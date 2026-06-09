@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../shared/widgets/placeholder_screen.dart';
 import 'app_routes.dart';
+import 'shell_scaffold.dart';
 
 part 'app_router.g.dart';
 
@@ -37,10 +38,10 @@ GoRouter appRouter(Ref ref) {
         builder: (_, __) => const PlaceholderScreen(title: 'تحقق OTP'),
       ),
 
-      // ─── Shell (bottom nav) ───────────────────────────────────────
+      // ─── Shell (bottom nav tabs) ──────────────────────────────────
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            _ShellScaffold(navigationShell: navigationShell),
+        builder: (_, __, navigationShell) =>
+            ShellScaffold(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
             navigatorKey: _homeKey,
@@ -120,48 +121,4 @@ GoRouter appRouter(Ref ref) {
       body: Center(child: Text('خطأ: ${state.error}')),
     ),
   );
-}
-
-// ─── Shell scaffold with bottom nav ──────────────────────────────────────────
-
-class _ShellScaffold extends StatelessWidget {
-  const _ShellScaffold({required this.navigationShell});
-
-  final StatefulNavigationShell navigationShell;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: navigationShell.currentIndex,
-        onTap: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        ),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'الرئيسية',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_outlined),
-            activeIcon: Icon(Icons.grid_view),
-            label: 'التصنيفات',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_outline),
-            activeIcon: Icon(Icons.favorite),
-            label: 'المحفوظات',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'حسابي',
-          ),
-        ],
-      ),
-    );
-  }
 }
