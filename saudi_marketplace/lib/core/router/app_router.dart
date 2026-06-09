@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../shared/widgets/placeholder_screen.dart';
 import 'app_routes.dart';
 import 'shell_scaffold.dart';
+import '../../features/home/presentation/home_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -48,8 +49,7 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.home,
-                builder: (_, __) =>
-                    const PlaceholderScreen(title: 'الرئيسية'),
+                builder: (_, __) => const HomeScreen(),
               ),
             ],
           ),

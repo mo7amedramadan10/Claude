@@ -17,8 +17,8 @@ class AppBottomNavBar extends StatelessWidget {
   final VoidCallback onSellTap;
 
   static const _items = [
-    _NavItem(icon: TablerIcons.home, activeIcon: TablerIcons.home_filled, label: 'الرئيسية'),
-    _NavItem(icon: TablerIcons.layout_grid, activeIcon: TablerIcons.layout_grid_filled, label: 'التصنيفات'),
+    _NavItem(icon: TablerIcons.home, activeIcon: TablerIcons.smart_home, label: 'الرئيسية'),
+    _NavItem(icon: TablerIcons.layout_grid, activeIcon: TablerIcons.layout_grid, label: 'التصنيفات'),
     _NavItem(icon: TablerIcons.heart, activeIcon: TablerIcons.heart_filled, label: 'المحفوظات'),
     _NavItem(icon: TablerIcons.user_circle, activeIcon: TablerIcons.user_circle, label: 'حسابي'),
   ];
