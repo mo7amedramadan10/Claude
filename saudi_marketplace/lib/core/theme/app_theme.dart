@@ -38,8 +38,6 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor:
           isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-      textTheme: GoogleFonts.tajawalTextTheme(),
-
       // ─── AppBar ───────────────────────────────────────────────────
       appBarTheme: AppBarTheme(
         backgroundColor:
@@ -144,7 +142,7 @@ abstract final class AppTheme {
       ),
 
       // ─── Text ─────────────────────────────────────────────────────
-      textTheme: TextTheme(
+      textTheme: GoogleFonts.tajawalTextTheme().copyWith(
         displayLarge: AppTextStyles.displayLarge,
         displayMedium: AppTextStyles.displayMedium,
         headlineLarge: AppTextStyles.headlineLarge,
