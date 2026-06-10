@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
@@ -37,7 +38,7 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor:
           isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-      fontFamily: 'Tajawal',
+      textTheme: GoogleFonts.tajawalTextTheme(),
 
       // ─── AppBar ───────────────────────────────────────────────────
       appBarTheme: AppBarTheme(

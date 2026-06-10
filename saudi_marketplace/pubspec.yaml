@@ -74,14 +74,3 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/fonts/
-
-  fonts:
-    - family: Tajawal
-      fonts:
-        - asset: assets/fonts/Tajawal-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/Tajawal-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Tajawal-Bold.ttf
-          weight: 700
