@@ -29,47 +29,61 @@ class HomeScreen extends ConsumerWidget {
         chatListProvider.select((s) => s.totalUnread));
 
     return Scaffold(
-      body: Column(
-        children: [
-          // App bar lives in the body so its height stays intrinsic
-          HomeAppBar(
-            unreadMessages: unreadMessages,
-            hasNotification: true,
-            onSearchTap: () => context.push(AppRoutes.search),
-            onNotificationTap: () => context.push(AppRoutes.notifications),
-            onMessageTap: () => context.push(AppRoutes.chatList),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: HomeAppBar(
+              unreadMessages: unreadMessages,
+              hasNotification: true,
+              onSearchTap: () => context.push(AppRoutes.search),
+              onNotificationTap: () => context.push(AppRoutes.notifications),
+              onMessageTap: () => context.push(AppRoutes.chatList),
+            ),
           ),
-          HomeCategories(
-            selectedIndex: state.selectedCategoryIndex,
-            onCategoryTap: notifier.selectCategory,
+          SliverToBoxAdapter(
+            child: HomeCategories(
+              selectedIndex: state.selectedCategoryIndex,
+              onCategoryTap: notifier.selectCategory,
+            ),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 24),
-              children: [
-                HomeAiBanner(onTap: () => context.push(AppRoutes.search)),
-                const SizedBox(height: 16),
-                _ListingsSection(
-                  title: 'إعلانات مميزة',
-                  listings: state.featuredListings,
-                  onFavorite: notifier.toggleFavorite,
-                  onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
-                ),
-                const SizedBox(height: 16),
-                _NearbySection(
-                  listings: state.nearbyListings,
-                  onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
-                ),
-                const SizedBox(height: 16),
-                _ListingsSection(
-                  title: 'مقترحة لك',
-                  listings: state.suggestedListings,
-                  onFavorite: notifier.toggleFavorite,
-                  onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
-                ),
-                const SizedBox(height: 16),
-                _SellersSection(sellers: HomeMockData.sellers),
-              ],
+          SliverToBoxAdapter(
+            child: HomeAiBanner(onTap: () => context.push(AppRoutes.search)),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _ListingsSection(
+                title: 'إعلانات مميزة',
+                listings: state.featuredListings,
+                onFavorite: notifier.toggleFavorite,
+                onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _NearbySection(
+                listings: state.nearbyListings,
+                onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _ListingsSection(
+                title: 'مقترحة لك',
+                listings: state.suggestedListings,
+                onFavorite: notifier.toggleFavorite,
+                onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 24),
+              child: _SellersSection(sellers: HomeMockData.sellers),
             ),
           ),
         ],
