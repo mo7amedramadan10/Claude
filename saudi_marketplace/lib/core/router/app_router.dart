@@ -7,6 +7,7 @@ import '../shared/widgets/placeholder_screen.dart';
 import 'app_routes.dart';
 import 'shell_scaffold.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/search/presentation/search_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -95,7 +96,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.search,
-        builder: (_, __) => const PlaceholderScreen(title: 'البحث'),
+        builder: (_, __) => const SearchScreen(),
       ),
       GoRoute(
         path: AppRoutes.sellItem,

@@ -15,12 +15,16 @@ class ListingCard extends StatelessWidget {
     required this.onFavoriteTap,
     this.onTap,
     this.width = 160,
+    this.imageHeight = 114,
   });
 
   final ListingModel listing;
   final VoidCallback onFavoriteTap;
   final VoidCallback? onTap;
-  final double width;
+
+  /// Pass null to let the parent (e.g. a grid) control the width.
+  final double? width;
+  final double imageHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +44,11 @@ class ListingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _CardImage(listing: listing, onFavoriteTap: onFavoriteTap),
+            _CardImage(
+              listing: listing,
+              onFavoriteTap: onFavoriteTap,
+              height: imageHeight,
+            ),
             _CardBody(listing: listing),
           ],
         ),
@@ -50,15 +58,20 @@ class ListingCard extends StatelessWidget {
 }
 
 class _CardImage extends StatelessWidget {
-  const _CardImage({required this.listing, required this.onFavoriteTap});
+  const _CardImage({
+    required this.listing,
+    required this.onFavoriteTap,
+    required this.height,
+  });
 
   final ListingModel listing;
   final VoidCallback onFavoriteTap;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 114,
+      height: height,
       child: Stack(
         children: [
           ClipRRect(
@@ -67,7 +80,7 @@ class _CardImage extends StatelessWidget {
             child: CachedNetworkImage(
               imageUrl: listing.imageUrl,
               width: double.infinity,
-              height: 114,
+              height: height,
               fit: BoxFit.cover,
               placeholder: (_, __) => Shimmer.fromColors(
                 baseColor: AppColors.grey100,
