@@ -12,6 +12,7 @@ import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/product_details/presentation/listing_detail_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/saved/presentation/saved_screen.dart';
+import '../../features/account/presentation/account_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -81,8 +82,7 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
-                builder: (_, __) =>
-                    const PlaceholderScreen(title: 'حسابي'),
+                builder: (_, __) => const AccountScreen(),
               ),
             ],
           ),
