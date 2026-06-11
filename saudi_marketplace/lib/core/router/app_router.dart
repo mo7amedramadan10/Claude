@@ -7,6 +7,7 @@ import '../shared/widgets/placeholder_screen.dart';
 import 'app_routes.dart';
 import 'shell_scaffold.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/categories/presentation/categories_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/product_details/presentation/listing_detail_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
@@ -61,8 +62,7 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.categories,
-                builder: (_, __) =>
-                    const PlaceholderScreen(title: 'التصنيفات'),
+                builder: (_, __) => const CategoriesScreen(),
               ),
             ],
           ),
