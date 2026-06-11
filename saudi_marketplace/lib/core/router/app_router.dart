@@ -7,6 +7,7 @@ import '../shared/widgets/placeholder_screen.dart';
 import 'app_routes.dart';
 import 'shell_scaffold.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/product_details/presentation/listing_detail_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 
 part 'app_router.g.dart';
@@ -90,8 +91,8 @@ GoRouter appRouter(Ref ref) {
       // ─── Full-screen routes (outside shell) ───────────────────────
       GoRoute(
         path: AppRoutes.productDetails,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'تفاصيل الإعلان ${state.pathParameters['id']}',
+        builder: (_, state) => ListingDetailScreen(
+          listingId: state.pathParameters['id']!,
         ),
       ),
       GoRoute(
