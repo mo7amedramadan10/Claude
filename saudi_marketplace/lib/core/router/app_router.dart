@@ -7,6 +7,7 @@ import '../shared/widgets/placeholder_screen.dart';
 import 'app_routes.dart';
 import 'shell_scaffold.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/product_details/presentation/listing_detail_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 
@@ -109,8 +110,8 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.chatDetail,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'محادثة ${state.pathParameters['id']}',
+        builder: (_, state) => ChatScreen(
+          chatId: state.pathParameters['id']!,
         ),
       ),
       GoRoute(
