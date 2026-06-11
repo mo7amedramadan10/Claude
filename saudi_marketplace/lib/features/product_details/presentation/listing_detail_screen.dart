@@ -10,6 +10,7 @@ import '../../../core/utils/number_formatter.dart';
 import '../models/listing_detail_model.dart';
 import '../providers/listing_detail_provider.dart';
 import 'widgets/detail_bottom_bar.dart';
+import 'widgets/detail_error_view.dart';
 import 'widgets/detail_gallery.dart';
 import 'widgets/detail_seller_card.dart';
 import 'widgets/detail_specs_card.dart';
@@ -25,6 +26,26 @@ class ListingDetailScreen extends ConsumerWidget {
     final notifier = ref.read(listingDetailProvider(listingId).notifier);
     final detail = state.detail;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (state.isLoading) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (state.errorMessage != null) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        body: DetailErrorView(
+          message: state.errorMessage!,
+          onRetry: notifier.load,
+          onBack: () => context.pop(),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
