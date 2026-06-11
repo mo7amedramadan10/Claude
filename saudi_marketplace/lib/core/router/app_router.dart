@@ -11,6 +11,7 @@ import '../../features/categories/presentation/categories_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/product_details/presentation/listing_detail_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
+import '../../features/saved/presentation/saved_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -71,8 +72,7 @@ GoRouter appRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.favorites,
-                builder: (_, __) =>
-                    const PlaceholderScreen(title: 'المحفوظات'),
+                builder: (_, __) => const SavedScreen(),
               ),
             ],
           ),
