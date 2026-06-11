@@ -116,7 +116,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
                   height: 7,
                   margin: EdgeInsetsDirectional.only(start: i == 0 ? 0 : 4),
                   transform:
-                      Matrix4.translationValues(0, -bounce.clamp(0, 4), 0),
+                      Matrix4.translationValues(0, -bounce.clamp(0.0, 4.0), 0),
                   decoration: BoxDecoration(
                     color: AppColors.grey400
                         .withValues(alpha: bounce > 0.5 ? 1 : 0.4),
