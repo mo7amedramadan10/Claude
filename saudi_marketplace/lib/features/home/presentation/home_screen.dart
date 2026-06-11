@@ -11,6 +11,7 @@ import '../data/home_mock_data.dart';
 import '../models/listing_model.dart';
 import '../models/seller_model.dart';
 import '../providers/home_provider.dart';
+import '../../chat_list/providers/chat_list_provider.dart';
 import 'widgets/home_ai_banner.dart';
 import 'widgets/home_app_bar.dart';
 import 'widgets/home_categories.dart';
@@ -24,10 +25,12 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeProvider);
     final notifier = ref.read(homeProvider.notifier);
+    final unreadMessages = ref.watch(
+        chatListProvider.select((s) => s.totalUnread));
 
     return Scaffold(
       appBar: HomeAppBar(
-        unreadMessages: 3,
+        unreadMessages: unreadMessages,
         hasNotification: true,
         onSearchTap: () => context.push(AppRoutes.search),
         onNotificationTap: () => context.push(AppRoutes.notifications),

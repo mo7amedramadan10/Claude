@@ -13,6 +13,7 @@ import '../../features/product_details/presentation/listing_detail_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/saved/presentation/saved_screen.dart';
 import '../../features/account/presentation/account_screen.dart';
+import '../../features/chat_list/presentation/chat_list_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -106,7 +107,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.chatList,
-        builder: (_, __) => const PlaceholderScreen(title: 'المحادثات'),
+        builder: (_, __) => const ChatListScreen(),
       ),
       GoRoute(
         path: AppRoutes.chatDetail,
