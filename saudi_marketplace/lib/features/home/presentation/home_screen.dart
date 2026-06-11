@@ -29,15 +29,16 @@ class HomeScreen extends ConsumerWidget {
         chatListProvider.select((s) => s.totalUnread));
 
     return Scaffold(
-      appBar: HomeAppBar(
-        unreadMessages: unreadMessages,
-        hasNotification: true,
-        onSearchTap: () => context.push(AppRoutes.search),
-        onNotificationTap: () => context.push(AppRoutes.notifications),
-        onMessageTap: () => context.push(AppRoutes.chatList),
-      ),
       body: Column(
         children: [
+          // App bar lives in the body so its height stays intrinsic
+          HomeAppBar(
+            unreadMessages: unreadMessages,
+            hasNotification: true,
+            onSearchTap: () => context.push(AppRoutes.search),
+            onNotificationTap: () => context.push(AppRoutes.notifications),
+            onMessageTap: () => context.push(AppRoutes.chatList),
+          ),
           HomeCategories(
             selectedIndex: state.selectedCategoryIndex,
             onCategoryTap: notifier.selectCategory,

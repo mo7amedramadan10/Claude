@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
-class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+class HomeAppBar extends StatelessWidget {
   const HomeAppBar({
     super.key,
     required this.onSearchTap,
@@ -20,9 +20,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onMessageTap;
   final int unreadMessages;
   final bool hasNotification;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(150);
 
   @override
   Widget build(BuildContext context) {
