@@ -7,7 +7,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/shared/widgets/listing_card.dart';
 import '../../../core/shared/widgets/section_header.dart';
 import '../../../core/theme/app_colors.dart';
-import '../data/home_mock_data.dart';
 import '../models/listing_model.dart';
 import '../models/seller_model.dart';
 import '../providers/home_provider.dart';
@@ -29,64 +28,68 @@ class HomeScreen extends ConsumerWidget {
         chatListProvider.select((s) => s.totalUnread));
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: HomeAppBar(
-              unreadMessages: unreadMessages,
-              hasNotification: true,
-              onSearchTap: () => context.push(AppRoutes.search),
-              onNotificationTap: () => context.push(AppRoutes.notifications),
-              onMessageTap: () => context.push(AppRoutes.chatList),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: HomeCategories(
-              selectedIndex: state.selectedCategoryIndex,
-              onCategoryTap: notifier.selectCategory,
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: HomeAiBanner(onTap: () => context.push(AppRoutes.search)),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: _ListingsSection(
-                title: 'إعلانات مميزة',
-                listings: state.featuredListings,
-                onFavorite: notifier.toggleFavorite,
-                onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+      body: RefreshIndicator(
+        onRefresh: notifier.refresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: HomeAppBar(
+                unreadMessages: unreadMessages,
+                hasNotification: true,
+                onSearchTap: () => context.push(AppRoutes.search),
+                onNotificationTap: () => context.push(AppRoutes.notifications),
+                onMessageTap: () => context.push(AppRoutes.chatList),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: _NearbySection(
-                listings: state.nearbyListings,
-                onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+            SliverToBoxAdapter(
+              child: HomeCategories(
+                selectedIndex: state.selectedCategoryIndex,
+                onCategoryTap: notifier.selectCategory,
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: _ListingsSection(
-                title: 'مقترحة لك',
-                listings: state.suggestedListings,
-                onFavorite: notifier.toggleFavorite,
-                onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+            SliverToBoxAdapter(
+              child: HomeAiBanner(onTap: () => context.push(AppRoutes.search)),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _ListingsSection(
+                  title: 'إعلانات مميزة',
+                  listings: state.featuredListings,
+                  onFavorite: notifier.toggleFavorite,
+                  onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+                ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16, bottom: 24),
-              child: _SellersSection(sellers: HomeMockData.sellers),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _NearbySection(
+                  listings: state.nearbyListings,
+                  onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+                ),
+              ),
             ),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _ListingsSection(
+                  title: 'مقترحة لك',
+                  listings: state.suggestedListings,
+                  onFavorite: notifier.toggleFavorite,
+                  onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 24),
+                child: _SellersSection(sellers: state.sellers),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -73,12 +73,13 @@ class SupabaseNotificationsRepository implements NotificationsRepository {
   @override
   Future<int> fetchUnreadCount(String userId) async {
     try {
-      final data = await _db
+      final res = await _db
           .from('notifications')
-          .select('id', const FetchOptions(count: CountOption.exact))
+          .select('id')
           .eq('user_id', userId)
-          .eq('is_read', false);
-      return data.count ?? 0;
+          .eq('is_read', false)
+          .count(CountOption.exact);
+      return res.count;
     } catch (e) {
       throw mapException(e);
     }

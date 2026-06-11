@@ -25,7 +25,8 @@ class ProfileModel with _$ProfileModel {
     @JsonKey(name: 'last_seen_at') DateTime? lastSeenAt,
     @JsonKey(name: 'deleted_at') DateTime? deletedAt,
     @JsonKey(name: 'created_at') required DateTime createdAt,
-    @JsonKey(name: 'updated_at') required DateTime updatedAt,
+    // غير موجود في view public_profiles — متاح فقط عند قراءة ملفك الشخصي
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
   }) = _ProfileModel;
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) =>

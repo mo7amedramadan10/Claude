@@ -11,17 +11,19 @@ const _feedColumns = '''
   is_price_negotiable, is_price_hidden, condition, status,
   neighborhood, is_verified, is_featured, views_count,
   favorites_count, created_at, updated_at, expires_at, deleted_at,
-  listing_images(id, storage_path, is_primary, sort_order)
+  listing_images(id, listing_id, storage_path, is_primary, sort_order, created_at),
+  city:cities(id, name_ar, name_en, is_active, sort_order, created_at)
 ''';
 
 const _detailColumns = '''
   *,
   listing_images(*),
   listing_specs(*),
-  seller:profiles!seller_id(
-    id, full_name, avatar_url, rating_avg, total_reviews,
-    is_nafath_verified, completed_deals, active_listings_count,
-    city_id, last_seen_at, is_active, created_at, updated_at
+  city:cities(id, name_ar, name_en, is_active, sort_order, created_at),
+  seller:public_profiles!seller_id(
+    id, full_name, avatar_url, bio, city_id, is_nafath_verified,
+    rating_avg, total_reviews, completed_deals,
+    active_listings_count, last_seen_at, created_at
   )
 ''';
 
@@ -73,18 +75,19 @@ class SupabaseListingsRepository implements ListingsRepository {
     int offset = 0,
   }) async {
     try {
+      // الفلاتر تُضاف قبل order/range (قيد chaining في supabase v2)
       var q = _db
           .from('listings')
           .select(_feedColumns)
           .eq('status', 'active')
-          .filter('deleted_at', 'is', null)
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+          .filter('deleted_at', 'is', null);
 
       if (categoryId != null) q = q.eq('category_id', categoryId);
       if (cityId != null)     q = q.eq('city_id', cityId);
 
-      final data = await q;
+      final data = await q
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
       return data.map(ListingModel.fromJson).toList();
     } catch (e) {
       throw mapException(e);
@@ -140,9 +143,7 @@ class SupabaseListingsRepository implements ListingsRepository {
           .select(_feedColumns)
           .eq('status', 'active')
           .filter('deleted_at', 'is', null)
-          .ilike('title', '%$query%')
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+          .ilike('title', '%$query%');
 
       if (categoryId != null) q = q.eq('category_id', categoryId);
       if (cityId != null)     q = q.eq('city_id', cityId);
@@ -150,7 +151,9 @@ class SupabaseListingsRepository implements ListingsRepository {
       if (minPrice != null)   q = q.gte('price', minPrice);
       if (maxPrice != null)   q = q.lte('price', maxPrice);
 
-      final data = await q;
+      final data = await q
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
       return data.map(ListingModel.fromJson).toList();
     } catch (e) {
       throw mapException(e);

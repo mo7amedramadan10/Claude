@@ -6,9 +6,10 @@ import '../../../core/supabase/supabase_providers.dart';
 import '../models/conversation_model.dart';
 import '../models/message_model.dart';
 
+// بيانات الطرف الآخر تُقرأ من view public_profiles (RLS يمنع profiles)
 const _participantColumns = '''
   id, full_name, avatar_url, rating_avg, is_nafath_verified,
-  is_active, last_seen_at, created_at, updated_at
+  last_seen_at, created_at
 ''';
 
 const _conversationColumns = '''
@@ -16,8 +17,8 @@ const _conversationColumns = '''
   last_message_preview, last_sender_id, buyer_unread_count,
   seller_unread_count, is_archived_by_buyer, is_archived_by_seller,
   created_at,
-  buyer:profiles!buyer_id($_participantColumns),
-  seller:profiles!seller_id($_participantColumns)
+  buyer:public_profiles!buyer_id($_participantColumns),
+  seller:public_profiles!seller_id($_participantColumns)
 ''';
 
 abstract class ChatRepository {
@@ -110,15 +111,15 @@ class SupabaseChatRepository implements ChatRepository {
       var q = _db
           .from('messages')
           .select()
-          .eq('conversation_id', conversationId)
-          .order('created_at', ascending: false)
-          .limit(limit);
+          .eq('conversation_id', conversationId);
 
       if (before != null) {
         q = q.lt('created_at', before.toIso8601String());
       }
 
-      final data = await q;
+      final data = await q
+          .order('created_at', ascending: false)
+          .limit(limit);
       return (data as List)
           .map((r) => MessageModel.fromJson(r as Map<String, dynamic>))
           .toList();

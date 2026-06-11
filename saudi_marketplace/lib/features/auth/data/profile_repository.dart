@@ -5,16 +5,17 @@ import '../../../core/exceptions/app_exception.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../models/profile_model.dart';
 
-// Columns safe to return for OTHER users (mirrors public_profiles view)
+// أعمدة view public_profiles كما عُرّف في 004_rls.sql — لا تزد عليها
 const _publicColumns = '''
   id, full_name, avatar_url, bio, city_id, is_nafath_verified,
-  nafath_verified_at, rating_avg, total_reviews, completed_deals,
-  active_listings_count, is_active, last_seen_at, created_at, updated_at
+  rating_avg, total_reviews, completed_deals,
+  active_listings_count, last_seen_at, created_at
 ''';
 
 abstract class ProfileRepository {
   Future<ProfileModel> fetchCurrentUser();
   Future<ProfileModel> fetchById(String id);
+  Future<List<ProfileModel>> fetchVerifiedSellers({int limit = 10});
   Future<void> updateProfile(String id, Map<String, dynamic> data);
   Future<void> updateLastSeen(String id);
   Future<void> softDelete(String id);
@@ -44,14 +45,31 @@ class SupabaseProfileRepository implements ProfileRepository {
   @override
   Future<ProfileModel> fetchById(String id) async {
     try {
+      // بيانات المستخدمين الآخرين تُقرأ من view public_profiles فقط
       final data = await _db
-          .from('profiles')
+          .from('public_profiles')
           .select(_publicColumns)
           .eq('id', id)
-          .filter('deleted_at', 'is', null)
-          .eq('is_active', true)
           .single();
       return ProfileModel.fromJson(data);
+    } catch (e) {
+      throw mapException(e);
+    }
+  }
+
+  @override
+  Future<List<ProfileModel>> fetchVerifiedSellers({int limit = 10}) async {
+    try {
+      // view public_profiles يخفي رقم الجوال ويستبعد المحذوفين
+      final data = await _db
+          .from('public_profiles')
+          .select()
+          .eq('is_nafath_verified', true)
+          .order('rating_avg', ascending: false)
+          .limit(limit);
+      return (data as List)
+          .map((r) => ProfileModel.fromJson(r as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       throw mapException(e);
     }
