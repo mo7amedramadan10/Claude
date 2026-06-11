@@ -15,4 +15,13 @@ abstract final class NumberFormatter {
       .split('')
       .map((c) => _arabicDigits[int.parse(c)])
       .join();
+
+  /// سعر بأرقام عربية مع فواصل الآلاف: 82500 → «٨٢,٥٠٠»
+  static String arabicPrice(double price) => formatPrice(price)
+      .split('')
+      .map((c) {
+        final d = int.tryParse(c);
+        return d != null ? _arabicDigits[d] : c;
+      })
+      .join();
 }

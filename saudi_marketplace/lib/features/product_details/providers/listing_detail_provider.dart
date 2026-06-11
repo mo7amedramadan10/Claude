@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/env.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../favorites/data/favorites_repository.dart';
+import '../../saved/providers/saved_provider.dart';
 import '../data/listing_detail_mock_data.dart';
 import '../data/listing_detail_repository.dart';
 import '../models/listing_detail_model.dart';
@@ -40,8 +41,12 @@ class ListingDetailState {
 
 class ListingDetailNotifier
     extends AutoDisposeFamilyNotifier<ListingDetailState, String> {
+  // provider من نوع autoDispose — لا تلمس ref/state بعد التخلص منه
+  bool _disposed = false;
+
   @override
   ListingDetailState build(String arg) {
+    ref.onDispose(() => _disposed = true);
     if (Env.isConfigured) {
       Future.microtask(load);
     }
@@ -57,6 +62,7 @@ class ListingDetailNotifier
       final repo = ref.read(listingDetailRepositoryProvider);
       final userId = ref.read(currentUserIdProvider);
       final result = await repo.fetchDetail(arg, userId: userId);
+      if (_disposed) return;
       repo.registerView(arg);
       state = state.copyWith(
         detail: result.detail,
@@ -64,6 +70,7 @@ class ListingDetailNotifier
         isLoading: false,
       );
     } catch (e) {
+      if (_disposed) return;
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
@@ -81,9 +88,12 @@ class ListingDetailNotifier
     final repo = ref.read(favoritesRepositoryProvider);
     final action =
         wasFavorite ? repo.remove(userId, arg) : repo.add(userId, arg);
-    // تراجع محلي إذا فشل الطلب
-    action.catchError((_) {
-      state = state.copyWith(isFavorite: wasFavorite);
+    action.then((_) {
+      // تحديث شاشة المحفوظات بعد نجاح التغيير
+      if (!_disposed) ref.invalidate(savedProvider);
+    }).catchError((_) {
+      // تراجع محلي إذا فشل الطلب
+      if (!_disposed) state = state.copyWith(isFavorite: wasFavorite);
     });
   }
 }

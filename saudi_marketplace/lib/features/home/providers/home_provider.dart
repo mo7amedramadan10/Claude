@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/env.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../favorites/data/favorites_repository.dart';
+import '../../saved/providers/saved_provider.dart';
 import '../data/home_mock_data.dart';
 import '../data/home_repository.dart';
 import '../models/listing_model.dart';
@@ -90,8 +91,13 @@ class HomeNotifier extends Notifier<HomeState> {
     final repo = ref.read(favoritesRepositoryProvider);
     final action =
         wasFavorite ? repo.remove(userId, id) : repo.add(userId, id);
-    // تراجع محلي إذا فشل الطلب
-    action.catchError((_) => _applyFavorite(id, wasFavorite));
+    action.then((_) {
+      // تحديث شاشة المحفوظات بعد نجاح التغيير
+      ref.invalidate(savedProvider);
+    }).catchError((_) {
+      // تراجع محلي إذا فشل الطلب
+      _applyFavorite(id, wasFavorite);
+    });
   }
 
   bool _isFavorite(String id) {

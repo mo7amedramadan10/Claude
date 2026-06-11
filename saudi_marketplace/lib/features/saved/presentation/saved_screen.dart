@@ -61,31 +61,44 @@ class SavedScreen extends ConsumerWidget {
 
           // ─── Body ───────────────────────────────────────────────
           Expanded(
-            child: items.isNotEmpty
-                ? GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 11,
-                      crossAxisSpacing: 11,
-                      mainAxisExtent: 210,
-                    ),
-                    itemCount: items.length,
-                    itemBuilder: (_, i) {
-                      final item = items[i];
-                      return SavedCard(
-                        item: item,
-                        onTap: () => context
-                            .push(AppRoutes.productDetailsPath(item.id)),
-                        onRemove: () =>
-                            ref.read(savedProvider.notifier).remove(item.id),
-                      );
-                    },
+            child: state.isLoading && items.isEmpty
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(color: AppColors.primary),
                   )
-                : SavedEmptyState(
-                    onBrowse: () => context.go(AppRoutes.home),
-                  ),
+                : items.isNotEmpty
+                    ? RefreshIndicator(
+                        onRefresh:
+                            ref.read(savedProvider.notifier).refresh,
+                        child: GridView.builder(
+                          physics:
+                              const AlwaysScrollableScrollPhysics(),
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 11,
+                            crossAxisSpacing: 11,
+                            mainAxisExtent: 210,
+                          ),
+                          itemCount: items.length,
+                          itemBuilder: (_, i) {
+                            final item = items[i];
+                            return SavedCard(
+                              item: item,
+                              onTap: () => context.push(
+                                  AppRoutes.productDetailsPath(item.id)),
+                              onRemove: () => ref
+                                  .read(savedProvider.notifier)
+                                  .remove(item.id),
+                            );
+                          },
+                        ),
+                      )
+                    : SavedEmptyState(
+                        onBrowse: () => context.go(AppRoutes.home),
+                      ),
           ),
         ]),
       ),
