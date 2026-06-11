@@ -7,13 +7,13 @@ import '../models/seller_model.dart';
 abstract final class HomeMockData {
   static const categories = [
     CategoryModel(id: 'cars', label: 'سيارات', icon: TablerIcons.car),
-    CategoryModel(id: 'real_estate', label: 'عقارات', icon: TablerIcons.building),
+    CategoryModel(id: 'real_estate', label: 'عقارات', icon: TablerIcons.building_community),
     CategoryModel(id: 'phones', label: 'جوالات', icon: TablerIcons.device_mobile),
     CategoryModel(id: 'electronics', label: 'إلكترونيات', icon: TablerIcons.device_laptop),
     CategoryModel(id: 'furniture', label: 'أثاث', icon: TablerIcons.armchair),
     CategoryModel(id: 'fashion', label: 'أزياء', icon: TablerIcons.shirt),
     CategoryModel(id: 'jobs', label: 'وظائف', icon: TablerIcons.briefcase),
-    CategoryModel(id: 'more', label: 'المزيد', icon: TablerIcons.grid_dots),
+    CategoryModel(id: 'more', label: 'المزيد', icon: TablerIcons.dots_circle_horizontal),
   ];
 
   static const featuredListings = [
@@ -56,17 +56,17 @@ abstract final class HomeMockData {
     ListingModel(
       id: '7', title: 'Toyota Camry 2023', price: 68000, city: 'الرياض',
       imageUrl: 'https://images.unsplash.com/photo-1571607388263-1044f9ea01dd?w=300&q=80',
-      postedAt: 'منذ ٣ أيام', rating: 5.0, isAiRecommended: true,
+      postedAt: 'منذ ٣ أيام', rating: 5.0,
     ),
     ListingModel(
-      id: '8', title: 'Samsung Galaxy S24 Ultra', price: 3100, city: 'جدة',
+      id: '8', title: 'Samsung S24 Ultra', price: 3100, city: 'جدة',
       imageUrl: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&q=80',
-      postedAt: 'منذ ٥ ساعات', rating: 4.6, isAiRecommended: true, isFavorite: true,
+      postedAt: 'منذ ٥ ساعات', rating: 4.6, isFavorite: true,
     ),
     ListingModel(
       id: '9', title: 'Sony A7IV كاميرا', price: 9800, city: 'الدمام',
       imageUrl: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=300&q=80',
-      postedAt: 'منذ يومين', rating: 4.8, isAiRecommended: true,
+      postedAt: 'منذ يومين', rating: 4.8,
     ),
   ];
 

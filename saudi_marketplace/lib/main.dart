@@ -17,7 +17,7 @@ class SaudiMarketplaceApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'سوق',
+      title: 'بيكيا',
       debugShowCheckedModeBanner: false,
 
       // ─── Locale & RTL ──────────────────────────────────────────

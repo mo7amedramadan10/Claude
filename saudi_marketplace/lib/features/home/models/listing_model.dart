@@ -9,7 +9,6 @@ class ListingModel {
     this.rating,
     this.distanceKm,
     this.isVerified = false,
-    this.isAiRecommended = false,
     this.isFavorite = false,
   });
 
@@ -22,7 +21,6 @@ class ListingModel {
   final double? rating;
   final double? distanceKm;
   final bool isVerified;
-  final bool isAiRecommended;
   final bool isFavorite;
 
   ListingModel copyWith({bool? isFavorite}) => ListingModel(
@@ -35,7 +33,6 @@ class ListingModel {
         rating: rating,
         distanceKm: distanceKm,
         isVerified: isVerified,
-        isAiRecommended: isAiRecommended,
         isFavorite: isFavorite ?? this.isFavorite,
       );
 }

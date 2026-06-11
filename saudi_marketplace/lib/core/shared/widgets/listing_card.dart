@@ -14,7 +14,7 @@ class ListingCard extends StatelessWidget {
     required this.listing,
     required this.onFavoriteTap,
     this.onTap,
-    this.width = 155,
+    this.width = 160,
   });
 
   final ListingModel listing;
@@ -34,7 +34,7 @@ class ListingCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? AppColors.navyLight : AppColors.grey100,
-            width: 0.5,
+            width: 1,
           ),
         ),
         child: Column(
@@ -58,15 +58,16 @@ class _CardImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 110,
+      height: 114,
       child: Stack(
         children: [
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(15)),
             child: CachedNetworkImage(
               imageUrl: listing.imageUrl,
               width: double.infinity,
-              height: 110,
+              height: 114,
               fit: BoxFit.cover,
               placeholder: (_, __) => Shimmer.fromColors(
                 baseColor: AppColors.grey100,
@@ -75,35 +76,37 @@ class _CardImage extends StatelessWidget {
               ),
               errorWidget: (_, __, ___) => Container(
                 color: AppColors.grey100,
-                child: const Icon(TablerIcons.photo_off, color: AppColors.grey400),
+                child: const Icon(TablerIcons.photo_off,
+                    color: AppColors.grey400),
               ),
             ),
           ),
           Positioned(
-            top: 7, left: 7,
+            top: 8,
+            left: 8,
             child: GestureDetector(
               onTap: onFavoriteTap,
               child: Container(
-                width: 28, height: 28,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.88),
+                  color: Colors.white.withValues(alpha: 0.92),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  listing.isFavorite ? TablerIcons.heart_filled : TablerIcons.heart,
+                  listing.isFavorite
+                      ? TablerIcons.heart_filled
+                      : TablerIcons.heart,
                   size: 14,
-                  color: listing.isFavorite ? AppColors.error : AppColors.grey500,
+                  color: listing.isFavorite
+                      ? AppColors.error
+                      : AppColors.grey600,
                 ),
               ),
             ),
           ),
-          if (listing.isVerified || listing.isAiRecommended)
-            Positioned(
-              top: 7, right: 7,
-              child: listing.isAiRecommended
-                  ? const _AiBadge()
-                  : const _VerifiedBadge(),
-            ),
+          if (listing.isVerified)
+            const Positioned(top: 8, right: 8, child: _VerifiedBadge()),
         ],
       ),
     );
@@ -112,70 +115,74 @@ class _CardImage extends StatelessWidget {
 
 class _VerifiedBadge extends StatelessWidget {
   const _VerifiedBadge();
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(TablerIcons.shield_check, size: 10, color: Colors.white),
-          const SizedBox(width: 3),
-          Text('موثق', style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontSize: 9)),
-        ]),
-      );
-}
 
-class _AiBadge extends StatelessWidget {
-  const _AiBadge();
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         decoration: BoxDecoration(
-          color: AppColors.ai.withValues(alpha: 0.85),
+          color: AppColors.primaryDark,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(TablerIcons.sparkles, size: 9, color: Colors.white),
+          const Icon(TablerIcons.rosette_discount_check,
+              size: 11, color: Colors.white),
           const SizedBox(width: 3),
-          Text('AI', style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontSize: 9)),
+          Text('موثق',
+              style: AppTextStyles.labelSmall
+                  .copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
         ]),
       );
 }
 
 class _CardBody extends StatelessWidget {
   const _CardBody({required this.listing});
+
   final ListingModel listing;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.all(9),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 11),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(listing.title, style: AppTextStyles.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
+          Text(
+            listing.title,
+            style: AppTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : AppColors.navy,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 5),
           Text.rich(TextSpan(
             text: NumberFormatter.formatPrice(listing.price),
-            style: AppTextStyles.price,
-            children: [TextSpan(text: ' ريال', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary))],
-          )),
-          const SizedBox(height: 5),
-          Row(children: [
-            const Icon(TablerIcons.map_pin, size: 11, color: AppColors.grey500),
-            const SizedBox(width: 3),
-            Text(listing.city, style: AppTextStyles.labelSmall),
-            const Spacer(),
-            if (listing.rating != null) ...[
-              const Icon(TablerIcons.star_filled, size: 11, color: AppColors.warning),
-              const SizedBox(width: 2),
-              Text(listing.rating!.toString(), style: AppTextStyles.labelSmall),
+            style: AppTextStyles.price
+                .copyWith(fontSize: 15, color: AppColors.primaryDark),
+            children: [
+              TextSpan(
+                text: ' ريال',
+                style: AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.primaryDark,
+                    fontWeight: FontWeight.w600),
+              ),
             ],
-          ]),
-          if (listing.postedAt.isNotEmpty) ...[
-            const SizedBox(height: 4),
+          )),
+          const SizedBox(height: 7),
+          Row(children: [
+            const Icon(TablerIcons.map_pin,
+                size: 12, color: AppColors.grey600),
+            const SizedBox(width: 3),
+            Text(listing.city,
+                style: AppTextStyles.labelLarge
+                    .copyWith(color: AppColors.grey600)),
+            const Spacer(),
             Text(listing.postedAt,
-                style: AppTextStyles.labelSmall.copyWith(color: AppColors.grey400, fontSize: 9)),
-          ],
+                style: AppTextStyles.labelLarge
+                    .copyWith(color: AppColors.grey600)),
+          ]),
         ],
       ),
     );

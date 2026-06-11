@@ -19,38 +19,41 @@ class HomeSellerCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 130,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        width: 134,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 14),
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? AppColors.navyLight : AppColors.grey100,
-            width: 0.5,
+            width: 1,
           ),
         ),
         child: Column(children: [
           _Avatar(url: seller.avatarUrl),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Text(seller.name,
-              style: AppTextStyles.titleSmall,
+              style: AppTextStyles.titleSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : AppColors.navy,
+              ),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text('★★★★★',
-                style: AppTextStyles.labelSmall
-                    .copyWith(color: AppColors.warning)),
+            const Icon(TablerIcons.star_filled,
+                size: 12, color: AppColors.warning),
             const SizedBox(width: 3),
-            Text(seller.rating.toString(), style: AppTextStyles.labelSmall),
+            Text(
+              '${seller.rating} · ${seller.completedDeals} صفقة',
+              style:
+                  AppTextStyles.labelLarge.copyWith(color: AppColors.grey600),
+            ),
           ]),
-          const SizedBox(height: 3),
-          Text('${seller.completedDeals} صفقة مكتملة',
-              style: AppTextStyles.labelSmall, textAlign: TextAlign.center),
           if (seller.isNafadhVerified) ...[
-            const SizedBox(height: 6),
-            _NafadhBadge(),
+            const SizedBox(height: 7),
+            const _NafadhBadge(),
           ],
         ]),
       ),
@@ -60,11 +63,13 @@ class HomeSellerCard extends StatelessWidget {
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.url});
+
   final String url;
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 50, height: 50,
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(color: AppColors.primary, width: 2.5),
@@ -80,7 +85,8 @@ class _Avatar extends StatelessWidget {
             ),
             errorWidget: (_, __, ___) => Container(
               color: AppColors.primaryLight,
-              child: const Icon(TablerIcons.user, size: 24, color: AppColors.primary),
+              child: const Icon(TablerIcons.user,
+                  size: 24, color: AppColors.primary),
             ),
           ),
         ),
@@ -88,21 +94,22 @@ class _Avatar extends StatelessWidget {
 }
 
 class _NafadhBadge extends StatelessWidget {
+  const _NafadhBadge();
+
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           color: AppColors.primaryLight,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(TablerIcons.id, size: 11, color: AppColors.primary),
-          const SizedBox(width: 3),
+          const Icon(TablerIcons.shield_check_filled,
+              size: 12, color: AppColors.primaryDark),
+          const SizedBox(width: 4),
           Text('نفاذ وطني',
               style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 9)),
+                  color: AppColors.primaryDark, fontWeight: FontWeight.w700)),
         ]),
       );
 }

@@ -9,11 +9,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../models/listing_model.dart';
 
 class HomeNearbyCard extends StatelessWidget {
-  const HomeNearbyCard({
-    super.key,
-    required this.listing,
-    this.onTap,
-  });
+  const HomeNearbyCard({super.key, required this.listing, this.onTap});
 
   final ListingModel listing;
   final VoidCallback? onTap;
@@ -24,13 +20,13 @@ class HomeNearbyCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 155,
+        width: 160,
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? AppColors.navyLight : AppColors.grey100,
-            width: 0.5,
+            width: 1,
           ),
         ),
         child: Column(
@@ -38,46 +34,60 @@ class HomeNearbyCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+                  const BorderRadius.vertical(top: Radius.circular(15)),
               child: CachedNetworkImage(
                 imageUrl: listing.imageUrl,
                 width: double.infinity,
-                height: 95,
+                height: 100,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Shimmer.fromColors(
                   baseColor: AppColors.grey100,
                   highlightColor: AppColors.grey50,
-                  child: Container(height: 95, color: AppColors.grey100),
+                  child: Container(height: 100, color: AppColors.grey100),
                 ),
                 errorWidget: (_, __, ___) => Container(
-                  height: 95,
+                  height: 100,
                   color: AppColors.grey100,
-                  child: const Icon(TablerIcons.photo_off, color: AppColors.grey400),
+                  child: const Icon(TablerIcons.photo_off,
+                      color: AppColors.grey400),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(9),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 11),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(listing.title,
-                      style: AppTextStyles.titleSmall,
+                      style: AppTextStyles.titleSmall.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : AppColors.navy,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${NumberFormatter.formatPrice(listing.price)} ريال',
-                    style: AppTextStyles.price.copyWith(fontSize: 13),
-                  ),
+                  const SizedBox(height: 4),
+                  Text.rich(TextSpan(
+                    text: NumberFormatter.formatPrice(listing.price),
+                    style: AppTextStyles.price
+                        .copyWith(color: AppColors.primaryDark),
+                    children: [
+                      TextSpan(
+                        text: ' ريال',
+                        style: AppTextStyles.labelLarge.copyWith(
+                            color: AppColors.primaryDark,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  )),
                   if (listing.distanceKm != null) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 5),
                     Row(children: [
-                      const Icon(TablerIcons.map_pin,
-                          size: 10, color: AppColors.grey500),
-                      const SizedBox(width: 3),
-                      Text('${listing.distanceKm} كم بعيد',
-                          style: AppTextStyles.labelSmall),
+                      const Icon(TablerIcons.route,
+                          size: 12, color: AppColors.grey600),
+                      const SizedBox(width: 4),
+                      Text('يبعد ${listing.distanceKm} كم',
+                          style: AppTextStyles.labelLarge
+                              .copyWith(color: AppColors.grey600)),
                     ]),
                   ],
                 ],

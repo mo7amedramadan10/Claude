@@ -22,11 +22,11 @@ class HomeCategories extends StatelessWidget {
       color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Row(
           children: HomeMockData.categories.asMap().entries.map((e) {
             return Padding(
-              padding: const EdgeInsets.only(left: 4),
+              padding: const EdgeInsets.only(left: 6),
               child: _CategoryItem(
                 category: e.value,
                 isActive: e.key == selectedIndex,
@@ -55,31 +55,37 @@ class _CategoryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 48, height: 48,
-            decoration: BoxDecoration(
-              color: isActive ? AppColors.primary : AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        width: 58,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.primary : AppColors.primaryTint,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(
+                category.icon,
+                size: 23,
+                color: isActive ? Colors.white : AppColors.primary,
+              ),
             ),
-            child: Icon(
-              category.icon,
-              size: 22,
-              color: isActive ? Colors.white : AppColors.primary,
+            const SizedBox(height: 6),
+            Text(
+              category.label,
+              style: AppTextStyles.labelLarge.copyWith(
+                color: isActive ? AppColors.primaryDark : AppColors.grey700,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            category.label,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: isActive ? AppColors.primary : AppColors.grey700,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

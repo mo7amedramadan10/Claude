@@ -59,11 +59,6 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 _ListingsSection(
                   title: 'مقترحة لك',
-                  titleSuffix: const Icon(
-                    TablerIcons.sparkles,
-                    size: 14,
-                    color: AppColors.ai,
-                  ),
                   listings: state.suggestedListings,
                   onFavorite: notifier.toggleFavorite,
                   onTap: (id) => context.push(AppRoutes.productDetailsPath(id)),
@@ -111,13 +106,13 @@ class _ListingsSection extends StatelessWidget {
           ]),
           onViewAll: () {},
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 220,
+          height: 210,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: listings.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, __) => const SizedBox(width: 11),
             itemBuilder: (_, i) => ListingCard(
               listing: listings[i],
               onFavoriteTap: () => onFavorite(listings[i].id),
@@ -144,18 +139,18 @@ class _NearbySection extends StatelessWidget {
         SectionHeader(
           title: Row(mainAxisSize: MainAxisSize.min, children: [
             const Text('قريب منك'),
-            const SizedBox(width: 5),
-            const Icon(TablerIcons.map_2, size: 14, color: AppColors.primary),
+            const SizedBox(width: 6),
+            const Icon(TablerIcons.map_2, size: 16, color: AppColors.primary),
           ]),
           onViewAll: () {},
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 178,
+          height: 190,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: listings.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, __) => const SizedBox(width: 11),
             itemBuilder: (_, i) => HomeNearbyCard(
               listing: listings[i],
               onTap: () => onTap(listings[i].id),
@@ -180,19 +175,19 @@ class _SellersSection extends StatelessWidget {
         SectionHeader(
           title: Row(mainAxisSize: MainAxisSize.min, children: [
             const Text('البائعون الموثقون'),
-            const SizedBox(width: 5),
-            const Icon(TablerIcons.shield_check,
-                size: 14, color: AppColors.primary),
+            const SizedBox(width: 6),
+            const Icon(TablerIcons.rosette_discount_check,
+                size: 16, color: AppColors.primary),
           ]),
           onViewAll: () {},
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 168,
+          height: 160,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: sellers.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, __) => const SizedBox(width: 11),
             itemBuilder: (_, i) => HomeSellerCard(seller: sellers[i]),
           ),
         ),

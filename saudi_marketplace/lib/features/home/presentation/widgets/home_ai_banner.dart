@@ -14,35 +14,59 @@ class HomeAiBanner extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
             colors: [AppColors.navy, AppColors.navyLight],
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
         ),
-        child: Row(children: [
-          _AiOrb(),
-          const SizedBox(width: 12),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(TablerIcons.sparkles,
+                size: 24, color: AppColors.aiSparkle),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ماذا تبحث عنه اليوم؟',
-                    style: AppTextStyles.titleMedium.copyWith(color: Colors.white)),
-                const SizedBox(height: 3),
+                Text('ابحث بالذكاء الاصطناعي',
+                    style: AppTextStyles.titleLarge
+                        .copyWith(color: Colors.white)),
+                const SizedBox(height: 4),
                 Text(
-                  'صف ما تريد وسيساعدك الذكاء الاصطناعي في العثور على أفضل العروض.',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: const Color(0xFFA8C0D6),
-                    height: 1.4,
-                  ),
+                  'صِف ما تريد بكلماتك وسنجد لك أفضل العروض القريبة.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.navyMuted, height: 1.5),
                 ),
-                const SizedBox(height: 8),
-                _StartButton(),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(TablerIcons.wand,
+                        size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text('ابدأ البحث الذكي',
+                        style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700)),
+                  ]),
+                ),
               ],
             ),
           ),
@@ -50,34 +74,4 @@ class HomeAiBanner extends StatelessWidget {
       ),
     );
   }
-}
-
-class _AiOrb extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 44, height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.25),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(TablerIcons.sparkles, size: 22, color: AppColors.primary),
-      );
-}
-
-class _StartButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Text('✦', style: TextStyle(color: Colors.white, fontSize: 10)),
-          const SizedBox(width: 4),
-          Text('ابدأ البحث الذكي',
-              style: AppTextStyles.labelSmall
-                  .copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
-        ]),
-      );
 }
