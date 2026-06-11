@@ -18,11 +18,18 @@ const _conversationColumns = '''
   seller_unread_count, is_archived_by_buyer, is_archived_by_seller,
   created_at,
   buyer:public_profiles!buyer_id($_participantColumns),
-  seller:public_profiles!seller_id($_participantColumns)
+  seller:public_profiles!seller_id($_participantColumns),
+  listing:listings(
+    id, seller_id, category_id, city_id, title, description, price,
+    currency, is_price_hidden, condition, status, expires_at,
+    created_at, updated_at,
+    listing_images(id, listing_id, storage_path, is_primary, sort_order, created_at)
+  )
 ''';
 
 abstract class ChatRepository {
   Future<List<ConversationModel>> fetchConversations(String userId);
+  Future<ConversationModel> fetchConversationById(String id);
   Future<ConversationModel> fetchOrCreateConversation({
     required String listingId,
     required String buyerId,
@@ -61,6 +68,20 @@ class SupabaseChatRepository implements ChatRepository {
       return (data as List)
           .map((r) => ConversationModel.fromJson(r as Map<String, dynamic>))
           .toList();
+    } catch (e) {
+      throw mapException(e);
+    }
+  }
+
+  @override
+  Future<ConversationModel> fetchConversationById(String id) async {
+    try {
+      final data = await _db
+          .from('conversations')
+          .select(_conversationColumns)
+          .eq('id', id)
+          .single();
+      return ConversationModel.fromJson(data);
     } catch (e) {
       throw mapException(e);
     }

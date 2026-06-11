@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../auth/models/profile_model.dart';
+import '../../listings/models/listing_model.dart';
 
 part 'conversation_model.freezed.dart';
 part 'conversation_model.g.dart';
@@ -25,6 +26,7 @@ class ConversationModel with _$ConversationModel {
     // Joined fields
     ProfileModel? buyer,
     ProfileModel? seller,
+    ListingModel? listing,
   }) = _ConversationModel;
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) =>

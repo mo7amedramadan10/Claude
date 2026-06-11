@@ -48,10 +48,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(chatProvider(widget.chatId));
+    final header = state.header;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Auto-scroll whenever a message is added or typing state changes
     ref.listen(chatProvider(widget.chatId), (_, __) => _scrollToBottom());
+
+    if (state.isLoading) {
+      return Scaffold(
+        backgroundColor:
+            isDark ? AppColors.backgroundDark : AppColors.chatBackground,
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (state.errorMessage != null && state.messages.isEmpty) {
+      return Scaffold(
+        backgroundColor:
+            isDark ? AppColors.backgroundDark : AppColors.chatBackground,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          leading: BackButton(onPressed: () => context.pop()),
+        ),
+        body: Center(
+          child: Text(
+            state.errorMessage!,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.grey600),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor:
@@ -59,17 +89,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: SafeArea(
         child: Column(children: [
           ChatHeader(
-            sellerName: 'محمد العتيبي',
-            avatarUrl:
-                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&q=80',
+            sellerName: header.otherName,
+            avatarUrl: header.otherAvatarUrl,
             onBack: () => context.pop(),
           ),
           ChatListingBar(
-            title: 'BMW 530i موديل 2022',
-            price: '٨٢,٥٠٠',
-            imageUrl:
-                'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=160&q=80',
-            onTap: () => context.push(AppRoutes.productDetailsPath('1')),
+            title: header.listingTitle,
+            price: header.listingPrice,
+            imageUrl: header.listingImageUrl,
+            onTap: () => context
+                .push(AppRoutes.productDetailsPath(header.listingId)),
           ),
           Expanded(
             child: ListView.separated(

@@ -92,29 +92,41 @@ class ChatListScreen extends ConsumerWidget {
 
           // ─── List ───────────────────────────────────────────────
           Expanded(
-            child: conversations.isEmpty
-                ? _EmptyState()
-                : Container(
-                    color: isDark ? AppColors.backgroundDark : Colors.white,
-                    child: ListView.builder(
-                      itemCount: conversations.length,
-                      itemBuilder: (_, i) {
-                        final conv = conversations[i];
-                        return ConversationTile(
-                          conversation: conv,
-                          isLast: i == conversations.length - 1,
-                          onTap: () {
-                            ref
-                                .read(chatListProvider.notifier)
-                                .markRead(conv.id);
-                            context.push(
-                              AppRoutes.chatDetailPath(conv.id),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
+            child: state.isLoading && conversations.isEmpty
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(color: AppColors.primary),
+                  )
+                : conversations.isEmpty
+                    ? _EmptyState()
+                    : Container(
+                        color:
+                            isDark ? AppColors.backgroundDark : Colors.white,
+                        child: RefreshIndicator(
+                          onRefresh:
+                              ref.read(chatListProvider.notifier).refresh,
+                          child: ListView.builder(
+                            physics:
+                                const AlwaysScrollableScrollPhysics(),
+                            itemCount: conversations.length,
+                            itemBuilder: (_, i) {
+                              final conv = conversations[i];
+                              return ConversationTile(
+                                conversation: conv,
+                                isLast: i == conversations.length - 1,
+                                onTap: () {
+                                  ref
+                                      .read(chatListProvider.notifier)
+                                      .markRead(conv.id);
+                                  context.push(
+                                    AppRoutes.chatDetailPath(conv.id),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
           ),
         ]),
       ),

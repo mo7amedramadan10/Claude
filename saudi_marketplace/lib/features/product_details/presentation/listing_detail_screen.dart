@@ -81,7 +81,17 @@ class ListingDetailScreen extends ConsumerWidget {
         ),
       ),
       bottomNavigationBar: DetailBottomBar(
-        onChatTap: () => context.push(AppRoutes.chatDetailPath(detail.id)),
+        onChatTap: () async {
+          final chatId = await notifier.openConversation();
+          if (!context.mounted) return;
+          if (chatId == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('سجّل الدخول لبدء المحادثة')),
+            );
+            return;
+          }
+          context.push(AppRoutes.chatDetailPath(chatId));
+        },
       ),
     );
   }

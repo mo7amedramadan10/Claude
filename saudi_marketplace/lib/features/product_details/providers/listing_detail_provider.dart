@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/env.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../chat/data/chat_repository.dart';
 import '../../favorites/data/favorites_repository.dart';
 import '../../saved/providers/saved_provider.dart';
 import '../data/listing_detail_mock_data.dart';
@@ -77,6 +78,28 @@ class ListingDetailNotifier
 
   void selectImage(int index) =>
       state = state.copyWith(activeImageIndex: index);
+
+  /// يرجع معرّف المحادثة للانتقال إليها، أو null إذا تعذّر البدء
+  /// (زائر غير مسجل، أو المعلن نفسه)
+  Future<String?> openConversation() async {
+    if (!Env.isConfigured) return arg; // وضع تجريبي: نفس المعرّف
+
+    final myId = ref.read(currentUserIdProvider);
+    final sellerId = state.detail.seller.id;
+    if (myId == null || sellerId.isEmpty || sellerId == myId) return null;
+
+    try {
+      final conversation =
+          await ref.read(chatRepositoryProvider).fetchOrCreateConversation(
+                listingId: arg,
+                buyerId: myId,
+                sellerId: sellerId,
+              );
+      return conversation.id;
+    } catch (_) {
+      return null;
+    }
+  }
 
   void toggleFavorite() {
     final wasFavorite = state.isFavorite;

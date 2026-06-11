@@ -12,6 +12,18 @@ abstract final class RelativeTime {
     return 'منذ ${_unit(diff.inDays ~/ 365, 'سنة', 'سنتين', 'سنوات')}';
   }
 
+  /// صيغة قصيرة لقوائم المحادثات: «الآن»، «٥ د»، «٣ س»، «أمس»، «٤ ي»
+  static String short(DateTime time) {
+    final diff = DateTime.now().difference(time);
+
+    if (diff.inMinutes < 1) return 'الآن';
+    if (diff.inMinutes < 60) return '${_arabicDigits(diff.inMinutes)} د';
+    if (diff.inHours < 24) return '${_arabicDigits(diff.inHours)} س';
+    if (diff.inDays < 2) return 'أمس';
+    if (diff.inDays < 7) return '${_arabicDigits(diff.inDays)} ي';
+    return '${_arabicDigits(diff.inDays ~/ 7)} أ';
+  }
+
   static String _unit(int n, String one, String two, String plural) {
     if (n <= 1) return one;
     if (n == 2) return two;
