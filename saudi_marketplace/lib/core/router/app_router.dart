@@ -13,6 +13,9 @@ import '../../features/product_details/presentation/listing_detail_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/saved/presentation/saved_screen.dart';
 import '../../features/account/presentation/account_screen.dart';
+import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/providers/auth_provider.dart';
+import '../../features/auth/presentation/register_screen.dart';
 import '../../features/chat_list/presentation/chat_list_screen.dart';
 
 part 'app_router.g.dart';
@@ -26,20 +29,23 @@ final _profileKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
 @riverpod
 GoRouter appRouter(Ref ref) {
+  // جلسة محفوظة → الرئيسية مباشرة، وإلا شاشة الدخول (مع خيار الزائر)
+  final hasSession = ref.read(authProvider).isLoggedIn;
+
   return GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: AppRoutes.home,
+    initialLocation: hasSession ? AppRoutes.home : AppRoutes.login,
     debugLogDiagnostics: true,
 
     routes: [
       // ─── Auth routes (full-screen, outside shell) ─────────────────
       GoRoute(
         path: AppRoutes.login,
-        builder: (_, __) => const PlaceholderScreen(title: 'تسجيل الدخول'),
+        builder: (_, __) => const LoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.register,
-        builder: (_, __) => const PlaceholderScreen(title: 'إنشاء حساب'),
+        builder: (_, __) => const RegisterScreen(),
       ),
       GoRoute(
         path: AppRoutes.otpVerify,
