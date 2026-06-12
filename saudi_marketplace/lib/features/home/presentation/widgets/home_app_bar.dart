@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -100,9 +99,8 @@ class _BrandLockup extends StatelessWidget {
       const SizedBox(width: 9),
       Text(
         'بيكيا',
-        style: GoogleFonts.tajawal(
+        style: AppTextStyles.displayMedium.copyWith(
           fontSize: 24,
-          fontWeight: FontWeight.w700,
           color: isDark ? Colors.white : AppColors.navy,
           height: 1,
         ),

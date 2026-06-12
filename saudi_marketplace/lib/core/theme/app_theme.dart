@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
@@ -142,7 +141,7 @@ abstract final class AppTheme {
       ),
 
       // ─── Text ─────────────────────────────────────────────────────
-      textTheme: GoogleFonts.tajawalTextTheme().copyWith(
+      textTheme: const TextTheme().copyWith(
         displayLarge: AppTextStyles.displayLarge,
         displayMedium: AppTextStyles.displayMedium,
         headlineLarge: AppTextStyles.headlineLarge,
