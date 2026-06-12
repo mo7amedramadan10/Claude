@@ -45,6 +45,9 @@ abstract class MyListingsRepository {
 class MockMyListingsRepository implements MyListingsRepository {
   final _items = List<MyListingItem>.from(MyListingsMockData.items);
 
+  /// تُستخدم من شاشة «أضف إعلاناً» في الوضع التجريبي
+  void addItem(MyListingItem item) => _items.insert(0, item);
+
   @override
   Future<List<MyListingItem>> fetchMyListings(String userId) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));

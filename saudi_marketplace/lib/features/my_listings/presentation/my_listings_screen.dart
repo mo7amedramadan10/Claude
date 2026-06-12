@@ -251,7 +251,7 @@ class _EmptyState extends StatelessWidget {
           'إعلاناتك النشطة ستظهر هنا'
         ),
       ListingStatusFilter.sold => (
-          TablerIcons.check_circle,
+          TablerIcons.circle_check,
           'لا يوجد مبيعات بعد',
           'الإعلانات المكتملة ستظهر هنا'
         ),
