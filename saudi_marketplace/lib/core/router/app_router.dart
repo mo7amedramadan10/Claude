@@ -15,6 +15,7 @@ import '../../features/saved/presentation/saved_screen.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/my_listings/presentation/my_listings_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/chat_list/presentation/chat_list_screen.dart';
 
@@ -120,6 +121,10 @@ GoRouter appRouter(Ref ref) {
         builder: (_, state) => ChatScreen(
           chatId: state.pathParameters['id']!,
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.myListings,
+        builder: (_, __) => const MyListingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.notifications,

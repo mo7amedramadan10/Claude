@@ -28,6 +28,9 @@ abstract final class AppRoutes {
   static const chatDetail = '/chat/:id';
   static String chatDetailPath(String id) => '/chat/$id';
 
+  // ─── My Listings ─────────────────────────────────────────────────
+  static const myListings = '/my-listings';
+
   // ─── Notifications ───────────────────────────────────────────────
   static const notifications = '/notifications';
 }

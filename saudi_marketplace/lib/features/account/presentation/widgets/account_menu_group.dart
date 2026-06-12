@@ -7,9 +7,14 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../models/account_menu_item.dart';
 
 class AccountMenuGroupCard extends StatelessWidget {
-  const AccountMenuGroupCard({super.key, required this.group});
+  const AccountMenuGroupCard({
+    super.key,
+    required this.group,
+    this.onDangerTap,
+  });
 
   final AccountMenuGroup group;
+  final VoidCallback? onDangerTap;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +49,7 @@ class AccountMenuGroupCard extends StatelessWidget {
                 _MenuRow(
                   item: group.items[i],
                   isLast: i == group.items.length - 1,
+                  onDangerTap: group.items[i].isDanger ? onDangerTap : null,
                 ),
             ],
           ),
@@ -55,10 +61,15 @@ class AccountMenuGroupCard extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.item, required this.isLast});
+  const _MenuRow({
+    required this.item,
+    required this.isLast,
+    this.onDangerTap,
+  });
 
   final AccountMenuItem item;
   final bool isLast;
+  final VoidCallback? onDangerTap;
 
   // Icon tile tint palettes (background, foreground)
   static const _tints = {
@@ -74,11 +85,13 @@ class _MenuRow extends StatelessWidget {
     final (tileBg, tileFg) = _tints[item.tint]!;
 
     return InkWell(
-      onTap: item.route == null
-          ? () {}
-          : item.isTabRoute
-              ? () => context.go(item.route!)
-              : () => context.push(item.route!),
+      onTap: item.isDanger && item.route == null
+          ? onDangerTap
+          : item.route == null
+              ? null
+              : item.isTabRoute
+                  ? () => context.go(item.route!)
+                  : () => context.push(item.route!),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

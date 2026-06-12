@@ -23,7 +23,7 @@ abstract final class AccountMockData {
           icon: TablerIcons.clipboard_text,
           label: 'إعلاناتي',
           value: '١٢',
-          route: AppRoutes.search,
+          route: AppRoutes.myListings,
         ),
         AccountMenuItem(icon: TablerIcons.receipt_2, label: 'صفقاتي'),
         AccountMenuItem(
