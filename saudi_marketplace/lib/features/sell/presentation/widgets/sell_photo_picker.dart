@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,19 +8,26 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../models/sell_models.dart';
 import '../../providers/sell_provider.dart';
 
 class SellPhotoPicker extends StatelessWidget {
   const SellPhotoPicker({
     super.key,
-    required this.images,
+    required this.existingImages,
+    required this.newImages,
     required this.onAdd,
-    required this.onRemove,
+    required this.onRemoveExisting,
+    required this.onRemoveNew,
   });
 
-  final List<XFile> images;
+  final List<ExistingImage> existingImages;
+  final List<XFile> newImages;
   final void Function(List<XFile>) onAdd;
-  final void Function(int) onRemove;
+  final void Function(int) onRemoveExisting;
+  final void Function(int) onRemoveNew;
+
+  int get _total => existingImages.length + newImages.length;
 
   Future<void> _pick() async {
     final picked = await ImagePicker().pickMultiImage(
@@ -38,7 +46,7 @@ class SellPhotoPicker extends StatelessWidget {
                 .copyWith(color: AppColors.grey700, fontSize: 13.5)),
         const SizedBox(width: 6),
         Text(
-          '(${NumberFormatter.toArabicDigits(images.length)}/'
+          '(${NumberFormatter.toArabicDigits(_total)}/'
           '${NumberFormatter.toArabicDigits(maxListingImages)})',
           style: AppTextStyles.labelLarge
               .copyWith(fontSize: 11.5, color: AppColors.grey400),
@@ -50,14 +58,23 @@ class SellPhotoPicker extends StatelessWidget {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            if (images.length < maxListingImages)
-              _AddTile(onTap: _pick),
-            for (var i = 0; i < images.length; i++) ...[
+            if (_total < maxListingImages) _AddTile(onTap: _pick),
+            // ── صور موجودة مسبقاً ──────────────────────────────────
+            for (var i = 0; i < existingImages.length; i++) ...[
               const SizedBox(width: 10),
-              _PhotoTile(
-                file: images[i],
-                isPrimary: i == 0,
-                onRemove: () => onRemove(i),
+              _NetworkTile(
+                url: existingImages[i].publicUrl,
+                isPrimary: i == 0 && newImages.isEmpty,
+                onRemove: () => onRemoveExisting(i),
+              ),
+            ],
+            // ── صور جديدة من الجهاز ────────────────────────────────
+            for (var i = 0; i < newImages.length; i++) ...[
+              const SizedBox(width: 10),
+              _LocalTile(
+                file: newImages[i],
+                isPrimary: existingImages.isEmpty && i == 0,
+                onRemove: () => onRemoveNew(i),
               ),
             ],
           ],
@@ -73,6 +90,7 @@ class SellPhotoPicker extends StatelessWidget {
   }
 }
 
+// ── Add tile ──────────────────────────────────────────────────────────────
 class _AddTile extends StatelessWidget {
   const _AddTile({required this.onTap});
   final VoidCallback onTap;
@@ -104,14 +122,15 @@ class _AddTile extends StatelessWidget {
   }
 }
 
-class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({
-    required this.file,
+// ── Shared tile scaffold ──────────────────────────────────────────────────
+class _TileScaffold extends StatelessWidget {
+  const _TileScaffold({
+    required this.child,
     required this.isPrimary,
     required this.onRemove,
   });
 
-  final XFile file;
+  final Widget child;
   final bool isPrimary;
   final VoidCallback onRemove;
 
@@ -120,21 +139,8 @@ class _PhotoTile extends StatelessWidget {
     return Stack(children: [
       ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.file(
-          File(file.path),
-          width: 96,
-          height: 96,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            width: 96,
-            height: 96,
-            color: AppColors.grey50,
-            child: const Icon(TablerIcons.photo,
-                size: 28, color: AppColors.grey400),
-          ),
-        ),
+        child: child,
       ),
-      // زر الحذف
       PositionedDirectional(
         top: 5,
         start: 5,
@@ -151,7 +157,6 @@ class _PhotoTile extends StatelessWidget {
           ),
         ),
       ),
-      // شارة «رئيسية»
       if (isPrimary)
         PositionedDirectional(
           bottom: 5,
@@ -169,5 +174,73 @@ class _PhotoTile extends StatelessWidget {
           ),
         ),
     ]);
+  }
+}
+
+class _NetworkTile extends StatelessWidget {
+  const _NetworkTile({
+    required this.url,
+    required this.isPrimary,
+    required this.onRemove,
+  });
+
+  final String url;
+  final bool isPrimary;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TileScaffold(
+      isPrimary: isPrimary,
+      onRemove: onRemove,
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        placeholder: (_, __) =>
+            Container(width: 96, height: 96, color: AppColors.grey50),
+        errorWidget: (_, __, ___) => Container(
+          width: 96,
+          height: 96,
+          color: AppColors.grey50,
+          child: const Icon(TablerIcons.photo,
+              size: 30, color: AppColors.grey400),
+        ),
+      ),
+    );
+  }
+}
+
+class _LocalTile extends StatelessWidget {
+  const _LocalTile({
+    required this.file,
+    required this.isPrimary,
+    required this.onRemove,
+  });
+
+  final XFile file;
+  final bool isPrimary;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TileScaffold(
+      isPrimary: isPrimary,
+      onRemove: onRemove,
+      child: Image.file(
+        File(file.path),
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 96,
+          height: 96,
+          color: AppColors.grey50,
+          child: const Icon(TablerIcons.photo,
+              size: 30, color: AppColors.grey400),
+        ),
+      ),
+    );
   }
 }

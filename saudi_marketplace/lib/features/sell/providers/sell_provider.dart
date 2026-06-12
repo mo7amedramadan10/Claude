@@ -14,46 +14,75 @@ const maxListingImages = 10;
 
 class SellState {
   const SellState({
-    this.images = const [],
     this.categories = const [],
     this.cities = const [],
     this.selectedCategory,
     this.selectedCity,
     this.condition = 'good',
     this.isNegotiable = true,
+    this.existingImages = const [],
+    this.newImages = const [],
+    this.editingListingId,
+    this.editableData,
+    this.isLoadingEdit = false,
     this.isSubmitting = false,
     this.errorMessage,
   });
 
-  final List<XFile> images;
   final List<LookupOption> categories;
   final List<LookupOption> cities;
   final LookupOption? selectedCategory;
   final LookupOption? selectedCity;
   final String condition;
   final bool isNegotiable;
+
+  /// صور محفوظة في الـ storage (وضع التعديل)
+  final List<ExistingImage> existingImages;
+
+  /// صور جديدة اختارها المستخدم من الجهاز
+  final List<XFile> newImages;
+
+  /// إذا غير null → وضع التعديل
+  final String? editingListingId;
+
+  /// بيانات الإعلان المُحمَّلة للتعديل (تُستخدم مرة واحدة لملء الحقول)
+  final EditableListingData? editableData;
+
+  final bool isLoadingEdit;
   final bool isSubmitting;
   final String? errorMessage;
 
+  bool get isEditMode => editingListingId != null;
+
+  int get totalImages => existingImages.length + newImages.length;
+
   SellState copyWith({
-    List<XFile>? images,
     List<LookupOption>? categories,
     List<LookupOption>? cities,
     LookupOption? selectedCategory,
     LookupOption? selectedCity,
     String? condition,
     bool? isNegotiable,
+    List<ExistingImage>? existingImages,
+    List<XFile>? newImages,
+    String? editingListingId,
+    EditableListingData? editableData,
+    bool? isLoadingEdit,
     bool? isSubmitting,
     String? errorMessage,
   }) =>
       SellState(
-        images: images ?? this.images,
         categories: categories ?? this.categories,
         cities: cities ?? this.cities,
         selectedCategory: selectedCategory ?? this.selectedCategory,
         selectedCity: selectedCity ?? this.selectedCity,
         condition: condition ?? this.condition,
         isNegotiable: isNegotiable ?? this.isNegotiable,
+        existingImages: existingImages ?? this.existingImages,
+        newImages: newImages ?? this.newImages,
+        editingListingId: editingListingId ?? this.editingListingId,
+        editableData: editableData ?? this.editableData,
+        isLoadingEdit: isLoadingEdit ?? this.isLoadingEdit,
         isSubmitting: isSubmitting ?? this.isSubmitting,
         errorMessage: errorMessage,
       );
@@ -81,22 +110,72 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
     }
   }
 
+  /// يُستدعى عند فتح النموذج في وضع التعديل
+  Future<void> initEdit(String listingId) async {
+    state = state.copyWith(
+        editingListingId: listingId, isLoadingEdit: true);
+    try {
+      final data = await ref
+          .read(sellRepositoryProvider)
+          .fetchListingForEdit(listingId);
+      if (_disposed) return;
+
+      // مطابقة الفئة والمدينة بعد تحميل القوائم
+      final matchedCategory = state.categories.isEmpty
+          ? null
+          : state.categories.firstWhere((c) => c.id == data.categoryId,
+              orElse: () => state.categories.first);
+      final matchedCity = state.cities.isEmpty
+          ? null
+          : state.cities.firstWhere((c) => c.id == data.cityId,
+              orElse: () => state.cities.first);
+
+      state = state.copyWith(
+        editableData: data,
+        existingImages: data.existingImages,
+        condition: data.condition,
+        isNegotiable: data.isNegotiable,
+        selectedCategory: matchedCategory,
+        selectedCity: matchedCity,
+        isLoadingEdit: false,
+      );
+    } catch (e) {
+      if (!_disposed) {
+        state = state.copyWith(
+            isLoadingEdit: false, errorMessage: e.toString());
+      }
+    }
+  }
+
+  // ── Image management ─────────────────────────────────────────────────────
+
   void addImages(List<XFile> picked) {
-    final remaining = maxListingImages - state.images.length;
+    final remaining = maxListingImages - state.totalImages;
     if (remaining <= 0) return;
     state = state.copyWith(
-      images: [...state.images, ...picked.take(remaining)],
+      newImages: [...state.newImages, ...picked.take(remaining)],
     );
   }
 
-  void removeImage(int index) {
+  void removeExistingImage(int index) {
     state = state.copyWith(
-      images: [
-        for (var i = 0; i < state.images.length; i++)
-          if (i != index) state.images[i],
+      existingImages: [
+        for (var i = 0; i < state.existingImages.length; i++)
+          if (i != index) state.existingImages[i],
       ],
     );
   }
+
+  void removeNewImage(int index) {
+    state = state.copyWith(
+      newImages: [
+        for (var i = 0; i < state.newImages.length; i++)
+          if (i != index) state.newImages[i],
+      ],
+    );
+  }
+
+  // ── Form fields ──────────────────────────────────────────────────────────
 
   void selectCategory(LookupOption option) =>
       state = state.copyWith(selectedCategory: option);
@@ -104,13 +183,14 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
   void selectCity(LookupOption option) =>
       state = state.copyWith(selectedCity: option);
 
-  void setCondition(String value) =>
-      state = state.copyWith(condition: value);
+  void setCondition(String value) => state = state.copyWith(condition: value);
 
   void toggleNegotiable(bool value) =>
       state = state.copyWith(isNegotiable: value);
 
-  /// يرجع معرّف الإعلان الجديد عند النجاح، أو null عند الفشل
+  // ── Submit ───────────────────────────────────────────────────────────────
+
+  /// يرجع معرّف الإعلان عند النجاح، أو null عند الفشل
   Future<String?> submit({
     required String title,
     required String description,
@@ -130,6 +210,7 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
     }
 
     state = state.copyWith(isSubmitting: true);
+
     final draft = SellDraft(
       title: title.trim(),
       description: description.trim(),
@@ -138,19 +219,33 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
       condition: state.condition,
       categoryId: category.id,
       cityId: city.id,
-      neighborhood: neighborhood?.trim().isEmpty ?? true
-          ? null
-          : neighborhood!.trim(),
-      images: state.images,
+      neighborhood:
+          (neighborhood?.trim().isEmpty ?? true) ? null : neighborhood!.trim(),
+      newImages: state.newImages,
     );
 
     try {
-      final listingId = await ref
-          .read(sellRepositoryProvider)
-          .submit(draft: draft, userId: userId);
-      _appendToMockMyListings(listingId, draft);
-      ref.invalidate(myListingsProvider);
-      return listingId;
+      final repo = ref.read(sellRepositoryProvider);
+
+      if (state.isEditMode) {
+        // ── وضع التعديل ─────────────────────────────────────────────
+        await repo.updateListing(
+          listingId: state.editingListingId!,
+          draft: draft,
+          keptImages: state.existingImages,
+          userId: userId,
+        );
+        _updateMockItem(state.editingListingId!, draft);
+        ref.invalidate(myListingsProvider);
+        return state.editingListingId;
+      } else {
+        // ── إعلان جديد ──────────────────────────────────────────────
+        final listingId =
+            await repo.submit(draft: draft, userId: userId);
+        _appendToMockMyListings(listingId, draft);
+        ref.invalidate(myListingsProvider);
+        return listingId;
+      }
     } on AppException catch (e) {
       if (!_disposed) {
         state = state.copyWith(isSubmitting: false, errorMessage: e.message);
@@ -159,13 +254,12 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
     } catch (_) {
       if (!_disposed) {
         state = state.copyWith(
-            isSubmitting: false, errorMessage: 'تعذّر نشر الإعلان');
+            isSubmitting: false, errorMessage: 'حدث خطأ، حاول مجدداً');
       }
       return null;
     }
   }
 
-  /// في الوضع التجريبي: يُضاف الإعلان لقائمة «إعلاناتي» مباشرة
   void _appendToMockMyListings(String listingId, SellDraft draft) {
     if (Env.isConfigured) return;
     final repo = ref.read(myListingsRepositoryProvider);
@@ -180,6 +274,26 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
       favoritesCount: 0,
       createdAt: DateTime.now(),
     ));
+  }
+
+  void _updateMockItem(String listingId, SellDraft draft) {
+    if (Env.isConfigured) return;
+    final repo = ref.read(myListingsRepositoryProvider);
+    if (repo is! MockMyListingsRepository) return;
+    repo.updateItem(listingId,
+        (item) => MyListingItem(
+              id: item.id,
+              title: draft.title,
+              price: draft.price,
+              status: item.status,
+              imageUrl: state.existingImages.isNotEmpty
+                  ? state.existingImages.first.publicUrl
+                  : item.imageUrl,
+              viewsCount: item.viewsCount,
+              favoritesCount: item.favoritesCount,
+              createdAt: item.createdAt,
+              isVerified: item.isVerified,
+            ));
   }
 }
 

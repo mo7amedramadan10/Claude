@@ -111,7 +111,9 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.sellItem,
-        builder: (_, __) => const SellScreen(),
+        // extra = listingId (String) عند فتح النموذج بوضع التعديل
+        builder: (_, state) =>
+            SellScreen(editingId: state.extra as String?),
       ),
       GoRoute(
         path: AppRoutes.chatList,

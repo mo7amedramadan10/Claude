@@ -20,7 +20,47 @@ abstract final class ListingCondition {
   };
 }
 
-/// مسودة الإعلان الجاهزة للإرسال
+/// صورة محفوظة مسبقاً في التخزين (وضع التعديل)
+class ExistingImage {
+  const ExistingImage({
+    required this.id,
+    required this.storagePath,
+    required this.publicUrl,
+  });
+
+  final String id;
+  final String storagePath;
+  final String publicUrl;
+}
+
+/// بيانات إعلان موجود جاهزة للتعديل
+class EditableListingData {
+  const EditableListingData({
+    required this.id,
+    required this.title,
+    required this.description,
+    this.price,
+    required this.isNegotiable,
+    required this.condition,
+    required this.categoryId,
+    required this.cityId,
+    this.neighborhood,
+    required this.existingImages,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final double? price;
+  final bool isNegotiable;
+  final String condition;
+  final String categoryId;
+  final String cityId;
+  final String? neighborhood;
+  final List<ExistingImage> existingImages;
+}
+
+/// مسودة الإعلان (نشر جديد أو حفظ تعديل)
 class SellDraft {
   const SellDraft({
     required this.title,
@@ -31,7 +71,7 @@ class SellDraft {
     required this.categoryId,
     required this.cityId,
     this.neighborhood,
-    required this.images,
+    required this.newImages,
   });
 
   final String title;
@@ -42,5 +82,5 @@ class SellDraft {
   final String categoryId;
   final String cityId;
   final String? neighborhood;
-  final List<XFile> images;
+  final List<XFile> newImages; // صور جديدة لم تُرفَع بعد
 }

@@ -222,7 +222,10 @@ class _Body extends ConsumerWidget {
                 final item = items[i];
                 return MyListingCard(
                   item: item,
-                  onEdit: () => ctx.push(AppRoutes.sellItem),
+                  onEdit: () => ctx.push(
+                    AppRoutes.sellItem,
+                    extra: item.id,
+                  ),
                   onMarkAsSold: () => notifier.markAsSold(item.id),
                   onDelete: () => notifier.deleteItem(item.id),
                 );

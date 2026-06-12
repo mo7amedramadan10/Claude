@@ -11,7 +11,10 @@ import 'widgets/sell_photo_picker.dart';
 import 'widgets/sell_pickers.dart';
 
 class SellScreen extends ConsumerStatefulWidget {
-  const SellScreen({super.key});
+  const SellScreen({super.key, this.editingId});
+
+  /// إذا غير null → وضع التعديل
+  final String? editingId;
 
   @override
   ConsumerState<SellScreen> createState() => _SellScreenState();
@@ -24,6 +27,18 @@ class _SellScreenState extends ConsumerState<SellScreen> {
   final _neighborhoodController = TextEditingController();
   final _descriptionController = TextEditingController();
 
+  bool _controllersLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.editingId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(sellProvider.notifier).initEdit(widget.editingId!);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -33,7 +48,6 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     super.dispose();
   }
 
-  /// يحوّل الأرقام العربية الشرقية لغربية ثم يحلّل السعر
   double? _parsePrice(String raw) {
     var s = raw.trim().replaceAll(',', '');
     const eastern = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -63,8 +77,12 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         );
 
     if (listingId != null && mounted) {
+      final isEdit = ref.read(sellProvider).isEditMode;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم نشر إعلانك بنجاح 🎉')),
+        SnackBar(
+            content: Text(isEdit
+                ? 'تم حفظ التعديلات بنجاح ✅'
+                : 'تم نشر إعلانك بنجاح 🎉')),
       );
       context.pushReplacement(AppRoutes.myListings);
     }
@@ -75,6 +93,22 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     final state = ref.watch(sellProvider);
     final notifier = ref.read(sellProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEditMode = state.isEditMode;
+
+    // ملء الحقول النصية عند وصول بيانات الإعلان (مرة واحدة فقط)
+    ref.listen(
+      sellProvider.select((s) => s.editableData),
+      (_, data) {
+        if (data != null && !_controllersLoaded) {
+          _controllersLoaded = true;
+          _titleController.text = data.title;
+          _descriptionController.text = data.description;
+          _priceController.text =
+              data.price != null ? data.price!.toStringAsFixed(0) : '';
+          _neighborhoodController.text = data.neighborhood ?? '';
+        }
+      },
+    );
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
@@ -85,146 +119,127 @@ class _SellScreenState extends ConsumerState<SellScreen> {
           color: isDark ? Colors.white : AppColors.navy,
           onPressed: () => context.pop(),
         ),
-        title: Text('أضف إعلاناً',
-            style: AppTextStyles.headlineLarge.copyWith(
-                fontSize: 17,
-                color: isDark ? Colors.white : AppColors.navy)),
+        title: Text(
+          isEditMode ? 'تعديل الإعلان' : 'أضف إعلاناً',
+          style: AppTextStyles.headlineLarge.copyWith(
+              fontSize: 17,
+              color: isDark ? Colors.white : AppColors.navy),
+        ),
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-            children: [
-              SellPhotoPicker(
-                images: state.images,
-                onAdd: notifier.addImages,
-                onRemove: notifier.removeImage,
-              ),
-              const SizedBox(height: 20),
-              _SellField(
-                controller: _titleController,
-                label: 'عنوان الإعلان',
-                hint: 'مثال: آيفون 15 برو ماكس 256GB',
-                icon: TablerIcons.text_caption,
-                validator: (v) {
-                  final value = v?.trim() ?? '';
-                  if (value.isEmpty) return 'أدخل عنوان الإعلان';
-                  if (value.length < 4) return 'العنوان قصير جداً';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              SellLookupField(
-                label: 'الفئة',
-                placeholder: 'اختر فئة الإعلان',
-                icon: TablerIcons.category,
-                options: state.categories,
-                selected: state.selectedCategory,
-                onSelect: notifier.selectCategory,
-              ),
-              const SizedBox(height: 16),
-              SellLookupField(
-                label: 'المدينة',
-                placeholder: 'اختر المدينة',
-                icon: TablerIcons.map_pin,
-                options: state.cities,
-                selected: state.selectedCity,
-                onSelect: notifier.selectCity,
-              ),
-              const SizedBox(height: 16),
-              _SellField(
-                controller: _neighborhoodController,
-                label: 'الحي (اختياري)',
-                hint: 'مثال: حي الملقا',
-                icon: TablerIcons.building_community,
-              ),
-              const SizedBox(height: 18),
-              ConditionChips(
-                selected: state.condition,
-                onSelect: notifier.setCondition,
-              ),
-              const SizedBox(height: 18),
-              _SellField(
-                controller: _priceController,
-                label: 'السعر بالريال (اتركه فارغاً إذا مجاني)',
-                hint: 'مثال: 4200',
-                icon: TablerIcons.currency_riyal,
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  final value = v?.trim() ?? '';
-                  if (value.isEmpty) return null;
-                  if (_parsePrice(value) == null) return 'أدخل سعراً صحيحاً';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              _NegotiableSwitch(
-                value: state.isNegotiable,
-                onChanged: notifier.toggleNegotiable,
-              ),
-              const SizedBox(height: 18),
-              _SellField(
-                controller: _descriptionController,
-                label: 'الوصف',
-                hint: 'اشرح تفاصيل المنتج، حالته، وسبب البيع...',
-                icon: TablerIcons.align_right,
-                maxLines: 5,
-                validator: (v) {
-                  final value = v?.trim() ?? '';
-                  if (value.isEmpty) return 'أدخل وصف الإعلان';
-                  if (value.length < 10) return 'الوصف قصير جداً';
-                  return null;
-                },
-              ),
-              if (state.errorMessage != null) ...[
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 13, vertical: 11),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: AppColors.error.withValues(alpha: 0.25)),
-                  ),
-                  child: Text(state.errorMessage!,
-                      style: AppTextStyles.bodyMedium
-                          .copyWith(color: AppColors.error)),
-                ),
-              ],
-              const SizedBox(height: 22),
-              SizedBox(
-                height: 52,
-                child: FilledButton(
-                  onPressed: state.isSubmitting ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    disabledBackgroundColor:
-                        AppColors.primary.withValues(alpha: 0.6),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: state.isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2.5, color: Colors.white),
-                        )
-                      : Text('نشر الإعلان',
-                          style: AppTextStyles.headlineMedium.copyWith(
-                              color: Colors.white, fontSize: 15.5)),
+        child: state.isLoadingEdit
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary))
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                  children: [
+                    SellPhotoPicker(
+                      existingImages: state.existingImages,
+                      newImages: state.newImages,
+                      onAdd: notifier.addImages,
+                      onRemoveExisting: notifier.removeExistingImage,
+                      onRemoveNew: notifier.removeNewImage,
+                    ),
+                    const SizedBox(height: 20),
+                    _SellField(
+                      controller: _titleController,
+                      label: 'عنوان الإعلان',
+                      hint: 'مثال: آيفون 15 برو ماكس 256GB',
+                      icon: TablerIcons.text_caption,
+                      validator: (v) {
+                        final value = v?.trim() ?? '';
+                        if (value.isEmpty) return 'أدخل عنوان الإعلان';
+                        if (value.length < 4) return 'العنوان قصير جداً';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    SellLookupField(
+                      label: 'الفئة',
+                      placeholder: 'اختر فئة الإعلان',
+                      icon: TablerIcons.category,
+                      options: state.categories,
+                      selected: state.selectedCategory,
+                      onSelect: notifier.selectCategory,
+                    ),
+                    const SizedBox(height: 16),
+                    SellLookupField(
+                      label: 'المدينة',
+                      placeholder: 'اختر المدينة',
+                      icon: TablerIcons.map_pin,
+                      options: state.cities,
+                      selected: state.selectedCity,
+                      onSelect: notifier.selectCity,
+                    ),
+                    const SizedBox(height: 16),
+                    _SellField(
+                      controller: _neighborhoodController,
+                      label: 'الحي (اختياري)',
+                      hint: 'مثال: حي الملقا',
+                      icon: TablerIcons.building_community,
+                    ),
+                    const SizedBox(height: 18),
+                    ConditionChips(
+                      selected: state.condition,
+                      onSelect: notifier.setCondition,
+                    ),
+                    const SizedBox(height: 18),
+                    _SellField(
+                      controller: _priceController,
+                      label: 'السعر بالريال (اتركه فارغاً إذا مجاني)',
+                      hint: 'مثال: 4200',
+                      icon: TablerIcons.currency_riyal,
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        final value = v?.trim() ?? '';
+                        if (value.isEmpty) return null;
+                        if (_parsePrice(value) == null) {
+                          return 'أدخل سعراً صحيحاً';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _NegotiableSwitch(
+                      value: state.isNegotiable,
+                      onChanged: notifier.toggleNegotiable,
+                    ),
+                    const SizedBox(height: 18),
+                    _SellField(
+                      controller: _descriptionController,
+                      label: 'الوصف',
+                      hint: 'اشرح تفاصيل المنتج، حالته، وسبب البيع...',
+                      icon: TablerIcons.align_right,
+                      maxLines: 5,
+                      validator: (v) {
+                        final value = v?.trim() ?? '';
+                        if (value.isEmpty) return 'أدخل وصف الإعلان';
+                        if (value.length < 10) return 'الوصف قصير جداً';
+                        return null;
+                      },
+                    ),
+                    if (state.errorMessage != null) ...[
+                      const SizedBox(height: 14),
+                      _ErrorBanner(message: state.errorMessage!),
+                    ],
+                    const SizedBox(height: 22),
+                    _SubmitButton(
+                      isSubmitting: state.isSubmitting,
+                      isEditMode: isEditMode,
+                      onPressed: _submit,
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
+
+// ── Shared widgets ────────────────────────────────────────────────────────
 
 class _SellField extends StatelessWidget {
   const _SellField({
@@ -317,6 +332,76 @@ class _NegotiableSwitch extends StatelessWidget {
           activeColor: AppColors.primary,
         ),
       ]),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border:
+            Border.all(color: AppColors.error.withValues(alpha: 0.25)),
+      ),
+      child: Row(children: [
+        const Icon(TablerIcons.alert_circle,
+            size: 18, color: AppColors.error),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(message,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.error)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _SubmitButton extends StatelessWidget {
+  const _SubmitButton({
+    required this.isSubmitting,
+    required this.isEditMode,
+    required this.onPressed,
+  });
+
+  final bool isSubmitting;
+  final bool isEditMode;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: FilledButton(
+        onPressed: isSubmitting ? null : onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          disabledBackgroundColor:
+              AppColors.primary.withValues(alpha: 0.6),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14)),
+        ),
+        child: isSubmitting
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: Colors.white),
+              )
+            : Text(
+                isEditMode ? 'حفظ التعديلات' : 'نشر الإعلان',
+                style: AppTextStyles.headlineMedium
+                    .copyWith(color: Colors.white, fontSize: 15.5),
+              ),
+      ),
     );
   }
 }

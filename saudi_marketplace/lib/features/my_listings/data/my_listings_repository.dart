@@ -48,6 +48,12 @@ class MockMyListingsRepository implements MyListingsRepository {
   /// تُستخدم من شاشة «أضف إعلاناً» في الوضع التجريبي
   void addItem(MyListingItem item) => _items.insert(0, item);
 
+  /// تُستخدم من شاشة «تعديل الإعلان» في الوضع التجريبي
+  void updateItem(String id, MyListingItem Function(MyListingItem) updater) {
+    final index = _items.indexWhere((i) => i.id == id);
+    if (index != -1) _items[index] = updater(_items[index]);
+  }
+
   @override
   Future<List<MyListingItem>> fetchMyListings(String userId) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
