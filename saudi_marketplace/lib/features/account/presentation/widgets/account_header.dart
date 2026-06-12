@@ -1,16 +1,20 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../data/account_mock_data.dart';
+import '../../../auth/providers/auth_provider.dart';
 
-class AccountHeader extends StatelessWidget {
+class AccountHeader extends ConsumerWidget {
   const AccountHeader({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
+    final name = user?.nameOrUsername ?? 'مستخدم بيكيا';
+    final username = user?.username ?? '';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 46),
@@ -52,24 +56,27 @@ class AccountHeader extends StatelessWidget {
           // ─── Profile row ──────────────────────────────────────
           Row(
             children: [
+              // Avatar placeholder (initial letter)
               Container(
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(0.25),
                   border: Border.all(
                     color: AppColors.aiSparkle.withOpacity(0.6),
                     width: 3,
                   ),
                 ),
-                clipBehavior: Clip.hardEdge,
-                child: CachedNetworkImage(
-                  imageUrl: AccountMockData.avatarUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) =>
-                      Container(color: AppColors.navyLight),
-                  errorWidget: (_, __, ___) =>
-                      Container(color: AppColors.navyLight),
+                child: Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'ب',
+                    style: AppTextStyles.headlineLarge.copyWith(
+                      fontSize: 28,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -78,21 +85,31 @@ class AccountHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AccountMockData.userName,
+                      name,
                       style: AppTextStyles.headlineLarge.copyWith(
                         fontSize: 19,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    if (username.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '@$username',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          fontSize: 12,
+                          color: const Color(0xFFA8C0D6),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.aiSparkle.withOpacity(0.18),
+                        color: Colors.white.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: AppColors.aiSparkle.withOpacity(0.35),
+                          color: Colors.white.withOpacity(0.2),
                           width: 1,
                         ),
                       ),
@@ -100,28 +117,20 @@ class AccountHeader extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
-                            TablerIcons.rosette_discount_check_filled,
-                            size: 14,
-                            color: AppColors.aiSparkle,
+                            TablerIcons.user_check,
+                            size: 13,
+                            color: Colors.white70,
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            'موثّق عبر نفاذ وطني',
+                            'عضو جديد',
                             style: AppTextStyles.labelLarge.copyWith(
                               fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.aiSparkle,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white70,
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      AccountMockData.memberSince,
-                      style: AppTextStyles.labelLarge.copyWith(
-                        fontSize: 12,
-                        color: const Color(0xFFA8C0D6),
                       ),
                     ),
                   ],

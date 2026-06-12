@@ -3,16 +3,20 @@ import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../data/account_mock_data.dart';
 import '../../models/account_menu_item.dart';
 
 class AccountStatsCard extends StatelessWidget {
   const AccountStatsCard({super.key});
 
+  static const _stats = [
+    AccountStat(value: '٠', label: 'إعلاناتي'),
+    AccountStat(value: '٠', label: 'صفقة مكتملة'),
+    AccountStat(value: '—', label: 'تقييمي', showStar: true),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final stats = AccountMockData.stats;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -35,11 +39,12 @@ class AccountStatsCard extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            for (var i = 0; i < stats.length; i++) ...[
+            for (var i = 0; i < _stats.length; i++) ...[
               if (i > 0)
                 const VerticalDivider(
                     width: 1, thickness: 1, color: AppColors.grey300),
-              Expanded(child: _StatColumn(stat: stats[i], isDark: isDark)),
+              Expanded(
+                  child: _StatColumn(stat: _stats[i], isDark: isDark)),
             ],
           ],
         ),
@@ -69,7 +74,7 @@ class _StatColumn extends StatelessWidget {
                 color: isDark ? Colors.white : AppColors.navy,
               ),
             ),
-            if (stat.showStar) ...[
+            if (stat.showStar && stat.value != '—') ...[
               const SizedBox(width: 4),
               const Icon(TablerIcons.star_filled,
                   size: 15, color: AppColors.warning),
