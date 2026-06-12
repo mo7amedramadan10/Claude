@@ -32,7 +32,6 @@ dependencies:
   geolocator: ^13.0.1
 
   # ─── Fonts & Icons ───────────────────────────────────────────────
-  google_fonts: ^6.2.1
   flutter_tabler_icons: ^1.1.0
 
   # ─── Image Handling ──────────────────────────────────────────────
