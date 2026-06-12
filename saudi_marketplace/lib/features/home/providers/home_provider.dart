@@ -4,7 +4,6 @@ import '../../../core/config/env.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../favorites/data/favorites_repository.dart';
 import '../../saved/providers/saved_provider.dart';
-import '../data/home_mock_data.dart';
 import '../data/home_repository.dart';
 import '../models/listing_model.dart';
 import '../models/seller_model.dart';
@@ -14,10 +13,10 @@ class HomeState {
     this.selectedCategoryIndex = 0,
     this.isLoading = false,
     this.errorMessage,
-    this.featuredListings = HomeMockData.featuredListings,
-    this.nearbyListings = HomeMockData.nearbyListings,
-    this.suggestedListings = HomeMockData.suggestedListings,
-    this.sellers = HomeMockData.sellers,
+    this.featuredListings = const [],
+    this.nearbyListings = const [],
+    this.suggestedListings = const [],
+    this.sellers = const [],
   });
 
   final int selectedCategoryIndex;
@@ -52,11 +51,8 @@ class HomeState {
 class HomeNotifier extends Notifier<HomeState> {
   @override
   HomeState build() {
-    // البيانات التجريبية تظهر فوراً، ثم تُستبدل بالحقيقية إن وُجدت
-    if (Env.isConfigured) {
-      Future.microtask(refresh);
-    }
-    return const HomeState();
+    Future.microtask(refresh);
+    return const HomeState(isLoading: true);
   }
 
   Future<void> refresh() async {

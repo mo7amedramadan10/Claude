@@ -45,6 +45,9 @@ abstract class MyListingsRepository {
 class MockMyListingsRepository implements MyListingsRepository {
   final _items = List<MyListingItem>.from(MyListingsMockData.items);
 
+  /// للقراءة من MockHomeRepository
+  List<MyListingItem> get cachedItems => List.unmodifiable(_items);
+
   /// تُستخدم من شاشة «أضف إعلاناً» في الوضع التجريبي
   void addItem(MyListingItem item) => _items.insert(0, item);
 

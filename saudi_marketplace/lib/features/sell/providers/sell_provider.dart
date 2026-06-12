@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/config/env.dart';
 import '../../../core/exceptions/app_exception.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../home/providers/home_provider.dart';
 import '../../my_listings/data/my_listings_repository.dart';
 import '../../my_listings/models/my_listing_item.dart';
 import '../../my_listings/providers/my_listings_provider.dart';
@@ -244,6 +245,7 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
             await repo.submit(draft: draft, userId: userId);
         _appendToMockMyListings(listingId, draft);
         ref.invalidate(myListingsProvider);
+        ref.invalidate(homeProvider);
         return listingId;
       }
     } on AppException catch (e) {

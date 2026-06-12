@@ -4,6 +4,7 @@ import '../../../core/config/env.dart';
 import '../../auth/data/profile_repository.dart';
 import '../../favorites/data/favorites_repository.dart';
 import '../../listings/data/listings_repository.dart';
+import '../../my_listings/data/my_listings_repository.dart';
 import '../models/listing_model.dart';
 import '../models/seller_model.dart';
 import 'home_mock_data.dart';
@@ -29,13 +30,30 @@ abstract class HomeRepository {
 
 /// مصدر تجريبي — يُستخدم تلقائياً قبل إعداد Supabase
 class MockHomeRepository implements HomeRepository {
-  const MockHomeRepository();
+  const MockHomeRepository(this._myListings);
+  final MockMyListingsRepository _myListings;
 
   @override
   Future<HomeFeedData> fetchHomeFeed({String? userId}) async {
-    return const HomeFeedData(
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
+    // إعلانات المستخدم النشطة تظهر في أعلى قائمة الإعلانات القريبة
+    final userItems = _myListings.cachedItems
+        .where((i) => i.isActive)
+        .map((i) => ListingModel(
+              id: i.id,
+              title: i.title,
+              price: i.price ?? 0,
+              city: 'إعلانك',
+              imageUrl: i.imageUrl,
+              postedAt: 'منذ قليل',
+              isVerified: i.isVerified,
+            ))
+        .toList();
+
+    return HomeFeedData(
       featured: HomeMockData.featuredListings,
-      nearby: HomeMockData.nearbyListings,
+      nearby: [...userItems, ...HomeMockData.nearbyListings],
       suggested: HomeMockData.suggestedListings,
       sellers: HomeMockData.sellers,
     );
@@ -82,7 +100,11 @@ class SupabaseHomeRepository implements HomeRepository {
 }
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
-  if (!Env.isConfigured) return const MockHomeRepository();
+  if (!Env.isConfigured) {
+    final myListings =
+        ref.watch(myListingsRepositoryProvider) as MockMyListingsRepository;
+    return MockHomeRepository(myListings);
+  }
   return SupabaseHomeRepository(
     ref.watch(listingsRepositoryProvider),
     ref.watch(profileRepositoryProvider),
