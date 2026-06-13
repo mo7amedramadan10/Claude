@@ -80,6 +80,8 @@ class MyListingsNotifier extends AutoDisposeNotifier<MyListingsState> {
       state = state.copyWith(isLoading: true);
       final items =
           await ref.read(myListingsRepositoryProvider).fetchMyListings(userId);
+      debugPrint(
+          '[بيكيا] جلب إعلاناتي — userId=$userId · عدد النتائج=${items.length}');
       if (!_disposed) state = state.copyWith(listings: items, isLoading: false);
     } catch (e, st) {
       debugPrint('[بيكيا] فشل جلب إعلاناتي (userId=$userId): $e\n$st');
