@@ -7,7 +7,7 @@ import '../models/listing_model.dart';
 
 // ── Column sets ──────────────────────────────────────────────
 const _feedColumns = '''
-  id, seller_id, category_id, city_id, title, price, currency,
+  id, seller_id, category_id, city_id, title, description, price, currency,
   is_price_negotiable, is_price_hidden, condition, status,
   neighborhood, is_verified, is_featured, views_count,
   favorites_count, created_at, updated_at, expires_at, deleted_at,
