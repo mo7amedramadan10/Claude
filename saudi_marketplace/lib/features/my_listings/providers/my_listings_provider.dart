@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
@@ -80,9 +81,12 @@ class MyListingsNotifier extends AutoDisposeNotifier<MyListingsState> {
       final items =
           await ref.read(myListingsRepositoryProvider).fetchMyListings(userId);
       if (!_disposed) state = state.copyWith(listings: items, isLoading: false);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[بيكيا] فشل جلب إعلاناتي (userId=$userId): $e\n$st');
       if (!_disposed) {
-        state = state.copyWith(isLoading: false, errorMessage: e.toString());
+        final detail = kDebugMode ? '\n\n($e)' : '';
+        state = state.copyWith(
+            isLoading: false, errorMessage: 'تعذّر جلب إعلاناتك$detail');
       }
     }
   }
