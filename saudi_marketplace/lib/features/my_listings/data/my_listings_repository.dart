@@ -83,10 +83,14 @@ class SupabaseMyListingsRepository implements MyListingsRepository {
           .from('listings')
           .select(_myListingsColumns)
           .eq('seller_id', userId)
-          .filter('deleted_at', 'is', null)
           .order('created_at', ascending: false);
-      return (data as List)
-          .map((r) => ListingModel.fromJson(r as Map<String, dynamic>).toMyItem())
+      final all = (data as List)
+          .map((r) => ListingModel.fromJson(r as Map<String, dynamic>))
+          .toList();
+      // استبعاد المحذوف client-side (بدل فلتر السيرفر الذي قد يسبب مشاكل)
+      return all
+          .where((l) => l.deletedAt == null)
+          .map((l) => l.toMyItem())
           .toList();
     } catch (e) {
       throw mapException(e);

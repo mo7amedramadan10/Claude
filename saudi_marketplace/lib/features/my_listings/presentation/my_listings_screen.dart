@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/number_formatter.dart';
@@ -208,6 +210,33 @@ class _Body extends ConsumerWidget {
     }
 
     final items = state.filtered;
+
+    // تشخيص: عرض الـ userId الذي يبحث به التطبيق عند عدم وجود نتائج
+    if (kDebugMode && items.isEmpty) {
+      final uid = ref.read(currentUserIdProvider);
+      return RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: notifier.refresh,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+          children: [
+            Icon(TablerIcons.clipboard_text,
+                size: 56, color: AppColors.grey300),
+            const SizedBox(height: 16),
+            Text('لا يوجد إعلانات بعد',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.headlineMedium.copyWith(fontSize: 16)),
+            const SizedBox(height: 30),
+            SelectableText(
+              'DEBUG — userId المستخدم في الاستعلام:\n${uid ?? "null"}',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.grey400),
+            ),
+          ],
+        ),
+      );
+    }
 
     return RefreshIndicator(
       color: AppColors.primary,
