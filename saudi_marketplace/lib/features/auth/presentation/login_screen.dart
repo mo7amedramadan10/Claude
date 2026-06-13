@@ -18,13 +18,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -34,16 +34,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final ok = await ref.read(authProvider.notifier).signIn(
-          _usernameController.text,
+          _emailController.text.trim(),
           _passwordController.text,
         );
     if (ok && mounted) context.go(AppRoutes.home);
   }
 
-  String? _validateUsername(String? v) {
+  String? _validateEmail(String? v) {
     final value = v?.trim() ?? '';
-    if (value.isEmpty) return 'أدخل اسم المستخدم';
-    if (value.length < 3) return 'اسم المستخدم ٣ أحرف على الأقل';
+    if (value.isEmpty) return 'أدخل البريد الإلكتروني';
+    if (!RegExp(r'^[\w.+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}$').hasMatch(value)) {
+      return 'صيغة البريد الإلكتروني غير صحيحة';
+    }
     return null;
   }
 
@@ -84,11 +86,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           .copyWith(color: AppColors.grey600)),
                   const SizedBox(height: 24),
                   AuthTextField(
-                    controller: _usernameController,
-                    label: 'اسم المستخدم',
-                    hint: 'مثال: abu_khalid',
-                    icon: TablerIcons.user,
-                    validator: _validateUsername,
+                    controller: _emailController,
+                    label: 'البريد الإلكتروني',
+                    hint: 'example@gmail.com',
+                    icon: TablerIcons.mail,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: _validateEmail,
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(

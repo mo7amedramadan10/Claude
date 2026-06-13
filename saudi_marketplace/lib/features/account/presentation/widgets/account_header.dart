@@ -12,8 +12,8 @@ class AccountHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
-    final name = user?.nameOrUsername ?? 'مستخدم بيكيا';
-    final username = user?.username ?? '';
+    final name = user?.nameOrEmail ?? 'مستخدم بيكيا';
+    final email = user?.email ?? '';
 
     return Container(
       width: double.infinity,
@@ -91,10 +91,10 @@ class AccountHeader extends ConsumerWidget {
                         color: Colors.white,
                       ),
                     ),
-                    if (username.isNotEmpty) ...[
+                    if (email.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        '@$username',
+                        email,
                         style: AppTextStyles.labelLarge.copyWith(
                           fontSize: 12,
                           color: const Color(0xFFA8C0D6),

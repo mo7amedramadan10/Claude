@@ -19,14 +19,14 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -36,9 +36,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final ok = await ref.read(authProvider.notifier).signUp(
-          username: _usernameController.text,
+          email: _emailController.text.trim(),
           password: _passwordController.text,
-          fullName: _fullNameController.text,
+          fullName: _fullNameController.text.trim(),
         );
     if (ok && mounted) context.go(AppRoutes.home);
   }
@@ -50,12 +50,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return null;
   }
 
-  String? _validateUsername(String? v) {
+  String? _validateEmail(String? v) {
     final value = v?.trim() ?? '';
-    if (value.isEmpty) return 'أدخل اسم المستخدم';
-    if (value.length < 3) return 'اسم المستخدم ٣ أحرف على الأقل';
-    if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(value)) {
-      return 'أحرف إنجليزية وأرقام و _ فقط';
+    if (value.isEmpty) return 'أدخل البريد الإلكتروني';
+    if (!RegExp(r'^[\w.+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}$').hasMatch(value)) {
+      return 'صيغة البريد الإلكتروني غير صحيحة';
     }
     return null;
   }
@@ -102,11 +101,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
-                    controller: _usernameController,
-                    label: 'اسم المستخدم',
-                    hint: 'مثال: abu_khalid',
-                    icon: TablerIcons.user,
-                    validator: _validateUsername,
+                    controller: _emailController,
+                    label: 'البريد الإلكتروني',
+                    hint: 'example@gmail.com',
+                    icon: TablerIcons.mail,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: _validateEmail,
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
@@ -143,9 +143,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             color:
                                 AppColors.error.withValues(alpha: 0.25)),
                       ),
-                      child: Text(auth.errorMessage!,
-                          style: AppTextStyles.bodyMedium
-                              .copyWith(color: AppColors.error)),
+                      child: Row(children: [
+                        const Icon(TablerIcons.alert_circle,
+                            size: 18, color: AppColors.error),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(auth.errorMessage!,
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.error)),
+                        ),
+                      ]),
                     ),
                   ],
                   const SizedBox(height: 24),

@@ -7,24 +7,16 @@ import '../../../core/exceptions/app_exception.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../models/auth_user.dart';
 
-/// Supabase Auth يتعامل بالبريد الإلكتروني، لذا يُحوَّل اسم المستخدم
-/// لبريد داخلي ثابت الصيغة (نفس التحويل عند التسجيل والدخول)
-String usernameToEmail(String input) {
-  final trimmed = input.trim();
-  if (trimmed.contains('@')) return trimmed;
-  return '${trimmed.toLowerCase()}@bikya.sa';
-}
-
 abstract class AuthRepository {
   AuthUser? get currentUser;
 
   Future<AuthUser> signIn({
-    required String username,
+    required String email,
     required String password,
   });
 
   Future<AuthUser> signUp({
-    required String username,
+    required String email,
     required String password,
     required String fullName,
   });
@@ -32,7 +24,6 @@ abstract class AuthRepository {
   Future<void> signOut();
 }
 
-/// وضع تجريبي: أي اسم مستخدم/كلمة مرور صحيحة الشكل تنجح
 class MockAuthRepository implements AuthRepository {
   static const _mockUserId = 'mock-user-0001';
 
@@ -40,31 +31,30 @@ class MockAuthRepository implements AuthRepository {
   AuthUser? get currentUser => MockSession.isLoggedIn
       ? AuthUser(
           id: MockSession.userId!,
-          username: MockSession.username!,
+          email: MockSession.username ?? 'user@mock.local',
           displayName: MockSession.displayName,
         )
       : null;
 
   @override
   Future<AuthUser> signIn({
-    required String username,
+    required String email,
     required String password,
   }) async {
-    // محاكاة زمن الشبكة
     await Future<void>.delayed(const Duration(milliseconds: 700));
-    MockSession.start(id: _mockUserId, name: username.trim());
+    MockSession.start(id: _mockUserId, name: email.trim());
     return currentUser!;
   }
 
   @override
   Future<AuthUser> signUp({
-    required String username,
+    required String email,
     required String password,
     required String fullName,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 700));
     MockSession.start(
-        id: _mockUserId, name: username.trim(), display: fullName.trim());
+        id: _mockUserId, name: email.trim(), display: fullName.trim());
     return currentUser!;
   }
 
@@ -82,19 +72,19 @@ class SupabaseAuthRepository implements AuthRepository {
     if (u == null) return null;
     return AuthUser(
       id: u.id,
-      username: (u.email ?? '').split('@').first,
+      email: u.email ?? '',
       displayName: u.userMetadata?['full_name'] as String?,
     );
   }
 
   @override
   Future<AuthUser> signIn({
-    required String username,
+    required String email,
     required String password,
   }) async {
     try {
       final res = await _db.auth.signInWithPassword(
-        email: usernameToEmail(username),
+        email: email.trim(),
         password: password,
       );
       if (res.user == null) {
@@ -103,7 +93,7 @@ class SupabaseAuthRepository implements AuthRepository {
       return currentUser!;
     } on AuthException catch (e) {
       if (e.message.toLowerCase().contains('invalid')) {
-        throw const AuthFailure('اسم المستخدم أو كلمة المرور غير صحيحة');
+        throw const AuthFailure('البريد الإلكتروني أو كلمة المرور غير صحيحة');
       }
       throw mapException(e);
     } catch (e) {
@@ -113,13 +103,13 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<AuthUser> signUp({
-    required String username,
+    required String email,
     required String password,
     required String fullName,
   }) async {
     try {
       final res = await _db.auth.signUp(
-        email: usernameToEmail(username),
+        email: email.trim(),
         password: password,
         data: {'full_name': fullName.trim()},
       );
@@ -129,7 +119,7 @@ class SupabaseAuthRepository implements AuthRepository {
       return currentUser!;
     } on AuthException catch (e) {
       if (e.message.toLowerCase().contains('already registered')) {
-        throw const ValidationError('اسم المستخدم مسجَّل مسبقاً');
+        throw const ValidationError('البريد الإلكتروني مسجَّل مسبقاً');
       }
       throw mapException(e);
     } catch (e) {

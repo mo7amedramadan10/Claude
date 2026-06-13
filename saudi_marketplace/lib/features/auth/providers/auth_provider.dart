@@ -39,12 +39,12 @@ class AuthNotifier extends Notifier<AuthSessionState> {
     );
   }
 
-  Future<bool> signIn(String username, String password) async {
+  Future<bool> signIn(String email, String password) async {
     state = state.copyWith(isLoading: true);
     try {
       final user = await ref
           .read(authRepositoryProvider)
-          .signIn(username: username, password: password);
+          .signIn(email: email, password: password);
       state = AuthSessionState(user: user);
       _refreshUserScopedProviders();
       return true;
@@ -58,14 +58,14 @@ class AuthNotifier extends Notifier<AuthSessionState> {
   }
 
   Future<bool> signUp({
-    required String username,
+    required String email,
     required String password,
     required String fullName,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
       final user = await ref.read(authRepositoryProvider).signUp(
-            username: username,
+            email: email,
             password: password,
             fullName: fullName,
           );
