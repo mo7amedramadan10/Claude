@@ -129,9 +129,12 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
       // الخطأ الخام في الـ console لتشخيص مشاكل RLS / الشبكة على الويب
       debugPrint('[بيكيا] فشل تحميل الفئات/المدن: $e\n$st');
       if (!_disposed) {
+        // في وضع التطوير نعرض نص الخطأ الخام مباشرة لتسهيل التشخيص
+        final detail = kDebugMode ? '\n($e)' : '';
         state = state.copyWith(
           isLoadingLookups: false,
-          lookupsError: 'تعذّر تحميل الفئات والمدن — اضغط لإعادة المحاولة',
+          lookupsError:
+              'تعذّر تحميل الفئات والمدن — اضغط لإعادة المحاولة$detail',
         );
       }
     }
