@@ -40,7 +40,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           password: _passwordController.text,
           fullName: _fullNameController.text.trim(),
         );
-    if (ok && mounted) context.go(AppRoutes.home);
+    if (ok && mounted) {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(AppRoutes.home);
+      }
+    }
   }
 
   String? _validateFullName(String? v) {

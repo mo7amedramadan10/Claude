@@ -37,7 +37,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _emailController.text.trim(),
           _passwordController.text,
         );
-    if (ok && mounted) context.go(AppRoutes.home);
+    if (ok && mounted) {
+      // لو الشاشة انفتحت بـ push (من تاب حسابي) → ارجع لها بعد الدخول
+      // لو كانت الـ initial route → اذهب للرئيسية
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(AppRoutes.home);
+      }
+    }
   }
 
   String? _validateEmail(String? v) {
@@ -127,7 +135,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 14),
                   Center(
                     child: TextButton(
-                      onPressed: () => context.go(AppRoutes.home),
+                      onPressed: () => context.canPop()
+                          ? context.pop()
+                          : context.go(AppRoutes.home),
                       child: Text('الدخول كزائر',
                           style: AppTextStyles.titleMedium.copyWith(
                               color: AppColors.grey600, fontSize: 13.5)),

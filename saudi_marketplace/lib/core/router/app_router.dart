@@ -14,7 +14,6 @@ import '../../features/search/presentation/search_screen.dart';
 import '../../features/saved/presentation/saved_screen.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
-import '../../features/auth/providers/auth_provider.dart';
 import '../../features/my_listings/presentation/my_listings_screen.dart';
 import '../../features/sell/presentation/sell_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
@@ -31,12 +30,9 @@ final _profileKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
 @riverpod
 GoRouter appRouter(Ref ref) {
-  // جلسة محفوظة → الرئيسية مباشرة، وإلا شاشة الدخول (مع خيار الزائر)
-  final hasSession = ref.read(authProvider).isLoggedIn;
-
   return GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: hasSession ? AppRoutes.home : AppRoutes.login,
+    initialLocation: AppRoutes.home,
     debugLogDiagnostics: true,
 
     routes: [
