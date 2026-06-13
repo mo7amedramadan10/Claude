@@ -15,6 +15,9 @@ class SellLookupField extends StatelessWidget {
     required this.options,
     required this.selected,
     required this.onSelect,
+    this.isLoading = false,
+    this.errorText,
+    this.onRetry,
   });
 
   final String label;
@@ -23,6 +26,15 @@ class SellLookupField extends StatelessWidget {
   final List<LookupOption> options;
   final LookupOption? selected;
   final void Function(LookupOption) onSelect;
+
+  /// تحميل القائمة جارٍ
+  final bool isLoading;
+
+  /// نص خطأ تحميل القائمة (إن وُجد)
+  final String? errorText;
+
+  /// إعادة محاولة التحميل عند الضغط على حقل فارغ
+  final Future<void> Function()? onRetry;
 
   void _openSheet(BuildContext context) {
     showModalBottomSheet<void>(
@@ -86,13 +98,24 @@ class SellLookupField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasValue = selected != null;
+    final hasError = errorText != null;
+    final isEmpty = options.isEmpty;
+
+    // الضغط: تحميل ⇐ معطّل · فارغ ⇐ إعادة محاولة · فيه خيارات ⇐ فتح القائمة
+    final VoidCallback? onTap = isLoading
+        ? null
+        : (isEmpty ? (onRetry == null ? null : () => onRetry!()) : () => _openSheet(context));
+
+    final Color borderColor =
+        hasError ? AppColors.error.withValues(alpha: 0.4) : AppColors.grey200;
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label,
           style: AppTextStyles.titleMedium
               .copyWith(color: AppColors.grey700, fontSize: 13.5)),
       const SizedBox(height: 8),
       InkWell(
-        onTap: options.isEmpty ? null : () => _openSheet(context),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding:
@@ -100,25 +123,61 @@ class SellLookupField extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.grey50,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.grey200),
+            border: Border.all(color: borderColor),
           ),
-          child: Row(children: [
-            Icon(icon, size: 20, color: AppColors.grey500),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                hasValue ? selected!.label : placeholder,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  fontSize: 14,
-                  color: hasValue ? AppColors.navy : AppColors.grey500,
-                ),
-              ),
-            ),
-            const Icon(TablerIcons.chevron_down,
-                size: 18, color: AppColors.grey400),
-          ]),
+          child: _buildContent(hasValue),
         ),
       ),
+    ]);
+  }
+
+  Widget _buildContent(bool hasValue) {
+    // ── جارٍ التحميل ──────────────────────────────────────────
+    if (isLoading) {
+      return Row(children: [
+        const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: AppColors.primary),
+        ),
+        const SizedBox(width: 12),
+        Text('جارٍ التحميل...',
+            style: AppTextStyles.bodyLarge
+                .copyWith(fontSize: 14, color: AppColors.grey500)),
+      ]);
+    }
+
+    // ── خطأ تحميل القائمة ────────────────────────────────────
+    if (errorText != null) {
+      return Row(children: [
+        const Icon(TablerIcons.alert_circle,
+            size: 20, color: AppColors.error),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(errorText!,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(fontSize: 13, color: AppColors.error)),
+        ),
+        const Icon(TablerIcons.refresh, size: 18, color: AppColors.error),
+      ]);
+    }
+
+    // ── الحالة الطبيعية ──────────────────────────────────────
+    return Row(children: [
+      Icon(icon, size: 20, color: AppColors.grey500),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(
+          hasValue ? selected!.label : placeholder,
+          style: AppTextStyles.bodyLarge.copyWith(
+            fontSize: 14,
+            color: hasValue ? AppColors.navy : AppColors.grey500,
+          ),
+        ),
+      ),
+      const Icon(TablerIcons.chevron_down,
+          size: 18, color: AppColors.grey400),
     ]);
   }
 }

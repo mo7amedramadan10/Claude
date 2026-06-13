@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -17,6 +18,8 @@ class SellState {
   const SellState({
     this.categories = const [],
     this.cities = const [],
+    this.isLoadingLookups = true,
+    this.lookupsError,
     this.selectedCategory,
     this.selectedCity,
     this.condition = 'good',
@@ -32,6 +35,13 @@ class SellState {
 
   final List<LookupOption> categories;
   final List<LookupOption> cities;
+
+  /// تحميل قوائم الفئات/المدن جارٍ
+  final bool isLoadingLookups;
+
+  /// خطأ عند تحميل الفئات/المدن (مستقل عن أخطاء النشر)
+  final String? lookupsError;
+
   final LookupOption? selectedCategory;
   final LookupOption? selectedCity;
   final String condition;
@@ -60,6 +70,8 @@ class SellState {
   SellState copyWith({
     List<LookupOption>? categories,
     List<LookupOption>? cities,
+    bool? isLoadingLookups,
+    String? lookupsError,
     LookupOption? selectedCategory,
     LookupOption? selectedCity,
     String? condition,
@@ -75,6 +87,8 @@ class SellState {
       SellState(
         categories: categories ?? this.categories,
         cities: cities ?? this.cities,
+        isLoadingLookups: isLoadingLookups ?? this.isLoadingLookups,
+        lookupsError: lookupsError,
         selectedCategory: selectedCategory ?? this.selectedCategory,
         selectedCity: selectedCity ?? this.selectedCity,
         condition: condition ?? this.condition,
@@ -100,16 +114,31 @@ class SellNotifier extends AutoDisposeNotifier<SellState> {
   }
 
   Future<void> _loadLookups() async {
+    state = state.copyWith(isLoadingLookups: true);
     try {
       final repo = ref.read(sellRepositoryProvider);
       final results =
           await Future.wait([repo.fetchCategories(), repo.fetchCities()]);
       if (_disposed) return;
-      state = state.copyWith(categories: results[0], cities: results[1]);
-    } catch (e) {
-      if (!_disposed) state = state.copyWith(errorMessage: e.toString());
+      state = state.copyWith(
+        categories: results[0],
+        cities: results[1],
+        isLoadingLookups: false,
+      );
+    } catch (e, st) {
+      // الخطأ الخام في الـ console لتشخيص مشاكل RLS / الشبكة على الويب
+      debugPrint('[بيكيا] فشل تحميل الفئات/المدن: $e\n$st');
+      if (!_disposed) {
+        state = state.copyWith(
+          isLoadingLookups: false,
+          lookupsError: 'تعذّر تحميل الفئات والمدن — اضغط لإعادة المحاولة',
+        );
+      }
     }
   }
+
+  /// إعادة محاولة تحميل القوائم (عند الضغط على حقل فارغ)
+  Future<void> reloadLookups() => _loadLookups();
 
   /// يُستدعى عند فتح النموذج في وضع التعديل
   Future<void> initEdit(String listingId) async {

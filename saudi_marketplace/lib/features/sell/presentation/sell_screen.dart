@@ -164,6 +164,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                       options: state.categories,
                       selected: state.selectedCategory,
                       onSelect: notifier.selectCategory,
+                      isLoading: state.isLoadingLookups,
+                      errorText: state.lookupsError,
+                      onRetry: notifier.reloadLookups,
                     ),
                     const SizedBox(height: 16),
                     SellLookupField(
@@ -173,6 +176,9 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                       options: state.cities,
                       selected: state.selectedCity,
                       onSelect: notifier.selectCity,
+                      isLoading: state.isLoadingLookups,
+                      errorText: state.lookupsError,
+                      onRetry: notifier.reloadLookups,
                     ),
                     const SizedBox(height: 16),
                     _SellField(
