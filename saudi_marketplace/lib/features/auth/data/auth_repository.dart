@@ -12,7 +12,7 @@ import '../models/auth_user.dart';
 String usernameToEmail(String input) {
   final trimmed = input.trim();
   if (trimmed.contains('@')) return trimmed;
-  return '${trimmed.toLowerCase()}@users.bikya.app';
+  return '${trimmed.toLowerCase()}@bikya.sa';
 }
 
 abstract class AuthRepository {
