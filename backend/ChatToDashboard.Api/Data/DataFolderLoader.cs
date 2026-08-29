@@ -50,6 +50,7 @@ public class DataFolderLoader
             .OrderBy(f => f)
             .ToList();
 
+        await _db.EnsureDatabaseExistsAsync(_logger, ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"IF SCHEMA_ID('{Schema}') IS NULL EXEC('CREATE SCHEMA [{Schema}]')");

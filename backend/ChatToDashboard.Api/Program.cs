@@ -26,6 +26,12 @@ builder.Services.AddHttpClient<ClaudeClient>(client =>
 var app = builder.Build();
 
 app.UseCors(FrontendCorsPolicy);
+
+// In production the frontend build is copied into wwwroot (see Dockerfile) and served
+// from the same origin; in dev, Vite serves it separately and these are no-ops.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapControllers();
 
 // Initial load: scan the data folder and (re)create the staging tables so the

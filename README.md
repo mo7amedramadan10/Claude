@@ -27,6 +27,9 @@ access to the source files.
                                  └─────────────┘        └─────────────────┘
 ```
 
+> **Deploying to a server?** See [DEPLOY.md](DEPLOY.md) — one `docker compose up` runs the
+> whole stack (app + SQL Server), and users only need a browser.
+
 ## Prerequisites
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
