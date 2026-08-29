@@ -2,10 +2,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Data.Common;
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Models;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Claude;
 
@@ -21,7 +21,7 @@ public class ClaudeClient
     private const int MaxRowsReturned = 500;
 
     private static readonly Regex ForbiddenSqlKeywords = new(
-        @"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|MERGE|EXEC|EXECUTE|GRANT|REVOKE|BACKUP|RESTORE|USE|KILL|SHUTDOWN)\b|(\bsp_\w+)|(\bxp_\w+)",
+        @"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|MERGE|EXEC|EXECUTE|GRANT|REVOKE|BACKUP|RESTORE|USE|KILL|SHUTDOWN|PRAGMA|ATTACH|DETACH|VACUUM|REINDEX|REPLACE)\b|(\bsp_\w+)|(\bxp_\w+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly HttpClient _http;
@@ -29,7 +29,7 @@ public class ClaudeClient
     private readonly string _model;
     private readonly int _maxTokens;
     private readonly DataFolderLoader _loader;
-    private readonly SqlServerContext _db;
+    private readonly DataStore _db;
     private readonly DocumentSearchService _documents;
     private readonly ILogger<ClaudeClient> _logger;
 
@@ -37,7 +37,7 @@ public class ClaudeClient
         HttpClient http,
         IConfiguration configuration,
         DataFolderLoader loader,
-        SqlServerContext db,
+        DataStore db,
         DocumentSearchService documents,
         ILogger<ClaudeClient> logger)
     {
@@ -86,7 +86,7 @@ public class ClaudeClient
         while (messages.Count > 0 && messages[0]!["role"]!.GetValue<string>() == "assistant")
             messages.RemoveAt(0);
 
-        var tools = ToolDefinitions.Build(_documents.Enabled);
+        var tools = ToolDefinitions.Build(_db, _documents.Enabled);
         var jsonRepairAttempts = 0;
 
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
@@ -240,8 +240,9 @@ public class ClaudeClient
             blocks[^1]!.AsObject()["cache_control"] = new JsonObject { ["type"] = "ephemeral" };
     }
 
+    // $$ delimiters: {{expr}} interpolates, single braces stay literal for the JSON schema below.
     private string BuildSystemPrompt() =>
-        """
+        $$"""
         You are an analytics assistant that answers questions about data stored in SQL Server and
         responds with a dashboard specification in JSON.
 
@@ -252,13 +253,7 @@ public class ClaudeClient
            queries (GROUP BY) that return chart-ready data over fetching raw rows.
         3. When you have the data, respond with the final dashboard JSON and nothing else.
 
-        SQL DIALECT — this is Microsoft SQL Server (T-SQL), NOT PostgreSQL or MySQL:
-        - Use TOP N, never LIMIT. Always cap results: SELECT TOP 500 ...
-        - Use GETDATE() instead of NOW(); DATEADD/DATEDIFF for date math; FORMAT() or CONVERT() for formatting.
-        - Quote identifiers with [square brackets], not double quotes.
-        - Tables live in the staging schema; always reference them as staging.[TableName].
-        - Only SELECT statements are allowed. Any INSERT/UPDATE/DELETE/DDL is rejected.
-        - If a query fails, read the error message and correct your SQL.
+        {{_db.DialectPrompt}}
 
         FINAL RESPONSE FORMAT
         Your final message must be ONLY a single JSON object — no markdown code fences, no prose
@@ -314,11 +309,11 @@ public class ClaudeClient
                     return ($"Error: unknown tool '{toolName}'.", true);
             }
         }
-        catch (SqlException ex)
+        catch (DbException ex)
         {
-            // Feed SQL errors back so Claude can correct its T-SQL.
+            // Feed SQL errors back so Claude can correct its query.
             _logger.LogWarning(ex, "SQL error executing tool {Tool}", toolName);
-            return ($"SQL Server error: {ex.Message}", true);
+            return ($"{_db.DialectName} error: {ex.Message}", true);
         }
         catch (Exception ex)
         {

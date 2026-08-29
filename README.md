@@ -13,7 +13,8 @@ spec that the React frontend renders with Recharts.
 
 Because the data lives in a central SQL Server (local or Azure SQL), multiple users on
 different machines all query the same up-to-date data through the app — no one needs local
-access to the source files.
+access to the source files. To try it on a single machine with nothing to install, it can also
+run against a local SQLite file (`"DatabaseProvider": "Sqlite"`).
 
 ```
 ┌──────────┐   POST /api/chat   ┌─────────────────┐   Messages API + tools   ┌────────┐
@@ -32,11 +33,15 @@ access to the source files.
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET SDK 8 or newer](https://dotnet.microsoft.com/download/dotnet/8.0) (the project targets
+  net8.0 and rolls forward, so a newer SDK such as .NET 10 works on its own)
 - [Node.js](https://nodejs.org/) 18+ (with npm)
-- An accessible **SQL Server** instance (local SQL Server, SQL Express, or Azure SQL) and a
-  connection string for a database where the app may create a `staging` schema and tables
 - An [Anthropic API key](https://console.anthropic.com/)
+- A database — either:
+  - **SQL Server** (local, Express, or Azure SQL) — the default, and what makes the data
+    centrally queryable for everyone; or
+  - **nothing to install** — set `"DatabaseProvider": "Sqlite"` and the app keeps its data in a
+    local file. Good for trying it out on one machine; not for the shared multi-user setup.
 
 ## Setup
 
@@ -51,6 +56,14 @@ dotnet user-secrets set "ConnectionStrings:DataDb" "Server=localhost;Database=Ch
 
 For Azure SQL, use its ADO.NET connection string instead. Both values live in
 `dotnet user-secrets` — do **not** put them in `appsettings.Development.json` or commit them.
+The app creates the database itself if it doesn't exist (where it has permission to; on Azure
+SQL, create the database first).
+
+**No database server?** Set `"DatabaseProvider": "Sqlite"` in `appsettings.json` and skip the
+connection string entirely — the app creates `chat-to-dashboard.db` next to the binary on first
+run. Only the Anthropic key is then required. Everything else works the same; Claude is told to
+write SQLite SQL instead of T-SQL, and tables are named `staging_<FileName>` (SQLite has no
+schemas) rather than `staging.<FileName>`.
 
 ### 2. Configure the data folder
 
@@ -115,6 +128,7 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 |---|---|---|
 | `DataFolderPath` | `../../data` | Folder scanned for data files (env var `DataFolderPath` overrides) |
 | `EnableRag` | `false` | Index PDF/DOCX and expose `search_documents` |
+| `DatabaseProvider` | `SqlServer` | `SqlServer` (shared/central) or `Sqlite` (local file, nothing to install) |
 | `Anthropic:Model` | `claude-sonnet-5` | Claude model ID used for chat |
 | `Anthropic:MaxTokens` | `16000` | Max tokens per Claude response |
 | `ConnectionStrings:DataDb` | — | Set via user-secrets |

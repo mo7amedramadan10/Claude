@@ -7,6 +7,11 @@ appsettings.Development.json
 node_modules/
 dist/
 
+# Local SQLite database (DatabaseProvider=Sqlite)
+*.db
+*.db-shm
+*.db-wal
+
 # Environment / secrets
 .env
 .env.*

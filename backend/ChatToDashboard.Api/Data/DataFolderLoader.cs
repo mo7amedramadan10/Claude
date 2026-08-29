@@ -5,8 +5,6 @@ using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Data;
 
@@ -23,13 +21,11 @@ public record TableSchema(string Table, IReadOnlyList<TableColumn> Columns);
 /// </summary>
 public class DataFolderLoader
 {
-    private const string Schema = "staging";
-
-    private readonly SqlServerContext _db;
+    private readonly DataStore _db;
     private readonly ILogger<DataFolderLoader> _logger;
     private readonly string _dataFolderPath;
 
-    public DataFolderLoader(SqlServerContext db, IConfiguration configuration, ILogger<DataFolderLoader> logger)
+    public DataFolderLoader(DataStore db, IConfiguration configuration, ILogger<DataFolderLoader> logger)
     {
         _db = db;
         _logger = logger;
@@ -52,8 +48,7 @@ public class DataFolderLoader
 
         await _db.EnsureDatabaseExistsAsync(_logger, ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync(
-            $"IF SCHEMA_ID('{Schema}') IS NULL EXEC('CREATE SCHEMA [{Schema}]')");
+        await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var results = new List<LoadedTable>();
         foreach (var file in files)
@@ -63,10 +58,11 @@ public class DataFolderLoader
             {
                 var table = LoadFileIntoDataTable(file);
                 var tableName = SanitizeTableName(Path.GetFileNameWithoutExtension(file));
-                await RecreateAndBulkLoadAsync(connection, tableName, table, ct);
-                results.Add(new LoadedTable($"{Schema}.{tableName}", Path.GetFileName(file), table.Rows.Count));
-                _logger.LogInformation("Loaded {File} into {Schema}.{Table} ({Rows} rows)",
-                    Path.GetFileName(file), Schema, tableName, table.Rows.Count);
+                await _db.RecreateAndLoadAsync(connection, tableName, table, ct);
+                var displayName = _db.DisplayTable(tableName);
+                results.Add(new LoadedTable(displayName, Path.GetFileName(file), table.Rows.Count));
+                _logger.LogInformation("Loaded {File} into {Table} ({Rows} rows)",
+                    Path.GetFileName(file), displayName, table.Rows.Count);
             }
             catch (Exception ex)
             {
@@ -76,25 +72,8 @@ public class DataFolderLoader
         return results;
     }
 
-    public async Task<IReadOnlyList<TableSchema>> GetSchemaAsync(CancellationToken ct = default)
-    {
-        await using var connection = await _db.OpenConnectionAsync(ct);
-        var rows = await connection.QueryAsync<(string Table, string Column, string DataType)>(
-            """
-            SELECT c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE
-            FROM INFORMATION_SCHEMA.COLUMNS c
-            WHERE c.TABLE_SCHEMA = @Schema
-            ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION
-            """,
-            new { Schema });
-
-        return rows
-            .GroupBy(r => r.Table)
-            .Select(g => new TableSchema(
-                $"{Schema}.{g.Key}",
-                g.Select(r => new TableColumn(r.Column, r.DataType)).ToList()))
-            .ToList();
-    }
+    public Task<IReadOnlyList<TableSchema>> GetSchemaAsync(CancellationToken ct = default) =>
+        _db.GetSchemaAsync(ct);
 
     private static string SanitizeTableName(string name)
     {
@@ -287,29 +266,4 @@ public class DataFolderLoader
         return raw;
     }
 
-    private static string SqlTypeFor(Type type) =>
-        type == typeof(long) ? "BIGINT"
-        : type == typeof(decimal) ? "DECIMAL(18,4)"
-        : type == typeof(DateTime) ? "DATETIME2"
-        : type == typeof(bool) ? "BIT"
-        : "NVARCHAR(MAX)";
-
-    private static async Task RecreateAndBulkLoadAsync(
-        SqlConnection connection, string tableName, DataTable table, CancellationToken ct)
-    {
-        var columnDefs = table.Columns.Cast<DataColumn>()
-            .Select(c => $"[{c.ColumnName}] {SqlTypeFor(c.DataType)} NULL");
-
-        await connection.ExecuteAsync($"DROP TABLE IF EXISTS [{Schema}].[{tableName}]");
-        await connection.ExecuteAsync($"CREATE TABLE [{Schema}].[{tableName}] ({string.Join(", ", columnDefs)})");
-
-        using var bulk = new SqlBulkCopy(connection)
-        {
-            DestinationTableName = $"[{Schema}].[{tableName}]",
-            BatchSize = 5000,
-        };
-        foreach (DataColumn column in table.Columns)
-            bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
-        await bulk.WriteToServerAsync(table, ct);
-    }
 }

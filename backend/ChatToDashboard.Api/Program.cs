@@ -14,7 +14,7 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 
-builder.Services.AddSingleton<SqlServerContext>();
+builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<DataFolderLoader>();
 builder.Services.AddSingleton<DocumentSearchService>();
 builder.Services.AddHttpClient<ClaudeClient>(client =>
