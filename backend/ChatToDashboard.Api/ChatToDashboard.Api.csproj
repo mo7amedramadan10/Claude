@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <!-- Runs on any installed .NET runtime >= 8 (e.g. a machine with only the .NET 10 SDK). -->
+    <RollForward>LatestMajor</RollForward>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>chat-to-dashboard-api</UserSecretsId>
