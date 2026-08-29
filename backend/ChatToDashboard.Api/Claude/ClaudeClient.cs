@@ -42,8 +42,10 @@ public class ClaudeClient
         ILogger<ClaudeClient> logger)
     {
         _http = http;
-        _apiKey = configuration["Anthropic:ApiKey"]
-            ?? throw new InvalidOperationException(
+        // Trimmed: a stray space or newline pasted with the key makes the API reject it as invalid.
+        _apiKey = configuration["Anthropic:ApiKey"]?.Trim() is { Length: > 0 } key
+            ? key
+            : throw new InvalidOperationException(
                 "Anthropic API key is not configured. " +
                 "Set it with: dotnet user-secrets set \"Anthropic:ApiKey\" \"<key>\"");
         _model = configuration["Anthropic:Model"] ?? "claude-sonnet-5";
