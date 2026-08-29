@@ -113,7 +113,7 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 | `DataFolderPath` | `../../data` | Folder scanned for data files (env var `DataFolderPath` overrides) |
 | `EnableRag` | `false` | Index PDF/DOCX and expose `search_documents` |
 | `Anthropic:Model` | `claude-sonnet-5` | Claude model ID used for chat |
-| `Anthropic:MaxTokens` | `8192` | Max tokens per Claude response |
+| `Anthropic:MaxTokens` | `16000` | Max tokens per Claude response |
 | `ConnectionStrings:DataDb` | — | Set via user-secrets |
 | `Anthropic:ApiKey` | — | Set via user-secrets |
 

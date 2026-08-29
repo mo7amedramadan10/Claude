@@ -8,13 +8,19 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   async function ask(question) {
+    // Send recent successful turns so follow-up questions keep their context.
+    const history = messages
+      .filter((m) => !m.isError)
+      .slice(-10)
+      .map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }));
+
     setMessages((prev) => [...prev, { role: 'user', text: question }]);
     setLoading(true);
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: question }),
+        body: JSON.stringify({ message: question, history }),
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok || !payload?.dashboard) {

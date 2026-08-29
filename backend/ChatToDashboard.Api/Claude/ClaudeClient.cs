@@ -47,23 +47,44 @@ public class ClaudeClient
                 "Anthropic API key is not configured. " +
                 "Set it with: dotnet user-secrets set \"Anthropic:ApiKey\" \"<key>\"");
         _model = configuration["Anthropic:Model"] ?? "claude-sonnet-5";
-        _maxTokens = configuration.GetValue("Anthropic:MaxTokens", 8192);
+        _maxTokens = configuration.GetValue("Anthropic:MaxTokens", 16000);
         _loader = loader;
         _db = db;
         _documents = documents;
         _logger = logger;
     }
 
-    public async Task<DashboardSpec> GenerateDashboardAsync(string question, CancellationToken ct = default)
+    public async Task<DashboardSpec> GenerateDashboardAsync(
+        string question, IReadOnlyList<ChatTurn>? history = null, CancellationToken ct = default)
     {
-        var messages = new JsonArray
+        var messages = new JsonArray();
+
+        // Replay prior Q&A summaries (text only) so follow-up questions have context.
+        // Tool calls from earlier turns are not replayed; Claude re-queries as needed.
+        void AppendTextTurn(string role, string text)
         {
-            new JsonObject
+            // The Messages API requires alternating roles; merge consecutive same-role turns.
+            if (messages.Count > 0 && messages[^1]!["role"]!.GetValue<string>() == role)
             {
-                ["role"] = "user",
-                ["content"] = question,
-            },
-        };
+                var previous = messages[^1]!.AsObject();
+                previous["content"] = previous["content"]!.GetValue<string>() + "\n\n" + text;
+                return;
+            }
+            messages.Add(new JsonObject { ["role"] = role, ["content"] = text });
+        }
+
+        foreach (var turn in history ?? Array.Empty<ChatTurn>())
+        {
+            if (string.IsNullOrWhiteSpace(turn.Text)) continue;
+            if (turn.Role != "user" && turn.Role != "assistant") continue;
+            AppendTextTurn(turn.Role, turn.Text.Trim());
+        }
+
+        AppendTextTurn("user", question);
+
+        // A conversation must start with a user turn; drop a leading assistant turn.
+        while (messages.Count > 0 && messages[0]!["role"]!.GetValue<string>() == "assistant")
+            messages.RemoveAt(0);
 
         var tools = ToolDefinitions.Build(_documents.Enabled);
         var jsonRepairAttempts = 0;
@@ -109,6 +130,22 @@ public class ClaudeClient
                 continue;
             }
 
+            if (stopReason == "max_tokens")
+            {
+                jsonRepairAttempts++;
+                if (jsonRepairAttempts >= MaxJsonRepairAttempts)
+                    throw new InvalidOperationException(
+                        "Claude's response was repeatedly truncated (max_tokens). Increase Anthropic:MaxTokens.");
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] =
+                        "Your response was cut off because it exceeded the token limit. Respond again with the " +
+                        "complete dashboard JSON only, using fewer/smaller widgets (aggregate the data further).",
+                });
+                continue;
+            }
+
             // Final (non-tool) turn: expect the dashboard JSON.
             var text = string.Concat(content
                 .Where(b => b?["type"]?.GetValue<string>() == "text")
@@ -139,14 +176,26 @@ public class ClaudeClient
 
     private async Task<JsonObject> CallMessagesApiAsync(JsonArray messages, JsonArray tools, CancellationToken ct)
     {
+        // Prompt caching: one breakpoint after the stable prefix (tools + system), and one
+        // on the last message so each tool-loop iteration reuses the growing conversation
+        // prefix instead of re-processing it.
         var body = new JsonObject
         {
             ["model"] = _model,
             ["max_tokens"] = _maxTokens,
-            ["system"] = BuildSystemPrompt(),
+            ["system"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["type"] = "text",
+                    ["text"] = BuildSystemPrompt(),
+                    ["cache_control"] = new JsonObject { ["type"] = "ephemeral" },
+                },
+            },
             ["tools"] = tools.DeepClone(),
             ["messages"] = messages.DeepClone(),
         };
+        MarkLastMessageCacheable(body["messages"]!.AsArray());
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "v1/messages")
         {
@@ -163,6 +212,32 @@ public class ClaudeClient
 
         return JsonNode.Parse(responseText)?.AsObject()
             ?? throw new InvalidOperationException("Anthropic API returned an empty response body.");
+    }
+
+    /// <summary>
+    /// Puts a cache_control breakpoint on the last content block of the last message
+    /// (normalizing string content to a block array first).
+    /// </summary>
+    private static void MarkLastMessageCacheable(JsonArray messages)
+    {
+        if (messages.Count == 0) return;
+        var last = messages[^1]!.AsObject();
+        var content = last["content"]!;
+
+        if (content.GetValueKind() == JsonValueKind.String)
+        {
+            last["content"] = new JsonArray(new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = content.GetValue<string>(),
+                ["cache_control"] = new JsonObject { ["type"] = "ephemeral" },
+            });
+            return;
+        }
+
+        var blocks = content.AsArray();
+        if (blocks.Count > 0)
+            blocks[^1]!.AsObject()["cache_control"] = new JsonObject { ["type"] = "ephemeral" };
     }
 
     private string BuildSystemPrompt() =>
