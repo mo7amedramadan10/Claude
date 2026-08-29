@@ -100,10 +100,11 @@ curl -X POST http://localhost:5000/api/data/refresh
 ## Optional: unstructured documents (RAG)
 
 Set `"EnableRag": true` in `appsettings.json` to index `.pdf` and `.docx` files from the data
-folder and expose a `search_documents` tool to Claude. The bundled implementation is a
-deliberately lightweight keyword-overlap search over text chunks (zero extra infrastructure);
-it is isolated behind the feature flag and the tool interface so you can swap in a real
-embeddings + vector-store pipeline (e.g. Qdrant) without touching the tool-use loop.
+folder and expose a `search_documents` tool to Claude. PDF text is extracted with
+[PdfPig](https://github.com/UglyToad/PdfPig); DOCX text is read straight from the document XML.
+Search itself is a deliberately lightweight keyword-overlap scorer over text chunks (zero extra
+infrastructure); it is isolated behind the feature flag and the tool interface so you can swap
+in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the tool-use loop.
 
 ## Configuration reference (`appsettings.json`)
 
@@ -111,7 +112,7 @@ embeddings + vector-store pipeline (e.g. Qdrant) without touching the tool-use l
 |---|---|---|
 | `DataFolderPath` | `../../data` | Folder scanned for data files (env var `DataFolderPath` overrides) |
 | `EnableRag` | `false` | Index PDF/DOCX and expose `search_documents` |
-| `Anthropic:Model` | `claude-sonnet-4-6` | Claude model ID used for chat |
+| `Anthropic:Model` | `claude-sonnet-5` | Claude model ID used for chat |
 | `Anthropic:MaxTokens` | `8192` | Max tokens per Claude response |
 | `ConnectionStrings:DataDb` | — | Set via user-secrets |
 | `Anthropic:ApiKey` | — | Set via user-secrets |

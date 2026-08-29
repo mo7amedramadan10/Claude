@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
+using UglyToad.PdfPig;
 
 namespace ChatToDashboard.Api.Data;
 
@@ -98,68 +99,14 @@ public class DocumentSearchService
             .Select(m => m.Value)
             .ToHashSet();
 
-    /// <summary>
-    /// Best-effort, zero-dependency PDF text extraction: inflates FlateDecode content
-    /// streams and pulls the string operands out of text-showing operators. Good enough
-    /// for simple text PDFs; swap in a real PDF library (e.g. PdfPig) or a proper
-    /// embeddings pipeline for production RAG.
-    /// </summary>
     private static string ExtractPdfText(string file)
     {
-        var bytes = File.ReadAllBytes(file);
-        var raw = Encoding.Latin1.GetString(bytes);
+        using var pdf = PdfDocument.Open(file);
         var sb = new StringBuilder();
-
-        foreach (Match m in Regex.Matches(raw, @"stream\r?\n", RegexOptions.None))
-        {
-            var start = m.Index + m.Length;
-            var end = raw.IndexOf("endstream", start, StringComparison.Ordinal);
-            if (end < 0) continue;
-
-            var streamBytes = bytes.AsSpan(start, end - start).ToArray();
-            string content;
-            try
-            {
-                using var input = new MemoryStream(streamBytes);
-                using var zlib = new ZLibStream(input, CompressionMode.Decompress);
-                using var reader = new StreamReader(zlib, Encoding.Latin1);
-                content = reader.ReadToEnd();
-            }
-            catch (InvalidDataException)
-            {
-                content = Encoding.Latin1.GetString(streamBytes);
-            }
-
-            // Text-showing operators: (string) Tj, (string) ', and [(a) -120 (b)] TJ arrays.
-            foreach (Match text in Regex.Matches(content, @"\(((?:[^()\\]|\\.)*)\)\s*(?:Tj|')|\[((?:[^\[\]\\]|\\.)*)\]\s*TJ"))
-            {
-                var value = text.Groups[1].Success
-                    ? text.Groups[1].Value
-                    : string.Concat(Regex.Matches(text.Groups[2].Value, @"\(((?:[^()\\]|\\.)*)\)")
-                        .Select(p => p.Groups[1].Value));
-                sb.Append(UnescapePdfString(value)).Append(' ');
-            }
-        }
+        foreach (var page in pdf.GetPages())
+            sb.AppendLine(page.Text);
         return sb.ToString();
     }
-
-    private static string UnescapePdfString(string value) =>
-        Regex.Replace(value, @"\\([nrtbf()\\]|\d{1,3})", m =>
-        {
-            var escape = m.Groups[1].Value;
-            return escape switch
-            {
-                "n" => "\n",
-                "r" => "\r",
-                "t" => "\t",
-                "b" => "\b",
-                "f" => "\f",
-                "(" => "(",
-                ")" => ")",
-                "\\" => "\\",
-                _ => ((char)Convert.ToInt32(escape, 8)).ToString(),
-            };
-        });
 
     private static string ExtractDocxText(string file)
     {

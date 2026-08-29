@@ -46,7 +46,7 @@ public class ClaudeClient
             ?? throw new InvalidOperationException(
                 "Anthropic API key is not configured. " +
                 "Set it with: dotnet user-secrets set \"Anthropic:ApiKey\" \"<key>\"");
-        _model = configuration["Anthropic:Model"] ?? "claude-sonnet-4-6";
+        _model = configuration["Anthropic:Model"] ?? "claude-sonnet-5";
         _maxTokens = configuration.GetValue("Anthropic:MaxTokens", 8192);
         _loader = loader;
         _db = db;
