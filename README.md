@@ -141,3 +141,29 @@ statement; write/DDL keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `E
 multi-statement batches are rejected, and results are capped at 500 rows server-side. SQL
 errors are fed back to Claude as tool results so it can self-correct its T-SQL (up to the
 loop's retry limits).
+
+## Opening in Visual Studio
+
+Open `ChatToDashboard.sln` at the repo root. The backend runs with F5 (the `http` profile
+listens on `http://localhost:5000`).
+
+Secrets are easiest to set from the IDE: right-click the **ChatToDashboard.Api** project →
+**Manage User Secrets**, which opens `secrets.json`:
+
+```json
+{
+  "Anthropic:ApiKey": "sk-ant-api03-...",
+  "ConnectionStrings:DataDb": "Server=localhost;Database=ChatToDashboard;Trusted_Connection=True;TrustServerCertificate=True"
+}
+```
+
+Omit the connection string when running with `"DatabaseProvider": "Sqlite"`.
+
+The frontend is not part of the solution (Vite runs it). Start it from a terminal —
+Visual Studio's is under **View → Terminal**:
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
