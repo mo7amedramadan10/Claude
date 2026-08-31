@@ -6,7 +6,7 @@ nothing installed on their machines.
 ## Option A: Any server with Docker (VPS, on-prem box, cloud VM)
 
 This is the simplest path. The included `docker-compose.yml` runs the whole stack: the app
-(API + frontend in one container) plus SQL Server, with the database created automatically
+(one container serving both the API and the UI) plus SQL Server, with the database created automatically
 on first start.
 
 ### 1. Get a server

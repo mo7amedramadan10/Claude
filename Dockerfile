@@ -1,24 +1,15 @@
-# ---- Frontend build ----
-FROM node:22-alpine AS frontend
-WORKDIR /src
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ ./
-RUN npm run build
-
-# ---- Backend build ----
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS backend
+# ---- Build ----
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY backend/ChatToDashboard.Api/ChatToDashboard.Api.csproj ChatToDashboard.Api/
 RUN dotnet restore ChatToDashboard.Api/ChatToDashboard.Api.csproj
 COPY backend/ChatToDashboard.Api/ ChatToDashboard.Api/
 RUN dotnet publish ChatToDashboard.Api/ChatToDashboard.Api.csproj -c Release -o /app/publish
 
-# ---- Runtime: one container serving both the API and the built frontend ----
+# ---- Runtime: one container serving the API and the UI ----
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=backend /app/publish .
-COPY --from=frontend /src/dist ./wwwroot
+COPY --from=build /app/publish .
 # Seed data baked into the image; mount a volume over /data to use your own files.
 COPY data/ /data/
 ENV DataFolderPath=/data

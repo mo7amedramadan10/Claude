@@ -3,16 +3,7 @@ using ChatToDashboard.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-const string FrontendCorsPolicy = "frontend";
-
 builder.Services.AddControllers();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(FrontendCorsPolicy, policy => policy
-        .WithOrigins("http://localhost:5173")
-        .AllowAnyHeader()
-        .AllowAnyMethod());
-});
 
 builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<DataFolderLoader>();
@@ -25,10 +16,7 @@ builder.Services.AddHttpClient<ClaudeClient>(client =>
 
 var app = builder.Build();
 
-app.UseCors(FrontendCorsPolicy);
-
-// In production the frontend build is copied into wwwroot (see Dockerfile) and served
-// from the same origin; in dev, Vite serves it separately and these are no-ops.
+// The UI lives in wwwroot and is served from this same app — one project, one URL.
 app.UseDefaultFiles();
 app.UseStaticFiles();
 

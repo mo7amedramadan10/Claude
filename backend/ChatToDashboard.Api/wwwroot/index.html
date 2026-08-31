@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chat to Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='white'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='white'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='white'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    color-scheme: light;
+    --surface: #fcfcfb;
+    --page: #f9f9f7;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --line: #e6e5df;
+    --accent: #2a78d6;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+    --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; display: flex; overflow: hidden;
+    background: var(--page); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  /* ---- Chat panel ---- */
+  #chat { width: 35%; min-width: 320px; display: flex; flex-direction: column;
+          background: #fff; border-right: 1px solid var(--line); }
+  #chat header { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  #chat h1 { margin: 0; font-size: 17px; font-weight: 600; }
+  #chat header p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+  #messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 16px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 6px; }
+  .msg.bot { align-self: flex-start; background: #f4f4f2; border-bottom-left-radius: 6px; }
+  .msg.err { align-self: flex-start; background: #fdf2f2; border: 1px solid #f5c9c9; color: #a12b2b; border-bottom-left-radius: 6px; }
+  .hint { background: #f4f4f2; border-radius: 16px; padding: 14px; color: var(--ink-2); font-size: 13px; }
+  .hint b { display: block; margin-bottom: 6px; color: var(--ink); font-weight: 600; }
+  .hint span { display: block; padding: 3px 0; cursor: pointer; color: var(--accent); }
+  .hint span:hover { text-decoration: underline; }
+  .dots { display: inline-flex; gap: 4px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: #b9b8b2; animation: b 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay: .15s } .dots i:nth-child(3) { animation-delay: .3s }
+  @keyframes b { 0%,60%,100% { transform: translateY(0) } 30% { transform: translateY(-5px) } }
+  form { display: flex; gap: 8px; padding: 14px; border-top: 1px solid var(--line); }
+  input { flex: 1; padding: 10px 14px; font: inherit; border: 1px solid #d6d5cf; border-radius: 12px; outline: none; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #2a78d61a; }
+  button { padding: 10px 18px; font: inherit; font-weight: 500; color: #fff; background: var(--accent);
+           border: 0; border-radius: 12px; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ---- Dashboard ---- */
+  #dash { flex: 1; overflow-y: auto; padding: 24px; }
+  #dash.busy { opacity: .55; }
+  #summary { background: #fff; border: 1px solid var(--line); border-radius: 16px;
+             padding: 16px 20px; margin-bottom: 18px; color: var(--ink-2); box-shadow: 0 1px 2px #0b0b0b0d; }
+  #grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 18px;
+          box-shadow: 0 1px 2px #0b0b0b0d; min-width: 0; }
+  .card.wide { grid-column: 1 / -1; }
+  .card h3 { margin: 0 0 12px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+  .kpi { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+  .kpi-label { margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: var(--ink-2); background: #faf9f7;
+       padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; position: sticky; top: 0; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f2f1ec; white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:hover td { background: #faf9f7; }
+  .tablewrap { max-height: 340px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+  .empty { height: 70vh; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); }
+  .empty h2 { margin: 0 0 6px; font-size: 17px; color: var(--ink); }
+  .skel { height: 210px; border-radius: 12px; background: #f1f0ec; animation: p 1.4s ease-in-out infinite; }
+  @keyframes p { 50% { opacity: .55 } }
+  #tip { position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+         background: #fff; border: 1px solid var(--grid); border-radius: 10px; padding: 7px 11px;
+         font-size: 13px; box-shadow: 0 4px 14px #0b0b0b1f; z-index: 10; white-space: nowrap; }
+  svg { display: block; width: 100%; height: auto; }
+  svg text { fill: var(--muted); font-size: 12px; }
+  .mark { transition: opacity .12s; cursor: default; }
+  .mark:hover { opacity: .82; }
+  @media (max-width: 1000px) { #grid { grid-template-columns: 1fr; } .card.wide { grid-column: auto; } }
+</style>
+</head>
+<body>
+  <aside id="chat">
+    <header>
+      <h1>Chat to Dashboard</h1>
+      <p>Ask a question about your data</p>
+    </header>
+    <div id="messages"></div>
+    <form id="form">
+      <input id="q" placeholder="Ask about your data…" autocomplete="off" />
+      <button type="submit" id="send">Send</button>
+    </form>
+  </aside>
+
+  <main id="dash"></main>
+  <div id="tip"></div>
+
+<script>
+const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
+const GRID = '#e1e0d9', AXIS = '#c3c2b7';
+
+const el = { messages: document.getElementById('messages'), dash: document.getElementById('dash'),
+             form: document.getElementById('form'), q: document.getElementById('q'),
+             send: document.getElementById('send'), tip: document.getElementById('tip') };
+
+const state = { messages: [], dashboard: null, loading: false };
+
+// ---------- helpers ----------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+function fmt(v) {
+  if (typeof v !== 'number' || !isFinite(v)) return String(v ?? '—');
+  const a = Math.abs(v);
+  if (a >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+  if (a >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (a >= 1e4) return (v / 1e3).toFixed(1) + 'K';
+  return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+const num = v => typeof v === 'number' ? v : (parseFloat(v) || 0);
+
+function keysFor(w) {
+  const rows = Array.isArray(w.data) ? w.data : [];
+  const first = rows[0] || {};
+  const ks = Object.keys(first);
+  const xKey = w.xKey || ks.find(k => typeof first[k] !== 'number') || ks[0];
+  const yKey = w.yKey || ks.find(k => k !== xKey && typeof first[k] === 'number') || ks[1];
+  return { rows, xKey, yKey };
+}
+
+// Nice axis ticks
+function ticks(max) {
+  if (max <= 0) return [0, 1];
+  const raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].find(m => m * mag >= raw) * mag;
+  const out = [];
+  for (let v = 0; v <= max + step * 0.001; v += step) out.push(v);
+  return out;
+}
+
+function showTip(e, html) {
+  el.tip.innerHTML = html;
+  el.tip.style.opacity = 1;
+  const pad = 14;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  const r = el.tip.getBoundingClientRect();
+  if (x + r.width > innerWidth) x = e.clientX - r.width - pad;
+  if (y + r.height > innerHeight) y = e.clientY - r.height - pad;
+  el.tip.style.left = x + 'px'; el.tip.style.top = y + 'px';
+}
+const hideTip = () => { el.tip.style.opacity = 0; };
+
+// Keeps the first/last axis label inside the viewBox instead of clipping it.
+function anchorAt(x) { return x > W - 40 ? 'end' : x < ML + 12 ? 'start' : 'middle'; }
+
+function svg(w, h, inner) {
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img">${inner}</svg>`;
+}
+// Bar with rounded top corners only, anchored to the baseline.
+function topRoundedBar(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} `
+       + `Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
+}
+
+// ---------- charts ----------
+const W = 620, H = 300, ML = 62, MR = 12, MT = 12, MB = 38;
+
+function axes(maxY, plotW, plotH) {
+  return ticks(maxY).map(t => {
+    const y = MT + plotH - (t / maxY) * plotH;
+    return `<line x1="${ML}" y1="${y}" x2="${ML + plotW}" y2="${y}" stroke="${GRID}" stroke-width="1"/>`
+         + `<text x="${ML - 10}" y="${y + 4}" text-anchor="end">${fmt(t)}</text>`;
+  }).join('');
+}
+
+function barChart(w) {
+  const { rows, xKey, yKey } = keysFor(w);
+  if (!rows.length) return '<p style="color:#898781">No data</p>';
+  const plotW = W - ML - MR, plotH = H - MT - MB;
+  const maxY = Math.max(...rows.map(r => num(r[yKey])), 0) || 1;
+  const band = plotW / rows.length, bw = Math.min(band * 0.6, 56);
+
+  const bars = rows.map((r, i) => {
+    const v = num(r[yKey]);
+    const h = Math.max((v / maxY) * plotH, v > 0 ? 2 : 0);
+    const x = ML + band * i + (band - bw) / 2, y = MT + plotH - h;
+    const label = `${esc(r[xKey])}: <b>${fmt(v)}</b>`;
+    return `<path class="mark" d="${topRoundedBar(x, y, bw, h, 4)}" fill="${PALETTE[0]}" data-tip="${label}"/>`;
+  }).join('');
+
+  const labels = rows.map((r, i) => {
+    const x = ML + band * i + band / 2;
+    return `<text x="${x}" y="${H - 14}" text-anchor="${anchorAt(x)}">${esc(String(r[xKey]).slice(0, 14))}</text>`;
+  }).join('');
+
+  return svg(W, H, axes(maxY, plotW, plotH)
+    + `<line x1="${ML}" y1="${MT + plotH}" x2="${ML + plotW}" y2="${MT + plotH}" stroke="${AXIS}"/>`
+    + bars + labels);
+}
+
+function lineChart(w) {
+  const { rows, xKey, yKey } = keysFor(w);
+  if (!rows.length) return '<p style="color:#898781">No data</p>';
+  const plotW = W - ML - MR, plotH = H - MT - MB;
+  const maxY = Math.max(...rows.map(r => num(r[yKey])), 0) || 1;
+  const step = rows.length > 1 ? plotW / (rows.length - 1) : 0;
+  const pt = i => [ML + step * i + (rows.length === 1 ? plotW / 2 : 0),
+                   MT + plotH - (num(rows[i][yKey]) / maxY) * plotH];
+
+  const path = rows.map((_, i) => (i ? 'L' : 'M') + pt(i).join(',')).join(' ');
+  const dots = rows.map((r, i) => {
+    const [x, y] = pt(i);
+    return `<circle class="mark" cx="${x}" cy="${y}" r="4.5" fill="${PALETTE[0]}" `
+         + `stroke="#fff" stroke-width="2" data-tip="${esc(r[xKey])}: <b>${fmt(num(r[yKey]))}</b>"/>`;
+  }).join('');
+
+  const every = Math.ceil(rows.length / 8);
+  const labels = rows.map((r, i) => {
+    if (i % every && i !== rows.length - 1) return '';
+    const x = pt(i)[0];
+    return `<text x="${x}" y="${H - 14}" text-anchor="${anchorAt(x)}">${esc(String(r[xKey]).slice(0, 12))}</text>`;
+  }).join('');
+
+  return svg(W, H, axes(maxY, plotW, plotH)
+    + `<line x1="${ML}" y1="${MT + plotH}" x2="${ML + plotW}" y2="${MT + plotH}" stroke="${AXIS}"/>`
+    + `<path d="${path}" fill="none" stroke="${PALETTE[0]}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+    + dots + labels);
+}
+
+function pieChart(w) {
+  const rows = (Array.isArray(w.data) ? w.data : []).map(r => ({
+    label: r.label ?? Object.values(r).find(v => typeof v === 'string') ?? '—',
+    value: num(r.value ?? Object.values(r).find(v => typeof v === 'number')),
+  })).filter(r => r.value > 0);
+  if (!rows.length) return '<p style="color:#898781">No data</p>';
+
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  const S = 260, cx = S / 2, cy = S / 2, R = 100, r0 = 58;
+  let angle = -Math.PI / 2;
+
+  const arcs = rows.map((row, i) => {
+    const sweep = (row.value / total) * Math.PI * 2;
+    const gap = Math.min(0.02, sweep / 8);          // 2px-ish surface gap between slices
+    const a0 = angle + gap / 2, a1 = angle + sweep - gap / 2;
+    angle += sweep;
+    const large = sweep > Math.PI ? 1 : 0;
+    const p = (rad, a) => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)];
+    const [x0, y0] = p(R, a0), [x1, y1] = p(R, a1), [x2, y2] = p(r0, a1), [x3, y3] = p(r0, a0);
+    const pct = ((row.value / total) * 100).toFixed(1);
+    return `<path class="mark" d="M${x0},${y0} A${R},${R} 0 ${large} 1 ${x1},${y1} L${x2},${y2} `
+         + `A${r0},${r0} 0 ${large} 0 ${x3},${y3} Z" fill="${PALETTE[i % PALETTE.length]}" `
+         + `data-tip="${esc(row.label)}: <b>${fmt(row.value)}</b> (${pct}%)"/>`;
+  }).join('');
+
+  const legend = rows.map((row, i) =>
+    `<span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${esc(row.label)}</span>`
+  ).join('');
+
+  return `<div style="max-width:270px;margin:0 auto">${svg(S, S, arcs)}</div>`
+       + `<div class="legend">${legend}</div>`;
+}
+
+function kpiCard(w) {
+  const e = Array.isArray(w.data) ? w.data[0] : null;
+  const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
+  return `<div class="kpi">${esc(fmt(v))}</div>`
+       + (e?.label ? `<div class="kpi-label">${esc(e.label)}</div>` : '');
+}
+
+function tableCard(w) {
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return '<p style="color:#898781">No data</p>';
+  const cols = Object.keys(rows[0]);
+  return `<div class="tablewrap"><table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>`
+       + `<tbody>${rows.map(r => `<tr>${cols.map(c => {
+           const v = r[c], n = typeof v === 'number';
+           return `<td class="${n ? 'num' : ''}">${esc(n ? fmt(v) : (v ?? '—'))}</td>`;
+         }).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+const RENDERERS = { kpi: kpiCard, bar: barChart, line: lineChart, pie: pieChart, table: tableCard };
+
+// ---------- rendering ----------
+function renderDashboard() {
+  const d = state.dashboard;
+  el.dash.classList.toggle('busy', state.loading);
+
+  if (!d) {
+    el.dash.innerHTML = state.loading
+      ? `<div id="grid">${'<div class="card"><div class="skel"></div></div>'.repeat(4)}</div>`
+      : `<div class="empty"><div><h2>Your dashboard will appear here</h2>
+         <p>Ask a question and Claude will query your data and build the charts.</p></div></div>`;
+    return;
+  }
+
+  const cards = (d.widgets || []).map(w => {
+    const render = RENDERERS[(w.type || '').toLowerCase()];
+    if (!render) return '';
+    const wide = w.type === 'table' ? ' wide' : '';
+    return `<section class="card${wide}"><h3>${esc(w.title)}</h3>${render(w)}</section>`;
+  }).join('');
+
+  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div><div id="grid">${cards}</div>`;
+
+  el.dash.querySelectorAll('[data-tip]').forEach(node => {
+    node.addEventListener('mousemove', e => showTip(e, node.dataset.tip));
+    node.addEventListener('mouseleave', hideTip);
+  });
+}
+
+const SAMPLES = ['What is total revenue by region?', 'Show monthly revenue trends',
+                 'Which products sell best?', 'Compare revenue by category'];
+
+function renderMessages() {
+  if (!state.messages.length && !state.loading) {
+    el.messages.innerHTML = `<div class="hint"><b>Try asking:</b>`
+      + SAMPLES.map(s => `<span data-q="${esc(s)}">${esc(s)}</span>`).join('') + `</div>`;
+    el.messages.querySelectorAll('[data-q]').forEach(n =>
+      n.addEventListener('click', () => ask(n.dataset.q)));
+    return;
+  }
+  el.messages.innerHTML = state.messages
+    .map(m => `<div class="msg ${m.error ? 'err' : m.role === 'user' ? 'user' : 'bot'}">${esc(m.text)}</div>`)
+    .join('')
+    + (state.loading ? `<div class="msg bot"><span class="dots"><i></i><i></i><i></i></span></div>` : '');
+  el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+// ---------- chat ----------
+async function ask(question) {
+  if (state.loading || !question.trim()) return;
+
+  const history = state.messages.filter(m => !m.error).slice(-10)
+    .map(m => ({ role: m.role, text: m.text }));
+
+  state.messages.push({ role: 'user', text: question });
+  state.loading = true;
+  renderMessages(); renderDashboard();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: question, history }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.dashboard) {
+      state.messages.push({ role: 'assistant', error: true, text: payload?.error || `Request failed (${res.status})` });
+    } else {
+      state.dashboard = payload.dashboard;
+      state.messages.push({ role: 'assistant', text: payload.dashboard.summary });
+    }
+  } catch (err) {
+    state.messages.push({ role: 'assistant', error: true, text: 'Could not reach the server: ' + err.message });
+  } finally {
+    state.loading = false;
+    renderMessages(); renderDashboard();
+  }
+}
+
+el.form.addEventListener('submit', e => {
+  e.preventDefault();
+  const q = el.q.value.trim();
+  el.q.value = '';
+  ask(q);
+});
+
+renderMessages();
+renderDashboard();
+</script>
+</body>
+</html>

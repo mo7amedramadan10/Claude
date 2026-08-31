@@ -9,7 +9,11 @@ bulk-loads every `.csv` / `.xlsx` / `.json` file into its own table in a `stagin
 shared SQL Server instance. When you ask a question, the backend calls the Anthropic Claude API
 with three tools — `list_files`, `query_data` (read-only T-SQL), and optionally
 `search_documents` — loops through Claude's tool calls, and returns a validated dashboard JSON
-spec that the React frontend renders with Recharts.
+spec that the built-in UI renders as charts.
+
+Everything is **one ASP.NET Core project**: the API and the UI ship together and are served
+from the same URL. The UI is plain HTML/CSS/JavaScript with hand-written SVG charts — no npm,
+no build step, and no CDN, so it works even on a machine with no internet access.
 
 Because the data lives in a central SQL Server (local or Azure SQL), multiple users on
 different machines all query the same up-to-date data through the app — no one needs local
@@ -18,7 +22,8 @@ run against a local SQLite file (`"DatabaseProvider": "Sqlite"`).
 
 ```
 ┌──────────┐   POST /api/chat   ┌─────────────────┐   Messages API + tools   ┌────────┐
-│ React UI │ ─────────────────▶ │ ASP.NET Core API │ ◀──────────────────────▶ │ Claude │
+│ Built-in │ ─────────────────▶ │ ASP.NET Core app │ ◀──────────────────────▶ │ Claude │
+│    UI    │                    │  (serves the UI) │                          │        │
 └──────────┘   dashboard JSON   └─────────────────┘                          └────────┘
                                         │  Dapper / SqlBulkCopy
                                         ▼
@@ -35,7 +40,6 @@ run against a local SQLite file (`"DatabaseProvider": "Sqlite"`).
 
 - [.NET SDK 8 or newer](https://dotnet.microsoft.com/download/dotnet/8.0) (the project targets
   net8.0 and rolls forward, so a newer SDK such as .NET 10 works on its own)
-- [Node.js](https://nodejs.org/) 18+ (with npm)
 - An [Anthropic API key](https://console.anthropic.com/)
 - A database — either:
   - **SQL Server** (local, Express, or Azure SQL) — the default, and what makes the data
@@ -82,26 +86,15 @@ Supported structured files: `.csv`, `.xlsx`, `.json` (array of objects). Each fi
 table `staging.<FileName>` — dropped and recreated on every load, so re-running or refreshing
 always reflects the current files.
 
-### 3. Run the backend
+### 3. Run it
 
 ```bash
 cd backend/ChatToDashboard.Api
 dotnet run
 ```
 
-Listens on `http://localhost:5000` and performs the initial data load on startup (a failed
-load — e.g. SQL Server unreachable — is logged but doesn't stop the app).
-
-### 4. Run the frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`. The dev server proxies `/api` to the backend (CORS is also
-enabled for this origin).
+Open `http://localhost:5000` — the UI and the API are both served there. The initial data load
+runs at startup (a failure — e.g. SQL Server unreachable — is logged but doesn't stop the app).
 
 ## Refreshing data
 
@@ -139,13 +132,13 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 Generated SQL is validated before execution: it must be a single `SELECT` (or `WITH … SELECT`)
 statement; write/DDL keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `EXEC`, …) and
 multi-statement batches are rejected, and results are capped at 500 rows server-side. SQL
-errors are fed back to Claude as tool results so it can self-correct its T-SQL (up to the
+errors are fed back to Claude as tool results so it can self-correct its SQL (up to the
 loop's retry limits).
 
 ## Opening in Visual Studio
 
-Open `ChatToDashboard.sln` at the repo root. The backend runs with F5 (the `http` profile
-listens on `http://localhost:5000`).
+Open `ChatToDashboard.sln` at the repo root and press F5. That runs the whole app — it opens
+on `http://localhost:5000` with the UI included.
 
 Secrets are easiest to set from the IDE: right-click the **ChatToDashboard.Api** project →
 **Manage User Secrets**, which opens `secrets.json`:
@@ -159,11 +152,5 @@ Secrets are easiest to set from the IDE: right-click the **ChatToDashboard.Api**
 
 Omit the connection string when running with `"DatabaseProvider": "Sqlite"`.
 
-The frontend is not part of the solution (Vite runs it). Start it from a terminal —
-Visual Studio's is under **View → Terminal**:
-
-```powershell
-cd frontend
-npm.cmd install
-npm.cmd run dev
-```
+To change the UI, edit `backend/ChatToDashboard.Api/wwwroot/index.html` and refresh the
+browser — there is no build step.
