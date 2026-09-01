@@ -1,4 +1,5 @@
 using ChatToDashboard.Api.Models;
+using ChatToDashboard.Api.Sources;
 
 namespace ChatToDashboard.Api.Llm;
 
@@ -9,5 +10,8 @@ namespace ChatToDashboard.Api.Llm;
 public interface IDashboardGenerator
 {
     Task<DashboardSpec> GenerateDashboardAsync(
-        string question, IReadOnlyList<ChatTurn>? history = null, CancellationToken ct = default);
+        string question,
+        IReadOnlyList<ChatTurn>? history = null,
+        SourceSelection? sources = null,
+        CancellationToken ct = default);
 }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using ChatToDashboard.Api.Sources;
 
 namespace ChatToDashboard.Api.Models;
 
@@ -13,6 +14,10 @@ public class ChatRequest
     /// </summary>
     [JsonPropertyName("history")]
     public List<ChatTurn> History { get; set; } = new();
+
+    /// <summary>Which sources the user has enabled; omitted means "everything".</summary>
+    [JsonPropertyName("sources")]
+    public SourceSelection? Sources { get; set; }
 }
 
 public class ChatTurn

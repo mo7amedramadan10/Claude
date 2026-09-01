@@ -2,6 +2,8 @@ using ChatToDashboard.Api.Claude;
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.OpenAi;
+using ChatToDashboard.Api.Repository;
+using ChatToDashboard.Api.Sources;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,9 @@ builder.Services.AddControllers();
 builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<DataFolderLoader>();
 builder.Services.AddSingleton<DocumentSearchService>();
+builder.Services.AddSingleton<RepositoryStore>();
+builder.Services.AddSingleton<UploadParser>();
+builder.Services.Configure<SourceOptions>(builder.Configuration.GetSection(SourceOptions.SectionName));
 builder.Services.AddSingleton<AnalyticsTools>();
 
 // Which LLM answers the questions: "Anthropic" (default) or "OpenAI".

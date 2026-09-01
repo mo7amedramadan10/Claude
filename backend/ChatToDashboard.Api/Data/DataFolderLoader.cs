@@ -75,7 +75,7 @@ public class DataFolderLoader
     public Task<IReadOnlyList<TableSchema>> GetSchemaAsync(CancellationToken ct = default) =>
         _db.GetSchemaAsync(ct);
 
-    private static string SanitizeTableName(string name)
+    public static string SanitizeTableName(string name)
     {
         var sanitized = Regex.Replace(name, @"[^\w]", "_");
         if (sanitized.Length == 0 || char.IsDigit(sanitized[0]))
@@ -95,7 +95,7 @@ public class DataFolderLoader
 
     // ---- File readers: everything is read as strings first, then column types are inferred. ----
 
-    private DataTable LoadFileIntoDataTable(string file) =>
+    public static DataTable LoadFileIntoDataTable(string file) =>
         Path.GetExtension(file).ToLowerInvariant() switch
         {
             ".csv" => InferTypes(ReadCsv(file)),
@@ -104,7 +104,7 @@ public class DataFolderLoader
             _ => throw new NotSupportedException($"Unsupported file type: {file}"),
         };
 
-    private static (List<string> Headers, List<string?[]> Rows) ReadCsv(string file)
+    public static (List<string> Headers, List<string?[]> Rows) ReadCsv(string file)
     {
         using var reader = new StreamReader(file);
         using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -131,7 +131,7 @@ public class DataFolderLoader
         return (headers, rows);
     }
 
-    private static (List<string> Headers, List<string?[]> Rows) ReadXlsx(string file)
+    public static (List<string> Headers, List<string?[]> Rows) ReadXlsx(string file)
     {
         using var workbook = new XLWorkbook(file);
         var sheet = workbook.Worksheets.First();
@@ -207,7 +207,7 @@ public class DataFolderLoader
 
     // ---- Type inference: BIGINT / DECIMAL / DATETIME2 / BIT when every non-empty value parses, else NVARCHAR. ----
 
-    private static DataTable InferTypes((List<string> Headers, List<string?[]> Rows) data)
+    public static DataTable InferTypes((List<string> Headers, List<string?[]> Rows) data)
     {
         var (headers, rows) = data;
         var table = new DataTable();

@@ -108,6 +108,20 @@ public class DataStore
         ? SqlitePrefix + tableName
         : $"{SqlServerSchema}.{tableName}";
 
+    /// <summary>Strips the schema/prefix from a display name, giving the bare table name.</summary>
+    public string BareTableName(string displayName) => Provider == DbProvider.Sqlite
+        ? (displayName.StartsWith(SqlitePrefix, StringComparison.Ordinal)
+            ? displayName[SqlitePrefix.Length..]
+            : displayName)
+        : (displayName.Contains('.') ? displayName.Split('.').Last() : displayName);
+
+    public async Task DropTableAsync(DbConnection connection, string bareName, CancellationToken ct = default)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"DROP TABLE IF EXISTS {QualifiedTable(bareName)}";
+        await command.ExecuteNonQueryAsync(ct);
+    }
+
     /// <summary>The name Claude sees, for a table name as returned by the catalog query.</summary>
     private string CatalogDisplayTable(string rawName) => Provider == DbProvider.Sqlite
         ? rawName // SQLite table names already carry the staging_ prefix.

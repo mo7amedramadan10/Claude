@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
+using ChatToDashboard.Api.Sources;
 
 namespace ChatToDashboard.Api.OpenAi;
 
@@ -41,11 +42,15 @@ public class OpenAiClient : IDashboardGenerator
     }
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
-        string question, IReadOnlyList<ChatTurn>? history = null, CancellationToken ct = default)
+        string question,
+        IReadOnlyList<ChatTurn>? history = null,
+        SourceSelection? sources = null,
+        CancellationToken ct = default)
     {
+        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var messages = new JsonArray
         {
-            new JsonObject { ["role"] = "system", ["content"] = _tools.BuildSystemPrompt() },
+            new JsonObject { ["role"] = "system", ["content"] = _tools.BuildSystemPrompt(context) },
         };
 
         foreach (var turn in history ?? Array.Empty<ChatTurn>())
@@ -57,7 +62,7 @@ public class OpenAiClient : IDashboardGenerator
 
         messages.Add(new JsonObject { ["role"] = "user", ["content"] = question });
 
-        var tools = BuildToolsJson();
+        var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
 
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
@@ -98,7 +103,7 @@ public class OpenAiClient : IDashboardGenerator
                         continue;
                     }
 
-                    var (result, isError) = await _tools.ExecuteToolAsync(toolName, arguments, ct);
+                    var (result, isError) = await _tools.ExecuteToolAsync(toolName, arguments, context, ct);
                     messages.Add(ToolResultMessage(callId, result, isError));
                 }
                 continue;
@@ -153,10 +158,10 @@ public class OpenAiClient : IDashboardGenerator
             ["content"] = isError ? $"ERROR: {content}" : content,
         };
 
-    private JsonArray BuildToolsJson()
+    private JsonArray BuildToolsJson(AnalyticsTools.SourceContext context)
     {
         var tools = new JsonArray();
-        foreach (var tool in _tools.BuildTools())
+        foreach (var tool in _tools.BuildTools(context))
         {
             tools.Add(new JsonObject
             {

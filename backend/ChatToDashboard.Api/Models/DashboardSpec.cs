@@ -24,8 +24,10 @@ public class DashboardSpec
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(Summary))
             errors.Add("\"summary\" is required and must be a non-empty string.");
-        if (Widgets is null || Widgets.Count == 0)
-            errors.Add("\"widgets\" must be a non-empty array.");
+        // An empty array is valid: it is how the agent answers when the question needs a
+        // source the user has switched off, and the summary explains what to enable.
+        if (Widgets is null)
+            errors.Add("\"widgets\" must be an array.");
         else
         {
             for (var i = 0; i < Widgets.Count; i++)
@@ -38,6 +40,9 @@ public class DashboardSpec
                     errors.Add($"widgets[{i}].title is required.");
                 if (w.Data.ValueKind != JsonValueKind.Array)
                     errors.Add($"widgets[{i}].data must be a JSON array.");
+                if (string.IsNullOrWhiteSpace(w.Source))
+                    errors.Add($"widgets[{i}].source is required: two sentences — where the data came " +
+                               "from, then how it was calculated.");
             }
         }
         return errors;
@@ -60,4 +65,11 @@ public class DashboardWidget
 
     [JsonPropertyName("yKey")]
     public string? YKey { get; set; }
+
+    /// <summary>
+    /// Provenance shown behind the widget's ⓘ button: exactly two sentences — where the
+    /// data came from, then how it was calculated.
+    /// </summary>
+    [JsonPropertyName("source")]
+    public string? Source { get; set; }
 }

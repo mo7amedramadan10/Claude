@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
+using ChatToDashboard.Api.Sources;
 
 namespace ChatToDashboard.Api.Claude;
 
@@ -43,7 +44,10 @@ public class ClaudeClient : IDashboardGenerator
     }
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
-        string question, IReadOnlyList<ChatTurn>? history = null, CancellationToken ct = default)
+        string question,
+        IReadOnlyList<ChatTurn>? history = null,
+        SourceSelection? sources = null,
+        CancellationToken ct = default)
     {
         var messages = new JsonArray();
 
@@ -74,13 +78,14 @@ public class ClaudeClient : IDashboardGenerator
         while (messages.Count > 0 && messages[0]!["role"]!.GetValue<string>() == "assistant")
             messages.RemoveAt(0);
 
-        var tools = BuildToolsJson();
+        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+        var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
 
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
             ct.ThrowIfCancellationRequested();
-            var response = await CallMessagesApiAsync(messages, tools, ct);
+            var response = await CallMessagesApiAsync(messages, tools, context, ct);
 
             var stopReason = response["stop_reason"]?.GetValue<string>();
             var content = response["content"]?.AsArray()
@@ -103,7 +108,7 @@ public class ClaudeClient : IDashboardGenerator
                     var toolName = block["name"]!.GetValue<string>();
                     var input = block["input"]?.AsObject() ?? new JsonObject();
 
-                    var (result, isError) = await _tools.ExecuteToolAsync(toolName, input, ct);
+                    var (result, isError) = await _tools.ExecuteToolAsync(toolName, input, context, ct);
                     var resultBlock = new JsonObject
                     {
                         ["type"] = "tool_result",
@@ -162,10 +167,10 @@ public class ClaudeClient : IDashboardGenerator
             $"Tool-use loop did not converge within {MaxToolIterations} iterations.");
     }
 
-    private JsonArray BuildToolsJson()
+    private JsonArray BuildToolsJson(AnalyticsTools.SourceContext context)
     {
         var tools = new JsonArray();
-        foreach (var tool in _tools.BuildTools())
+        foreach (var tool in _tools.BuildTools(context))
         {
             tools.Add(new JsonObject
             {
@@ -177,7 +182,8 @@ public class ClaudeClient : IDashboardGenerator
         return tools;
     }
 
-    private async Task<JsonObject> CallMessagesApiAsync(JsonArray messages, JsonArray tools, CancellationToken ct)
+    private async Task<JsonObject> CallMessagesApiAsync(
+        JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context, CancellationToken ct)
     {
         // Prompt caching: one breakpoint after the stable prefix (tools + system), and one
         // on the last message so each tool-loop iteration reuses the growing conversation
@@ -191,7 +197,7 @@ public class ClaudeClient : IDashboardGenerator
                 new JsonObject
                 {
                     ["type"] = "text",
-                    ["text"] = _tools.BuildSystemPrompt(),
+                    ["text"] = _tools.BuildSystemPrompt(context),
                     ["cache_control"] = new JsonObject { ["type"] = "ephemeral" },
                 },
             },
