@@ -17,6 +17,7 @@ builder.Services.AddSingleton<RepositoryStore>();
 builder.Services.AddSingleton<UploadParser>();
 builder.Services.Configure<SourceOptions>(builder.Configuration.GetSection(SourceOptions.SectionName));
 builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection(PricingOptions.SectionName));
+builder.Services.AddSingleton<CostCalculator>();
 builder.Services.AddSingleton<UsageStore>();
 builder.Services.AddSingleton<UsageTracker>();
 builder.Services.AddSingleton<AnalyticsTools>();

@@ -11,11 +11,13 @@ namespace ChatToDashboard.Api.Usage;
 public class UsageStore
 {
     private readonly DataStore _db;
+    private readonly CostCalculator _cost;
     private readonly ILogger<UsageStore> _logger;
 
-    public UsageStore(DataStore db, ILogger<UsageStore> logger)
+    public UsageStore(DataStore db, CostCalculator cost, ILogger<UsageStore> logger)
     {
         _db = db;
+        _cost = cost;
         _logger = logger;
     }
 
@@ -95,7 +97,11 @@ public class UsageStore
             $"SELECT {top}Id, Timestamp, Provider, Model, Question, EnabledSources, TurnCount, ToolCallCount, " +
             "InputTokens, OutputTokens, CacheReadTokens, CacheWriteTokens, TotalTokens, EstimatedCost, " +
             $"DurationMs, Success, Error FROM {Table} ORDER BY Timestamp DESC{tail}");
-        return rows.ToList();
+
+        // Priced at read time so an edited price table applies to the whole history.
+        var records = rows.ToList();
+        foreach (var record in records) record.EstimatedCost = _cost.Estimate(record);
+        return records;
     }
 
     /// <summary>One request in full, including every prompt and tool result.</summary>
@@ -111,7 +117,7 @@ public class UsageStore
         string? Text(string key) => dict.TryGetValue(key, out var v) ? v?.ToString() : null;
         int Int(string key) => dict.TryGetValue(key, out var v) && v is not null ? Convert.ToInt32(v) : 0;
 
-        return new UsageRecord
+        var record = new UsageRecord
         {
             Id = Text("Id") ?? id,
             Timestamp = DateTime.TryParse(Text("Timestamp"), out var ts) ? ts : default,
@@ -135,6 +141,8 @@ public class UsageStore
             Turns = Deserialize<List<UsageTurn>>(Text("TurnsJson")) ?? new(),
             ToolCalls = Deserialize<List<UsageToolCall>>(Text("ToolCallsJson")) ?? new(),
         };
+        record.EstimatedCost = _cost.Estimate(record);
+        return record;
     }
 
     private static T? Deserialize<T>(string? json) =>

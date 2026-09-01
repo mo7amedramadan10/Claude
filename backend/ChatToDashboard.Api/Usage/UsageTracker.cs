@@ -32,15 +32,15 @@ public class PricingOptions
 public class UsageTrace
 {
     private readonly UsageStore _store;
-    private readonly PricingOptions _pricing;
+    private readonly CostCalculator _cost;
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
     private readonly UsageRecord _record;
 
-    internal UsageTrace(UsageStore store, PricingOptions pricing, string provider, string model,
+    internal UsageTrace(UsageStore store, CostCalculator cost, string provider, string model,
         string question, string enabledSources)
     {
         _store = store;
-        _pricing = pricing;
+        _cost = cost;
         _record = new UsageRecord
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -101,20 +101,8 @@ public class UsageTrace
         _record.ToolCallCount = _record.ToolCalls.Count;
         _record.TotalTokens = _record.InputTokens + _record.OutputTokens + _record.CacheReadTokens;
         _record.DurationMs = _stopwatch.ElapsedMilliseconds;
-        _record.EstimatedCost = EstimateCost();
+        _record.EstimatedCost = _cost.Estimate(_record);
         await _store.SaveAsync(_record, ct);
-    }
-
-    private decimal EstimateCost()
-    {
-        if (!_pricing.Models.TryGetValue(_record.Model, out var price)) return 0m;
-        const decimal perMillion = 1_000_000m;
-        var cacheRead = price.CacheRead ?? price.Input * 0.10m;
-        var cacheWrite = price.CacheWrite ?? price.Input * 1.25m;
-        return (_record.InputTokens * price.Input
-              + _record.OutputTokens * price.Output
-              + _record.CacheReadTokens * cacheRead
-              + _record.CacheWriteTokens * cacheWrite) / perMillion;
     }
 
     private static int Read(JsonObject? usage, string first, string? second)
@@ -137,14 +125,14 @@ public class UsageTrace
 public class UsageTracker
 {
     private readonly UsageStore _store;
-    private readonly PricingOptions _pricing;
+    private readonly CostCalculator _cost;
 
-    public UsageTracker(UsageStore store, Microsoft.Extensions.Options.IOptions<PricingOptions> pricing)
+    public UsageTracker(UsageStore store, CostCalculator cost)
     {
         _store = store;
-        _pricing = pricing.Value;
+        _cost = cost;
     }
 
     public UsageTrace Begin(string provider, string model, string question, string enabledSources) =>
-        new(_store, _pricing, provider, model, question, enabledSources);
+        new(_store, _cost, provider, model, question, enabledSources);
 }
