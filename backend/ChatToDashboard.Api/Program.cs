@@ -1,5 +1,7 @@
 using ChatToDashboard.Api.Claude;
 using ChatToDashboard.Api.Data;
+using ChatToDashboard.Api.Llm;
+using ChatToDashboard.Api.OpenAi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,11 +10,27 @@ builder.Services.AddControllers();
 builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<DataFolderLoader>();
 builder.Services.AddSingleton<DocumentSearchService>();
-builder.Services.AddHttpClient<ClaudeClient>(client =>
+builder.Services.AddSingleton<AnalyticsTools>();
+
+// Which LLM answers the questions: "Anthropic" (default) or "OpenAI".
+var llmProvider = builder.Configuration["Llm:Provider"] ?? "Anthropic";
+if (string.Equals(llmProvider, "OpenAI", StringComparison.OrdinalIgnoreCase))
 {
-    client.BaseAddress = new Uri("https://api.anthropic.com/");
-    client.Timeout = TimeSpan.FromMinutes(5);
-});
+    builder.Services.AddHttpClient<IDashboardGenerator, OpenAiClient>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/");
+        client.Timeout = TimeSpan.FromMinutes(5);
+    });
+}
+else
+{
+    builder.Services.AddHttpClient<IDashboardGenerator, ClaudeClient>(client =>
+    {
+        client.BaseAddress = new Uri("https://api.anthropic.com/");
+        client.Timeout = TimeSpan.FromMinutes(5);
+    });
+}
 
 var app = builder.Build();
 

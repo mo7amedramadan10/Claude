@@ -1,4 +1,4 @@
-using ChatToDashboard.Api.Claude;
+using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,12 +8,12 @@ namespace ChatToDashboard.Api.Controllers;
 [Route("api/chat")]
 public class ChatController : ControllerBase
 {
-    private readonly ClaudeClient _claude;
+    private readonly IDashboardGenerator _generator;
     private readonly ILogger<ChatController> _logger;
 
-    public ChatController(ClaudeClient claude, ILogger<ChatController> logger)
+    public ChatController(IDashboardGenerator generator, ILogger<ChatController> logger)
     {
-        _claude = claude;
+        _generator = generator;
         _logger = logger;
     }
 
@@ -25,7 +25,7 @@ public class ChatController : ControllerBase
 
         try
         {
-            var dashboard = await _claude.GenerateDashboardAsync(request.Message.Trim(), request.History, ct);
+            var dashboard = await _generator.GenerateDashboardAsync(request.Message.Trim(), request.History, ct);
             return Ok(new ChatResponse { Dashboard = dashboard });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
