@@ -106,8 +106,10 @@ public class AnalyticsTools
         {
             new(
                 "list_files",
-                "Lists the available data tables with their column names and data types. " +
-                "Call this first to see what data exists.",
+                "Lists what data exists: the queryable tables with their columns and types, and the " +
+                "files saved in the file repository (name, category, type, row or page count, upload " +
+                "date). Call this first. Note PDF files have no queryable table — their metadata is " +
+                "listed here and their text is searched with search_documents.",
                 new JsonObject
                 {
                     ["type"] = "object",
@@ -168,7 +170,10 @@ public class AnalyticsTools
         اكتب كل النصوص الظاهرة للمستخدم (summary و title و source) باللغة العربية.
 
         خطوات العمل
-        1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة (إلا لو كنت عارفها من نفس المحادثة).
+        1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة، وكمان قائمة الملفات المحفوظة في
+           مستودع الملفات (الاسم والتصنيف والنوع وعدد الصفوف أو الصفحات وتاريخ الرفع).
+           لو السؤال عن المستودع نفسه — كام ملف، إيه التصنيفات، أحدث ملف — الإجابة موجودة
+           في نتيجة list_files مباشرة من غير ما تحتاج query_data.
         2. نادِ query_data باستعلامات SELECT للحصول على الأرقام. فضّل الاستعلامات المجمّعة
            (GROUP BY) اللي بترجع بيانات جاهزة للرسم على جلب صفوف خام.
         3. لما تجمع البيانات، رد بالـ JSON النهائي فقط.
@@ -185,7 +190,10 @@ public class AnalyticsTools
           واذكر اسم المصدر أو التصنيف المقفول بالظبط وقول للمستخدم يفعّله من قائمة "المصادر" فوق.
         - لو المصدر مفعّل لكنه غير مربوط بعد، قول إن النظام ده لسه مش موصّل وإن مفيش بيانات منه.
         - في الحالتين دول رجّع JSON صحيح فيه summary يشرح المطلوب، و widgets تبقى مصفوفة فاضية [].
-        - ما تخترعش أرقام أبدًا. كل رقم لازم يكون جاي من نتيجة query_data أو search_documents فعلية.
+        - ما تخترعش أرقام أبدًا. كل رقم لازم يكون جاي من نتيجة list_files أو query_data أو
+          search_documents فعلية.
+        - ملفات الـ PDF مالهاش جداول: بياناتها الوصفية بترجع في list_files، ومحتواها بيتبحث فيه
+          بـ search_documents. لو السؤال عن عدد الملفات أو أسمائها، استخدم list_files.
 
         {{_db.DialectPrompt}}
 
@@ -249,9 +257,29 @@ public class AnalyticsTools
                             category = context.TableCategories.TryGetValue(t.Table, out var c) ? c : null,
                             columns = t.Columns,
                         });
+                    // The repository's own catalogue: a PDF contributes no table, so without
+                    // this the model has no way to know the file exists at all.
+                    var files = await _repository.ListAsync(ct);
+                    var visibleFiles = files
+                        .Where(f => context.EnabledCategories.Contains(f.Category, StringComparer.OrdinalIgnoreCase))
+                        .Select(f => new
+                        {
+                            name = f.Name,
+                            category = f.Category,
+                            kind = f.Kind,
+                            rows = f.Kind == "pdf" ? (int?)null : f.RowCount,
+                            columns = f.Kind == "pdf" ? (int?)null : f.ColumnCount,
+                            pages = f.Kind == "pdf" ? f.PageCount : (int?)null,
+                            uploadedAt = f.UploadedAt.ToString("yyyy-MM-dd"),
+                            queryableTable = f.TableName,
+                        })
+                        .ToList();
+
                     return (JsonSerializer.Serialize(new
                     {
                         tables = visible,
+                        repositoryFiles = visibleFiles,
+                        repositoryFileCount = visibleFiles.Count,
                         disabledCategories = context.DisabledCategories,
                         disabledSystems = context.DisabledSystems,
                     }), false);
