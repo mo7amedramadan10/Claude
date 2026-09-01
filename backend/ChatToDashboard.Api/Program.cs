@@ -51,6 +51,9 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    // Logged so a stale or unsaved appsettings.json is obvious at a glance.
+    logger.LogInformation("Configuration in use — LLM provider: {Llm}, database: {Db}",
+        llmProvider, scope.ServiceProvider.GetRequiredService<DataStore>().Provider);
     try
     {
         var loader = scope.ServiceProvider.GetRequiredService<DataFolderLoader>();
