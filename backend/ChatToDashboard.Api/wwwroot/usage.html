@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>استهلاك الذكاء الاصطناعي</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231baf7a'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<style>
+:root{
+  --surface:#fcfcfb; --plane:#f9f9f7; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --accent:#1baf7a; --accent-soft:#e7f7f1; --blue:#2a78d6; --blue-soft:#eaf2fd;
+  --danger:#d03b3b; --danger-soft:#fdf0f0; --warn:#eda100;
+  --radius:14px; --shadow:0 1px 2px rgba(11,11,11,.05), 0 1px 8px rgba(11,11,11,.04);
+}
+*{box-sizing:border-box}
+body{margin:0;overflow-x:hidden;background:var(--plane);color:var(--ink);
+  font-family:"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;font-size:14px}
+button{font:inherit;cursor:pointer}
+
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 22px;
+  background:var(--surface);border-bottom:1px solid var(--grid)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700}
+.brand .dot{width:22px;height:22px;border-radius:6px;background:var(--accent)}
+header .spacer{margin-inline-start:auto}
+.btn{padding:7px 14px;border:1px solid var(--grid);border-radius:10px;background:var(--surface);color:var(--ink-2)}
+.btn:hover{border-color:var(--muted)}
+.btn.link{border-color:transparent;color:var(--blue);text-decoration:none;display:inline-block}
+.btn.danger{color:var(--danger)}
+
+main{padding:22px;max-width:1500px;margin:0 auto}
+h2{margin:26px 0 12px;font-size:15px;color:var(--ink-2)}
+h2:first-child{margin-top:0}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.stat{background:var(--surface);border:1px solid var(--grid);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:15px 17px}
+.stat .label{font-size:12.5px;color:var(--muted)}
+.stat .value{margin-top:6px;font-size:27px;font-weight:600;letter-spacing:-.5px}
+.stat .sub{margin-top:3px;font-size:12px;color:var(--muted)}
+.stat.cost .value{color:var(--accent)}
+
+.panel{background:var(--surface);border:1px solid var(--grid);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:var(--plane);text-align:start;padding:9px 13px;font-weight:600;
+  color:var(--ink-2);border-bottom:1px solid var(--grid);white-space:nowrap}
+td{padding:9px 13px;border-bottom:1px solid #f1f0ec;vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--plane)}
+td.num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.q{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600}
+.pill.ok{background:var(--accent-soft);color:#137a55}
+.pill.bad{background:var(--danger-soft);color:var(--danger)}
+.pill.model{background:var(--blue-soft);color:var(--blue)}
+.empty{padding:50px;text-align:center;color:var(--muted)}
+
+/* detail drawer */
+#overlay{position:fixed;inset:0;background:rgba(11,11,11,.35);display:none;z-index:50}
+#overlay.open{display:block}
+#drawer{position:fixed;inset-block:0;inset-inline-start:0;width:min(920px,94vw);z-index:51;
+  background:var(--plane);border-inline-end:1px solid var(--grid);overflow-y:auto;
+  transform:translateX(100%);transition:transform .18s ease}
+#drawer.open{transform:translateX(0)}
+#drawer .head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:14px 20px;
+  background:var(--surface);border-bottom:1px solid var(--grid)}
+#drawer .head h3{margin:0;font-size:15px;flex:1}
+#drawer .body{padding:20px;display:flex;flex-direction:column;gap:16px}
+.block{background:var(--surface);border:1px solid var(--grid);border-radius:12px;overflow:hidden}
+.block>summary{padding:11px 15px;font-weight:600;font-size:13px;color:var(--ink-2);cursor:pointer;
+  list-style:none;display:flex;align-items:center;gap:9px}
+.block>summary::-webkit-details-marker{display:none}
+.block>summary::before{content:'▸';color:var(--muted);transition:transform .15s}
+.block[open]>summary::before{transform:rotate(-90deg)}
+.block>summary .tag{margin-inline-start:auto;font-weight:400;font-size:11.5px;color:var(--muted)}
+pre{margin:0;padding:14px 16px;border-top:1px solid var(--grid);background:#fbfbf9;
+  font-family:ui-monospace,"Cascadia Code",Consolas,monospace;font-size:11.5px;line-height:1.65;
+  white-space:pre-wrap;word-break:break-word;max-height:460px;overflow:auto;direction:ltr;text-align:left}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--grid)}
+.meta-grid div{background:var(--surface);padding:11px 14px}
+.meta-grid .k{font-size:11.5px;color:var(--muted)}
+.meta-grid .v{margin-top:3px;font-weight:600;font-variant-numeric:tabular-nums}
+.bar-row{display:flex;align-items:center;gap:10px;padding:7px 15px}
+.bar-row .name{width:150px;font-size:12.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row .track{flex:1;height:9px;border-radius:5px;background:var(--plane);overflow:hidden}
+.bar-row .fill{height:100%;border-radius:5px;background:var(--blue)}
+.bar-row .val{width:110px;text-align:end;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.note{padding:11px 15px;font-size:12.5px;color:var(--muted);background:#fffbea;border-top:1px solid #f0e2b6}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span><span>استهلاك الذكاء الاصطناعي</span></div>
+  <div class="spacer"></div>
+  <a class="btn link" href="/">→ العودة للوحة المعلومات</a>
+  <button class="btn" id="refresh">تحديث</button>
+  <button class="btn danger" id="clear">مسح السجل</button>
+</header>
+
+<main>
+  <h2>الإجمالي</h2>
+  <div class="stats" id="stats"></div>
+
+  <h2>حسب الموديل</h2>
+  <div class="panel" id="by-model"></div>
+
+  <h2>الطلبات (اضغط على أي صف لعرض كل ما أُرسل للموديل)</h2>
+  <div class="panel" id="requests"></div>
+</main>
+
+<div id="overlay"></div>
+<aside id="drawer"><div class="head"><h3 id="drawer-title"></h3>
+  <button class="btn" id="close-drawer">إغلاق</button></div>
+  <div class="body" id="drawer-body"></div>
+</aside>
+
+<script>
+const el = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf = n => (n ?? 0).toLocaleString('en-US');
+const money = n => n > 0 ? '$' + n.toFixed(n < 0.01 ? 5 : 4) : '—';
+const ms = n => n >= 1000 ? (n / 1000).toFixed(1) + ' ث' : n + ' مللي';
+const when = t => new Date(t + (t.endsWith('Z') ? '' : 'Z')).toLocaleString('ar-EG');
+const pretty = t => { try { return JSON.stringify(JSON.parse(t), null, 2); } catch { return t; } };
+
+let data = { summary: null, records: [] };
+
+async function load() {
+  const res = await fetch('/api/usage?limit=200');
+  data = await res.json();
+  renderStats(); renderByModel(); renderRequests();
+}
+
+function renderStats() {
+  const s = data.summary;
+  el('stats').innerHTML = `
+    ${stat('عدد الأسئلة', nf(s.requests), s.failedRequests ? `${nf(s.failedRequests)} منها فشل` : 'كلها نجحت')}
+    ${stat('إجمالي التوكنز', nf(s.totalTokens), `${nf(s.avgTokensPerRequest)} في المتوسط للسؤال`)}
+    ${stat('توكنز الإدخال', nf(s.inputTokens), `منها ${nf(s.cacheReadTokens)} من الكاش`)}
+    ${stat('توكنز الإخراج', nf(s.outputTokens), '')}
+    ${stat('التكلفة التقديرية', money(s.estimatedCost), 'حسب أسعار appsettings', 'cost')}
+    ${stat('متوسط زمن الرد', ms(s.avgDurationMs), '')}`;
+}
+const stat = (label, value, sub, cls = '') =>
+  `<div class="stat ${cls}"><div class="label">${label}</div><div class="value">${value}</div>
+   <div class="sub">${sub || '&nbsp;'}</div></div>`;
+
+function renderByModel() {
+  const rows = data.summary.byModel;
+  if (!rows.length) { el('by-model').innerHTML = '<div class="empty">لا يوجد بيانات بعد</div>'; return; }
+  const max = Math.max(...rows.map(r => r.totalTokens), 1);
+  el('by-model').innerHTML = rows.map(r => `
+    <div class="bar-row">
+      <span class="name">${esc(r.model)}</span>
+      <span class="track"><span class="fill" style="width:${(r.totalTokens / max * 100).toFixed(1)}%"></span></span>
+      <span class="val">${nf(r.totalTokens)} توكن</span>
+      <span class="val">${r.requests} سؤال</span>
+      <span class="val">${money(r.estimatedCost)}</span>
+    </div>`).join('');
+}
+
+function renderRequests() {
+  if (!data.records.length) {
+    el('requests').innerHTML = '<div class="empty">لم يتم إرسال أي سؤال للموديل بعد.</div>';
+    return;
+  }
+  el('requests').innerHTML = `<table>
+    <thead><tr>
+      <th>الوقت</th><th>السؤال</th><th>الموديل</th><th>الحالة</th>
+      <th class="num">جولات</th><th class="num">أدوات</th>
+      <th class="num">إدخال</th><th class="num">إخراج</th><th class="num">الإجمالي</th>
+      <th class="num">التكلفة</th><th class="num">الزمن</th>
+    </tr></thead><tbody>
+    ${data.records.map(r => `<tr data-id="${esc(r.id)}">
+      <td style="white-space:nowrap">${when(r.timestamp)}</td>
+      <td class="q" title="${esc(r.question)}">${esc(r.question)}</td>
+      <td><span class="pill model">${esc(r.model)}</span></td>
+      <td><span class="pill ${r.success ? 'ok' : 'bad'}">${r.success ? 'نجح' : 'فشل'}</span></td>
+      <td class="num">${r.turnCount}</td>
+      <td class="num">${r.toolCallCount}</td>
+      <td class="num">${nf(r.inputTokens)}</td>
+      <td class="num">${nf(r.outputTokens)}</td>
+      <td class="num">${nf(r.totalTokens)}</td>
+      <td class="num">${money(r.estimatedCost)}</td>
+      <td class="num">${ms(r.durationMs)}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  el('requests').querySelectorAll('tr[data-id]').forEach(tr =>
+    tr.addEventListener('click', () => openDetail(tr.dataset.id)));
+}
+
+async function openDetail(id) {
+  el('drawer-title').textContent = 'جارٍ التحميل…';
+  el('drawer-body').innerHTML = '';
+  el('drawer').classList.add('open'); el('overlay').classList.add('open');
+
+  const r = await (await fetch('/api/usage/' + id)).json();
+  el('drawer-title').textContent = r.question || '(بدون سؤال)';
+
+  const meta = `<div class="block"><div class="meta-grid">
+      ${cell('الوقت', when(r.timestamp))}${cell('المزود', r.provider)}${cell('الموديل', r.model)}
+      ${cell('الحالة', r.success ? 'نجح' : 'فشل')}
+      ${cell('جولات الموديل', r.turnCount)}${cell('نداءات الأدوات', r.toolCallCount)}
+      ${cell('توكنز الإدخال', nf(r.inputTokens))}${cell('توكنز الإخراج', nf(r.outputTokens))}
+      ${cell('من الكاش', nf(r.cacheReadTokens))}${cell('الإجمالي', nf(r.totalTokens))}
+      ${cell('التكلفة التقديرية', money(r.estimatedCost))}${cell('الزمن', ms(r.durationMs))}
+    </div>
+    <div class="note">المصادر المفعّلة وقت السؤال — ${esc(r.enabledSources || '(غير مسجّل)')}</div>
+    ${r.error ? `<div class="note" style="background:var(--danger-soft);border-color:#f3d0d0;color:var(--danger)">${esc(r.error)}</div>` : ''}
+    </div>`;
+
+  const system = r.systemPrompt
+    ? block('الـ System Prompt المرسل للموديل', pretty(r.systemPrompt), `${nf(r.systemPrompt.length)} حرف`) : '';
+
+  const tools = r.toolCalls.length ? `<details class="block" open>
+      <summary>الأدوات التي نفّذها الموديل <span class="tag">${r.toolCalls.length} نداء</span></summary>
+      ${r.toolCalls.map((t, i) => `
+        <pre>#${i + 1} · ${esc(t.tool)}${t.isError ? '  ⚠ خطأ' : ''}  (${ms(t.durationMs)})
+
+── المُدخل ──
+${esc(pretty(t.input))}
+
+── النتيجة الراجعة للموديل ──
+${esc(t.result)}</pre>`).join('')}
+    </details>` : '';
+
+  const turns = r.turns.map((t, i) => `<details class="block">
+      <summary>الجولة ${i + 1} مع الموديل
+        <span class="tag">إدخال ${nf(t.inputTokens)} · إخراج ${nf(t.outputTokens)} · ${esc(t.stopReason || '')} · ${ms(t.durationMs)}</span>
+      </summary>
+      <pre>── ما أُرسل (request body) ──
+${esc(pretty(t.requestBody || ''))}
+
+── ما رجع (response body) ──
+${esc(pretty(t.responseBody || ''))}</pre>
+    </details>`).join('');
+
+  const final = r.finalResponse ? block('الرد النهائي للموديل', pretty(r.finalResponse), '') : '';
+
+  el('drawer-body').innerHTML = meta + system + tools + turns + final;
+}
+
+const cell = (k, v) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`;
+const block = (title, content, tag) => `<details class="block">
+    <summary>${title}${tag ? `<span class="tag">${tag}</span>` : ''}</summary>
+    <pre>${esc(content)}</pre></details>`;
+
+function closeDrawer() {
+  el('drawer').classList.remove('open'); el('overlay').classList.remove('open');
+}
+el('overlay').addEventListener('click', closeDrawer);
+el('close-drawer').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+el('refresh').addEventListener('click', load);
+el('clear').addEventListener('click', async () => {
+  if (!confirm('مسح كل سجل الاستهلاك؟ لا يمكن التراجع.')) return;
+  await fetch('/api/usage', { method: 'DELETE' });
+  load();
+});
+
+load();
+</script>
+</body>
+</html>

@@ -23,7 +23,8 @@ header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
 .brand{display:flex;align-items:center;gap:9px;font-weight:700}
 .brand .dot{width:22px;height:22px;border-radius:6px;background:var(--accent)}
 nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
-.tab{padding:6px 14px;border:1px solid transparent;border-radius:999px;background:transparent;color:var(--ink-2)}
+.tab{padding:6px 14px;border:1px solid transparent;border-radius:999px;background:transparent;
+  color:var(--ink-2);text-decoration:none;display:inline-block}
 .tab:hover{background:var(--plane)}
 .tab.active{background:var(--accent-soft);color:var(--accent);border-color:#cfe1f8;font-weight:600}
 .tab .badge{display:inline-block;min-width:19px;padding:0 5px;margin-inline-start:6px;border-radius:999px;
@@ -156,6 +157,7 @@ tr:last-child td{border-bottom:0}
   <nav class="tabs">
     <button class="tab active" data-screen="chat">المحادثة</button>
     <button class="tab" data-screen="repo">مستودع الملفات <span class="badge" id="repo-badge">0</span></button>
+    <a class="tab" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
   </nav>
 
   <div class="sources">

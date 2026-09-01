@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Usage;
 
 namespace ChatToDashboard.Api.Claude;
 
@@ -22,12 +23,14 @@ public class ClaudeClient : IDashboardGenerator
     private readonly string _model;
     private readonly int _maxTokens;
     private readonly AnalyticsTools _tools;
+    private readonly UsageTracker _usage;
     private readonly ILogger<ClaudeClient> _logger;
 
     public ClaudeClient(
         HttpClient http,
         IConfiguration configuration,
         AnalyticsTools tools,
+        UsageTracker usage,
         ILogger<ClaudeClient> logger)
     {
         _http = http;
@@ -40,6 +43,7 @@ public class ClaudeClient : IDashboardGenerator
         _model = configuration["Anthropic:Model"] ?? "claude-sonnet-5";
         _maxTokens = configuration.GetValue("Anthropic:MaxTokens", 16000);
         _tools = tools;
+        _usage = usage;
         _logger = logger;
     }
 
@@ -82,10 +86,14 @@ public class ClaudeClient : IDashboardGenerator
         var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
 
+        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context));
+        trace.SetSystemPrompt(_tools.BuildSystemPrompt(context));
+        try
+        {
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
             ct.ThrowIfCancellationRequested();
-            var response = await CallMessagesApiAsync(messages, tools, context, ct);
+            var response = await CallMessagesApiAsync(messages, tools, context, trace, ct);
 
             var stopReason = response["stop_reason"]?.GetValue<string>();
             var content = response["content"]?.AsArray()
@@ -108,7 +116,9 @@ public class ClaudeClient : IDashboardGenerator
                     var toolName = block["name"]!.GetValue<string>();
                     var input = block["input"]?.AsObject() ?? new JsonObject();
 
+                    var toolClock = System.Diagnostics.Stopwatch.StartNew();
                     var (result, isError) = await _tools.ExecuteToolAsync(toolName, input, context, ct);
+                    trace.RecordToolCall(toolName, input.ToJsonString(), result, isError, toolClock.ElapsedMilliseconds);
                     var resultBlock = new JsonObject
                     {
                         ["type"] = "tool_result",
@@ -145,7 +155,11 @@ public class ClaudeClient : IDashboardGenerator
                 .Select(b => b!["text"]!.GetValue<string>()));
 
             var (dashboard, parseError) = AnalyticsTools.TryParseDashboard(text);
-            if (dashboard is not null) return dashboard;
+            if (dashboard is not null)
+            {
+                await trace.CompleteAsync(true, text, null, ct);
+                return dashboard;
+            }
 
             jsonRepairAttempts++;
             _logger.LogWarning("Dashboard JSON invalid (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
@@ -165,7 +179,18 @@ public class ClaudeClient : IDashboardGenerator
 
         throw new InvalidOperationException(
             $"Tool-use loop did not converge within {MaxToolIterations} iterations.");
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
     }
+
+    /// <summary>A short, readable note of which sources were on for this question.</summary>
+    private static string DescribeSources(AnalyticsTools.SourceContext context) =>
+        $"أنظمة: {(context.EnabledSystems.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledSystems))} | " +
+        $"تصنيفات: {(context.EnabledCategories.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledCategories))}";
 
     private JsonArray BuildToolsJson(AnalyticsTools.SourceContext context)
     {
@@ -183,7 +208,8 @@ public class ClaudeClient : IDashboardGenerator
     }
 
     private async Task<JsonObject> CallMessagesApiAsync(
-        JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context, CancellationToken ct)
+        JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context,
+        UsageTrace trace, CancellationToken ct)
     {
         // Prompt caching: one breakpoint after the stable prefix (tools + system), and one
         // on the last message so each tool-loop iteration reuses the growing conversation
@@ -206,9 +232,11 @@ public class ClaudeClient : IDashboardGenerator
         };
         MarkLastMessageCacheable(body["messages"]!.AsArray());
 
+        var requestBody = body.ToJsonString();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         using var request = new HttpRequestMessage(HttpMethod.Post, "v1/messages")
         {
-            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+            Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
         request.Headers.Add("x-api-key", _apiKey);
         request.Headers.Add("anthropic-version", "2023-06-01");
@@ -219,8 +247,10 @@ public class ClaudeClient : IDashboardGenerator
             throw new HttpRequestException(
                 $"Anthropic API returned {(int)response.StatusCode}: {responseText}");
 
-        return JsonNode.Parse(responseText)?.AsObject()
+        var parsed = JsonNode.Parse(responseText)?.AsObject()
             ?? throw new InvalidOperationException("Anthropic API returned an empty response body.");
+        trace.RecordTurn(requestBody, responseText, parsed, clock.ElapsedMilliseconds);
+        return parsed;
     }
 
     /// <summary>

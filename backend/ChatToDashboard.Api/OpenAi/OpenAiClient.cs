@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Usage;
 
 namespace ChatToDashboard.Api.OpenAi;
 
@@ -21,12 +22,14 @@ public class OpenAiClient : IDashboardGenerator
     private readonly string _apiKey;
     private readonly string _model;
     private readonly AnalyticsTools _tools;
+    private readonly UsageTracker _usage;
     private readonly ILogger<OpenAiClient> _logger;
 
     public OpenAiClient(
         HttpClient http,
         IConfiguration configuration,
         AnalyticsTools tools,
+        UsageTracker usage,
         ILogger<OpenAiClient> logger)
     {
         _http = http;
@@ -38,6 +41,7 @@ public class OpenAiClient : IDashboardGenerator
                 "Set it with: dotnet user-secrets set \"OpenAI:ApiKey\" \"<key>\"");
         _model = configuration["OpenAI:Model"] ?? "gpt-4o";
         _tools = tools;
+        _usage = usage;
         _logger = logger;
     }
 
@@ -65,10 +69,14 @@ public class OpenAiClient : IDashboardGenerator
         var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
 
+        var trace = _usage.Begin("OpenAI", _model, question, DescribeSources(context));
+        trace.SetSystemPrompt(_tools.BuildSystemPrompt(context));
+        try
+        {
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
             ct.ThrowIfCancellationRequested();
-            var response = await CallChatCompletionsAsync(messages, tools, ct);
+            var response = await CallChatCompletionsAsync(messages, tools, trace, ct);
 
             var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
@@ -103,7 +111,9 @@ public class OpenAiClient : IDashboardGenerator
                         continue;
                     }
 
+                    var toolClock = System.Diagnostics.Stopwatch.StartNew();
                     var (result, isError) = await _tools.ExecuteToolAsync(toolName, arguments, context, ct);
+                    trace.RecordToolCall(toolName, arguments.ToJsonString(), result, isError, toolClock.ElapsedMilliseconds);
                     messages.Add(ToolResultMessage(callId, result, isError));
                 }
                 continue;
@@ -127,7 +137,11 @@ public class OpenAiClient : IDashboardGenerator
 
             var text = message["content"]?.GetValue<string>() ?? string.Empty;
             var (dashboard, parseError) = AnalyticsTools.TryParseDashboard(text);
-            if (dashboard is not null) return dashboard;
+            if (dashboard is not null)
+            {
+                await trace.CompleteAsync(true, text, null, ct);
+                return dashboard;
+            }
 
             jsonRepairAttempts++;
             _logger.LogWarning("Dashboard JSON invalid (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
@@ -147,7 +161,18 @@ public class OpenAiClient : IDashboardGenerator
 
         throw new InvalidOperationException(
             $"Tool-calling loop did not converge within {MaxToolIterations} iterations.");
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
     }
+
+    /// <summary>A short, readable note of which sources were on for this question.</summary>
+    private static string DescribeSources(AnalyticsTools.SourceContext context) =>
+        $"أنظمة: {(context.EnabledSystems.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledSystems))} | " +
+        $"تصنيفات: {(context.EnabledCategories.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledCategories))}";
 
     private static JsonObject ToolResultMessage(string callId, string content, bool isError = false) =>
         new()
@@ -178,7 +203,7 @@ public class OpenAiClient : IDashboardGenerator
     }
 
     private async Task<JsonObject> CallChatCompletionsAsync(
-        JsonArray messages, JsonArray tools, CancellationToken ct)
+        JsonArray messages, JsonArray tools, UsageTrace trace, CancellationToken ct)
     {
         var body = new JsonObject
         {
@@ -187,9 +212,11 @@ public class OpenAiClient : IDashboardGenerator
             ["tools"] = tools.DeepClone(),
         };
 
+        var requestBody = body.ToJsonString();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         using var request = new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions")
         {
-            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+            Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
         request.Headers.Add("Authorization", $"Bearer {_apiKey}");
 
@@ -199,7 +226,9 @@ public class OpenAiClient : IDashboardGenerator
             throw new HttpRequestException(
                 $"OpenAI API returned {(int)response.StatusCode}: {responseText}");
 
-        return JsonNode.Parse(responseText)?.AsObject()
+        var parsed = JsonNode.Parse(responseText)?.AsObject()
             ?? throw new InvalidOperationException("OpenAI API returned an empty response body.");
+        trace.RecordTurn(requestBody, responseText, parsed, clock.ElapsedMilliseconds);
+        return parsed;
     }
 }

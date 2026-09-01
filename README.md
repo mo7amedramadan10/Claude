@@ -108,6 +108,27 @@ dotnet run
 Open `http://localhost:5000` — the UI and the API are both served there. The initial data load
 runs at startup (a failure — e.g. SQL Server unreachable — is logged but doesn't stop the app).
 
+## Usage & observability (`/usage`)
+
+A separate page — linked from the header, or open `http://localhost:5000/usage` directly — shows
+exactly what was sent to the model and what it cost. Every question is logged with:
+
+- totals: questions asked, input/output/cached tokens, estimated cost, average latency, and a
+  per-model breakdown;
+- one row per question: model, status, number of model round-trips and tool calls, tokens, cost
+  and duration;
+- click any row for the full record — the system prompt as sent, every tool call with its input
+  and the result handed back to the model, each round-trip's complete request and response
+  bodies, and the final answer.
+
+Cost is estimated from the `Pricing` section of `appsettings.json` (price per **million**
+tokens). Anthropic list prices are prefilled; fill in your own OpenAI rates from
+platform.openai.com/pricing — a model with no price shows an em dash rather than a wrong number.
+Token counts themselves always come from the provider's own `usage` block, not an estimate.
+
+`DELETE /api/usage` (or the "مسح السجل" button) clears the log. Note the log stores prompts and
+tool results verbatim, which includes rows from your data — it lives in your own database.
+
 ## Refreshing data
 
 When files in the data folder change, reload all staging tables without restarting:
@@ -142,6 +163,7 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 | `ConnectionStrings:DataDb` | — | Set via user-secrets |
 | `Anthropic:ApiKey` | — | Set via user-secrets |
 | `OpenAI:ApiKey` | — | Set via user-secrets |
+| `Pricing:Models` | Anthropic list prices | Price per million tokens, per model, for the `/usage` cost estimate |
 
 ## Safety
 

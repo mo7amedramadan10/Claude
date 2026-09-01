@@ -4,6 +4,7 @@ using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.OpenAi;
 using ChatToDashboard.Api.Repository;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Usage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,9 @@ builder.Services.AddSingleton<DocumentSearchService>();
 builder.Services.AddSingleton<RepositoryStore>();
 builder.Services.AddSingleton<UploadParser>();
 builder.Services.Configure<SourceOptions>(builder.Configuration.GetSection(SourceOptions.SectionName));
+builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection(PricingOptions.SectionName));
+builder.Services.AddSingleton<UsageStore>();
+builder.Services.AddSingleton<UsageTracker>();
 builder.Services.AddSingleton<AnalyticsTools>();
 
 // Which LLM answers the questions: "Anthropic" (default) or "OpenAI".
@@ -44,6 +48,10 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapControllers();
+
+// The observability page lives on its own link, unrelated to the dashboard.
+app.MapGet("/usage", (IWebHostEnvironment env) =>
+    Results.File(Path.Combine(env.WebRootPath, "usage.html"), "text/html"));
 
 // Initial load: scan the data folder and (re)create the staging tables so the
 // shared SQL Server copy reflects the current files. Failures are logged but do
