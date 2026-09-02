@@ -200,6 +200,21 @@ back it, the model substitutes something it can actually support and says so in 
 can submit with just the image and no typed question — a default prompt ("rebuild this
 dashboard from my real data") is used.
 
+## Sharing a dashboard
+
+**🔗 مشاركة** publishes the current dashboard under a random link (`/?share=<id>`) and shows
+it in a copyable box. Anyone with that link — no login, no app needed beyond a browser — gets
+a read-only page: just the widgets, a banner naming the original question, and a link back to
+the full app. It's served by the same `index.html`; a `?share=` query string switches it into
+that stripped-down view instead of the normal chat UI.
+
+Since the app has no login, "who can see it" is exactly "who has the link" — the same trust
+model as most lightweight share links (Google Docs, Notion, etc.): the id is 16 random hex
+characters (64 bits), not sequential or guessable, but anyone holding it can view. Manage what
+you've published with `GET /api/share` (your own links — scoped by the same `X-User-Id`
+browser id as history) and `DELETE /api/share/{id}`; deleting one immediately breaks that link
+for everyone.
+
 ## Exporting a dashboard (PDF / PowerPoint)
 
 Two buttons appear above any generated dashboard:

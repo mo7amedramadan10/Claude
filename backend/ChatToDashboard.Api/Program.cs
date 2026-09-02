@@ -4,6 +4,7 @@ using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.OpenAi;
 using ChatToDashboard.Api.Repository;
+using ChatToDashboard.Api.Share;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Usage;
 
@@ -24,6 +25,7 @@ builder.Services.AddSingleton<UsageTracker>();
 builder.Services.AddSingleton<SystemApiLoader>();
 builder.Services.AddSingleton<AnalyticsTools>();
 builder.Services.AddSingleton<HistoryStore>();
+builder.Services.AddSingleton<ShareStore>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
 // internal server with a self-signed certificate, and is opt-in per system.

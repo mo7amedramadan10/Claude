@@ -205,9 +205,34 @@ tr:last-child td{border-bottom:0}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .card.wide{grid-column:1/-1}
 }
+
+/* ---------- share ---------- */
+.modal-overlay{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(11,11,11,.4);padding:20px}
+.modal-overlay.hidden{display:none}
+.modal{width:min(460px,100%);background:var(--surface);border-radius:var(--radius);
+  box-shadow:0 20px 50px rgba(11,11,11,.25);padding:20px}
+.modal h3{margin:0 0 6px}
+.modal-note{margin:0 0 14px;color:var(--ink-2);font-size:12.5px;line-height:1.6}
+.modal-row{display:flex;gap:8px}
+#share-link{flex:1;padding:9px 12px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--plane);color:var(--ink-2);font-size:12.5px}
+.modal-row button{padding:9px 16px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
+.modal-actions{display:flex;justify-content:flex-end;margin-top:14px}
+.modal-actions button{padding:7px 16px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
+
+/* ---------- shared read-only view ---------- */
+#shared-banner{display:flex;align-items:center;gap:12px;padding:11px 20px;
+  background:var(--accent-soft);border-bottom:1px solid #cfe1f8;color:var(--ink-2)}
+#shared-banner .q{font-weight:600;color:var(--ink)}
+#shared-banner a{margin-inline-start:auto;color:var(--accent);font-weight:600;text-decoration:none}
 </style>
 </head>
 <body>
+<div id="shared-banner" class="hidden">
+  <span>📤 عرض مشاركة —</span><span class="q" id="shared-banner-q"></span>
+  <a href="/">افتح التطبيق الكامل ←</a>
+</div>
 <header>
   <div class="brand"><span class="dot"></span><span>المحادثة إلى لوحة معلومات</span></div>
 
@@ -256,6 +281,7 @@ tr:last-child td{border-bottom:0}
 
   <section id="dash-pane">
     <div id="dash-toolbar" class="dash-toolbar hidden">
+      <button type="button" id="btn-share">🔗 مشاركة</button>
       <button type="button" id="btn-export-pdf">🖨️ تصدير PDF</button>
       <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
     </div>
@@ -286,6 +312,20 @@ tr:last-child td{border-bottom:0}
 
 <datalist id="cat-suggestions"></datalist>
 <div id="tip"></div>
+
+<div id="share-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>رابط المشاركة</h3>
+    <p class="modal-note">أي شخص معه هذا الرابط يقدر يفتح نسخة للعرض فقط من اللوحة دي — بدون تسجيل دخول.</p>
+    <div class="modal-row">
+      <input type="text" id="share-link" readonly />
+      <button type="button" id="share-copy">نسخ</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="share-close">إغلاق</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const el = id => document.getElementById(id);
@@ -1060,7 +1100,67 @@ el('attached-image-remove').addEventListener('click', () => {
   renderAttachedImage();
 });
 
+// ---------- share ----------
+async function shareDashboard() {
+  const d = state.dashboard;
+  if (!d?.widgets?.length) return;
+  const btn = el('btn-share');
+  btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ الإنشاء…';
+  try {
+    const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
+    const res = await fetch('/api/share', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
+      body: JSON.stringify({ question: lastQuestion, summary: d.summary, widgets: d.widgets }),
+    });
+    if (!res.ok) throw new Error(`فشل إنشاء الرابط (${res.status})`);
+    const saved = await res.json();
+    el('share-link').value = `${location.origin}/?share=${saved.id}`;
+    el('share-modal').classList.remove('hidden');
+    el('share-link').select();
+  } catch (err) {
+    alert('تعذّر إنشاء رابط المشاركة: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = original;
+  }
+}
+el('btn-share').addEventListener('click', shareDashboard);
+el('share-close').addEventListener('click', () => el('share-modal').classList.add('hidden'));
+el('share-modal').addEventListener('click', e => { if (e.target.id === 'share-modal') el('share-modal').classList.add('hidden'); });
+el('share-copy').addEventListener('click', async () => {
+  const btn = el('share-copy'); const original = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(el('share-link').value);
+  } catch {
+    el('share-link').select();
+    document.execCommand('copy');
+  }
+  btn.textContent = 'تم النسخ ✓';
+  setTimeout(() => { btn.textContent = original; }, 1500);
+});
+
+// A URL like /?share=<id> opens a read-only public view: no login, no chat, no sources —
+// just the published dashboard, fetched straight from the share endpoint and rendered
+// through the same renderDashboard() as everything else.
+async function bootSharedView(shareId) {
+  el('shared-banner').classList.remove('hidden');
+  document.querySelector('header').style.display = 'none';
+  el('chat-rail').style.display = 'none';
+  try {
+    const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
+    if (!res.ok) throw new Error(res.status === 404 ? 'الرابط غير موجود أو تم حذفه.' : `تعذّر التحميل (${res.status})`);
+    const shared = await res.json();
+    el('shared-banner-q').textContent = shared.question;
+    document.title = `${shared.question} — لوحة مشاركة`;
+    state.dashboard = { summary: shared.summary, widgets: JSON.parse(shared.widgetsJson || '[]') };
+  } catch (err) {
+    el('shared-banner-q').textContent = err.message;
+  }
+  renderDashboard();
+}
+
 (async function boot() {
+  const shareId = new URLSearchParams(location.search).get('share');
+  if (shareId) { await bootSharedView(shareId); return; }
   renderMessages();
   renderDashboard();
   await loadSources();
