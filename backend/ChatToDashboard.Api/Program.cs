@@ -20,7 +20,17 @@ builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection(Pric
 builder.Services.AddSingleton<CostCalculator>();
 builder.Services.AddSingleton<UsageStore>();
 builder.Services.AddSingleton<UsageTracker>();
+builder.Services.AddSingleton<SystemApiLoader>();
 builder.Services.AddSingleton<AnalyticsTools>();
+
+// Named clients for the back-office endpoints. The "insecure" one exists only for an
+// internal server with a self-signed certificate, and is opt-in per system.
+builder.Services.AddHttpClient(SystemApiClients.Default);
+builder.Services.AddHttpClient(SystemApiClients.Insecure)
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+    });
 
 // Which LLM answers the questions: "Anthropic" (default) or "OpenAI".
 var llmProvider = builder.Configuration["Llm:Provider"] ?? "Anthropic";
@@ -72,6 +82,10 @@ using (var scope = app.Services.CreateScope())
 
         var documents = scope.ServiceProvider.GetRequiredService<DocumentSearchService>();
         documents.Reindex(loader.DataFolderPath);
+
+        var systems = await scope.ServiceProvider.GetRequiredService<SystemApiLoader>().LoadAllAsync();
+        foreach (var system in systems.Where(s => s.Error is not null))
+            logger.LogWarning("System {System} could not be loaded: {Error}", system.System, system.Error);
     }
     catch (Exception ex)
     {

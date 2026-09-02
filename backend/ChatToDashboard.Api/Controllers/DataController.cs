@@ -1,4 +1,5 @@
 using ChatToDashboard.Api.Data;
+using ChatToDashboard.Api.Sources;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
@@ -9,12 +10,18 @@ public class DataController : ControllerBase
 {
     private readonly DataFolderLoader _loader;
     private readonly DocumentSearchService _documents;
+    private readonly SystemApiLoader _systems;
     private readonly ILogger<DataController> _logger;
 
-    public DataController(DataFolderLoader loader, DocumentSearchService documents, ILogger<DataController> logger)
+    public DataController(
+        DataFolderLoader loader,
+        DocumentSearchService documents,
+        SystemApiLoader systems,
+        ILogger<DataController> logger)
     {
         _loader = loader;
         _documents = documents;
+        _systems = systems;
         _logger = logger;
     }
 
@@ -26,7 +33,13 @@ public class DataController : ControllerBase
         {
             var loaded = await _loader.LoadAllAsync(ct);
             _documents.Reindex(_loader.DataFolderPath);
-            return Ok(new { tables = loaded, ragChunks = _documents.Enabled ? _documents.IndexedChunkCount : (int?)null });
+            var systems = await _systems.LoadAllAsync(ct);
+            return Ok(new
+            {
+                tables = loaded,
+                systems,
+                ragChunks = _documents.Enabled ? _documents.IndexedChunkCount : (int?)null,
+            });
         }
         catch (Exception ex)
         {

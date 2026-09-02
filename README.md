@@ -108,6 +108,42 @@ dotnet run
 Open `http://localhost:5000` — the UI and the API are both served there. The initial data load
 runs at startup (a failure — e.g. SQL Server unreachable — is logged but doesn't stop the app).
 
+## Connecting a back-office system to an API
+
+A system in the `Sources` list becomes a real data source by giving it an `Api` block. Its
+records are fetched on startup and on `POST /api/data/refresh`, flattened into a staging table
+(`staging_sys_<id>`), and from then on queried with SQL like any loaded file — so the model can
+aggregate over them and the dashboard charts them.
+
+```jsonc
+{
+  "Id": "procurement",
+  "Name": "نظام المشتريات",
+  "Api": {
+    "Url": "https://internal-host/api/services/app/ServiceRequests/GetAllServiceRequestsForAi",
+    "Method": "GET",
+    "ResultPath": "",              // empty = auto-detect result.items, result, items, data…
+    "MaxRecords": 20000,
+    "TimeoutSeconds": 60,
+    "AllowInvalidCertificate": false,
+    "Headers": { }                 // e.g. { "Authorization": "Bearer …" } if it needs one
+  }
+}
+```
+
+- **Response shape** — the array of records is found automatically for the common envelopes
+  (`result.items`, `result`, `items`, `data`, or a bare top-level array). If the endpoint nests
+  it somewhere else, set `ResultPath` to the dotted path.
+- **Nested objects** are flattened into dotted columns: `vendor: { name }` becomes a
+  `vendor.name` column. Arrays are kept as their JSON text.
+- **Gating still applies** — switch the system off in the Sources dropdown and its table
+  disappears from `list_files`, while a query touching it is refused by name.
+- **The endpoint must be reachable from wherever the app runs.** For an intranet-only endpoint
+  that means running the app inside the network (or on a host with a route to it); a failure is
+  logged at startup and the system simply stays empty rather than stopping the app.
+- `AllowInvalidCertificate` disables TLS validation for that one system. Use it only for an
+  internal server with a self-signed certificate.
+
 ## Usage & observability (`/usage`)
 
 A separate page — linked from the header, or open `http://localhost:5000/usage` directly — shows

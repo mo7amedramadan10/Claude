@@ -31,6 +31,7 @@ public class AnalyticsTools
     private readonly DataStore _db;
     private readonly DocumentSearchService _documents;
     private readonly RepositoryStore _repository;
+    private readonly SystemApiLoader _systemLoader;
     private readonly SourceOptions _sources;
     private readonly ILogger<AnalyticsTools> _logger;
 
@@ -39,6 +40,7 @@ public class AnalyticsTools
         DataStore db,
         DocumentSearchService documents,
         RepositoryStore repository,
+        SystemApiLoader systemLoader,
         IOptions<SourceOptions> sources,
         ILogger<AnalyticsTools> logger)
     {
@@ -46,6 +48,7 @@ public class AnalyticsTools
         _db = db;
         _documents = documents;
         _repository = repository;
+        _systemLoader = systemLoader;
         _sources = sources.Value;
         _logger = logger;
     }
@@ -61,6 +64,8 @@ public class AnalyticsTools
         IReadOnlyList<string> EnabledCategories,
         IReadOnlyList<string> DisabledCategories,
         IReadOnlyDictionary<string, string> TableCategories,
+        IReadOnlyDictionary<string, string> TableSystems,
+        IReadOnlyDictionary<string, string> DisabledSystemTables,
         bool HasDocuments);
 
     public async Task<SourceContext> DescribeSourcesAsync(
@@ -69,9 +74,20 @@ public class AnalyticsTools
         var enabledSystems = new List<string>();
         var disabledSystems = new List<string>();
         var unconnected = new List<string>();
+        var systemTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var disabledSystemTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var system in _sources.Systems)
         {
-            if (!selection.AllowsSystem(system.Id)) { disabledSystems.Add(system.Name); continue; }
+            // A system with an endpoint owns the staging table its records were loaded into.
+            var table = system.HasApi ? _systemLoader.TableFor(system) : null;
+            if (table is not null) systemTables[table] = system.Name;
+
+            if (!selection.AllowsSystem(system.Id))
+            {
+                disabledSystems.Add(system.Name);
+                if (table is not null) disabledSystemTables[table] = system.Name;
+                continue;
+            }
             enabledSystems.Add(system.Name);
             if (!system.IsConnected) unconnected.Add(system.Name);
         }
@@ -95,7 +111,8 @@ public class AnalyticsTools
 
         return new SourceContext(
             enabledSystems, disabledSystems, unconnected,
-            enabledCategories, disabledCategories, tableCategories, hasDocuments);
+            enabledCategories, disabledCategories, tableCategories,
+            systemTables, disabledSystemTables, hasDocuments);
     }
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
@@ -251,10 +268,12 @@ public class AnalyticsTools
                     var visible = schema
                         .Where(t => !context.TableCategories.TryGetValue(t.Table, out var category)
                                     || context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
+                        .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
                         .Select(t => new
                         {
                             table = t.Table,
                             category = context.TableCategories.TryGetValue(t.Table, out var c) ? c : null,
+                            system = context.TableSystems.TryGetValue(t.Table, out var sys) ? sys : null,
                             columns = t.Columns,
                         });
                     // The repository's own catalogue: a PDF contributes no table, so without
@@ -289,6 +308,13 @@ public class AnalyticsTools
                     var sql = input["sql"]?.GetValue<string>();
                     if (string.IsNullOrWhiteSpace(sql))
                         return ("Error: 'sql' input is required.", true);
+
+                    var blockedSystem = context.DisabledSystemTables
+                        .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
+                            || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+                    if (blockedSystem.Key is not null)
+                        return ($"الاستعلام مرفوض: الجدول {blockedSystem.Key} تابع لـ\"{blockedSystem.Value}\" " +
+                                "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.", true);
 
                     var blocked = context.TableCategories
                         .Where(kv => !context.EnabledCategories.Contains(kv.Value, StringComparer.OrdinalIgnoreCase))
