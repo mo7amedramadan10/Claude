@@ -187,6 +187,19 @@ is capped at the latest 60 dashboards; older ones are dropped automatically on s
 `POST /api/history`, `GET /api/history`, `DELETE /api/history/{id}` and `DELETE /api/history`
 are the underlying endpoints, backed by a `DashboardHistory` table.
 
+## Building a dashboard from an image
+
+The 🖼️ button next to the chat input attaches a reference image — a screenshot of a
+dashboard from another tool, a mockup, a hand-drawn sketch. The browser downscales it to a
+manageable size, and it goes to the model as part of the question (both Claude and OpenAI
+vision models are supported; no extra config needed). The model treats the image purely as a
+**layout reference** — how many widgets, what chart types, roughly what they're titled — and
+still has to build every number the normal way, through `list_files`/`query_data` against your
+real data; it never reads numbers off the picture. If a widget in the image has no real data to
+back it, the model substitutes something it can actually support and says so in the summary. You
+can submit with just the image and no typed question — a default prompt ("rebuild this
+dashboard from my real data") is used.
+
 ## Exporting a dashboard (PDF / PowerPoint)
 
 Two buttons appear above any generated dashboard:

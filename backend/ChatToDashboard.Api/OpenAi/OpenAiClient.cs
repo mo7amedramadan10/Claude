@@ -49,6 +49,7 @@ public class OpenAiClient : IDashboardGenerator
         string question,
         IReadOnlyList<ChatTurn>? history = null,
         SourceSelection? sources = null,
+        string? imageDataUrl = null,
         CancellationToken ct = default)
     {
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
@@ -64,7 +65,14 @@ public class OpenAiClient : IDashboardGenerator
             messages.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Text.Trim() });
         }
 
-        messages.Add(new JsonObject { ["role"] = "user", ["content"] = question });
+        // A reference image, if attached, rides along on this question's turn only —
+        // never replayed on later turns since it isn't part of ChatTurn history.
+        JsonNode userContent = string.IsNullOrWhiteSpace(imageDataUrl)
+            ? question
+            : new JsonArray(
+                new JsonObject { ["type"] = "text", ["text"] = question },
+                new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } });
+        messages.Add(new JsonObject { ["role"] = "user", ["content"] = userContent });
 
         var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;

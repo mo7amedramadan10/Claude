@@ -51,6 +51,7 @@ public class ClaudeClient : IDashboardGenerator
         string question,
         IReadOnlyList<ChatTurn>? history = null,
         SourceSelection? sources = null,
+        string? imageDataUrl = null,
         CancellationToken ct = default)
     {
         var messages = new JsonArray();
@@ -77,6 +78,21 @@ public class ClaudeClient : IDashboardGenerator
         }
 
         AppendTextTurn("user", question);
+
+        // A reference image, if attached, rides along on this question's turn only —
+        // never replayed on later turns since it isn't part of ChatTurn history.
+        if (TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
+        {
+            var last = messages[^1]!.AsObject();
+            var text = last["content"]!.GetValue<string>();
+            last["content"] = new JsonArray(
+                new JsonObject
+                {
+                    ["type"] = "image",
+                    ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
+                },
+                new JsonObject { ["type"] = "text", ["text"] = text });
+        }
 
         // A conversation must start with a user turn; drop a leading assistant turn.
         while (messages.Count > 0 && messages[0]!["role"]!.GetValue<string>() == "assistant")
@@ -185,6 +201,18 @@ public class ClaudeClient : IDashboardGenerator
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             throw;
         }
+    }
+
+    /// <summary>Splits a "data:&lt;mime&gt;;base64,&lt;data&gt;" URL into its two parts.</summary>
+    private static bool TryParseDataUrl(string? dataUrl, out string mediaType, out string base64Data)
+    {
+        mediaType = ""; base64Data = "";
+        if (string.IsNullOrWhiteSpace(dataUrl)) return false;
+        var match = System.Text.RegularExpressions.Regex.Match(dataUrl, @"^data:([\w/.+-]+);base64,(.+)$", System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (!match.Success) return false;
+        mediaType = match.Groups[1].Value;
+        base64Data = match.Groups[2].Value;
+        return true;
     }
 
     /// <summary>A short, readable note of which sources were on for this question.</summary>

@@ -18,6 +18,13 @@ public class ChatRequest
     /// <summary>Which sources the user has enabled; omitted means "everything".</summary>
     [JsonPropertyName("sources")]
     public SourceSelection? Sources { get; set; }
+
+    /// <summary>
+    /// Optional reference image (a data URL, e.g. "data:image/jpeg;base64,...") — a screenshot
+    /// or mockup of a dashboard the model should analyze and rebuild using real data.
+    /// </summary>
+    [JsonPropertyName("image")]
+    public string? Image { get; set; }
 }
 
 public class ChatTurn

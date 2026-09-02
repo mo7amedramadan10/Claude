@@ -84,6 +84,15 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 #q:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 #send{padding:10px 18px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-weight:600}
 #send:disabled{opacity:.45;cursor:not-allowed}
+.attach-btn{display:flex;align-items:center;justify-content:center;width:41px;
+  border:1px solid var(--grid);border-radius:11px;background:var(--surface);font-size:16px}
+.attach-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+.attached-image{display:flex;align-items:center;gap:10px;margin:0 14px;padding:8px 10px;
+  background:var(--plane);border:1px solid var(--grid);border-radius:11px}
+.attached-image.hidden{display:none}
+.attached-image img{width:40px;height:40px;object-fit:cover;border-radius:7px;border:1px solid var(--grid)}
+.attached-image span{flex:1;font-size:12.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attached-image button{border:0;background:transparent;color:var(--danger);font-size:15px}
 
 /* ---------- widgets ---------- */
 #summary{margin-bottom:16px;padding:14px 17px;background:var(--surface);
@@ -230,8 +239,17 @@ tr:last-child td{border-bottom:0}
       <span id="repo-link-text">📁 لا يوجد ملفات في المستودع</span>
       <button data-screen="repo">إدارة الملفات ←</button>
     </div>
+    <div id="attached-image" class="attached-image hidden">
+      <img id="attached-image-preview" alt="الصورة المرفقة" />
+      <span id="attached-image-name"></span>
+      <button type="button" id="attached-image-remove" title="إزالة الصورة">✕</button>
+    </div>
     <form id="form">
-      <input id="q" type="text" placeholder="اسأل عن بياناتك…" autocomplete="off" />
+      <label class="attach-btn" title="إرفاق صورة داشبورد لإعادة بنائه ببياناتك">
+        🖼️
+        <input type="file" id="dash-image-input" accept="image/*" hidden>
+      </label>
+      <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
       <button id="send" type="submit">إرسال</button>
     </form>
   </aside>
@@ -277,6 +295,7 @@ const state = {
   onSystems: new Set(), onCategories: new Set(), // enabled
   files: [], pending: [], filter: 'الكل',
   history: [], historyLoaded: false,
+  attachedImage: null, attachedImageName: '',
 };
 
 // Anonymous per-browser id — the app has no login, so history is scoped to whoever
@@ -636,8 +655,10 @@ function renderMessages() {
 async function ask(question) {
   const history = state.messages.filter(m => !m.error).slice(-10)
     .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }));
+  const image = state.attachedImage;
 
-  state.messages.push({ role: 'user', text: question });
+  state.messages.push({ role: 'user', text: image ? `📎 ${state.attachedImageName}\n${question}` : question });
+  state.attachedImage = null; state.attachedImageName = ''; renderAttachedImage();
   state.loading = true;
   renderMessages(); renderDashboard(); el.send.disabled = true;
 
@@ -645,7 +666,7 @@ async function ask(question) {
     const res = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: question, history,
+        message: question, history, image,
         sources: { systems: [...state.onSystems], categories: [...state.onCategories] },
       }),
     });
@@ -979,9 +1000,64 @@ el.dash = el('dash'); el.messages = el('messages'); el.tip = el('tip'); el.send 
 el('form').addEventListener('submit', e => {
   e.preventDefault();
   const q = el('q').value.trim();
-  if (!q || state.loading) return;
+  if (state.loading || (!q && !state.attachedImage)) return;
   el('q').value = '';
-  ask(q);
+  ask(q || 'أعد إنشاء الداشبورد كما في الصورة المرفقة، بنفس أنواع الرسومات والعناصر، مستخدمًا بياناتي الفعلية.');
+});
+
+// ---------- image-to-dashboard attachment ----------
+function renderAttachedImage() {
+  const has = !!state.attachedImage;
+  el('attached-image').classList.toggle('hidden', !has);
+  if (has) {
+    el('attached-image-preview').src = state.attachedImage;
+    el('attached-image-name').textContent = state.attachedImageName;
+  }
+}
+
+// Downscales to a sensible max dimension before sending — keeps the request small and
+// fast regardless of how big the original screenshot/photo is.
+async function fileToResizedDataUrl(file, maxDim = 1600, quality = 0.85) {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('image decode failed'));
+      image.src = objectUrl;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+el('dash-image-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { alert('الملف يجب أن يكون صورة.'); return; }
+  if (file.size > 15 * 1024 * 1024) { alert('حجم الصورة كبير جداً (الحد الأقصى 15MB).'); return; }
+  try {
+    state.attachedImage = await fileToResizedDataUrl(file);
+    state.attachedImageName = file.name;
+    renderAttachedImage();
+  } catch {
+    alert('تعذّر قراءة الصورة.');
+  }
+});
+
+el('attached-image-remove').addEventListener('click', () => {
+  state.attachedImage = null; state.attachedImageName = '';
+  renderAttachedImage();
 });
 
 (async function boot() {
