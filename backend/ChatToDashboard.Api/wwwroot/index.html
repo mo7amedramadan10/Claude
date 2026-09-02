@@ -226,9 +226,78 @@ tr:last-child td{border-bottom:0}
   background:var(--accent-soft);border-bottom:1px solid #cfe1f8;color:var(--ink-2)}
 #shared-banner .q{font-weight:600;color:var(--ink)}
 #shared-banner a{margin-inline-start:auto;color:var(--accent);font-weight:600;text-decoration:none}
+
+/* ---------- login ---------- */
+.login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  background:var(--plane)}
+.login-screen.hidden{display:none}
+.login-card{width:min(360px,90vw);display:flex;flex-direction:column;gap:12px;padding:26px;
+  background:var(--surface);border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow)}
+.login-brand{display:flex;align-items:center;justify-content:center;gap:9px;font-weight:700;margin-bottom:6px}
+.login-brand .dot{width:22px;height:22px;border-radius:6px;background:var(--accent)}
+.login-card label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+.login-card input,.login-card select{padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:14px}
+.login-card input:focus,.login-card select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
+.login-error{padding:8px 11px;border-radius:9px;background:#fdf0f0;border:1px solid #f3d0d0;color:#9b2c2c;font-size:12.5px}
+.login-error.hidden{display:none}
+#login-submit{padding:10px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
+#login-submit:disabled{opacity:.6;cursor:progress}
+
+/* ---------- user menu ---------- */
+.user-menu{display:flex;align-items:center;gap:10px;padding-inline-start:6px}
+#current-user-name{font-size:12.5px;color:var(--ink-2)}
+#logout-btn{padding:6px 13px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
+#logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+.tab.hidden,.hidden{display:none}
+
+/* ---------- users admin screen ---------- */
+#screen-users{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+.users-bar{display:flex;align-items:center;gap:14px}
+.users-bar .count{color:var(--muted);font-size:13px}
+.new-btn{margin-inline-start:auto;padding:8px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
+.users-table-wrap{border:1px solid var(--grid);border-radius:var(--radius);overflow:auto;background:var(--surface)}
+.users-table{width:100%;border-collapse:collapse;font-size:13px}
+.users-table th{text-align:start;padding:10px 13px;background:var(--plane);font-weight:600;color:var(--ink-2);
+  border-bottom:1px solid var(--grid);white-space:nowrap}
+.users-table td{padding:10px 13px;border-bottom:1px solid #f1f0ec;white-space:nowrap}
+.users-table tr:last-child td{border-bottom:0}
+.role-badge{padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
+.role-badge.admin{background:#fdf0e0;color:#a15c00}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;background:#1baf7a}
+.status-dot.off{background:var(--muted)}
+.users-table .edit-btn,.users-table .del-btn{padding:5px 11px;border:1px solid var(--grid);border-radius:8px;
+  background:var(--surface);color:var(--ink-2);font-size:12px}
+.users-table .del-btn:hover{border-color:var(--danger);color:var(--danger)}
+.users-table .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- user modal ---------- */
+.user-modal-box{width:min(480px,100%);max-height:86vh;overflow-y:auto}
+#user-form{display:flex;flex-direction:column;gap:12px}
+#user-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+#user-form input[type="text"],#user-form input[type="password"],#user-form select{
+  padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:13.5px;color:var(--ink)}
+.chk-row{flex-direction:row !important;align-items:center;gap:8px !important}
+.chk-row input{width:16px;height:16px;accent-color:var(--accent)}
+.hint{color:var(--muted);font-weight:400;font-size:11px}
+.perm-block{padding:10px 12px;border:1px solid var(--grid);border-radius:10px;background:var(--plane)}
+.perm-list{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--grid)}
+.perm-list.hidden{display:none}
+.perm-list label{flex-direction:row !important;align-items:center;gap:6px !important;font-size:12.5px;color:var(--ink)}
+.perm-list input{width:15px;height:15px;accent-color:var(--accent)}
+.perm-list .empty{color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
+<div id="login-screen" class="login-screen hidden">
+  <form id="login-form" class="login-card">
+    <div class="login-brand"><span class="dot"></span><span>المحادثة إلى لوحة معلومات</span></div>
+    <label>اسم المستخدم<input id="login-username" type="text" autocomplete="username" required></label>
+    <label>كلمة المرور<input id="login-password" type="password" autocomplete="current-password" required></label>
+    <div id="login-error" class="login-error hidden"></div>
+    <button type="submit" id="login-submit">تسجيل الدخول</button>
+  </form>
+</div>
+
 <div id="shared-banner" class="hidden">
   <span>📤 عرض مشاركة —</span><span class="q" id="shared-banner-q"></span>
   <a href="/">افتح التطبيق الكامل ←</a>
@@ -240,7 +309,8 @@ tr:last-child td{border-bottom:0}
     <button class="tab active" data-screen="chat">المحادثة</button>
     <button class="tab" data-screen="repo">مستودع الملفات <span class="badge" id="repo-badge">0</span></button>
     <button class="tab" data-screen="history">السجل <span class="badge" id="history-badge">0</span></button>
-    <a class="tab" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
+    <button class="tab hidden" id="tab-users" data-screen="users">المستخدمون</button>
+    <a class="tab hidden" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
   </nav>
 
   <div class="sources">
@@ -254,6 +324,11 @@ tr:last-child td{border-bottom:0}
       <label class="source-item head"><input type="checkbox" id="cat-all" checked>مستودع الملفات — تحديد الكل</label>
       <div id="category-toggles" class="nested"></div>
     </div>
+  </div>
+
+  <div class="user-menu">
+    <span id="current-user-name"></span>
+    <button type="button" id="logout-btn">خروج</button>
   </div>
 </header>
 
@@ -310,6 +385,21 @@ tr:last-child td{border-bottom:0}
   <div class="hist-grid" id="history-grid"></div>
 </div>
 
+<div id="screen-users" class="screen">
+  <div class="users-bar">
+    <span class="count" id="users-count"></span>
+    <button class="new-btn" id="btn-new-user">+ مستخدم جديد</button>
+  </div>
+  <div class="users-table-wrap">
+    <table class="users-table">
+      <thead><tr>
+        <th>اسم المستخدم</th><th>الاسم</th><th>طريقة الدخول</th><th>الدور</th><th>الوصول</th><th>الحالة</th><th></th>
+      </tr></thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
 <datalist id="cat-suggestions"></datalist>
 <div id="tip"></div>
 
@@ -327,6 +417,48 @@ tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<div id="user-modal" class="modal-overlay hidden">
+  <div class="modal user-modal-box">
+    <h3 id="user-modal-title">مستخدم جديد</h3>
+    <form id="user-form">
+      <input type="hidden" id="user-id">
+      <label>اسم المستخدم<input id="user-username" type="text" required></label>
+      <label>الاسم المعروض<input id="user-displayname" type="text"></label>
+      <label>طريقة الدخول
+        <select id="user-authmethod">
+          <option value="Local">محلي (اسم مستخدم وكلمة مرور)</option>
+          <option value="ActiveDirectory">Active Directory</option>
+        </select>
+      </label>
+      <label id="user-password-row">كلمة المرور <span class="hint" id="user-password-hint"></span>
+        <input id="user-password" type="password" autocomplete="new-password">
+      </label>
+      <label>الدور
+        <select id="user-role">
+          <option value="User">مستخدم عادي</option>
+          <option value="Admin">مسؤول</option>
+        </select>
+      </label>
+      <label class="chk-row"><input type="checkbox" id="user-active" checked> الحساب نشط</label>
+
+      <div class="perm-block">
+        <label class="chk-row"><input type="checkbox" id="user-allow-all-systems" checked> الوصول لكل الأنظمة</label>
+        <div id="user-systems-list" class="perm-list"></div>
+      </div>
+      <div class="perm-block">
+        <label class="chk-row"><input type="checkbox" id="user-allow-all-categories" checked> الوصول لكل تصنيفات المستودع</label>
+        <div id="user-categories-list" class="perm-list"></div>
+      </div>
+
+      <div id="user-form-error" class="login-error hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="user-cancel">إلغاء</button>
+        <button type="submit" id="user-save">حفظ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 const el = id => document.getElementById(id);
 const state = {
@@ -336,20 +468,21 @@ const state = {
   files: [], pending: [], filter: 'الكل',
   history: [], historyLoaded: false,
   attachedImage: null, attachedImageName: '',
+  currentUser: null, users: [],
 };
 
-// Anonymous per-browser id — the app has no login, so history is scoped to whoever
-// holds this id in their browser's localStorage rather than a real account.
-function getUserId() {
-  try {
-    let id = localStorage.getItem('chatToDashboardUserId');
-    if (!id) {
-      id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-      localStorage.setItem('chatToDashboardUserId', id);
-    }
-    return id;
-  } catch { return 'local'; }
-}
+// Every API call rides on the auth cookie automatically (same-origin fetch). If the
+// session ever stops being valid mid-use — expired, or an admin deactivated the account —
+// any 401 sends the whole page back to the login screen rather than failing silently in
+// place, without needing every individual fetch() call site to check for it.
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await nativeFetch(...args);
+  const url = String(args[0]);
+  if (res.status === 401 && !url.startsWith('/api/auth/') && !url.startsWith('/api/share/')) location.reload();
+  return res;
+};
+
 const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
 const GRID = '#e1e0d9', AXIS = '#c3c2b7';
 // ---------- helpers ----------
@@ -968,7 +1101,7 @@ function saveToHistory(question, dashboard) {
   if (!dashboard?.widgets?.length) return;
   fetch('/api/history', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       question, summary: dashboard.summary,
       queryDescription: dashboard.summary, widgets: dashboard.widgets,
@@ -977,7 +1110,7 @@ function saveToHistory(question, dashboard) {
 }
 
 async function loadHistory() {
-  const res = await fetch('/api/history', { headers: { 'X-User-Id': getUserId() } });
+  const res = await fetch('/api/history');
   state.history = res.ok ? await res.json() : [];
   state.historyLoaded = true;
   renderHistory();
@@ -1026,14 +1159,14 @@ function openHistoryEntry(id) {
 
 async function deleteHistoryEntry(id) {
   if (!confirm('حذف هذه اللوحة من السجل؟')) return;
-  await fetch('/api/history/' + id, { method: 'DELETE', headers: { 'X-User-Id': getUserId() } });
+  await fetch('/api/history/' + id, { method: 'DELETE' });
   state.history = state.history.filter(h => h.id !== id);
   renderHistory();
 }
 
 el('history-clear').addEventListener('click', async () => {
   if (!state.history.length || !confirm('مسح كل السجل؟ لا يمكن التراجع عن هذا.')) return;
-  await fetch('/api/history', { method: 'DELETE', headers: { 'X-User-Id': getUserId() } });
+  await fetch('/api/history', { method: 'DELETE' });
   state.history = [];
   renderHistory();
 });
@@ -1044,6 +1177,7 @@ function showScreen(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
+  if (name === 'users') loadUsers();
 }
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
@@ -1123,7 +1257,7 @@ async function shareDashboard() {
   try {
     const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
     const res = await fetch('/api/share', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: lastQuestion, summary: d.summary, widgets: d.widgets }),
     });
     if (!res.ok) throw new Error(`فشل إنشاء الرابط (${res.status})`);
@@ -1172,13 +1306,198 @@ async function bootSharedView(shareId) {
   renderDashboard();
 }
 
-(async function boot() {
-  const shareId = new URLSearchParams(location.search).get('share');
-  if (shareId) { await bootSharedView(shareId); return; }
+// ---------- auth ----------
+function showLoginScreen(message) {
+  el('login-screen').classList.remove('hidden');
+  if (message) {
+    el('login-error').textContent = message;
+    el('login-error').classList.remove('hidden');
+  }
+}
+function hideLoginScreen() { el('login-screen').classList.add('hidden'); }
+
+function renderCurrentUser() {
+  const u = state.currentUser;
+  if (!u) return;
+  el('current-user-name').textContent = `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
+  el('tab-users').classList.toggle('hidden', u.role !== 'Admin');
+  el('usage-link').classList.toggle('hidden', u.role !== 'Admin');
+}
+
+el('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const username = el('login-username').value.trim();
+  const password = el('login-password').value;
+  if (!username || !password) return;
+  el('login-submit').disabled = true;
+  el('login-error').classList.add('hidden');
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      el('login-error').textContent = err.error || 'تعذّر تسجيل الدخول.';
+      el('login-error').classList.remove('hidden');
+      return;
+    }
+    state.currentUser = await res.json();
+    el('login-password').value = '';
+    hideLoginScreen();
+    await startApp();
+  } finally {
+    el('login-submit').disabled = false;
+  }
+});
+
+el('logout-btn').addEventListener('click', async () => {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  location.href = '/';
+});
+
+async function startApp() {
+  renderCurrentUser();
   renderMessages();
   renderDashboard();
   await loadSources();
   await loadFiles();
+}
+
+// ---------- users admin ----------
+async function loadUsers() {
+  const res = await fetch('/api/users');
+  state.users = res.ok ? await res.json() : [];
+  renderUsers();
+}
+
+function renderUsers() {
+  el('users-count').textContent = `${state.users.length} مستخدم`;
+  el('users-tbody').innerHTML = state.users.map(u => `
+    <tr>
+      <td>${esc(u.username)}</td>
+      <td>${esc(u.displayName)}</td>
+      <td>${u.authMethod === 'ActiveDirectory' ? 'Active Directory' : 'محلي'}</td>
+      <td><span class="role-badge${u.role === 'Admin' ? ' admin' : ''}">${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'}</span></td>
+      <td>${u.allowAllSystems && u.allowAllCategories ? 'الكل' :
+            [u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`,
+             u.allowAllCategories ? 'كل التصنيفات' : `${u.allowedCategories.length} تصنيف`].join(' · ')}</td>
+      <td><span class="status-dot${u.isActive ? '' : ' off'}"></span>${u.isActive ? 'نشط' : 'معطّل'}</td>
+      <td>
+        <button class="edit-btn" data-edit="${esc(u.id)}">تعديل</button>
+        <button class="del-btn" data-del="${esc(u.id)}">حذف</button>
+      </td>
+    </tr>`).join('');
+
+  el('users-tbody').querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', () => openUserModal(state.users.find(u => u.id === btn.dataset.edit))));
+  el('users-tbody').querySelectorAll('[data-del]').forEach(btn =>
+    btn.addEventListener('click', () => deleteUser(btn.dataset.del)));
+}
+
+function renderPermChecklist(containerId, items, checkedList, keyFn, labelFn) {
+  const container = el(containerId);
+  if (!items.length) { container.innerHTML = '<span class="empty">لا يوجد عناصر بعد</span>'; return; }
+  container.innerHTML = items.map(item => {
+    const key = keyFn(item);
+    return `<label><input type="checkbox" value="${esc(key)}" ${checkedList.includes(key) ? 'checked' : ''}> ${esc(labelFn(item))}</label>`;
+  }).join('');
+}
+
+function togglePermList(listId, allCheckboxId) {
+  el(listId).classList.toggle('hidden', el(allCheckboxId).checked);
+}
+
+el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
+el('user-allow-all-categories').addEventListener('change', () => togglePermList('user-categories-list', 'user-allow-all-categories'));
+el('user-authmethod').addEventListener('change', () => {
+  el('user-password-row').style.display = el('user-authmethod').value === 'Local' ? '' : 'none';
+});
+
+function openUserModal(user) {
+  el('user-form-error').classList.add('hidden');
+  el('user-id').value = user ? user.id : '';
+  el('user-modal-title').textContent = user ? `تعديل ${user.username}` : 'مستخدم جديد';
+  el('user-username').value = user ? user.username : '';
+  el('user-username').disabled = !!user;
+  el('user-displayname').value = user ? user.displayName : '';
+  el('user-authmethod').value = user ? user.authMethod : 'Local';
+  el('user-role').value = user ? user.role : 'User';
+  el('user-active').checked = user ? user.isActive : true;
+  el('user-password').value = '';
+  el('user-password-hint').textContent = user ? '(اتركها فاضية لعدم التغيير)' : '';
+  el('user-password-row').style.display = (user ? user.authMethod : 'Local') === 'Local' ? '' : 'none';
+
+  el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
+  el('user-allow-all-categories').checked = user ? user.allowAllCategories : true;
+  renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name);
+  renderPermChecklist('user-categories-list', state.categories, user ? user.allowedCategories : [], c => c, c => c);
+  togglePermList('user-systems-list', 'user-allow-all-systems');
+  togglePermList('user-categories-list', 'user-allow-all-categories');
+
+  el('user-modal').classList.remove('hidden');
+}
+
+el('btn-new-user').addEventListener('click', () => openUserModal(null));
+el('user-cancel').addEventListener('click', () => el('user-modal').classList.add('hidden'));
+el('user-modal').addEventListener('click', e => { if (e.target.id === 'user-modal') el('user-modal').classList.add('hidden'); });
+
+el('user-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = el('user-id').value;
+  const body = {
+    username: el('user-username').value.trim(),
+    displayName: el('user-displayname').value.trim(),
+    password: el('user-password').value || null,
+    authMethod: el('user-authmethod').value,
+    role: el('user-role').value,
+    isActive: el('user-active').checked,
+    allowAllSystems: el('user-allow-all-systems').checked,
+    allowedSystems: [...el('user-systems-list').querySelectorAll('input:checked')].map(i => i.value),
+    allowAllCategories: el('user-allow-all-categories').checked,
+    allowedCategories: [...el('user-categories-list').querySelectorAll('input:checked')].map(i => i.value),
+  };
+  const saveBtn = el('user-save');
+  saveBtn.disabled = true;
+  try {
+    const res = await fetch(id ? `/api/users/${id}` : '/api/users', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      el('user-form-error').textContent = err.error || `فشل الحفظ (${res.status})`;
+      el('user-form-error').classList.remove('hidden');
+      return;
+    }
+    el('user-modal').classList.add('hidden');
+    await loadUsers();
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+async function deleteUser(id) {
+  const user = state.users.find(u => u.id === id);
+  if (!user || !confirm(`حذف المستخدم "${user.username}"؟`)) return;
+  const res = await fetch('/api/users/' + id, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || 'تعذّر الحذف.');
+    return;
+  }
+  await loadUsers();
+}
+
+(async function boot() {
+  const shareId = new URLSearchParams(location.search).get('share');
+  if (shareId) { await bootSharedView(shareId); return; }
+
+  const res = await fetch('/api/auth/me');
+  if (!res.ok) { showLoginScreen(); return; }
+  state.currentUser = await res.json();
+  await startApp();
 })();
 </script>
 </body>

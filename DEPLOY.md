@@ -87,10 +87,13 @@ it in step 1; the app still creates the `staging` schema and tables on its own.
 
 ## Security checklist (read before sharing the URL)
 
-- **The app ships with no login.** Anyone with the URL can query your data and spend your
-  Anthropic credits. Put it behind something before sharing beyond a trusted circle:
-  App Service Authentication (Entra ID) on Azure, a reverse proxy with auth
-  (Caddy/nginx + basic auth or OAuth), or keep it on a VPN/private network.
+- **Every page and API call requires a signed-in account** (see README "Accounts &
+  permissions") except one deliberate exception: a published share link
+  (`/?share=<id>`) is viewable by anyone who has it, by design. The very first account
+  is either the one you set via `Auth:SeedAdmin:Username`/`Password` (user-secrets)
+  before first run, or a random one generated and logged once on first startup — check
+  the startup log if you didn't set it yourself. Change that password (or replace the
+  account) before sharing the URL beyond yourself.
 - **Use HTTPS** for anything reachable from the internet (App Service gives it for free; on
   a VPS put Caddy or nginx with Let's Encrypt in front of port 8080).
 - **Database user**: the compose file uses `sa` for simplicity. For a hardened setup, create

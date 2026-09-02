@@ -1,13 +1,15 @@
+using System.Security.Claims;
 using ChatToDashboard.Api.Share;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
 /// <summary>
 /// Publishes a dashboard under a link anyone can open, read-only, without the chat app
-/// around it. Like history, "who created it" is the browser-generated id sent as
-/// X-User-Id (see HistoryController) — GET is deliberately open to anyone with the id,
-/// since that is the whole point of a share link.
+/// around it. "Who created it" is now the signed-in account; GET-by-id is the one
+/// deliberate exception to "everything requires login" — the whole point of a share link
+/// is that the person opening it doesn't need an account.
 /// </summary>
 [ApiController]
 [Route("api/share")]
@@ -17,10 +19,7 @@ public class ShareController : ControllerBase
 
     public ShareController(ShareStore store) => _store = store;
 
-    private string UserId =>
-        Request.Headers.TryGetValue("X-User-Id", out var v) && !string.IsNullOrWhiteSpace(v)
-            ? v.ToString().Trim()
-            : "local";
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateShareRequest request, CancellationToken ct)
@@ -42,8 +41,9 @@ public class ShareController : ControllerBase
         return Ok(saved);
     }
 
-    /// <summary>Public: anyone with the id can view the shared dashboard.</summary>
+    /// <summary>Public: anyone with the id can view the shared dashboard — no login needed.</summary>
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> Get(string id, CancellationToken ct)
     {
         var entry = await _store.GetAsync(id, ct);

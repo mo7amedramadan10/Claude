@@ -16,16 +16,23 @@ public class SourceSelection
     public List<string> Categories { get; set; } = new();
 
     /// <summary>
-    /// True when the UI did not send a selection at all (older client, direct API call):
-    /// everything stays enabled rather than silently answering with nothing.
+    /// True when the UI did not send a systems selection at all (older client, direct API
+    /// call, or a permission set with no system restriction): every system stays enabled
+    /// rather than silently answering with nothing. Independent from
+    /// <see cref="CategoriesUnset"/> because a user's permissions can restrict one
+    /// dimension without restricting the other.
     /// </summary>
     [JsonIgnore]
-    public bool IsUnset { get; set; }
+    public bool SystemsUnset { get; set; }
 
-    public static SourceSelection AllEnabled() => new() { IsUnset = true };
+    /// <summary>Same as <see cref="SystemsUnset"/>, for categories.</summary>
+    [JsonIgnore]
+    public bool CategoriesUnset { get; set; }
 
-    public bool AllowsSystem(string id) => IsUnset || Systems.Contains(id, StringComparer.OrdinalIgnoreCase);
+    public static SourceSelection AllEnabled() => new() { SystemsUnset = true, CategoriesUnset = true };
+
+    public bool AllowsSystem(string id) => SystemsUnset || Systems.Contains(id, StringComparer.OrdinalIgnoreCase);
 
     public bool AllowsCategory(string category) =>
-        IsUnset || Categories.Contains(category, StringComparer.OrdinalIgnoreCase);
+        CategoriesUnset || Categories.Contains(category, StringComparer.OrdinalIgnoreCase);
 }

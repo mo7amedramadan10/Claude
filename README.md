@@ -172,6 +172,57 @@ Token counts themselves always come from the provider's own `usage` block, not a
 `DELETE /api/usage` (or the "مسح السجل" button) clears the log. Note the log stores prompts and
 tool results verbatim, which includes rows from your data — it lives in your own database.
 
+## Accounts & permissions
+
+Every screen and API call requires a signed-in account, with one deliberate exception: an
+opened share link (see "Sharing a dashboard" below). There is no self-signup — an admin
+creates every account, either as a **local** account (username + password) or an **Active
+Directory** account (the username has to exist as an account here too, but the password is
+never stored — it's verified against your directory on every login).
+
+**First login:** since accounts are admin-created and there's no admin yet on a fresh install,
+the app creates one automatically the first time it starts with zero accounts in the database.
+Set it yourself before first run:
+
+```bash
+dotnet user-secrets set "Auth:SeedAdmin:Username" "admin"
+dotnet user-secrets set "Auth:SeedAdmin:Password" "<a real password>"
+```
+
+or leave `Auth:SeedAdmin:Password` unset and a random one is generated and printed **once** in
+the startup log (`docker compose logs` or the console) — sign in with it and go create real
+accounts. Either way the account it creates is `Admin`, with full access to everything; change
+its password (or make yourself a proper account and deactivate it) once you're in.
+
+**Roles:** `Admin` can manage accounts (the **المستخدمون** tab), bulk-refresh data
+(`POST /api/data/refresh`, the per-system ⟳ button), and see the `/usage` cost/prompt log.
+`User` can chat, use history, export, and share — nothing administrative.
+
+**Per-source permissions:** independent of role, every account also has its own allowed
+systems and repository categories — the same "Sources" dropdown every question already gates
+against, now enforced per account rather than trusted from the client. When creating or
+editing a user, leave "الوصول لكل الأنظمة" / "لكل تصنيفات المستودع" checked for full access, or
+uncheck it and pick specific systems/categories. **The server always intersects what a user
+asks for with what they're actually allowed** — a user cannot widen their own access by
+editing the request, only narrow it further via the Sources dropdown. Admins are never
+restricted by this, regardless of what's ticked on their own account.
+
+**Active Directory**, off by default — turn it on and point it at your domain controller via
+user-secrets:
+
+```bash
+dotnet user-secrets set "ActiveDirectory:Enabled" "true"
+dotnet user-secrets set "ActiveDirectory:Host" "dc01.company.local"
+dotnet user-secrets set "ActiveDirectory:Domain" "company.local"
+# Port defaults to 389; set ActiveDirectory:UseSsl=true and Port=636 for LDAPS.
+```
+
+A login attempt for an AD account binds to the directory **as that user** with the password
+they typed — the standard way to check an AD password without needing a privileged service
+account. Nothing else is read from the directory (no group sync); admins still control role
+and per-source permissions here, same as a local account — only where the password lives is
+different.
+
 ## History (`السجل`)
 
 Every question that produces at least one widget is saved automatically — no extra click.
@@ -180,9 +231,7 @@ count); **فتح** reopens one instantly by re-rendering the saved widgets in th
 it does **not** call the model again — and **حذف** / **مسح الكل** remove one entry or all of
 them.
 
-Because the app has no login, "the current user" is a random id the browser generates once
-and keeps in `localStorage`, sent as the `X-User-Id` header — enough to keep one browser's
-history separate from another's without standing up real authentication. Each user's history
+History is per-account — "the current user" is whoever is signed in. Each account's history
 is capped at the latest 60 dashboards; older ones are dropped automatically on save.
 `POST /api/history`, `GET /api/history`, `DELETE /api/history/{id}` and `DELETE /api/history`
 are the underlying endpoints, backed by a `DashboardHistory` table.
@@ -203,17 +252,17 @@ dashboard from my real data") is used.
 ## Sharing a dashboard
 
 **🔗 مشاركة** publishes the current dashboard under a random link (`/?share=<id>`) and shows
-it in a copyable box. Anyone with that link — no login, no app needed beyond a browser — gets
-a read-only page: just the widgets, a banner naming the original question, and a link back to
-the full app. It's served by the same `index.html`; a `?share=` query string switches it into
-that stripped-down view instead of the normal chat UI.
+it in a copyable box. Opening that link is the **one deliberate exception** to "everything
+requires an account": anyone with it gets a read-only page — just the widgets, a banner naming
+the original question, and a link back to the full app — no sign-in needed. It's served by the
+same `index.html`; a `?share=` query string switches it into that stripped-down view instead of
+the normal chat UI.
 
-Since the app has no login, "who can see it" is exactly "who has the link" — the same trust
-model as most lightweight share links (Google Docs, Notion, etc.): the id is 16 random hex
-characters (64 bits), not sequential or guessable, but anyone holding it can view. Manage what
-you've published with `GET /api/share` (your own links — scoped by the same `X-User-Id`
-browser id as history) and `DELETE /api/share/{id}`; deleting one immediately breaks that link
-for everyone.
+"Who can see it" is exactly "who has the link" — the same trust model as most lightweight
+share links (Google Docs, Notion, etc.): the id is 16 random hex characters (64 bits), not
+sequential or guessable, but anyone holding it can view. Manage what you've published with
+`GET /api/share` (your own links) and `DELETE /api/share/{id}`; deleting one immediately breaks
+that link for everyone.
 
 ## Exporting a dashboard (PDF / PowerPoint)
 
@@ -265,6 +314,12 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 | `Anthropic:ApiKey` | — | Set via user-secrets |
 | `OpenAI:ApiKey` | — | Set via user-secrets |
 | `Pricing:Models` | Anthropic list prices | Price per million tokens, per model, for the `/usage` cost estimate |
+| `Auth:SeedAdmin:Username` | `admin` | Username for the auto-created first admin account |
+| `Auth:SeedAdmin:Password` | — | Set via user-secrets; leave unset to get a random generated one, logged once |
+| `ActiveDirectory:Enabled` | `false` | Turn on AD login |
+| `ActiveDirectory:Host` | — | Domain controller hostname/IP, via user-secrets |
+| `ActiveDirectory:Domain` | — | DNS domain used to build the login UPN (`user@domain`) |
+| `ActiveDirectory:Port` / `:UseSsl` | `389` / `false` | `636` + `true` for LDAPS |
 
 ## Safety
 

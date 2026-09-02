@@ -1,10 +1,14 @@
 using ChatToDashboard.Api.Usage;
+using ChatToDashboard.Api.Users;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
+// Prompts, tool results and cost data for every user's questions — admin only.
 [ApiController]
 [Route("api/usage")]
+[Authorize(Roles = UserRoles.Admin)]
 public class UsageController : ControllerBase
 {
     private readonly UsageStore _store;

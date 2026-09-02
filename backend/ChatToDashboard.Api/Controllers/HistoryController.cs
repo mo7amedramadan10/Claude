@@ -1,15 +1,10 @@
+using System.Security.Claims;
 using ChatToDashboard.Api.History;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
-/// <summary>
-/// Saved dashboards ("السجل"). The app has no login, so "the current user" is a random
-/// id the frontend generates once and keeps in localStorage, sent as the X-User-Id
-/// header — good enough to keep one browser's history separate from another's without
-/// standing up real authentication. A request with no header falls back to a shared
-/// "local" bucket, so the API still works from curl/Postman.
-/// </summary>
+/// <summary>Saved dashboards ("السجل") — one list per signed-in account.</summary>
 [ApiController]
 [Route("api/history")]
 public class HistoryController : ControllerBase
@@ -18,10 +13,7 @@ public class HistoryController : ControllerBase
 
     public HistoryController(HistoryStore store) => _store = store;
 
-    private string UserId =>
-        Request.Headers.TryGetValue("X-User-Id", out var v) && !string.IsNullOrWhiteSpace(v)
-            ? v.ToString().Trim()
-            : "local";
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     /// <summary>Saves a generated dashboard. Called right after the chat flow renders one.</summary>
     [HttpPost]

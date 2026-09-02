@@ -1,11 +1,15 @@
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Users;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
+// Bulk data reload is an operational action, not something every user needs — admin only.
 [ApiController]
 [Route("api/data")]
+[Authorize(Roles = UserRoles.Admin)]
 public class DataController : ControllerBase
 {
     private readonly DataFolderLoader _loader;

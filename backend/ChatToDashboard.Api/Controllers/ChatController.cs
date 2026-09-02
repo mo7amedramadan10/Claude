@@ -1,5 +1,6 @@
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
+using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
@@ -13,11 +14,13 @@ public class ChatController : ControllerBase
     private const int MaxImageDataUrlLength = 12 * 1024 * 1024;
 
     private readonly IDashboardGenerator _generator;
+    private readonly PermissionsService _permissions;
     private readonly ILogger<ChatController> _logger;
 
-    public ChatController(IDashboardGenerator generator, ILogger<ChatController> logger)
+    public ChatController(IDashboardGenerator generator, PermissionsService permissions, ILogger<ChatController> logger)
     {
         _generator = generator;
+        _permissions = permissions;
         _logger = logger;
     }
 
@@ -30,10 +33,16 @@ public class ChatController : ControllerBase
             (!image.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) || image.Length > MaxImageDataUrlLength))
             return BadRequest(new ChatResponse { Error = "image must be a data:image/... URL under 12MB." });
 
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        // Narrowed server-side against this user's own permissions — the client's
+        // requested selection can only ever shrink, never widen, what it's allowed to see.
+        var effectiveSources = PermissionsService.GetEffectiveSelection(user, request.Sources);
+
         try
         {
             var dashboard = await _generator.GenerateDashboardAsync(
-                request.Message.Trim(), request.History, request.Sources, request.Image, ct);
+                request.Message.Trim(), request.History, effectiveSources, request.Image, ct);
             return Ok(new ChatResponse { Dashboard = dashboard });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
