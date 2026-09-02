@@ -692,9 +692,23 @@ function renderMessages() {
   el.messages.scrollTop = el.messages.scrollHeight;
 }
 
+// A compact, one-line description of a dashboard's widgets (type, title, and the
+// column(s) charted) — attached to the history sent back to the model so a follow-up
+// like "خليه شهري" or "غيّر لون الرسم" has something concrete to refer to. Never shown
+// in the chat bubble itself (see renderMessages, which only ever reads m.text).
+function widgetsBrief(widgets) {
+  if (!widgets?.length) return '';
+  return widgets.map((w, i) => {
+    const cols = w.xKey || w.yKey ? ` (x=${w.xKey || '-'}, y=${w.yKey || '-'})` : '';
+    return `${i + 1}) ${w.type} "${w.title}"${cols}`;
+  }).join('؛ ');
+}
+
 async function ask(question) {
-  const history = state.messages.filter(m => !m.error).slice(-10)
-    .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }));
+  const history = state.messages.filter(m => !m.error).slice(-10).map(m => ({
+    role: m.role === 'user' ? 'user' : 'assistant',
+    text: m.role === 'bot' && m.widgetsBrief ? `${m.text}\nعناصر اللوحة السابقة: ${m.widgetsBrief}` : m.text,
+  }));
   const image = state.attachedImage;
 
   state.messages.push({ role: 'user', text: image ? `📎 ${state.attachedImageName}\n${question}` : question });
@@ -715,7 +729,7 @@ async function ask(question) {
       state.messages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
     } else {
       state.dashboard = payload.dashboard;
-      state.messages.push({ role: 'bot', text: payload.dashboard.summary });
+      state.messages.push({ role: 'bot', text: payload.dashboard.summary, widgetsBrief: widgetsBrief(payload.dashboard.widgets) });
       saveToHistory(question, payload.dashboard);
     }
   } catch (err) {
