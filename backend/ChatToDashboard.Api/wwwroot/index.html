@@ -155,6 +155,28 @@ tr:last-child td{border-bottom:0}
 .repo-card .del:hover{color:var(--danger)}
 .repo-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
+
+/* ---------- history screen ---------- */
+#screen-history{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+.hist-bar{display:flex;align-items:center;gap:14px}
+.hist-bar .count{color:var(--muted);font-size:13px}
+.clear-btn{margin-inline-start:auto;padding:7px 14px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--danger)}
+.clear-btn:hover{border-color:var(--danger);background:#fdf0f0}
+.hist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.hist-card{display:flex;flex-direction:column;gap:8px;padding:16px;background:var(--surface);
+  border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow)}
+.hist-card .q{font-weight:600;font-size:13.5px;line-height:1.55}
+.hist-card .summary{color:var(--ink-2);font-size:12.5px;line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hist-card .meta{color:var(--muted);font-size:11.5px}
+.hist-card .actions{display:flex;gap:8px;margin-top:auto}
+.hist-card .actions button{flex:1;padding:7px 10px;border-radius:9px;font-size:12.5px}
+.hist-card .open-btn{border:0;background:var(--accent);color:#fff;font-weight:600}
+.hist-card .del-btn{border:1px solid var(--grid);background:var(--surface);color:var(--danger)}
+.hist-card .del-btn:hover{border-color:var(--danger);background:#fdf0f0}
+.hist-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
+  border:1px dashed var(--grid);border-radius:var(--radius)}
 </style>
 </head>
 <body>
@@ -164,6 +186,7 @@ tr:last-child td{border-bottom:0}
   <nav class="tabs">
     <button class="tab active" data-screen="chat">المحادثة</button>
     <button class="tab" data-screen="repo">مستودع الملفات <span class="badge" id="repo-badge">0</span></button>
+    <button class="tab" data-screen="history">السجل <span class="badge" id="history-badge">0</span></button>
     <a class="tab" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
   </nav>
 
@@ -212,6 +235,14 @@ tr:last-child td{border-bottom:0}
   <div class="repo-grid" id="repo-grid"></div>
 </div>
 
+<div id="screen-history" class="screen">
+  <div class="hist-bar">
+    <span class="count" id="history-count"></span>
+    <button class="clear-btn" id="history-clear">مسح الكل</button>
+  </div>
+  <div class="hist-grid" id="history-grid"></div>
+</div>
+
 <datalist id="cat-suggestions"></datalist>
 <div id="tip"></div>
 
@@ -222,7 +253,21 @@ const state = {
   systems: [], categories: [],            // available, from /api/sources
   onSystems: new Set(), onCategories: new Set(), // enabled
   files: [], pending: [], filter: 'الكل',
+  history: [], historyLoaded: false,
 };
+
+// Anonymous per-browser id — the app has no login, so history is scoped to whoever
+// holds this id in their browser's localStorage rather than a real account.
+function getUserId() {
+  try {
+    let id = localStorage.getItem('chatToDashboardUserId');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      localStorage.setItem('chatToDashboardUserId', id);
+    }
+    return id;
+  } catch { return 'local'; }
+}
 const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
 const GRID = '#e1e0d9', AXIS = '#c3c2b7';
 // ---------- helpers ----------
@@ -504,6 +549,7 @@ async function ask(question) {
     } else {
       state.dashboard = payload.dashboard;
       state.messages.push({ role: 'bot', text: payload.dashboard.summary });
+      saveToHistory(question, payload.dashboard);
     }
   } catch (err) {
     state.messages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
@@ -734,11 +780,89 @@ el('file-input').addEventListener('change', async e => {
   renderPending();
 });
 
+// ---------- history ----------
+// Fire-and-forget: saving history must never block or break the dashboard that
+// already rendered. Only questions that produced at least one widget are saved.
+function saveToHistory(question, dashboard) {
+  if (!dashboard?.widgets?.length) return;
+  fetch('/api/history', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
+    body: JSON.stringify({
+      question, summary: dashboard.summary,
+      queryDescription: dashboard.summary, widgets: dashboard.widgets,
+    }),
+  }).then(() => { state.historyLoaded = false; }).catch(() => {});
+}
+
+async function loadHistory() {
+  const res = await fetch('/api/history', { headers: { 'X-User-Id': getUserId() } });
+  state.history = res.ok ? await res.json() : [];
+  state.historyLoaded = true;
+  renderHistory();
+}
+
+function renderHistory() {
+  el('history-badge').textContent = state.history.length;
+  el('history-count').textContent = state.history.length
+    ? `${state.history.length} لوحة محفوظة`
+    : 'لا يوجد لوحات محفوظة بعد';
+
+  el('history-grid').innerHTML = state.history.length ? state.history.map(h => {
+    const widgets = parseWidgets(h.widgetsJson);
+    const when = new Date(h.createdAt + (h.createdAt.endsWith('Z') ? '' : 'Z'));
+    return `<div class="hist-card">
+        <div class="q">${esc(h.question)}</div>
+        <div class="summary">${esc(h.summary)}</div>
+        <div class="meta">${when.toLocaleString('ar-EG')} · ${widgets.length} عنصر</div>
+        <div class="actions">
+          <button class="open-btn" data-open="${esc(h.id)}">فتح</button>
+          <button class="del-btn" data-del="${esc(h.id)}">حذف</button>
+        </div>
+      </div>`;
+  }).join('') : `<div class="hist-empty">لا يوجد لوحات محفوظة بعد — أي سؤال تسأله يُحفظ هنا تلقائياً.</div>`;
+
+  el('history-grid').querySelectorAll('[data-open]').forEach(btn =>
+    btn.addEventListener('click', () => openHistoryEntry(btn.dataset.open)));
+  el('history-grid').querySelectorAll('[data-del]').forEach(btn =>
+    btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.del)));
+}
+
+function parseWidgets(json) {
+  try { const w = JSON.parse(json); return Array.isArray(w) ? w : []; } catch { return []; }
+}
+
+// Reopens a saved dashboard entirely client-side — no call to the chat/AI endpoint.
+function openHistoryEntry(id) {
+  const entry = state.history.find(h => h.id === id);
+  if (!entry) return;
+  state.dashboard = { summary: entry.summary, widgets: parseWidgets(entry.widgetsJson) };
+  state.messages.push({ role: 'user', text: entry.queryDescription || entry.question });
+  state.messages.push({ role: 'bot', text: entry.summary });
+  showScreen('chat');
+  renderMessages(); renderDashboard();
+}
+
+async function deleteHistoryEntry(id) {
+  if (!confirm('حذف هذه اللوحة من السجل؟')) return;
+  await fetch('/api/history/' + id, { method: 'DELETE', headers: { 'X-User-Id': getUserId() } });
+  state.history = state.history.filter(h => h.id !== id);
+  renderHistory();
+}
+
+el('history-clear').addEventListener('click', async () => {
+  if (!state.history.length || !confirm('مسح كل السجل؟ لا يمكن التراجع عن هذا.')) return;
+  await fetch('/api/history', { method: 'DELETE', headers: { 'X-User-Id': getUserId() } });
+  state.history = [];
+  renderHistory();
+});
+
 // ---------- screens ----------
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   if (name === 'repo') loadFiles();
+  if (name === 'history' && !state.historyLoaded) loadHistory();
 }
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));

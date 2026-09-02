@@ -172,6 +172,21 @@ Token counts themselves always come from the provider's own `usage` block, not a
 `DELETE /api/usage` (or the "مسح السجل" button) clears the log. Note the log stores prompts and
 tool results verbatim, which includes rows from your data — it lives in your own database.
 
+## History (`السجل`)
+
+Every question that produces at least one widget is saved automatically — no extra click.
+The **السجل** tab lists saved dashboards newest-first (question, summary, timestamp, widget
+count); **فتح** reopens one instantly by re-rendering the saved widgets in the browser —
+it does **not** call the model again — and **حذف** / **مسح الكل** remove one entry or all of
+them.
+
+Because the app has no login, "the current user" is a random id the browser generates once
+and keeps in `localStorage`, sent as the `X-User-Id` header — enough to keep one browser's
+history separate from another's without standing up real authentication. Each user's history
+is capped at the latest 60 dashboards; older ones are dropped automatically on save.
+`POST /api/history`, `GET /api/history`, `DELETE /api/history/{id}` and `DELETE /api/history`
+are the underlying endpoints, backed by a `DashboardHistory` table.
+
 ## Refreshing data
 
 When files in the data folder change, reload all staging tables without restarting:
