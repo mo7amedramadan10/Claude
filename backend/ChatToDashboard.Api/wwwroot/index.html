@@ -177,6 +177,25 @@ tr:last-child td{border-bottom:0}
 .hist-card .del-btn:hover{border-color:var(--danger);background:#fdf0f0}
 .hist-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
+
+/* ---------- dashboard export toolbar ---------- */
+.dash-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
+.dash-toolbar.hidden{display:none}
+.dash-toolbar button{padding:7px 14px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12.5px}
+.dash-toolbar button:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.dash-toolbar button:disabled{opacity:.55;cursor:progress}
+
+/* Printing (تصدير PDF): only the dashboard content, nothing else. */
+@media print{
+  header, #chat-rail, #dash-toolbar, #tip, .src-pop, #sources-panel{display:none !important}
+  body, .screen, #screen-chat, #dash-pane{height:auto !important;overflow:visible !important;
+    display:block !important;padding:0 !important;margin:0 !important}
+  #summary{box-shadow:none}
+  .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .card.wide{grid-column:1/-1}
+}
 </style>
 </head>
 <body>
@@ -218,6 +237,10 @@ tr:last-child td{border-bottom:0}
   </aside>
 
   <section id="dash-pane">
+    <div id="dash-toolbar" class="dash-toolbar hidden">
+      <button type="button" id="btn-export-pdf">🖨️ تصدير PDF</button>
+      <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
+    </div>
     <div id="dash"></div>
   </section>
 
@@ -464,6 +487,7 @@ function sourcePopover(source) {
 
 function renderDashboard() {
   const d = state.dashboard;
+  el('dash-toolbar').classList.toggle('hidden', !d || !(d.widgets || []).length);
   if (!d) {
     el.dash.innerHTML = state.loading
       ? `<div class="grid skeleton">${'<div class="card"><div class="bar"></div></div>'.repeat(4)}</div>`
@@ -513,6 +537,88 @@ function closePopovers() {
   document.querySelectorAll('.src-btn.active').forEach(b => b.classList.remove('active'));
 }
 document.addEventListener('click', closePopovers);
+
+// ---------- export (PDF / PowerPoint) ----------
+// PDF: the browser's own print-to-PDF, steered by the @media print rules above —
+// no server round trip, and it prints exactly what's on screen.
+el('btn-export-pdf').addEventListener('click', () => window.print());
+
+// PowerPoint: KPI values and tables travel as plain data so they land as native,
+// still-editable PowerPoint shapes; bar/line/pie charts are already drawn as SVG in
+// the DOM, so each one is snapshotted to a PNG here and only the picture is sent —
+// the server has no charting code of its own.
+async function svgToPngDataUrl(svgEl, scale = 2) {
+  let xml = new XMLSerializer().serializeToString(svgEl);
+  if (!xml.includes('xmlns=')) xml = xml.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('svg decode failed'));
+      image.src = url;
+    });
+    const vb = svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.width
+      ? svgEl.viewBox.baseVal : { width: img.width || 620, height: img.height || 300 };
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vb.width * scale);
+    canvas.height = Math.round(vb.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fcfcfb';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function widgetToPptxInput(w, card) {
+  const base = { type: (w.type || '').toLowerCase(), title: w.title || '', source: w.source || '' };
+  if (base.type === 'kpi') {
+    const e = Array.isArray(w.data) ? w.data[0] : null;
+    const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
+    return { ...base, value: fmt(v), label: e?.label ?? '' };
+  }
+  if (base.type === 'table') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    const cols = rows.length ? Object.keys(rows[0]) : [];
+    return { ...base, columns: cols, rows: rows.map(r => cols.map(c => String(r[c] ?? ''))) };
+  }
+  const svgEl = card?.querySelector('svg');
+  if (!svgEl) return base;
+  try { return { ...base, image: await svgToPngDataUrl(svgEl) }; }
+  catch { return base; }
+}
+
+async function exportPptx() {
+  const d = state.dashboard;
+  if (!d?.widgets?.length) return;
+  const btn = el('btn-export-pptx');
+  btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ التصدير…';
+  try {
+    const cards = [...document.querySelectorAll('#dash .grid > .card')];
+    const widgets = await Promise.all(d.widgets.map((w, i) => widgetToPptxInput(w, cards[i])));
+    const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text;
+
+    const res = await fetch('/api/export/pptx', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: lastQuestion || 'لوحة معلومات', summary: d.summary, widgets }),
+    });
+    if (!res.ok) throw new Error(`فشل التصدير (${res.status})`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'dashboard.pptx';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('تعذّر تصدير العرض التقديمي: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = original;
+  }
+}
+el('btn-export-pptx').addEventListener('click', exportPptx);
 
 // ---------- chat ----------
 function renderMessages() {

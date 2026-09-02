@@ -187,6 +187,21 @@ is capped at the latest 60 dashboards; older ones are dropped automatically on s
 `POST /api/history`, `GET /api/history`, `DELETE /api/history/{id}` and `DELETE /api/history`
 are the underlying endpoints, backed by a `DashboardHistory` table.
 
+## Exporting a dashboard (PDF / PowerPoint)
+
+Two buttons appear above any generated dashboard:
+
+- **تصدير PDF** — the browser's own print-to-PDF: it prints just the dashboard (no header,
+  chat rail, or buttons — see the `@media print` rules in `index.html`), so "Save as PDF" in
+  the print dialog is the export. No server round trip.
+- **تصدير PowerPoint** — downloads a real, editable `.pptx`: a title slide (question +
+  summary) followed by one slide per widget. KPI values and tables are sent as plain data and
+  land as native, still-editable PowerPoint text/tables; bar/line/pie widgets are already
+  drawn as SVG in the browser, so each one is snapshotted to a PNG on the client (via an
+  off-screen `<canvas>`) and only that image is sent — `POST /api/export/pptx` has no
+  charting code of its own, `Export/PptxBuilder.cs` just assembles the OOXML package
+  (`DocumentFormat.OpenXml`) from a title, a summary, and that per-widget data.
+
 ## Refreshing data
 
 When files in the data folder change, reload all staging tables without restarting:
