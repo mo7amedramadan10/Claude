@@ -44,9 +44,16 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .source-item input{accent-color:var(--accent);width:15px;height:15px}
 .source-item.head{font-weight:600}
 .source-item .note{margin-inline-start:auto;font-size:11px;color:var(--muted)}
+.source-item .grow{flex:1}
+.refresh-btn{padding:2px 8px;border:1px solid var(--grid);border-radius:7px;background:var(--surface);
+  color:var(--accent);font-size:11.5px;line-height:1.6}
+.refresh-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+.refresh-btn:disabled{opacity:.5;cursor:progress}
+.sys-status{padding:0 9px 6px 31px;font-size:11px;color:var(--muted);line-height:1.55}
+.sys-status.bad{color:var(--danger)}
 #sources-panel hr{border:0;border-top:1px solid var(--grid);margin:7px 4px}
 .nested{padding-inline-start:22px}
-.nested .empty{padding:6px 9px;font-size:12px;color:var(--muted)}
+.nested-empty{padding:6px 9px;font-size:12px;color:var(--muted)}
 
 /* ---------- layout ---------- */
 .screen{display:none}
@@ -528,8 +535,11 @@ function renderSources() {
   el('system-toggles').innerHTML = state.systems.map(s => `
     <label class="source-item">
       <input type="checkbox" class="sys-cb" data-id="${esc(s.id)}" ${state.onSystems.has(s.id) ? 'checked' : ''}>
-      ${esc(s.name)}${s.connected ? '' : '<span class="note">غير مربوط بعد</span>'}
-    </label>`).join('');
+      <span class="grow">${esc(s.name)}</span>
+      ${s.connected ? '' : '<span class="note">غير مربوط بعد</span>'}
+      ${s.refreshable ? `<button type="button" class="refresh-btn" data-refresh="${esc(s.id)}">⟳ جلب</button>` : ''}
+    </label>
+    ${s.refreshable ? `<div class="sys-status${s.error ? ' bad' : ''}" data-status="${esc(s.id)}">${systemStatusText(s)}</div>` : ''}`).join('');
 
   el('category-toggles').innerHTML = state.categories.length
     ? state.categories.map(c => `
@@ -537,7 +547,10 @@ function renderSources() {
           <input type="checkbox" class="cat-cb" data-cat="${esc(c)}" ${state.onCategories.has(c) ? 'checked' : ''}>
           ${esc(c)}
         </label>`).join('')
-    : '<div class="empty">لا يوجد تصنيفات بعد — ارفع ملفات أولاً</div>';
+    : '<div class="nested-empty">لا يوجد تصنيفات بعد — ارفع ملفات أولاً</div>';
+
+  el('system-toggles').querySelectorAll('[data-refresh]').forEach(btn =>
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); refreshSystem(btn); }));
 
   el('system-toggles').querySelectorAll('.sys-cb').forEach(cb => cb.addEventListener('change', () => {
     cb.checked ? state.onSystems.add(cb.dataset.id) : state.onSystems.delete(cb.dataset.id);
@@ -548,6 +561,29 @@ function renderSources() {
     syncSourceHeaders();
   }));
   syncSourceHeaders();
+}
+
+function systemStatusText(s) {
+  if (s.error) return 'تعذّر الجلب: ' + esc(s.error);
+  if (!s.lastRefreshed) return 'لم يتم الجلب بعد — اضغط «جلب»';
+  const when = new Date(s.lastRefreshed + (s.lastRefreshed.endsWith('Z') ? '' : 'Z'));
+  return `${s.records.toLocaleString('en-US')} سجل · آخر جلب ${when.toLocaleTimeString('ar-EG')}`;
+}
+
+async function refreshSystem(btn) {
+  const id = btn.dataset.refresh;
+  const status = el('system-toggles').querySelector(`[data-status="${CSS.escape(id)}"]`);
+  btn.disabled = true; btn.textContent = '⟳ جارٍ الجلب…';
+  if (status) { status.className = 'sys-status'; status.textContent = 'جارٍ الجلب من النظام…'; }
+  try {
+    const res = await fetch(`/api/sources/${encodeURIComponent(id)}/refresh`, { method: 'POST' });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.error || `فشل الجلب (${res.status})`);
+    await loadSources();
+  } catch (err) {
+    if (status) { status.className = 'sys-status bad'; status.textContent = 'تعذّر الجلب: ' + err.message; }
+    btn.disabled = false; btn.textContent = '⟳ جلب';
+  }
 }
 
 function syncSourceHeaders() {

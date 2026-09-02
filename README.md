@@ -144,6 +144,11 @@ aggregate over them and the dashboard charts them.
 - `AllowInvalidCertificate` disables TLS validation for that one system. Use it only for an
   internal server with a self-signed certificate.
 
+**Refreshing one system:** the Sources dropdown shows a ⟳ button beside every system that has
+an endpoint, with its record count and the time of the last fetch underneath (or the error, if
+the fetch failed). `POST /api/sources/{id}/refresh` does the same thing from a script.
+`POST /api/data/refresh` still reloads everything — files and all systems — at once.
+
 ## Usage & observability (`/usage`)
 
 A separate page — linked from the header, or open `http://localhost:5000/usage` directly — shows

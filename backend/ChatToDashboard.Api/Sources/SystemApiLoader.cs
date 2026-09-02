@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Data;
 using System.Text;
 using System.Text.Json;
@@ -7,6 +8,9 @@ using Microsoft.Extensions.Options;
 namespace ChatToDashboard.Api.Sources;
 
 public record LoadedSystem(string System, string Table, int Records, string? Error);
+
+/// <summary>The outcome of the last load for one system, shown next to its refresh button.</summary>
+public record SystemStatus(DateTime? LastRefreshed, int Records, string? Error, bool Refreshing);
 
 /// <summary>
 /// Pulls each configured system's records from its HTTP endpoint and loads them into a
@@ -21,6 +25,11 @@ public class SystemApiLoader
     private readonly DataStore _db;
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<SystemApiLoader> _logger;
+
+    private readonly ConcurrentDictionary<string, SystemStatus> _status = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>One refresh at a time per system, so a double-click can't load it twice.</summary>
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.OrdinalIgnoreCase);
 
     public SystemApiLoader(
         IOptions<SourceOptions> options,
@@ -38,42 +47,70 @@ public class SystemApiLoader
     public string TableFor(SystemSource system) =>
         _db.DisplayTable("sys_" + DataFolderLoader.SanitizeTableName(system.Id));
 
+    public SystemStatus StatusFor(string systemId) =>
+        _status.TryGetValue(systemId, out var status) ? status : new SystemStatus(null, 0, null, false);
+
+    public SystemSource? Find(string systemId) =>
+        _options.Systems.FirstOrDefault(s => string.Equals(s.Id, systemId, StringComparison.OrdinalIgnoreCase));
+
     public async Task<IReadOnlyList<LoadedSystem>> LoadAllAsync(CancellationToken ct = default)
     {
         var systems = _options.Systems.Where(s => s.HasApi).ToList();
-        if (systems.Count == 0) return Array.Empty<LoadedSystem>();
-
         var results = new List<LoadedSystem>();
-        await using var connection = await _db.OpenConnectionAsync(ct);
-        await _db.CreateContainerIfMissingAsync(connection, ct);
-
         foreach (var system in systems)
         {
             ct.ThrowIfCancellationRequested();
-            var bareName = "sys_" + DataFolderLoader.SanitizeTableName(system.Id);
-            try
-            {
-                var records = await FetchAsync(system, ct);
-                var table = BuildTable(records, system.Api!.MaxRecords);
-                if (table.Columns.Count == 0)
-                {
-                    results.Add(new LoadedSystem(system.Name, TableFor(system), 0,
-                        "الاستجابة لا تحتوي على سجلات."));
-                    continue;
-                }
-
-                await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
-                results.Add(new LoadedSystem(system.Name, TableFor(system), table.Rows.Count, null));
-                _logger.LogInformation("Loaded {Count} record(s) from {System} into {Table}",
-                    table.Rows.Count, system.Name, TableFor(system));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to load system {System} from {Url}", system.Name, system.Api?.Url);
-                results.Add(new LoadedSystem(system.Name, TableFor(system), 0, ex.Message));
-            }
+            results.Add(await LoadAsync(system, ct));
         }
         return results;
+    }
+
+    /// <summary>Refreshes a single system on demand (the per-system button).</summary>
+    public async Task<LoadedSystem?> LoadOneAsync(string systemId, CancellationToken ct = default)
+    {
+        var system = Find(systemId);
+        if (system is null || !system.HasApi) return null;
+        return await LoadAsync(system, ct);
+    }
+
+    private async Task<LoadedSystem> LoadAsync(SystemSource system, CancellationToken ct)
+    {
+        var gate = _locks.GetOrAdd(system.Id, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+
+        var previous = StatusFor(system.Id);
+        _status[system.Id] = previous with { Refreshing = true };
+        var bareName = "sys_" + DataFolderLoader.SanitizeTableName(system.Id);
+        try
+        {
+            var records = await FetchAsync(system, ct);
+            var table = BuildTable(records, system.Api!.MaxRecords);
+            if (table.Columns.Count == 0)
+            {
+                var empty = "الاستجابة لا تحتوي على سجلات.";
+                _status[system.Id] = new SystemStatus(DateTime.UtcNow, 0, empty, false);
+                return new LoadedSystem(system.Name, TableFor(system), 0, empty);
+            }
+
+            await using var connection = await _db.OpenConnectionAsync(ct);
+            await _db.CreateContainerIfMissingAsync(connection, ct);
+            await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
+
+            _status[system.Id] = new SystemStatus(DateTime.UtcNow, table.Rows.Count, null, false);
+            _logger.LogInformation("Loaded {Count} record(s) from {System} into {Table}",
+                table.Rows.Count, system.Name, TableFor(system));
+            return new LoadedSystem(system.Name, TableFor(system), table.Rows.Count, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load system {System} from {Url}", system.Name, system.Api?.Url);
+            _status[system.Id] = new SystemStatus(previous.LastRefreshed, previous.Records, ex.Message, false);
+            return new LoadedSystem(system.Name, TableFor(system), 0, ex.Message);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     private async Task<List<JsonElement>> FetchAsync(SystemSource system, CancellationToken ct)
