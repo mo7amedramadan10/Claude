@@ -64,12 +64,14 @@ For Azure SQL, use its ADO.NET connection string instead. Both values live in
 The app creates the database itself if it doesn't exist (where it has permission to; on Azure
 SQL, create the database first).
 
-**Using OpenAI instead of Claude?** Set `"Provider": "OpenAI"` under `Llm` in
-`appsettings.json`, then store that key instead:
+**Out of the box the app runs on OpenAI with a local SQLite file**, so the only thing you have
+to provide is the key:
 
 ```bash
 dotnet user-secrets set "OpenAI:ApiKey" "sk-..."
 ```
+
+To use Claude instead, set `"Provider": "Anthropic"` under `Llm` and store `Anthropic:ApiKey`.
 
 Both providers run the identical agent — same tools, same read-only SQL validation, same
 dashboard schema and retry logic; only the wire protocol differs (Anthropic tool use vs.
@@ -195,8 +197,8 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 |---|---|---|
 | `DataFolderPath` | `../../data` | Folder scanned for data files (env var `DataFolderPath` overrides) |
 | `EnableRag` | `false` | Index PDF/DOCX and expose `search_documents` |
-| `DatabaseProvider` | `SqlServer` | `SqlServer` (shared/central) or `Sqlite` (local file, nothing to install) |
-| `Llm:Provider` | `Anthropic` | `Anthropic` or `OpenAI` |
+| `DatabaseProvider` | `Sqlite` | `Sqlite` (local file, nothing to install) or `SqlServer` (shared/central) |
+| `Llm:Provider` | `OpenAI` | `OpenAI` or `Anthropic` |
 | `Anthropic:Model` | `claude-sonnet-5` | Claude model ID used for chat |
 | `OpenAI:Model` | `gpt-4o` | OpenAI model ID (used when `Llm:Provider` is `OpenAI`) |
 | `OpenAI:BaseUrl` | `https://api.openai.com/` | Override for Azure OpenAI or a compatible gateway |
