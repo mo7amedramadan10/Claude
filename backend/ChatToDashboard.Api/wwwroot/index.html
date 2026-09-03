@@ -106,6 +106,11 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
 @keyframes b{0%,60%,100%{opacity:.25}30%{opacity:1}}
 
+.suggest-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px}
+.suggest-chip{padding:6px 12px;border:1px solid var(--grid);border-radius:999px;
+  background:var(--plane);color:var(--ink-2);font-size:12px}
+.suggest-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
 #repo-link{display:flex;align-items:center;gap:10px;padding:9px 16px;
   border-top:1px solid var(--grid);color:var(--ink-2);font-size:13px}
 #repo-link button{margin-inline-start:auto;padding:5px 11px;border:1px solid var(--grid);
@@ -1685,6 +1690,53 @@ function renderMessages() {
          <span class="ex">جرّب: «ما إجمالي الإيرادات حسب المنطقة؟»</span></div>` : '';
   el.messages.innerHTML = hint + items + typing;
   el.messages.scrollTop = el.messages.scrollHeight;
+  renderSuggestions();
+}
+
+// ---------- follow-up suggestions ----------
+// A handful of ready-to-click follow-up prompts ("خليه شهري"، "أضف جدول تفصيلي"...) —
+// computed purely from the dashboard that's actually on screen right now (chart types,
+// x-axis fields, widget count), never from a fixed list. Clicking one just calls ask()
+// with that text, so it goes through the exact same follow-up handling (and the true-
+// current-state context fix above) as anything the user types by hand.
+function looksTimeBased(w) {
+  const key = (w.xKey || '').toLowerCase();
+  if (/date|month|week|year|شهر|تاريخ|سنة|أسبوع|period/i.test(key)) return true;
+  const rows = Array.isArray(w.data) ? w.data : [];
+  const v = w.xKey ? rows[0]?.[w.xKey] : undefined;
+  return typeof v === 'string' && /^\d{4}-\d{2}(-\d{2})?$/.test(v);
+}
+
+function computeSuggestions(d) {
+  if (!d?.widgets?.length) return [];
+  const widgets = d.widgets;
+  const types = new Set(widgets.map(w => (w.type || '').toLowerCase()));
+  const hasTimeChart = widgets.some(w => ['bar', 'line'].includes((w.type || '').toLowerCase()) && looksTimeBased(w));
+
+  const chips = [];
+  if (hasTimeChart) { chips.push('خليه شهري'); chips.push('اعرض آخر 3 شهور بس'); }
+  if (types.has('bar') && !types.has('line')) chips.push('غيّر الرسم لخط بياني');
+  if (!types.has('pie') && widgets.length <= 6) chips.push('أضف رسم توزيع (Pie)');
+  if (!types.has('table')) chips.push('أضف جدول تفصيلي');
+  if (widgets.length <= 3) chips.push('اعمل تقرير شامل بدل كده');
+  return chips.slice(0, 4);
+}
+
+function renderSuggestions() {
+  const existing = document.getElementById('suggest-row');
+  if (existing) existing.remove();
+  if (state.loading || !state.dashboard?.widgets?.length) return;
+
+  const chips = computeSuggestions(state.dashboard);
+  if (!chips.length) return;
+
+  const row = document.createElement('div');
+  row.id = 'suggest-row';
+  row.className = 'suggest-row';
+  row.innerHTML = chips.map(c => `<button type="button" class="suggest-chip">${esc(c)}</button>`).join('');
+  row.querySelectorAll('.suggest-chip').forEach(btn =>
+    btn.addEventListener('click', () => { if (!state.loading) ask(btn.textContent); }));
+  el.messages.after(row);
 }
 
 // A compact, one-line description of a dashboard's widgets (type, title, and the
