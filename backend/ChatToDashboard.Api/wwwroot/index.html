@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>المحادثة إلى لوحة معلومات</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0F1A'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='%2335D1A1'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='%2335D1A1'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='%2335D1A1'/%3E%3C/svg%3E" />
+<script>
+// Set before the stylesheet paints anything, so the remembered theme applies on first
+// frame instead of flashing the default and then switching.
+(function () {
+  try {
+    var t = localStorage.getItem('chatToDashboardTheme');
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+})();
+</script>
 <style>
 /*
  * Design tokens — the single source of truth for color/font/spacing across the whole
@@ -15,12 +25,23 @@
 :root{
   --bg:#0A0F1A; --surface:#111827; --plane:#17203352; --ink:#E7ECF5; --ink-2:#8B96AC; --muted:#8B96AC;
   --grid:#232C3F; --line:#232C3F; --accent:#35D1A1; --accent-soft:#35D1A122; --danger:#EF6461; --amber:#F2B84B;
-  --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35);
+  --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35); --skeleton-a:#141B2B; --skeleton-b:#1c2740;
   --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
   --display:'Space Grotesk',system-ui,-apple-system,sans-serif;
   --body:'IBM Plex Sans Arabic',"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;
-  /* Chart palette — fixed rotation shared by every chart component, never per-instance. */
+  /* Chart palette — fixed rotation shared by every chart component, never per-instance.
+     Kept identical across both themes (see THEME in the script below) so a category
+     means the same color whichever mode you're in. */
   --chart-palette: #35D1A1, #F2B84B, #6C8CFF, #EF6461, #B784F0;
+}
+/* Light mode — same tokens, same accent hue (darkened for contrast on white), inverted
+   surfaces. Toggled via the 🌙/☀️ button; JS mirrors this exact palette in THEMES.light
+   so charts (drawn on canvas, not styleable by CSS) match it too. */
+:root[data-theme="light"]{
+  --bg:#F5F7FA; --surface:#FFFFFF; --plane:#EEF1F6; --ink:#10151F; --ink-2:#565F6D; --muted:#565F6D;
+  --grid:#E1E5EC; --line:#E1E5EC; --accent:#0E9F78; --accent-soft:#0E9F7818; --danger:#D3402F; --amber:#B8730A;
+  --shadow:0 1px 2px rgba(16,21,31,.05), 0 6px 18px rgba(16,21,31,.07);
+  --skeleton-a:#EEF1F6; --skeleton-b:#F8F9FB;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
@@ -125,7 +146,7 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
   background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1}
 .src-btn:hover,.src-btn.active{background:var(--accent);color:#06251C}
 .src-pop{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:20;width:min(330px,90%);
-  padding:12px;background:#0D1422;border:1px solid var(--accent);border-radius:12px;
+  padding:12px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;
   box-shadow:var(--shadow);font-size:12.5px;line-height:1.7}
 .src-pop.open{display:block}
 .src-block+.src-block{margin-top:9px;padding-top:9px;border-top:1px solid var(--grid)}
@@ -144,7 +165,7 @@ tr:last-child td{border-bottom:0}
 .empty{display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;color:var(--muted)}
 .empty .big{font-family:var(--display);font-size:17px;color:var(--ink);margin-bottom:5px}
 .skeleton .widget{height:230px}
-.skeleton .bar{height:100%;border-radius:9px;background:linear-gradient(90deg,#141B2B,#1c2740,#141B2B);
+.skeleton .bar{height:100%;border-radius:9px;background:linear-gradient(90deg,var(--skeleton-a),var(--skeleton-b),var(--skeleton-a));
   background-size:200% 100%;animation:sh 1.3s infinite}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
@@ -264,6 +285,9 @@ tr:last-child td{border-bottom:0}
 #current-user-name{font-size:12.5px;color:var(--ink-2)}
 #logout-btn{padding:6px 13px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
 #logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+#theme-toggle{width:33px;height:33px;padding:0;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);font-size:14px;line-height:1}
+#theme-toggle:hover{border-color:var(--accent)}
 .tab.hidden,.hidden{display:none}
 
 /* ---------- users admin screen ---------- */
@@ -343,6 +367,7 @@ tr:last-child td{border-bottom:0}
   </div>
 
   <div class="user-menu">
+    <button type="button" id="theme-toggle" title="تبديل المظهر">🌙</button>
     <span id="current-user-name"></span>
     <button type="button" id="logout-btn">خروج</button>
   </div>
@@ -505,15 +530,40 @@ window.fetch = async (...args) => {
 // The single source every chart pulls its colors/fonts from — a JS mirror of the CSS
 // custom properties in :root above. No chart component sets a color or font ad hoc;
 // they all go through THEME so every chart, on every dashboard, looks like one system.
-const THEME = {
-  palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
-  accent: '#35D1A1',
-  gridColor: '#232C3F',
-  tickColor: '#8B96AC',
-  fontFamily: 'IBM Plex Sans Arabic',
+// Light and dark — same chart palette in both (a category means the same color either
+// way), only the grid/tick/accent colors change, mirroring the CSS :root tokens above.
+const THEMES = {
+  dark: {
+    palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
+    accent: '#35D1A1', gridColor: '#232C3F', tickColor: '#8B96AC',
+    fontFamily: 'IBM Plex Sans Arabic',
+  },
+  light: {
+    palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
+    accent: '#0E9F78', gridColor: '#E1E5EC', tickColor: '#565F6D',
+    fontFamily: 'IBM Plex Sans Arabic',
+  },
 };
+// Reassigned by applyTheme() below — every chart component reads THEME.x at render
+// time, so switching this and rebuilding the dashboard is enough to re-theme charts
+// too (canvas pixels are static once drawn; CSS alone can't recolor them).
+let THEME = THEMES[document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'];
 Chart.defaults.font.family = THEME.fontFamily;
 Chart.defaults.color = THEME.tickColor;
+
+function applyTheme(name) {
+  name = name === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', name);
+  THEME = THEMES[name];
+  Chart.defaults.color = THEME.tickColor;
+  try { localStorage.setItem('chatToDashboardTheme', name); } catch {}
+  const btn = el('theme-toggle');
+  btn.textContent = name === 'light' ? '🌙' : '☀️';
+  btn.title = name === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
+  // Existing charts were painted with the old theme's colors baked into their canvas —
+  // rebuild the dashboard so anything already on screen reflects the new theme too.
+  if (state.dashboard) renderDashboard();
+}
 
 // The model only ever controls widget content (type/title/data) — never layout or
 // style. Anything outside this whitelist renders as a table instead of risking a
@@ -1369,6 +1419,17 @@ el('logout-btn').addEventListener('click', async () => {
   await fetch('/api/auth/logout', { method: 'POST' });
   location.href = '/';
 });
+
+el('theme-toggle').addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+});
+// Sync the button's icon/title with whatever the head script already set on <html>,
+// without triggering a dashboard rebuild (nothing is rendered yet at boot).
+(() => {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  el('theme-toggle').textContent = current === 'light' ? '🌙' : '☀️';
+  el('theme-toggle').title = current === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
+})();
 
 async function startApp() {
   renderCurrentUser();

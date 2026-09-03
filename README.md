@@ -291,9 +291,17 @@ model produced it:
   `.widget.table`): a `kpi` is always the small card; `bar`, `line`, `pie` and `table` always
   span 2 grid columns. A widget's data volume or title length never changes its size.
 - **One design-token block** — the `:root` CSS custom properties (colors, fonts, radius) plus
-  the `THEME` JS object (chart palette, grid/tick color, font family) a few lines below it —
-  is the single source every card and every chart pulls from. No component sets a color or
-  font ad hoc.
+  the matching `THEMES` JS object (chart palette, grid/tick color, font family) a few lines
+  below it — is the single source every card and every chart pulls from. No component sets a
+  color or font ad hoc.
+- **Light and dark mode** — the 🌙/☀️ button in the header (`applyTheme()`) toggles a
+  `data-theme` attribute on `<html>`, which switches which block of `:root` custom properties
+  is active; the choice is remembered in `localStorage` and applied by an inline script in
+  `<head>` before the stylesheet paints, so there's no flash of the wrong theme on load. CSS
+  can't recolor an already-drawn `<canvas>`, so `applyTheme()` also rebuilds any dashboard
+  that's currently on screen (`renderDashboard()`) so its charts pick up the new palette too.
+  The chart color palette itself is identical in both modes (only grid/tick/accent colors
+  change) so a category means the same color regardless of theme.
 - **Five fixed widget components** — `KpiCard`, `BarChartCard`/`LineChartCard` (sharing
   `buildXyChart`), `PieChartCard`, `TableCard` — and every widget routes through exactly one of
   them, chosen by `buildWidget()`. Chart components build their Chart.js config through one
