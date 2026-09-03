@@ -63,25 +63,32 @@ builder.Services.AddHttpClient(SystemApiClients.Insecure)
         ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
     });
 
-// Which LLM answers the questions: "Anthropic" (default) or "OpenAI".
+// Which LLM answers the questions — "Anthropic" (default), "OpenAI", or "Ollama" (an
+// internal deployment reached through a company API gateway). All three clients are always
+// registered, each with its own typed HttpClient; only the one actually selected (via
+// LlmSettingsStore, overridable from the dashboard at runtime, falling back to this config
+// value) is ever resolved and called — see LlmRouter. That also means a provider whose API
+// key isn't configured only breaks if it's the one currently selected, not at startup.
 var llmProvider = builder.Configuration["Llm:Provider"] ?? "Anthropic";
-if (string.Equals(llmProvider, "OpenAI", StringComparison.OrdinalIgnoreCase))
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.LlmSettingsStore>();
+builder.Services.AddHttpClient<ClaudeClient>(client =>
 {
-    builder.Services.AddHttpClient<IDashboardGenerator, OpenAiClient>(client =>
-    {
-        client.BaseAddress = new Uri(
-            builder.Configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/");
-        client.Timeout = TimeSpan.FromMinutes(5);
-    });
-}
-else
+    client.BaseAddress = new Uri("https://api.anthropic.com/");
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+builder.Services.AddHttpClient<OpenAiClient>(client =>
 {
-    builder.Services.AddHttpClient<IDashboardGenerator, ClaudeClient>(client =>
-    {
-        client.BaseAddress = new Uri("https://api.anthropic.com/");
-        client.Timeout = TimeSpan.FromMinutes(5);
-    });
-}
+    client.BaseAddress = new Uri(
+        builder.Configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/");
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+builder.Services.AddHttpClient<ChatToDashboard.Api.Ollama.OllamaClient>(client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["Ollama:BaseUrl"] ?? "http://172.17.242.1:8081/api/v1/");
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+builder.Services.AddSingleton<IDashboardGenerator, ChatToDashboard.Api.Llm.LlmRouter>();
 
 var app = builder.Build();
 
@@ -109,8 +116,10 @@ app.MapGet("/usage", (IWebHostEnvironment env) =>
 using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    // Logged so a stale or unsaved appsettings.json is obvious at a glance.
-    logger.LogInformation("Configuration in use — LLM provider: {Llm}, database: {Db}",
+    // Logged so a stale or unsaved appsettings.json is obvious at a glance. The effective
+    // provider can differ from this default if an admin overrode it from the dashboard's
+    // model selector (LlmSettingsStore) — that only takes effect per-question, not here.
+    logger.LogInformation("Configuration in use — LLM provider (default): {Llm}, database: {Db}",
         llmProvider, scope.ServiceProvider.GetRequiredService<DataStore>().Provider);
 
     // Accounts are admin-provisioned only (no self-signup) — so the very first admin has

@@ -57,18 +57,22 @@ public class UsageTrace
     /// <summary>Records one model round-trip, with the exact bodies exchanged.</summary>
     public void RecordTurn(string requestBody, string responseBody, JsonObject response, long durationMs)
     {
-        var usage = response["usage"]?.AsObject();
+        // Anthropic/OpenAI nest counts under "usage"; Ollama's native API has no "usage"
+        // object at all and puts prompt_eval_count/eval_count on the response's top level —
+        // fall back to the response object itself so that case is read too.
+        var usage = response["usage"]?.AsObject() ?? response;
         var turn = new UsageTurn
         {
             Turn = _record.Turns.Count + 1,
-            // Anthropic and OpenAI name these differently; read whichever is present.
-            InputTokens = Read(usage, "input_tokens", "prompt_tokens"),
-            OutputTokens = Read(usage, "output_tokens", "completion_tokens"),
-            CacheReadTokens = Read(usage, "cache_read_input_tokens", null)
+            // Each provider names these differently; read whichever is present.
+            InputTokens = Read(usage, "input_tokens", "prompt_tokens", "prompt_eval_count"),
+            OutputTokens = Read(usage, "output_tokens", "completion_tokens", "eval_count"),
+            CacheReadTokens = Read(usage, "cache_read_input_tokens")
                 + ReadNested(usage, "prompt_tokens_details", "cached_tokens"),
-            CacheWriteTokens = Read(usage, "cache_creation_input_tokens", null),
+            CacheWriteTokens = Read(usage, "cache_creation_input_tokens"),
             StopReason = response["stop_reason"]?.GetValue<string>()
-                ?? response["choices"]?[0]?["finish_reason"]?.GetValue<string>(),
+                ?? response["choices"]?[0]?["finish_reason"]?.GetValue<string>()
+                ?? response["done_reason"]?.GetValue<string>(),
             DurationMs = durationMs,
             RequestBody = requestBody,
             ResponseBody = responseBody,
@@ -105,12 +109,11 @@ public class UsageTrace
         await _store.SaveAsync(_record, ct);
     }
 
-    private static int Read(JsonObject? usage, string first, string? second)
+    private static int Read(JsonObject? usage, params string[] names)
     {
         if (usage is null) return 0;
-        if (usage[first] is { } a && a.GetValueKind() == JsonValueKind.Number) return a.GetValue<int>();
-        if (second is not null && usage[second] is { } b && b.GetValueKind() == JsonValueKind.Number)
-            return b.GetValue<int>();
+        foreach (var name in names)
+            if (usage[name] is { } v && v.GetValueKind() == JsonValueKind.Number) return v.GetValue<int>();
         return 0;
     }
 

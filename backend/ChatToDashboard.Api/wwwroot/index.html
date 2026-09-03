@@ -104,6 +104,34 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .rail-size-toggle button:hover:not(:disabled){background:var(--plane);color:var(--accent)}
 .rail-size-toggle button:disabled{opacity:.35;cursor:not-allowed}
 
+.model-switch{position:relative}
+#model-switch-btn{padding:6px 12px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12.5px}
+#model-switch-btn:hover{border-color:var(--accent)}
+.model-switch-panel{display:none;position:absolute;inset-inline-end:0;top:calc(100% + 7px);z-index:40;
+  width:290px;padding:14px;background:var(--surface);border:1px solid var(--grid);border-radius:var(--radius);
+  box-shadow:0 8px 28px rgba(11,11,11,.12)}
+.model-switch-panel.open{display:block}
+.model-switch-title{font-size:12.5px;font-weight:600;margin-bottom:10px}
+.model-switch-providers{display:flex;flex-direction:column;gap:6px}
+.model-switch-option{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:12.5px}
+.model-switch-option:hover{background:var(--plane)}
+.model-switch-option input{accent-color:var(--accent)}
+.model-switch-option .badge{margin-inline-start:auto;font-size:10.5px;padding:1px 7px;border-radius:999px;
+  background:var(--plane);color:var(--muted)}
+.model-switch-option .badge.ok{background:var(--accent-soft);color:var(--accent)}
+.model-switch-option.disabled{opacity:.5;cursor:not-allowed}
+.model-switch-ollama-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--grid)}
+.model-switch-ollama-row label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2)}
+.model-switch-ollama-row select{padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px;color:var(--ink)}
+.model-switch-note{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.5}
+.model-switch-note.bad{color:var(--danger)}
+.model-switch-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.model-switch-actions button{padding:6px 13px;border-radius:8px;font-size:12.5px}
+#model-switch-cancel{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2)}
+#model-switch-save{border:0;background:var(--accent);color:#fff;font-weight:600}
+#model-switch-save:disabled{opacity:.5;cursor:not-allowed}
+
 #messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
 .msg{max-width:86%;padding:9px 13px;border-radius:14px;line-height:1.65;white-space:pre-wrap}
 .msg.user{align-self:flex-start;background:var(--accent);color:#fff;border-end-start-radius:5px}
@@ -467,6 +495,24 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="rail-shrink" title="تصغير لوحة المحادثة">–</button>
       <button type="button" id="rail-grow" title="تكبير لوحة المحادثة">+</button>
       <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
+    </div>
+    <div class="model-switch hidden" id="model-switch">
+      <button type="button" id="model-switch-btn">🧠 <span id="model-switch-label">الموديل</span> ▾</button>
+      <div class="model-switch-panel" id="model-switch-panel">
+        <div class="model-switch-title">أي موديل يجاوب على الأسئلة؟</div>
+        <div id="model-switch-providers" class="model-switch-providers"></div>
+        <div id="model-switch-ollama-row" class="model-switch-ollama-row hidden">
+          <label>الموديل الداخلي (Ollama)
+            <select id="model-switch-ollama-select"></select>
+          </label>
+          <div id="model-switch-ollama-note" class="model-switch-note"></div>
+        </div>
+        <div id="model-switch-error" class="model-switch-note bad hidden"></div>
+        <div class="model-switch-actions">
+          <button type="button" id="model-switch-cancel">إلغاء</button>
+          <button type="button" id="model-switch-save">حفظ</button>
+        </div>
+      </div>
     </div>
     <button type="button" id="theme-toggle" title="تبديل المظهر">🌙</button>
     <span id="current-user-name"></span>
@@ -2324,7 +2370,112 @@ function renderCurrentUser() {
   el('current-user-name').textContent = `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
   el('tab-users').classList.toggle('hidden', u.role !== 'Admin');
   el('usage-link').classList.toggle('hidden', u.role !== 'Admin');
+  el('model-switch').classList.toggle('hidden', u.role !== 'Admin');
 }
+
+// ---------- model switcher (admin only) ----------
+// Lets an admin change which LLM answers questions — Claude, GPT, or an internal Ollama
+// deployment — from the dashboard itself, with no restart. GET/PUT /api/llm-settings;
+// the actual switch takes effect on LlmRouter's very next call (see backend).
+const PROVIDER_LABELS = { Anthropic: 'Claude (Anthropic)', OpenAI: 'GPT (OpenAI)', Ollama: 'الموديل الداخلي (Ollama)' };
+state.llmSettings = null;
+state.ollamaModels = null;
+
+function closeModelSwitch() { el('model-switch-panel').classList.remove('open'); }
+document.addEventListener('click', e => {
+  if (!el('model-switch').contains(e.target)) closeModelSwitch();
+});
+el('model-switch-panel').addEventListener('click', e => e.stopPropagation());
+
+el('model-switch-btn').addEventListener('click', async e => {
+  e.stopPropagation();
+  const panel = el('model-switch-panel');
+  const open = panel.classList.contains('open');
+  closeModelSwitch();
+  if (open) return;
+  panel.classList.add('open');
+  if (!state.llmSettings) await loadLlmSettings();
+});
+el('model-switch-cancel').addEventListener('click', closeModelSwitch);
+
+async function loadLlmSettings() {
+  try {
+    const res = await fetch('/api/llm-settings');
+    if (!res.ok) throw new Error();
+    state.llmSettings = await res.json();
+    el('model-switch-label').textContent = PROVIDER_LABELS[state.llmSettings.activeProvider] || state.llmSettings.activeProvider;
+    renderModelSwitchProviders();
+  } catch {
+    el('model-switch-providers').innerHTML = '<div class="model-switch-note bad">تعذّر تحميل إعدادات الموديل.</div>';
+  }
+}
+
+function renderModelSwitchProviders() {
+  const s = state.llmSettings;
+  el('model-switch-providers').innerHTML = s.providers.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="model-provider" value="${esc(p.id)}"
+        ${p.id === s.activeProvider ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      <span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>
+    </label>`).join('');
+
+  el('model-switch-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleOllamaRow(inp.value)));
+  toggleOllamaRow(s.activeProvider);
+}
+
+function toggleOllamaRow(provider) {
+  const isOllama = provider === 'Ollama';
+  el('model-switch-ollama-row').classList.toggle('hidden', !isOllama);
+  if (isOllama && !state.ollamaModels) loadOllamaModels();
+}
+
+async function loadOllamaModels() {
+  const select = el('model-switch-ollama-select');
+  select.innerHTML = '<option>جارٍ التحميل…</option>';
+  try {
+    const res = await fetch('/api/llm-settings/ollama-models');
+    const data = await res.json();
+    state.ollamaModels = data.models || [];
+    const current = state.llmSettings?.activeModel;
+    select.innerHTML = state.ollamaModels.map(m =>
+      `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
+    el('model-switch-ollama-note').textContent = data.note || '';
+  } catch {
+    select.innerHTML = '';
+    el('model-switch-ollama-note').textContent = 'تعذّر تحميل قائمة الموديلات.';
+  }
+}
+
+el('model-switch-save').addEventListener('click', async () => {
+  const provider = el('model-switch-providers').querySelector('input:checked')?.value;
+  if (!provider) return;
+  const ollamaModel = provider === 'Ollama' ? el('model-switch-ollama-select').value : undefined;
+
+  const btn = el('model-switch-save');
+  btn.disabled = true;
+  el('model-switch-error').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, ollamaModel }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeProvider = provider;
+    if (ollamaModel) state.llmSettings.activeModel = ollamaModel;
+    el('model-switch-label').textContent = PROVIDER_LABELS[provider] || provider;
+    closeModelSwitch();
+  } catch (err) {
+    el('model-switch-error').textContent = err.message;
+    el('model-switch-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 el('login-form').addEventListener('submit', async e => {
   e.preventDefault();
