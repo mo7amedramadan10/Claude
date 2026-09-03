@@ -218,6 +218,28 @@ tr:last-child td{border-bottom:0}
 .wizard-next-btn:disabled{opacity:.5;cursor:not-allowed}
 .wizard-next-btn.hidden,.wizard-back-btn.hidden{display:none}
 
+/* ---------- AI copilot side panel ---------- */
+#copilot-panel{position:fixed;inset-inline-end:0;top:53px;bottom:0;width:340px;max-width:92vw;
+  display:flex;flex-direction:column;background:var(--surface);border-inline-start:1px solid var(--grid);
+  box-shadow:-8px 0 24px rgba(0,0,0,.12);z-index:60;transform:translateX(-100%);transition:transform .2s ease}
+#copilot-panel.open{transform:translateX(0)}
+.copilot-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--grid)}
+.copilot-head h3{margin:0;font-size:14px;flex:1}
+.copilot-x{border:0;background:transparent;color:var(--ink-2);font-size:16px}
+.copilot-quick{display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap;border-bottom:1px solid var(--grid)}
+.copilot-quick button{padding:5px 10px;border:1px solid var(--grid);border-radius:999px;background:var(--plane);
+  color:var(--ink-2);font-size:11.5px}
+.copilot-quick button:hover{border-color:var(--accent);color:var(--accent)}
+#copilot-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.copilot-msg{max-width:92%;padding:8px 11px;border-radius:12px;font-size:12.5px;line-height:1.6;white-space:pre-wrap}
+.copilot-msg.user{align-self:flex-start;background:var(--accent);color:#fff;border-end-start-radius:4px}
+.copilot-msg.bot{align-self:flex-end;background:var(--plane);border:1px solid var(--grid);border-end-end-radius:4px}
+.copilot-msg.err{align-self:flex-end;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger)}
+#copilot-form{display:flex;gap:6px;padding:10px;border-top:1px solid var(--grid)}
+#copilot-input{flex:1;padding:8px 11px;border:1px solid var(--grid);border-radius:9px;font-size:12.5px}
+#copilot-send{padding:8px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600;font-size:12.5px}
+#copilot-send:disabled{opacity:.5;cursor:not-allowed}
+
 .empty{display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;color:var(--muted)}
 .empty .big{font-family:var(--display);font-size:17px;color:var(--ink);margin-bottom:5px}
 .skeleton .widget{height:230px}
@@ -460,6 +482,7 @@ tr:last-child td{border-bottom:0}
       <span id="autosave-status" class="autosave-status"></span>
       <button type="button" id="btn-undo" title="تراجع" disabled>↶ تراجع</button>
       <button type="button" id="btn-redo" title="إعادة" disabled>↷ إعادة</button>
+      <button type="button" id="btn-copilot">✨ مساعد AI</button>
       <button type="button" id="btn-share">🔗 مشاركة</button>
       <button type="button" id="btn-export-pdf">🖨️ تصدير PDF</button>
       <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
@@ -468,6 +491,22 @@ tr:last-child td{border-bottom:0}
   </section>
 
 </main>
+
+<div id="copilot-panel">
+  <div class="copilot-head">
+    <h3>✨ مساعد AI</h3>
+    <button type="button" id="copilot-close" class="copilot-x">✕</button>
+  </div>
+  <div class="copilot-quick">
+    <button type="button" id="copilot-improve">تحسين اللوحة</button>
+    <button type="button" id="copilot-missing">هل يوجد شيء ناقص؟</button>
+  </div>
+  <div id="copilot-messages"></div>
+  <form id="copilot-form">
+    <input id="copilot-input" type="text" placeholder="مثال: أضف لي رسم يوضح المصروفات شهريًا" autocomplete="off" />
+    <button id="copilot-send" type="submit">إرسال</button>
+  </form>
+</div>
 
 <div id="screen-repo" class="screen">
   <div class="repo-bar">
@@ -591,6 +630,7 @@ const state = {
   currentUser: null, users: [],
   editMode: false, editHistory: { past: [], future: [] },
   currentHistoryId: null, wizard: null,
+  copilotMessages: [], copilotLoading: false,
 };
 
 // Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
@@ -701,15 +741,27 @@ function capRows(rows, xKey, yKey) {
  * Widget sources are authored as two sentences: "<where it came from>. <how it was calculated>."
  * Split on the first ". " so each half gets its own labelled block in the ⓘ popover.
  */
-function sourcePopover(source) {
+function sourcePopover(w) {
+  const source = w.source || '';
   const at = source.indexOf('. ');
   const from = at > -1 ? source.slice(0, at + 1) : source;
   const method = at > -1 ? source.slice(at + 2) : '';
+  // Widgets built through the "+ إضافة عنصر" wizard carry their real structured query
+  // (metric/aggregation/dimension/period) — shown verbatim here, never authored by the
+  // model. Chat-generated widgets have no `query`, so this block is simply omitted.
+  const q = w.query;
+  const queryBlock = q ? `
+    <div class="src-block"><span class="src-lbl">المؤشر</span>${esc(q.metric || '')}${q.aggregation ? ` (${esc(q.aggregation.toUpperCase())})` : ''}</div>
+    ${q.dimension ? `<div class="src-block"><span class="src-lbl">مجمّع حسب</span>${esc(q.dimension)}</div>` : ''}
+    ${q.dateColumn && q.timeRange && q.timeRange !== 'all' ? `<div class="src-block"><span class="src-lbl">الفترة</span>${esc(timeRangeLabel(q.timeRange))}</div>` : ''}
+  ` : '';
   return `<div class="src-pop">
     <div class="src-block"><span class="src-lbl">مصدر البيانات</span>${esc(from)}</div>
     ${method ? `<div class="src-block"><span class="src-lbl">طريقة الحساب</span>${esc(method)}</div>` : ''}
+    ${queryBlock}
   </div>`;
 }
+function timeRangeLabel(v) { return (TIME_RANGE_OPTIONS.find(([k]) => k === v) || [v, v])[1]; }
 
 function closePopovers() {
   document.querySelectorAll('.src-pop.open').forEach(p => p.classList.remove('open'));
@@ -743,7 +795,7 @@ function widgetShell(w, extraClass) {
     head.appendChild(srcBtn);
 
     const wrap = document.createElement('div');
-    wrap.innerHTML = sourcePopover(w.source);
+    wrap.innerHTML = sourcePopover(w);
     card.appendChild(wrap.firstElementChild);
 
     srcBtn.addEventListener('click', e => {
@@ -1256,6 +1308,81 @@ async function renderWizardStep() {
   }
 }
 
+// ---------- AI copilot ----------
+// Natural-language dashboard edits reuse the exact same /api/chat + DashboardSpec
+// pipeline as the main chat — nothing new on the backend, no separate "action" schema.
+// What differs is what the model is told the "current dashboard" is: a single synthetic
+// history turn built from the *real* current widget state (which may have been edited
+// by hand since it was generated), so the model's existing follow-up rules — keep
+// existing widgets, change only what's asked, never fabricate a number — apply against
+// the truth rather than a stale chat transcript. The result replaces state.dashboard the
+// same way any chat follow-up already does, and is itself undoable like any other edit.
+function openCopilot() { el('copilot-panel').classList.add('open'); el('copilot-input').focus(); }
+function closeCopilot() { el('copilot-panel').classList.remove('open'); }
+el('btn-copilot').addEventListener('click', () =>
+  el('copilot-panel').classList.contains('open') ? closeCopilot() : openCopilot());
+el('copilot-close').addEventListener('click', closeCopilot);
+
+function renderCopilotMessages() {
+  const items = state.copilotMessages.map(m =>
+    `<div class="copilot-msg ${m.role === 'user' ? 'user' : (m.error ? 'err' : 'bot')}">${esc(m.text)}</div>`).join('');
+  const typing = state.copilotLoading ? `<div class="copilot-msg bot dots"><span></span><span></span><span></span></div>` : '';
+  el('copilot-messages').innerHTML = items + typing;
+  el('copilot-messages').scrollTop = el('copilot-messages').scrollHeight;
+}
+
+async function askCopilot(text) {
+  if (!text || state.copilotLoading) return;
+  state.copilotMessages.push({ role: 'user', text });
+  state.copilotLoading = true;
+  el('copilot-send').disabled = true;
+  renderCopilotMessages();
+
+  const current = state.dashboard;
+  const historyContext = current?.widgets?.length
+    ? [{ role: 'assistant', text: `${current.summary}\nعناصر اللوحة السابقة: ${widgetsBrief(current.widgets)}` }]
+    : [];
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text, history: historyContext,
+        sources: { systems: [...state.onSystems], categories: [...state.onCategories] },
+      }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.dashboard) {
+      state.copilotMessages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
+    } else {
+      pushUndo();
+      state.dashboard = ensureWidgetMeta(payload.dashboard);
+      state.copilotMessages.push({ role: 'bot', text: payload.dashboard.summary });
+      renderDashboard();
+      scheduleAutosave();
+      updateUndoRedoButtons();
+    }
+  } catch (err) {
+    state.copilotMessages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
+  } finally {
+    state.copilotLoading = false;
+    el('copilot-send').disabled = false;
+    renderCopilotMessages();
+  }
+}
+
+el('copilot-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const text = el('copilot-input').value.trim();
+  if (!text) return;
+  el('copilot-input').value = '';
+  askCopilot(text);
+});
+el('copilot-improve').addEventListener('click', () =>
+  askCopilot('حلّل اللوحة الحالية واقترح تحسينات مفيدة، وطبّقها مباشرة (أضف أو عدّل العناصر المناسبة بأرقام حقيقية فقط، بدون اختراع بيانات).'));
+el('copilot-missing').addEventListener('click', () =>
+  askCopilot('هل يوجد شيء مهم ناقص في هذه اللوحة؟ لو فيه، أضفه مباشرة بعنصر مناسب بأرقام حقيقية فقط.'));
+
 function emptyBody(card) {
   const p = document.createElement('p');
   p.style.color = 'var(--muted)';
@@ -1382,7 +1509,8 @@ function renderDashboard() {
   el('autosave-status').classList.toggle('hidden', !editable);
   el('btn-undo').classList.toggle('hidden', !editable);
   el('btn-redo').classList.toggle('hidden', !editable);
-  if (!editable) state.editMode = false;
+  el('btn-copilot').classList.toggle('hidden', !editable);
+  if (!editable) { state.editMode = false; closeCopilot(); }
   updateUndoRedoButtons();
 
   chartInstances.forEach(c => c.destroy());
