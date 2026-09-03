@@ -223,6 +223,13 @@ public class OpenAiClient : IDashboardGenerator
             ["messages"] = messages.DeepClone(),
             ["tools"] = tools.DeepClone(),
         };
+        // Reasoning models (the gpt-5.x family) default to a reasoning_effort that refuses to
+        // mix with function tools on this endpoint ("Function tools with reasoning_effort are
+        // not supported ... set reasoning_effort to 'none'"). Every call here uses tools, so
+        // opt those models out of reasoning explicitly; non-reasoning models like gpt-4o don't
+        // take this parameter and are left alone.
+        if (model.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
+            body["reasoning_effort"] = "none";
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();
