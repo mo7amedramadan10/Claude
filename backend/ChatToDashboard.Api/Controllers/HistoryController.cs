@@ -44,6 +44,20 @@ public class HistoryController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct) => Ok(await _store.ListAsync(UserId, ct: ct));
 
+    /// <summary>
+    /// Dashboard-editor autosave: overwrites an existing entry's widgets/summary in place
+    /// instead of creating a new history row for every edit.
+    /// </summary>
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(string id, [FromBody] UpdateHistoryRequest request, CancellationToken ct)
+    {
+        var widgetsJson = request.Widgets.ValueKind == System.Text.Json.JsonValueKind.Undefined
+            ? "[]"
+            : request.Widgets.GetRawText();
+        var updated = await _store.UpdateAsync(UserId, id, request.Summary, widgetsJson, ct);
+        return updated ? NoContent() : NotFound(new { error = "غير موجود" });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {

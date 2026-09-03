@@ -162,6 +162,62 @@ th{position:sticky;top:0;background:var(--surface);text-align:start;padding:8px 
 td{padding:7px 11px;border-bottom:1px solid var(--grid);white-space:nowrap;font-family:var(--mono)}
 td.num{text-align:end;font-variant-numeric:tabular-nums}
 tr:last-child td{border-bottom:0}
+/* ---------- dashboard editor ---------- */
+.edit-toggle{display:inline-flex;border:1px solid var(--grid);border-radius:9px;overflow:hidden;margin-inline-end:auto}
+.edit-toggle-btn{padding:7px 14px;border:0;background:var(--surface);color:var(--ink-2);font-size:12.5px}
+.edit-toggle-btn.active{background:var(--accent);color:#fff;font-weight:600}
+.autosave-status{font-size:11.5px;color:var(--muted);min-width:8px;white-space:nowrap}
+.widget.editable{cursor:grab}
+.widget.editable.dragging{opacity:.35}
+.widget.editable.drag-over{outline:2px dashed var(--accent);outline-offset:2px}
+.widget-menu-btn{border:1px solid var(--grid);border-radius:7px;background:var(--surface);color:var(--ink-2);
+  width:23px;height:23px;font-size:14px;line-height:1;padding:0}
+.widget-menu-btn:hover{border-color:var(--accent);color:var(--accent)}
+.widget-menu{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:25;min-width:175px;
+  padding:6px;background:var(--surface);border:1px solid var(--grid);border-radius:12px;box-shadow:var(--shadow)}
+.widget-menu.open{display:block}
+.widget-menu button{display:block;width:100%;text-align:start;padding:8px 10px;border:0;border-radius:8px;
+  background:transparent;color:var(--ink);font-size:12.5px}
+.widget-menu button:hover{background:var(--plane)}
+.widget-menu button.danger{color:var(--danger)}
+.widget-menu button.current{color:var(--accent);font-weight:600}
+.widget-menu .menu-label{padding:6px 10px 4px;font-size:11px;color:var(--muted);font-weight:600}
+/* widget size overrides — placed after the type rules above so they win by source order */
+.widget[data-size="small"]{grid-column:span 1}
+.widget[data-size="wide"]{grid-column:span 2}
+.widget[data-size="full"]{grid-column:1/-1}
+.add-widget-btn{display:block;margin:18px auto 0;padding:11px 22px;border:1.5px dashed var(--grid);
+  border-radius:12px;background:transparent;color:var(--accent);font-weight:600}
+.add-widget-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+
+/* ---------- add-widget wizard ---------- */
+.wizard-box{width:min(480px,100%);max-height:82vh;overflow-y:auto;display:flex;flex-direction:column}
+.wizard-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.wizard-head h3{margin:0}
+.wizard-x{border:0;background:transparent;color:var(--ink-2);font-size:18px}
+.wizard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wizard-option{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 10px;
+  border:1px solid var(--grid);border-radius:12px;background:var(--plane);color:var(--ink);font-size:13px}
+.wizard-option:hover{border-color:var(--accent);background:var(--accent-soft)}
+.wizard-option.wide{flex-direction:row;justify-content:flex-start;padding:12px 14px;width:100%}
+.wizard-option.current{border-color:var(--accent);color:var(--accent)}
+.wizard-icon{font-size:24px}
+.wizard-list{display:flex;flex-direction:column;gap:8px}
+.wizard-field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2);margin-bottom:12px}
+.wizard-field input{padding:9px 12px;border:1px solid var(--grid);border-radius:9px;color:var(--ink);background:var(--surface)}
+.wizard-checklist{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.wizard-checklist label{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px}
+.wizard-checklist input{width:15px;height:15px;accent-color:var(--accent)}
+.wizard-loading,.wizard-empty{padding:30px 10px;text-align:center;color:var(--muted)}
+.wizard-preview-card{padding:16px;border:1px solid var(--grid);border-radius:12px;background:var(--plane)}
+.wizard-preview-title{font-weight:700;margin-bottom:6px}
+.wizard-preview-meta{font-size:12px;color:var(--ink-2);line-height:1.6}
+.wizard-actions{display:flex;align-items:center;gap:10px;margin-top:16px}
+.wizard-back-btn{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2);padding:8px 14px;border-radius:9px}
+.wizard-next-btn{border:0;background:var(--accent);color:#fff;font-weight:600;padding:9px 18px;border-radius:9px;margin-inline-start:auto}
+.wizard-next-btn:disabled{opacity:.5;cursor:not-allowed}
+.wizard-next-btn.hidden,.wizard-back-btn.hidden{display:none}
+
 .empty{display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;color:var(--muted)}
 .empty .big{font-family:var(--display);font-size:17px;color:var(--ink);margin-bottom:5px}
 .skeleton .widget{height:230px}
@@ -397,6 +453,13 @@ tr:last-child td{border-bottom:0}
 
   <section id="dash-pane">
     <div id="dash-toolbar" class="dash-toolbar hidden">
+      <div class="edit-toggle" id="edit-toggle">
+        <button type="button" class="edit-toggle-btn active" data-mode="view">عرض</button>
+        <button type="button" class="edit-toggle-btn" data-mode="edit">تحرير</button>
+      </div>
+      <span id="autosave-status" class="autosave-status"></span>
+      <button type="button" id="btn-undo" title="تراجع" disabled>↶ تراجع</button>
+      <button type="button" id="btn-redo" title="إعادة" disabled>↷ إعادة</button>
       <button type="button" id="btn-share">🔗 مشاركة</button>
       <button type="button" id="btn-export-pdf">🖨️ تصدير PDF</button>
       <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
@@ -457,6 +520,20 @@ tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<div id="wizard-modal" class="modal-overlay hidden">
+  <div class="modal wizard-box">
+    <div class="wizard-head">
+      <h3 id="wizard-title">إضافة عنصر</h3>
+      <button type="button" id="wizard-close" class="wizard-x">✕</button>
+    </div>
+    <div id="wizard-body"></div>
+    <div class="wizard-actions">
+      <button type="button" id="wizard-back" class="wizard-back-btn hidden">→ رجوع</button>
+      <button type="button" id="wizard-next" class="wizard-next-btn hidden" disabled>التالي</button>
+    </div>
+  </div>
+</div>
+
 <div id="user-modal" class="modal-overlay hidden">
   <div class="modal user-modal-box">
     <h3 id="user-modal-title">مستخدم جديد</h3>
@@ -512,7 +589,21 @@ const state = {
   history: [], historyLoaded: false,
   attachedImage: null, attachedImageName: '',
   currentUser: null, users: [],
+  editMode: false, editHistory: { past: [], future: [] },
+  currentHistoryId: null, wizard: null,
 };
+
+// Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
+// it) and a layout.size (small/wide/full) driving its grid span — neither exists in the
+// model's JSON contract, so they're assigned here the moment a dashboard enters state,
+// never sent back to /api/chat.
+function ensureWidgetMeta(dashboard) {
+  (dashboard?.widgets || []).forEach(w => {
+    if (!w.id) w.id = 'w' + Math.random().toString(36).slice(2, 10);
+    if (!w.layout) w.layout = { size: w.type === 'kpi' ? 'small' : (w.type === 'table' ? 'full' : 'wide') };
+  });
+  return dashboard;
+}
 
 // Every API call rides on the auth cookie automatically (same-origin fetch). If the
 // session ever stops being valid mid-use — expired, or an admin deactivated the account —
@@ -636,6 +727,9 @@ let chartInstances = [];
 function widgetShell(w, extraClass) {
   const card = document.createElement('div');
   card.className = 'widget' + (extraClass ? ' ' + extraClass : '');
+  card.dataset.size = (w.layout && w.layout.size) || (extraClass === 'kpi' ? 'small' : 'wide');
+  if (w.id) card.dataset.widgetId = w.id;
+
   const head = document.createElement('div');
   head.className = 'widget-head';
   const title = document.createElement('h3');
@@ -661,7 +755,505 @@ function widgetShell(w, extraClass) {
     });
   }
   card.appendChild(head);
+
+  if (state.editMode && w.id) {
+    const { btn: menuBtn, menu } = widgetMenu(w);
+    head.appendChild(menuBtn);
+    card.appendChild(menu);
+    enableWidgetDragDrop(card, w);
+  }
   return card;
+}
+
+// ---------- widget editor: menu, drag/drop, undo/redo ----------
+function closeAllWidgetMenus() {
+  document.querySelectorAll('.widget-menu.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closeAllWidgetMenus);
+
+function widgetMenu(w) {
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'widget-menu-btn'; btn.textContent = '⋮';
+  btn.title = 'خيارات العنصر';
+  const menu = document.createElement('div');
+  menu.className = 'widget-menu';
+  renderWidgetMenuDefault(menu, w);
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = menu.classList.contains('open');
+    closeAllWidgetMenus();
+    if (!open) { renderWidgetMenuDefault(menu, w); menu.classList.add('open'); }
+  });
+  menu.addEventListener('click', e => e.stopPropagation());
+  return { btn, menu };
+}
+
+function renderWidgetMenuDefault(menu, w) {
+  const canEditData = !!w.query; // only wizard-created widgets carry a re-runnable query
+  menu.innerHTML = `
+    <button data-act="type">🔀 تغيير نوع الرسم</button>
+    <button data-act="size">↔️ تغيير الحجم</button>
+    ${canEditData ? '<button data-act="period">📅 تغيير الفترة</button>' : ''}
+    <button data-act="duplicate">📋 نسخ</button>
+    <button data-act="delete" class="danger">🗑️ حذف</button>
+  `;
+  menu.querySelector('[data-act="type"]').onclick = () => renderWidgetMenuType(menu, w);
+  menu.querySelector('[data-act="size"]').onclick = () => renderWidgetMenuSize(menu, w);
+  menu.querySelector('[data-act="duplicate"]').onclick = () => { duplicateWidget(w.id); closeAllWidgetMenus(); };
+  menu.querySelector('[data-act="delete"]').onclick = () => {
+    if (confirm('حذف هذا العنصر؟')) { deleteWidget(w.id); closeAllWidgetMenus(); }
+  };
+  const periodBtn = menu.querySelector('[data-act="period"]');
+  if (periodBtn) periodBtn.onclick = () => { closeAllWidgetMenus(); openPeriodEditor(w); };
+}
+
+function renderWidgetMenuSize(menu, w) {
+  const current = (w.layout && w.layout.size) || (w.type === 'kpi' ? 'small' : 'wide');
+  const opts = [['small', 'صغير'], ['wide', 'عريض (عمودين)'], ['full', 'عرض كامل']];
+  menu.innerHTML = `<div class="menu-label">الحجم</div>` +
+    opts.map(([v, l]) => `<button data-size="${v}"${v === current ? ' class="current"' : ''}>${l}</button>`).join('');
+  menu.querySelectorAll('[data-size]').forEach(b =>
+    b.onclick = () => { setWidgetSize(w.id, b.dataset.size); closeAllWidgetMenus(); });
+}
+
+function renderWidgetMenuType(menu, w) {
+  const types = [['bar', '📊 أعمدة'], ['line', '📈 خط'], ['pie', '🥧 دائري'], ['table', '📋 جدول'], ['kpi', '🔢 مؤشر']];
+  menu.innerHTML = `<div class="menu-label">نوع الرسم</div>` +
+    types.map(([v, l]) => `<button data-type="${v}"${v === w.type ? ' class="current"' : ''}>${l}</button>`).join('');
+  menu.querySelectorAll('[data-type]').forEach(b =>
+    b.onclick = () => { setWidgetType(w.id, b.dataset.type); closeAllWidgetMenus(); });
+}
+
+function enableWidgetDragDrop(card, w) {
+  card.classList.add('editable');
+  card.draggable = true;
+  card.addEventListener('dragstart', e => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', w.id);
+    card.classList.add('dragging');
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    const fromId = e.dataTransfer.getData('text/plain');
+    if (fromId && fromId !== w.id) reorderWidget(fromId, w.id);
+  });
+}
+
+function findWidget(id) { return (state.dashboard?.widgets || []).find(w => w.id === id); }
+
+function snapshotDashboard() {
+  return JSON.parse(JSON.stringify({ summary: state.dashboard.summary, widgets: state.dashboard.widgets }));
+}
+function updateUndoRedoButtons() {
+  el('btn-undo').disabled = !state.editHistory.past.length;
+  el('btn-redo').disabled = !state.editHistory.future.length;
+}
+function pushUndo() {
+  if (!state.dashboard) return;
+  state.editHistory.past.push(snapshotDashboard());
+  if (state.editHistory.past.length > 50) state.editHistory.past.shift();
+  state.editHistory.future = [];
+}
+function applySnapshot(snap) {
+  state.dashboard.summary = snap.summary;
+  state.dashboard.widgets = snap.widgets;
+  renderDashboard();
+  scheduleAutosave();
+}
+function undo() {
+  if (!state.editHistory.past.length) return;
+  state.editHistory.future.push(snapshotDashboard());
+  applySnapshot(state.editHistory.past.pop());
+  updateUndoRedoButtons();
+}
+function redo() {
+  if (!state.editHistory.future.length) return;
+  state.editHistory.past.push(snapshotDashboard());
+  applySnapshot(state.editHistory.future.pop());
+  updateUndoRedoButtons();
+}
+el('btn-undo').addEventListener('click', undo);
+el('btn-redo').addEventListener('click', redo);
+
+function deleteWidget(id) {
+  pushUndo();
+  state.dashboard.widgets = state.dashboard.widgets.filter(w => w.id !== id);
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function duplicateWidget(id) {
+  const idx = state.dashboard.widgets.findIndex(w => w.id === id);
+  if (idx === -1) return;
+  pushUndo();
+  const copy = JSON.parse(JSON.stringify(state.dashboard.widgets[idx]));
+  copy.id = 'w' + Math.random().toString(36).slice(2, 10);
+  state.dashboard.widgets.splice(idx + 1, 0, copy);
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function setWidgetSize(id, size) {
+  const w = findWidget(id);
+  if (!w) return;
+  pushUndo();
+  w.layout = { ...(w.layout || {}), size };
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function setWidgetType(id, type) {
+  const w = findWidget(id);
+  if (!w || w.type === type) return;
+  pushUndo();
+  w.type = type;
+  if (w.query) w.query = { ...w.query, chartType: type };
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function reorderWidget(fromId, toId) {
+  const widgets = state.dashboard.widgets;
+  const fromIdx = widgets.findIndex(w => w.id === fromId);
+  const toIdx = widgets.findIndex(w => w.id === toId);
+  if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+  pushUndo();
+  const [moved] = widgets.splice(fromIdx, 1);
+  widgets.splice(toIdx, 0, moved);
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+
+el('edit-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('.edit-toggle-btn');
+  if (!btn) return;
+  state.editMode = btn.dataset.mode === 'edit';
+  el('edit-toggle').querySelectorAll('.edit-toggle-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === (state.editMode ? 'edit' : 'view')));
+  renderDashboard();
+});
+
+// ---------- autosave: updates the same history row instead of creating a new one per edit ----------
+let autosaveTimer = null;
+function scheduleAutosave() {
+  if (!state.currentUser || !state.dashboard?.widgets?.length) return;
+  el('autosave-status').textContent = 'جارٍ الحفظ…';
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(doAutosave, 900);
+}
+async function doAutosave() {
+  const d = state.dashboard;
+  if (!d) return;
+  try {
+    if (state.currentHistoryId) {
+      const res = await fetch('/api/history/' + state.currentHistoryId, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: d.summary, widgets: d.widgets }),
+      });
+      if (res.ok) { el('autosave-status').textContent = '✓ تم الحفظ'; return; }
+      if (res.status !== 404) throw new Error();
+      state.currentHistoryId = null; // entry was deleted elsewhere — fall through and recreate
+    }
+    const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
+    const res = await fetch('/api/history', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: lastQuestion, summary: d.summary, queryDescription: d.summary, widgets: d.widgets }),
+    });
+    if (!res.ok) throw new Error();
+    const saved = await res.json();
+    state.currentHistoryId = saved.id;
+    state.historyLoaded = false;
+    el('autosave-status').textContent = '✓ تم الحفظ';
+  } catch {
+    el('autosave-status').textContent = 'تعذّر الحفظ';
+  }
+}
+
+// ---------- add-widget wizard ----------
+// A business-friendly, step-by-step alternative to writing a prompt: the user never sees
+// a chart-type name or a column-type distinction — just "what to compare" and "what to
+// measure" — and every step's options come from the real, permission-filtered schema
+// (see /api/widgets/fields), never a hardcoded list. The final step runs the structured
+// query through /api/widgets/query — the same deterministic, GPT-free path used for
+// "change the period" on an existing widget (openPeriodEditor below).
+const WIZARD_KINDS = [
+  { kind: 'comparison', icon: '📊', label: 'مقارنة', chartType: 'bar' },
+  { kind: 'trend', icon: '📈', label: 'اتجاه عبر الزمن', chartType: 'line' },
+  { kind: 'kpi', icon: '🔢', label: 'مؤشر رئيسي', chartType: 'kpi' },
+  { kind: 'distribution', icon: '🥧', label: 'توزيع', chartType: 'pie' },
+  { kind: 'table', icon: '📋', label: 'جدول', chartType: 'table' },
+];
+const TIME_RANGE_OPTIONS = [
+  ['this_month', 'هذا الشهر'], ['last_month', 'الشهر الماضي'], ['last_3_months', 'آخر 3 أشهر'],
+  ['last_6_months', 'آخر 6 أشهر'], ['this_year', 'هذا العام'], ['all', 'كل البيانات'], ['custom', 'مخصص'],
+];
+
+function openWizard() {
+  state.wizard = { mode: 'add', step: 'kind', stack: [], kind: null, table: null,
+    dimension: null, metric: null, dateColumn: null, timeRange: 'all', granularity: 'month',
+    columns: [], columnsTouched: false, sort: 'desc', fields: null, gen: 0 };
+  el('wizard-next').classList.add('hidden');
+  el('wizard-modal').classList.remove('hidden');
+  renderWizardStep();
+}
+
+// Reopens the wizard scoped to just the period of an already-placed, wizard-created widget
+// — the "تغيير الفترة" item in its ⋮ menu. Only offered when the widget carries a `query`
+// (see renderWidgetMenuDefault): chat-generated widgets have no structured query to re-run.
+function openPeriodEditor(w) {
+  state.wizard = { mode: 'edit-period', targetId: w.id, step: 'period', stack: [],
+    timeRange: w.query.timeRange || 'all', baseQuery: w.query, gen: 0 };
+  el('wizard-next').classList.add('hidden');
+  el('wizard-modal').classList.remove('hidden');
+  renderWizardStep();
+}
+
+function closeWizard() { el('wizard-modal').classList.add('hidden'); state.wizard = null; }
+el('wizard-close').addEventListener('click', closeWizard);
+el('wizard-modal').addEventListener('click', e => { if (e.target.id === 'wizard-modal') closeWizard(); });
+
+function wizardBack() {
+  const w = state.wizard;
+  if (!w.stack.length) { closeWizard(); return; }
+  w.step = w.stack.pop();
+  renderWizardStep();
+}
+el('wizard-back').addEventListener('click', wizardBack);
+
+// User-driven transition: remembers where we came from so wizardBack() can return to it.
+function advance(next) {
+  const w = state.wizard;
+  w.stack.push(w.step);
+  w.step = next;
+  renderWizardStep();
+}
+// Programmatic transition (e.g. an async fetch's result) — not a click, so nothing to undo back to.
+function replaceStep(next) { state.wizard.step = next; renderWizardStep(); }
+
+async function loadWizardFields() {
+  const w = state.wizard;
+  try {
+    const res = await fetch('/api/widgets/fields', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: { systems: [...state.onSystems], categories: [...state.onCategories] } }),
+    });
+    const data = await res.json();
+    let tables = data.tables || [];
+    tables = w.kind === 'table' ? tables.filter(t => t.allColumns.length) : tables.filter(t => t.metrics.length);
+    if (w.kind === 'comparison' || w.kind === 'distribution') tables = tables.filter(t => t.dimensions.length);
+    if (w.kind === 'trend') tables = tables.filter(t => t.dateColumns.length > 0);
+    w.fields = tables;
+    if (!tables.length) { replaceStep('no-data'); return; }
+    if (tables.length === 1) { w.table = tables[0]; replaceStep(afterTableStep()); return; }
+    replaceStep('table');
+  } catch {
+    replaceStep('no-data');
+  }
+}
+
+function afterTableStep() {
+  const w = state.wizard;
+  if (w.kind === 'comparison' || w.kind === 'distribution') return 'dimension';
+  if (w.kind === 'table') return 'columns';
+  return 'metric'; // trend | kpi
+}
+
+function afterMetricStep() {
+  const w = state.wizard;
+  w.dateColumn = w.table.dateColumns.length ? w.table.dateColumns[0] : null;
+  return (w.kind === 'trend' || w.dateColumn) ? 'period' : 'preview';
+}
+
+function buildWizardQuery(w) {
+  if (w.mode === 'edit-period')
+    return { ...w.baseQuery, timeRange: w.timeRange, customFrom: w.customFrom || null, customTo: w.customTo || null };
+
+  const kindMeta = WIZARD_KINDS.find(k => k.kind === w.kind);
+  return {
+    table: w.table.table,
+    metric: w.metric || (w.table.metrics[0] || ''),
+    aggregation: 'sum',
+    dimension: (w.kind === 'comparison' || w.kind === 'distribution') ? w.dimension : null,
+    dateColumn: w.dateColumn || null,
+    timeRange: w.dateColumn ? (w.timeRange || 'all') : 'all',
+    customFrom: w.customFrom || null,
+    customTo: w.customTo || null,
+    timeGranularity: w.kind === 'trend' ? (w.granularity || 'month') : null,
+    chartType: kindMeta.chartType,
+    columns: w.kind === 'table' ? w.columns : null,
+    topN: null,
+    sort: 'desc',
+  };
+}
+
+function confirmWizardResult() {
+  const w = state.wizard;
+  if (!w.result) return;
+  pushUndo();
+  if (w.mode === 'edit-period') {
+    const target = findWidget(w.targetId);
+    if (target) {
+      target.type = w.result.type; target.data = w.result.data;
+      target.xKey = w.result.xKey; target.yKey = w.result.yKey;
+      target.source = w.result.source; target.query = w.result.query;
+    }
+  } else {
+    const widget = {
+      id: 'w' + Math.random().toString(36).slice(2, 10),
+      type: w.result.type, title: w.result.title, data: w.result.data,
+      xKey: w.result.xKey, yKey: w.result.yKey, source: w.result.source, query: w.result.query,
+      layout: { size: w.result.type === 'kpi' ? 'small' : (w.result.type === 'table' ? 'full' : 'wide') },
+    };
+    if (!state.dashboard) state.dashboard = { summary: 'لوحة معلومات', widgets: [] };
+    state.dashboard.widgets.push(widget);
+  }
+  closeWizard();
+  renderDashboard();
+  scheduleAutosave();
+  updateUndoRedoButtons();
+}
+
+async function renderWizardStep() {
+  const w = state.wizard;
+  if (!w) return;
+  const body = el('wizard-body');
+  el('wizard-back').classList.toggle('hidden', !w.stack.length);
+  el('wizard-next').classList.add('hidden');
+
+  if (w.step === 'kind') {
+    el('wizard-title').textContent = 'ماذا تريد أن تضيف؟';
+    body.innerHTML = `<div class="wizard-grid">${WIZARD_KINDS.map(k =>
+      `<button class="wizard-option" data-kind="${k.kind}"><span class="wizard-icon">${k.icon}</span><span>${esc(k.label)}</span></button>`).join('')}</div>`;
+    body.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => {
+      w.kind = b.dataset.kind;
+      advance('loading');
+      loadWizardFields();
+    });
+    return;
+  }
+
+  if (w.step === 'loading') {
+    el('wizard-title').textContent = 'إضافة عنصر';
+    body.innerHTML = `<div class="wizard-loading">جارٍ التحميل…</div>`;
+    return;
+  }
+
+  if (w.step === 'no-data') {
+    el('wizard-title').textContent = 'إضافة عنصر';
+    body.innerHTML = `<div class="wizard-empty">لا تتوفر بيانات كافية لإنشاء هذا العنصر.<br>
+      فعّل مصدرًا من قائمة «المصادر» أعلى الصفحة أو ارفع ملفًا في مستودع الملفات.</div>`;
+    return;
+  }
+
+  if (w.step === 'table') {
+    el('wizard-title').textContent = 'من أي مصدر بيانات؟';
+    body.innerHTML = `<div class="wizard-list">${w.fields.map(f =>
+      `<button class="wizard-option wide" data-table="${esc(f.table)}">${esc(f.system || f.category || f.table)}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-table]').forEach(b => b.onclick = () => {
+      w.table = w.fields.find(f => f.table === b.dataset.table);
+      advance(afterTableStep());
+    });
+    return;
+  }
+
+  if (w.step === 'dimension') {
+    el('wizard-title').textContent = w.kind === 'distribution' ? 'توزيع حسب ماذا؟' : 'مقارنة ماذا؟';
+    body.innerHTML = `<div class="wizard-list">${w.table.dimensions.map(d =>
+      `<button class="wizard-option wide" data-dim="${esc(d)}">${esc(d)}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-dim]').forEach(b => b.onclick = () => { w.dimension = b.dataset.dim; advance('metric'); });
+    return;
+  }
+
+  if (w.step === 'metric') {
+    el('wizard-title').textContent = 'ماذا تريد قياسه؟';
+    body.innerHTML = `<div class="wizard-list">${w.table.metrics.map(m =>
+      `<button class="wizard-option wide" data-metric="${esc(m)}">${esc(m)}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-metric]').forEach(b => b.onclick = () => { w.metric = b.dataset.metric; advance(afterMetricStep()); });
+    return;
+  }
+
+  if (w.step === 'period') {
+    el('wizard-title').textContent = 'الفترة؟';
+    body.innerHTML = `<div class="wizard-list">${TIME_RANGE_OPTIONS.map(([v, l]) =>
+      `<button class="wizard-option wide${v === w.timeRange ? ' current' : ''}" data-range="${v}">${l}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-range]').forEach(b => b.onclick = () => {
+      w.timeRange = b.dataset.range;
+      if (w.timeRange === 'custom') { advance('custom-range'); return; }
+      advance(w.mode === 'edit-period' ? 'preview' : (w.kind === 'trend' ? 'granularity' : 'preview'));
+    });
+    return;
+  }
+
+  if (w.step === 'custom-range') {
+    el('wizard-title').textContent = 'حدد الفترة';
+    body.innerHTML = `
+      <label class="wizard-field">من<input type="date" id="wiz-from" value="${esc(w.customFrom || '')}"></label>
+      <label class="wizard-field">إلى<input type="date" id="wiz-to" value="${esc(w.customTo || '')}"></label>`;
+    el('wizard-next').classList.remove('hidden');
+    el('wizard-next').disabled = false;
+    el('wizard-next').textContent = 'التالي';
+    el('wizard-next').onclick = () => {
+      const from = el('wiz-from').value, to = el('wiz-to').value;
+      if (!from || !to) return;
+      w.customFrom = from; w.customTo = to;
+      advance(w.mode === 'edit-period' ? 'preview' : (w.kind === 'trend' ? 'granularity' : 'preview'));
+    };
+    return;
+  }
+
+  if (w.step === 'granularity') {
+    el('wizard-title').textContent = 'التجميع؟';
+    const opts = [['day', 'يوميًا'], ['week', 'أسبوعيًا'], ['month', 'شهريًا']];
+    body.innerHTML = `<div class="wizard-list">${opts.map(([v, l]) =>
+      `<button class="wizard-option wide${v === (w.granularity || 'month') ? ' current' : ''}" data-gran="${v}">${l}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-gran]').forEach(b => b.onclick = () => { w.granularity = b.dataset.gran; advance('preview'); });
+    return;
+  }
+
+  if (w.step === 'columns') {
+    el('wizard-title').textContent = 'اختر الأعمدة';
+    body.innerHTML = `<div class="wizard-checklist">${w.table.allColumns.map((c, i) =>
+      `<label><input type="checkbox" value="${esc(c)}" ${w.columnsTouched ? (w.columns.includes(c) ? 'checked' : '') : (i < 8 ? 'checked' : '')}> ${esc(c)}</label>`).join('')}</div>`;
+    el('wizard-next').classList.remove('hidden');
+    el('wizard-next').disabled = false;
+    el('wizard-next').textContent = 'التالي';
+    el('wizard-next').onclick = () => {
+      w.columns = [...body.querySelectorAll('input:checked')].map(i => i.value);
+      w.columnsTouched = true;
+      if (!w.columns.length) return;
+      advance('preview');
+    };
+    return;
+  }
+
+  if (w.step === 'preview') {
+    const isEdit = w.mode === 'edit-period';
+    el('wizard-title').textContent = isEdit ? 'تحديث الفترة' : 'إضافة العنصر';
+    body.innerHTML = `<div class="wizard-loading">جارٍ تجهيز المعاينة…</div>`;
+    el('wizard-next').classList.remove('hidden');
+    el('wizard-next').disabled = true;
+    el('wizard-next').textContent = isEdit ? '💾 تحديث' : '➕ إضافة';
+
+    const myGen = ++w.gen;
+    try {
+      const query = buildWizardQuery(w);
+      const res = await fetch('/api/widgets/query', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources: { systems: [...state.onSystems], categories: [...state.onCategories] }, query }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (state.wizard !== w || w.gen !== myGen) return; // navigated away while loading
+      if (!res.ok || !payload) throw new Error(payload?.error || `تعذّر التنفيذ (${res.status})`);
+      w.result = payload;
+      body.innerHTML = `<div class="wizard-preview-card">
+        <div class="wizard-preview-title">${esc(payload.title)}</div>
+        <div class="wizard-preview-meta">${esc(payload.source)}</div>
+      </div>`;
+      el('wizard-next').disabled = false;
+      el('wizard-next').onclick = confirmWizardResult;
+    } catch (err) {
+      if (state.wizard !== w || w.gen !== myGen) return;
+      body.innerHTML = `<div class="wizard-empty">${esc(err.message || 'تعذّر تنفيذ الاستعلام.')}</div>`;
+      el('wizard-next').disabled = true;
+    }
+    return;
+  }
 }
 
 function emptyBody(card) {
@@ -784,7 +1376,14 @@ function buildWidget(raw) {
 // ---------- dashboard rendering ----------
 function renderDashboard() {
   const d = state.dashboard;
+  const editable = !!state.currentUser; // never editable in the public share view
   el('dash-toolbar').classList.toggle('hidden', !d || !(d.widgets || []).length);
+  el('edit-toggle').classList.toggle('hidden', !editable);
+  el('autosave-status').classList.toggle('hidden', !editable);
+  el('btn-undo').classList.toggle('hidden', !editable);
+  el('btn-redo').classList.toggle('hidden', !editable);
+  if (!editable) state.editMode = false;
+  updateUndoRedoButtons();
 
   chartInstances.forEach(c => c.destroy());
   chartInstances = [];
@@ -801,12 +1400,20 @@ function renderDashboard() {
 
   el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>`;
   const widgets = d.widgets || [];
-  if (!widgets.length) return;
+  if (widgets.length) {
+    const grid = document.createElement('div');
+    grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
+    widgets.forEach(w => grid.appendChild(buildWidget(w)));
+    el.dash.appendChild(grid);
+  }
+  if (editable && state.editMode) el.dash.appendChild(buildAddWidgetButton());
+}
 
-  const grid = document.createElement('div');
-  grid.className = 'grid';
-  widgets.forEach(w => grid.appendChild(buildWidget(w)));
-  el.dash.appendChild(grid);
+function buildAddWidgetButton() {
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'add-widget-btn'; btn.textContent = '+ إضافة عنصر';
+  btn.addEventListener('click', openWizard);
+  return btn;
 }
 
 // ---------- export (PDF / PowerPoint) ----------
@@ -925,7 +1532,9 @@ async function ask(question) {
     if (!res.ok || !payload?.dashboard) {
       state.messages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
     } else {
-      state.dashboard = payload.dashboard;
+      state.dashboard = ensureWidgetMeta(payload.dashboard);
+      state.editHistory = { past: [], future: [] };
+      state.currentHistoryId = null;
       state.messages.push({ role: 'bot', text: payload.dashboard.summary, widgetsBrief: widgetsBrief(payload.dashboard.widgets) });
       saveToHistory(question, payload.dashboard);
     }
@@ -1162,7 +1771,7 @@ el('file-input').addEventListener('change', async e => {
 // Fire-and-forget: saving history must never block or break the dashboard that
 // already rendered. Only questions that produced at least one widget are saved.
 function saveToHistory(question, dashboard) {
-  if (!dashboard?.widgets?.length) return;
+  if (!dashboard?.widgets?.length) { state.currentHistoryId = null; return; }
   fetch('/api/history', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1170,7 +1779,11 @@ function saveToHistory(question, dashboard) {
       question, summary: dashboard.summary,
       queryDescription: dashboard.summary, widgets: dashboard.widgets,
     }),
-  }).then(() => { state.historyLoaded = false; }).catch(() => {});
+  }).then(res => res.ok ? res.json() : null).then(saved => {
+    // Captured so a later editor edit updates this same row instead of creating a new one.
+    state.currentHistoryId = saved?.id || null;
+    state.historyLoaded = false;
+  }).catch(() => {});
 }
 
 async function loadHistory() {
@@ -1214,7 +1827,9 @@ function parseWidgets(json) {
 function openHistoryEntry(id) {
   const entry = state.history.find(h => h.id === id);
   if (!entry) return;
-  state.dashboard = { summary: entry.summary, widgets: parseWidgets(entry.widgetsJson) };
+  state.dashboard = ensureWidgetMeta({ summary: entry.summary, widgets: parseWidgets(entry.widgetsJson) });
+  state.editHistory = { past: [], future: [] };
+  state.currentHistoryId = entry.id; // further edits autosave onto this same saved entry
   state.messages.push({ role: 'user', text: entry.queryDescription || entry.question });
   state.messages.push({ role: 'bot', text: entry.summary });
   showScreen('chat');

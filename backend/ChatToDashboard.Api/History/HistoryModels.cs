@@ -39,3 +39,13 @@ public class SaveHistoryRequest
     [JsonPropertyName("widgets")]
     public JsonElement Widgets { get; set; }
 }
+
+/// <summary>Body of PUT /api/history/{id} — dashboard-editor autosave.</summary>
+public class UpdateHistoryRequest
+{
+    [JsonPropertyName("summary")]
+    public string Summary { get; set; } = "";
+
+    [JsonPropertyName("widgets")]
+    public JsonElement Widgets { get; set; }
+}

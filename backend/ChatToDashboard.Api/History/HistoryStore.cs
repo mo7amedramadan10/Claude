@@ -91,6 +91,23 @@ public class HistoryStore
         return rows.ToList();
     }
 
+    /// <summary>
+    /// Overwrites an existing entry's content in place — only if it belongs to
+    /// <paramref name="userId"/>. Used by dashboard-editor autosave, so editing a saved
+    /// dashboard updates the same history row instead of piling up a new one per change.
+    /// </summary>
+    public async Task<bool> UpdateAsync(
+        string userId, string id, string summary, string widgetsJson, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var affected = await connection.ExecuteAsync(
+            $"UPDATE {Table} SET Summary = @summary, QueryDescription = @summary, WidgetsJson = @widgetsJson " +
+            "WHERE Id = @id AND UserId = @userId",
+            new { id, userId, summary, widgetsJson });
+        return affected > 0;
+    }
+
     /// <summary>Deletes one entry — only if it belongs to <paramref name="userId"/>.</summary>
     public async Task<bool> DeleteAsync(string userId, string id, CancellationToken ct = default)
     {

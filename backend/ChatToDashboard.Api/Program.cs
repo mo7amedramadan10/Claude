@@ -52,6 +52,7 @@ builder.Services.AddSingleton<SystemApiLoader>();
 builder.Services.AddSingleton<AnalyticsTools>();
 builder.Services.AddSingleton<HistoryStore>();
 builder.Services.AddSingleton<ShareStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
 // internal server with a self-signed certificate, and is opt-in per system.
