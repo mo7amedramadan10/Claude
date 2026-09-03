@@ -12,8 +12,9 @@ with three tools — `list_files`, `query_data` (read-only T-SQL), and optionall
 spec that the built-in UI renders as charts.
 
 Everything is **one ASP.NET Core project**: the API and the UI ship together and are served
-from the same URL. The UI is plain HTML/CSS/JavaScript with hand-written SVG charts — no npm,
-no build step, and no CDN, so it works even on a machine with no internet access.
+from the same URL. The UI is plain HTML/CSS/JavaScript — no npm, no build step. Its one
+dependency, Chart.js, is vendored locally (`wwwroot/lib/`) rather than pulled from a CDN, so
+the whole thing still works on a machine with no internet access.
 
 Because the data lives in a central SQL Server (local or Azure SQL), multiple users on
 different machines all query the same up-to-date data through the app — no one needs local
@@ -274,10 +275,42 @@ Two buttons appear above any generated dashboard:
 - **تصدير PowerPoint** — downloads a real, editable `.pptx`: a title slide (question +
   summary) followed by one slide per widget. KPI values and tables are sent as plain data and
   land as native, still-editable PowerPoint text/tables; bar/line/pie widgets are already
-  drawn as SVG in the browser, so each one is snapshotted to a PNG on the client (via an
-  off-screen `<canvas>`) and only that image is sent — `POST /api/export/pptx` has no
+  drawn on a `<canvas>` by Chart.js, so each one's pixels are read directly
+  (`canvas.toDataURL()`) and only that image is sent — `POST /api/export/pptx` has no
   charting code of its own, `Export/PptxBuilder.cs` just assembles the OOXML package
   (`DocumentFormat.OpenXml`) from a title, a summary, and that per-widget data.
+
+## Dashboard design system
+
+The model only ever controls a widget's **content** — `type`, `title`, `data` (and `xKey`/
+`yKey` for bar/line) — never its layout or styling. Everything visual is a fixed rule in the
+frontend, so every dashboard looks like one consistent product no matter what question or
+model produced it:
+
+- **Grid rules keyed off `type` alone** (`index.html`, `.widget`/`.widget.kpi`/`.widget.chart`/
+  `.widget.table`): a `kpi` is always the small card; `bar`, `line`, `pie` and `table` always
+  span 2 grid columns. A widget's data volume or title length never changes its size.
+- **One design-token block** — the `:root` CSS custom properties (colors, fonts, radius) plus
+  the `THEME` JS object (chart palette, grid/tick color, font family) a few lines below it —
+  is the single source every card and every chart pulls from. No component sets a color or
+  font ad hoc.
+- **Five fixed widget components** — `KpiCard`, `BarChartCard`/`LineChartCard` (sharing
+  `buildXyChart`), `PieChartCard`, `TableCard` — and every widget routes through exactly one of
+  them, chosen by `buildWidget()`. Chart components build their Chart.js config through one
+  shared `chartConfig()`, so the palette/grid/tick/font are set in exactly one place rather
+  than per chart instance.
+- **Strict whitelist** — `WIDGET_TYPES = ['kpi','bar','line','pie','table']`. A type outside
+  that list (which in practice the backend already rejects — see `DashboardWidget.Validate()`
+  in `Models/DashboardSpec.cs` — but a saved History/Share entry could in principle carry
+  anything) renders as a `TableCard` instead, with a `console.warn`, rather than breaking the
+  grid or crashing the page.
+- **Frontend data-volume guard** (`capRows()`) — independent of whatever the system prompt
+  asks the model to do, a bar/line/pie chart never renders more than 15 points; anything past
+  that is folded into one summed "+N more" bucket rather than an unreadably dense chart.
+
+`wwwroot/lib/chart.umd.min.js` is Chart.js vendored locally rather than pulled from a CDN
+(MIT-licensed). To update it: `npm pack chart.js@<version>`, extract the tarball, and copy
+`package/dist/chart.umd.js` over that file.
 
 ## Refreshing data
 

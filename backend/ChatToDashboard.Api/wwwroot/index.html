@@ -4,16 +4,26 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>المحادثة إلى لوحة معلومات</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='white'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='white'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='white'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0F1A'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='%2335D1A1'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='%2335D1A1'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='%2335D1A1'/%3E%3C/svg%3E" />
 <style>
+/*
+ * Design tokens — the single source of truth for color/font/spacing across the whole
+ * app. Ported from the reference prototype's :root block and its renderWidgets() chart
+ * palette/config as closely as possible. Nothing below should hardcode a color, font or
+ * spacing value directly — it all traces back to one of these.
+ */
 :root{
-  --surface:#fcfcfb; --plane:#f9f9f7; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
-  --grid:#e1e0d9; --line:#c3c2b7; --accent:#2a78d6; --accent-soft:#eaf2fd; --danger:#d03b3b;
-  --radius:14px; --shadow:0 1px 2px rgba(11,11,11,.05), 0 1px 8px rgba(11,11,11,.04);
+  --bg:#0A0F1A; --surface:#111827; --plane:#17203352; --ink:#E7ECF5; --ink-2:#8B96AC; --muted:#8B96AC;
+  --grid:#232C3F; --line:#232C3F; --accent:#35D1A1; --accent-soft:#35D1A122; --danger:#EF6461; --amber:#F2B84B;
+  --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35);
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  --display:'Space Grotesk',system-ui,-apple-system,sans-serif;
+  --body:'IBM Plex Sans Arabic',"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;
+  /* Chart palette — fixed rotation shared by every chart component, never per-instance. */
+  --chart-palette: #35D1A1, #F2B84B, #6C8CFF, #EF6461, #B784F0;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--plane);color:var(--ink);
-  font-family:"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;font-size:14px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
 button{font:inherit;cursor:pointer}
 input{font:inherit}
 
@@ -67,7 +77,7 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .msg{max-width:86%;padding:9px 13px;border-radius:14px;line-height:1.65;white-space:pre-wrap}
 .msg.user{align-self:flex-start;background:var(--accent);color:#fff;border-end-start-radius:5px}
 .msg.bot{align-self:flex-end;background:var(--plane);border:1px solid var(--grid);border-end-end-radius:5px}
-.msg.err{align-self:flex-end;background:#fdf0f0;border:1px solid #f3d0d0;color:#9b2c2c}
+.msg.err{align-self:flex-end;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger)}
 .hint{margin:auto;padding:14px;border-radius:12px;background:var(--plane);color:var(--ink-2);text-align:center}
 .hint .ex{display:block;margin-top:6px;color:var(--muted);font-size:13px}
 .dots span{display:inline-block;width:6px;height:6px;margin:0 1px;border-radius:50%;
@@ -94,44 +104,47 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .attached-image span{flex:1;font-size:12.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .attached-image button{border:0;background:transparent;color:var(--danger);font-size:15px}
 
-/* ---------- widgets ---------- */
+/* ---------- widgets ----------
+ * Fixed grid rules keyed off the widget's *type* alone, never its content: a kpi is
+ * always the small card, bar/line/pie always span 2 columns, table always spans 2
+ * columns. Ported from the prototype's #dashboard/.widget rules — this is the one
+ * layout every dashboard renders through, regardless of what question produced it. */
 #summary{margin-bottom:16px;padding:14px 17px;background:var(--surface);
   border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow);line-height:1.75}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
-.card{position:relative;background:var(--surface);border:1px solid var(--grid);
-  border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
-.card.wide{grid-column:1/-1}
-.card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-.card h3{margin:0;font-size:13px;font-weight:600;color:var(--ink-2)}
-.src-btn{width:19px;height:19px;padding:0;border:1px solid var(--grid);border-radius:50%;
-  background:var(--surface);color:var(--muted);font-size:12px;line-height:1}
-.src-btn:hover,.src-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-content:start}
+.widget{position:relative;background:var(--surface);border:1px solid var(--grid);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
+  display:flex;flex-direction:column;gap:10px;animation:rise .35s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.widget.kpi{justify-content:center;align-items:center;text-align:center;min-height:150px}
+.widget.chart{grid-column:span 2;min-height:300px}
+.widget.table{grid-column:span 2}
+.widget-head{display:flex;align-items:center;gap:8px}
+.widget h3{margin:0;font-size:12px;font-weight:500;color:var(--ink-2);font-family:var(--mono);letter-spacing:.3px}
+.src-btn{width:19px;height:19px;padding:0;border:1px solid var(--accent);border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1}
+.src-btn:hover,.src-btn.active{background:var(--accent);color:#06251C}
 .src-pop{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:20;width:min(330px,90%);
-  padding:12px;background:var(--surface);border:1px solid var(--grid);border-radius:12px;
-  box-shadow:0 8px 28px rgba(11,11,11,.14);font-size:12.5px;line-height:1.7}
+  padding:12px;background:#0D1422;border:1px solid var(--accent);border-radius:12px;
+  box-shadow:var(--shadow);font-size:12.5px;line-height:1.7}
 .src-pop.open{display:block}
 .src-block+.src-block{margin-top:9px;padding-top:9px;border-top:1px solid var(--grid)}
-.src-lbl{display:block;margin-bottom:2px;font-size:11px;font-weight:700;color:var(--accent)}
-.card>.kpi{font-size:40px;font-weight:600;letter-spacing:-.5px;line-height:1.15}
-.kpi-label{margin-top:5px;color:var(--muted)}
-svg{width:100%;height:auto;display:block}
-svg text{fill:var(--muted);font-size:11px;font-family:inherit}
-.mark{transition:opacity .12s}.mark:hover{opacity:.82}
-.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:12px;color:var(--ink-2)}
-.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-inline-end:5px}
+.src-lbl{display:block;margin-bottom:2px;font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)}
+.kpi .value{font-family:var(--display);font-size:34px;font-weight:700;color:var(--accent)}
+.kpi-label{color:var(--ink-2)}
+.widget canvas{max-height:230px}
+.chart-note{font-size:11px;color:var(--muted);text-align:center}
 .tbl-wrap{max-height:340px;overflow:auto;border:1px solid var(--grid);border-radius:10px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{position:sticky;top:0;background:var(--plane);text-align:start;padding:8px 11px;
-  font-weight:600;color:var(--ink-2);border-bottom:1px solid var(--grid);white-space:nowrap}
-td{padding:7px 11px;border-bottom:1px solid #f1f0ec;white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);text-align:start;padding:8px 11px;
+  font-weight:500;color:var(--ink-2);font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--grid);white-space:nowrap}
+td{padding:7px 11px;border-bottom:1px solid var(--grid);white-space:nowrap;font-family:var(--mono)}
 td.num{text-align:end;font-variant-numeric:tabular-nums}
 tr:last-child td{border-bottom:0}
-#tip{position:fixed;z-index:60;padding:6px 9px;border-radius:8px;background:#0b0b0b;color:#fff;
-  font-size:12px;pointer-events:none;opacity:0;transition:opacity .1s}
 .empty{display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;color:var(--muted)}
-.empty .big{font-size:17px;color:var(--ink-2);margin-bottom:5px}
-.skeleton .card{height:230px}
-.skeleton .bar{height:100%;border-radius:9px;background:linear-gradient(90deg,#f1f0ec,#f7f6f3,#f1f0ec);
+.empty .big{font-family:var(--display);font-size:17px;color:var(--ink);margin-bottom:5px}
+.skeleton .widget{height:230px}
+.skeleton .bar{height:100%;border-radius:9px;background:linear-gradient(90deg,#141B2B,#1c2740,#141B2B);
   background-size:200% 100%;animation:sh 1.3s infinite}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
@@ -144,13 +157,13 @@ tr:last-child td{border-bottom:0}
 .chip{padding:5px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);color:var(--ink-2)}
 .chip.active{background:var(--accent-soft);border-color:#cfe1f8;color:var(--accent);font-weight:600}
 #pending{display:flex;flex-direction:column;gap:9px}
-.pending-card{display:flex;align-items:center;gap:11px;padding:11px 14px;background:#fffbea;
-  border:1px solid #f0e2b6;border-radius:12px}
+.pending-card{display:flex;align-items:center;gap:11px;padding:11px 14px;background:rgba(242,184,75,.10);
+  border:1px solid rgba(242,184,75,.35);border-radius:12px}
 .pending-card .name{flex:1;font-size:13px}
 .pending-card input{width:210px;padding:7px 11px;border:1px solid var(--grid);border-radius:9px}
 .pending-card .save{padding:7px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
 .pending-card .cancel{border:0;background:transparent;color:var(--danger);font-size:18px;font-weight:700}
-.pending-card.bad{background:#fdf0f0;border-color:#f3d0d0}
+.pending-card.bad{background:rgba(239,100,97,.12);border-color:rgba(239,100,97,.35)}
 .repo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
 .repo-card{position:relative;padding:16px;background:var(--surface);border:1px solid var(--grid);
   border-radius:var(--radius);box-shadow:var(--shadow)}
@@ -171,7 +184,7 @@ tr:last-child td{border-bottom:0}
 .hist-bar .count{color:var(--muted);font-size:13px}
 .clear-btn{margin-inline-start:auto;padding:7px 14px;border:1px solid var(--grid);border-radius:9px;
   background:var(--surface);color:var(--danger)}
-.clear-btn:hover{border-color:var(--danger);background:#fdf0f0}
+.clear-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.12)}
 .hist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
 .hist-card{display:flex;flex-direction:column;gap:8px;padding:16px;background:var(--surface);
   border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow)}
@@ -183,7 +196,7 @@ tr:last-child td{border-bottom:0}
 .hist-card .actions button{flex:1;padding:7px 10px;border-radius:9px;font-size:12.5px}
 .hist-card .open-btn{border:0;background:var(--accent);color:#fff;font-weight:600}
 .hist-card .del-btn{border:1px solid var(--grid);background:var(--surface);color:var(--danger)}
-.hist-card .del-btn:hover{border-color:var(--danger);background:#fdf0f0}
+.hist-card .del-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.12)}
 .hist-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
 
@@ -197,13 +210,16 @@ tr:last-child td{border-bottom:0}
 
 /* Printing (تصدير PDF): only the dashboard content, nothing else. */
 @media print{
-  header, #chat-rail, #dash-toolbar, #tip, .src-pop, #sources-panel{display:none !important}
+  header, #chat-rail, #dash-toolbar, .src-pop, #sources-panel, #shared-banner{display:none !important}
+  /* Force a light, ink-friendly printout regardless of the app's on-screen dark theme. */
   body, .screen, #screen-chat, #dash-pane{height:auto !important;overflow:visible !important;
-    display:block !important;padding:0 !important;margin:0 !important}
-  #summary{box-shadow:none}
-  .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+    display:block !important;padding:0 !important;margin:0 !important;background:#fff !important;color:#000 !important}
+  #summary{box-shadow:none;background:#fff;border-color:#ccc;color:#000}
+  .widget{box-shadow:none;border:1px solid #ccc;break-inside:avoid;background:#fff;color:#000}
+  .widget h3{color:#555}
+  .kpi .value{color:#000}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .card.wide{grid-column:1/-1}
+  .widget.chart,.widget.table{grid-column:1/-1}
 }
 
 /* ---------- share ---------- */
@@ -238,7 +254,7 @@ tr:last-child td{border-bottom:0}
 .login-card label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
 .login-card input,.login-card select{padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:14px}
 .login-card input:focus,.login-card select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
-.login-error{padding:8px 11px;border-radius:9px;background:#fdf0f0;border:1px solid #f3d0d0;color:#9b2c2c;font-size:12.5px}
+.login-error{padding:8px 11px;border-radius:9px;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger);font-size:12.5px}
 .login-error.hidden{display:none}
 #login-submit{padding:10px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
 #login-submit:disabled{opacity:.6;cursor:progress}
@@ -259,11 +275,11 @@ tr:last-child td{border-bottom:0}
 .users-table{width:100%;border-collapse:collapse;font-size:13px}
 .users-table th{text-align:start;padding:10px 13px;background:var(--plane);font-weight:600;color:var(--ink-2);
   border-bottom:1px solid var(--grid);white-space:nowrap}
-.users-table td{padding:10px 13px;border-bottom:1px solid #f1f0ec;white-space:nowrap}
+.users-table td{padding:10px 13px;border-bottom:1px solid var(--grid);white-space:nowrap}
 .users-table tr:last-child td{border-bottom:0}
 .role-badge{padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
-.role-badge.admin{background:#fdf0e0;color:#a15c00}
-.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;background:#1baf7a}
+.role-badge.admin{background:rgba(242,184,75,.15);color:var(--amber)}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;background:var(--accent)}
 .status-dot.off{background:var(--muted)}
 .users-table .edit-btn,.users-table .del-btn{padding:5px 11px;border:1px solid var(--grid);border-radius:8px;
   background:var(--surface);color:var(--ink-2);font-size:12px}
@@ -401,7 +417,6 @@ tr:last-child td{border-bottom:0}
 </div>
 
 <datalist id="cat-suggestions"></datalist>
-<div id="tip"></div>
 
 <div id="share-modal" class="modal-overlay hidden">
   <div class="modal">
@@ -459,6 +474,9 @@ tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<!-- Vendored locally (wwwroot/lib/) rather than a CDN — the app is meant to work with
+     no internet access at all. See README for how it's fetched/updated. -->
+<script src="lib/chart.umd.min.js"></script>
 <script>
 const el = id => document.getElementById(id);
 const state = {
@@ -483,8 +501,29 @@ window.fetch = async (...args) => {
   return res;
 };
 
-const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
-const GRID = '#e1e0d9', AXIS = '#c3c2b7';
+// ---------- design tokens ----------
+// The single source every chart pulls its colors/fonts from — a JS mirror of the CSS
+// custom properties in :root above. No chart component sets a color or font ad hoc;
+// they all go through THEME so every chart, on every dashboard, looks like one system.
+const THEME = {
+  palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
+  accent: '#35D1A1',
+  gridColor: '#232C3F',
+  tickColor: '#8B96AC',
+  fontFamily: 'IBM Plex Sans Arabic',
+};
+Chart.defaults.font.family = THEME.fontFamily;
+Chart.defaults.color = THEME.tickColor;
+
+// The model only ever controls widget content (type/title/data) — never layout or
+// style. Anything outside this whitelist renders as a table instead of risking a
+// broken grid or a crash on an unexpected type.
+const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table'];
+// Defense in depth: regardless of what the system prompt asked the model to do, a
+// chart never renders more than this many points — the overflow is folded into one
+// summed "+N more" bucket instead of an unreadably dense chart.
+const MAX_CHART_POINTS = 15;
+
 // ---------- helpers ----------
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
@@ -507,162 +546,16 @@ function keysFor(w) {
   return { rows, xKey, yKey };
 }
 
-// Nice axis ticks
-function ticks(max) {
-  if (max <= 0) return [0, 1];
-  const raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
-  const step = [1, 2, 2.5, 5, 10].find(m => m * mag >= raw) * mag;
-  const out = [];
-  for (let v = 0; v <= max + step * 0.001; v += step) out.push(v);
-  return out;
+function capRows(rows, xKey, yKey) {
+  if (rows.length <= MAX_CHART_POINTS) return { rows, truncated: 0 };
+  const kept = rows.slice(0, MAX_CHART_POINTS - 1);
+  const rest = rows.slice(MAX_CHART_POINTS - 1);
+  const bucket = {};
+  bucket[xKey] = `+${rest.length} أخرى`;
+  bucket[yKey] = rest.reduce((s, r) => s + num(r[yKey]), 0);
+  return { rows: [...kept, bucket], truncated: rest.length };
 }
 
-function showTip(e, html) {
-  el.tip.innerHTML = html;
-  el.tip.style.opacity = 1;
-  const pad = 14;
-  let x = e.clientX + pad, y = e.clientY + pad;
-  const r = el.tip.getBoundingClientRect();
-  if (x + r.width > innerWidth) x = e.clientX - r.width - pad;
-  if (y + r.height > innerHeight) y = e.clientY - r.height - pad;
-  el.tip.style.left = x + 'px'; el.tip.style.top = y + 'px';
-}
-const hideTip = () => { el.tip.style.opacity = 0; };
-
-// Keeps the first/last axis label inside the viewBox instead of clipping it.
-function anchorAt(x) { return x > W - 40 ? 'end' : x < ML + 12 ? 'start' : 'middle'; }
-
-function svg(w, h, inner) {
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img">${inner}</svg>`;
-}
-// Bar with rounded top corners only, anchored to the baseline.
-function topRoundedBar(x, y, w, h, r) {
-  r = Math.min(r, w / 2, h);
-  return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} `
-       + `Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
-}
-
-// ---------- charts ----------
-const W = 620, H = 300, ML = 62, MR = 12, MT = 12, MB = 38;
-
-function axes(maxY, plotW, plotH) {
-  return ticks(maxY).map(t => {
-    const y = MT + plotH - (t / maxY) * plotH;
-    return `<line x1="${ML}" y1="${y}" x2="${ML + plotW}" y2="${y}" stroke="${GRID}" stroke-width="1"/>`
-         + `<text x="${ML - 10}" y="${y + 4}" text-anchor="end">${fmt(t)}</text>`;
-  }).join('');
-}
-
-function barChart(w) {
-  const { rows, xKey, yKey } = keysFor(w);
-  if (!rows.length) return '<p style="color:#898781">No data</p>';
-  const plotW = W - ML - MR, plotH = H - MT - MB;
-  const maxY = Math.max(...rows.map(r => num(r[yKey])), 0) || 1;
-  const band = plotW / rows.length, bw = Math.min(band * 0.6, 56);
-
-  const bars = rows.map((r, i) => {
-    const v = num(r[yKey]);
-    const h = Math.max((v / maxY) * plotH, v > 0 ? 2 : 0);
-    const x = ML + band * i + (band - bw) / 2, y = MT + plotH - h;
-    const label = `${esc(r[xKey])}: <b>${fmt(v)}</b>`;
-    return `<path class="mark" d="${topRoundedBar(x, y, bw, h, 4)}" fill="${PALETTE[0]}" data-tip="${label}"/>`;
-  }).join('');
-
-  const labels = rows.map((r, i) => {
-    const x = ML + band * i + band / 2;
-    return `<text x="${x}" y="${H - 14}" text-anchor="${anchorAt(x)}">${esc(String(r[xKey]).slice(0, 14))}</text>`;
-  }).join('');
-
-  return svg(W, H, axes(maxY, plotW, plotH)
-    + `<line x1="${ML}" y1="${MT + plotH}" x2="${ML + plotW}" y2="${MT + plotH}" stroke="${AXIS}"/>`
-    + bars + labels);
-}
-
-function lineChart(w) {
-  const { rows, xKey, yKey } = keysFor(w);
-  if (!rows.length) return '<p style="color:#898781">No data</p>';
-  const plotW = W - ML - MR, plotH = H - MT - MB;
-  const maxY = Math.max(...rows.map(r => num(r[yKey])), 0) || 1;
-  const step = rows.length > 1 ? plotW / (rows.length - 1) : 0;
-  const pt = i => [ML + step * i + (rows.length === 1 ? plotW / 2 : 0),
-                   MT + plotH - (num(rows[i][yKey]) / maxY) * plotH];
-
-  const path = rows.map((_, i) => (i ? 'L' : 'M') + pt(i).join(',')).join(' ');
-  const dots = rows.map((r, i) => {
-    const [x, y] = pt(i);
-    return `<circle class="mark" cx="${x}" cy="${y}" r="4.5" fill="${PALETTE[0]}" `
-         + `stroke="#fff" stroke-width="2" data-tip="${esc(r[xKey])}: <b>${fmt(num(r[yKey]))}</b>"/>`;
-  }).join('');
-
-  const every = Math.ceil(rows.length / 8);
-  const labels = rows.map((r, i) => {
-    if (i % every && i !== rows.length - 1) return '';
-    const x = pt(i)[0];
-    return `<text x="${x}" y="${H - 14}" text-anchor="${anchorAt(x)}">${esc(String(r[xKey]).slice(0, 12))}</text>`;
-  }).join('');
-
-  return svg(W, H, axes(maxY, plotW, plotH)
-    + `<line x1="${ML}" y1="${MT + plotH}" x2="${ML + plotW}" y2="${MT + plotH}" stroke="${AXIS}"/>`
-    + `<path d="${path}" fill="none" stroke="${PALETTE[0]}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
-    + dots + labels);
-}
-
-function pieChart(w) {
-  const rows = (Array.isArray(w.data) ? w.data : []).map(r => ({
-    label: r.label ?? Object.values(r).find(v => typeof v === 'string') ?? '—',
-    value: num(r.value ?? Object.values(r).find(v => typeof v === 'number')),
-  })).filter(r => r.value > 0);
-  if (!rows.length) return '<p style="color:#898781">No data</p>';
-
-  const total = rows.reduce((s, r) => s + r.value, 0);
-  const S = 260, cx = S / 2, cy = S / 2, R = 100, r0 = 58;
-  let angle = -Math.PI / 2;
-
-  const arcs = rows.map((row, i) => {
-    const sweep = (row.value / total) * Math.PI * 2;
-    const gap = Math.min(0.02, sweep / 8);          // 2px-ish surface gap between slices
-    const a0 = angle + gap / 2, a1 = angle + sweep - gap / 2;
-    angle += sweep;
-    const large = sweep > Math.PI ? 1 : 0;
-    const p = (rad, a) => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)];
-    const [x0, y0] = p(R, a0), [x1, y1] = p(R, a1), [x2, y2] = p(r0, a1), [x3, y3] = p(r0, a0);
-    const pct = ((row.value / total) * 100).toFixed(1);
-    return `<path class="mark" d="M${x0},${y0} A${R},${R} 0 ${large} 1 ${x1},${y1} L${x2},${y2} `
-         + `A${r0},${r0} 0 ${large} 0 ${x3},${y3} Z" fill="${PALETTE[i % PALETTE.length]}" `
-         + `data-tip="${esc(row.label)}: <b>${fmt(row.value)}</b> (${pct}%)"/>`;
-  }).join('');
-
-  const legend = rows.map((row, i) =>
-    `<span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${esc(row.label)}</span>`
-  ).join('');
-
-  return `<div style="max-width:270px;margin:0 auto">${svg(S, S, arcs)}</div>`
-       + `<div class="legend">${legend}</div>`;
-}
-
-function kpiCard(w) {
-  const e = Array.isArray(w.data) ? w.data[0] : null;
-  const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
-  return `<div class="kpi">${esc(fmt(v))}</div>`
-       + (e?.label ? `<div class="kpi-label">${esc(e.label)}</div>` : '');
-}
-
-function tableCard(w) {
-  const rows = Array.isArray(w.data) ? w.data : [];
-  if (!rows.length) return '<p style="color:#898781">No data</p>';
-  const cols = Object.keys(rows[0]);
-  return `<div class="tablewrap"><table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>`
-       + `<tbody>${rows.map(r => `<tr>${cols.map(c => {
-           const v = r[c], n = typeof v === 'number';
-           return `<td class="${n ? 'num' : ''}">${esc(n ? fmt(v) : (v ?? '—'))}</td>`;
-         }).join('')}</tr>`).join('')}</tbody></table></div>`;
-}
-
-const RENDERERS = { kpi: kpiCard, bar: barChart, line: lineChart, pie: pieChart, table: tableCard };
-
-// ---------- rendering ----------
-
-// ---------- widget rendering ----------
 /**
  * Widget sources are authored as two sentences: "<where it came from>. <how it was calculated>."
  * Split on the first ". " so each half gets its own labelled block in the ⓘ popover.
@@ -677,12 +570,178 @@ function sourcePopover(source) {
   </div>`;
 }
 
+function closePopovers() {
+  document.querySelectorAll('.src-pop.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.src-btn.active').forEach(b => b.classList.remove('active'));
+}
+document.addEventListener('click', closePopovers);
+
+// ---------- widget components ----------
+// Every widget renders through exactly one of these five, chosen by validated `type`
+// alone — never by its data volume or title length. Chart components share one
+// mountChart() so the Chart.js config object (palette, grid/tick color, font) is built
+// in exactly one place.
+let chartInstances = [];
+
+function widgetShell(w, extraClass) {
+  const card = document.createElement('div');
+  card.className = 'widget' + (extraClass ? ' ' + extraClass : '');
+  const head = document.createElement('div');
+  head.className = 'widget-head';
+  const title = document.createElement('h3');
+  title.textContent = w.title || '';
+  head.appendChild(title);
+
+  if (w.source) {
+    const srcBtn = document.createElement('button');
+    srcBtn.type = 'button'; srcBtn.className = 'src-btn'; srcBtn.textContent = 'ⓘ';
+    srcBtn.setAttribute('aria-label', 'مصدر البيانات');
+    head.appendChild(srcBtn);
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = sourcePopover(w.source);
+    card.appendChild(wrap.firstElementChild);
+
+    srcBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const pop = card.querySelector('.src-pop');
+      const open = pop.classList.contains('open');
+      closePopovers();
+      if (!open) { pop.classList.add('open'); srcBtn.classList.add('active'); }
+    });
+  }
+  card.appendChild(head);
+  return card;
+}
+
+function emptyBody(card) {
+  const p = document.createElement('p');
+  p.style.color = 'var(--muted)';
+  p.textContent = 'لا يوجد بيانات';
+  card.appendChild(p);
+  return card;
+}
+
+function KpiCard(w) {
+  const card = widgetShell(w, 'kpi');
+  const e = Array.isArray(w.data) ? w.data[0] : null;
+  const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
+  const val = document.createElement('div');
+  val.className = 'value';
+  val.textContent = fmt(v);
+  card.appendChild(val);
+  if (e?.label) {
+    const label = document.createElement('div');
+    label.className = 'kpi-label';
+    label.textContent = e.label;
+    card.appendChild(label);
+  }
+  return card;
+}
+
+function TableCard(w) {
+  const card = widgetShell(w, 'table');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const cols = Object.keys(rows[0]);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${cols.map(c => {
+      const v = r[c], n = typeof v === 'number';
+      return `<td class="${n ? 'num' : ''}">${esc(n ? fmt(v) : (v ?? '—'))}</td>`;
+    }).join('')}</tr>`).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// One shared config builder — the only place a chart's colors/fonts are set — passed
+// to Chart.js verbatim so its own defaults never leak through.
+function chartConfig(type, labels, values, title) {
+  const isLine = type === 'line';
+  return {
+    type: type === 'pie' ? 'doughnut' : type,
+    data: {
+      labels,
+      datasets: [{
+        label: title,
+        data: values,
+        backgroundColor: isLine ? THEME.accent + '22' : THEME.palette,
+        borderColor: isLine ? THEME.accent : THEME.palette,
+        borderWidth: isLine ? 2 : 0,
+        fill: isLine,
+        tension: .35,
+        borderRadius: type === 'bar' ? 6 : 0,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: type === 'pie', labels: { color: THEME.tickColor, font: { family: THEME.fontFamily } } } },
+      scales: type === 'pie' ? {} : {
+        x: { ticks: { color: THEME.tickColor, font: { family: THEME.fontFamily, size: 11 } }, grid: { color: THEME.gridColor } },
+        y: { ticks: { color: THEME.tickColor }, grid: { color: THEME.gridColor } },
+      },
+    },
+  };
+}
+
+function mountChart(card, type, labels, values, title, truncated) {
+  const canvas = document.createElement('canvas');
+  card.appendChild(canvas);
+  if (truncated > 0) {
+    const note = document.createElement('div');
+    note.className = 'chart-note';
+    note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
+    card.appendChild(note);
+  }
+  chartInstances.push(new Chart(canvas.getContext('2d'), chartConfig(type, labels, values, title)));
+}
+
+function buildXyChart(w, type) {
+  const card = widgetShell(w, 'chart');
+  const { rows: allRows, xKey, yKey } = keysFor(w);
+  if (!allRows.length) return emptyBody(card);
+  const { rows, truncated } = capRows(allRows, xKey, yKey);
+  mountChart(card, type, rows.map(r => r[xKey]), rows.map(r => num(r[yKey])), w.title, truncated);
+  return card;
+}
+const BarChartCard = w => buildXyChart(w, 'bar');
+const LineChartCard = w => buildXyChart(w, 'line');
+
+function PieChartCard(w) {
+  const card = widgetShell(w, 'chart');
+  const allRows = (Array.isArray(w.data) ? w.data : []).map(r => ({
+    label: r.label ?? Object.values(r).find(v => typeof v === 'string') ?? '—',
+    value: num(r.value ?? Object.values(r).find(v => typeof v === 'number')),
+  })).filter(r => r.value > 0);
+  if (!allRows.length) return emptyBody(card);
+  const { rows, truncated } = capRows(allRows, 'label', 'value');
+  mountChart(card, 'pie', rows.map(r => r.label), rows.map(r => r.value), w.title, truncated);
+  return card;
+}
+
+const WIDGET_COMPONENTS = { kpi: KpiCard, bar: BarChartCard, line: LineChartCard, pie: PieChartCard, table: TableCard };
+
+function buildWidget(raw) {
+  const type = (raw.type || '').toLowerCase();
+  if (!WIDGET_TYPES.includes(type)) {
+    console.warn('Unknown widget type — rendering as a table instead:', raw.type, raw);
+    return TableCard({ ...raw, type: 'table' });
+  }
+  return WIDGET_COMPONENTS[type](raw);
+}
+
+// ---------- dashboard rendering ----------
 function renderDashboard() {
   const d = state.dashboard;
   el('dash-toolbar').classList.toggle('hidden', !d || !(d.widgets || []).length);
+
+  chartInstances.forEach(c => c.destroy());
+  chartInstances = [];
+
   if (!d) {
     el.dash.innerHTML = state.loading
-      ? `<div class="grid skeleton">${'<div class="card"><div class="bar"></div></div>'.repeat(4)}</div>`
+      ? `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`
       : `<div class="empty"><div>
            <div class="big">اسأل سؤالاً عن بياناتك</div>
            <div>مثال: «قارن الإيرادات بين المناطق» أو «أعطني تقريراً شاملاً»</div>
@@ -690,45 +749,15 @@ function renderDashboard() {
     return;
   }
 
-  const cards = (d.widgets || []).map(w => {
-    const render = RENDERERS[(w.type || '').toLowerCase()];
-    if (!render) return '';
-    const wide = w.type === 'table' || w.type === 'line' ? ' wide' : '';
-    const info = w.source ? `<button class="src-btn" type="button" aria-label="مصدر البيانات">ⓘ</button>` : '';
-    const pop = w.source ? sourcePopover(w.source) : '';
-    return `<div class="card${wide}${w.type === 'kpi' ? ' kpi' : ''}">
-        ${pop}
-        <div class="card-head"><h3>${esc(w.title)}</h3>${info}</div>
-        ${render(w)}
-      </div>`;
-  }).join('');
+  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>`;
+  const widgets = d.widgets || [];
+  if (!widgets.length) return;
 
-  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>`
-    + (cards ? `<div class="grid">${cards}</div>` : '');
-  wireDashboard();
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  widgets.forEach(w => grid.appendChild(buildWidget(w)));
+  el.dash.appendChild(grid);
 }
-
-function wireDashboard() {
-  el.dash.querySelectorAll('.src-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const pop = btn.closest('.card').querySelector('.src-pop');
-      const open = pop.classList.contains('open');
-      closePopovers();
-      if (!open) { pop.classList.add('open'); btn.classList.add('active'); }
-    });
-  });
-  el.dash.querySelectorAll('[data-tip]').forEach(mark => {
-    mark.addEventListener('mousemove', e => showTip(e, mark.dataset.tip));
-    mark.addEventListener('mouseleave', hideTip);
-  });
-}
-
-function closePopovers() {
-  document.querySelectorAll('.src-pop.open').forEach(p => p.classList.remove('open'));
-  document.querySelectorAll('.src-btn.active').forEach(b => b.classList.remove('active'));
-}
-document.addEventListener('click', closePopovers);
 
 // ---------- export (PDF / PowerPoint) ----------
 // PDF: the browser's own print-to-PDF, steered by the @media print rules above —
@@ -736,36 +765,21 @@ document.addEventListener('click', closePopovers);
 el('btn-export-pdf').addEventListener('click', () => window.print());
 
 // PowerPoint: KPI values and tables travel as plain data so they land as native,
-// still-editable PowerPoint shapes; bar/line/pie charts are already drawn as SVG in
-// the DOM, so each one is snapshotted to a PNG here and only the picture is sent —
-// the server has no charting code of its own.
-async function svgToPngDataUrl(svgEl, scale = 2) {
-  let xml = new XMLSerializer().serializeToString(svgEl);
-  if (!xml.includes('xmlns=')) xml = xml.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-  const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('svg decode failed'));
-      image.src = url;
-    });
-    const vb = svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.width
-      ? svgEl.viewBox.baseVal : { width: img.width || 620, height: img.height || 300 };
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(vb.width * scale);
-    canvas.height = Math.round(vb.height * scale);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fcfcfb';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/png');
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+// still-editable PowerPoint shapes; bar/line/pie charts are already drawn on a
+// <canvas> by Chart.js, so each one's pixels are read directly with toDataURL() — no
+// server-side charting code, and no SVG round trip needed. Chart.js canvases are
+// transparent, so it's composited onto white first — the PPTX slide is white either way.
+function canvasToPngDataUrl(canvas) {
+  const flat = document.createElement('canvas');
+  flat.width = canvas.width; flat.height = canvas.height;
+  const ctx = flat.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, flat.width, flat.height);
+  ctx.drawImage(canvas, 0, 0);
+  return flat.toDataURL('image/png');
 }
 
-async function widgetToPptxInput(w, card) {
+function widgetToPptxInput(w, card) {
   const base = { type: (w.type || '').toLowerCase(), title: w.title || '', source: w.source || '' };
   if (base.type === 'kpi') {
     const e = Array.isArray(w.data) ? w.data[0] : null;
@@ -777,9 +791,9 @@ async function widgetToPptxInput(w, card) {
     const cols = rows.length ? Object.keys(rows[0]) : [];
     return { ...base, columns: cols, rows: rows.map(r => cols.map(c => String(r[c] ?? ''))) };
   }
-  const svgEl = card?.querySelector('svg');
-  if (!svgEl) return base;
-  try { return { ...base, image: await svgToPngDataUrl(svgEl) }; }
+  const canvas = card?.querySelector('canvas');
+  if (!canvas) return base;
+  try { return { ...base, image: canvasToPngDataUrl(canvas) }; }
   catch { return base; }
 }
 
@@ -789,7 +803,7 @@ async function exportPptx() {
   const btn = el('btn-export-pptx');
   btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ التصدير…';
   try {
-    const cards = [...document.querySelectorAll('#dash .grid > .card')];
+    const cards = [...document.querySelectorAll('#dash .grid > .widget')];
     const widgets = await Promise.all(d.widgets.map((w, i) => widgetToPptxInput(w, cards[i])));
     const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text;
 
@@ -1183,7 +1197,7 @@ document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
 
 // ---------- boot ----------
-el.dash = el('dash'); el.messages = el('messages'); el.tip = el('tip'); el.send = el('send');
+el.dash = el('dash'); el.messages = el('messages'); el.send = el('send');
 
 el('form').addEventListener('submit', e => {
   e.preventDefault();
