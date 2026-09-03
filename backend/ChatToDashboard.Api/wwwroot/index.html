@@ -240,6 +240,30 @@ tr:last-child td{border-bottom:0}
 #copilot-send{padding:8px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600;font-size:12.5px}
 #copilot-send:disabled{opacity:.5;cursor:not-allowed}
 
+/* ---------- dashboard filters ---------- */
+#filter-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.filter-ctl{position:relative}
+.filter-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--surface);color:var(--ink-2);font-size:12.5px}
+.filter-btn:hover{border-color:var(--accent)}
+.filter-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
+.filter-panel{display:none;position:absolute;top:calc(100% + 6px);inset-inline-start:0;z-index:30;
+  min-width:200px;max-height:260px;overflow-y:auto;padding:8px;background:var(--surface);
+  border:1px solid var(--grid);border-radius:12px;box-shadow:var(--shadow)}
+.filter-panel.open{display:block}
+.filter-panel label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;font-size:12.5px}
+.filter-panel label:hover{background:var(--plane)}
+.filter-panel input[type="checkbox"],.filter-panel input[type="radio"]{accent-color:var(--accent)}
+.filter-range{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--surface)}
+.filter-range span{font-size:12px;color:var(--ink-2)}
+.filter-range input{width:118px;padding:4px 6px;border:1px solid var(--grid);border-radius:7px;font-size:12px}
+.filter-clear-btn{padding:6px 12px;border:1px solid var(--grid);border-radius:999px;background:transparent;
+  color:var(--danger);font-size:12px}
+.filter-clear-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.1)}
+.widget-unaffected{position:absolute;top:10px;inset-inline-start:10px;padding:2px 8px;border-radius:999px;
+  background:var(--plane);color:var(--muted);font-size:10.5px;border:1px solid var(--grid)}
+
 .empty{display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;color:var(--muted)}
 .empty .big{font-family:var(--display);font-size:17px;color:var(--ink);margin-bottom:5px}
 .skeleton .widget{height:230px}
@@ -631,6 +655,7 @@ const state = {
   editMode: false, editHistory: { past: [], future: [] },
   currentHistoryId: null, wizard: null,
   copilotMessages: [], copilotLoading: false,
+  activeFilters: {}, // filterId -> selected values (or [from,to] for range types)
 };
 
 // Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
@@ -807,6 +832,14 @@ function widgetShell(w, extraClass) {
     });
   }
   card.appendChild(head);
+
+  if (getActiveFilterTables().size && (!w.query || !getActiveFilterTables().has(w.query.table))) {
+    const badge = document.createElement('span');
+    badge.className = 'widget-unaffected';
+    badge.textContent = 'غير متأثر بالفلتر';
+    badge.title = 'هذا العنصر مش مبني على استعلام قابل لإعادة التنفيذ، فمش بيتفلتر تلقائيًا.';
+    card.appendChild(badge);
+  }
 
   if (state.editMode && w.id) {
     const { btn: menuBtn, menu } = widgetMenu(w);
@@ -1527,6 +1560,8 @@ function renderDashboard() {
   }
 
   el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>`;
+  if (d.filters?.length) el.dash.appendChild(buildFilterBar(d.filters));
+
   const widgets = d.widgets || [];
   if (widgets.length) {
     const grid = document.createElement('div');
@@ -1535,6 +1570,149 @@ function renderDashboard() {
     el.dash.appendChild(grid);
   }
   if (editable && state.editMode) el.dash.appendChild(buildAddWidgetButton());
+}
+
+// ---------- dashboard filters ----------
+// Filters come from the model (see the "الفلاتر" section of the system prompt) as
+// {id,label,field,table,type,options}. Applying one deterministically re-runs
+// /api/widgets/query for every widget whose structured `query.table` matches the
+// filter's table (wizard-created widgets) — never the LLM. A chat/copilot-authored
+// widget carries no structured query, so a dashboard filter cannot reach it; rather than
+// silently ignore it, buildWidget() marks it "غير متأثر بالفلتر" (see widgetShell).
+function getActiveFilters() {
+  const filters = state.dashboard?.filters || [];
+  return filters
+    .map(f => ({ def: f, values: state.activeFilters[f.id] || [] }))
+    .filter(x => x.values.some(v => v !== '' && v != null));
+}
+function getActiveFilterTables() {
+  return new Set(getActiveFilters().map(x => x.def.table).filter(Boolean));
+}
+
+function buildFilterBar(filters) {
+  const bar = document.createElement('div');
+  bar.id = 'filter-bar';
+  filters.forEach(f => bar.appendChild(buildFilterControl(f)));
+  if (getActiveFilters().length) {
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button'; clearBtn.className = 'filter-clear-btn'; clearBtn.textContent = '✕ مسح كل الفلاتر';
+    clearBtn.addEventListener('click', clearAllFilters);
+    bar.appendChild(clearBtn);
+  }
+  return bar;
+}
+
+function buildFilterControl(f) {
+  return (f.type === 'date_range' || f.type === 'numeric_range') ? buildRangeFilterControl(f) : buildSelectFilterControl(f);
+}
+
+function buildSelectFilterControl(f) {
+  const wrap = document.createElement('div');
+  wrap.className = 'filter-ctl';
+  const selected = state.activeFilters[f.id] || [];
+  const isMulti = f.type === 'multi_select';
+
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'filter-btn' + (selected.length ? ' active' : '');
+  btn.textContent = `${f.label}${selected.length ? ` (${selected.length})` : ''} ▾`;
+
+  const panel = document.createElement('div');
+  panel.className = 'filter-panel';
+  const allChecked = !selected.length ? 'checked' : '';
+  const optionsHtml = (f.options || []).map(o => `
+    <label><input type="${isMulti ? 'checkbox' : 'radio'}" name="filter-${esc(f.id)}" value="${esc(o.value)}"
+      ${selected.includes(o.value) ? 'checked' : ''}> ${esc(o.label)}</label>`).join('');
+  panel.innerHTML = isMulti ? optionsHtml
+    : `<label><input type="radio" name="filter-${esc(f.id)}" value="" ${allChecked}> الكل</label>${optionsHtml}`;
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = panel.classList.contains('open');
+    closeAllFilterPanels();
+    if (!open) panel.classList.add('open');
+  });
+  panel.addEventListener('click', e => e.stopPropagation());
+  panel.addEventListener('change', () => {
+    const checked = [...panel.querySelectorAll('input:checked')].map(i => i.value).filter(v => v !== '');
+    setFilterValue(f.id, checked);
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(panel);
+  return wrap;
+}
+
+function buildRangeFilterControl(f) {
+  const wrap = document.createElement('div');
+  wrap.className = 'filter-range';
+  const [from = '', to = ''] = state.activeFilters[f.id] || [];
+  const inputType = f.type === 'date_range' ? 'date' : 'number';
+  wrap.innerHTML = `<span>${esc(f.label)}</span>
+    <input type="${inputType}" data-role="from" value="${esc(from)}">
+    <span>—</span>
+    <input type="${inputType}" data-role="to" value="${esc(to)}">`;
+  const apply = () => {
+    const fromVal = wrap.querySelector('[data-role="from"]').value;
+    const toVal = wrap.querySelector('[data-role="to"]').value;
+    setFilterValue(f.id, (fromVal || toVal) ? [fromVal, toVal] : []);
+  };
+  wrap.querySelectorAll('input').forEach(inp => inp.addEventListener('change', apply));
+  return wrap;
+}
+
+function closeAllFilterPanels() {
+  document.querySelectorAll('.filter-panel.open').forEach(p => p.classList.remove('open'));
+}
+document.addEventListener('click', closeAllFilterPanels);
+
+function setFilterValue(filterId, values) {
+  pushUndo();
+  state.activeFilters[filterId] = values;
+  applyFilters();
+}
+
+function clearAllFilters() {
+  pushUndo();
+  state.activeFilters = {};
+  applyFilters();
+}
+
+// Equality/IN filters only (date_range/numeric_range aren't supported by the deterministic
+// backend yet — see WidgetQueryService — so they narrow the visible selection but don't
+// re-query; this is a known v1 limitation, not a silent bug).
+async function applyFilters() {
+  const activeByTable = {};
+  getActiveFilters().forEach(({ def, values }) => {
+    if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
+    (activeByTable[def.table] ||= []).push({ field: def.field, values });
+  });
+
+  if (state.currentUser) el('autosave-status')?.classList.remove('hidden');
+  const status = el('autosave-status');
+  if (status) status.textContent = 'جارٍ التحديث…';
+
+  const widgets = state.dashboard?.widgets || [];
+  await Promise.all(widgets.map(async w => {
+    if (!w.query || !w.query.table) return;
+    const filters = activeByTable[w.query.table] || [];
+    try {
+      const res = await fetch('/api/widgets/query', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sources: { systems: [...state.onSystems], categories: [...state.onCategories] },
+          query: { ...w.query, filters },
+        }),
+      });
+      if (!res.ok) return;
+      const payload = await res.json();
+      w.data = payload.data; w.xKey = payload.xKey; w.yKey = payload.yKey; w.source = payload.source;
+      w.query = payload.query;
+    } catch { /* leave the widget's previous data in place on a transient failure */ }
+  }));
+
+  renderDashboard();
+  scheduleAutosave();
+  updateUndoRedoButtons();
 }
 
 function buildAddWidgetButton() {
@@ -1663,6 +1841,7 @@ async function ask(question) {
       state.dashboard = ensureWidgetMeta(payload.dashboard);
       state.editHistory = { past: [], future: [] };
       state.currentHistoryId = null;
+      state.activeFilters = {};
       state.messages.push({ role: 'bot', text: payload.dashboard.summary, widgetsBrief: widgetsBrief(payload.dashboard.widgets) });
       saveToHistory(question, payload.dashboard);
     }
@@ -1958,6 +2137,7 @@ function openHistoryEntry(id) {
   state.dashboard = ensureWidgetMeta({ summary: entry.summary, widgets: parseWidgets(entry.widgetsJson) });
   state.editHistory = { past: [], future: [] };
   state.currentHistoryId = entry.id; // further edits autosave onto this same saved entry
+  state.activeFilters = {};
   state.messages.push({ role: 'user', text: entry.queryDescription || entry.question });
   state.messages.push({ role: 'bot', text: entry.summary });
   showScreen('chat');

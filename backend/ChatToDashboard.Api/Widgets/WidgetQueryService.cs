@@ -8,17 +8,20 @@ using Dapper;
 namespace ChatToDashboard.Api.Widgets;
 
 /// <summary>
-/// Executes a structured widget query (metric/aggregation/dimension/time range — no SQL,
-/// chosen entirely through the "Add Widget" wizard) directly against the data tables,
-/// without going through the LLM. This is what lets simple, deterministic dashboard edits
-/// (add a KPI, change the period, change the chart type) skip the model entirely: natural
-/// language still goes through GPT, but "click a button" never does.
+/// Executes a structured widget query (metric/aggregation/dimension/time range/filters —
+/// no SQL, chosen entirely through the "Add Widget" wizard or a dashboard filter) directly
+/// against the data tables, without going through the LLM. This is what lets simple,
+/// deterministic dashboard edits (add a KPI, change the period, apply a filter, change the
+/// chart type) skip the model entirely: natural language still goes through GPT, but
+/// "click a button" never does.
 ///
 /// Every table/column name that ends up in generated SQL is first matched against the real
 /// schema (<see cref="DataFolderLoader.GetSchemaAsync"/>) and the caller's own source
 /// permissions (<see cref="AnalyticsTools.DescribeSourcesAsync"/>) — the same gate
 /// query_data enforces for the LLM path — so nothing the client sends is interpolated into
-/// SQL verbatim; only names the schema itself reports back are used.
+/// SQL verbatim; only names the schema itself reports back are used. Filter *values* (which
+/// are much less constrained than identifiers) are always passed as real ADO.NET parameters,
+/// never string-interpolated.
 /// </summary>
 public class WidgetQueryService
 {
@@ -73,23 +76,40 @@ public class WidgetQueryService
         return new FieldsResponse { Tables = tables };
     }
 
+    /// <summary>
+    /// Distinct, non-null values of one real column — the only legitimate source for a
+    /// filter's option list (never invented; see the system prompt's "الفلاتر" section).
+    /// Capped at 50 values: a column with more distinct values than that is not a usable
+    /// filter dimension anyway.
+    /// </summary>
+    public async Task<FilterValuesResponse> GetFilterValuesAsync(
+        string tableName, string field, SourceSelection selection, CancellationToken ct)
+    {
+        var table = await ResolveTableAsync(tableName, selection, ct);
+        var col = FindColumn(table, field)
+            ?? throw new WidgetQueryValidationException("العمود المطلوب غير موجود في هذا الجدول.");
+
+        var tableRef = QualifiedTable(table.Table);
+        var colQuoted = Quote(col.Name);
+        var limit = 50;
+        var sql = _db.Provider == DbProvider.Sqlite
+            ? $"SELECT DISTINCT {colQuoted} AS v FROM {tableRef} WHERE {colQuoted} IS NOT NULL ORDER BY v LIMIT {limit}"
+            : $"SELECT DISTINCT TOP {limit} {colQuoted} AS v FROM {tableRef} WHERE {colQuoted} IS NOT NULL ORDER BY v";
+
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var values = (await connection.QueryAsync<string>(new CommandDefinition(sql, cancellationToken: ct)))
+            .Where(v => !string.IsNullOrEmpty(v))
+            .ToList();
+
+        return new FilterValuesResponse { Values = values };
+    }
+
     public async Task<WidgetQueryResult> ExecuteAsync(WidgetQueryRequest request, SourceSelection selection, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Table))
             throw new WidgetQueryValidationException("لم يتم اختيار مصدر بيانات.");
 
-        var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(ct);
-
-        var table = schema.FirstOrDefault(t => string.Equals(t.Table, request.Table, StringComparison.OrdinalIgnoreCase))
-            ?? throw new WidgetQueryValidationException("الجدول المطلوب غير موجود أو غير متاح.");
-
-        // Same permission gate query_data enforces for the LLM path.
-        if (context.TableCategories.TryGetValue(table.Table, out var category)
-            && !context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
-            throw new WidgetQueryValidationException($"لا يوجد صلاحية للوصول لتصنيف \"{category}\".");
-        if (context.DisabledSystemTables.TryGetValue(table.Table, out var systemName))
-            throw new WidgetQueryValidationException($"النظام \"{systemName}\" غير مفعّل حاليًا.");
+        var table = await ResolveTableAsync(request.Table, selection, ct);
 
         var aggregation = (request.Aggregation ?? "sum").ToLowerInvariant();
         if (!Aggregations.Contains(aggregation))
@@ -119,35 +139,94 @@ public class WidgetQueryService
 
         var tableRef = QualifiedTable(table.Table);
 
+        // Every filter value becomes a real parameter — never string-interpolated — even
+        // though the field name itself is schema-verified like any other identifier here.
+        var parameters = new DynamicParameters();
+        var clauses = new List<string>();
+        var filterNote = "";
+        if (dateCol is not null && !string.IsNullOrWhiteSpace(request.TimeRange) && request.TimeRange != "all")
+        {
+            if (!TimeRanges.Contains(request.TimeRange))
+                throw new WidgetQueryValidationException("الفترة الزمنية غير مدعومة.");
+            clauses.Add(BuildTimeRangeFilter(tableRef, Quote(dateCol.Name), request.TimeRange!, request.CustomFrom, request.CustomTo));
+        }
+        if (request.Filters is { Count: > 0 })
+        {
+            var (filterClauses, note) = BuildFilterClauses(table, request.Filters, parameters);
+            clauses.AddRange(filterClauses);
+            filterNote = note;
+        }
+        var where = clauses.Count > 0 ? " WHERE " + string.Join(" AND ", clauses) : "";
+
         await using var connection = await _db.OpenConnectionAsync(ct);
 
         if (isTableWidget)
-            return await BuildTableWidgetAsync(connection, table, tableRef, request, dateCol, ct);
+            return await BuildTableWidgetAsync(connection, table, tableRef, request, dateCol, where, parameters, filterNote, ct);
 
         var aggExpr = string.Equals(aggregation, "count", StringComparison.OrdinalIgnoreCase)
             ? "COUNT(*)"
             : $"{aggregation.ToUpperInvariant()}({Quote(metricCol!.Name)})";
 
-        var where = "";
-        if (dateCol is not null && !string.IsNullOrWhiteSpace(request.TimeRange) && request.TimeRange != "all")
-        {
-            if (!TimeRanges.Contains(request.TimeRange))
-                throw new WidgetQueryValidationException("الفترة الزمنية غير مدعومة.");
-            where = " WHERE " + BuildTimeRangeFilter(tableRef, Quote(dateCol.Name), request.TimeRange!, request.CustomFrom, request.CustomTo);
-        }
-
         if (dateCol is not null && !string.IsNullOrWhiteSpace(request.TimeGranularity))
-            return await BuildTrendWidgetAsync(connection, table, tableRef, request, dateCol, aggExpr, aggregation, metricCol!, where, ct);
+            return await BuildTrendWidgetAsync(connection, table, tableRef, request, dateCol, aggExpr, aggregation, metricCol!, where, parameters, filterNote, ct);
 
         if (dimensionCol is not null)
-            return await BuildComparisonWidgetAsync(connection, table, request, dimensionCol, aggExpr, aggregation, metricCol!, where, ct);
+            return await BuildComparisonWidgetAsync(connection, table, request, dimensionCol, aggExpr, aggregation, metricCol!, where, parameters, filterNote, ct);
 
-        return await BuildKpiWidgetAsync(connection, table, tableRef, request, aggExpr, aggregation, metricCol!, where, ct);
+        return await BuildKpiWidgetAsync(connection, table, tableRef, request, aggExpr, aggregation, metricCol!, where, parameters, filterNote, ct);
+    }
+
+    private async Task<TableSchema> ResolveTableAsync(string tableName, SourceSelection selection, CancellationToken ct)
+    {
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var schema = await _loader.GetSchemaAsync(ct);
+
+        var table = schema.FirstOrDefault(t => string.Equals(t.Table, tableName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new WidgetQueryValidationException("الجدول المطلوب غير موجود أو غير متاح.");
+
+        // Same permission gate query_data enforces for the LLM path.
+        if (context.TableCategories.TryGetValue(table.Table, out var category)
+            && !context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
+            throw new WidgetQueryValidationException($"لا يوجد صلاحية للوصول لتصنيف \"{category}\".");
+        if (context.DisabledSystemTables.TryGetValue(table.Table, out var systemName))
+            throw new WidgetQueryValidationException($"النظام \"{systemName}\" غير مفعّل حاليًا.");
+
+        return table;
+    }
+
+    /// <summary>
+    /// Builds "<paramref name="table"/>.field IN (@p0, @p1...)" clauses for every filter
+    /// whose field actually belongs to this widget's table; a filter for an unrelated table
+    /// is silently skipped here rather than rejected — see the frontend's "غير متأثر
+    /// بالفلتر" badge for widgets a dashboard filter cannot reach.
+    /// </summary>
+    private (List<string> Clauses, string Note) BuildFilterClauses(
+        TableSchema table, List<FilterCondition> filters, DynamicParameters parameters)
+    {
+        var clauses = new List<string>();
+        var notes = new List<string>();
+        var p = 0;
+        foreach (var f in filters)
+        {
+            if (string.IsNullOrWhiteSpace(f.Field) || f.Values is not { Count: > 0 }) continue;
+            var col = FindColumn(table, f.Field);
+            if (col is null) continue; // field belongs to a different table — not applicable here
+
+            var names = f.Values.Select(_ => $"@wf{p++}").ToList();
+            for (var i = 0; i < f.Values.Count; i++)
+                parameters.Add(names[i], f.Values[i]);
+            clauses.Add(f.Values.Count == 1
+                ? $"{Quote(col.Name)} = {names[0]}"
+                : $"{Quote(col.Name)} IN ({string.Join(", ", names)})");
+            notes.Add($"{col.Name} = {string.Join("/", f.Values)}");
+        }
+        return (clauses, notes.Count > 0 ? " مع تطبيق فلتر: " + string.Join("، ", notes) : "");
     }
 
     private async Task<WidgetQueryResult> BuildTableWidgetAsync(
         System.Data.Common.DbConnection connection, TableSchema table, string tableRef,
-        WidgetQueryRequest request, TableColumn? dateCol, CancellationToken ct)
+        WidgetQueryRequest request, TableColumn? dateCol, string where, DynamicParameters parameters,
+        string filterNote, CancellationToken ct)
     {
         var cols = (request.Columns is { Count: > 0 }
                 ? request.Columns.Select(c => FindColumn(table, c)?.Name
@@ -161,10 +240,10 @@ public class WidgetQueryService
         var order = dateCol is not null ? $" ORDER BY {Quote(dateCol.Name)} DESC" : "";
         var limit = Cap(request.TopN, 50);
         var sql = _db.Provider == DbProvider.Sqlite
-            ? $"SELECT {selectList} FROM {tableRef}{order} LIMIT {limit}"
-            : $"SELECT TOP {limit} {selectList} FROM {tableRef}{order}";
+            ? $"SELECT {selectList} FROM {tableRef}{where}{order} LIMIT {limit}"
+            : $"SELECT TOP {limit} {selectList} FROM {tableRef}{where}{order}";
 
-        var rows = (await connection.QueryAsync(new CommandDefinition(sql, cancellationToken: ct)))
+        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r).ToList();
 
         return new WidgetQueryResult
@@ -172,21 +251,22 @@ public class WidgetQueryService
             Type = "table",
             Title = request.Title ?? table.Table,
             Data = rows,
-            Source = $"من جدول {table.Table}. عرض الأعمدة المختارة كما هي بدون تجميع.",
+            Source = $"من جدول {table.Table}. عرض الأعمدة المختارة كما هي بدون تجميع{filterNote}.",
             Query = request,
         };
     }
 
     private async Task<WidgetQueryResult> BuildTrendWidgetAsync(
         System.Data.Common.DbConnection connection, TableSchema table, string tableRef, WidgetQueryRequest request,
-        TableColumn dateCol, string aggExpr, string aggregation, TableColumn metricCol, string where, CancellationToken ct)
+        TableColumn dateCol, string aggExpr, string aggregation, TableColumn metricCol, string where,
+        DynamicParameters parameters, string filterNote, CancellationToken ct)
     {
         var granularity = request.TimeGranularity!.ToLowerInvariant();
         var periodExpr = PeriodExpr(dateCol.Name, granularity);
         var sql = $"SELECT {periodExpr} AS period, {aggExpr} AS value FROM {tableRef}{where} " +
                   $"GROUP BY {periodExpr} ORDER BY period ASC";
 
-        var rows = (await connection.QueryAsync(new CommandDefinition(sql, cancellationToken: ct)))
+        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r)
             .Select(r => new Dictionary<string, object?> { ["period"] = r["period"], ["value"] = r["value"] })
             .ToList<object>();
@@ -196,14 +276,15 @@ public class WidgetQueryService
             Type = request.ChartType is "bar" or "kpi" or "pie" or "table" ? request.ChartType : "line",
             Title = request.Title ?? metricCol.Name,
             Data = rows, XKey = "period", YKey = "value",
-            Source = $"من جدول {table.Table}. تم تجميع {aggregation.ToUpperInvariant()}({metricCol.Name}) حسب {dateCol.Name} ({GranularityArabic(granularity)}).",
+            Source = $"من جدول {table.Table}. تم تجميع {aggregation.ToUpperInvariant()}({metricCol.Name}) حسب {dateCol.Name} ({GranularityArabic(granularity)}){filterNote}.",
             Query = request,
         };
     }
 
     private async Task<WidgetQueryResult> BuildComparisonWidgetAsync(
         System.Data.Common.DbConnection connection, TableSchema table, WidgetQueryRequest request,
-        TableColumn dimensionCol, string aggExpr, string aggregation, TableColumn metricCol, string where, CancellationToken ct)
+        TableColumn dimensionCol, string aggExpr, string aggregation, TableColumn metricCol, string where,
+        DynamicParameters parameters, string filterNote, CancellationToken ct)
     {
         var topN = Cap(request.TopN, 10);
         var sortDir = string.Equals(request.Sort, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
@@ -215,7 +296,7 @@ public class WidgetQueryService
             : $"SELECT TOP {topN} {dimQuoted} AS label, {aggExpr} AS value FROM {tableRef}{where} " +
               $"GROUP BY {dimQuoted} ORDER BY value {sortDir}";
 
-        var rows = (await connection.QueryAsync(new CommandDefinition(sql, cancellationToken: ct)))
+        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r)
             .Select(r => new Dictionary<string, object?> { ["label"] = r["label"], ["value"] = r["value"] })
             .ToList<object>();
@@ -225,27 +306,28 @@ public class WidgetQueryService
             Type = request.ChartType is "line" or "kpi" or "table" ? request.ChartType : (request.ChartType ?? "bar"),
             Title = request.Title ?? metricCol.Name,
             Data = rows, XKey = "label", YKey = "value",
-            Source = $"من جدول {table.Table}. تم تجميع {aggregation.ToUpperInvariant()}({metricCol.Name}) حسب {dimensionCol.Name}.",
+            Source = $"من جدول {table.Table}. تم تجميع {aggregation.ToUpperInvariant()}({metricCol.Name}) حسب {dimensionCol.Name}{filterNote}.",
             Query = request,
         };
     }
 
     private async Task<WidgetQueryResult> BuildKpiWidgetAsync(
         System.Data.Common.DbConnection connection, TableSchema table, string tableRef, WidgetQueryRequest request,
-        string aggExpr, string aggregation, TableColumn metricCol, string where, CancellationToken ct)
+        string aggExpr, string aggregation, TableColumn metricCol, string where, DynamicParameters parameters,
+        string filterNote, CancellationToken ct)
     {
         var sql = $"SELECT {aggExpr} AS value FROM {tableRef}{where}";
-        var value = await connection.ExecuteScalarAsync<double?>(new CommandDefinition(sql, cancellationToken: ct)) ?? 0;
+        var value = await connection.ExecuteScalarAsync<double?>(new CommandDefinition(sql, parameters, cancellationToken: ct)) ?? 0;
 
         var data = new List<object> { new Dictionary<string, object?> { ["label"] = request.Title ?? metricCol.Name, ["value"] = value } };
-        var periodNote = where.Length > 0 ? " للفترة المحددة" : "";
+        var periodNote = where.Length > 0 && filterNote.Length == 0 ? " للفترة المحددة" : "";
 
         return new WidgetQueryResult
         {
             Type = "kpi",
             Title = request.Title ?? metricCol.Name,
             Data = data,
-            Source = $"من جدول {table.Table}. تم حساب {aggregation.ToUpperInvariant()}({metricCol.Name}){periodNote}.",
+            Source = $"من جدول {table.Table}. تم حساب {aggregation.ToUpperInvariant()}({metricCol.Name}){periodNote}{filterNote}.",
             Query = request,
         };
     }

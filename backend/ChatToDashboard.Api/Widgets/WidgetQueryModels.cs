@@ -47,6 +47,32 @@ public class WidgetQueryRequest
     [JsonPropertyName("chartType")] public string? ChartType { get; set; } // kpi|bar|line|pie|table hint
     [JsonPropertyName("title")] public string? Title { get; set; }
     [JsonPropertyName("columns")] public List<string>? Columns { get; set; } // table widgets: explicit column pick
+
+    /// <summary>
+    /// Dashboard-level filters currently applied to this widget's table (equality/IN on a
+    /// real, schema-verified column — see <see cref="Widgets.WidgetQueryService"/>).
+    /// </summary>
+    [JsonPropertyName("filters")] public List<FilterCondition>? Filters { get; set; }
+}
+
+/// <summary>One active dashboard filter's effect on a query: field IN (values...).</summary>
+public class FilterCondition
+{
+    [JsonPropertyName("field")] public string Field { get; set; } = "";
+    [JsonPropertyName("values")] public List<string> Values { get; set; } = new();
+}
+
+/// <summary>Body of POST /api/widgets/filter-values.</summary>
+public class FilterValuesRequest
+{
+    [JsonPropertyName("sources")] public SourceSelection? Sources { get; set; }
+    [JsonPropertyName("table")] public string Table { get; set; } = "";
+    [JsonPropertyName("field")] public string Field { get; set; } = "";
+}
+
+public class FilterValuesResponse
+{
+    [JsonPropertyName("values")] public List<string> Values { get; set; } = new();
 }
 
 /// <summary>Body of POST /api/widgets/query.</summary>

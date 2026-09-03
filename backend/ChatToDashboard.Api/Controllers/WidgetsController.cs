@@ -47,4 +47,21 @@ public class WidgetsController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    /// <summary>Real DISTINCT values for one column — the only legitimate filter-option source.</summary>
+    [HttpPost("filter-values")]
+    public async Task<IActionResult> FilterValues([FromBody] FilterValuesRequest request, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        try
+        {
+            return Ok(await _service.GetFilterValuesAsync(request.Table, request.Field, effective, ct));
+        }
+        catch (WidgetQueryValidationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
