@@ -87,6 +87,33 @@ pre{margin:0;padding:14px 16px;border-top:1px solid var(--grid);background:#fbfb
 .bar-row .fill{height:100%;border-radius:5px;background:var(--blue)}
 .bar-row .val{width:110px;text-align:end;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .note{padding:11px 15px;font-size:12.5px;color:var(--muted);background:#fffbea;border-top:1px solid #f0e2b6}
+
+/* friendly ("easy to read") rendering of tool calls and the final dashboard */
+.friendly-call{padding:13px 15px;border-bottom:1px solid var(--grid)}
+.friendly-call:last-child{border-bottom:0}
+.friendly-call-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fc-icon{font-size:16px}
+.fc-title{font-weight:600;font-size:13px}
+.fc-badge{margin-inline-start:auto;padding:2px 9px;border-radius:999px;background:var(--blue-soft);
+  color:var(--blue);font-size:11px;font-weight:600;white-space:nowrap}
+.fc-badge.bad{background:var(--danger-soft);color:var(--danger)}
+.fc-sql{margin:6px 0 10px;padding:9px 11px;border-radius:8px;background:var(--plane);border:1px solid var(--grid);
+  font-family:ui-monospace,"Cascadia Code",Consolas,monospace;font-size:12px;direction:ltr;text-align:left;
+  white-space:pre-wrap;word-break:break-word}
+.fc-sub{margin:10px 0 5px;font-size:11.5px;font-weight:600;color:var(--muted)}
+.fc-list{margin:0;padding-inline-start:20px;font-size:12.5px;line-height:1.9}
+.fc-empty,.fc-error{padding:8px 0;font-size:12.5px;color:var(--muted)}
+.fc-error{color:var(--danger)}
+.fc-table-wrap{overflow-x:auto;border:1px solid var(--grid);border-radius:8px;max-height:320px;overflow-y:auto}
+.fc-table{width:100%;border-collapse:collapse;font-size:12px}
+.fc-table th{position:sticky;top:0;background:var(--plane);text-align:start;padding:6px 9px;font-weight:600;
+  color:var(--ink-2);border-bottom:1px solid var(--grid);white-space:nowrap}
+.fc-table td{padding:6px 9px;border-bottom:1px solid #f1f0ec;white-space:nowrap}
+.fc-more{padding:6px 9px;font-size:11.5px;color:var(--muted)}
+.friendly-dash{padding:13px 15px}
+.fd-summary{padding:10px 13px;margin-bottom:10px;border-radius:9px;background:var(--accent-soft);
+  color:#137a55;font-size:13px;line-height:1.7}
+.fd-source{margin-top:2px;font-size:11.5px;color:var(--muted);line-height:1.6}
 </style>
 </head>
 <body>
@@ -191,6 +218,98 @@ function renderRequests() {
     tr.addEventListener('click', () => openDetail(tr.dataset.id)));
 }
 
+// ---------- friendly ("easy to read") view of what was actually sent/received ----------
+// The raw system-prompt/tools/turns blocks below are untouched — this is an additional,
+// plain-language rendering of the exact same tool calls and final answer, for someone who
+// doesn't want to read raw JSON: the real SQL that ran, the real rows that came back (as
+// an actual table), which files/tables were found, and the dashboard's widgets in plain text.
+function fmtCell(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'number') return v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  return String(v);
+}
+
+function friendlyTable(rows) {
+  if (!rows.length) return `<div class="fc-empty">لم يرجع أي صفوف.</div>`;
+  const cols = Object.keys(rows[0]);
+  const shown = rows.slice(0, 15);
+  return `<div class="fc-table-wrap"><table class="fc-table"><thead><tr>
+      ${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${shown.map(row => `<tr>${cols.map(c => `<td>${esc(fmtCell(row[c]))}</td>`).join('')}</tr>`).join('')}</tbody></table>
+    ${rows.length > shown.length ? `<div class="fc-more">+ ${nf(rows.length - shown.length)} صف إضافي غير معروض هنا (لكنه وصل فعليًا للموديل)</div>` : ''}</div>`;
+}
+
+function friendlyToolCall(t, i) {
+  let input = {}, result = null;
+  try { input = JSON.parse(t.input); } catch {}
+  try { result = JSON.parse(t.result); } catch {}
+
+  if (t.tool === 'query_data') {
+    const rows = Array.isArray(result?.rows) ? result.rows : [];
+    return `<div class="friendly-call">
+      <div class="friendly-call-head"><span class="fc-icon">🗄️</span>
+        <span class="fc-title">استعلام على البيانات — نداء #${i + 1}</span>
+        <span class="fc-badge${t.isError ? ' bad' : ''}">${t.isError ? 'فشل' : `${nf(result?.rowCount ?? rows.length)} صف`}</span>
+      </div>
+      ${input.sql ? `<div class="fc-sql">${esc(input.sql)}</div>` : ''}
+      ${t.isError ? `<div class="fc-error">${esc(t.result)}</div>` : friendlyTable(rows)}
+    </div>`;
+  }
+
+  if (t.tool === 'list_files') {
+    const tables = result?.tables || [];
+    const files = result?.repositoryFiles || [];
+    return `<div class="friendly-call">
+      <div class="friendly-call-head"><span class="fc-icon">📋</span>
+        <span class="fc-title">فحص الجداول والملفات المتاحة — نداء #${i + 1}</span></div>
+      ${tables.length ? `<div class="fc-sub">الجداول (${tables.length})</div>
+        <ul class="fc-list">${tables.map(tb => `<li><b>${esc(tb.table)}</b> — ${tb.columns?.length || 0} عمود
+          ${tb.system ? ` · نظام: ${esc(tb.system)}` : ''}${tb.category ? ` · تصنيف: ${esc(tb.category)}` : ''}</li>`).join('')}</ul>` : ''}
+      ${files.length ? `<div class="fc-sub">ملفات المستودع (${files.length})</div>
+        <ul class="fc-list">${files.map(f => `<li>${esc(f.name)} — ${esc(f.category)}${f.rows ? ` · ${nf(f.rows)} صف` : ''}</li>`).join('')}</ul>` : ''}
+      ${!tables.length && !files.length ? `<div class="fc-empty">لا يوجد جداول أو ملفات متاحة حاليًا.</div>` : ''}
+    </div>`;
+  }
+
+  if (t.tool === 'search_documents') {
+    const hits = Array.isArray(result) ? result : [];
+    return `<div class="friendly-call">
+      <div class="friendly-call-head"><span class="fc-icon">🔎</span>
+        <span class="fc-title">بحث في المستندات — نداء #${i + 1}</span>
+        <span class="fc-badge">${nf(hits.length)} نتيجة</span></div>
+      ${input.query ? `<div class="fc-sql">${esc(input.query)}</div>` : ''}
+      ${hits.length
+        ? `<ul class="fc-list">${hits.map(h => `<li><b>${esc(h.file)}</b>${h.category ? ` (${esc(h.category)})` : ''}
+             — ${esc((h.text || '').slice(0, 140))}${(h.text || '').length > 140 ? '…' : ''}</li>`).join('')}</ul>`
+        : `<div class="fc-empty">لم يُعثر على نتائج مطابقة.</div>`}
+    </div>`;
+  }
+
+  // Fallback for any tool not covered above — shouldn't happen, but never render nothing.
+  return `<div class="friendly-call"><div class="friendly-call-head">
+    <span class="fc-icon">🛠️</span><span class="fc-title">${esc(t.tool)} — نداء #${i + 1}</span>
+    ${t.isError ? '<span class="fc-badge bad">فشل</span>' : ''}</div></div>`;
+}
+
+const WIDGET_TYPE_ICON = { kpi: '🔢', bar: '📊', line: '📈', pie: '🥧', table: '📋' };
+
+function friendlyDashboard(finalResponseText) {
+  let spec;
+  try { spec = JSON.parse(finalResponseText); } catch { return `<div class="fc-empty">تعذّرت قراءة الرد النهائي كـ JSON.</div>`; }
+  if (!spec || typeof spec !== 'object') return '';
+  const widgets = Array.isArray(spec.widgets) ? spec.widgets : [];
+  const filters = Array.isArray(spec.filters) ? spec.filters : [];
+  return `
+    ${spec.summary ? `<div class="fd-summary">${esc(spec.summary)}</div>` : ''}
+    ${widgets.length ? `<div class="fc-sub">عناصر اللوحة (${widgets.length})</div>
+      <ul class="fc-list">${widgets.map(w => `<li>${WIDGET_TYPE_ICON[String(w.type || '').toLowerCase()] || '📦'}
+        <b>${esc(w.title || '')}</b>${w.source ? `<div class="fd-source">${esc(w.source)}</div>` : ''}</li>`).join('')}</ul>`
+      : `<div class="fc-empty">اللوحة رجعت من غير أي عناصر.</div>`}
+    ${filters.length ? `<div class="fc-sub">الفلاتر المقترحة (${filters.length})</div>
+      <ul class="fc-list">${filters.map(f => `<li>${esc(f.label || f.field || '')}${f.options?.length ? ` — ${nf(f.options.length)} قيمة` : ''}</li>`).join('')}</ul>` : ''}
+  `;
+}
+
 async function openDetail(id) {
   el('drawer-title').textContent = 'جارٍ التحميل…';
   el('drawer-body').innerHTML = '';
@@ -210,6 +329,16 @@ async function openDetail(id) {
     <div class="note">المصادر المفعّلة وقت السؤال — ${esc(r.enabledSources || '(غير مسجّل)')}</div>
     ${r.error ? `<div class="note" style="background:var(--danger-soft);border-color:#f3d0d0;color:var(--danger)">${esc(r.error)}</div>` : ''}
     </div>`;
+
+  const friendly = (r.toolCalls.length || r.finalResponse) ? `<details class="block" open>
+      <summary>📖 نظرة مبسّطة على البيانات المرسلة والمستقبلة <span class="tag">للاطّلاع السريع، بدون JSON</span></summary>
+      ${r.toolCalls.map((t, i) => friendlyToolCall(t, i)).join('')}
+      ${r.finalResponse ? `<div class="friendly-call">
+          <div class="friendly-call-head"><span class="fc-icon">📊</span>
+            <span class="fc-title">اللوحة النهائية اللي ظهرت للمستخدم</span></div>
+          <div class="friendly-dash">${friendlyDashboard(r.finalResponse)}</div>
+        </div>` : ''}
+    </details>` : '';
 
   const system = r.systemPrompt
     ? block('الـ System Prompt المرسل للموديل', pretty(r.systemPrompt), `${nf(r.systemPrompt.length)} حرف`) : '';
@@ -239,7 +368,7 @@ ${esc(pretty(t.responseBody || ''))}</pre>
 
   const final = r.finalResponse ? block('الرد النهائي للموديل', pretty(r.finalResponse), '') : '';
 
-  el('drawer-body').innerHTML = meta + system + tools + turns + final;
+  el('drawer-body').innerHTML = meta + friendly + system + tools + turns + final;
 }
 
 const cell = (k, v) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`;
