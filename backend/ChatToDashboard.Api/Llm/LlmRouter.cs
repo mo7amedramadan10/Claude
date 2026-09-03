@@ -44,7 +44,7 @@ public class LlmRouter : IDashboardGenerator
         string? imageDataUrl = null,
         CancellationToken ct = default)
     {
-        var (savedProvider, _) = await _settings.GetAsync(ct);
+        var (savedProvider, _, _) = await _settings.GetAsync(ct);
         var provider = savedProvider is { Length: > 0 } ? savedProvider : _defaultProvider;
 
         IDashboardGenerator generator = provider switch

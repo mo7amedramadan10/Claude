@@ -507,6 +507,12 @@ tr:last-child td{border-bottom:0}
           </label>
           <div id="model-switch-ollama-note" class="model-switch-note"></div>
         </div>
+        <div id="model-switch-openai-row" class="model-switch-ollama-row hidden">
+          <label>موديل GPT (OpenAI)
+            <select id="model-switch-openai-select"></select>
+          </label>
+          <div id="model-switch-openai-note" class="model-switch-note"></div>
+        </div>
         <div id="model-switch-error" class="model-switch-note bad hidden"></div>
         <div class="model-switch-actions">
           <button type="button" id="model-switch-cancel">إلغاء</button>
@@ -2378,8 +2384,13 @@ function renderCurrentUser() {
 // deployment — from the dashboard itself, with no restart. GET/PUT /api/llm-settings;
 // the actual switch takes effect on LlmRouter's very next call (see backend).
 const PROVIDER_LABELS = { Anthropic: 'Claude (Anthropic)', OpenAI: 'GPT (OpenAI)', Ollama: 'الموديل الداخلي (Ollama)' };
+// Providers that offer a model dropdown, and the bits that differ between them.
+const MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'model-switch-ollama-row', selectId: 'model-switch-ollama-select', noteId: 'model-switch-ollama-note', activeKey: 'activeOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'model-switch-openai-row', selectId: 'model-switch-openai-select', noteId: 'model-switch-openai-note', activeKey: 'activeOpenAiModel', bodyKey: 'openAiModel' },
+};
 state.llmSettings = null;
-state.ollamaModels = null;
+state.modelChoices = {};
 
 function closeModelSwitch() { el('model-switch-panel').classList.remove('open'); }
 document.addEventListener('click', e => {
@@ -2421,37 +2432,43 @@ function renderModelSwitchProviders() {
     </label>`).join('');
 
   el('model-switch-providers').querySelectorAll('input').forEach(inp =>
-    inp.addEventListener('change', () => toggleOllamaRow(inp.value)));
-  toggleOllamaRow(s.activeProvider);
+    inp.addEventListener('change', () => toggleModelRow(inp.value)));
+  toggleModelRow(s.activeProvider);
 }
 
-function toggleOllamaRow(provider) {
-  const isOllama = provider === 'Ollama';
-  el('model-switch-ollama-row').classList.toggle('hidden', !isOllama);
-  if (isOllama && !state.ollamaModels) loadOllamaModels();
+function toggleModelRow(provider) {
+  for (const [id, picker] of Object.entries(MODEL_PICKERS)) {
+    const isActive = provider === id;
+    el(picker.rowId).classList.toggle('hidden', !isActive);
+    if (isActive && !state.modelChoices[id]) loadModelChoices(id);
+  }
 }
 
-async function loadOllamaModels() {
-  const select = el('model-switch-ollama-select');
+async function loadModelChoices(providerId) {
+  const picker = MODEL_PICKERS[providerId];
+  const select = el(picker.selectId);
   select.innerHTML = '<option>جارٍ التحميل…</option>';
   try {
-    const res = await fetch('/api/llm-settings/ollama-models');
+    const res = await fetch(`/api/llm-settings/${picker.endpoint}`);
     const data = await res.json();
-    state.ollamaModels = data.models || [];
-    const current = state.llmSettings?.activeModel;
-    select.innerHTML = state.ollamaModels.map(m =>
+    state.modelChoices[providerId] = data.models || [];
+    const current = state.llmSettings?.[picker.activeKey];
+    select.innerHTML = state.modelChoices[providerId].map(m =>
       `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
-    el('model-switch-ollama-note').textContent = data.note || '';
+    el(picker.noteId).textContent = data.note || '';
   } catch {
     select.innerHTML = '';
-    el('model-switch-ollama-note').textContent = 'تعذّر تحميل قائمة الموديلات.';
+    el(picker.noteId).textContent = 'تعذّر تحميل قائمة الموديلات.';
   }
 }
 
 el('model-switch-save').addEventListener('click', async () => {
   const provider = el('model-switch-providers').querySelector('input:checked')?.value;
   if (!provider) return;
-  const ollamaModel = provider === 'Ollama' ? el('model-switch-ollama-select').value : undefined;
+  const picker = MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
 
   const btn = el('model-switch-save');
   btn.disabled = true;
@@ -2459,14 +2476,14 @@ el('model-switch-save').addEventListener('click', async () => {
   try {
     const res = await fetch('/api/llm-settings', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, ollamaModel }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `فشل الحفظ (${res.status})`);
     }
     state.llmSettings.activeProvider = provider;
-    if (ollamaModel) state.llmSettings.activeModel = ollamaModel;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
     el('model-switch-label').textContent = PROVIDER_LABELS[provider] || provider;
     closeModelSwitch();
   } catch (err) {

@@ -11,12 +11,13 @@ public class UpdateLlmSettingsRequest
 {
     public string Provider { get; set; } = "";
     public string? OllamaModel { get; set; }
+    public string? OpenAiModel { get; set; }
 }
 
 /// <summary>
-/// Which LLM answers questions, and (for the internal Ollama gateway) which model —
-/// admin-only, changeable from the dashboard without a restart. See LlmRouter for how a
-/// change here takes effect on the very next question.
+/// Which LLM answers questions, and which model for the providers that support picking one
+/// (Ollama, OpenAI) — admin-only, changeable from the dashboard without a restart. See
+/// LlmRouter for how a change here takes effect on the very next question.
 /// </summary>
 [ApiController]
 [Route("api/llm-settings")]
@@ -43,14 +44,16 @@ public class LlmSettingsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
-        var (savedProvider, savedModel) = await _settings.GetAsync(ct);
+        var (savedProvider, savedOllamaModel, savedOpenAiModel) = await _settings.GetAsync(ct);
         var activeProvider = savedProvider is { Length: > 0 } ? savedProvider : (_configuration["Llm:Provider"] ?? LlmRouter.Anthropic);
-        var activeModel = savedModel is { Length: > 0 } ? savedModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeOllamaModel = savedOllamaModel is { Length: > 0 } ? savedOllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeOpenAiModel = savedOpenAiModel is { Length: > 0 } ? savedOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
 
         return Ok(new
         {
             activeProvider,
-            activeModel,
+            activeOllamaModel,
+            activeOpenAiModel,
             providers = new[]
             {
                 new { id = LlmRouter.Anthropic, label = "Claude (Anthropic)", configured = IsConfigured("Anthropic:ApiKey") },
@@ -83,7 +86,7 @@ public class LlmSettingsController : ControllerBase
             if (!response.IsSuccessStatusCode) throw new HttpRequestException($"status {(int)response.StatusCode}");
 
             var body = await response.Content.ReadAsStringAsync(ct);
-            var names = ExtractModelNames(body);
+            var names = ExtractModelNames(body, "models", "data", "name", "model");
             if (names.Count == 0) throw new InvalidOperationException("unrecognized response shape");
             return Ok(new { models = names, live = true, note = (string?)null });
         }
@@ -93,34 +96,49 @@ public class LlmSettingsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// A curated list from appsettings (OpenAI:AvailableModels) rather than OpenAI's raw
+    /// account-wide GET /v1/models — that endpoint returns every model on the account
+    /// (embeddings, audio, image, dozens of chat variants), which would make the switcher
+    /// noisier, not more useful. This is where a custom/internal model name reached through
+    /// this same OpenAI key/base URL (not a separate gateway) belongs — just add it here.
+    /// </summary>
+    [HttpGet("openai-models")]
+    public IActionResult OpenAiModels()
+    {
+        var models = _configuration.GetSection("OpenAI:AvailableModels").Get<string[]>()
+            is { Length: > 0 } configured ? configured : new[] { _configuration["OpenAI:Model"] ?? "gpt-4o" };
+        return Ok(new { models, live = false, note = (string?)null });
+    }
+
     [HttpPut]
     public async Task<IActionResult> Update([FromBody] UpdateLlmSettingsRequest request, CancellationToken ct)
     {
         if (!LlmRouter.KnownProviders.Contains(request.Provider, StringComparer.OrdinalIgnoreCase))
             return BadRequest(new { error = "مزوّد غير معروف." });
 
-        await _settings.SetAsync(request.Provider, request.OllamaModel, ct);
+        await _settings.SetAsync(request.Provider, request.OllamaModel, request.OpenAiModel, ct);
         return NoContent();
     }
 
     private bool IsConfigured(string key) => _configuration[key]?.Trim() is { Length: > 0 };
 
     /// <summary>
-    /// Parsed leniently since the gateway's exact JSON field names for this endpoint
-    /// weren't confirmed against a live response — tries the shapes the Connection Guide's
-    /// rendered table implies, and gives up (triggering the fallback list) rather than guess wrong.
+    /// Parsed leniently since these third-party response shapes weren't confirmed against a
+    /// live call from here — tries a couple of reasonable array/name-field combinations and
+    /// gives up (triggering the caller's fallback list) rather than guess wrong.
     /// </summary>
-    private static List<string> ExtractModelNames(string json)
+    private static List<string> ExtractModelNames(string json, string arrayKeyA, string arrayKeyB, string nameKeyA, string nameKeyB)
     {
         var names = new List<string>();
         try
         {
             var node = JsonNode.Parse(json);
-            var array = node?["models"]?.AsArray() ?? node?["data"]?.AsArray() ?? node?.AsArray();
+            var array = node?[arrayKeyA]?.AsArray() ?? node?[arrayKeyB]?.AsArray() ?? node?.AsArray();
             if (array is null) return names;
             foreach (var item in array)
             {
-                var name = item?["name"]?.GetValue<string>() ?? item?["model"]?.GetValue<string>();
+                var name = item?[nameKeyA]?.GetValue<string>() ?? item?[nameKeyB]?.GetValue<string>();
                 if (!string.IsNullOrWhiteSpace(name)) names.Add(name);
             }
         }

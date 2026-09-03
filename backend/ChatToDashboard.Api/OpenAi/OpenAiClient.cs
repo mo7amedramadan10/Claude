@@ -20,7 +20,8 @@ public class OpenAiClient : IDashboardGenerator
 
     private readonly HttpClient _http;
     private readonly string _apiKey;
-    private readonly string _model;
+    private readonly string _defaultModel;
+    private readonly ChatToDashboard.Api.Llm.LlmSettingsStore _settings;
     private readonly AnalyticsTools _tools;
     private readonly UsageTracker _usage;
     private readonly ILogger<OpenAiClient> _logger;
@@ -28,6 +29,7 @@ public class OpenAiClient : IDashboardGenerator
     public OpenAiClient(
         HttpClient http,
         IConfiguration configuration,
+        ChatToDashboard.Api.Llm.LlmSettingsStore settings,
         AnalyticsTools tools,
         UsageTracker usage,
         ILogger<OpenAiClient> logger)
@@ -39,7 +41,8 @@ public class OpenAiClient : IDashboardGenerator
             : throw new InvalidOperationException(
                 "OpenAI API key is not configured. " +
                 "Set it with: dotnet user-secrets set \"OpenAI:ApiKey\" \"<key>\"");
-        _model = configuration["OpenAI:Model"] ?? "gpt-4o";
+        _defaultModel = configuration["OpenAI:Model"] ?? "gpt-4o";
+        _settings = settings;
         _tools = tools;
         _usage = usage;
         _logger = logger;
@@ -77,14 +80,15 @@ public class OpenAiClient : IDashboardGenerator
         var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
 
-        var trace = _usage.Begin("OpenAI", _model, question, DescribeSources(context));
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context));
         trace.SetSystemPrompt(_tools.BuildSystemPrompt(context));
         try
         {
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
             ct.ThrowIfCancellationRequested();
-            var response = await CallChatCompletionsAsync(messages, tools, trace, ct);
+            var response = await CallChatCompletionsAsync(model, messages, tools, trace, ct);
 
             var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
@@ -211,11 +215,11 @@ public class OpenAiClient : IDashboardGenerator
     }
 
     private async Task<JsonObject> CallChatCompletionsAsync(
-        JsonArray messages, JsonArray tools, UsageTrace trace, CancellationToken ct)
+        string model, JsonArray messages, JsonArray tools, UsageTrace trace, CancellationToken ct)
     {
         var body = new JsonObject
         {
-            ["model"] = _model,
+            ["model"] = model,
             ["messages"] = messages.DeepClone(),
             ["tools"] = tools.DeepClone(),
         };
