@@ -200,6 +200,7 @@ tr:last-child td{border-bottom:0}
 /* widget size overrides — placed after the type rules above so they win by source order */
 .widget[data-size="small"]{grid-column:span 1}
 .widget[data-size="wide"]{grid-column:span 2}
+.widget[data-size="large"]{grid-column:span 3}
 .widget[data-size="full"]{grid-column:1/-1}
 .add-widget-btn{display:block;margin:18px auto 0;padding:11px 22px;border:1.5px dashed var(--grid);
   border-radius:12px;background:transparent;color:var(--accent);font-weight:600}
@@ -875,7 +876,7 @@ function renderWidgetMenuDefault(menu, w) {
 
 function renderWidgetMenuSize(menu, w) {
   const current = (w.layout && w.layout.size) || (w.type === 'kpi' ? 'small' : 'wide');
-  const opts = [['small', 'صغير'], ['wide', 'عريض (عمودين)'], ['full', 'عرض كامل']];
+  const opts = [['small', 'صغير'], ['wide', 'عريض (عمودين)'], ['large', 'واسع (3 أعمدة)'], ['full', 'عرض كامل']];
   menu.innerHTML = `<div class="menu-label">الحجم</div>` +
     opts.map(([v, l]) => `<button data-size="${v}"${v === current ? ' class="current"' : ''}>${l}</button>`).join('');
   menu.querySelectorAll('[data-size]').forEach(b =>
