@@ -1445,7 +1445,10 @@ function chartConfig(type, labels, values, title) {
       animations: { enabled: false }, // deterministic, snappy for many widgets at once
     },
     dataLabels: { enabled: false },
-    tooltip: { theme: dark ? 'dark' : 'light' },
+    // Raw values can be long floats (e.g. an AVG() result) — fmt() (already used for KPI
+    // values) rounds/abbreviates them ("42.0K") so axis ticks and tooltips stay short instead
+    // of overflowing the card with fifteen decimal places.
+    tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: fmt } },
     colors: isLine ? [THEME.accent] : THEME.palette,
   };
   if (isDonut) {
@@ -1464,7 +1467,7 @@ function chartConfig(type, labels, values, title) {
       labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
       axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
     },
-    yaxis: { labels: { style: { colors: THEME.tickColor } } },
+    yaxis: { labels: { style: { colors: THEME.tickColor }, formatter: fmt } },
     grid: { borderColor: THEME.gridColor, strokeDashArray: 0 },
     fill: isLine ? { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: .35, opacityTo: .05 } } : { opacity: 1 },
     stroke: isLine ? { curve: 'smooth', width: 2 } : { width: 0 },
