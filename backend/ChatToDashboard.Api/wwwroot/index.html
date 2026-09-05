@@ -36,7 +36,7 @@
 }
 /* Light mode — same tokens, same accent hue (darkened for contrast on white), inverted
    surfaces. Toggled via the 🌙/☀️ button; JS mirrors this exact palette in THEMES.light
-   so charts (drawn on canvas, not styleable by CSS) match it too. */
+   so charts (drawn as inline SVG by ApexCharts, not styleable by CSS) match it too. */
 :root[data-theme="light"]{
   --bg:#F5F7FA; --surface:#FFFFFF; --plane:#EEF1F6; --ink:#10151F; --ink-2:#565F6D; --muted:#565F6D;
   --grid:#E1E5EC; --line:#E1E5EC; --accent:#0E9F78; --accent-soft:#0E9F7818; --danger:#D3402F; --amber:#B8730A;
@@ -196,7 +196,7 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .src-lbl{display:block;margin-bottom:2px;font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)}
 .kpi .value{font-family:var(--display);font-size:34px;font-weight:700;color:var(--accent)}
 .kpi-label{color:var(--ink-2)}
-.widget canvas{max-height:230px}
+.widget .chart-holder{height:230px}
 .chart-note{font-size:11px;color:var(--muted);text-align:center}
 .tbl-wrap{max-height:340px;overflow:auto;border:1px solid var(--grid);border-radius:10px}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -674,8 +674,9 @@ tr:last-child td{border-bottom:0}
 </div>
 
 <!-- Vendored locally (wwwroot/lib/) rather than a CDN — the app is meant to work with
-     no internet access at all. See README for how it's fetched/updated. -->
-<script src="lib/chart.umd.min.js"></script>
+     no internet access at all. See README for how it's fetched/updated. Pinned to 5.0.0,
+     the last MIT-licensed release (5.1+ requires a paid license above $2M/yr revenue). -->
+<script src="lib/apexcharts.min.js"></script>
 <script>
 const el = id => document.getElementById(id);
 const state = {
@@ -735,21 +736,20 @@ const THEMES = {
 };
 // Reassigned by applyTheme() below — every chart component reads THEME.x at render
 // time, so switching this and rebuilding the dashboard is enough to re-theme charts
-// too (canvas pixels are static once drawn; CSS alone can't recolor them).
+// too (an already-rendered chart's SVG colors are static once drawn; CSS alone can't
+// recolor them — ApexCharts has no global defaults object, so THEME is read fresh by
+// chartConfig() on every rebuild instead).
 let THEME = THEMES[document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'];
-Chart.defaults.font.family = THEME.fontFamily;
-Chart.defaults.color = THEME.tickColor;
 
 function applyTheme(name) {
   name = name === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', name);
   THEME = THEMES[name];
-  Chart.defaults.color = THEME.tickColor;
   try { localStorage.setItem('chatToDashboardTheme', name); } catch {}
   const btn = el('theme-toggle');
   btn.textContent = name === 'light' ? '🌙' : '☀️';
   btn.title = name === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
-  // Existing charts were painted with the old theme's colors baked into their canvas —
+  // Existing charts were painted with the old theme's colors baked into their SVG —
   // rebuild the dashboard so anything already on screen reflects the new theme too.
   if (state.dashboard) renderDashboard();
 }
@@ -830,9 +830,15 @@ document.addEventListener('click', closePopovers);
 // ---------- widget components ----------
 // Every widget renders through exactly one of these five, chosen by validated `type`
 // alone — never by its data volume or title length. Chart components share one
-// mountChart() so the Chart.js config object (palette, grid/tick color, font) is built
-// in exactly one place.
+// mountChart() so the ApexCharts options object (palette, grid/tick color, font) is
+// built in exactly one place.
 let chartInstances = [];
+// ApexCharts measures its container's real width/height at construction time, so a
+// chart created before its widget card is attached to the document renders at 0x0.
+// buildWidget() runs for every widget *before* the grid holding them is appended to
+// #dash, so mountChart() only queues {card, holder, options} here; renderDashboard()
+// instantiates them right after the grid is actually in the DOM.
+let pendingCharts = [];
 
 function widgetShell(w, extraClass) {
   const card = document.createElement('div');
@@ -1417,45 +1423,67 @@ function TableCard(w) {
 }
 
 // One shared config builder — the only place a chart's colors/fonts are set — passed
-// to Chart.js verbatim so its own defaults never leak through.
+// to ApexCharts verbatim so its own defaults never leak through. Donut and xy (bar/line)
+// options are built as two separate object literals rather than one with ternaries that
+// null out xaxis/yaxis/grid for a donut — ApexCharts' internal option merge chokes on an
+// explicit `undefined` value for those keys (throws inside its own constructor), so a
+// donut's config must omit them entirely instead.
 function chartConfig(type, labels, values, title) {
   const isLine = type === 'line';
-  return {
-    type: type === 'pie' ? 'doughnut' : type,
-    data: {
+  const isDonut = type === 'pie'; // rendered as a donut, same choice the old Chart.js config made
+  // ApexCharts only applies a fill *under the curve* (translucent gradient, matching the old
+  // Chart.js look) to chart.type "area" — asking a plain "line" for a gradient fill instead
+  // makes it apply that same low-opacity gradient to the stroke itself, rendering the line
+  // almost invisible against the background.
+  const apexType = isDonut ? 'donut' : (isLine ? 'area' : type);
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const base = {
+    chart: {
+      type: apexType, height: '100%', width: '100%',
+      fontFamily: THEME.fontFamily, foreColor: THEME.tickColor,
+      background: 'transparent', toolbar: { show: false },
+      animations: { enabled: false }, // deterministic, snappy for many widgets at once
+    },
+    dataLabels: { enabled: false },
+    tooltip: { theme: dark ? 'dark' : 'light' },
+    colors: isLine ? [THEME.accent] : THEME.palette,
+  };
+  if (isDonut) {
+    return {
+      ...base,
+      series: values,
       labels,
-      datasets: [{
-        label: title,
-        data: values,
-        backgroundColor: isLine ? THEME.accent + '22' : THEME.palette,
-        borderColor: isLine ? THEME.accent : THEME.palette,
-        borderWidth: isLine ? 2 : 0,
-        fill: isLine,
-        tension: .35,
-        borderRadius: type === 'bar' ? 6 : 0,
-      }],
+      legend: { labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
+    };
+  }
+  return {
+    ...base,
+    series: [{ name: title, data: values }],
+    xaxis: {
+      categories: labels,
+      labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
+      axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
     },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: type === 'pie', labels: { color: THEME.tickColor, font: { family: THEME.fontFamily } } } },
-      scales: type === 'pie' ? {} : {
-        x: { ticks: { color: THEME.tickColor, font: { family: THEME.fontFamily, size: 11 } }, grid: { color: THEME.gridColor } },
-        y: { ticks: { color: THEME.tickColor }, grid: { color: THEME.gridColor } },
-      },
-    },
+    yaxis: { labels: { style: { colors: THEME.tickColor } } },
+    grid: { borderColor: THEME.gridColor, strokeDashArray: 0 },
+    fill: isLine ? { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: .35, opacityTo: .05 } } : { opacity: 1 },
+    stroke: isLine ? { curve: 'smooth', width: 2 } : { width: 0 },
+    plotOptions: apexType === 'bar' ? { bar: { borderRadius: 6, columnWidth: '55%' } } : {},
+    legend: { show: false },
   };
 }
 
 function mountChart(card, type, labels, values, title, truncated) {
-  const canvas = document.createElement('canvas');
-  card.appendChild(canvas);
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
   if (truncated > 0) {
     const note = document.createElement('div');
     note.className = 'chart-note';
     note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
     card.appendChild(note);
   }
-  chartInstances.push(new Chart(canvas.getContext('2d'), chartConfig(type, labels, values, title)));
+  pendingCharts.push({ card, holder, options: chartConfig(type, labels, values, title) });
 }
 
 function buildXyChart(w, type) {
@@ -1506,6 +1534,7 @@ function renderDashboard() {
 
   chartInstances.forEach(c => c.destroy());
   chartInstances = [];
+  pendingCharts = [];
 
   if (!d) {
     el.dash.innerHTML = state.loading
@@ -1526,6 +1555,17 @@ function renderDashboard() {
     grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
     widgets.forEach(w => grid.appendChild(buildWidget(w)));
     el.dash.appendChild(grid);
+
+    // Only now is every widget's chart-holder actually laid out with real dimensions —
+    // instantiate the charts queued by mountChart() and keep each render's promise so
+    // the PPTX export can await it before capturing the SVG (see widgetToPptxInput).
+    pendingCharts.forEach(({ card, holder, options }) => {
+      const chart = new ApexCharts(holder, options);
+      card.__apexChart = chart;
+      card.__apexRendered = chart.render();
+      chartInstances.push(chart);
+    });
+    pendingCharts = [];
   }
   if (editable && state.editMode) el.dash.appendChild(buildAddWidgetButton());
 }
@@ -1686,21 +1726,29 @@ function buildAddWidgetButton() {
 el('btn-export-pdf').addEventListener('click', () => window.print());
 
 // PowerPoint: KPI values and tables travel as plain data so they land as native,
-// still-editable PowerPoint shapes; bar/line/pie charts are already drawn on a
-// <canvas> by Chart.js, so each one's pixels are read directly with toDataURL() — no
-// server-side charting code, and no SVG round trip needed. Chart.js canvases are
-// transparent, so it's composited onto white first — the PPTX slide is white either way.
-function canvasToPngDataUrl(canvas) {
-  const flat = document.createElement('canvas');
-  flat.width = canvas.width; flat.height = canvas.height;
-  const ctx = flat.getContext('2d');
+// still-editable PowerPoint shapes; bar/line/pie charts are rendered as inline SVG by
+// ApexCharts, which can export its own current state to a PNG data URI (dataURI()) —
+// no server-side charting code, and no manual SVG-to-canvas work needed. That PNG is
+// transparent wherever the chart is, so it's composited onto white first — the PPTX
+// slide is white either way.
+async function apexChartToPngDataUrl(chart) {
+  const { imgURI } = await chart.dataURI({ scale: 2 });
+  const img = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('chart image decode failed'));
+    image.src = imgURI;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width; canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, flat.width, flat.height);
-  ctx.drawImage(canvas, 0, 0);
-  return flat.toDataURL('image/png');
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+  return canvas.toDataURL('image/png');
 }
 
-function widgetToPptxInput(w, card) {
+async function widgetToPptxInput(w, card) {
   const base = { type: (w.type || '').toLowerCase(), title: w.title || '', source: w.source || '' };
   if (base.type === 'kpi') {
     const e = Array.isArray(w.data) ? w.data[0] : null;
@@ -1712,9 +1760,12 @@ function widgetToPptxInput(w, card) {
     const cols = rows.length ? Object.keys(rows[0]) : [];
     return { ...base, columns: cols, rows: rows.map(r => cols.map(c => String(r[c] ?? ''))) };
   }
-  const canvas = card?.querySelector('canvas');
-  if (!canvas) return base;
-  try { return { ...base, image: canvasToPngDataUrl(canvas) }; }
+  const chart = card?.__apexChart;
+  if (!chart) return base;
+  try {
+    await card.__apexRendered; // wait for the initial paint before capturing its SVG
+    return { ...base, image: await apexChartToPngDataUrl(chart) };
+  }
   catch { return base; }
 }
 

@@ -13,8 +13,8 @@ spec that the built-in UI renders as charts.
 
 Everything is **one ASP.NET Core project**: the API and the UI ship together and are served
 from the same URL. The UI is plain HTML/CSS/JavaScript — no npm, no build step. Its one
-dependency, Chart.js, is vendored locally (`wwwroot/lib/`) rather than pulled from a CDN, so
-the whole thing still works on a machine with no internet access.
+dependency, ApexCharts, is vendored locally (`wwwroot/lib/`) rather than pulled from a CDN,
+so the whole thing still works on a machine with no internet access.
 
 Because the data lives in a central SQL Server (local or Azure SQL), multiple users on
 different machines all query the same up-to-date data through the app — no one needs local
@@ -274,11 +274,11 @@ Two buttons appear above any generated dashboard:
   the print dialog is the export. No server round trip.
 - **تصدير PowerPoint** — downloads a real, editable `.pptx`: a title slide (question +
   summary) followed by one slide per widget. KPI values and tables are sent as plain data and
-  land as native, still-editable PowerPoint text/tables; bar/line/pie widgets are already
-  drawn on a `<canvas>` by Chart.js, so each one's pixels are read directly
-  (`canvas.toDataURL()`) and only that image is sent — `POST /api/export/pptx` has no
-  charting code of its own, `Export/PptxBuilder.cs` just assembles the OOXML package
-  (`DocumentFormat.OpenXml`) from a title, a summary, and that per-widget data.
+  land as native, still-editable PowerPoint text/tables; bar/line/pie widgets are rendered as
+  inline SVG by ApexCharts, which can export its own current state to a PNG (`chart.dataURI()`)
+  and only that image is sent — `POST /api/export/pptx` has no charting code of its own,
+  `Export/PptxBuilder.cs` just assembles the OOXML package (`DocumentFormat.OpenXml`) from a
+  title, a summary, and that per-widget data.
 
 ## Dashboard design system
 
@@ -298,15 +298,18 @@ model produced it:
   `data-theme` attribute on `<html>`, which switches which block of `:root` custom properties
   is active; the choice is remembered in `localStorage` and applied by an inline script in
   `<head>` before the stylesheet paints, so there's no flash of the wrong theme on load. CSS
-  can't recolor an already-drawn `<canvas>`, so `applyTheme()` also rebuilds any dashboard
+  can't recolor an already-drawn chart's SVG, so `applyTheme()` also rebuilds any dashboard
   that's currently on screen (`renderDashboard()`) so its charts pick up the new palette too.
   The chart color palette itself is identical in both modes (only grid/tick/accent colors
   change) so a category means the same color regardless of theme.
 - **Five fixed widget components** — `KpiCard`, `BarChartCard`/`LineChartCard` (sharing
   `buildXyChart`), `PieChartCard`, `TableCard` — and every widget routes through exactly one of
-  them, chosen by `buildWidget()`. Chart components build their Chart.js config through one
+  them, chosen by `buildWidget()`. Chart components build their ApexCharts options through one
   shared `chartConfig()`, so the palette/grid/tick/font are set in exactly one place rather
-  than per chart instance.
+  than per chart instance. `mountChart()` only *queues* a chart (in `pendingCharts`); the
+  actual `new ApexCharts(...)` construction happens in `renderDashboard()` right after the
+  widget grid is attached to the document — ApexCharts measures its container's real size at
+  construction time, so building it any earlier renders at 0×0.
 - **Strict whitelist** — `WIDGET_TYPES = ['kpi','bar','line','pie','table']`. A type outside
   that list (which in practice the backend already rejects — see `DashboardWidget.Validate()`
   in `Models/DashboardSpec.cs` — but a saved History/Share entry could in principle carry
@@ -316,9 +319,12 @@ model produced it:
   asks the model to do, a bar/line/pie chart never renders more than 15 points; anything past
   that is folded into one summed "+N more" bucket rather than an unreadably dense chart.
 
-`wwwroot/lib/chart.umd.min.js` is Chart.js vendored locally rather than pulled from a CDN
-(MIT-licensed). To update it: `npm pack chart.js@<version>`, extract the tarball, and copy
-`package/dist/chart.umd.js` over that file.
+`wwwroot/lib/apexcharts.min.js` is ApexCharts vendored locally rather than pulled from a CDN.
+**Pinned to 5.0.0** — the last MIT-licensed release; 5.1+ switched to a dual license that
+requires a paid commercial license once the organization using it clears $2M/year in revenue
+(see the package's own `LICENSE`), so do not casually bump this past 5.0.0. To update within
+that constraint: `npm pack apexcharts@5.0.0`, extract the tarball, and copy
+`package/dist/apexcharts.min.js` over that file.
 
 ## Refreshing data
 
