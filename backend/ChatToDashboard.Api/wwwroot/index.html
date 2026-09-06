@@ -201,6 +201,13 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .src-btn{width:19px;height:19px;padding:0;border:1px solid var(--accent);border-radius:50%;
   background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1}
 .src-btn:hover,.src-btn.active{background:var(--accent);color:#06251C}
+/* Deliberately the amber token, not the accent — ties the button to the forecast series'
+   own color in the chart (see forecastChartConfig()) so the whole feature reads as one thing. */
+.forecast-btn{padding:4px 10px;border:1px solid var(--amber);border-radius:999px;
+  background:transparent;color:var(--amber);font-size:11px;white-space:nowrap}
+.forecast-btn:hover{background:var(--amber);color:#241a00}
+.forecast-btn:disabled{opacity:.6;cursor:progress}
+.forecast-note{font-size:11px;color:var(--amber);line-height:1.6;text-align:center}
 .src-pop{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:20;width:min(330px,90%);
   padding:12px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;
   box-shadow:var(--shadow);font-size:12.5px;line-height:1.7}
@@ -214,6 +221,10 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
   text-shadow:0 0 10px var(--accent-soft),0 0 28px var(--accent-soft)}
 .kpi-label{color:var(--ink-2)}
 .widget .chart-holder{height:230px}
+/* A forecast chart also renders a legend (3 series) below its plot, which the plain 230px
+   box has no room for — ApexCharts then overflows past the box, colliding with .forecast-note
+   right under it. See the "chart container excludes its own axis/legend band" anti-pattern. */
+.widget .chart-holder.chart-holder-forecast{height:280px}
 .chart-note{font-size:11px;color:var(--muted);text-align:center}
 .tbl-wrap{max-height:340px;overflow:auto;border:1px solid var(--grid);border-radius:10px}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -892,6 +903,11 @@ function widgetShell(w, extraClass) {
       if (!open) { pop.classList.add('open'); srcBtn.classList.add('active'); }
     });
   }
+  // Forecasting is opt-in per widget, never automatic — only offered on a bar/line widget
+  // with enough historical points for a regression to mean anything.
+  if ((w.type === 'bar' || w.type === 'line') && Array.isArray(w.data) && w.data.length >= 3) {
+    head.appendChild(buildForecastButton(w));
+  }
   card.appendChild(head);
 
   if (getActiveFilterTables().size && (!w.query || !getActiveFilterTables().has(w.query.table))) {
@@ -909,6 +925,46 @@ function widgetShell(w, extraClass) {
     enableWidgetDragDrop(card, w);
   }
   return card;
+}
+
+// ---------- forecasting ----------
+// A real statistical forecast (POST /api/widgets/forecast — ordinary least-squares linear
+// regression server-side, see ForecastService.cs), never an LLM guess: this button works on
+// whatever data the chart already has client-side, so it's identical for a wizard-built widget
+// and a chat-authored one. Strictly opt-in per widget — nothing here ever fires on its own.
+function buildForecastButton(w) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'forecast-btn';
+  const setLabel = () => { btn.textContent = w.forecast ? '✕ إخفاء التوقع' : '🔮 توقّع الأشهر الجاية'; };
+  setLabel();
+  btn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (w.forecast) {
+      delete w.forecast;
+      renderDashboard(); scheduleAutosave();
+      return;
+    }
+    const { rows, xKey, yKey } = keysFor(w);
+    const values = rows.map(r => num(r[yKey]));
+    btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ التوقع…';
+    try {
+      const res = await fetch('/api/widgets/forecast', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labels: rows.map(r => String(r[xKey])), values, periods: 3 }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `تعذّر التوقع (${res.status})`);
+      }
+      w.forecast = await res.json();
+      renderDashboard(); scheduleAutosave();
+    } catch (err) {
+      alert('تعذّر حساب التوقع: ' + err.message);
+      btn.disabled = false; btn.textContent = original;
+    }
+  });
+  return btn;
 }
 
 // ---------- widget editor: menu, drag/drop, undo/redo ----------
@@ -1586,12 +1642,105 @@ function mountChart(card, type, labels, values, title, truncated) {
   pendingCharts.push({ card, holder, options: chartConfig(type, labels, values, title) });
 }
 
+// Builds a mixed-series ApexCharts config for a bar/line widget extended with a forecast.
+// The real historical marks render exactly as chartConfig() would; the forecast is ALWAYS a
+// dashed line in a distinct color (never the historical series' own color, never solid) with
+// a shaded confidence-interval band behind it and a "متوقّع" legend entry — the mandatory
+// visual separation the forecasting feature requires, regardless of whether the base widget
+// is a bar or a line chart.
+function forecastChartConfig(type, labels, values, forecast, title) {
+  const isLine = type === 'line';
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const histLen = values.length;
+  const fLen = forecast.values.length;
+  const categories = labels.concat(forecast.labels);
+
+  // Padded with nulls over the forecast span so it doesn't extend past the real data.
+  const historicalData = values.concat(new Array(fLen).fill(null));
+  // Each of forecast/upper/lower starts at the last historical point (so its dashed line
+  // visually continues from the real data rather than floating disconnected), null before that.
+  const bridge = new Array(Math.max(0, histLen - 1)).fill(null).concat([values[histLen - 1]]);
+  const forecastData = bridge.concat(forecast.values);
+  const upperData = bridge.concat(forecast.upper);
+  const lowerData = bridge.concat(forecast.lower);
+
+  // The y-axis is scaled to the *real* points (historical + forecast), not the confidence
+  // bounds — a short/noisy series can produce a bound so wide (correctly — that's the point of
+  // flagging low confidence) that letting it drive the axis squashes the actual trend into an
+  // unreadable sliver. The bound lines simply run off the top/bottom of the chart when they
+  // exceed this range, which itself reads as "very uncertain" rather than hiding that fact.
+  const realPoints = values.concat(forecast.values);
+  const dataMin = Math.min(...realPoints), dataMax = Math.max(...realPoints);
+  const padding = Math.max((dataMax - dataMin) * 0.3, Math.abs(dataMax) * 0.1, 1);
+
+  // A shaded band would be the more standard way to show this, but ApexCharts' rangeArea
+  // series type (verified against this exact vendored version) simply doesn't render when
+  // mixed into a combo chart with a bar/line — it silently produces an empty series, tested
+  // both against a bar-based and a line-based combo. Two dashed bound lines, fainter/thinner
+  // than the forecast line itself, convey the same thing (a range, not a single confident
+  // number, visibly wider with sparse history) without relying on a combination this chart
+  // library doesn't actually support yet.
+  const forecastColor = THEME.palette[1]; // amber — deliberately not the historical series' color
+  return {
+    __isForecast: true, // opts this chart out of the 3D bar-extrusion pass (see renderDashboard)
+    chart: {
+      type: isLine ? 'line' : 'bar', height: '100%', width: '100%',
+      fontFamily: THEME.fontFamily, foreColor: THEME.tickColor, background: 'transparent',
+      toolbar: { show: false },
+      animations: { enabled: true, easing: 'easeout', speed: 450, animateGradually: { enabled: true, delay: 60 } },
+    },
+    series: [
+      { name: title, type: isLine ? 'line' : 'bar', data: historicalData },
+      { name: 'الحد الأعلى للتوقع', type: 'line', data: upperData },
+      { name: 'الحد الأدنى للتوقع', type: 'line', data: lowerData },
+      { name: 'متوقّع', type: 'line', data: forecastData },
+    ],
+    colors: [THEME.palette[0], forecastColor, forecastColor, forecastColor],
+    fill: { opacity: [1, 1, 1, 1] },
+    stroke: { curve: 'smooth', width: [isLine ? 2 : 0, 1.5, 1.5, 3], dashArray: [0, 3, 3, 6] },
+    markers: { size: 0 },
+    plotOptions: isLine ? {} : { bar: { borderRadius: 8, columnWidth: '55%' } },
+    dataLabels: { enabled: false },
+    xaxis: {
+      categories,
+      labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
+      axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
+    },
+    yaxis: { min: dataMin - padding, max: dataMax + padding, labels: { style: { colors: THEME.tickColor }, formatter: fmt } },
+    grid: { borderColor: THEME.gridColor, strokeDashArray: 0 },
+    legend: { show: true, labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
+    tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: fmt } },
+  };
+}
+
+function mountForecastChart(card, type, labels, values, forecast, title, truncated) {
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder chart-holder-forecast';
+  card.appendChild(holder);
+  if (truncated > 0) {
+    const note = document.createElement('div');
+    note.className = 'chart-note';
+    note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
+    card.appendChild(note);
+  }
+  const methodLabel = forecast.method === 'linear_regression_seasonal' ? 'انحدار خطي مع تعديل موسمي' : 'انحدار خطي';
+  const noteEl = document.createElement('div');
+  noteEl.className = 'forecast-note';
+  noteEl.textContent = `🔮 توقّع إحصائي (${methodLabel}${typeof forecast.r2 === 'number' ? `، R²=${forecast.r2}` : ''})` +
+    (forecast.note ? ` — ${forecast.note}` : '');
+  card.appendChild(noteEl);
+  pendingCharts.push({ card, holder, options: forecastChartConfig(type, labels, values, forecast, title) });
+}
+
 function buildXyChart(w, type) {
   const card = widgetShell(w, 'chart');
   const { rows: allRows, xKey, yKey } = keysFor(w);
   if (!allRows.length) return emptyBody(card);
   const { rows, truncated } = capRows(allRows, xKey, yKey);
-  mountChart(card, type, rows.map(r => r[xKey]), rows.map(r => num(r[yKey])), w.title, truncated);
+  const labels = rows.map(r => r[xKey]);
+  const values = rows.map(r => num(r[yKey]));
+  if (w.forecast) mountForecastChart(card, type, labels, values, w.forecast, w.title, truncated);
+  else mountChart(card, type, labels, values, w.title, truncated);
   return card;
 }
 const BarChartCard = w => buildXyChart(w, 'bar');
@@ -1660,12 +1809,18 @@ function renderDashboard() {
     // instantiate the charts queued by mountChart() and keep each render's promise so
     // the PPTX export can await it before capturing the SVG (see widgetToPptxInput).
     pendingCharts.forEach(({ card, holder, options }) => {
+      // chart.height:'100%' (set in chartConfig()/forecastChartConfig()) doesn't reliably
+      // resolve for a mixed-series chart (a forecast's bar/line + rangeArea combo) — it falls
+      // back near ApexCharts' own ~350px default regardless of the container, overflowing
+      // .chart-holder and colliding with whatever sits below it. Passing the container's own
+      // real measured height works for every chart shape, so it replaces '100%' universally.
+      options.chart.height = holder.clientHeight;
       // In 3D view, extrude bar charts with a fake top/side face once the entrance animation
       // actually finishes — measuring bar geometry any earlier (mid-animation) would extrude
       // from a not-yet-full-height bar. A donut/line chart needs no such per-mark treatment:
       // once the whole card tilts (see .dim-3d in the CSS), a flat circle/curve already reads
       // as sitting on a 3D plane on its own.
-      if (state.view3d && options.chart.type === 'bar') {
+      if (state.view3d && options.chart.type === 'bar' && !options.__isForecast) {
         const baseColor = options.colors[0];
         options.chart = { ...options.chart, events: { animationEnd: () => apply3dBarExtrusion(holder.querySelector('svg'), baseColor) } };
       }
@@ -1901,7 +2056,7 @@ async function widgetToPptxInput(w, card) {
     // Re-applied defensively (it's idempotent) rather than relying solely on the
     // animationEnd hook in renderDashboard() — exporting fast enough to beat that event
     // would otherwise capture bars with no extrusion yet.
-    if (state.view3d && base.type === 'bar') apply3dBarExtrusion(svg, THEME.palette[0]);
+    if (state.view3d && base.type === 'bar' && !w.forecast) apply3dBarExtrusion(svg, THEME.palette[0]);
     return { ...base, image: await svgElementToPngDataUrl(svg) };
   }
   catch { return base; }

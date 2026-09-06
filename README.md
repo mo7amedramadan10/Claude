@@ -326,6 +326,31 @@ requires a paid commercial license once the organization using it clears $2M/yea
 that constraint: `npm pack apexcharts@5.0.0`, extract the tarball, and copy
 `package/dist/apexcharts.min.js` over that file.
 
+## Forecasting
+
+A predicted future value is always computed by a real statistic — ordinary least-squares
+linear regression, with an additive seasonal adjustment when the series covers at least two
+full cycles (`Widgets/ForecastService.cs`) — never guessed by the model or the UI. Two ways to
+get one, both going through that same service:
+
+- **The "🔮 توقّع الأشهر الجاية" button** on any bar/line widget (`POST /api/widgets/forecast`
+  in `WidgetsController.cs`) works on whatever data the chart already has client-side — no SQL,
+  no LLM call, identical for a wizard-built widget or a chat-authored one.
+- **The `forecast_data` tool** (`AnalyticsTools.cs`, alongside `query_data`) lets the model
+  answer a chat-typed forecast request with real numbers: it runs the model's own two-column
+  time-series SQL, then hands the value column to `ForecastService`.
+
+Either way the result lands in a widget's `forecast` field (`Models/DashboardSpec.cs`) —
+labels/values/lower/upper/method/note/r2 — kept strictly separate from the widget's real `data`.
+The frontend (`forecastChartConfig()` in `index.html`) renders it as a dashed continuation in a
+different color from the historical series, with the forecast's own legend entry, never blended
+in as if it were an observed value. The confidence interval itself widens automatically for a
+shorter or noisier historical series (the standard OLS prediction-interval formula) — a short
+enough series also gets an explicit note saying so. It renders as two dashed bound lines rather
+than a shaded band: ApexCharts' `rangeArea` series type (verified against the exact vendored
+5.0.0) silently fails to render when mixed into a combo chart with a bar/line series, so a
+shaded fill wasn't a reliable option here.
+
 ## Refreshing data
 
 When files in the data folder change, reload all staging tables without restarting:

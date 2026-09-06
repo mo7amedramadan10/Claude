@@ -1,8 +1,29 @@
+using System.Text.Json.Serialization;
 using ChatToDashboard.Api.Users;
 using ChatToDashboard.Api.Widgets;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
+
+/// <summary>Body of POST /api/widgets/forecast.</summary>
+public class ForecastWidgetRequest
+{
+    [JsonPropertyName("labels")] public List<string> Labels { get; set; } = new();
+    [JsonPropertyName("values")] public List<double> Values { get; set; } = new();
+    [JsonPropertyName("periods")] public int Periods { get; set; } = 3;
+    [JsonPropertyName("seasonLength")] public int? SeasonLength { get; set; }
+}
+
+public class ForecastWidgetResponse
+{
+    [JsonPropertyName("method")] public string Method { get; set; } = "";
+    [JsonPropertyName("r2")] public double R2 { get; set; }
+    [JsonPropertyName("labels")] public List<string> Labels { get; set; } = new();
+    [JsonPropertyName("values")] public List<double> Values { get; set; } = new();
+    [JsonPropertyName("lower")] public List<double> Lower { get; set; } = new();
+    [JsonPropertyName("upper")] public List<double> Upper { get; set; } = new();
+    [JsonPropertyName("note")] public string? Note { get; set; }
+}
 
 /// <summary>
 /// The deterministic "Add Widget" / edit-widget path: a structured query (metric,
@@ -46,6 +67,45 @@ public class WidgetsController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// The "🔮 توقّع الأشهر الجاية" button: a real statistical forecast (see ForecastService)
+    /// computed directly on whatever data a chart already has client-side — works identically
+    /// for a wizard-built widget or a chat-authored one, since neither the original SQL nor an
+    /// LLM call is needed, just the numbers already on screen.
+    /// </summary>
+    [HttpPost("forecast")]
+    public async Task<IActionResult> Forecast([FromBody] ForecastWidgetRequest request, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+
+        if (request.Values is null || request.Values.Count < 2)
+            return BadRequest(new { error = "محتاج نقطتين بيانات على الأقل عشان نقدر نتوقع." });
+
+        var periods = Math.Clamp(request.Periods <= 0 ? 3 : request.Periods, 1, 12);
+        ForecastOutcome outcome;
+        try
+        {
+            outcome = ForecastService.Forecast(request.Values, periods, request.SeasonLength);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+
+        var labels = Enumerable.Range(1, periods).Select(h => $"توقّع +{h}").ToList();
+        return Ok(new ForecastWidgetResponse
+        {
+            Method = outcome.Method,
+            R2 = outcome.RSquared,
+            Note = outcome.Note,
+            Labels = labels,
+            Values = outcome.Points.Select(p => Math.Round(p.Value, 2)).ToList(),
+            Lower = outcome.Points.Select(p => Math.Round(p.Lower, 2)).ToList(),
+            Upper = outcome.Points.Select(p => Math.Round(p.Upper, 2)).ToList(),
+        });
     }
 
     /// <summary>Real DISTINCT values for one column — the only legitimate filter-option source.</summary>

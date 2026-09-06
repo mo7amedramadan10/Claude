@@ -53,6 +53,14 @@ public class DashboardSpec
                 if (string.IsNullOrWhiteSpace(w.Source))
                     errors.Add($"widgets[{i}].source is required: two sentences — where the data came " +
                                "from, then how it was calculated.");
+                if (w.Forecast is not null)
+                {
+                    var f = w.Forecast;
+                    var n = f.Labels?.Count ?? 0;
+                    if (n == 0 || f.Values?.Count != n || f.Lower?.Count != n || f.Upper?.Count != n)
+                        errors.Add($"widgets[{i}].forecast: labels/values/lower/upper must be non-empty " +
+                                   "arrays of the same length.");
+                }
             }
         }
 
@@ -138,4 +146,25 @@ public class DashboardWidget
     /// </summary>
     [JsonPropertyName("source")]
     public string? Source { get; set; }
+
+    /// <summary>
+    /// A statistically-computed forecast extending this widget's real historical <see
+    /// cref="Data"/> — set by the model only via the forecast_data tool result (never invented),
+    /// or attached client-side by the "🔮 توقّع الأشهر الجاية" button. Absent for an ordinary
+    /// widget. The frontend renders this as a visually distinct dashed/shaded continuation, never
+    /// blended into <see cref="Data"/> as if it were an observed value.
+    /// </summary>
+    [JsonPropertyName("forecast")]
+    public WidgetForecast? Forecast { get; set; }
+}
+
+public class WidgetForecast
+{
+    [JsonPropertyName("labels")] public List<string> Labels { get; set; } = new();
+    [JsonPropertyName("values")] public List<double> Values { get; set; } = new();
+    [JsonPropertyName("lower")] public List<double> Lower { get; set; } = new();
+    [JsonPropertyName("upper")] public List<double> Upper { get; set; } = new();
+    [JsonPropertyName("method")] public string? Method { get; set; }
+    [JsonPropertyName("note")] public string? Note { get; set; }
+    [JsonPropertyName("r2")] public double? R2 { get; set; }
 }

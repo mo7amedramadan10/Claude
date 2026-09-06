@@ -6,6 +6,7 @@ using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Repository;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Widgets;
 using Dapper;
 using Microsoft.Extensions.Options;
 
@@ -151,6 +152,44 @@ public class AnalyticsTools
                     },
                     ["required"] = new JsonArray { "sql" },
                 }),
+            new(
+                "forecast_data",
+                $"Runs a read-only SELECT query ({_db.DialectName} dialect) that returns exactly two columns " +
+                "— a chronological period label, then a numeric value, ordered oldest-to-newest — and computes " +
+                "a REAL statistical forecast (ordinary least-squares linear regression, with an additive " +
+                "seasonal adjustment when the series covers at least two full seasonal cycles) for the next " +
+                "periodsAhead periods, including a ~95% prediction interval. Use this — never your own " +
+                "estimate — whenever the user asks to forecast/predict/project a future value. The forecasted " +
+                "numbers this returns are the only ones you may put in a widget's \"forecast\" field; never " +
+                "invent a projected number yourself, and never put a forecasted value in \"data\" as if it " +
+                "were an observed one.",
+                new JsonObject
+                {
+                    ["type"] = "object",
+                    ["properties"] = new JsonObject
+                    {
+                        ["sql"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = $"A single SELECT statement ({_db.DialectName} dialect) " +
+                                "returning exactly two columns — period label, then numeric value — ordered " +
+                                "chronologically ascending (oldest first).",
+                        },
+                        ["periodsAhead"] = new JsonObject
+                        {
+                            ["type"] = "integer",
+                            ["description"] = "How many future periods to forecast (1-12).",
+                        },
+                        ["seasonLength"] = new JsonObject
+                        {
+                            ["type"] = "integer",
+                            ["description"] = "Optional: periods per seasonal cycle (e.g. 12 for monthly data " +
+                                "with yearly seasonality) — only worth setting when the query returned at " +
+                                "least two full cycles of history. Omit otherwise.",
+                        },
+                    },
+                    ["required"] = new JsonArray { "sql", "periodsAhead" },
+                }),
         };
 
         if (_documents.Enabled || context.HasDocuments)
@@ -233,6 +272,21 @@ public class AnalyticsTools
           من غير قيمة حقيقية وراه.
         - الفلاتر دي اقتراح بس؛ تفعيلها الفعلي بيحصل في الواجهة بعد كده من غير ما تحتاج
           تتدخل إنت تاني.
+
+        التنبؤ (forecast) — لما المستخدم يطلب توقع مستقبلي صريح
+        لو السؤال فيه طلب توقع/تنبؤ/إسقاط لقيمة مستقبلية (زي "توقع مبيعات الشهر الجاي" أو
+        "إيه المتوقع للربع القادم؟") — ممنوع تمامًا إنك تحسب أو تخمّن الرقم المتوقع بنفسك مهما
+        كان بسيطًا. نادِ أداة forecast_data باستعلام SELECT يرجّع عمودين بالظبط (تسمية الفترة،
+        ثم القيمة الرقمية) مرتبة زمنيًا تصاعديًا، وحدد periodsAhead (عدد الفترات المطلوب
+        توقعها). لو عندك سببين منطقيين إن فيه موسمية سنوية والبيانات بتغطي سنتين كاملتين على
+        الأقل بنفس التجميع (شهري مثلًا)، حدد seasonLength (زي ١٢ للبيانات الشهرية).
+        - ضع نتيجة forecast_data زي ما هي بالظبط في حقل "forecast" بالعنصر (labels/values/
+          lower/upper/method/note) — ممنوع تُدرج أي رقم من الـ forecast جوه "data" العادية،
+          وممنوع تُعدّل أو "تظبط" الأرقام اللي رجعتها الأداة.
+        - اذكر في summary إن في توقعًا إحصائيًا مبنيًا على البيانات التاريخية (مش رقمًا مؤكدًا)،
+          وانقل ملاحظة "note" لو موجودة (زي تحذير قلة البيانات) بمعناها في الكلام.
+        - لو المستخدم سأل سؤالًا عاديًا مش فيه طلب توقع صريح، ممنوع تستخدم forecast_data من
+          نفسك أو تضيف حقل forecast من غير ما يُطلب — التوقع اختياري بحت.
 
         منهج داخلي قبل كل رد (ما يظهرش للمستخدم، بس اتبعه فعليًا في كل مرة)
         افهم طبيعة السؤال (جديد؟ تعديل على اللي فات؟ عن المستودع نفسه؟) ← خطّط الاستعلام
@@ -354,7 +408,8 @@ public class AnalyticsTools
               "data": [ ... ],
               "xKey": "اختياري، لـ bar/line: اسم حقل التصنيف",
               "yKey": "اختياري، لـ bar/line: اسم الحقل الرقمي",
-              "source": "جملتان بالعربي: الأولى مصدر البيانات، والثانية طريقة الحساب."
+              "source": "جملتان بالعربي: الأولى مصدر البيانات، والثانية طريقة الحساب.",
+              "forecast": "اختياري، بس فقط لو المستخدم طلب توقع فعليًا — شوف قسم (التنبؤ) تحت"
             }
           ],
           "filters": [
@@ -389,6 +444,9 @@ public class AnalyticsTools
           (مثال [{"month": "2024-01", "revenue": 1234.5}] مع xKey "month" وyKey "revenue").
         - pie: data عبارة عن [{"label": "...", "value": <رقم>}, ...] (٦ شرائح كحد أقصى، والباقي في "أخرى").
         - table: data مصفوفة صفوف؛ المفاتيح بتبقى عناوين الأعمدة.
+        - forecast (bar/line بس): كائن اختياري { "labels": [...], "values": [...], "lower": [...],
+          "upper": [...], "method": "...", "note": "...", "r2": <رقم أو null> } — القيم دي لازم
+          تكون بالظبط ناتج forecast_data (قسم "التنبؤ" تحت)، وممنوع تتكرر جوه data العادية.
         خلي الأرقام أرقام JSON مش نصوص. كل عنصر data لازم يكون ١٥ صف كحد أقصى تقريبًا —
         لو النتيجة الخام أكبر من كده، جمّعها أو رتّبها ("Top N") قبل ما تحطها في data بدل
         ما ترسل كل الصفوف الخام.
@@ -410,6 +468,8 @@ public class AnalyticsTools
         - لو المصدر مقفول أو غير مربوط، اتبعت "قواعد المصادر" بالظبط (widgets فاضية + توضيح)؟
         - لو فيه filters، كل "options" فيها جاي من استعلام DISTINCT حقيقي، وكل "table"
           مطابق لاسم الجدول اللي فعلًا استخدمته؟
+        - لو حطيت حقل "forecast"، هل هو ناتج نداء forecast_data فعلي بالظبط (مش رقم حسبته
+          إنت)، وهل المستخدم طلب توقعًا صراحة أصلًا؟
 
         الدقة أهم من الاكتمال، والاكتمال أهم من الجمال. لوحة بعنصرين صحيحين ومصدرهما واضح
         أفضل بكثير من لوحة بثمن عناصر بعضها مختلق أو غير موثّق.
@@ -471,22 +531,25 @@ public class AnalyticsTools
                     if (string.IsNullOrWhiteSpace(sql))
                         return ("Error: 'sql' input is required.", true);
 
-                    var blockedSystem = context.DisabledSystemTables
-                        .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                            || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
-                    if (blockedSystem.Key is not null)
-                        return ($"الاستعلام مرفوض: الجدول {blockedSystem.Key} تابع لـ\"{blockedSystem.Value}\" " +
-                                "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.", true);
-
-                    var blocked = context.TableCategories
-                        .Where(kv => !context.EnabledCategories.Contains(kv.Value, StringComparer.OrdinalIgnoreCase))
-                        .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                            || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
-                    if (blocked.Key is not null)
-                        return ($"الاستعلام مرفوض: الجدول {blocked.Key} تابع لتصنيف \"{blocked.Value}\" " +
-                                "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.", true);
+                    var permissionError = CheckSourcePermission(sql, context);
+                    if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteQueryAsync(sql, ct);
+                }
+                case "forecast_data":
+                {
+                    var sql = input["sql"]?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(sql))
+                        return ("Error: 'sql' input is required.", true);
+                    if (input["periodsAhead"] is not JsonValue periodsNode || !periodsNode.TryGetValue<int>(out var periodsAhead))
+                        return ("Error: 'periodsAhead' input is required and must be an integer.", true);
+                    periodsAhead = Math.Clamp(periodsAhead, 1, 12);
+                    int? seasonLength = input["seasonLength"] is JsonValue seasonNode && seasonNode.TryGetValue<int>(out var sl) ? sl : null;
+
+                    var permissionError = CheckSourcePermission(sql, context);
+                    if (permissionError is not null) return (permissionError, true);
+
+                    return await ExecuteForecastAsync(sql, periodsAhead, seasonLength, ct);
                 }
                 case "search_documents":
                 {
@@ -554,6 +617,27 @@ public class AnalyticsTools
         return text.Substring(index, Math.Min(window, text.Length - index));
     }
 
+    /// <summary>Null if the query is allowed; otherwise the Arabic refusal message to return to the model.</summary>
+    private static string? CheckSourcePermission(string sql, SourceContext context)
+    {
+        var blockedSystem = context.DisabledSystemTables
+            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
+                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+        if (blockedSystem.Key is not null)
+            return $"الاستعلام مرفوض: الجدول {blockedSystem.Key} تابع لـ\"{blockedSystem.Value}\" " +
+                   "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
+
+        var blocked = context.TableCategories
+            .Where(kv => !context.EnabledCategories.Contains(kv.Value, StringComparer.OrdinalIgnoreCase))
+            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
+                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+        if (blocked.Key is not null)
+            return $"الاستعلام مرفوض: الجدول {blocked.Key} تابع لتصنيف \"{blocked.Value}\" " +
+                   "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
+
+        return null;
+    }
+
     private async Task<(string Result, bool IsError)> ExecuteQueryAsync(string sql, CancellationToken ct)
     {
         var validationError = ValidateReadOnlySql(sql);
@@ -574,6 +658,76 @@ public class AnalyticsTools
         }
 
         return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows }), false);
+    }
+
+    /// <summary>
+    /// Runs the model's two-column time-series query, then hands the value column to
+    /// ForecastService for a real statistical forecast — see the forecast_data tool description
+    /// in BuildTools() for the exact contract the model must follow.
+    /// </summary>
+    private async Task<(string Result, bool IsError)> ExecuteForecastAsync(
+        string sql, int periodsAhead, int? seasonLength, CancellationToken ct)
+    {
+        var validationError = ValidateReadOnlySql(sql);
+        if (validationError is not null)
+            return ($"Query rejected: {validationError}", true);
+
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var labels = new List<string>();
+        var values = new List<double>();
+
+        await using var reader = await connection.ExecuteReaderAsync(
+            new CommandDefinition(sql, commandTimeout: 30, cancellationToken: ct));
+        if (reader.FieldCount < 2)
+            return ("Error: the query must return exactly two columns — a period label, then a numeric value.", true);
+        while (values.Count < MaxRowsReturned && await reader.ReadAsync(ct))
+        {
+            if (reader.IsDBNull(1)) continue; // skip a period with no value rather than failing the whole fit
+            if (!TryToDouble(reader.GetValue(1), out var value)) continue;
+            labels.Add(reader.IsDBNull(0) ? "" : reader.GetValue(0)?.ToString() ?? "");
+            values.Add(value);
+        }
+
+        if (values.Count < 2)
+            return ("Error: need at least 2 historical rows with a non-null numeric value to forecast.", true);
+
+        ForecastOutcome outcome;
+        try
+        {
+            outcome = ForecastService.Forecast(values, periodsAhead, seasonLength);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ($"Error: {ex.Message}", true);
+        }
+
+        return (JsonSerializer.Serialize(new
+        {
+            historical = new { labels, values },
+            forecast = new
+            {
+                method = outcome.Method,
+                r2 = outcome.RSquared,
+                note = outcome.Note,
+                values = outcome.Points.Select(p => Math.Round(p.Value, 2)).ToList(),
+                lower = outcome.Points.Select(p => Math.Round(p.Lower, 2)).ToList(),
+                upper = outcome.Points.Select(p => Math.Round(p.Upper, 2)).ToList(),
+            },
+        }), false);
+    }
+
+    private static bool TryToDouble(object raw, out double value)
+    {
+        switch (raw)
+        {
+            case double d: value = d; return true;
+            case float f: value = f; return true;
+            case decimal m: value = (double)m; return true;
+            case int i: value = i; return true;
+            case long l: value = l; return true;
+            case short s: value = s; return true;
+            default: return double.TryParse(raw?.ToString(), out value);
+        }
     }
 
     /// <summary>
