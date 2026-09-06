@@ -192,10 +192,21 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
   display:flex;flex-direction:column;gap:10px;animation:rise .35s ease both;
   transition:box-shadow .3s ease,border-color .3s ease}
 /* While TTS is reading a sentence that names this widget (see speakText's boundary
-   handling), it gets a soft glow so the user can follow along visually — cleared the
-   moment speech moves to a sentence that names a different widget, or ends. */
-.widget.tts-highlight{border-color:var(--accent);
-  box-shadow:0 0 0 3px var(--accent-soft),0 0 24px var(--accent-soft)}
+   handling), it's marked unmistakably — not just a shadow, but a solid accent border, a
+   tinted background, a small pulsing 🔊 badge, and a gentle "breathing" ring — so it reads
+   clearly even at a glance or on a dim screen. All of it clears the moment speech moves to
+   a sentence naming a different widget, or ends. */
+.widget.tts-highlight{border:2px solid var(--accent);
+  background:color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow:0 0 0 4px var(--accent-soft);
+  animation:tts-pulse 1.6s ease-in-out infinite}
+.widget.tts-highlight::before{content:'🔊';position:absolute;top:-11px;inset-inline-start:14px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:12px;line-height:24px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+@keyframes tts-pulse{
+  0%,100%{box-shadow:0 0 0 4px var(--accent-soft)}
+  50%{box-shadow:0 0 0 9px color-mix(in srgb, var(--accent) 22%, transparent)}
+}
 /* `to{}` deliberately omits `transform` — CSS resolves an omitted endpoint to whatever the
    element's non-animated transform would be, so this same entrance animation settles into
    either `none` (2D) or the .dim-3d tilt below, instead of the two fighting over the property. */
