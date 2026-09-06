@@ -27,6 +27,14 @@ public class OllamaClient : IDashboardGenerator
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
+    // A weaker/local model can keep calling tools indefinitely instead of ever concluding —
+    // it never gets a "you're out of budget" signal otherwise, since nothing about the
+    // conversation itself changes turn to turn. From this iteration on, no tool definitions
+    // are sent at all (see the loop below), so the model *cannot* call one and must answer in
+    // plain text — reusing the existing JSON-repair retries below as a safety net if that
+    // first forced answer isn't valid JSON. Leaves enough headroom for MaxJsonRepairAttempts
+    // retries to still fit before MaxToolIterations is reached.
+    private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
     private readonly string _apiKey;
@@ -87,6 +95,7 @@ public class OllamaClient : IDashboardGenerator
 
         var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
+        var forcedFinalAnswerNoticeSent = false;
 
         var trace = _usage.Begin("Ollama", model, question, DescribeSources(context));
         trace.SetSystemPrompt(_tools.BuildSystemPrompt(context));
@@ -95,7 +104,20 @@ public class OllamaClient : IDashboardGenerator
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
             ct.ThrowIfCancellationRequested();
-            var response = await CallChatAsync(model, messages, tools, trace, ct);
+            var forceFinalAnswer = iteration >= ForceFinalAnswerAtIteration;
+            if (forceFinalAnswer && !forcedFinalAnswerNoticeSent)
+            {
+                forcedFinalAnswerNoticeSent = true;
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] =
+                        "لقد استدعيت عددًا كافيًا من الأدوات بالفعل. لا تنادِ أي أداة أخرى — " +
+                        "استخدم فقط النتائج التي جمعتها حتى الآن، وأجب فورًا بكائن JSON النهائي " +
+                        "للوحة المعلومات مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
+                });
+            }
+            var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
 
             var message = response["message"]?.AsObject()
                 ?? throw new InvalidOperationException("Ollama gateway response had no 'message'.");
@@ -221,15 +243,19 @@ public class OllamaClient : IDashboardGenerator
     }
 
     private async Task<JsonObject> CallChatAsync(
-        string model, JsonArray messages, JsonArray tools, UsageTrace trace, CancellationToken ct)
+        string model, JsonArray messages, JsonArray? tools, UsageTrace trace, CancellationToken ct)
     {
         var body = new JsonObject
         {
             ["model"] = model,
             ["messages"] = messages.DeepClone(),
-            ["tools"] = tools.DeepClone(),
             ["stream"] = false, // Ollama streams by default; the tool-loop needs one complete reply.
         };
+        // Omit "tools" entirely (rather than send "[]") when forcing a tools-less final
+        // answer — matches the other clients and avoids relying on how this gateway treats
+        // an empty array specifically.
+        if (tools is { Count: > 0 })
+            body["tools"] = tools.DeepClone();
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();

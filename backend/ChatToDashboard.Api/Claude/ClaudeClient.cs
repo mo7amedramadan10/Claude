@@ -17,6 +17,14 @@ public class ClaudeClient : IDashboardGenerator
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
+    // A weaker/local model can keep calling tools indefinitely instead of ever concluding —
+    // it never gets a "you're out of budget" signal otherwise, since nothing about the
+    // conversation itself changes turn to turn. From this iteration on, no tool definitions
+    // are sent at all (see the loop below), so the model *cannot* call one and must answer in
+    // plain text — reusing the existing JSON-repair retries below as a safety net if that
+    // first forced answer isn't valid JSON. Leaves enough headroom for MaxJsonRepairAttempts
+    // retries to still fit before MaxToolIterations is reached.
+    private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
     private readonly string _apiKey;
@@ -78,6 +86,7 @@ public class ClaudeClient : IDashboardGenerator
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
+        var forcedFinalAnswerNoticeSent = false;
 
         var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context));
         trace.SetSystemPrompt(_tools.BuildSystemPrompt(context));
@@ -86,7 +95,20 @@ public class ClaudeClient : IDashboardGenerator
         for (var iteration = 0; iteration < MaxToolIterations; iteration++)
         {
             ct.ThrowIfCancellationRequested();
-            var response = await CallMessagesApiAsync(messages, tools, context, trace, ct);
+            var forceFinalAnswer = iteration >= ForceFinalAnswerAtIteration;
+            if (forceFinalAnswer && !forcedFinalAnswerNoticeSent)
+            {
+                forcedFinalAnswerNoticeSent = true;
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] =
+                        "لقد استدعيت عددًا كافيًا من الأدوات بالفعل. لا تنادِ أي أداة أخرى — " +
+                        "استخدم فقط النتائج التي جمعتها حتى الآن، وأجب فورًا بكائن JSON النهائي " +
+                        "للوحة المعلومات مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
+                });
+            }
+            var response = await CallMessagesApiAsync(messages, forceFinalAnswer ? null : tools, context, trace, ct);
 
             var stopReason = response["stop_reason"]?.GetValue<string>();
             var content = response["content"]?.AsArray()
@@ -213,12 +235,14 @@ public class ClaudeClient : IDashboardGenerator
     }
 
     private async Task<JsonObject> CallMessagesApiAsync(
-        JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context,
+        JsonArray messages, JsonArray? tools, AnalyticsTools.SourceContext context,
         UsageTrace trace, CancellationToken ct)
     {
         // Prompt caching: one breakpoint after the stable prefix (tools + system), and one
         // on the last message so each tool-loop iteration reuses the growing conversation
-        // prefix instead of re-processing it.
+        // prefix instead of re-processing it. Forcing a tools-less final answer (tools null)
+        // changes that prefix and so loses the cache hit for this one call only — an accepted
+        // cost, since it only happens on the last few iterations of an already-degenerate loop.
         var body = new JsonObject
         {
             ["model"] = _model,
@@ -232,9 +256,10 @@ public class ClaudeClient : IDashboardGenerator
                     ["cache_control"] = new JsonObject { ["type"] = "ephemeral" },
                 },
             },
-            ["tools"] = tools.DeepClone(),
             ["messages"] = messages.DeepClone(),
         };
+        if (tools is { Count: > 0 })
+            body["tools"] = tools.DeepClone();
         MarkLastMessageCacheable(body["messages"]!.AsArray());
 
         var requestBody = body.ToJsonString();
