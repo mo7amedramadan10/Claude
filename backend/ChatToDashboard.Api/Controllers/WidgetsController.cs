@@ -108,6 +108,30 @@ public class WidgetsController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// The dashboard-filter path for a chat-authored widget (one with a stored `query` — see
+    /// DashboardWidget.Query — rather than the wizard's full structured query). Re-runs that
+    /// widget's own SQL with the active filter(s) spliced in server-side; see
+    /// WidgetQueryService.ExecuteSqlFilterAsync for why this is safe despite taking SQL text
+    /// from the client, and for the cases it can't handle (the widget is simply left
+    /// "غير متأثر بالفلتر" rather than risking a wrong result).
+    /// </summary>
+    [HttpPost("sql-filter")]
+    public async Task<IActionResult> SqlFilter([FromBody] SqlFilterRequest request, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        try
+        {
+            return Ok(await _service.ExecuteSqlFilterAsync(request.Table, request.Sql, request.Filters, effective, ct));
+        }
+        catch (WidgetQueryValidationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     /// <summary>Real DISTINCT values for one column — the only legitimate filter-option source.</summary>
     [HttpPost("filter-values")]
     public async Task<IActionResult> FilterValues([FromBody] FilterValuesRequest request, CancellationToken ct)

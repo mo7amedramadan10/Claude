@@ -102,3 +102,25 @@ public class WidgetQueryValidationException : Exception
 {
     public WidgetQueryValidationException(string message) : base(message) { }
 }
+
+/// <summary>
+/// Body of POST /api/widgets/sql-filter — re-runs a chat-authored widget's own stored query
+/// (see <see cref="Models.DashboardWidget.Query"/>) with the active dashboard filter(s) spliced
+/// in as an extra WHERE condition. Unlike <see cref="WidgetQueryRequest"/> (built entirely from
+/// schema-verified names, no client SQL at all), this endpoint necessarily accepts a SQL string
+/// from the client — it is the only place this widget's query lineage lives, since the model
+/// only returns it once and the frontend holds it from then on. See
+/// <see cref="WidgetQueryService.ExecuteSqlFilterAsync"/> for the safeguards this requires.
+/// </summary>
+public class SqlFilterRequest
+{
+    [JsonPropertyName("sources")] public SourceSelection? Sources { get; set; }
+    [JsonPropertyName("table")] public string Table { get; set; } = "";
+    [JsonPropertyName("sql")] public string Sql { get; set; } = "";
+    [JsonPropertyName("filters")] public List<FilterCondition>? Filters { get; set; }
+}
+
+public class SqlFilterResult
+{
+    [JsonPropertyName("data")] public object Data { get; set; } = new List<object>();
+}

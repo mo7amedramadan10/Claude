@@ -1984,17 +1984,29 @@ async function applyFilters() {
   const status = el('autosave-status');
   if (status) status.textContent = 'جارٍ التحديث…';
 
+  const sources = { systems: [...state.onSystems], categories: [...state.onCategories] };
   const widgets = state.dashboard?.widgets || [];
   await Promise.all(widgets.map(async w => {
     if (!w.query || !w.query.table) return;
     const filters = activeByTable[w.query.table] || [];
     try {
+      // Two shapes share the same "query" field depending on how the widget was built:
+      // the wizard's fully-structured query (metric/aggregation/dimension/...), rebuilt
+      // from scratch server-side — vs. a chat-authored widget's own stored SQL (just
+      // {table, sql}), re-run with the filter spliced into that exact query instead.
+      if (w.query.sql) {
+        const res = await fetch('/api/widgets/sql-filter', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sources, table: w.query.table, sql: w.query.sql, filters }),
+        });
+        if (!res.ok) return;
+        const payload = await res.json();
+        w.data = payload.data;
+        return;
+      }
       const res = await fetch('/api/widgets/query', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sources: { systems: [...state.onSystems], categories: [...state.onCategories] },
-          query: { ...w.query, filters },
-        }),
+        body: JSON.stringify({ sources, query: { ...w.query, filters } }),
       });
       if (!res.ok) return;
       const payload = await res.json();

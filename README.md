@@ -248,6 +248,34 @@ it as `currentDashboard` on `POST /api/chat` when continuing (see `ComposeUserMe
 every question, growing with the conversation; this replaces that with a single, complete
 snapshot of what's actually on screen — no multi-turn tool-calling history is resent.
 
+## Dashboard filters
+
+A dashboard's suggested filters (the model's own `filters` field, or one added through the
+editor) only affect a widget that carries query lineage — enough information to re-run its
+query with an extra condition. A widget with none is marked **"غير متأثر بالفلتر"** rather than
+silently ignoring the filter.
+
+Two independent paths supply that lineage:
+- **Wizard-built widgets** carry the full structured query (table/metric/aggregation/
+  dimension/time range) chosen through **+ إضافة عنصر**, rebuilt entirely server-side
+  (`WidgetQueryService.ExecuteAsync`) — never client SQL.
+- **Chat-built widgets** carry just `{ table, sql }` — the exact SELECT the model used for that
+  widget (see the system prompt's "حقل query" section) — re-run by `WidgetQueryService.
+  ExecuteSqlFilterAsync` with the active filter spliced in as an extra `WHERE`/`AND` condition,
+  found by scanning the statement's real structure (parenthesis depth, quoted strings) rather
+  than naive text search, so a subquery's or CTE's own clauses are never mistaken for the outer
+  statement's.
+
+Splicing text into an already-written SELECT can't handle every shape a model might write (a
+filtered column that only exists inside a subquery's own scope, for instance) — a widget that
+doesn't fit stays "غير متأثر بالفلتر" rather than risking a wrong number. Accepting that SQL
+from the client (it can only live there — the model returns it once and the frontend holds it
+from then on) is the one place a filter's execution isn't built entirely from schema-verified
+names: `ValidateReadOnlySql` (single read-only `SELECT`/`WITH` only) and `CheckSourcePermission`
+(the same disabled-system/category scan `query_data` applies) both run against it before and
+after the filter is spliced in, and the filter's own column/values still go through the same
+schema-verified, parameterized path as the wizard's filters — never string-interpolated.
+
 ## History (`السجل`)
 
 Every question that produces at least one widget is saved automatically — no extra click.

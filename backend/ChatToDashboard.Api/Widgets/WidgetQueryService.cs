@@ -176,6 +176,124 @@ public class WidgetQueryService
         return await BuildKpiWidgetAsync(connection, table, tableRef, request, aggExpr, aggregation, metricCol!, where, parameters, filterNote, ct);
     }
 
+    /// <summary>
+    /// Re-runs a chat-authored widget's own stored SQL (see DashboardWidget.Query) with the
+    /// active dashboard filter(s) added as an extra WHERE condition — the counterpart to
+    /// <see cref="ExecuteAsync"/> for widgets the model built directly with SQL rather than
+    /// through the wizard. Splicing text into an already-written SELECT is inherently more
+    /// fragile than building one from scratch (it can't handle every shape a model might
+    /// write — e.g. a filtered column that only exists inside a subquery's own scope — and a
+    /// widget it can't handle safely just stays visibly "غير متأثر بالفلتر" rather than
+    /// silently returning a wrong result), but it covers the common single-SELECT,
+    /// no-nested-subquery shape the system prompt's own SQL rules already push the model
+    /// toward, without a fresh model round-trip on every filter click.
+    ///
+    /// Security note: unlike every other method here, "sql" itself comes from the client —
+    /// it can only live there, since the model returns it once and the frontend holds it from
+    /// then on. Three checks keep this from being an open SQL-execution endpoint: (1)
+    /// ValidateReadOnlySql rejects anything but a single read-only SELECT/WITH statement
+    /// (checked both before and after splicing), (2) CheckSourcePermission — the exact scan
+    /// query_data applies to every LLM-issued query — rejects any reference to a disabled
+    /// system or category table, and (3) the filter condition itself goes through
+    /// BuildFilterClauses, which only accepts a schema-verified column name and always
+    /// parameterizes the values, never string-interpolates them.
+    /// </summary>
+    public async Task<SqlFilterResult> ExecuteSqlFilterAsync(
+        string tableName, string sql, List<FilterCondition>? filters, SourceSelection selection, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(tableName))
+            throw new WidgetQueryValidationException("لم يتم تحديد الجدول.");
+        if (string.IsNullOrWhiteSpace(sql) || AnalyticsTools.ValidateReadOnlySql(sql) is not null)
+            throw new WidgetQueryValidationException("الاستعلام المخزّن لهذا العنصر غير صالح.");
+
+        var table = await ResolveTableAsync(tableName, selection, ct);
+
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        if (AnalyticsTools.CheckSourcePermission(sql, context) is not null)
+            throw new WidgetQueryValidationException("لا يوجد صلاحية لتنفيذ هذا الاستعلام.");
+
+        var parameters = new DynamicParameters();
+        var (clauses, _) = BuildFilterClauses(table, filters ?? new List<FilterCondition>(), parameters);
+        var filteredSql = clauses.Count > 0 ? SpliceWhereClause(sql, string.Join(" AND ", clauses)) : sql;
+
+        if (AnalyticsTools.ValidateReadOnlySql(filteredSql) is not null)
+            throw new WidgetQueryValidationException("تعذّر تطبيق الفلتر على استعلام هذا العنصر.");
+
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = (await connection.QueryAsync(
+                new CommandDefinition(filteredSql, parameters, commandTimeout: 30, cancellationToken: ct)))
+            .Take(AnalyticsTools.MaxRowsReturned)
+            .Select(r => (IDictionary<string, object?>)r)
+            .ToList<object>();
+
+        return new SqlFilterResult { Data = rows };
+    }
+
+    /// <summary>
+    /// Inserts <paramref name="condition"/> into <paramref name="sql"/> as an additional WHERE
+    /// condition, respecting the statement's real structure — a keyword inside parentheses or
+    /// a string literal (a subquery, a CTE, a quoted value) is never mistaken for a clause
+    /// boundary. Combines with an existing WHERE via AND; adds a new WHERE if none exists.
+    /// </summary>
+    private static string SpliceWhereClause(string sql, string condition)
+    {
+        var (whereIndex, nextClauseIndex) = FindTopLevelClauses(sql);
+        var insertAt = nextClauseIndex ?? sql.TrimEnd(';', ' ', '\t', '\r', '\n').Length;
+        var prefix = sql[..insertAt].TrimEnd();
+        var suffix = sql[insertAt..];
+        return whereIndex is not null
+            ? $"{prefix} AND ({condition}) {suffix}"
+            : $"{prefix} WHERE {condition} {suffix}";
+    }
+
+    private static readonly Regex TopLevelClauseKeyword =
+        new(@"\b(WHERE|GROUP\s+BY|ORDER\s+BY|LIMIT)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// The position of the statement's own WHERE (if any) and of the first clause keyword
+    /// after it — GROUP BY/ORDER BY/LIMIT, or the same WHERE position if none of those exist
+    /// — skipping any match that falls inside parentheses or a string literal, so a
+    /// subquery's or CTE's own clauses are never mistaken for the main statement's.
+    /// </summary>
+    private static (int? WhereIndex, int? NextClauseIndex) FindTopLevelClauses(string sql)
+    {
+        int? whereIndex = null, nextIndex = null;
+        foreach (Match m in TopLevelClauseKeyword.Matches(sql))
+        {
+            if (ParenDepthAt(sql, m.Index) != 0) continue;
+            var keyword = Regex.Replace(m.Value, @"\s+", " ").Trim().ToUpperInvariant();
+            if (keyword == "WHERE")
+            {
+                whereIndex ??= m.Index;
+                continue;
+            }
+            if (nextIndex is null) { nextIndex = m.Index; break; }
+        }
+        return (whereIndex, nextIndex);
+    }
+
+    /// <summary>Parenthesis depth just before <paramref name="index"/>, ignoring parens inside quoted strings.</summary>
+    private static int ParenDepthAt(string sql, int index)
+    {
+        var depth = 0;
+        var inSingleQuote = false;
+        var inDoubleQuote = false;
+        for (var i = 0; i < index; i++)
+        {
+            var c = sql[i];
+            if (inSingleQuote) { if (c == '\'') inSingleQuote = false; continue; }
+            if (inDoubleQuote) { if (c == '"') inDoubleQuote = false; continue; }
+            switch (c)
+            {
+                case '\'': inSingleQuote = true; break;
+                case '"': inDoubleQuote = true; break;
+                case '(': depth++; break;
+                case ')': depth--; break;
+            }
+        }
+        return depth;
+    }
+
     private async Task<TableSchema> ResolveTableAsync(string tableName, SourceSelection selection, CancellationToken ct)
     {
         var context = await _tools.DescribeSourcesAsync(selection, ct);

@@ -169,6 +169,27 @@ public class DashboardWidget
     /// </summary>
     [JsonPropertyName("forecast")]
     public WidgetForecast? Forecast { get; set; }
+
+    /// <summary>
+    /// The exact table and read-only SELECT that produced <see cref="Data"/>, so a dashboard
+    /// filter can re-run this widget's own query with an extra condition spliced in — see
+    /// WidgetQueryService.ExecuteSqlFilterAsync — without a fresh model call. Absent when the
+    /// widget has no single query to point to (e.g. built from list_files metadata, or a
+    /// forecast overlay); such a widget is simply not filterable, and the frontend marks it
+    /// "غير متأثر بالفلتر" exactly as it already does for one with no query lineage at all.
+    /// </summary>
+    [JsonPropertyName("query")]
+    public WidgetSqlQuery? Query { get; set; }
+}
+
+/// <summary>See <see cref="DashboardWidget.Query"/>.</summary>
+public class WidgetSqlQuery
+{
+    [JsonPropertyName("table")]
+    public string Table { get; set; } = string.Empty;
+
+    [JsonPropertyName("sql")]
+    public string Sql { get; set; } = string.Empty;
 }
 
 public class WidgetForecast

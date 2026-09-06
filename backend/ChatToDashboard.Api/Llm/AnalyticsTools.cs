@@ -343,7 +343,9 @@ public class AnalyticsTools
         - لو مفيش أبعاد مناسبة فعلًا، سيب filters مصفوفة فاضية [] — ممنوع تضيف فلتر شكلي
           من غير قيمة حقيقية وراه.
         - الفلاتر دي اقتراح بس؛ تفعيلها الفعلي بيحصل في الواجهة بعد كده من غير ما تحتاج
-          تتدخل إنت تاني.
+          تتدخل إنت تاني — لكن ده يشتغل بس مع العناصر اللي حاطط لها حقل "query" (تحت)،
+          فأي عنصر من نفس الجدول اللي حددته "table" في الفلتر لازم يحمل query.table مطابق
+          عشان الفلتر يقدر يأثّر فيه فعليًا، وإلا هيظهر للمستخدم كعنصر "غير متأثر بالفلتر".
 
         التنبؤ (forecast) — لما المستخدم يطلب توقع مستقبلي صريح
         لو السؤال فيه طلب توقع/تنبؤ/إسقاط لقيمة مستقبلية (زي "توقع مبيعات الشهر الجاي" أو
@@ -398,8 +400,10 @@ public class AnalyticsTools
           على السؤال الفعلي، ووضّح في summary إنك بنيت لوحة جديدة لاختلاف الموضوع.
           - إجراء إجباري بالترتيب ده بالظبط، من غير تخطي أي خطوة:
             ١) انسخ كل عنصر موجود في "العناصر الحالية" (الحرفية اللي وصلتك في الرسالة، بكل
-               حقوله بالكامل: type وtitle وdata وxKey وyKey وsource وforecast) زي ما هو —
-               ده نقطة البداية الإجبارية لمصفوفة widgets في ردك، قبل أي تعديل.
+               حقوله بالكامل: type وtitle وdata وxKey وyKey وsource وforecast وquery لو
+               موجود) زي ما هو — ده نقطة البداية الإجبارية لمصفوفة widgets في ردك، قبل أي
+               تعديل. حقل query تحديدًا مهم يفضل موجود من غير تغيير عشان الفلاتر تفضل شغالة
+               على العنصر ده حتى بعد المتابعة.
             ٢) عدّل بس العنصر أو العناصر اللي طلب المستخدم تعديلها فعليًا (استبدل بياناتها
                بنتيجة استعلام جديد لو لزم الأمر)، أو احذف بس اللي طلب حذفه صراحة، أو أضف
                عنصرًا جديدًا لو طلب إضافة — فوق النسخة اللي عملتها في الخطوة ١، مش بدلًا
@@ -504,7 +508,8 @@ public class AnalyticsTools
               "xKey": "اختياري، لـ bar/line: اسم حقل التصنيف",
               "yKey": "اختياري، لـ bar/line: اسم الحقل الرقمي",
               "source": "جملتان بالعربي: الأولى مصدر البيانات، والثانية طريقة الحساب.",
-              "forecast": "اختياري، بس فقط لو المستخدم طلب توقع فعليًا — شوف قسم (التنبؤ) تحت"
+              "forecast": "اختياري، بس فقط لو المستخدم طلب توقع فعليًا — شوف قسم (التنبؤ) تحت",
+              "query": "اختياري لكن مهم لتفعيل الفلاتر — شوف قسم (حقل query) تحت"
             }
           ],
           "filters": [
@@ -532,6 +537,21 @@ public class AnalyticsTools
         مثال: "من جدول staging_sample_sales في مستودع الملفات (تصنيف المبيعات). تم تجميع
         SUM(Revenue) وتقسيمها حسب Region مع ترتيب تنازلي."
         الكلام ده لازم يكون مطابق للأدوات اللي ناديتها فعلًا — ممنوع تأليف مصدر أو طريقة حساب.
+
+        حقل query — بيخلي فلاتر اللوحة تقدر تأثّر فعليًا على العنصر
+        لو بنيت عنصر (bar/line/pie/kpi) من نتيجة نداء query_data واحد بالظبط (مش مجمّع من
+        أكتر من نداء)، حط حقل "query" فيه:
+        { "table": "اسم الجدول الفعلي اللي جاي منه العمود (نفس الاسم اللي استخدمته في SQL)",
+          "sql": "نفس جملة SELECT اللي فعلًا نفّذتها بالظبط، حرفيًا، من غير أي تعديل" }
+        - "sql" لازم يكون النص الحرفي اللي بعته لـ query_data، مش نسخة معدّلة أو مبسّطة —
+          الواجهة بتضيف شرط WHERE فوقه لاحقًا لما المستخدم يختار فلتر، فأي اختلاف عن
+          الاستعلام الحقيقي هيدّي نتيجة غلط.
+        - سيب query غايبة (من غير الحقل خالص) لو العنصر مبني من أكتر من نداء query_data
+          مجمّعين، أو من list_files/search_documents بس، أو كان forecast — في الحالات دي
+          مفيش استعلام واحد واضح يترجعله الفلتر، والعنصر هيظهر ببساطة "غير متأثر بالفلتر"
+          وده أفضل من query غلط بيرجّع نتيجة غير صحيحة.
+        - ده منفصل تمامًا عن source: source نص عربي للعرض، وquery بيانات تقنية خام للتنفيذ
+          الآلي فقط — الاثنين لازم يوصفوا نفس الاستعلام لكن بصيغتين مختلفتين تمامًا.
 
         اصطلاحات بيانات العناصر
         - kpi: data عبارة عن [{"label": "...", "value": <رقم أو نص>}] (عنصر واحد).
@@ -721,8 +741,13 @@ public class AnalyticsTools
         return text.Substring(index, Math.Min(window, text.Length - index));
     }
 
-    /// <summary>Null if the query is allowed; otherwise the Arabic refusal message to return to the model.</summary>
-    private static string? CheckSourcePermission(string sql, SourceContext context)
+    /// <summary>
+    /// Null if the query is allowed; otherwise the Arabic refusal message to return to the
+    /// model. Internal (not private) so <see cref="Widgets.WidgetQueryService"/> can apply the
+    /// exact same table/category gate to a widget's stored SQL before re-executing it with a
+    /// filter spliced in — the same permission surface as the LLM's own query_data tool.
+    /// </summary>
+    internal static string? CheckSourcePermission(string sql, SourceContext context)
     {
         var blockedSystem = context.DisabledSystemTables
             .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
