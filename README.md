@@ -351,6 +351,33 @@ than a shaded band: ApexCharts' `rangeArea` series type (verified against the ex
 5.0.0) silently fails to render when mixed into a combo chart with a bar/line series, so a
 shaded fill wasn't a reliable option here.
 
+## Voice
+
+Two independent, browser-native features — no server-side speech code, no cloud speech API,
+each usable without the other:
+
+- **Speech-to-text** (🎤 button by the chat input): the Web Speech API transcribes into the
+  same `#q` box any typed question already goes through — voice is just an alternate way to
+  fill that box, never a separate path, so every existing rule (sources, filters, the tool
+  loop) applies unchanged. It never auto-sends: Arabic recognition can mishear a dialect word,
+  a technical term, or an exact entity name, so the transcript stays editable until the user
+  presses "إرسال" themselves. Only shown when the browser actually implements
+  `SpeechRecognition`/`webkitSpeechRecognition` — Chrome and Edge; Firefox and Safari don't, at
+  least not without a flag.
+- **Text-to-speech** (🔊 button on any bot message, plus an opt-in "قراءة تلقائية" toggle in the
+  header that speaks every *new* answer as it arrives): reads only the short plain-language
+  summary a response already carries — a chart or a table has no meaningful spoken form,
+  and the UI never tries to read one aloud. Auto-read defaults to off and is remembered
+  per-browser (`localStorage`), since an unannounced voice reading a business number aloud is
+  the wrong call in a shared office; the manual per-message button has no such restriction.
+
+Both rely on the browser's own built-in engine (`SpeechRecognition`/`speechSynthesis`) rather
+than a cloud speech service — free and immediate, but recognition quality varies by OS/browser
+and Arabic dialect. If this graduates from pilot to production and that quality gap matters,
+Azure Speech Services is the natural next step (this deployment already lives in Azure) — it
+keeps audio inside the same Azure tenant rather than sending it to a third party, and supports
+picking a specific Arabic dialect. That's a deliberate scope cut for now, not an oversight.
+
 ## Refreshing data
 
 When files in the data folder change, reload all staging tables without restarting:

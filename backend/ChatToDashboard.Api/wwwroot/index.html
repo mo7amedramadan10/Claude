@@ -163,6 +163,8 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .attach-btn{display:flex;align-items:center;justify-content:center;width:41px;
   border:1px solid var(--grid);border-radius:11px;background:var(--surface);font-size:16px}
 .attach-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+#mic-btn.listening{border-color:var(--danger);background:var(--danger);color:#fff;animation:mic-pulse 1.2s ease-in-out infinite}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent)}50%{box-shadow:0 0 0 8px transparent}}
 .attached-image{display:flex;align-items:center;gap:10px;margin:0 14px;padding:8px 10px;
   background:var(--plane);border:1px solid var(--grid);border-radius:11px}
 .attached-image.hidden{display:none}
@@ -440,6 +442,13 @@ tr:last-child td{border-bottom:0}
 #theme-toggle{width:33px;height:33px;padding:0;border:1px solid var(--grid);border-radius:9px;
   background:var(--surface);font-size:14px;line-height:1}
 #theme-toggle:hover{border-color:var(--accent)}
+#auto-read-toggle{padding:6px 12px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12.5px}
+#auto-read-toggle:hover{border-color:var(--accent)}
+#auto-read-toggle.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.msg-speak-btn{border:0;background:transparent;color:inherit;opacity:.7;font-size:13px;
+  padding:0;margin-inline-start:6px;vertical-align:middle}
+.msg-speak-btn:hover{opacity:1}
 .tab.hidden,.hidden{display:none}
 
 /* ---------- users admin screen ---------- */
@@ -524,6 +533,7 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="rail-grow" title="تكبير لوحة المحادثة">+</button>
       <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
     </div>
+    <button type="button" id="auto-read-toggle" class="hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد">🔇 قراءة تلقائية</button>
     <div class="model-switch hidden" id="model-switch">
       <button type="button" id="model-switch-btn">🧠 <span id="model-switch-label">الموديل</span> ▾</button>
       <div class="model-switch-panel" id="model-switch-panel">
@@ -571,6 +581,7 @@ tr:last-child td{border-bottom:0}
         🖼️
         <input type="file" id="dash-image-input" accept="image/*" hidden>
       </label>
+      <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك">🎤</button>
       <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
       <button id="send" type="submit">إرسال</button>
     </form>
@@ -2093,8 +2104,14 @@ el('btn-export-pptx').addEventListener('click', exportPptx);
 
 // ---------- chat ----------
 function renderMessages() {
-  const items = state.messages.map(m =>
-    `<div class="msg ${m.role === 'user' ? 'user' : (m.error ? 'err' : 'bot')}">${esc(m.text)}</div>`).join('');
+  const items = state.messages.map((m, i) => {
+    const cls = m.role === 'user' ? 'user' : (m.error ? 'err' : 'bot');
+    // Only a real bot answer gets a speaker button — never an error message or the user's
+    // own turn, and never at all in a browser with no speechSynthesis to act on it.
+    const speak = (cls === 'bot' && ttsSupported())
+      ? `<button type="button" class="msg-speak-btn" data-idx="${i}" title="قراءة بصوت عالٍ">🔊</button>` : '';
+    return `<div class="msg ${cls}">${esc(m.text)}${speak}</div>`;
+  }).join('');
   const typing = state.loading
     ? `<div class="msg bot dots"><span></span><span></span><span></span></div>` : '';
   const hint = state.messages.length === 0 && !state.loading
@@ -2103,6 +2120,93 @@ function renderMessages() {
   el.messages.innerHTML = hint + items + typing;
   el.messages.scrollTop = el.messages.scrollHeight;
   renderSuggestions();
+}
+el('messages').addEventListener('click', e => {
+  const btn = e.target.closest('.msg-speak-btn');
+  if (!btn) return;
+  speakText(state.messages[Number(btn.dataset.idx)]?.text || '');
+});
+
+// ---------- voice: text-to-speech (the model talks back) ----------
+// Reads only the short plain-language summary a response already carries — never the charts
+// or tables themselves, which have no meaningful spoken form. Two independent triggers: the
+// 🔊 button on any individual bot message (always available), and an opt-in "قراءة تلقائية"
+// toggle that speaks every *new* answer the moment it arrives — off by default, since an
+// unannounced voice reading a business number aloud is the wrong call in a shared office.
+const ttsSupported = () => 'speechSynthesis' in window;
+
+function speakText(text) {
+  if (!ttsSupported() || !text) return;
+  window.speechSynthesis.cancel(); // never overlap two utterances
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'ar-SA';
+  const arabicVoice = window.speechSynthesis.getVoices().find(v => (v.lang || '').toLowerCase().startsWith('ar'));
+  if (arabicVoice) utter.voice = arabicVoice;
+  window.speechSynthesis.speak(utter);
+}
+
+try { state.autoRead = localStorage.getItem('chatToDashboardAutoRead') === '1'; } catch { state.autoRead = false; }
+
+function syncAutoReadButton() {
+  const btn = el('auto-read-toggle');
+  btn.classList.toggle('active', state.autoRead);
+  btn.textContent = state.autoRead ? '🔊 قراءة تلقائية' : '🔇 قراءة تلقائية';
+}
+if (ttsSupported()) {
+  el('auto-read-toggle').classList.remove('hidden');
+  syncAutoReadButton();
+  el('auto-read-toggle').addEventListener('click', () => {
+    state.autoRead = !state.autoRead;
+    try { localStorage.setItem('chatToDashboardAutoRead', state.autoRead ? '1' : '0'); } catch {}
+    syncAutoReadButton();
+    if (!state.autoRead) window.speechSynthesis.cancel();
+  });
+}
+
+// ---------- voice: speech-to-text (the user talks to the model) ----------
+// A mic button that transcribes into the same #q box any typed question already goes
+// through — voice is just an alternate way to fill that box, never a separate path, so every
+// existing rule (sources, filters, the tool loop) applies unchanged. Deliberately never
+// auto-sends: Arabic recognition can mishear a dialect word, a technical term, or an exact
+// entity name, so the transcript stays editable until the user presses "إرسال" themselves.
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognitionCtor) {
+  el('mic-btn').classList.remove('hidden');
+  let recognition = null;
+  let listening = false;
+
+  function stopListening() {
+    listening = false;
+    el('mic-btn').classList.remove('listening');
+    try { recognition?.stop(); } catch {}
+  }
+
+  el('mic-btn').addEventListener('click', () => {
+    if (listening) { stopListening(); return; }
+    recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'ar-SA';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    listening = true;
+    el('mic-btn').classList.add('listening');
+
+    recognition.addEventListener('result', ev => {
+      let transcript = '';
+      for (let i = 0; i < ev.results.length; i++) transcript += ev.results[i][0].transcript;
+      el('q').value = transcript;
+    });
+    recognition.addEventListener('error', ev => {
+      stopListening();
+      if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+      const messages = {
+        'not-allowed': 'محتاج إذن استخدام الميكروفون من المتصفح.',
+        'audio-capture': 'مفيش ميكروفون متاح.',
+      };
+      alert(messages[ev.error] || 'تعذّر التعرف على الصوت: ' + ev.error);
+    });
+    recognition.addEventListener('end', stopListening);
+    try { recognition.start(); } catch { stopListening(); }
+  });
 }
 
 // ---------- follow-up suggestions ----------
@@ -2203,6 +2307,7 @@ async function ask(question) {
       state.activeFilters = {};
       state.messages.push({ role: 'bot', text: payload.dashboard.summary, widgetsBrief: widgetsBrief(payload.dashboard.widgets) });
       saveToHistory(question, payload.dashboard);
+      if (state.autoRead) speakText(payload.dashboard.summary);
     }
   } catch (err) {
     state.messages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
