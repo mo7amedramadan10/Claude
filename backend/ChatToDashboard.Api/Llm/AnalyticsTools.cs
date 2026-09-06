@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -27,6 +28,19 @@ public class AnalyticsTools
     private static readonly Regex ForbiddenSqlKeywords = new(
         @"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|MERGE|EXEC|EXECUTE|GRANT|REVOKE|BACKUP|RESTORE|USE|KILL|SHUTDOWN|PRAGMA|ATTACH|DETACH|VACUUM|REINDEX|REPLACE)\b|(\bsp_\w+)|(\bxp_\w+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    // Every tool result below is serialized here, then embedded as a plain string value inside
+    // a *second* JSON document (the provider request body — see ClaudeClient/OpenAiClient).
+    // The default encoder hex-escapes non-ASCII text into a six-character ASCII sequence
+    // ("\uXXXX" as literal text, not a real code point yet) — so the second, legitimate
+    // serialization pass escapes THOSE literal backslashes too, and the model ends up reading
+    // undecoded "\uXXXX\uXXXX..." text instead of the Arabic word it names. Never double-
+    // escaping here (this relaxed encoder leaves non-ASCII as real UTF-8) is what lets an
+    // Arabic table/column name — or any other tool result text — reach the model as itself.
+    private static readonly JsonSerializerOptions ToolResultJsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
 
     private readonly DataFolderLoader _loader;
     private readonly DataStore _db;
@@ -523,7 +537,7 @@ public class AnalyticsTools
                         repositoryFileCount = visibleFiles.Count,
                         disabledCategories = context.DisabledCategories,
                         disabledSystems = context.DisabledSystems,
-                    }), false);
+                    }, ToolResultJsonOptions), false);
                 }
                 case "query_data":
                 {
@@ -578,7 +592,7 @@ public class AnalyticsTools
 
                     var hits = folderHits.Concat(repositoryHits)
                         .OrderByDescending(h => h.score).Take(5).ToList();
-                    return (JsonSerializer.Serialize(hits), false);
+                    return (JsonSerializer.Serialize(hits, ToolResultJsonOptions), false);
                 }
                 default:
                     return ($"Error: unknown tool '{toolName}'.", true);
@@ -657,7 +671,7 @@ public class AnalyticsTools
             rows.Add(row);
         }
 
-        return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows }), false);
+        return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows }, ToolResultJsonOptions), false);
     }
 
     /// <summary>
@@ -713,7 +727,7 @@ public class AnalyticsTools
                 lower = outcome.Points.Select(p => Math.Round(p.Lower, 2)).ToList(),
                 upper = outcome.Points.Select(p => Math.Round(p.Upper, 2)).ToList(),
             },
-        }), false);
+        }, ToolResultJsonOptions), false);
     }
 
     private static bool TryToDouble(object raw, out double value)
