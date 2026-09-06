@@ -26,6 +26,7 @@
   --bg:#0A0F1A; --surface:#111827; --plane:#17203352; --ink:#E7ECF5; --ink-2:#8B96AC; --muted:#8B96AC;
   --grid:#232C3F; --line:#232C3F; --accent:#35D1A1; --accent-soft:#35D1A122; --danger:#EF6461; --amber:#F2B84B;
   --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35); --skeleton-a:#141B2B; --skeleton-b:#1c2740;
+  --shadow-3d:0 26px 40px -18px rgba(0,0,0,.55),0 10px 18px -8px rgba(0,0,0,.4);
   --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
   --display:'Space Grotesk',system-ui,-apple-system,sans-serif;
   --body:'IBM Plex Sans Arabic',"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;
@@ -41,6 +42,7 @@
   --bg:#F5F7FA; --surface:#FFFFFF; --plane:#EEF1F6; --ink:#10151F; --ink-2:#565F6D; --muted:#565F6D;
   --grid:#E1E5EC; --line:#E1E5EC; --accent:#0E9F78; --accent-soft:#0E9F7818; --danger:#D3402F; --amber:#B8730A;
   --shadow:0 1px 2px rgba(16,21,31,.05), 0 6px 18px rgba(16,21,31,.07);
+  --shadow-3d:0 24px 38px -18px rgba(16,21,31,.22),0 8px 14px -6px rgba(16,21,31,.14);
   --skeleton-a:#EEF1F6; --skeleton-b:#F8F9FB;
 }
 *{box-sizing:border-box}
@@ -179,7 +181,18 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .widget{position:relative;background:var(--surface);border:1px solid var(--grid);
   border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
   display:flex;flex-direction:column;gap:10px;animation:rise .35s ease both}
-@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* `to{}` deliberately omits `transform` — CSS resolves an omitted endpoint to whatever the
+   element's non-animated transform would be, so this same entrance animation settles into
+   either `none` (2D) or the .dim-3d tilt below, instead of the two fighting over the property. */
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+/* "3D" view (#view-dim-toggle in the toolbar): a tasteful perspective tilt on every card,
+   small enough that text stays perfectly readable — a floating, dimensional feel, not an
+   actual 3D chart engine. Bar charts get real extra depth too: mountChart()'s post-render
+   pass (apply3dBarExtrusion) adds an extruded top/side face to each bar, which reads as
+   genuinely 3D once the whole card — bars included — tilts together as one rigid plane. */
+.grid.dim-3d{perspective:1600px}
+.grid.dim-3d .widget{transform:rotateX(9deg) rotateY(-7deg);box-shadow:var(--shadow-3d);transition:transform .2s ease}
+.grid.dim-3d .widget:hover{transform:rotateX(5deg) rotateY(-3deg) translateY(-3px)}
 .widget.kpi{justify-content:center;align-items:center;text-align:center;min-height:150px}
 .widget.chart{grid-column:span 2;min-height:300px}
 .widget.table{grid-column:span 2}
@@ -558,6 +571,10 @@ tr:last-child td{border-bottom:0}
         <button type="button" class="edit-toggle-btn active" data-mode="view">عرض</button>
         <button type="button" class="edit-toggle-btn" data-mode="edit">تحرير</button>
       </div>
+      <div class="edit-toggle" id="view-dim-toggle" title="عرض العناصر بشكل مسطّح أو بمنظور 3D">
+        <button type="button" class="edit-toggle-btn active" data-dim="2d">2D</button>
+        <button type="button" class="edit-toggle-btn" data-dim="3d">3D</button>
+      </div>
       <span id="autosave-status" class="autosave-status"></span>
       <button type="button" id="btn-undo" title="تراجع" disabled>↶ تراجع</button>
       <button type="button" id="btn-redo" title="إعادة" disabled>↷ إعادة</button>
@@ -695,6 +712,7 @@ const state = {
   currentHistoryId: null, wizard: null,
   activeFilters: {}, // filterId -> selected values (or [from,to] for range types)
 };
+try { state.view3d = localStorage.getItem('chatToDashboardView3d') === '1'; } catch { state.view3d = false; }
 
 // Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
 // it) and a layout.size (small/wide/full) driving its grid span — neither exists in the
@@ -1054,6 +1072,20 @@ el('edit-toggle').addEventListener('click', e => {
   state.editMode = btn.dataset.mode === 'edit';
   el('edit-toggle').querySelectorAll('.edit-toggle-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.mode === (state.editMode ? 'edit' : 'view')));
+  renderDashboard();
+});
+
+// Reflects whatever localStorage had on load — a fresh page load shouldn't reset the choice
+// back to 2D. See applyTheme() above for the same pattern with the light/dark toggle.
+el('view-dim-toggle').querySelectorAll('.edit-toggle-btn').forEach(b =>
+  b.classList.toggle('active', b.dataset.dim === (state.view3d ? '3d' : '2d')));
+el('view-dim-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('.edit-toggle-btn');
+  if (!btn) return;
+  state.view3d = btn.dataset.dim === '3d';
+  el('view-dim-toggle').querySelectorAll('.edit-toggle-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.dim === (state.view3d ? '3d' : '2d')));
+  try { localStorage.setItem('chatToDashboardView3d', state.view3d ? '1' : '0'); } catch {}
   renderDashboard();
 });
 
@@ -1426,6 +1458,49 @@ function TableCard(w) {
   return card;
 }
 
+// Darkens (negative percent) or lightens (positive) a "#rrggbb" color toward black/white —
+// used only for the extra 3D "top"/"side" faces below, never for a chart's real fill.
+function shadeHex(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent);
+  r = Math.round((t - r) * p) + r; g = Math.round((t - g) * p) + g; b = Math.round((t - b) * p) + b;
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+// Fakes an extruded "3-D column" look — a top and a side face per bar, built from plain SVG
+// polygons next to each bar's real path — for the 3D view toggle. Only bar charts need this:
+// a donut or line chart already reads as sitting on a 3D plane once the whole card tilts (see
+// .dim-3d in the CSS); a flat circle/curve doesn't need per-mark extrusion to look dimensional.
+// Purely decorative — the bar's real geometry, data and hit area are untouched.
+function apply3dBarExtrusion(svg, baseColor) {
+  if (!svg) return;
+  svg.querySelectorAll('.bar-3d-face').forEach(el => el.remove()); // idempotent if ever re-run
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const depth = 9;
+  const topColor = shadeHex(baseColor, .35);
+  const sideColor = shadeHex(baseColor, -.35);
+  svg.querySelectorAll('.apexcharts-bar-area').forEach(bar => {
+    const b = bar.getBBox();
+    if (b.width <= 0 || b.height <= 0) return;
+    const side = document.createElementNS(svgNS, 'polygon');
+    side.setAttribute('class', 'bar-3d-face');
+    side.setAttribute('fill', sideColor);
+    side.setAttribute('points',
+      `${b.x + b.width},${b.y} ${b.x + b.width + depth},${b.y - depth} ` +
+      `${b.x + b.width + depth},${b.y + b.height - depth} ${b.x + b.width},${b.y + b.height}`);
+    const top = document.createElementNS(svgNS, 'polygon');
+    top.setAttribute('class', 'bar-3d-face');
+    top.setAttribute('fill', topColor);
+    top.setAttribute('points',
+      `${b.x},${b.y} ${b.x + depth},${b.y - depth} ` +
+      `${b.x + b.width + depth},${b.y - depth} ${b.x + b.width},${b.y}`);
+    bar.insertAdjacentElement('afterend', side);
+    side.insertAdjacentElement('afterend', top);
+  });
+}
+
 // One shared config builder — the only place a chart's colors/fonts are set — passed
 // to ApexCharts verbatim so its own defaults never leak through. Donut and xy (bar/line)
 // options are built as two separate object literals rather than one with ternaries that
@@ -1577,7 +1652,7 @@ function renderDashboard() {
   const widgets = d.widgets || [];
   if (widgets.length) {
     const grid = document.createElement('div');
-    grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
+    grid.className = 'grid' + (state.editMode ? ' edit-mode' : '') + (state.view3d ? ' dim-3d' : '');
     widgets.forEach(w => grid.appendChild(buildWidget(w)));
     el.dash.appendChild(grid);
 
@@ -1585,8 +1660,18 @@ function renderDashboard() {
     // instantiate the charts queued by mountChart() and keep each render's promise so
     // the PPTX export can await it before capturing the SVG (see widgetToPptxInput).
     pendingCharts.forEach(({ card, holder, options }) => {
+      // In 3D view, extrude bar charts with a fake top/side face once the entrance animation
+      // actually finishes — measuring bar geometry any earlier (mid-animation) would extrude
+      // from a not-yet-full-height bar. A donut/line chart needs no such per-mark treatment:
+      // once the whole card tilts (see .dim-3d in the CSS), a flat circle/curve already reads
+      // as sitting on a 3D plane on its own.
+      if (state.view3d && options.chart.type === 'bar') {
+        const baseColor = options.colors[0];
+        options.chart = { ...options.chart, events: { animationEnd: () => apply3dBarExtrusion(holder.querySelector('svg'), baseColor) } };
+      }
       const chart = new ApexCharts(holder, options);
       card.__apexChart = chart;
+      card.__apexHolder = holder;
       card.__apexRendered = chart.render();
       chartInstances.push(chart);
     });
@@ -1752,30 +1837,41 @@ el('btn-export-pdf').addEventListener('click', () => window.print());
 
 // PowerPoint: KPI values and tables travel as plain data so they land as native,
 // still-editable PowerPoint shapes; bar/line/pie charts are rendered as inline SVG by
-// ApexCharts, which can export its own current state to a PNG data URI (dataURI()) —
-// no server-side charting code, and no manual SVG-to-canvas work needed. That PNG is
-// transparent wherever the chart is, so it's composited onto white first — the PPTX
-// slide is white either way.
-async function apexChartToPngDataUrl(chart) {
-  // The entrance animation (chartConfig()'s chart.animations) may still be mid-flight the
-  // instant this is called — snap it to its finished state first, or the export can capture
-  // a bar not yet at full height or a line not yet fully drawn. `animate: false` on this
-  // particular update redraws immediately rather than transitioning.
-  await chart.updateOptions({ chart: { animations: { enabled: false } } }, false, false, false);
-  const { imgURI } = await chart.dataURI({ scale: 2 });
-  const img = await new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('chart image decode failed'));
-    image.src = imgURI;
+// ApexCharts. Its own dataURI() export API sounded like the obvious way to turn that into
+// a PNG, but it silently ignores the 3D view's extruded-bar polygons (mountChart() adds
+// those as extra <polygon> elements next to the real bar path) — dataURI() apparently
+// rebuilds the image from ApexCharts' own internal series model rather than serializing the
+// live SVG DOM. Serializing that SVG element ourselves (clone -> XML string -> Image ->
+// canvas) is a few more lines but captures the chart exactly as it looks on screen,
+// extrusion included. The result is transparent wherever the chart is, so it's composited
+// onto white first — the PPTX slide is white either way.
+function svgElementToPngDataUrl(svgEl, scale = 2) {
+  return new Promise((resolve, reject) => {
+    const rect = svgEl.getBoundingClientRect();
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute('width', rect.width);
+    clone.setAttribute('height', rect.height);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    // Hover-only elements ApexCharts normally keeps invisible via its own stylesheet
+    // (opacity: 0 until you hover) — that stylesheet isn't available to a standalone image
+    // decode, so left in, the crosshair rect renders as a solid tinted band.
+    clone.querySelectorAll('.apexcharts-xcrosshairs, .apexcharts-ycrosshairs, .apexcharts-tooltip')
+      .forEach(el => el.remove());
+    const xml = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(rect.width * scale));
+      canvas.height = Math.max(1, Math.round(rect.height * scale));
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('chart SVG image decode failed'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
   });
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width; canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL('image/png');
 }
 
 async function widgetToPptxInput(w, card) {
@@ -1791,10 +1887,22 @@ async function widgetToPptxInput(w, card) {
     return { ...base, columns: cols, rows: rows.map(r => cols.map(c => String(r[c] ?? ''))) };
   }
   const chart = card?.__apexChart;
-  if (!chart) return base;
+  const holder = card?.__apexHolder;
+  if (!chart || !holder) return base;
   try {
     await card.__apexRendered; // wait for the initial paint before capturing its SVG
-    return { ...base, image: await apexChartToPngDataUrl(chart) };
+    // The entrance animation (chartConfig()'s chart.animations) may still be mid-flight the
+    // instant this runs — snap it to its finished state first, or the export can capture a
+    // bar not yet at full height or a line not yet fully drawn. `animate: false` on this
+    // particular update redraws immediately rather than transitioning.
+    await chart.updateOptions({ chart: { animations: { enabled: false } } }, false, false, false);
+    const svg = holder.querySelector('svg');
+    if (!svg) return base;
+    // Re-applied defensively (it's idempotent) rather than relying solely on the
+    // animationEnd hook in renderDashboard() — exporting fast enough to beat that event
+    // would otherwise capture bars with no extrusion yet.
+    if (state.view3d && base.type === 'bar') apply3dBarExtrusion(svg, THEME.palette[0]);
+    return { ...base, image: await svgElementToPngDataUrl(svg) };
   }
   catch { return base; }
 }
