@@ -628,6 +628,7 @@ tr:last-child td{border-bottom:0}
         <button type="button" class="edit-toggle-btn" data-dim="3d">3D</button>
       </div>
       <span id="autosave-status" class="autosave-status"></span>
+      <button type="button" id="btn-refresh" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">🔄 تحديث</button>
       <button type="button" id="btn-undo" title="تراجع" disabled>↶ تراجع</button>
       <button type="button" id="btn-redo" title="إعادة" disabled>↷ إعادة</button>
       <button type="button" id="btn-share">🔗 مشاركة</button>
@@ -1201,7 +1202,10 @@ async function doAutosave() {
     if (state.currentHistoryId) {
       const res = await fetch('/api/history/' + state.currentHistoryId, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary: d.summary, widgets: d.widgets }),
+        body: JSON.stringify({
+          summary: d.summary, widgets: d.widgets,
+          filters: d.filters || [], activeFilters: state.activeFilters || {},
+        }),
       });
       if (res.ok) { el('autosave-status').textContent = '✓ تم الحفظ'; return; }
       if (res.status !== 404) throw new Error();
@@ -1210,7 +1214,10 @@ async function doAutosave() {
     const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
     const res = await fetch('/api/history', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: lastQuestion, summary: d.summary, queryDescription: d.summary, widgets: d.widgets }),
+      body: JSON.stringify({
+        question: lastQuestion, summary: d.summary, queryDescription: d.summary, widgets: d.widgets,
+        filters: d.filters || [], activeFilters: state.activeFilters || {},
+      }),
     });
     if (!res.ok) throw new Error();
     const saved = await res.json();
@@ -2031,6 +2038,19 @@ async function applyFilters() {
   updateUndoRedoButtons();
 }
 
+// "🔄 تحديث": re-fetches every widget that carries query lineage straight from the live
+// database — applyFilters() already does exactly this (it re-runs each such widget's query
+// with whichever filter is currently active, even an empty one), so refreshing is just
+// calling it again on demand instead of only after a filter change. A widget with no query
+// lineage at all (e.g. combined from several tool calls, or a forecast) can't be refreshed
+// this way and simply keeps its existing data, same as it already does for filtering.
+el('btn-refresh').addEventListener('click', async () => {
+  const btn = el('btn-refresh');
+  btn.disabled = true;
+  try { await applyFilters(); }
+  finally { btn.disabled = false; }
+});
+
 function buildAddWidgetButton() {
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'add-widget-btn'; btn.textContent = '+ إضافة عنصر';
@@ -2668,6 +2688,7 @@ function saveToHistory(question, dashboard) {
     body: JSON.stringify({
       question, summary: dashboard.summary,
       queryDescription: dashboard.summary, widgets: dashboard.widgets,
+      filters: dashboard.filters || [], activeFilters: state.activeFilters || {},
     }),
   }).then(res => res.ok ? res.json() : null).then(saved => {
     // Captured so a later editor edit updates this same row instead of creating a new one.
@@ -2713,14 +2734,26 @@ function parseWidgets(json) {
   try { const w = JSON.parse(json); return Array.isArray(w) ? w : []; } catch { return []; }
 }
 
-// Reopens a saved dashboard entirely client-side — no call to the chat/AI endpoint.
+function parseFilters(json) {
+  try { const f = JSON.parse(json); return Array.isArray(f) ? f : []; } catch { return []; }
+}
+function parseActiveFilters(json) {
+  try { const f = JSON.parse(json); return f && typeof f === 'object' && !Array.isArray(f) ? f : {}; } catch { return {}; }
+}
+
+// Reopens a saved dashboard entirely client-side — no call to the chat/AI endpoint. Filters
+// and the selection that was active when it was saved come back too (see saveToHistory/
+// doAutosave), so the dashboard looks exactly as it did rather than losing its filter UI.
 function openHistoryEntry(id) {
   const entry = state.history.find(h => h.id === id);
   if (!entry) return;
-  state.dashboard = ensureWidgetMeta({ summary: entry.summary, widgets: parseWidgets(entry.widgetsJson) });
+  state.dashboard = ensureWidgetMeta({
+    summary: entry.summary, widgets: parseWidgets(entry.widgetsJson),
+    filters: parseFilters(entry.filtersJson),
+  });
   state.editHistory = { past: [], future: [] };
   state.currentHistoryId = entry.id; // further edits autosave onto this same saved entry
-  state.activeFilters = {};
+  state.activeFilters = parseActiveFilters(entry.activeFiltersJson);
   state.messages.push({ role: 'user', text: entry.queryDescription || entry.question });
   state.messages.push({
     role: 'bot', text: entry.summary,

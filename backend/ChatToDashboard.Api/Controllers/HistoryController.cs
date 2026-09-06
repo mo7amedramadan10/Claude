@@ -34,6 +34,12 @@ public class HistoryController : ControllerBase
             WidgetsJson = request.Widgets.ValueKind == System.Text.Json.JsonValueKind.Undefined
                 ? "[]"
                 : request.Widgets.GetRawText(),
+            FiltersJson = request.Filters.ValueKind == System.Text.Json.JsonValueKind.Undefined
+                ? "[]"
+                : request.Filters.GetRawText(),
+            ActiveFiltersJson = request.ActiveFilters.ValueKind == System.Text.Json.JsonValueKind.Undefined
+                ? "{}"
+                : request.ActiveFilters.GetRawText(),
         };
 
         var saved = await _store.SaveAsync(entry, ct);
@@ -54,7 +60,13 @@ public class HistoryController : ControllerBase
         var widgetsJson = request.Widgets.ValueKind == System.Text.Json.JsonValueKind.Undefined
             ? "[]"
             : request.Widgets.GetRawText();
-        var updated = await _store.UpdateAsync(UserId, id, request.Summary, widgetsJson, ct);
+        var filtersJson = request.Filters.ValueKind == System.Text.Json.JsonValueKind.Undefined
+            ? "[]"
+            : request.Filters.GetRawText();
+        var activeFiltersJson = request.ActiveFilters.ValueKind == System.Text.Json.JsonValueKind.Undefined
+            ? "{}"
+            : request.ActiveFilters.GetRawText();
+        var updated = await _store.UpdateAsync(UserId, id, request.Summary, widgetsJson, filtersJson, activeFiltersJson, ct);
         return updated ? NoContent() : NotFound(new { error = "غير موجود" });
     }
 

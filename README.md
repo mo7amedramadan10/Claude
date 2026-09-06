@@ -291,13 +291,27 @@ fresh start (see above) clears both, same as the first question of a session.
 Every question that produces at least one widget is saved automatically — no extra click.
 The **السجل** tab lists saved dashboards newest-first (question, summary, timestamp, widget
 count); **فتح** reopens one instantly by re-rendering the saved widgets in the browser —
-it does **not** call the model again — and **حذف** / **مسح الكل** remove one entry or all of
-them.
+it does **not** call the model again, and does not re-run any query either (see "🔄 تحديث"
+below for that) — and **حذف** / **مسح الكل** remove one entry or all of them.
+
+A saved entry carries the dashboard's filter definitions and whichever values were actually
+selected when it was saved, not just the widgets — reopening it puts the filter controls back
+exactly as they were, already showing the same filtered numbers, rather than losing the filter
+UI entirely (leaving stale-looking data with no way to tell it had been filtered).
 
 History is per-account — "the current user" is whoever is signed in. Each account's history
 is capped at the latest 60 dashboards; older ones are dropped automatically on save.
 `POST /api/history`, `GET /api/history`, `DELETE /api/history/{id}` and `DELETE /api/history`
 are the underlying endpoints, backed by a `DashboardHistory` table.
+
+## Refreshing a dashboard's data ("🔄 تحديث")
+
+Re-runs every widget that carries query lineage (see "Dashboard filters" above) straight
+against the live database, keeping whichever filter is currently applied — it's the same
+`applyFilters()` path a filter click already uses, just triggered on demand instead of only
+after picking a filter value. A widget with no query lineage at all (built from several
+combined tool calls, or a forecast) can't be refreshed this way and simply keeps its existing
+data, exactly like it already does for filtering.
 
 ## Building a dashboard from an image
 
