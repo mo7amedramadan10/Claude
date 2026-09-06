@@ -234,10 +234,12 @@ filtering the same data, changing a time range, adding a widget alongside the ex
 unless the question is clearly about something else entirely.
 
 This is a deliberate, structural decision, not the model guessing "new topic vs. follow-up"
-from wording: click **"🆕 ابدأ لوحة جديدة"** next to the chat input to arm a one-shot override
-for the *next* question only — that question gets no prior context and starts a dashboard from
-zero, exactly like the first question of a session. Continuation resumes automatically right
-after (the button un-arms itself once that one question is sent).
+from wording: click **"🆕 ابدأ لوحة جديدة"** next to the chat input to empty the dashboard
+immediately — the panel resets to its pristine "ask a question" state right there, no need to
+also ask something first. The chat transcript itself is untouched; only the dashboard clears.
+Since the next question is then sent with nothing to continue, it starts completely from
+scratch, exactly like the first question of a session — no separate "armed" state to track or
+undo, since an empty dashboard already *is* the fresh-start signal.
 
 The backend holds no server-side session state for this — the frontend already owns "the
 dashboard currently shown to the user" (`state.dashboard`) for rendering, and simply forwards
