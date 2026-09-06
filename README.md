@@ -276,6 +276,16 @@ names: `ValidateReadOnlySql` (single read-only `SELECT`/`WITH` only) and `CheckS
 after the filter is spliced in, and the filter's own column/values still go through the same
 schema-verified, parameterized path as the wizard's filters — never string-interpolated.
 
+Filters and the user's current selection both survive a continuation question (e.g. "زوّد رسم
+لـ...") on the frontend, not by asking the model to remember them: only `summary`+`widgets`
+travel as continuation context (see "Continuing a dashboard" above), so the model has no way to
+deliberately keep a filter it was never shown. `ask()` instead merges by filter `id` — every
+existing filter stays exactly as it was, and only a genuinely new `id` the model proposed (for
+a widget it just added, say) gets appended — and leaves `state.activeFilters` (the values
+actually picked) untouched, re-running it against the updated widget set right after so a
+newly-added widget reflects it immediately rather than waiting for the next filter click. A
+fresh start (see above) clears both, same as the first question of a session.
+
 ## History (`السجل`)
 
 Every question that produces at least one widget is saved automatically — no extra click.

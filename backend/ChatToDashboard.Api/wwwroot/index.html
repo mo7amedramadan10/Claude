@@ -2376,6 +2376,7 @@ async function ask(question) {
   const currentDashboard = state.dashboard?.widgets?.length
     ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
     : null;
+  const isContinuation = !!currentDashboard;
   const image = state.attachedImage;
 
   state.messages.push({ role: 'user', text: image ? `📎 ${state.attachedImageName}\n${question}` : question });
@@ -2395,10 +2396,24 @@ async function ask(question) {
     if (!res.ok || !payload?.dashboard) {
       state.messages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
     } else {
+      if (isContinuation) {
+        // The model isn't told what filters already exist (only summary+widgets travel as
+        // continuation context — see ComposeUserMessage), so it has no way to deliberately
+        // keep them; left alone, every continuation turn would silently replace the whole
+        // filters array with whatever it freshly decided this time, dropping the ones the
+        // user already had selected. Keep every existing filter (by id) as-is, and only
+        // append a genuinely new one the model proposed for this turn (e.g. for a widget
+        // it just added) — never let a repeated id overwrite the one already on screen.
+        const oldFilters = state.dashboard?.filters || [];
+        const oldIds = new Set(oldFilters.map(f => f.id).filter(Boolean));
+        const newFilters = (payload.dashboard.filters || []).filter(f => !f.id || !oldIds.has(f.id));
+        payload.dashboard.filters = [...oldFilters, ...newFilters];
+      } else {
+        state.activeFilters = {};
+      }
       state.dashboard = ensureWidgetMeta(payload.dashboard);
       state.editHistory = { past: [], future: [] };
       state.currentHistoryId = null;
-      state.activeFilters = {};
       // narration is the rich, read-aloud-friendly walkthrough (see AnalyticsTools'
       // "الشرح السردي" system-prompt section) — distinct from the short summary (used
       // elsewhere: continuation context, history list) and from each widget's technical
@@ -2408,6 +2423,10 @@ async function ask(question) {
       state.messages.push({ role: 'bot', text: narration, speechWidgets });
       saveToHistory(question, payload.dashboard);
       if (state.autoRead) speakText(narration, speechWidgets);
+      // The user's already-applied filter selections carried over too (above) — re-apply
+      // them now so a widget the continuation just added or changed reflects them
+      // immediately, instead of showing unfiltered data until the next filter click.
+      if (isContinuation && getActiveFilters().length) await applyFilters();
     }
   } catch (err) {
     state.messages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
