@@ -370,6 +370,12 @@ each usable without the other:
   and the UI never tries to read one aloud. Auto-read defaults to off and is remembered
   per-browser (`localStorage`), since an unannounced voice reading a business number aloud is
   the wrong call in a shared office; the manual per-message button has no such restriction.
+  While it reads, the widget the current sentence is talking about gets a soft highlight
+  (`.tts-highlight`) so the user can follow along on the dashboard — a best-effort match
+  (a sentence "names" a widget when the widget's title appears in it verbatim), driven by
+  `SpeechSynthesisUtterance`'s `boundary` event, so it costs nothing extra from the model or
+  the data contract and simply shows no highlight when a sentence doesn't name a widget by
+  title, or when a browser doesn't fire `boundary` events at all.
 
 Both rely on the browser's own built-in engine (`SpeechRecognition`/`speechSynthesis`) rather
 than a cloud speech service — free and immediate, but recognition quality varies by OS/browser

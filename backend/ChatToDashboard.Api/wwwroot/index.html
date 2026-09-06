@@ -182,7 +182,13 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-content:start}
 .widget{position:relative;background:var(--surface);border:1px solid var(--grid);
   border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
-  display:flex;flex-direction:column;gap:10px;animation:rise .35s ease both}
+  display:flex;flex-direction:column;gap:10px;animation:rise .35s ease both;
+  transition:box-shadow .3s ease,border-color .3s ease}
+/* While TTS is reading a sentence that names this widget (see speakText's boundary
+   handling), it gets a soft glow so the user can follow along visually — cleared the
+   moment speech moves to a sentence that names a different widget, or ends. */
+.widget.tts-highlight{border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft),0 0 24px var(--accent-soft)}
 /* `to{}` deliberately omits `transform` — CSS resolves an omitted endpoint to whatever the
    element's non-animated transform would be, so this same entrance animation settles into
    either `none` (2D) or the .dim-3d tilt below, instead of the two fighting over the property. */
@@ -2124,7 +2130,8 @@ function renderMessages() {
 el('messages').addEventListener('click', e => {
   const btn = e.target.closest('.msg-speak-btn');
   if (!btn) return;
-  speakText(state.messages[Number(btn.dataset.idx)]?.text || '');
+  const msg = state.messages[Number(btn.dataset.idx)];
+  speakText(msg?.text || '', msg?.speechWidgets);
 });
 
 // ---------- voice: text-to-speech (the model talks back) ----------
@@ -2135,13 +2142,66 @@ el('messages').addEventListener('click', e => {
 // unannounced voice reading a business number aloud is the wrong call in a shared office.
 const ttsSupported = () => 'speechSynthesis' in window;
 
-function speakText(text) {
+// Splits the summary into rough sentences (Arabic/Latin stops or newlines), keeping each
+// piece's start offset in the original string so a `boundary` event's charIndex can be
+// mapped back to "which sentence is being read right now".
+function splitSentences(text) {
+  const sentences = [];
+  const re = /[^.!؟\n]+[.!؟\n]*/g;
+  let m;
+  while ((m = re.exec(text))) sentences.push({ start: m.index, text: m[0] });
+  return sentences;
+}
+
+function clearTtsHighlight() {
+  document.querySelectorAll('.widget.tts-highlight').forEach(c => c.classList.remove('tts-highlight'));
+}
+
+// Best-effort only: a sentence "names" a widget when the widget's own title appears in it
+// verbatim, which holds whenever the model's summary talks about a widget by name (the
+// common case) and simply highlights nothing when it doesn't — never a hard requirement.
+function widgetForSentence(sentence, widgets) {
+  if (!widgets?.length) return null;
+  const candidates = widgets.filter(w => w.title && w.title.trim().length >= 3 && sentence.includes(w.title));
+  if (!candidates.length) return null;
+  // Prefer the most specific (longest) title match when more than one widget's name appears.
+  return candidates.reduce((a, b) => (b.title.length > a.title.length ? b : a));
+}
+
+// `widgets` is optional: [{id, title}, ...] for the dashboard this text describes, used only
+// to drive the read-along highlight below — speech itself works identically without it.
+function speakText(text, widgets) {
   if (!ttsSupported() || !text) return;
   window.speechSynthesis.cancel(); // never overlap two utterances
+  clearTtsHighlight();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'ar-SA';
   const arabicVoice = window.speechSynthesis.getVoices().find(v => (v.lang || '').toLowerCase().startsWith('ar'));
   if (arabicVoice) utter.voice = arabicVoice;
+
+  if (widgets?.length) {
+    const sentences = splitSentences(text);
+    let lastId = null;
+    // Not every engine fires word-level boundary events (support is inconsistent across
+    // browsers); when it doesn't, the highlight simply never appears — speech is unaffected.
+    utter.onboundary = e => {
+      if (e.name && e.name !== 'word' && e.name !== 'sentence') return;
+      const sentence = sentences.findLast ? sentences.findLast(s => s.start <= e.charIndex) : [...sentences].reverse().find(s => s.start <= e.charIndex);
+      const match = sentence ? widgetForSentence(sentence.text, widgets) : null;
+      if (match?.id === lastId) return;
+      clearTtsHighlight();
+      if (match) {
+        const card = document.querySelector(`.widget[data-widget-id="${match.id}"]`);
+        card?.classList.add('tts-highlight');
+        lastId = match.id;
+      } else {
+        lastId = null;
+      }
+    };
+    utter.onend = clearTtsHighlight;
+    utter.onerror = clearTtsHighlight;
+  }
+
   window.speechSynthesis.speak(utter);
 }
 
@@ -2305,9 +2365,10 @@ async function ask(question) {
       state.editHistory = { past: [], future: [] };
       state.currentHistoryId = null;
       state.activeFilters = {};
-      state.messages.push({ role: 'bot', text: payload.dashboard.summary, widgetsBrief: widgetsBrief(payload.dashboard.widgets) });
+      const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
+      state.messages.push({ role: 'bot', text: payload.dashboard.summary, widgetsBrief: widgetsBrief(payload.dashboard.widgets), speechWidgets });
       saveToHistory(question, payload.dashboard);
-      if (state.autoRead) speakText(payload.dashboard.summary);
+      if (state.autoRead) speakText(payload.dashboard.summary, speechWidgets);
     }
   } catch (err) {
     state.messages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
@@ -2603,7 +2664,10 @@ function openHistoryEntry(id) {
   state.currentHistoryId = entry.id; // further edits autosave onto this same saved entry
   state.activeFilters = {};
   state.messages.push({ role: 'user', text: entry.queryDescription || entry.question });
-  state.messages.push({ role: 'bot', text: entry.summary });
+  state.messages.push({
+    role: 'bot', text: entry.summary,
+    speechWidgets: state.dashboard.widgets.map(w => ({ id: w.id, title: w.title })),
+  });
   showScreen('chat');
   renderMessages(); renderDashboard();
 }
