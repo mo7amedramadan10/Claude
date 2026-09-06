@@ -50,7 +50,7 @@ public class OpenAiClient : IDashboardGenerator
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
         string question,
-        IReadOnlyList<ChatTurn>? history = null,
+        DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         CancellationToken ct = default)
@@ -61,19 +61,14 @@ public class OpenAiClient : IDashboardGenerator
             new JsonObject { ["role"] = "system", ["content"] = _tools.BuildSystemPrompt(context) },
         };
 
-        foreach (var turn in history ?? Array.Empty<ChatTurn>())
-        {
-            if (string.IsNullOrWhiteSpace(turn.Text)) continue;
-            if (turn.Role != "user" && turn.Role != "assistant") continue;
-            messages.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Text.Trim() });
-        }
-
-        // A reference image, if attached, rides along on this question's turn only —
-        // never replayed on later turns since it isn't part of ChatTurn history.
+        // The dashboard currently on screen (when this is a continuation, not a fresh start —
+        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
+        // there is no separate multi-turn history to replay.
+        var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
         JsonNode userContent = string.IsNullOrWhiteSpace(imageDataUrl)
-            ? question
+            ? userText
             : new JsonArray(
-                new JsonObject { ["type"] = "text", ["text"] = question },
+                new JsonObject { ["type"] = "text", ["text"] = userText },
                 new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } });
         messages.Add(new JsonObject { ["role"] = "user", ["content"] = userContent });
 

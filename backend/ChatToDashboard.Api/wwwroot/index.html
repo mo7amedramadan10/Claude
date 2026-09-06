@@ -163,6 +163,14 @@ form#form{display:flex;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .attach-btn{display:flex;align-items:center;justify-content:center;width:41px;
   border:1px solid var(--grid);border-radius:11px;background:var(--surface);font-size:16px}
 .attach-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+/* Default (unarmed): the next question continues the dashboard on screen. Click once to
+   arm a fresh start for the *next* question only — see ask() in the chat section, which
+   consumes (un-arms) this the moment that one question is sent. */
+.new-dash-btn{display:flex;align-items:center;gap:4px;height:41px;padding:0 12px;
+  border:1px solid var(--grid);border-radius:11px;background:var(--surface);color:var(--ink-2);
+  font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+.new-dash-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.new-dash-btn.armed{border-color:var(--accent);background:var(--accent);color:#fff}
 #mic-btn.listening{border-color:var(--danger);background:var(--danger);color:#fff;animation:mic-pulse 1.2s ease-in-out infinite}
 @keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent)}50%{box-shadow:0 0 0 8px transparent}}
 .attached-image{display:flex;align-items:center;gap:10px;margin:0 14px;padding:8px 10px;
@@ -588,6 +596,8 @@ tr:last-child td{border-bottom:0}
         <input type="file" id="dash-image-input" accept="image/*" hidden>
       </label>
       <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك">🎤</button>
+      <button type="button" id="new-dashboard-btn" class="new-dash-btn"
+        title="السؤال الجاي هيبني لوحة جديدة تمامًا، بدل ما يكمل على اللي معروض دلوقتي">🆕 ابدأ لوحة جديدة</button>
       <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
       <button id="send" type="submit">إرسال</button>
     </form>
@@ -739,6 +749,7 @@ const state = {
   editMode: false, editHistory: { past: [], future: [] },
   currentHistoryId: null, wizard: null,
   activeFilters: {}, // filterId -> selected values (or [from,to] for range types)
+  startFresh: false, // one-shot: armed by "🆕 ابدأ لوحة جديدة", consumed by the next ask()
 };
 try { state.view3d = localStorage.getItem('chatToDashboardView3d') === '1'; } catch { state.view3d = false; }
 
@@ -2223,6 +2234,20 @@ if (ttsSupported()) {
   });
 }
 
+// ---------- continuation: "🆕 ابدأ لوحة جديدة" ----------
+// Arms a one-shot override so the *next* question is answered from scratch instead of
+// continuing the dashboard on screen (see ask(), which reads and un-arms state.startFresh).
+// Deliberately a button, not wording detection — see AnalyticsTools.ComposeUserMessage.
+function syncNewDashboardButton() {
+  const btn = el('new-dashboard-btn');
+  btn.classList.toggle('armed', state.startFresh);
+  btn.textContent = state.startFresh ? '✓ هتبدأ لوحة جديدة' : '🆕 ابدأ لوحة جديدة';
+}
+el('new-dashboard-btn').addEventListener('click', () => {
+  state.startFresh = !state.startFresh;
+  syncNewDashboardButton();
+});
+
 // ---------- voice: speech-to-text (the user talks to the model) ----------
 // A mic button that transcribes into the same #q box any typed question already goes
 // through — voice is just an alternate way to fill that box, never a separate path, so every
@@ -2315,33 +2340,20 @@ function renderSuggestions() {
   el.messages.after(row);
 }
 
-// A compact, one-line description of a dashboard's widgets (type, title, and the
-// column(s) charted) — attached to the history sent back to the model so a follow-up
-// like "خليه شهري" or "غيّر لون الرسم" has something concrete to refer to. Never shown
-// in the chat bubble itself (see renderMessages, which only ever reads m.text).
-function widgetsBrief(widgets) {
-  if (!widgets?.length) return '';
-  return widgets.map((w, i) => {
-    const cols = w.xKey || w.yKey ? ` (x=${w.xKey || '-'}, y=${w.yKey || '-'})` : '';
-    return `${i + 1}) ${w.type} "${w.title}"${cols}`;
-  }).join('؛ ');
-}
-
+// Whether/how the new question continues the dashboard on screen is decided here, explicitly
+// and structurally — never guessed from the question's wording (see AnalyticsTools.
+// ComposeUserMessage on the backend, which frames this as the model's only continuation
+// signal). Default: continue, sending the full current summary+widgets (source fields and
+// all) so a follow-up like "اعرضلي بس القطاع الرقمي" can refine what's already there. The "🆕
+// ابدأ لوحة جديدة" button arms a one-shot override, consumed by exactly the next ask() call.
 async function ask(question) {
-  const priorMessages = state.messages.filter(m => !m.error).slice(-10);
-  const history = priorMessages.map((m, i) => {
-    // For the most recent turn, describe the dashboard's *actual current* state — it may
-    // have been hand-edited since it was generated (widgets added/removed/filtered via the
-    // editor) — instead of the snapshot captured back when it was first generated, so a
-    // follow-up like "خليه شهري" always modifies what's really on screen right now.
-    if (m.role === 'bot' && i === priorMessages.length - 1 && state.dashboard?.widgets?.length) {
-      return { role: 'assistant', text: `${state.dashboard.summary}\nعناصر اللوحة السابقة: ${widgetsBrief(state.dashboard.widgets)}` };
-    }
-    return {
-      role: m.role === 'user' ? 'user' : 'assistant',
-      text: m.role === 'bot' && m.widgetsBrief ? `${m.text}\nعناصر اللوحة السابقة: ${m.widgetsBrief}` : m.text,
-    };
-  });
+  const startFresh = state.startFresh;
+  state.startFresh = false;
+  syncNewDashboardButton();
+
+  const currentDashboard = (!startFresh && state.dashboard?.widgets?.length)
+    ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
+    : null;
   const image = state.attachedImage;
 
   state.messages.push({ role: 'user', text: image ? `📎 ${state.attachedImageName}\n${question}` : question });
@@ -2353,7 +2365,7 @@ async function ask(question) {
     const res = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: question, history, image,
+        message: question, currentDashboard, image,
         sources: { systems: [...state.onSystems], categories: [...state.onCategories] },
       }),
     });
@@ -2366,7 +2378,7 @@ async function ask(question) {
       state.currentHistoryId = null;
       state.activeFilters = {};
       const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
-      state.messages.push({ role: 'bot', text: payload.dashboard.summary, widgetsBrief: widgetsBrief(payload.dashboard.widgets), speechWidgets });
+      state.messages.push({ role: 'bot', text: payload.dashboard.summary, speechWidgets });
       saveToHistory(question, payload.dashboard);
       if (state.autoRead) speakText(payload.dashboard.summary, speechWidgets);
     }

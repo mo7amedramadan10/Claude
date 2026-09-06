@@ -9,11 +9,14 @@ public class ChatRequest
     public string Message { get; set; } = string.Empty;
 
     /// <summary>
-    /// Prior conversation turns (oldest first), so follow-up questions like
-    /// "now break that down by month" have context. Optional.
+    /// The dashboard currently shown to the user — its last summary and full widgets array
+    /// (each widget's "source" included), sent only when this question should continue or
+    /// refine it. Null for the first question of a session, or right after the "🆕 ابدأ لوحة
+    /// جديدة" button is clicked — the frontend alone decides which, by including or omitting
+    /// this field; the model never has to infer "new topic vs. follow-up" from wording alone.
     /// </summary>
-    [JsonPropertyName("history")]
-    public List<ChatTurn> History { get; set; } = new();
+    [JsonPropertyName("currentDashboard")]
+    public DashboardStateInput? CurrentDashboard { get; set; }
 
     /// <summary>Which sources the user has enabled; omitted means "everything".</summary>
     [JsonPropertyName("sources")]
@@ -27,13 +30,14 @@ public class ChatRequest
     public string? Image { get; set; }
 }
 
-public class ChatTurn
+/// <summary>The dashboard state a continuation question is framed against — see <see cref="ChatRequest.CurrentDashboard"/>.</summary>
+public class DashboardStateInput
 {
-    [JsonPropertyName("role")]
-    public string Role { get; set; } = string.Empty; // "user" or "assistant"
+    [JsonPropertyName("summary")]
+    public string Summary { get; set; } = string.Empty;
 
-    [JsonPropertyName("text")]
-    public string Text { get; set; } = string.Empty;
+    [JsonPropertyName("widgets")]
+    public List<DashboardWidget> Widgets { get; set; } = new();
 }
 
 public class ChatResponse

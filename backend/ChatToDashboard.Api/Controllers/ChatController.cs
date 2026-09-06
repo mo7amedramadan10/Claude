@@ -42,7 +42,7 @@ public class ChatController : ControllerBase
         try
         {
             var dashboard = await _generator.GenerateDashboardAsync(
-                request.Message.Trim(), request.History, effectiveSources, request.Image, ct);
+                request.Message.Trim(), request.CurrentDashboard, effectiveSources, request.Image, ct);
             return Ok(new ChatResponse { Dashboard = dashboard });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

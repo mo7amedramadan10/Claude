@@ -49,38 +49,19 @@ public class ClaudeClient : IDashboardGenerator
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
         string question,
-        IReadOnlyList<ChatTurn>? history = null,
+        DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         CancellationToken ct = default)
     {
-        var messages = new JsonArray();
+        // The dashboard currently on screen (when this is a continuation, not a fresh start —
+        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn,
+        // so there is no separate multi-turn history to replay; a fresh request starts with
+        // exactly this one turn.
+        var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
-        // Replay prior Q&A summaries (text only) so follow-up questions have context.
-        // Tool calls from earlier turns are not replayed; Claude re-queries as needed.
-        void AppendTextTurn(string role, string text)
-        {
-            // The Messages API requires alternating roles; merge consecutive same-role turns.
-            if (messages.Count > 0 && messages[^1]!["role"]!.GetValue<string>() == role)
-            {
-                var previous = messages[^1]!.AsObject();
-                previous["content"] = previous["content"]!.GetValue<string>() + "\n\n" + text;
-                return;
-            }
-            messages.Add(new JsonObject { ["role"] = role, ["content"] = text });
-        }
-
-        foreach (var turn in history ?? Array.Empty<ChatTurn>())
-        {
-            if (string.IsNullOrWhiteSpace(turn.Text)) continue;
-            if (turn.Role != "user" && turn.Role != "assistant") continue;
-            AppendTextTurn(turn.Role, turn.Text.Trim());
-        }
-
-        AppendTextTurn("user", question);
-
-        // A reference image, if attached, rides along on this question's turn only —
-        // never replayed on later turns since it isn't part of ChatTurn history.
+        // A reference image, if attached, rides along on this question's turn only.
         if (TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
         {
             var last = messages[^1]!.AsObject();
@@ -93,10 +74,6 @@ public class ClaudeClient : IDashboardGenerator
                 },
                 new JsonObject { ["type"] = "text", ["text"] = text });
         }
-
-        // A conversation must start with a user turn; drop a leading assistant turn.
-        while (messages.Count > 0 && messages[0]!["role"]!.GetValue<string>() == "assistant")
-            messages.RemoveAt(0);
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var tools = BuildToolsJson(context);

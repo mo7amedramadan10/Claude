@@ -39,7 +39,7 @@ public class LlmRouter : IDashboardGenerator
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
         string question,
-        IReadOnlyList<ChatTurn>? history = null,
+        DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         CancellationToken ct = default)
@@ -53,6 +53,6 @@ public class LlmRouter : IDashboardGenerator
             Ollama => _services.GetRequiredService<OllamaClient>(),
             _ => _services.GetRequiredService<ClaudeClient>(),
         };
-        return await generator.GenerateDashboardAsync(question, history, sources, imageDataUrl, ct);
+        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, ct);
     }
 }

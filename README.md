@@ -224,6 +224,28 @@ account. Nothing else is read from the directory (no group sync); admins still c
 and per-source permissions here, same as a local account — only where the password lives is
 different.
 
+## Continuing a dashboard
+
+By default, every new question **continues the dashboard currently on screen** rather than
+starting from scratch: the frontend sends the last response's full `summary` and `widgets`
+array (every field, `source` included) as explicit context ahead of the new question, and the
+system prompt instructs the model to treat it as a base to refine or extend — narrowing/
+filtering the same data, changing a time range, adding a widget alongside the existing ones —
+unless the question is clearly about something else entirely.
+
+This is a deliberate, structural decision, not the model guessing "new topic vs. follow-up"
+from wording: click **"🆕 ابدأ لوحة جديدة"** next to the chat input to arm a one-shot override
+for the *next* question only — that question gets no prior context and starts a dashboard from
+zero, exactly like the first question of a session. Continuation resumes automatically right
+after (the button un-arms itself once that one question is sent).
+
+The backend holds no server-side session state for this — the frontend already owns "the
+dashboard currently shown to the user" (`state.dashboard`) for rendering, and simply forwards
+it as `currentDashboard` on `POST /api/chat` when continuing (see `ComposeUserMessage` in
+`AnalyticsTools.cs`). Earlier versions replayed the last several chat turns as text history on
+every question, growing with the conversation; this replaces that with a single, complete
+snapshot of what's actually on screen — no multi-turn tool-calling history is resent.
+
 ## History (`السجل`)
 
 Every question that produces at least one widget is saved automatically — no extra click.

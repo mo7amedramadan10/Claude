@@ -61,7 +61,7 @@ public class OllamaClient : IDashboardGenerator
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
         string question,
-        IReadOnlyList<ChatTurn>? history = null,
+        DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         CancellationToken ct = default)
@@ -80,13 +80,10 @@ public class OllamaClient : IDashboardGenerator
             new JsonObject { ["role"] = "system", ["content"] = _tools.BuildSystemPrompt(context) },
         };
 
-        foreach (var turn in history ?? Array.Empty<ChatTurn>())
-        {
-            if (string.IsNullOrWhiteSpace(turn.Text)) continue;
-            if (turn.Role != "user" && turn.Role != "assistant") continue;
-            messages.Add(new JsonObject { ["role"] = turn.Role, ["content"] = turn.Text.Trim() });
-        }
-        messages.Add(new JsonObject { ["role"] = "user", ["content"] = question });
+        // The dashboard currently on screen (when this is a continuation, not a fresh start —
+        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
+        // there is no separate multi-turn history to replay.
+        messages.Add(new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) });
 
         var tools = BuildToolsJson(context);
         var jsonRepairAttempts = 0;
