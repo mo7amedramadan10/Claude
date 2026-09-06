@@ -17,6 +17,17 @@ public class DashboardSpec
     [JsonPropertyName("summary")]
     public string Summary { get; set; } = string.Empty;
 
+    /// <summary>
+    /// A rich, engaging narrative walkthrough of the dashboard — distinct in purpose from
+    /// <see cref="Summary"/> (short, compact) and from each widget's <see
+    /// cref="DashboardWidget.Source"/> (technical provenance, never mentioned here). Written in
+    /// Modern Standard Arabic, meant to be read or listened to (see the 🔊 button, which reads
+    /// this — never Summary or Source). See BuildSystemPrompt's "narration" section for the
+    /// full content rules.
+    /// </summary>
+    [JsonPropertyName("narration")]
+    public string Narration { get; set; } = string.Empty;
+
     [JsonPropertyName("widgets")]
     public List<DashboardWidget> Widgets { get; set; } = new();
 
@@ -34,6 +45,8 @@ public class DashboardSpec
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(Summary))
             errors.Add("\"summary\" is required and must be a non-empty string.");
+        if (string.IsNullOrWhiteSpace(Narration))
+            errors.Add("\"narration\" is required and must be a non-empty string.");
         // An empty array is valid: it is how the agent answers when the question needs a
         // source the user has switched off, and the summary explains what to enable.
         if (Widgets is null)

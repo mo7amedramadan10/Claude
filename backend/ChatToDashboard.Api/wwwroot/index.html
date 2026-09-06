@@ -2377,10 +2377,15 @@ async function ask(question) {
       state.editHistory = { past: [], future: [] };
       state.currentHistoryId = null;
       state.activeFilters = {};
+      // narration is the rich, read-aloud-friendly walkthrough (see AnalyticsTools'
+      // "الشرح السردي" system-prompt section) — distinct from the short summary (used
+      // elsewhere: continuation context, history list) and from each widget's technical
+      // source. It's what the chat bubble shows and what 🔊/auto-read speaks.
       const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
-      state.messages.push({ role: 'bot', text: payload.dashboard.summary, speechWidgets });
+      const narration = payload.dashboard.narration || payload.dashboard.summary;
+      state.messages.push({ role: 'bot', text: narration, speechWidgets });
       saveToHistory(question, payload.dashboard);
-      if (state.autoRead) speakText(payload.dashboard.summary, speechWidgets);
+      if (state.autoRead) speakText(narration, speechWidgets);
     }
   } catch (err) {
     state.messages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });

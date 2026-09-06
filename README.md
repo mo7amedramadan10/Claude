@@ -373,6 +373,24 @@ than a shaded band: ApexCharts' `rangeArea` series type (verified against the ex
 5.0.0) silently fails to render when mixed into a combo chart with a bar/line series, so a
 shaded fill wasn't a reliable option here.
 
+## Narration vs. summary vs. source
+
+Every response carries three distinct pieces of user-facing text, each with its own job and
+its own audience:
+
+- **`summary`** — one or two sentences, compact. Shown as the dashboard pane's own header, and
+  reused internally (the "current dashboard" context on a follow-up question, the one-line
+  preview in **السجل**) — anywhere a short label is all that's needed.
+- **`narration`** — a richer walkthrough in Modern Standard Arabic (الفصحى), roughly 4–8
+  sentences, that reads through the widgets in order with real narrative transitions instead of
+  a repeated per-widget template. This is what the chat bubble displays and what 🔊/auto-read
+  speaks. It never mentions how the answer was produced — no table, file, category, "قاعدة
+  بيانات", "استعلام", or column name — only what the data means.
+- **`source`** (per widget, behind its ⓘ button) — exactly the technical provenance: which
+  table/file/system the number came from, and how it was calculated. `narration` and `source`
+  are deliberately disjoint: provenance lives only in `source`, meaning lives only in
+  `narration`.
+
 ## Voice
 
 Two independent, browser-native features — no server-side speech code, no cloud speech API,
@@ -387,9 +405,10 @@ each usable without the other:
   `SpeechRecognition`/`webkitSpeechRecognition` — Chrome and Edge; Firefox and Safari don't, at
   least not without a flag.
 - **Text-to-speech** (🔊 button on any bot message, plus an opt-in "قراءة تلقائية" toggle in the
-  header that speaks every *new* answer as it arrives): reads only the short plain-language
-  summary a response already carries — a chart or a table has no meaningful spoken form,
-  and the UI never tries to read one aloud. Auto-read defaults to off and is remembered
+  header that speaks every *new* answer as it arrives): reads the rich `narration` field (see
+  "Narration vs. summary vs. source" below) — never the short `summary`, and never a widget's
+  `source` — since a chart or a table has no meaningful spoken form and the UI never tries to
+  read one aloud. Auto-read defaults to off and is remembered
   per-browser (`localStorage`), since an unannounced voice reading a business number aloud is
   the wrong call in a shared office; the manual per-message button has no such restriction.
   While it reads, the widget the current sentence is talking about gets a soft highlight
