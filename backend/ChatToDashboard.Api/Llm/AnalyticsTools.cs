@@ -29,6 +29,18 @@ public class AnalyticsTools
         @"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|MERGE|EXEC|EXECUTE|GRANT|REVOKE|BACKUP|RESTORE|USE|KILL|SHUTDOWN|PRAGMA|ATTACH|DETACH|VACUUM|REINDEX|REPLACE)\b|(\bsp_\w+)|(\bxp_\w+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    // A recurring mistake (seen with Ollama's smaller models, but not exclusive to it): writing
+    // GROUP BY 'column_name' with single quotes — a SQL *string literal* — instead of
+    // GROUP BY "column_name" with double quotes (SQLite's identifier syntax). The query still
+    // runs and "succeeds", but every row now evaluates the constant identically, so it silently
+    // collapses into a single group instead of one per real value. Without a hint the model has
+    // no signal anything is wrong beyond "the count looks too high", and — observed live — can
+    // spend a dozen tool calls guessing at WHERE-clause exclusions (NULLs, blanks, specific
+    // values) that can never fix a GROUP BY target that was never a column reference to begin
+    // with. Flagging it in the tool result itself lets the model self-correct in one turn.
+    private static readonly Regex GroupByStringLiteral = new(
+        @"GROUP\s+BY\s+'([^']*)'", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     // Every tool result below is serialized here, then embedded as a plain string value inside
     // a *second* JSON document (the provider request body — see ClaudeClient/OpenAiClient).
     // The default encoder hex-escapes non-ASCII text into a six-character ASCII sequence
@@ -784,6 +796,21 @@ public class AnalyticsTools
             for (var i = 0; i < reader.FieldCount; i++)
                 row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
             rows.Add(row);
+        }
+
+        var groupByLiteral = GroupByStringLiteral.Match(sql);
+        if (groupByLiteral.Success)
+        {
+            var literal = groupByLiteral.Groups[1].Value;
+            return (JsonSerializer.Serialize(new
+            {
+                rowCount = rows.Count,
+                rows,
+                warning = $"GROUP BY '{literal}' uses single quotes, which SQL treats as a fixed " +
+                    "string literal — not a column reference — so every row groups into the same " +
+                    "single bucket. If you meant to group by a column, use double quotes for the " +
+                    $"identifier instead: GROUP BY \"{literal}\".",
+            }, ToolResultJsonOptions), false);
         }
 
         return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows }, ToolResultJsonOptions), false);
