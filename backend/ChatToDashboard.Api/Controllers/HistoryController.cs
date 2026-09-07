@@ -163,10 +163,21 @@ public class HistoryController : ControllerBase
         if (entry.OwnerId != UserId && !IsAdmin) return Forbid();
 
         var roles = await _store.ListRolesAsync(id, ct);
+        // Resolved here (not left to the frontend) so a non-Admin Owner — who can't call
+        // GET /api/users to build their own id->name map — still sees real names instead
+        // of raw ids for the handful of people already on this dashboard.
+        var owner = string.IsNullOrWhiteSpace(entry.OwnerId) ? null : await _users.FindByIdAsync(entry.OwnerId, ct);
+        var roleUsers = new List<object>();
+        foreach (var r in roles)
+        {
+            var u = await _users.FindByIdAsync(r.UserId, ct);
+            roleUsers.Add(new { userId = r.UserId, role = r.Role, displayName = u?.DisplayName ?? u?.Username ?? r.UserId, username = u?.Username });
+        }
         return Ok(new
         {
             ownerId = entry.OwnerId,
-            roles = roles.Select(r => new { userId = r.UserId, role = r.Role }),
+            ownerName = owner?.DisplayName ?? owner?.Username,
+            roles = roleUsers,
         });
     }
 
@@ -324,6 +335,7 @@ public class HistoryController : ControllerBase
     {
         bool disabled = false;
         string? disabledReason = null;
+        string? ownerName = null;
         if (entry.IsActive)
         {
             myRole ??= await ResolveRoleAsync(entry, ct);
@@ -335,6 +347,7 @@ public class HistoryController : ControllerBase
             else
             {
                 var owner = await _users.FindByIdAsync(entry.OwnerId, ct);
+                ownerName = owner?.DisplayName ?? owner?.Username;
                 var reason = owner is null
                     ? "تعذّر العثور على مالك اللوحة."
                     : await _access.CheckEligibilityAsync(owner, entry.WidgetsJson, ct);
@@ -351,7 +364,7 @@ public class HistoryController : ControllerBase
         {
             entry.Id, entry.UserId, entry.Question, entry.QueryDescription, entry.Summary,
             entry.WidgetsJson, entry.FiltersJson, entry.ActiveFiltersJson, entry.CreatedAt,
-            entry.IsActive, entry.OwnerId,
+            entry.IsActive, entry.OwnerId, ownerName,
             myRole = entry.IsActive ? myRole : "owner",
             disabled, disabledReason,
         };
