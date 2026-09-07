@@ -2179,19 +2179,25 @@ function renderDashboard() {
       // both render inside the same "total" state: the big number's font comes from
       // `labels.value` (yes, even for the idle grand-total figure, not just a hovered
       // slice's own value), while `labels.total`'s own fontSize/color style only the
-      // static "الإجمالي" caption underneath it — confirmed by inspecting the actual
-      // rendered <text> elements, since it isn't obvious from the option names alone.
+      // caption underneath it (deriveUnitLabel(title)) — confirmed by inspecting the
+      // actual rendered <text> elements, since it isn't obvious from the option names alone.
       if (options.chart.type === 'donut') {
         const box = Math.min(holder.clientWidth, holder.clientHeight);
         const numSize = Math.round(Math.max(18, Math.min(38, box * 0.16)));
         const capSize = Math.round(Math.max(10, numSize * 0.4));
         const labels = options.plotOptions.pie.donut.labels;
         labels.value.fontSize = numSize + 'px';
-        labels.value.offsetY = -Math.round(capSize * 0.6);
+        // offsetY nudges each line away from ApexCharts' own default (already vertically
+        // stacked, overlapping) position — *not* a shared center both are measured from, so
+        // this can't be derived from font-size alone; multipliers below were tuned against
+        // the real rendered <text> boxes (measured via getBoundingClientRect in a live
+        // browser) until the number and caption cleared each other with a small gap, rather
+        // than guessed from the font sizes' ratio.
+        labels.value.offsetY = -Math.round(capSize * 1.15) - 3;
         labels.total.fontSize = capSize + 'px';
-        labels.total.offsetY = Math.round(numSize * 0.32);
+        labels.total.offsetY = Math.round(numSize * 0.55) + 3;
         labels.name.fontSize = capSize + 'px';
-        labels.name.offsetY = Math.round(numSize * 0.32);
+        labels.name.offsetY = Math.round(numSize * 0.55) + 3;
       }
       // In 3D view, extrude bar charts with a fake top/side face once the entrance animation
       // actually finishes — measuring bar geometry any earlier (mid-animation) would extrude
