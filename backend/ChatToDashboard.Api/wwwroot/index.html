@@ -337,6 +337,8 @@ tr:last-child td{border-bottom:0}
 .filter-clear-btn{padding:6px 12px;border:1px solid var(--grid);border-radius:999px;background:transparent;
   color:var(--danger);font-size:12px}
 .filter-clear-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.1)}
+.filter-badge-static{display:flex;align-items:center;padding:6px 12px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--plane);color:var(--ink-2);font-size:12.5px}
 .widget-unaffected{position:absolute;top:10px;inset-inline-start:10px;padding:2px 8px;border-radius:999px;
   background:var(--plane);color:var(--muted);font-size:10.5px;border:1px solid var(--grid)}
 
@@ -488,6 +490,21 @@ tr:last-child td{border-bottom:0}
 .role-add-row select{width:auto}
 .roles-section-title{font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px}
 .roles-error{color:var(--danger);font-size:12px;margin-top:4px}
+
+/* ---------- Part 3: static snapshot sharing (expiry, revoke, view count) ---------- */
+.share-modal-box{max-width:480px}
+.share-expiry-label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+#share-expiry-date{margin-top:8px}
+.share-row-meta{display:flex;flex-direction:column;gap:2px}
+.share-row-meta .q{font-size:12.5px;font-weight:600}
+.share-row-meta .meta{font-size:11px;color:var(--muted)}
+.share-row-actions{display:flex;gap:6px;align-items:center}
+.share-row-actions button{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2);
+  padding:4px 10px;border-radius:7px;font-size:11.5px;cursor:pointer}
+.share-row-actions .revoke-share-btn{color:var(--danger)}
+.share-status-tag{font-size:10.5px;padding:1px 8px;border-radius:999px;font-weight:700}
+.share-status-tag.live{background:rgba(52,199,89,.16);color:#1e9e46}
+.share-status-tag.inactive{background:rgba(239,100,97,.16);color:var(--danger)}
 
 /* ---------- dashboard export toolbar ---------- */
 .dash-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
@@ -825,13 +842,35 @@ tr:last-child td{border-bottom:0}
 <datalist id="cat-suggestions"></datalist>
 
 <div id="share-modal" class="modal-overlay hidden">
-  <div class="modal">
-    <h3>رابط المشاركة</h3>
-    <p class="modal-note">أي شخص معه هذا الرابط يقدر يفتح نسخة للعرض فقط من اللوحة دي — بدون تسجيل دخول.</p>
-    <div class="modal-row">
-      <input type="text" id="share-link" readonly />
-      <button type="button" id="share-copy">نسخ</button>
+  <div class="modal share-modal-box">
+    <h3>مشاركة اللوحة</h3>
+    <p class="modal-note">أي شخص معه الرابط يقدر يفتح نسخة ثابتة (لحظة إنشاء الرابط) من اللوحة — بدون تسجيل دخول. النسخة لا تتحدث لاحقًا.</p>
+
+    <div id="share-compose">
+      <label class="share-expiry-label">انتهاء الرابط</label>
+      <select id="share-expiry">
+        <option value="">بدون انتهاء</option>
+        <option value="24">بعد 24 ساعة</option>
+        <option value="168">بعد 7 أيام</option>
+        <option value="720">بعد 30 يومًا</option>
+        <option value="custom">تاريخ محدد…</option>
+      </select>
+      <input type="date" id="share-expiry-date" class="hidden" />
+      <div class="modal-actions">
+        <button type="button" id="share-create-confirm">🔗 إنشاء الرابط</button>
+      </div>
     </div>
+
+    <div id="share-link-box" class="hidden">
+      <div class="modal-row">
+        <input type="text" id="share-link" readonly />
+        <button type="button" id="share-copy">نسخ</button>
+      </div>
+    </div>
+
+    <div class="roles-section-title">روابطي السابقة</div>
+    <div id="share-list" class="roles-list"></div>
+
     <div class="modal-actions">
       <button type="button" id="share-close">إغلاق</button>
     </div>
@@ -2057,6 +2096,8 @@ function renderDashboard() {
   el('autosave-status').classList.toggle('hidden', !editable);
   el('btn-undo').classList.toggle('hidden', !editable);
   el('btn-redo').classList.toggle('hidden', !editable);
+  // A share is a frozen snapshot (Part 3) — there is nothing for "🔄 تحديث" to re-fetch.
+  el('btn-refresh').classList.toggle('hidden', !!state.shareId);
   if (!editable) state.editMode = false;
   updateUndoRedoButtons();
 
@@ -2075,10 +2116,9 @@ function renderDashboard() {
   }
 
   el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>` + (state.dashboardIsActive ? dashboardStatusBarHtml() : '');
-  // Interactive in the share view too — applyFilters() routes through a share-scoped,
-  // anonymous-safe endpoint there (see bootSharedView/applyFilters), not the normal
-  // auth-required widget endpoints.
-  if (d.filters?.length) el.dash.appendChild(buildFilterBar(d.filters));
+  // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
+  // selection was active when it was published), never interactive.
+  if (d.filters?.length) el.dash.appendChild(state.shareId ? buildFilterBarReadOnly(d.filters) : buildFilterBar(d.filters));
 
   const widgets = d.widgets || [];
   if (widgets.length) {
@@ -2157,7 +2197,7 @@ function getActiveFilterTables() {
   return new Set(getActiveFilters().map(x => x.def.table).filter(Boolean));
 }
 
-function buildFilterBar(filters, readOnly) {
+function buildFilterBar(filters) {
   const bar = document.createElement('div');
   bar.id = 'filter-bar';
   filters.forEach(f => bar.appendChild(buildFilterControl(f)));
@@ -2167,6 +2207,24 @@ function buildFilterBar(filters, readOnly) {
     clearBtn.addEventListener('click', clearAllFilters);
     bar.appendChild(clearBtn);
   }
+  return bar;
+}
+
+// A share's filter bar (Part 3) shows which selection was active when the snapshot was
+// published — plain badges, no click handlers; nothing behind them can be re-run.
+function buildFilterBarReadOnly(filters) {
+  const bar = document.createElement('div');
+  bar.id = 'filter-bar';
+  filters.forEach(f => {
+    const values = state.activeFilters[f.id];
+    const text = Array.isArray(values) && values.length
+      ? `${f.label}: ${values.filter(Boolean).join('، ') || 'الكل'}`
+      : `${f.label}: الكل`;
+    const badge = document.createElement('span');
+    badge.className = 'filter-badge-static';
+    badge.textContent = text;
+    bar.appendChild(badge);
+  });
   return bar;
 }
 
@@ -2249,6 +2307,10 @@ function clearAllFilters() {
 // backend yet — see WidgetQueryService — so they narrow the visible selection but don't
 // re-query; this is a known v1 limitation, not a silent bug).
 async function applyFilters() {
+  // A share is a frozen snapshot (Part 3) — nothing in it is ever re-run. Its filter
+  // controls are read-only (buildFilterBarReadOnly) and it has no refresh button, so this
+  // shouldn't normally be reachable in share view at all; the guard is defense in depth.
+  if (state.shareId) return;
   const activeByTable = {};
   getActiveFilters().forEach(({ def, values }) => {
     if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
@@ -2268,23 +2330,6 @@ async function applyFilters() {
     if (!w.query || !w.query.table) return;
     const filters = activeByTable[w.query.table] || [];
     try {
-      // A share link has no session, so the normal auth-required endpoints below don't
-      // work for it — route through the share-scoped one instead, which re-runs whatever
-      // this exact widget already published (by index, never by a client-supplied
-      // table/sql) under the sharer's own data permissions. See ShareController.
-      if (state.shareId) {
-        const res = await fetch(`/api/share/${encodeURIComponent(state.shareId)}/widgets/${index}/refresh`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filters }),
-        });
-        if (!res.ok) return;
-        const payload = await res.json();
-        w.data = payload.data;
-        if ('xKey' in payload) w.xKey = payload.xKey;
-        if ('yKey' in payload) w.yKey = payload.yKey;
-        if ('source' in payload) w.source = payload.source;
-        return;
-      }
       // An Active dashboard (Part 2) always re-executes live, under the Owner's own
       // permission, on every open/filter/refresh — same "index-only, never client-supplied
       // sql/table" endpoint shape as the share-scoped one above, just Owner- instead of
@@ -3610,11 +3655,43 @@ el('attached-image-remove').addEventListener('click', () => {
   renderAttachedImage();
 });
 
-// ---------- share ----------
-async function shareDashboard() {
+// ---------- share (Part 3: creator-set expiry, manual revocation, view count) ----------
+// Opens the modal in "compose" mode (pick an expiry, then confirm) rather than creating
+// immediately — the expiry has to be chosen before the link exists. The modal also always
+// shows the creator's past links (loadShareList) so revoke/view-count management lives in
+// the same place as creating a new one.
+function openShareModal() {
   const d = state.dashboard;
   if (!d?.widgets?.length) return;
-  const btn = el('btn-share');
+  el('share-compose').classList.remove('hidden');
+  el('share-link-box').classList.add('hidden');
+  el('share-expiry').value = '';
+  el('share-expiry-date').classList.add('hidden');
+  el('share-modal').classList.remove('hidden');
+  loadShareList();
+}
+el('btn-share').addEventListener('click', openShareModal);
+
+el('share-expiry').addEventListener('change', () => {
+  el('share-expiry-date').classList.toggle('hidden', el('share-expiry').value !== 'custom');
+});
+
+// Resolves whatever the creator picked (a duration preset or a specific date) to one
+// absolute ISO instant — the server only ever sees "expiresAt" (see ShareModels.cs).
+function resolveShareExpiresAt() {
+  const choice = el('share-expiry').value;
+  if (!choice) return null;
+  if (choice === 'custom') {
+    const dateVal = el('share-expiry-date').value;
+    return dateVal ? new Date(dateVal + 'T23:59:59').toISOString() : null;
+  }
+  return new Date(Date.now() + Number(choice) * 3600 * 1000).toISOString();
+}
+
+el('share-create-confirm').addEventListener('click', async () => {
+  const d = state.dashboard;
+  if (!d?.widgets?.length) return;
+  const btn = el('share-create-confirm');
   btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ الإنشاء…';
   try {
     const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
@@ -3623,20 +3700,23 @@ async function shareDashboard() {
       body: JSON.stringify({
         question: lastQuestion, summary: d.summary, widgets: d.widgets,
         filters: d.filters || [], activeFilters: state.activeFilters || {},
+        expiresAt: resolveShareExpiresAt(),
       }),
     });
     if (!res.ok) throw new Error(`فشل إنشاء الرابط (${res.status})`);
     const saved = await res.json();
     el('share-link').value = `${location.origin}/?share=${saved.id}`;
-    el('share-modal').classList.remove('hidden');
+    el('share-compose').classList.add('hidden');
+    el('share-link-box').classList.remove('hidden');
     el('share-link').select();
+    await loadShareList();
   } catch (err) {
     alert('تعذّر إنشاء رابط المشاركة: ' + err.message);
   } finally {
     btn.disabled = false; btn.textContent = original;
   }
-}
-el('btn-share').addEventListener('click', shareDashboard);
+});
+
 el('share-close').addEventListener('click', () => el('share-modal').classList.add('hidden'));
 el('share-modal').addEventListener('click', e => { if (e.target.id === 'share-modal') el('share-modal').classList.add('hidden'); });
 el('share-copy').addEventListener('click', async () => {
@@ -3651,18 +3731,76 @@ el('share-copy').addEventListener('click', async () => {
   setTimeout(() => { btn.textContent = original; }, 1500);
 });
 
+function shareStatus(s) {
+  if (s.revokedAt) return { label: 'أُلغي', cls: 'inactive' };
+  if (s.expiresAt && new Date(s.expiresAt + (s.expiresAt.endsWith('Z') ? '' : 'Z')) < new Date()) return { label: 'منتهي', cls: 'inactive' };
+  return { label: 'نشط', cls: 'live' };
+}
+
+async function loadShareList() {
+  const list = el('share-list');
+  list.innerHTML = '<div class="owner-line">جارٍ التحميل…</div>';
+  try {
+    const res = await fetch('/api/share');
+    const shares = res.ok ? await res.json() : [];
+    if (!shares.length) { list.innerHTML = '<div class="owner-line">لا يوجد روابط مشاركة بعد.</div>'; return; }
+    list.innerHTML = shares.map(s => {
+      const status = shareStatus(s);
+      const when = new Date(s.createdAt + (s.createdAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG');
+      const expiryText = s.expiresAt
+        ? new Date(s.expiresAt + (s.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG')
+        : 'بدون انتهاء';
+      const revokeBtn = status.cls === 'live'
+        ? `<button type="button" class="revoke-share-btn" data-revoke="${esc(s.id)}">إلغاء</button>` : '';
+      return `<div class="role-row">
+          <div class="share-row-meta">
+            <span class="q">${esc(s.question)} <span class="share-status-tag ${status.cls}">${status.label}</span></span>
+            <span class="meta">${when} · ينتهي: ${expiryText} · 👁 ${s.viewCount || 0} مشاهدة</span>
+          </div>
+          <div class="share-row-actions">
+            ${revokeBtn}
+            <button type="button" class="remove-role-btn" data-del-share="${esc(s.id)}">حذف</button>
+          </div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-revoke]').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch(`/api/share/${encodeURIComponent(btn.dataset.revoke)}/revoke`, { method: 'POST' });
+      await loadShareList();
+    }));
+    list.querySelectorAll('[data-del-share]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('حذف رابط المشاركة هذا؟')) return;
+      await fetch(`/api/share/${encodeURIComponent(btn.dataset.delShare)}`, { method: 'DELETE' });
+      await loadShareList();
+    }));
+  } catch {
+    list.innerHTML = '<div class="owner-line">تعذّر تحميل الروابط.</div>';
+  }
+}
+
 // A URL like /?share=<id> opens a read-only public view: no login, no chat, no sources —
 // just the published dashboard, fetched straight from the share endpoint and rendered
 // through the same renderDashboard() as everything else.
 async function bootSharedView(shareId) {
-  state.shareId = shareId; // routes applyFilters() (filter clicks + 🔄 تحديث) through the
-                            // anonymous, share-scoped refresh endpoint instead of the
-                            // normal auth-required widget endpoints — see applyFilters().
+  // A share is a frozen snapshot (Part 3) — state.shareId only marks "we're in the public
+  // share view" (banner, read-only filter display); it no longer routes any live query.
+  state.shareId = shareId;
   el('shared-banner').classList.remove('hidden');
   document.querySelector('header').style.display = 'none';
   el('chat-rail').style.display = 'none';
   try {
     const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
+    if (res.status === 410) {
+      const payload = await res.json().catch(() => null);
+      el('shared-banner-q').textContent = 'رابط غير نشط';
+      document.title = 'رابط غير نشط — لوحة مشاركة';
+      // A clear, dedicated message — not the normal empty/loading dashboard placeholder —
+      // per the design doc: shows a clear message, not a generic error page.
+      el.dash.innerHTML = `<div class="empty"><div>
+          <div class="big">⚠️ ${esc(payload?.reason || 'هذا الرابط لم يعد نشطًا.')}</div>
+          <div>تواصل مع ${esc(payload?.creatorName || 'صاحب الرابط')} للحصول على رابط جديد.</div>
+        </div></div>`;
+      return;
+    }
     if (!res.ok) throw new Error(res.status === 404 ? 'الرابط غير موجود أو تم حذفه.' : `تعذّر التحميل (${res.status})`);
     const shared = await res.json();
     el('shared-banner-q').textContent = shared.question;
