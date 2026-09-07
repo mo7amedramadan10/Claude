@@ -321,6 +321,16 @@ public class RepositoryStore
         return affected > 0;
     }
 
+    /// <summary>Just the creator id — for an authorization check (Owner-or-Admin) that
+    /// doesn't need the full joined ListAsync row.</summary>
+    public async Task<string?> GetCreatedByUserIdAsync(string fileId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<string?>(
+            $"SELECT CreatedByUserId FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
+    }
+
     public async Task<List<string>> GetPermittedUserIdsAsync(string fileId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

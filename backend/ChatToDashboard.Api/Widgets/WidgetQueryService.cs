@@ -60,6 +60,10 @@ public class WidgetQueryService
             .Where(t => !context.TableCategories.TryGetValue(t.Table, out var category)
                         || context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
             .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
+            // Every file is now auto-restricted to its creator (see
+            // AnalyticsTools.DescribeSourcesAsync) — without this, the wizard would offer a
+            // table it then rejects the moment the user tries to actually query it.
+            .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
             .Select(t => new TableFields
             {
                 Table = t.Table,

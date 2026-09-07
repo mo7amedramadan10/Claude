@@ -75,6 +75,24 @@ public class UserStore
             $"SELECT * FROM {Table} WHERE LOWER(Username) = LOWER(@username)", new { username });
     }
 
+    /// <summary>Active users whose username or display name contains <paramref name="query"/>
+    /// — capped small and narrow (never the full roster) so a non-Admin can search for
+    /// someone to grant a permission/role to without the Admin-only GET /api/users listing.</summary>
+    public async Task<IReadOnlyList<AppUser>> SearchAsync(string query, int limit, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var like = $"%{query}%";
+        var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
+        var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
+        var rows = await connection.QueryAsync<AppUser>(
+            $"SELECT {top}* FROM {Table} WHERE IsActive = 1 AND " +
+            "(LOWER(Username) LIKE LOWER(@like) OR LOWER(DisplayName) LIKE LOWER(@like)) " +
+            $"ORDER BY Username{tail}",
+            new { like, limit });
+        return rows.ToList();
+    }
+
     public async Task<AppUser> CreateAsync(AppUser user, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

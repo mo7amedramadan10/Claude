@@ -379,7 +379,7 @@ tr:last-child td{border-bottom:0}
 .file-list-head .col-updated{width:96px;text-align:center}
 .file-list-head .col-usage{width:84px;text-align:center}
 .file-list-head .col-access{width:104px;text-align:center}
-.file-list-head .col-actions{width:80px}
+.file-list-head .col-actions{width:150px}
 .file-list{display:flex;flex-direction:column;gap:8px}
 .file-row{background:var(--surface);border:1px solid var(--grid);border-radius:12px;
   padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s}
@@ -410,7 +410,8 @@ tr:last-child td{border-bottom:0}
 .avatar:first-child{margin-inline-start:0}
 .avatar.owner{background:var(--accent);color:#fff;border-color:var(--surface);font-weight:700}
 .access-locked{font-size:11px;color:var(--muted)}
-.col-actions{width:80px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
+.access-locked.ok{color:#1e9e46}
+.col-actions{width:150px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
 .icon-btn{width:32px;height:32px;border-radius:8px;background:var(--plane);border:1px solid var(--grid);
   color:var(--ink-2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
 .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
@@ -490,6 +491,17 @@ tr:last-child td{border-bottom:0}
 .role-add-row select{width:auto}
 .roles-section-title{font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px}
 .roles-error{color:var(--danger);font-size:12px;margin-top:4px}
+
+/* ---------- searchable user picker (file permissions) ---------- */
+.user-search-box{position:relative}
+.user-search-box input{width:100%}
+.user-search-suggestions{position:absolute;top:calc(100% + 4px);inset-inline-start:0;inset-inline-end:0;
+  z-index:40;max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--grid);
+  border-radius:10px;box-shadow:var(--shadow)}
+.user-search-item{display:flex;flex-direction:column;gap:1px;padding:8px 12px;cursor:pointer;font-size:12.5px}
+.user-search-item:hover{background:var(--plane)}
+.user-search-item .uname{color:var(--muted);font-size:11px}
+.user-search-empty{padding:10px 12px;font-size:12px;color:var(--muted)}
 
 /* ---------- Part 3: static snapshot sharing (expiry, revoke, view count) ---------- */
 .share-modal-box{max-width:480px}
@@ -795,21 +807,6 @@ tr:last-child td{border-bottom:0}
       <label>الوصف<textarea id="file-description" rows="2" maxlength="500"></textarea></label>
       <label>التصنيف<input type="text" id="file-category" list="cat-suggestions"></label>
 
-      <div class="perm-block" id="file-perm-section">
-        <label class="chk-row"><input type="checkbox" id="file-restrict-toggle"> تقييد استخدام هذا الملف كمصدر بيانات لمستخدمين محددين</label>
-        <div id="file-perm-list" class="perm-list"></div>
-      </div>
-
-      <div class="perm-block">
-        <span class="rel-title">ملفات مرتبطة</span>
-        <div id="file-rel-list"></div>
-        <div class="rel-add">
-          <select id="file-rel-target"></select>
-          <input type="text" id="file-rel-column" placeholder="اسم العمود المشترك">
-          <button type="button" id="file-rel-add-btn">ربط</button>
-        </div>
-      </div>
-
       <div id="file-form-error" class="login-error hidden"></div>
       <div class="modal-actions">
         <button type="button" id="file-modal-delete" class="file-modal-delete">🗑️ حذف الملف</button>
@@ -817,6 +814,53 @@ tr:last-child td{border-bottom:0}
         <button type="submit" id="file-modal-save">حفظ</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div id="file-perm-modal" class="modal-overlay hidden">
+  <div class="modal roles-modal-box">
+    <h3>صلاحيات الملف</h3>
+    <input type="hidden" id="file-perm-modal-id" />
+    <p class="modal-note">هذا الملف مقيّد تلقائيًا لمنشئه ولا يمكن إزالة هذا القيد — يمكنك فقط
+      منح صلاحية استخدامه لمستخدمين آخرين بالإضافة إليه.</p>
+    <div class="roles-owner-row">
+      <span>المالك (منشئ الملف): <strong id="file-perm-creator-name">—</strong></span>
+    </div>
+
+    <div class="roles-section-title">مستخدمون لديهم صلاحية إضافية</div>
+    <div id="file-perm-list" class="roles-list"></div>
+
+    <div class="roles-section-title">إضافة مستخدم</div>
+    <div class="user-search-box">
+      <input type="text" id="file-perm-search" placeholder="ابحث باسم المستخدم أو الاسم…" autocomplete="off" />
+      <div id="file-perm-suggestions" class="user-search-suggestions hidden"></div>
+    </div>
+
+    <div id="file-perm-error" class="roles-error hidden"></div>
+    <div class="modal-actions">
+      <button type="button" id="file-perm-modal-close">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<div id="file-rel-modal" class="modal-overlay hidden">
+  <div class="modal roles-modal-box">
+    <h3>الملفات المرتبطة</h3>
+    <input type="hidden" id="file-rel-modal-id" />
+    <p class="modal-note">اربط هذا الملف بملف آخر يشترك معه في عمود، ليظهر الربط كإشارة عند تحليل البيانات.</p>
+
+    <div id="file-rel-list" class="roles-list"></div>
+
+    <div class="roles-section-title">إضافة ربط</div>
+    <div class="rel-add">
+      <select id="file-rel-target"></select>
+      <input type="text" id="file-rel-column" placeholder="اسم العمود المشترك">
+      <button type="button" id="file-rel-add-btn">ربط</button>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" id="file-rel-modal-close">إغلاق</button>
+    </div>
   </div>
 </div>
 
@@ -3094,15 +3138,23 @@ function renderRepo() {
     const relLinks = f.relationships.length
       ? `<div class="fr-links">${f.relationships.map(r => `<span class="link-chip">🔗 ${esc(r.relatedFileName)}</span>`).join('')}</div>`
       : '';
-    const access = f.permittedUserIds.length
-      ? (state.currentUser?.role === 'Admin'
-          ? `<div class="avatar-stack">
-              <div class="avatar owner" title="${esc(f.createdByUserId ? userInitials(f.createdByUserId) : '')}">${esc(userInitials(f.createdByUserId))}</div>
-              ${f.permittedUserIds.slice(0, 2).map(id => `<div class="avatar" title="${esc(userInitials(id))}">${esc(userInitials(id))}</div>`).join('')}
-              ${f.permittedUserIds.length > 2 ? `<div class="avatar">+${f.permittedUserIds.length - 2}</div>` : ''}
-            </div>`
-          : `<span class="access-locked">🔒 مقيّد</span>`)
-      : `<span class="access-locked">عام</span>`;
+    // Every file is automatically restricted to its creator now (see
+    // AnalyticsTools.DescribeSourcesAsync) — never "public" — so this column always shows
+    // something. An Admin sees the real avatar stack (creator + granted); anyone else just
+    // sees whether *they themselves* currently have access, never other people's identities.
+    const isAdmin = state.currentUser?.role === 'Admin';
+    const isCreator = !!state.currentUser && f.createdByUserId === state.currentUser.id;
+    const iHaveAccess = isAdmin || isCreator || (state.currentUser && f.permittedUserIds.includes(state.currentUser.id));
+    const access = isAdmin
+      ? `<div class="avatar-stack">
+          <div class="avatar owner" title="${esc(f.createdByUserId ? userInitials(f.createdByUserId) : '')}">${esc(userInitials(f.createdByUserId))}</div>
+          ${f.permittedUserIds.slice(0, 2).map(id => `<div class="avatar" title="${esc(userInitials(id))}">${esc(userInitials(id))}</div>`).join('')}
+          ${f.permittedUserIds.length > 2 ? `<div class="avatar">+${f.permittedUserIds.length - 2}</div>` : ''}
+        </div>`
+      : (iHaveAccess ? `<span class="access-locked ok">✅ ${isCreator ? 'ملفك' : 'لديك صلاحية'}</span>` : `<span class="access-locked">🔒 مقيّد</span>`);
+    const canManage = isAdmin || isCreator;
+    const permBtn = canManage
+      ? `<button class="icon-btn perm-btn" data-id="${esc(f.id)}" title="صلاحيات الملف">🔒</button>` : '';
 
     return `<div class="file-row${isStale ? ' stale' : ''}" data-id="${esc(f.id)}">
         <div class="fr-main">
@@ -3122,7 +3174,9 @@ function renderRepo() {
         <div class="col-access">${access}</div>
         <div class="col-actions">
           <button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>
-          <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل والصلاحيات">⚙️</button>
+          <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
+          ${permBtn}
+          <button class="icon-btn rel-btn" data-id="${esc(f.id)}" title="الملفات المرتبطة">🔗</button>
         </div>
       </div>`;
   }).join('')
@@ -3130,6 +3184,8 @@ function renderRepo() {
 
   el('repo-list').querySelectorAll('.upd').forEach(btn => btn.addEventListener('click', () => openUpdateFilePicker(btn.dataset.id)));
   el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.perm-btn').forEach(btn => btn.addEventListener('click', () => openFilePermModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.rel-btn').forEach(btn => btn.addEventListener('click', () => openFileRelModal(btn.dataset.id)));
 
   renderPending();
 }
@@ -3243,7 +3299,8 @@ el('file-update-input').addEventListener('change', async e => {
   }
 });
 
-// ---------- file detail modal: meta / permissions / relationships ----------
+// ---------- file detail modal: meta only (permissions/relationships have their own
+// dedicated modals — see openFilePermModal/openFileRelModal below) ----------
 function openFileModal(fileId) {
   const f = state.files.find(f => f.id === fileId);
   if (!f) return;
@@ -3253,65 +3310,8 @@ function openFileModal(fileId) {
   el('file-description').value = f.description;
   el('file-category').value = f.category;
   el('file-form-error').classList.add('hidden');
-
-  const isAdmin = state.currentUser?.role === 'Admin';
-  el('file-perm-section').classList.toggle('hidden', !isAdmin);
-  if (isAdmin) {
-    el('file-restrict-toggle').checked = f.permittedUserIds.length > 0;
-    renderPermChecklist('file-perm-list', state.users, f.permittedUserIds, u => u.id, u => u.displayName || u.username);
-    toggleFilePermList();
-  }
-
-  renderFileRelationships(f);
-  const targets = state.files.filter(other => other.id !== f.id);
-  el('file-rel-target').innerHTML = targets.length
-    ? targets.map(t => `<option value="${esc(t.id)}">${esc(t.displayName)}</option>`).join('')
-    : '<option value="">لا يوجد ملفات أخرى</option>';
-  el('file-rel-column').value = '';
-
   el('file-modal').classList.remove('hidden');
 }
-
-function renderFileRelationships(f) {
-  el('file-rel-list').innerHTML = f.relationships.length
-    ? f.relationships.map(r => `<div class="rel-row">
-        <span class="rel-label">🔗 ${esc(r.relatedFileName)} — العمود المشترك: <b>${esc(r.sharedColumn)}</b></span>
-        <button type="button" class="rel-del" data-rel="${esc(r.id)}" title="إزالة الربط">✕</button>
-      </div>`).join('')
-    : '<span class="access-locked">لا يوجد ملفات مرتبطة بعد.</span>';
-
-  el('file-rel-list').querySelectorAll('.rel-del').forEach(btn => btn.addEventListener('click', async () => {
-    const fileId = el('file-modal-id').value;
-    await fetch(`/api/repository/files/${fileId}/relationships/${btn.dataset.rel}`, { method: 'DELETE' });
-    await loadFiles();
-    const refreshed = state.files.find(x => x.id === fileId);
-    if (refreshed) renderFileRelationships(refreshed);
-  }));
-}
-
-// Opposite polarity from togglePermList's "allow all -> hide the specific list" (used by
-// the user-permission editor): here checking the box means "I want to pick specific users",
-// so it SHOWS the list instead of hiding it.
-function toggleFilePermList() {
-  el('file-perm-list').classList.toggle('hidden', !el('file-restrict-toggle').checked);
-}
-el('file-restrict-toggle').addEventListener('change', toggleFilePermList);
-
-el('file-rel-add-btn').addEventListener('click', async () => {
-  const fileId = el('file-modal-id').value;
-  const relatedFileId = el('file-rel-target').value;
-  const sharedColumn = el('file-rel-column').value.trim();
-  if (!relatedFileId || !sharedColumn) { alert('اختر ملفًا واكتب اسم العمود المشترك.'); return; }
-  const res = await fetch(`/api/repository/files/${fileId}/relationships`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ relatedFileId, sharedColumn }),
-  });
-  if (!res.ok) { alert('تعذّر إضافة الربط.'); return; }
-  el('file-rel-column').value = '';
-  await loadFiles();
-  const refreshed = state.files.find(x => x.id === fileId);
-  if (refreshed) renderFileRelationships(refreshed);
-});
 
 el('file-modal-cancel').addEventListener('click', () => el('file-modal').classList.add('hidden'));
 el('file-modal-delete').addEventListener('click', async () => {
@@ -3340,17 +3340,6 @@ el('file-form').addEventListener('submit', async e => {
       body: JSON.stringify({ displayName, description, category }),
     });
     if (!metaRes.ok) throw new Error((await metaRes.json().catch(() => ({}))).error || 'تعذّر حفظ التفاصيل.');
-
-    if (state.currentUser?.role === 'Admin') {
-      const restricted = el('file-restrict-toggle').checked;
-      const userIds = restricted ? [...el('file-perm-list').querySelectorAll('input:checked')].map(i => i.value) : [];
-      const permRes = await fetch(`/api/repository/files/${fileId}/permissions`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds }),
-      });
-      if (!permRes.ok) throw new Error('تعذّر حفظ صلاحيات الملف.');
-    }
-
     el('file-modal').classList.add('hidden');
     await loadFiles(); await loadSources();
   } catch (err) {
@@ -3359,6 +3348,129 @@ el('file-form').addEventListener('submit', async e => {
     saveBtn.disabled = false;
   }
 });
+
+// ---------- file permissions modal ----------
+// Every file is automatically restricted to its creator (see AnalyticsTools.
+// DescribeSourcesAsync) — this can't be turned off, only added to. Users are picked from a
+// searchable dropdown (not a checkbox list of everyone): GET /api/users is Admin-only, so a
+// non-Admin creator has no way to enumerate everyone, only search a few matches at a time
+// via the narrow /api/users/search endpoint (UserLookupController).
+let filePermSearchTimer = null;
+function openFilePermModal(fileId) {
+  el('file-perm-modal-id').value = fileId;
+  el('file-perm-search').value = '';
+  el('file-perm-suggestions').classList.add('hidden');
+  el('file-perm-error').classList.add('hidden');
+  el('file-perm-modal').classList.remove('hidden');
+  reloadFilePermModal();
+}
+
+async function reloadFilePermModal() {
+  const fileId = el('file-perm-modal-id').value;
+  const res = await fetch(`/api/repository/files/${fileId}/permissions`);
+  if (!res.ok) { el('file-perm-creator-name').textContent = '—'; return; }
+  const data = await res.json();
+  el('file-perm-creator-name').textContent = data.creatorName || data.creatorId || '—';
+  el('file-perm-list').innerHTML = data.granted.length
+    ? data.granted.map(g => `<div class="role-row">
+        <span class="name">${esc(g.displayName)}</span>
+        <button type="button" class="remove-role-btn" data-remove="${esc(g.userId)}">إزالة</button>
+      </div>`).join('')
+    : '<div class="owner-line">لا يوجد مستخدمون إضافيون بعد.</div>';
+  el('file-perm-list').querySelectorAll('[data-remove]').forEach(btn =>
+    btn.addEventListener('click', () => setFilePermGranted(data.granted.filter(g => g.userId !== btn.dataset.remove).map(g => g.userId))));
+}
+
+async function setFilePermGranted(userIds) {
+  const fileId = el('file-perm-modal-id').value;
+  const errBox = el('file-perm-error'); errBox.classList.add('hidden');
+  const res = await fetch(`/api/repository/files/${fileId}/permissions`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userIds }),
+  });
+  if (!res.ok) { errBox.textContent = 'تعذّر حفظ الصلاحيات.'; errBox.classList.remove('hidden'); return; }
+  await reloadFilePermModal();
+  await loadFiles();
+}
+
+el('file-perm-search').addEventListener('input', () => {
+  clearTimeout(filePermSearchTimer);
+  const q = el('file-perm-search').value.trim();
+  if (q.length < 2) { el('file-perm-suggestions').classList.add('hidden'); return; }
+  filePermSearchTimer = setTimeout(async () => {
+    const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+    const results = res.ok ? await res.json() : [];
+    const box = el('file-perm-suggestions');
+    box.innerHTML = results.length
+      ? results.map(u => `<div class="user-search-item" data-pick="${esc(u.id)}">
+          <span>${esc(u.displayName)}</span><span class="uname">@${esc(u.username)}</span>
+        </div>`).join('')
+      : '<div class="user-search-empty">لا نتائج.</div>';
+    box.classList.remove('hidden');
+    box.querySelectorAll('[data-pick]').forEach(item => item.addEventListener('click', async () => {
+      const fileId = el('file-perm-modal-id').value;
+      const current = await (await fetch(`/api/repository/files/${fileId}/permissions`)).json();
+      const ids = current.granted.map(g => g.userId);
+      if (!ids.includes(item.dataset.pick)) ids.push(item.dataset.pick);
+      el('file-perm-search').value = '';
+      box.classList.add('hidden');
+      await setFilePermGranted(ids);
+    }));
+  }, 250);
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.user-search-box')) el('file-perm-suggestions')?.classList.add('hidden');
+});
+el('file-perm-modal-close').addEventListener('click', () => el('file-perm-modal').classList.add('hidden'));
+el('file-perm-modal').addEventListener('click', e => { if (e.target.id === 'file-perm-modal') el('file-perm-modal').classList.add('hidden'); });
+
+// ---------- file relationships modal ----------
+function openFileRelModal(fileId) {
+  const f = state.files.find(x => x.id === fileId);
+  if (!f) return;
+  el('file-rel-modal-id').value = fileId;
+  renderFileRelationships(f);
+  const targets = state.files.filter(other => other.id !== f.id);
+  el('file-rel-target').innerHTML = targets.length
+    ? targets.map(t => `<option value="${esc(t.id)}">${esc(t.displayName)}</option>`).join('')
+    : '<option value="">لا يوجد ملفات أخرى</option>';
+  el('file-rel-column').value = '';
+  el('file-rel-modal').classList.remove('hidden');
+}
+
+function renderFileRelationships(f) {
+  el('file-rel-list').innerHTML = f.relationships.length
+    ? f.relationships.map(r => `<div class="role-row">
+        <span class="name">🔗 ${esc(r.relatedFileName)} — العمود المشترك: <b>${esc(r.sharedColumn)}</b></span>
+        <button type="button" class="remove-role-btn rel-del" data-rel="${esc(r.id)}" title="إزالة الربط">إزالة</button>
+      </div>`).join('')
+    : '<div class="owner-line">لا يوجد ملفات مرتبطة بعد.</div>';
+
+  el('file-rel-list').querySelectorAll('.rel-del').forEach(btn => btn.addEventListener('click', async () => {
+    const fileId = el('file-rel-modal-id').value;
+    await fetch(`/api/repository/files/${fileId}/relationships/${btn.dataset.rel}`, { method: 'DELETE' });
+    await loadFiles();
+    const refreshed = state.files.find(x => x.id === fileId);
+    if (refreshed) renderFileRelationships(refreshed);
+  }));
+}
+
+el('file-rel-add-btn').addEventListener('click', async () => {
+  const fileId = el('file-rel-modal-id').value;
+  const relatedFileId = el('file-rel-target').value;
+  const sharedColumn = el('file-rel-column').value.trim();
+  if (!relatedFileId || !sharedColumn) { alert('اختر ملفًا واكتب اسم العمود المشترك.'); return; }
+  const res = await fetch(`/api/repository/files/${fileId}/relationships`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ relatedFileId, sharedColumn }),
+  });
+  if (!res.ok) { alert('تعذّر إضافة الربط.'); return; }
+  el('file-rel-column').value = '';
+  await loadFiles();
+  const refreshed = state.files.find(x => x.id === fileId);
+  if (refreshed) renderFileRelationships(refreshed);
+});
+el('file-rel-modal-close').addEventListener('click', () => el('file-rel-modal').classList.add('hidden'));
+el('file-rel-modal').addEventListener('click', e => { if (e.target.id === 'file-rel-modal') el('file-rel-modal').classList.add('hidden'); });
 
 // ---------- history ----------
 // Fire-and-forget: saving history must never block or break the dashboard that

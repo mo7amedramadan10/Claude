@@ -49,9 +49,10 @@ public class RepositoryFile
     /// <summary>The account that created this file identity (via "Upload new file").</summary>
     [JsonPropertyName("createdByUserId")] public string CreatedByUserId { get; set; } = string.Empty;
 
-    /// <summary>Named users explicitly allowed to use this file as a data source, on top of
-    /// their existing category access — empty means no per-file narrowing is configured yet
-    /// (category-level gating alone still applies, same as before this feature existed).</summary>
+    /// <summary>Named users explicitly granted access to this file as a data source, on top
+    /// of <see cref="CreatedByUserId"/> — every file is automatically restricted to its
+    /// creator, not opt-in and not removable (see AnalyticsTools.DescribeSourcesAsync); this
+    /// list only ever *adds* other named users, it never widens access to everyone.</summary>
     [JsonPropertyName("permittedUserIds")] public List<string> PermittedUserIds { get; set; } = new();
 
     /// <summary>Other files manually declared as related to this one.</summary>

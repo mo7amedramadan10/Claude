@@ -13,14 +13,16 @@ public class RepositoryController : ControllerBase
     private readonly RepositoryStore _store;
     private readonly UploadParser _parser;
     private readonly PermissionsService _permissions;
+    private readonly UserStore _users;
     private readonly ILogger<RepositoryController> _logger;
 
     public RepositoryController(
-        RepositoryStore store, UploadParser parser, PermissionsService permissions, ILogger<RepositoryController> logger)
+        RepositoryStore store, UploadParser parser, PermissionsService permissions, UserStore users, ILogger<RepositoryController> logger)
     {
         _store = store;
         _parser = parser;
         _permissions = permissions;
+        _users = users;
         _logger = logger;
     }
 
@@ -124,19 +126,47 @@ public class RepositoryController : ControllerBase
         return ok ? NoContent() : NotFound(new { error = "الملف غير موجود." });
     }
 
-    /// <summary>Named users allowed to use this file as a data source, on top of their
-    /// existing category access. Only an Admin manages this — same authority level as
-    /// managing user accounts and their category/system permissions.</summary>
+    /// <summary>The file's creator (its automatic, un-removable access) plus every named
+    /// user explicitly granted on top of that — names resolved here (not left to the
+    /// frontend) so a non-Admin creator, who can't call the Admin-only GET /api/users to
+    /// build their own id->name map, still sees real names for the people already granted.</summary>
     [HttpGet("files/{id}/permissions")]
-    public async Task<IActionResult> GetPermissions(string id, CancellationToken ct) =>
-        Ok(await _store.GetPermittedUserIdsAsync(id, ct));
+    public async Task<IActionResult> GetPermissions(string id, CancellationToken ct)
+    {
+        var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
+        if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
 
+        var creator = string.IsNullOrWhiteSpace(createdByUserId) ? null : await _users.FindByIdAsync(createdByUserId, ct);
+        var grantedIds = await _store.GetPermittedUserIdsAsync(id, ct);
+        var granted = new List<object>();
+        foreach (var userId in grantedIds)
+        {
+            var u = await _users.FindByIdAsync(userId, ct);
+            granted.Add(new { userId, displayName = u?.DisplayName ?? u?.Username ?? userId, username = u?.Username });
+        }
+        return Ok(new
+        {
+            creatorId = createdByUserId,
+            creatorName = creator?.DisplayName ?? creator?.Username,
+            granted,
+        });
+    }
+
+    /// <summary>
+    /// Grants named users access to this file on top of its automatic, un-removable
+    /// creator-only restriction (see RepositoryModels.cs) — the file's own creator, or an
+    /// Admin standing in for them. request.UserIds is the *additional* grant list; the
+    /// creator's own access never needs to be (and can't be) listed here to keep it.
+    /// </summary>
     [HttpPut("files/{id}/permissions")]
     public async Task<IActionResult> SetPermissions(string id, [FromBody] UpdateFilePermissionsRequest request, CancellationToken ct)
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        if (user.Role != UserRoles.Admin) return Forbid();
+        var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
+        if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
+        if (user.Role != UserRoles.Admin && !string.Equals(createdByUserId, user.Id, StringComparison.OrdinalIgnoreCase))
+            return Forbid();
 
         await _store.SetPermittedUserIdsAsync(id, request.UserIds, ct);
         return NoContent();

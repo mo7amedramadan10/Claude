@@ -96,9 +96,11 @@ public class AnalyticsTools
         IReadOnlyDictionary<string, string> TableCategories,
         IReadOnlyDictionary<string, string> TableSystems,
         IReadOnlyDictionary<string, string> DisabledSystemTables,
-        // Table -> the file's display name, for a repository file whose per-file permission
-        // list is configured (non-empty) and doesn't include the current user — an Admin, or
-        // any file with no permission list configured at all, never appears here. Separate
+        // Table -> the file's display name, for a repository file the current user is
+        // neither the creator of nor explicitly granted onto — every file with a recorded
+        // creator is auto-restricted to it (see RepositoryFile.PermittedUserIds), so this
+        // covers essentially all of them for a non-Admin except their own uploads and
+        // whatever's been explicitly shared with them. An Admin never appears here. Separate
         // from DisabledSystemTables since the reason is per-user, not a source-wide toggle.
         IReadOnlyDictionary<string, string> RestrictedFileTables,
         bool HasDocuments);
@@ -142,16 +144,22 @@ public class AnalyticsTools
             .GroupBy(f => f.TableName!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().Category, StringComparer.OrdinalIgnoreCase);
 
-        // A file's permission list is opt-in narrowing on top of category access: empty means
-        // no one has restricted it yet, so category gating alone still governs (unchanged
-        // behavior for every file until someone explicitly sets a list on it).
+        // Every file is automatically restricted to its own creator — not opt-in, and not
+        // removable (see RepositoryFile.PermittedUserIds) — with PermittedUserIds as the
+        // *additional* names its creator (or an Admin) has explicitly granted on top of
+        // that. So unlike a category/system toggle, this check applies to every file with a
+        // table, not just ones someone has configured a list on.
         var restrictedFileTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (!selection.IsAdmin)
         {
-            foreach (var f in files.Where(f => !string.IsNullOrWhiteSpace(f.TableName) && f.PermittedUserIds.Count > 0))
+            // A file uploaded before CreatedByUserId existed has no recorded creator — there's
+            // no one it could be auto-restricted "to", so it stays open (old behavior) rather
+            // than becoming inaccessible to everyone but Admins with no way to grant it back.
+            foreach (var f in files.Where(f => !string.IsNullOrWhiteSpace(f.TableName) && !string.IsNullOrWhiteSpace(f.CreatedByUserId)))
             {
                 var allowed = selection.UserId is not null
-                    && f.PermittedUserIds.Contains(selection.UserId, StringComparer.OrdinalIgnoreCase);
+                    && (string.Equals(selection.UserId, f.CreatedByUserId, StringComparison.OrdinalIgnoreCase)
+                        || f.PermittedUserIds.Contains(selection.UserId, StringComparer.OrdinalIgnoreCase));
                 if (!allowed) restrictedFileTables[f.TableName!] = f.DisplayName;
             }
         }
