@@ -259,6 +259,46 @@ th{position:sticky;top:0;background:var(--surface);text-align:start;padding:8px 
 td{padding:7px 11px;border-bottom:1px solid var(--grid);white-space:nowrap;font-family:var(--mono)}
 td.num{text-align:end;font-variant-numeric:tabular-nums}
 tr:last-child td{border-bottom:0}
+
+/* ---------- progress-table ---------- */
+.widget.progress-table{grid-column:span 2}
+.prog-cell{display:flex;align-items:center;gap:10px;font-family:var(--body);white-space:normal}
+.prog-track{flex:1;height:18px;border-radius:5px;background:var(--plane);overflow:hidden;display:flex}
+.prog-seg{height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-family:var(--mono);color:#06251C;min-width:2px}
+.prog-seg.tone-muted{color:var(--ink-2)}
+.prog-total{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);width:60px;
+  text-align:end;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* ---------- trend-matrix ---------- */
+.trend-cell{display:flex;align-items:center;white-space:nowrap}
+.trend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-inline-end:6px;flex-shrink:0}
+.trend-dot.up{background:var(--accent)}
+.trend-dot.down{background:var(--danger)}
+.trend-dot.flat{background:var(--muted)}
+.trend-delta{font-family:var(--mono);font-size:11.5px}
+.sparkline{display:inline-flex;align-items:flex-end;gap:2px;height:16px;margin-inline-start:8px}
+.spark-bar{width:3px;background:var(--muted);border-radius:1px;min-height:1px}
+
+/* ---------- status-bar ---------- */
+.widget.status-bar{align-items:stretch}
+.status-bar-row{display:flex;align-items:center;gap:18px}
+.status-bar-num{font-family:var(--display);font-size:30px;font-weight:700;
+  color:var(--accent);width:64px;text-align:center;flex-shrink:0}
+.status-bar-label{font-size:13px;margin-bottom:7px;color:var(--ink)}
+.status-badges{display:flex;gap:8px;flex-wrap:wrap}
+.status-badge{font-size:11px;padding:5px 11px;border-radius:14px;font-family:var(--mono);
+  display:flex;align-items:center;gap:5px;white-space:nowrap}
+.status-badge.severe{background:color-mix(in srgb, var(--danger) 14%, transparent);color:var(--danger)}
+.status-badge.warning{background:color-mix(in srgb, var(--amber) 16%, transparent);color:var(--amber)}
+.status-badge.ontrack{background:var(--accent-soft);color:var(--accent)}
+
+/* ---------- comparison layout (two widgets of the same type, side by side) ---------- */
+.compare-row{display:flex;align-items:center;justify-content:center;gap:18px}
+.compare-side{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.compare-side .side-title{font-size:12px;color:var(--ink-2);font-weight:600}
+.compare-side .chart-holder{width:100%}
+.compare-arrow{font-size:22px;color:var(--muted);flex-shrink:0}
 /* ---------- dashboard editor ---------- */
 .edit-toggle{display:inline-flex;border:1px solid var(--grid);border-radius:9px;overflow:hidden;margin-inline-end:auto}
 .edit-toggle-btn{padding:7px 14px;border:0;background:var(--surface);color:var(--ink-2);font-size:12.5px}
@@ -2267,7 +2307,113 @@ function PieChartCard(w) {
   return card;
 }
 
-const WIDGET_COMPONENTS = { kpi: KpiCard, bar: BarChartCard, line: LineChartCard, pie: PieChartCard, table: TableCard };
+// A segment's `color` is one of a small fixed vocabulary — never an arbitrary hex the model
+// invents — mapped to the exact same tokens every other severity/status indicator in the
+// app already uses. "muted" (the default for an unrecognized/absent value) renders as a
+// translucent neutral fill, the rest as solid theme colors.
+function toneColor(tone) {
+  if (tone === 'accent') return THEME.accent;
+  if (tone === 'danger') return THEME.danger;
+  if (tone === 'amber') return THEME.amber;
+  return 'color-mix(in srgb, ' + THEME.tickColor + ' 35%, transparent)';
+}
+
+// ---------- new widget type: progress-table ----------
+// Each row's bar is scaled to that row's own `total` (its segments' values need not sum to
+// it — e.g. "spent" vs. a target — so the bar can visibly under- or over-fill).
+function ProgressTableCard(w) {
+  const card = widgetShell(w, 'progress-table');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><thead><tr><th>${esc(w.labelHeader || '')}</th><th>${esc(w.progressHeader || 'التقدّم')}</th></tr></thead>
+    <tbody>${rows.map(r => {
+      const total = num(r.total);
+      const segs = Array.isArray(r.segments) ? r.segments : [];
+      const segsHtml = segs.map(s => {
+        const value = num(s.value);
+        const pct = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0;
+        const tone = s.color || 'muted';
+        return `<div class="prog-seg${tone === 'muted' ? ' tone-muted' : ''}" style="width:${pct}%;background:${toneColor(tone)}"
+          title="${esc(s.label || '')}: ${esc(fmt(value))}">${pct >= 8 ? esc(fmt(value)) : ''}</div>`;
+      }).join('');
+      return `<tr><td>${esc(r.label ?? '—')}</td><td class="prog-cell">
+          <div class="prog-track">${segsHtml}</div>
+          <div class="prog-total">${esc(fmt(total))}</div>
+        </td></tr>`;
+    }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- new widget type: trend-matrix ----------
+// Trend direction/delta/sparkline are all computed here from the row's own period values —
+// never model-specified — comparing strictly the last two points, per the design spec.
+function TrendMatrixCard(w) {
+  const card = widgetShell(w, 'trend-matrix');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const periodLabels = (rows[0].periods || []).map(p => p.label);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><thead><tr>
+      <th>${esc(w.metricHeader || 'المؤشر')}</th>
+      ${periodLabels.map(l => `<th>${esc(l)}</th>`).join('')}
+      <th>${esc(w.trendHeader || 'الاتجاه')}</th>
+    </tr></thead>
+    <tbody>${rows.map(r => {
+      const periods = Array.isArray(r.periods) ? r.periods : [];
+      const values = periods.map(p => num(p.value));
+      const cells = periods.map(p => `<td class="num">${esc(fmt(num(p.value)))}</td>`).join('');
+      const last = values[values.length - 1], prev = values[values.length - 2];
+      const dir = (last === undefined || prev === undefined) ? 'flat' : last > prev ? 'up' : last < prev ? 'down' : 'flat';
+      const delta = (last !== undefined && prev !== undefined) ? last - prev : null;
+      const deltaText = delta === null ? '—' : (delta >= 0 ? '+' : '') + fmt(delta);
+      const min = Math.min(...values, 0), max = Math.max(...values, 1);
+      const spark = values.map(v => {
+        const h = max > min ? Math.round(4 + ((v - min) / (max - min)) * 12) : 8;
+        return `<span class="spark-bar" style="height:${h}px"></span>`;
+      }).join('');
+      return `<tr><td>${esc(r.metric ?? '—')}</td>${cells}
+          <td><div class="trend-cell">
+            <span class="trend-dot ${dir}"></span><span class="trend-delta">${deltaText}</span>
+            <span class="sparkline">${spark}</span>
+          </div></td></tr>`;
+    }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- new widget type: status-bar ----------
+// One total+label+breakdown per widget instance (per the schema) — the model sends several
+// of these as separate widgets if it wants more than one breakdown on a dashboard.
+function StatusBarCard(w) {
+  const card = widgetShell(w, 'status-bar');
+  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row) return emptyBody(card);
+  const statuses = Array.isArray(row.statuses) ? row.statuses : [];
+  const wrap = document.createElement('div');
+  wrap.className = 'status-bar-row';
+  const sevClass = s => (s === 'severe' || s === 'warning' || s === 'ontrack') ? s : 'ontrack';
+  const sevIcon = { severe: '🔴', warning: '🟡', ontrack: '🟢' };
+  wrap.innerHTML = `
+    <div class="status-bar-num">${esc(fmt(num(row.total)))}</div>
+    <div>
+      ${row.label ? `<div class="status-bar-label">${esc(row.label)}</div>` : ''}
+      <div class="status-badges">
+        ${statuses.map(s => `<span class="status-badge ${sevClass(s.severity)}">
+            ${sevIcon[sevClass(s.severity)]} ${esc(s.label)}: ${esc(fmt(num(s.count)))}</span>`).join('')}
+      </div>
+    </div>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+const WIDGET_COMPONENTS = {
+  kpi: KpiCard, bar: BarChartCard, line: LineChartCard, pie: PieChartCard, table: TableCard,
+  'progress-table': ProgressTableCard, 'trend-matrix': TrendMatrixCard, 'status-bar': StatusBarCard,
+};
 
 function buildWidget(raw) {
   const type = (raw.type || '').toLowerCase();
