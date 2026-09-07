@@ -1105,12 +1105,14 @@ window.fetch = async (...args) => {
 const THEMES = {
   dark: {
     palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
-    accent: '#35D1A1', gridColor: '#232C3F', tickColor: '#8B96AC', ink: '#E7ECF5',
+    accent: '#35D1A1', danger: '#EF6461', amber: '#F2B84B',
+    gridColor: '#232C3F', tickColor: '#8B96AC', ink: '#E7ECF5',
     fontFamily: 'IBM Plex Sans Arabic',
   },
   light: {
     palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
-    accent: '#0E9F78', gridColor: '#E1E5EC', tickColor: '#565F6D', ink: '#10151F',
+    accent: '#0E9F78', danger: '#D3402F', amber: '#B8730A',
+    gridColor: '#E1E5EC', tickColor: '#565F6D', ink: '#10151F',
     fontFamily: 'IBM Plex Sans Arabic',
   },
 };
@@ -1137,7 +1139,7 @@ function applyTheme(name) {
 // The model only ever controls widget content (type/title/data) — never layout or
 // style. Anything outside this whitelist renders as a table instead of risking a
 // broken grid or a crash on an unexpected type.
-const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table'];
+const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table', 'progress-table', 'trend-matrix', 'status-bar'];
 // Defense in depth: regardless of what the system prompt asked the model to do, a
 // chart never renders more than this many points — the overflow is folded into one
 // summed "+N more" bucket instead of an unreadably dense chart.
@@ -1957,7 +1959,7 @@ function apply3dBarExtrusion(svg, baseColor) {
 // null out xaxis/yaxis/grid for a donut — ApexCharts' internal option merge chokes on an
 // explicit `undefined` value for those keys (throws inside its own constructor), so a
 // donut's config must omit them entirely instead.
-function chartConfig(type, labels, values, title) {
+function chartConfig(type, labels, values, title, centerLabel) {
   const isLine = type === 'line';
   const isDonut = type === 'pie'; // rendered as a donut, same choice the old Chart.js config made
   // ApexCharts only applies a fill *under the curve* (translucent gradient, matching the old
@@ -2033,7 +2035,7 @@ function chartConfig(type, labels, values, title) {
                 formatter: v => centerNum(v),
               },
               total: {
-                show: true, showAlways: true, label: deriveUnitLabel(title),
+                show: true, showAlways: true, label: centerLabel || deriveUnitLabel(title),
                 fontFamily: THEME.fontFamily, fontWeight: 400,
                 color: THEME.tickColor,
                 formatter: w => centerNum(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
@@ -2060,7 +2062,7 @@ function chartConfig(type, labels, values, title) {
   };
 }
 
-function mountChart(card, type, labels, values, title, truncated) {
+function mountChart(card, type, labels, values, title, truncated, centerLabel) {
   const holder = document.createElement('div');
   holder.className = 'chart-holder';
   card.appendChild(holder);
@@ -2070,7 +2072,7 @@ function mountChart(card, type, labels, values, title, truncated) {
     note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
     card.appendChild(note);
   }
-  pendingCharts.push({ card, holder, options: chartConfig(type, labels, values, title) });
+  pendingCharts.push({ card, holder, options: chartConfig(type, labels, values, title, centerLabel) });
 }
 
 // Builds a mixed-series ApexCharts config for a bar/line widget extended with a forecast.
@@ -2165,6 +2167,11 @@ function mountForecastChart(card, type, labels, values, forecast, title, truncat
 
 function buildXyChart(w, type) {
   const card = widgetShell(w, 'chart');
+  // Extension (multi-series bar/line): w.series is [{key, label}] naming which data-row
+  // fields to plot as separate series sharing one xKey category axis — a different shape
+  // from the single-series xKey/yKey path below, so it's handled by its own function
+  // rather than threading extra branches through the existing one.
+  if (Array.isArray(w.series) && w.series.length) return buildMultiSeriesChart(card, w, type);
   const { rows: allRows, xKey, yKey } = keysFor(w);
   if (!allRows.length) return emptyBody(card);
   const { rows, truncated } = capRows(allRows, xKey, yKey);
@@ -2177,6 +2184,77 @@ function buildXyChart(w, type) {
 const BarChartCard = w => buildXyChart(w, 'bar');
 const LineChartCard = w => buildXyChart(w, 'line');
 
+// Caps a multi-series row set the same way capRows() does for a single series — folding
+// the overflow into one "+N أخرى" bucket, just summed across every series field at once.
+function capMultiSeriesRows(rows, xKey, seriesKeys) {
+  if (rows.length <= MAX_CHART_POINTS) return { rows, truncated: 0 };
+  const kept = rows.slice(0, MAX_CHART_POINTS - 1);
+  const rest = rows.slice(MAX_CHART_POINTS - 1);
+  const bucket = { [xKey]: `+${rest.length} أخرى` };
+  seriesKeys.forEach(k => { bucket[k] = rest.reduce((s, r) => s + num(r[k]), 0); });
+  return { rows: [...kept, bucket], truncated: rest.length };
+}
+
+// Multi-series bar (grouped or stacked, per w.stacked) / line — a shared axis with one
+// series per w.series entry. Colors always come from THEME.palette by series index, never
+// a model-supplied value, for the same reason every other chart in the app does this: one
+// consistent palette across the whole dashboard, no risk of a clashing/invented color.
+// Data labels are always on (unlike the single-series path) since these charts get
+// exported to PDF/PPTX, where hover-only tooltips don't exist.
+function buildMultiSeriesChart(card, w, type) {
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const xKey = w.xKey || Object.keys(rows[0]).find(k => typeof rows[0][k] !== 'number') || Object.keys(rows[0])[0];
+  const seriesKeys = w.series.map(s => s.key);
+  const { rows: capped, truncated } = capMultiSeriesRows(rows, xKey, seriesKeys);
+  const categories = capped.map(r => r[xKey]);
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const isLine = type === 'line';
+  const stacked = !isLine && !!w.stacked;
+  const apexSeries = w.series.map(s => ({ name: s.label || s.key, data: capped.map(r => num(r[s.key])) }));
+
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  if (truncated > 0) {
+    const note = document.createElement('div');
+    note.className = 'chart-note';
+    note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
+    card.appendChild(note);
+  }
+
+  const options = {
+    chart: {
+      type: isLine ? 'line' : 'bar', height: '100%', width: '100%', stacked,
+      fontFamily: THEME.fontFamily, foreColor: THEME.tickColor, background: 'transparent',
+      toolbar: { show: false },
+      animations: { enabled: true, easing: 'easeout', speed: 450, animateGradually: { enabled: true, delay: 60 } },
+    },
+    series: apexSeries,
+    colors: THEME.palette.slice(0, apexSeries.length),
+    dataLabels: {
+      enabled: true, formatter: fmt,
+      style: { fontSize: '10px', fontFamily: THEME.fontFamily, colors: [THEME.ink] },
+      background: { enabled: false },
+      offsetY: isLine ? -8 : 0,
+    },
+    stroke: isLine ? { curve: 'smooth', width: 2 } : { width: 0 },
+    markers: isLine ? { size: 4 } : {},
+    plotOptions: isLine ? {} : { bar: { borderRadius: 4, columnWidth: stacked ? '55%' : '70%' } },
+    xaxis: {
+      categories,
+      labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
+      axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
+    },
+    yaxis: { labels: { style: { colors: THEME.tickColor }, formatter: fmt } },
+    grid: { borderColor: THEME.gridColor, strokeDashArray: 0 },
+    legend: { show: true, position: 'bottom', labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
+    tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: fmt } },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
 function PieChartCard(w) {
   const card = widgetShell(w, 'chart');
   const allRows = (Array.isArray(w.data) ? w.data : []).map(r => ({
@@ -2185,7 +2263,7 @@ function PieChartCard(w) {
   })).filter(r => r.value > 0);
   if (!allRows.length) return emptyBody(card);
   const { rows, truncated } = capRows(allRows, 'label', 'value');
-  mountChart(card, 'pie', rows.map(r => r.label), rows.map(r => r.value), w.title, truncated);
+  mountChart(card, 'pie', rows.map(r => r.label), rows.map(r => r.value), w.title, truncated, w.centerLabel);
   return card;
 }
 
