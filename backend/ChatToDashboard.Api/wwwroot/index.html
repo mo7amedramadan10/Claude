@@ -363,19 +363,74 @@ tr:last-child td{border-bottom:0}
 .pending-card .save{padding:7px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
 .pending-card .cancel{border:0;background:transparent;color:var(--danger);font-size:18px;font-weight:700}
 .pending-card.bad{background:rgba(239,100,97,.12);border-color:rgba(239,100,97,.35)}
-.repo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
-.repo-card{position:relative;padding:16px;background:var(--surface);border:1px solid var(--grid);
-  border-radius:var(--radius);box-shadow:var(--shadow)}
-.repo-card .icon{font-size:26px}
-.repo-card .name{margin-top:8px;font-weight:600;font-size:13px;word-break:break-word}
-.cat-badge{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;
-  background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:600}
-.repo-card .meta{margin-top:9px;font-size:12px;color:var(--muted)}
-.repo-card .del{position:absolute;inset-inline-end:11px;top:11px;border:0;background:transparent;
-  color:var(--muted);font-size:15px}
-.repo-card .del:hover{color:var(--danger)}
-.repo-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
+.repo-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.sort-select{font-size:12px;color:var(--ink-2);background:var(--surface);border:1px solid var(--grid);
+  border-radius:8px;padding:7px 12px}
+.cat-badge{display:inline-block;padding:3px 10px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:600;flex-shrink:0}
+.repo-empty{padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
+
+/* ---------- file repository: list-row layout ---------- */
+.file-list-head{display:flex;align-items:center;gap:16px;padding:0 18px 6px;font-size:11px;color:var(--muted)}
+.file-list-head .col-main{flex:1}
+.file-list-head .col-updated{width:96px;text-align:center}
+.file-list-head .col-usage{width:84px;text-align:center}
+.file-list-head .col-access{width:104px;text-align:center}
+.file-list-head .col-actions{width:80px}
+.file-list{display:flex;flex-direction:column;gap:8px}
+.file-row{background:var(--surface);border:1px solid var(--grid);border-radius:12px;
+  padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s}
+.file-row:hover{border-color:var(--accent)}
+.file-row.stale{border-inline-start:3px solid #F2B84B}
+.fr-main{flex:1;min-width:0;display:flex;gap:12px;align-items:flex-start}
+.fr-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.fr-text{min-width:0;flex:1}
+.fr-line1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fr-name{font-weight:600;font-size:14px}
+.badge-stale{font-size:10px;padding:2px 8px;border-radius:9px;background:rgba(242,184,75,.16);color:#c98a1f}
+.fr-line2{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.fr-line2 .orig-name{font-family:monospace;direction:ltr;unicode-bidi:embed}
+.fr-line2 .sep{margin:0 6px;opacity:.5}
+.fr-links{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.link-chip{font-size:10px;color:#8b5fbf;background:rgba(139,95,191,.13);padding:2px 8px;border-radius:9px}
+.col-updated{width:96px;text-align:center;font-size:11px;color:var(--muted);flex-shrink:0}
+.col-updated b{display:block;color:var(--ink);font-size:12px;margin-bottom:1px}
+.col-usage{width:84px;text-align:center;flex-shrink:0}
+.col-usage .num{font-size:16px;font-weight:700;color:var(--accent)}
+.col-usage .lbl{font-size:9.5px;color:var(--muted)}
+.col-access{width:104px;display:flex;justify-content:center;flex-shrink:0}
+.avatar-stack{display:flex}
+.avatar{width:22px;height:22px;border-radius:50%;background:var(--plane);border:2px solid var(--surface);
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-2);
+  margin-inline-start:-8px}
+.avatar:first-child{margin-inline-start:0}
+.avatar.owner{background:var(--accent);color:#fff;border-color:var(--surface);font-weight:700}
+.access-locked{font-size:11px;color:var(--muted)}
+.col-actions{width:80px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
+.icon-btn{width:32px;height:32px;border-radius:8px;background:var(--plane);border:1px solid var(--grid);
+  color:var(--ink-2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+.icon-btn:disabled{opacity:.5;cursor:progress}
+
+/* ---------- file detail modal (meta / permissions / relationships) ---------- */
+.file-modal-box{width:min(520px,100%);max-height:86vh;overflow-y:auto}
+#file-form{display:flex;flex-direction:column;gap:12px}
+#file-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+#file-form input[type="text"],#file-form textarea{padding:9px 12px;border:1px solid var(--grid);
+  border-radius:9px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface)}
+.rel-title{display:block;margin-bottom:8px;font-size:12.5px;color:var(--ink-2)}
+.rel-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rel-row .rel-label{flex:1;font-size:12.5px}
+.rel-row button{border:0;background:transparent;color:var(--danger);font-size:15px}
+.rel-add{display:flex;gap:8px;margin-top:8px}
+.rel-add select, .rel-add input{flex:1;padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px}
+.rel-add button{padding:7px 12px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;flex-shrink:0}
+@media (max-width:900px){
+  .col-updated, .col-usage, .col-access{display:none}
+  .file-list-head .col-updated, .file-list-head .col-usage, .file-list-head .col-access{display:none}
+}
 
 /* ---------- history screen ---------- */
 #screen-history{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
@@ -435,6 +490,7 @@ tr:last-child td{border-bottom:0}
 .modal-row button{padding:9px 16px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
 .modal-actions{display:flex;justify-content:flex-end;margin-top:14px}
 .modal-actions button{padding:7px 16px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
+.modal-actions .file-modal-delete{margin-inline-end:auto;border-color:rgba(239,100,97,.35);color:var(--danger)}
 
 /* ---------- shared read-only view ---------- */
 #shared-banner{display:flex;align-items:center;gap:12px;padding:11px 20px;
@@ -650,10 +706,62 @@ tr:last-child td{border-bottom:0}
       📎 رفع ملفات جديدة
       <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.pdf" multiple hidden>
     </label>
-    <div class="chips" id="filters"></div>
+    <!-- Bound to one existing file's id right before it's clicked (see openUpdateFilePicker) —
+         "Update this file" re-uses the same server-side parser, just skips the "assign a
+         category" step since display name/category/relationships/permissions are preserved. -->
+    <input type="file" id="file-update-input" accept=".xlsx,.xls,.csv,.pdf" hidden>
   </div>
   <div id="pending"></div>
-  <div class="repo-grid" id="repo-grid"></div>
+  <div class="repo-toolbar">
+    <div class="chips" id="filters"></div>
+    <select class="sort-select" id="repo-sort">
+      <option value="usage">الأكثر استخدامًا</option>
+      <option value="updated">الأحدث تحديثًا</option>
+      <option value="name">الاسم</option>
+    </select>
+  </div>
+  <div class="file-list-head">
+    <div class="col-main">الملف</div>
+    <div class="col-updated">آخر تحديث</div>
+    <div class="col-usage">الاستخدام</div>
+    <div class="col-access">الصلاحيات</div>
+    <div class="col-actions"></div>
+  </div>
+  <div class="file-list" id="repo-list"></div>
+</div>
+
+<div id="file-modal" class="modal-overlay hidden">
+  <div class="modal file-modal-box">
+    <h3 id="file-modal-title">تفاصيل الملف</h3>
+    <form id="file-form">
+      <input type="hidden" id="file-modal-id">
+      <label>اسم العرض<input type="text" id="file-display-name" maxlength="200" required></label>
+      <label>الوصف<textarea id="file-description" rows="2" maxlength="500"></textarea></label>
+      <label>التصنيف<input type="text" id="file-category" list="cat-suggestions"></label>
+
+      <div class="perm-block" id="file-perm-section">
+        <label class="chk-row"><input type="checkbox" id="file-restrict-toggle"> تقييد استخدام هذا الملف كمصدر بيانات لمستخدمين محددين</label>
+        <div id="file-perm-list" class="perm-list"></div>
+      </div>
+
+      <div class="perm-block">
+        <span class="rel-title">ملفات مرتبطة</span>
+        <div id="file-rel-list"></div>
+        <div class="rel-add">
+          <select id="file-rel-target"></select>
+          <input type="text" id="file-rel-column" placeholder="اسم العمود المشترك">
+          <button type="button" id="file-rel-add-btn">ربط</button>
+        </div>
+      </div>
+
+      <div id="file-form-error" class="login-error hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="file-modal-delete" class="file-modal-delete">🗑️ حذف الملف</button>
+        <button type="button" id="file-modal-cancel">إلغاء</button>
+        <button type="submit" id="file-modal-save">حفظ</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <div id="screen-history" class="screen">
@@ -2671,11 +2779,32 @@ async function loadFiles() {
   state.files = await res.json();
   if (!state.categories.length || state.files.some(f => !state.categories.includes(f.category)))
     await loadSources();
+  // Only an Admin can manage per-file permissions (same authority level as managing user
+  // accounts) and only an Admin's browser is even allowed to call GET /api/users — load it
+  // here (not eagerly for everyone) so the row's access column can show real initials for
+  // whoever configured this file's permission list.
+  if (state.currentUser?.role === 'Admin' && !state.users.length) await loadUsers();
   renderRepo();
 }
 
 function repoCategories() {
   return [...new Set(state.files.map(f => f.category || 'عام'))];
+}
+
+// "قبل 3 أيام" / "اليوم" / "منذ 5 أشهر" — the same relative-time granularity the design
+// mockup uses for "آخر تحديث" and the "لم يُستخدم منذ..." staleness hint.
+function relTime(dateStr) {
+  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (diffDays <= 0) return 'اليوم';
+  if (diffDays === 1) return 'أمس';
+  if (diffDays < 30) return `قبل ${diffDays} يوم`;
+  const months = Math.floor(diffDays / 30);
+  return months <= 1 ? 'قبل شهر' : `منذ ${months} أشهر`;
+}
+
+function userInitials(userId) {
+  const u = state.users.find(u => u.id === userId);
+  return u ? (u.displayName || u.username).trim().slice(0, 2) : '؟';
 }
 
 function renderRepo() {
@@ -2694,33 +2823,65 @@ function renderRepo() {
 
   el('cat-suggestions').innerHTML = repoCategories().map(c => `<option value="${esc(c)}">`).join('');
 
-  const visible = state.filter === 'الكل'
-    ? state.files : state.files.filter(f => (f.category || 'عام') === state.filter);
+  let visible = state.filter === 'الكل'
+    ? [...state.files] : state.files.filter(f => (f.category || 'عام') === state.filter);
 
-  el('repo-grid').innerHTML = visible.length ? visible.map(f => {
+  const sort = el('repo-sort').value = state.repoSort || 'usage';
+  visible.sort(sort === 'name' ? (a, b) => a.displayName.localeCompare(b.displayName, 'ar')
+    : sort === 'updated' ? (a, b) => new Date(b.lastUpdatedAt) - new Date(a.lastUpdatedAt)
+    : (a, b) => b.usageCount - a.usageCount);
+
+  const STALE_DAYS = 90;
+  el('repo-list').innerHTML = visible.length ? visible.map(f => {
     const icon = f.kind === 'pdf' ? '📄' : '📊';
-    const meta = f.kind === 'pdf'
-      ? `${f.pageCount} صفحة`
-      : `${f.rowCount} صف · ${f.columnCount} عمود`;
-    const date = new Date(f.uploadedAt).toLocaleDateString('ar-EG');
-    return `<div class="repo-card">
-        <button class="del" data-id="${esc(f.id)}" title="حذف">✕</button>
-        <div class="icon">${icon}</div>
-        <div class="name">${esc(f.name)}</div>
-        <div><span class="cat-badge">${esc(f.category || 'عام')}</span></div>
-        <div class="meta">${meta} · ${date}</div>
+    const staleDays = f.lastUsedAt ? Math.floor((Date.now() - new Date(f.lastUsedAt).getTime()) / 86400000) : null;
+    const isStale = staleDays !== null && staleDays > STALE_DAYS;
+    const staleBadge = isStale ? `<span class="badge-stale">⚠ ${relTime(f.lastUsedAt)}</span>` : '';
+    const meta = f.kind === 'pdf' ? `${f.pageCount} صفحة` : `${f.rowCount} صف · ${f.columnCount} عمود`;
+    const relLinks = f.relationships.length
+      ? `<div class="fr-links">${f.relationships.map(r => `<span class="link-chip">🔗 ${esc(r.relatedFileName)}</span>`).join('')}</div>`
+      : '';
+    const access = f.permittedUserIds.length
+      ? (state.currentUser?.role === 'Admin'
+          ? `<div class="avatar-stack">
+              <div class="avatar owner" title="${esc(f.createdByUserId ? userInitials(f.createdByUserId) : '')}">${esc(userInitials(f.createdByUserId))}</div>
+              ${f.permittedUserIds.slice(0, 2).map(id => `<div class="avatar" title="${esc(userInitials(id))}">${esc(userInitials(id))}</div>`).join('')}
+              ${f.permittedUserIds.length > 2 ? `<div class="avatar">+${f.permittedUserIds.length - 2}</div>` : ''}
+            </div>`
+          : `<span class="access-locked">🔒 مقيّد</span>`)
+      : `<span class="access-locked">عام</span>`;
+
+    return `<div class="file-row${isStale ? ' stale' : ''}" data-id="${esc(f.id)}">
+        <div class="fr-main">
+          <div class="fr-icon">${icon}</div>
+          <div class="fr-text">
+            <div class="fr-line1">
+              <span class="fr-name">${esc(f.displayName)}</span>
+              <span class="cat-badge">${esc(f.category || 'عام')}</span>
+              ${staleBadge}
+            </div>
+            <div class="fr-line2">${esc(f.description || meta)}${f.description ? ` <span class="sep">·</span> ${meta} <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>` : ` <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>`}</div>
+            ${relLinks}
+          </div>
+        </div>
+        <div class="col-updated"><b>${relTime(f.lastUpdatedAt)}</b>${new Date(f.lastUpdatedAt).toLocaleDateString('ar-EG')}</div>
+        <div class="col-usage"><div class="num">${f.usageCount}</div><div class="lbl">لوحة</div></div>
+        <div class="col-access">${access}</div>
+        <div class="col-actions">
+          <button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>
+          <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل والصلاحيات">⚙️</button>
+        </div>
       </div>`;
   }).join('')
     : `<div class="repo-empty">لا يوجد ملفات ${state.filter !== 'الكل' ? 'في هذا التصنيف' : 'في المستودع بعد'}. ارفع ملفاً من الأعلى.</div>`;
 
-  el('repo-grid').querySelectorAll('.del').forEach(btn => btn.addEventListener('click', async () => {
-    if (!confirm('حذف هذا الملف من المستودع؟')) return;
-    await fetch('/api/repository/files/' + btn.dataset.id, { method: 'DELETE' });
-    await loadFiles(); await loadSources();
-  }));
+  el('repo-list').querySelectorAll('.upd').forEach(btn => btn.addEventListener('click', () => openUpdateFilePicker(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
 
   renderPending();
 }
+
+el('repo-sort').addEventListener('change', () => { state.repoSort = el('repo-sort').value; renderRepo(); });
 
 function renderPending() {
   el('pending').innerHTML = state.pending.map((p, i) => p.error
@@ -2731,19 +2892,24 @@ function renderPending() {
     : `<div class="pending-card">
          <span>${p.kind === 'pdf' ? '📄' : '📊'}</span>
          <span class="name">${esc(p.name)} — ${p.kind === 'pdf' ? `${p.pageCount} صفحة` : `${p.rowCount} صف`}</span>
-         <input list="cat-suggestions" placeholder="التصنيف (مثلاً: المالية)" value="عام" data-idx="${i}">
+         <input placeholder="اسم العرض (إجباري)" value="${esc(p.name.replace(/\.[^.]+$/, ''))}" data-idx="${i}" data-field="displayName">
+         <input placeholder="وصف مختصر" data-idx="${i}" data-field="description">
+         <input list="cat-suggestions" placeholder="التصنيف (مثلاً: المالية)" value="عام" data-idx="${i}" data-field="category">
          <button class="save" data-idx="${i}">حفظ في المستودع</button>
          <button class="cancel" data-idx="${i}">×</button>
        </div>`).join('');
 
   el('pending').querySelectorAll('.save').forEach(btn => btn.addEventListener('click', async () => {
     const i = +btn.dataset.idx;
-    const input = el('pending').querySelector(`input[data-idx="${i}"]`);
-    const category = (input.value || 'عام').trim() || 'عام';
+    const field = f => el('pending').querySelector(`input[data-idx="${i}"][data-field="${f}"]`)?.value || '';
+    const displayName = field('displayName').trim();
+    if (!displayName) { alert('اسم العرض إجباري.'); return; }
+    const category = (field('category') || 'عام').trim() || 'عام';
+    const description = field('description').trim();
     btn.disabled = true; btn.textContent = 'جارٍ الحفظ…';
     const res = await fetch('/api/repository/files', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: state.pending[i].token, category }),
+      body: JSON.stringify({ token: state.pending[i].token, displayName, description, category }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -2783,6 +2949,162 @@ el('file-input').addEventListener('change', async e => {
     state.pending.push({ name: 'تعذّر الرفع', error: err.message });
   }
   renderPending();
+});
+
+// ---------- "Update this file": re-upload data into an existing file's identity ----------
+// Display name/category/relationships/permissions are preserved server-side (see
+// RepositoryStore.UpdateDataAsync) — this flow only ever needs the new file itself.
+let updateTargetFileId = null;
+function openUpdateFilePicker(fileId) {
+  updateTargetFileId = fileId;
+  el('file-update-input').click();
+}
+el('file-update-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !updateTargetFileId) return;
+  const targetId = updateTargetFileId;
+  const row = el('repo-list').querySelector(`.file-row[data-id="${targetId}"] .upd`);
+  if (row) { row.disabled = true; row.textContent = '⏳'; }
+  try {
+    const form = new FormData();
+    form.append('files', file);
+    const uploadRes = await fetch('/api/repository/upload', { method: 'POST', body: form });
+    const [parsed] = await uploadRes.json();
+    if (!parsed || parsed.error) throw new Error(parsed?.error || 'تعذّر قراءة الملف.');
+
+    const updateRes = await fetch(`/api/repository/files/${targetId}/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: parsed.token }),
+    });
+    if (!updateRes.ok) {
+      const err = await updateRes.json().catch(() => ({}));
+      throw new Error(err.error || `فشل التحديث (${updateRes.status})`);
+    }
+    await loadFiles(); await loadSources();
+  } catch (err) {
+    alert('تعذّر تحديث بيانات الملف: ' + err.message);
+    if (row) { row.disabled = false; row.textContent = '🔄'; }
+  } finally {
+    updateTargetFileId = null;
+  }
+});
+
+// ---------- file detail modal: meta / permissions / relationships ----------
+function openFileModal(fileId) {
+  const f = state.files.find(f => f.id === fileId);
+  if (!f) return;
+  el('file-modal-id').value = f.id;
+  el('file-modal-title').textContent = f.displayName;
+  el('file-display-name').value = f.displayName;
+  el('file-description').value = f.description;
+  el('file-category').value = f.category;
+  el('file-form-error').classList.add('hidden');
+
+  const isAdmin = state.currentUser?.role === 'Admin';
+  el('file-perm-section').classList.toggle('hidden', !isAdmin);
+  if (isAdmin) {
+    el('file-restrict-toggle').checked = f.permittedUserIds.length > 0;
+    renderPermChecklist('file-perm-list', state.users, f.permittedUserIds, u => u.id, u => u.displayName || u.username);
+    toggleFilePermList();
+  }
+
+  renderFileRelationships(f);
+  const targets = state.files.filter(other => other.id !== f.id);
+  el('file-rel-target').innerHTML = targets.length
+    ? targets.map(t => `<option value="${esc(t.id)}">${esc(t.displayName)}</option>`).join('')
+    : '<option value="">لا يوجد ملفات أخرى</option>';
+  el('file-rel-column').value = '';
+
+  el('file-modal').classList.remove('hidden');
+}
+
+function renderFileRelationships(f) {
+  el('file-rel-list').innerHTML = f.relationships.length
+    ? f.relationships.map(r => `<div class="rel-row">
+        <span class="rel-label">🔗 ${esc(r.relatedFileName)} — العمود المشترك: <b>${esc(r.sharedColumn)}</b></span>
+        <button type="button" class="rel-del" data-rel="${esc(r.id)}" title="إزالة الربط">✕</button>
+      </div>`).join('')
+    : '<span class="access-locked">لا يوجد ملفات مرتبطة بعد.</span>';
+
+  el('file-rel-list').querySelectorAll('.rel-del').forEach(btn => btn.addEventListener('click', async () => {
+    const fileId = el('file-modal-id').value;
+    await fetch(`/api/repository/files/${fileId}/relationships/${btn.dataset.rel}`, { method: 'DELETE' });
+    await loadFiles();
+    const refreshed = state.files.find(x => x.id === fileId);
+    if (refreshed) renderFileRelationships(refreshed);
+  }));
+}
+
+// Opposite polarity from togglePermList's "allow all -> hide the specific list" (used by
+// the user-permission editor): here checking the box means "I want to pick specific users",
+// so it SHOWS the list instead of hiding it.
+function toggleFilePermList() {
+  el('file-perm-list').classList.toggle('hidden', !el('file-restrict-toggle').checked);
+}
+el('file-restrict-toggle').addEventListener('change', toggleFilePermList);
+
+el('file-rel-add-btn').addEventListener('click', async () => {
+  const fileId = el('file-modal-id').value;
+  const relatedFileId = el('file-rel-target').value;
+  const sharedColumn = el('file-rel-column').value.trim();
+  if (!relatedFileId || !sharedColumn) { alert('اختر ملفًا واكتب اسم العمود المشترك.'); return; }
+  const res = await fetch(`/api/repository/files/${fileId}/relationships`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ relatedFileId, sharedColumn }),
+  });
+  if (!res.ok) { alert('تعذّر إضافة الربط.'); return; }
+  el('file-rel-column').value = '';
+  await loadFiles();
+  const refreshed = state.files.find(x => x.id === fileId);
+  if (refreshed) renderFileRelationships(refreshed);
+});
+
+el('file-modal-cancel').addEventListener('click', () => el('file-modal').classList.add('hidden'));
+el('file-modal-delete').addEventListener('click', async () => {
+  const fileId = el('file-modal-id').value;
+  const f = state.files.find(x => x.id === fileId);
+  if (!f || !confirm(`حذف "${f.displayName}" من المستودع؟ لا يمكن التراجع عن هذا.`)) return;
+  await fetch('/api/repository/files/' + fileId, { method: 'DELETE' });
+  el('file-modal').classList.add('hidden');
+  await loadFiles(); await loadSources();
+});
+el('file-modal').addEventListener('click', e => { if (e.target.id === 'file-modal') el('file-modal').classList.add('hidden'); });
+
+el('file-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fileId = el('file-modal-id').value;
+  const displayName = el('file-display-name').value.trim();
+  if (!displayName) return;
+  const description = el('file-description').value.trim();
+  const category = el('file-category').value.trim() || 'عام';
+  const errBox = el('file-form-error'); errBox.classList.add('hidden');
+  const saveBtn = el('file-modal-save'); saveBtn.disabled = true;
+
+  try {
+    const metaRes = await fetch(`/api/repository/files/${fileId}/meta`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName, description, category }),
+    });
+    if (!metaRes.ok) throw new Error((await metaRes.json().catch(() => ({}))).error || 'تعذّر حفظ التفاصيل.');
+
+    if (state.currentUser?.role === 'Admin') {
+      const restricted = el('file-restrict-toggle').checked;
+      const userIds = restricted ? [...el('file-perm-list').querySelectorAll('input:checked')].map(i => i.value) : [];
+      const permRes = await fetch(`/api/repository/files/${fileId}/permissions`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds }),
+      });
+      if (!permRes.ok) throw new Error('تعذّر حفظ صلاحيات الملف.');
+    }
+
+    el('file-modal').classList.add('hidden');
+    await loadFiles(); await loadSources();
+  } catch (err) {
+    errBox.textContent = err.message; errBox.classList.remove('hidden');
+  } finally {
+    saveBtn.disabled = false;
+  }
 });
 
 // ---------- history ----------
