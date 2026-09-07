@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using ChatToDashboard.Api.Data;
 using Dapper;
+using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Share;
 
@@ -28,18 +30,47 @@ public class ShareStore
             ? $"""
                CREATE TABLE IF NOT EXISTS {Table} (
                  "Id" TEXT PRIMARY KEY, "CreatedByUserId" TEXT, "Question" TEXT,
-                 "Summary" TEXT, "WidgetsJson" TEXT, "CreatedAt" TEXT)
+                 "Summary" TEXT, "WidgetsJson" TEXT, "FiltersJson" TEXT, "ActiveFiltersJson" TEXT,
+                 "CreatedAt" TEXT)
                """
             : $"""
                IF OBJECT_ID('staging.SharedDashboard') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(32) PRIMARY KEY, [CreatedByUserId] NVARCHAR(200), [Question] NVARCHAR(MAX),
-                 [Summary] NVARCHAR(MAX), [WidgetsJson] NVARCHAR(MAX), [CreatedAt] DATETIME2)
+                 [Summary] NVARCHAR(MAX), [WidgetsJson] NVARCHAR(MAX), [FiltersJson] NVARCHAR(MAX),
+                 [ActiveFiltersJson] NVARCHAR(MAX), [CreatedAt] DATETIME2)
                """;
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = text;
-        await command.ExecuteNonQueryAsync(ct);
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = text;
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        // Migration for a table created before FiltersJson/ActiveFiltersJson existed —
+        // SQLite has no "ADD COLUMN IF NOT EXISTS", so the duplicate-column failure is just
+        // swallowed (same pattern as HistoryStore.EnsureSchemaAsync).
+        foreach (var (column, sqliteType, sqlServerType) in new[]
+                 {
+                     ("FiltersJson", "TEXT", "NVARCHAR(MAX)"),
+                     ("ActiveFiltersJson", "TEXT", "NVARCHAR(MAX)"),
+                 })
+        {
+            try
+            {
+                await using var alter = connection.CreateCommand();
+                alter.CommandText = _db.Provider == DbProvider.Sqlite
+                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqliteType}"
+                    : $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
+                await alter.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+            catch (SqlException ex) when (ex.Message.Contains("already", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+        }
     }
 
     public async Task<SharedDashboard> SaveAsync(SharedDashboard entry, CancellationToken ct = default)
@@ -50,8 +81,10 @@ public class ShareStore
 
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
-            $"INSERT INTO {Table} (Id, CreatedByUserId, Question, Summary, WidgetsJson, CreatedAt) " +
-            "VALUES (@Id, @CreatedByUserId, @Question, @Summary, @WidgetsJson, @CreatedAt)",
+            $"INSERT INTO {Table} (Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
+            "FiltersJson, ActiveFiltersJson, CreatedAt) " +
+            "VALUES (@Id, @CreatedByUserId, @Question, @Summary, @WidgetsJson, " +
+            "@FiltersJson, @ActiveFiltersJson, @CreatedAt)",
             entry);
         return entry;
     }
@@ -61,8 +94,12 @@ public class ShareStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
+        // COALESCE covers rows saved before FiltersJson/ActiveFiltersJson existed — the
+        // migration in EnsureSchemaAsync adds the columns as NULL on old rows, not "[]"/"{}".
         return await connection.QuerySingleOrDefaultAsync<SharedDashboard>(
-            $"SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, CreatedAt FROM {Table} WHERE Id = @id",
+            "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
+            "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
+            $"CreatedAt FROM {Table} WHERE Id = @id",
             new { id });
     }
 

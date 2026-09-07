@@ -35,6 +35,12 @@ public class ShareController : ControllerBase
             WidgetsJson = request.Widgets.ValueKind == System.Text.Json.JsonValueKind.Undefined
                 ? "[]"
                 : request.Widgets.GetRawText(),
+            FiltersJson = request.Filters.ValueKind == System.Text.Json.JsonValueKind.Undefined
+                ? "[]"
+                : request.Filters.GetRawText(),
+            ActiveFiltersJson = request.ActiveFilters.ValueKind == System.Text.Json.JsonValueKind.Undefined
+                ? "{}"
+                : request.ActiveFilters.GetRawText(),
         };
 
         var saved = await _store.SaveAsync(entry, ct);

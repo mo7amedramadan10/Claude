@@ -341,6 +341,11 @@ sequential or guessable, but anyone holding it can view. Manage what you've publ
 `GET /api/share` (your own links) and `DELETE /api/share/{id}`; deleting one immediately breaks
 that link for everyone.
 
+If a filter was applied when you shared, the recipient sees the same filter bar showing what
+was selected (e.g. "الحالة (1)") — the widget data itself is already that filtered snapshot.
+It's shown read-only rather than as a live control: a share link has no sign-in, and re-running
+a filtered query requires one, so there's nothing for the recipient to switch it to.
+
 ## Exporting a dashboard (PDF / PowerPoint)
 
 Two buttons appear above any generated dashboard:

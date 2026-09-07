@@ -15,6 +15,16 @@ public class SharedDashboard
     public string Question { get; set; } = "";
     public string Summary { get; set; } = "";
     public string WidgetsJson { get; set; } = "[]";
+
+    /// <summary>The dashboard's filter definitions (see DashboardSpec.Filters) — without
+    /// these the shared view has no way to show which filter was applied when the link was
+    /// created, even though the widget data itself is already the filtered snapshot.</summary>
+    public string FiltersJson { get; set; } = "[]";
+
+    /// <summary>Which filter values were selected at share time (frontend's
+    /// state.activeFilters: filterId -> values) — shown read-only in the shared view, since
+    /// an anonymous viewer has no session to re-run a filtered query with a different value.</summary>
+    public string ActiveFiltersJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
 }
 
@@ -29,4 +39,10 @@ public class CreateShareRequest
 
     [JsonPropertyName("widgets")]
     public JsonElement Widgets { get; set; }
+
+    [JsonPropertyName("filters")]
+    public JsonElement Filters { get; set; }
+
+    [JsonPropertyName("activeFilters")]
+    public JsonElement ActiveFilters { get; set; }
 }
