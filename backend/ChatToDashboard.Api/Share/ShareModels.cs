@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ChatToDashboard.Api.Widgets;
 
 namespace ChatToDashboard.Api.Share;
 
@@ -23,11 +22,22 @@ public class SharedDashboard
     public string FiltersJson { get; set; } = "[]";
 
     /// <summary>Which filter values were selected at share time (frontend's
-    /// state.activeFilters: filterId -> values) — the shared view opens with the same
-    /// selection, and the recipient can change it from there (see POST
-    /// /api/share/{id}/widgets/{index}/refresh).</summary>
+    /// state.activeFilters: filterId -> values) — shown read-only in the shared view; a
+    /// snapshot is frozen exactly as it was when created, never re-executed (Part 3).</summary>
     public string ActiveFiltersJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Null means "never expires" — the creator picks this themselves at creation
+    /// time (a specific date or a duration resolved to one client-side); there is no
+    /// system-enforced default.</summary>
+    public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>Null while active; set the moment the creator manually revokes the link.</summary>
+    public DateTime? RevokedAt { get; set; }
+
+    /// <summary>A simple open/view count, incremented on every successful (non-expired,
+    /// non-revoked) anonymous GET — surfaced to the creator as a basic usage signal.</summary>
+    public int ViewCount { get; set; }
 }
 
 /// <summary>Body of POST /api/share — the frontend sends the widgets array verbatim.</summary>
@@ -47,17 +57,11 @@ public class CreateShareRequest
 
     [JsonPropertyName("activeFilters")]
     public JsonElement ActiveFilters { get; set; }
-}
 
-/// <summary>
-/// Body of POST /api/share/{id}/widgets/{index}/refresh — re-runs one widget already
-/// published in this share with a (possibly different) filter selection, or with none at
-/// all for a plain refresh. Deliberately carries no table/sql/query of its own: the widget
-/// to run comes from the share's own stored WidgetsJson at <c>index</c>, never from the
-/// (anonymous, unauthenticated) caller — see ShareController for why that boundary matters.
-/// </summary>
-public class RefreshShareWidgetRequest
-{
-    [JsonPropertyName("filters")]
-    public List<FilterCondition>? Filters { get; set; }
+    /// <summary>Null (the default from the JSON binder when omitted) means "never expires".
+    /// Sent by the frontend as an absolute ISO-8601 instant — a duration preset ("7 أيام")
+    /// or a specific picked date are both resolved to one client-side before this is sent,
+    /// so the server never needs to know which the creator chose.</summary>
+    [JsonPropertyName("expiresAt")]
+    public DateTime? ExpiresAt { get; set; }
 }

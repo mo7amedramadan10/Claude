@@ -47,13 +47,16 @@ public class ShareStore
             await command.ExecuteNonQueryAsync(ct);
         }
 
-        // Migration for a table created before FiltersJson/ActiveFiltersJson existed —
-        // SQLite has no "ADD COLUMN IF NOT EXISTS", so the duplicate-column failure is just
-        // swallowed (same pattern as HistoryStore.EnsureSchemaAsync).
+        // Migration for a table created before FiltersJson/ActiveFiltersJson/the Part 3
+        // columns existed — SQLite has no "ADD COLUMN IF NOT EXISTS", so the duplicate-column
+        // failure is just swallowed (same pattern as HistoryStore.EnsureSchemaAsync).
         foreach (var (column, sqliteType, sqlServerType) in new[]
                  {
                      ("FiltersJson", "TEXT", "NVARCHAR(MAX)"),
                      ("ActiveFiltersJson", "TEXT", "NVARCHAR(MAX)"),
+                     ("ExpiresAt", "TEXT", "DATETIME2"),
+                     ("RevokedAt", "TEXT", "DATETIME2"),
+                     ("ViewCount", "INTEGER", "INT"),
                  })
         {
             try
@@ -78,29 +81,42 @@ public class ShareStore
         await EnsureSchemaAsync(ct);
         entry.Id = NewShareId();
         entry.CreatedAt = DateTime.UtcNow;
+        entry.ViewCount = 0;
 
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"INSERT INTO {Table} (Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
-            "FiltersJson, ActiveFiltersJson, CreatedAt) " +
+            "FiltersJson, ActiveFiltersJson, CreatedAt, ExpiresAt, RevokedAt, ViewCount) " +
             "VALUES (@Id, @CreatedByUserId, @Question, @Summary, @WidgetsJson, " +
-            "@FiltersJson, @ActiveFiltersJson, @CreatedAt)",
+            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ExpiresAt, @RevokedAt, @ViewCount)",
             entry);
         return entry;
     }
 
-    /// <summary>Reads a share by id — deliberately no owner check, this is the public view.</summary>
+    /// <summary>Reads a share by id — deliberately no owner check, this is the public view.
+    /// Includes an expired/revoked entry too — the caller decides what "inactive" means and
+    /// how to respond; this is just the raw row.</summary>
     public async Task<SharedDashboard?> GetAsync(string id, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        // COALESCE covers rows saved before FiltersJson/ActiveFiltersJson existed — the
-        // migration in EnsureSchemaAsync adds the columns as NULL on old rows, not "[]"/"{}".
+        // COALESCE covers rows saved before FiltersJson/ActiveFiltersJson/ViewCount existed —
+        // the migration in EnsureSchemaAsync adds the columns as NULL on old rows, not "[]"/0.
         return await connection.QuerySingleOrDefaultAsync<SharedDashboard>(
             "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
             "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
-            $"CreatedAt FROM {Table} WHERE Id = @id",
+            "CreatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount " +
+            $"FROM {Table} WHERE Id = @id",
             new { id });
+    }
+
+    /// <summary>Bumps the view count by one — called only for a genuinely active (not
+    /// expired/revoked) view, so the count reflects real opens of live content.</summary>
+    public async Task IncrementViewCountAsync(string id, CancellationToken ct = default)
+    {
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {Table} SET ViewCount = COALESCE(ViewCount, 0) + 1 WHERE Id = @id", new { id });
     }
 
     public async Task<IReadOnlyList<SharedDashboard>> ListAsync(string userId, CancellationToken ct = default)
@@ -108,7 +124,8 @@ public class ShareStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<SharedDashboard>(
-            $"SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, CreatedAt FROM {Table} " +
+            "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, CreatedAt, " +
+            $"ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount FROM {Table} " +
             "WHERE CreatedByUserId = @userId ORDER BY CreatedAt DESC",
             new { userId });
         return rows.ToList();
@@ -120,6 +137,19 @@ public class ShareStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         var affected = await connection.ExecuteAsync(
             $"DELETE FROM {Table} WHERE Id = @id AND CreatedByUserId = @userId", new { id, userId });
+        return affected > 0;
+    }
+
+    /// <summary>Manually revokes a share — creator-only, idempotent (revoking an already
+    /// revoked link just keeps its original RevokedAt).</summary>
+    public async Task<bool> RevokeAsync(string userId, string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var affected = await connection.ExecuteAsync(
+            $"UPDATE {Table} SET RevokedAt = COALESCE(RevokedAt, @now) " +
+            "WHERE Id = @id AND CreatedByUserId = @userId",
+            new { id, userId, now = DateTime.UtcNow });
         return affected > 0;
     }
 
