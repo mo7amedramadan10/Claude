@@ -86,7 +86,13 @@ builder.Services.AddHttpClient<ChatToDashboard.Api.Ollama.OllamaClient>(client =
 {
     client.BaseAddress = new Uri(
         builder.Configuration["Ollama:BaseUrl"] ?? "http://172.17.242.1:8081/api/v1/");
-    client.Timeout = TimeSpan.FromMinutes(5);
+    // Local/self-hosted inference can be far slower than a cloud API — especially on
+    // CPU-only hardware, a large model, or a long system prompt — so the 5-minute default
+    // that's fine for Claude/OpenAI can genuinely be too tight here ("HttpClient.Timeout of
+    // 300 seconds elapsing" mid-request). Configurable per deployment since hardware varies;
+    // set Ollama:TimeoutSeconds higher still if a single reply routinely needs more than this.
+    var timeoutSeconds = builder.Configuration.GetValue("Ollama:TimeoutSeconds", 600);
+    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 });
 builder.Services.AddSingleton<IDashboardGenerator, ChatToDashboard.Api.Llm.LlmRouter>();
 
