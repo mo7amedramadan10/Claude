@@ -31,6 +31,55 @@ public class DashboardHistoryEntry
     /// dashboard was showing when saved, matching the already-filtered widget data.</summary>
     public string ActiveFiltersJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Draft (false, default) — a frozen snapshot, unchanged behavior. Active (true)
+    /// — the user explicitly promoted it: it gets an Owner/roles and re-executes its widgets
+    /// live on every open instead of showing the frozen <see cref="WidgetsJson"/>.</summary>
+    public bool IsActive { get; set; }
+
+    /// <summary>Only meaningful when <see cref="IsActive"/>. Whoever's data permission the
+    /// dashboard's live query executes under — starts as the activating user, changeable via
+    /// owner transfer. Null for a Draft.</summary>
+    public string? OwnerId { get; set; }
+}
+
+/// <summary>One row of <c>DashboardRoles</c>: a named user's Editor/Viewer role on one Active
+/// dashboard. The Owner is not stored here — it's <see cref="DashboardHistoryEntry.OwnerId"/>.</summary>
+public class DashboardRoleEntry
+{
+    public string DashboardId { get; set; } = "";
+    public string UserId { get; set; } = "";
+
+    /// <summary>"editor" or "viewer".</summary>
+    public string Role { get; set; } = "";
+}
+
+public static class DashboardRoles
+{
+    public const string Editor = "editor";
+    public const string Viewer = "viewer";
+}
+
+/// <summary>Body of PUT /api/history/{id}/roles/{userId}.</summary>
+public class SetDashboardRoleRequest
+{
+    [JsonPropertyName("role")]
+    public string Role { get; set; } = "";
+}
+
+/// <summary>Body of POST /api/history/{id}/transfer-owner.</summary>
+public class TransferOwnerRequest
+{
+    [JsonPropertyName("newOwnerId")]
+    public string NewOwnerId { get; set; } = "";
+}
+
+/// <summary>Body of POST /api/history/{id}/widgets/{index}/refresh — same shape as the
+/// share-scoped equivalent (index-only, never client-supplied table/sql).</summary>
+public class RefreshDashboardWidgetRequest
+{
+    [JsonPropertyName("filters")]
+    public List<Widgets.FilterCondition>? Filters { get; set; }
 }
 
 /// <summary>Body of POST /api/history — the frontend sends the widgets array verbatim.</summary>

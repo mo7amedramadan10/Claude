@@ -28,6 +28,10 @@ public class HistoryStore
         ? "\"DashboardHistory\""
         : "[staging].[DashboardHistory]";
 
+    private string RolesTable => _db.Provider == DbProvider.Sqlite
+        ? "\"DashboardRoles\""
+        : "[staging].[DashboardRoles]";
+
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
@@ -61,6 +65,8 @@ public class HistoryStore
                  {
                      ("FiltersJson", "TEXT", "NVARCHAR(MAX)"),
                      ("ActiveFiltersJson", "TEXT", "NVARCHAR(MAX)"),
+                     ("IsActive", "INTEGER", "BIT"),
+                     ("OwnerId", "TEXT", "NVARCHAR(200)"),
                  })
         {
             try
@@ -77,6 +83,26 @@ public class HistoryStore
             catch (SqlException ex) when (ex.Message.Contains("already", StringComparison.OrdinalIgnoreCase))
             {
             }
+        }
+
+        // Editor/Viewer roles on Active dashboards — mirrors repo_FilePermissions' shape.
+        // The Owner is not in here; it's DashboardHistory.OwnerId.
+        var rolesText = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               CREATE TABLE IF NOT EXISTS {RolesTable} (
+                 "DashboardId" TEXT NOT NULL, "UserId" TEXT NOT NULL, "Role" TEXT NOT NULL,
+                 PRIMARY KEY ("DashboardId", "UserId"))
+               """
+            : $"""
+               IF OBJECT_ID('staging.DashboardRoles') IS NULL
+               CREATE TABLE {RolesTable} (
+                 [DashboardId] NVARCHAR(64) NOT NULL, [UserId] NVARCHAR(200) NOT NULL, [Role] NVARCHAR(20) NOT NULL,
+                 PRIMARY KEY ([DashboardId], [UserId]))
+               """;
+        await using (var rolesCommand = connection.CreateCommand())
+        {
+            rolesCommand.CommandText = rolesText;
+            await rolesCommand.ExecuteNonQueryAsync(ct);
         }
     }
 
@@ -108,7 +134,12 @@ public class HistoryStore
         return entry;
     }
 
-    /// <summary>The user's entries, newest first, capped at <paramref name="limit"/>.</summary>
+    /// <summary>
+    /// The user's own Draft entries, plus every Active dashboard they own or hold an
+    /// Editor/Viewer role on — newest first, capped at <paramref name="limit"/>. A Draft
+    /// stays exactly as private as before this feature; only Active dashboards are ever
+    /// visible to someone other than their creator.
+    /// </summary>
     public async Task<IReadOnlyList<DashboardHistoryEntry>> ListAsync(
         string userId, int limit = MaxPerUser, CancellationToken ct = default)
     {
@@ -116,14 +147,31 @@ public class HistoryStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
         var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
-        // COALESCE covers rows saved before FiltersJson/ActiveFiltersJson existed — the
-        // migration in EnsureSchemaAsync adds the columns as NULL on old rows, not "[]"/"{}".
+        // COALESCE covers rows saved before FiltersJson/ActiveFiltersJson/IsActive existed —
+        // the migration in EnsureSchemaAsync adds the columns as NULL on old rows.
         var rows = await connection.QueryAsync<DashboardHistoryEntry>(
-            $"SELECT {top}Id, UserId, Question, QueryDescription, Summary, WidgetsJson, " +
-            "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
-            $"CreatedAt FROM {Table} WHERE UserId = @userId ORDER BY CreatedAt DESC{tail}",
+            $"SELECT {top}t.Id, t.UserId, t.Question, t.QueryDescription, t.Summary, t.WidgetsJson, " +
+            "COALESCE(t.FiltersJson, '[]') AS FiltersJson, COALESCE(t.ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
+            "COALESCE(t.IsActive, 0) AS IsActive, t.OwnerId, t.CreatedAt " +
+            $"FROM {Table} t WHERE (COALESCE(t.IsActive, 0) = 0 AND t.UserId = @userId) " +
+            $"OR (COALESCE(t.IsActive, 0) = 1 AND (t.OwnerId = @userId " +
+            $"OR EXISTS (SELECT 1 FROM {RolesTable} r WHERE r.DashboardId = t.Id AND r.UserId = @userId))) " +
+            $"ORDER BY t.CreatedAt DESC{tail}",
             new { userId });
         return rows.ToList();
+    }
+
+    /// <summary>Fetches one entry regardless of who owns it — callers must check the
+    /// requester's role themselves (see DashboardAccessService).</summary>
+    public async Task<DashboardHistoryEntry?> GetByIdAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<DashboardHistoryEntry>(
+            "SELECT Id, UserId, Question, QueryDescription, Summary, WidgetsJson, " +
+            "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
+            $"COALESCE(IsActive, 0) AS IsActive, OwnerId, CreatedAt FROM {Table} WHERE Id = @id",
+            new { id });
     }
 
     /// <summary>
@@ -145,6 +193,23 @@ public class HistoryStore
         return affected > 0;
     }
 
+    /// <summary>Same as <see cref="UpdateAsync"/> but without the creator-only filter — for an
+    /// Active dashboard's Owner or an Editor, whose access was already checked by the caller
+    /// via DashboardAccessService (they may not be the original creator after an ownership
+    /// transfer).</summary>
+    public async Task UpdateContentAsync(
+        string id, string summary, string widgetsJson,
+        string filtersJson, string activeFiltersJson, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {Table} SET Summary = @summary, QueryDescription = @summary, WidgetsJson = @widgetsJson, " +
+            "FiltersJson = @filtersJson, ActiveFiltersJson = @activeFiltersJson " +
+            "WHERE Id = @id",
+            new { id, summary, widgetsJson, filtersJson, activeFiltersJson });
+    }
+
     /// <summary>Deletes one entry — only if it belongs to <paramref name="userId"/>.</summary>
     public async Task<bool> DeleteAsync(string userId, string id, CancellationToken ct = default)
     {
@@ -155,10 +220,87 @@ public class HistoryStore
         return affected > 0;
     }
 
+    /// <summary>Deletes one entry unconditionally — the caller (an Active dashboard's Owner,
+    /// or an Admin) already had their access checked via DashboardAccessService.</summary>
+    public async Task DeleteUnfilteredAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"DELETE FROM {Table} WHERE Id = @id", new { id });
+        await connection.ExecuteAsync($"DELETE FROM {RolesTable} WHERE DashboardId = @id", new { id });
+    }
+
     public async Task ClearAsync(string userId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"DELETE FROM {Table} WHERE UserId = @userId", new { userId });
+    }
+
+    /// <summary>Promotes a Draft to Active, stamping <paramref name="ownerId"/> as its Owner.
+    /// The caller must already have checked the promoting user's data permission.</summary>
+    public async Task ActivateAsync(string id, string ownerId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {Table} SET IsActive = 1, OwnerId = @ownerId WHERE Id = @id",
+            new { id, ownerId });
+    }
+
+    /// <summary>Reassigns the Owner of an Active dashboard. The caller must already have
+    /// checked the new owner's eligibility (valid permission on every dependency).</summary>
+    public async Task TransferOwnerAsync(string id, string newOwnerId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {Table} SET OwnerId = @newOwnerId WHERE Id = @id", new { id, newOwnerId });
+    }
+
+    /// <summary>All Editor/Viewer role rows for one dashboard.</summary>
+    public async Task<IReadOnlyList<DashboardRoleEntry>> ListRolesAsync(string dashboardId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<DashboardRoleEntry>(
+            $"SELECT DashboardId, UserId, Role FROM {RolesTable} WHERE DashboardId = @dashboardId",
+            new { dashboardId });
+        return rows.ToList();
+    }
+
+    /// <summary>This user's Editor/Viewer role (if any) on each of the given dashboards.
+    /// Ownership is not covered here — check DashboardHistoryEntry.OwnerId separately.</summary>
+    public async Task<IReadOnlyDictionary<string, string>> GetMyRolesAsync(
+        string userId, IReadOnlyCollection<string> dashboardIds, CancellationToken ct = default)
+    {
+        if (dashboardIds.Count == 0) return new Dictionary<string, string>();
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<DashboardRoleEntry>(
+            $"SELECT DashboardId, UserId, Role FROM {RolesTable} WHERE UserId = @userId AND DashboardId IN @dashboardIds",
+            new { userId, dashboardIds });
+        return rows.ToDictionary(r => r.DashboardId, r => r.Role);
+    }
+
+    public async Task SetRoleAsync(string dashboardId, string userId, string role, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"DELETE FROM {RolesTable} WHERE DashboardId = @dashboardId AND UserId = @userId",
+            new { dashboardId, userId });
+        await connection.ExecuteAsync(
+            $"INSERT INTO {RolesTable} (DashboardId, UserId, Role) VALUES (@dashboardId, @userId, @role)",
+            new { dashboardId, userId, role });
+    }
+
+    public async Task RemoveRoleAsync(string dashboardId, string userId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"DELETE FROM {RolesTable} WHERE DashboardId = @dashboardId AND UserId = @userId",
+            new { dashboardId, userId });
     }
 }

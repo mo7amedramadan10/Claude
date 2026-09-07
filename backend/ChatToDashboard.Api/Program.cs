@@ -51,6 +51,7 @@ builder.Services.AddSingleton<UsageTracker>();
 builder.Services.AddSingleton<SystemApiLoader>();
 builder.Services.AddSingleton<AnalyticsTools>();
 builder.Services.AddSingleton<HistoryStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.History.DashboardAccessService>();
 builder.Services.AddSingleton<ShareStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
 
