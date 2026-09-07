@@ -2861,8 +2861,42 @@ function svgElementToPngDataUrl(svgEl, scale = 2) {
   });
 }
 
+// progress-table / trend-matrix / status-bar have no native PPTX shape of their own — the
+// backend builder only knows kpi / table / image. Rather than teaching it three more bespoke
+// layouts (or a native side-by-side layout for comparison), every one of them is flattened
+// into the same {columns, rows} table shape it already renders as an editable PowerPoint
+// table; a comparison widget is flattened into a two-column-by-side table regardless of the
+// type being compared. Best-effort but faithful to the real numbers — never blank.
+function comparisonToPptxInput(base, w) {
+  const left = w.comparison.left || {};
+  const right = w.comparison.right || {};
+  const leftRows = Array.isArray(left.data) ? left.data : [];
+  const rightRows = Array.isArray(right.data) ? right.data : [];
+  const labels = [];
+  leftRows.forEach(r => { if (r?.label != null && !labels.includes(r.label)) labels.push(r.label); });
+  rightRows.forEach(r => { if (r?.label != null && !labels.includes(r.label)) labels.push(r.label); });
+  if (labels.length) {
+    const findVal = (rows, label) => rows.find(r => r.label === label)?.value;
+    return {
+      ...base, type: 'table',
+      columns: ['البند', left.title || 'الفترة الأولى', right.title || 'الفترة الثانية'],
+      rows: labels.map(l => [String(l), fmt(findVal(leftRows, l)), fmt(findVal(rightRows, l))]),
+    };
+  }
+  const valOf = rows => { const e = rows[0]; return e?.value ?? Object.values(e || {}).find(x => typeof x === 'number'); };
+  return {
+    ...base, type: 'table',
+    columns: ['الفترة', 'القيمة'],
+    rows: [
+      [left.title || 'الفترة الأولى', fmt(valOf(leftRows))],
+      [right.title || 'الفترة الثانية', fmt(valOf(rightRows))],
+    ],
+  };
+}
+
 async function widgetToPptxInput(w, card) {
   const base = { type: (w.type || '').toLowerCase(), title: w.title || '', source: w.source || '' };
+  if (w.comparison && typeof w.comparison === 'object') return comparisonToPptxInput(base, w);
   if (base.type === 'kpi') {
     const e = Array.isArray(w.data) ? w.data[0] : null;
     const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
@@ -2872,6 +2906,46 @@ async function widgetToPptxInput(w, card) {
     const rows = Array.isArray(w.data) ? w.data : [];
     const cols = rows.length ? Object.keys(rows[0]) : [];
     return { ...base, columns: cols, rows: rows.map(r => cols.map(c => String(r[c] ?? ''))) };
+  }
+  if (base.type === 'progress-table') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    return {
+      ...base, type: 'table',
+      columns: ['البند', 'التفاصيل', 'الإجمالي'],
+      rows: rows.map(r => [
+        String(r.label ?? ''),
+        Array.isArray(r.segments) ? r.segments.map(s => `${s.label ?? ''}: ${fmt(s.value)}`).join(' · ') : '',
+        fmt(r.total),
+      ]),
+    };
+  }
+  if (base.type === 'trend-matrix') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    const periodLabels = (Array.isArray(rows[0]?.periods) ? rows[0].periods : []).map(p => p.label ?? '');
+    return {
+      ...base, type: 'table',
+      columns: ['المؤشر', ...periodLabels, 'الاتجاه'],
+      rows: rows.map(r => {
+        const periods = Array.isArray(r.periods) ? r.periods : [];
+        const last = periods[periods.length - 1]?.value;
+        const prev = periods[periods.length - 2]?.value;
+        const arrow = (typeof last === 'number' && typeof prev === 'number')
+          ? (last > prev ? '↑' : last < prev ? '↓' : '→') : '→';
+        return [String(r.metric ?? ''), ...periods.map(p => fmt(p.value)), arrow];
+      }),
+    };
+  }
+  if (base.type === 'status-bar') {
+    const data = w.data || {};
+    const statuses = Array.isArray(data.statuses) ? data.statuses : [];
+    return {
+      ...base, type: 'table',
+      columns: ['البند', 'العدد'],
+      rows: [
+        [data.label || 'الإجمالي', fmt(data.total)],
+        ...statuses.map(s => [String(s.label ?? ''), fmt(s.count)]),
+      ],
+    };
   }
   const chart = card?.__apexChart;
   const holder = card?.__apexHolder;
