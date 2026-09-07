@@ -30,16 +30,19 @@ public class AnalyticsTools
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     // A recurring mistake (seen with Ollama's smaller models, but not exclusive to it): writing
-    // GROUP BY 'column_name' with single quotes — a SQL *string literal* — instead of
-    // GROUP BY "column_name" with double quotes (SQLite's identifier syntax). The query still
-    // runs and "succeeds", but every row now evaluates the constant identically, so it silently
-    // collapses into a single group instead of one per real value. Without a hint the model has
-    // no signal anything is wrong beyond "the count looks too high", and — observed live — can
-    // spend a dozen tool calls guessing at WHERE-clause exclusions (NULLs, blanks, specific
-    // values) that can never fix a GROUP BY target that was never a column reference to begin
-    // with. Flagging it in the tool result itself lets the model self-correct in one turn.
-    private static readonly Regex GroupByStringLiteral = new(
-        @"GROUP\s+BY\s+'([^']*)'", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    // 'column_name' with single quotes — a SQL *string literal* — instead of "column_name"
+    // with double quotes (SQLite's identifier syntax), in GROUP BY and/or in a SELECT-list
+    // alias. A query still runs and "succeeds" either way, but every row evaluates the literal
+    // identically, so GROUP BY 'x' silently collapses into a single group instead of one per
+    // real value, and SELECT 'x' AS label shows the literal text "x" instead of each row's
+    // actual value. Without a hint the model has no signal anything is wrong beyond "the
+    // numbers look off", and — observed live — can spend a dozen tool calls guessing at
+    // WHERE-clause exclusions that can never fix a target that was never a column reference to
+    // begin with. Flagging it in the tool result itself lets the model self-correct in one turn.
+    // Captures either the single-quoted literal (group 1) or the double-quoted column (group 2)
+    // GROUP BY resolves to, so the SELECT-list check below knows which name to look for.
+    private static readonly Regex GroupByTarget = new(
+        @"GROUP\s+BY\s+(?:'([^']*)'|""([^""]*)"")", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     // Every tool result below is serialized here, then embedded as a plain string value inside
     // a *second* JSON document (the provider request body — see ClaudeClient/OpenAiClient).
@@ -798,22 +801,47 @@ public class AnalyticsTools
             rows.Add(row);
         }
 
-        var groupByLiteral = GroupByStringLiteral.Match(sql);
-        if (groupByLiteral.Success)
-        {
-            var literal = groupByLiteral.Groups[1].Value;
-            return (JsonSerializer.Serialize(new
-            {
-                rowCount = rows.Count,
-                rows,
-                warning = $"GROUP BY '{literal}' uses single quotes, which SQL treats as a fixed " +
-                    "string literal — not a column reference — so every row groups into the same " +
-                    "single bucket. If you meant to group by a column, use double quotes for the " +
-                    $"identifier instead: GROUP BY \"{literal}\".",
-            }, ToolResultJsonOptions), false);
-        }
+        var warning = DetectQuotedIdentifierMistake(sql);
+        if (warning is not null)
+            return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows, warning }, ToolResultJsonOptions), false);
 
         return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows }, ToolResultJsonOptions), false);
+    }
+
+    /// <summary>
+    /// See the GroupByTarget comment above: catches both directions of the single/double-quote
+    /// mix-up around whatever name GROUP BY resolves to — GROUP BY 'x' itself, and/or a
+    /// SELECT-list alias that still literal-quotes the same name GROUP BY already treats (or
+    /// should treat) as the real column.
+    /// </summary>
+    private static string? DetectQuotedIdentifierMistake(string sql)
+    {
+        var groupBy = GroupByTarget.Match(sql);
+        if (!groupBy.Success) return null;
+
+        var selectAliasesLiteral = (string name) =>
+            Regex.IsMatch(sql, $@"'{Regex.Escape(name)}'\s+AS\s+\w+", RegexOptions.IgnoreCase);
+
+        if (groupBy.Groups[1].Success)
+        {
+            var literal = groupBy.Groups[1].Value;
+            return selectAliasesLiteral(literal)
+                ? $"Both the SELECT list and GROUP BY use '{literal}' in single quotes, which SQL " +
+                    "treats as a fixed string literal — not a column reference — so every row shows " +
+                    "the same label text and groups into one bucket. Use double quotes for the column " +
+                    $"in both places: SELECT \"{literal}\" AS ..., GROUP BY \"{literal}\"."
+                : $"GROUP BY '{literal}' uses single quotes, which SQL treats as a fixed string " +
+                    "literal — not a column reference — so every row groups into the same single " +
+                    $"bucket. If you meant to group by a column, use double quotes instead: GROUP BY \"{literal}\".";
+        }
+
+        var column = groupBy.Groups[2].Value;
+        return selectAliasesLiteral(column)
+            ? $"GROUP BY \"{column}\" correctly groups by the column, but the SELECT list aliases the " +
+                $"fixed string '{column}' instead of the column's actual value — every row will show " +
+                $"the literal text \"{column}\" as the label instead of the real grouped value. Use " +
+                $"double quotes there too: SELECT \"{column}\" AS ..."
+            : null;
     }
 
     /// <summary>
