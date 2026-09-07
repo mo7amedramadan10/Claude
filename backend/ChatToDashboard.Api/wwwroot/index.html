@@ -804,12 +804,12 @@ window.fetch = async (...args) => {
 const THEMES = {
   dark: {
     palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
-    accent: '#35D1A1', gridColor: '#232C3F', tickColor: '#8B96AC',
+    accent: '#35D1A1', gridColor: '#232C3F', tickColor: '#8B96AC', ink: '#E7ECF5',
     fontFamily: 'IBM Plex Sans Arabic',
   },
   light: {
     palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
-    accent: '#0E9F78', gridColor: '#E1E5EC', tickColor: '#565F6D',
+    accent: '#0E9F78', gridColor: '#E1E5EC', tickColor: '#565F6D', ink: '#10151F',
     fontFamily: 'IBM Plex Sans Arabic',
   },
 };
@@ -854,6 +854,11 @@ function fmt(v) {
   return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 const num = v => typeof v === 'number' ? v : (parseFloat(v) || 0);
+// Full precision, comma-separated — unlike fmt() this never abbreviates to K/M. Used only
+// for a donut's center total/value: it's the one headline figure on the chart, not a
+// space-constrained axis tick, so exactness matters more than brevity there.
+const centerNum = v => (typeof v === 'number' && isFinite(v))
+  ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(v ?? '—');
 
 function keysFor(w) {
   const rows = Array.isArray(w.data) ? w.data : [];
@@ -1664,8 +1669,14 @@ function chartConfig(type, labels, values, title) {
       labels,
       legend: { labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
       // The center label: just the number — the grand total by default (showAlways), a
-      // slice's own value while hovering it — no "الإجمالي"/name caption above it, sized
-      // and weighted to read as the donut's headline figure rather than a small caption.
+      // slice's own value while hovering it — no "الإجمالي"/name caption above it. Full
+      // precision here (never the K/M-abbreviated fmt() used on axes/tooltips), since this
+      // is the dashboard's one headline figure, not a space-constrained tick label. Neutral
+      // --ink color rather than accent — accent duplicates the first slice's own color,
+      // which read as if the number belonged to that slice rather than the whole donut.
+      // fontSize is set per-widget in the pendingCharts render loop below, proportional to
+      // the actual rendered donut size — a fixed px here would look right on one card size
+      // and wrong on every other.
       plotOptions: {
         pie: {
           donut: {
@@ -1674,15 +1685,15 @@ function chartConfig(type, labels, values, title) {
               show: true,
               name: { show: false },
               value: {
-                show: true, fontFamily: THEME.fontFamily, fontSize: '26px', fontWeight: 700,
-                color: THEME.accent, offsetY: 8,
-                formatter: v => fmt(Number(v)),
+                show: true, fontFamily: THEME.fontFamily, fontWeight: 700,
+                color: THEME.ink, offsetY: 2,
+                formatter: v => centerNum(v),
               },
               total: {
                 show: true, showAlways: true, label: '',
-                fontFamily: THEME.fontFamily, fontSize: '26px', fontWeight: 700,
-                color: THEME.accent,
-                formatter: w => fmt(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
+                fontFamily: THEME.fontFamily, fontWeight: 700,
+                color: THEME.ink, offsetY: 2,
+                formatter: w => centerNum(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
               },
             },
           },
@@ -1895,6 +1906,16 @@ function renderDashboard() {
       // .chart-holder and colliding with whatever sits below it. Passing the container's own
       // real measured height works for every chart shape, so it replaces '100%' universally.
       options.chart.height = holder.clientHeight;
+      // The donut's center-total font size, proportional to its actual rendered size (not a
+      // fixed px) — right at holder.clientHeight/Width's real, laid-out values, the same
+      // reason chart.height is set here rather than in chartConfig(). Ring thickness
+      // (plotOptions.pie.donut.size) is untouched; only the number's size scales.
+      if (options.chart.type === 'donut') {
+        const box = Math.min(holder.clientWidth, holder.clientHeight);
+        const centerFontSize = Math.round(Math.max(18, Math.min(38, box * 0.16))) + 'px';
+        options.plotOptions.pie.donut.labels.value.fontSize = centerFontSize;
+        options.plotOptions.pie.donut.labels.total.fontSize = centerFontSize;
+      }
       // In 3D view, extrude bar charts with a fake top/side face once the entrance animation
       // actually finishes — measuring bar geometry any earlier (mid-animation) would extrude
       // from a not-yet-full-height bar. A donut/line chart needs no such per-mark treatment:
