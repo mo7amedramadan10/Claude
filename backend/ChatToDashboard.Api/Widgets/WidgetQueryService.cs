@@ -308,6 +308,8 @@ public class WidgetQueryService
             throw new WidgetQueryValidationException($"لا يوجد صلاحية للوصول لتصنيف \"{category}\".");
         if (context.DisabledSystemTables.TryGetValue(table.Table, out var systemName))
             throw new WidgetQueryValidationException($"النظام \"{systemName}\" غير مفعّل حاليًا.");
+        if (context.RestrictedFileTables.TryGetValue(table.Table, out var fileName))
+            throw new WidgetQueryValidationException($"لا يوجد صلاحية لاستخدام ملف \"{fileName}\" كمصدر بيانات.");
 
         return table;
     }

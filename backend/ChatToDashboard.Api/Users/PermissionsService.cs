@@ -29,7 +29,14 @@ public class PermissionsService
     /// <summary>Intersects the client's requested selection with what <paramref name="user"/> may access.</summary>
     public static SourceSelection GetEffectiveSelection(AppUser user, SourceSelection? requested)
     {
-        if (user.Role == UserRoles.Admin) return requested ?? SourceSelection.AllEnabled();
+        var isAdmin = user.Role == UserRoles.Admin;
+        if (isAdmin)
+        {
+            var admin = requested ?? SourceSelection.AllEnabled();
+            admin.UserId = user.Id;
+            admin.IsAdmin = true;
+            return admin;
+        }
 
         var req = requested ?? SourceSelection.AllEnabled();
         var (systemsUnset, systems) = Narrow(req.SystemsUnset, req.Systems, user.AllowAllSystems, Deserialize(user.AllowedSystemsJson));
@@ -39,6 +46,7 @@ public class PermissionsService
         {
             SystemsUnset = systemsUnset, Systems = systems,
             CategoriesUnset = categoriesUnset, Categories = categories,
+            UserId = user.Id, IsAdmin = false,
         };
     }
 

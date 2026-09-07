@@ -96,6 +96,11 @@ public class AnalyticsTools
         IReadOnlyDictionary<string, string> TableCategories,
         IReadOnlyDictionary<string, string> TableSystems,
         IReadOnlyDictionary<string, string> DisabledSystemTables,
+        // Table -> the file's display name, for a repository file whose per-file permission
+        // list is configured (non-empty) and doesn't include the current user — an Admin, or
+        // any file with no permission list configured at all, never appears here. Separate
+        // from DisabledSystemTables since the reason is per-user, not a source-wide toggle.
+        IReadOnlyDictionary<string, string> RestrictedFileTables,
         bool HasDocuments);
 
     public async Task<SourceContext> DescribeSourcesAsync(
@@ -137,12 +142,26 @@ public class AnalyticsTools
             .GroupBy(f => f.TableName!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().Category, StringComparer.OrdinalIgnoreCase);
 
+        // A file's permission list is opt-in narrowing on top of category access: empty means
+        // no one has restricted it yet, so category gating alone still governs (unchanged
+        // behavior for every file until someone explicitly sets a list on it).
+        var restrictedFileTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!selection.IsAdmin)
+        {
+            foreach (var f in files.Where(f => !string.IsNullOrWhiteSpace(f.TableName) && f.PermittedUserIds.Count > 0))
+            {
+                var allowed = selection.UserId is not null
+                    && f.PermittedUserIds.Contains(selection.UserId, StringComparer.OrdinalIgnoreCase);
+                if (!allowed) restrictedFileTables[f.TableName!] = f.DisplayName;
+            }
+        }
+
         var hasDocuments = files.Any(f => f.Kind == "pdf" && selection.AllowsCategory(f.Category));
 
         return new SourceContext(
             enabledSystems, disabledSystems, unconnected,
             enabledCategories, disabledCategories, tableCategories,
-            systemTables, disabledSystemTables, hasDocuments);
+            systemTables, disabledSystemTables, restrictedFileTables, hasDocuments);
     }
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
@@ -630,6 +649,7 @@ public class AnalyticsTools
                         .Where(t => !context.TableCategories.TryGetValue(t.Table, out var category)
                                     || context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
                         .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
+                        .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
                         .Select(t => new
                         {
                             table = t.Table,
@@ -642,9 +662,10 @@ public class AnalyticsTools
                     var files = await _repository.ListAsync(ct);
                     var visibleFiles = files
                         .Where(f => context.EnabledCategories.Contains(f.Category, StringComparer.OrdinalIgnoreCase))
+                        .Where(f => f.TableName is null || !context.RestrictedFileTables.ContainsKey(f.TableName))
                         .Select(f => new
                         {
-                            name = f.Name,
+                            name = f.DisplayName,
                             category = f.Category,
                             kind = f.Kind,
                             rows = f.Kind == "pdf" ? (int?)null : f.RowCount,
@@ -778,6 +799,13 @@ public class AnalyticsTools
         if (blocked.Key is not null)
             return $"الاستعلام مرفوض: الجدول {blocked.Key} تابع لتصنيف \"{blocked.Value}\" " +
                    "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
+
+        var restrictedFile = context.RestrictedFileTables
+            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
+                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+        if (restrictedFile.Key is not null)
+            return $"الاستعلام مرفوض: الجدول {restrictedFile.Key} تابع لملف \"{restrictedFile.Value}\" " +
+                   "وصلاحية استخدامه كمصدر بيانات غير ممنوحة لهذا المستخدم.";
 
         return null;
     }

@@ -29,6 +29,22 @@ public class SourceSelection
     [JsonIgnore]
     public bool CategoriesUnset { get; set; }
 
+    /// <summary>
+    /// The account this selection is being resolved for — stamped by
+    /// PermissionsService.GetEffectiveSelection, never sent by the client. Lets
+    /// AnalyticsTools.DescribeSourcesAsync check a repository file's per-file named-user
+    /// permission list (see RepositoryFile.PermittedUserIds) without widening every call
+    /// site that already threads a SourceSelection through (ChatController, WidgetsController,
+    /// ShareController's share-scoped refresh) to also carry a separate user id.
+    /// </summary>
+    [JsonIgnore]
+    public string? UserId { get; set; }
+
+    /// <summary>An Admin bypasses per-file permission lists entirely, same as they already
+    /// bypass category/system narrowing.</summary>
+    [JsonIgnore]
+    public bool IsAdmin { get; set; }
+
     public static SourceSelection AllEnabled() => new() { SystemsUnset = true, CategoriesUnset = true };
 
     public bool AllowsSystem(string id) => SystemsUnset || Systems.Contains(id, StringComparer.OrdinalIgnoreCase);
