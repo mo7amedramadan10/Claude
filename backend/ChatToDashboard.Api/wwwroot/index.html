@@ -505,6 +505,8 @@ tr:last-child td{border-bottom:0}
 .share-status-tag{font-size:10.5px;padding:1px 8px;border-radius:999px;font-weight:700}
 .share-status-tag.live{background:rgba(52,199,89,.16);color:#1e9e46}
 .share-status-tag.inactive{background:rgba(239,100,97,.16);color:var(--danger)}
+.link-btn{border:0;background:none;color:var(--accent);font-weight:600;font-size:inherit;
+  cursor:pointer;padding:0;text-decoration:underline}
 
 /* ---------- dashboard export toolbar ---------- */
 .dash-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
@@ -646,6 +648,8 @@ tr:last-child td{border-bottom:0}
     <button class="tab active" data-screen="chat">المحادثة</button>
     <button class="tab" data-screen="repo">مستودع الملفات <span class="badge" id="repo-badge">0</span></button>
     <button class="tab" data-screen="history">السجل <span class="badge" id="history-badge">0</span></button>
+    <button class="tab" data-screen="active">اللوحات النشطة <span class="badge" id="active-badge">0</span></button>
+    <button class="tab" data-screen="sharelinks">روابط المشاركة <span class="badge" id="sharelinks-badge">0</span></button>
     <button class="tab hidden" id="tab-users" data-screen="users">المستخدمون</button>
     <a class="tab hidden" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
   </nav>
@@ -824,6 +828,34 @@ tr:last-child td{border-bottom:0}
   <div class="hist-grid" id="history-grid"></div>
 </div>
 
+<div id="screen-active" class="screen">
+  <div class="repo-bar">
+    <span class="count" id="active-count"></span>
+  </div>
+  <div class="file-list-head">
+    <div class="col-main">اللوحة</div>
+    <div class="col-updated">آخر حفظ</div>
+    <div class="col-usage">العناصر</div>
+    <div class="col-access">الدور</div>
+    <div class="col-actions"></div>
+  </div>
+  <div class="file-list" id="active-list"></div>
+</div>
+
+<div id="screen-sharelinks" class="screen">
+  <div class="repo-bar">
+    <span class="count" id="sharelinks-count"></span>
+  </div>
+  <div class="file-list-head">
+    <div class="col-main">الرابط</div>
+    <div class="col-updated">الإنشاء / الانتهاء</div>
+    <div class="col-usage">المشاهدات</div>
+    <div class="col-access">الحالة</div>
+    <div class="col-actions"></div>
+  </div>
+  <div class="file-list" id="sharelinks-list"></div>
+</div>
+
 <div id="screen-users" class="screen">
   <div class="users-bar">
     <span class="count" id="users-count"></span>
@@ -849,10 +881,11 @@ tr:last-child td{border-bottom:0}
     <div id="share-compose">
       <label class="share-expiry-label">انتهاء الرابط</label>
       <select id="share-expiry">
-        <option value="">بدون انتهاء</option>
         <option value="24">بعد 24 ساعة</option>
         <option value="168">بعد 7 أيام</option>
         <option value="720">بعد 30 يومًا</option>
+        <option value="1440">بعد 60 يومًا</option>
+        <option value="2160">بعد 90 يومًا</option>
         <option value="custom">تاريخ محدد…</option>
       </select>
       <input type="date" id="share-expiry-date" class="hidden" />
@@ -868,8 +901,8 @@ tr:last-child td{border-bottom:0}
       </div>
     </div>
 
-    <div class="roles-section-title">روابطي السابقة</div>
-    <div id="share-list" class="roles-list"></div>
+    <p class="modal-note">لإدارة روابط المشاركة السابقة (الإلغاء، متابعة عدد المشاهدات) —
+      <button type="button" class="link-btn" id="share-goto-list">روابط المشاركة ←</button></p>
 
     <div class="modal-actions">
       <button type="button" id="share-close">إغلاق</button>
@@ -3377,7 +3410,8 @@ function renderHistory() {
     const activateBtn = !h.isActive ? `<button class="activate-btn" data-activate="${esc(h.id)}">تفعيل</button>` : '';
     const canDelete = !h.isActive || h.myRole === 'owner';
     const delBtn = canDelete ? `<button class="del-btn" data-del="${esc(h.id)}">حذف</button>` : '';
-    const rolesBtn = h.isActive && h.myRole === 'owner' ? `<button class="roles-btn" data-roles="${esc(h.id)}">⚙️ الصلاحيات</button>` : '';
+    // Roles/ownership management for an Active dashboard now lives on its own dedicated
+    // page ("اللوحات النشطة") rather than duplicated here — see renderActiveDashboardsList().
     return `<div class="hist-card">
         <div class="badges">${stateBadge}${roleBadge}${disabledBadge}</div>
         <div class="q">${esc(h.question)}</div>
@@ -3386,7 +3420,7 @@ function renderHistory() {
         <div class="meta">${when.toLocaleString('ar-EG')} · ${widgets.length} عنصر</div>
         <div class="actions">
           <button class="open-btn" data-open="${esc(h.id)}">فتح</button>
-          ${activateBtn}${rolesBtn}${delBtn}
+          ${activateBtn}${delBtn}
         </div>
       </div>`;
   }).join('') : `<div class="hist-empty">لا يوجد لوحات محفوظة بعد — أي سؤال تسأله يُحفظ هنا تلقائياً.</div>`;
@@ -3397,8 +3431,58 @@ function renderHistory() {
     btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.del)));
   el('history-grid').querySelectorAll('[data-activate]').forEach(btn =>
     btn.addEventListener('click', () => activateHistoryEntry(btn.dataset.activate)));
-  el('history-grid').querySelectorAll('[data-roles]').forEach(btn =>
+
+  renderActiveDashboardsList();
+}
+
+// ---------- Active dashboards: own dedicated page (list view, same shape as the file
+// repository's) ----------
+// Sourced from the same state.history the "السجل" tab already loaded (the List endpoint
+// already returns Active dashboards the caller owns or holds a role on, alongside their
+// own Drafts) — just filtered down to isActive here, no separate fetch.
+function renderActiveDashboardsList() {
+  const actives = state.history.filter(h => h.isActive);
+  el('active-badge').textContent = actives.length;
+  el('active-count').textContent = actives.length
+    ? `${actives.length} لوحة نشطة` : 'لا يوجد لوحات نشطة بعد';
+
+  el('active-list').innerHTML = actives.length ? actives.map(h => {
+    const widgets = parseWidgets(h.widgetsJson);
+    const when = new Date(h.createdAt + (h.createdAt.endsWith('Z') ? '' : 'Z'));
+    const roleBadge = h.myRole ? `<span class="role-badge${h.myRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[h.myRole] || h.myRole}</span>` : '';
+    const disabledBadge = h.disabled ? `<span class="badge-stale" title="${esc(h.disabledReason || '')}">⚠ معطّلة</span>` : '';
+    const ownerLine = h.ownerName ? `المالك: ${esc(h.ownerName)}` : '';
+    const rolesBtn = h.myRole === 'owner'
+      ? `<button class="icon-btn roles-btn" data-roles="${esc(h.id)}" title="إدارة الصلاحيات">⚙️</button>` : '';
+    const delBtn = h.myRole === 'owner'
+      ? `<button class="icon-btn del-active-btn" data-del="${esc(h.id)}" title="حذف">🗑️</button>` : '';
+    return `<div class="file-row${h.disabled ? ' stale' : ''}" data-id="${esc(h.id)}">
+        <div class="fr-main">
+          <div class="fr-icon">📊</div>
+          <div class="fr-text">
+            <div class="fr-line1">
+              <span class="fr-name">${esc(h.question)}</span>
+              ${disabledBadge}
+            </div>
+            <div class="fr-line2">${esc(h.summary)}${ownerLine ? ` <span class="sep">·</span> ${ownerLine}` : ''}</div>
+          </div>
+        </div>
+        <div class="col-updated"><b>${relTime(h.createdAt)}</b>${when.toLocaleDateString('ar-EG')}</div>
+        <div class="col-usage"><div class="num">${widgets.length}</div><div class="lbl">عنصر</div></div>
+        <div class="col-access">${roleBadge || '—'}</div>
+        <div class="col-actions">
+          <button class="icon-btn open-active-btn" data-open="${esc(h.id)}" title="فتح">↗️</button>
+          ${rolesBtn}${delBtn}
+        </div>
+      </div>`;
+  }).join('') : `<div class="repo-empty">لا يوجد لوحات نشطة بعد — فعّل لوحة من تبويب "السجل" لتظهر هنا.</div>`;
+
+  el('active-list').querySelectorAll('[data-open]').forEach(btn =>
+    btn.addEventListener('click', () => openHistoryEntry(btn.dataset.open)));
+  el('active-list').querySelectorAll('[data-roles]').forEach(btn =>
     btn.addEventListener('click', () => openRolesModal(btn.dataset.roles)));
+  el('active-list').querySelectorAll('.del-active-btn').forEach(btn =>
+    btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.del)));
 }
 
 // Promotes a Draft to Active — the activating user becomes its Owner, which the backend
@@ -3572,6 +3656,8 @@ function showScreen(name) {
   el('rail-size-toggle').classList.toggle('hidden', name !== 'chat');
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
+  if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
+  if (name === 'sharelinks') loadShareList();
   if (name === 'users') loadUsers();
 }
 document.querySelectorAll('[data-screen]').forEach(b =>
@@ -3704,12 +3790,15 @@ function openShareModal() {
   if (!d?.widgets?.length) return;
   el('share-compose').classList.remove('hidden');
   el('share-link-box').classList.add('hidden');
-  el('share-expiry').value = '';
+  el('share-expiry').value = '24';
   el('share-expiry-date').classList.add('hidden');
   el('share-modal').classList.remove('hidden');
-  loadShareList();
 }
 el('btn-share').addEventListener('click', openShareModal);
+el('share-goto-list').addEventListener('click', () => {
+  el('share-modal').classList.add('hidden');
+  showScreen('sharelinks');
+});
 
 el('share-expiry').addEventListener('change', () => {
   el('share-expiry-date').classList.toggle('hidden', el('share-expiry').value !== 'custom');
@@ -3776,29 +3865,46 @@ function shareStatus(s) {
   return { label: 'نشط', cls: 'live' };
 }
 
+// ---------- share links: own dedicated page (list view, same shape as the file repository's
+// and the Active-dashboards page) ----------
 async function loadShareList() {
-  const list = el('share-list');
-  list.innerHTML = '<div class="owner-line">جارٍ التحميل…</div>';
+  const list = el('sharelinks-list');
+  list.innerHTML = `<div class="repo-empty">جارٍ التحميل…</div>`;
   try {
     const res = await fetch('/api/share');
     const shares = res.ok ? await res.json() : [];
-    if (!shares.length) { list.innerHTML = '<div class="owner-line">لا يوجد روابط مشاركة بعد.</div>'; return; }
+    el('sharelinks-badge').textContent = shares.length;
+    el('sharelinks-count').textContent = shares.length ? `${shares.length} رابط مشاركة` : 'لا يوجد روابط مشاركة بعد';
+    if (!shares.length) {
+      list.innerHTML = `<div class="repo-empty">لا يوجد روابط مشاركة بعد — أنشئ رابطًا من زر "🔗 مشاركة" على أي لوحة.</div>`;
+      return;
+    }
     list.innerHTML = shares.map(s => {
       const status = shareStatus(s);
-      const when = new Date(s.createdAt + (s.createdAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG');
+      const when = new Date(s.createdAt + (s.createdAt.endsWith('Z') ? '' : 'Z'));
       const expiryText = s.expiresAt
         ? new Date(s.expiresAt + (s.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG')
         : 'بدون انتهاء';
       const revokeBtn = status.cls === 'live'
-        ? `<button type="button" class="revoke-share-btn" data-revoke="${esc(s.id)}">إلغاء</button>` : '';
-      return `<div class="role-row">
-          <div class="share-row-meta">
-            <span class="q">${esc(s.question)} <span class="share-status-tag ${status.cls}">${status.label}</span></span>
-            <span class="meta">${when} · ينتهي: ${expiryText} · 👁 ${s.viewCount || 0} مشاهدة</span>
+        ? `<button class="icon-btn revoke-share-btn" data-revoke="${esc(s.id)}" title="إلغاء الرابط">🚫</button>` : '';
+      const copyBtn = status.cls === 'live'
+        ? `<button class="icon-btn copy-share-btn" data-copy="${esc(s.id)}" title="نسخ الرابط">🔗</button>` : '';
+      return `<div class="file-row${status.cls === 'inactive' ? ' stale' : ''}" data-id="${esc(s.id)}">
+          <div class="fr-main">
+            <div class="fr-icon">🔗</div>
+            <div class="fr-text">
+              <div class="fr-line1">
+                <span class="fr-name">${esc(s.question)}</span>
+              </div>
+              <div class="fr-line2">${esc(s.summary || '')}</div>
+            </div>
           </div>
-          <div class="share-row-actions">
-            ${revokeBtn}
-            <button type="button" class="remove-role-btn" data-del-share="${esc(s.id)}">حذف</button>
+          <div class="col-updated"><b>${relTime(s.createdAt)}</b>ينتهي: ${expiryText}</div>
+          <div class="col-usage"><div class="num">${s.viewCount || 0}</div><div class="lbl">👁 مشاهدة</div></div>
+          <div class="col-access"><span class="share-status-tag ${status.cls}">${status.label}</span></div>
+          <div class="col-actions">
+            ${copyBtn}${revokeBtn}
+            <button class="icon-btn del-share-btn" data-del="${esc(s.id)}" title="حذف">🗑️</button>
           </div>
         </div>`;
     }).join('');
@@ -3806,13 +3912,18 @@ async function loadShareList() {
       await fetch(`/api/share/${encodeURIComponent(btn.dataset.revoke)}/revoke`, { method: 'POST' });
       await loadShareList();
     }));
-    list.querySelectorAll('[data-del-share]').forEach(btn => btn.addEventListener('click', async () => {
+    list.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', async () => {
+      const link = `${location.origin}/?share=${btn.dataset.copy}`;
+      try { await navigator.clipboard.writeText(link); } catch {}
+      const original = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = original; }, 1200);
+    }));
+    list.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', async () => {
       if (!confirm('حذف رابط المشاركة هذا؟')) return;
-      await fetch(`/api/share/${encodeURIComponent(btn.dataset.delShare)}`, { method: 'DELETE' });
+      await fetch(`/api/share/${encodeURIComponent(btn.dataset.del)}`, { method: 'DELETE' });
       await loadShareList();
     }));
   } catch {
-    list.innerHTML = '<div class="owner-line">تعذّر تحميل الروابط.</div>';
+    list.innerHTML = `<div class="repo-empty">تعذّر تحميل الروابط.</div>`;
   }
 }
 
