@@ -350,7 +350,7 @@ tr:last-child td{border-bottom:0}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ---------- repository screen ---------- */
-#screen-repo{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+#screen-repo,#screen-active,#screen-sharelinks{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
 .repo-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:11px;
   background:var(--accent);color:#fff;font-weight:600}
@@ -382,7 +382,13 @@ tr:last-child td{border-bottom:0}
 .file-list-head .col-actions{width:150px}
 .file-list{display:flex;flex-direction:column;gap:8px}
 .file-row{background:var(--surface);border:1px solid var(--grid);border-radius:12px;
-  padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s}
+  padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s;
+  /* .file-list is a column flexbox, so .file-row's own default min-width:auto (a flex
+     item's intrinsic content size) would otherwise let a long, nowrap fr-line2/fr-name
+     force the whole row — and the page — wider than the viewport before its own ellipsis
+     truncation ever gets a chance to apply. Without this, a long AI-generated summary blows
+     the row (and the whole page) out horizontally instead of truncating in place. */
+  min-width:0}
 .file-row:hover{border-color:var(--accent)}
 .file-row.stale{border-inline-start:3px solid #F2B84B}
 .fr-main{flex:1;min-width:0;display:flex;gap:12px;align-items:flex-start}
