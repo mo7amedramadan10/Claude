@@ -1668,31 +1668,36 @@ function chartConfig(type, labels, values, title) {
       series: values,
       labels,
       legend: { labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
-      // The center label: just the number — the grand total by default (showAlways), a
-      // slice's own value while hovering it — no "الإجمالي"/name caption above it. Full
-      // precision here (never the K/M-abbreviated fmt() used on axes/tooltips), since this
-      // is the dashboard's one headline figure, not a space-constrained tick label. Neutral
-      // --ink color rather than accent — accent duplicates the first slice's own color,
-      // which read as if the number belonged to that slice rather than the whole donut.
-      // fontSize is set per-widget in the pendingCharts render loop below, proportional to
-      // the actual rendered donut size — a fixed px here would look right on one card size
-      // and wrong on every other.
+      // The center label: a big bold number with a small muted caption under it — the
+      // grand total ("الإجمالي") by default (showAlways), a slice's own value + category
+      // name while hovering it. Full precision here (never the K/M-abbreviated fmt() used
+      // on axes/tooltips), since this is the dashboard's one headline figure, not a space-
+      // constrained tick label. Neutral --ink for the number rather than accent — accent
+      // duplicates the first slice's own color, which read as if the number belonged to
+      // that slice rather than the whole donut; the caption uses the same muted tickColor
+      // as everything else secondary in the UI. Font sizes and vertical offsets (ApexCharts
+      // draws the caption *above* the number by default — flipped here to match the
+      // requested look) are set per-widget in the pendingCharts render loop below,
+      // proportional to the donut's actual rendered size, not a fixed px.
       plotOptions: {
         pie: {
           donut: {
             size: '72%',
             labels: {
               show: true,
-              name: { show: false },
+              name: {
+                show: true, fontFamily: THEME.fontFamily, fontWeight: 400,
+                color: THEME.tickColor,
+              },
               value: {
                 show: true, fontFamily: THEME.fontFamily, fontWeight: 700,
-                color: THEME.ink, offsetY: 2,
+                color: THEME.ink,
                 formatter: v => centerNum(v),
               },
               total: {
-                show: true, showAlways: true, label: '',
-                fontFamily: THEME.fontFamily, fontWeight: 700,
-                color: THEME.ink, offsetY: 2,
+                show: true, showAlways: true, label: 'الإجمالي',
+                fontFamily: THEME.fontFamily, fontWeight: 400,
+                color: THEME.tickColor,
                 formatter: w => centerNum(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
               },
             },
@@ -1906,15 +1911,28 @@ function renderDashboard() {
       // .chart-holder and colliding with whatever sits below it. Passing the container's own
       // real measured height works for every chart shape, so it replaces '100%' universally.
       options.chart.height = holder.clientHeight;
-      // The donut's center-total font size, proportional to its actual rendered size (not a
-      // fixed px) — right at holder.clientHeight/Width's real, laid-out values, the same
-      // reason chart.height is set here rather than in chartConfig(). Ring thickness
-      // (plotOptions.pie.donut.size) is untouched; only the number's size scales.
+      // The donut's center number + caption sizes, proportional to its actual rendered size
+      // (not a fixed px) — right at holder.clientHeight/Width's real, laid-out values, the
+      // same reason chart.height is set here rather than in chartConfig(). Ring thickness
+      // (plotOptions.pie.donut.size) is untouched; only the center text scales.
+      //
+      // ApexCharts styles these two lines from two *different* config blocks even though
+      // both render inside the same "total" state: the big number's font comes from
+      // `labels.value` (yes, even for the idle grand-total figure, not just a hovered
+      // slice's own value), while `labels.total`'s own fontSize/color style only the
+      // static "الإجمالي" caption underneath it — confirmed by inspecting the actual
+      // rendered <text> elements, since it isn't obvious from the option names alone.
       if (options.chart.type === 'donut') {
         const box = Math.min(holder.clientWidth, holder.clientHeight);
-        const centerFontSize = Math.round(Math.max(18, Math.min(38, box * 0.16))) + 'px';
-        options.plotOptions.pie.donut.labels.value.fontSize = centerFontSize;
-        options.plotOptions.pie.donut.labels.total.fontSize = centerFontSize;
+        const numSize = Math.round(Math.max(18, Math.min(38, box * 0.16)));
+        const capSize = Math.round(Math.max(10, numSize * 0.4));
+        const labels = options.plotOptions.pie.donut.labels;
+        labels.value.fontSize = numSize + 'px';
+        labels.value.offsetY = -Math.round(capSize * 0.6);
+        labels.total.fontSize = capSize + 'px';
+        labels.total.offsetY = Math.round(numSize * 0.32);
+        labels.name.fontSize = capSize + 'px';
+        labels.name.offsetY = Math.round(numSize * 0.32);
       }
       // In 3D view, extrude bar charts with a fake top/side face once the entrance animation
       // actually finishes — measuring bar geometry any earlier (mid-animation) would extrude
