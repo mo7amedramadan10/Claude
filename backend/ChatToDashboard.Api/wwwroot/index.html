@@ -2424,6 +2424,23 @@ async function ask(question) {
       state.messages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
     } else {
       if (isContinuation) {
+        // The system prompt tells the model to always copy forward every existing widget
+        // it isn't explicitly editing/deleting (see AnalyticsTools' "متابعة" instructions),
+        // but that's still just an instruction — a smaller/local model (seen with Ollama)
+        // can silently drop widgets from its JSON output while its own summary claims it
+        // kept everything. Widgets have no stable id the model echoes back (unlike filters
+        // below), so match by title instead: any existing widget whose title doesn't
+        // survive into the new response is presumed dropped by mistake and restored,
+        // unless the question itself looks like an explicit deletion request.
+        const oldWidgets = state.dashboard?.widgets || [];
+        const newWidgets = payload.dashboard.widgets || [];
+        const deletionRequested = /احذف|امسح|شيل|إزال|ألغِ|ألغي|تخلص/.test(question);
+        if (!deletionRequested && oldWidgets.length && newWidgets.length < oldWidgets.length) {
+          const newTitles = new Set(newWidgets.map(w => w.title));
+          const missing = oldWidgets.filter(w => !newTitles.has(w.title));
+          payload.dashboard.widgets = [...missing, ...newWidgets];
+        }
+
         // The model isn't told what filters already exist (only summary+widgets travel as
         // continuation context — see ComposeUserMessage), so it has no way to deliberately
         // keep them; left alone, every continuation turn would silently replace the whole
