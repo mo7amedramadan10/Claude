@@ -294,11 +294,11 @@ tr:last-child td{border-bottom:0}
 .status-badge.ontrack{background:var(--accent-soft);color:var(--accent)}
 
 /* ---------- comparison layout (two widgets of the same type, side by side) ---------- */
-.compare-row{display:flex;align-items:center;justify-content:center;gap:18px}
-.compare-side{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px}
-.compare-side .side-title{font-size:12px;color:var(--ink-2);font-weight:600}
-.compare-side .chart-holder{width:100%}
-.compare-arrow{font-size:22px;color:var(--muted);flex-shrink:0}
+.comparison-wrap{background:transparent;border:0;box-shadow:none;padding:0}
+.comparison-title{font-weight:600;font-size:14px;margin-bottom:12px}
+.compare-row{display:flex;align-items:stretch;justify-content:center;gap:14px}
+.compare-row>.widget{flex:1;min-width:0;margin:0}
+.compare-arrow{font-size:22px;color:var(--muted);flex-shrink:0;display:flex;align-items:center}
 /* ---------- dashboard editor ---------- */
 .edit-toggle{display:inline-flex;border:1px solid var(--grid);border-radius:9px;overflow:hidden;margin-inline-end:auto}
 .edit-toggle-btn{padding:7px 14px;border:0;background:var(--surface);color:var(--ink-2);font-size:12.5px}
@@ -2415,7 +2415,50 @@ const WIDGET_COMPONENTS = {
   'progress-table': ProgressTableCard, 'trend-matrix': TrendMatrixCard, 'status-bar': StatusBarCard,
 };
 
+// ---------- comparison layout (not a 6th type — a display option any type can carry) ----------
+// { comparison: { left: {...partial widget}, right: {...partial widget} } } on an otherwise
+// normal widget — reuses whichever component `type` already is for both halves (each a
+// fully real, independent widget with its own title/source/etc.), just laid out side by
+// side with a connecting arrow instead of stacked in the grid like every other widget.
+function ComparisonCard(raw) {
+  const type = (raw.type || '').toLowerCase();
+  if (!WIDGET_TYPES.includes(type)) {
+    console.warn('Unknown comparison type — rendering its left side as a table instead:', raw);
+    return TableCard({ ...raw.comparison.left, type: 'table' });
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'widget comparison-wrap';
+  wrap.dataset.size = 'full';
+  if (raw.title) {
+    const h = document.createElement('div');
+    h.className = 'comparison-title';
+    h.textContent = raw.title;
+    wrap.appendChild(h);
+  }
+  const row = document.createElement('div');
+  row.className = 'compare-row';
+  // Each side is built through the exact same buildWidget() -> WIDGET_COMPONENTS path as
+  // any other widget, just with its own id/layout stripped — it's a nested, non-editable
+  // mini-widget, not an independent grid item the drag/resize/delete menu should touch.
+  const buildSide = def => buildWidget({
+    ...def, type, id: undefined, layout: { size: 'wide' },
+    // A pie's own hollow center is where its side's caption reads best (matching the
+    // reference mockup) — defaults to this side's title, e.g. "الربع الأول", unless the
+    // side already specifies its own centerLabel.
+    ...(type === 'pie' && !def.centerLabel ? { centerLabel: def.title } : {}),
+  });
+  row.appendChild(buildSide(raw.comparison.left || {}));
+  const arrow = document.createElement('div');
+  arrow.className = 'compare-arrow';
+  arrow.textContent = '⟷';
+  row.appendChild(arrow);
+  row.appendChild(buildSide(raw.comparison.right || {}));
+  wrap.appendChild(row);
+  return wrap;
+}
+
 function buildWidget(raw) {
+  if (raw.comparison && typeof raw.comparison === 'object') return ComparisonCard(raw);
   const type = (raw.type || '').toLowerCase();
   if (!WIDGET_TYPES.includes(type)) {
     console.warn('Unknown widget type — rendering as a table instead:', raw.type, raw);
