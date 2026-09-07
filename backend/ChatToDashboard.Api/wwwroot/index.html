@@ -1078,6 +1078,38 @@ const num = v => typeof v === 'number' ? v : (parseFloat(v) || 0);
 const centerNum = v => (typeof v === 'number' && isFinite(v))
   ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(v ?? '—');
 
+// A donut's idle center caption names what the number actually is — "مشروع" for a count of
+// projects, "خطر" for a count of risks — instead of the generic "الإجمالي", which said
+// nothing about the number itself. There's no structured "what this counts" field in the
+// widget schema (chat-authored widgets carry only a title + raw SQL), so this is pulled
+// from the widget's own title: strip a leading aggregate word ("عدد المخاطر" -> "المخاطر")
+// and a trailing "by ..." clause ("توزيع المشاريع حسب الحالة" -> "المشاريع"), then singularize
+// the remaining noun via a small curated dictionary of common business-Arabic plurals —
+// genuine Arabic morphology (broken plurals especially) has no reliable general rule, so
+// unlisted nouns are shown as extracted rather than risk a wrong guess.
+const PLURAL_TO_SINGULAR = {
+  'مشاريع': 'مشروع', 'مخاطر': 'خطر', 'عقود': 'عقد', 'طلبات': 'طلب', 'طلبيات': 'طلبية',
+  'فواتير': 'فاتورة', 'عملاء': 'عميل', 'زبائن': 'زبون', 'موردين': 'مورد', 'موردون': 'مورد',
+  'موظفين': 'موظف', 'موظفون': 'موظف', 'مستخدمين': 'مستخدم', 'مستخدمون': 'مستخدم',
+  'منتجات': 'منتج', 'أصناف': 'صنف', 'حسابات': 'حساب', 'تقارير': 'تقرير', 'ملفات': 'ملف',
+  'مستندات': 'مستند', 'وثائق': 'وثيقة', 'شركات': 'شركة', 'فروع': 'فرع', 'وحدات': 'وحدة',
+  'أقسام': 'قسم', 'حالات': 'حالة', 'مهام': 'مهمة', 'إيرادات': 'إيراد', 'مصروفات': 'مصروف',
+  'نفقات': 'نفقة', 'أصول': 'أصل', 'شكاوى': 'شكوى', 'حوادث': 'حادث', 'مخالفات': 'مخالفة',
+  'تراخيص': 'ترخيص', 'عقارات': 'عقار', 'فرص': 'فرصة', 'صفقات': 'صفقة', 'اجتماعات': 'اجتماع',
+  'تذاكر': 'تذكرة', 'شحنات': 'شحنة', 'قضايا': 'قضية', 'مطالبات': 'مطالبة', 'مخازن': 'مخزن',
+  'عمليات': 'عملية', 'معاملات': 'معاملة', 'حملات': 'حملة', 'مبادرات': 'مبادرة', 'مهارات': 'مهارة',
+  'دورات': 'دورة', 'إجازات': 'إجازة', 'مبيعات': 'مبيعات',
+};
+function deriveUnitLabel(title) {
+  if (!title) return 'الإجمالي';
+  let t = title
+    .replace(/^(توزيع|نسبة|عدد|إجمالي|مجموع|تحليل|ملخص|أعداد|نسب)\s+/u, '')
+    .replace(/\s+(موزعة\s+)?(حسب|بحسب|لكل|بين|عبر|على\s+حسب).*$/u, '')
+    .trim();
+  const bare = t.replace(/^ال/u, '');
+  return PLURAL_TO_SINGULAR[bare] || PLURAL_TO_SINGULAR[t] || bare || 'الإجمالي';
+}
+
 function keysFor(w) {
   const rows = Array.isArray(w.data) ? w.data : [];
   const first = rows[0] || {};
@@ -1891,8 +1923,9 @@ function chartConfig(type, labels, values, title) {
       labels,
       legend: { labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
       // The center label: a big bold number with a small muted caption under it — the
-      // grand total ("الإجمالي") by default (showAlways), a slice's own value + category
-      // name while hovering it. Full precision here (never the K/M-abbreviated fmt() used
+      // grand total by default (showAlways), captioned with deriveUnitLabel(title) (what the
+      // number counts, e.g. "مشروع"/"خطر" — not the generic "الإجمالي"); a slice's own value
+      // + category name while hovering it. Full precision here (never the K/M-abbreviated fmt() used
       // on axes/tooltips), since this is the dashboard's one headline figure, not a space-
       // constrained tick label. Neutral --ink for the number rather than accent — accent
       // duplicates the first slice's own color, which read as if the number belonged to
@@ -1917,7 +1950,7 @@ function chartConfig(type, labels, values, title) {
                 formatter: v => centerNum(v),
               },
               total: {
-                show: true, showAlways: true, label: 'الإجمالي',
+                show: true, showAlways: true, label: deriveUnitLabel(title),
                 fontFamily: THEME.fontFamily, fontWeight: 400,
                 color: THEME.tickColor,
                 formatter: w => centerNum(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
