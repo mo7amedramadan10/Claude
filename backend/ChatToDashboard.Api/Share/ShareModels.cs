@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ChatToDashboard.Api.Widgets;
 
 namespace ChatToDashboard.Api.Share;
 
@@ -22,8 +23,9 @@ public class SharedDashboard
     public string FiltersJson { get; set; } = "[]";
 
     /// <summary>Which filter values were selected at share time (frontend's
-    /// state.activeFilters: filterId -> values) — shown read-only in the shared view, since
-    /// an anonymous viewer has no session to re-run a filtered query with a different value.</summary>
+    /// state.activeFilters: filterId -> values) — the shared view opens with the same
+    /// selection, and the recipient can change it from there (see POST
+    /// /api/share/{id}/widgets/{index}/refresh).</summary>
     public string ActiveFiltersJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
 }
@@ -45,4 +47,17 @@ public class CreateShareRequest
 
     [JsonPropertyName("activeFilters")]
     public JsonElement ActiveFilters { get; set; }
+}
+
+/// <summary>
+/// Body of POST /api/share/{id}/widgets/{index}/refresh — re-runs one widget already
+/// published in this share with a (possibly different) filter selection, or with none at
+/// all for a plain refresh. Deliberately carries no table/sql/query of its own: the widget
+/// to run comes from the share's own stored WidgetsJson at <c>index</c>, never from the
+/// (anonymous, unauthenticated) caller — see ShareController for why that boundary matters.
+/// </summary>
+public class RefreshShareWidgetRequest
+{
+    [JsonPropertyName("filters")]
+    public List<FilterCondition>? Filters { get; set; }
 }

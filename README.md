@@ -341,10 +341,14 @@ sequential or guessable, but anyone holding it can view. Manage what you've publ
 `GET /api/share` (your own links) and `DELETE /api/share/{id}`; deleting one immediately breaks
 that link for everyone.
 
-If a filter was applied when you shared, the recipient sees the same filter bar showing what
-was selected (e.g. "الحالة (1)") — the widget data itself is already that filtered snapshot.
-It's shown read-only rather than as a live control: a share link has no sign-in, and re-running
-a filtered query requires one, so there's nothing for the recipient to switch it to.
+The recipient can filter and refresh, not just view: the shared view opens with whatever
+filter selection was active when you shared, and the recipient can change it or click
+**🔄 تحديث** for live data — both go through `POST /api/share/{id}/widgets/{index}/refresh`,
+the one endpoint a share link's anonymous session is allowed to call. It never accepts a
+table or SQL from that caller — only an index into this exact share's own already-published
+widgets — so the recipient can only ever re-run a query this link already exposed, and it
+runs under the sharer's own current data permissions (checked live, not a snapshot from share
+time), the same "runs as its owner" model most embedded/shared BI views use.
 
 ## Exporting a dashboard (PDF / PowerPoint)
 
