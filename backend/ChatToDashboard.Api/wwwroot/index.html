@@ -454,6 +454,41 @@ tr:last-child td{border-bottom:0}
 .hist-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
 
+/* ---------- Part 2: dashboard states (Draft/Active), roles, owner transfer ---------- */
+.state-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  font-size:10.5px;font-weight:700;white-space:nowrap}
+.state-badge.draft{background:rgba(148,163,184,.18);color:var(--muted)}
+.state-badge.active{background:rgba(52,199,89,.16);color:#1e9e46}
+.role-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  font-size:10.5px;font-weight:600;background:rgba(59,130,246,.14);color:#2f6fdb;white-space:nowrap}
+.role-badge.role-viewer{background:rgba(148,163,184,.18);color:var(--muted)}
+.state-badge.disabled-badge{background:rgba(239,100,97,.16);color:var(--danger)}
+.hist-card .badges{display:flex;gap:6px;flex-wrap:wrap}
+.hist-card .owner-line{color:var(--muted);font-size:11px}
+.hist-card .actions button.activate-btn{border:1px solid var(--accent);background:transparent;color:var(--accent)}
+.hist-card .actions button.roles-btn{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2)}
+
+#dashboard-status-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 12px}
+#dashboard-status-bar .manage-roles-btn{border:1px solid var(--grid);background:var(--surface);
+  color:var(--ink-2);padding:4px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+.dashboard-disabled-banner{display:flex;align-items:center;gap:8px;padding:12px 14px;
+  border-radius:10px;background:rgba(239,100,97,.1);border:1px solid rgba(239,100,97,.35);
+  color:var(--danger);font-size:13px;line-height:1.6;margin-bottom:14px}
+
+.roles-modal-box{max-width:480px}
+.roles-owner-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;
+  border-bottom:1px solid var(--grid);margin-bottom:10px}
+.roles-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:220px;overflow-y:auto}
+.role-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;
+  border:1px solid var(--grid);border-radius:9px;background:var(--surface-2,var(--surface))}
+.role-row .name{font-size:12.5px;font-weight:600}
+.role-row .remove-role-btn{border:0;background:transparent;color:var(--danger);cursor:pointer;font-size:12px}
+.role-add-row,.owner-transfer-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.role-add-row input,.owner-transfer-row input{flex:1}
+.role-add-row select{width:auto}
+.roles-section-title{font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px}
+.roles-error{color:var(--danger);font-size:12px;margin-top:4px}
+
 /* ---------- dashboard export toolbar ---------- */
 .dash-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
 .dash-toolbar.hidden{display:none}
@@ -803,6 +838,39 @@ tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<div id="roles-modal" class="modal-overlay hidden">
+  <div class="modal roles-modal-box">
+    <h3>إدارة صلاحيات اللوحة</h3>
+    <input type="hidden" id="roles-modal-id" />
+    <div class="roles-owner-row">
+      <span>المالك: <strong id="roles-owner-name">—</strong></span>
+    </div>
+
+    <div class="roles-section-title">نقل الملكية</div>
+    <p class="modal-note">المالك الجديد لازم يكون بالفعل عنده صلاحية وصول للبيانات اللي تعتمد عليها هذه اللوحة.</p>
+    <div class="owner-transfer-row">
+      <input type="text" id="transfer-owner-username" placeholder="اسم المستخدم" />
+      <button type="button" id="transfer-owner-btn">نقل</button>
+    </div>
+
+    <div class="roles-section-title">محررون ومشاهدون</div>
+    <div class="role-add-row">
+      <input type="text" id="role-add-username" placeholder="اسم المستخدم" />
+      <select id="role-add-select">
+        <option value="editor">محرر</option>
+        <option value="viewer">مشاهد</option>
+      </select>
+      <button type="button" id="role-add-btn">إضافة</button>
+    </div>
+    <div id="roles-list" class="roles-list"></div>
+
+    <div id="roles-error" class="roles-error hidden"></div>
+    <div class="modal-actions">
+      <button type="button" id="roles-modal-close">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <div id="wizard-modal" class="modal-overlay hidden">
   <div class="modal wizard-box">
     <div class="wizard-head">
@@ -876,6 +944,9 @@ const state = {
   editMode: false, editHistory: { past: [], future: [] },
   currentHistoryId: null, wizard: null,
   activeFilters: {}, // filterId -> selected values (or [from,to] for range types)
+  // Set only while the open dashboard is an Active one (see openHistoryEntry): gates
+  // edit/wizard controls for a Viewer and drives the disabled-state banner.
+  dashboardIsActive: false, dashboardRole: null, dashboardDisabled: false, dashboardDisabledReason: '',
 };
 try { state.view3d = localStorage.getItem('chatToDashboardView3d') === '1'; } catch { state.view3d = false; }
 
@@ -1307,7 +1378,9 @@ el('view-dim-toggle').addEventListener('click', e => {
 // ---------- autosave: updates the same history row instead of creating a new one per edit ----------
 let autosaveTimer = null;
 function scheduleAutosave() {
-  if (!state.currentUser || !state.dashboard?.widgets?.length) return;
+  // A Viewer never edits — their applyFilters()-driven live refresh (see openHistoryEntry)
+  // must not try to persist anything back, or it'd just fail against Update()'s role check.
+  if (!state.currentUser || !state.dashboard?.widgets?.length || state.dashboardRole === 'viewer') return;
   el('autosave-status').textContent = 'جارٍ الحفظ…';
   clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(doAutosave, 900);
@@ -1327,6 +1400,8 @@ async function doAutosave() {
       if (res.ok) { el('autosave-status').textContent = '✓ تم الحفظ'; return; }
       if (res.status !== 404) throw new Error();
       state.currentHistoryId = null; // entry was deleted elsewhere — fall through and recreate
+      state.dashboardIsActive = false; state.dashboardRole = null;
+      state.dashboardDisabled = false; state.dashboardDisabledReason = '';
     }
     const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
     const res = await fetch('/api/history', {
@@ -1973,7 +2048,10 @@ function buildWidget(raw) {
 // ---------- dashboard rendering ----------
 function renderDashboard() {
   const d = state.dashboard;
-  const editable = !!state.currentUser; // never editable in the public share view
+  // Never editable in the public share view; a Viewer on an Active dashboard can look but
+  // not refine it either — only the Owner/an Editor may (their own permission is what's
+  // actually checked when they do, same as a fresh question — see DashboardAccessService).
+  const editable = !!state.currentUser && state.dashboardRole !== 'viewer';
   el('dash-toolbar').classList.toggle('hidden', !d || !(d.widgets || []).length);
   el('edit-toggle').classList.toggle('hidden', !editable);
   el('autosave-status').classList.toggle('hidden', !editable);
@@ -1996,7 +2074,7 @@ function renderDashboard() {
     return;
   }
 
-  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>`;
+  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>` + (state.dashboardIsActive ? dashboardStatusBarHtml() : '');
   // Interactive in the share view too — applyFilters() routes through a share-scoped,
   // anonymous-safe endpoint there (see bootSharedView/applyFilters), not the normal
   // auth-required widget endpoints.
@@ -2180,6 +2258,9 @@ async function applyFilters() {
   if (state.currentUser) el('autosave-status')?.classList.remove('hidden');
   const status = el('autosave-status');
   if (status) status.textContent = 'جارٍ التحديث…';
+  // Re-checked fresh on every call (a since-fixed dashboard should stop showing the
+  // banner) — only a 409 from the Active-dashboard refresh branch below sets it again.
+  if (state.dashboardIsActive) { state.dashboardDisabled = false; state.dashboardDisabledReason = ''; }
 
   const sources = { systems: [...state.onSystems], categories: [...state.onCategories] };
   const widgets = state.dashboard?.widgets || [];
@@ -2196,6 +2277,29 @@ async function applyFilters() {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filters }),
         });
+        if (!res.ok) return;
+        const payload = await res.json();
+        w.data = payload.data;
+        if ('xKey' in payload) w.xKey = payload.xKey;
+        if ('yKey' in payload) w.yKey = payload.yKey;
+        if ('source' in payload) w.source = payload.source;
+        return;
+      }
+      // An Active dashboard (Part 2) always re-executes live, under the Owner's own
+      // permission, on every open/filter/refresh — same "index-only, never client-supplied
+      // sql/table" endpoint shape as the share-scoped one above, just Owner- instead of
+      // sharer-scoped and auth-required instead of anonymous.
+      if (state.dashboardIsActive && state.currentHistoryId) {
+        const res = await fetch(`/api/history/${encodeURIComponent(state.currentHistoryId)}/widgets/${index}/refresh`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filters }),
+        });
+        if (res.status === 409) {
+          const payload = await res.json().catch(() => null);
+          state.dashboardDisabled = true;
+          state.dashboardDisabledReason = payload?.reason || 'هذه اللوحة معطّلة حاليًا.';
+          return;
+        }
         if (!res.ok) return;
         const payload = await res.json();
         w.data = payload.data;
@@ -2253,6 +2357,31 @@ function buildAddWidgetButton() {
   btn.addEventListener('click', openWizard);
   return btn;
 }
+
+// ---------- Part 2: Active-dashboard status bar (state badge, role badge, manage-roles) ----------
+const ROLE_LABELS = { owner: 'مالك', editor: 'محرر', viewer: 'مشاهد' };
+function dashboardStatusBarHtml() {
+  const roleBadge = state.dashboardRole
+    ? `<span class="role-badge${state.dashboardRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[state.dashboardRole] || state.dashboardRole}</span>`
+    : '';
+  const manageBtn = state.dashboardRole === 'owner'
+    ? `<button type="button" class="manage-roles-btn" data-id="${esc(state.currentHistoryId || '')}">⚙️ إدارة الصلاحيات</button>` : '';
+  const bar = `<div id="dashboard-status-bar">
+      <span class="state-badge active">نشطة</span>${roleBadge}${manageBtn}
+    </div>`;
+  const banner = state.dashboardDisabled
+    ? `<div class="dashboard-disabled-banner">⚠️ ${esc(state.dashboardDisabledReason || 'هذه اللوحة معطّلة حاليًا.')}</div>`
+    : '';
+  return bar + banner;
+}
+// Delegated (not re-bound every render, since #dashboard-status-bar's own HTML is replaced
+// wholesale by renderDashboard() each time) — #dash is the stable ancestor. (el.dash isn't
+// cached yet at this point in the script — see the "boot" section near the bottom — so this
+// resolves the element directly instead.)
+el('dash').addEventListener('click', e => {
+  const btn = e.target.closest('.manage-roles-btn');
+  if (btn?.dataset.id) openRolesModal(btn.dataset.id);
+});
 
 // ---------- export (PDF / PowerPoint) ----------
 // PDF: the browser's own print-to-PDF, steered by the @media print rules above —
@@ -2487,6 +2616,8 @@ el('new-dashboard-btn').addEventListener('click', () => {
   state.currentHistoryId = null;
   state.activeFilters = {};
   state.messages = [];
+  state.dashboardIsActive = false; state.dashboardRole = null;
+  state.dashboardDisabled = false; state.dashboardDisabledReason = '';
   if (ttsSupported()) window.speechSynthesis.cancel(); // don't keep reading a wiped-out message
   renderDashboard();
   renderMessages();
@@ -2650,6 +2781,11 @@ async function ask(question) {
       state.dashboard = ensureWidgetMeta(payload.dashboard);
       state.editHistory = { past: [], future: [] };
       state.currentHistoryId = null;
+      // A chat answer always lands as a fresh Draft (per Part 2: "any question's result
+      // goes to History as a frozen snapshot") — even when it continues an Active
+      // dashboard, so the Active one's own state no longer describes what's on screen now.
+      state.dashboardIsActive = false; state.dashboardRole = null;
+      state.dashboardDisabled = false; state.dashboardDisabledReason = '';
       // narration is the rich, read-aloud-friendly walkthrough (see AnalyticsTools'
       // "الشرح السردي" system-prompt section) — distinct from the short summary (used
       // elsewhere: continuation context, history list) and from each widget's technical
@@ -3143,13 +3279,30 @@ function renderHistory() {
   el('history-grid').innerHTML = state.history.length ? state.history.map(h => {
     const widgets = parseWidgets(h.widgetsJson);
     const when = new Date(h.createdAt + (h.createdAt.endsWith('Z') ? '' : 'Z'));
+    const stateBadge = h.isActive
+      ? `<span class="state-badge active">نشطة</span>`
+      : `<span class="state-badge draft">مسودة</span>`;
+    const roleBadge = h.isActive && h.myRole
+      ? `<span class="role-badge${h.myRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[h.myRole] || h.myRole}</span>` : '';
+    const disabledBadge = h.disabled ? `<span class="state-badge disabled-badge" title="${esc(h.disabledReason || '')}">⚠️ معطّلة</span>` : '';
+    const ownerLine = h.isActive && h.ownerName ? `<div class="owner-line">المالك: ${esc(h.ownerName)}</div>` : '';
+    // Only a Draft's own creator ever sees it (server already filters the list), so
+    // "تفعيل" is always safe to show for one; deletion on an Active dashboard is
+    // Owner/Admin-only server-side — hide it for an Editor/Viewer rather than let them
+    // hit a 404.
+    const activateBtn = !h.isActive ? `<button class="activate-btn" data-activate="${esc(h.id)}">تفعيل</button>` : '';
+    const canDelete = !h.isActive || h.myRole === 'owner';
+    const delBtn = canDelete ? `<button class="del-btn" data-del="${esc(h.id)}">حذف</button>` : '';
+    const rolesBtn = h.isActive && h.myRole === 'owner' ? `<button class="roles-btn" data-roles="${esc(h.id)}">⚙️ الصلاحيات</button>` : '';
     return `<div class="hist-card">
+        <div class="badges">${stateBadge}${roleBadge}${disabledBadge}</div>
         <div class="q">${esc(h.question)}</div>
         <div class="summary">${esc(h.summary)}</div>
+        ${ownerLine}
         <div class="meta">${when.toLocaleString('ar-EG')} · ${widgets.length} عنصر</div>
         <div class="actions">
           <button class="open-btn" data-open="${esc(h.id)}">فتح</button>
-          <button class="del-btn" data-del="${esc(h.id)}">حذف</button>
+          ${activateBtn}${rolesBtn}${delBtn}
         </div>
       </div>`;
   }).join('') : `<div class="hist-empty">لا يوجد لوحات محفوظة بعد — أي سؤال تسأله يُحفظ هنا تلقائياً.</div>`;
@@ -3158,6 +3311,27 @@ function renderHistory() {
     btn.addEventListener('click', () => openHistoryEntry(btn.dataset.open)));
   el('history-grid').querySelectorAll('[data-del]').forEach(btn =>
     btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.del)));
+  el('history-grid').querySelectorAll('[data-activate]').forEach(btn =>
+    btn.addEventListener('click', () => activateHistoryEntry(btn.dataset.activate)));
+  el('history-grid').querySelectorAll('[data-roles]').forEach(btn =>
+    btn.addEventListener('click', () => openRolesModal(btn.dataset.roles)));
+}
+
+// Promotes a Draft to Active — the activating user becomes its Owner, which the backend
+// rejects if they don't already hold valid permission on every source the dashboard's
+// widgets depend on (DashboardAccessService — the exact same gate a fresh question goes
+// through).
+async function activateHistoryEntry(id) {
+  try {
+    const res = await fetch(`/api/history/${encodeURIComponent(id)}/activate`, { method: 'POST' });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) { alert(payload?.error || 'تعذّر تفعيل اللوحة.'); return; }
+    const idx = state.history.findIndex(h => h.id === id);
+    if (idx !== -1) state.history[idx] = payload; else state.history.unshift(payload);
+    renderHistory();
+  } catch {
+    alert('تعذّر الوصول إلى الخادم.');
+  }
 }
 
 function parseWidgets(json) {
@@ -3184,6 +3358,13 @@ function openHistoryEntry(id) {
   state.editHistory = { past: [], future: [] };
   state.currentHistoryId = entry.id; // further edits autosave onto this same saved entry
   state.activeFilters = parseActiveFilters(entry.activeFiltersJson);
+  // Part 2: an Active dashboard is never frozen — see the state.dashboardIsActive branch
+  // in applyFilters(), triggered right below, which re-executes every widget live under
+  // the Owner's own permission (re-validated fresh, not the List call's snapshot).
+  state.dashboardIsActive = !!entry.isActive;
+  state.dashboardRole = entry.isActive ? (entry.myRole || null) : null;
+  state.dashboardDisabled = !!entry.disabled;
+  state.dashboardDisabledReason = entry.disabledReason || '';
   state.messages.push({ role: 'user', text: entry.queryDescription || entry.question });
   state.messages.push({
     role: 'bot', text: entry.summary,
@@ -3191,6 +3372,7 @@ function openHistoryEntry(id) {
   });
   showScreen('chat');
   renderMessages(); renderDashboard();
+  if (state.dashboardIsActive && !state.dashboardDisabled) applyFilters();
 }
 
 async function deleteHistoryEntry(id) {
@@ -3199,6 +3381,98 @@ async function deleteHistoryEntry(id) {
   state.history = state.history.filter(h => h.id !== id);
   renderHistory();
 }
+
+// ---------- Part 2: roles modal (Owner transfer + Editor/Viewer management) ----------
+// The Owner picks people by username, not from a dropdown — GET /api/users (a full listing)
+// is Admin-only, so a non-Admin Owner has no way to enumerate everyone; the narrow
+// GET /api/users/lookup/{username} (exact match, any authenticated caller) resolves just
+// the one person they typed. See UserLookupController.
+async function lookupUsername(username) {
+  const res = await fetch(`/api/users/lookup/${encodeURIComponent(username.trim())}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+function rolesModalError(message) {
+  const box = el('roles-error');
+  box.textContent = message || '';
+  box.classList.toggle('hidden', !message);
+}
+
+async function openRolesModal(id) {
+  rolesModalError('');
+  el('roles-modal-id').value = id;
+  el('roles-owner-name').textContent = '…';
+  el('roles-list').innerHTML = '';
+  el('transfer-owner-username').value = '';
+  el('role-add-username').value = '';
+  el('roles-modal').classList.remove('hidden');
+  await reloadRolesModal();
+}
+
+async function reloadRolesModal() {
+  const id = el('roles-modal-id').value;
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/roles`);
+  if (!res.ok) { rolesModalError('تعذّر تحميل الصلاحيات.'); return; }
+  const data = await res.json();
+  el('roles-owner-name').textContent = data.ownerName || data.ownerId || '—';
+  el('roles-list').innerHTML = data.roles.length ? data.roles.map(r => `
+      <div class="role-row">
+        <span class="name">${esc(r.displayName)} — ${ROLE_LABELS[r.role] || r.role}</span>
+        <button type="button" class="remove-role-btn" data-remove="${esc(r.userId)}">إزالة</button>
+      </div>`).join('') : `<div class="owner-line">لا يوجد محررون أو مشاهدون بعد.</div>`;
+  el('roles-list').querySelectorAll('[data-remove]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      await fetch(`/api/history/${encodeURIComponent(id)}/roles/${encodeURIComponent(btn.dataset.remove)}`, { method: 'DELETE' });
+      await reloadRolesModal();
+    }));
+}
+
+el('role-add-btn').addEventListener('click', async () => {
+  rolesModalError('');
+  const id = el('roles-modal-id').value;
+  const username = el('role-add-username').value.trim();
+  const role = el('role-add-select').value;
+  if (!username) return;
+  const user = await lookupUsername(username);
+  if (!user) { rolesModalError('لا يوجد مستخدم بهذا الاسم.'); return; }
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/roles/${encodeURIComponent(user.id)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }),
+  });
+  if (!res.ok) { const p = await res.json().catch(() => null); rolesModalError(p?.error || 'تعذّر إضافة الدور.'); return; }
+  el('role-add-username').value = '';
+  await reloadRolesModal();
+});
+
+el('transfer-owner-btn').addEventListener('click', async () => {
+  rolesModalError('');
+  const id = el('roles-modal-id').value;
+  const username = el('transfer-owner-username').value.trim();
+  if (!username) return;
+  const user = await lookupUsername(username);
+  if (!user) { rolesModalError('لا يوجد مستخدم بهذا الاسم.'); return; }
+  if (!confirm(`نقل ملكية اللوحة إلى ${user.displayName || user.username}؟`)) return;
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/transfer-owner`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newOwnerId: user.id }),
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) { rolesModalError(payload?.error || 'تعذّر نقل الملكية.'); return; }
+  // The caller may no longer be the Owner after a successful transfer — reflect that in
+  // the open dashboard (if this is the one on screen) and the History list right away.
+  const idx = state.history.findIndex(h => h.id === id);
+  if (idx !== -1) state.history[idx] = payload;
+  if (state.currentHistoryId === id) {
+    state.dashboardRole = payload.myRole || null;
+    state.dashboardDisabled = !!payload.disabled;
+    state.dashboardDisabledReason = payload.disabledReason || '';
+    renderDashboard();
+  }
+  el('transfer-owner-username').value = '';
+  await reloadRolesModal();
+  renderHistory();
+});
+
+el('roles-modal-close').addEventListener('click', () => el('roles-modal').classList.add('hidden'));
 
 el('history-clear').addEventListener('click', async () => {
   if (!state.history.length || !confirm('مسح كل السجل؟ لا يمكن التراجع عن هذا.')) return;

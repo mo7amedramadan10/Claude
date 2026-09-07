@@ -233,7 +233,10 @@ public class HistoryController : ControllerBase
         // Editor/Viewer row for them so they don't show up as both.
         await _store.RemoveRoleAsync(id, request.NewOwnerId, ct);
         var updated = await _store.GetByIdAsync(id, ct);
-        return Ok(await EnrichAsync(updated!, ct, "owner"));
+        // Not necessarily "owner" for the response's myRole — the caller (Owner or Admin)
+        // may have just transferred ownership away from themselves, in which case their own
+        // standing is whatever role (if any) they're left with, resolved fresh below.
+        return Ok(await EnrichAsync(updated!, ct));
     }
 
     /// <summary>
