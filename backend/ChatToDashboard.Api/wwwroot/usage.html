@@ -138,6 +138,7 @@ pre{margin:0;padding:14px 16px;border-top:1px solid var(--grid);background:#fbfb
 
 <div id="overlay"></div>
 <aside id="drawer"><div class="head"><h3 id="drawer-title"></h3>
+  <button class="btn" id="export-excel">📥 تصدير Excel</button>
   <button class="btn" id="close-drawer">إغلاق</button></div>
   <div class="body" id="drawer-body"></div>
 </aside>
@@ -152,6 +153,7 @@ const when = t => new Date(t + (t.endsWith('Z') ? '' : 'Z')).toLocaleString('ar-
 const pretty = t => { try { return JSON.stringify(JSON.parse(t), null, 2); } catch { return t; } };
 
 let data = { summary: null, records: [] };
+let currentRecord = null; // the full record behind the open drawer — see openDetail/exportRecordToExcel
 
 async function load() {
   const res = await fetch('/api/usage?limit=200');
@@ -316,6 +318,7 @@ async function openDetail(id) {
   el('drawer').classList.add('open'); el('overlay').classList.add('open');
 
   const r = await (await fetch('/api/usage/' + id)).json();
+  currentRecord = r;
   el('drawer-title').textContent = r.question || '(بدون سؤال)';
 
   const meta = `<div class="block"><div class="meta-grid">
@@ -375,6 +378,90 @@ const cell = (k, v) => `<div><div class="k">${k}</div><div class="v">${esc(v)}</
 const block = (title, content, tag) => `<details class="block">
     <summary>${title}${tag ? `<span class="tag">${tag}</span>` : ''}</summary>
     <pre>${esc(content)}</pre></details>`;
+
+// ---------- export one request's full turn-by-turn detail as an Excel file ----------
+// Built as a "SpreadsheetML 2003" XML document — a plain-text, multi-sheet format Excel
+// opens natively — rather than a real .xlsx (a zip container), so this needs no library at
+// all, vendored or CDN-loaded: the same "write it ourselves" choice already made for the
+// PPTX export above, and the safest one in a deployment that may not have CDN access.
+function xmlEscape(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
+}
+
+function ssCell(value) {
+  const isNum = typeof value === 'number' && Number.isFinite(value);
+  return `<Cell ss:StyleID="wrap"><Data ss:Type="${isNum ? 'Number' : 'String'}">${xmlEscape(value)}</Data></Cell>`;
+}
+
+function ssSheet(name, headerRow, dataRows, colWidths) {
+  const cols = (colWidths || []).map(w => `<Column ss:Width="${w}"/>`).join('');
+  const header = `<Row>${headerRow.map(h => `<Cell ss:StyleID="header"><Data ss:Type="String">${xmlEscape(h)}</Data></Cell>`).join('')}</Row>`;
+  const body = dataRows.map(row => `<Row ss:AutoFitHeight="1">${row.map(ssCell).join('')}</Row>`).join('');
+  // Sheet names in this format can't exceed 31 characters or contain \ / ? * [ ].
+  const safeName = xmlEscape(name).slice(0, 31);
+  return `<Worksheet ss:Name="${safeName}"><Table>${cols}${header}${body}</Table></Worksheet>`;
+}
+
+function buildSpreadsheetXml(sheets) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#E1E5EC" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="wrap"><Alignment ss:Vertical="Top" ss:WrapText="1"/></Style>
+ </Styles>
+ ${sheets.join('\n')}
+</Workbook>`;
+}
+
+function exportRecordToExcel(r) {
+  if (!r) return;
+
+  const summarySheet = ssSheet('ملخص الطلب',
+    ['الحقل', 'القيمة'],
+    [
+      ['معرّف الطلب', r.id], ['الوقت', when(r.timestamp)], ['المزود', r.provider], ['الموديل', r.model],
+      ['السؤال', r.question], ['الحالة', r.success ? 'نجح' : 'فشل'], ['رسالة الخطأ', r.error || ''],
+      ['المصادر المفعّلة', r.enabledSources || ''],
+      ['عدد الجولات', r.turnCount], ['عدد نداءات الأدوات', r.toolCallCount],
+      ['توكنز الإدخال', r.inputTokens], ['توكنز الإخراج', r.outputTokens],
+      ['توكنز من الكاش (قراءة)', r.cacheReadTokens], ['توكنز من الكاش (كتابة)', r.cacheWriteTokens],
+      ['إجمالي التوكنز', r.totalTokens], ['التكلفة التقديرية ($)', Number(r.estimatedCost) || 0],
+      ['الزمن الكلي (مللي ثانية)', r.durationMs],
+      ['الـ System Prompt', r.systemPrompt || ''], ['الرد النهائي', pretty(r.finalResponse || '')],
+    ],
+    [140, 500]);
+
+  const turnsSheet = ssSheet('الجولات',
+    ['رقم الجولة', 'توكنز الإدخال', 'توكنز الإخراج', 'من الكاش (قراءة)', 'من الكاش (كتابة)',
+      'سبب التوقف', 'الزمن (مللي ثانية)', 'الطلب المرسل (Request Body)', 'الرد المستلم (Response Body)'],
+    r.turns.map(t => [
+      t.turn, t.inputTokens, t.outputTokens, t.cacheReadTokens, t.cacheWriteTokens,
+      t.stopReason || '', t.durationMs, pretty(t.requestBody || ''), pretty(t.responseBody || ''),
+    ]),
+    [70, 90, 90, 100, 100, 100, 100, 450, 450]);
+
+  const toolCallsSheet = ssSheet('استدعاءات الأدوات',
+    ['رقم الجولة', 'الأداة', 'خطأ؟', 'الزمن (مللي ثانية)', 'المُدخل (Input)', 'النتيجة (Result)'],
+    r.toolCalls.map(t => [t.turn, t.tool, t.isError ? 'نعم' : 'لا', t.durationMs, pretty(t.input || ''), t.result || '']),
+    [70, 130, 60, 100, 350, 450]);
+
+  const xml = buildSpreadsheetXml([summarySheet, turnsSheet, toolCallsSheet]);
+  const blob = new Blob(['﻿' + xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `usage-request-${r.id}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+el('export-excel').addEventListener('click', () => exportRecordToExcel(currentRecord));
 
 function closeDrawer() {
   el('drawer').classList.remove('open'); el('overlay').classList.remove('open');
