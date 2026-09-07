@@ -439,6 +439,10 @@ tr:last-child td{border-bottom:0}
 /* ---------- shared read-only view ---------- */
 #shared-banner{display:flex;align-items:center;gap:12px;padding:11px 20px;
   background:var(--accent-soft);border-bottom:1px solid #cfe1f8;color:var(--ink-2)}
+/* An ID selector always beats a bare class selector regardless of source order, so plain
+   ".hidden{display:none}" alone can never override the "display:flex" above — this element
+   showed up on every screen, not just the share link, until it had its own hidden override. */
+#shared-banner.hidden{display:none}
 #shared-banner .q{font-weight:600;color:var(--ink)}
 #shared-banner a{margin-inline-start:auto;color:var(--accent);font-weight:600;text-decoration:none}
 
@@ -2280,17 +2284,20 @@ if (ttsSupported()) {
 }
 
 // ---------- continuation: "🆕 ابدأ لوحة جديدة" ----------
-// Empties the dashboard on screen immediately — not just a flag for the next question.
-// Since ask() only sends the current dashboard as continuation context when one actually
-// exists (state.dashboard?.widgets?.length), an empty dashboard already means the next
-// question is answered from scratch — no separate "armed" state needed. Deliberately a
-// button, not wording detection — see AnalyticsTools.ComposeUserMessage.
+// Empties the dashboard AND the chat transcript immediately — a real "start over", not just
+// a flag for the next question. Since ask() only sends the current dashboard as continuation
+// context when one actually exists (state.dashboard?.widgets?.length), an empty dashboard
+// already means the next question is answered from scratch — no separate "armed" state
+// needed. Deliberately a button, not wording detection — see AnalyticsTools.ComposeUserMessage.
 el('new-dashboard-btn').addEventListener('click', () => {
   state.dashboard = null;
   state.editHistory = { past: [], future: [] };
   state.currentHistoryId = null;
   state.activeFilters = {};
+  state.messages = [];
+  if (ttsSupported()) window.speechSynthesis.cancel(); // don't keep reading a wiped-out message
   renderDashboard();
+  renderMessages();
 });
 
 // ---------- voice: speech-to-text (the user talks to the model) ----------
