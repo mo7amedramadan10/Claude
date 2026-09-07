@@ -35,7 +35,17 @@ ANTHROPIC_API_KEY=sk-ant-...          # your Anthropic API key
 # Optional:
 # ANTHROPIC_MODEL=claude-sonnet-5
 # ENABLE_RAG=true
+# OLLAMA_API_KEY=...                  # only if you switch the provider to Ollama in the dashboard
+# OLLAMA_BASE_URL=http://...          # defaults to the internal gateway URL baked into the image
+# OLLAMA_MODEL=qwen3:14b
 ```
+
+Changing any of these after the container is already running requires `docker compose up -d
+--build` again — editing `.env` alone does not restart the container, and (importantly)
+running `dotnet user-secrets set` on your own machine has **no effect on a deployed
+container at all**: user secrets are a local-development-only mechanism, read from a file
+on your machine that never ships with the image. Every credential the deployed app needs
+must go through `.env` here (or the container/App Service's own environment settings).
 
 ### 4. Start
 
@@ -77,6 +87,9 @@ git pull && docker compose up -d --build
    `<registry>.azurecr.io/chat-to-dashboard:latest`, and set these application settings:
    - `ConnectionStrings__DataDb` = the Azure SQL connection string
    - `Anthropic__ApiKey` = your key
+   - `Ollama__ApiKey` = your Ollama gateway token, only if you switch the provider to
+     Ollama in the dashboard (same caveat as above: `dotnet user-secrets` never reaches
+     this app — set it here)
    - `WEBSITES_PORT` = `8080`
    - optionally `DataFolderPath` = `/data` with an Azure Files mount at `/data` so you can
      update data files without rebuilding the image (the baked-in seed data is used otherwise).

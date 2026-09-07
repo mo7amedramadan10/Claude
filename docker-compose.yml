@@ -1,5 +1,7 @@
 # Full stack in two containers: the app (API + frontend) and SQL Server.
 # Required in .env (same folder): SQL_PASSWORD, ANTHROPIC_API_KEY — see DEPLOY.md.
+# Optional: OLLAMA_API_KEY (only needed if you switch the provider to Ollama from the
+# dashboard's model selector — otherwise leave it unset).
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -26,6 +28,9 @@ services:
       ConnectionStrings__DataDb: "Server=db;Database=ChatToDashboard;User Id=sa;Password=${SQL_PASSWORD};TrustServerCertificate=True"
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in .env}
       Anthropic__Model: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      Ollama__ApiKey: ${OLLAMA_API_KEY:-}
+      Ollama__BaseUrl: ${OLLAMA_BASE_URL:-http://172.17.242.1:8081/api/v1/}
+      Ollama__Model: ${OLLAMA_MODEL:-qwen3:14b}
       EnableRag: ${ENABLE_RAG:-false}
       DataFolderPath: /data
     volumes:
