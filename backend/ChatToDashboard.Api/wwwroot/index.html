@@ -1663,6 +1663,27 @@ function chartConfig(type, labels, values, title) {
       series: values,
       labels,
       legend: { labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
+      // The center label: the slice name/value while hovering one, the grand total
+      // otherwise (showAlways keeps it visible even with nothing hovered/selected).
+      plotOptions: {
+        pie: {
+          donut: {
+            labels: {
+              show: true,
+              name: { show: true, fontFamily: THEME.fontFamily, color: THEME.tickColor },
+              value: {
+                show: true, fontFamily: THEME.fontFamily, color: THEME.accent,
+                formatter: v => fmt(Number(v)),
+              },
+              total: {
+                show: true, showAlways: true, label: 'الإجمالي',
+                fontFamily: THEME.fontFamily, color: THEME.accent,
+                formatter: w => fmt(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
+              },
+            },
+          },
+        },
+      },
     };
   }
   return {
