@@ -57,6 +57,10 @@ public class AnalyticsTools
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    /// <summary>Stand-in for a widget's omitted "data" (see TryParseDashboard) — a real,
+    /// serializable JsonElement, never the default Undefined one JsonSerializer can't write.</summary>
+    private static readonly JsonElement EmptyArrayElement = JsonDocument.Parse("[]").RootElement;
+
     private readonly DataFolderLoader _loader;
     private readonly DataStore _db;
     private readonly DocumentSearchService _documents;
@@ -1072,6 +1076,15 @@ public class AnalyticsTools
         var validationErrors = spec.Validate();
         if (validationErrors.Count > 0)
             return (null, string.Join(" ", validationErrors));
+
+        // A comparison-carrying widget legitimately omits "data" entirely (see
+        // BuildSystemPrompt), which deserializes to a JsonElement with ValueKind Undefined —
+        // Validate() above already allows that, but JsonSerializer.Serialize throws when
+        // asked to write an Undefined element back out for the API response. Normalize it to
+        // an empty array (the same value an explicit "data": [] would produce) so the
+        // response can actually be serialized.
+        foreach (var w in spec.Widgets)
+            if (w.Data.ValueKind == JsonValueKind.Undefined) w.Data = EmptyArrayElement;
 
         return (spec, null);
     }

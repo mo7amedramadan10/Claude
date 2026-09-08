@@ -10,7 +10,13 @@ namespace ChatToDashboard.Api.Models;
 public class DashboardSpec
 {
     private static readonly HashSet<string> AllowedWidgetTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "kpi", "bar", "line", "pie", "table" };
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "kpi", "bar", "line", "pie", "table",
+            // See BuildSystemPrompt's progress-table/trend-matrix/status-bar sections —
+            // each has its own "data" shape, handled specially below in Validate().
+            "progress-table", "trend-matrix", "status-bar",
+        };
     private static readonly HashSet<string> AllowedFilterTypes =
         new(StringComparer.OrdinalIgnoreCase) { "single_select", "multi_select", "date_range", "numeric_range" };
 
@@ -58,11 +64,23 @@ public class DashboardSpec
                 var w = Widgets[i];
                 if (w is null) { errors.Add($"widgets[{i}] is null."); continue; }
                 if (string.IsNullOrWhiteSpace(w.Type) || !AllowedWidgetTypes.Contains(w.Type))
-                    errors.Add($"widgets[{i}].type must be one of: kpi, bar, line, pie, table (got \"{w.Type}\").");
+                    errors.Add($"widgets[{i}].type must be one of: kpi, bar, line, pie, table, progress-table, " +
+                               $"trend-matrix, status-bar (got \"{w.Type}\").");
                 if (string.IsNullOrWhiteSpace(w.Title))
                     errors.Add($"widgets[{i}].title is required.");
-                if (w.Data.ValueKind != JsonValueKind.Array)
-                    errors.Add($"widgets[{i}].data must be a JSON array.");
+                // status-bar's data is a single object, not an array (see BuildSystemPrompt).
+                // A widget carrying "comparison" instead puts its real data inside left/right
+                // and is told to leave the top-level "data" empty or absent entirely.
+                var hasComparison = w.Comparison is { ValueKind: JsonValueKind.Object };
+                if (!hasComparison)
+                {
+                    var expectedKind = string.Equals(w.Type, "status-bar", StringComparison.OrdinalIgnoreCase)
+                        ? JsonValueKind.Object : JsonValueKind.Array;
+                    if (w.Data.ValueKind != expectedKind)
+                        errors.Add(expectedKind == JsonValueKind.Object
+                            ? $"widgets[{i}].data must be a single JSON object for type \"status-bar\"."
+                            : $"widgets[{i}].data must be a JSON array.");
+                }
                 if (string.IsNullOrWhiteSpace(w.Source))
                     errors.Add($"widgets[{i}].source is required: two sentences — where the data came " +
                                "from, then how it was calculated.");
@@ -180,6 +198,16 @@ public class DashboardWidget
     /// </summary>
     [JsonPropertyName("query")]
     public WidgetSqlQuery? Query { get; set; }
+
+    /// <summary>
+    /// "تخطيط المقارنة" (see BuildSystemPrompt) — a display option any widget type can carry
+    /// instead of a direct <see cref="Data"/> array: { "left": {...}, "right": {...} }, each
+    /// side shaped like whatever <see cref="Type"/> normally needs. Kept as a raw JsonElement
+    /// (like <see cref="Data"/> itself) rather than a typed model, since its shape varies with
+    /// Type; the frontend (buildWidget/ComparisonCard) is what actually interprets it.
+    /// </summary>
+    [JsonPropertyName("comparison")]
+    public JsonElement? Comparison { get; set; }
 }
 
 /// <summary>See <see cref="DashboardWidget.Query"/>.</summary>
