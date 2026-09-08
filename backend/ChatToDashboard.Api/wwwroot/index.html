@@ -3944,8 +3944,22 @@ async function setFilePermGranted(userIds) {
 }
 
 initUserSearchPicker(el('file-perm-search'), el('file-perm-suggestions'), async picked => {
+  el('file-perm-error').classList.add('hidden');
   const fileId = el('file-perm-modal-id').value;
-  const current = await (await fetch(`/api/repository/files/${fileId}/permissions`)).json();
+  const res = await fetch(`/api/repository/files/${fileId}/permissions`);
+  if (!res.ok) {
+    // A 404 here means the file itself is gone (deleted, or replaced by a data update that
+    // gave it a new id) while this modal was still open with the old id — silently crashing
+    // on it (the previous behavior: the suggestion box just closes with no explanation) left
+    // no way to tell. Refresh the list so the stale row disappears too.
+    el('file-perm-error').textContent = res.status === 404
+      ? 'تعذّر العثور على هذا الملف — يبدو أنه حُذف أو تحدّث. أعد فتح صلاحياته من قائمة الملفات.'
+      : 'تعذّر تحميل صلاحيات الملف الحالية.';
+    el('file-perm-error').classList.remove('hidden');
+    if (res.status === 404) await loadFiles();
+    return;
+  }
+  const current = await res.json();
   const ids = current.granted.map(g => g.userId);
   if (!ids.includes(picked.id)) ids.push(picked.id);
   el('file-perm-search').value = '';

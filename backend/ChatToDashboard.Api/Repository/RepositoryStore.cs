@@ -322,13 +322,19 @@ public class RepositoryStore
     }
 
     /// <summary>Just the creator id — for an authorization check (Owner-or-Admin) that
-    /// doesn't need the full joined ListAsync row.</summary>
+    /// doesn't need the full joined ListAsync row. COALESCEd to "" (matching SelectColumns
+    /// above) rather than a raw SELECT: a file uploaded before creator-tracking existed has
+    /// CreatedByUserId = NULL in the database, and ExecuteScalarAsync returns C# null both
+    /// for "row has a NULL value" and "no row matched at all" — without the COALESCE those
+    /// two cases were indistinguishable, so callers (GetPermissions/SetPermissions) treated
+    /// a perfectly real, listed file as 404 "not found" the moment anyone tried to manage its
+    /// permissions, with no such file actually missing.</summary>
     public async Task<string?> GetCreatedByUserIdAsync(string fileId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<string?>(
-            $"SELECT CreatedByUserId FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
+            $"SELECT COALESCE(CreatedByUserId, '') FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
     }
 
     public async Task<List<string>> GetPermittedUserIdsAsync(string fileId, CancellationToken ct = default)
