@@ -200,7 +200,8 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
  * layout every dashboard renders through, regardless of what question produced it. */
 #summary{margin-bottom:16px;padding:14px 17px;background:var(--surface);
   border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow);line-height:1.75}
-#dashboard-sources{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-6px 0 14px}
+#dashboard-top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:-6px 0 14px}
+#dashboard-sources,#dashboard-status-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 #dashboard-sources .ds-label{font-size:12px;color:var(--muted);font-weight:600}
 #dashboard-sources .ds-chip{display:inline-flex;align-items:center;padding:3px 10px;
   border-radius:999px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
@@ -539,7 +540,6 @@ tr:last-child td{border-bottom:0}
 .hist-card .actions button.activate-btn{border:1px solid var(--accent);background:transparent;color:var(--accent)}
 .hist-card .actions button.roles-btn{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2)}
 
-#dashboard-status-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 12px}
 #dashboard-status-bar .manage-roles-btn{border:1px solid var(--grid);background:var(--surface);
   color:var(--ink-2);padding:4px 12px;border-radius:8px;font-size:12px;cursor:pointer}
 .dashboard-disabled-banner{display:flex;align-items:center;gap:8px;padding:12px 14px;
@@ -2699,9 +2699,7 @@ function renderDashboard() {
     return;
   }
 
-  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>`
-    + dashboardSourcesHtml(d.widgets)
-    + (state.dashboardIsActive ? dashboardStatusBarHtml() : '');
+  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>` + dashboardTopBarHtml(d.widgets);
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
   if (d.filters?.length) el.dash.appendChild(state.shareId ? buildFilterBarReadOnly(d.filters) : buildFilterBar(d.filters));
@@ -3015,27 +3013,36 @@ function computeDashboardSources(widgets) {
 function dashboardSourcesHtml(widgets) {
   const labels = computeDashboardSources(widgets);
   if (!labels.length) return '';
-  return `<div id="dashboard-sources">
-      <span class="ds-label">🗄️ مصادر البيانات:</span>
-      ${labels.map(l => `<span class="ds-chip">${esc(l)}</span>`).join('')}
-    </div>`;
+  return `<span class="ds-label">🗄️ مصادر البيانات:</span>
+    ${labels.map(l => `<span class="ds-chip">${esc(l)}</span>`).join('')}`;
 }
 
 // ---------- Part 2: Active-dashboard status bar (state badge, role badge, manage-roles) ----------
 const ROLE_LABELS = { owner: 'مالك', editor: 'محرر', viewer: 'مشاهد' };
-function dashboardStatusBarHtml() {
+function dashboardStatusBadgesHtml() {
   const roleBadge = state.dashboardRole
     ? `<span class="role-badge${state.dashboardRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[state.dashboardRole] || state.dashboardRole}</span>`
     : '';
   const manageBtn = state.dashboardRole === 'owner'
     ? `<button type="button" class="manage-roles-btn" data-id="${esc(state.currentHistoryId || '')}">⚙️ إدارة الصلاحيات</button>` : '';
-  const bar = `<div id="dashboard-status-bar">
-      <span class="state-badge active">نشطة</span>${roleBadge}${manageBtn}
-    </div>`;
-  const banner = state.dashboardDisabled
+  return `<span class="state-badge active">نشطة</span>${roleBadge}${manageBtn}`;
+}
+function dashboardDisabledBannerHtml() {
+  return state.dashboardDisabled
     ? `<div class="dashboard-disabled-banner">⚠️ ${esc(state.dashboardDisabledReason || 'هذه اللوحة معطّلة حاليًا.')}</div>`
     : '';
-  return bar + banner;
+}
+
+// Data sources on one side, the Active-dashboard state/role/manage-roles badges on the
+// other — one row, opposite ends — rather than two separate stacked rows.
+function dashboardTopBarHtml(widgets) {
+  const sources = dashboardSourcesHtml(widgets);
+  const status = state.dashboardIsActive ? dashboardStatusBadgesHtml() : '';
+  if (!sources && !status) return '';
+  return `<div id="dashboard-top-bar">
+      <div id="dashboard-sources">${sources}</div>
+      <div id="dashboard-status-bar">${status}</div>
+    </div>` + dashboardDisabledBannerHtml();
 }
 // Delegated (not re-bound every render, since #dashboard-status-bar's own HTML is replaced
 // wholesale by renderDashboard() each time) — #dash is the stable ancestor. (el.dash isn't
