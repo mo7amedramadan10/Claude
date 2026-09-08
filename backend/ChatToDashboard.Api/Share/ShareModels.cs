@@ -64,4 +64,11 @@ public class CreateShareRequest
     /// so the server never needs to know which the creator chose.</summary>
     [JsonPropertyName("expiresAt")]
     public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>The Active dashboard this snapshot is taken from — required so the server can
+    /// verify it really is Active (a Draft has no Owner, so a share link off one would be an
+    /// orphaned, unmanageable copy of someone's private work-in-progress). See
+    /// ShareController.Create.</summary>
+    [JsonPropertyName("historyId")]
+    public string? HistoryId { get; set; }
 }

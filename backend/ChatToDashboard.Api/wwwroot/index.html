@@ -605,6 +605,10 @@ tr:last-child td{border-bottom:0}
   background:var(--surface);color:var(--ink-2);font-size:12.5px}
 .dash-toolbar button:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .dash-toolbar button:disabled{opacity:.55;cursor:progress}
+/* Filled/accent rather than the toolbar's usual outline — this is the one action that
+   unlocks مشاركة right next to it, so it should read as the recommended next step. */
+#btn-activate{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+#btn-activate:hover{background:var(--accent);color:#fff}
 
 /* Printing (تصدير PDF): only the dashboard content, nothing else. */
 @media print{
@@ -853,6 +857,7 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="btn-refresh" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">🔄 تحديث</button>
       <button type="button" id="btn-undo" title="تراجع" disabled>↶ تراجع</button>
       <button type="button" id="btn-redo" title="إعادة" disabled>↷ إعادة</button>
+      <button type="button" id="btn-activate" class="hidden" title="حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين">✅ تفعيل اللوحة</button>
       <button type="button" id="btn-share">🔗 مشاركة</button>
       <button type="button" id="btn-export-pdf">🖨️ تصدير PDF</button>
       <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
@@ -2668,6 +2673,18 @@ function renderDashboard() {
   el('btn-redo').classList.toggle('hidden', !editable);
   // A share is a frozen snapshot (Part 3) — there is nothing for "🔄 تحديث" to re-fetch.
   el('btn-refresh').classList.toggle('hidden', !!state.shareId);
+  // A Draft has no Owner and can't be shared (see btn-share below) — offer to activate it
+  // right here instead of sending the user to "السجل" to do it. Once Active, this hides and
+  // مشاركة unlocks.
+  const canActivate = editable && !state.shareId && !!state.currentHistoryId && !state.dashboardIsActive;
+  el('btn-activate').classList.toggle('hidden', !canActivate);
+  // Sharing publishes a frozen snapshot independent of the Active-dashboard Owner/Editor/
+  // Viewer model (Part 3) — but a Draft has no Owner and no one else can even see it, so a
+  // share link made from one would be an orphaned, unmanageable copy of someone's private
+  // work-in-progress. Require activation first (also enforced server-side, see
+  // ShareController.Create).
+  el('btn-share').disabled = !state.dashboardIsActive;
+  el('btn-share').title = state.dashboardIsActive ? '' : 'فعّل اللوحة أولاً قبل مشاركتها — زر «✅ تفعيل اللوحة» بجانبه.';
   if (!editable) state.editMode = false;
   updateUndoRedoButtons();
 
@@ -4394,10 +4411,23 @@ async function activateHistoryEntry(id) {
     const idx = state.history.findIndex(h => h.id === id);
     if (idx !== -1) state.history[idx] = payload; else state.history.unshift(payload);
     renderHistory();
+    // If this is the dashboard currently on screen (e.g. activated via the toolbar's
+    // ✅ تفعيل اللوحة button, not just from السجل), reflect its new Active state there too
+    // — unlocks مشاركة and hides the activate button — rather than requiring a reopen.
+    if (state.currentHistoryId === id) {
+      state.dashboardIsActive = true;
+      state.dashboardRole = payload.myRole || 'owner';
+      state.dashboardDisabled = !!payload.disabled;
+      state.dashboardDisabledReason = payload.disabledReason || '';
+      renderDashboard();
+    }
   } catch {
     alert('تعذّر الوصول إلى الخادم.');
   }
 }
+el('btn-activate').addEventListener('click', () => {
+  if (state.currentHistoryId) activateHistoryEntry(state.currentHistoryId);
+});
 
 function parseWidgets(json) {
   try { const w = JSON.parse(json); return Array.isArray(w) ? w : []; } catch { return []; }
@@ -4715,6 +4745,10 @@ el('attached-image-remove').addEventListener('click', () => {
 function openShareModal() {
   const d = state.dashboard;
   if (!d?.widgets?.length) return;
+  // The button is disabled for a Draft (see renderDashboard), but guard here too in case
+  // this is ever reached another way — a Draft has no Owner, so a link made from it would
+  // be an unmanageable orphan (also enforced server-side, see ShareController.Create).
+  if (!state.dashboardIsActive) { alert('يجب تفعيل اللوحة أولاً قبل مشاركتها.'); return; }
   el('share-compose').classList.remove('hidden');
   el('share-link-box').classList.add('hidden');
   el('share-expiry').value = '24';
@@ -4755,10 +4789,10 @@ el('share-create-confirm').addEventListener('click', async () => {
       body: JSON.stringify({
         question: lastQuestion, summary: d.summary, widgets: d.widgets,
         filters: d.filters || [], activeFilters: state.activeFilters || {},
-        expiresAt: resolveShareExpiresAt(),
+        expiresAt: resolveShareExpiresAt(), historyId: state.currentHistoryId,
       }),
     });
-    if (!res.ok) throw new Error(`فشل إنشاء الرابط (${res.status})`);
+    if (!res.ok) { const p = await res.json().catch(() => null); throw new Error(p?.error || `فشل إنشاء الرابط (${res.status})`); }
     const saved = await res.json();
     el('share-link').value = `${location.origin}/?share=${saved.id}`;
     el('share-compose').classList.add('hidden');

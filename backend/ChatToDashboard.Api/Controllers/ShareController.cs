@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Share;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -20,11 +21,13 @@ public class ShareController : ControllerBase
 {
     private readonly ShareStore _store;
     private readonly UserStore _users;
+    private readonly HistoryStore _history;
 
-    public ShareController(ShareStore store, UserStore users)
+    public ShareController(ShareStore store, UserStore users, HistoryStore history)
     {
         _store = store;
         _users = users;
+        _history = history;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -34,6 +37,16 @@ public class ShareController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Question))
             return BadRequest(new { error = "question is required." });
+
+        // A Draft has no Owner and is visible only to its creator — a share link off one
+        // would be an orphaned, unmanageable copy of someone's private work-in-progress.
+        // Only a dashboard that's been promoted to Active (see HistoryController.Activate)
+        // may be shared.
+        if (string.IsNullOrWhiteSpace(request.HistoryId))
+            return BadRequest(new { error = "يجب تفعيل اللوحة أولاً قبل مشاركتها." });
+        var dashboard = await _history.GetByIdAsync(request.HistoryId, ct);
+        if (dashboard is null || !dashboard.IsActive)
+            return BadRequest(new { error = "يجب تفعيل اللوحة أولاً قبل مشاركتها." });
 
         var entry = new SharedDashboard
         {
