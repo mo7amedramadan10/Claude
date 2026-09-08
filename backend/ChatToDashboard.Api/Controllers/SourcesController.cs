@@ -73,6 +73,32 @@ public class SourcesController : ControllerBase
                 };
             }),
             categories,
+            tableLabels = await BuildTableLabelsAsync(allowed, ct),
         });
+    }
+
+    /// <summary>
+    /// Staging-table name -> a friendly Arabic label ("اسم النظام" for a system-backed table,
+    /// "اسم الملف (تصنيف الملف)" for a file-repository one) — lets the dashboard header show
+    /// which real-world sources a set of widgets depends on (see index.html's
+    /// computeDashboardSources) without the frontend ever needing to know a raw table name.
+    /// Filtered to the same categories the rest of this response already allows, for the same
+    /// reason: a category the user has no access to shouldn't even be named to them.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, string>> BuildTableLabelsAsync(SourceSelection allowed, CancellationToken ct)
+    {
+        var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var system in _options.Systems)
+        {
+            var table = system.HasApi ? _systems.TableFor(system) : null;
+            if (table is not null) labels[table] = system.Name;
+        }
+        var files = await _store.ListAsync(ct);
+        foreach (var f in files)
+        {
+            if (string.IsNullOrWhiteSpace(f.TableName) || !allowed.AllowsCategory(f.Category)) continue;
+            labels[f.TableName!] = $"{f.DisplayName} (تصنيف {f.Category})";
+        }
+        return labels;
     }
 }

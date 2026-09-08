@@ -200,6 +200,10 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
  * layout every dashboard renders through, regardless of what question produced it. */
 #summary{margin-bottom:16px;padding:14px 17px;background:var(--surface);
   border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow);line-height:1.75}
+#dashboard-sources{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-6px 0 14px}
+#dashboard-sources .ds-label{font-size:12px;color:var(--muted);font-weight:600}
+#dashboard-sources .ds-chip{display:inline-flex;align-items:center;padding:3px 10px;
+  border-radius:999px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-content:start}
 .widget{position:relative;background:var(--surface);border:1px solid var(--grid);
   border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
@@ -1263,7 +1267,7 @@ tr:last-child td{border-bottom:0}
 const el = id => document.getElementById(id);
 const state = {
   messages: [], dashboard: null, loading: false,
-  systems: [], categories: [],            // available, from /api/sources
+  systems: [], categories: [], tableLabels: {}, // available, from /api/sources
   onSystems: new Set(), onCategories: new Set(), // enabled
   files: [], pending: [], filter: 'الكل',
   history: [], historyLoaded: false,
@@ -2695,7 +2699,9 @@ function renderDashboard() {
     return;
   }
 
-  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>` + (state.dashboardIsActive ? dashboardStatusBarHtml() : '');
+  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>`
+    + dashboardSourcesHtml(d.widgets)
+    + (state.dashboardIsActive ? dashboardStatusBarHtml() : '');
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
   if (d.filters?.length) el.dash.appendChild(state.shareId ? buildFilterBarReadOnly(d.filters) : buildFilterBar(d.filters));
@@ -2987,6 +2993,32 @@ function buildAddWidgetButton() {
   btn.type = 'button'; btn.className = 'add-widget-btn'; btn.textContent = '+ إضافة عنصر';
   btn.addEventListener('click', openWizard);
   return btn;
+}
+
+// ---------- data-source badges (shown at the top of any dashboard, Draft or Active) ----------
+// Every widget built from a single query_data call carries query.table (see AnalyticsTools'
+// system prompt) — the same structured lineage the dashboard-filter/refresh features already
+// rely on. A widget with none (built from several aggregated calls, list_files/
+// search_documents alone, or a forecast) simply isn't counted, same limitation those
+// features already have and surface as "غير متأثر بالفلتر".
+function computeDashboardSources(widgets) {
+  const tables = new Set();
+  const collect = w => {
+    if (w.comparison) { collect(w.comparison.left || {}); collect(w.comparison.right || {}); return; }
+    if (w.query?.table) tables.add(w.query.table);
+  };
+  (widgets || []).forEach(collect);
+  return [...tables]
+    .map(t => state.tableLabels[t] || t)
+    .sort((a, b) => a.localeCompare(b, 'ar'));
+}
+function dashboardSourcesHtml(widgets) {
+  const labels = computeDashboardSources(widgets);
+  if (!labels.length) return '';
+  return `<div id="dashboard-sources">
+      <span class="ds-label">🗄️ مصادر البيانات:</span>
+      ${labels.map(l => `<span class="ds-chip">${esc(l)}</span>`).join('')}
+    </div>`;
 }
 
 // ---------- Part 2: Active-dashboard status bar (state badge, role badge, manage-roles) ----------
@@ -3527,6 +3559,7 @@ async function loadSources() {
 
   state.systems = data.systems || [];
   state.categories = data.categories || [];
+  state.tableLabels = data.tableLabels || {};
 
   // Newly appearing sources start enabled; the user's explicit choices are preserved.
   state.systems.forEach(s => { if (!knownSystems.has(s.id)) state.onSystems.add(s.id); });
