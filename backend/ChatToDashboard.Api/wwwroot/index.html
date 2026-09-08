@@ -125,7 +125,7 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .model-switch-option.disabled{opacity:.5;cursor:not-allowed}
 .model-switch-ollama-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--grid)}
 .model-switch-ollama-row label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2)}
-.model-switch-ollama-row select{padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px;color:var(--ink)}
+.model-switch-ollama-row select{padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px;color:var(--ink);background:var(--surface)}
 .model-switch-note{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.5}
 .model-switch-note.bad{color:var(--danger)}
 .model-switch-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
@@ -667,7 +667,7 @@ tr:last-child td{border-bottom:0}
 .tab.hidden,.hidden{display:none}
 
 /* ---------- users admin screen ---------- */
-#screen-users{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+#screen-users,#screen-settings{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
 .users-bar{display:flex;align-items:center;gap:14px}
 .users-bar .count{color:var(--muted);font-size:13px}
 .new-btn{margin-inline-start:auto;padding:8px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
@@ -685,6 +685,27 @@ tr:last-child td{border-bottom:0}
   background:var(--surface);color:var(--ink-2);font-size:12px}
 .users-table .del-btn:hover{border-color:var(--danger);color:var(--danger)}
 .users-table .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- settings screen (system-wide AI model) ---------- */
+.settings-wrap{display:flex;flex-direction:column;gap:20px;max-width:720px}
+.settings-banner{display:flex;gap:12px;padding:14px 16px;border:1px solid var(--accent);border-radius:var(--radius);
+  background:var(--accent-soft)}
+.settings-banner-icon{font-size:20px;flex-shrink:0}
+.settings-banner-title{font-weight:700;font-size:13.5px;margin-bottom:4px}
+.settings-banner-text{font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+.settings-section{padding:16px;border:1px solid var(--grid);border-radius:var(--radius);background:var(--surface)}
+.settings-section h3{margin:0 0 12px;font-size:13.5px}
+.settings-current{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.settings-current-badge{padding:4px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.settings-current-model{color:var(--muted);font-family:var(--mono);font-size:12px}
+.settings-save-note{color:var(--accent);font-size:12.5px;font-weight:600;margin-inline-end:auto}
+.settings-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.settings-info-card{padding:12px 14px;border:1px solid var(--grid);border-radius:10px;background:var(--plane)}
+.settings-info-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.settings-info-title{font-weight:600;font-size:12.5px}
+.settings-info-badge{font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.18);color:var(--muted);white-space:nowrap}
+.settings-info-badge.ok{background:var(--accent-soft);color:var(--accent)}
+.settings-info-card p{margin:0;font-size:12px;line-height:1.6;color:var(--ink-2)}
 
 /* ---------- role-info modal (explains Owner/Editor/Viewer to a non-technical user) ---------- */
 .role-info-box{width:min(520px,100%);max-height:86vh;overflow-y:auto}
@@ -745,6 +766,7 @@ tr:last-child td{border-bottom:0}
     <button class="tab" data-screen="active">اللوحات النشطة <span class="badge" id="active-badge">0</span></button>
     <button class="tab" data-screen="sharelinks">روابط المشاركة <span class="badge" id="sharelinks-badge">0</span></button>
     <button class="tab hidden" id="tab-users" data-screen="users">المستخدمون</button>
+    <button class="tab hidden" id="tab-settings" data-screen="settings">الإعدادات</button>
     <a class="tab hidden" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
   </nav>
 
@@ -1016,6 +1038,72 @@ tr:last-child td{border-bottom:0}
       </tr></thead>
       <tbody id="users-tbody"></tbody>
     </table>
+  </div>
+</div>
+
+<div id="screen-settings" class="screen">
+  <div class="settings-wrap">
+    <div class="settings-banner">
+      <span class="settings-banner-icon">🌐</span>
+      <div>
+        <div class="settings-banner-title">إعداد على مستوى النظام بالكامل</div>
+        <div class="settings-banner-text">الموديل المختار هنا هو نفسه اللي بيجاوب على أسئلة كل المستخدمين في النظام — مش إعداد شخصي لكل مستخدم على حدة، وأي تغيير يسري فورًا على أول سؤال جديد بعد الحفظ.</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>الموديل المستخدم حاليًا</h3>
+      <div id="settings-current" class="settings-current">جارٍ التحميل…</div>
+    </div>
+
+    <div class="settings-section">
+      <h3>تغيير الموديل</h3>
+      <div id="settings-providers" class="model-switch-providers"></div>
+      <div id="settings-ollama-row" class="model-switch-ollama-row hidden">
+        <label>الموديل الداخلي (Ollama)
+          <select id="settings-ollama-select"></select>
+        </label>
+        <div id="settings-ollama-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-openai-row" class="model-switch-ollama-row hidden">
+        <label>موديل OpenAI
+          <select id="settings-openai-select"></select>
+        </label>
+        <div id="settings-openai-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-error" class="model-switch-note bad hidden"></div>
+      <div class="model-switch-actions">
+        <span id="settings-save-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+        <button type="button" id="settings-save">حفظ التغييرات</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>معلومات عن الموديلات المتاحة</h3>
+      <div class="settings-info-grid">
+        <div class="settings-info-card" data-provider="Anthropic">
+          <div class="settings-info-head">
+            <span class="settings-info-title">Claude (Anthropic)</span>
+            <span class="settings-info-badge">…</span>
+          </div>
+          <p>مناسب للتحليل الدقيق والأسئلة المركّبة اللي تحتاج فهم وربط بين أكثر من مصدر بيانات في نفس الوقت.</p>
+        </div>
+        <div class="settings-info-card" data-provider="OpenAI">
+          <div class="settings-info-head">
+            <span class="settings-info-title">GPT (OpenAI)</span>
+            <span class="settings-info-badge">…</span>
+          </div>
+          <p>بديل سريع وقوي، مع إمكانية اختيار موديل محدد من قائمة الموديلات المتاحة في الإعدادات.</p>
+        </div>
+        <div class="settings-info-card" data-provider="Ollama">
+          <div class="settings-info-head">
+            <span class="settings-info-title">الموديل الداخلي (Ollama)</span>
+            <span class="settings-info-badge">…</span>
+          </div>
+          <p>يعمل على خوادم المؤسسة نفسها دون إرسال أي بيانات لجهة خارجية — الخيار الأنسب للبيانات الحساسة، مع إمكانية اختيار حجم الموديل.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -4468,6 +4556,7 @@ function showScreen(name) {
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
   if (name === 'sharelinks') loadShareList();
   if (name === 'users') loadUsers();
+  if (name === 'settings') loadSettingsPage();
 }
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
@@ -4791,6 +4880,7 @@ function renderCurrentUser() {
   if (!u) return;
   el('current-user-name').textContent = `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
   el('tab-users').classList.toggle('hidden', u.role !== 'Admin');
+  el('tab-settings').classList.toggle('hidden', u.role !== 'Admin');
   el('usage-link').classList.toggle('hidden', u.role !== 'Admin');
   el('model-switch').classList.toggle('hidden', u.role !== 'Admin');
 }
@@ -4905,6 +4995,124 @@ el('model-switch-save').addEventListener('click', async () => {
   } catch (err) {
     el('model-switch-error').textContent = err.message;
     el('model-switch-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ---------- settings page (admin only) — same system-wide GET/PUT /api/llm-settings as
+// the header model switcher above, just laid out as a full page with descriptive info
+// per provider instead of a quick popover; both read/write the exact same setting.
+const SETTINGS_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-ollama-row', selectId: 'settings-ollama-select', noteId: 'settings-ollama-note', activeKey: 'activeOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-openai-row', selectId: 'settings-openai-select', noteId: 'settings-openai-note', activeKey: 'activeOpenAiModel', bodyKey: 'openAiModel' },
+};
+state.settingsModelChoices = {};
+
+async function loadSettingsPage() {
+  el('settings-current').textContent = 'جارٍ التحميل…';
+  try {
+    const res = await fetch('/api/llm-settings');
+    if (!res.ok) throw new Error();
+    state.llmSettings = await res.json();
+    renderSettingsCurrent();
+    renderSettingsProviders();
+    renderSettingsInfoBadges();
+  } catch {
+    el('settings-current').textContent = 'تعذّر تحميل إعدادات الموديل.';
+    el('settings-providers').innerHTML = '';
+  }
+}
+
+function renderSettingsCurrent() {
+  const s = state.llmSettings;
+  const modelName = s.activeProvider === 'Ollama' ? s.activeOllamaModel : s.activeProvider === 'OpenAI' ? s.activeOpenAiModel : '';
+  el('settings-current').innerHTML = `<span class="settings-current-badge">${esc(PROVIDER_LABELS[s.activeProvider] || s.activeProvider)}</span>` +
+    (modelName ? `<span class="settings-current-model">${esc(modelName)}</span>` : '');
+}
+
+function renderSettingsProviders() {
+  const s = state.llmSettings;
+  el('settings-providers').innerHTML = s.providers.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-provider" value="${esc(p.id)}"
+        ${p.id === s.activeProvider ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      <span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>
+    </label>`).join('');
+  el('settings-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleSettingsModelRow(inp.value)));
+  toggleSettingsModelRow(s.activeProvider);
+}
+
+function toggleSettingsModelRow(provider) {
+  for (const [id, picker] of Object.entries(SETTINGS_MODEL_PICKERS)) {
+    const isActive = provider === id;
+    el(picker.rowId).classList.toggle('hidden', !isActive);
+    if (isActive && !state.settingsModelChoices[id]) loadSettingsModelChoices(id);
+  }
+}
+
+async function loadSettingsModelChoices(providerId) {
+  const picker = SETTINGS_MODEL_PICKERS[providerId];
+  const select = el(picker.selectId);
+  select.innerHTML = '<option>جارٍ التحميل…</option>';
+  try {
+    const res = await fetch(`/api/llm-settings/${picker.endpoint}`);
+    const data = await res.json();
+    state.settingsModelChoices[providerId] = data.models || [];
+    const current = state.llmSettings?.[picker.activeKey];
+    select.innerHTML = state.settingsModelChoices[providerId].map(m =>
+      `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
+    el(picker.noteId).textContent = data.note || '';
+  } catch {
+    select.innerHTML = '';
+    el(picker.noteId).textContent = 'تعذّر تحميل قائمة الموديلات.';
+  }
+}
+
+function renderSettingsInfoBadges() {
+  const s = state.llmSettings;
+  document.querySelectorAll('.settings-info-card').forEach(card => {
+    const p = s.providers.find(x => x.id === card.dataset.provider);
+    const badge = card.querySelector('.settings-info-badge');
+    if (!p || !badge) return;
+    badge.textContent = p.configured ? 'مُعد على الخادم' : 'غير مُعد على الخادم';
+    badge.classList.toggle('ok', p.configured);
+  });
+}
+
+el('settings-save').addEventListener('click', async () => {
+  const provider = el('settings-providers').querySelector('input:checked')?.value;
+  if (!provider) return;
+  const picker = SETTINGS_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-save');
+  btn.disabled = true;
+  el('settings-error').classList.add('hidden');
+  el('settings-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    // state.llmSettings is shared with the header switcher above, so this keeps both in
+    // sync without a second round trip.
+    state.llmSettings.activeProvider = provider;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    if (!el('model-switch').classList.contains('hidden')) el('model-switch-label').textContent = PROVIDER_LABELS[provider] || provider;
+    renderSettingsCurrent();
+    el('settings-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-error').textContent = err.message;
+    el('settings-error').classList.remove('hidden');
   } finally {
     btn.disabled = false;
   }
