@@ -1764,6 +1764,16 @@ async function doAutosave() {
         }),
       });
       if (res.ok) { el('autosave-status').textContent = '✓ تم الحفظ'; return; }
+      // A rejected edit (e.g. an Editor's widget introducing a data source the dashboard
+      // didn't already use — see HistoryController.Update) is a real validation failure,
+      // not a transient error: surface the server's own reason instead of a generic
+      // "تعذّر الحفظ" every subsequent keystroke would otherwise repeat silently.
+      if (res.status === 400) {
+        const payload = await res.json().catch(() => null);
+        el('autosave-status').textContent = 'تعذّر الحفظ';
+        if (payload?.error) alert(payload.error);
+        return;
+      }
       if (res.status !== 404) throw new Error();
       state.currentHistoryId = null; // entry was deleted elsewhere — fall through and recreate
       state.dashboardIsActive = false; state.dashboardRole = null;

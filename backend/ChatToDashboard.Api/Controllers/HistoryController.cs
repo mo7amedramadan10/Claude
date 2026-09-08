@@ -103,10 +103,49 @@ public class HistoryController : ControllerBase
         if (!canEdit) return NotFound(new { error = "غير موجود" });
 
         var widgetsJson = request.Widgets.ValueKind == JsonValueKind.Undefined ? "[]" : request.Widgets.GetRawText();
+
+        // Only the Owner (or an Admin standing in for them) may change which data sources
+        // an Active dashboard depends on — its live query always executes under the
+        // Owner's own permission, so an Editor introducing a table the Owner can't access
+        // would break the dashboard for everyone the moment it re-runs. Editors stay free
+        // to add/remove/rework widgets built on tables the dashboard already uses.
+        if (entry.IsActive && role == DashboardRoles.Editor && !IsAdmin)
+        {
+            var introduced = ExtractTables(widgetsJson).Except(ExtractTables(entry.WidgetsJson), StringComparer.OrdinalIgnoreCase).ToList();
+            if (introduced.Count > 0)
+                return BadRequest(new
+                {
+                    error = $"تغيير مصادر البيانات صلاحية تخص مالك اللوحة فقط — لا يمكنك كمحرِّر إضافة عنصر يعتمد على مصدر بيانات جديد ({string.Join("، ", introduced)}).",
+                });
+        }
+
         var filtersJson = request.Filters.ValueKind == JsonValueKind.Undefined ? "[]" : request.Filters.GetRawText();
         var activeFiltersJson = request.ActiveFilters.ValueKind == JsonValueKind.Undefined ? "{}" : request.ActiveFilters.GetRawText();
         await _store.UpdateContentAsync(id, request.Summary, widgetsJson, filtersJson, activeFiltersJson, ct);
         return NoContent();
+    }
+
+    /// <summary>Distinct query.table values a widgets JSON array depends on — the data
+    /// sources a re-runnable (wizard-created) widget references. A widget with no query
+    /// (e.g. a frozen chat-answered one) contributes nothing, matching
+    /// DashboardAccessService's own table extraction.</summary>
+    private static HashSet<string> ExtractTables(string widgetsJson)
+    {
+        var tables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var widgets = JsonDocument.Parse(widgetsJson).RootElement;
+            if (widgets.ValueKind != JsonValueKind.Array) return tables;
+            foreach (var widget in widgets.EnumerateArray())
+            {
+                if (!widget.TryGetProperty("query", out var query) || query.ValueKind != JsonValueKind.Object) continue;
+                if (query.TryGetProperty("table", out var table) && table.ValueKind == JsonValueKind.String
+                    && !string.IsNullOrWhiteSpace(table.GetString()))
+                    tables.Add(table.GetString()!);
+            }
+        }
+        catch (JsonException) { }
+        return tables;
     }
 
     /// <summary>Renames a dashboard's title/description only — same permission as
