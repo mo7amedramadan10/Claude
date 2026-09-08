@@ -686,6 +686,23 @@ tr:last-child td{border-bottom:0}
 .users-table .del-btn:hover{border-color:var(--danger);color:var(--danger)}
 .users-table .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
 
+/* ---------- role-info modal (explains Owner/Editor/Viewer to a non-technical user) ---------- */
+.role-info-box{width:min(520px,100%);max-height:86vh;overflow-y:auto}
+.role-info-item{padding:12px 0;border-top:1px solid var(--grid)}
+.role-info-item:first-of-type{border-top:0}
+.role-info-item p{margin:8px 0;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+.role-info-item ul{margin:6px 0;padding-inline-start:20px;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+.role-info-item li{margin-bottom:4px}
+.role-info-head{display:flex;align-items:center;gap:8px}
+.role-info-sub{color:var(--muted);font-size:11.5px}
+
+/* ---------- rename (active dashboard title/description) modal ---------- */
+.rename-modal-box{width:min(440px,100%)}
+#rename-form{display:flex;flex-direction:column;gap:12px}
+#rename-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+#rename-form input[type="text"],#rename-form textarea{padding:9px 12px;border:1px solid var(--grid);
+  border-radius:9px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface)}
+
 /* ---------- user modal ---------- */
 .user-modal-box{width:min(480px,100%);max-height:86vh;overflow-y:auto}
 #user-form{display:flex;flex-direction:column;gap:12px}
@@ -940,8 +957,37 @@ tr:last-child td{border-bottom:0}
 <div id="screen-active" class="screen">
   <div class="repo-bar">
     <span class="count" id="active-count"></span>
+    <button type="button" class="link-btn" id="active-roles-info-btn">ⓘ ما معنى المالك والصلاحيات؟</button>
   </div>
   <div class="active-cards" id="active-list"></div>
+</div>
+
+<div id="role-info-modal" class="modal-overlay hidden">
+  <div class="modal role-info-box">
+    <h3>الأدوار على اللوحة النشطة</h3>
+    <p class="modal-note">كل لوحة نشطة عليها شخص أو أكثر بأحد ثلاثة أدوار — هذا يحدد مين يقدر يعدّل فيها ومين يقدر بس يشوفها.</p>
+    <div class="role-info-item">
+      <div class="role-info-head"><span class="role-badge">مالك</span></div>
+      <p>هو الشخص اللي فعّل اللوحة (حوّلها من مسودة إلى لوحة نشطة). بيانات اللوحة تُستخرج دائمًا تحت صلاحية وصول <b>المالك</b> على الأنظمة والمصادر — لو المالك خسر صلاحيته على مصدر بيانات معين، اللوحة تتعطّل تلقائيًا لكل من يشاهدها. المالك هو الوحيد اللي يقدر:</p>
+      <ul>
+        <li>يحذف اللوحة نهائيًا.</li>
+        <li>يضيف أو يشيل محررين ومشاهدين، ويحدد دور كل واحد منهم.</li>
+        <li>ينقل الملكية لشخص آخر (لازم يكون عنده هو نفسه صلاحية وصول صالحة على نفس البيانات).</li>
+      </ul>
+      <p>وبالطبع يملك أيضًا كل صلاحيات المحرر أدناه.</p>
+    </div>
+    <div class="role-info-item">
+      <div class="role-info-head"><span class="role-badge">محرر</span><span class="role-info-sub">صلاحية تعديل</span></div>
+      <p>يقدر يفتح اللوحة ويعدّل محتواها — يضيف أو يحذف عناصر، يغيّر نوع الرسم البياني، يستخدم الفلاتر — وأي تعديل يتحفظ تلقائيًا. لا يقدر يحذف اللوحة نفسها، ولا يدير من له صلاحية عليها، ولا ينقل الملكية.</p>
+    </div>
+    <div class="role-info-item">
+      <div class="role-info-head"><span class="role-badge role-viewer">مشاهد</span><span class="role-info-sub">صلاحية عرض</span></div>
+      <p>يقدر بس يفتح اللوحة ويشوف البيانات والرسوم البيانية كما هي، بدون أي إمكانية للتعديل.</p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="role-info-close">إغلاق</button>
+    </div>
+  </div>
 </div>
 
 <div id="screen-sharelinks" class="screen">
@@ -1042,6 +1088,22 @@ tr:last-child td{border-bottom:0}
     <div class="modal-actions">
       <button type="button" id="roles-modal-close">إغلاق</button>
     </div>
+  </div>
+</div>
+
+<div id="rename-modal" class="modal-overlay hidden">
+  <div class="modal rename-modal-box">
+    <h3>تعديل الاسم والوصف</h3>
+    <form id="rename-form">
+      <input type="hidden" id="rename-modal-id">
+      <label>الاسم<input id="rename-name" type="text" required maxlength="200"></label>
+      <label>الوصف<textarea id="rename-desc" rows="3" maxlength="500"></textarea></label>
+      <div id="rename-error" class="roles-error hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="rename-cancel">إلغاء</button>
+        <button type="submit" id="rename-save">حفظ</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -4154,6 +4216,10 @@ function renderActiveDashboardsList() {
     const roleBadge = h.myRole ? `<span class="role-badge${h.myRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[h.myRole] || h.myRole}</span>` : '';
     const disabledBadge = h.disabled ? `<span class="badge-stale" title="${esc(h.disabledReason || '')}">⚠ معطّلة</span>` : '';
     const ownerLine = h.ownerName ? `المالك: ${esc(h.ownerName)}` : '';
+    const isAdmin = state.currentUser?.role === 'Admin';
+    const canRename = h.myRole === 'owner' || h.myRole === 'editor' || isAdmin;
+    const renameBtn = canRename
+      ? `<button class="icon-btn rename-active-btn" data-rename="${esc(h.id)}" title="تعديل الاسم والوصف">✏️</button>` : '';
     const rolesBtn = h.myRole === 'owner'
       ? `<button class="icon-btn roles-btn" data-roles="${esc(h.id)}" title="إدارة الصلاحيات">⚙️</button>` : '';
     const delBtn = h.myRole === 'owner'
@@ -4170,7 +4236,7 @@ function renderActiveDashboardsList() {
           </div>
           <div class="actions">
             <button class="open-btn" data-open="${esc(h.id)}">↗️ فتح</button>
-            ${rolesBtn}${delBtn}
+            ${renameBtn}${rolesBtn}${delBtn}
           </div>
         </div>
       </div>`;
@@ -4178,6 +4244,8 @@ function renderActiveDashboardsList() {
 
   el('active-list').querySelectorAll('[data-open]').forEach(btn =>
     btn.addEventListener('click', () => openHistoryEntry(btn.dataset.open)));
+  el('active-list').querySelectorAll('[data-rename]').forEach(btn =>
+    btn.addEventListener('click', () => openRenameModal(btn.dataset.rename)));
   el('active-list').querySelectorAll('[data-roles]').forEach(btn =>
     btn.addEventListener('click', () => openRolesModal(btn.dataset.roles)));
   el('active-list').querySelectorAll('.del-active-btn').forEach(btn =>
@@ -4340,6 +4408,48 @@ el('transfer-owner-btn').addEventListener('click', async () => {
 });
 
 el('roles-modal-close').addEventListener('click', () => el('roles-modal').classList.add('hidden'));
+
+// ---------- rename (active dashboard title/description) ----------
+function renameModalError(message) {
+  const box = el('rename-error');
+  box.textContent = message || '';
+  box.classList.toggle('hidden', !message);
+}
+
+function openRenameModal(id) {
+  const entry = state.history.find(h => h.id === id);
+  if (!entry) return;
+  renameModalError('');
+  el('rename-modal-id').value = id;
+  el('rename-name').value = entry.question || '';
+  el('rename-desc').value = entry.summary || '';
+  el('rename-modal').classList.remove('hidden');
+  el('rename-name').focus();
+}
+
+el('rename-cancel').addEventListener('click', () => el('rename-modal').classList.add('hidden'));
+
+el('rename-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  renameModalError('');
+  const id = el('rename-modal-id').value;
+  const question = el('rename-name').value.trim();
+  const summary = el('rename-desc').value.trim();
+  if (!question) { renameModalError('الاسم مطلوب.'); return; }
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/rename`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, summary }),
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) { renameModalError(payload?.error || 'تعذّر الحفظ.'); return; }
+  const idx = state.history.findIndex(h => h.id === id);
+  if (idx !== -1) state.history[idx] = payload;
+  if (state.currentHistoryId === id) state.dashboard.summary = payload.summary;
+  el('rename-modal').classList.add('hidden');
+  renderHistory();
+});
+
+el('active-roles-info-btn').addEventListener('click', () => el('role-info-modal').classList.remove('hidden'));
+el('role-info-close').addEventListener('click', () => el('role-info-modal').classList.add('hidden'));
 
 el('history-clear').addEventListener('click', async () => {
   if (!state.history.length || !confirm('مسح كل السجل؟ لا يمكن التراجع عن هذا.')) return;

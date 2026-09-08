@@ -104,6 +104,17 @@ public class SaveHistoryRequest
     public JsonElement ActiveFilters { get; set; }
 }
 
+/// <summary>Body of PUT /api/history/{id}/rename — renames the title/description only,
+/// leaving widgets/filters untouched (unlike the full-content autosave below).</summary>
+public class RenameHistoryRequest
+{
+    [JsonPropertyName("question")]
+    public string Question { get; set; } = "";
+
+    [JsonPropertyName("summary")]
+    public string Summary { get; set; } = "";
+}
+
 /// <summary>Body of PUT /api/history/{id} — dashboard-editor autosave.</summary>
 public class UpdateHistoryRequest
 {

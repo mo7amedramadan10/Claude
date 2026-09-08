@@ -109,6 +109,30 @@ public class HistoryController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Renames a dashboard's title/description only — same permission as
+    /// <see cref="Update"/> (a Draft's creator; an Active dashboard's Owner/Editor/Admin) but
+    /// never touches widgets/filters, so it's safe to call from a plain rename UI without
+    /// re-sending the whole dashboard content.</summary>
+    [HttpPut("{id}/rename")]
+    public async Task<IActionResult> Rename(string id, [FromBody] RenameHistoryRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Question))
+            return BadRequest(new { error = "الاسم مطلوب." });
+
+        var entry = await _store.GetByIdAsync(id, ct);
+        if (entry is null) return NotFound(new { error = "غير موجود" });
+
+        var role = await ResolveRoleAsync(entry, ct);
+        var canEdit = entry.IsActive
+            ? role is "owner" or DashboardRoles.Editor || IsAdmin
+            : entry.UserId == UserId;
+        if (!canEdit) return NotFound(new { error = "غير موجود" });
+
+        await _store.RenameAsync(id, request.Question, request.Summary, ct);
+        var updated = await _store.GetByIdAsync(id, ct);
+        return Ok(await EnrichAsync(updated!, ct, role));
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {

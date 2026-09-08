@@ -210,6 +210,18 @@ public class HistoryStore
             new { id, summary, widgetsJson, filtersJson, activeFiltersJson });
     }
 
+    /// <summary>Renames a dashboard's title and description — a lightweight edit distinct from
+    /// <see cref="UpdateContentAsync"/>'s full content autosave, so it never touches
+    /// widgets/filters. Permission is checked by the caller (see HistoryController.Rename).</summary>
+    public async Task RenameAsync(string id, string question, string summary, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {Table} SET Question = @question, Summary = @summary, QueryDescription = @summary WHERE Id = @id",
+            new { id, question, summary });
+    }
+
     /// <summary>Deletes one entry — only if it belongs to <paramref name="userId"/>.</summary>
     public async Task<bool> DeleteAsync(string userId, string id, CancellationToken ct = default)
     {
