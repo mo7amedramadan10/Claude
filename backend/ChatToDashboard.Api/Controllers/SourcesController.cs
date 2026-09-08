@@ -43,8 +43,10 @@ public class SourcesController : ControllerBase
 
     /// <summary>
     /// The source list the header dropdown is built from. Filtered to what the signed-in
-    /// user is actually permitted to see (admins see everything) — so a system or
-    /// category someone has no access to doesn't even appear as an option.
+    /// user is actually permitted to see (admins see everything) — so a system or file
+    /// someone has no access to doesn't even appear as an option. Each repository file is
+    /// its own independent source here, at the same level as a system — not grouped by
+    /// category.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
@@ -53,7 +55,10 @@ public class SourcesController : ControllerBase
         if (user is null) return Unauthorized();
         var allowed = PermissionsService.GetEffectiveSelection(user, null);
 
-        var categories = (await _store.ListCategoriesAsync(ct)).Where(allowed.AllowsCategory).ToList();
+        var repoFiles = await _store.ListAsync(ct);
+        var files = repoFiles.Where(f => allowed.AllowsFile(f.Id))
+            .Select(f => new { id = f.Id, name = f.DisplayName, category = f.Category })
+            .ToList();
         return Ok(new
         {
             systems = _options.Systems.Where(s => allowed.AllowsSystem(s.Id)).Select(s =>
@@ -72,8 +77,8 @@ public class SourcesController : ControllerBase
                     refreshing = status.Refreshing,
                 };
             }),
-            categories,
-            tableLabels = await BuildTableLabelsAsync(allowed, ct),
+            files,
+            tableLabels = BuildTableLabels(repoFiles, allowed),
         });
     }
 
@@ -82,10 +87,11 @@ public class SourcesController : ControllerBase
     /// "اسم الملف (تصنيف الملف)" for a file-repository one) — lets the dashboard header show
     /// which real-world sources a set of widgets depends on (see index.html's
     /// computeDashboardSources) without the frontend ever needing to know a raw table name.
-    /// Filtered to the same categories the rest of this response already allows, for the same
-    /// reason: a category the user has no access to shouldn't even be named to them.
+    /// Filtered to the same files the rest of this response already allows, for the same
+    /// reason: a file the user has no access to shouldn't even be named to them.
     /// </summary>
-    private async Task<IReadOnlyDictionary<string, string>> BuildTableLabelsAsync(SourceSelection allowed, CancellationToken ct)
+    private IReadOnlyDictionary<string, string> BuildTableLabels(
+        IReadOnlyList<RepositoryFile> repoFiles, SourceSelection allowed)
     {
         var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var system in _options.Systems)
@@ -93,10 +99,9 @@ public class SourcesController : ControllerBase
             var table = system.HasApi ? _systems.TableFor(system) : null;
             if (table is not null) labels[table] = system.Name;
         }
-        var files = await _store.ListAsync(ct);
-        foreach (var f in files)
+        foreach (var f in repoFiles)
         {
-            if (string.IsNullOrWhiteSpace(f.TableName) || !allowed.AllowsCategory(f.Category)) continue;
+            if (string.IsNullOrWhiteSpace(f.TableName) || !allowed.AllowsFile(f.Id)) continue;
             labels[f.TableName!] = $"{f.DisplayName} (تصنيف {f.Category})";
         }
         return labels;

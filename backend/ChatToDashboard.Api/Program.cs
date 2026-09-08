@@ -153,7 +153,7 @@ using (var scope = app.Services.CreateScope())
                 PasswordHash = PasswordHasher.Hash(seedPassword!),
                 IsActive = true,
                 AllowAllSystems = true,
-                AllowAllCategories = true,
+                AllowAllFiles = true,
             });
 
             if (generated)

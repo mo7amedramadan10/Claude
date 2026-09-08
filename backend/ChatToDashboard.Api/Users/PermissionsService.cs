@@ -40,12 +40,12 @@ public class PermissionsService
 
         var req = requested ?? SourceSelection.AllEnabled();
         var (systemsUnset, systems) = Narrow(req.SystemsUnset, req.Systems, user.AllowAllSystems, Deserialize(user.AllowedSystemsJson));
-        var (categoriesUnset, categories) = Narrow(req.CategoriesUnset, req.Categories, user.AllowAllCategories, Deserialize(user.AllowedCategoriesJson));
+        var (filesUnset, files) = Narrow(req.FilesUnset, req.Files, user.AllowAllFiles, Deserialize(user.AllowedFilesJson));
 
         return new SourceSelection
         {
             SystemsUnset = systemsUnset, Systems = systems,
-            CategoriesUnset = categoriesUnset, Categories = categories,
+            FilesUnset = filesUnset, Files = files,
             UserId = user.Id, IsAdmin = false,
         };
     }

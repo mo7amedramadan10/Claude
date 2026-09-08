@@ -12,22 +12,26 @@ public class SourceSelection
     [JsonPropertyName("systems")]
     public List<string> Systems { get; set; } = new();
 
-    [JsonPropertyName("categories")]
-    public List<string> Categories { get; set; } = new();
+    /// <summary>
+    /// Repository file ids currently enabled as data sources — each file is its own
+    /// independent source, at the same level as a system, not grouped by category.
+    /// </summary>
+    [JsonPropertyName("files")]
+    public List<string> Files { get; set; } = new();
 
     /// <summary>
     /// True when the UI did not send a systems selection at all (older client, direct API
     /// call, or a permission set with no system restriction): every system stays enabled
     /// rather than silently answering with nothing. Independent from
-    /// <see cref="CategoriesUnset"/> because a user's permissions can restrict one
+    /// <see cref="FilesUnset"/> because a user's permissions can restrict one
     /// dimension without restricting the other.
     /// </summary>
     [JsonIgnore]
     public bool SystemsUnset { get; set; }
 
-    /// <summary>Same as <see cref="SystemsUnset"/>, for categories.</summary>
+    /// <summary>Same as <see cref="SystemsUnset"/>, for files.</summary>
     [JsonIgnore]
-    public bool CategoriesUnset { get; set; }
+    public bool FilesUnset { get; set; }
 
     /// <summary>
     /// The account this selection is being resolved for — stamped by
@@ -45,10 +49,9 @@ public class SourceSelection
     [JsonIgnore]
     public bool IsAdmin { get; set; }
 
-    public static SourceSelection AllEnabled() => new() { SystemsUnset = true, CategoriesUnset = true };
+    public static SourceSelection AllEnabled() => new() { SystemsUnset = true, FilesUnset = true };
 
     public bool AllowsSystem(string id) => SystemsUnset || Systems.Contains(id, StringComparer.OrdinalIgnoreCase);
 
-    public bool AllowsCategory(string category) =>
-        CategoriesUnset || Categories.Contains(category, StringComparer.OrdinalIgnoreCase);
+    public bool AllowsFile(string fileId) => FilesUnset || Files.Contains(fileId, StringComparer.OrdinalIgnoreCase);
 }

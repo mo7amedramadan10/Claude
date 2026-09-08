@@ -389,13 +389,13 @@ public class RepositoryStore
     }
 
     /// <summary>Text of PDF files in the enabled categories, for document search.</summary>
-    public async Task<IReadOnlyList<(string Name, string Category, string Text)>> GetTextDocumentsAsync(
+    public async Task<IReadOnlyList<(string Id, string Name, string Category, string Text)>> GetTextDocumentsAsync(
         CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var rows = await connection.QueryAsync<(string Name, string Category, string Text)>(
-            $"SELECT COALESCE(DisplayName, OriginalFileName, '') AS Name, Category, TextContent FROM {CatalogueTable} " +
+        var rows = await connection.QueryAsync<(string Id, string Name, string Category, string Text)>(
+            $"SELECT Id, COALESCE(DisplayName, OriginalFileName, '') AS Name, Category, TextContent FROM {CatalogueTable} " +
             "WHERE TextContent IS NOT NULL AND TextContent <> ''");
         return rows.ToList();
     }

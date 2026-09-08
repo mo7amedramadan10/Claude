@@ -786,8 +786,8 @@ tr:last-child td{border-bottom:0}
       <label class="source-item head"><input type="checkbox" id="sys-all" checked>الأنظمة — تحديد الكل</label>
       <div id="system-toggles" class="nested"></div>
       <hr>
-      <label class="source-item head"><input type="checkbox" id="cat-all" checked>مستودع الملفات — تحديد الكل</label>
-      <div id="category-toggles" class="nested"></div>
+      <label class="source-item head"><input type="checkbox" id="file-all" checked>مستودع الملفات — تحديد الكل</label>
+      <div id="file-toggles" class="nested"></div>
     </div>
   </div>
 
@@ -1246,8 +1246,8 @@ tr:last-child td{border-bottom:0}
         <div id="user-systems-list" class="perm-list"></div>
       </div>
       <div class="perm-block">
-        <label class="chk-row"><input type="checkbox" id="user-allow-all-categories" checked> الوصول لكل تصنيفات المستودع</label>
-        <div id="user-categories-list" class="perm-list"></div>
+        <label class="chk-row"><input type="checkbox" id="user-allow-all-files" checked> الوصول لكل ملفات المستودع</label>
+        <div id="user-files-list" class="perm-list"></div>
       </div>
 
       <div id="user-form-error" class="login-error hidden"></div>
@@ -1267,8 +1267,8 @@ tr:last-child td{border-bottom:0}
 const el = id => document.getElementById(id);
 const state = {
   messages: [], dashboard: null, loading: false,
-  systems: [], categories: [], tableLabels: {}, // available, from /api/sources
-  onSystems: new Set(), onCategories: new Set(), // enabled
+  systems: [], sourceFiles: [], tableLabels: {}, // available, from /api/sources
+  onSystems: new Set(), onFiles: new Set(), // enabled
   files: [], pending: [], filter: 'الكل',
   history: [], historyLoaded: false,
   attachedImage: null, attachedImageName: '',
@@ -1858,7 +1858,7 @@ async function loadWizardFields() {
   try {
     const res = await fetch('/api/widgets/fields', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sources: { systems: [...state.onSystems], categories: [...state.onCategories] } }),
+      body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] } }),
     });
     const data = await res.json();
     let tables = data.tables || [];
@@ -1971,7 +1971,7 @@ async function renderWizardStep() {
   if (w.step === 'table') {
     el('wizard-title').textContent = 'من أي مصدر بيانات؟';
     body.innerHTML = `<div class="wizard-list">${w.fields.map(f =>
-      `<button class="wizard-option wide" data-table="${esc(f.table)}">${esc(f.system || f.category || f.table)}</button>`).join('')}</div>`;
+      `<button class="wizard-option wide" data-table="${esc(f.table)}">${esc(f.system || f.file || f.table)}</button>`).join('')}</div>`;
     body.querySelectorAll('[data-table]').forEach(b => b.onclick = () => {
       w.table = w.fields.find(f => f.table === b.dataset.table);
       advance(afterTableStep());
@@ -2062,7 +2062,7 @@ async function renderWizardStep() {
       const query = buildWizardQuery(w);
       const res = await fetch('/api/widgets/query', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sources: { systems: [...state.onSystems], categories: [...state.onCategories] }, query }),
+        body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] }, query }),
       });
       const payload = await res.json().catch(() => null);
       if (state.wizard !== w || w.gen !== myGen) return; // navigated away while loading
@@ -2914,7 +2914,7 @@ async function applyFilters() {
   // banner) — only a 409 from the Active-dashboard refresh branch below sets it again.
   if (state.dashboardIsActive) { state.dashboardDisabled = false; state.dashboardDisabledReason = ''; }
 
-  const sources = { systems: [...state.onSystems], categories: [...state.onCategories] };
+  const sources = { systems: [...state.onSystems], files: [...state.onFiles] };
   const widgets = state.dashboard?.widgets || [];
   await Promise.all(widgets.map(async (w, index) => {
     if (!w.query || !w.query.table) return;
@@ -3488,7 +3488,7 @@ async function ask(question) {
         // autosave/wizard path already enforces, since a chat continuation would otherwise
         // silently fork into a disconnected Draft that never goes through that check at all.
         historyId: isContinuation && state.dashboardIsActive ? state.currentHistoryId : null,
-        sources: { systems: [...state.onSystems], categories: [...state.onCategories] },
+        sources: { systems: [...state.onSystems], files: [...state.onFiles] },
       }),
     });
     const payload = await res.json().catch(() => null);
@@ -3562,16 +3562,17 @@ async function loadSources() {
   const res = await fetch('/api/sources');
   const data = await res.json();
   const knownSystems = new Set(state.systems.map(s => s.id));
-  const knownCategories = new Set(state.categories);
+  const knownFiles = new Set(state.sourceFiles.map(f => f.id));
 
   state.systems = data.systems || [];
-  state.categories = data.categories || [];
+  state.sourceFiles = data.files || [];
   state.tableLabels = data.tableLabels || {};
 
   // Newly appearing sources start enabled; the user's explicit choices are preserved.
   state.systems.forEach(s => { if (!knownSystems.has(s.id)) state.onSystems.add(s.id); });
-  state.categories.forEach(c => { if (!knownCategories.has(c)) state.onCategories.add(c); });
-  [...state.onCategories].forEach(c => { if (!state.categories.includes(c)) state.onCategories.delete(c); });
+  state.sourceFiles.forEach(f => { if (!knownFiles.has(f.id)) state.onFiles.add(f.id); });
+  const currentFileIds = new Set(state.sourceFiles.map(f => f.id));
+  [...state.onFiles].forEach(id => { if (!currentFileIds.has(id)) state.onFiles.delete(id); });
 
   renderSources();
 }
@@ -3586,13 +3587,17 @@ function renderSources() {
     </label>
     ${s.refreshable ? `<div class="sys-status${s.error ? ' bad' : ''}" data-status="${esc(s.id)}">${systemStatusText(s)}</div>` : ''}`).join('');
 
-  el('category-toggles').innerHTML = state.categories.length
-    ? state.categories.map(c => `
+  // Each repository file is its own independent source, at the same level as a system —
+  // not grouped by category (a small category hint still shown alongside the name, purely
+  // informational, since it's a real descriptive attribute of the file).
+  el('file-toggles').innerHTML = state.sourceFiles.length
+    ? state.sourceFiles.map(f => `
         <label class="source-item">
-          <input type="checkbox" class="cat-cb" data-cat="${esc(c)}" ${state.onCategories.has(c) ? 'checked' : ''}>
-          ${esc(c)}
+          <input type="checkbox" class="file-cb" data-id="${esc(f.id)}" ${state.onFiles.has(f.id) ? 'checked' : ''}>
+          <span class="grow">${esc(f.name)}</span>
+          <span class="note">${esc(f.category)}</span>
         </label>`).join('')
-    : '<div class="nested-empty">لا يوجد تصنيفات بعد — ارفع ملفات أولاً</div>';
+    : '<div class="nested-empty">لا يوجد ملفات بعد — ارفع ملفات أولاً</div>';
 
   el('system-toggles').querySelectorAll('[data-refresh]').forEach(btn =>
     btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); refreshSystem(btn); }));
@@ -3601,8 +3606,8 @@ function renderSources() {
     cb.checked ? state.onSystems.add(cb.dataset.id) : state.onSystems.delete(cb.dataset.id);
     syncSourceHeaders();
   }));
-  el('category-toggles').querySelectorAll('.cat-cb').forEach(cb => cb.addEventListener('change', () => {
-    cb.checked ? state.onCategories.add(cb.dataset.cat) : state.onCategories.delete(cb.dataset.cat);
+  el('file-toggles').querySelectorAll('.file-cb').forEach(cb => cb.addEventListener('change', () => {
+    cb.checked ? state.onFiles.add(cb.dataset.id) : state.onFiles.delete(cb.dataset.id);
     syncSourceHeaders();
   }));
   syncSourceHeaders();
@@ -3633,9 +3638,9 @@ async function refreshSystem(btn) {
 
 function syncSourceHeaders() {
   el('sys-all').checked = state.systems.length > 0 && state.onSystems.size === state.systems.length;
-  el('cat-all').checked = state.categories.length > 0 && state.onCategories.size === state.categories.length;
-  const total = state.systems.length + state.categories.length;
-  const on = state.onSystems.size + state.onCategories.size;
+  el('file-all').checked = state.sourceFiles.length > 0 && state.onFiles.size === state.sourceFiles.length;
+  const total = state.systems.length + state.sourceFiles.length;
+  const on = state.onSystems.size + state.onFiles.size;
   el('sources-label').textContent =
     total === 0 ? 'لا يوجد مصادر'
     : on === 0 ? 'لا يوجد مصدر مفعّل'
@@ -3654,8 +3659,8 @@ el('sys-all').addEventListener('change', e => {
   state.onSystems = e.target.checked ? new Set(state.systems.map(s => s.id)) : new Set();
   renderSources();
 });
-el('cat-all').addEventListener('change', e => {
-  state.onCategories = e.target.checked ? new Set(state.categories) : new Set();
+el('file-all').addEventListener('change', e => {
+  state.onFiles = e.target.checked ? new Set(state.sourceFiles.map(f => f.id)) : new Set();
   renderSources();
 });
 
@@ -3663,7 +3668,8 @@ el('cat-all').addEventListener('change', e => {
 async function loadFiles() {
   const res = await fetch('/api/repository/files');
   state.files = await res.json();
-  if (!state.categories.length || state.files.some(f => !state.categories.includes(f.category)))
+  const knownSourceFileIds = new Set(state.sourceFiles.map(f => f.id));
+  if (!state.sourceFiles.length || state.files.some(f => !knownSourceFileIds.has(f.id)))
     await loadSources();
   // Only an Admin can manage per-file permissions (same authority level as managing user
   // accounts) and only an Admin's browser is even allowed to call GET /api/users — load it
@@ -5172,9 +5178,9 @@ function renderUsers() {
       <td>${esc(u.displayName)}</td>
       <td>${u.authMethod === 'ActiveDirectory' ? 'Active Directory' : 'محلي'}</td>
       <td><span class="role-badge${u.role === 'Admin' ? ' admin' : ''}">${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'}</span></td>
-      <td>${u.allowAllSystems && u.allowAllCategories ? 'الكل' :
+      <td>${u.allowAllSystems && u.allowAllFiles ? 'الكل' :
             [u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`,
-             u.allowAllCategories ? 'كل التصنيفات' : `${u.allowedCategories.length} تصنيف`].join(' · ')}</td>
+             u.allowAllFiles ? 'كل الملفات' : `${u.allowedFiles.length} ملف`].join(' · ')}</td>
       <td><span class="status-dot${u.isActive ? '' : ' off'}"></span>${u.isActive ? 'نشط' : 'معطّل'}</td>
       <td>
         <button class="edit-btn" data-edit="${esc(u.id)}">تعديل</button>
@@ -5202,7 +5208,7 @@ function togglePermList(listId, allCheckboxId) {
 }
 
 el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
-el('user-allow-all-categories').addEventListener('change', () => togglePermList('user-categories-list', 'user-allow-all-categories'));
+el('user-allow-all-files').addEventListener('change', () => togglePermList('user-files-list', 'user-allow-all-files'));
 el('user-authmethod').addEventListener('change', () => {
   el('user-password-row').style.display = el('user-authmethod').value === 'Local' ? '' : 'none';
 });
@@ -5222,11 +5228,11 @@ function openUserModal(user) {
   el('user-password-row').style.display = (user ? user.authMethod : 'Local') === 'Local' ? '' : 'none';
 
   el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
-  el('user-allow-all-categories').checked = user ? user.allowAllCategories : true;
+  el('user-allow-all-files').checked = user ? user.allowAllFiles : true;
   renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name);
-  renderPermChecklist('user-categories-list', state.categories, user ? user.allowedCategories : [], c => c, c => c);
+  renderPermChecklist('user-files-list', state.sourceFiles, user ? user.allowedFiles : [], f => f.id, f => f.name);
   togglePermList('user-systems-list', 'user-allow-all-systems');
-  togglePermList('user-categories-list', 'user-allow-all-categories');
+  togglePermList('user-files-list', 'user-allow-all-files');
 
   el('user-modal').classList.remove('hidden');
 }
@@ -5247,8 +5253,8 @@ el('user-form').addEventListener('submit', async e => {
     isActive: el('user-active').checked,
     allowAllSystems: el('user-allow-all-systems').checked,
     allowedSystems: [...el('user-systems-list').querySelectorAll('input:checked')].map(i => i.value),
-    allowAllCategories: el('user-allow-all-categories').checked,
-    allowedCategories: [...el('user-categories-list').querySelectorAll('input:checked')].map(i => i.value),
+    allowAllFiles: el('user-allow-all-files').checked,
+    allowedFiles: [...el('user-files-list').querySelectorAll('input:checked')].map(i => i.value),
   };
   const saveBtn = el('user-save');
   saveBtn.disabled = true;

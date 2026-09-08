@@ -57,8 +57,7 @@ public class WidgetQueryService
         var schema = await _loader.GetSchemaAsync(ct);
 
         var tables = schema
-            .Where(t => !context.TableCategories.TryGetValue(t.Table, out var category)
-                        || context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
+            .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
             .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
             // Every file is now auto-restricted to its creator (see
             // AnalyticsTools.DescribeSourcesAsync) — without this, the wizard would offer a
@@ -67,7 +66,7 @@ public class WidgetQueryService
             .Select(t => new TableFields
             {
                 Table = t.Table,
-                Category = context.TableCategories.TryGetValue(t.Table, out var c) ? c : null,
+                File = context.TableFiles.TryGetValue(t.Table, out var c) ? c : null,
                 System = context.TableSystems.TryGetValue(t.Table, out var s) ? s : null,
                 Metrics = t.Columns.Where(c => IsNumeric(c.SqlType)).Select(c => c.Name).ToList(),
                 Dimensions = t.Columns.Where(c => !IsNumeric(c.SqlType) && !IsDate(c)).Select(c => c.Name).ToList(),
@@ -307,9 +306,8 @@ public class WidgetQueryService
             ?? throw new WidgetQueryValidationException("الجدول المطلوب غير موجود أو غير متاح.");
 
         // Same permission gate query_data enforces for the LLM path.
-        if (context.TableCategories.TryGetValue(table.Table, out var category)
-            && !context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
-            throw new WidgetQueryValidationException($"لا يوجد صلاحية للوصول لتصنيف \"{category}\".");
+        if (context.DisabledFileTables.TryGetValue(table.Table, out var fileLabel))
+            throw new WidgetQueryValidationException($"لا يوجد صلاحية للوصول لملف \"{fileLabel}\".");
         if (context.DisabledSystemTables.TryGetValue(table.Table, out var systemName))
             throw new WidgetQueryValidationException($"النظام \"{systemName}\" غير مفعّل حاليًا.");
         if (context.RestrictedFileTables.TryGetValue(table.Table, out var fileName))

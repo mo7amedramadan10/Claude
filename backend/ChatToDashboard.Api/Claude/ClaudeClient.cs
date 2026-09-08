@@ -217,7 +217,7 @@ public class ClaudeClient : IDashboardGenerator
     /// <summary>A short, readable note of which sources were on for this question.</summary>
     private static string DescribeSources(AnalyticsTools.SourceContext context) =>
         $"أنظمة: {(context.EnabledSystems.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledSystems))} | " +
-        $"تصنيفات: {(context.EnabledCategories.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledCategories))}";
+        $"ملفات: {(context.EnabledFiles.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledFiles))}";
 
     private JsonArray BuildToolsJson(AnalyticsTools.SourceContext context)
     {

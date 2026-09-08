@@ -18,9 +18,12 @@ public static class AuthMethods
 /// An account. Local accounts carry a password hash; Active Directory accounts carry
 /// none — their credentials are verified against the configured directory on every
 /// login instead. Per-source access (<see cref="AllowAllSystems"/>/<see cref="AllowedSystemsJson"/>
-/// and the category equivalents) reuses the exact shape the chat request already sends as
+/// and the file equivalents) reuses the exact shape the chat request already sends as
 /// <c>Sources.SourceSelection</c>, so it can be intersected with what the client asks for
 /// without a separate model. Admins always have full access regardless of these flags.
+/// Each repository file is its own independent source (<see cref="AllowAllFiles"/>/<see
+/// cref="AllowedFilesJson"/>, a list of file ids) — at the same granularity as a system,
+/// not grouped by category.
 /// </summary>
 public class AppUser
 {
@@ -33,8 +36,8 @@ public class AppUser
     public bool IsActive { get; set; } = true;
     public bool AllowAllSystems { get; set; } = true;
     public string AllowedSystemsJson { get; set; } = "[]";
-    public bool AllowAllCategories { get; set; } = true;
-    public string AllowedCategoriesJson { get; set; } = "[]";
+    public bool AllowAllFiles { get; set; } = true;
+    public string AllowedFilesJson { get; set; } = "[]";
     public DateTime CreatedAt { get; set; }
 }
 
@@ -49,8 +52,8 @@ public class UserInfo
     [JsonPropertyName("isActive")] public bool IsActive { get; set; }
     [JsonPropertyName("allowAllSystems")] public bool AllowAllSystems { get; set; }
     [JsonPropertyName("allowedSystems")] public List<string> AllowedSystems { get; set; } = new();
-    [JsonPropertyName("allowAllCategories")] public bool AllowAllCategories { get; set; }
-    [JsonPropertyName("allowedCategories")] public List<string> AllowedCategories { get; set; } = new();
+    [JsonPropertyName("allowAllFiles")] public bool AllowAllFiles { get; set; }
+    [JsonPropertyName("allowedFiles")] public List<string> AllowedFiles { get; set; } = new();
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
 }
 
@@ -71,6 +74,6 @@ public class UserRequest
     [JsonPropertyName("isActive")] public bool IsActive { get; set; } = true;
     [JsonPropertyName("allowAllSystems")] public bool AllowAllSystems { get; set; } = true;
     [JsonPropertyName("allowedSystems")] public List<string> AllowedSystems { get; set; } = new();
-    [JsonPropertyName("allowAllCategories")] public bool AllowAllCategories { get; set; } = true;
-    [JsonPropertyName("allowedCategories")] public List<string> AllowedCategories { get; set; } = new();
+    [JsonPropertyName("allowAllFiles")] public bool AllowAllFiles { get; set; } = true;
+    [JsonPropertyName("allowedFiles")] public List<string> AllowedFiles { get; set; } = new();
 }

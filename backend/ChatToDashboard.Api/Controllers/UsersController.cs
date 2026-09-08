@@ -38,8 +38,8 @@ public class UsersController : ControllerBase
             PasswordHash = request.AuthMethod == AuthMethods.Local ? PasswordHasher.Hash(request.Password!) : "",
             AllowAllSystems = request.AllowAllSystems,
             AllowedSystemsJson = JsonSerializer.Serialize(request.AllowedSystems),
-            AllowAllCategories = request.AllowAllCategories,
-            AllowedCategoriesJson = JsonSerializer.Serialize(request.AllowedCategories),
+            AllowAllFiles = request.AllowAllFiles,
+            AllowedFilesJson = JsonSerializer.Serialize(request.AllowedFiles),
         };
         var created = await _users.CreateAsync(user, ct);
         return Ok(UserStore.ToInfo(created));
@@ -70,8 +70,8 @@ public class UsersController : ControllerBase
         user.IsActive = request.IsActive;
         user.AllowAllSystems = request.AllowAllSystems;
         user.AllowedSystemsJson = JsonSerializer.Serialize(request.AllowedSystems);
-        user.AllowAllCategories = request.AllowAllCategories;
-        user.AllowedCategoriesJson = JsonSerializer.Serialize(request.AllowedCategories);
+        user.AllowAllFiles = request.AllowAllFiles;
+        user.AllowedFilesJson = JsonSerializer.Serialize(request.AllowedFiles);
         if (request.AuthMethod == AuthMethods.Local && !string.IsNullOrWhiteSpace(request.Password))
             user.PasswordHash = PasswordHasher.Hash(request.Password);
         else if (request.AuthMethod == AuthMethods.ActiveDirectory)

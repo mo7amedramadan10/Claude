@@ -85,23 +85,35 @@ public class AnalyticsTools
 
     /// <summary>
     /// Which sources are on/off for this question, resolved against the configured systems
-    /// and the categories that actually exist in the repository.
+    /// and every file actually in the repository — each file is its own independent
+    /// source, at the same level as a system, not grouped by category.
     /// </summary>
     public record SourceContext(
         IReadOnlyList<string> EnabledSystems,
         IReadOnlyList<string> DisabledSystems,
         IReadOnlyList<string> UnconnectedSystems,
-        IReadOnlyList<string> EnabledCategories,
-        IReadOnlyList<string> DisabledCategories,
-        IReadOnlyDictionary<string, string> TableCategories,
+        // Display names, for the "المصادر المفعّلة حاليًا" prompt bullets.
+        IReadOnlyList<string> EnabledFiles,
+        IReadOnlyList<string> DisabledFiles,
+        // Repository file ids currently enabled — every file with an Id present here has
+        // passed the on/off toggle (independent of RestrictedFileTables below).
+        IReadOnlySet<string> EnabledFileIds,
+        // Table -> owning file's display name, for every repository file that has a table
+        // (all of them, enabled or not) — used to label list_files' "tables" entries and to
+        // name the file in a refusal message.
+        IReadOnlyDictionary<string, string> TableFiles,
         IReadOnlyDictionary<string, string> TableSystems,
         IReadOnlyDictionary<string, string> DisabledSystemTables,
+        // Table -> owning file's display name, DISABLED files only — the query-blocking
+        // gate CheckSourcePermission scans, mirroring DisabledSystemTables.
+        IReadOnlyDictionary<string, string> DisabledFileTables,
         // Table -> the file's display name, for a repository file the current user is
         // neither the creator of nor explicitly granted onto — every file with a recorded
         // creator is auto-restricted to it (see RepositoryFile.PermittedUserIds), so this
         // covers essentially all of them for a non-Admin except their own uploads and
         // whatever's been explicitly shared with them. An Admin never appears here. Separate
-        // from DisabledSystemTables since the reason is per-user, not a source-wide toggle.
+        // from DisabledFileTables since the reason is per-user identity, not the on/off
+        // toggle every file also carries.
         IReadOnlyDictionary<string, string> RestrictedFileTables,
         bool HasDocuments);
 
@@ -130,19 +142,26 @@ public class AnalyticsTools
         }
 
         var files = await _repository.ListAsync(ct);
-        var enabledCategories = new List<string>();
-        var disabledCategories = new List<string>();
-        foreach (var category in files.Select(f => f.Category).Distinct(StringComparer.OrdinalIgnoreCase))
+        var enabledFiles = new List<string>();
+        var disabledFiles = new List<string>();
+        var enabledFileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var tableFiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var disabledFileTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var f in files)
         {
-            if (selection.AllowsCategory(category)) enabledCategories.Add(category);
-            else disabledCategories.Add(category);
-        }
+            if (!string.IsNullOrWhiteSpace(f.TableName)) tableFiles[f.TableName!] = f.DisplayName;
 
-        // Table -> category, so a query against a switched-off category can be refused by name.
-        var tableCategories = files
-            .Where(f => !string.IsNullOrWhiteSpace(f.TableName))
-            .GroupBy(f => f.TableName!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().Category, StringComparer.OrdinalIgnoreCase);
+            if (selection.AllowsFile(f.Id))
+            {
+                enabledFiles.Add(f.DisplayName);
+                enabledFileIds.Add(f.Id);
+            }
+            else
+            {
+                disabledFiles.Add(f.DisplayName);
+                if (!string.IsNullOrWhiteSpace(f.TableName)) disabledFileTables[f.TableName!] = f.DisplayName;
+            }
+        }
 
         // Every file is automatically restricted to its own creator — not opt-in, and not
         // removable (see RepositoryFile.PermittedUserIds) — with PermittedUserIds as the
@@ -164,12 +183,12 @@ public class AnalyticsTools
             }
         }
 
-        var hasDocuments = files.Any(f => f.Kind == "pdf" && selection.AllowsCategory(f.Category));
+        var hasDocuments = files.Any(f => f.Kind == "pdf" && selection.AllowsFile(f.Id));
 
         return new SourceContext(
             enabledSystems, disabledSystems, unconnected,
-            enabledCategories, disabledCategories, tableCategories,
-            systemTables, disabledSystemTables, restrictedFileTables, hasDocuments);
+            enabledFiles, disabledFiles, enabledFileIds, tableFiles,
+            systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments);
     }
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
@@ -483,13 +502,13 @@ public class AnalyticsTools
         - أنظمة مفعّلة: {{Bullets(context.EnabledSystems)}}
         - أنظمة مقفولة (لا يحق للمستخدم الوصول لها): {{Bullets(context.DisabledSystems)}}
         - أنظمة مفعّلة لكن لسه غير مربوطة بقاعدة بيانات (مفيش داتا منها بعد): {{Bullets(context.UnconnectedSystems)}}
-        - تصنيفات مستودع الملفات المفعّلة: {{Bullets(context.EnabledCategories)}}
-        - تصنيفات مستودع الملفات المقفولة (لا يحق للمستخدم الوصول لها): {{Bullets(context.DisabledCategories)}}
+        - ملفات مستودع الملفات المفعّلة: {{Bullets(context.EnabledFiles)}}
+        - ملفات مستودع الملفات المقفولة (لا يحق للمستخدم الوصول لها): {{Bullets(context.DisabledFiles)}}
 
         قواعد المصادر — مهمة جدًا، وهي حدود صلاحيات حقيقية مش مجرد اقتراح
         هناك ثلاث حالات مختلفة لازم تفرّق بينها في ردك، ولكل واحدة صياغة مختلفة:
-        - "غير مصرّح" (مصدر أو تصنيف في قائمة "مقفولة" فوق): ما تحاولش تخمّن ولا تجاوب من
-          مصدر تاني بديل. رد باعتذار مهذب، اذكر اسم المصدر أو التصنيف المقفول بالظبط بالاسم،
+        - "غير مصرّح" (مصدر أو ملف في قائمة "مقفولة" فوق): ما تحاولش تخمّن ولا تجاوب من
+          مصدر تاني بديل. رد باعتذار مهذب، اذكر اسم المصدر أو الملف المقفول بالظبط بالاسم،
           وقول للمستخدم إنه يحتاج يطلب تفعيله (من الإدمن أو من قائمة "المصادر" لو عنده صلاحية).
         - "غير مربوط بعد" (نظام في قائمة "مفعّلة لكن غير مربوطة" فوق): المستخدم عنده صلاحية
           الوصول له، لكن مفيش بيانات منه لسه لأنه لسه مش موصّل فعليًا. قول ده بوضوح — الفرق
@@ -718,17 +737,16 @@ public class AnalyticsTools
                 case "list_files":
                 {
                     var schema = await _loader.GetSchemaAsync(ct);
-                    // Hide tables belonging to a switched-off repository category, and label
+                    // Hide tables belonging to a switched-off repository file, and label
                     // the rest so the model can attribute each number to a real source.
                     var visible = schema
-                        .Where(t => !context.TableCategories.TryGetValue(t.Table, out var category)
-                                    || context.EnabledCategories.Contains(category, StringComparer.OrdinalIgnoreCase))
+                        .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
                         .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
                         .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
                         .Select(t => new
                         {
                             table = t.Table,
-                            category = context.TableCategories.TryGetValue(t.Table, out var c) ? c : null,
+                            file = context.TableFiles.TryGetValue(t.Table, out var fn) ? fn : null,
                             system = context.TableSystems.TryGetValue(t.Table, out var sys) ? sys : null,
                             columns = t.Columns,
                         });
@@ -736,7 +754,7 @@ public class AnalyticsTools
                     // this the model has no way to know the file exists at all.
                     var files = await _repository.ListAsync(ct);
                     var visibleFiles = files
-                        .Where(f => context.EnabledCategories.Contains(f.Category, StringComparer.OrdinalIgnoreCase))
+                        .Where(f => context.EnabledFileIds.Contains(f.Id))
                         .Where(f => f.TableName is null || !context.RestrictedFileTables.ContainsKey(f.TableName))
                         .Select(f => new
                         {
@@ -756,7 +774,7 @@ public class AnalyticsTools
                         tables = visible,
                         repositoryFiles = visibleFiles,
                         repositoryFileCount = visibleFiles.Count,
-                        disabledCategories = context.DisabledCategories,
+                        disabledFiles = context.DisabledFiles,
                         disabledSystems = context.DisabledSystems,
                     }, ToolResultJsonOptions), false);
                 }
@@ -801,7 +819,7 @@ public class AnalyticsTools
 
                     var documents = await _repository.GetTextDocumentsAsync(ct);
                     var repositoryHits = documents
-                        .Where(d => context.EnabledCategories.Contains(d.Category, StringComparer.OrdinalIgnoreCase))
+                        .Where(d => context.EnabledFileIds.Contains(d.Id))
                         .Select(d => new
                         {
                             file = d.Name,
@@ -867,12 +885,11 @@ public class AnalyticsTools
             return $"الاستعلام مرفوض: الجدول {blockedSystem.Key} تابع لـ\"{blockedSystem.Value}\" " +
                    "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
 
-        var blocked = context.TableCategories
-            .Where(kv => !context.EnabledCategories.Contains(kv.Value, StringComparer.OrdinalIgnoreCase))
+        var blockedFile = context.DisabledFileTables
             .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
                 || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
-        if (blocked.Key is not null)
-            return $"الاستعلام مرفوض: الجدول {blocked.Key} تابع لتصنيف \"{blocked.Value}\" " +
+        if (blockedFile.Key is not null)
+            return $"الاستعلام مرفوض: الجدول {blockedFile.Key} تابع لملف \"{blockedFile.Value}\" " +
                    "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
 
         var restrictedFile = context.RestrictedFileTables

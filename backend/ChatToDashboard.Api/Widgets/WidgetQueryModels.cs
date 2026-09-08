@@ -7,7 +7,7 @@ namespace ChatToDashboard.Api.Widgets;
 public class TableFields
 {
     [JsonPropertyName("table")] public string Table { get; set; } = "";
-    [JsonPropertyName("category")] public string? Category { get; set; }
+    [JsonPropertyName("file")] public string? File { get; set; }
     [JsonPropertyName("system")] public string? System { get; set; }
     [JsonPropertyName("metrics")] public List<string> Metrics { get; set; } = new();
     [JsonPropertyName("dimensions")] public List<string> Dimensions { get; set; } = new();
