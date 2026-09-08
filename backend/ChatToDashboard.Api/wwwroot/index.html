@@ -411,7 +411,7 @@ tr:last-child td{border-bottom:0}
   border-radius:8px;padding:7px 12px}
 .cat-badge{display:inline-block;padding:3px 10px;border-radius:999px;
   background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:600;flex-shrink:0}
-.repo-empty{padding:44px;text-align:center;color:var(--muted);
+.repo-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
 
 /* ---------- file repository: list-row layout ---------- */
@@ -503,6 +503,24 @@ tr:last-child td{border-bottom:0}
 .hist-card .del-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.12)}
 .hist-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
+
+/* ---------- Active dashboards: card grid with a mini preview thumbnail ---------- */
+.active-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.active-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--grid);
+  border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.active-card:hover{border-color:var(--accent)}
+.active-card.stale{border-inline-start:3px solid var(--amber)}
+.dash-thumb{aspect-ratio:16/9;border-bottom:1px solid var(--grid)}
+.dash-thumb svg{display:block;width:100%;height:100%}
+.active-card-body{display:flex;flex-direction:column;gap:8px;padding:14px}
+.active-card .badges{display:flex;gap:6px;flex-wrap:wrap}
+.active-card .ac-name{font-weight:600;font-size:13.5px;line-height:1.5}
+.active-card .ac-summary{color:var(--ink-2);font-size:12px;line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.active-card .ac-meta{color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:8px}
+.active-card .actions{display:flex;gap:8px;margin-top:auto}
+.active-card .actions .open-btn{flex:1;border:0;background:var(--accent);color:#fff;font-weight:600;
+  padding:7px 10px;border-radius:9px;font-size:12.5px}
 
 /* ---------- Part 2: dashboard states (Draft/Active), roles, owner transfer ---------- */
 .state-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
@@ -923,14 +941,7 @@ tr:last-child td{border-bottom:0}
   <div class="repo-bar">
     <span class="count" id="active-count"></span>
   </div>
-  <div class="file-list-head">
-    <div class="col-main">اللوحة</div>
-    <div class="col-updated">آخر حفظ</div>
-    <div class="col-usage">العناصر</div>
-    <div class="col-access">الدور</div>
-    <div class="col-actions"></div>
-  </div>
-  <div class="file-list" id="active-list"></div>
+  <div class="active-cards" id="active-list"></div>
 </div>
 
 <div id="screen-sharelinks" class="screen">
@@ -3910,8 +3921,224 @@ function renderHistory() {
   renderActiveDashboardsList();
 }
 
-// ---------- Active dashboards: own dedicated page (list view, same shape as the file
-// repository's) ----------
+// ---------- Active dashboards: mini SVG preview thumbnails ----------
+// A fast, purely data-driven "poster" of a saved dashboard's widgets — not a literal
+// screenshot, since that would mean spinning up a real ApexCharts instance for every
+// widget of every active dashboard just to rasterize them, which doesn't scale to a list.
+// Colors are the same small semantic vocabulary used everywhere else in this app (CSS
+// custom properties, referenced live via style="fill:var(--x)"), so unlike the real
+// ApexCharts-based charts (which bake static SVG colors and need a rebuild) this
+// thumbnail re-themes itself automatically on the light/dark toggle — no extra code needed.
+const THUMB_W = 240, THUMB_H = 128, THUMB_COLS = 4, THUMB_PAD = 6, THUMB_GAP = 5, THUMB_MAX_ROWS = 3;
+const THUMB_TONES = ['var(--accent)', 'var(--amber)', 'var(--danger)'];
+
+function thumbSpan(w) {
+  if (w.comparison) return THUMB_COLS;
+  const size = w.layout && w.layout.size;
+  if (size === 'small') return 1;
+  if (size === 'large') return 3;
+  if (size === 'full') return THUMB_COLS;
+  if (size === 'wide') return 2;
+  return (w.type || '').toLowerCase() === 'kpi' ? 1 : 2;
+}
+
+function packThumbnailRows(widgets) {
+  const rows = [];
+  let current = [], currentSpan = 0;
+  for (const w of widgets) {
+    if (rows.length >= THUMB_MAX_ROWS) break;
+    const span = thumbSpan(w);
+    if (currentSpan && currentSpan + span > THUMB_COLS) {
+      rows.push(current);
+      if (rows.length >= THUMB_MAX_ROWS) { current = null; break; }
+      current = []; currentSpan = 0;
+    }
+    current.push(w); currentSpan += span;
+  }
+  if (current && current.length) rows.push(current);
+  return rows;
+}
+
+function dashboardThumbnailSvg(widgets) {
+  if (!Array.isArray(widgets) || !widgets.length) {
+    return `<svg viewBox="0 0 ${THUMB_W} ${THUMB_H}" aria-hidden="true"><rect width="100%" height="100%" style="fill:var(--plane)"/></svg>`;
+  }
+  const rows = packThumbnailRows(widgets);
+  const shown = rows.reduce((n, r) => n + r.length, 0);
+  const overflow = widgets.length - shown;
+  const rowH = (THUMB_H - THUMB_PAD * 2 - THUMB_GAP * (rows.length - 1)) / rows.length;
+  const colW = (THUMB_W - THUMB_PAD * 2 - THUMB_GAP * (THUMB_COLS - 1)) / THUMB_COLS;
+  let y = THUMB_PAD, cells = '';
+  rows.forEach(row => {
+    let x = THUMB_PAD;
+    const rowSpan = row.reduce((s, w) => s + thumbSpan(w), 0);
+    const scale = THUMB_COLS / Math.max(rowSpan, 1);
+    row.forEach(w => {
+      const span = thumbSpan(w) * scale;
+      const cw = span * colW + (span - 1) * THUMB_GAP;
+      cells += thumbCell(w, x, y, cw, rowH);
+      x += cw + THUMB_GAP;
+    });
+    y += rowH + THUMB_GAP;
+  });
+  const overflowChip = overflow > 0 ? `
+    <rect x="${THUMB_W - 28}" y="4" width="24" height="13" rx="6.5" style="fill:var(--surface);stroke:var(--grid)"/>
+    <text x="${THUMB_W - 16}" y="13.5" text-anchor="middle" style="fill:var(--muted);font-size:8px">+${overflow}</text>` : '';
+  return `<svg viewBox="0 0 ${THUMB_W} ${THUMB_H}" aria-hidden="true">
+    <rect width="100%" height="100%" style="fill:var(--plane)"/>${cells}${overflowChip}
+  </svg>`;
+}
+
+function thumbCell(w, x, y, cw, ch) {
+  const type = w.comparison ? 'comparison' : (w.type || '').toLowerCase();
+  const bg = `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" rx="4" style="fill:var(--surface);stroke:var(--grid)"/>`;
+  const pad = 4;
+  const ix = x + pad, iy = y + pad, iw = Math.max(cw - pad * 2, 1), ih = Math.max(ch - pad * 2, 1);
+  let inner;
+  switch (type) {
+    case 'kpi': inner = thumbKpi(w, x, y, cw, ch); break;
+    case 'pie': inner = thumbDonut(w, x + cw / 2, y + ch / 2, Math.min(iw, ih) / 2); break;
+    case 'bar': inner = thumbBars(w, ix, iy, iw, ih); break;
+    case 'line': inner = thumbLine(w, ix, iy, iw, ih); break;
+    case 'progress-table': inner = thumbProgressRows(ix, iy, iw, ih); break;
+    case 'trend-matrix': inner = thumbTrendRows(ix, iy, iw, ih); break;
+    case 'status-bar': inner = thumbChips(ix, iy, iw, ih); break;
+    case 'comparison': inner = thumbComparisonBox(ix, iy, iw, ih); break;
+    default: inner = thumbTableRows(ix, iy, iw, ih); break; // table and anything unrecognized
+  }
+  return bg + inner;
+}
+
+function thumbKpi(w, x, y, cw, ch) {
+  const e = Array.isArray(w.data) ? w.data[0] : null;
+  const v = e?.value ?? Object.values(e || {}).find(n => typeof n === 'number');
+  const size = Math.min(ch * 0.32, cw * 0.22, 15);
+  return `<text x="${(x + cw / 2).toFixed(1)}" y="${(y + ch / 2 + size * 0.35).toFixed(1)}" text-anchor="middle"
+    style="fill:var(--accent);font-size:${size.toFixed(1)}px;font-weight:700">${esc(fmt(v))}</text>`;
+}
+
+function thumbSeriesValues(w) {
+  if (Array.isArray(w.series) && w.series.length && Array.isArray(w.data)) {
+    const keys = w.series.map(s => s.key);
+    return w.data.map(r => keys.map(k => num(r[k])));
+  }
+  if (Array.isArray(w.data)) {
+    return w.data.map(r => [num(r.value ?? Object.values(r).find(v => typeof v === 'number'))]);
+  }
+  return [];
+}
+
+function thumbBars(w, x, y, iw, ih) {
+  const rows = thumbSeriesValues(w).slice(0, 5);
+  if (!rows.length) return '';
+  const seriesCount = rows[0].length;
+  const groupW = iw / rows.length;
+  const barW = Math.max((groupW - 3) / seriesCount - 1, 1.5);
+  const max = Math.max(1, ...rows.flat());
+  let out = '';
+  rows.forEach((vals, i) => {
+    vals.forEach((v, s) => {
+      const h = Math.max((v / max) * ih, 1.5);
+      const bx = x + i * groupW + s * (barW + 1);
+      out += `<rect x="${bx.toFixed(1)}" y="${(y + ih - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1" style="fill:${THUMB_TONES[s % THUMB_TONES.length]}"/>`;
+    });
+  });
+  return out;
+}
+
+function thumbLine(w, x, y, iw, ih) {
+  const rows = thumbSeriesValues(w);
+  if (!rows.length) return '';
+  const seriesCount = rows[0].length;
+  let out = '';
+  for (let s = 0; s < seriesCount; s++) {
+    const vals = rows.map(r => r[s] ?? 0);
+    const max = Math.max(1, ...vals);
+    const pts = vals.map((v, i) => {
+      const px = x + (vals.length > 1 ? (i / (vals.length - 1)) * iw : iw / 2);
+      const py = y + ih - (v / max) * ih;
+      return `${px.toFixed(1)},${py.toFixed(1)}`;
+    }).join(' ');
+    out += `<polyline points="${pts}" fill="none" style="stroke:${THUMB_TONES[s % THUMB_TONES.length]}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  return out;
+}
+
+function thumbDonut(w, cx, cy, r) {
+  const rows = Array.isArray(w.data) ? w.data.slice(0, 3) : [];
+  const total = rows.reduce((s, row) => s + num(row.value), 0) || 1;
+  const rIn = r * 0.55;
+  let angle = -90, out = '';
+  rows.forEach((row, i) => {
+    const sweep = (num(row.value) / total) * 360;
+    out += thumbArcPath(cx, cy, rIn, r, angle, angle + sweep, THUMB_TONES[i % THUMB_TONES.length]);
+    angle += sweep;
+  });
+  return out || `<circle cx="${cx}" cy="${cy}" r="${r}" style="fill:none;stroke:var(--grid)"/>`;
+}
+
+function thumbArcPath(cx, cy, rIn, rOut, a0, a1, color) {
+  const large = (a1 - a0) % 360 > 180 ? 1 : 0;
+  const p = (r, a) => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)];
+  const [x0, y0] = p(rOut, a0), [x1, y1] = p(rOut, a1), [x2, y2] = p(rIn, a1), [x3, y3] = p(rIn, a0);
+  return `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${rOut.toFixed(1)},${rOut.toFixed(1)} 0 ${large} 1 ${x1.toFixed(1)},${y1.toFixed(1)}
+    L${x2.toFixed(1)},${y2.toFixed(1)} A${rIn.toFixed(1)},${rIn.toFixed(1)} 0 ${large} 0 ${x3.toFixed(1)},${y3.toFixed(1)} Z" style="fill:${color}"/>`;
+}
+
+function thumbTableRows(x, y, iw, ih) {
+  const rows = 3, rh = ih / rows;
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2;
+    out += `<line x1="${x.toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw * (i === 0 ? 1 : 0.7)).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--grid)" stroke-width="3"/>`;
+  }
+  return out;
+}
+
+function thumbProgressRows(x, y, iw, ih) {
+  const rows = 2, rh = ih / rows;
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2 - 1.5;
+    const split = 0.4 + i * 0.25;
+    out += `<rect x="${x.toFixed(1)}" y="${yy.toFixed(1)}" width="${(iw * split).toFixed(1)}" height="3" rx="1.5" style="fill:var(--accent)"/>`;
+    out += `<rect x="${(x + iw * split).toFixed(1)}" y="${yy.toFixed(1)}" width="${(iw * (1 - split)).toFixed(1)}" height="3" rx="1.5" style="fill:var(--grid)"/>`;
+  }
+  return out;
+}
+
+function thumbTrendRows(x, y, iw, ih) {
+  const rows = 3, rh = ih / rows;
+  const tones = ['var(--accent)', 'var(--danger)', 'var(--muted)'];
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2;
+    out += `<circle cx="${(x + 3).toFixed(1)}" cy="${yy.toFixed(1)}" r="2" style="fill:${tones[i % tones.length]}"/>`;
+    out += `<line x1="${(x + 9).toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw * 0.7).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--grid)" stroke-width="2.5"/>`;
+  }
+  return out;
+}
+
+function thumbChips(x, y, iw, ih) {
+  const tones = ['var(--danger)', 'var(--amber)', 'var(--accent)'];
+  const chipW = (iw - 8) / 3;
+  let out = `<text x="${x.toFixed(1)}" y="${(y + ih * 0.45).toFixed(1)}" style="fill:var(--ink);font-size:${Math.min(ih * 0.4, 14).toFixed(1)}px;font-weight:700">••</text>`;
+  tones.forEach((c, i) => {
+    const cx = x + i * (chipW + 4);
+    out += `<rect x="${cx.toFixed(1)}" y="${(y + ih - 8).toFixed(1)}" width="${chipW.toFixed(1)}" height="6" rx="3" style="fill:${c}"/>`;
+  });
+  return out;
+}
+
+function thumbComparisonBox(x, y, iw, ih) {
+  const halfW = (iw - 10) / 2;
+  return `
+    <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${halfW.toFixed(1)}" height="${ih.toFixed(1)}" rx="3" style="fill:var(--plane);stroke:var(--grid)"/>
+    <rect x="${(x + halfW + 10).toFixed(1)}" y="${y.toFixed(1)}" width="${halfW.toFixed(1)}" height="${ih.toFixed(1)}" rx="3" style="fill:var(--plane);stroke:var(--grid)"/>
+    <text x="${(x + iw / 2).toFixed(1)}" y="${(y + ih / 2 + 3).toFixed(1)}" text-anchor="middle" style="fill:var(--muted);font-size:10px">⟷</text>`;
+}
+
+// ---------- Active dashboards: own dedicated page (card grid with a thumbnail per card) ----------
 // Sourced from the same state.history the "السجل" tab already loaded (the List endpoint
 // already returns Active dashboards the caller owns or holds a role on, alongside their
 // own Drafts) — just filtered down to isActive here, no separate fetch.
@@ -3931,23 +4158,20 @@ function renderActiveDashboardsList() {
       ? `<button class="icon-btn roles-btn" data-roles="${esc(h.id)}" title="إدارة الصلاحيات">⚙️</button>` : '';
     const delBtn = h.myRole === 'owner'
       ? `<button class="icon-btn del-active-btn" data-del="${esc(h.id)}" title="حذف">🗑️</button>` : '';
-    return `<div class="file-row${h.disabled ? ' stale' : ''}" data-id="${esc(h.id)}">
-        <div class="fr-main">
-          <div class="fr-icon">📊</div>
-          <div class="fr-text">
-            <div class="fr-line1">
-              <span class="fr-name">${esc(h.question)}</span>
-              ${disabledBadge}
-            </div>
-            <div class="fr-line2">${esc(h.summary)}${ownerLine ? ` <span class="sep">·</span> ${ownerLine}` : ''}</div>
+    return `<div class="active-card${h.disabled ? ' stale' : ''}" data-id="${esc(h.id)}">
+        <div class="dash-thumb">${dashboardThumbnailSvg(widgets)}</div>
+        <div class="active-card-body">
+          <div class="badges">${roleBadge}${disabledBadge}</div>
+          <div class="ac-name">${esc(h.question)}</div>
+          <div class="ac-summary">${esc(h.summary)}</div>
+          <div class="ac-meta">
+            <span>${widgets.length} عنصر${ownerLine ? ` · ${ownerLine}` : ''}</span>
+            <span>${relTime(h.createdAt)} · ${when.toLocaleDateString('ar-EG')}</span>
           </div>
-        </div>
-        <div class="col-updated"><b>${relTime(h.createdAt)}</b>${when.toLocaleDateString('ar-EG')}</div>
-        <div class="col-usage"><div class="num">${widgets.length}</div><div class="lbl">عنصر</div></div>
-        <div class="col-access">${roleBadge || '—'}</div>
-        <div class="col-actions">
-          <button class="icon-btn open-active-btn" data-open="${esc(h.id)}" title="فتح">↗️</button>
-          ${rolesBtn}${delBtn}
+          <div class="actions">
+            <button class="open-btn" data-open="${esc(h.id)}">↗️ فتح</button>
+            ${rolesBtn}${delBtn}
+          </div>
         </div>
       </div>`;
   }).join('') : `<div class="repo-empty">لا يوجد لوحات نشطة بعد — فعّل لوحة من تبويب "السجل" لتظهر هنا.</div>`;
