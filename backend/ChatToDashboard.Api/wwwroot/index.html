@@ -477,7 +477,8 @@ tr:last-child td{border-bottom:0}
 .access-locked.ok{color:#1e9e46}
 .col-actions{width:150px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
 .icon-btn{width:32px;height:32px;border-radius:8px;background:var(--plane);border:1px solid var(--grid);
-  color:var(--ink-2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+  color:var(--ink-2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none}
 .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
 .icon-btn:disabled{opacity:.5;cursor:progress}
 
@@ -2699,7 +2700,11 @@ function renderDashboard() {
     return;
   }
 
-  el.dash.innerHTML = `<div id="summary">${esc(d.summary)}</div>` + dashboardTopBarHtml(d.widgets);
+  // A dashboard opened from السجل/اللوحات النشطة carries its own name (the title assigned
+  // when it was saved or last renamed) — show that at the top instead of the summary text,
+  // matching what "اللوحات النشطة" itself lists it as. A brand-new, not-yet-saved chat
+  // dashboard has no name yet, so it keeps showing its summary as before.
+  el.dash.innerHTML = `<div id="summary">${esc(d.name || d.summary)}</div>` + dashboardTopBarHtml(d.widgets);
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
   if (d.filters?.length) el.dash.appendChild(state.shareId ? buildFilterBarReadOnly(d.filters) : buildFilterBar(d.filters));
@@ -3768,6 +3773,7 @@ function renderRepo() {
         <div class="col-usage"><div class="num">${f.usageCount}</div><div class="lbl">لوحة</div></div>
         <div class="col-access">${access}</div>
         <div class="col-actions">
+          <a class="icon-btn dl" href="/api/repository/files/${esc(f.id)}/download" title="تنزيل الملف">⬇️</a>
           <button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>
           <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
           ${permBtn}
@@ -4494,7 +4500,7 @@ function openHistoryEntry(id) {
   const entry = state.history.find(h => h.id === id);
   if (!entry) return;
   state.dashboard = ensureWidgetMeta({
-    summary: entry.summary, widgets: parseWidgets(entry.widgetsJson),
+    name: entry.question, summary: entry.summary, widgets: parseWidgets(entry.widgetsJson),
     filters: parseFilters(entry.filtersJson),
   });
   state.editHistory = { past: [], future: [] };
@@ -4637,7 +4643,11 @@ el('rename-form').addEventListener('submit', async e => {
   if (!res.ok) { renameModalError(payload?.error || 'تعذّر الحفظ.'); return; }
   const idx = state.history.findIndex(h => h.id === id);
   if (idx !== -1) state.history[idx] = payload;
-  if (state.currentHistoryId === id) state.dashboard.summary = payload.summary;
+  if (state.currentHistoryId === id) {
+    state.dashboard.name = payload.question;
+    state.dashboard.summary = payload.summary;
+    renderDashboard();
+  }
   el('rename-modal').classList.add('hidden');
   renderHistory();
 });

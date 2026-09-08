@@ -116,6 +116,48 @@ public class RepositoryController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// The original file exactly as uploaded (or as of the last "Update this file"), for the
+    /// user to download. Gated the same way actually *using* this file as a data source
+    /// already is — creator, an Admin, or someone explicitly granted (see
+    /// AnalyticsTools.DescribeSourcesAsync's RestrictedFileTables) — since a raw export is at
+    /// least as sensitive as a query result. Merely seeing the file listed in "مستودع
+    /// الملفات" does not itself grant this, same as it doesn't grant querying it.
+    /// </summary>
+    [HttpGet("files/{id}/download")]
+    public async Task<IActionResult> Download(string id, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+
+        var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
+        if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
+
+        if (user.Role != UserRoles.Admin && !string.Equals(createdByUserId, user.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            var granted = await _store.GetPermittedUserIdsAsync(id, ct);
+            if (!granted.Contains(user.Id, StringComparer.OrdinalIgnoreCase))
+                return Forbid();
+        }
+
+        var file = await _store.GetFileContentAsync(id, ct);
+        if (file is null)
+            return NotFound(new { error = "الملف الأصلي غير محفوظ (رُفع قبل إتاحة التنزيل) — أعد رفعه عبر «تحديث البيانات»." });
+
+        var (content, originalFileName) = file.Value;
+        var downloadName = string.IsNullOrWhiteSpace(originalFileName) ? $"{id}.bin" : originalFileName;
+        return File(content, ContentTypeFor(downloadName), downloadName);
+    }
+
+    private static string ContentTypeFor(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
+    {
+        ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xls" => "application/vnd.ms-excel",
+        ".csv" => "text/csv",
+        ".pdf" => "application/pdf",
+        _ => "application/octet-stream",
+    };
+
     /// <summary>Edits display name/description/category without touching the data.</summary>
     [HttpPut("files/{id}/meta")]
     public async Task<IActionResult> UpdateMeta(string id, [FromBody] UpdateFileMetaRequest request, CancellationToken ct)

@@ -45,7 +45,7 @@ public class RepositoryStore
                  "Id" TEXT PRIMARY KEY, "DisplayName" TEXT, "OriginalFileName" TEXT, "Description" TEXT,
                  "Category" TEXT, "Kind" TEXT, "RowCount" INTEGER, "ColumnCount" INTEGER, "PageCount" INTEGER,
                  "UploadedAt" TEXT, "LastUpdatedAt" TEXT, "TableName" TEXT, "TextContent" TEXT,
-                 "ColumnsJson" TEXT, "SchemaChangedAt" TEXT, "CreatedByUserId" TEXT)
+                 "ColumnsJson" TEXT, "SchemaChangedAt" TEXT, "CreatedByUserId" TEXT, "FileContent" BLOB)
                """
             : $"""
                IF OBJECT_ID('staging.repo_Files') IS NULL
@@ -55,7 +55,7 @@ public class RepositoryStore
                  [RowCount] INT, [ColumnCount] INT, [PageCount] INT,
                  [UploadedAt] DATETIME2, [LastUpdatedAt] DATETIME2, [TableName] NVARCHAR(200),
                  [TextContent] NVARCHAR(MAX), [ColumnsJson] NVARCHAR(MAX), [SchemaChangedAt] DATETIME2,
-                 [CreatedByUserId] NVARCHAR(200))
+                 [CreatedByUserId] NVARCHAR(200), [FileContent] VARBINARY(MAX))
                """;
         await using (var command = connection.CreateCommand())
         {
@@ -67,7 +67,9 @@ public class RepositoryStore
         // "ADD COLUMN IF NOT EXISTS", so the duplicate-column failure is just swallowed (same
         // pattern as HistoryStore/ShareStore). Pre-existing rows' "Name" column (the old,
         // single "uploaded filename" field) becomes the DisplayName fallback below, since
-        // that's the only name they ever had.
+        // that's the only name they ever had. A pre-migration row's FileContent stays NULL —
+        // its original bytes were never kept — so GET .../download 404s for it specifically
+        // rather than the whole feature failing; re-uploading via "Update this file" fixes it.
         foreach (var (column, sqliteType, sqlServerType) in new[]
                  {
                      ("DisplayName", "TEXT", "NVARCHAR(400)"),
@@ -77,6 +79,7 @@ public class RepositoryStore
                      ("ColumnsJson", "TEXT", "NVARCHAR(MAX)"),
                      ("SchemaChangedAt", "TEXT", "DATETIME2"),
                      ("CreatedByUserId", "TEXT", "NVARCHAR(200)"),
+                     ("FileContent", "BLOB", "VARBINARY(MAX)"),
                  })
         {
             try
@@ -239,15 +242,15 @@ public class RepositoryStore
 
         await connection.ExecuteAsync(
             $"INSERT INTO {CatalogueTable} (Id, DisplayName, OriginalFileName, Description, Category, Kind, " +
-            "RowCount, ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId) " +
+            "RowCount, ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
             "VALUES (@Id, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
-            "@RowCount, @ColumnCount, @PageCount, @UploadedAt, @LastUpdatedAt, @TableName, @TextContent, @ColumnsJson, @CreatedByUserId)",
+            "@RowCount, @ColumnCount, @PageCount, @UploadedAt, @LastUpdatedAt, @TableName, @TextContent, @ColumnsJson, @CreatedByUserId, @FileContent)",
             new
             {
                 record.Id, record.DisplayName, record.OriginalFileName, record.Description, record.Category,
                 record.Kind, record.RowCount, record.ColumnCount, record.PageCount, record.UploadedAt,
                 record.LastUpdatedAt, record.TableName, TextContent = parsed.Text, ColumnsJson = columnsJson,
-                record.CreatedByUserId,
+                record.CreatedByUserId, FileContent = parsed.Content,
             });
 
         _logger.LogInformation("Saved {File} to repository under category {Category}", record.DisplayName, record.Category);
@@ -293,7 +296,7 @@ public class RepositoryStore
         var updated = await connection.ExecuteAsync(
             $"UPDATE {CatalogueTable} SET OriginalFileName = @OriginalFileName, RowCount = @RowCount, " +
             "ColumnCount = @ColumnCount, PageCount = @PageCount, LastUpdatedAt = @LastUpdatedAt, " +
-            "TextContent = @TextContent" +
+            "TextContent = @TextContent, FileContent = @FileContent" +
             (newColumnsJson is not null ? ", ColumnsJson = @ColumnsJson" : "") +
             (schemaChangedAt is not null ? ", SchemaChangedAt = @SchemaChangedAt" : "") +
             " WHERE Id = @Id",
@@ -301,7 +304,8 @@ public class RepositoryStore
             {
                 Id = id, OriginalFileName = parsed.FileName, RowCount = parsed.Table?.Rows.Count ?? 0,
                 ColumnCount = parsed.Table?.Columns.Count ?? 0, PageCount = parsed.PageCount,
-                LastUpdatedAt = now, TextContent = parsed.Text, ColumnsJson = newColumnsJson, SchemaChangedAt = schemaChangedAt,
+                LastUpdatedAt = now, TextContent = parsed.Text, FileContent = parsed.Content,
+                ColumnsJson = newColumnsJson, SchemaChangedAt = schemaChangedAt,
             });
         if (updated == 0) return null;
 
@@ -319,6 +323,22 @@ public class RepositoryStore
             $"UPDATE {CatalogueTable} SET DisplayName = @displayName, Description = @description, Category = @category WHERE Id = @id",
             new { id, displayName = displayName.Trim(), description = description?.Trim() ?? "", category = string.IsNullOrWhiteSpace(category) ? "عام" : category.Trim() });
         return affected > 0;
+    }
+
+    /// <summary>The raw bytes exactly as uploaded, for GET .../download — null if this file
+    /// predates FileContent (re-upload via "Update this file" to backfill), or the id
+    /// doesn't exist at all; the caller can't tell the two apart from this alone, so it
+    /// checks existence itself first (see RepositoryController.Download).</summary>
+    public async Task<(byte[] Content, string OriginalFileName)?> GetFileContentAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var row = await connection.QuerySingleOrDefaultAsync(
+            $"SELECT FileContent, COALESCE(OriginalFileName, '') AS OriginalFileName FROM {CatalogueTable} WHERE Id = @id",
+            new { id });
+        if (row is null) return null;
+        byte[]? content = row.FileContent;
+        return content is null ? null : (content, (string)row.OriginalFileName);
     }
 
     /// <summary>Just the creator id — for an authorization check (Owner-or-Admin) that

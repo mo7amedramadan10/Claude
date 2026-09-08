@@ -6,8 +6,11 @@ using UglyToad.PdfPig;
 
 namespace ChatToDashboard.Api.Repository;
 
-/// <summary>A file parsed on the server, held until the user assigns it a category.</summary>
-public record ParsedUpload(string FileName, string Kind, DataTable? Table, string? Text, int PageCount);
+/// <summary>A file parsed on the server, held until the user assigns it a category.
+/// <paramref name="Content"/> is the raw upload exactly as received — kept alongside the
+/// parsed result purely so RepositoryStore can persist it for GET .../download, and never
+/// otherwise touched here.</summary>
+public record ParsedUpload(string FileName, string Kind, DataTable? Table, string? Text, int PageCount, byte[] Content);
 
 /// <summary>
 /// Parses uploads server-side (never in the browser): spreadsheets with ClosedXML/CsvHelper
@@ -31,18 +34,22 @@ public class UploadParser
         var token = Guid.NewGuid().ToString("N");
 
         // ClosedXML and PdfPig both want a seekable file; buffer the upload to a temp file.
+        // The same bytes are kept in memory too (ParsedUpload.Content) so a later download
+        // request can hand back the exact original file, not a reconstruction from parsed data.
         var temp = Path.Combine(Path.GetTempPath(), token + extension);
         try
         {
-            using (var file = File.Create(temp)) content.CopyTo(file);
+            byte[] bytes;
+            using (var buffer = new MemoryStream()) { content.CopyTo(buffer); bytes = buffer.ToArray(); }
+            File.WriteAllBytes(temp, bytes);
 
             ParsedUpload parsed = extension switch
             {
                 ".csv" => new ParsedUpload(fileName, "csv",
-                    DataFolderLoader.InferTypes(DataFolderLoader.ReadCsv(temp)), null, 0),
+                    DataFolderLoader.InferTypes(DataFolderLoader.ReadCsv(temp)), null, 0, bytes),
                 ".xlsx" or ".xls" => new ParsedUpload(fileName, "excel",
-                    DataFolderLoader.InferTypes(DataFolderLoader.ReadXlsx(temp)), null, 0),
-                ".pdf" => ParsePdf(fileName, temp),
+                    DataFolderLoader.InferTypes(DataFolderLoader.ReadXlsx(temp)), null, 0, bytes),
+                ".pdf" => ParsePdf(fileName, temp, bytes),
                 _ => throw new NotSupportedException($"Unsupported file type: {extension}"),
             };
 
@@ -70,7 +77,7 @@ public class UploadParser
         }
     }
 
-    private static ParsedUpload ParsePdf(string fileName, string path)
+    private static ParsedUpload ParsePdf(string fileName, string path, byte[] bytes)
     {
         using var pdf = PdfDocument.Open(path);
         var text = new StringBuilder();
@@ -80,7 +87,7 @@ public class UploadParser
             text.AppendLine(page.Text);
             pages++;
         }
-        return new ParsedUpload(fileName, "pdf", null, text.ToString(), pages);
+        return new ParsedUpload(fileName, "pdf", null, text.ToString(), pages, bytes);
     }
 
     public bool TryTake(string token, out ParsedUpload upload)
