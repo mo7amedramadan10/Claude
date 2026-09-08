@@ -517,23 +517,9 @@ tr:last-child td{border-bottom:0}
 .hist-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
   border:1px dashed var(--grid);border-radius:var(--radius)}
 
-/* ---------- Active dashboards: card grid with a mini preview thumbnail ---------- */
-.active-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-.active-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--grid);
-  border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-.active-card:hover{border-color:var(--accent)}
-.active-card.stale{border-inline-start:3px solid var(--amber)}
-.dash-thumb{aspect-ratio:16/9;border-bottom:1px solid var(--grid)}
-.dash-thumb svg{display:block;width:100%;height:100%}
-.active-card-body{display:flex;flex-direction:column;gap:8px;padding:14px}
-.active-card .badges{display:flex;gap:6px;flex-wrap:wrap}
-.active-card .ac-name{font-weight:600;font-size:13.5px;line-height:1.5}
-.active-card .ac-summary{color:var(--ink-2);font-size:12px;line-height:1.6;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.active-card .ac-meta{color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:8px}
-.active-card .actions{display:flex;gap:8px;margin-top:auto}
-.active-card .actions .open-btn{flex:1;border:0;background:var(--accent);color:#fff;font-weight:600;
-  padding:7px 10px;border-radius:9px;font-size:12.5px}
+/* ---------- Active dashboards: list row with a small mini preview thumbnail ---------- */
+.fr-thumb{width:76px;height:43px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1px solid var(--grid)}
+.fr-thumb svg{display:block;width:100%;height:100%}
 
 /* ---------- Part 2: dashboard states (Draft/Active), roles, owner transfer ---------- */
 .state-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
@@ -976,7 +962,14 @@ tr:last-child td{border-bottom:0}
     <span class="count" id="active-count"></span>
     <button type="button" class="link-btn" id="active-roles-info-btn">ⓘ ما معنى المالك والصلاحيات؟</button>
   </div>
-  <div class="active-cards" id="active-list"></div>
+  <div class="file-list-head">
+    <div class="col-main">اللوحة</div>
+    <div class="col-updated">آخر حفظ</div>
+    <div class="col-usage">العناصر</div>
+    <div class="col-access">الدور</div>
+    <div class="col-actions"></div>
+  </div>
+  <div class="file-list" id="active-list"></div>
 </div>
 
 <div id="role-info-modal" class="modal-overlay hidden">
@@ -4347,7 +4340,7 @@ function thumbComparisonBox(x, y, iw, ih) {
     <text x="${(x + iw / 2).toFixed(1)}" y="${(y + ih / 2 + 3).toFixed(1)}" text-anchor="middle" style="fill:var(--muted);font-size:10px">⟷</text>`;
 }
 
-// ---------- Active dashboards: own dedicated page (card grid with a thumbnail per card) ----------
+// ---------- Active dashboards: own dedicated page (list row with a thumbnail per row) ----------
 // Sourced from the same state.history the "السجل" tab already loaded (the List endpoint
 // already returns Active dashboards the caller owns or holds a role on, alongside their
 // own Drafts) — just filtered down to isActive here, no separate fetch.
@@ -4371,20 +4364,23 @@ function renderActiveDashboardsList() {
       ? `<button class="icon-btn roles-btn" data-roles="${esc(h.id)}" title="إدارة الصلاحيات">⚙️</button>` : '';
     const delBtn = h.myRole === 'owner'
       ? `<button class="icon-btn del-active-btn" data-del="${esc(h.id)}" title="حذف">🗑️</button>` : '';
-    return `<div class="active-card${h.disabled ? ' stale' : ''}" data-id="${esc(h.id)}">
-        <div class="dash-thumb">${dashboardThumbnailSvg(widgets)}</div>
-        <div class="active-card-body">
-          <div class="badges">${roleBadge}${disabledBadge}</div>
-          <div class="ac-name">${esc(h.question)}</div>
-          <div class="ac-summary">${esc(h.summary)}</div>
-          <div class="ac-meta">
-            <span>${widgets.length} عنصر${ownerLine ? ` · ${ownerLine}` : ''}</span>
-            <span>${relTime(h.createdAt)} · ${when.toLocaleDateString('ar-EG')}</span>
+    return `<div class="file-row${h.disabled ? ' stale' : ''}" data-id="${esc(h.id)}">
+        <div class="fr-main">
+          <div class="fr-thumb">${dashboardThumbnailSvg(widgets)}</div>
+          <div class="fr-text">
+            <div class="fr-line1">
+              <span class="fr-name">${esc(h.question)}</span>
+              ${disabledBadge}
+            </div>
+            <div class="fr-line2">${esc(h.summary)}${ownerLine ? ` <span class="sep">·</span> ${ownerLine}` : ''}</div>
           </div>
-          <div class="actions">
-            <button class="open-btn" data-open="${esc(h.id)}">↗️ فتح</button>
-            ${renameBtn}${rolesBtn}${delBtn}
-          </div>
+        </div>
+        <div class="col-updated"><b>${relTime(h.createdAt)}</b>${when.toLocaleDateString('ar-EG')}</div>
+        <div class="col-usage"><div class="num">${widgets.length}</div><div class="lbl">عنصر</div></div>
+        <div class="col-access">${roleBadge || '—'}</div>
+        <div class="col-actions">
+          <button class="icon-btn open-active-btn" data-open="${esc(h.id)}" title="فتح">↗️</button>
+          ${renameBtn}${rolesBtn}${delBtn}
         </div>
       </div>`;
   }).join('') : `<div class="repo-empty">لا يوجد لوحات نشطة بعد — فعّل لوحة من تبويب "السجل" لتظهر هنا.</div>`;
