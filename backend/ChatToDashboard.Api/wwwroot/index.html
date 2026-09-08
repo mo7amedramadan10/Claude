@@ -34,6 +34,10 @@
      Kept identical across both themes (see THEME in the script below) so a category
      means the same color whichever mode you're in. */
   --chart-palette: #35D1A1, #F2B84B, #6C8CFF, #EF6461, #B784F0;
+  /* Custom chevron for every <select> in the app (see the global "select" rule below) —
+     a plain SVG data URI, since url()-referenced background-image can't pick up
+     currentColor/CSS vars, so it's redefined per theme instead. */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B96AC' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 /* Light mode — same tokens, same accent hue (darkened for contrast on white), inverted
    surfaces. Toggled via the 🌙/☀️ button; JS mirrors this exact palette in THEMES.light
@@ -44,11 +48,30 @@
   --shadow:0 1px 2px rgba(16,21,31,.05), 0 6px 18px rgba(16,21,31,.07);
   --shadow-3d:0 24px 38px -18px rgba(16,21,31,.22),0 8px 14px -6px rgba(16,21,31,.14);
   --skeleton-a:#EEF1F6; --skeleton-b:#F8F9FB;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23565F6D' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
 button{font:inherit;cursor:pointer}
 input{font:inherit}
+
+/* ---------- dropdowns (every <select> in the app) ---------- */
+/* One shared, larger, custom-chevron design instead of each screen's own small native
+   control — appearance:none strips the browser's tiny built-in arrow (and, on Firefox,
+   its default padding) so --select-arrow (a plain SVG, themed above) can replace it,
+   positioned for RTL: text starts at the right, so the icon sits on the left. Later,
+   more specific selectors may still override individual properties (e.g. a fixed width
+   inside a tight toolbar) — this is the shared baseline everywhere else falls back to. */
+select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  padding:11px 44px 11px 16px; border:1px solid var(--grid); border-radius:11px;
+  background:var(--surface) var(--select-arrow) no-repeat left 14px center;
+  background-size:18px; color:var(--ink); font:inherit; font-size:14px; cursor:pointer;
+  transition:border-color .15s, box-shadow .15s;
+}
+select:hover{border-color:var(--accent)}
+select:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); outline:none}
+select:disabled{opacity:.55; cursor:not-allowed}
 
 /* ---------- header ---------- */
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
@@ -118,7 +141,6 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .model-switch-option.disabled{opacity:.5;cursor:not-allowed}
 .model-switch-ollama-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--grid)}
 .model-switch-ollama-row label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2)}
-.model-switch-ollama-row select{padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px;color:var(--ink);background:var(--surface)}
 .model-switch-note{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.5}
 .model-switch-note.bad{color:var(--danger)}
 .model-switch-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
@@ -399,8 +421,6 @@ tr:last-child td{border-bottom:0}
 .pending-card .cancel{border:0;background:transparent;color:var(--danger);font-size:18px;font-weight:700}
 .pending-card.bad{background:rgba(239,100,97,.12);border-color:rgba(239,100,97,.35)}
 .repo-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-.sort-select{font-size:12px;color:var(--ink-2);background:var(--surface);border:1px solid var(--grid);
-  border-radius:8px;padding:7px 12px}
 .cat-badge{display:inline-block;padding:3px 10px;border-radius:999px;
   background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:600;flex-shrink:0}
 .repo-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
@@ -467,7 +487,8 @@ tr:last-child td{border-bottom:0}
 .rel-row .rel-label{flex:1;font-size:12.5px}
 .rel-row button{border:0;background:transparent;color:var(--danger);font-size:15px}
 .rel-add{display:flex;gap:8px;margin-top:8px}
-.rel-add select, .rel-add input{flex:1;padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px}
+.rel-add select, .rel-add input{flex:1}
+.rel-add input{padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px}
 .rel-add button{padding:7px 12px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;flex-shrink:0}
 @media (max-width:900px){
   .col-updated, .col-usage, .col-access{display:none}
@@ -634,8 +655,8 @@ tr:last-child td{border-bottom:0}
 .login-brand{display:flex;align-items:center;justify-content:center;gap:9px;font-weight:700;margin-bottom:6px}
 .login-brand .dot{width:22px;height:22px;border-radius:6px;background:var(--accent)}
 .login-card label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
-.login-card input,.login-card select{padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:14px}
-.login-card input:focus,.login-card select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
+.login-card input{padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:14px}
+.login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
 .login-error{padding:8px 11px;border-radius:9px;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger);font-size:12.5px}
 .login-error.hidden{display:none}
 #login-submit{padding:10px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
@@ -721,7 +742,7 @@ tr:last-child td{border-bottom:0}
 .user-modal-box{width:min(480px,100%);max-height:86vh;overflow-y:auto}
 #user-form{display:flex;flex-direction:column;gap:12px}
 #user-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
-#user-form input[type="text"],#user-form input[type="password"],#user-form select{
+#user-form input[type="text"],#user-form input[type="password"]{
   padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:13.5px;color:var(--ink)}
 .chk-row{flex-direction:row !important;align-items:center;gap:8px !important}
 .chk-row input{width:16px;height:16px;accent-color:var(--accent)}
