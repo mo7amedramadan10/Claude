@@ -295,6 +295,19 @@ public class HistoryStore
         return rows.ToDictionary(r => r.DashboardId, r => r.Role);
     }
 
+    /// <summary>"owner" | "editor" | "viewer" | null for a Draft or an Active dashboard the
+    /// given user has no standing on. Shared by HistoryController (the wizard/autosave path's
+    /// Owner-only new-data-source guard) and ChatController (the identical guard on the
+    /// chat-continuation path — see ChatController.Post) so both ask the exact same
+    /// question the exact same way.</summary>
+    public async Task<string?> ResolveRoleAsync(string userId, DashboardHistoryEntry entry, CancellationToken ct = default)
+    {
+        if (!entry.IsActive) return entry.UserId == userId ? "owner" : null;
+        if (entry.OwnerId == userId) return "owner";
+        var roles = await GetMyRolesAsync(userId, new[] { entry.Id }, ct);
+        return roles.GetValueOrDefault(entry.Id);
+    }
+
     public async Task SetRoleAsync(string dashboardId, string userId, string role, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

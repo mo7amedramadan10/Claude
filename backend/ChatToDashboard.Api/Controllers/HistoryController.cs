@@ -111,7 +111,8 @@ public class HistoryController : ControllerBase
         // to add/remove/rework widgets built on tables the dashboard already uses.
         if (entry.IsActive && role == DashboardRoles.Editor && !IsAdmin)
         {
-            var introduced = ExtractTables(widgetsJson).Except(ExtractTables(entry.WidgetsJson), StringComparer.OrdinalIgnoreCase).ToList();
+            var introduced = WidgetTableExtractor.ExtractTables(widgetsJson)
+                .Except(WidgetTableExtractor.ExtractTables(entry.WidgetsJson), StringComparer.OrdinalIgnoreCase).ToList();
             if (introduced.Count > 0)
                 return BadRequest(new
                 {
@@ -123,29 +124,6 @@ public class HistoryController : ControllerBase
         var activeFiltersJson = request.ActiveFilters.ValueKind == JsonValueKind.Undefined ? "{}" : request.ActiveFilters.GetRawText();
         await _store.UpdateContentAsync(id, request.Summary, widgetsJson, filtersJson, activeFiltersJson, ct);
         return NoContent();
-    }
-
-    /// <summary>Distinct query.table values a widgets JSON array depends on — the data
-    /// sources a re-runnable (wizard-created) widget references. A widget with no query
-    /// (e.g. a frozen chat-answered one) contributes nothing, matching
-    /// DashboardAccessService's own table extraction.</summary>
-    private static HashSet<string> ExtractTables(string widgetsJson)
-    {
-        var tables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        try
-        {
-            var widgets = JsonDocument.Parse(widgetsJson).RootElement;
-            if (widgets.ValueKind != JsonValueKind.Array) return tables;
-            foreach (var widget in widgets.EnumerateArray())
-            {
-                if (!widget.TryGetProperty("query", out var query) || query.ValueKind != JsonValueKind.Object) continue;
-                if (query.TryGetProperty("table", out var table) && table.ValueKind == JsonValueKind.String
-                    && !string.IsNullOrWhiteSpace(table.GetString()))
-                    tables.Add(table.GetString()!);
-            }
-        }
-        catch (JsonException) { }
-        return tables;
     }
 
     /// <summary>Renames a dashboard's title/description only — same permission as
@@ -386,13 +364,8 @@ public class HistoryController : ControllerBase
     /// <summary>"owner" | "editor" | "viewer" | null for a Draft or an Active dashboard the
     /// caller has no standing on. Admins are never blocked but are not implicitly a role
     /// holder either (kept separate — see IsAdmin checks at each call site).</summary>
-    private async Task<string?> ResolveRoleAsync(DashboardHistoryEntry entry, CancellationToken ct)
-    {
-        if (!entry.IsActive) return entry.UserId == UserId ? "owner" : null;
-        if (entry.OwnerId == UserId) return "owner";
-        var roles = await _store.GetMyRolesAsync(UserId, new[] { entry.Id }, ct);
-        return roles.GetValueOrDefault(entry.Id);
-    }
+    private Task<string?> ResolveRoleAsync(DashboardHistoryEntry entry, CancellationToken ct) =>
+        _store.ResolveRoleAsync(UserId, entry, ct);
 
     /// <summary>Wraps a raw entry with the caller-facing fields the frontend needs: the
     /// caller's role, and — for an Active dashboard — the live disabled state from

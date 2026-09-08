@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Users;
@@ -15,12 +16,15 @@ public class ChatController : ControllerBase
 
     private readonly IDashboardGenerator _generator;
     private readonly PermissionsService _permissions;
+    private readonly HistoryStore _history;
     private readonly ILogger<ChatController> _logger;
 
-    public ChatController(IDashboardGenerator generator, PermissionsService permissions, ILogger<ChatController> logger)
+    public ChatController(
+        IDashboardGenerator generator, PermissionsService permissions, HistoryStore history, ILogger<ChatController> logger)
     {
         _generator = generator;
         _permissions = permissions;
+        _history = history;
         _logger = logger;
     }
 
@@ -43,6 +47,41 @@ public class ChatController : ControllerBase
         {
             var dashboard = await _generator.GenerateDashboardAsync(
                 request.Message.Trim(), request.CurrentDashboard, effectiveSources, request.Image, ct);
+
+            // Mirrors HistoryController.Update's Owner-only new-data-source guard, but on the
+            // chat-continuation path: without this, an Editor could reach the same outcome —
+            // a widget depending on a table the dashboard's Owner never used — just by asking
+            // for it in the chat box instead of the wizard, since a chat answer would otherwise
+            // land as a disconnected fresh Draft the frontend silently forks into (see
+            // index.html's ask()), never touching Update()'s check at all. Checked against the
+            // dashboard's own stored widgets, never the client-supplied currentDashboard, so
+            // this can't be bypassed by echoing back a doctored "current" state.
+            if (!string.IsNullOrWhiteSpace(request.HistoryId))
+            {
+                var entry = await _history.GetByIdAsync(request.HistoryId, ct);
+                if (entry is not null && entry.IsActive)
+                {
+                    var role = await _history.ResolveRoleAsync(user.Id, entry, ct);
+                    if (role == DashboardRoles.Editor && user.Role != UserRoles.Admin)
+                    {
+                        var newTables = dashboard.Widgets
+                            .Where(w => w.Query is not null && !string.IsNullOrWhiteSpace(w.Query.Table))
+                            .Select(w => w.Query!.Table);
+                        var existingTables = WidgetTableExtractor.ExtractTables(entry.WidgetsJson);
+                        var introduced = newTables
+                            .Where(t => !existingTables.Contains(t))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+                        if (introduced.Count > 0)
+                            return BadRequest(new ChatResponse
+                            {
+                                Error = $"تغيير مصادر البيانات صلاحية تخص مالك اللوحة فقط — لا يمكنك كمحرِّر " +
+                                    $"إضافة عنصر يعتمد على مصدر بيانات جديد ({string.Join("، ", introduced)}).",
+                            });
+                    }
+                }
+            }
+
             return Ok(new ChatResponse { Dashboard = dashboard });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

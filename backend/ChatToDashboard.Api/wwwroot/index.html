@@ -3444,6 +3444,11 @@ async function ask(question) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: question, currentDashboard, image,
+        // Only when actually continuing an Active dashboard (never a Draft) — lets the
+        // server re-apply the same "Editors can't introduce a new data source" rule the
+        // autosave/wizard path already enforces, since a chat continuation would otherwise
+        // silently fork into a disconnected Draft that never goes through that check at all.
+        historyId: isContinuation && state.dashboardIsActive ? state.currentHistoryId : null,
         sources: { systems: [...state.onSystems], categories: [...state.onCategories] },
       }),
     });

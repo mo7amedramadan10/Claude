@@ -18,6 +18,17 @@ public class ChatRequest
     [JsonPropertyName("currentDashboard")]
     public DashboardStateInput? CurrentDashboard { get; set; }
 
+    /// <summary>
+    /// The Active dashboard id <see cref="CurrentDashboard"/> was opened from, if any — sent
+    /// only when the user is continuing a dashboard that's actually Active (never a Draft).
+    /// Lets the server re-apply the same "only the Owner may introduce a new data source" rule
+    /// that HistoryController.Update enforces on the wizard/autosave path (see
+    /// ChatController.Post) — without it, a chat continuation would silently fork into a
+    /// disconnected new Draft instead, bypassing that guard entirely.
+    /// </summary>
+    [JsonPropertyName("historyId")]
+    public string? HistoryId { get; set; }
+
     /// <summary>Which sources the user has enabled; omitted means "everything".</summary>
     [JsonPropertyName("sources")]
     public SourceSelection? Sources { get; set; }
