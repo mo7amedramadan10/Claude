@@ -549,8 +549,8 @@ tr:last-child td{border-bottom:0}
 .roles-section-title{font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px}
 .roles-error{color:var(--danger);font-size:12px;margin-top:4px}
 
-/* ---------- searchable user picker (file permissions) ---------- */
-.user-search-box{position:relative}
+/* ---------- searchable user picker (file permissions; dashboard roles/owner-transfer) ---------- */
+.user-search-box{position:relative;flex:1}
 .user-search-box input{width:100%}
 .user-search-suggestions{position:absolute;top:calc(100% + 4px);inset-inline-start:0;inset-inline-end:0;
   z-index:40;max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--grid);
@@ -1138,18 +1138,22 @@ tr:last-child td{border-bottom:0}
     <div class="roles-section-title">نقل الملكية</div>
     <p class="modal-note">المالك الجديد لازم يكون بالفعل عنده صلاحية وصول للبيانات اللي تعتمد عليها هذه اللوحة.</p>
     <div class="owner-transfer-row">
-      <input type="text" id="transfer-owner-username" placeholder="اسم المستخدم" />
-      <button type="button" id="transfer-owner-btn">نقل</button>
+      <div class="user-search-box">
+        <input type="text" id="transfer-owner-search" placeholder="ابحث باسم المستخدم أو الاسم…" autocomplete="off" />
+        <div id="transfer-owner-suggestions" class="user-search-suggestions hidden"></div>
+      </div>
     </div>
 
     <div class="roles-section-title">محررون ومشاهدون</div>
     <div class="role-add-row">
-      <input type="text" id="role-add-username" placeholder="اسم المستخدم" />
+      <div class="user-search-box">
+        <input type="text" id="role-add-search" placeholder="ابحث باسم المستخدم أو الاسم…" autocomplete="off" />
+        <div id="role-add-suggestions" class="user-search-suggestions hidden"></div>
+      </div>
       <select id="role-add-select">
         <option value="editor">محرر</option>
         <option value="viewer">مشاهد</option>
       </select>
-      <button type="button" id="role-add-btn">إضافة</button>
     </div>
     <div id="roles-list" class="roles-list"></div>
 
@@ -3858,13 +3862,51 @@ el('file-form').addEventListener('submit', async e => {
   }
 });
 
+// ---------- searchable user picker ----------
+// Shared by the file-permissions modal and the dashboard-roles modal's "add role" and
+// "transfer owner" pickers: GET /api/users (a full listing) is Admin-only, so a non-Admin
+// caller has no way to enumerate everyone — only search a few matches at a time via the
+// narrow /api/users/search endpoint (UserLookupController).
+//
+// Selection fires on mousedown, not click, with preventDefault() on it — this keeps the
+// text input focused (a mousedown on another element would otherwise blur it first) and
+// guarantees the pick registers before this same click can bubble to any outside-click
+// handler that hides the suggestion box, rather than racing it.
+function initUserSearchPicker(input, box, onPick) {
+  let timer = null;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) { box.classList.add('hidden'); return; }
+    timer = setTimeout(async () => {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+      const results = res.ok ? await res.json() : [];
+      box.innerHTML = results.length
+        ? results.map(u => `<div class="user-search-item" data-pick="${esc(u.id)}">
+            <span>${esc(u.displayName)}</span><span class="uname">@${esc(u.username)}</span>
+          </div>`).join('')
+        : '<div class="user-search-empty">لا نتائج.</div>';
+      box.classList.remove('hidden');
+      box.querySelectorAll('[data-pick]').forEach(item => {
+        item.addEventListener('mousedown', e => {
+          e.preventDefault();
+          const picked = results.find(u => u.id === item.dataset.pick);
+          box.classList.add('hidden');
+          if (picked) onPick(picked);
+        });
+      });
+    }, 250);
+  });
+}
+document.addEventListener('click', e => {
+  document.querySelectorAll('.user-search-box').forEach(wrap => {
+    if (!wrap.contains(e.target)) wrap.querySelector('.user-search-suggestions')?.classList.add('hidden');
+  });
+});
+
 // ---------- file permissions modal ----------
 // Every file is automatically restricted to its creator (see AnalyticsTools.
-// DescribeSourcesAsync) — this can't be turned off, only added to. Users are picked from a
-// searchable dropdown (not a checkbox list of everyone): GET /api/users is Admin-only, so a
-// non-Admin creator has no way to enumerate everyone, only search a few matches at a time
-// via the narrow /api/users/search endpoint (UserLookupController).
-let filePermSearchTimer = null;
+// DescribeSourcesAsync) — this can't be turned off, only added to.
 function openFilePermModal(fileId) {
   el('file-perm-modal-id').value = fileId;
   el('file-perm-search').value = '';
@@ -3901,33 +3943,13 @@ async function setFilePermGranted(userIds) {
   await loadFiles();
 }
 
-el('file-perm-search').addEventListener('input', () => {
-  clearTimeout(filePermSearchTimer);
-  const q = el('file-perm-search').value.trim();
-  if (q.length < 2) { el('file-perm-suggestions').classList.add('hidden'); return; }
-  filePermSearchTimer = setTimeout(async () => {
-    const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
-    const results = res.ok ? await res.json() : [];
-    const box = el('file-perm-suggestions');
-    box.innerHTML = results.length
-      ? results.map(u => `<div class="user-search-item" data-pick="${esc(u.id)}">
-          <span>${esc(u.displayName)}</span><span class="uname">@${esc(u.username)}</span>
-        </div>`).join('')
-      : '<div class="user-search-empty">لا نتائج.</div>';
-    box.classList.remove('hidden');
-    box.querySelectorAll('[data-pick]').forEach(item => item.addEventListener('click', async () => {
-      const fileId = el('file-perm-modal-id').value;
-      const current = await (await fetch(`/api/repository/files/${fileId}/permissions`)).json();
-      const ids = current.granted.map(g => g.userId);
-      if (!ids.includes(item.dataset.pick)) ids.push(item.dataset.pick);
-      el('file-perm-search').value = '';
-      box.classList.add('hidden');
-      await setFilePermGranted(ids);
-    }));
-  }, 250);
-});
-document.addEventListener('click', e => {
-  if (!e.target.closest('.user-search-box')) el('file-perm-suggestions')?.classList.add('hidden');
+initUserSearchPicker(el('file-perm-search'), el('file-perm-suggestions'), async picked => {
+  const fileId = el('file-perm-modal-id').value;
+  const current = await (await fetch(`/api/repository/files/${fileId}/permissions`)).json();
+  const ids = current.granted.map(g => g.userId);
+  if (!ids.includes(picked.id)) ids.push(picked.id);
+  el('file-perm-search').value = '';
+  await setFilePermGranted(ids);
 });
 el('file-perm-modal-close').addEventListener('click', () => el('file-perm-modal').classList.add('hidden'));
 el('file-perm-modal').addEventListener('click', e => { if (e.target.id === 'file-perm-modal') el('file-perm-modal').classList.add('hidden'); });
@@ -4391,16 +4413,9 @@ async function deleteHistoryEntry(id) {
 }
 
 // ---------- Part 2: roles modal (Owner transfer + Editor/Viewer management) ----------
-// The Owner picks people by username, not from a dropdown — GET /api/users (a full listing)
-// is Admin-only, so a non-Admin Owner has no way to enumerate everyone; the narrow
-// GET /api/users/lookup/{username} (exact match, any authenticated caller) resolves just
-// the one person they typed. See UserLookupController.
-async function lookupUsername(username) {
-  const res = await fetch(`/api/users/lookup/${encodeURIComponent(username.trim())}`);
-  if (!res.ok) return null;
-  return res.json();
-}
-
+// Both pickers below use the same searchable user picker as the file-permissions modal
+// (initUserSearchPicker) — type a few letters of a name or username, click a result to act
+// immediately, rather than typing an exact username into a plain text field.
 function rolesModalError(message) {
   const box = el('roles-error');
   box.textContent = message || '';
@@ -4412,8 +4427,10 @@ async function openRolesModal(id) {
   el('roles-modal-id').value = id;
   el('roles-owner-name').textContent = '…';
   el('roles-list').innerHTML = '';
-  el('transfer-owner-username').value = '';
-  el('role-add-username').value = '';
+  el('transfer-owner-search').value = '';
+  el('role-add-search').value = '';
+  el('transfer-owner-suggestions').classList.add('hidden');
+  el('role-add-suggestions').classList.add('hidden');
   el('roles-modal').classList.remove('hidden');
   await reloadRolesModal();
 }
@@ -4436,32 +4453,24 @@ async function reloadRolesModal() {
     }));
 }
 
-el('role-add-btn').addEventListener('click', async () => {
+initUserSearchPicker(el('role-add-search'), el('role-add-suggestions'), async picked => {
   rolesModalError('');
   const id = el('roles-modal-id').value;
-  const username = el('role-add-username').value.trim();
   const role = el('role-add-select').value;
-  if (!username) return;
-  const user = await lookupUsername(username);
-  if (!user) { rolesModalError('لا يوجد مستخدم بهذا الاسم.'); return; }
-  const res = await fetch(`/api/history/${encodeURIComponent(id)}/roles/${encodeURIComponent(user.id)}`, {
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/roles/${encodeURIComponent(picked.id)}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }),
   });
   if (!res.ok) { const p = await res.json().catch(() => null); rolesModalError(p?.error || 'تعذّر إضافة الدور.'); return; }
-  el('role-add-username').value = '';
+  el('role-add-search').value = '';
   await reloadRolesModal();
 });
 
-el('transfer-owner-btn').addEventListener('click', async () => {
+initUserSearchPicker(el('transfer-owner-search'), el('transfer-owner-suggestions'), async picked => {
   rolesModalError('');
   const id = el('roles-modal-id').value;
-  const username = el('transfer-owner-username').value.trim();
-  if (!username) return;
-  const user = await lookupUsername(username);
-  if (!user) { rolesModalError('لا يوجد مستخدم بهذا الاسم.'); return; }
-  if (!confirm(`نقل ملكية اللوحة إلى ${user.displayName || user.username}؟`)) return;
+  if (!confirm(`نقل ملكية اللوحة إلى ${picked.displayName || picked.username}؟`)) return;
   const res = await fetch(`/api/history/${encodeURIComponent(id)}/transfer-owner`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newOwnerId: user.id }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newOwnerId: picked.id }),
   });
   const payload = await res.json().catch(() => null);
   if (!res.ok) { rolesModalError(payload?.error || 'تعذّر نقل الملكية.'); return; }
@@ -4475,7 +4484,7 @@ el('transfer-owner-btn').addEventListener('click', async () => {
     state.dashboardDisabledReason = payload.disabledReason || '';
     renderDashboard();
   }
-  el('transfer-owner-username').value = '';
+  el('transfer-owner-search').value = '';
   await reloadRolesModal();
   renderHistory();
 });
