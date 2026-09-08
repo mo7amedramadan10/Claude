@@ -1340,11 +1340,6 @@ function fmt(v) {
   return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 const num = v => typeof v === 'number' ? v : (parseFloat(v) || 0);
-// Full precision, comma-separated — unlike fmt() this never abbreviates to K/M. Used only
-// for a donut's center total/value: it's the one headline figure on the chart, not a
-// space-constrained axis tick, so exactness matters more than brevity there.
-const centerNum = v => (typeof v === 'number' && isFinite(v))
-  ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(v ?? '—');
 
 // A donut's idle center caption names what the number actually is — "مشروع" for a count of
 // projects, "خطر" for a count of risks — instead of the generic "الإجمالي", which said
@@ -2203,12 +2198,11 @@ function chartConfig(type, labels, values, title, centerLabel) {
       // The center label: a big bold number with a small muted caption under it — the
       // grand total by default (showAlways), captioned with deriveUnitLabel(title) (what the
       // number counts, e.g. "مشروع"/"خطر" — not the generic "الإجمالي"); a slice's own value
-      // + category name while hovering it. Full precision here (never the K/M-abbreviated fmt() used
-      // on axes/tooltips), since this is the dashboard's one headline figure, not a space-
-      // constrained tick label. Neutral --ink for the number rather than accent — accent
-      // duplicates the first slice's own color, which read as if the number belonged to
-      // that slice rather than the whole donut; the caption uses the same muted tickColor
-      // as everything else secondary in the UI. Font sizes and vertical offsets (ApexCharts
+      // + category name while hovering it. Colored and formatted to match a KPI card's own
+      // number exactly (THEME.accent, fmt()'s K/M-abbreviated form) rather than a distinct
+      // full-precision/neutral-color treatment, so the same figure reads consistently
+      // wherever it appears on a dashboard. The caption keeps the muted tickColor used for
+      // everything else secondary in the UI. Font sizes and vertical offsets (ApexCharts
       // draws the caption *above* the number by default — flipped here to match the
       // requested look) are set per-widget in the pendingCharts render loop below,
       // proportional to the donut's actual rendered size, not a fixed px.
@@ -2224,14 +2218,14 @@ function chartConfig(type, labels, values, title, centerLabel) {
               },
               value: {
                 show: true, fontFamily: THEME.fontFamily, fontWeight: 700,
-                color: THEME.ink,
-                formatter: v => centerNum(v),
+                color: THEME.accent,
+                formatter: v => fmt(v),
               },
               total: {
                 show: true, showAlways: true, label: centerLabel || deriveUnitLabel(title),
                 fontFamily: THEME.fontFamily, fontWeight: 400,
                 color: THEME.tickColor,
-                formatter: w => centerNum(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
+                formatter: w => fmt(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
               },
             },
           },
