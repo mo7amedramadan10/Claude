@@ -106,15 +106,8 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .rail-size-toggle button:hover:not(:disabled){background:var(--plane);color:var(--accent)}
 .rail-size-toggle button:disabled{opacity:.35;cursor:not-allowed}
 
-.model-switch{position:relative}
-#model-switch-btn{padding:6px 12px;border:1px solid var(--grid);border-radius:9px;
-  background:var(--surface);color:var(--ink-2);font-size:12.5px}
-#model-switch-btn:hover{border-color:var(--accent)}
-.model-switch-panel{display:none;position:absolute;inset-inline-end:0;top:calc(100% + 7px);z-index:40;
-  width:290px;padding:14px;background:var(--surface);border:1px solid var(--grid);border-radius:var(--radius);
-  box-shadow:0 8px 28px rgba(11,11,11,.12)}
-.model-switch-panel.open{display:block}
-.model-switch-title{font-size:12.5px;font-weight:600;margin-bottom:10px}
+/* .model-switch-* below now backs only the الإعدادات page (see #screen-settings) — the
+   header popover version of this control was removed; model selection lives there only. */
 .model-switch-providers{display:flex;flex-direction:column;gap:6px}
 .model-switch-option{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:12.5px}
 .model-switch-option:hover{background:var(--plane)}
@@ -130,9 +123,8 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .model-switch-note.bad{color:var(--danger)}
 .model-switch-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 .model-switch-actions button{padding:6px 13px;border-radius:8px;font-size:12.5px}
-#model-switch-cancel{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2)}
-#model-switch-save{border:0;background:var(--accent);color:#fff;font-weight:600}
-#model-switch-save:disabled{opacity:.5;cursor:not-allowed}
+#settings-save{border:0;background:var(--accent);color:#fff;font-weight:600}
+#settings-save:disabled{opacity:.5;cursor:not-allowed}
 
 #messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
 .msg{max-width:86%;padding:9px 13px;border-radius:14px;line-height:1.65;white-space:pre-wrap}
@@ -687,7 +679,7 @@ tr:last-child td{border-bottom:0}
 .users-table .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ---------- settings screen (system-wide AI model) ---------- */
-.settings-wrap{display:flex;flex-direction:column;gap:20px;max-width:720px}
+.settings-wrap{display:flex;flex-direction:column;gap:20px}
 .settings-banner{display:flex;gap:12px;padding:14px 16px;border:1px solid var(--accent);border-radius:var(--radius);
   background:var(--accent-soft)}
 .settings-banner-icon{font-size:20px;flex-shrink:0}
@@ -791,30 +783,6 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
     </div>
     <button type="button" id="auto-read-toggle" class="hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد">🔇 قراءة تلقائية</button>
-    <div class="model-switch hidden" id="model-switch">
-      <button type="button" id="model-switch-btn">🧠 <span id="model-switch-label">الموديل</span> ▾</button>
-      <div class="model-switch-panel" id="model-switch-panel">
-        <div class="model-switch-title">أي موديل يجاوب على الأسئلة؟</div>
-        <div id="model-switch-providers" class="model-switch-providers"></div>
-        <div id="model-switch-ollama-row" class="model-switch-ollama-row hidden">
-          <label>الموديل الداخلي (Ollama)
-            <select id="model-switch-ollama-select"></select>
-          </label>
-          <div id="model-switch-ollama-note" class="model-switch-note"></div>
-        </div>
-        <div id="model-switch-openai-row" class="model-switch-ollama-row hidden">
-          <label>موديل GPT (OpenAI)
-            <select id="model-switch-openai-select"></select>
-          </label>
-          <div id="model-switch-openai-note" class="model-switch-note"></div>
-        </div>
-        <div id="model-switch-error" class="model-switch-note bad hidden"></div>
-        <div class="model-switch-actions">
-          <button type="button" id="model-switch-cancel">إلغاء</button>
-          <button type="button" id="model-switch-save">حفظ</button>
-        </div>
-      </div>
-    </div>
     <button type="button" id="theme-toggle" title="تبديل المظهر">🌙</button>
     <span id="current-user-name"></span>
     <button type="button" id="logout-btn">خروج</button>
@@ -4900,127 +4868,14 @@ function renderCurrentUser() {
   el('tab-users').classList.toggle('hidden', u.role !== 'Admin');
   el('tab-settings').classList.toggle('hidden', u.role !== 'Admin');
   el('usage-link').classList.toggle('hidden', u.role !== 'Admin');
-  el('model-switch').classList.toggle('hidden', u.role !== 'Admin');
 }
 
-// ---------- model switcher (admin only) ----------
-// Lets an admin change which LLM answers questions — Claude, GPT, or an internal Ollama
-// deployment — from the dashboard itself, with no restart. GET/PUT /api/llm-settings;
-// the actual switch takes effect on LlmRouter's very next call (see backend).
+// ---------- settings page (admin only) — the system-wide AI model/provider, via
+// GET/PUT /api/llm-settings; the switch takes effect on LlmRouter's very next call (see
+// backend). This is the only place in the app that can change it — there is no per-user
+// choice and no shortcut elsewhere, so every user's questions run on whatever is set here.
 const PROVIDER_LABELS = { Anthropic: 'Claude (Anthropic)', OpenAI: 'GPT (OpenAI)', Ollama: 'الموديل الداخلي (Ollama)' };
-// Providers that offer a model dropdown, and the bits that differ between them.
-const MODEL_PICKERS = {
-  Ollama: { endpoint: 'ollama-models', rowId: 'model-switch-ollama-row', selectId: 'model-switch-ollama-select', noteId: 'model-switch-ollama-note', activeKey: 'activeOllamaModel', bodyKey: 'ollamaModel' },
-  OpenAI: { endpoint: 'openai-models', rowId: 'model-switch-openai-row', selectId: 'model-switch-openai-select', noteId: 'model-switch-openai-note', activeKey: 'activeOpenAiModel', bodyKey: 'openAiModel' },
-};
 state.llmSettings = null;
-state.modelChoices = {};
-
-function closeModelSwitch() { el('model-switch-panel').classList.remove('open'); }
-document.addEventListener('click', e => {
-  if (!el('model-switch').contains(e.target)) closeModelSwitch();
-});
-el('model-switch-panel').addEventListener('click', e => e.stopPropagation());
-
-el('model-switch-btn').addEventListener('click', async e => {
-  e.stopPropagation();
-  const panel = el('model-switch-panel');
-  const open = panel.classList.contains('open');
-  closeModelSwitch();
-  if (open) return;
-  panel.classList.add('open');
-  if (!state.llmSettings) await loadLlmSettings();
-});
-el('model-switch-cancel').addEventListener('click', closeModelSwitch);
-
-async function loadLlmSettings() {
-  try {
-    const res = await fetch('/api/llm-settings');
-    if (!res.ok) throw new Error();
-    state.llmSettings = await res.json();
-    el('model-switch-label').textContent = PROVIDER_LABELS[state.llmSettings.activeProvider] || state.llmSettings.activeProvider;
-    renderModelSwitchProviders();
-  } catch {
-    el('model-switch-providers').innerHTML = '<div class="model-switch-note bad">تعذّر تحميل إعدادات الموديل.</div>';
-  }
-}
-
-function renderModelSwitchProviders() {
-  const s = state.llmSettings;
-  el('model-switch-providers').innerHTML = s.providers.map(p => `
-    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
-      <input type="radio" name="model-provider" value="${esc(p.id)}"
-        ${p.id === s.activeProvider ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
-      ${esc(p.label)}
-      <span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>
-    </label>`).join('');
-
-  el('model-switch-providers').querySelectorAll('input').forEach(inp =>
-    inp.addEventListener('change', () => toggleModelRow(inp.value)));
-  toggleModelRow(s.activeProvider);
-}
-
-function toggleModelRow(provider) {
-  for (const [id, picker] of Object.entries(MODEL_PICKERS)) {
-    const isActive = provider === id;
-    el(picker.rowId).classList.toggle('hidden', !isActive);
-    if (isActive && !state.modelChoices[id]) loadModelChoices(id);
-  }
-}
-
-async function loadModelChoices(providerId) {
-  const picker = MODEL_PICKERS[providerId];
-  const select = el(picker.selectId);
-  select.innerHTML = '<option>جارٍ التحميل…</option>';
-  try {
-    const res = await fetch(`/api/llm-settings/${picker.endpoint}`);
-    const data = await res.json();
-    state.modelChoices[providerId] = data.models || [];
-    const current = state.llmSettings?.[picker.activeKey];
-    select.innerHTML = state.modelChoices[providerId].map(m =>
-      `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
-    el(picker.noteId).textContent = data.note || '';
-  } catch {
-    select.innerHTML = '';
-    el(picker.noteId).textContent = 'تعذّر تحميل قائمة الموديلات.';
-  }
-}
-
-el('model-switch-save').addEventListener('click', async () => {
-  const provider = el('model-switch-providers').querySelector('input:checked')?.value;
-  if (!provider) return;
-  const picker = MODEL_PICKERS[provider];
-  const chosenModel = picker ? el(picker.selectId).value : undefined;
-  const body = { provider };
-  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
-
-  const btn = el('model-switch-save');
-  btn.disabled = true;
-  el('model-switch-error').classList.add('hidden');
-  try {
-    const res = await fetch('/api/llm-settings', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `فشل الحفظ (${res.status})`);
-    }
-    state.llmSettings.activeProvider = provider;
-    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
-    el('model-switch-label').textContent = PROVIDER_LABELS[provider] || provider;
-    closeModelSwitch();
-  } catch (err) {
-    el('model-switch-error').textContent = err.message;
-    el('model-switch-error').classList.remove('hidden');
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-// ---------- settings page (admin only) — same system-wide GET/PUT /api/llm-settings as
-// the header model switcher above, just laid out as a full page with descriptive info
-// per provider instead of a quick popover; both read/write the exact same setting.
 const SETTINGS_MODEL_PICKERS = {
   Ollama: { endpoint: 'ollama-models', rowId: 'settings-ollama-row', selectId: 'settings-ollama-select', noteId: 'settings-ollama-note', activeKey: 'activeOllamaModel', bodyKey: 'ollamaModel' },
   OpenAI: { endpoint: 'openai-models', rowId: 'settings-openai-row', selectId: 'settings-openai-select', noteId: 'settings-openai-note', activeKey: 'activeOpenAiModel', bodyKey: 'openAiModel' },
@@ -5121,11 +4976,8 @@ el('settings-save').addEventListener('click', async () => {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `فشل الحفظ (${res.status})`);
     }
-    // state.llmSettings is shared with the header switcher above, so this keeps both in
-    // sync without a second round trip.
     state.llmSettings.activeProvider = provider;
     if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
-    if (!el('model-switch').classList.contains('hidden')) el('model-switch-label').textContent = PROVIDER_LABELS[provider] || provider;
     renderSettingsCurrent();
     el('settings-save-note').classList.remove('hidden');
   } catch (err) {
