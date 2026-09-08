@@ -295,7 +295,8 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- comparison layout (two widgets of the same type, side by side) ---------- */
 .comparison-wrap{background:transparent;border:0;box-shadow:none;padding:0}
-.comparison-title{font-weight:600;font-size:14px;margin-bottom:12px}
+.comparison-wrap>.widget-head{margin-bottom:12px}
+.comparison-title{font-weight:600;font-size:14px;margin:0}
 .compare-row{display:flex;align-items:stretch;justify-content:center;gap:14px}
 .compare-row>.widget{flex:1;min-width:0;margin:0}
 .compare-arrow{font-size:22px;color:var(--muted);flex-shrink:0;display:flex;align-items:center}
@@ -2428,12 +2429,26 @@ function ComparisonCard(raw) {
   }
   const wrap = document.createElement('div');
   wrap.className = 'widget comparison-wrap';
-  wrap.dataset.size = 'full';
-  if (raw.title) {
-    const h = document.createElement('div');
+  wrap.dataset.size = (raw.layout && raw.layout.size) || 'full';
+  if (raw.id) wrap.dataset.widgetId = raw.id;
+
+  // Same drag/resize/delete affordances every other top-level widget gets in edit mode —
+  // the comparison as a whole is one entry in state.dashboard.widgets, so the existing
+  // generic helpers (widgetMenu, enableWidgetDragDrop, delete/duplicate/setWidgetSize) all
+  // work on it unchanged; it just never had a head to host the menu button before.
+  if (raw.title || (state.editMode && raw.id)) {
+    const head = document.createElement('div');
+    head.className = 'widget-head';
+    const h = document.createElement('h3');
     h.className = 'comparison-title';
-    h.textContent = raw.title;
-    wrap.appendChild(h);
+    h.textContent = raw.title || '';
+    head.appendChild(h);
+    wrap.appendChild(head);
+    if (state.editMode && raw.id) {
+      const { btn: menuBtn, menu } = widgetMenu(raw);
+      head.appendChild(menuBtn);
+      wrap.appendChild(menu);
+    }
   }
   const row = document.createElement('div');
   row.className = 'compare-row';
@@ -2454,6 +2469,7 @@ function ComparisonCard(raw) {
   row.appendChild(arrow);
   row.appendChild(buildSide(raw.comparison.right || {}));
   wrap.appendChild(row);
+  if (state.editMode && raw.id) enableWidgetDragDrop(wrap, raw);
   return wrap;
 }
 
