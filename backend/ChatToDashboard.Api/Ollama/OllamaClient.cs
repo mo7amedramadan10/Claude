@@ -83,9 +83,10 @@ public class OllamaClient : IDashboardGenerator
 
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+        var systemPrompt = _tools.BuildSystemPrompt(context);
         var messages = new JsonArray
         {
-            new JsonObject { ["role"] = "system", ["content"] = _tools.BuildSystemPrompt(context) },
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
         };
 
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
@@ -94,114 +95,55 @@ public class OllamaClient : IDashboardGenerator
         messages.Add(new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) });
 
         var tools = BuildToolsJson(context);
-        var jsonRepairAttempts = 0;
-        var forcedFinalAnswerNoticeSent = false;
-
         var trace = _usage.Begin("Ollama", model, question, DescribeSources(context));
-        trace.SetSystemPrompt(_tools.BuildSystemPrompt(context));
-        try
+        trace.SetSystemPrompt(systemPrompt);
+        return await RunLoopAsync(
+            model, messages, tools, context, trace,
+            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+    }
+
+    public async Task<InquiryResponse> GenerateInquiryAsync(
+        string question, SourceSelection? sources = null, CancellationToken ct = default)
+    {
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+        var systemPrompt = _tools.BuildInquirySystemPrompt(context);
+        // Inquiries is never continuation-aware — isolated from whatever dashboard is on
+        // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
+        var messages = new JsonArray
         {
-        for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = question },
+        };
+
+        var tools = BuildToolsJson(context);
+        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context));
+        trace.SetSystemPrompt(systemPrompt);
+        return await RunLoopAsync(
+            model, messages, tools, context, trace,
+            AnalyticsTools.TryParseInquiry, "inquiry", ct);
+    }
+
+    public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
+        InquiryResponse inquiry, SourceSelection? sources = null, CancellationToken ct = default)
+    {
+        // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+        // already fetched, so no tools are offered at all (tools: null below), guaranteeing
+        // no new query_data/list_files call can happen here.
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var messages = new JsonArray
         {
-            ct.ThrowIfCancellationRequested();
-            var forceFinalAnswer = iteration >= ForceFinalAnswerAtIteration;
-            if (forceFinalAnswer && !forcedFinalAnswerNoticeSent)
-            {
-                forcedFinalAnswerNoticeSent = true;
-                messages.Add(new JsonObject
-                {
-                    ["role"] = "user",
-                    ["content"] =
-                        "لقد استدعيت عددًا كافيًا من الأدوات بالفعل. لا تنادِ أي أداة أخرى — " +
-                        "استخدم فقط النتائج التي جمعتها حتى الآن، وأجب فورًا بكائن JSON النهائي " +
-                        "للوحة المعلومات مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
-                });
-            }
-            var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry) },
+        };
 
-            var message = response["message"]?.AsObject()
-                ?? throw new InvalidOperationException("Ollama gateway response had no 'message'.");
-            var doneReason = response["done_reason"]?.GetValue<string>();
-
-            // Echo the assistant turn back verbatim on the next request.
-            messages.Add(message.DeepClone());
-
-            var toolCalls = message["tool_calls"]?.AsArray();
-            if (toolCalls is { Count: > 0 })
-            {
-                foreach (var call in toolCalls)
-                {
-                    var function = call?["function"]?.AsObject();
-                    if (function is null) continue;
-                    var toolName = function["name"]?.GetValue<string>() ?? "";
-
-                    // Ollama sends arguments as a JSON object already (unlike OpenAI's
-                    // stringified JSON) — but read defensively in case a proxy/version differs.
-                    var argumentsNode = function["arguments"];
-                    JsonObject arguments = argumentsNode switch
-                    {
-                        JsonObject obj => obj,
-                        JsonValue val when val.TryGetValue<string>(out var raw) && !string.IsNullOrWhiteSpace(raw)
-                            => TryParseArguments(raw),
-                        _ => new JsonObject(),
-                    };
-
-                    var toolClock = System.Diagnostics.Stopwatch.StartNew();
-                    var (result, isError) = await _tools.ExecuteToolAsync(toolName, arguments, context, ct);
-                    trace.RecordToolCall(toolName, arguments.ToJsonString(), result, isError, toolClock.ElapsedMilliseconds);
-                    messages.Add(ToolResultMessage(toolName, result, isError));
-                }
-                continue;
-            }
-
-            if (doneReason == "length")
-            {
-                jsonRepairAttempts++;
-                if (jsonRepairAttempts >= MaxJsonRepairAttempts)
-                    throw new InvalidOperationException(
-                        "The model's response was repeatedly truncated. Try a model with a larger context window.");
-                messages.Add(new JsonObject
-                {
-                    ["role"] = "user",
-                    ["content"] =
-                        "Your response was cut off because it exceeded the token limit. Respond again with the " +
-                        "complete dashboard JSON only, using fewer/smaller widgets (aggregate the data further).",
-                });
-                continue;
-            }
-
-            var text = message["content"]?.GetValue<string>() ?? string.Empty;
-            var (dashboard, parseError) = AnalyticsTools.TryParseDashboard(text);
-            if (dashboard is not null)
-            {
-                await trace.CompleteAsync(true, text, null, ct);
-                return dashboard;
-            }
-
-            jsonRepairAttempts++;
-            _logger.LogWarning("Dashboard JSON invalid (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
-            if (jsonRepairAttempts >= MaxJsonRepairAttempts)
-                throw new InvalidOperationException(
-                    $"The model did not return valid dashboard JSON after {MaxJsonRepairAttempts} attempts. Last error: {parseError}");
-
-            messages.Add(new JsonObject
-            {
-                ["role"] = "user",
-                ["content"] =
-                    $"Your previous response was not valid dashboard JSON. Error: {parseError}\n" +
-                    "Respond again with ONLY a single JSON object matching the required schema — " +
-                    "no markdown fences, no explanation, no text outside the JSON.",
-            });
-        }
-
-        throw new InvalidOperationException(
-            $"Tool-calling loop did not converge within {MaxToolIterations} iterations.");
-        }
-        catch (Exception ex)
-        {
-            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
-            throw;
-        }
+        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context));
+        trace.SetSystemPrompt(systemPrompt);
+        return await RunLoopAsync(
+            model, messages, null, context, trace,
+            AnalyticsTools.TryParseDashboard, "dashboard", ct);
     }
 
     private static JsonObject TryParseArguments(string raw)
@@ -240,6 +182,126 @@ public class OllamaClient : IDashboardGenerator
             });
         }
         return tools;
+    }
+
+    /// <summary>
+    /// The tool-calling loop shared by every mode above: call the API, execute any requested
+    /// tool and loop, or parse+validate the final text via <paramref name="tryParse"/> —
+    /// retrying (a "your JSON was invalid, try again" turn) up to <see
+    /// cref="MaxJsonRepairAttempts"/> times. <paramref name="tools"/> null/empty means no
+    /// tool is ever offered, so the very first turn is already necessarily final (used by
+    /// the tool-free conversion call).
+    /// </summary>
+    private async Task<T> RunLoopAsync<T>(
+        string model, JsonArray messages, JsonArray? tools, AnalyticsTools.SourceContext context,
+        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct)
+        where T : class
+    {
+        var jsonRepairAttempts = 0;
+        var forcedFinalAnswerNoticeSent = false;
+        try
+        {
+            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= ForceFinalAnswerAtIteration;
+                if (forceFinalAnswer && tools is { Count: > 0 } && !forcedFinalAnswerNoticeSent)
+                {
+                    forcedFinalAnswerNoticeSent = true;
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] =
+                            "لقد استدعيت عددًا كافيًا من الأدوات بالفعل. لا تنادِ أي أداة أخرى — " +
+                            "استخدم فقط النتائج التي جمعتها حتى الآن، وأجب فورًا بكائن JSON النهائي " +
+                            "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
+                    });
+                }
+                var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+
+                var message = response["message"]?.AsObject()
+                    ?? throw new InvalidOperationException("Ollama gateway response had no 'message'.");
+                var doneReason = response["done_reason"]?.GetValue<string>();
+
+                // Echo the assistant turn back verbatim on the next request.
+                messages.Add(message.DeepClone());
+
+                var toolCalls = message["tool_calls"]?.AsArray();
+                if (toolCalls is { Count: > 0 })
+                {
+                    foreach (var call in toolCalls)
+                    {
+                        var function = call?["function"]?.AsObject();
+                        if (function is null) continue;
+                        var toolName = function["name"]?.GetValue<string>() ?? "";
+
+                        // Ollama sends arguments as a JSON object already (unlike OpenAI's
+                        // stringified JSON) — but read defensively in case a proxy/version differs.
+                        var argumentsNode = function["arguments"];
+                        JsonObject arguments = argumentsNode switch
+                        {
+                            JsonObject obj => obj,
+                            JsonValue val when val.TryGetValue<string>(out var raw) && !string.IsNullOrWhiteSpace(raw)
+                                => TryParseArguments(raw),
+                            _ => new JsonObject(),
+                        };
+
+                        var toolClock = System.Diagnostics.Stopwatch.StartNew();
+                        var (result, isError) = await _tools.ExecuteToolAsync(toolName, arguments, context, ct);
+                        trace.RecordToolCall(toolName, arguments.ToJsonString(), result, isError, toolClock.ElapsedMilliseconds);
+                        messages.Add(ToolResultMessage(toolName, result, isError));
+                    }
+                    continue;
+                }
+
+                if (doneReason == "length")
+                {
+                    jsonRepairAttempts++;
+                    if (jsonRepairAttempts >= MaxJsonRepairAttempts)
+                        throw new InvalidOperationException(
+                            "The model's response was repeatedly truncated. Try a model with a larger context window.");
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] =
+                            "Your response was cut off because it exceeded the token limit. Respond again with the " +
+                            "complete JSON only, using fewer/smaller widgets (aggregate the data further).",
+                    });
+                    continue;
+                }
+
+                var text = message["content"]?.GetValue<string>() ?? string.Empty;
+                var (parsed, parseError) = tryParse(text);
+                if (parsed is not null)
+                {
+                    await trace.CompleteAsync(true, text, null, ct);
+                    return parsed;
+                }
+
+                jsonRepairAttempts++;
+                _logger.LogWarning("{Kind} JSON invalid (attempt {Attempt}): {Error}", kindLabel, jsonRepairAttempts, parseError);
+                if (jsonRepairAttempts >= MaxJsonRepairAttempts)
+                    throw new InvalidOperationException(
+                        $"The model did not return valid {kindLabel} JSON after {MaxJsonRepairAttempts} attempts. Last error: {parseError}");
+
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] =
+                        $"Your previous response was not valid JSON. Error: {parseError}\n" +
+                        "Respond again with ONLY a single JSON object matching the required schema — " +
+                        "no markdown fences, no explanation, no text outside the JSON.",
+                });
+            }
+
+            throw new InvalidOperationException(
+                $"Tool-calling loop did not converge within {MaxToolIterations} iterations.");
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
     }
 
     private async Task<JsonObject> CallChatAsync(

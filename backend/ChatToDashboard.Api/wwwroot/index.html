@@ -148,13 +148,27 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 #settings-save{border:0;background:var(--accent);color:#fff;font-weight:600}
 #settings-save:disabled{opacity:.5;cursor:not-allowed}
 
-#messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+#chat-mode-tabs{display:flex;gap:6px;padding:10px 12px 0}
+.chat-mode-tab{flex:1;padding:8px 10px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12.5px;font-weight:600;cursor:pointer}
+.chat-mode-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.chat-mode-tab:hover:not(.active){background:var(--plane)}
+
+#messages,#inquiry-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+/* ID selectors above beat a bare class selector regardless of source order (see the
+   #shared-banner note below), so these need their own hidden override. */
+#messages.hidden,#inquiry-messages.hidden{display:none}
 .msg{max-width:86%;padding:9px 13px;border-radius:14px;line-height:1.65;white-space:pre-wrap}
 .msg.user{align-self:flex-start;background:var(--accent);color:#fff;border-end-start-radius:5px}
 .msg.bot{align-self:flex-end;background:var(--plane);border:1px solid var(--grid);border-end-end-radius:5px}
 .msg.err{align-self:flex-end;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger)}
 .hint{margin:auto;padding:14px;border-radius:12px;background:var(--plane);color:var(--ink-2);text-align:center}
 .hint .ex{display:block;margin-top:6px;color:var(--muted);font-size:13px}
+.msg.bot.inquiry-answer{position:relative}
+.inquiry-answer-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.inquiry-convert-btn{border:1px solid var(--accent);background:transparent;color:var(--accent);
+  padding:3px 10px;border-radius:8px;font-size:11.5px;cursor:pointer}
+.inquiry-convert-btn:hover{background:var(--accent-soft)}
 .dots span{display:inline-block;width:6px;height:6px;margin:0 1px;border-radius:50%;
   background:var(--muted);animation:b .9s infinite}
 .dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
@@ -807,7 +821,12 @@ tr:last-child td{border-bottom:0}
 
 <main id="screen-chat" class="screen active">
   <aside id="chat-rail">
+    <div id="chat-mode-tabs">
+      <button type="button" class="chat-mode-tab active" data-mode="dashboard">بناء اللوحة</button>
+      <button type="button" class="chat-mode-tab" data-mode="inquiry">الاستفسارات</button>
+    </div>
     <div id="messages"></div>
+    <div id="inquiry-messages" class="hidden"></div>
     <div id="repo-link">
       <span id="repo-link-text">📁 لا يوجد ملفات في المستودع</span>
       <button data-screen="repo">إدارة الملفات ←</button>
@@ -819,7 +838,7 @@ tr:last-child td{border-bottom:0}
     </div>
     <form id="form">
       <div class="form-actions-row">
-        <label class="attach-btn" title="إرفاق صورة داشبورد لإعادة بنائه ببياناتك">
+        <label class="attach-btn" id="dash-image-attach-label" title="إرفاق صورة داشبورد لإعادة بنائه ببياناتك">
           🖼️
           <input type="file" id="dash-image-input" accept="image/*" hidden>
         </label>
@@ -1268,6 +1287,10 @@ tr:last-child td{border-bottom:0}
 const el = id => document.getElementById(id);
 const state = {
   messages: [], dashboard: null, loading: false,
+  // "الاستفسارات" sub-tab: fully isolated from the dashboard-building chat above — its own
+  // message log, never touches state.dashboard/currentHistoryId unless the user explicitly
+  // clicks "🔄 حوّله لداشبورد" on one answer (see convertInquiryToDashboard).
+  chatMode: 'dashboard', inquiryMessages: [],
   systems: [], sourceFiles: [], tableLabels: {}, // available, from /api/sources
   onSystems: new Set(), onFiles: new Set(), // enabled
   files: [], pending: [], filter: 'الكل',
@@ -3562,6 +3585,145 @@ async function ask(question) {
   }
 }
 
+// ---------- الاستفسارات (Inquiries): a text-only sibling of ask() above ----------
+// Two small sub-tabs inside the same side chat panel — never a top-level screen, and the
+// dashboard area (#dash-pane) is never hidden or cleared by switching between them. Isolated
+// from state.dashboard/state.messages entirely: an Inquiries question can never affect the
+// dashboard currently on screen, and its answers are never saved to السجل (state.history) —
+// only "🔄 حوّله لداشبورد" below ever bridges the two, and only on explicit click.
+function setChatMode(mode) {
+  state.chatMode = mode;
+  document.querySelectorAll('.chat-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  el('messages').classList.toggle('hidden', mode !== 'dashboard');
+  el('inquiry-messages').classList.toggle('hidden', mode !== 'inquiry');
+  // Attaching a dashboard screenshot and "ابدأ لوحة جديدة" only make sense for بناء اللوحة.
+  el('dash-image-attach-label').classList.toggle('hidden', mode !== 'dashboard');
+  el('new-dashboard-btn').classList.toggle('hidden', mode !== 'dashboard');
+  el('q').placeholder = mode === 'inquiry'
+    ? 'اسأل استفسارًا سريعًا عن بياناتك — إجابة نصية مباشرة، من غير بناء لوحة…'
+    : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
+  if (mode === 'inquiry') renderInquiryMessages(); else renderMessages();
+}
+document.querySelectorAll('.chat-mode-tab').forEach(tab =>
+  tab.addEventListener('click', () => { if (!state.loading) setChatMode(tab.dataset.mode); }));
+
+function renderInquiryMessages() {
+  const items = state.inquiryMessages.map((m, i) => {
+    if (m.role === 'user') return `<div class="msg user">${esc(m.text)}</div>`;
+    if (m.error) return `<div class="msg err">${esc(m.text)}</div>`;
+    // Same ⓘ transparency popover a widget's source button already uses (sourcePopover),
+    // just surfaced next to a chat message instead of a widget card — see .msg.bot.inquiry-
+    // answer{position:relative} above for why .src-pop (position:absolute) lands correctly.
+    return `<div class="msg bot inquiry-answer">
+        ${esc(m.text)}
+        <div class="inquiry-answer-actions">
+          <button type="button" class="src-btn">ⓘ المصدر</button>
+          <button type="button" class="inquiry-convert-btn" data-idx="${i}">🔄 حوّله لداشبورد</button>
+        </div>
+        ${sourcePopover({ source: m.source })}
+      </div>`;
+  }).join('');
+  const typing = state.loading && state.chatMode === 'inquiry'
+    ? `<div class="msg bot dots"><span></span><span></span><span></span></div>` : '';
+  const hint = state.inquiryMessages.length === 0 && !(state.loading && state.chatMode === 'inquiry')
+    ? `<div class="hint">اسأل استفسارًا وسيجاوبك المساعد بإجابة نصية مباشرة، من غير بناء لوحة.
+         <span class="ex">جرّب: «كام إجمالي الإيرادات الشهر ده؟»</span></div>` : '';
+  const box = el('inquiry-messages');
+  box.innerHTML = hint + items + typing;
+  box.scrollTop = box.scrollHeight;
+}
+el('inquiry-messages').addEventListener('click', e => {
+  const srcBtn = e.target.closest('.src-btn');
+  if (srcBtn) {
+    e.stopPropagation();
+    const pop = srcBtn.closest('.msg').querySelector('.src-pop');
+    const open = pop.classList.contains('open');
+    closePopovers();
+    if (!open) { pop.classList.add('open'); srcBtn.classList.add('active'); }
+    return;
+  }
+  const convertBtn = e.target.closest('.inquiry-convert-btn');
+  if (convertBtn) convertInquiryToDashboard(state.inquiryMessages[Number(convertBtn.dataset.idx)]);
+});
+
+async function askInquiry(question) {
+  state.inquiryMessages.push({ role: 'user', text: question });
+  state.loading = true;
+  renderInquiryMessages(); el.send.disabled = true;
+
+  try {
+    const res = await fetch('/api/inquiry', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: question,
+        // Same on/off source toggle the dashboard-building chat uses — the exact same
+        // tool-use flow and gating, just a different final response shape.
+        sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+      }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.answer) {
+      state.inquiryMessages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
+    } else {
+      state.inquiryMessages.push({
+        role: 'bot', text: payload.answer.answer, source: payload.answer.source, data: payload.answer.data,
+      });
+    }
+  } catch (err) {
+    state.inquiryMessages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
+  } finally {
+    state.loading = false; el.send.disabled = false;
+    renderInquiryMessages();
+  }
+}
+
+// "🔄 حوّله لداشبورد": never re-runs the question through the tool-calling loop — the data
+// this Inquiries answer already produced is handed to a single, tool-free call that only
+// reshapes it into widgets (see GenerateDashboardFromInquiryAsync). The result then replaces
+// whatever is in the (always-visible) dashboard area exactly the way a fresh, non-continuation
+// chat answer already would — same state fields ask() itself sets on that path — so the usual
+// "بناء اللوحة" continuation/autosave/history machinery picks it up completely normally
+// afterward. Lands in بناء اللوحة so that tab's own conversation reflects it.
+async function convertInquiryToDashboard(msg) {
+  if (!msg || state.loading) return;
+  state.loading = true;
+  renderInquiryMessages();
+
+  try {
+    const res = await fetch('/api/inquiry/convert', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        answer: msg.text, source: msg.source, data: msg.data,
+        sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+      }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.dashboard) {
+      alert(payload?.error || `تعذّر تحويل الإجابة إلى لوحة (${res.status})`);
+      return;
+    }
+
+    state.activeFilters = {};
+    state.dashboard = ensureWidgetMeta(payload.dashboard);
+    state.editHistory = { past: [], future: [] };
+    state.currentHistoryId = null;
+    state.dashboardIsActive = false; state.dashboardRole = null;
+    state.dashboardDisabled = false; state.dashboardDisabledReason = '';
+
+    const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
+    const narration = payload.dashboard.narration || payload.dashboard.summary;
+    state.messages.push({ role: 'bot', text: narration, speechWidgets });
+    saveToHistory(msg.text, payload.dashboard);
+    if (state.autoRead) speakText(narration, speechWidgets);
+    setChatMode('dashboard');
+  } catch (err) {
+    alert('تعذّر الوصول إلى الخادم: ' + err.message);
+  } finally {
+    state.loading = false;
+    renderInquiryMessages(); renderMessages(); renderDashboard();
+  }
+}
+
 // ---------- sources ----------
 async function loadSources() {
   const res = await fetch('/api/sources');
@@ -4734,6 +4896,12 @@ el.dash = el('dash'); el.messages = el('messages'); el.send = el('send');
 el('form').addEventListener('submit', e => {
   e.preventDefault();
   const q = el('q').value.trim();
+  if (state.chatMode === 'inquiry') {
+    if (state.loading || !q) return;
+    el('q').value = '';
+    askInquiry(q);
+    return;
+  }
   if (state.loading || (!q && !state.attachedImage)) return;
   el('q').value = '';
   ask(q || 'أعد إنشاء الداشبورد كما في الصورة المرفقة، بنفس أنواع الرسومات والعناصر، مستخدمًا بياناتي الفعلية.');

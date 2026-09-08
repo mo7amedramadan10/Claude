@@ -24,4 +24,24 @@ public interface IDashboardGenerator
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// "الاستفسارات" mode — the exact same tool-use flow (list_files/query_data/forecast_data/
+    /// search_documents, same source gating) as <see cref="GenerateDashboardAsync"/>, but the
+    /// model answers in plain text instead of building widgets. Never continuation-aware —
+    /// Inquiries is isolated from whatever dashboard is currently on screen.
+    /// </summary>
+    Task<InquiryResponse> GenerateInquiryAsync(
+        string question,
+        SourceSelection? sources = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// "🔄 حوّله لداشبورد" — reshapes one already-answered Inquiries response's own data into a
+    /// normal dashboard, via a single non-tool-calling call (no new query_data/list_files/...).
+    /// </summary>
+    Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
+        InquiryResponse inquiry,
+        SourceSelection? sources = null,
+        CancellationToken ct = default);
 }

@@ -326,6 +326,37 @@ public class AnalyticsTools
             """;
     }
 
+    /// <summary>
+    /// "🔄 حوّله لداشبورد" — frames an already-answered Inquiries response as a pure
+    /// restructuring task: the real data is handed over verbatim, no tool call is offered
+    /// (see IDashboardGenerator.GenerateDashboardFromInquiryAsync), and the model's only job
+    /// is to shape it into the normal widgets JSON — never to re-derive or second-guess the
+    /// numbers themselves.
+    /// </summary>
+    public static string ComposeConversionUserMessage(InquiryResponse inquiry)
+    {
+        var dataJson = JsonSerializer.Serialize(inquiry.Data, ToolResultJsonOptions);
+        return $$"""
+            مهمة إعادة هيكلة فقط — من غير أي نداء أداة (list_files أو query_data أو غيرها):
+            الأرقام دي جاية فعليًا من استعلام سابق نُفِّذ بالفعل، ومهمتك دلوقتي إنك تحوّلها لعنصر
+            أو أكتر (widgets) بالشكل المناسب حسب طبيعتها (kpi/bar/line/pie/table أو أحد الأنواع
+            الجديدة progress-table/trend-matrix/status-bar لو مناسب فعلًا)، من غير ما تخترع أي
+            رقم إضافي أو تحسب حاجة مختلفة عن اللي جاي تحت.
+
+            الإجابة النصية الأصلية (استرشد بيها لصياغة summary وnarration، من غير نسخ حرفي بالضرورة):
+            {{inquiry.Answer}}
+
+            مصدر البيانات وطريقة حسابها (استخدمه كما هو في حقل source):
+            {{inquiry.Source}}
+
+            البيانات الفعلية اللي استندت عليها الإجابة — استخدمها زي ما هي بالضبط:
+            {{dataJson}}
+
+            رجّع كائن JSON واحد فقط مطابق لمخطط اللوحة المعتاد (summary وnarration وwidgets)،
+            من غير أي نص خارج الـJSON ولا markdown fence.
+            """;
+    }
+
     // $$ delimiters: {{expr}} interpolates, single braces stay literal for the JSON schema below.
     public string BuildSystemPrompt(SourceContext context) =>
         $$"""
@@ -731,6 +762,77 @@ public class AnalyticsTools
         أفضل بكثير من لوحة بثمن عناصر بعضها مختلق أو غير موثّق.
         """;
 
+    /// <summary>
+    /// "الاستفسارات" mode — same tool catalogue (BuildTools) and the exact same source-
+    /// permission rules as BuildSystemPrompt, but the final answer is a short, direct text
+    /// answer instead of a dashboard: no widgets, no narration, no filters, no chart-type
+    /// vocabulary at all. Kept as its own separate prompt (not a parameterized branch of
+    /// BuildSystemPrompt) so the carefully-tuned dashboard prompt is never touched by this.
+    /// </summary>
+    public string BuildInquirySystemPrompt(SourceContext context) =>
+        $$"""
+        أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بترد على استفسارات عن بيانات
+        المؤسسة بإجابة نصية مباشرة وواضحة — من غير ما تبني لوحة معلومات أو أي عناصر رسوم
+        بيانية أو تُرجع حقل widgets أصلًا. اكتب كل النصوص الظاهرة للمستخدم بالعربية الفصحى،
+        بأسلوب مهني ومباشر وبدون حشو.
+
+        القاعدة الذهبية: ممنوع تختلق رقمًا أو تخمّنه أو "تقرّبه" من غير ما يكون جاي فعليًا
+        من نتيجة أداة ناديتها (list_files أو query_data أو forecast_data أو
+        search_documents). لو مش متاح عندك الرقم، قول كده صراحة في إجابتك بدل ما تخترعه
+        أو تسكت عن غيابه.
+
+        خطوات العمل
+        1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة والملفات المحفوظة في المستودع.
+        2. نادِ query_data باستعلام SELECT واحد مباشر (مجمّع لو محتاج) يرجّع بالظبط الرقم
+           أو الأرقام المطلوبة للإجابة على سؤال المستخدم — من غير ما تجيب صفوف خام زيادة
+           عن الحاجة.
+        3. لو السؤال فيه طلب توقع/تنبؤ صريح لفترة مستقبلية، نادِ forecast_data بدل ما تحسب
+           أو تخمّن الرقم بنفسك — بنفس القواعد المعتادة (استعلام برجّع فترة وقيمة رقمية
+           بس، مرتب زمنيًا تصاعديًا).
+        4. قبل الرد، تأكد إن كل رقم هتذكره فعلاً موجود في نتيجة أداة ناديتها.
+
+        {{SourcesSummaryBullets(context)}}
+
+        قواعد المصادر — مهمة جدًا، وهي حدود صلاحيات حقيقية مش مجرد اقتراح (نفس القواعد
+        المعتمدة في بناء اللوحات بالظبط)
+        هناك ثلاث حالات مختلفة لازم تفرّق بينها في ردك:
+        - "غير مصرّح" (مصدر أو ملف في قائمة "مقفولة" فوق): ما تحاولش تخمّن ولا تجاوب من
+          مصدر تاني بديل. رد باعتذار مهذب، اذكر اسم المصدر أو الملف المقفول بالظبط بالاسم،
+          وقول للمستخدم إنه يحتاج يطلب تفعيله (من الإدمن أو من قائمة "المصادر" لو عنده صلاحية).
+        - "غير مربوط بعد" (نظام في قائمة "مفعّلة لكن غير مربوطة" فوق): المستخدم عنده صلاحية
+          الوصول له، لكن مفيش بيانات منه لسه لأنه لسه مش موصّل فعليًا. قول ده بوضوح.
+        - "لا توجد بيانات" (مصدر مفعّل ومربوط لكن الاستعلام رجع صفوف فاضية فعليًا): وضّح إن
+          البيانات مفحوصة فعلًا لكن مفيش نتائج تطابق الشرط المطلوب.
+        - في الحالات التلاتة، لسه لازم ترجع كائن JSON صحيح بنفس الصيغة تحت — answer يشرح
+          الحالة بوضوح (وليه مفيش رقم)، وsource يوضّح المصدر المقصود، وdata فاضية ({}).
+
+        صيغة الرد النهائي — إجباري، JSON فقط من غير أي نص خارجه أو markdown fence
+        {
+          "answer": "الإجابة الكاملة بالعربية الفصحى — جملة أو فقرة قصيرة (لا تتعدى ٣-٤
+            جمل)، تجاوب على سؤال المستخدم مباشرة بالأرقام الفعلية، من غير أي تفاصيل تقنية
+            (اسم جدول أو ملف أو تصنيف أو كلمة \"استعلام\" أو \"قاعدة بيانات\") — كل ده مكانه
+            source بس.",
+          "source": "جملتان بالظبط، بنفس تنسيق حقل source في عناصر اللوحة العادية: الجملة
+            الأولى منين جت البيانات (اسم الجدول أو الملف والتصنيف أو النظام)، والتانية إزاي
+            اتحسبت.",
+          "data": "القيمة أو الصفوف الفعلية اللي استندت عليها الإجابة، بنفس شكلها من نتيجة
+            الأداة (رقم واحد، أو مصفوفة صفوف، أو كائن) — لازم تكون نفس الأرقام بالظبط اللي
+            ذكرتها في answer، من غير أي فرق، عشان ممكن تتحول لاحقًا لعنصر لوحة معلومات."
+        }
+        """;
+
+    /// <summary>Shared between BuildSystemPrompt and BuildInquirySystemPrompt — kept as its
+    /// own small helper (not extracted from BuildSystemPrompt's inline text) so neither
+    /// prompt's existing, tuned wording is touched by the other.</summary>
+    private static string SourcesSummaryBullets(SourceContext context) => $"""
+        المصادر المفعّلة حاليًا
+        - أنظمة مفعّلة: {Bullets(context.EnabledSystems)}
+        - أنظمة مقفولة (لا يحق للمستخدم الوصول لها): {Bullets(context.DisabledSystems)}
+        - أنظمة مفعّلة لكن لسه غير مربوطة بقاعدة بيانات (مفيش داتا منها بعد): {Bullets(context.UnconnectedSystems)}
+        - ملفات مستودع الملفات المفعّلة: {Bullets(context.EnabledFiles)}
+        - ملفات مستودع الملفات المقفولة (لا يحق للمستخدم الوصول لها): {Bullets(context.DisabledFiles)}
+        """;
+
     public async Task<(string Result, bool IsError)> ExecuteToolAsync(
         string toolName, JsonObject input, SourceContext context, CancellationToken ct)
     {
@@ -1039,10 +1141,11 @@ public class AnalyticsTools
     }
 
     /// <summary>
-    /// Parses and validates the final dashboard JSON. Tolerates a markdown code fence
-    /// or stray prose around the object, but the JSON itself must match the schema.
+    /// Pulls the single JSON object out of a model's final-turn text — tolerates a markdown
+    /// code fence or stray prose around it. Shared by every "parse the model's final answer"
+    /// path (dashboard, Inquiries); each does its own typed deserialization/validation after.
     /// </summary>
-    public static (DashboardSpec? Dashboard, string? Error) TryParseDashboard(string text)
+    private static (string? Candidate, string? Error) ExtractJsonCandidate(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return (null, "the response contained no text.");
@@ -1050,15 +1153,23 @@ public class AnalyticsTools
         var candidate = text.Trim();
         var fence = Regex.Match(candidate, @"```(?:json)?\s*(\{.*\})\s*```", RegexOptions.Singleline);
         if (fence.Success)
-            candidate = fence.Groups[1].Value;
-        else
-        {
-            var start = candidate.IndexOf('{');
-            var end = candidate.LastIndexOf('}');
-            if (start < 0 || end <= start)
-                return (null, "no JSON object found in the response.");
-            candidate = candidate[start..(end + 1)];
-        }
+            return (fence.Groups[1].Value, null);
+
+        var start = candidate.IndexOf('{');
+        var end = candidate.LastIndexOf('}');
+        if (start < 0 || end <= start)
+            return (null, "no JSON object found in the response.");
+        return (candidate[start..(end + 1)], null);
+    }
+
+    /// <summary>
+    /// Parses and validates the final dashboard JSON. Tolerates a markdown code fence
+    /// or stray prose around the object, but the JSON itself must match the schema.
+    /// </summary>
+    public static (DashboardSpec? Dashboard, string? Error) TryParseDashboard(string text)
+    {
+        var (candidate, extractError) = ExtractJsonCandidate(text);
+        if (candidate is null) return (null, extractError);
 
         DashboardSpec? spec;
         try
@@ -1085,6 +1196,42 @@ public class AnalyticsTools
         // response can actually be serialized.
         foreach (var w in spec.Widgets)
             if (w.Data.ValueKind == JsonValueKind.Undefined) w.Data = EmptyArrayElement;
+
+        return (spec, null);
+    }
+
+    /// <summary>
+    /// Parses and validates an Inquiries-mode final answer JSON (see InquiryModels.cs and
+    /// BuildInquirySystemPrompt) — same tolerant extraction as <see cref="TryParseDashboard"/>,
+    /// just a much smaller contract.
+    /// </summary>
+    public static (InquiryResponse? Inquiry, string? Error) TryParseInquiry(string text)
+    {
+        var (candidate, extractError) = ExtractJsonCandidate(text);
+        if (candidate is null) return (null, extractError);
+
+        InquiryResponse? spec;
+        try
+        {
+            spec = JsonSerializer.Deserialize<InquiryResponse>(candidate);
+        }
+        catch (JsonException ex)
+        {
+            return (null, $"JSON deserialization failed: {ex.Message}");
+        }
+
+        if (spec is null)
+            return (null, "JSON deserialized to null.");
+
+        var validationErrors = spec.Validate();
+        if (validationErrors.Count > 0)
+            return (null, string.Join(" ", validationErrors));
+
+        // Same Undefined-JsonElement serialization hazard as a dashboard widget's "data" —
+        // see TryParseDashboard. Here "data" is required by Validate() to be present at all
+        // only in spirit (the model is told to always include the real values), but nothing
+        // enforces it structurally, so guard the same way regardless.
+        if (spec.Data.ValueKind == JsonValueKind.Undefined) spec.Data = EmptyArrayElement;
 
         return (spec, null);
     }

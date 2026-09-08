@@ -44,15 +44,34 @@ public class LlmRouter : IDashboardGenerator
         string? imageDataUrl = null,
         CancellationToken ct = default)
     {
+        var generator = await ResolveAsync(ct);
+        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, ct);
+    }
+
+    public async Task<InquiryResponse> GenerateInquiryAsync(
+        string question, SourceSelection? sources = null, CancellationToken ct = default)
+    {
+        var generator = await ResolveAsync(ct);
+        return await generator.GenerateInquiryAsync(question, sources, ct);
+    }
+
+    public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
+        InquiryResponse inquiry, SourceSelection? sources = null, CancellationToken ct = default)
+    {
+        var generator = await ResolveAsync(ct);
+        return await generator.GenerateDashboardFromInquiryAsync(inquiry, sources, ct);
+    }
+
+    private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)
+    {
         var (savedProvider, _, _) = await _settings.GetAsync(ct);
         var provider = savedProvider is { Length: > 0 } ? savedProvider : _defaultProvider;
 
-        IDashboardGenerator generator = provider switch
+        return provider switch
         {
             OpenAI => _services.GetRequiredService<OpenAiClient>(),
             Ollama => _services.GetRequiredService<OllamaClient>(),
             _ => _services.GetRequiredService<ClaudeClient>(),
         };
-        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, ct);
     }
 }
