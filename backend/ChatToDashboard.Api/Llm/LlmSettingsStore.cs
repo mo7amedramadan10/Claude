@@ -80,18 +80,50 @@ public class LlmSettingsStore
         catch (SqlException ex) when (ex.Number == 2705)
         {
         }
+
+        // Migration for a table created before the document reader had its own sub-model
+        // choice — it used to silently reuse OllamaModel/OpenAiModel above (the
+        // dashboard-building sub-model), which defeated the "independent setting" this
+        // section is meant to be. Null/empty falls back to each client's own configured
+        // default model, never to the dashboard's chosen sub-model.
+        foreach (var column in new[] { "DocumentReaderOllamaModel", "DocumentReaderOpenAiModel" })
+        {
+            try
+            {
+                await using var alter = connection.CreateCommand();
+                alter.CommandText = _db.Provider == DbProvider.Sqlite
+                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" TEXT"
+                    : $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
+                await alter.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+            catch (SqlException ex) when (ex.Number == 2705)
+            {
+            }
+        }
     }
 
     /// <summary>Current override, if any has ever been saved — every field null otherwise.
     /// DocumentReaderProvider null/empty means "disabled" (PdfPig only), not "same as
-    /// Provider" — it never falls back to the dashboard-building provider.</summary>
-    public async Task<(string? Provider, string? OllamaModel, string? OpenAiModel, string? DocumentReaderProvider)> GetAsync(CancellationToken ct = default)
+    /// Provider" — it never falls back to the dashboard-building provider. Likewise
+    /// DocumentReaderOllamaModel/DocumentReaderOpenAiModel are each provider's OWN sub-model
+    /// choice for document reading — independent of OllamaModel/OpenAiModel above, which are
+    /// only ever for dashboard building.</summary>
+    public async Task<(string? Provider, string? OllamaModel, string? OpenAiModel, string? DocumentReaderProvider,
+        string? DocumentReaderOllamaModel, string? DocumentReaderOpenAiModel)> GetAsync(CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var row = await connection.QuerySingleOrDefaultAsync<SettingsRow>(
-            $"SELECT Provider, OllamaModel, OpenAiModel, DocumentReaderProvider FROM {Table} WHERE Id = 1");
-        return (row?.Provider, row?.OllamaModel, row?.OpenAiModel, row?.DocumentReaderProvider);
+            $"""
+            SELECT Provider, OllamaModel, OpenAiModel, DocumentReaderProvider,
+                   DocumentReaderOllamaModel, DocumentReaderOpenAiModel
+            FROM {Table} WHERE Id = 1
+            """);
+        return (row?.Provider, row?.OllamaModel, row?.OpenAiModel, row?.DocumentReaderProvider,
+            row?.DocumentReaderOllamaModel, row?.DocumentReaderOpenAiModel);
     }
 
     public async Task SetAsync(string provider, string? ollamaModel, string? openAiModel, CancellationToken ct = default)
@@ -122,26 +154,43 @@ public class LlmSettingsStore
     }
 
     /// <summary>
-    /// Sets (or clears, with null/"") the document-reading provider only — independent of
-    /// SetAsync above, since switching who builds dashboards shouldn't touch this, and vice
-    /// versa. A row must already exist (from the app's own startup or an earlier SetAsync);
-    /// on a genuinely fresh DB this is a no-op, matching the "disabled by default" contract.
+    /// Sets (or clears, with null/"") the document-reading provider and, when given, that
+    /// provider's own sub-model — independent of SetAsync above, since switching who builds
+    /// dashboards shouldn't touch this, and vice versa. Like SetAsync, a null sub-model leaves
+    /// whatever was stored before untouched (switching provider must not forget a previously
+    /// chosen Ollama/OpenAI sub-model for next time). A row must already exist (from the app's
+    /// own startup or an earlier SetAsync); on a genuinely fresh DB this is a no-op, matching
+    /// the "disabled by default" contract.
     /// </summary>
-    public async Task SetDocumentReaderAsync(string? provider, CancellationToken ct = default)
+    public async Task SetDocumentReaderAsync(
+        string? provider, string? ollamaModel = null, string? openAiModel = null, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var sql = _db.Provider == DbProvider.Sqlite
             ? $"""
-               INSERT INTO {Table} (Id, DocumentReaderProvider) VALUES (1, @provider)
-               ON CONFLICT(Id) DO UPDATE SET DocumentReaderProvider = @provider
+               INSERT INTO {Table} (Id, DocumentReaderProvider, DocumentReaderOllamaModel, DocumentReaderOpenAiModel)
+               VALUES (1, @provider, @ollamaModel, @openAiModel)
+               ON CONFLICT(Id) DO UPDATE SET
+                 DocumentReaderProvider = @provider,
+                 DocumentReaderOllamaModel = COALESCE(@ollamaModel, DocumentReaderOllamaModel),
+                 DocumentReaderOpenAiModel = COALESCE(@openAiModel, DocumentReaderOpenAiModel)
                """
             : $"""
                MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
-               WHEN MATCHED THEN UPDATE SET DocumentReaderProvider = @provider
-               WHEN NOT MATCHED THEN INSERT (Id, DocumentReaderProvider) VALUES (1, @provider);
+               WHEN MATCHED THEN UPDATE SET
+                 DocumentReaderProvider = @provider,
+                 DocumentReaderOllamaModel = COALESCE(@ollamaModel, t.DocumentReaderOllamaModel),
+                 DocumentReaderOpenAiModel = COALESCE(@openAiModel, t.DocumentReaderOpenAiModel)
+               WHEN NOT MATCHED THEN INSERT (Id, DocumentReaderProvider, DocumentReaderOllamaModel, DocumentReaderOpenAiModel)
+                 VALUES (1, @provider, @ollamaModel, @openAiModel);
                """;
-        await connection.ExecuteAsync(sql, new { provider = string.IsNullOrWhiteSpace(provider) ? null : provider });
+        await connection.ExecuteAsync(sql, new
+        {
+            provider = string.IsNullOrWhiteSpace(provider) ? null : provider,
+            ollamaModel,
+            openAiModel,
+        });
     }
 
     private class SettingsRow
@@ -150,5 +199,7 @@ public class LlmSettingsStore
         public string? OllamaModel { get; set; }
         public string? OpenAiModel { get; set; }
         public string? DocumentReaderProvider { get; set; }
+        public string? DocumentReaderOllamaModel { get; set; }
+        public string? DocumentReaderOpenAiModel { get; set; }
     }
 }

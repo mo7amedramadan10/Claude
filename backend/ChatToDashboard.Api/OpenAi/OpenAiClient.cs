@@ -150,7 +150,10 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
             new JsonObject { ["role"] = "user", ["content"] = content },
         };
 
-        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        // Its own sub-model choice, independent of GenerateDashboardAsync's OpenAiModel above —
+        // an admin can run document reading on a different OpenAI model than the one that
+        // builds dashboards. Falls back to the same config default as that one, never to it.
+        var model = (await _settings.GetAsync(ct)).DocumentReaderOpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
         var trace = _usage.Begin("OpenAI", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة");
         trace.SetSystemPrompt(systemPrompt);
         try

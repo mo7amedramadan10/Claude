@@ -1119,6 +1119,18 @@ tr:last-child td{border-bottom:0}
         لو فشلت القراءة بالذكاء الاصطناعي لأي سبب، يرجع النظام تلقائيًا للاستخراج النصي العادي
         بدل ما يفشل الرفع بالكامل.</p>
       <div id="settings-doc-reader-providers" class="model-switch-providers"></div>
+      <div id="settings-doc-reader-ollama-row" class="model-switch-ollama-row hidden">
+        <label>الموديل الداخلي (Ollama)
+          <select id="settings-doc-reader-ollama-select"></select>
+        </label>
+        <div id="settings-doc-reader-ollama-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-doc-reader-openai-row" class="model-switch-ollama-row hidden">
+        <label>موديل OpenAI
+          <select id="settings-doc-reader-openai-select"></select>
+        </label>
+        <div id="settings-doc-reader-openai-note" class="model-switch-note"></div>
+      </div>
       <div id="settings-doc-reader-error" class="model-switch-note bad hidden"></div>
       <div class="model-switch-actions">
         <span id="settings-doc-reader-save-note" class="settings-save-note hidden">✓ تم الحفظ</span>
@@ -5245,6 +5257,16 @@ const SETTINGS_MODEL_PICKERS = {
   Ollama: { endpoint: 'ollama-models', rowId: 'settings-ollama-row', selectId: 'settings-ollama-select', noteId: 'settings-ollama-note', activeKey: 'activeOllamaModel', bodyKey: 'ollamaModel' },
   OpenAI: { endpoint: 'openai-models', rowId: 'settings-openai-row', selectId: 'settings-openai-select', noteId: 'settings-openai-note', activeKey: 'activeOpenAiModel', bodyKey: 'openAiModel' },
 };
+// Same two providers, same live model-list endpoints — but the document reader has its OWN
+// sub-model choice (activeDocumentReader{Ollama,OpenAi}Model), independent of the dashboard
+// picker above, so a different rowId/selectId/activeKey per provider, read/written through
+// PUT /api/llm-settings/document-reader rather than the main settings-save handler below.
+const DOC_READER_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-doc-reader-ollama-row', selectId: 'settings-doc-reader-ollama-select', noteId: 'settings-doc-reader-ollama-note', activeKey: 'activeDocumentReaderOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-doc-reader-openai-row', selectId: 'settings-doc-reader-openai-select', noteId: 'settings-doc-reader-openai-note', activeKey: 'activeDocumentReaderOpenAiModel', bodyKey: 'openAiModel' },
+};
+// Keyed by provider id, shared between both picker maps above — it's the same live list of
+// models either way (what exists), just used to pre-select a different activeKey per picker.
 state.settingsModelChoices = {};
 
 async function loadSettingsPage() {
@@ -5283,10 +5305,18 @@ function renderSettingsDocReaderProviders() {
         ? '<span class="badge">⚠️ قد لا يدعم الصور — لو فشل بيرجع تلقائيًا لقراءة PdfPig العادية</span>'
         : (p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : '')}
     </label>`).join('');
+  el('settings-doc-reader-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleDocReaderModelRow(inp.value)));
+  toggleDocReaderModelRow(current);
 }
 
 el('settings-doc-reader-save').addEventListener('click', async () => {
   const provider = el('settings-doc-reader-providers').querySelector('input:checked')?.value ?? '';
+  const picker = DOC_READER_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
   const btn = el('settings-doc-reader-save');
   btn.disabled = true;
   el('settings-doc-reader-error').classList.add('hidden');
@@ -5294,13 +5324,14 @@ el('settings-doc-reader-save').addEventListener('click', async () => {
   try {
     const res = await fetch('/api/llm-settings/document-reader', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: provider || null }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `فشل الحفظ (${res.status})`);
     }
     state.llmSettings.activeDocumentReaderProvider = provider || null;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
     renderSettingsDocReaderProviders();
     el('settings-doc-reader-save-note').classList.remove('hidden');
   } catch (err) {
@@ -5332,30 +5363,41 @@ function renderSettingsProviders() {
   toggleSettingsModelRow(s.activeProvider);
 }
 
-function toggleSettingsModelRow(provider) {
-  for (const [id, picker] of Object.entries(SETTINGS_MODEL_PICKERS)) {
+function toggleSettingsModelRow(provider) { toggleModelRow(SETTINGS_MODEL_PICKERS, provider); }
+function toggleDocReaderModelRow(provider) { toggleModelRow(DOC_READER_MODEL_PICKERS, provider); }
+
+function toggleModelRow(pickers, provider) {
+  for (const [id, picker] of Object.entries(pickers)) {
     const isActive = provider === id;
     el(picker.rowId).classList.toggle('hidden', !isActive);
-    if (isActive && !state.settingsModelChoices[id]) loadSettingsModelChoices(id);
+    if (isActive) loadSettingsModelChoices(picker, id);
   }
 }
 
-async function loadSettingsModelChoices(providerId) {
-  const picker = SETTINGS_MODEL_PICKERS[providerId];
+// The live model list (state.settingsModelChoices[providerId]) is fetched once and shared
+// between the dashboard picker and the document-reader picker — it's the same "what models
+// exist" either way; only which one is pre-selected (picker.activeKey) differs.
+async function loadSettingsModelChoices(picker, providerId) {
   const select = el(picker.selectId);
+  const cached = state.settingsModelChoices[providerId];
+  if (cached) { renderModelSelect(picker, cached.models, cached.note); return; }
   select.innerHTML = '<option>جارٍ التحميل…</option>';
   try {
     const res = await fetch(`/api/llm-settings/${picker.endpoint}`);
     const data = await res.json();
-    state.settingsModelChoices[providerId] = data.models || [];
-    const current = state.llmSettings?.[picker.activeKey];
-    select.innerHTML = state.settingsModelChoices[providerId].map(m =>
-      `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
-    el(picker.noteId).textContent = data.note || '';
+    state.settingsModelChoices[providerId] = { models: data.models || [], note: data.note || '' };
+    renderModelSelect(picker, data.models || [], data.note || '');
   } catch {
     select.innerHTML = '';
     el(picker.noteId).textContent = 'تعذّر تحميل قائمة الموديلات.';
   }
+}
+
+function renderModelSelect(picker, models, note) {
+  const current = state.llmSettings?.[picker.activeKey];
+  el(picker.selectId).innerHTML = models.map(m =>
+    `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  el(picker.noteId).textContent = note || '';
 }
 
 function renderSettingsInfoBadges() {

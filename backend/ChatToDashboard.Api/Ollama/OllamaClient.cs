@@ -159,7 +159,10 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     public async Task<string> ExtractDocumentTextAsync(
         string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
     {
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        // Its own sub-model choice, independent of GenerateDashboardAsync's OllamaModel above —
+        // an admin can run document reading on a different internal model than the one that
+        // builds dashboards. Falls back to the same config default as that one, never to it.
+        var model = (await _settings.GetAsync(ct)).DocumentReaderOllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var images = new JsonArray();
         foreach (var dataUrl in pageImageDataUrls)
             if (TryExtractBase64(dataUrl, out var base64Data))

@@ -64,7 +64,7 @@ public class LlmRouter : IDashboardGenerator
 
     private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)
     {
-        var (savedProvider, _, _, _) = await _settings.GetAsync(ct);
+        var (savedProvider, _, _, _, _, _) = await _settings.GetAsync(ct);
         var provider = savedProvider is { Length: > 0 } ? savedProvider : _defaultProvider;
 
         return provider switch
@@ -113,14 +113,14 @@ public class DocumentReaderRouter : IDocumentReaderRouter
     /// find out afterward that nothing is configured to read them.</summary>
     public async Task<bool> IsEnabledAsync(CancellationToken ct = default)
     {
-        var (_, _, _, documentReaderProvider) = await _settings.GetAsync(ct);
+        var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
         return !string.IsNullOrWhiteSpace(documentReaderProvider);
     }
 
     public async Task<string?> ExtractTextAsync(
         string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
     {
-        var (_, _, _, documentReaderProvider) = await _settings.GetAsync(ct);
+        var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
         if (string.IsNullOrWhiteSpace(documentReaderProvider)) return null;
 
         IDocumentTextExtractor extractor = documentReaderProvider switch
