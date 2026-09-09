@@ -1067,7 +1067,7 @@ tr:last-child td{border-bottom:0}
   <div class="users-table-wrap">
     <table class="users-table">
       <thead><tr>
-        <th>اسم المستخدم</th><th>الاسم</th><th>طريقة الدخول</th><th>الدور</th><th>الوصول</th><th>الحالة</th><th></th>
+        <th>اسم المستخدم</th><th>الاسم</th><th>طريقة الدخول</th><th>الدور</th><th>الأنظمة</th><th>الحالة</th><th></th>
       </tr></thead>
       <tbody id="users-tbody"></tbody>
     </table>
@@ -1274,10 +1274,10 @@ tr:last-child td{border-bottom:0}
         <label class="chk-row"><input type="checkbox" id="user-allow-all-systems" checked> الوصول لكل الأنظمة</label>
         <div id="user-systems-list" class="perm-list"></div>
       </div>
-      <div class="perm-block">
-        <label class="chk-row"><input type="checkbox" id="user-allow-all-files" checked> الوصول لكل ملفات المستودع</label>
-        <div id="user-files-list" class="perm-list"></div>
-      </div>
+      <!-- File access isn't set here anymore — it's managed only per-file from "مستودع
+           الملفات" (the 🔒 button on each file: creator/Admin/explicitly granted), so a
+           user's file permissions live in one place instead of two. -->
+      <p class="hint">صلاحيات الملفات بتتحدد من مستودع الملفات نفسه (زر 🔒 على كل ملف)، مش من هنا.</p>
 
       <div id="user-form-error" class="login-error hidden"></div>
       <div class="modal-actions">
@@ -5404,9 +5404,7 @@ function renderUsers() {
       <td>${esc(u.displayName)}</td>
       <td>${u.authMethod === 'ActiveDirectory' ? 'Active Directory' : 'محلي'}</td>
       <td><span class="role-badge${u.role === 'Admin' ? ' admin' : ''}">${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'}</span></td>
-      <td>${u.allowAllSystems && u.allowAllFiles ? 'الكل' :
-            [u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`,
-             u.allowAllFiles ? 'كل الملفات' : `${u.allowedFiles.length} ملف`].join(' · ')}</td>
+      <td>${u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`}</td>
       <td><span class="status-dot${u.isActive ? '' : ' off'}"></span>${u.isActive ? 'نشط' : 'معطّل'}</td>
       <td>
         <button class="edit-btn" data-edit="${esc(u.id)}">تعديل</button>
@@ -5434,7 +5432,6 @@ function togglePermList(listId, allCheckboxId) {
 }
 
 el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
-el('user-allow-all-files').addEventListener('change', () => togglePermList('user-files-list', 'user-allow-all-files'));
 el('user-authmethod').addEventListener('change', () => {
   el('user-password-row').style.display = el('user-authmethod').value === 'Local' ? '' : 'none';
 });
@@ -5454,11 +5451,8 @@ function openUserModal(user) {
   el('user-password-row').style.display = (user ? user.authMethod : 'Local') === 'Local' ? '' : 'none';
 
   el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
-  el('user-allow-all-files').checked = user ? user.allowAllFiles : true;
   renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name);
-  renderPermChecklist('user-files-list', state.sourceFiles, user ? user.allowedFiles : [], f => f.id, f => f.name);
   togglePermList('user-systems-list', 'user-allow-all-systems');
-  togglePermList('user-files-list', 'user-allow-all-files');
 
   el('user-modal').classList.remove('hidden');
 }
@@ -5479,8 +5473,9 @@ el('user-form').addEventListener('submit', async e => {
     isActive: el('user-active').checked,
     allowAllSystems: el('user-allow-all-systems').checked,
     allowedSystems: [...el('user-systems-list').querySelectorAll('input:checked')].map(i => i.value),
-    allowAllFiles: el('user-allow-all-files').checked,
-    allowedFiles: [...el('user-files-list').querySelectorAll('input:checked')].map(i => i.value),
+    // File permissions are managed only from "مستودع الملفات" now — the server ignores
+    // these two regardless (see UsersController), but omitting them keeps the request
+    // honest about what this form actually controls.
   };
   const saveBtn = el('user-save');
   saveBtn.disabled = true;
