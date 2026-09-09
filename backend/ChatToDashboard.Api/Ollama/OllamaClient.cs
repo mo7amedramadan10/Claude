@@ -146,17 +146,65 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
             AnalyticsTools.TryParseDashboard, "dashboard", ct);
     }
 
-    /// <summary>See ClaudeClient.ExtractDocumentTextAsync — but the internal gateway's models
-    /// are all plain chat/instruct models with no vision support (see the same rejection in
-    /// GenerateDashboardAsync above), so this can never actually read a page image. Throws
-    /// immediately rather than sending a request the model would just ignore the images on;
-    /// DocumentReaderRouter's caller (the repository upload flow) catches this and falls back
-    /// to PdfPig's plain-text extraction, same as any other extraction failure.</summary>
-    public Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default) =>
-        throw new InvalidOperationException(
-            "الموديل الداخلي الحالي لا يدعم تحليل الصور، فمش هيقدر يقرأ صفحات المستند. " +
-            "بدّل موديل قراءة المستندات لـ Claude أو GPT من الإعدادات.");
+    /// <summary>See ClaudeClient.ExtractDocumentTextAsync. Unlike GenerateDashboardAsync's
+    /// image rejection above (a screenshot mid-conversation, where failing fast and telling
+    /// the user to switch models is the right call), a document upload already has a working
+    /// fallback if this doesn't pan out — so instead of assuming upfront that the gateway's
+    /// current models have no vision support, this actually sends the page images (via
+    /// Ollama's own "images" field — raw base64, no data: URL prefix) and waits for the real
+    /// reply. Whatever comes back — a genuine transcription, a model that quietly ignored the
+    /// images, or the gateway rejecting the request outright — DocumentReaderRouter's caller
+    /// (the repository upload flow) only ever falls back to PdfPig's plain-text extraction on
+    /// an actual failure here, same as for Claude/OpenAI.</summary>
+    public async Task<string> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
+    {
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var images = new JsonArray();
+        foreach (var dataUrl in pageImageDataUrls)
+            if (TryExtractBase64(dataUrl, out var base64Data))
+                images.Add(base64Data);
+
+        var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject
+            {
+                ["role"] = "user",
+                ["content"] = AnalyticsTools.DocumentExtractionInstruction(fileName),
+                ["images"] = images,
+            },
+        };
+
+        var trace = _usage.Begin("Ollama", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة");
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallChatAsync(model, messages, null, trace, ct);
+            var text = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+            await trace.CompleteAsync(true, text, null, ct);
+            return text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>Pulls the base64 payload out of a "data:&lt;mime&gt;;base64,&lt;data&gt;" URL —
+    /// Ollama's "images" field wants the raw base64 only, no data: prefix.</summary>
+    private static bool TryExtractBase64(string? dataUrl, out string base64Data)
+    {
+        base64Data = "";
+        if (string.IsNullOrWhiteSpace(dataUrl)) return false;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            dataUrl, @"^data:[\w/.+-]+;base64,(.+)$", System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (!match.Success) return false;
+        base64Data = match.Groups[1].Value;
+        return true;
+    }
 
     private static JsonObject TryParseArguments(string raw)
     {

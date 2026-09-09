@@ -5280,7 +5280,7 @@ function renderSettingsDocReaderProviders() {
         ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
       ${esc(p.label)}
       ${p.id === 'Ollama'
-        ? '<span class="badge">⚠️ لا يدعم قراءة الصور حاليًا</span>'
+        ? '<span class="badge">⚠️ قد لا يدعم الصور — لو فشل بيرجع تلقائيًا لقراءة PdfPig العادية</span>'
         : (p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : '')}
     </label>`).join('');
 }
