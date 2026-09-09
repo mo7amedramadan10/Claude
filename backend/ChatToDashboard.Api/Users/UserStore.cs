@@ -68,7 +68,12 @@ public class UserStore
             catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
             {
             }
-            catch (SqlException ex) when (ex.Message.Contains("already", StringComparison.OrdinalIgnoreCase))
+            // Error 2705: "Column names in each table must be unique" — the wording SQL
+            // Server actually uses for a duplicate ADD COLUMN never contains "already", so
+            // matching on the message (as this used to) never caught it; the column was
+            // already present (e.g. a fresh DB whose CREATE TABLE included it directly) and
+            // this ALTER was a no-op migration step that should be silently skipped.
+            catch (SqlException ex) when (ex.Number == 2705)
             {
             }
         }

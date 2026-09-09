@@ -93,7 +93,10 @@ public class RepositoryStore
             catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
             {
             }
-            catch (SqlException ex) when (ex.Message.Contains("already", StringComparison.OrdinalIgnoreCase))
+            // Error 2705: "Column names in each table must be unique" — SQL Server's actual
+            // wording for a duplicate ADD COLUMN never contains "already" (see UserStore's
+            // identical migration loop for the full explanation).
+            catch (SqlException ex) when (ex.Number == 2705)
             {
             }
         }
@@ -130,7 +133,11 @@ public class RepositoryStore
     private const string SelectColumns =
         "Id, COALESCE(DisplayName, OriginalFileName, '') AS DisplayName, " +
         "COALESCE(OriginalFileName, '') AS OriginalFileName, COALESCE(Description, '') AS Description, " +
-        "Category, Kind, RowCount, ColumnCount, PageCount, UploadedAt, " +
+        // RowCount bracketed: SQL Server's parser rejects it bare here ("Incorrect syntax
+        // near the keyword 'RowCount'") even though it isn't formally reserved; [brackets]
+        // are valid in both SQL Server and SQLite (its Access-compatibility quoting), so this
+        // needs no per-provider branching like the rest of this shared literal.
+        "Category, Kind, [RowCount], ColumnCount, PageCount, UploadedAt, " +
         "COALESCE(LastUpdatedAt, UploadedAt) AS LastUpdatedAt, TableName, SchemaChangedAt, " +
         "COALESCE(CreatedByUserId, '') AS CreatedByUserId";
 
@@ -242,7 +249,7 @@ public class RepositoryStore
 
         await connection.ExecuteAsync(
             $"INSERT INTO {CatalogueTable} (Id, DisplayName, OriginalFileName, Description, Category, Kind, " +
-            "RowCount, ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
+            "[RowCount], ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
             "VALUES (@Id, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
             "@RowCount, @ColumnCount, @PageCount, @UploadedAt, @LastUpdatedAt, @TableName, @TextContent, @ColumnsJson, @CreatedByUserId, @FileContent)",
             new
@@ -294,7 +301,7 @@ public class RepositoryStore
         }
 
         var updated = await connection.ExecuteAsync(
-            $"UPDATE {CatalogueTable} SET OriginalFileName = @OriginalFileName, RowCount = @RowCount, " +
+            $"UPDATE {CatalogueTable} SET OriginalFileName = @OriginalFileName, [RowCount] = @RowCount, " +
             "ColumnCount = @ColumnCount, PageCount = @PageCount, LastUpdatedAt = @LastUpdatedAt, " +
             "TextContent = @TextContent, FileContent = @FileContent" +
             (newColumnsJson is not null ? ", ColumnsJson = @ColumnsJson" : "") +

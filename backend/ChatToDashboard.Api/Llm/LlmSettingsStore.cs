@@ -56,7 +56,10 @@ public class LlmSettingsStore
         catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
         {
         }
-        catch (SqlException ex) when (ex.Message.Contains("already", StringComparison.OrdinalIgnoreCase))
+        // Error 2705: "Column names in each table must be unique" — SQL Server's actual
+        // wording for a duplicate ADD COLUMN never contains "already" (see UserStore's
+        // identical migration loop for the full explanation).
+        catch (SqlException ex) when (ex.Number == 2705)
         {
         }
     }
