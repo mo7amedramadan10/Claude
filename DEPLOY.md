@@ -101,7 +101,7 @@ it in step 1; the app still creates the `staging` schema and tables on its own.
 ## Option C: Kubernetes on the company server (multiapps) — the current production path
 
 CI/CD is fully described by **one file, `azure-pipelines.yml`**, which extends the shared
-pipeline in the `platform` repo (`THQ_MVPs/platform`). Every push to `main` builds the
+pipeline in the `platform` repo (`THQ_Platform/THQ_Platform`). Every push to `main` builds the
 image on the server, pushes it to the internal registry, creates the app's database on the
 shared SQL Server, and rolls the deployment out. See `platform/README.md` for every
 parameter.

@@ -3,7 +3,7 @@ resources:
   repositories:
     - repository: platform
       type: git
-      name: THQ_MVPs/platform
+      name: THQ_Platform/THQ_Platform
 
 extends:
   template: pipelines/deploy-app.yml@platform
