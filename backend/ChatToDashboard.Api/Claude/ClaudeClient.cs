@@ -13,7 +13,7 @@ namespace ChatToDashboard.Api.Claude;
 /// Claude asks for list_files / query_data / search_documents, we execute the tool
 /// and send back tool_result blocks, until Claude returns the final dashboard JSON.
 /// </summary>
-public class ClaudeClient : IDashboardGenerator
+public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -129,6 +129,50 @@ public class ClaudeClient : IDashboardGenerator
         return await RunLoopAsync(
             messages, systemPrompt, null, context, trace,
             AnalyticsTools.TryParseDashboard, "dashboard", ct);
+    }
+
+    /// <summary>
+    /// Reads a document via its rendered page images instead of a text-layer parser — see
+    /// IDocumentTextExtractor. A single, tool-free turn: every page image goes in one user
+    /// message so the model reads the whole document at once (page order matters for tables/
+    /// sections spanning a page break), and the reply is the transcribed text verbatim, not
+    /// JSON — there's no dashboard schema to validate here.
+    /// </summary>
+    public async Task<string> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
+    {
+        var content = new JsonArray();
+        foreach (var dataUrl in pageImageDataUrls)
+        {
+            if (!TryParseDataUrl(dataUrl, out var mediaType, out var base64Data)) continue;
+            content.Add(new JsonObject
+            {
+                ["type"] = "image",
+                ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
+            });
+        }
+        content.Add(new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.DocumentExtractionInstruction(fileName) });
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = content } };
+        var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
+
+        var trace = _usage.Begin("Anthropic", _model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة");
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var responseContent = response["content"]?.AsArray()
+                ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+            var text = string.Concat(responseContent
+                .Where(b => b?["type"]?.GetValue<string>() == "text")
+                .Select(b => b!["text"]!.GetValue<string>()));
+            await trace.CompleteAsync(true, text, null, ct);
+            return text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
     }
 
     /// <summary>

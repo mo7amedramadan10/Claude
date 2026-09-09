@@ -65,7 +65,7 @@ public class RepositoryController : ControllerBase
     /// </summary>
     [HttpPost("upload")]
     [RequestSizeLimit(MaxUploadBytes)]
-    public IActionResult Upload([FromForm] IFormFileCollection files)
+    public async Task<IActionResult> Upload([FromForm] IFormFileCollection files, CancellationToken ct)
     {
         if (files is null || files.Count == 0)
             return BadRequest(new { error = "No files were uploaded." });
@@ -85,7 +85,7 @@ public class RepositoryController : ControllerBase
             }
 
             using var stream = file.OpenReadStream();
-            results.Add(_parser.Parse(file.FileName, stream));
+            results.Add(await _parser.ParseAsync(file.FileName, stream, ct));
         }
         return Ok(results);
     }

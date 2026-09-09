@@ -23,7 +23,7 @@ namespace ChatToDashboard.Api.Ollama;
 ///   (see UsageTrace.RecordTurn, which already falls back to the response's top level).
 /// - "stream" is NOT omittable — Ollama defaults to streaming, so every request pins it false.
 /// </summary>
-public class OllamaClient : IDashboardGenerator
+public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -145,6 +145,18 @@ public class OllamaClient : IDashboardGenerator
             model, messages, null, context, trace,
             AnalyticsTools.TryParseDashboard, "dashboard", ct);
     }
+
+    /// <summary>See ClaudeClient.ExtractDocumentTextAsync — but the internal gateway's models
+    /// are all plain chat/instruct models with no vision support (see the same rejection in
+    /// GenerateDashboardAsync above), so this can never actually read a page image. Throws
+    /// immediately rather than sending a request the model would just ignore the images on;
+    /// DocumentReaderRouter's caller (the repository upload flow) catches this and falls back
+    /// to PdfPig's plain-text extraction, same as any other extraction failure.</summary>
+    public Task<string> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default) =>
+        throw new InvalidOperationException(
+            "الموديل الداخلي الحالي لا يدعم تحليل الصور، فمش هيقدر يقرأ صفحات المستند. " +
+            "بدّل موديل قراءة المستندات لـ Claude أو GPT من الإعدادات.");
 
     private static JsonObject TryParseArguments(string raw)
     {

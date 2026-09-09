@@ -62,16 +62,36 @@ public class LlmSettingsStore
         catch (SqlException ex) when (ex.Number == 2705)
         {
         }
+
+        // Migration for a table created before document reading got its own provider —
+        // null/empty means disabled (PDF uploads keep using PdfPig's plain-text extraction
+        // only), never inherited from the dashboard-building Provider above.
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"DocumentReaderProvider\" TEXT"
+                : $"ALTER TABLE {Table} ADD [DocumentReaderProvider] NVARCHAR(50)";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+        {
+        }
+        catch (SqlException ex) when (ex.Number == 2705)
+        {
+        }
     }
 
-    /// <summary>Current override, if any has ever been saved — every field null otherwise.</summary>
-    public async Task<(string? Provider, string? OllamaModel, string? OpenAiModel)> GetAsync(CancellationToken ct = default)
+    /// <summary>Current override, if any has ever been saved — every field null otherwise.
+    /// DocumentReaderProvider null/empty means "disabled" (PdfPig only), not "same as
+    /// Provider" — it never falls back to the dashboard-building provider.</summary>
+    public async Task<(string? Provider, string? OllamaModel, string? OpenAiModel, string? DocumentReaderProvider)> GetAsync(CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var row = await connection.QuerySingleOrDefaultAsync<SettingsRow>(
-            $"SELECT Provider, OllamaModel, OpenAiModel FROM {Table} WHERE Id = 1");
-        return (row?.Provider, row?.OllamaModel, row?.OpenAiModel);
+            $"SELECT Provider, OllamaModel, OpenAiModel, DocumentReaderProvider FROM {Table} WHERE Id = 1");
+        return (row?.Provider, row?.OllamaModel, row?.OpenAiModel, row?.DocumentReaderProvider);
     }
 
     public async Task SetAsync(string provider, string? ollamaModel, string? openAiModel, CancellationToken ct = default)
@@ -101,10 +121,34 @@ public class LlmSettingsStore
         await connection.ExecuteAsync(sql, new { provider, ollamaModel, openAiModel });
     }
 
+    /// <summary>
+    /// Sets (or clears, with null/"") the document-reading provider only — independent of
+    /// SetAsync above, since switching who builds dashboards shouldn't touch this, and vice
+    /// versa. A row must already exist (from the app's own startup or an earlier SetAsync);
+    /// on a genuinely fresh DB this is a no-op, matching the "disabled by default" contract.
+    /// </summary>
+    public async Task SetDocumentReaderAsync(string? provider, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var sql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               INSERT INTO {Table} (Id, DocumentReaderProvider) VALUES (1, @provider)
+               ON CONFLICT(Id) DO UPDATE SET DocumentReaderProvider = @provider
+               """
+            : $"""
+               MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
+               WHEN MATCHED THEN UPDATE SET DocumentReaderProvider = @provider
+               WHEN NOT MATCHED THEN INSERT (Id, DocumentReaderProvider) VALUES (1, @provider);
+               """;
+        await connection.ExecuteAsync(sql, new { provider = string.IsNullOrWhiteSpace(provider) ? null : provider });
+    }
+
     private class SettingsRow
     {
         public string? Provider { get; set; }
         public string? OllamaModel { get; set; }
         public string? OpenAiModel { get; set; }
+        public string? DocumentReaderProvider { get; set; }
     }
 }

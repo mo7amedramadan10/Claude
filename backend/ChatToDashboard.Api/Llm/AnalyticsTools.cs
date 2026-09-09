@@ -376,6 +376,30 @@ public class AnalyticsTools
             """;
     }
 
+    /// <summary>
+    /// System prompt for IDocumentTextExtractor.ExtractDocumentTextAsync — a document-reading
+    /// role only, deliberately unrelated to the dashboard/Inquiries prompts above (no widget
+    /// schema, no tools, no source-gating rules to reference): this call never sees a source
+    /// context at all, just page images handed to it directly by the repository upload flow.
+    /// </summary>
+    public const string DocumentExtractionSystemPrompt =
+        "أنت أداة استخراج نص من مستندات. مهمتك الوحيدة قراءة صور صفحات مرفقة بعناية وإرجاع " +
+        "كل نص ظاهر فيها بالكامل وبدقة — حتى لو كانت الصفحة ممسوحة ضوئيًا (صورة) وليست نصًا " +
+        "رقميًا أصلًا، أو فيها جدول أو رسم بياني تقدر تقرأ أرقامه. ممنوع تلخّص أو تفسّر أو تعلّق " +
+        "على المحتوى، وممنوع تختلق أي نص مش موجود فعليًا في الصورة. جاوب بالنص المستخرج فقط.";
+
+    /// <summary>The per-file instruction accompanying the page images — see
+    /// DocumentExtractionSystemPrompt for the role framing.</summary>
+    public static string DocumentExtractionInstruction(string fileName) =>
+        $$"""
+        الصور المرفقة هي صفحات ملف اسمه "{{fileName}}"، بترتيب الصفحات كما هي في الملف.
+        اقرأ كل صورة واستخرج كل محتواها النصي (فقرات، عناوين، جداول بصفوفها وأعمدتها، أرقام) —
+        حافظ على ترتيب الصفحات، وابدأ كل صفحة بسطر مستقل بالشكل "--- صفحة N ---" (N رقم
+        الصفحة بدءًا من 1). لو صفحة فاضية أو مفيهاش أي نص مقروء، اكتب تحت رقمها "(لا يوجد نص)"
+        بدل ما تتجاهلها أو تسكت عنها. رجّع النص المستخرج فقط — من غير أي مقدمة أو تلخيص أو
+        تعليق من عندك خارج محتوى الصفحات نفسه.
+        """;
+
     // $$ delimiters: {{expr}} interpolates, single braces stay literal for the JSON schema below.
     public string BuildSystemPrompt(SourceContext context) =>
         $$"""

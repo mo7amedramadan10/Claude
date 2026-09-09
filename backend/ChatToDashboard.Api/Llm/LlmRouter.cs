@@ -64,7 +64,7 @@ public class LlmRouter : IDashboardGenerator
 
     private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)
     {
-        var (savedProvider, _, _) = await _settings.GetAsync(ct);
+        var (savedProvider, _, _, _) = await _settings.GetAsync(ct);
         var provider = savedProvider is { Length: > 0 } ? savedProvider : _defaultProvider;
 
         return provider switch
@@ -73,5 +73,63 @@ public class LlmRouter : IDashboardGenerator
             Ollama => _services.GetRequiredService<OllamaClient>(),
             _ => _services.GetRequiredService<ClaudeClient>(),
         };
+    }
+}
+
+/// <summary>The IDashboardGenerator equivalent of this router, for the document-reading side —
+/// its own interface so the repository upload flow (UploadParser) can depend on this instead
+/// of the concrete DocumentReaderRouter, the same indirection IDashboardGenerator/LlmRouter
+/// already use elsewhere.</summary>
+public interface IDocumentReaderRouter
+{
+    Task<bool> IsEnabledAsync(CancellationToken ct = default);
+
+    Task<string?> ExtractTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default);
+}
+
+/// <summary>
+/// The IDocumentTextExtractor equivalent of LlmRouter above: resolves whichever concrete
+/// client is currently set as LlmSettingsStore.DocumentReaderProvider — a completely
+/// independent choice from LlmRouter's own provider, so an admin can read documents with one
+/// model and build dashboards with another. Null/unset means "disabled": ExtractTextAsync
+/// returns null rather than falling back to some default provider, since silently spending
+/// on a provider nobody explicitly picked for this purpose would be the wrong failure mode —
+/// the repository upload flow falls back to PdfPig's plain-text extraction in that case.
+/// </summary>
+public class DocumentReaderRouter : IDocumentReaderRouter
+{
+    private readonly IServiceProvider _services;
+    private readonly LlmSettingsStore _settings;
+
+    public DocumentReaderRouter(IServiceProvider services, LlmSettingsStore settings)
+    {
+        _services = services;
+        _settings = settings;
+    }
+
+    /// <summary>Cheap check the repository upload flow makes before doing any of the
+    /// (comparatively expensive) PDF page rasterization — no point rendering pages just to
+    /// find out afterward that nothing is configured to read them.</summary>
+    public async Task<bool> IsEnabledAsync(CancellationToken ct = default)
+    {
+        var (_, _, _, documentReaderProvider) = await _settings.GetAsync(ct);
+        return !string.IsNullOrWhiteSpace(documentReaderProvider);
+    }
+
+    public async Task<string?> ExtractTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
+    {
+        var (_, _, _, documentReaderProvider) = await _settings.GetAsync(ct);
+        if (string.IsNullOrWhiteSpace(documentReaderProvider)) return null;
+
+        IDocumentTextExtractor extractor = documentReaderProvider switch
+        {
+            LlmRouter.OpenAI => _services.GetRequiredService<OpenAiClient>(),
+            LlmRouter.Ollama => _services.GetRequiredService<OllamaClient>(),
+            LlmRouter.Anthropic => _services.GetRequiredService<ClaudeClient>(),
+            _ => throw new InvalidOperationException($"Unknown DocumentReaderProvider '{documentReaderProvider}'."),
+        };
+        return await extractor.ExtractDocumentTextAsync(fileName, pageImageDataUrls, ct);
     }
 }
