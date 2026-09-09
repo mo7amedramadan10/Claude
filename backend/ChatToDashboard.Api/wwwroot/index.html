@@ -4006,6 +4006,8 @@ function renderRepo() {
     const canManage = isAdmin || isCreator;
     const permBtn = canManage
       ? `<button class="icon-btn perm-btn" data-id="${esc(f.id)}" title="صلاحيات الملف">🔒</button>` : '';
+    const delBtn = canManage
+      ? `<button class="icon-btn del-btn" data-id="${esc(f.id)}" data-name="${esc(f.displayName)}" title="حذف الملف">🗑️</button>` : '';
 
     return `<div class="file-row${isStale ? ' stale' : ''}" data-id="${esc(f.id)}">
         <div class="fr-main">
@@ -4029,6 +4031,7 @@ function renderRepo() {
           <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
           ${permBtn}
           <button class="icon-btn rel-btn" data-id="${esc(f.id)}" title="الملفات المرتبطة">🔗</button>
+          ${delBtn}
         </div>
       </div>`;
   }).join('')
@@ -4038,6 +4041,7 @@ function renderRepo() {
   el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.perm-btn').forEach(btn => btn.addEventListener('click', () => openFilePermModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.rel-btn').forEach(btn => btn.addEventListener('click', () => openFileRelModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => deleteFile(btn.dataset.id, btn.dataset.name)));
 
   renderPending();
 }
@@ -4175,14 +4179,28 @@ function openFileModal(fileId) {
   el('file-modal').classList.remove('hidden');
 }
 
-el('file-modal-cancel').addEventListener('click', () => el('file-modal').classList.add('hidden'));
-el('file-modal-delete').addEventListener('click', async () => {
-  const fileId = el('file-modal-id').value;
-  const f = state.files.find(x => x.id === fileId);
-  if (!f || !confirm(`حذف "${f.displayName}" من المستودع؟ لا يمكن التراجع عن هذا.`)) return;
-  await fetch('/api/repository/files/' + fileId, { method: 'DELETE' });
+// Shared by the row's own 🗑️ button and the "✏️ التفاصيل" modal's delete button below —
+// same confirm + DELETE + refresh, so there's one place this logic lives. The backend only
+// allows the file's creator or an Admin to actually delete it (same gate as its permissions);
+// a 403 here means someone merely granted access to the file tried anyway.
+async function deleteFile(fileId, displayName) {
+  if (!confirm(`حذف "${displayName}" من المستودع؟ لا يمكن التراجع عن هذا.`)) return;
+  const res = await fetch('/api/repository/files/' + fileId, { method: 'DELETE' });
+  if (!res.ok) {
+    alert(res.status === 403
+      ? 'ليس لديك صلاحية حذف هذا الملف — الحذف مقصور على من رفعه أو على المسؤول.'
+      : `تعذّر حذف الملف (${res.status}).`);
+    return;
+  }
   el('file-modal').classList.add('hidden');
   await loadFiles(); await loadSources();
+}
+
+el('file-modal-cancel').addEventListener('click', () => el('file-modal').classList.add('hidden'));
+el('file-modal-delete').addEventListener('click', () => {
+  const fileId = el('file-modal-id').value;
+  const f = state.files.find(x => x.id === fileId);
+  if (f) deleteFile(f.id, f.displayName);
 });
 el('file-modal').addEventListener('click', e => { if (e.target.id === 'file-modal') el('file-modal').classList.add('hidden'); });
 

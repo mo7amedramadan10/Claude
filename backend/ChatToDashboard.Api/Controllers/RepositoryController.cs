@@ -262,9 +262,19 @@ public class RepositoryController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Deleting a file is at least as sensitive as managing its permissions —
+    /// gated the same way SetPermissions above is: the file's creator, or an Admin standing
+    /// in for them. Someone merely granted query/view access to the file is not enough.</summary>
     [HttpDelete("files/{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
+        if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
+        if (user.Role != UserRoles.Admin && !string.Equals(createdByUserId, user.Id, StringComparison.OrdinalIgnoreCase))
+            return Forbid();
+
         await _store.DeleteAsync(id, ct);
         return NoContent();
     }
