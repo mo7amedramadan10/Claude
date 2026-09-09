@@ -113,12 +113,12 @@ public class ClaudeClient : IDashboardGenerator
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
     {
-        // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+        // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
         // no new query_data/list_files call can happen here.
-        var userText = AnalyticsTools.ComposeConversionUserMessage(inquiry);
+        var userText = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard);
         var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);

@@ -1294,7 +1294,7 @@ const state = {
   messages: [], dashboard: null, loading: false,
   // "الاستفسارات" sub-tab: fully isolated from the dashboard-building chat above — its own
   // message log, never touches state.dashboard/currentHistoryId unless the user explicitly
-  // clicks "🔄 حوّله لداشبورد" on one answer (see convertInquiryToDashboard).
+  // clicks "➕ أضف إلى لوحة المتابعة" on one answer (see convertInquiryToDashboard).
   chatMode: 'dashboard', inquiryMessages: [],
   systems: [], sourceFiles: [], tableLabels: {}, // available, from /api/sources
   onSystems: new Set(), onFiles: new Set(), // enabled
@@ -3595,7 +3595,7 @@ async function ask(question) {
 // dashboard area (#dash-pane) is never hidden or cleared by switching between them. Isolated
 // from state.dashboard/state.messages entirely: an Inquiries question can never affect the
 // dashboard currently on screen, and its answers are never saved to السجل (state.history) —
-// only "🔄 حوّله لداشبورد" below ever bridges the two, and only on explicit click.
+// only "➕ أضف إلى لوحة المتابعة" below ever bridges the two, and only on explicit click.
 function setChatMode(mode) {
   state.chatMode = mode;
   document.querySelectorAll('.chat-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
@@ -3623,7 +3623,7 @@ function renderInquiryMessages() {
         ${esc(m.text)}
         <div class="inquiry-answer-actions">
           <button type="button" class="src-btn">ⓘ المصدر</button>
-          <button type="button" class="inquiry-convert-btn" data-idx="${i}">🔄 حوّله لداشبورد</button>
+          <button type="button" class="inquiry-convert-btn" data-idx="${i}">➕ أضف إلى لوحة المتابعة</button>
         </div>
         ${sourcePopover({ source: m.source })}
       </div>`;
@@ -3682,15 +3682,24 @@ async function askInquiry(question) {
   }
 }
 
-// "🔄 حوّله لداشبورد": never re-runs the question through the tool-calling loop — the data
-// this Inquiries answer already produced is handed to a single, tool-free call that only
-// reshapes it into widgets (see GenerateDashboardFromInquiryAsync). The result then replaces
-// whatever is in the (always-visible) dashboard area exactly the way a fresh, non-continuation
-// chat answer already would — same state fields ask() itself sets on that path — so the usual
-// "بناء اللوحة" continuation/autosave/history machinery picks it up completely normally
-// afterward. Lands in بناء اللوحة so that tab's own conversation reflects it.
+// "➕ أضف إلى لوحة المتابعة": never re-runs the question through the tool-calling loop — the
+// data this Inquiries answer already produced is handed to a single, tool-free call that only
+// reshapes it into widgets (see GenerateDashboardFromInquiryAsync). Mirrors ask()'s own
+// continuation contract exactly: it's added to whatever dashboard is already on screen (same
+// currentDashboard framing, same dropped-widget/filter safety net below) unless there's
+// nothing to add to yet, in which case it becomes a fresh dashboard on its own — same state
+// fields ask() itself sets on that path either way, so the usual "بناء اللوحة" autosave/
+// history machinery picks it up completely normally afterward. Lands in بناء اللوحة so that
+// tab's own conversation reflects it.
 async function convertInquiryToDashboard(msg) {
   if (!msg || state.loading) return;
+  // Same "continue the dashboard on screen, unless 🆕 ابدأ لوحة جديدة was clicked" contract
+  // as ask() — see currentDashboard there. Only its absence (a fresh session, or right after
+  // that button) makes this build a brand-new dashboard containing just this answer's data.
+  const currentDashboard = state.dashboard?.widgets?.length
+    ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
+    : null;
+  const isContinuation = !!currentDashboard;
   state.loading = true;
   renderInquiryMessages();
 
@@ -3698,17 +3707,36 @@ async function convertInquiryToDashboard(msg) {
     const res = await fetch('/api/inquiry/convert', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        answer: msg.text, source: msg.source, data: msg.data,
+        answer: msg.text, source: msg.source, data: msg.data, currentDashboard,
         sources: { systems: [...state.onSystems], files: [...state.onFiles] },
       }),
     });
     const payload = await res.json().catch(() => null);
     if (!res.ok || !payload?.dashboard) {
-      alert(payload?.error || `تعذّر تحويل الإجابة إلى لوحة (${res.status})`);
+      alert(payload?.error || `تعذّر إضافة الإجابة إلى اللوحة (${res.status})`);
       return;
     }
 
-    state.activeFilters = {};
+    if (isContinuation) {
+      // Same safety net ask() applies on its own continuation path: a smaller/local model
+      // can silently drop an existing widget despite the system prompt's copy-forward
+      // instruction. Match by title (widgets have no stable id the model echoes back) and
+      // restore anything missing, then carry forward existing filters the same way.
+      const oldWidgets = state.dashboard?.widgets || [];
+      const newWidgets = payload.dashboard.widgets || [];
+      if (oldWidgets.length && newWidgets.length < oldWidgets.length) {
+        const newTitles = new Set(newWidgets.map(w => w.title));
+        const missing = oldWidgets.filter(w => !newTitles.has(w.title));
+        payload.dashboard.widgets = [...missing, ...newWidgets];
+      }
+
+      const oldFilters = state.dashboard?.filters || [];
+      const oldIds = new Set(oldFilters.map(f => f.id).filter(Boolean));
+      const newFilters = (payload.dashboard.filters || []).filter(f => !f.id || !oldIds.has(f.id));
+      payload.dashboard.filters = [...oldFilters, ...newFilters];
+    } else {
+      state.activeFilters = {};
+    }
     state.dashboard = ensureWidgetMeta(payload.dashboard);
     state.editHistory = { past: [], future: [] };
     state.currentHistoryId = null;
@@ -3720,6 +3748,7 @@ async function convertInquiryToDashboard(msg) {
     state.messages.push({ role: 'bot', text: narration, speechWidgets });
     saveToHistory(msg.text, payload.dashboard);
     if (state.autoRead) speakText(narration, speechWidgets);
+    if (isContinuation && getActiveFilters().length) await applyFilters();
     setChatMode('dashboard');
   } catch (err) {
     alert('تعذّر الوصول إلى الخادم: ' + err.message);

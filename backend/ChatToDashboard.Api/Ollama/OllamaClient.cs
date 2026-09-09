@@ -125,9 +125,9 @@ public class OllamaClient : IDashboardGenerator
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
     {
-        // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+        // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
         // no new query_data/list_files call can happen here.
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
@@ -136,7 +136,7 @@ public class OllamaClient : IDashboardGenerator
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry) },
+            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard) },
         };
 
         var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context));

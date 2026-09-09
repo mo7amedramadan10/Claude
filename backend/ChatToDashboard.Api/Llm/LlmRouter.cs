@@ -56,10 +56,10 @@ public class LlmRouter : IDashboardGenerator
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
     {
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardFromInquiryAsync(inquiry, sources, ct);
+        return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, ct);
     }
 
     private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)

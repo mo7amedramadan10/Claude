@@ -37,11 +37,18 @@ public interface IDashboardGenerator
         CancellationToken ct = default);
 
     /// <summary>
-    /// "🔄 حوّله لداشبورد" — reshapes one already-answered Inquiries response's own data into a
-    /// normal dashboard, via a single non-tool-calling call (no new query_data/list_files/...).
+    /// "➕ أضف إلى لوحة المتابعة" — reshapes one already-answered Inquiries response's own data
+    /// into a dashboard, via a single non-tool-calling call (no new query_data/list_files/...).
     /// </summary>
+    /// <param name="currentDashboard">
+    /// Same contract as <see cref="GenerateDashboardAsync"/>'s parameter of the same name:
+    /// present means add this answer's data to it (every existing widget copied forward,
+    /// unchanged, plus the new one); absent means there's nothing to add to yet, so this just
+    /// builds a fresh dashboard containing this answer's data alone.
+    /// </param>
     Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryResponse inquiry,
+        DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         CancellationToken ct = default);
 }

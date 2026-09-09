@@ -55,9 +55,9 @@ public class InquiryApiResponse
     public string? Error { get; set; }
 }
 
-/// <summary>Body of POST /api/inquiry/convert — "🔄 حوّله لداشبورد": the exact answer/source/
-/// data of one already-given Inquiries answer, restructured into a dashboard via a single
-/// non-tool-calling call (see IDashboardGenerator.GenerateDashboardFromInquiryAsync).</summary>
+/// <summary>Body of POST /api/inquiry/convert — "➕ أضف إلى لوحة المتابعة": the exact answer/
+/// source/data of one already-given Inquiries answer, restructured into a dashboard via a
+/// single non-tool-calling call (see IDashboardGenerator.GenerateDashboardFromInquiryAsync).</summary>
 public class ConvertInquiryRequest
 {
     [JsonPropertyName("answer")]
@@ -68,6 +68,16 @@ public class ConvertInquiryRequest
 
     [JsonPropertyName("data")]
     public JsonElement Data { get; set; }
+
+    /// <summary>
+    /// The dashboard currently on screen — same shape and same "add to it, don't replace"
+    /// contract as <see cref="ChatRequest.CurrentDashboard"/>. Null when there's nothing to
+    /// add to yet (first conversion of a session, or right after "🆕 ابدأ لوحة جديدة"), in
+    /// which case this behaves exactly like the old "🔄 حوّله لداشبورد": a fresh dashboard
+    /// containing just this answer's data.
+    /// </summary>
+    [JsonPropertyName("currentDashboard")]
+    public DashboardStateInput? CurrentDashboard { get; set; }
 
     [JsonPropertyName("sources")]
     public SourceSelection? Sources { get; set; }

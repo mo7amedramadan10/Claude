@@ -327,17 +327,36 @@ public class AnalyticsTools
     }
 
     /// <summary>
-    /// "🔄 حوّله لداشبورد" — frames an already-answered Inquiries response as a pure
+    /// "➕ أضف إلى لوحة المتابعة" — frames an already-answered Inquiries response as a pure
     /// restructuring task: the real data is handed over verbatim, no tool call is offered
     /// (see IDashboardGenerator.GenerateDashboardFromInquiryAsync), and the model's only job
     /// is to shape it into the normal widgets JSON — never to re-derive or second-guess the
-    /// numbers themselves.
+    /// numbers themselves. When <paramref name="currentDashboard"/> is given, this opens with
+    /// the exact same "اللوحة المعروضة حاليًا للمستخدم" framing ComposeUserMessage uses for a
+    /// normal chat continuation — BuildSystemPrompt already keys its whole copy-forward-and-
+    /// append behavior off that one phrase, so reusing it here (rather than duplicating those
+    /// instructions) makes this call add to the existing dashboard exactly the same way a
+    /// "بناء اللوحة" follow-up question would, with no changes to the system prompt itself.
     /// </summary>
-    public static string ComposeConversionUserMessage(InquiryResponse inquiry)
+    public static string ComposeConversionUserMessage(InquiryResponse inquiry, DashboardStateInput? currentDashboard = null)
     {
         var dataJson = JsonSerializer.Serialize(inquiry.Data, ToolResultJsonOptions);
+        var currentDashboardBlock = "";
+        if (currentDashboard is { Widgets.Count: > 0 })
+        {
+            var widgetsJson = JsonSerializer.Serialize(currentDashboard.Widgets, ToolResultJsonOptions);
+            currentDashboardBlock = $$"""
+                اللوحة المعروضة حاليًا للمستخدم:
+                الملخص السابق: {{currentDashboard.Summary}}
+                العناصر الحالية (JSON كامل، شامل حقل source لكل عنصر):
+                {{widgetsJson}}
+
+
+                """;
+        }
+
         return $$"""
-            مهمة إعادة هيكلة فقط — من غير أي نداء أداة (list_files أو query_data أو غيرها):
+            {{currentDashboardBlock}}مهمة إعادة هيكلة فقط — من غير أي نداء أداة (list_files أو query_data أو غيرها):
             الأرقام دي جاية فعليًا من استعلام سابق نُفِّذ بالفعل، ومهمتك دلوقتي إنك تحوّلها لعنصر
             أو أكتر (widgets) بالشكل المناسب حسب طبيعتها (kpi/bar/line/pie/table أو أحد الأنواع
             الجديدة progress-table/trend-matrix/status-bar لو مناسب فعلًا)، من غير ما تخترع أي

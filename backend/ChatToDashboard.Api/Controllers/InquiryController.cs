@@ -54,8 +54,9 @@ public class InquiryController : ControllerBase
         }
     }
 
-    /// <summary>"🔄 حوّله لداشبورد" — reshapes one already-answered Inquiries response into a
-    /// dashboard via a single non-tool-calling call; never re-queries anything.</summary>
+    /// <summary>"➕ أضف إلى لوحة المتابعة" — reshapes one already-answered Inquiries response
+    /// into a dashboard via a single non-tool-calling call (never re-queries anything), adding
+    /// it to request.CurrentDashboard when one is given rather than replacing it.</summary>
     [HttpPost("convert")]
     public async Task<ActionResult<ChatResponse>> Convert([FromBody] ConvertInquiryRequest request, CancellationToken ct)
     {
@@ -70,7 +71,7 @@ public class InquiryController : ControllerBase
 
         try
         {
-            var dashboard = await _generator.GenerateDashboardFromInquiryAsync(inquiry, effectiveSources, ct);
+            var dashboard = await _generator.GenerateDashboardFromInquiryAsync(inquiry, request.CurrentDashboard, effectiveSources, ct);
             return Ok(new ChatResponse { Dashboard = dashboard });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
