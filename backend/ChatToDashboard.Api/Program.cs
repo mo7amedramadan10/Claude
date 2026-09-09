@@ -126,8 +126,15 @@ using (var scope = app.Services.CreateScope())
     // Logged so a stale or unsaved appsettings.json is obvious at a glance. The effective
     // provider can differ from this default if an admin overrode it from the dashboard's
     // model selector (LlmSettingsStore) — that only takes effect per-question, not here.
+    var dataStore = scope.ServiceProvider.GetRequiredService<DataStore>();
     logger.LogInformation("Configuration in use — LLM provider (default): {Llm}, database: {Db}",
-        llmProvider, scope.ServiceProvider.GetRequiredService<DataStore>().Provider);
+        llmProvider, dataStore.Provider);
+
+    // Must run before anything below touches the database: on a fresh SQL Server the
+    // target database doesn't exist yet, so without this the very first operation (seeding
+    // the admin account, just below) fails with "Cannot open database" and no account ever
+    // gets created — a silent lockout, since there's no self-signup to fall back on.
+    await dataStore.EnsureDatabaseExistsAsync(logger);
 
     // Accounts are admin-provisioned only (no self-signup) — so the very first admin has
     // to come from somewhere. If no account exists yet at all, create one: from
