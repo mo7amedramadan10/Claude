@@ -1,0 +1,111 @@
+# CI/CD for AI_Dashboard → Kubernetes on the 'multiapps' server.
+#
+# Runs on the self-hosted agent pool 'multiapps' (the agent lives on the same server as
+# the cluster, so it can reach the internal registry and kubectl without any tunnelling).
+#
+# Required once, in Pipelines > Library > Variable group 'ai-dashboard' (mark as secret):
+#   SQL_PASSWORD          SQL Server 'sa' password (min 8 chars, upper+lower+digit)
+#   OPENAI_API_KEY        OpenAI key (default provider)
+#   ANTHROPIC_API_KEY     Anthropic key (optional — leave empty if unused)
+#   OLLAMA_API_KEY        Ollama gateway token (optional)
+#   SEED_ADMIN_PASSWORD   password for the first 'admin' account (first run only)
+
+trigger:
+  branches:
+    include: [main]
+
+pool:
+  name: multiapps
+
+variables:
+  - group: ai-dashboard
+  - name: REGISTRY
+    value: 172.17.131.40:30500
+  - name: APP
+    value: ai-dashboard
+  - name: NAMESPACE
+    value: ai-dashboard
+  - name: IMAGE
+    value: $(REGISTRY)/$(APP):$(Build.BuildId)
+
+stages:
+  - stage: Build
+    displayName: Build & push image
+    jobs:
+      - job: build
+        steps:
+          - checkout: self
+            fetchDepth: 1
+
+          - script: |
+              set -euo pipefail
+              podman build -t $(IMAGE) -t $(REGISTRY)/$(APP):latest .
+              podman push $(IMAGE)
+              podman push $(REGISTRY)/$(APP):latest
+              echo "Pushed $(IMAGE)"
+            displayName: podman build & push
+
+          - script: |
+              # Keep the agent's disk clean: drop dangling layers older than a day.
+              podman image prune -f --filter until=24h || true
+            displayName: prune old images
+            condition: always()
+
+  - stage: Deploy
+    displayName: Deploy to Kubernetes
+    dependsOn: Build
+    jobs:
+      - job: deploy
+        steps:
+          - checkout: self
+            fetchDepth: 1
+
+          - script: |
+              set -euo pipefail
+              kubectl apply -f k8s/00-namespace.yaml
+              kubectl apply -f k8s/10-configmap.yaml
+            displayName: namespace & config
+
+          - script: |
+              set -euo pipefail
+              # (Re)create the Secret from the variable group. Values never touch the repo.
+              kubectl -n $(NAMESPACE) create secret generic ai-dashboard-secrets \
+                --from-literal=SQL_PASSWORD="$SQL_PASSWORD" \
+                --from-literal=ConnectionStrings__DataDb="Server=mssql;Database=ChatToDashboard;User Id=sa;Password=$SQL_PASSWORD;TrustServerCertificate=True" \
+                --from-literal=OpenAI__ApiKey="$OPENAI_API_KEY" \
+                --from-literal=Anthropic__ApiKey="$ANTHROPIC_API_KEY" \
+                --from-literal=Ollama__ApiKey="$OLLAMA_API_KEY" \
+                --from-literal=Auth__SeedAdmin__Password="$SEED_ADMIN_PASSWORD" \
+                --dry-run=client -o yaml | kubectl apply -f -
+            displayName: secrets
+            env:
+              SQL_PASSWORD: $(SQL_PASSWORD)
+              OPENAI_API_KEY: $(OPENAI_API_KEY)
+              ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
+              OLLAMA_API_KEY: $(OLLAMA_API_KEY)
+              SEED_ADMIN_PASSWORD: $(SEED_ADMIN_PASSWORD)
+
+          - script: |
+              set -euo pipefail
+              kubectl apply -f k8s/20-mssql.yaml
+              kubectl -n $(NAMESPACE) rollout status statefulset/mssql --timeout=300s
+            displayName: SQL Server
+
+          - script: |
+              set -euo pipefail
+              sed "s|IMAGE_PLACEHOLDER|$(IMAGE)|g" k8s/30-app.yaml | kubectl apply -f -
+              kubectl -n $(NAMESPACE) rollout status deployment/$(APP) --timeout=300s
+            displayName: app
+
+          - script: |
+              set -euo pipefail
+              echo "== Pods =="
+              kubectl -n $(NAMESPACE) get pods -o wide
+              echo "== Smoke test (UI shell) =="
+              curl -sf -o /dev/null -w "HTTP %{http_code}\n" http://localhost:30080/index.html
+              echo "== Smoke test (API requires auth → expect 401) =="
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:30080/api/history)
+              echo "HTTP $code"; test "$code" = "401"
+              echo
+              echo "App URL: http://172.17.131.40:30080  (or http://ai-dashboard.multiapps.local via ingress)"
+            displayName: verify
