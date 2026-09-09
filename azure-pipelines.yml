@@ -1,4 +1,5 @@
-# AI_Dashboard — the whole CI/CD in one file. Everything else lives in the 'platform' repo.
+# AI_Dashboard — .NET 8 API + UI, SQL Server, persistent data folder.
+# Full reference of every option: platform/examples/TEMPLATE.azure-pipelines.yml
 trigger:
   branches:
     include: [main]
@@ -13,14 +14,12 @@ extends:
   template: pipelines/deploy-app.yml@platform
   parameters:
     appName: ai-dashboard
-    port: 8080
-    healthPath: /index.html          # served before auth → safe for probes
-    nodePort: 30080                  # http://172.17.131.40:30080
-    memory: 512Mi
-    ingressBodySize: 100m            # file uploads
-    ingressTimeout: 600              # long LLM answers
+    healthPath: /index.html            # served before login → safe for probes
+    nodePort: 30080                    # http://172.17.131.40:30080
+    ingressBodySize: 100m              # file uploads
+    ingressTimeout: 600                # long LLM answers
 
-    database: mssql                  # shared SQL Server Express
+    database: mssql                    # shared SQL Server Express
     dbName: ChatToDashboard
     dbConnStringEnv: ConnectionStrings__DataDb
 
@@ -28,8 +27,8 @@ extends:
       enabled: true
       mountPath: /data
       size: 10Gi
-      seedFrom: /seed                # first start copies the sample data
-      fsGroup: 1654                  # 'app' user in the aspnet image
+      seedFrom: /seed                  # sample data copied on first start
+      fsGroup: 1654                    # 'app' user in the aspnet image
 
     env:
       ASPNETCORE_ENVIRONMENT: Production
@@ -43,8 +42,8 @@ extends:
       Ollama__Model: qwen3:14b
       Auth__SeedAdmin__Username: admin
 
-    secrets:                         # container env  :  variable in group 'ai-dashboard'
+    secrets:                           # container env : Library group 'ai-dashboard'
       OpenAI__ApiKey: OPENAI_API_KEY
-      Anthropic__ApiKey: ANTHROPIC_API_KEY
-      Ollama__ApiKey: OLLAMA_API_KEY
+      Anthropic__ApiKey: ANTHROPIC_API_KEY?      # optional
+      Ollama__ApiKey: OLLAMA_API_KEY?            # optional
       Auth__SeedAdmin__Password: SEED_ADMIN_PASSWORD
