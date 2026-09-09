@@ -1,4 +1,8 @@
 # AI_Dashboard — the whole CI/CD in one file. Everything else lives in the 'platform' repo.
+trigger:
+  branches:
+    include: [main]
+
 resources:
   repositories:
     - repository: platform
