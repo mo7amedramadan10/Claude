@@ -400,6 +400,19 @@ public class AnalyticsTools
         تعليق من عندك خارج محتوى الصفحات نفسه.
         """;
 
+    /// <summary>Single-page variant of DocumentExtractionInstruction, for OllamaClient —
+    /// which sends the internal gateway one page per request instead of bundling every page
+    /// into one message (see OllamaClient.ExtractDocumentTextAsync for why). The page number
+    /// is added by the caller around this call's own output, so this doesn't ask the model to
+    /// label it itself the way the multi-image instruction above does.</summary>
+    public static string DocumentExtractionPageInstruction(string fileName, int pageNumber, int totalPages) =>
+        $$"""
+        الصورة المرفقة هي الصفحة رقم {{pageNumber}} من {{totalPages}} في ملف اسمه "{{fileName}}".
+        اقرأ الصورة واستخرج كل محتواها النصي (فقرات، عناوين، جداول بصفوفها وأعمدتها، أرقام).
+        لو الصفحة فاضية أو مفيهاش أي نص مقروء، اكتب "(لا يوجد نص)" فقط. رجّع النص المستخرج فقط —
+        من غير أي مقدمة أو تلخيص أو تعليق من عندك خارج محتوى الصفحة نفسها.
+        """;
+
     // $$ delimiters: {{expr}} interpolates, single braces stay literal for the JSON schema below.
     public string BuildSystemPrompt(SourceContext context) =>
         $$"""

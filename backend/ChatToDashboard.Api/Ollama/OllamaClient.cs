@@ -5,6 +5,7 @@ using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Usage;
+using SkiaSharp;
 
 namespace ChatToDashboard.Api.Ollama;
 
@@ -146,6 +147,14 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
             AnalyticsTools.TryParseDashboard, "dashboard", ct);
     }
 
+    // Long side of a page image sent to the internal gateway, after re-encoding to JPEG below.
+    // Well within what a vision model reads comfortably (Claude itself targets a similar
+    // range), and small enough that even a single dense/scanned page stays far under almost
+    // any realistic request-body cap — see ExtractDocumentTextAsync for why this matters here
+    // specifically and not for Claude/OpenAI.
+    private const int GatewayImageMaxDimension = 1400;
+    private const int GatewayImageJpegQuality = 78;
+
     /// <summary>See ClaudeClient.ExtractDocumentTextAsync. Unlike GenerateDashboardAsync's
     /// image rejection above (a screenshot mid-conversation, where failing fast and telling
     /// the user to switch models is the right call), a document upload already has a working
@@ -155,7 +164,17 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     /// reply. Whatever comes back — a genuine transcription, a model that quietly ignored the
     /// images, or the gateway rejecting the request outright — DocumentReaderRouter's caller
     /// (the repository upload flow) only ever falls back to PdfPig's plain-text extraction on
-    /// an actual failure here, same as for Claude/OpenAI.</summary>
+    /// an actual failure here, same as for Claude/OpenAI.
+    ///
+    /// Sends the gateway ONE PAGE PER REQUEST rather than Claude/OpenAI's single message with
+    /// every page bundled together — seen live: this internal gateway enforces its own request
+    /// body size limit and rejects a bundled multi-page request with 413 "payload_too_large",
+    /// even though Claude's/OpenAI's cloud APIs accept the exact same combined payload without
+    /// issue. Splitting per page sidesteps that limit by construction — a request only ever
+    /// carries one page — no matter how many pages the document has; downscaling each page to
+    /// GatewayImageMaxDimension/re-encoding as JPEG below additionally covers the case where
+    /// even a single dense page's PNG (rendered once, upstream, for whichever provider ends up
+    /// reading it) would already be too large on its own.</summary>
     public async Task<string> ExtractDocumentTextAsync(
         string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
     {
@@ -163,29 +182,33 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         // an admin can run document reading on a different internal model than the one that
         // builds dashboards. Falls back to the same config default as that one, never to it.
         var model = (await _settings.GetAsync(ct)).DocumentReaderOllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var images = new JsonArray();
-        foreach (var dataUrl in pageImageDataUrls)
-            if (TryExtractBase64(dataUrl, out var base64Data))
-                images.Add(base64Data);
-
         var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
-        var messages = new JsonArray
-        {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject
-            {
-                ["role"] = "user",
-                ["content"] = AnalyticsTools.DocumentExtractionInstruction(fileName),
-                ["images"] = images,
-            },
-        };
-
         var trace = _usage.Begin("Ollama", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة");
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallChatAsync(model, messages, null, trace, ct);
-            var text = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+            var combined = new StringBuilder();
+            for (var i = 0; i < pageImageDataUrls.Count; i++)
+            {
+                if (!TryExtractBase64(pageImageDataUrls[i], out var base64Data)) continue;
+                var pageNumber = i + 1;
+                var messages = new JsonArray
+                {
+                    new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                    new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] = AnalyticsTools.DocumentExtractionPageInstruction(fileName, pageNumber, pageImageDataUrls.Count),
+                        ["images"] = new JsonArray { CompressForGateway(base64Data) },
+                    },
+                };
+                var response = await CallChatAsync(model, messages, null, trace, ct);
+                var pageText = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+                combined.AppendLine($"--- صفحة {pageNumber} ---");
+                combined.AppendLine(pageText.Trim());
+            }
+
+            var text = combined.ToString();
             await trace.CompleteAsync(true, text, null, ct);
             return text;
         }
@@ -207,6 +230,45 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         if (!match.Success) return false;
         base64Data = match.Groups[1].Value;
         return true;
+    }
+
+    /// <summary>Decodes the page (rendered upstream as PNG for whichever provider ends up
+    /// reading it) and re-encodes it as a smaller JPEG, downscaled to at most
+    /// GatewayImageMaxDimension on its long side — this gateway's own request-size limit is
+    /// what's being worked around here, not anything about image quality, so this only runs
+    /// for Ollama; Claude/OpenAI keep receiving the original PNG. Falls back to the original
+    /// bytes untouched if decoding fails for any reason (an unexpected format, a corrupt
+    /// page) — sending the original is still strictly better than dropping the page.</summary>
+    private static string CompressForGateway(string base64Png)
+    {
+        SKBitmap? resized = null;
+        try
+        {
+            using var bitmap = SKBitmap.Decode(Convert.FromBase64String(base64Png));
+            if (bitmap is null) return base64Png;
+
+            var toEncode = bitmap;
+            var longSide = Math.Max(bitmap.Width, bitmap.Height);
+            if (longSide > GatewayImageMaxDimension)
+            {
+                var scale = GatewayImageMaxDimension / (double)longSide;
+                resized = bitmap.Resize(
+                    new SKImageInfo((int)(bitmap.Width * scale), (int)(bitmap.Height * scale)),
+                    new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+                if (resized is not null) toEncode = resized;
+            }
+
+            using var encoded = toEncode.Encode(SKEncodedImageFormat.Jpeg, GatewayImageJpegQuality);
+            return Convert.ToBase64String(encoded.ToArray());
+        }
+        catch (Exception)
+        {
+            return base64Png;
+        }
+        finally
+        {
+            resized?.Dispose();
+        }
     }
 
     private static JsonObject TryParseArguments(string raw)
