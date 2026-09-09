@@ -1,6 +1,8 @@
 using System.Text.Json;
 using ChatToDashboard.Api.Data;
 using Dapper;
+using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Usage;
 
@@ -53,6 +55,26 @@ public class UsageStore
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
+
+        // Migration for a table created before who-asked was tracked — both null on an old
+        // row, same as any request with no HTTP user in scope (there currently isn't one).
+        foreach (var column in new[] { "UserId", "UserName" })
+        {
+            try
+            {
+                await using var alter = connection.CreateCommand();
+                alter.CommandText = _db.Provider == DbProvider.Sqlite
+                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" TEXT"
+                    : $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
+                await alter.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+            catch (SqlException ex) when (ex.Number == 2705)
+            {
+            }
+        }
     }
 
     public async Task SaveAsync(UsageRecord record, CancellationToken ct = default)
@@ -62,15 +84,16 @@ public class UsageStore
             await EnsureSchemaAsync(ct);
             await using var connection = await _db.OpenConnectionAsync(ct);
             await connection.ExecuteAsync(
-                $"INSERT INTO {Table} (Id, Timestamp, Provider, Model, Question, EnabledSources, TurnCount, " +
+                $"INSERT INTO {Table} (Id, Timestamp, Provider, Model, Question, UserId, UserName, EnabledSources, TurnCount, " +
                 "ToolCallCount, InputTokens, OutputTokens, CacheReadTokens, CacheWriteTokens, TotalTokens, " +
                 "EstimatedCost, DurationMs, Success, Error, SystemPrompt, TurnsJson, ToolCallsJson, FinalResponse) " +
-                "VALUES (@Id, @Timestamp, @Provider, @Model, @Question, @EnabledSources, @TurnCount, " +
+                "VALUES (@Id, @Timestamp, @Provider, @Model, @Question, @UserId, @UserName, @EnabledSources, @TurnCount, " +
                 "@ToolCallCount, @InputTokens, @OutputTokens, @CacheReadTokens, @CacheWriteTokens, @TotalTokens, " +
                 "@EstimatedCost, @DurationMs, @Success, @Error, @SystemPrompt, @TurnsJson, @ToolCallsJson, @FinalResponse)",
                 new
                 {
                     record.Id, record.Timestamp, record.Provider, record.Model, record.Question,
+                    record.UserId, record.UserName,
                     record.EnabledSources, record.TurnCount, record.ToolCallCount, record.InputTokens,
                     record.OutputTokens, record.CacheReadTokens, record.CacheWriteTokens, record.TotalTokens,
                     record.EstimatedCost, record.DurationMs, record.Success, record.Error, record.SystemPrompt,
@@ -94,7 +117,7 @@ public class UsageStore
         var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
         var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
         var rows = await connection.QueryAsync<UsageRecord>(
-            $"SELECT {top}Id, Timestamp, Provider, Model, Question, EnabledSources, TurnCount, ToolCallCount, " +
+            $"SELECT {top}Id, Timestamp, Provider, Model, Question, UserId, UserName, EnabledSources, TurnCount, ToolCallCount, " +
             "InputTokens, OutputTokens, CacheReadTokens, CacheWriteTokens, TotalTokens, EstimatedCost, " +
             $"DurationMs, Success, Error FROM {Table} ORDER BY Timestamp DESC{tail}");
 
@@ -124,6 +147,8 @@ public class UsageStore
             Provider = Text("Provider") ?? "",
             Model = Text("Model") ?? "",
             Question = Text("Question") ?? "",
+            UserId = Text("UserId"),
+            UserName = Text("UserName"),
             EnabledSources = Text("EnabledSources") ?? "",
             TurnCount = Int("TurnCount"),
             ToolCallCount = Int("ToolCallCount"),

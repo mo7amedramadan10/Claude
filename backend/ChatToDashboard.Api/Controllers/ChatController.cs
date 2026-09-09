@@ -46,7 +46,7 @@ public class ChatController : ControllerBase
         try
         {
             var dashboard = await _generator.GenerateDashboardAsync(
-                request.Message.Trim(), request.CurrentDashboard, effectiveSources, request.Image, ct);
+                request.Message.Trim(), request.CurrentDashboard, effectiveSources, request.Image, user, ct);
 
             // Mirrors HistoryController.Update's Owner-only new-data-source guard, but on the
             // chat-continuation path: without this, an Editor could reach the same outcome —

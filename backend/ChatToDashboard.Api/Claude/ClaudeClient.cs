@@ -5,6 +5,7 @@ using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Usage;
+using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.Claude;
 
@@ -60,6 +61,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default)
     {
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
@@ -87,7 +89,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         var systemPrompt = _tools.BuildSystemPrompt(context);
         var tools = BuildToolsJson(context);
 
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context));
+        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             messages, systemPrompt, tools, context, trace,
@@ -95,7 +97,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // Inquiries is never continuation-aware — isolated from whatever dashboard is on
         // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
@@ -105,7 +107,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         var systemPrompt = _tools.BuildInquirySystemPrompt(context);
         var tools = BuildToolsJson(context);
 
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context));
+        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             messages, systemPrompt, tools, context, trace,
@@ -113,7 +115,8 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
@@ -124,7 +127,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var systemPrompt = _tools.BuildSystemPrompt(context);
 
-        var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context));
+        var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             messages, systemPrompt, null, context, trace,
@@ -139,7 +142,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
     /// JSON — there's no dashboard schema to validate here.
     /// </summary>
     public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var content = new JsonArray();
         foreach (var dataUrl in pageImageDataUrls)
@@ -155,7 +158,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = content } };
         var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
 
-        var trace = _usage.Begin("Anthropic", _model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة");
+        var trace = _usage.Begin("Anthropic", _model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة", requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         try
         {

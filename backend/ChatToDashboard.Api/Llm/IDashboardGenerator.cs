@@ -1,5 +1,6 @@
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.Llm;
 
@@ -18,11 +19,15 @@ public interface IDashboardGenerator
     /// An optional reference image ("data:&lt;mime&gt;;base64,...") — a dashboard screenshot
     /// or mockup to recreate with real data, attached to this question only.
     /// </param>
+    /// <param name="requestingUser">Who asked — recorded on the usage log entry only (see
+    /// UsageTracker.Begin); never affects what the model is allowed to see, which is already
+    /// narrowed server-side into <paramref name="sources"/> before this is called.</param>
     Task<DashboardSpec> GenerateDashboardAsync(
         string question,
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -34,6 +39,7 @@ public interface IDashboardGenerator
     Task<InquiryResponse> GenerateInquiryAsync(
         string question,
         SourceSelection? sources = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -50,5 +56,6 @@ public interface IDashboardGenerator
         InquiryResponse inquiry,
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default);
 }

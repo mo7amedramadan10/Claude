@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.Usage;
 
@@ -37,7 +38,7 @@ public class UsageTrace
     private readonly UsageRecord _record;
 
     internal UsageTrace(UsageStore store, CostCalculator cost, string provider, string model,
-        string question, string enabledSources)
+        string question, string enabledSources, AppUser? user)
     {
         _store = store;
         _cost = cost;
@@ -49,6 +50,10 @@ public class UsageTrace
             Model = model,
             Question = question,
             EnabledSources = enabledSources,
+            UserId = user?.Id,
+            // DisplayName is required at signup (see UsersController) but fall back to
+            // Username defensively rather than show a blank name on the usage page.
+            UserName = user is null ? null : (user.DisplayName is { Length: > 0 } ? user.DisplayName : user.Username),
         };
     }
 
@@ -136,6 +141,6 @@ public class UsageTracker
         _cost = cost;
     }
 
-    public UsageTrace Begin(string provider, string model, string question, string enabledSources) =>
-        new(_store, _cost, provider, model, question, enabledSources);
+    public UsageTrace Begin(string provider, string model, string question, string enabledSources, AppUser? user = null) =>
+        new(_store, _cost, provider, model, question, enabledSources, user);
 }

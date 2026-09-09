@@ -3,6 +3,7 @@ using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Ollama;
 using ChatToDashboard.Api.OpenAi;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Users;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ChatToDashboard.Api.Llm;
@@ -42,24 +43,26 @@ public class LlmRouter : IDashboardGenerator
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default)
     {
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, ct);
+        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, ct);
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateInquiryAsync(question, sources, ct);
+        return await generator.GenerateInquiryAsync(question, sources, requestingUser, ct);
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, ct);
+        return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, requestingUser, ct);
     }
 
     private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)
@@ -85,7 +88,7 @@ public interface IDocumentReaderRouter
     Task<bool> IsEnabledAsync(CancellationToken ct = default);
 
     Task<string?> ExtractTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default);
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -118,7 +121,7 @@ public class DocumentReaderRouter : IDocumentReaderRouter
     }
 
     public async Task<string?> ExtractTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
         if (string.IsNullOrWhiteSpace(documentReaderProvider)) return null;
@@ -130,6 +133,6 @@ public class DocumentReaderRouter : IDocumentReaderRouter
             LlmRouter.Anthropic => _services.GetRequiredService<ClaudeClient>(),
             _ => throw new InvalidOperationException($"Unknown DocumentReaderProvider '{documentReaderProvider}'."),
         };
-        return await extractor.ExtractDocumentTextAsync(fileName, pageImageDataUrls, ct);
+        return await extractor.ExtractDocumentTextAsync(fileName, pageImageDataUrls, requestingUser, ct);
     }
 }

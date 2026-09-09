@@ -5,6 +5,7 @@ using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Usage;
+using ChatToDashboard.Api.Users;
 using SkiaSharp;
 
 namespace ChatToDashboard.Api.Ollama;
@@ -73,6 +74,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default)
     {
         // Screenshot-to-dashboard needs a vision-capable model; the gateway's models list
@@ -96,7 +98,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         messages.Add(new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) });
 
         var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context));
+        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, tools, context, trace,
@@ -104,7 +106,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
@@ -118,7 +120,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         };
 
         var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context));
+        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, tools, context, trace,
@@ -126,7 +128,8 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
@@ -140,7 +143,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
             new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard) },
         };
 
-        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context));
+        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, null, context, trace,
@@ -176,14 +179,14 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     /// even a single dense page's PNG (rendered once, upstream, for whichever provider ends up
     /// reading it) would already be too large on its own.</summary>
     public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // Its own sub-model choice, independent of GenerateDashboardAsync's OllamaModel above —
         // an admin can run document reading on a different internal model than the one that
         // builds dashboards. Falls back to the same config default as that one, never to it.
         var model = (await _settings.GetAsync(ct)).DocumentReaderOllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
-        var trace = _usage.Begin("Ollama", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة");
+        var trace = _usage.Begin("Ollama", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة", requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         try
         {

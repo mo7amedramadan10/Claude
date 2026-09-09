@@ -1,3 +1,5 @@
+using ChatToDashboard.Api.Users;
+
 namespace ChatToDashboard.Api.Llm;
 
 /// <summary>
@@ -17,5 +19,5 @@ public interface IDocumentTextExtractor
     /// document order — the same data-URL shape ClaudeClient/OpenAiClient/OllamaClient already
     /// accept for a reference-image attachment.</param>
     Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default);
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default);
 }

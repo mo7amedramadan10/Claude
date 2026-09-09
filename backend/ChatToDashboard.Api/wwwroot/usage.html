@@ -196,13 +196,14 @@ function renderRequests() {
   }
   el('requests').innerHTML = `<table>
     <thead><tr>
-      <th>الوقت</th><th>السؤال</th><th>الموديل</th><th>الحالة</th>
+      <th>الوقت</th><th>المستخدم</th><th>السؤال</th><th>الموديل</th><th>الحالة</th>
       <th class="num">جولات</th><th class="num">أدوات</th>
       <th class="num">إدخال</th><th class="num">إخراج</th><th class="num">الإجمالي</th>
       <th class="num">التكلفة</th><th class="num">الزمن</th>
     </tr></thead><tbody>
     ${data.records.map(r => `<tr data-id="${esc(r.id)}">
       <td style="white-space:nowrap">${when(r.timestamp)}</td>
+      <td style="white-space:nowrap">${esc(r.userName || '—')}</td>
       <td class="q" title="${esc(r.question)}">${esc(r.question)}</td>
       <td><span class="pill model">${esc(r.model)}</span></td>
       <td><span class="pill ${r.success ? 'ok' : 'bad'}">${r.success ? 'نجح' : 'فشل'}</span></td>
@@ -322,7 +323,7 @@ async function openDetail(id) {
   el('drawer-title').textContent = r.question || '(بدون سؤال)';
 
   const meta = `<div class="block"><div class="meta-grid">
-      ${cell('الوقت', when(r.timestamp))}${cell('المزود', r.provider)}${cell('الموديل', r.model)}
+      ${cell('الوقت', when(r.timestamp))}${cell('المستخدم', r.userName || '—')}${cell('المزود', r.provider)}${cell('الموديل', r.model)}
       ${cell('الحالة', r.success ? 'نجح' : 'فشل')}
       ${cell('جولات الموديل', r.turnCount)}${cell('نداءات الأدوات', r.toolCallCount)}
       ${cell('توكنز الإدخال', nf(r.inputTokens))}${cell('توكنز الإخراج', nf(r.outputTokens))}
@@ -423,7 +424,7 @@ function exportRecordToExcel(r) {
   const summarySheet = ssSheet('ملخص الطلب',
     ['الحقل', 'القيمة'],
     [
-      ['معرّف الطلب', r.id], ['الوقت', when(r.timestamp)], ['المزود', r.provider], ['الموديل', r.model],
+      ['معرّف الطلب', r.id], ['الوقت', when(r.timestamp)], ['المستخدم', r.userName || ''], ['المزود', r.provider], ['الموديل', r.model],
       ['السؤال', r.question], ['الحالة', r.success ? 'نجح' : 'فشل'], ['رسالة الخطأ', r.error || ''],
       ['المصادر المفعّلة', r.enabledSources || ''],
       ['عدد الجولات', r.turnCount], ['عدد نداءات الأدوات', r.toolCallCount],

@@ -5,6 +5,7 @@ using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Usage;
+using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.OpenAi;
 
@@ -61,6 +62,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default)
     {
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
@@ -83,7 +85,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
 
         var tools = BuildToolsJson(context);
         var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context));
+        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, tools, context, trace,
@@ -91,7 +93,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var systemPrompt = _tools.BuildInquirySystemPrompt(context);
@@ -105,7 +107,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
 
         var tools = BuildToolsJson(context);
         var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context));
+        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, tools, context, trace,
@@ -113,7 +115,8 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
@@ -127,7 +130,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
         };
 
         var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context));
+        var trace = _usage.Begin("OpenAI", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, null, context, trace,
@@ -137,7 +140,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
     /// <summary>See ClaudeClient.ExtractDocumentTextAsync — same contract, OpenAI's own
     /// image_url content-part shape and plain choices[0].message.content response.</summary>
     public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, CancellationToken ct = default)
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
         var content = new JsonArray { new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.DocumentExtractionInstruction(fileName) } };
@@ -154,7 +157,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
         // an admin can run document reading on a different OpenAI model than the one that
         // builds dashboards. Falls back to the same config default as that one, never to it.
         var model = (await _settings.GetAsync(ct)).DocumentReaderOpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة");
+        var trace = _usage.Begin("OpenAI", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة", requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         try
         {

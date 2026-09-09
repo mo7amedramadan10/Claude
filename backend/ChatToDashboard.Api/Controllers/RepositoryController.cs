@@ -70,6 +70,11 @@ public class RepositoryController : ControllerBase
         if (files is null || files.Count == 0)
             return BadRequest(new { error = "No files were uploaded." });
 
+        // Only needed so a PDF's AI-extraction attempt (see UploadParser.TryExtractWithAiAsync)
+        // is attributed to whoever uploaded it on the usage page — parsing itself needs no
+        // permission check here, same as before this was resolved.
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+
         var results = new List<PendingUpload>();
         foreach (var file in files)
         {
@@ -85,7 +90,7 @@ public class RepositoryController : ControllerBase
             }
 
             using var stream = file.OpenReadStream();
-            results.Add(await _parser.ParseAsync(file.FileName, stream, ct));
+            results.Add(await _parser.ParseAsync(file.FileName, stream, user, ct));
         }
         return Ok(results);
     }

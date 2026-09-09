@@ -40,6 +40,11 @@ public class UsageRecord
     [JsonPropertyName("model")] public string Model { get; set; } = string.Empty;
     [JsonPropertyName("question")] public string Question { get; set; } = string.Empty;
 
+    /// <summary>Who asked — null for a request with no HTTP user in scope (there currently
+    /// isn't one), never a placeholder like "unknown"; the usage page shows "—" for that.</summary>
+    [JsonPropertyName("userId")] public string? UserId { get; set; }
+    [JsonPropertyName("userName")] public string? UserName { get; set; }
+
     [JsonPropertyName("enabledSources")] public string EnabledSources { get; set; } = string.Empty;
     [JsonPropertyName("turnCount")] public int TurnCount { get; set; }
     [JsonPropertyName("toolCallCount")] public int ToolCallCount { get; set; }

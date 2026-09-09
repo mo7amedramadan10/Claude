@@ -3,6 +3,7 @@ using System.Data;
 using System.Text;
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Llm;
+using ChatToDashboard.Api.Users;
 using SkiaSharp;
 using UglyToad.PdfPig;
 
@@ -35,7 +36,8 @@ public class UploadParser
     public static bool IsSupported(string fileName) =>
         Path.GetExtension(fileName).ToLowerInvariant() is ".xlsx" or ".xls" or ".csv" or ".pdf";
 
-    public async Task<PendingUpload> ParseAsync(string fileName, Stream content, CancellationToken ct = default)
+    public async Task<PendingUpload> ParseAsync(
+        string fileName, Stream content, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         var token = Guid.NewGuid().ToString("N");
@@ -56,7 +58,7 @@ public class UploadParser
                     DataFolderLoader.InferTypes(DataFolderLoader.ReadCsv(temp)), null, 0, bytes),
                 ".xlsx" or ".xls" => new ParsedUpload(fileName, "excel",
                     DataFolderLoader.InferTypes(DataFolderLoader.ReadXlsx(temp)), null, 0, bytes),
-                ".pdf" => await ParsePdfAsync(fileName, temp, bytes, ct),
+                ".pdf" => await ParsePdfAsync(fileName, temp, bytes, requestingUser, ct),
                 _ => throw new NotSupportedException($"Unsupported file type: {extension}"),
             };
 
@@ -84,7 +86,8 @@ public class UploadParser
         }
     }
 
-    private async Task<ParsedUpload> ParsePdfAsync(string fileName, string path, byte[] bytes, CancellationToken ct)
+    private async Task<ParsedUpload> ParsePdfAsync(
+        string fileName, string path, byte[] bytes, AppUser? requestingUser, CancellationToken ct)
     {
         using var pdf = PdfDocument.Open(path);
         var text = new StringBuilder();
@@ -104,11 +107,12 @@ public class UploadParser
         // support) falls back to the PdfPig text already in hand rather than failing the
         // whole upload — a document search that's merely as good as before beats one that's
         // suddenly empty because of an unrelated setting.
-        var aiText = await TryExtractWithAiAsync(fileName, bytes, pages, ct);
+        var aiText = await TryExtractWithAiAsync(fileName, bytes, pages, requestingUser, ct);
         return new ParsedUpload(fileName, "pdf", null, aiText ?? pdfPigText, pages, bytes);
     }
 
-    private async Task<string?> TryExtractWithAiAsync(string fileName, byte[] pdfBytes, int pageCount, CancellationToken ct)
+    private async Task<string?> TryExtractWithAiAsync(
+        string fileName, byte[] pdfBytes, int pageCount, AppUser? requestingUser, CancellationToken ct)
     {
         if (pageCount == 0 || !await _documentReader.IsEnabledAsync(ct)) return null;
         try
@@ -130,7 +134,7 @@ public class UploadParser
             }
             if (pageImages.Count == 0) return null;
 
-            var extracted = await _documentReader.ExtractTextAsync(fileName, pageImages, ct);
+            var extracted = await _documentReader.ExtractTextAsync(fileName, pageImages, requestingUser, ct);
             return string.IsNullOrWhiteSpace(extracted) ? null : extracted;
         }
         catch (Exception ex)
