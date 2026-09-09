@@ -435,16 +435,18 @@ tr:last-child td{border-bottom:0}
 /* ---------- repository screen ---------- */
 #screen-repo,#screen-active,#screen-sharelinks{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
 .repo-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:11px;
+.upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:11px;border:0;
   background:var(--accent);color:#fff;font-weight:600}
+.upload-modal-box{width:min(820px,100%);max-height:86vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.upload-modal-pick{align-self:flex-start}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:5px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);color:var(--ink-2)}
 .chip.active{background:var(--accent-soft);border-color:#cfe1f8;color:var(--accent);font-weight:600}
 #pending{display:flex;flex-direction:column;gap:9px}
-.pending-card{display:flex;align-items:center;gap:11px;padding:11px 14px;background:rgba(242,184,75,.10);
+.pending-card{display:flex;align-items:center;flex-wrap:wrap;gap:11px;padding:11px 14px;background:rgba(242,184,75,.10);
   border:1px solid rgba(242,184,75,.35);border-radius:12px}
-.pending-card .name{flex:1;font-size:13px}
-.pending-card input{width:210px;padding:7px 11px;border:1px solid var(--grid);border-radius:9px}
+.pending-card .name{flex:1 1 100%;font-size:13px}
+.pending-card input{flex:1 1 160px;min-width:140px;padding:7px 11px;border:1px solid var(--grid);border-radius:9px}
 .pending-card .save{padding:7px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
 .pending-card .cancel{border:0;background:transparent;color:var(--danger);font-size:18px;font-weight:700}
 .pending-card.bad{background:rgba(239,100,97,.12);border-color:rgba(239,100,97,.35)}
@@ -888,16 +890,12 @@ tr:last-child td{border-bottom:0}
 
 <div id="screen-repo" class="screen">
   <div class="repo-bar">
-    <label class="upload-btn">
-      📎 رفع ملفات جديدة
-      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.pdf" multiple hidden>
-    </label>
+    <button type="button" class="upload-btn" id="btn-open-upload-modal">📎 رفع ملفات جديدة</button>
     <!-- Bound to one existing file's id right before it's clicked (see openUpdateFilePicker) —
          "Update this file" re-uses the same server-side parser, just skips the "assign a
          category" step since display name/category/relationships/permissions are preserved. -->
     <input type="file" id="file-update-input" accept=".xlsx,.xls,.csv,.pdf" hidden>
   </div>
-  <div id="pending"></div>
   <div class="repo-toolbar">
     <div class="chips" id="filters"></div>
     <select class="sort-select" id="repo-sort">
@@ -914,6 +912,22 @@ tr:last-child td{border-bottom:0}
     <div class="col-actions"></div>
   </div>
   <div class="file-list" id="repo-list"></div>
+</div>
+
+<div id="upload-modal" class="modal-overlay hidden">
+  <div class="modal upload-modal-box">
+    <h3>رفع ملفات جديدة</h3>
+    <p class="modal-note">اختر ملفًا واحدًا أو أكثر (Excel أو CSV أو PDF)، اكتب بيانات كل ملف، ثم اضغط
+      "حفظ في المستودع" لكل ملف على حدة لإضافته للمستودع.</p>
+    <label class="upload-btn upload-modal-pick">
+      📎 اختر ملفات
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.pdf" multiple hidden>
+    </label>
+    <div id="pending"></div>
+    <div class="modal-actions">
+      <button type="button" id="upload-modal-close">إغلاق</button>
+    </div>
+  </div>
 </div>
 
 <div id="file-modal" class="modal-overlay hidden">
@@ -4076,6 +4090,16 @@ function renderPending() {
     renderPending();
   }));
 }
+
+// ---------- upload modal: the popup the repository page's upload button opens — file
+// picking, per-file metadata, and the save-to-repository step all happen inside it, instead
+// of inline on the page. Unsaved pending cards (state.pending) are left as-is on close, so
+// reopening the modal shows them again ready to finish, exactly like before this was a modal. ----------
+function openUploadModal() { el('upload-modal').classList.remove('hidden'); }
+function closeUploadModal() { el('upload-modal').classList.add('hidden'); }
+el('btn-open-upload-modal').addEventListener('click', openUploadModal);
+el('upload-modal-close').addEventListener('click', closeUploadModal);
+el('upload-modal').addEventListener('click', e => { if (e.target.id === 'upload-modal') closeUploadModal(); });
 
 el('file-input').addEventListener('change', async e => {
   const files = [...e.target.files];
