@@ -59,12 +59,16 @@ input{font:inherit}
 /* One shared, larger, custom-chevron design instead of each screen's own small native
    control — appearance:none strips the browser's tiny built-in arrow (and, on Firefox,
    its default padding) so --select-arrow (a plain SVG, themed above) can replace it,
-   positioned for RTL: text starts at the right, so the icon sits on the left. Later,
-   more specific selectors may still override individual properties (e.g. a fixed width
-   inside a tight toolbar) — this is the shared baseline everywhere else falls back to. */
+   positioned for RTL: text starts at the right, so the icon sits on the left. The padding
+   below has to mirror that: the wider clearance belongs on the LEFT (where the icon
+   actually sits), not the right — it was left un-mirrored for RTL, so on a select without
+   much spare width (e.g. "الأكثر استخدامًا" in the repository sort dropdown) the
+   right-aligned text ran straight into/over the icon instead of stopping short of it.
+   Later, more specific selectors may still override individual properties (e.g. a fixed
+   width inside a tight toolbar) — this is the shared baseline everywhere else falls back to. */
 select{
   appearance:none; -webkit-appearance:none; -moz-appearance:none;
-  padding:11px 44px 11px 16px; border:1px solid var(--grid); border-radius:11px;
+  padding:11px 16px 11px 44px; border:1px solid var(--grid); border-radius:11px;
   background:var(--surface) var(--select-arrow) no-repeat left 14px center;
   background-size:18px; color:var(--ink); font:inherit; font-size:14px; cursor:pointer;
   transition:border-color .15s, box-shadow .15s;
