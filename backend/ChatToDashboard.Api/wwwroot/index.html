@@ -260,6 +260,11 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
 .src-btn{width:19px;height:19px;padding:0;border:1px solid var(--accent);border-radius:50%;
   background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1}
 .src-btn:hover,.src-btn.active{background:var(--accent);color:#06251C}
+/* In Inquiries mode this same button carries "ⓘ المصدر" (icon + label), not just the icon a
+   widget's ⓘ shows — the fixed 19px circle above clips/garbles that longer text, so here it
+   grows into a normal pill like .inquiry-convert-btn instead. */
+.inquiry-answer-actions .src-btn{width:auto;height:auto;border-radius:8px;padding:3px 10px;
+  font-size:11.5px;line-height:1.4}
 /* Deliberately the amber token, not the accent — ties the button to the forecast series'
    own color in the chart (see forecastChartConfig()) so the whole feature reads as one thing. */
 .forecast-btn{padding:4px 10px;border:1px solid var(--amber);border-radius:999px;
