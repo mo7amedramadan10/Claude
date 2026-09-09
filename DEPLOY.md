@@ -98,67 +98,24 @@ git pull && docker compose up -d --build
 Note: on Azure SQL the app cannot create the database itself (no `master` access) — create
 it in step 1; the app still creates the `staging` schema and tables on its own.
 
-## Option C: Kubernetes on the company server (multiapps) — CI/CD via Azure Pipelines
+## Option C: Kubernetes on the company server (multiapps) — the current production path
 
-This is the current production path. Every push to `main` builds the image on the
-server, pushes it to the internal registry and rolls it out to the cluster. Nothing
-needs to be installed on anyone's laptop.
+CI/CD is fully described by **one file, `azure-pipelines.yml`**, which extends the shared
+pipeline in the `platform` repo (`THQ_MVPs/platform`). Every push to `main` builds the
+image on the server, pushes it to the internal registry, creates the app's database on the
+shared SQL Server, and rolls the deployment out. See `platform/README.md` for every
+parameter.
 
-### What's in the repo
+One-time setup: Pipelines → Library → variable group **`ai-dashboard`** with
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_API_KEY`, `SEED_ADMIN_PASSWORD` (secret),
+and the shared group **`platform`** with `MSSQL_SA_PASSWORD`.
 
-| File | Purpose |
-|---|---|
-| `Dockerfile` | Multi-stage build: .NET 8 SDK → aspnet runtime, runs as non-root, port 8080 |
-| `azure-pipelines.yml` | Build & push (podman) → deploy (kubectl) on the self-hosted pool `multiapps` |
-| `k8s/00-namespace.yaml` | Namespace `ai-dashboard` |
-| `k8s/10-configmap.yaml` | Non-secret settings (LLM provider, models, Ollama URL, data path) |
-| `k8s/20-mssql.yaml` | SQL Server 2022 StatefulSet with a 20 GB persistent volume |
-| `k8s/30-app.yaml` | App Deployment, data volume (10 GB), Service, NodePort 30080, Ingress |
-| `k8s/secret.example.yaml` | Shape of the Secret — real values come from the pipeline, never from git |
+The app is at **http://172.17.131.40:30080** or **http://ai-dashboard.multiapps.local**
+(DNS/hosts entry → 172.17.131.40). First login: `admin` / `SEED_ADMIN_PASSWORD`.
 
-### One-time setup in Azure DevOps
-
-1. **Variable group**: Pipelines → Library → *+ Variable group* named `ai-dashboard` with
-   `SQL_PASSWORD`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_API_KEY`,
-   `SEED_ADMIN_PASSWORD` (click the lock icon on each to make it secret). Under
-   *Pipeline permissions* allow this pipeline.
-2. **Pipeline**: Pipelines → *New pipeline* → Azure Repos Git → `AI_Dashboard` →
-   *Existing Azure Pipelines YAML file* → `/azure-pipelines.yml` → Run.
-   First run may ask you to *Permit* the `multiapps` agent pool and the variable group.
-
-### Where the app is
-
-- By IP, no DNS needed: **http://172.17.131.40:30080**
-- By name through ingress-nginx: **http://ai-dashboard.multiapps.local** — ask IT for a
-  DNS record pointing at `172.17.131.40`, or add that line to your hosts file.
-
-First login: `admin` / the `SEED_ADMIN_PASSWORD` you set. Change it from the UI.
-
-### Day-2 operations (on the server, as root)
-
-```bash
-kubectl -n ai-dashboard get pods                       # health at a glance
-kubectl -n ai-dashboard logs deploy/ai-dashboard -f    # app logs
-kubectl -n ai-dashboard logs statefulset/mssql         # SQL Server logs
-kubectl -n ai-dashboard rollout restart deploy/ai-dashboard   # restart the app
-kubectl -n ai-dashboard rollout undo deploy/ai-dashboard      # roll back to previous image
-```
-
-**Data files** live on the volume behind PVC `ai-dashboard-data`. To add files:
-
-```bash
-POD=$(kubectl -n ai-dashboard get pod -l app=ai-dashboard -o jsonpath='{.items[0].metadata.name}')
-kubectl -n ai-dashboard cp ./my_report.xlsx $POD:/data/
-curl -X POST -b cookie.txt http://172.17.131.40:30080/api/data/refresh   # after signing in
-```
-
-**Change a setting** (model, provider, Ollama URL): edit `k8s/10-configmap.yaml`, push to
-`main`. **Rotate a secret**: update the variable group and re-run the pipeline.
-
-**Backups**: the SQL data is on the `data-mssql-0` PVC under
-`/opt/local-path-provisioner/` on the server. Take a SQL backup with
-`kubectl -n ai-dashboard exec mssql-0 -- /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SQL_PASSWORD" -C -Q "BACKUP DATABASE ChatToDashboard TO DISK='/var/opt/mssql/ChatToDashboard.bak'"`
-and copy the `.bak` out with `kubectl cp`.
+Day-2 on the server: `kubectl -n ai-dashboard logs deploy/ai-dashboard -f`,
+`kubectl -n ai-dashboard rollout undo deploy/ai-dashboard` (roll back),
+`kubectl -n databases exec -it mssql-0 -- /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C` (DB shell).
 
 ## Security checklist (read before sharing the URL)
 
