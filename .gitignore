@@ -1,0 +1,25 @@
+# .NET
+bin/
+obj/
+appsettings.Development.json
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# Local SQLite database (DatabaseProvider=Sqlite)
+*.db
+*.db-shm
+*.db-wal
+
+# Environment / secrets
+.env
+.env.*
+
+# Editor
+.vs/
+.vscode/
+.idea/
+*.user

@@ -1,0 +1,41 @@
+OrderDate,Region,Product,Category,Quantity,UnitPrice,Revenue
+2024-01-05,North,Laptop Pro 15,Electronics,3,1299.00,3897.00
+2024-01-08,South,Wireless Mouse,Accessories,12,24.99,299.88
+2024-01-12,East,Office Chair,Furniture,5,189.50,947.50
+2024-01-15,West,Laptop Pro 15,Electronics,2,1299.00,2598.00
+2024-01-19,North,USB-C Dock,Accessories,8,79.99,639.92
+2024-01-23,South,Standing Desk,Furniture,3,449.00,1347.00
+2024-01-28,East,Monitor 27in,Electronics,6,329.00,1974.00
+2024-02-02,West,Wireless Mouse,Accessories,15,24.99,374.85
+2024-02-06,North,Standing Desk,Furniture,2,449.00,898.00
+2024-02-11,South,Laptop Pro 15,Electronics,4,1299.00,5196.00
+2024-02-14,East,USB-C Dock,Accessories,10,79.99,799.90
+2024-02-18,West,Office Chair,Furniture,7,189.50,1326.50
+2024-02-22,North,Monitor 27in,Electronics,4,329.00,1316.00
+2024-02-27,South,Wireless Keyboard,Accessories,9,49.99,449.91
+2024-03-03,East,Laptop Pro 15,Electronics,3,1299.00,3897.00
+2024-03-07,West,Standing Desk,Furniture,4,449.00,1796.00
+2024-03-12,North,Wireless Mouse,Accessories,20,24.99,499.80
+2024-03-16,South,Monitor 27in,Electronics,5,329.00,1645.00
+2024-03-21,East,Office Chair,Furniture,6,189.50,1137.00
+2024-03-25,West,USB-C Dock,Accessories,11,79.99,879.89
+2024-04-01,North,Laptop Pro 15,Electronics,5,1299.00,6495.00
+2024-04-05,South,Office Chair,Furniture,4,189.50,758.00
+2024-04-10,East,Wireless Keyboard,Accessories,14,49.99,699.86
+2024-04-14,West,Monitor 27in,Electronics,7,329.00,2303.00
+2024-04-19,North,Standing Desk,Furniture,3,449.00,1347.00
+2024-04-23,South,USB-C Dock,Accessories,9,79.99,719.91
+2024-04-28,East,Laptop Pro 15,Electronics,2,1299.00,2598.00
+2024-05-03,West,Wireless Mouse,Accessories,18,24.99,449.82
+2024-05-08,North,Monitor 27in,Electronics,6,329.00,1974.00
+2024-05-13,South,Standing Desk,Furniture,5,449.00,2245.00
+2024-05-17,East,Wireless Keyboard,Accessories,12,49.99,599.88
+2024-05-22,West,Office Chair,Furniture,8,189.50,1516.00
+2024-05-27,North,Laptop Pro 15,Electronics,4,1299.00,5196.00
+2024-06-02,South,Monitor 27in,Electronics,8,329.00,2632.00
+2024-06-07,East,USB-C Dock,Accessories,13,79.99,1039.87
+2024-06-12,West,Laptop Pro 15,Electronics,3,1299.00,3897.00
+2024-06-16,North,Wireless Keyboard,Accessories,10,49.99,499.90
+2024-06-21,South,Office Chair,Furniture,5,189.50,947.50
+2024-06-26,East,Standing Desk,Furniture,4,449.00,1796.00
+2024-06-30,West,Wireless Mouse,Accessories,22,24.99,549.78
