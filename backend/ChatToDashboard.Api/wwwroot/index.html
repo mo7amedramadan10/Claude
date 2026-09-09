@@ -661,6 +661,29 @@ tr:last-child td{border-bottom:0}
 .modal-actions button{padding:7px 16px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
 .modal-actions .file-modal-delete{margin-inline-end:auto;border-color:rgba(239,100,97,.35);color:var(--danger)}
 
+/* ---------- guided tour ---------- */
+/* The dim layer sits below whatever step's target element (see .tour-target) — a target's
+   own higher z-index is what makes it "pop" above the dim without needing an actual
+   spotlight-cutout mask. */
+#tour-dim{position:fixed;inset:0;z-index:300;background:rgba(11,11,11,.5);display:none}
+#tour-dim.open{display:block}
+.tour-target{position:relative;z-index:301;outline:3px solid var(--accent);outline-offset:3px;
+  border-radius:8px;box-shadow:0 0 0 6px rgba(27,175,122,.28)}
+#tour-pop{position:fixed;z-index:302;width:min(320px,88vw);background:var(--surface);
+  border:1px solid var(--grid);border-radius:14px;box-shadow:0 20px 50px rgba(11,11,11,.3);
+  padding:16px 18px;display:none}
+#tour-pop.open{display:block}
+#tour-pop h4{margin:0 0 8px;font-size:14.5px}
+#tour-pop p{margin:0 0 14px;font-size:13px;line-height:1.7;color:var(--ink-2)}
+.tour-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tour-step-count{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.tour-actions{display:flex;gap:8px}
+.tour-actions button{padding:6px 14px;border-radius:9px;border:1px solid var(--grid);
+  background:var(--plane);color:var(--ink-2);font-size:12.5px}
+.tour-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.tour-skip{display:block;margin-top:10px;border:0;background:transparent;color:var(--muted);
+  text-decoration:underline;font-size:12px;padding:2px}
+
 /* ---------- shared read-only view ---------- */
 #shared-banner{display:flex;align-items:center;gap:12px;padding:11px 20px;
   background:var(--accent-soft);border-bottom:1px solid #cfe1f8;color:var(--ink-2)}
@@ -829,11 +852,15 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
     </div>
     <button type="button" id="auto-read-toggle" class="hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد">🔇 قراءة تلقائية</button>
+    <button type="button" id="tour-btn" title="دليل استخدام النظام">❓</button>
     <button type="button" id="theme-toggle" title="تبديل المظهر">🌙</button>
     <span id="current-user-name"></span>
     <button type="button" id="logout-btn">خروج</button>
   </div>
 </header>
+
+<div id="tour-dim"></div>
+<div id="tour-pop"></div>
 
 <main id="screen-chat" class="screen active">
   <aside id="chat-rail">
@@ -5542,12 +5569,172 @@ el('theme-toggle').addEventListener('click', () => {
   el('theme-toggle').title = current === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
 })();
 
+// ---------- guided tour ----------
+// A short, dismissible walkthrough of the main screens — starts automatically once per user
+// per browser (see maybeAutoStartTour, called from startApp), and can be replayed any time
+// via the ❓ button. Each step either highlights a real header element (the nav tabs
+// themselves, always present regardless of which screen is active — no screen-switching
+// needed to keep them visible) or, for chat-only controls, relies on startTour forcing the
+// chat screen active first.
+function buildTourSteps() {
+  const isAdmin = state.currentUser?.role === 'Admin';
+  const steps = [
+    {
+      title: '👋 أهلاً بك',
+      body: 'جولة سريعة على أهم صفحات النظام — تقدر تتخطاها الآن وتشغّلها تاني وقت ما تحب من زر ❓ فوق.',
+    },
+    {
+      target: '[data-screen="chat"]',
+      title: '💬 المحادثة',
+      body: 'الصفحة الرئيسية: اكتب سؤالك بلغة عربية طبيعية عن بياناتك، ويبنيلك النظام لوحة معلومات تفاعلية فورًا.',
+    },
+    {
+      target: '#chat-mode-tabs',
+      title: '🧭 بناء اللوحة / الاستفسارات',
+      body: '«بناء اللوحة» يحوّل سؤالك لعناصر رسومية وجداول. «الاستفسارات» يرجّعلك إجابة نصية سريعة من غير بناء لوحة — مفيد للأسئلة السريعة.',
+    },
+    {
+      target: '#sources-btn',
+      title: '📁 مصادر البيانات',
+      body: 'من هنا تتحكم في أي الأنظمة أو الملفات مفعّلة وقت السؤال — تقدر تقصر البحث على مصدر معيّن بس.',
+    },
+    {
+      target: '[data-screen="repo"]',
+      title: '📎 مستودع الملفات',
+      body: 'ترفع هنا ملفات Excel أو CSV أو PDF، وتستخدمها كمصدر بيانات تسأل عنه زي أي نظام متصل.',
+    },
+    {
+      target: '[data-screen="history"]',
+      title: '🕘 السجل',
+      body: 'كل اللوحات اللي سألت عنها قبل كده — تقدر ترجع لأي لوحة وتكمل عليها أو تعدّلها.',
+    },
+    {
+      target: '[data-screen="active"]',
+      title: '✅ اللوحات النشطة',
+      body: 'لوحات مفعّلة تقدر تشاركها مع فريقك بأدوار مختلفة (مالك/محرر/مشاهد)، وتفضل بياناتها تتحدث تلقائيًا من المصدر الحي.',
+    },
+    {
+      target: '[data-screen="sharelinks"]',
+      title: '🔗 روابط المشاركة',
+      body: 'روابط ثابتة لمشاركة نسخة لحظية من لوحة مع أي شخص، من غير ما يحتاج تسجيل دخول.',
+    },
+  ];
+  if (isAdmin) {
+    steps.push(
+      {
+        target: '#tab-users',
+        title: '👥 المستخدمون',
+        body: 'إدارة حسابات المستخدمين، أدوارهم، وأي الأنظمة يقدروا يوصلوا لها.',
+      },
+      {
+        target: '#tab-settings',
+        title: '⚙️ الإعدادات',
+        body: 'التحكم في موديل الذكاء الاصطناعي المستخدم لبناء اللوحات، وموديل قراءة ملفات PDF بشكل مستقل عنه.',
+      },
+      {
+        target: '#usage-link',
+        title: '📊 الاستهلاك',
+        body: 'سجل تفصيلي لكل سؤال اتبعت للموديل — التوكنز المستخدمة، التكلفة التقديرية، ومين سأل.',
+      },
+    );
+  }
+  steps.push({
+    target: '#tour-btn',
+    title: '❓ تحتاج الدليل تاني؟',
+    body: 'اضغط هنا في أي وقت لإعادة عرض هذا الدليل من الأول.',
+  });
+  return steps;
+}
+
+let tourSteps = [];
+let tourIndex = 0;
+
+function startTour() {
+  tourSteps = buildTourSteps();
+  tourIndex = 0;
+  showScreen('chat'); // guarantees the chat-only steps' targets are actually visible
+  el('tour-dim').classList.add('open');
+  renderTourStep();
+}
+
+function endTour() {
+  el('tour-dim').classList.remove('open');
+  el('tour-pop').classList.remove('open');
+  document.querySelectorAll('.tour-target').forEach(e => e.classList.remove('tour-target'));
+}
+
+function renderTourStep() {
+  document.querySelectorAll('.tour-target').forEach(e => e.classList.remove('tour-target'));
+  const step = tourSteps[tourIndex];
+  if (!step) { endTour(); return; }
+
+  const pop = el('tour-pop');
+  const isFirst = tourIndex === 0;
+  const isLast = tourIndex === tourSteps.length - 1;
+  pop.innerHTML = `
+    <h4>${esc(step.title)}</h4>
+    <p>${esc(step.body)}</p>
+    <div class="tour-foot">
+      <span class="tour-step-count">${tourIndex + 1} من ${tourSteps.length}</span>
+      <div class="tour-actions">
+        ${!isFirst ? '<button type="button" id="tour-prev">السابق</button>' : ''}
+        <button type="button" id="tour-next" class="primary">${isLast ? 'إنهاء' : 'التالي'}</button>
+      </div>
+    </div>
+    ${!isLast ? '<button type="button" class="tour-skip" id="tour-skip">تخطّي الدليل</button>' : ''}`;
+  pop.classList.add('open');
+
+  const targetEl = step.target ? document.querySelector(step.target) : null;
+  if (targetEl) {
+    targetEl.classList.add('tour-target');
+    positionTourPopover(targetEl, pop);
+  } else {
+    pop.style.top = '50%'; pop.style.insetInlineStart = '50%'; pop.style.transform = 'translate(-50%,-50%)';
+  }
+
+  el('tour-next').addEventListener('click', () => { tourIndex++; renderTourStep(); });
+  el('tour-prev')?.addEventListener('click', () => { tourIndex--; renderTourStep(); });
+  el('tour-skip')?.addEventListener('click', endTour);
+}
+
+/// Plain top/left (not RTL logical properties) since getBoundingClientRect() is always
+/// viewport/physical-coordinate, regardless of document direction.
+function positionTourPopover(targetEl, pop) {
+  pop.style.transform = 'none';
+  pop.style.insetInlineStart = '';
+  const rect = targetEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const margin = 14;
+  let top = rect.bottom + margin;
+  if (top + popRect.height > window.innerHeight - 10) top = Math.max(10, rect.top - popRect.height - margin);
+  let left = Math.min(Math.max(10, rect.left), window.innerWidth - popRect.width - 10);
+  pop.style.top = `${top}px`;
+  pop.style.left = `${left}px`;
+}
+
+el('tour-btn').addEventListener('click', startTour);
+el('tour-dim').addEventListener('click', endTour);
+
+/// Once per user per browser, a little while after their first successful login or
+/// session-restore — long enough for the chat screen to have settled. Marks itself seen the
+/// moment it decides to auto-start (not when the user finishes), so it never re-nags even if
+/// they close the tab mid-tour; they can always replay it manually via #tour-btn regardless.
+function maybeAutoStartTour() {
+  const key = `tourSeen:${state.currentUser?.username || 'anon'}`;
+  try {
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+  } catch { return; }
+  setTimeout(startTour, 700);
+}
+
 async function startApp() {
   renderCurrentUser();
   renderMessages();
   renderDashboard();
   await loadSources();
   await loadFiles();
+  maybeAutoStartTour();
 }
 
 // ---------- users admin ----------
