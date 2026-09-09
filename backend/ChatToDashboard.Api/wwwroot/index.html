@@ -1640,7 +1640,17 @@ function renderWidgetMenuSize(menu, w) {
 }
 
 function renderWidgetMenuType(menu, w) {
-  const types = [['bar', '📊 أعمدة'], ['line', '📈 خط'], ['pie', '🥧 دائري'], ['table', '📋 جدول'], ['kpi', '🔢 مؤشر']];
+  // bar/line/pie/table/kpi all read the same generic {rows, xKey, yKey}-style data (see
+  // keysFor()), so switching among them just reinterprets the same rows. The three newer
+  // types below have their own bespoke data shape (progress-table's target/current pairs,
+  // trend-matrix's per-period series, status-bar's total+breakdown) that a widget built as
+  // one of the five above won't carry — switching into one of these from an incompatible
+  // widget shows that type's own empty state (like an unrelated data mismatch already
+  // would) rather than breaking, but it won't reshape the data to fit automatically.
+  const types = [
+    ['bar', '📊 أعمدة'], ['line', '📈 خط'], ['pie', '🥧 دائري'], ['table', '📋 جدول'], ['kpi', '🔢 مؤشر'],
+    ['progress-table', '📶 جدول تقدم'], ['trend-matrix', '📉 مصفوفة اتجاهات'], ['status-bar', '🚦 شريط حالة'],
+  ];
   menu.innerHTML = `<div class="menu-label">نوع الرسم</div>` +
     types.map(([v, l]) => `<button data-type="${v}"${v === w.type ? ' class="current"' : ''}>${l}</button>`).join('');
   menu.querySelectorAll('[data-type]').forEach(b =>
