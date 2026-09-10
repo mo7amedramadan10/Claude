@@ -463,11 +463,16 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- file repository: list-row layout ---------- */
 .file-list-head{display:flex;align-items:center;gap:16px;padding:0 18px 6px;font-size:11px;color:var(--muted)}
-.file-list-head .col-main{flex:1}
+/* flex:0 1 46% (not flex:1) so this column sizes the same on every row regardless of that
+   row's own name/description length — a short name no longer leaves the fixed-width columns
+   stranded behind a huge trailing gap, and every row's columns still land at the identical
+   horizontal position as every other row's (and the header's), since the basis is a share of
+   the row's own width, not of this row's content. */
+.file-list-head .col-main{flex:0 1 46%}
 .file-list-head .col-updated{width:96px;text-align:center}
 .file-list-head .col-usage{width:84px;text-align:center}
 .file-list-head .col-access{width:104px;text-align:center}
-.file-list-head .col-actions{width:150px}
+.file-list-head .col-actions{width:230px}
 .file-list{display:flex;flex-direction:column;gap:8px}
 .file-row{background:var(--surface);border:1px solid var(--grid);border-radius:12px;
   padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s;
@@ -479,7 +484,7 @@ tr:last-child td{border-bottom:0}
   min-width:0}
 .file-row:hover{border-color:var(--accent)}
 .file-row.stale{border-inline-start:3px solid #F2B84B}
-.fr-main{flex:1;min-width:0;display:flex;gap:12px;align-items:flex-start}
+.fr-main{flex:0 1 46%;min-width:0;display:flex;gap:12px;align-items:flex-start}
 .fr-icon{font-size:20px;flex-shrink:0;margin-top:1px}
 .fr-text{min-width:0;flex:1}
 .fr-line1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -505,7 +510,11 @@ tr:last-child td{border-bottom:0}
 .avatar.owner{background:var(--accent);color:#fff;border-color:var(--surface);font-weight:700}
 .access-locked{font-size:11px;color:var(--muted)}
 .access-locked.ok{color:#1e9e46}
-.col-actions{width:150px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
+/* 6 icon buttons × 32px + 5 × 6px gaps = 222px of actual content — the old 150px was too
+   narrow, so the leftover buttons visually spilled out of this box into .col-access next to
+   it (position/size stayed correctly at 150px, since overflow:visible doesn't grow the box
+   itself — only what's rendered past its edge). 230px gives it real room. */
+.col-actions{width:230px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
 .icon-btn{width:32px;height:32px;border-radius:8px;background:var(--plane);border:1px solid var(--grid);
   color:var(--ink-2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
   text-decoration:none}
