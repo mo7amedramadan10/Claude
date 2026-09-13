@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>المحادثة إلى لوحة معلومات</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0F1A'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='%2335D1A1'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='%2335D1A1'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='%2335D1A1'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230C0D0E'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='%233cb4e5'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='%233cb4e5'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='%233cb4e5'/%3E%3C/svg%3E" />
 <script>
 // Set before the stylesheet paints anything, so the remembered theme applies on first
 // frame instead of flashing the default and then switching.
@@ -23,32 +23,38 @@
  * spacing value directly — it all traces back to one of these.
  */
 :root{
-  --bg:#0A0F1A; --surface:#111827; --plane:#17203352; --ink:#E7ECF5; --ink-2:#8B96AC; --muted:#8B96AC;
-  --grid:#232C3F; --line:#232C3F; --accent:#35D1A1; --accent-soft:#35D1A122; --danger:#EF6461; --amber:#F2B84B;
-  --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35); --skeleton-a:#141B2B; --skeleton-b:#1c2740;
+  --bg:#0C0D0E; --surface:#1A1B1D; --plane:#2A2B2E52; --ink:#EDEFF1; --ink-2:#9A9CA0; --muted:#9A9CA0;
+  --grid:#333436; --line:#333436; --accent:#3cb4e5; --accent-soft:#3cb4e522; --danger:#EF6461; --amber:#F2B84B;
+  --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35); --skeleton-a:#19191b; --skeleton-b:#242527;
   --shadow-3d:0 26px 40px -18px rgba(0,0,0,.55),0 10px 18px -8px rgba(0,0,0,.4);
   --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
-  --display:'Space Grotesk',system-ui,-apple-system,sans-serif;
-  --body:'IBM Plex Sans Arabic',"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;
+  --display:'Tanseek Modern Pro','Space Grotesk',system-ui,-apple-system,sans-serif;
+  --body:'Tanseek Modern Pro Arabic','IBM Plex Sans Arabic',"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;
   /* Chart palette — fixed rotation shared by every chart component, never per-instance.
      Kept identical across both themes (see THEME in the script below) so a category
-     means the same color whichever mode you're in. */
-  --chart-palette: #35D1A1, #F2B84B, #6C8CFF, #EF6461, #B784F0;
+     means the same color whichever mode you're in. Straight from the AHAD corporate
+     colors spec: primary (298C) first, then the four secondary colors, ordered so the
+     two most-used slots (0: solo-series color, 1: forecast/second-series color) read as
+     clearly distinct hues (blue vs. purple) rather than two shades of the same blue. */
+  --chart-palette: #3cb4e5, #4d4184, #00bbb4, #007cbb, #9dd3c9;
   /* Custom chevron for every <select> in the app (see the global "select" rule below) —
      a plain SVG data URI, since url()-referenced background-image can't pick up
      currentColor/CSS vars, so it's redefined per theme instead. */
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B96AC' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239A9CA0' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 /* Light mode — same tokens, same accent hue (darkened for contrast on white), inverted
    surfaces. Toggled via the 🌙/☀️ button; JS mirrors this exact palette in THEMES.light
-   so charts (drawn as inline SVG by ApexCharts, not styleable by CSS) match it too. */
+   so charts (drawn as inline SVG by ApexCharts, not styleable by CSS) match it too.
+   Neutrals (bg/surface/ink/grid) are the AHAD corporate dark-neutral (P179-14, #434345)
+   family rather than a blue-tinted gray, matching the guide's "40% white / 20% dark
+   neutral" color-balance rule — --ink here IS that spec color, not an approximation. */
 :root[data-theme="light"]{
-  --bg:#F5F7FA; --surface:#FFFFFF; --plane:#EEF1F6; --ink:#10151F; --ink-2:#565F6D; --muted:#565F6D;
-  --grid:#E1E5EC; --line:#E1E5EC; --accent:#0E9F78; --accent-soft:#0E9F7818; --danger:#D3402F; --amber:#B8730A;
+  --bg:#F6F6F7; --surface:#FFFFFF; --plane:#EFEFF0; --ink:#434345; --ink-2:#6B6D70; --muted:#6B6D70;
+  --grid:#E3E4E6; --line:#E3E4E6; --accent:#007cbb; --accent-soft:#007cbb18; --danger:#D3402F; --amber:#B8730A;
   --shadow:0 1px 2px rgba(16,21,31,.05), 0 6px 18px rgba(16,21,31,.07);
   --shadow-3d:0 24px 38px -18px rgba(16,21,31,.22),0 8px 14px -6px rgba(16,21,31,.14);
-  --skeleton-a:#EEF1F6; --skeleton-b:#F8F9FB;
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23565F6D' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --skeleton-a:#EFEFF0; --skeleton-b:#F8F8F9;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6D70' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
@@ -1429,16 +1435,16 @@ window.fetch = async (...args) => {
 // way), only the grid/tick/accent colors change, mirroring the CSS :root tokens above.
 const THEMES = {
   dark: {
-    palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
-    accent: '#35D1A1', danger: '#EF6461', amber: '#F2B84B',
-    gridColor: '#232C3F', tickColor: '#8B96AC', ink: '#E7ECF5',
-    fontFamily: 'IBM Plex Sans Arabic',
+    palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
+    accent: '#3cb4e5', danger: '#EF6461', amber: '#F2B84B',
+    gridColor: '#333436', tickColor: '#9A9CA0', ink: '#EDEFF1',
+    fontFamily: 'Tanseek Modern Pro Arabic',
   },
   light: {
-    palette: ['#35D1A1', '#F2B84B', '#6C8CFF', '#EF6461', '#B784F0'],
-    accent: '#0E9F78', danger: '#D3402F', amber: '#B8730A',
-    gridColor: '#E1E5EC', tickColor: '#565F6D', ink: '#10151F',
-    fontFamily: 'IBM Plex Sans Arabic',
+    palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
+    accent: '#007cbb', danger: '#D3402F', amber: '#B8730A',
+    gridColor: '#E3E4E6', tickColor: '#6B6D70', ink: '#434345',
+    fontFamily: 'Tanseek Modern Pro Arabic',
   },
 };
 // Reassigned by applyTheme() below — every chart component reads THEME.x at render
