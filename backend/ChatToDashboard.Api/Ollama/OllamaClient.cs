@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
@@ -158,6 +159,15 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     private const int GatewayImageMaxDimension = 1400;
     private const int GatewayImageJpegQuality = 78;
 
+    // Pages read at once, instead of strictly one-at-a-time — seen live: an 18-page document
+    // against a large internal model (gemma4:31b) took ~18-175 seconds PER PAGE, and strictly
+    // sequential meant that time simply added up — 12.5 minutes for 12 pages before the user,
+    // seeing no progress at all, closed the tab and lost even the 12 pages that had already
+    // come back cleanly. A modest cap: enough to meaningfully cut the wall-clock wait without
+    // hammering a gateway that may itself only run one inference at a time (in which case this
+    // helps less, but never hurts correctness — see the partial-result handling below).
+    private const int MaxConcurrentPages = 3;
+
     /// <summary>See ClaudeClient.ExtractDocumentTextAsync. Unlike GenerateDashboardAsync's
     /// image rejection above (a screenshot mid-conversation, where failing fast and telling
     /// the user to switch models is the right call), a document upload already has a working
@@ -177,9 +187,18 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     /// carries one page — no matter how many pages the document has; downscaling each page to
     /// GatewayImageMaxDimension/re-encoding as JPEG below additionally covers the case where
     /// even a single dense page's PNG (rendered once, upstream, for whichever provider ends up
-    /// reading it) would already be too large on its own.</summary>
-    public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    /// reading it) would already be too large on its own.
+    ///
+    /// Pages are read with bounded concurrency (MaxConcurrentPages at a time) rather than
+    /// strictly one after another, and a page that fails on its own — or the whole thing being
+    /// cancelled partway through — never discards pages that already came back: whatever
+    /// succeeded is returned as a genuine partial DocumentExtractionResult (PagesRead less than
+    /// the total), which the caller (UploadParser) fills in from PdfPig's own per-page text
+    /// rather than losing that work. Only a request that reads zero pages at all is a real
+    /// failure that propagates up for the caller's usual all-or-nothing PdfPig fallback.</summary>
+    public async Task<DocumentExtractionResult> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
         // Its own sub-model choice, independent of GenerateDashboardAsync's OllamaModel above —
         // an admin can run document reading on a different internal model than the one that
@@ -188,38 +207,80 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
         var trace = _usage.Begin("Ollama", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة", requestingUser);
         trace.SetSystemPrompt(systemPrompt);
-        try
-        {
-            var combined = new StringBuilder();
-            for (var i = 0; i < pageImageDataUrls.Count; i++)
-            {
-                if (!TryExtractBase64(pageImageDataUrls[i], out var base64Data)) continue;
-                var pageNumber = i + 1;
-                var messages = new JsonArray
-                {
-                    new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-                    new JsonObject
-                    {
-                        ["role"] = "user",
-                        ["content"] = AnalyticsTools.DocumentExtractionPageInstruction(fileName, pageNumber, pageImageDataUrls.Count),
-                        ["images"] = new JsonArray { CompressForGateway(base64Data) },
-                    },
-                };
-                var response = await CallChatAsync(model, messages, null, trace, ct);
-                var pageText = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
-                combined.AppendLine($"--- صفحة {pageNumber} ---");
-                combined.AppendLine(pageText.Trim());
-            }
 
-            var text = combined.ToString();
-            await trace.CompleteAsync(true, text, null, ct);
-            return text;
-        }
-        catch (Exception ex)
+        var pageTexts = new string?[pageImageDataUrls.Count];
+        var pagesRead = 0;
+        Exception? lastFailure = null;
+        using var semaphore = new SemaphoreSlim(MaxConcurrentPages);
+
+        async Task ReadPageAsync(int index)
         {
-            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
-            throw;
+            // The semaphore wait itself must stay inside the try/catch too — a cancellation
+            // (or a rare SemaphoreSlim fault) firing while a page is still queued, before it
+            // ever acquires the slot, would otherwise escape uncaught and fail Task.WhenAll for
+            // every page at once, which is exactly the all-or-nothing loss this method exists
+            // to avoid; whatever pages already finished stay in pageTexts either way.
+            try
+            {
+                await semaphore.WaitAsync(ct);
+                try
+                {
+                    if (!TryExtractBase64(pageImageDataUrls[index], out var base64Data)) return;
+                    var pageNumber = index + 1;
+                    var messages = new JsonArray
+                    {
+                        new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                        new JsonObject
+                        {
+                            ["role"] = "user",
+                            ["content"] = AnalyticsTools.DocumentExtractionPageInstruction(fileName, pageNumber, pageImageDataUrls.Count),
+                            ["images"] = new JsonArray { CompressForGateway(base64Data) },
+                        },
+                    };
+                    var response = await CallChatAsync(model, messages, null, trace, ct);
+                    var pageText = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+                    pageTexts[index] = pageText.Trim();
+                    Interlocked.Increment(ref pagesRead);
+                    onPageRead?.Invoke(Volatile.Read(ref pagesRead), pageImageDataUrls.Count);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }
+            catch (Exception ex)
+            {
+                // This one page didn't make it — every other page's own task is unaffected
+                // and keeps running; see the class-level remarks above.
+                lastFailure = ex;
+            }
         }
+
+        await Task.WhenAll(Enumerable.Range(0, pageImageDataUrls.Count).Select(ReadPageAsync));
+
+        var combined = new StringBuilder();
+        for (var i = 0; i < pageTexts.Length; i++)
+        {
+            if (pageTexts[i] is null) continue;
+            combined.AppendLine($"--- صفحة {i + 1} ---");
+            combined.AppendLine(pageTexts[i]);
+        }
+        var text = combined.ToString();
+
+        if (pagesRead == 0)
+        {
+            // Nothing at all came back — a genuine failure, same as before: propagate it so
+            // the caller's fallback to PdfPig's plain-text extraction takes over entirely.
+            await trace.CompleteAsync(false, null, lastFailure?.Message ?? "No pages were read.", CancellationToken.None);
+            throw lastFailure ?? new InvalidOperationException("No pages were read.");
+        }
+
+        // At least one real page came back. Recorded as a success either way — the pages that
+        // DID make it are genuine, useful output, not a failure — with the count of what's
+        // missing noted for anyone reading the usage log, if this wasn't a full read.
+        var note = pagesRead == pageImageDataUrls.Count ? null : $"{pageImageDataUrls.Count - pagesRead} صفحة لم تُقرأ: {lastFailure?.Message}";
+        await trace.CompleteAsync(true, text, note, CancellationToken.None);
+        return new DocumentExtractionResult(text, pagesRead);
     }
 
     /// <summary>Pulls the base64 payload out of a "data:&lt;mime&gt;;base64,&lt;data&gt;" URL —

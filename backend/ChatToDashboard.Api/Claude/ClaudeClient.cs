@@ -141,8 +141,9 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
     /// sections spanning a page break), and the reply is the transcribed text verbatim, not
     /// JSON — there's no dashboard schema to validate here.
     /// </summary>
-    public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    public async Task<DocumentExtractionResult> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
         var content = new JsonArray();
         foreach (var dataUrl in pageImageDataUrls)
@@ -169,7 +170,10 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
                 .Where(b => b?["type"]?.GetValue<string>() == "text")
                 .Select(b => b!["text"]!.GetValue<string>()));
             await trace.CompleteAsync(true, text, null, ct);
-            return text;
+            // One bundled call for the whole document — either every page made it into this
+            // reply or the call above already threw; there's no partial case to report here.
+            onPageRead?.Invoke(pageImageDataUrls.Count, pageImageDataUrls.Count);
+            return new DocumentExtractionResult(text, pageImageDataUrls.Count);
         }
         catch (Exception ex)
         {

@@ -87,8 +87,9 @@ public interface IDocumentReaderRouter
 {
     Task<bool> IsEnabledAsync(CancellationToken ct = default);
 
-    Task<string?> ExtractTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default);
+    Task<DocumentExtractionResult?> ExtractTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -120,8 +121,9 @@ public class DocumentReaderRouter : IDocumentReaderRouter
         return !string.IsNullOrWhiteSpace(documentReaderProvider);
     }
 
-    public async Task<string?> ExtractTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    public async Task<DocumentExtractionResult?> ExtractTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
         var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
         if (string.IsNullOrWhiteSpace(documentReaderProvider)) return null;
@@ -133,6 +135,6 @@ public class DocumentReaderRouter : IDocumentReaderRouter
             LlmRouter.Anthropic => _services.GetRequiredService<ClaudeClient>(),
             _ => throw new InvalidOperationException($"Unknown DocumentReaderProvider '{documentReaderProvider}'."),
         };
-        return await extractor.ExtractDocumentTextAsync(fileName, pageImageDataUrls, requestingUser, ct);
+        return await extractor.ExtractDocumentTextAsync(fileName, pageImageDataUrls, requestingUser, onPageRead, ct);
     }
 }

@@ -42,6 +42,7 @@ builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<DataFolderLoader>();
 builder.Services.AddSingleton<DocumentSearchService>();
 builder.Services.AddSingleton<RepositoryStore>();
+builder.Services.AddSingleton<UploadProgressTracker>();
 builder.Services.AddSingleton<UploadParser>();
 builder.Services.Configure<SourceOptions>(builder.Configuration.GetSection(SourceOptions.SectionName));
 builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection(PricingOptions.SectionName));

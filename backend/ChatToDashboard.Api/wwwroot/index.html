@@ -4154,15 +4154,43 @@ el('btn-open-upload-modal').addEventListener('click', openUploadModal);
 el('upload-modal-close').addEventListener('click', closeUploadModal);
 el('upload-modal').addEventListener('click', e => { if (e.target.id === 'upload-modal') closeUploadModal(); });
 
+// A fresh, unguessable id per upload attempt, purely to correlate this browser tab's polling
+// with UploadProgressTracker's server-side entry (see RepositoryController.UploadProgress) —
+// not an auth token, never sent anywhere but this one upload.
+function makeProgressToken() {
+  return 'up_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+}
+
+// Polls the upload-progress endpoint every 1.2s while `body` (the upload POST) is still in
+// flight, calling onUpdate(progress) whenever the server has something new to report — a
+// second connection reading state the first is updating, not background processing: the
+// polling stops the moment the POST settles, same as the request it's watching.
+function pollUploadProgress(token, onUpdate) {
+  return setInterval(async () => {
+    try {
+      const res = await fetch('/api/repository/upload-progress/' + token);
+      if (res.status === 200) onUpdate(await res.json());
+    } catch { /* a missed poll just means the next one tries again in 1.2s */ }
+  }, 1200);
+}
+
 el('file-input').addEventListener('change', async e => {
   const files = [...e.target.files];
   if (!files.length) return;
   const form = new FormData();
   files.forEach(f => form.append('files', f));
+  const progressToken = makeProgressToken();
+  form.append('progressToken', progressToken);
   e.target.value = '';
 
-  state.pending.push({ name: `جارٍ رفع ${files.length} ملف وتحليل محتواه…`, loading: true });
+  const pendingCard = { name: `جارٍ رفع ${files.length} ملف وتحليل محتواه…`, loading: true };
+  state.pending.push(pendingCard);
   renderPending();
+
+  const poll = pollUploadProgress(progressToken, p => {
+    pendingCard.name = `جارٍ قراءة "${p.fileName}" بالموديل الداخلي — صفحة ${p.pagesRead} من ${p.totalPages}…`;
+    renderPending();
+  });
   try {
     const res = await fetch('/api/repository/upload', { method: 'POST', body: form });
     const parsed = await res.json();
@@ -4171,6 +4199,8 @@ el('file-input').addEventListener('change', async e => {
   } catch (err) {
     state.pending.pop();
     state.pending.push({ name: 'تعذّر الرفع', error: err.message });
+  } finally {
+    clearInterval(poll);
   }
   renderPending();
 });
@@ -4190,9 +4220,14 @@ el('file-update-input').addEventListener('change', async e => {
   const targetId = updateTargetFileId;
   const row = el('repo-list').querySelector(`.file-row[data-id="${targetId}"] .upd`);
   if (row) { row.disabled = true; row.textContent = '⏳'; }
+  const progressToken = makeProgressToken();
+  const poll = pollUploadProgress(progressToken, p => {
+    if (row) row.textContent = `⏳ ${p.pagesRead}/${p.totalPages}`;
+  });
   try {
     const form = new FormData();
     form.append('files', file);
+    form.append('progressToken', progressToken);
     const uploadRes = await fetch('/api/repository/upload', { method: 'POST', body: form });
     const [parsed] = await uploadRes.json();
     if (!parsed || parsed.error) throw new Error(parsed?.error || 'تعذّر قراءة الملف.');
@@ -4210,6 +4245,7 @@ el('file-update-input').addEventListener('change', async e => {
     alert('تعذّر تحديث بيانات الملف: ' + err.message);
     if (row) { row.disabled = false; row.textContent = '🔄'; }
   } finally {
+    clearInterval(poll);
     updateTargetFileId = null;
   }
 });

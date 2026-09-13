@@ -18,6 +18,21 @@ public interface IDocumentTextExtractor
     /// <param name="pageImageDataUrls">One "data:image/png;base64,..." URL per page, in
     /// document order — the same data-URL shape ClaudeClient/OpenAiClient/OllamaClient already
     /// accept for a reference-image attachment.</param>
-    Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default);
+    /// <param name="onPageRead">Called after each page's own transcription completes — only
+    /// ever a progress signal (how many of the total pages are done so far), never anything the
+    /// extraction's correctness depends on. Claude/OpenAI process the whole document in one
+    /// call, so they never invoke this; only OllamaClient's real per-page loop does.</param>
+    Task<DocumentExtractionResult> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default);
 }
+
+/// <summary>
+/// What one extraction attempt produced. PagesRead can be less than pageImageDataUrls.Count —
+/// a partial result, some pages read before a failure or cancellation cut the rest short —
+/// which the caller (UploadParser) fills in from PdfPig's own per-page text rather than ever
+/// silently dropping the pages this didn't reach. Claude/OpenAI only ever return PagesRead
+/// equal to the full page count (or throw) — there's no partial concept for a single bundled
+/// call the way there is for OllamaClient's real per-page requests.
+/// </summary>
+public record DocumentExtractionResult(string Text, int PagesRead);

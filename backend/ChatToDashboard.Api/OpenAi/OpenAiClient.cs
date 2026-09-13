@@ -139,8 +139,9 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
 
     /// <summary>See ClaudeClient.ExtractDocumentTextAsync — same contract, OpenAI's own
     /// image_url content-part shape and plain choices[0].message.content response.</summary>
-    public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    public async Task<DocumentExtractionResult> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
         var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
         var content = new JsonArray { new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.DocumentExtractionInstruction(fileName) } };
@@ -166,7 +167,8 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
             var text = choice["message"]?["content"]?.GetValue<string>() ?? string.Empty;
             await trace.CompleteAsync(true, text, null, ct);
-            return text;
+            onPageRead?.Invoke(pageImageDataUrls.Count, pageImageDataUrls.Count);
+            return new DocumentExtractionResult(text, pageImageDataUrls.Count);
         }
         catch (Exception ex)
         {
