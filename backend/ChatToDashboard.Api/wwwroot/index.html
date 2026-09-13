@@ -59,12 +59,16 @@ input{font:inherit}
 /* One shared, larger, custom-chevron design instead of each screen's own small native
    control — appearance:none strips the browser's tiny built-in arrow (and, on Firefox,
    its default padding) so --select-arrow (a plain SVG, themed above) can replace it,
-   positioned for RTL: text starts at the right, so the icon sits on the left. Later,
-   more specific selectors may still override individual properties (e.g. a fixed width
-   inside a tight toolbar) — this is the shared baseline everywhere else falls back to. */
+   positioned for RTL: text starts at the right, so the icon sits on the left. The padding
+   below has to mirror that: the wider clearance belongs on the LEFT (where the icon
+   actually sits), not the right — it was left un-mirrored for RTL, so on a select without
+   much spare width (e.g. "الأكثر استخدامًا" in the repository sort dropdown) the
+   right-aligned text ran straight into/over the icon instead of stopping short of it.
+   Later, more specific selectors may still override individual properties (e.g. a fixed
+   width inside a tight toolbar) — this is the shared baseline everywhere else falls back to. */
 select{
   appearance:none; -webkit-appearance:none; -moz-appearance:none;
-  padding:11px 44px 11px 16px; border:1px solid var(--grid); border-radius:11px;
+  padding:11px 16px 11px 44px; border:1px solid var(--grid); border-radius:11px;
   background:var(--surface) var(--select-arrow) no-repeat left 14px center;
   background-size:18px; color:var(--ink); font:inherit; font-size:14px; cursor:pointer;
   transition:border-color .15s, box-shadow .15s;
@@ -431,19 +435,26 @@ tr:last-child td{border-bottom:0}
 /* ---------- repository screen ---------- */
 #screen-repo,#screen-active,#screen-sharelinks{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
 .repo-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:11px;
+.upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:11px;border:0;
   background:var(--accent);color:#fff;font-weight:600}
+.upload-modal-box{width:min(820px,100%);max-height:86vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.upload-modal-pick{align-self:flex-start}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:5px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);color:var(--ink-2)}
 .chip.active{background:var(--accent-soft);border-color:#cfe1f8;color:var(--accent);font-weight:600}
 #pending{display:flex;flex-direction:column;gap:9px}
-.pending-card{display:flex;align-items:center;gap:11px;padding:11px 14px;background:rgba(242,184,75,.10);
+.pending-card{display:flex;align-items:center;flex-wrap:wrap;gap:11px;padding:11px 14px;background:rgba(242,184,75,.10);
   border:1px solid rgba(242,184,75,.35);border-radius:12px}
-.pending-card .name{flex:1;font-size:13px}
-.pending-card input{width:210px;padding:7px 11px;border:1px solid var(--grid);border-radius:9px}
+.pending-card .name{flex:1 1 100%;font-size:13px}
+.pending-card input{flex:1 1 160px;min-width:140px;padding:7px 11px;border:1px solid var(--grid);border-radius:9px}
 .pending-card .save{padding:7px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
 .pending-card .cancel{border:0;background:transparent;color:var(--danger);font-size:18px;font-weight:700}
 .pending-card.bad{background:rgba(239,100,97,.12);border-color:rgba(239,100,97,.35)}
+.pending-card.loading{background:var(--plane);border-color:var(--grid)}
+.pending-card.loading .name{flex:1 1 auto;color:var(--ink-2)}
+.spinner{width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  border:2px solid var(--grid);border-top-color:var(--accent);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .repo-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .cat-badge{display:inline-block;padding:3px 10px;border-radius:999px;
   background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:600;flex-shrink:0}
@@ -452,11 +463,16 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- file repository: list-row layout ---------- */
 .file-list-head{display:flex;align-items:center;gap:16px;padding:0 18px 6px;font-size:11px;color:var(--muted)}
-.file-list-head .col-main{flex:1}
+/* flex:0 1 46% (not flex:1) so this column sizes the same on every row regardless of that
+   row's own name/description length — a short name no longer leaves the fixed-width columns
+   stranded behind a huge trailing gap, and every row's columns still land at the identical
+   horizontal position as every other row's (and the header's), since the basis is a share of
+   the row's own width, not of this row's content. */
+.file-list-head .col-main{flex:0 1 46%}
 .file-list-head .col-updated{width:96px;text-align:center}
 .file-list-head .col-usage{width:84px;text-align:center}
 .file-list-head .col-access{width:104px;text-align:center}
-.file-list-head .col-actions{width:150px}
+.file-list-head .col-actions{width:230px}
 .file-list{display:flex;flex-direction:column;gap:8px}
 .file-row{background:var(--surface);border:1px solid var(--grid);border-radius:12px;
   padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s;
@@ -468,7 +484,7 @@ tr:last-child td{border-bottom:0}
   min-width:0}
 .file-row:hover{border-color:var(--accent)}
 .file-row.stale{border-inline-start:3px solid #F2B84B}
-.fr-main{flex:1;min-width:0;display:flex;gap:12px;align-items:flex-start}
+.fr-main{flex:0 1 46%;min-width:0;display:flex;gap:12px;align-items:flex-start}
 .fr-icon{font-size:20px;flex-shrink:0;margin-top:1px}
 .fr-text{min-width:0;flex:1}
 .fr-line1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -494,7 +510,11 @@ tr:last-child td{border-bottom:0}
 .avatar.owner{background:var(--accent);color:#fff;border-color:var(--surface);font-weight:700}
 .access-locked{font-size:11px;color:var(--muted)}
 .access-locked.ok{color:#1e9e46}
-.col-actions{width:150px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
+/* 6 icon buttons × 32px + 5 × 6px gaps = 222px of actual content — the old 150px was too
+   narrow, so the leftover buttons visually spilled out of this box into .col-access next to
+   it (position/size stayed correctly at 150px, since overflow:visible doesn't grow the box
+   itself — only what's rendered past its edge). 230px gives it real room. */
+.col-actions{width:230px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
 .icon-btn{width:32px;height:32px;border-radius:8px;background:var(--plane);border:1px solid var(--grid);
   color:var(--ink-2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
   text-decoration:none}
@@ -649,6 +669,29 @@ tr:last-child td{border-bottom:0}
 .modal-actions{display:flex;justify-content:flex-end;margin-top:14px}
 .modal-actions button{padding:7px 16px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
 .modal-actions .file-modal-delete{margin-inline-end:auto;border-color:rgba(239,100,97,.35);color:var(--danger)}
+
+/* ---------- guided tour ---------- */
+/* The dim layer sits below whatever step's target element (see .tour-target) — a target's
+   own higher z-index is what makes it "pop" above the dim without needing an actual
+   spotlight-cutout mask. */
+#tour-dim{position:fixed;inset:0;z-index:300;background:rgba(11,11,11,.5);display:none}
+#tour-dim.open{display:block}
+.tour-target{position:relative;z-index:301;outline:3px solid var(--accent);outline-offset:3px;
+  border-radius:8px;box-shadow:0 0 0 6px rgba(27,175,122,.28)}
+#tour-pop{position:fixed;z-index:302;width:min(320px,88vw);background:var(--surface);
+  border:1px solid var(--grid);border-radius:14px;box-shadow:0 20px 50px rgba(11,11,11,.3);
+  padding:16px 18px;display:none}
+#tour-pop.open{display:block}
+#tour-pop h4{margin:0 0 8px;font-size:14.5px}
+#tour-pop p{margin:0 0 14px;font-size:13px;line-height:1.7;color:var(--ink-2)}
+.tour-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tour-step-count{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.tour-actions{display:flex;gap:8px}
+.tour-actions button{padding:6px 14px;border-radius:9px;border:1px solid var(--grid);
+  background:var(--plane);color:var(--ink-2);font-size:12.5px}
+.tour-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.tour-skip{display:block;margin-top:10px;border:0;background:transparent;color:var(--muted);
+  text-decoration:underline;font-size:12px;padding:2px}
 
 /* ---------- shared read-only view ---------- */
 #shared-banner{display:flex;align-items:center;gap:12px;padding:11px 20px;
@@ -818,11 +861,15 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
     </div>
     <button type="button" id="auto-read-toggle" class="hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد">🔇 قراءة تلقائية</button>
+    <button type="button" id="tour-btn" title="دليل استخدام النظام">❓</button>
     <button type="button" id="theme-toggle" title="تبديل المظهر">🌙</button>
     <span id="current-user-name"></span>
     <button type="button" id="logout-btn">خروج</button>
   </div>
 </header>
+
+<div id="tour-dim"></div>
+<div id="tour-pop"></div>
 
 <main id="screen-chat" class="screen active">
   <aside id="chat-rail">
@@ -884,16 +931,12 @@ tr:last-child td{border-bottom:0}
 
 <div id="screen-repo" class="screen">
   <div class="repo-bar">
-    <label class="upload-btn">
-      📎 رفع ملفات جديدة
-      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.pdf" multiple hidden>
-    </label>
+    <button type="button" class="upload-btn" id="btn-open-upload-modal">رفع ملفات جديدة</button>
     <!-- Bound to one existing file's id right before it's clicked (see openUpdateFilePicker) —
          "Update this file" re-uses the same server-side parser, just skips the "assign a
          category" step since display name/category/relationships/permissions are preserved. -->
     <input type="file" id="file-update-input" accept=".xlsx,.xls,.csv,.pdf" hidden>
   </div>
-  <div id="pending"></div>
   <div class="repo-toolbar">
     <div class="chips" id="filters"></div>
     <select class="sort-select" id="repo-sort">
@@ -910,6 +953,22 @@ tr:last-child td{border-bottom:0}
     <div class="col-actions"></div>
   </div>
   <div class="file-list" id="repo-list"></div>
+</div>
+
+<div id="upload-modal" class="modal-overlay hidden">
+  <div class="modal upload-modal-box">
+    <h3>رفع ملفات جديدة</h3>
+    <p class="modal-note">اختر ملفًا واحدًا أو أكثر (Excel أو CSV أو PDF)، اكتب بيانات كل ملف، ثم اضغط
+      "حفظ في المستودع" لكل ملف على حدة لإضافته للمستودع.</p>
+    <label class="upload-btn upload-modal-pick">
+      اختر ملفات
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.pdf" multiple hidden>
+    </label>
+    <div id="pending"></div>
+    <div class="modal-actions">
+      <button type="button" id="upload-modal-close">إغلاق</button>
+    </div>
+  </div>
 </div>
 
 <div id="file-modal" class="modal-overlay hidden">
@@ -1063,7 +1122,7 @@ tr:last-child td{border-bottom:0}
   <div class="users-table-wrap">
     <table class="users-table">
       <thead><tr>
-        <th>اسم المستخدم</th><th>الاسم</th><th>طريقة الدخول</th><th>الدور</th><th>الوصول</th><th>الحالة</th><th></th>
+        <th>اسم المستخدم</th><th>الاسم</th><th>طريقة الدخول</th><th>الدور</th><th>الأنظمة</th><th>الحالة</th><th></th>
       </tr></thead>
       <tbody id="users-tbody"></tbody>
     </table>
@@ -1104,6 +1163,33 @@ tr:last-child td{border-bottom:0}
       <div class="model-switch-actions">
         <span id="settings-save-note" class="settings-save-note hidden">✓ تم الحفظ</span>
         <button type="button" id="settings-save">حفظ التغييرات</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>نموذج قراءة المستندات (PDF)</h3>
+      <p class="model-switch-note">يُستخدم وقت رفع أي ملف PDF جديد ليقرأ صفحاته كصور — بما فيها
+        صفحة ممسوحة ضوئيًا أو جدول/رسم بياني مضمّن — بدل الاكتفاء باستخراج النص الرقمي فقط.
+        إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لكل غرض.
+        لو فشلت القراءة بالذكاء الاصطناعي لأي سبب، يرجع النظام تلقائيًا للاستخراج النصي العادي
+        بدل ما يفشل الرفع بالكامل.</p>
+      <div id="settings-doc-reader-providers" class="model-switch-providers"></div>
+      <div id="settings-doc-reader-ollama-row" class="model-switch-ollama-row hidden">
+        <label>الموديل الداخلي (Ollama)
+          <select id="settings-doc-reader-ollama-select"></select>
+        </label>
+        <div id="settings-doc-reader-ollama-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-doc-reader-openai-row" class="model-switch-ollama-row hidden">
+        <label>موديل OpenAI
+          <select id="settings-doc-reader-openai-select"></select>
+        </label>
+        <div id="settings-doc-reader-openai-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-doc-reader-error" class="model-switch-note bad hidden"></div>
+      <div class="model-switch-actions">
+        <span id="settings-doc-reader-save-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+        <button type="button" id="settings-doc-reader-save">حفظ</button>
       </div>
     </div>
 
@@ -1270,10 +1356,10 @@ tr:last-child td{border-bottom:0}
         <label class="chk-row"><input type="checkbox" id="user-allow-all-systems" checked> الوصول لكل الأنظمة</label>
         <div id="user-systems-list" class="perm-list"></div>
       </div>
-      <div class="perm-block">
-        <label class="chk-row"><input type="checkbox" id="user-allow-all-files" checked> الوصول لكل ملفات المستودع</label>
-        <div id="user-files-list" class="perm-list"></div>
-      </div>
+      <!-- File access isn't set here anymore — it's managed only per-file from "مستودع
+           الملفات" (the 🔒 button on each file: creator/Admin/explicitly granted), so a
+           user's file permissions live in one place instead of two. -->
+      <p class="hint">صلاحيات الملفات بتتحدد من مستودع الملفات نفسه (زر 🔒 على كل ملف)، مش من هنا.</p>
 
       <div id="user-form-error" class="login-error hidden"></div>
       <div class="modal-actions">
@@ -3961,6 +4047,8 @@ function renderRepo() {
     const canManage = isAdmin || isCreator;
     const permBtn = canManage
       ? `<button class="icon-btn perm-btn" data-id="${esc(f.id)}" title="صلاحيات الملف">🔒</button>` : '';
+    const delBtn = canManage
+      ? `<button class="icon-btn del-btn" data-id="${esc(f.id)}" data-name="${esc(f.displayName)}" title="حذف الملف">🗑️</button>` : '';
 
     return `<div class="file-row${isStale ? ' stale' : ''}" data-id="${esc(f.id)}">
         <div class="fr-main">
@@ -3984,6 +4072,7 @@ function renderRepo() {
           <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
           ${permBtn}
           <button class="icon-btn rel-btn" data-id="${esc(f.id)}" title="الملفات المرتبطة">🔗</button>
+          ${delBtn}
         </div>
       </div>`;
   }).join('')
@@ -3993,6 +4082,7 @@ function renderRepo() {
   el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.perm-btn').forEach(btn => btn.addEventListener('click', () => openFilePermModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.rel-btn').forEach(btn => btn.addEventListener('click', () => openFileRelModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => deleteFile(btn.dataset.id, btn.dataset.name)));
 
   renderPending();
 }
@@ -4000,7 +4090,15 @@ function renderRepo() {
 el('repo-sort').addEventListener('change', () => { state.repoSort = el('repo-sort').value; renderRepo(); });
 
 function renderPending() {
-  el('pending').innerHTML = state.pending.map((p, i) => p.error
+  // p.loading is the transient placeholder pushed the moment files are picked, before the
+  // server has actually finished uploading+parsing them (see the file-input change handler
+  // below) — no inputs, no save button at all during this state, so there's nothing to click
+  // before the real PendingUpload (with a real token) replaces it.
+  el('pending').innerHTML = state.pending.map((p, i) => p.loading
+    ? `<div class="pending-card loading">
+         <span class="spinner"></span><span class="name">${esc(p.name)}</span>
+       </div>`
+    : p.error
     ? `<div class="pending-card bad">
          <span>⚠️</span><span class="name">${esc(p.name)} — ${esc(p.error)}</span>
          <button class="cancel" data-idx="${i}">×</button>
@@ -4046,6 +4144,16 @@ function renderPending() {
   }));
 }
 
+// ---------- upload modal: the popup the repository page's upload button opens — file
+// picking, per-file metadata, and the save-to-repository step all happen inside it, instead
+// of inline on the page. Unsaved pending cards (state.pending) are left as-is on close, so
+// reopening the modal shows them again ready to finish, exactly like before this was a modal. ----------
+function openUploadModal() { el('upload-modal').classList.remove('hidden'); }
+function closeUploadModal() { el('upload-modal').classList.add('hidden'); }
+el('btn-open-upload-modal').addEventListener('click', openUploadModal);
+el('upload-modal-close').addEventListener('click', closeUploadModal);
+el('upload-modal').addEventListener('click', e => { if (e.target.id === 'upload-modal') closeUploadModal(); });
+
 el('file-input').addEventListener('change', async e => {
   const files = [...e.target.files];
   if (!files.length) return;
@@ -4053,7 +4161,7 @@ el('file-input').addEventListener('change', async e => {
   files.forEach(f => form.append('files', f));
   e.target.value = '';
 
-  state.pending.push({ name: `جارٍ رفع ${files.length} ملف…`, kind: 'excel', rowCount: 0, error: null, token: null });
+  state.pending.push({ name: `جارٍ رفع ${files.length} ملف وتحليل محتواه…`, loading: true });
   renderPending();
   try {
     const res = await fetch('/api/repository/upload', { method: 'POST', body: form });
@@ -4120,14 +4228,28 @@ function openFileModal(fileId) {
   el('file-modal').classList.remove('hidden');
 }
 
-el('file-modal-cancel').addEventListener('click', () => el('file-modal').classList.add('hidden'));
-el('file-modal-delete').addEventListener('click', async () => {
-  const fileId = el('file-modal-id').value;
-  const f = state.files.find(x => x.id === fileId);
-  if (!f || !confirm(`حذف "${f.displayName}" من المستودع؟ لا يمكن التراجع عن هذا.`)) return;
-  await fetch('/api/repository/files/' + fileId, { method: 'DELETE' });
+// Shared by the row's own 🗑️ button and the "✏️ التفاصيل" modal's delete button below —
+// same confirm + DELETE + refresh, so there's one place this logic lives. The backend only
+// allows the file's creator or an Admin to actually delete it (same gate as its permissions);
+// a 403 here means someone merely granted access to the file tried anyway.
+async function deleteFile(fileId, displayName) {
+  if (!confirm(`حذف "${displayName}" من المستودع؟ لا يمكن التراجع عن هذا.`)) return;
+  const res = await fetch('/api/repository/files/' + fileId, { method: 'DELETE' });
+  if (!res.ok) {
+    alert(res.status === 403
+      ? 'ليس لديك صلاحية حذف هذا الملف — الحذف مقصور على من رفعه أو على المسؤول.'
+      : `تعذّر حذف الملف (${res.status}).`);
+    return;
+  }
   el('file-modal').classList.add('hidden');
   await loadFiles(); await loadSources();
+}
+
+el('file-modal-cancel').addEventListener('click', () => el('file-modal').classList.add('hidden'));
+el('file-modal-delete').addEventListener('click', () => {
+  const fileId = el('file-modal-id').value;
+  const f = state.files.find(x => x.id === fileId);
+  if (f) deleteFile(f.id, f.displayName);
 });
 el('file-modal').addEventListener('click', e => { if (e.target.id === 'file-modal') el('file-modal').classList.add('hidden'); });
 
@@ -5226,6 +5348,16 @@ const SETTINGS_MODEL_PICKERS = {
   Ollama: { endpoint: 'ollama-models', rowId: 'settings-ollama-row', selectId: 'settings-ollama-select', noteId: 'settings-ollama-note', activeKey: 'activeOllamaModel', bodyKey: 'ollamaModel' },
   OpenAI: { endpoint: 'openai-models', rowId: 'settings-openai-row', selectId: 'settings-openai-select', noteId: 'settings-openai-note', activeKey: 'activeOpenAiModel', bodyKey: 'openAiModel' },
 };
+// Same two providers, same live model-list endpoints — but the document reader has its OWN
+// sub-model choice (activeDocumentReader{Ollama,OpenAi}Model), independent of the dashboard
+// picker above, so a different rowId/selectId/activeKey per provider, read/written through
+// PUT /api/llm-settings/document-reader rather than the main settings-save handler below.
+const DOC_READER_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-doc-reader-ollama-row', selectId: 'settings-doc-reader-ollama-select', noteId: 'settings-doc-reader-ollama-note', activeKey: 'activeDocumentReaderOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-doc-reader-openai-row', selectId: 'settings-doc-reader-openai-select', noteId: 'settings-doc-reader-openai-note', activeKey: 'activeDocumentReaderOpenAiModel', bodyKey: 'openAiModel' },
+};
+// Keyed by provider id, shared between both picker maps above — it's the same live list of
+// models either way (what exists), just used to pre-select a different activeKey per picker.
 state.settingsModelChoices = {};
 
 async function loadSettingsPage() {
@@ -5237,11 +5369,69 @@ async function loadSettingsPage() {
     renderSettingsCurrent();
     renderSettingsProviders();
     renderSettingsInfoBadges();
+    renderSettingsDocReaderProviders();
   } catch {
     el('settings-current').textContent = 'تعذّر تحميل إعدادات الموديل.';
     el('settings-providers').innerHTML = '';
   }
 }
+
+// "معطّل" (id: '') plus the same three providers the dashboard-building model uses — a
+// completely independent choice (LlmSettingsStore.DocumentReaderProvider), read/written
+// through its own PUT /api/llm-settings/document-reader rather than the main settings-save
+// handler below.
+function renderSettingsDocReaderProviders() {
+  const s = state.llmSettings;
+  const current = s.activeDocumentReaderProvider || '';
+  const options = [
+    { id: '', label: 'معطّل (استخراج نص عادي فقط)', configured: true },
+    ...s.providers,
+  ];
+  el('settings-doc-reader-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-doc-reader-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id === 'Ollama'
+        ? '<span class="badge">⚠️ قد لا يدعم الصور — لو فشل بيرجع تلقائيًا لقراءة PdfPig العادية</span>'
+        : (p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : '')}
+    </label>`).join('');
+  el('settings-doc-reader-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleDocReaderModelRow(inp.value)));
+  toggleDocReaderModelRow(current);
+}
+
+el('settings-doc-reader-save').addEventListener('click', async () => {
+  const provider = el('settings-doc-reader-providers').querySelector('input:checked')?.value ?? '';
+  const picker = DOC_READER_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-doc-reader-save');
+  btn.disabled = true;
+  el('settings-doc-reader-error').classList.add('hidden');
+  el('settings-doc-reader-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/document-reader', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeDocumentReaderProvider = provider || null;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsDocReaderProviders();
+    el('settings-doc-reader-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-doc-reader-error').textContent = err.message;
+    el('settings-doc-reader-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 function renderSettingsCurrent() {
   const s = state.llmSettings;
@@ -5264,30 +5454,41 @@ function renderSettingsProviders() {
   toggleSettingsModelRow(s.activeProvider);
 }
 
-function toggleSettingsModelRow(provider) {
-  for (const [id, picker] of Object.entries(SETTINGS_MODEL_PICKERS)) {
+function toggleSettingsModelRow(provider) { toggleModelRow(SETTINGS_MODEL_PICKERS, provider); }
+function toggleDocReaderModelRow(provider) { toggleModelRow(DOC_READER_MODEL_PICKERS, provider); }
+
+function toggleModelRow(pickers, provider) {
+  for (const [id, picker] of Object.entries(pickers)) {
     const isActive = provider === id;
     el(picker.rowId).classList.toggle('hidden', !isActive);
-    if (isActive && !state.settingsModelChoices[id]) loadSettingsModelChoices(id);
+    if (isActive) loadSettingsModelChoices(picker, id);
   }
 }
 
-async function loadSettingsModelChoices(providerId) {
-  const picker = SETTINGS_MODEL_PICKERS[providerId];
+// The live model list (state.settingsModelChoices[providerId]) is fetched once and shared
+// between the dashboard picker and the document-reader picker — it's the same "what models
+// exist" either way; only which one is pre-selected (picker.activeKey) differs.
+async function loadSettingsModelChoices(picker, providerId) {
   const select = el(picker.selectId);
+  const cached = state.settingsModelChoices[providerId];
+  if (cached) { renderModelSelect(picker, cached.models, cached.note); return; }
   select.innerHTML = '<option>جارٍ التحميل…</option>';
   try {
     const res = await fetch(`/api/llm-settings/${picker.endpoint}`);
     const data = await res.json();
-    state.settingsModelChoices[providerId] = data.models || [];
-    const current = state.llmSettings?.[picker.activeKey];
-    select.innerHTML = state.settingsModelChoices[providerId].map(m =>
-      `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
-    el(picker.noteId).textContent = data.note || '';
+    state.settingsModelChoices[providerId] = { models: data.models || [], note: data.note || '' };
+    renderModelSelect(picker, data.models || [], data.note || '');
   } catch {
     select.innerHTML = '';
     el(picker.noteId).textContent = 'تعذّر تحميل قائمة الموديلات.';
   }
+}
+
+function renderModelSelect(picker, models, note) {
+  const current = state.llmSettings?.[picker.activeKey];
+  el(picker.selectId).innerHTML = models.map(m =>
+    `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  el(picker.noteId).textContent = note || '';
 }
 
 function renderSettingsInfoBadges() {
@@ -5377,12 +5578,172 @@ el('theme-toggle').addEventListener('click', () => {
   el('theme-toggle').title = current === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
 })();
 
+// ---------- guided tour ----------
+// A short, dismissible walkthrough of the main screens — starts automatically once per user
+// per browser (see maybeAutoStartTour, called from startApp), and can be replayed any time
+// via the ❓ button. Each step either highlights a real header element (the nav tabs
+// themselves, always present regardless of which screen is active — no screen-switching
+// needed to keep them visible) or, for chat-only controls, relies on startTour forcing the
+// chat screen active first.
+function buildTourSteps() {
+  const isAdmin = state.currentUser?.role === 'Admin';
+  const steps = [
+    {
+      title: '👋 مرحبًا بك',
+      body: 'جولة موجزة تتناول أهم صفحات النظام. يمكنك تخطّيها الآن، وإعادة تشغيلها في أي وقت لاحقًا من الزر ❓ أعلى الصفحة.',
+    },
+    {
+      target: '[data-screen="chat"]',
+      title: '💬 المحادثة',
+      body: 'الصفحة الرئيسية: اكتب سؤالك بلغة عربية طبيعية عن بياناتك، ويقوم النظام ببناء لوحة معلومات تفاعلية فورًا.',
+    },
+    {
+      target: '#chat-mode-tabs',
+      title: '🧭 بناء اللوحة / الاستفسارات',
+      body: '«بناء اللوحة» يحوّل سؤالك إلى عناصر رسومية وجداول. أما «الاستفسارات» فيقدّم إجابة نصية سريعة دون بناء لوحة — مناسب للأسئلة المباشرة.',
+    },
+    {
+      target: '#sources-btn',
+      title: '📁 مصادر البيانات',
+      body: 'من هنا يمكن التحكم في الأنظمة أو الملفات المفعّلة وقت السؤال، واقتصار البحث على مصدر معيّن عند الحاجة.',
+    },
+    {
+      target: '[data-screen="repo"]',
+      title: '📎 مستودع الملفات',
+      body: 'من هذه الصفحة تُرفع ملفات Excel أو CSV أو PDF، لتُستخدم كمصدر بيانات يمكن الاستفسار عنه أسوة بأي نظام متصل.',
+    },
+    {
+      target: '[data-screen="history"]',
+      title: '🕘 السجل',
+      body: 'يضم جميع اللوحات التي سبق إنشاؤها، ويتيح العودة إلى أي منها لمتابعة العمل عليها أو تعديلها.',
+    },
+    {
+      target: '[data-screen="active"]',
+      title: '✅ اللوحات النشطة',
+      body: 'لوحات مفعّلة يمكن مشاركتها مع فريق العمل بأدوار مختلفة (مالك/محرر/مشاهد)، وتظل بياناتها تتحدّث تلقائيًا من المصدر الحي.',
+    },
+    {
+      target: '[data-screen="sharelinks"]',
+      title: '🔗 روابط المشاركة',
+      body: 'روابط ثابتة لمشاركة نسخة لحظية من لوحة مع أي شخص، دون الحاجة إلى تسجيل الدخول.',
+    },
+  ];
+  if (isAdmin) {
+    steps.push(
+      {
+        target: '#tab-users',
+        title: '👥 المستخدمون',
+        body: 'إدارة حسابات المستخدمين وأدوارهم والأنظمة المسموح لهم بالوصول إليها.',
+      },
+      {
+        target: '#tab-settings',
+        title: '⚙️ الإعدادات',
+        body: 'التحكم في نموذج الذكاء الاصطناعي المستخدم لبناء اللوحات، وفي نموذج قراءة ملفات PDF بشكل مستقل عنه.',
+      },
+      {
+        target: '#usage-link',
+        title: '📊 الاستهلاك',
+        body: 'سجل تفصيلي لكل سؤال أُرسل إلى النموذج: عدد التوكنز المستخدمة، التكلفة التقديرية، والمستخدم الذي طرح السؤال.',
+      },
+    );
+  }
+  steps.push({
+    target: '#tour-btn',
+    title: '❓ هل تحتاج إلى الدليل مرة أخرى؟',
+    body: 'اضغط هذا الزر في أي وقت لإعادة عرض هذا الدليل من البداية.',
+  });
+  return steps;
+}
+
+let tourSteps = [];
+let tourIndex = 0;
+
+function startTour() {
+  tourSteps = buildTourSteps();
+  tourIndex = 0;
+  showScreen('chat'); // guarantees the chat-only steps' targets are actually visible
+  el('tour-dim').classList.add('open');
+  renderTourStep();
+}
+
+function endTour() {
+  el('tour-dim').classList.remove('open');
+  el('tour-pop').classList.remove('open');
+  document.querySelectorAll('.tour-target').forEach(e => e.classList.remove('tour-target'));
+}
+
+function renderTourStep() {
+  document.querySelectorAll('.tour-target').forEach(e => e.classList.remove('tour-target'));
+  const step = tourSteps[tourIndex];
+  if (!step) { endTour(); return; }
+
+  const pop = el('tour-pop');
+  const isFirst = tourIndex === 0;
+  const isLast = tourIndex === tourSteps.length - 1;
+  pop.innerHTML = `
+    <h4>${esc(step.title)}</h4>
+    <p>${esc(step.body)}</p>
+    <div class="tour-foot">
+      <span class="tour-step-count">${tourIndex + 1} من ${tourSteps.length}</span>
+      <div class="tour-actions">
+        ${!isFirst ? '<button type="button" id="tour-prev">السابق</button>' : ''}
+        <button type="button" id="tour-next" class="primary">${isLast ? 'إنهاء' : 'التالي'}</button>
+      </div>
+    </div>
+    ${!isLast ? '<button type="button" class="tour-skip" id="tour-skip">تخطّي الدليل</button>' : ''}`;
+  pop.classList.add('open');
+
+  const targetEl = step.target ? document.querySelector(step.target) : null;
+  if (targetEl) {
+    targetEl.classList.add('tour-target');
+    positionTourPopover(targetEl, pop);
+  } else {
+    pop.style.top = '50%'; pop.style.insetInlineStart = '50%'; pop.style.transform = 'translate(-50%,-50%)';
+  }
+
+  el('tour-next').addEventListener('click', () => { tourIndex++; renderTourStep(); });
+  el('tour-prev')?.addEventListener('click', () => { tourIndex--; renderTourStep(); });
+  el('tour-skip')?.addEventListener('click', endTour);
+}
+
+/// Plain top/left (not RTL logical properties) since getBoundingClientRect() is always
+/// viewport/physical-coordinate, regardless of document direction.
+function positionTourPopover(targetEl, pop) {
+  pop.style.transform = 'none';
+  pop.style.insetInlineStart = '';
+  const rect = targetEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const margin = 14;
+  let top = rect.bottom + margin;
+  if (top + popRect.height > window.innerHeight - 10) top = Math.max(10, rect.top - popRect.height - margin);
+  let left = Math.min(Math.max(10, rect.left), window.innerWidth - popRect.width - 10);
+  pop.style.top = `${top}px`;
+  pop.style.left = `${left}px`;
+}
+
+el('tour-btn').addEventListener('click', startTour);
+el('tour-dim').addEventListener('click', endTour);
+
+/// Once per user per browser, a little while after their first successful login or
+/// session-restore — long enough for the chat screen to have settled. Marks itself seen the
+/// moment it decides to auto-start (not when the user finishes), so it never re-nags even if
+/// they close the tab mid-tour; they can always replay it manually via #tour-btn regardless.
+function maybeAutoStartTour() {
+  const key = `tourSeen:${state.currentUser?.username || 'anon'}`;
+  try {
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+  } catch { return; }
+  setTimeout(startTour, 700);
+}
+
 async function startApp() {
   renderCurrentUser();
   renderMessages();
   renderDashboard();
   await loadSources();
   await loadFiles();
+  maybeAutoStartTour();
 }
 
 // ---------- users admin ----------
@@ -5400,9 +5761,7 @@ function renderUsers() {
       <td>${esc(u.displayName)}</td>
       <td>${u.authMethod === 'ActiveDirectory' ? 'Active Directory' : 'محلي'}</td>
       <td><span class="role-badge${u.role === 'Admin' ? ' admin' : ''}">${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'}</span></td>
-      <td>${u.allowAllSystems && u.allowAllFiles ? 'الكل' :
-            [u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`,
-             u.allowAllFiles ? 'كل الملفات' : `${u.allowedFiles.length} ملف`].join(' · ')}</td>
+      <td>${u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`}</td>
       <td><span class="status-dot${u.isActive ? '' : ' off'}"></span>${u.isActive ? 'نشط' : 'معطّل'}</td>
       <td>
         <button class="edit-btn" data-edit="${esc(u.id)}">تعديل</button>
@@ -5430,7 +5789,6 @@ function togglePermList(listId, allCheckboxId) {
 }
 
 el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
-el('user-allow-all-files').addEventListener('change', () => togglePermList('user-files-list', 'user-allow-all-files'));
 el('user-authmethod').addEventListener('change', () => {
   el('user-password-row').style.display = el('user-authmethod').value === 'Local' ? '' : 'none';
 });
@@ -5450,11 +5808,8 @@ function openUserModal(user) {
   el('user-password-row').style.display = (user ? user.authMethod : 'Local') === 'Local' ? '' : 'none';
 
   el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
-  el('user-allow-all-files').checked = user ? user.allowAllFiles : true;
   renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name);
-  renderPermChecklist('user-files-list', state.sourceFiles, user ? user.allowedFiles : [], f => f.id, f => f.name);
   togglePermList('user-systems-list', 'user-allow-all-systems');
-  togglePermList('user-files-list', 'user-allow-all-files');
 
   el('user-modal').classList.remove('hidden');
 }
@@ -5475,8 +5830,9 @@ el('user-form').addEventListener('submit', async e => {
     isActive: el('user-active').checked,
     allowAllSystems: el('user-allow-all-systems').checked,
     allowedSystems: [...el('user-systems-list').querySelectorAll('input:checked')].map(i => i.value),
-    allowAllFiles: el('user-allow-all-files').checked,
-    allowedFiles: [...el('user-files-list').querySelectorAll('input:checked')].map(i => i.value),
+    // File permissions are managed only from "مستودع الملفات" now — the server ignores
+    // these two regardless (see UsersController), but omitting them keeps the request
+    // honest about what this form actually controls.
   };
   const saveBtn = el('user-save');
   saveBtn.disabled = true;

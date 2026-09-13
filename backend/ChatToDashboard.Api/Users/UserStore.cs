@@ -96,6 +96,20 @@ public class UserStore
             {
             }
         }
+
+        // Migration for a row saved before file access moved to be per-file only (see
+        // UsersController.Create/Update, which now always force AllowAllFiles=true on any
+        // write) — an existing row can still carry AllowAllFiles=0 from before that change,
+        // which would keep blocking a user from even their own uploads (AllowsFile stayed
+        // false for every file, including ones they created themselves) until they happened
+        // to be edited again. Runs unconditionally, not just WHERE NULL like the migration
+        // above, since the value to fix here is an explicit 0, not a missing column.
+        await using (var filesBackfill = connection.CreateCommand())
+        {
+            filesBackfill.CommandText =
+                $"UPDATE {Table} SET AllowAllFiles = 1, AllowedFilesJson = '[]' WHERE AllowAllFiles = 0 OR AllowAllFiles IS NULL";
+            await filesBackfill.ExecuteNonQueryAsync(ct);
+        }
     }
 
     public async Task<int> CountAsync(CancellationToken ct = default)

@@ -54,9 +54,16 @@ public class SourcesController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var allowed = PermissionsService.GetEffectiveSelection(user, null);
+        var isAdmin = user.Role == UserRoles.Admin;
 
         var repoFiles = await _store.ListAsync(ct);
-        var files = repoFiles.Where(f => allowed.AllowsFile(f.Id))
+        // allowed.AllowsFile is now always true (file access is never set per-user anymore —
+        // see UsersController), so the actual gate for a non-Admin is the same creator/
+        // explicitly-granted rule RepositoryController.Files applies to the file list itself.
+        var files = repoFiles.Where(f => allowed.AllowsFile(f.Id) && (isAdmin
+                || string.IsNullOrWhiteSpace(f.CreatedByUserId)
+                || string.Equals(f.CreatedByUserId, user.Id, StringComparison.OrdinalIgnoreCase)
+                || f.PermittedUserIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase)))
             .Select(f => new { id = f.Id, name = f.DisplayName, category = f.Category })
             .ToList();
         return Ok(new

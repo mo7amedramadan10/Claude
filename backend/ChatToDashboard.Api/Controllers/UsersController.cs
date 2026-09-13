@@ -38,8 +38,11 @@ public class UsersController : ControllerBase
             PasswordHash = request.AuthMethod == AuthMethods.Local ? PasswordHasher.Hash(request.Password!) : "",
             AllowAllSystems = request.AllowAllSystems,
             AllowedSystemsJson = JsonSerializer.Serialize(request.AllowedSystems),
-            AllowAllFiles = request.AllowAllFiles,
-            AllowedFilesJson = JsonSerializer.Serialize(request.AllowedFiles),
+            // File access is managed only from "مستودع الملفات" now (per-file, via the 🔒
+            // button — RepositoryController.SetPermissions/PermittedUserIds), never per-user
+            // here — see the same note on Update below.
+            AllowAllFiles = true,
+            AllowedFilesJson = "[]",
         };
         var created = await _users.CreateAsync(user, ct);
         return Ok(UserStore.ToInfo(created));
@@ -70,8 +73,15 @@ public class UsersController : ControllerBase
         user.IsActive = request.IsActive;
         user.AllowAllSystems = request.AllowAllSystems;
         user.AllowedSystemsJson = JsonSerializer.Serialize(request.AllowedSystems);
-        user.AllowAllFiles = request.AllowAllFiles;
-        user.AllowedFilesJson = JsonSerializer.Serialize(request.AllowedFiles);
+        // File access is deliberately never set from here — kept at its always-open default
+        // (AllowsFile is then a no-op for every file) so the only thing that actually gates
+        // a file is the per-file grant on "مستودع الملفات" (creator/Admin/explicitly
+        // granted — see RepositoryController.Files/SourcesController.Get, both of which
+        // apply that check independently of this flag). Whatever the client sends for
+        // allowAllFiles/allowedFiles is ignored — a stale or hand-crafted request can't
+        // reopen a per-user file permission this screen no longer offers.
+        user.AllowAllFiles = true;
+        user.AllowedFilesJson = "[]";
         if (request.AuthMethod == AuthMethods.Local && !string.IsNullOrWhiteSpace(request.Password))
             user.PasswordHash = PasswordHasher.Hash(request.Password);
         else if (request.AuthMethod == AuthMethods.ActiveDirectory)

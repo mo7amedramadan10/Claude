@@ -26,9 +26,33 @@ public class RepositoryController : ControllerBase
         _logger = logger;
     }
 
-    /// <summary>All saved files, newest first.</summary>
+    /// <summary>
+    /// Every file an Admin has, but for anyone else only the ones they can actually reach:
+    /// the same two-layer rule DescribeSourcesAsync already applies before a query runs
+    /// (the user's own file/category permission, AND — independently — a file with a
+    /// recorded creator being auto-restricted to that creator/an Admin/whoever's explicitly
+    /// granted). Actually *using* a file was always gated this way (download, query_data);
+    /// this makes the file even being listed follow the same rule, so a user with no access
+    /// to it never sees it exists at all, rather than a "🔒 مقيّد" entry they can't open.
+    /// </summary>
     [HttpGet("files")]
-    public async Task<IActionResult> Files(CancellationToken ct) => Ok(await _store.ListAsync(ct));
+    public async Task<IActionResult> Files(CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+
+        var files = await _store.ListAsync(ct);
+        if (user.Role == UserRoles.Admin) return Ok(files);
+
+        var selection = PermissionsService.GetEffectiveSelection(user, null);
+        var visible = files.Where(f =>
+            selection.AllowsFile(f.Id) &&
+            (string.IsNullOrWhiteSpace(f.CreatedByUserId)
+                || string.Equals(f.CreatedByUserId, user.Id, StringComparison.OrdinalIgnoreCase)
+                || f.PermittedUserIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+        return Ok(visible);
+    }
 
     [HttpGet("categories")]
     public async Task<IActionResult> Categories(CancellationToken ct) => Ok(await _store.ListCategoriesAsync(ct));
@@ -41,10 +65,15 @@ public class RepositoryController : ControllerBase
     /// </summary>
     [HttpPost("upload")]
     [RequestSizeLimit(MaxUploadBytes)]
-    public IActionResult Upload([FromForm] IFormFileCollection files)
+    public async Task<IActionResult> Upload([FromForm] IFormFileCollection files, CancellationToken ct)
     {
         if (files is null || files.Count == 0)
             return BadRequest(new { error = "No files were uploaded." });
+
+        // Only needed so a PDF's AI-extraction attempt (see UploadParser.TryExtractWithAiAsync)
+        // is attributed to whoever uploaded it on the usage page — parsing itself needs no
+        // permission check here, same as before this was resolved.
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
 
         var results = new List<PendingUpload>();
         foreach (var file in files)
@@ -61,7 +90,7 @@ public class RepositoryController : ControllerBase
             }
 
             using var stream = file.OpenReadStream();
-            results.Add(_parser.Parse(file.FileName, stream));
+            results.Add(await _parser.ParseAsync(file.FileName, stream, user, ct));
         }
         return Ok(results);
     }
@@ -238,9 +267,19 @@ public class RepositoryController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Deleting a file is at least as sensitive as managing its permissions —
+    /// gated the same way SetPermissions above is: the file's creator, or an Admin standing
+    /// in for them. Someone merely granted query/view access to the file is not enough.</summary>
     [HttpDelete("files/{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
+        if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
+        if (user.Role != UserRoles.Admin && !string.Equals(createdByUserId, user.Id, StringComparison.OrdinalIgnoreCase))
+            return Forbid();
+
         await _store.DeleteAsync(id, ct);
         return NoContent();
     }
