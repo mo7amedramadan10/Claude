@@ -1,0 +1,49 @@
+# AI_Dashboard — .NET 8 API + UI, SQL Server, persistent data folder.
+# Full reference of every option: platform/examples/TEMPLATE.azure-pipelines.yml
+trigger:
+  branches:
+    include: [main]
+
+resources:
+  repositories:
+    - repository: platform
+      type: git
+      name: THQ_Platform/THQ_Platform
+
+extends:
+  template: pipelines/deploy-app.yml@platform
+  parameters:
+    appName: ai-dashboard
+    healthPath: /index.html            # served before login → safe for probes
+    nodePort: 30080                    # http://172.17.131.40:30080
+    ingressBodySize: 100m              # file uploads
+    ingressTimeout: 600                # long LLM answers
+
+    database: mssql                    # shared SQL Server Express
+    dbName: ChatToDashboard
+    dbConnStringEnv: ConnectionStrings__DataDb
+
+    persistence:
+      enabled: true
+      mountPath: /data
+      size: 10Gi
+      seedFrom: /seed                  # sample data copied on first start
+      fsGroup: 1654                    # 'app' user in the aspnet image
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Production
+      DataFolderPath: /data
+      DatabaseProvider: SqlServer
+      EnableRag: "false"
+      Llm__Provider: OpenAI
+      OpenAI__Model: gpt-4o
+      Anthropic__Model: claude-sonnet-5
+      Ollama__BaseUrl: http://172.17.242.1:8081/api/v1/
+      Ollama__Model: qwen3:14b
+      Auth__SeedAdmin__Username: admin
+
+    secrets:                           # container env : Library group 'ai-dashboard'
+      OpenAI__ApiKey: OPENAI_API_KEY
+      Anthropic__ApiKey: ANTHROPIC_API_KEY?      # optional
+      Ollama__ApiKey: OLLAMA_API_KEY?            # optional
+      Auth__SeedAdmin__Password: SEED_ADMIN_PASSWORD

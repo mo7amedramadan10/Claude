@@ -98,6 +98,25 @@ git pull && docker compose up -d --build
 Note: on Azure SQL the app cannot create the database itself (no `master` access) — create
 it in step 1; the app still creates the `staging` schema and tables on its own.
 
+## Option C: Kubernetes on the company server (multiapps) — the current production path
+
+CI/CD is fully described by **one file, `azure-pipelines.yml`**, which extends the shared
+pipeline in the `platform` repo (`THQ_Platform/THQ_Platform`). Every push to `main` builds the
+image on the server, pushes it to the internal registry, creates the app's database on the
+shared SQL Server, and rolls the deployment out. See `platform/README.md` for every
+parameter.
+
+One-time setup: Pipelines → Library → variable group **`ai-dashboard`** with
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_API_KEY`, `SEED_ADMIN_PASSWORD` (secret),
+and the shared group **`platform`** with `MSSQL_SA_PASSWORD`.
+
+The app is at **http://172.17.131.40:30080** or **http://ai-dashboard.multiapps.local**
+(DNS/hosts entry → 172.17.131.40). First login: `admin` / `SEED_ADMIN_PASSWORD`.
+
+Day-2 on the server: `kubectl -n ai-dashboard logs deploy/ai-dashboard -f`,
+`kubectl -n ai-dashboard rollout undo deploy/ai-dashboard` (roll back),
+`kubectl -n databases exec -it mssql-0 -- /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C` (DB shell).
+
 ## Security checklist (read before sharing the URL)
 
 - **Every page and API call requires a signed-in account** (see README "Accounts &
