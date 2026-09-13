@@ -14,6 +14,18 @@ public class UpdateLlmSettingsRequest
     public string? OpenAiModel { get; set; }
 }
 
+public class UpdateDocumentReaderRequest
+{
+    /// <summary>One of LlmRouter's known provider ids, or null/"" to disable.</summary>
+    public string? Provider { get; set; }
+
+    /// <summary>The document reader's OWN sub-model choice for that provider — independent of
+    /// the dashboard-building OllamaModel/OpenAiModel in UpdateLlmSettingsRequest above. Only
+    /// the field matching Provider is meaningful; the other is ignored.</summary>
+    public string? OllamaModel { get; set; }
+    public string? OpenAiModel { get; set; }
+}
+
 /// <summary>
 /// Which LLM answers questions, and which model for the providers that support picking one
 /// (Ollama, OpenAI) — admin-only, changeable from the dashboard without a restart. See
@@ -44,16 +56,31 @@ public class LlmSettingsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
-        var (savedProvider, savedOllamaModel, savedOpenAiModel) = await _settings.GetAsync(ct);
+        var (savedProvider, savedOllamaModel, savedOpenAiModel, savedDocumentReaderProvider,
+            savedDocumentReaderOllamaModel, savedDocumentReaderOpenAiModel) = await _settings.GetAsync(ct);
         var activeProvider = savedProvider is { Length: > 0 } ? savedProvider : (_configuration["Llm:Provider"] ?? LlmRouter.Anthropic);
         var activeOllamaModel = savedOllamaModel is { Length: > 0 } ? savedOllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
         var activeOpenAiModel = savedOpenAiModel is { Length: > 0 } ? savedOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
+        // Unlike activeProvider above, this has no config-file default — null/"" genuinely
+        // means "disabled" (PDF uploads stay on PdfPig's plain-text extraction only), never
+        // silently inherited from Llm:Provider.
+        var activeDocumentReaderProvider = savedDocumentReaderProvider is { Length: > 0 } ? savedDocumentReaderProvider : null;
+        // Each falls back to the same config default its dashboard-building counterpart
+        // above uses — never to that counterpart's own saved choice, keeping this genuinely
+        // a separate setting rather than one that silently mirrors the other.
+        var activeDocumentReaderOllamaModel = savedDocumentReaderOllamaModel is { Length: > 0 }
+            ? savedDocumentReaderOllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeDocumentReaderOpenAiModel = savedDocumentReaderOpenAiModel is { Length: > 0 }
+            ? savedDocumentReaderOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
 
         return Ok(new
         {
             activeProvider,
             activeOllamaModel,
             activeOpenAiModel,
+            activeDocumentReaderProvider,
+            activeDocumentReaderOllamaModel,
+            activeDocumentReaderOpenAiModel,
             providers = new[]
             {
                 new { id = LlmRouter.Anthropic, label = "Claude (Anthropic)", configured = IsConfigured("Anthropic:ApiKey") },
@@ -118,6 +145,20 @@ public class LlmSettingsController : ControllerBase
             return BadRequest(new { error = "مزوّد غير معروف." });
 
         await _settings.SetAsync(request.Provider, request.OllamaModel, request.OpenAiModel, ct);
+        return NoContent();
+    }
+
+    /// <summary>Which model reads a PDF's page images at upload time — independent of Update
+    /// above (the dashboard-building provider). null/"" disables it (PdfPig-only, the
+    /// default) rather than falling back to any provider.</summary>
+    [HttpPut("document-reader")]
+    public async Task<IActionResult> UpdateDocumentReader([FromBody] UpdateDocumentReaderRequest request, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(request.Provider) &&
+            !LlmRouter.KnownProviders.Contains(request.Provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+
+        await _settings.SetDocumentReaderAsync(request.Provider, request.OllamaModel, request.OpenAiModel, ct);
         return NoContent();
     }
 

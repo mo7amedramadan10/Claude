@@ -5,6 +5,7 @@ using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Usage;
+using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.Claude;
 
@@ -13,7 +14,7 @@ namespace ChatToDashboard.Api.Claude;
 /// Claude asks for list_files / query_data / search_documents, we execute the tool
 /// and send back tool_result blocks, until Claude returns the final dashboard JSON.
 /// </summary>
-public class ClaudeClient : IDashboardGenerator
+public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -60,6 +61,7 @@ public class ClaudeClient : IDashboardGenerator
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default)
     {
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
@@ -87,7 +89,7 @@ public class ClaudeClient : IDashboardGenerator
         var systemPrompt = _tools.BuildSystemPrompt(context);
         var tools = BuildToolsJson(context);
 
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context));
+        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             messages, systemPrompt, tools, context, trace,
@@ -95,7 +97,7 @@ public class ClaudeClient : IDashboardGenerator
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // Inquiries is never continuation-aware — isolated from whatever dashboard is on
         // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
@@ -105,7 +107,7 @@ public class ClaudeClient : IDashboardGenerator
         var systemPrompt = _tools.BuildInquirySystemPrompt(context);
         var tools = BuildToolsJson(context);
 
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context));
+        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             messages, systemPrompt, tools, context, trace,
@@ -113,7 +115,8 @@ public class ClaudeClient : IDashboardGenerator
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
@@ -124,11 +127,55 @@ public class ClaudeClient : IDashboardGenerator
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var systemPrompt = _tools.BuildSystemPrompt(context);
 
-        var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context));
+        var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             messages, systemPrompt, null, context, trace,
             AnalyticsTools.TryParseDashboard, "dashboard", ct);
+    }
+
+    /// <summary>
+    /// Reads a document via its rendered page images instead of a text-layer parser — see
+    /// IDocumentTextExtractor. A single, tool-free turn: every page image goes in one user
+    /// message so the model reads the whole document at once (page order matters for tables/
+    /// sections spanning a page break), and the reply is the transcribed text verbatim, not
+    /// JSON — there's no dashboard schema to validate here.
+    /// </summary>
+    public async Task<string> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var content = new JsonArray();
+        foreach (var dataUrl in pageImageDataUrls)
+        {
+            if (!TryParseDataUrl(dataUrl, out var mediaType, out var base64Data)) continue;
+            content.Add(new JsonObject
+            {
+                ["type"] = "image",
+                ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
+            });
+        }
+        content.Add(new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.DocumentExtractionInstruction(fileName) });
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = content } };
+        var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
+
+        var trace = _usage.Begin("Anthropic", _model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var responseContent = response["content"]?.AsArray()
+                ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+            var text = string.Concat(responseContent
+                .Where(b => b?["type"]?.GetValue<string>() == "text")
+                .Select(b => b!["text"]!.GetValue<string>()));
+            await trace.CompleteAsync(true, text, null, ct);
+            return text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
     }
 
     /// <summary>

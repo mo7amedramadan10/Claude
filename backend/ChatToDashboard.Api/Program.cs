@@ -96,6 +96,7 @@ builder.Services.AddHttpClient<ChatToDashboard.Api.Ollama.OllamaClient>(client =
     client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 });
 builder.Services.AddSingleton<IDashboardGenerator, ChatToDashboard.Api.Llm.LlmRouter>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IDocumentReaderRouter, ChatToDashboard.Api.Llm.DocumentReaderRouter>();
 
 var app = builder.Build();
 

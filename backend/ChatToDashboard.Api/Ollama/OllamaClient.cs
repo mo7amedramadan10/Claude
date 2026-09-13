@@ -5,6 +5,8 @@ using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Usage;
+using ChatToDashboard.Api.Users;
+using SkiaSharp;
 
 namespace ChatToDashboard.Api.Ollama;
 
@@ -23,7 +25,7 @@ namespace ChatToDashboard.Api.Ollama;
 ///   (see UsageTrace.RecordTurn, which already falls back to the response's top level).
 /// - "stream" is NOT omittable — Ollama defaults to streaming, so every request pins it false.
 /// </summary>
-public class OllamaClient : IDashboardGenerator
+public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -72,6 +74,7 @@ public class OllamaClient : IDashboardGenerator
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
+        AppUser? requestingUser = null,
         CancellationToken ct = default)
     {
         // Screenshot-to-dashboard needs a vision-capable model; the gateway's models list
@@ -95,7 +98,7 @@ public class OllamaClient : IDashboardGenerator
         messages.Add(new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) });
 
         var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context));
+        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, tools, context, trace,
@@ -103,7 +106,7 @@ public class OllamaClient : IDashboardGenerator
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
     {
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
@@ -117,7 +120,7 @@ public class OllamaClient : IDashboardGenerator
         };
 
         var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context));
+        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, tools, context, trace,
@@ -125,7 +128,8 @@ public class OllamaClient : IDashboardGenerator
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null, CancellationToken ct = default)
+        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        AppUser? requestingUser = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
@@ -139,11 +143,135 @@ public class OllamaClient : IDashboardGenerator
             new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard) },
         };
 
-        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context));
+        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, null, context, trace,
             AnalyticsTools.TryParseDashboard, "dashboard", ct);
+    }
+
+    // Long side of a page image sent to the internal gateway, after re-encoding to JPEG below.
+    // Well within what a vision model reads comfortably (Claude itself targets a similar
+    // range), and small enough that even a single dense/scanned page stays far under almost
+    // any realistic request-body cap — see ExtractDocumentTextAsync for why this matters here
+    // specifically and not for Claude/OpenAI.
+    private const int GatewayImageMaxDimension = 1400;
+    private const int GatewayImageJpegQuality = 78;
+
+    /// <summary>See ClaudeClient.ExtractDocumentTextAsync. Unlike GenerateDashboardAsync's
+    /// image rejection above (a screenshot mid-conversation, where failing fast and telling
+    /// the user to switch models is the right call), a document upload already has a working
+    /// fallback if this doesn't pan out — so instead of assuming upfront that the gateway's
+    /// current models have no vision support, this actually sends the page images (via
+    /// Ollama's own "images" field — raw base64, no data: URL prefix) and waits for the real
+    /// reply. Whatever comes back — a genuine transcription, a model that quietly ignored the
+    /// images, or the gateway rejecting the request outright — DocumentReaderRouter's caller
+    /// (the repository upload flow) only ever falls back to PdfPig's plain-text extraction on
+    /// an actual failure here, same as for Claude/OpenAI.
+    ///
+    /// Sends the gateway ONE PAGE PER REQUEST rather than Claude/OpenAI's single message with
+    /// every page bundled together — seen live: this internal gateway enforces its own request
+    /// body size limit and rejects a bundled multi-page request with 413 "payload_too_large",
+    /// even though Claude's/OpenAI's cloud APIs accept the exact same combined payload without
+    /// issue. Splitting per page sidesteps that limit by construction — a request only ever
+    /// carries one page — no matter how many pages the document has; downscaling each page to
+    /// GatewayImageMaxDimension/re-encoding as JPEG below additionally covers the case where
+    /// even a single dense page's PNG (rendered once, upstream, for whichever provider ends up
+    /// reading it) would already be too large on its own.</summary>
+    public async Task<string> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        // Its own sub-model choice, independent of GenerateDashboardAsync's OllamaModel above —
+        // an admin can run document reading on a different internal model than the one that
+        // builds dashboards. Falls back to the same config default as that one, never to it.
+        var model = (await _settings.GetAsync(ct)).DocumentReaderOllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
+        var trace = _usage.Begin("Ollama", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var combined = new StringBuilder();
+            for (var i = 0; i < pageImageDataUrls.Count; i++)
+            {
+                if (!TryExtractBase64(pageImageDataUrls[i], out var base64Data)) continue;
+                var pageNumber = i + 1;
+                var messages = new JsonArray
+                {
+                    new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                    new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] = AnalyticsTools.DocumentExtractionPageInstruction(fileName, pageNumber, pageImageDataUrls.Count),
+                        ["images"] = new JsonArray { CompressForGateway(base64Data) },
+                    },
+                };
+                var response = await CallChatAsync(model, messages, null, trace, ct);
+                var pageText = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+                combined.AppendLine($"--- صفحة {pageNumber} ---");
+                combined.AppendLine(pageText.Trim());
+            }
+
+            var text = combined.ToString();
+            await trace.CompleteAsync(true, text, null, ct);
+            return text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>Pulls the base64 payload out of a "data:&lt;mime&gt;;base64,&lt;data&gt;" URL —
+    /// Ollama's "images" field wants the raw base64 only, no data: prefix.</summary>
+    private static bool TryExtractBase64(string? dataUrl, out string base64Data)
+    {
+        base64Data = "";
+        if (string.IsNullOrWhiteSpace(dataUrl)) return false;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            dataUrl, @"^data:[\w/.+-]+;base64,(.+)$", System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (!match.Success) return false;
+        base64Data = match.Groups[1].Value;
+        return true;
+    }
+
+    /// <summary>Decodes the page (rendered upstream as PNG for whichever provider ends up
+    /// reading it) and re-encodes it as a smaller JPEG, downscaled to at most
+    /// GatewayImageMaxDimension on its long side — this gateway's own request-size limit is
+    /// what's being worked around here, not anything about image quality, so this only runs
+    /// for Ollama; Claude/OpenAI keep receiving the original PNG. Falls back to the original
+    /// bytes untouched if decoding fails for any reason (an unexpected format, a corrupt
+    /// page) — sending the original is still strictly better than dropping the page.</summary>
+    private static string CompressForGateway(string base64Png)
+    {
+        SKBitmap? resized = null;
+        try
+        {
+            using var bitmap = SKBitmap.Decode(Convert.FromBase64String(base64Png));
+            if (bitmap is null) return base64Png;
+
+            var toEncode = bitmap;
+            var longSide = Math.Max(bitmap.Width, bitmap.Height);
+            if (longSide > GatewayImageMaxDimension)
+            {
+                var scale = GatewayImageMaxDimension / (double)longSide;
+                resized = bitmap.Resize(
+                    new SKImageInfo((int)(bitmap.Width * scale), (int)(bitmap.Height * scale)),
+                    new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+                if (resized is not null) toEncode = resized;
+            }
+
+            using var encoded = toEncode.Encode(SKEncodedImageFormat.Jpeg, GatewayImageJpegQuality);
+            return Convert.ToBase64String(encoded.ToArray());
+        }
+        catch (Exception)
+        {
+            return base64Png;
+        }
+        finally
+        {
+            resized?.Dispose();
+        }
     }
 
     private static JsonObject TryParseArguments(string raw)
