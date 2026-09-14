@@ -6,13 +6,19 @@
 <title>المحادثة إلى لوحة معلومات</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230C0D0E'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='%233cb4e5'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='%233cb4e5'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='%233cb4e5'/%3E%3C/svg%3E" />
 <script>
-// Set before the stylesheet paints anything, so the remembered theme applies on first
-// frame instead of flashing the default and then switching.
+// Set before the stylesheet paints anything, so the remembered theme/language apply on
+// first frame instead of flashing the default and then switching. English flips the whole
+// page to LTR — see I18N_EN/translateNode() further down for how the actual text swaps.
 (function () {
   try {
     var t = localStorage.getItem('chatToDashboardTheme');
     document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
   } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+  try {
+    var lang = localStorage.getItem('chatToDashboardLang') === 'en' ? 'en' : 'ar';
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('dir', lang === 'en' ? 'ltr' : 'rtl');
+  } catch (e) { /* stays ar/rtl, the document's own default */ }
 })();
 </script>
 <style>
@@ -751,6 +757,9 @@ tr:last-child td{border-bottom:0}
 #theme-toggle{width:33px;height:33px;padding:0;border:1px solid var(--grid);border-radius:9px;
   background:var(--surface);font-size:14px;line-height:1}
 #theme-toggle:hover{border-color:var(--accent)}
+#lang-toggle{width:33px;height:33px;padding:0;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:11px;font-weight:700;font-family:var(--mono)}
+#lang-toggle:hover{border-color:var(--accent);color:var(--accent)}
 #auto-read-toggle{padding:6px 12px;border:1px solid var(--grid);border-radius:9px;
   background:var(--surface);color:var(--ink-2);font-size:12.5px}
 #auto-read-toggle:hover{border-color:var(--accent)}
@@ -887,6 +896,7 @@ tr:last-child td{border-bottom:0}
     <button type="button" id="auto-read-toggle" class="hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد">🔇 قراءة تلقائية</button>
     <button type="button" id="tour-btn" title="دليل استخدام النظام">❓</button>
     <button type="button" id="theme-toggle" title="تبديل المظهر">🌙</button>
+    <button type="button" id="lang-toggle" title="Switch to English">EN</button>
     <span id="current-user-name"></span>
     <button type="button" id="logout-btn">خروج</button>
   </div>
@@ -1396,7 +1406,457 @@ tr:last-child td{border-bottom:0}
 <script src="lib/apexcharts.min.js"></script>
 <script>
 const el = id => document.getElementById(id);
+// Mirrors the <html lang> the head script already set (before this script even loads) —
+// read once here rather than re-touched, since switching it is a page reload (see
+// lang-toggle's click handler), never an in-place state change.
+// ---------- English translation layer ----------
+// A dictionary-driven, whole-DOM post-processing pass rather than hundreds of individual
+// call-site rewrites — the app is ~6000 lines of Arabic-native JS/HTML with no single
+// render entry point all of it flows through. Every render function keeps emitting Arabic
+// exactly as it always has; this only swaps what's already in the DOM, text node by text
+// node and a few key attributes, whenever the page is in English mode. Matched by
+// substring within each text node (not requiring an exact whole-node match), so labels
+// built with interpolation ("٣ عناصر", "تصدير PDF") still get their static Arabic parts
+// translated even though the whole string isn't itself a dictionary key. I18N_ENTRIES is
+// sorted longest-first so a more specific phrase is tried before any shorter phrase it
+// happens to contain (e.g. "مصدر البيانات" before a bare "البيانات" would ever match).
+const I18N_EN = {
+  // ---- brand / login / shared banner ----
+  'المحادثة إلى لوحة معلومات': 'Chat to Dashboard',
+  'اسم المستخدم': 'Username', 'كلمة المرور': 'Password', 'تسجيل الدخول': 'Sign In',
+  '📤 عرض مشاركة —': '📤 Shared view —', 'افتح التطبيق الكامل ←': 'Open the full app ←',
+  // ---- top nav ----
+  'المحادثة': 'Chat', 'مستودع الملفات': 'File Repository', 'السجل': 'History',
+  'اللوحات النشطة': 'Active Dashboards', 'روابط المشاركة': 'Share Links',
+  'المستخدمون': 'Users', 'الإعدادات': 'Settings',
+  'ما أُرسل للموديل وكم استهلك': 'What was sent to the model and how much it used',
+  'الاستهلاك ↗': 'Usage ↗',
+  'كل المصادر مفعّلة': 'All sources enabled',
+  'الأنظمة — تحديد الكل': 'Systems — select all',
+  'مستودع الملفات — تحديد الكل': 'File repository — select all',
+  'تصغير لوحة المحادثة': 'Shrink chat panel', 'تكبير لوحة المحادثة': 'Grow chat panel',
+  'إخفاء لوحة المحادثة': 'Hide chat panel',
+  'تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد': "Toggle automatic voice read-aloud for the assistant's replies",
+  '🔇 قراءة تلقائية': '🔇 Auto read', 'دليل استخدام النظام': 'System usage guide',
+  'تبديل المظهر': 'Toggle appearance', 'خروج': 'Log out',
+  // ---- chat panel ----
+  'بناء اللوحة': 'Build Dashboard', 'الاستفسارات': 'Inquiries',
+  '📁 لا يوجد ملفات في المستودع': '📁 No files in the repository', 'إدارة الملفات ←': 'Manage files ←',
+  'الصورة المرفقة': 'Attached image', 'إزالة الصورة': 'Remove image',
+  'إرفاق صورة داشبورد لإعادة بنائه ببياناتك': 'Attach a dashboard screenshot to rebuild it with your data',
+  'يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر':
+    'Instantly clears the dashboard on screen — your next question builds a brand-new one from scratch',
+  '🆕 ابدأ لوحة جديدة': '🆕 Start new dashboard',
+  'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…': 'Ask about your data, or attach a dashboard screenshot to rebuild it…',
+  'اسأل بصوتك': 'Ask by voice', 'إرسال': 'Send',
+  // ---- dashboard toolbar ----
+  'عرض': 'View', 'تحرير': 'Edit',
+  'يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا':
+    "Re-runs every widget's query against live data, keeping any filter currently applied",
+  '🔄 تحديث': '🔄 Refresh', 'تراجع': 'Undo', 'إعادة': 'Redo',
+  'حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين':
+    'Turn this dashboard into an Active one — shareable, with edit/view access grantable to others',
+  '✅ تفعيل اللوحة': '✅ Activate dashboard', '🔗 مشاركة': '🔗 Share',
+  '🖨️ تصدير PDF': '🖨️ Export PDF', '📊 تصدير PowerPoint': '📊 Export PowerPoint',
+  // ---- repository ----
+  'رفع ملفات جديدة': 'Upload new files', 'الأكثر استخدامًا': 'Most used',
+  'الأحدث تحديثًا': 'Recently updated', 'الاسم': 'Name',
+  'الملف': 'File', 'آخر تحديث': 'Last updated', 'الاستخدام': 'Usage', 'الصلاحيات': 'Permissions',
+  'اختر ملفًا واحدًا أو أكثر (Excel أو CSV أو PDF)، اكتب بيانات كل ملف، ثم اضغط\n      "حفظ في المستودع" لكل ملف على حدة لإضافته للمستودع.':
+    'Choose one or more files (Excel, CSV, or PDF), fill in each file\'s details, then click\n      "Save to repository" for each one to add it.',
+  'اختر ملفات': 'Choose files', 'إغلاق': 'Close', 'تفاصيل الملف': 'File Details',
+  'اسم العرض': 'Display name', 'الوصف': 'Description', 'التصنيف': 'Category',
+  '🗑️ حذف الملف': '🗑️ Delete file', 'إلغاء': 'Cancel', 'حفظ': 'Save',
+  'صلاحيات الملف': 'File Permissions',
+  'هذا الملف مقيّد تلقائيًا لمنشئه ولا يمكن إزالة هذا القيد — يمكنك فقط\n      منح صلاحية استخدامه لمستخدمين آخرين بالإضافة إليه.':
+    "This file is automatically restricted to its creator, and that can't be removed — you can only\n      additionally grant other users access to it.",
+  'المالك (منشئ الملف):': 'Owner (file creator):',
+  'مستخدمون لديهم صلاحية إضافية': 'Users with additional access',
+  'إضافة مستخدم': 'Add user', 'ابحث باسم المستخدم أو الاسم…': 'Search by username or name…',
+  'الملفات المرتبطة': 'Related Files',
+  'اربط هذا الملف بملف آخر يشترك معه في عمود، ليظهر الربط كإشارة عند تحليل البيانات.':
+    'Link this file to another that shares a column with it, so the link shows as a hint during data analysis.',
+  'إضافة ربط': 'Add link', 'اسم العمود المشترك': 'Shared column name', 'ربط': 'Link',
+  // ---- history / active / share links ----
+  'مسح الكل': 'Clear all', 'اللوحة': 'Dashboard', 'آخر حفظ': 'Last saved', 'العناصر': 'Widgets',
+  'الدور': 'Role', 'ⓘ ما معنى المالك والصلاحيات؟': 'ⓘ What do owner and permissions mean?',
+  'الأدوار على اللوحة النشطة': 'Roles on an Active Dashboard',
+  'تُسنَد لكل لوحة نشطة صلاحياتٌ لشخص واحد أو أكثر، وفق واحدٍ من ثلاثة أدوار، يحدّد كلٌّ منها من يملك حق التعديل عليها ومن يقتصر دوره على الاطّلاع فحسب.':
+    'Every Active dashboard grants access to one or more people under one of three roles, each determining who can edit it and who can only view it.',
+  'مالك': 'Owner',
+  'هو الشخص الذي أنشأ اللوحة. تُستخرج بيانات اللوحة دائمًا وفق صلاحية وصول <b>المالك</b> إلى الأنظمة والمصادر المعتمَدة عليها؛ فإذا فقد المالك صلاحيته على أحد مصادر البيانات، تتعطّل اللوحة تلقائيًا لجميع من يطّلعون عليها، دون استثناء.':
+    "The person who created the dashboard. Its data is always pulled under the <b>Owner's</b> own access to the systems/sources it depends on — if the Owner loses access to one of those sources, the dashboard breaks automatically for everyone viewing it, with no exception.",
+  'ينفرد المالك بالصلاحيات التالية:': 'Only the Owner has the following abilities:',
+  'حذف اللوحة نهائيًا.': 'Permanently delete the dashboard.',
+  'إضافة المحرِّرين والمشاهدين أو إزالتهم، وتحديد دور كل منهم.': "Add or remove Editors and Viewers, and set each one's role.",
+  'نقل الملكية إلى شخص آخر، بشرط أن يمتلك هذا الشخص صلاحية وصول سارية على البيانات ذاتها.':
+    'Transfer ownership to someone else, provided they already have valid access to the same data.',
+  'تغيير مصادر البيانات المعتمَدة في اللوحة — إضافة مصدر جديد إليها أو استبدال أحد مصادرها الحالية.':
+    "Change the dashboard's data sources — add a new one or replace an existing one.",
+  'وتشمل صلاحياته، بطبيعة الحال، جميع صلاحيات المحرِّر الموضّحة أدناه.': "Naturally, this also includes every Editor ability described below.",
+  'محرر': 'Editor', 'صلاحية التعديل': 'Edit access',
+  'يمكنه فتح اللوحة وتعديل محتواها؛ كإضافة عناصر أو حذفها، أو تغيير نوع الرسم البياني، أو استخدام عوامل التصفية، ضمن نطاق مصادر البيانات المعتمَدة أصلًا في اللوحة، وتُحفَظ أي تعديلات تلقائيًا. لا يملك المحرِّر صلاحية حذف اللوحة، ولا إدارة من له حق الوصول إليها، ولا نقل ملكيتها.':
+    'Can open the dashboard and edit its content — adding or removing widgets, changing a chart type, or using filters — within the data sources already set on the dashboard; edits save automatically. An Editor cannot delete the dashboard, manage who has access to it, or transfer its ownership.',
+  'مشاهد': 'Viewer', 'صلاحية العرض': 'View access',
+  'يقتصر دوره على فتح اللوحة والاطّلاع على بياناتها ورسومها البيانية، دون أي إمكانية للتعديل — لكنه يظل يرى بيانات حيّة لا مجمَّدة: يمكنه الضغط على زر «🔄 تحديث» في أي وقت لإعادة تنفيذ استعلامات اللوحة وجلب أحدث البيانات المتاحة، تمامًا كما يفعل المالك أو المحرِّر.':
+    'Can only open the dashboard and view its data and charts, with no ability to edit — but the data they see is still live, not frozen: they can click "🔄 Refresh" at any time to re-run the dashboard\'s queries and pull the latest available data, exactly like the Owner or an Editor can.',
+  'ما الفرق بين المشاهد على اللوحة النشطة ورابط المشاركة؟': "What's the difference between a Viewer on an Active Dashboard and a share link?",
+  'المشاهد على لوحة نشطة يرى نفس اللوحة الحيّة التي يراها المالك والمحرِّرون، ويمكنه الضغط على «🔄 تحديث» في أي وقت للحصول على أحدث البيانات المتوفرة فعليًا.':
+    'A Viewer on an Active dashboard sees the exact same live dashboard the Owner and Editors do, and can click "🔄 Refresh" at any time to get the latest data actually available.',
+  'أما <b>رابط المشاركة</b> فهو لقطة ثابتة (Snapshot) من اللوحة في لحظة إنشاء الرابط فقط — لا يحتوي على زر تحديث، ولا يعكس أي تغيير يطرأ على البيانات لاحقًا، حتى لو تغيّرت الأرقام الفعلية في الأنظمة المصدر بعد ذلك. فرابط المشاركة يناسب مشاركة نتيجة لحظة زمنية محددة (كتقرير شهري ثابت)، بينما صلاحية المشاهد على اللوحة النشطة تناسب من يحتاج متابعة البيانات باستمرار وهي محدَّثة.':
+    'A <b>share link</b>, on the other hand, is a frozen snapshot of the dashboard at the moment the link was created — it has no refresh button and never reflects any later change to the data, even if the real numbers in the source systems change afterward. A share link suits sharing a fixed point-in-time result (like a static monthly report), while Viewer access on an Active dashboard suits someone who needs to keep following the data as it updates.',
+  'من يملك صلاحية تغيير مصدر البيانات؟': "Who can change the dashboard's data source?",
+  'المالك وحده يملك هذه الصلاحية؛ أما المحرِّر فيمكنه التعديل على العرض والتحليل ضمن المصادر القائمة فقط، دون أن يتمكّن من إقحام مصدر بيانات جديد على اللوحة.':
+    'Only the Owner has this ability; an Editor can only adjust the view/analysis within the existing sources, without being able to introduce a new data source into the dashboard.',
+  'السبب في ذلك مرتبط مباشرةً بالمبدأ الذي تقوم عليه اللوحة النشطة: بما أن تنفيذ الاستعلام يتم دائمًا وفق صلاحية المالك، فإن أي إضافة لمصدر بيانات جديد تستلزم بالضرورة أن يمتلك المالك نفسه صلاحية وصول سارية عليه. لو سُمح للمحرِّر بإضافة مصدر لا يملك المالك صلاحية عليه، لتعطّلت اللوحة فورًا لجميع المستخدمين — وهو ما يتعارض مع الغرض من التعديل أصلًا. لذلك، فإن أي تغييرٍ يمسّ نطاق مصادر البيانات يبقى قرارًا يخصّ المالك حصرًا، تمامًا كصلاحيات إدارة الوصول ونقل الملكية.':
+    "This ties directly to the principle an Active dashboard runs on: since queries always execute under the Owner's own access, adding any new data source necessarily requires the Owner to already have valid access to it. If an Editor could add a source the Owner has no access to, the dashboard would break instantly for every user — defeating the whole point of the edit. So any change touching the dashboard's data-source scope stays the Owner's decision alone, just like managing access and transferring ownership.",
+  'الرابط': 'Link', 'الإنشاء / الانتهاء': 'Created / Expires', 'المشاهدات': 'Views', 'الحالة': 'Status',
+  '+ مستخدم جديد': '+ New user', 'طريقة الدخول': 'Sign-in method',
+  // ---- settings ----
+  'إعداد على مستوى النظام بالكامل': 'A System-Wide Setting',
+  'الموديل المختار هنا هو نفسه اللي بيجاوب على أسئلة كل المستخدمين في النظام — مش إعداد شخصي لكل مستخدم على حدة، وأي تغيير يسري فورًا على أول سؤال جديد بعد الحفظ.':
+    "The model chosen here is the same one that answers every user's questions across the system — not a per-user personal setting — and any change takes effect immediately on the next new question after saving.",
+  'الموديل المستخدم حاليًا': 'Currently Active Model', 'جارٍ التحميل…': 'Loading…',
+  'تغيير الموديل': 'Change Model', 'الموديل الداخلي (Ollama)': 'Internal Model (Ollama)',
+  'موديل OpenAI': 'OpenAI Model', '✓ تم الحفظ': '✓ Saved', 'حفظ التغييرات': 'Save Changes',
+  'نموذج قراءة المستندات (PDF)': 'Document Reader Model (PDF)',
+  'يُستخدم وقت رفع أي ملف PDF جديد ليقرأ صفحاته كصور — بما فيها\n        صفحة ممسوحة ضوئيًا أو جدول/رسم بياني مضمّن — بدل الاكتفاء باستخراج النص الرقمي فقط.\n        إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لكل غرض.\n        لو فشلت القراءة بالذكاء الاصطناعي لأي سبب، يرجع النظام تلقائيًا للاستخراج النصي العادي\n        بدل ما يفشل الرفع بالكامل.':
+    'Used when a new PDF is uploaded, to read its pages as images — including\n        a scanned page or an embedded table/chart — instead of only extracting the digital text layer.\n        A setting fully independent from "Currently Active Model" above: you can choose a different model for each purpose.\n        If AI reading fails for any reason, the system automatically falls back to plain text extraction\n        instead of failing the whole upload.',
+  'معلومات عن الموديلات المتاحة': 'About the Available Models',
+  'مناسب للتحليل الدقيق والأسئلة المركّبة اللي تحتاج فهم وربط بين أكثر من مصدر بيانات في نفس الوقت.':
+    'Well-suited to precise analysis and complex questions that need understanding and connecting more than one data source at once.',
+  'بديل سريع وقوي، مع إمكانية اختيار موديل محدد من قائمة الموديلات المتاحة في الإعدادات.':
+    'A fast, capable alternative, with the option to pick a specific model from the list available in settings.',
+  'يعمل على خوادم المؤسسة نفسها دون إرسال أي بيانات لجهة خارجية — الخيار الأنسب للبيانات الحساسة، مع إمكانية اختيار حجم الموديل.':
+    "Runs on the organization's own servers without sending any data to a third party — the best choice for sensitive data, with a choice of model size.",
+  // ---- share / roles / rename / wizard / user modals ----
+  'مشاركة اللوحة': 'Share Dashboard',
+  'أي شخص معه الرابط يقدر يفتح نسخة ثابتة (لحظة إنشاء الرابط) من اللوحة — بدون تسجيل دخول. النسخة لا تتحدث لاحقًا.':
+    'Anyone with the link can open a fixed snapshot (as of when the link was created) of the dashboard — no sign-in needed. The snapshot never updates afterward.',
+  'انتهاء الرابط': 'Link Expiry', 'بعد 24 ساعة': 'After 24 hours', 'بعد 7 أيام': 'After 7 days',
+  'بعد 30 يومًا': 'After 30 days', 'بعد 60 يومًا': 'After 60 days', 'بعد 90 يومًا': 'After 90 days',
+  'تاريخ محدد…': 'Specific date…', '🔗 إنشاء الرابط': '🔗 Create Link', 'نسخ': 'Copy',
+  'لإدارة روابط المشاركة السابقة (الإلغاء، متابعة عدد المشاهدات) —': 'To manage previous share links (revoke, track view counts) —',
+  'روابط المشاركة ←': 'Share Links ←', 'إدارة صلاحيات اللوحة': 'Manage Dashboard Permissions',
+  'المالك:': 'Owner:', 'نقل الملكية': 'Transfer Ownership',
+  'المالك الجديد لازم يكون بالفعل عنده صلاحية وصول للبيانات اللي تعتمد عليها هذه اللوحة.':
+    'The new Owner must already have access to the data this dashboard depends on.',
+  'محررون ومشاهدون': 'Editors and Viewers', 'تعديل الاسم والوصف': 'Edit Name and Description',
+  'إضافة عنصر': 'Add Widget', '→ رجوع': '→ Back', 'التالي': 'Next',
+  'مستخدم جديد': 'New User', 'الاسم المعروض': 'Display Name',
+  'محلي (اسم مستخدم وكلمة مرور)': 'Local (username & password)',
+  'مستخدم عادي': 'Regular User', 'مسؤول': 'Admin', 'الحساب نشط': 'Account active',
+  'الوصول لكل الأنظمة': 'Access to all systems',
+  'صلاحيات الملفات بتتحدد من مستودع الملفات نفسه (زر 🔒 على كل ملف)، مش من هنا.':
+    'File permissions are set from the file repository itself (the 🔒 button on each file), not from here.',
+
+  // ---- dynamic: shared small words / connectors ----
+  'الكل': 'All', 'أخرى': 'Other', 'الإجمالي': 'Total', 'عام': 'General',
+  '٪': '%', '، ': ', ', ' من ': ' of ',
+
+  // ---- dynamic: theme / lang toggle titles set from JS ----
+  'التبديل للوضع الداكن': 'Switch to dark mode', 'التبديل للوضع الفاتح': 'Switch to light mode',
+
+  // ---- dynamic: widget source popover ----
+  'المؤشر': 'Metric', 'مجمّع حسب': 'Grouped by', 'الفترة': 'Period',
+  'مصدر البيانات': 'Data Source', 'طريقة الحساب': 'Calculation Method',
+  'غير متأثر بالفلتر': 'Not affected by filters',
+  'هذا العنصر مش مبني على استعلام قابل لإعادة التنفيذ، فمش بيتفلتر تلقائيًا.':
+    "This widget isn't built on a re-runnable query, so it isn't filtered automatically.",
+
+  // ---- dynamic: forecast ----
+  '✕ إخفاء التوقع': '✕ Hide Forecast', '🔮 توقّع الأشهر الجاية': '🔮 Forecast Upcoming Months',
+  'جارٍ التوقع…': 'Forecasting…', 'تعذّر التوقع': "Couldn't generate the forecast",
+  'تعذّر حساب التوقع: ': "Couldn't calculate the forecast: ",
+  'الحد الأعلى للتوقع': 'Forecast Upper Bound', 'الحد الأدنى للتوقع': 'Forecast Lower Bound',
+  'متوقّع': 'Forecast', 'انحدار خطي مع تعديل موسمي': 'Linear regression with seasonal adjustment',
+  'انحدار خطي': 'Linear regression', '🔮 توقّع إحصائي (': '🔮 Statistical Forecast (',
+  'نقطة إضافية مجمّعة ضمن الرسم': 'additional point(s) grouped into the chart',
+
+  // ---- dynamic: widget menu (⋮) ----
+  'خيارات العنصر': 'Widget Options', '🔀 تغيير نوع الرسم': '🔀 Change Chart Type',
+  '↔️ تغيير الحجم': '↔️ Change Size', '📅 تغيير الفترة': '📅 Change Period',
+  '📋 نسخ': '📋 Duplicate', '🗑️ حذف': '🗑️ Delete', 'حذف هذا العنصر؟': 'Delete this widget?',
+  'صغير': 'Small', 'عريض (عمودين)': 'Wide (2 columns)', 'واسع (3 أعمدة)': 'Extra Wide (3 columns)',
+  'عرض كامل': 'Full Width', 'الحجم': 'Size', 'نوع الرسم': 'Chart Type',
+  '📊 أعمدة': '📊 Bar', '📈 خط': '📈 Line', '🥧 دائري': '🥧 Pie', '📋 جدول': '📋 Table',
+  '🔢 مؤشر': '🔢 KPI', '📶 جدول تقدم': '📶 Progress Table', '📉 مصفوفة اتجاهات': '📉 Trend Matrix',
+  '🚦 شريط حالة': '🚦 Status Bar', '🎯 مؤشر دائري': '🎯 Radial Gauge', '🎚️ مؤشر شريطي': '🎚️ Linear Gauge',
+  'جارٍ الحفظ…': 'Saving…', 'تعذّر الحفظ: ': "Couldn't save: ", 'تعذّر الحفظ': "Couldn't save",
+  'فشل الحفظ': 'Save failed', 'لوحة معلومات': 'Dashboard',
+
+  // ---- dynamic: add-widget wizard ----
+  'مقارنة': 'Comparison', 'اتجاه عبر الزمن': 'Trend Over Time', 'مؤشر رئيسي': 'Key Metric',
+  'توزيع': 'Distribution', 'جدول': 'Table',
+  'هذا الشهر': 'This Month', 'الشهر الماضي': 'Last Month', 'آخر 3 أشهر': 'Last 3 Months',
+  'آخر 6 أشهر': 'Last 6 Months', 'هذا العام': 'This Year', 'كل البيانات': 'All Data', 'مخصص': 'Custom',
+  'ماذا تريد أن تضيف؟': 'What would you like to add?', 'جارٍ التحميل…': 'Loading…',
+  'لا تتوفر بيانات كافية لإنشاء هذا العنصر.<br>': "There isn't enough data to create this widget.<br>",
+  'فعّل مصدرًا من قائمة «المصادر» أعلى الصفحة أو ارفع ملفًا في مستودع الملفات.':
+    'Enable a source from the "Sources" menu above, or upload a file to the file repository.',
+  'من أي مصدر بيانات؟': 'Which data source?', 'توزيع حسب ماذا؟': 'Distribution by what?',
+  'مقارنة ماذا؟': 'Compare what?', 'ماذا تريد قياسه؟': 'What would you like to measure?',
+  'الفترة؟': 'Which period?', 'حدد الفترة': 'Select the Period',
+  'من': 'From', 'إلى': 'To',
+  'التجميع؟': 'Group by?', 'يوميًا': 'Daily', 'أسبوعيًا': 'Weekly', 'شهريًا': 'Monthly',
+  'اختر الأعمدة': 'Select Columns', 'تحديث الفترة': 'Update Period', 'إضافة العنصر': 'Add Widget',
+  'جارٍ تجهيز المعاينة…': 'Preparing preview…', '💾 تحديث': '💾 Update', '➕ إضافة': '➕ Add',
+  'تعذّر التنفيذ': "Couldn't run the query", 'تعذّر تنفيذ الاستعلام.': "Couldn't run the query.",
+  'لا يوجد بيانات': 'No data available',
+
+  // ---- dynamic: comparison / progress-table / trend-matrix / status-bar widgets ----
+  'التقدّم': 'Progress', 'الاتجاه': 'Trend', 'الفترة الأولى': 'First Period',
+  'الفترة الثانية': 'Second Period', 'البند': 'Item', 'القيمة': 'Value', 'التفاصيل': 'Details',
+  'العدد': 'Count',
+
+  // ---- dynamic: export ----
+  'جارٍ التصدير…': 'Exporting…', 'فشل التصدير': 'Export failed',
+  'تعذّر تصدير العرض التقديمي: ': "Couldn't export the presentation: ",
+
+  // ---- dynamic: dashboard toolbar / filters / sources summary ----
+  'جارٍ التحديث…': 'Refreshing…',
+  'هذه اللوحة معطّلة حاليًا.': 'This dashboard is currently disabled.',
+  '🗄️ مصادر البيانات:': '🗄️ Data Sources:',
+  '✕ مسح كل الفلاتر': '✕ Clear All Filters', 'اضغط لإزالة هذا الفلتر': 'Click to remove this filter',
+  'نشطة': 'Active', '⚙️ إدارة الصلاحيات': '⚙️ Manage Permissions',
+
+  // ---- dynamic: chat panel ----
+  'قراءة بصوت عالٍ': 'Read aloud',
+  'اسأل سؤالاً عن بياناتك وسيبني لك المساعد لوحة معلومات.':
+    'Ask a question about your data and the assistant will build you a dashboard.',
+  'جرّب: «ما إجمالي الإيرادات حسب المنطقة؟»': 'Try: "What is total revenue by region?"',
+  'اسأل سؤالاً عن بياناتك': 'Ask a question about your data',
+  'مثال: «قارن الإيرادات بين المناطق» أو «أعطني تقريراً شاملاً»':
+    'Example: "Compare revenue by region" or "Give me a comprehensive report"',
+  '🔊 قراءة تلقائية': '🔊 Auto Read',
+  'محتاج إذن استخدام الميكروفون من المتصفح.': 'Microphone permission is needed from the browser.',
+  'مفيش ميكروفون متاح.': 'No microphone available.',
+  'تعذّر التعرف على الصوت: ': "Couldn't recognize speech: ",
+  'خليه شهري': 'Make it monthly', 'اعرض آخر 3 شهور بس': 'Show only the last 3 months',
+  'غيّر الرسم لخط بياني': 'Change the chart to a line chart',
+  'أضف رسم توزيع (Pie)': 'Add a distribution chart (Pie)', 'أضف جدول تفصيلي': 'Add a detailed table',
+  'اعمل تقرير شامل بدل كده': 'Make a comprehensive report instead',
+  'تعذّر تنفيذ الطلب': "Couldn't process the request",
+  'تعذّر الوصول إلى الخادم: ': "Couldn't reach the server: ",
+  'اسأل استفسارًا سريعًا عن بياناتك — إجابة نصية مباشرة، من غير بناء لوحة…':
+    'Ask a quick question about your data — a direct text answer, without building a dashboard…',
+  'ⓘ المصدر': 'ⓘ Source', '➕ أضف إلى لوحة المتابعة': '➕ Add to Follow-up Dashboard',
+  'اسأل استفسارًا وسيجاوبك المساعد بإجابة نصية مباشرة، من غير بناء لوحة.':
+    'Ask a question and the assistant will reply with a direct text answer, without building a dashboard.',
+  'جرّب: «كام إجمالي الإيرادات الشهر ده؟»': 'Try: "What is total revenue this month?"',
+  'تعذّر إضافة الإجابة إلى اللوحة': "Couldn't add the answer to the dashboard",
+
+  // ---- dynamic: sources dropdown / repository ----
+  'غير مربوط بعد': 'Not connected yet', '⟳ جلب': '⟳ Fetch',
+  'لا يوجد ملفات بعد — ارفع ملفات أولاً': 'No files yet — upload files first',
+  'تعذّر الجلب: ': "Couldn't fetch: ", 'لم يتم الجلب بعد — اضغط «جلب»': 'Not fetched yet — click "Fetch"',
+  ' سجل · آخر جلب ': ' records · last fetched ', '⟳ جارٍ الجلب…': '⟳ Fetching…',
+  'جارٍ الجلب من النظام…': 'Fetching from the system…', 'فشل الجلب': 'Fetch failed',
+  'لا يوجد مصادر': 'No sources', 'لا يوجد مصدر مفعّل': 'No source enabled',
+  'مصادر مفعّلة': 'sources enabled', 'صفحة': 'page(s)', 'صف': 'row(s)', 'عمود': 'column(s)',
+  'اليوم': 'Today', 'أمس': 'Yesterday', 'ملفك': 'Your file', 'لديك صلاحية': 'You have access',
+  '🔒 مقيّد': '🔒 Restricted', 'صلاحيات الملف': 'File Permissions',
+  'تحديث البيانات': 'Update Data', 'التفاصيل': 'Details', 'الملفات المرتبطة': 'Related Files',
+  'تنزيل الملف': 'Download File',
+  'لا يوجد ملفات في هذا التصنيف': 'No files in this category',
+  'لا يوجد ملفات ': 'No files ', 'في هذا التصنيف': 'in this category', 'في المستودع بعد': 'in the repository yet',
+  '. ارفع ملفاً من الأعلى.': '. Upload a file from above.',
+  'في المستودع بعد. ارفع ملفاً من الأعلى.': 'in the repository yet. Upload a file from above.',
+  'اسم العرض (إجباري)': 'Display name (required)', 'وصف مختصر': 'Short description',
+  'التصنيف (مثلاً: المالية)': 'Category (e.g. Finance)', 'حفظ في المستودع': 'Save to Repository',
+  'اسم العرض إجباري.': 'Display name is required.', 'جارٍ الحفظ: ': 'Saving: ',
+  'جارٍ رفع ': 'Uploading ', ' ملف وتحليل محتواه…': ' file(s) and analyzing content…',
+  'جارٍ قراءة "': 'Reading "', '" بالموديل الداخلي — صفحة ': '" with the internal model — page ',
+  ' من ': ' of ', 'تعذّر الرفع': 'Upload failed', 'تعذّر قراءة الملف.': "Couldn't read the file.",
+  'فشل التحديث': 'Update failed', 'تعذّر تحديث بيانات الملف: ': "Couldn't update the file's data: ",
+  'حذف "': 'Delete "', '" من المستودع؟ لا يمكن التراجع عن هذا.': '" from the repository? This cannot be undone.',
+  'ليس لديك صلاحية حذف هذا الملف — الحذف مقصور على من رفعه أو على المسؤول.':
+    "You don't have permission to delete this file — only the uploader or an admin can delete it.",
+  'تعذّر حذف الملف': "Couldn't delete the file", 'تعذّر حفظ التفاصيل.': "Couldn't save the details.",
+  'لا نتائج.': 'No results.', 'إزالة': 'Remove',
+  'لا يوجد مستخدمون إضافيون بعد.': 'No additional users yet.',
+  'تعذّر حفظ الصلاحيات.': "Couldn't save the permissions.",
+  'تعذّر العثور على هذا الملف — يبدو أنه حُذف أو تحدّث. أعد فتح صلاحياته من قائمة الملفات.':
+    "Couldn't find this file — it may have been deleted or updated. Reopen its permissions from the file list.",
+  'تعذّر تحميل صلاحيات الملف الحالية.': "Couldn't load the file's current permissions.",
+  'لا يوجد ملفات أخرى': 'No other files',
+  'العمود المشترك: ': 'Shared column: ', 'إزالة الربط': 'Remove Link',
+  'لا يوجد ملفات مرتبطة بعد.': 'No related files yet.',
+  'اختر ملفًا واكتب اسم العمود المشترك.': 'Choose a file and enter the shared column name.',
+  'تعذّر إضافة الربط.': "Couldn't add the link.",
+
+  // ---- dynamic: history / active dashboards / share links ----
+  ' لوحة محفوظة': ' saved dashboard(s)', 'لا يوجد لوحات محفوظة بعد': 'No saved dashboards yet',
+  'مسودة': 'Draft', '⚠️ معطّلة': '⚠️ Disabled', 'المالك: ': 'Owner: ',
+  'تفعيل': 'Activate', 'عنصر': 'widget(s)', 'فتح': 'Open',
+  'لا يوجد لوحات محفوظة بعد — أي سؤال تسأله يُحفظ هنا تلقائياً.': 'No saved dashboards yet — every question you ask is saved here automatically.',
+  ' لوحة نشطة': ' active dashboard(s)', 'لا يوجد لوحات نشطة بعد': 'No active dashboards yet',
+  '⚠ معطّلة': '⚠ Disabled', 'تعديل الاسم والوصف': 'Edit Name and Description',
+  'إدارة الصلاحيات': 'Manage Permissions',
+  'لا يوجد لوحات نشطة بعد — فعّل لوحة من تبويب "السجل" لتظهر هنا.':
+    'No active dashboards yet — activate a dashboard from the "History" tab for it to appear here.',
+  'تعذّر تفعيل اللوحة.': "Couldn't activate the dashboard.", 'تعذّر الوصول إلى الخادم.': "Couldn't reach the server.",
+  'حذف هذه اللوحة من السجل؟': 'Delete this dashboard from history?',
+  'تعذّر تحميل الصلاحيات.': "Couldn't load the permissions.",
+  'لا يوجد محررون أو مشاهدون بعد.': 'No editors or viewers yet.',
+  'تعذّر إضافة الدور.': "Couldn't add the role.",
+  'نقل ملكية اللوحة إلى ': 'Transfer dashboard ownership to ', '؟': '?',
+  'تعذّر نقل الملكية.': "Couldn't transfer ownership.",
+  'الاسم مطلوب.': 'Name is required.', 'مسح كل السجل؟ لا يمكن التراجع عن هذا.': 'Clear all history? This cannot be undone.',
+  'إظهار لوحة المحادثة': 'Show Chat Panel',
+  'الملف يجب أن يكون صورة.': 'The file must be an image.',
+  'حجم الصورة كبير جداً (الحد الأقصى 15MB).': 'The image is too large (15MB maximum).',
+  'تعذّر قراءة الصورة.': "Couldn't read the image.",
+  'يجب تفعيل اللوحة أولاً قبل مشاركتها.': 'The dashboard must be activated before sharing it.',
+  'فعّل اللوحة أولاً قبل مشاركتها — زر «✅ تفعيل اللوحة» بجانبه.':
+    'Activate the dashboard first before sharing it — see the "✅ Activate Dashboard" button next to it.',
+  'جارٍ الإنشاء…': 'Creating…', 'فشل إنشاء الرابط': 'Failed to create the link',
+  'تعذّر إنشاء رابط المشاركة: ': "Couldn't create the share link: ", 'تم النسخ ✓': 'Copied ✓',
+  'أُلغي': 'Revoked', 'منتهي': 'Expired', 'نشط': 'Live',
+  'جارٍ التحميل…': 'Loading…',
+  ' رابط مشاركة': ' share link(s)', 'لا يوجد روابط مشاركة بعد': 'No share links yet',
+  'لا يوجد روابط مشاركة بعد — أنشئ رابطًا من زر "🔗 مشاركة" على أي لوحة.':
+    'No share links yet — create one from the "🔗 Share" button on any dashboard.',
+  'بدون انتهاء': 'Never expires', 'إلغاء الرابط': 'Revoke Link', 'نسخ الرابط': 'Copy Link',
+  'ينتهي: ': 'Expires: ', 'مشاهدة': 'view(s)', 'حذف رابط المشاركة هذا؟': 'Delete this share link?',
+  'تعذّر تحميل الروابط.': "Couldn't load the links.",
+  'رابط غير نشط': 'Inactive Link', 'رابط غير نشط — لوحة مشاركة': 'Inactive Link — Shared Dashboard',
+  'هذا الرابط لم يعد نشطًا.': 'This link is no longer active.',
+  'تواصل مع ': 'Contact ', ' للحصول على رابط جديد.': ' to get a new link.', 'صاحب الرابط': 'the link owner',
+  'الرابط غير موجود أو تم حذفه.': "The link doesn't exist or was deleted.",
+  'تعذّر التحميل': "Couldn't load", ' — لوحة مشاركة': ' — Shared Dashboard',
+
+  // ---- dynamic: settings ----
+  'مسؤول': 'Admin', 'مستخدم': 'User', 'الموديل الداخلي (Ollama)': 'Internal Model (Ollama)',
+  'تعذّر تحميل إعدادات الموديل.': "Couldn't load the model settings.",
+  'معطّل (استخراج نص عادي فقط)': 'Disabled (plain text extraction only)',
+  '⚠️ قد لا يدعم الصور — لو فشل بيرجع تلقائيًا لقراءة PdfPig العادية':
+    '⚠️ May not support images — falls back automatically to regular PdfPig reading on failure',
+  'مُعد': 'Configured', 'غير مُعد': 'Not Configured', 'فشل الحفظ': 'Save failed',
+  'تعذّر تحميل قائمة الموديلات.': "Couldn't load the model list.",
+  'مُعد على الخادم': 'Configured on the server', 'غير مُعد على الخادم': 'Not configured on the server',
+  'تعذّر تسجيل الدخول.': "Couldn't sign in.",
+
+  // ---- dynamic: onboarding tour ----
+  '👋 مرحبًا بك': '👋 Welcome',
+  'جولة موجزة تتناول أهم صفحات النظام. يمكنك تخطّيها الآن، وإعادة تشغيلها في أي وقت لاحقًا من الزر ❓ أعلى الصفحة.':
+    'A short tour of the system\'s main pages. You can skip it now and replay it any time later from the ❓ button at the top of the page.',
+  '💬 المحادثة': '💬 Chat',
+  'الصفحة الرئيسية: اكتب سؤالك بلغة عربية طبيعية عن بياناتك، ويقوم النظام ببناء لوحة معلومات تفاعلية فورًا.':
+    'The main page: type your question about your data in natural language, and the system builds an interactive dashboard instantly.',
+  '🧭 بناء اللوحة / الاستفسارات': '🧭 Build Dashboard / Inquiries',
+  '«بناء اللوحة» يحوّل سؤالك إلى عناصر رسومية وجداول. أما «الاستفسارات» فيقدّم إجابة نصية سريعة دون بناء لوحة — مناسب للأسئلة المباشرة.':
+    '"Build Dashboard" turns your question into charts and tables. "Inquiries" gives a quick text answer without building a dashboard — suited to direct questions.',
+  '📁 مصادر البيانات': '📁 Data Sources',
+  'من هنا يمكن التحكم في الأنظمة أو الملفات المفعّلة وقت السؤال، واقتصار البحث على مصدر معيّن عند الحاجة.':
+    'From here you can control which systems or files are enabled when asking a question, and restrict the search to a specific source when needed.',
+  '📎 مستودع الملفات': '📎 File Repository',
+  'من هذه الصفحة تُرفع ملفات Excel أو CSV أو PDF، لتُستخدم كمصدر بيانات يمكن الاستفسار عنه أسوة بأي نظام متصل.':
+    'From this page you upload Excel, CSV, or PDF files, to be used as a data source you can query just like any connected system.',
+  '🕘 السجل': '🕘 History',
+  'يضم جميع اللوحات التي سبق إنشاؤها، ويتيح العودة إلى أي منها لمتابعة العمل عليها أو تعديلها.':
+    'Holds every dashboard you have created, letting you return to any of them to continue working on it or edit it.',
+  '✅ اللوحات النشطة': '✅ Active Dashboards',
+  'لوحات مفعّلة يمكن مشاركتها مع فريق العمل بأدوار مختلفة (مالك/محرر/مشاهد)، وتظل بياناتها تتحدّث تلقائيًا من المصدر الحي.':
+    'Activated dashboards that can be shared with your team under different roles (Owner/Editor/Viewer), and whose data keeps updating automatically from the live source.',
+  '🔗 روابط المشاركة': '🔗 Share Links',
+  'روابط ثابتة لمشاركة نسخة لحظية من لوحة مع أي شخص، دون الحاجة إلى تسجيل الدخول.':
+    'Fixed links for sharing a snapshot of a dashboard with anyone, without needing to sign in.',
+  '👥 المستخدمون': '👥 Users',
+  'إدارة حسابات المستخدمين وأدوارهم والأنظمة المسموح لهم بالوصول إليها.':
+    'Manage user accounts, their roles, and the systems they are allowed to access.',
+  '⚙️ الإعدادات': '⚙️ Settings',
+  'التحكم في نموذج الذكاء الاصطناعي المستخدم لبناء اللوحات، وفي نموذج قراءة ملفات PDF بشكل مستقل عنه.':
+    'Control the AI model used to build dashboards, and the PDF-reading model independently of it.',
+  '📊 الاستهلاك': '📊 Usage',
+  'سجل تفصيلي لكل سؤال أُرسل إلى النموذج: عدد التوكنز المستخدمة، التكلفة التقديرية، والمستخدم الذي طرح السؤال.':
+    'A detailed log of every question sent to the model: tokens used, estimated cost, and the user who asked it.',
+  '❓ هل تحتاج إلى الدليل مرة أخرى؟': '❓ Need the guide again?',
+  'اضغط هذا الزر في أي وقت لإعادة عرض هذا الدليل من البداية.':
+    'Click this button any time to replay this guide from the start.',
+  'السابق': 'Previous', 'إنهاء': 'Finish', 'تخطّي الدليل': 'Skip Guide',
+
+  // ---- dynamic: users screen ----
+  ' مستخدم': ' user(s)', 'محلي': 'Local', 'نظام': 'system(s)', 'كل الأنظمة': 'All Systems',
+  'الأنظمة': 'Systems', 'حذف': 'Delete',
+  'نشط': 'Active', 'معطّل': 'Disabled', 'تعديل': 'Edit',
+  'لا يوجد عناصر بعد': 'No items yet',
+  'مستخدم جديد': 'New User', '(اتركها فاضية لعدم التغيير)': "(leave blank to keep it unchanged)",
+  'فشل الحفظ': 'Save failed',
+};
+const I18N_ENTRIES = Object.entries(I18N_EN).sort((a, b) => b[0].length - a[0].length);
+
+const ARABIC_CHARS_RE = /[؀-ۿ]/;
+
+function translateText(text) {
+  let result = text;
+  for (const [ar, en] of I18N_ENTRIES) {
+    if (result.indexOf(ar) !== -1) result = result.split(ar).join(en);
+  }
+  // A short dictionary entry (e.g. a single word) can substring-match inside a longer
+  // Arabic sentence that isn't itself in the dictionary yet, leaving a garbled mix of
+  // English and Arabic. Only accept the translation once no Arabic script remains —
+  // otherwise keep the original text untranslated rather than show broken output.
+  if (ARABIC_CHARS_RE.test(result)) return text;
+  return result;
+}
+
+const I18N_ATTRS = ['placeholder', 'title', 'aria-label'];
+
+function translateNode(node) {
+  if (!node) return;
+  if (node.nodeType === Node.TEXT_NODE) {
+    const t = translateText(node.textContent);
+    if (t !== node.textContent) node.textContent = t;
+    return;
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return;
+  if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') return;
+  I18N_ATTRS.forEach(attr => {
+    const v = node.getAttribute && node.getAttribute(attr);
+    if (v) {
+      const t = translateText(v);
+      if (t !== v) node.setAttribute(attr, t);
+    }
+  });
+  node.childNodes.forEach(translateNode);
+}
+
+// English mode: translate whatever the server already sent in the initial HTML first (nav
+// labels, static modal markup — everything before any JS has rendered a single thing), then
+// keep translating everything the app renders afterward. Every screen (chat, dashboard,
+// repository, wizard, popovers…) builds fresh Arabic DOM straight from JS on its own
+// schedule, so a live observer catches all of it without needing a hook added to each one
+// individually.
+if (document.documentElement.getAttribute('lang') === 'en') {
+  document.addEventListener('DOMContentLoaded', () => translateNode(document.body));
+  new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      if (m.type === 'characterData') { translateNode(m.target); return; }
+      if (m.type === 'attributes') {
+        const v = m.target.getAttribute && m.target.getAttribute(m.attributeName);
+        if (v) {
+          const t = translateText(v);
+          if (t !== v) m.target.setAttribute(m.attributeName, t);
+        }
+        return;
+      }
+      m.addedNodes.forEach(translateNode);
+    });
+  }).observe(document.documentElement, {
+    childList: true, subtree: true, characterData: true,
+    attributes: true, attributeFilter: I18N_ATTRS,
+  });
+  // alert()/confirm() are native browser dialogs, not DOM nodes — the observer above can
+  // never reach their text, so their message is translated here instead.
+  const nativeAlert = window.alert.bind(window);
+  window.alert = (msg) => nativeAlert(translateText(String(msg)));
+  const nativeConfirm = window.confirm.bind(window);
+  window.confirm = (msg) => nativeConfirm(translateText(String(msg)));
+}
+
 const state = {
+  lang: document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'ar',
   messages: [], dashboard: null, loading: false,
   // "الاستفسارات" sub-tab: fully isolated from the dashboard-building chat above — its own
   // message log, never touches state.dashboard/currentHistoryId unless the user explicitly
@@ -4296,6 +4756,13 @@ function repoCategories() {
 // mockup uses for "آخر تحديث" and the "لم يُستخدم منذ..." staleness hint.
 function relTime(dateStr) {
   const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (state.lang === 'en') {
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    const months = Math.floor(diffDays / 30);
+    return months <= 1 ? 'A month ago' : `${months} months ago`;
+  }
   if (diffDays <= 0) return 'اليوم';
   if (diffDays === 1) return 'أمس';
   if (diffDays < 30) return `قبل ${diffDays} يوم`;
@@ -5952,6 +6419,24 @@ el('theme-toggle').addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   el('theme-toggle').textContent = current === 'light' ? '🌙' : '☀️';
   el('theme-toggle').title = current === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
+})();
+
+// Language switch reloads the page rather than re-rendering in place — every screen (chat,
+// dashboard, repository, history, settings…) builds its own Arabic strings straight from
+// JS, with no single re-render entry point that touches all of them at once the way
+// renderDashboard() does for the theme. A reload re-runs the whole boot sequence with
+// translateNode()'s MutationObserver (see I18N_EN below) already attached from the very
+// first paint, so everything comes up translated consistently instead of needing dozens of
+// call sites each manually re-invoked.
+el('lang-toggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('lang') === 'en' ? 'ar' : 'en';
+  try { localStorage.setItem('chatToDashboardLang', next); } catch {}
+  location.reload();
+});
+(() => {
+  const current = document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'ar';
+  el('lang-toggle').textContent = current === 'en' ? 'AR' : 'EN';
+  el('lang-toggle').title = current === 'en' ? 'التبديل للعربية' : 'Switch to English';
 })();
 
 // ---------- guided tour ----------
