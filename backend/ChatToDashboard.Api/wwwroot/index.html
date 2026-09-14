@@ -341,6 +341,19 @@ tr:last-child td{border-bottom:0}
 .status-badge.warning{background:color-mix(in srgb, var(--amber) 16%, transparent);color:var(--amber)}
 .status-badge.ontrack{background:var(--accent-soft);color:var(--accent)}
 
+/* ---------- linear-gauge ---------- */
+.widget.linear-gauge{grid-column:span 2}
+.lg-cell{display:flex;align-items:center;gap:12px;font-family:var(--body);white-space:normal}
+.lg-track{flex:1;height:6px;border-radius:999px;background:var(--plane);position:relative}
+.lg-fill{height:100%;border-radius:999px;position:relative;min-width:6px}
+.lg-handle{position:absolute;inset-inline-end:-7px;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;border-radius:50%;background:var(--surface);border:3px solid;box-sizing:border-box}
+.lg-value{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);width:56px;
+  text-align:end;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* ---------- radial-gauge ---------- */
+.rg-caption{text-align:center;color:var(--ink-2);font-size:12.5px;margin-top:-8px}
+
 /* ---------- comparison layout (two widgets of the same type, side by side) ---------- */
 .comparison-wrap{background:transparent;border:0;box-shadow:none;padding:0}
 .comparison-wrap>.widget-head{margin-bottom:12px}
@@ -1487,7 +1500,7 @@ function applyTheme(name) {
 // The model only ever controls widget content (type/title/data) — never layout or
 // style. Anything outside this whitelist renders as a table instead of risking a
 // broken grid or a crash on an unexpected type.
-const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table', 'progress-table', 'trend-matrix', 'status-bar'];
+const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table', 'progress-table', 'trend-matrix', 'status-bar', 'radial-gauge', 'linear-gauge'];
 // Defense in depth: regardless of what the system prompt asked the model to do, a
 // chart never renders more than this many points — the overflow is folded into one
 // summed "+N more" bucket instead of an unreadably dense chart.
@@ -1759,6 +1772,7 @@ function renderWidgetMenuType(menu, w) {
   const types = [
     ['bar', '📊 أعمدة'], ['line', '📈 خط'], ['pie', '🥧 دائري'], ['table', '📋 جدول'], ['kpi', '🔢 مؤشر'],
     ['progress-table', '📶 جدول تقدم'], ['trend-matrix', '📉 مصفوفة اتجاهات'], ['status-bar', '🚦 شريط حالة'],
+    ['radial-gauge', '🎯 مؤشر دائري'], ['linear-gauge', '🎚️ مؤشر شريطي'],
   ];
   menu.innerHTML = `<div class="menu-label">نوع الرسم</div>` +
     types.map(([v, l]) => `<button data-type="${v}"${v === w.type ? ' class="current"' : ''}>${l}</button>`).join('');
@@ -2637,6 +2651,9 @@ function buildMultiSeriesChart(card, w, type) {
   const dark = document.documentElement.getAttribute('data-theme') !== 'light';
   const isLine = type === 'line';
   const stacked = !isLine && !!w.stacked;
+  // areaFill (see AnalyticsTools.cs) — overlapping translucent gradient fills under each
+  // series ("mountain" style) instead of plain crossing lines. line-only; bar ignores it.
+  const areaFill = isLine && !!w.areaFill;
   const apexSeries = w.series.map(s => ({ name: s.label || s.key, data: capped.map(r => num(r[s.key])) }));
 
   const holder = document.createElement('div');
@@ -2651,22 +2668,28 @@ function buildMultiSeriesChart(card, w, type) {
 
   const options = {
     chart: {
-      type: isLine ? 'line' : 'bar', height: '100%', width: '100%', stacked,
+      type: areaFill ? 'area' : (isLine ? 'line' : 'bar'), height: '100%', width: '100%', stacked,
       fontFamily: THEME.fontFamily, foreColor: THEME.tickColor, background: 'transparent',
       toolbar: { show: false },
       animations: { enabled: true, easing: 'easeout', speed: 450, animateGradually: { enabled: true, delay: 60 } },
     },
     series: apexSeries,
     colors: THEME.palette.slice(0, apexSeries.length),
-    dataLabels: {
+    // areaFill's overlapping mountains get cluttered fast with a value label on every
+    // point of every series — same reason the single-series area chart never has them.
+    dataLabels: areaFill ? { enabled: false } : {
       enabled: true, formatter: fmt,
       style: { fontSize: '10px', fontFamily: THEME.fontFamily, colors: [THEME.ink] },
       background: { enabled: false },
       offsetY: isLine ? -8 : 0,
     },
     stroke: isLine ? { curve: 'smooth', width: 2 } : { width: 0 },
-    markers: isLine ? { size: 4 } : {},
+    markers: areaFill ? { size: 0 } : (isLine ? { size: 4 } : {}),
     plotOptions: isLine ? {} : { bar: { borderRadius: 4, columnWidth: stacked ? '55%' : '70%' } },
+    // Same gradient recipe as the single-series area chart in chartConfig() — a soft fade
+    // toward transparent rather than a flat translucent fill, so overlapping series still
+    // read as layered "mountains" instead of one another's fills flattening into mud.
+    ...(areaFill ? { fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: .5, opacityTo: .05 } } } : {}),
     xaxis: {
       categories,
       labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
@@ -2796,9 +2819,90 @@ function StatusBarCard(w) {
   return card;
 }
 
+// ---------- new widget type: linear-gauge ----------
+// One continuous track + a round handle marker per row — deliberately NOT progress-table's
+// several discrete colored segments in one track: this is a single value/max measure per
+// row (e.g. each team's own % of its own target), not a composition breakdown.
+function LinearGaugeCard(w) {
+  const card = widgetShell(w, 'linear-gauge');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><tbody>${rows.map(r => {
+    const value = num(r.value);
+    const max = r.max != null ? num(r.max) : 100;
+    const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+    const color = toneColor(r.tone || 'accent');
+    const valueLabel = (r.max == null) ? `${fmt(value)}٪` : `${fmt(value)} / ${fmt(max)}`;
+    return `<tr><td>${esc(r.label ?? '—')}</td><td class="lg-cell">
+        <div class="lg-track"><div class="lg-fill" style="width:${pct}%;background:${color}">
+          <span class="lg-handle" style="border-color:${color}"></span>
+        </div></div>
+        <div class="lg-value">${esc(valueLabel)}</div>
+      </td></tr>`;
+  }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- new widget type: radial-gauge ----------
+// A single value/max ring — data is one object (like status-bar), never an array. The
+// percentage, the arc, and the center number are always computed/drawn here — the model
+// only ever supplies the raw value/max/label, same "never model-supplied" rule as
+// trend-matrix's trend arrow.
+function radialGaugeConfig(value, max, tone) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+  return {
+    chart: {
+      type: 'radialBar', height: '100%', width: '100%', fontFamily: THEME.fontFamily,
+      background: 'transparent',
+      animations: { enabled: true, easing: 'easeout', speed: 450 },
+    },
+    series: [pct],
+    colors: [toneColor(tone || 'accent')],
+    plotOptions: {
+      radialBar: {
+        hollow: { size: '62%' },
+        track: { background: THEME.gridColor, strokeWidth: '100%' },
+        dataLabels: {
+          name: { show: false },
+          value: {
+            show: true, fontSize: '28px', fontWeight: 700, fontFamily: THEME.fontFamily,
+            color: THEME.ink, offsetY: 10, formatter: () => Math.round(pct) + '٪',
+          },
+        },
+      },
+    },
+    stroke: { lineCap: 'round' },
+  };
+}
+function RadialGaugeCard(w) {
+  const card = widgetShell(w, 'radial-gauge');
+  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row || row.value == null) return emptyBody(card);
+  const value = num(row.value);
+  const max = row.max != null ? num(row.max) : 100;
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  if (row.label) {
+    const caption = document.createElement('div');
+    caption.className = 'rg-caption';
+    caption.textContent = row.label;
+    card.appendChild(caption);
+  }
+  // Never cross-filterable (see attachCrossFilterClick's own guard on `widget` being
+  // present in pendingCharts) — a single aggregate measure has no per-category dimension
+  // to filter the rest of the dashboard by, the same reason a forecast chart isn't either.
+  pendingCharts.push({ card, holder, options: radialGaugeConfig(value, max, row.tone) });
+  return card;
+}
+
 const WIDGET_COMPONENTS = {
   kpi: KpiCard, bar: BarChartCard, line: LineChartCard, pie: PieChartCard, table: TableCard,
   'progress-table': ProgressTableCard, 'trend-matrix': TrendMatrixCard, 'status-bar': StatusBarCard,
+  'radial-gauge': RadialGaugeCard, 'linear-gauge': LinearGaugeCard,
 };
 
 // ---------- comparison layout (not a 6th type — a display option any type can carry) ----------
@@ -3364,12 +3468,15 @@ function svgElementToPngDataUrl(svgEl, scale = 2) {
   });
 }
 
-// progress-table / trend-matrix / status-bar have no native PPTX shape of their own — the
-// backend builder only knows kpi / table / image. Rather than teaching it three more bespoke
-// layouts (or a native side-by-side layout for comparison), every one of them is flattened
-// into the same {columns, rows} table shape it already renders as an editable PowerPoint
-// table; a comparison widget is flattened into a two-column-by-side table regardless of the
-// type being compared. Best-effort but faithful to the real numbers — never blank.
+// progress-table / trend-matrix / status-bar / linear-gauge have no native PPTX shape of
+// their own — the backend builder only knows kpi / table / image. Rather than teaching it
+// four more bespoke layouts (or a native side-by-side layout for comparison), every one of
+// them is flattened into the same {columns, rows} table shape it already renders as an
+// editable PowerPoint table; a comparison widget is flattened into a two-column-by-side
+// table regardless of the type being compared. Best-effort but faithful to the real
+// numbers — never blank. radial-gauge needs none of this: it's ApexCharts-based (a
+// radialBar chart, see RadialGaugeCard), so it already falls through to the generic
+// chart-capture path below like bar/line/pie do.
 function comparisonToPptxInput(base, w) {
   const left = w.comparison.left || {};
   const right = w.comparison.right || {};
@@ -3450,6 +3557,17 @@ async function widgetToPptxInput(w, card) {
       ],
     };
   }
+  if (base.type === 'linear-gauge') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    return {
+      ...base, type: 'table',
+      columns: ['البند', 'القيمة'],
+      rows: rows.map(r => [String(r.label ?? ''), r.max != null ? `${fmt(r.value)} / ${fmt(r.max)}` : `${fmt(r.value)}٪`]),
+    };
+  }
+  // radial-gauge has no branch here — it's ApexCharts-based (radialBar, see
+  // RadialGaugeCard/radialGaugeConfig) and falls through to the generic chart-capture path
+  // below exactly like bar/line/pie do, no bespoke flattening needed.
   const chart = card?.__apexChart;
   const holder = card?.__apexHolder;
   if (!chart || !holder) return base;
@@ -4764,6 +4882,8 @@ function thumbCell(w, x, y, cw, ch) {
     case 'progress-table': inner = thumbProgressRows(ix, iy, iw, ih); break;
     case 'trend-matrix': inner = thumbTrendRows(ix, iy, iw, ih); break;
     case 'status-bar': inner = thumbChips(ix, iy, iw, ih); break;
+    case 'radial-gauge': inner = thumbRadialGauge(w, x + cw / 2, y + ch / 2, Math.min(iw, ih) / 2); break;
+    case 'linear-gauge': inner = thumbLinearGaugeRows(ix, iy, iw, ih); break;
     case 'comparison': inner = thumbComparisonBox(ix, iy, iw, ih); break;
     default: inner = thumbTableRows(ix, iy, iw, ih); break; // table and anything unrecognized
   }
@@ -4876,6 +4996,32 @@ function thumbTrendRows(x, y, iw, ih) {
     const yy = y + i * rh + rh / 2;
     out += `<circle cx="${(x + 3).toFixed(1)}" cy="${yy.toFixed(1)}" r="2" style="fill:${tones[i % tones.length]}"/>`;
     out += `<line x1="${(x + 9).toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw * 0.7).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--grid)" stroke-width="2.5"/>`;
+  }
+  return out;
+}
+
+function thumbRadialGauge(w, cx, cy, r) {
+  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  const value = num(row?.value), max = row?.max != null ? num(row.max) : 100;
+  // Capped just under a full turn — thumbArcPath's large-arc-flag math degenerates at
+  // exactly 360° (start and end point coincide, drawing nothing); a value at or over max
+  // still reads as "nearly full" rather than vanishing.
+  const pct = max > 0 ? Math.max(0, Math.min(0.999, value / max)) : 0;
+  const rIn = r * 0.6;
+  const track = `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${((r + rIn) / 2).toFixed(1)}" style="fill:none;stroke:var(--grid)" stroke-width="${(r - rIn).toFixed(1)}"/>`;
+  const arc = pct > 0 ? thumbArcPath(cx, cy, rIn, r, -90, -90 + pct * 360, 'var(--accent)') : '';
+  return track + arc;
+}
+
+function thumbLinearGaugeRows(x, y, iw, ih) {
+  const rows = 3, rh = ih / rows;
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2;
+    const pct = 0.35 + i * 0.22;
+    out += `<line x1="${x.toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--grid)" stroke-width="3" stroke-linecap="round"/>`;
+    out += `<line x1="${x.toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw * pct).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--accent)" stroke-width="3" stroke-linecap="round"/>`;
+    out += `<circle cx="${(x + iw * pct).toFixed(1)}" cy="${yy.toFixed(1)}" r="2.5" style="fill:var(--surface);stroke:var(--accent)" stroke-width="1.5"/>`;
   }
   return out;
 }
