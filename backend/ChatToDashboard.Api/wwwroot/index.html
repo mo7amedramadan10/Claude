@@ -1225,6 +1225,32 @@ tr:last-child td{border-bottom:0}
     </div>
 
     <div class="settings-section">
+      <h3>نموذج تحليل الصور</h3>
+      <p class="model-switch-note">يُستخدم لما ترفق صورة داشبورد أو مخطط لإعادة بنائه ببياناتك —
+        إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لتحليل
+        الصور. لو تركته «نفس الموديل الحالي»، ستُرسل الصورة لنفس الموديل المختار فوق كالمعتاد؛
+        بعض الموديلات الداخلية لا تدعم تحليل الصور فترجع خطأً واضحاً بدل تجاهل الصورة بصمت.</p>
+      <div id="settings-image-reader-providers" class="model-switch-providers"></div>
+      <div id="settings-image-reader-ollama-row" class="model-switch-ollama-row hidden">
+        <label>الموديل الداخلي (Ollama)
+          <select id="settings-image-reader-ollama-select"></select>
+        </label>
+        <div id="settings-image-reader-ollama-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-image-reader-openai-row" class="model-switch-ollama-row hidden">
+        <label>موديل OpenAI
+          <select id="settings-image-reader-openai-select"></select>
+        </label>
+        <div id="settings-image-reader-openai-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-image-reader-error" class="model-switch-note bad hidden"></div>
+      <div class="model-switch-actions">
+        <span id="settings-image-reader-save-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+        <button type="button" id="settings-image-reader-save">حفظ</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>معلومات عن الموديلات المتاحة</h3>
       <div class="settings-info-grid">
         <div class="settings-info-card" data-provider="Anthropic">
@@ -1523,6 +1549,11 @@ const I18N_EN = {
   'نموذج قراءة المستندات (PDF)': 'Document Reader Model (PDF)',
   'يُستخدم وقت رفع أي ملف PDF جديد ليقرأ صفحاته كصور — بما فيها\n        صفحة ممسوحة ضوئيًا أو جدول/رسم بياني مضمّن — بدل الاكتفاء باستخراج النص الرقمي فقط.\n        إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لكل غرض.\n        لو فشلت القراءة بالذكاء الاصطناعي لأي سبب، يرجع النظام تلقائيًا للاستخراج النصي العادي\n        بدل ما يفشل الرفع بالكامل.':
     'Used when a new PDF is uploaded, to read its pages as images — including\n        a scanned page or an embedded table/chart — instead of only extracting the digital text layer.\n        A setting fully independent from "Currently Active Model" above: you can choose a different model for each purpose.\n        If AI reading fails for any reason, the system automatically falls back to plain text extraction\n        instead of failing the whole upload.',
+  'نموذج تحليل الصور': 'Image Analysis Model',
+  'يُستخدم لما ترفق صورة داشبورد أو مخطط لإعادة بنائه ببياناتك —\n        إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لتحليل\n        الصور. لو تركته «نفس الموديل الحالي»، ستُرسل الصورة لنفس الموديل المختار فوق كالمعتاد؛\n        بعض الموديلات الداخلية لا تدعم تحليل الصور فترجع خطأً واضحاً بدل تجاهل الصورة بصمت.':
+    'Used when you attach a dashboard screenshot or mockup to rebuild it with your data —\n        a setting fully independent from "Currently Active Model" above: you can choose a different model for image\n        analysis. Leave it on "Same as current model" and the image is sent to the same model chosen above as usual;\n        some internal models do not support image analysis and will return a clear error instead of silently ignoring the image.',
+  'نفس الموديل الحالي': 'Same as current model',
+  '⚠️ بعض الموديلات الداخلية لا تدعم تحليل الصور': '⚠️ Some internal models do not support image analysis',
   'معلومات عن الموديلات المتاحة': 'About the Available Models',
   'مناسب للتحليل الدقيق والأسئلة المركّبة اللي تحتاج فهم وربط بين أكثر من مصدر بيانات في نفس الوقت.':
     'Well-suited to precise analysis and complex questions that need understanding and connecting more than one data source at once.',
@@ -6247,6 +6278,13 @@ const DOC_READER_MODEL_PICKERS = {
   Ollama: { endpoint: 'ollama-models', rowId: 'settings-doc-reader-ollama-row', selectId: 'settings-doc-reader-ollama-select', noteId: 'settings-doc-reader-ollama-note', activeKey: 'activeDocumentReaderOllamaModel', bodyKey: 'ollamaModel' },
   OpenAI: { endpoint: 'openai-models', rowId: 'settings-doc-reader-openai-row', selectId: 'settings-doc-reader-openai-select', noteId: 'settings-doc-reader-openai-note', activeKey: 'activeDocumentReaderOpenAiModel', bodyKey: 'openAiModel' },
 };
+// Same shape again for the image-analysis picker (which model handles a request that
+// attaches a reference image) — its own independent choice, LlmSettingsStore.
+// ImageReaderProvider, read/written through PUT /api/llm-settings/image-reader.
+const IMAGE_READER_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-image-reader-ollama-row', selectId: 'settings-image-reader-ollama-select', noteId: 'settings-image-reader-ollama-note', activeKey: 'activeImageReaderOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-image-reader-openai-row', selectId: 'settings-image-reader-openai-select', noteId: 'settings-image-reader-openai-note', activeKey: 'activeImageReaderOpenAiModel', bodyKey: 'openAiModel' },
+};
 // Keyed by provider id, shared between both picker maps above — it's the same live list of
 // models either way (what exists), just used to pre-select a different activeKey per picker.
 state.settingsModelChoices = {};
@@ -6261,6 +6299,7 @@ async function loadSettingsPage() {
     renderSettingsProviders();
     renderSettingsInfoBadges();
     renderSettingsDocReaderProviders();
+    renderSettingsImageReaderProviders();
   } catch {
     el('settings-current').textContent = 'تعذّر تحميل إعدادات الموديل.';
     el('settings-providers').innerHTML = '';
@@ -6324,6 +6363,64 @@ el('settings-doc-reader-save').addEventListener('click', async () => {
   }
 });
 
+// "نفس الموديل الحالي" (id: '') plus the same three providers — unlike the document reader's
+// own "معطّل" option, an empty choice here doesn't disable anything: a request that attaches
+// an image still has to go through some model, so empty just means "use the dashboard-
+// building provider above" (see LlmRouter.GenerateDashboardAsync). Independent choice,
+// LlmSettingsStore.ImageReaderProvider, via its own PUT /api/llm-settings/image-reader.
+function renderSettingsImageReaderProviders() {
+  const s = state.llmSettings;
+  const current = s.activeImageReaderProvider || '';
+  const options = [
+    { id: '', label: 'نفس الموديل الحالي', configured: true },
+    ...s.providers,
+  ];
+  el('settings-image-reader-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-image-reader-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id === 'Ollama'
+        ? '<span class="badge">⚠️ بعض الموديلات الداخلية لا تدعم تحليل الصور</span>'
+        : (p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : '')}
+    </label>`).join('');
+  el('settings-image-reader-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleImageReaderModelRow(inp.value)));
+  toggleImageReaderModelRow(current);
+}
+
+el('settings-image-reader-save').addEventListener('click', async () => {
+  const provider = el('settings-image-reader-providers').querySelector('input:checked')?.value ?? '';
+  const picker = IMAGE_READER_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-image-reader-save');
+  btn.disabled = true;
+  el('settings-image-reader-error').classList.add('hidden');
+  el('settings-image-reader-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/image-reader', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeImageReaderProvider = provider || null;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsImageReaderProviders();
+    el('settings-image-reader-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-image-reader-error').textContent = err.message;
+    el('settings-image-reader-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 function renderSettingsCurrent() {
   const s = state.llmSettings;
   const modelName = s.activeProvider === 'Ollama' ? s.activeOllamaModel : s.activeProvider === 'OpenAI' ? s.activeOpenAiModel : '';
@@ -6347,6 +6444,7 @@ function renderSettingsProviders() {
 
 function toggleSettingsModelRow(provider) { toggleModelRow(SETTINGS_MODEL_PICKERS, provider); }
 function toggleDocReaderModelRow(provider) { toggleModelRow(DOC_READER_MODEL_PICKERS, provider); }
+function toggleImageReaderModelRow(provider) { toggleModelRow(IMAGE_READER_MODEL_PICKERS, provider); }
 
 function toggleModelRow(pickers, provider) {
   for (const [id, picker] of Object.entries(pickers)) {

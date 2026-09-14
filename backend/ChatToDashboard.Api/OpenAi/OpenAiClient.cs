@@ -64,6 +64,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
         string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default)
     {
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
@@ -85,7 +86,12 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
         messages.Add(new JsonObject { ["role"] = "user", ["content"] = userContent });
 
         var tools = BuildToolsJson(context);
-        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
+        // ImageReaderOpenAiModel) wins over the normal dashboard-building sub-model choice —
+        // see IDashboardGenerator.GenerateDashboardAsync's remarks.
+        var model = modelOverride is { Length: > 0 }
+            ? modelOverride
+            : (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
         var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(

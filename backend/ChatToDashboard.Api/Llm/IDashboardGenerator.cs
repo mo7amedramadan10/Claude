@@ -25,6 +25,14 @@ public interface IDashboardGenerator
     /// <param name="lang">The frontend's UI language ("en" or null/"ar") — see
     /// AnalyticsTools.LanguageOverrideBlock. Anything other than "en" produces Arabic content,
     /// unchanged from before this parameter existed.</param>
+    /// <param name="modelOverride">
+    /// Set only by LlmRouter, when it has routed this specific call (because it carries an
+    /// image) to a provider other than the one this client would otherwise use on its own —
+    /// see LlmSettingsStore.ImageReaderProvider. Replaces the client's own configured/saved
+    /// sub-model for this call only; null (every other caller) leaves that resolution exactly
+    /// as it was before this parameter existed. Anthropic has no sub-model to override, so
+    /// ClaudeClient ignores this.
+    /// </param>
     Task<DashboardSpec> GenerateDashboardAsync(
         string question,
         DashboardStateInput? currentDashboard = null,
@@ -32,6 +40,7 @@ public interface IDashboardGenerator
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
         string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default);
 
     /// <summary>

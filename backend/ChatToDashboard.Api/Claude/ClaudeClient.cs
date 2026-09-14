@@ -63,8 +63,16 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
         string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default)
     {
+        // Anthropic has just the one configured model (Anthropic:Model) — no per-request
+        // sub-model choice the way Ollama/OpenAI have (LlmSettingsStore.OllamaModel/
+        // OpenAiModel), and every current Claude model already supports vision, so there is
+        // nothing for LlmRouter's image-provider routing to actually override here; see
+        // IDashboardGenerator.GenerateDashboardAsync's remarks on modelOverride.
+        _ = modelOverride;
+
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
         // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn,
         // so there is no separate multi-turn history to replay; a fresh request starts with

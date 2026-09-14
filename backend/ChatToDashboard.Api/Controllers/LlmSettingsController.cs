@@ -26,6 +26,19 @@ public class UpdateDocumentReaderRequest
     public string? OpenAiModel { get; set; }
 }
 
+public class UpdateImageReaderRequest
+{
+    /// <summary>One of LlmRouter's known provider ids, or null/"" to fall back to the
+    /// dashboard-building Provider for a request that carries a reference image.</summary>
+    public string? Provider { get; set; }
+
+    /// <summary>The image reader's OWN sub-model choice for that provider — independent of
+    /// both UpdateLlmSettingsRequest's and UpdateDocumentReaderRequest's own model fields.
+    /// Only the field matching Provider is meaningful; the other is ignored.</summary>
+    public string? OllamaModel { get; set; }
+    public string? OpenAiModel { get; set; }
+}
+
 /// <summary>
 /// Which LLM answers questions, and which model for the providers that support picking one
 /// (Ollama, OpenAI) — admin-only, changeable from the dashboard without a restart. See
@@ -56,22 +69,29 @@ public class LlmSettingsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
-        var (savedProvider, savedOllamaModel, savedOpenAiModel, savedDocumentReaderProvider,
-            savedDocumentReaderOllamaModel, savedDocumentReaderOpenAiModel) = await _settings.GetAsync(ct);
-        var activeProvider = savedProvider is { Length: > 0 } ? savedProvider : (_configuration["Llm:Provider"] ?? LlmRouter.Anthropic);
-        var activeOllamaModel = savedOllamaModel is { Length: > 0 } ? savedOllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
-        var activeOpenAiModel = savedOpenAiModel is { Length: > 0 } ? savedOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
+        var saved = await _settings.GetAsync(ct);
+        var activeProvider = saved.Provider is { Length: > 0 } ? saved.Provider : (_configuration["Llm:Provider"] ?? LlmRouter.Anthropic);
+        var activeOllamaModel = saved.OllamaModel is { Length: > 0 } ? saved.OllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeOpenAiModel = saved.OpenAiModel is { Length: > 0 } ? saved.OpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
         // Unlike activeProvider above, this has no config-file default — null/"" genuinely
         // means "disabled" (PDF uploads stay on PdfPig's plain-text extraction only), never
         // silently inherited from Llm:Provider.
-        var activeDocumentReaderProvider = savedDocumentReaderProvider is { Length: > 0 } ? savedDocumentReaderProvider : null;
+        var activeDocumentReaderProvider = saved.DocumentReaderProvider is { Length: > 0 } ? saved.DocumentReaderProvider : null;
         // Each falls back to the same config default its dashboard-building counterpart
         // above uses — never to that counterpart's own saved choice, keeping this genuinely
         // a separate setting rather than one that silently mirrors the other.
-        var activeDocumentReaderOllamaModel = savedDocumentReaderOllamaModel is { Length: > 0 }
-            ? savedDocumentReaderOllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
-        var activeDocumentReaderOpenAiModel = savedDocumentReaderOpenAiModel is { Length: > 0 }
-            ? savedDocumentReaderOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
+        var activeDocumentReaderOllamaModel = saved.DocumentReaderOllamaModel is { Length: > 0 }
+            ? saved.DocumentReaderOllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeDocumentReaderOpenAiModel = saved.DocumentReaderOpenAiModel is { Length: > 0 }
+            ? saved.DocumentReaderOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
+        // Unlike the document reader above, null/"" here means "same as activeProvider" — see
+        // LlmSettingsStore.GetAsync's remarks — so this is the one field of the three that is
+        // NOT independent of activeProvider; it mirrors it until an admin picks something else.
+        var activeImageReaderProvider = saved.ImageReaderProvider is { Length: > 0 } ? saved.ImageReaderProvider : null;
+        var activeImageReaderOllamaModel = saved.ImageReaderOllamaModel is { Length: > 0 }
+            ? saved.ImageReaderOllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeImageReaderOpenAiModel = saved.ImageReaderOpenAiModel is { Length: > 0 }
+            ? saved.ImageReaderOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
 
         return Ok(new
         {
@@ -81,6 +101,9 @@ public class LlmSettingsController : ControllerBase
             activeDocumentReaderProvider,
             activeDocumentReaderOllamaModel,
             activeDocumentReaderOpenAiModel,
+            activeImageReaderProvider,
+            activeImageReaderOllamaModel,
+            activeImageReaderOpenAiModel,
             providers = new[]
             {
                 new { id = LlmRouter.Anthropic, label = "Claude (Anthropic)", configured = IsConfigured("Anthropic:ApiKey") },
@@ -159,6 +182,21 @@ public class LlmSettingsController : ControllerBase
             return BadRequest(new { error = "مزوّد غير معروف." });
 
         await _settings.SetDocumentReaderAsync(request.Provider, request.OllamaModel, request.OpenAiModel, ct);
+        return NoContent();
+    }
+
+    /// <summary>Which model handles a request that attaches a reference image (screenshot-to-
+    /// dashboard) — independent of Update above. null/"" falls back to the dashboard-building
+    /// provider (see LlmRouter.GenerateDashboardAsync), not to "disabled" — unlike the
+    /// document reader, there is no PdfPig-style fallback for an image question.</summary>
+    [HttpPut("image-reader")]
+    public async Task<IActionResult> UpdateImageReader([FromBody] UpdateImageReaderRequest request, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(request.Provider) &&
+            !LlmRouter.KnownProviders.Contains(request.Provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+
+        await _settings.SetImageReaderAsync(request.Provider, request.OllamaModel, request.OpenAiModel, ct);
         return NoContent();
     }
 

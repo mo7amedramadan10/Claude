@@ -45,10 +45,41 @@ public class LlmRouter : IDashboardGenerator
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
         string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default)
     {
+        // modelOverride only ever comes from THIS method's own routing below (never from a
+        // caller — ChatController, the only caller, never passes one) — it exists on this
+        // signature purely to satisfy IDashboardGenerator; ignored here rather than threaded
+        // through, since this router is exactly what decides it in the first place.
+        _ = modelOverride;
+
+        // A reference image (screenshot-to-dashboard) can be routed to its own provider/
+        // sub-model — LlmSettingsStore.ImageReaderProvider — independent of whichever
+        // provider normally builds dashboards, e.g. when the gateway's currently selected
+        // internal model can't handle images at all (see OllamaClient.GenerateDashboardAsync's
+        // "multimodal" rejection). Empty/unset (the default) falls back to the normal
+        // provider below, unchanged from before this setting existed — this only ever
+        // affects a request that actually carries an image.
+        if (!string.IsNullOrWhiteSpace(imageDataUrl))
+        {
+            var settings = await _settings.GetAsync(ct);
+            if (settings.ImageReaderProvider is { Length: > 0 } imageProvider)
+            {
+                var imageModelOverride = imageProvider switch
+                {
+                    OpenAI => settings.ImageReaderOpenAiModel,
+                    Ollama => settings.ImageReaderOllamaModel,
+                    _ => null,
+                };
+                var imageGenerator = ResolveProvider(imageProvider);
+                return await imageGenerator.GenerateDashboardAsync(
+                    question, currentDashboard, sources, imageDataUrl, requestingUser, lang, imageModelOverride, ct);
+            }
+        }
+
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, lang, ct);
+        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, lang, null, ct);
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
@@ -69,16 +100,17 @@ public class LlmRouter : IDashboardGenerator
 
     private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)
     {
-        var (savedProvider, _, _, _, _, _) = await _settings.GetAsync(ct);
-        var provider = savedProvider is { Length: > 0 } ? savedProvider : _defaultProvider;
-
-        return provider switch
-        {
-            OpenAI => _services.GetRequiredService<OpenAiClient>(),
-            Ollama => _services.GetRequiredService<OllamaClient>(),
-            _ => _services.GetRequiredService<ClaudeClient>(),
-        };
+        var settings = await _settings.GetAsync(ct);
+        var provider = settings.Provider is { Length: > 0 } ? settings.Provider : _defaultProvider;
+        return ResolveProvider(provider);
     }
+
+    private IDashboardGenerator ResolveProvider(string provider) => provider switch
+    {
+        OpenAI => _services.GetRequiredService<OpenAiClient>(),
+        Ollama => _services.GetRequiredService<OllamaClient>(),
+        _ => _services.GetRequiredService<ClaudeClient>(),
+    };
 }
 
 /// <summary>The IDashboardGenerator equivalent of this router, for the document-reading side —
@@ -119,7 +151,7 @@ public class DocumentReaderRouter : IDocumentReaderRouter
     /// find out afterward that nothing is configured to read them.</summary>
     public async Task<bool> IsEnabledAsync(CancellationToken ct = default)
     {
-        var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
+        var documentReaderProvider = (await _settings.GetAsync(ct)).DocumentReaderProvider;
         return !string.IsNullOrWhiteSpace(documentReaderProvider);
     }
 
@@ -127,7 +159,7 @@ public class DocumentReaderRouter : IDocumentReaderRouter
         string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
         Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
-        var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
+        var documentReaderProvider = (await _settings.GetAsync(ct)).DocumentReaderProvider;
         if (string.IsNullOrWhiteSpace(documentReaderProvider)) return null;
 
         IDocumentTextExtractor extractor = documentReaderProvider switch

@@ -103,6 +103,29 @@ public class LlmSettingsStore
             {
             }
         }
+
+        // Migration for a table created before a reference-image (screenshot-to-dashboard)
+        // had its own provider/sub-model choice — same independence contract as the document
+        // reader above: null/empty means "use the dashboard-building provider" (see
+        // LlmRouter.GenerateDashboardAsync), and each sub-model falls back to that provider's
+        // own configured default, never to the dashboard's chosen sub-model.
+        foreach (var column in new[] { "ImageReaderProvider", "ImageReaderOllamaModel", "ImageReaderOpenAiModel" })
+        {
+            try
+            {
+                await using var alter = connection.CreateCommand();
+                alter.CommandText = _db.Provider == DbProvider.Sqlite
+                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" TEXT"
+                    : $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
+                await alter.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+            catch (SqlException ex) when (ex.Number == 2705)
+            {
+            }
+        }
     }
 
     /// <summary>Current override, if any has ever been saved — every field null otherwise.
@@ -110,20 +133,31 @@ public class LlmSettingsStore
     /// Provider" — it never falls back to the dashboard-building provider. Likewise
     /// DocumentReaderOllamaModel/DocumentReaderOpenAiModel are each provider's OWN sub-model
     /// choice for document reading — independent of OllamaModel/OpenAiModel above, which are
-    /// only ever for dashboard building.</summary>
+    /// only ever for dashboard building.
+    ///
+    /// ImageReaderProvider is different: null/empty means "use the dashboard-building
+    /// Provider" (there's no PdfPig-style fallback for a reference-image question — some
+    /// provider must handle it) — see LlmRouter.GenerateDashboardAsync. Set, it routes only
+    /// the request that actually carries an image to that provider instead, using
+    /// ImageReaderOllamaModel/ImageReaderOpenAiModel as that provider's own sub-model choice
+    /// (independent of OllamaModel/OpenAiModel above, same contract as the document reader's
+    /// own sub-models).</summary>
     public async Task<(string? Provider, string? OllamaModel, string? OpenAiModel, string? DocumentReaderProvider,
-        string? DocumentReaderOllamaModel, string? DocumentReaderOpenAiModel)> GetAsync(CancellationToken ct = default)
+        string? DocumentReaderOllamaModel, string? DocumentReaderOpenAiModel, string? ImageReaderProvider,
+        string? ImageReaderOllamaModel, string? ImageReaderOpenAiModel)> GetAsync(CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var row = await connection.QuerySingleOrDefaultAsync<SettingsRow>(
             $"""
             SELECT Provider, OllamaModel, OpenAiModel, DocumentReaderProvider,
-                   DocumentReaderOllamaModel, DocumentReaderOpenAiModel
+                   DocumentReaderOllamaModel, DocumentReaderOpenAiModel,
+                   ImageReaderProvider, ImageReaderOllamaModel, ImageReaderOpenAiModel
             FROM {Table} WHERE Id = 1
             """);
         return (row?.Provider, row?.OllamaModel, row?.OpenAiModel, row?.DocumentReaderProvider,
-            row?.DocumentReaderOllamaModel, row?.DocumentReaderOpenAiModel);
+            row?.DocumentReaderOllamaModel, row?.DocumentReaderOpenAiModel,
+            row?.ImageReaderProvider, row?.ImageReaderOllamaModel, row?.ImageReaderOpenAiModel);
     }
 
     public async Task SetAsync(string provider, string? ollamaModel, string? openAiModel, CancellationToken ct = default)
@@ -193,6 +227,42 @@ public class LlmSettingsStore
         });
     }
 
+    /// <summary>
+    /// Sets (or clears, with null/"") the reference-image provider and, when given, that
+    /// provider's own sub-model — independent of SetAsync above, exactly like
+    /// SetDocumentReaderAsync. A null sub-model leaves whatever was stored before untouched.
+    /// </summary>
+    public async Task SetImageReaderAsync(
+        string? provider, string? ollamaModel = null, string? openAiModel = null, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var sql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               INSERT INTO {Table} (Id, ImageReaderProvider, ImageReaderOllamaModel, ImageReaderOpenAiModel)
+               VALUES (1, @provider, @ollamaModel, @openAiModel)
+               ON CONFLICT(Id) DO UPDATE SET
+                 ImageReaderProvider = @provider,
+                 ImageReaderOllamaModel = COALESCE(@ollamaModel, ImageReaderOllamaModel),
+                 ImageReaderOpenAiModel = COALESCE(@openAiModel, ImageReaderOpenAiModel)
+               """
+            : $"""
+               MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
+               WHEN MATCHED THEN UPDATE SET
+                 ImageReaderProvider = @provider,
+                 ImageReaderOllamaModel = COALESCE(@ollamaModel, t.ImageReaderOllamaModel),
+                 ImageReaderOpenAiModel = COALESCE(@openAiModel, t.ImageReaderOpenAiModel)
+               WHEN NOT MATCHED THEN INSERT (Id, ImageReaderProvider, ImageReaderOllamaModel, ImageReaderOpenAiModel)
+                 VALUES (1, @provider, @ollamaModel, @openAiModel);
+               """;
+        await connection.ExecuteAsync(sql, new
+        {
+            provider = string.IsNullOrWhiteSpace(provider) ? null : provider,
+            ollamaModel,
+            openAiModel,
+        });
+    }
+
     private class SettingsRow
     {
         public string? Provider { get; set; }
@@ -201,5 +271,8 @@ public class LlmSettingsStore
         public string? DocumentReaderProvider { get; set; }
         public string? DocumentReaderOllamaModel { get; set; }
         public string? DocumentReaderOpenAiModel { get; set; }
+        public string? ImageReaderProvider { get; set; }
+        public string? ImageReaderOllamaModel { get; set; }
+        public string? ImageReaderOpenAiModel { get; set; }
     }
 }

@@ -77,9 +77,15 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
         string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default)
     {
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
+        // ImageReaderOllamaModel) wins over the normal dashboard-building sub-model choice —
+        // see IDashboardGenerator.GenerateDashboardAsync's remarks.
+        var model = modelOverride is { Length: > 0 }
+            ? modelOverride
+            : (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var systemPrompt = _tools.BuildSystemPrompt(context, lang);
         var messages = new JsonArray
