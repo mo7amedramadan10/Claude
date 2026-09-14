@@ -76,6 +76,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
+        string? lang = null,
         CancellationToken ct = default)
     {
         // Screenshot-to-dashboard needs a vision-capable model; the gateway's models list
@@ -87,7 +88,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
 
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
@@ -107,11 +108,12 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
+        CancellationToken ct = default)
     {
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context);
+        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
         // Inquiries is never continuation-aware — isolated from whatever dashboard is on
         // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
         var messages = new JsonArray
@@ -130,14 +132,14 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
-        AppUser? requestingUser = null, CancellationToken ct = default)
+        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
         // no new query_data/list_files call can happen here.
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },

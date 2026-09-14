@@ -62,6 +62,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
+        string? lang = null,
         CancellationToken ct = default)
     {
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
@@ -86,7 +87,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         }
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
         var tools = BuildToolsJson(context);
 
         var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
@@ -97,14 +98,15 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
+        CancellationToken ct = default)
     {
         // Inquiries is never continuation-aware — isolated from whatever dashboard is on
         // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
         var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = question } };
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context);
+        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
         var tools = BuildToolsJson(context);
 
         var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
@@ -116,7 +118,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
-        AppUser? requestingUser = null, CancellationToken ct = default)
+        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
@@ -125,7 +127,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
 
         var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);

@@ -44,25 +44,27 @@ public class LlmRouter : IDashboardGenerator
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
+        string? lang = null,
         CancellationToken ct = default)
     {
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, ct);
+        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, lang, ct);
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
+        CancellationToken ct = default)
     {
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateInquiryAsync(question, sources, requestingUser, ct);
+        return await generator.GenerateInquiryAsync(question, sources, requestingUser, lang, ct);
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
-        AppUser? requestingUser = null, CancellationToken ct = default)
+        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
         var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, requestingUser, ct);
+        return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, requestingUser, lang, ct);
     }
 
     private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)

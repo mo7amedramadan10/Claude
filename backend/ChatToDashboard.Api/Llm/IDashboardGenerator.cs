@@ -22,12 +22,16 @@ public interface IDashboardGenerator
     /// <param name="requestingUser">Who asked — recorded on the usage log entry only (see
     /// UsageTracker.Begin); never affects what the model is allowed to see, which is already
     /// narrowed server-side into <paramref name="sources"/> before this is called.</param>
+    /// <param name="lang">The frontend's UI language ("en" or null/"ar") — see
+    /// AnalyticsTools.LanguageOverrideBlock. Anything other than "en" produces Arabic content,
+    /// unchanged from before this parameter existed.</param>
     Task<DashboardSpec> GenerateDashboardAsync(
         string question,
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
+        string? lang = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -40,6 +44,7 @@ public interface IDashboardGenerator
         string question,
         SourceSelection? sources = null,
         AppUser? requestingUser = null,
+        string? lang = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -57,5 +62,6 @@ public interface IDashboardGenerator
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         AppUser? requestingUser = null,
+        string? lang = null,
         CancellationToken ct = default);
 }

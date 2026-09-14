@@ -15,6 +15,10 @@ public class InquiryRequest
 
     [JsonPropertyName("sources")]
     public SourceSelection? Sources { get; set; }
+
+    /// <summary>See <see cref="ChatRequest.Lang"/>.</summary>
+    [JsonPropertyName("lang")]
+    public string? Lang { get; set; }
 }
 
 /// <summary>
@@ -81,4 +85,8 @@ public class ConvertInquiryRequest
 
     [JsonPropertyName("sources")]
     public SourceSelection? Sources { get; set; }
+
+    /// <summary>See <see cref="ChatRequest.Lang"/>.</summary>
+    [JsonPropertyName("lang")]
+    public string? Lang { get; set; }
 }

@@ -39,6 +39,14 @@ public class ChatRequest
     /// </summary>
     [JsonPropertyName("image")]
     public string? Image { get; set; }
+
+    /// <summary>
+    /// The frontend's current UI language ("en" or omitted/"ar") — see index.html's
+    /// #lang-toggle and AnalyticsTools.LanguageOverrideBlock. Anything other than "en"
+    /// produces Arabic dashboard content, unchanged from before this field existed.
+    /// </summary>
+    [JsonPropertyName("lang")]
+    public string? Lang { get; set; }
 }
 
 /// <summary>The dashboard state a continuation question is framed against — see <see cref="ChatRequest.CurrentDashboard"/>.</summary>

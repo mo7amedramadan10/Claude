@@ -4390,6 +4390,7 @@ async function ask(question) {
         // silently fork into a disconnected Draft that never goes through that check at all.
         historyId: isContinuation && state.dashboardIsActive ? state.currentHistoryId : null,
         sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        lang: state.lang,
       }),
     });
     const payload = await res.json().catch(() => null);
@@ -4532,6 +4533,7 @@ async function askInquiry(question) {
         // Same on/off source toggle the dashboard-building chat uses — the exact same
         // tool-use flow and gating, just a different final response shape.
         sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        lang: state.lang,
       }),
     });
     const payload = await res.json().catch(() => null);
@@ -4577,6 +4579,7 @@ async function convertInquiryToDashboard(msg) {
       body: JSON.stringify({
         answer: msg.text, source: msg.source, data: msg.data, currentDashboard,
         sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        lang: state.lang,
       }),
     });
     const payload = await res.json().catch(() => null);

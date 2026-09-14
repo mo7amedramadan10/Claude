@@ -413,10 +413,42 @@ public class AnalyticsTools
         من غير أي مقدمة أو تلخيص أو تعليق من عندك خارج محتوى الصفحة نفسها.
         """;
 
+    /// <summary>
+    /// Prepended to both BuildSystemPrompt and BuildInquirySystemPrompt when the frontend's
+    /// language toggle (see index.html's #lang-toggle) is set to English — everything else in
+    /// either prompt stays exactly as tuned (in Arabic, addressed to the model), since an LLM
+    /// follows instructions written in one language perfectly well while producing output in
+    /// another. Rewriting either ~500-line prompt into a parallel English copy would double the
+    /// maintenance burden for no behavioral gain — this single override, placed first so it
+    /// can't be missed, is what actually controls the *output* language the user sees. Null/
+    /// anything other than "en" changes nothing, so every existing call site (none of which
+    /// pass a language) keeps writing Arabic content exactly as before.
+    /// </summary>
+    private static string LanguageOverrideBlock(string? lang) => lang == "en"
+        ? """
+          LANGUAGE OVERRIDE — read this first: every instruction below this line is written in
+          Arabic and addressed to you, and you should still follow all of it exactly as written
+          (tool-calling rules, the JSON schema, the golden rule about never inventing numbers,
+          every formatting and validation requirement). The ONE thing that changes is the
+          *language of the content you generate*: write every user-facing text field (summary,
+          title, source, narration, answer, and any chart/table label or data value you author
+          yourself) in clear, professional English instead of Arabic. Do not mix the two
+          languages within a single field. This override takes priority over every Arabic
+          instruction below that tells you to write in Arabic (e.g. "اكتب كل النصوص الظاهرة
+          للمستخدم باللغة العربية" or "بالعربية الفصحى") — those instructions still describe
+          the required tone, register, and structure, just apply them in English now. Data
+          values that are themselves Arabic text (e.g. a category name stored in Arabic in the
+          user's own data, like a status or region name) should be passed through as-is, not
+          translated — only text you are composing yourself changes language.
+
+
+          """
+        : "";
+
     // $$ delimiters: {{expr}} interpolates, single braces stay literal for the JSON schema below.
-    public string BuildSystemPrompt(SourceContext context) =>
+    public string BuildSystemPrompt(SourceContext context, string? lang = null) =>
         $$"""
-        أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بتجاوب على أسئلة عن بيانات
+        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بتجاوب على أسئلة عن بيانات
         المؤسسة وترجع مواصفات لوحة معلومات بصيغة JSON. اكتب كل النصوص الظاهرة للمستخدم
         (summary وtitle وsource وnarration) باللغة العربية، بأسلوب مهني ومباشر وبدون حشو.
 
@@ -855,9 +887,9 @@ public class AnalyticsTools
     /// vocabulary at all. Kept as its own separate prompt (not a parameterized branch of
     /// BuildSystemPrompt) so the carefully-tuned dashboard prompt is never touched by this.
     /// </summary>
-    public string BuildInquirySystemPrompt(SourceContext context) =>
+    public string BuildInquirySystemPrompt(SourceContext context, string? lang = null) =>
         $$"""
-        أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بترد على استفسارات عن بيانات
+        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بترد على استفسارات عن بيانات
         المؤسسة بإجابة نصية مباشرة وواضحة — من غير ما تبني لوحة معلومات أو أي عناصر رسوم
         بيانية أو تُرجع حقل widgets أصلًا. اكتب كل النصوص الظاهرة للمستخدم بالعربية الفصحى،
         بأسلوب مهني ومباشر وبدون حشو.
