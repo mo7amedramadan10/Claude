@@ -102,12 +102,30 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .tab .badge{display:inline-block;min-width:19px;padding:0 5px;margin-inline-start:6px;border-radius:999px;
   background:var(--accent);color:#fff;font-size:11px;line-height:18px;text-align:center}
 
-/* ---------- sources dropdown ---------- */
-.sources{position:relative;margin-inline-start:auto}
-#sources-btn{display:flex;align-items:center;gap:8px;padding:7px 13px;
-  border:1px solid var(--grid);border-radius:10px;background:var(--surface);color:var(--ink-2)}
-#sources-btn:hover{border-color:var(--line)}
-#sources-panel{position:absolute;inset-inline-end:0;top:calc(100% + 7px);z-index:40;width:290px;
+/* ---------- sources dropdown ----------
+ * Lives in the chat form's .form-actions-row, next to #new-dashboard-btn, so the source
+ * selection is right there with every message rather than tucked away in the header —
+ * sized/styled to match .new-dash-btn (same height, border, hover) instead of its old
+ * header treatment. #sources-panel still anchors off .sources itself (position:relative),
+ * so the dropdown opens in the same place regardless of which container it lives in.
+ * Anchored with inset-inline-start (not -end): #chat-rail hugs the app's own inline-end
+ * edge (the screen's physical right in RTL), so .sources can end up right at that outer
+ * edge with zero room to spare on that side once it wraps onto the row alone at a narrow
+ * rail width — opening the panel from inset-inline-end there pushed it straight off the
+ * viewport. Opening from inset-inline-start instead always grows toward the rail's own
+ * interior (and the dash pane beyond it), which reliably has room regardless of rail width.
+ * Opens UPWARD (bottom, not top) for the same reason: this row sits right above the
+ * message input, at the very bottom of the chat rail, with the message list's open space
+ * above it and essentially nothing below — a downward panel here would routinely run off
+ * the bottom of the window the way it never did back when this control lived in the header. */
+.sources{position:relative}
+#sources-btn{display:flex;align-items:center;gap:6px;height:41px;padding:0 12px;max-width:170px;
+  border:1px solid var(--grid);border-radius:11px;background:var(--surface);color:var(--ink-2);
+  font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden}
+#sources-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+#sources-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sources-panel{position:absolute;inset-inline-start:0;bottom:calc(100% + 7px);z-index:40;
+  width:290px;max-width:calc(100vw - 32px);
   max-height:70vh;overflow:auto;padding:8px;background:var(--surface);
   border:1px solid var(--grid);border-radius:var(--radius);box-shadow:0 8px 28px rgba(11,11,11,.12)}
 #sources-panel.hidden{display:none}
@@ -200,7 +218,7 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 #repo-link button{margin-inline-start:auto;padding:5px 11px;border:1px solid var(--grid);
   border-radius:8px;background:var(--surface);color:var(--accent)}
 form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px solid var(--grid)}
-.form-actions-row{display:flex;gap:8px}
+.form-actions-row{display:flex;gap:8px;flex-wrap:wrap}
 .form-input-row{display:flex;gap:8px}
 #q{flex:1;padding:10px 13px;border:1px solid var(--grid);border-radius:11px;outline:none}
 #q:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -875,19 +893,6 @@ tr:last-child td{border-bottom:0}
     <a class="tab hidden" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
   </nav>
 
-  <div class="sources">
-    <button id="sources-btn">
-      <span>📁</span><span id="sources-label">كل المصادر مفعّلة</span><span>▾</span>
-    </button>
-    <div id="sources-panel" class="hidden">
-      <label class="source-item head"><input type="checkbox" id="sys-all" checked>الأنظمة — تحديد الكل</label>
-      <div id="system-toggles" class="nested"></div>
-      <hr>
-      <label class="source-item head"><input type="checkbox" id="file-all" checked>مستودع الملفات — تحديد الكل</label>
-      <div id="file-toggles" class="nested"></div>
-    </div>
-  </div>
-
   <div class="user-menu">
     <div class="rail-size-toggle" id="rail-size-toggle">
       <button type="button" id="rail-shrink" title="تصغير لوحة المحادثة">–</button>
@@ -931,6 +936,18 @@ tr:last-child td{border-bottom:0}
         </label>
         <button type="button" id="new-dashboard-btn" class="new-dash-btn"
           title="يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر">🆕 ابدأ لوحة جديدة</button>
+        <div class="sources">
+          <button type="button" id="sources-btn">
+            <span>📁</span><span id="sources-label">كل المصادر مفعّلة</span><span>▾</span>
+          </button>
+          <div id="sources-panel" class="hidden">
+            <label class="source-item head"><input type="checkbox" id="sys-all" checked>الأنظمة — تحديد الكل</label>
+            <div id="system-toggles" class="nested"></div>
+            <hr>
+            <label class="source-item head"><input type="checkbox" id="file-all" checked>مستودع الملفات — تحديد الكل</label>
+            <div id="file-toggles" class="nested"></div>
+          </div>
+        </div>
       </div>
       <div class="form-input-row">
         <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
