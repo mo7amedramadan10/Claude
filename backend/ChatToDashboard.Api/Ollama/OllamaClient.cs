@@ -91,22 +91,33 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
         // there is no separate multi-turn history to replay.
         var userMessage = new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) };
-        // Not every model on this gateway advertises vision support up front, and the ones
-        // that don't tend to just ignore an "images" field rather than reject the request —
-        // so, same as ExtractDocumentTextAsync's page images, this is sent through regardless
-        // and left to the model itself to use or ignore, rather than refused here on the
-        // client's own assumption. CompressForGateway keeps it under the gateway's request-
-        // size limit the same way a document page image already does.
-        if (TryExtractBase64(imageDataUrl, out var imageBase64))
-            userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
+        // Sent through unconditionally rather than refused here on the client's own
+        // assumption — same as ExtractDocumentTextAsync's page images, and CompressForGateway
+        // keeps it under the gateway's request-size limit the same way those already do.
+        // Whichever model is actually selected decides for itself whether it can use it: seen
+        // live, the gateway doesn't silently ignore an image a model can't handle — it rejects
+        // the whole request with 400 "Multimodal data provided, but model does not support
+        // multimodal requests", which the catch below turns into a plain-language message
+        // instead of the raw gateway JSON reaching the user.
+        var hasImage = TryExtractBase64(imageDataUrl, out var imageBase64);
+        if (hasImage) userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
         messages.Add(userMessage);
 
         var tools = BuildToolsJson(context);
         var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        try
+        {
+            return await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (HttpRequestException ex) when (hasImage && ex.Message.Contains("multimodal", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"الموديل الداخلي الحالي ({model}) لا يدعم تحليل الصور. بدّل مؤقتًا إلى Claude أو GPT من إعدادات الموديل لهذا الطلب، أو اختر موديلاً داخليًا آخر يدعم الصور إن وُجد.",
+                ex);
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
