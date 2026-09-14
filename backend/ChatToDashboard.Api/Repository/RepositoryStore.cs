@@ -29,6 +29,14 @@ public class RepositoryStore
         _logger = logger;
     }
 
+    /// <summary>Dapper's default SqlCommand timeout (30s) is fine for the small metadata
+    /// queries elsewhere in this class, but the two writes below also carry the file's raw
+    /// bytes (FileContent, VARBINARY(MAX)/BLOB) — seen live timing out ("Execution Timeout
+    /// Expired") on a real upload over a slower/shared SQL Server link, well after the actual
+    /// table load had already finished. A larger, generous ceiling here costs nothing on a
+    /// fast link and gives a slow one the room a single-row blob write can genuinely need.</summary>
+    private const int FileWriteCommandTimeoutSeconds = 120;
+
     private string CatalogueTable => _db.Provider == DbProvider.Sqlite
         ? "\"repo_Files\"" : "[staging].[repo_Files]";
     private string PermissionsTable => _db.Provider == DbProvider.Sqlite
@@ -263,7 +271,7 @@ public class RepositoryStore
         if (table is not null && bareName is not null)
             await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
 
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             $"INSERT INTO {CatalogueTable} (Id, DisplayName, OriginalFileName, Description, Category, Kind, " +
             "[RowCount], ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
             "VALUES (@Id, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
@@ -274,7 +282,8 @@ public class RepositoryStore
                 record.Kind, record.RowCount, record.ColumnCount, record.PageCount, record.UploadedAt,
                 record.LastUpdatedAt, record.TableName, TextContent = parsed.Text, ColumnsJson = columnsJson,
                 record.CreatedByUserId, FileContent = parsed.Content,
-            });
+            },
+            commandTimeout: FileWriteCommandTimeoutSeconds, cancellationToken: ct));
 
         _logger.LogInformation("Saved {File} to repository under category {Category}", record.DisplayName, record.Category);
         return record;
@@ -381,7 +390,7 @@ public class RepositoryStore
                 schemaChangedAt = now;
         }
 
-        var updated = await connection.ExecuteAsync(
+        var updated = await connection.ExecuteAsync(new CommandDefinition(
             $"UPDATE {CatalogueTable} SET OriginalFileName = @OriginalFileName, [RowCount] = @RowCount, " +
             "ColumnCount = @ColumnCount, PageCount = @PageCount, LastUpdatedAt = @LastUpdatedAt, " +
             "TextContent = @TextContent, FileContent = @FileContent" +
@@ -394,7 +403,8 @@ public class RepositoryStore
                 ColumnCount = parsed.Table?.Columns.Count ?? 0, PageCount = parsed.PageCount,
                 LastUpdatedAt = now, TextContent = parsed.Text, FileContent = parsed.Content,
                 ColumnsJson = newColumnsJson, SchemaChangedAt = schemaChangedAt,
-            });
+            },
+            commandTimeout: FileWriteCommandTimeoutSeconds, cancellationToken: ct));
         if (updated == 0) return null;
 
         _logger.LogInformation("Updated data for repository file {Id}{Schema}", id,

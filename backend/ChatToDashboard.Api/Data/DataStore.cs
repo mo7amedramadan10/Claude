@@ -197,6 +197,13 @@ public class DataStore
 
     // ---- Loading ----
 
+    /// <summary>The default SqlCommand/SqlBulkCopy timeout (30s) is plenty on a fast local
+    /// connection, but real deployments hit it over a slower or more loaded shared SQL Server
+    /// link — seen live as "Execution Timeout Expired" while loading a ~1000-row upload. A
+    /// larger ceiling here costs nothing on a fast connection and gives a slow one the room a
+    /// bigger table load can genuinely need.</summary>
+    private const int LoadCommandTimeoutSeconds = 120;
+
     /// <summary>Drops and recreates the staging table, then loads every row of <paramref name="table"/>.</summary>
     public async Task RecreateAndLoadAsync(
         DbConnection connection, string tableName, DataTable table, CancellationToken ct = default)
@@ -208,11 +215,13 @@ public class DataStore
         await using (var drop = connection.CreateCommand())
         {
             drop.CommandText = $"DROP TABLE IF EXISTS {target}";
+            drop.CommandTimeout = LoadCommandTimeoutSeconds;
             await drop.ExecuteNonQueryAsync(ct);
         }
         await using (var create = connection.CreateCommand())
         {
             create.CommandText = $"CREATE TABLE {target} ({string.Join(", ", columnDefs)})";
+            create.CommandTimeout = LoadCommandTimeoutSeconds;
             await create.ExecuteNonQueryAsync(ct);
         }
 
@@ -231,6 +240,7 @@ public class DataStore
         {
             DestinationTableName = target,
             BatchSize = 5000,
+            BulkCopyTimeout = LoadCommandTimeoutSeconds,
         };
         foreach (DataColumn column in table.Columns)
             bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
