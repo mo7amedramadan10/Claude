@@ -262,7 +262,12 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
 .grid.dim-3d{perspective:1600px}
 .grid.dim-3d .widget{transform:rotateX(9deg) rotateY(-7deg);box-shadow:var(--shadow-3d);transition:transform .2s ease}
 .grid.dim-3d .widget:hover{transform:rotateX(5deg) rotateY(-3deg) translateY(-3px)}
-.widget.kpi{justify-content:center;align-items:center;text-align:center;min-height:150px}
+.widget.kpi{justify-content:center;align-items:center;min-height:150px}
+/* Big number beside its description, not stacked above it — the dominant "basic numbers"
+   composition in the brand's visual-system guide (a large colored figure as the focal
+   point, a short caption riding its baseline to the side) rather than a centered KPI
+   stack. */
+.kpi-body{display:flex;align-items:baseline;gap:14px;justify-content:center;max-width:100%}
 .widget.chart{grid-column:span 2;min-height:300px}
 .widget.table{grid-column:span 2}
 .widget-head{display:flex;align-items:center;gap:8px}
@@ -291,9 +296,9 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
 /* A soft halo, not a hard neon outline — two low-opacity layers (the same tint already used
    for badges/hover states) so the number reads as "glowing gently" without losing crispness
    against its background. */
-.kpi .value{font-family:var(--display);font-size:34px;font-weight:700;color:var(--accent);
-  text-shadow:0 0 10px var(--accent-soft),0 0 28px var(--accent-soft)}
-.kpi-label{color:var(--ink-2)}
+.kpi .value{font-family:var(--display);font-size:42px;font-weight:700;color:var(--accent);
+  text-shadow:0 0 10px var(--accent-soft),0 0 28px var(--accent-soft);line-height:1;white-space:nowrap}
+.kpi-label{color:var(--ink);font-size:13px;line-height:1.5;text-align:start;max-width:170px}
 .widget .chart-holder{height:230px}
 /* A forecast chart also renders a legend (3 series) below its plot, which the plain 230px
    box has no room for — ApexCharts then overflows past the box, colliding with .forecast-note
@@ -1467,13 +1472,13 @@ const THEMES = {
   dark: {
     palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
     accent: '#3cb4e5', danger: '#EF6461', amber: '#F2B84B',
-    gridColor: '#333436', tickColor: '#9A9CA0', ink: '#EDEFF1',
+    gridColor: '#333436', tickColor: '#9A9CA0', ink: '#EDEFF1', surface: '#1A1B1D',
     fontFamily: 'Tanseek Modern Pro Arabic',
   },
   light: {
     palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
     accent: '#007cbb', danger: '#D3402F', amber: '#B8730A',
-    gridColor: '#E3E4E6', tickColor: '#6B6D70', ink: '#434345',
+    gridColor: '#E3E4E6', tickColor: '#6B6D70', ink: '#434345', surface: '#FFFFFF',
     fontFamily: 'Tanseek Modern Pro Arabic',
   },
 };
@@ -2258,16 +2263,19 @@ function KpiCard(w) {
   const card = widgetShell(w, 'kpi');
   const e = Array.isArray(w.data) ? w.data[0] : null;
   const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
+  const body = document.createElement('div');
+  body.className = 'kpi-body';
   const val = document.createElement('div');
   val.className = 'value';
   val.textContent = fmt(v);
-  card.appendChild(val);
+  body.appendChild(val);
   if (e?.label) {
     const label = document.createElement('div');
     label.className = 'kpi-label';
     label.textContent = e.label;
-    card.appendChild(label);
+    body.appendChild(label);
   }
+  card.appendChild(body);
   return card;
 }
 
@@ -2302,17 +2310,20 @@ function shadeHex(hex, percent) {
 // polygons next to each bar's real path — for the 3D view toggle. Only bar charts need this:
 // a donut or line chart already reads as sitting on a 3D plane once the whole card tilts (see
 // .dim-3d in the CSS); a flat circle/curve doesn't need per-mark extrusion to look dimensional.
-// Purely decorative — the bar's real geometry, data and hit area are untouched.
-function apply3dBarExtrusion(svg, baseColor) {
+// Purely decorative — the bar's real geometry, data and hit area are untouched. `colors` is
+// the chart's own per-bar palette (distributed:true bars each have their own color now, see
+// chartConfig()) — cycled by index, same as ApexCharts itself does for the bars.
+function apply3dBarExtrusion(svg, colors) {
   if (!svg) return;
   svg.querySelectorAll('.bar-3d-face').forEach(el => el.remove()); // idempotent if ever re-run
   const svgNS = 'http://www.w3.org/2000/svg';
   const depth = 9;
-  const topColor = shadeHex(baseColor, .35);
-  const sideColor = shadeHex(baseColor, -.35);
-  svg.querySelectorAll('.apexcharts-bar-area').forEach(bar => {
+  svg.querySelectorAll('.apexcharts-bar-area').forEach((bar, i) => {
     const b = bar.getBBox();
     if (b.width <= 0 || b.height <= 0) return;
+    const baseColor = colors[i % colors.length];
+    const topColor = shadeHex(baseColor, .35);
+    const sideColor = shadeHex(baseColor, -.35);
     const side = document.createElementNS(svgNS, 'polygon');
     side.setAttribute('class', 'bar-3d-face');
     side.setAttribute('fill', sideColor);
@@ -2330,6 +2341,57 @@ function apply3dBarExtrusion(svg, baseColor) {
   });
 }
 
+// Draws the "lollipop" bar decoration: a full-height, pill-shaped, muted background track
+// behind each bar (wider than the bar itself — ApexCharts' own backgroundBarColors only
+// draws a track the SAME width as the column, so this is plain SVG instead, same technique
+// as apply3dBarExtrusion above) plus a colored circular value badge at the top of the actual
+// filled bar. Purely decorative — the bar's real geometry/data/hit area are untouched.
+// Mutually exclusive with 3D extrusion (see the render loop): the two decorative treatments
+// were never designed to combine visually, and the reference "basic bar chart" is a flat,
+// non-tilted look anyway.
+function applyLollipopStyle(svg, values, colors) {
+  if (!svg) return;
+  svg.querySelectorAll('.bar-lollipop-track,.bar-lollipop-badge').forEach(el => el.remove());
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const grid = svg.querySelector('.apexcharts-grid');
+  if (!grid) return;
+  const gridTop = grid.getBBox().y;
+  const badgeR = 14;
+  svg.querySelectorAll('.apexcharts-bar-area').forEach((bar, i) => {
+    const b = bar.getBBox();
+    if (b.width <= 0) return;
+    const cx = b.x + b.width / 2;
+    const baseline = b.y + b.height; // the shared zero-line, same for every bar
+    const trackW = b.width * 2.1;
+    const trackH = Math.max(baseline - gridTop, 1);
+    const track = document.createElementNS(svgNS, 'rect');
+    track.setAttribute('class', 'bar-lollipop-track');
+    track.setAttribute('x', (cx - trackW / 2).toFixed(1));
+    track.setAttribute('y', gridTop.toFixed(1));
+    track.setAttribute('width', trackW.toFixed(1));
+    track.setAttribute('height', trackH.toFixed(1));
+    track.setAttribute('rx', (trackW / 2).toFixed(1));
+    track.setAttribute('fill', THEME.gridColor);
+    bar.insertAdjacentElement('beforebegin', track);
+
+    const color = colors[i % colors.length];
+    const badge = document.createElementNS(svgNS, 'g');
+    badge.setAttribute('class', 'bar-lollipop-badge');
+    const circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('cx', cx.toFixed(1)); circle.setAttribute('cy', b.y.toFixed(1)); circle.setAttribute('r', badgeR);
+    circle.setAttribute('fill', color);
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', cx.toFixed(1)); text.setAttribute('y', (b.y + 1).toFixed(1));
+    text.setAttribute('text-anchor', 'middle'); text.setAttribute('dominant-baseline', 'central');
+    text.setAttribute('fill', '#fff');
+    text.setAttribute('font-size', '10.5'); text.setAttribute('font-weight', '700');
+    text.setAttribute('font-family', THEME.fontFamily);
+    text.textContent = fmt(values[i]);
+    badge.appendChild(circle); badge.appendChild(text);
+    bar.insertAdjacentElement('afterend', badge);
+  });
+}
+
 // One shared config builder — the only place a chart's colors/fonts are set — passed
 // to ApexCharts verbatim so its own defaults never leak through. Donut and xy (bar/line)
 // options are built as two separate object literals rather than one with ternaries that
@@ -2339,11 +2401,11 @@ function apply3dBarExtrusion(svg, baseColor) {
 function chartConfig(type, labels, values, title, centerLabel) {
   const isLine = type === 'line';
   const isDonut = type === 'pie'; // rendered as a donut, same choice the old Chart.js config made
-  // ApexCharts only applies a fill *under the curve* (translucent gradient, matching the old
-  // Chart.js look) to chart.type "area" — asking a plain "line" for a gradient fill instead
-  // makes it apply that same low-opacity gradient to the stroke itself, rendering the line
-  // almost invisible against the background.
-  const apexType = isDonut ? 'donut' : (isLine ? 'area' : type);
+  // A plain stroked line, no fill under the curve — matching the visual-system guide's basic
+  // line-chart example (ring markers + a value label at every point instead). The two-series
+  // "mountain" look from that same guide page is the areaFill extension on the *multi*-series
+  // line (buildMultiSeriesChart), not this single-series path.
+  const apexType = isDonut ? 'donut' : type;
   const dark = document.documentElement.getAttribute('data-theme') !== 'light';
   const base = {
     chart: {
@@ -2371,11 +2433,11 @@ function chartConfig(type, labels, values, title, centerLabel) {
     colors: isLine ? [THEME.accent] : THEME.palette,
     // A gentle tonal gradient — lighter toward one end of the same hue, not a second color —
     // for a sense of depth without turning the categorical palette into a magnitude ramp.
+    // Only ever visible on bar (a plain "line" chart type never paints a fill regardless of
+    // this config, single-series or not).
     fill: {
       type: 'gradient',
-      gradient: isLine
-        ? { shadeIntensity: 1, opacityFrom: .35, opacityTo: .05 }
-        : { shade: 'light', type: 'vertical', shadeIntensity: .35, opacityFrom: 1, opacityTo: .85 },
+      gradient: { shade: 'light', type: 'vertical', shadeIntensity: .35, opacityFrom: 1, opacityTo: .85 },
     },
   };
   if (isDonut) {
@@ -2383,7 +2445,29 @@ function chartConfig(type, labels, values, title, centerLabel) {
       ...base,
       series: values,
       labels,
-      legend: { labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
+      // A side legend with each entry's own share prefixed on it ("51% Lorem ipsum") instead
+      // of a bare category name — the guide's donut-with-legend variant. `position: 'right'`
+      // matches the reference literally rather than mirroring for RTL (ApexCharts' own
+      // legend layout isn't RTL-aware, so 'left' would just move it, not truly mirror it).
+      legend: {
+        show: true, position: 'right', horizontalAlign: 'center',
+        labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily,
+        formatter: (seriesName, opts) => {
+          const val = opts.w.globals.series[opts.seriesIndex];
+          const total = opts.w.globals.seriesTotals.reduce((a, b) => a + b, 0) || 1;
+          return `${Math.round((val / total) * 100)}% ${seriesName}`;
+        },
+      },
+      // Each slice's own share, printed right on the ring — the guide's other donut variant
+      // (51%/45%/4% labelled in place rather than only in a legend). `val` here is already
+      // the slice's percentage for a pie/donut series (ApexCharts' own convention), not the
+      // raw value, so no separate percentage math is needed the way the legend above does.
+      dataLabels: {
+        enabled: true,
+        formatter: val => Math.round(val) + '%',
+        style: { fontSize: '11px', fontWeight: 700, fontFamily: THEME.fontFamily, colors: ['#fff'] },
+        dropShadow: { enabled: true, top: 1, left: 1, blur: 1.5, opacity: .45 },
+      },
       // The center label: a big bold number with a small muted caption under it — the
       // grand total by default (showAlways), captioned with deriveUnitLabel(title) (what the
       // number counts, e.g. "مشروع"/"خطر" — not the generic "الإجمالي"); a slice's own value
@@ -2431,9 +2515,45 @@ function chartConfig(type, labels, values, title, centerLabel) {
       axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
     },
     yaxis: { labels: { style: { colors: THEME.tickColor }, formatter: fmt } },
-    grid: { borderColor: THEME.gridColor, strokeDashArray: 0 },
-    stroke: isLine ? { curve: 'smooth', width: 2 } : { width: 0 },
-    plotOptions: apexType === 'bar' ? { bar: { borderRadius: 8, columnWidth: '55%' } } : {},
+    // Extra headroom above the plot for bar charts only — otherwise the lollipop value
+    // badge on the tallest bar (drawn above the bar's own top edge, see applyLollipopStyle)
+    // gets clipped by the SVG's own viewBox with nothing reserved for it.
+    // Extra headroom for line too — the per-point value labels (dataLabels below) sit right
+    // above their marker, same clipping risk the bar badge has.
+    grid: { borderColor: THEME.gridColor, strokeDashArray: 0, padding: isLine || apexType === 'bar' ? { top: 24 } : {} },
+    stroke: isLine ? { curve: 'smooth', width: 3 } : { width: 0 },
+    // A plain single-series line's marker at each point cycles through the brand palette —
+    // "hollow ring" style (fillColor is the card's own surface color, so it reads as an
+    // outlined circle rather than a solid dot) plus a value label above every point, matching
+    // the visual-system guide's basic line-chart example. The connecting stroke itself stays
+    // one consistent color (colors: [THEME.accent] above) rather than also shifting per
+    // segment — cycling the *line's* own color would clash with how color is used to mean
+    // "this series" everywhere else in the app (multi-series/bar/pie all key legend meaning
+    // off of color), where here it would just be decorative and could read as unintentional.
+    markers: isLine ? {
+      size: 6, strokeWidth: 2, hover: { sizeOffset: 2 },
+      discrete: values.map((_, i) => ({
+        seriesIndex: 0, dataPointIndex: i,
+        fillColor: THEME.surface, strokeColor: THEME.palette[i % THEME.palette.length], size: 6,
+      })),
+    } : {},
+    dataLabels: isLine ? {
+      enabled: true, formatter: fmt, offsetY: -14,
+      style: { fontSize: '11px', fontWeight: 700, fontFamily: THEME.fontFamily, colors: [THEME.ink] },
+      background: { enabled: false },
+    } : { enabled: false },
+    // "Lollipop" bars — narrow pill-shaped columns, one brand color per category
+    // (distributed:true) instead of one color for the whole series — matching the visual-
+    // system guide's basic bar-chart example. The wider rounded background "track" behind
+    // each bar and the circular value badge at its top are NOT an ApexCharts option (its own
+    // backgroundBarColors draws a track the SAME width as the column, not a visibly wider
+    // one) — both are drawn as plain SVG after render instead, see applyLollipopStyle below;
+    // plotOptions.bar.distributed here is exactly what that render step keys off of to know
+    // this is the single-series chart it should decorate, vs. a grouped/stacked multi-series
+    // bar built by buildMultiSeriesChart, which never sets it.
+    plotOptions: apexType === 'bar'
+      ? { bar: { borderRadius: 9, borderRadiusApplication: 'around', columnWidth: '30%', distributed: true } }
+      : {},
     legend: { show: false },
   };
 }
@@ -3080,9 +3200,21 @@ function renderDashboard() {
       // once the whole card tilts (see .dim-3d in the CSS), a flat circle/curve already reads
       // as sitting on a 3D plane on its own.
       const is3dBar = state.view3d && options.chart.type === 'bar' && !options.__isForecast;
-      if (is3dBar) {
-        const baseColor = options.colors[0];
-        options.chart = { ...options.chart, events: { animationEnd: () => apply3dBarExtrusion(holder.querySelector('svg'), baseColor) } };
+      // Lollipop decoration only for the single-series bar chart built by chartConfig() (see
+      // its plotOptions.bar.distributed:true — buildMultiSeriesChart never sets that), and
+      // only in 2D — the two decorative treatments were never designed to combine visually,
+      // and the reference "basic bar chart" is a flat, non-tilted look anyway.
+      const isLollipopBar = !state.view3d && options.chart.type === 'bar' && !options.__isForecast
+        && !!options.plotOptions?.bar?.distributed;
+      if (is3dBar || isLollipopBar) {
+        const colors = options.colors;
+        const values = options.series[0].data;
+        const draw = () => {
+          const svg = holder.querySelector('svg');
+          if (is3dBar) apply3dBarExtrusion(svg, colors);
+          else applyLollipopStyle(svg, values, colors);
+        };
+        options.chart = { ...options.chart, events: { animationEnd: draw } };
       }
       // Forecast charts (options.__isForecast) never reach here with a `widget` — their
       // categories mix real history with future, not-yet-real forecast periods, so
@@ -3093,18 +3225,21 @@ function renderDashboard() {
       card.__apexHolder = holder;
       card.__apexRendered = chart.render();
       chartInstances.push(chart);
-      if (is3dBar) {
+      if (is3dBar || isLollipopBar) {
         // Safety net: on the specific chart a cross-filter click just came from, ApexCharts'
         // own post-click bookkeeping can race with this destroy-and-recreate cycle and
-        // "animationEnd" above simply never fires — leaving that one widget's bars flat in
-        // 3D view. Re-check shortly after the entrance animation should be done and extrude
-        // then if the event-driven path above didn't already do it (the .bar-3d-face check
+        // "animationEnd" above simply never fires — leaving that one widget's bars
+        // undecorated. Re-check shortly after the entrance animation should be done and
+        // draw then if the event-driven path above didn't already (the class-presence check
         // keeps this a no-op in the normal case).
-        const baseColor = options.colors[0];
+        const colors = options.colors;
+        const values = options.series[0].data;
         const animMs = (options.chart.animations?.speed || 450) + (options.chart.animations?.animateGradually?.delay || 0);
         setTimeout(() => {
           const svg = holder.querySelector('svg');
-          if (svg && !svg.querySelector('.bar-3d-face')) apply3dBarExtrusion(svg, baseColor);
+          if (!svg) return;
+          if (is3dBar && !svg.querySelector('.bar-3d-face')) apply3dBarExtrusion(svg, colors);
+          else if (isLollipopBar && !svg.querySelector('.bar-lollipop-badge')) applyLollipopStyle(svg, values, colors);
         }, animMs + 200);
       }
     });
