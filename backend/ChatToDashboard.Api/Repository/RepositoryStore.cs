@@ -238,17 +238,30 @@ public class RepositoryStore
             CreatedByUserId = createdByUserId,
         };
 
-        await using var connection = await _db.OpenConnectionAsync(ct);
-
+        // Resolved before opening the connection below — ResolveBareTableNameAsync makes its
+        // own independent, potentially slow LLM call (ITableNamingAssistant) plus its own
+        // separate GetSchemaAsync connection for the collision check, neither of which touch
+        // `connection`. Holding it open and idle across that call was a real bug (seen live,
+        // reported as "Execution Timeout Expired" on save): a pooled connection to a remote/
+        // shared SQL Server can be reset by an idle network hop while it sits unused, and the
+        // next command run on it then fails as if IT had timed out, even though the actual
+        // DROP/CREATE/bulk-copy work is fast. Resolving the name first and opening fresh right
+        // before it's used means the connection is never open longer than the DB work itself.
+        var table = parsed.Table;
         var columnsJson = "[]";
-        if (parsed.Table is { } table && table.Columns.Count > 0)
+        string? bareName = null;
+        if (table is not null && table.Columns.Count > 0)
         {
             var columnNames = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
-            var bareName = await ResolveBareTableNameAsync(record.DisplayName, record.Description, columnNames, parsed.FileName, id, ct);
+            bareName = await ResolveBareTableNameAsync(record.DisplayName, record.Description, columnNames, parsed.FileName, id, ct);
             record.TableName = _db.DisplayTable(bareName);
-            await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
             columnsJson = System.Text.Json.JsonSerializer.Serialize(columnNames);
         }
+
+        await using var connection = await _db.OpenConnectionAsync(ct);
+
+        if (table is not null && bareName is not null)
+            await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
 
         await connection.ExecuteAsync(
             $"INSERT INTO {CatalogueTable} (Id, DisplayName, OriginalFileName, Description, Category, Kind, " +
