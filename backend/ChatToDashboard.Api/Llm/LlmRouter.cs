@@ -3,6 +3,7 @@ using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Ollama;
 using ChatToDashboard.Api.OpenAi;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Usage;
 using ChatToDashboard.Api.Users;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,12 +31,14 @@ public class LlmRouter : IDashboardGenerator
     private readonly IServiceProvider _services;
     private readonly LlmSettingsStore _settings;
     private readonly string _defaultProvider;
+    private readonly UsageTracker _usage;
 
-    public LlmRouter(IServiceProvider services, LlmSettingsStore settings, IConfiguration configuration)
+    public LlmRouter(IServiceProvider services, LlmSettingsStore settings, IConfiguration configuration, UsageTracker usage)
     {
         _services = services;
         _settings = settings;
         _defaultProvider = configuration["Llm:Provider"] ?? Anthropic;
+        _usage = usage;
     }
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
@@ -72,13 +75,13 @@ public class LlmRouter : IDashboardGenerator
                     Ollama => settings.ImageReaderOllamaModel,
                     _ => null,
                 };
-                var imageGenerator = ResolveProvider(imageProvider);
+                var imageGenerator = await ResolveOrRecordFailureAsync(imageProvider, question, requestingUser, ct);
                 return await imageGenerator.GenerateDashboardAsync(
                     question, currentDashboard, sources, imageDataUrl, requestingUser, lang, imageModelOverride, ct);
             }
         }
 
-        var generator = await ResolveAsync(ct);
+        var generator = await ResolveAsync(question, requestingUser, ct);
         return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, lang, null, ct);
     }
 
@@ -86,7 +89,7 @@ public class LlmRouter : IDashboardGenerator
         string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
         CancellationToken ct = default)
     {
-        var generator = await ResolveAsync(ct);
+        var generator = await ResolveAsync(question, requestingUser, ct);
         return await generator.GenerateInquiryAsync(question, sources, requestingUser, lang, ct);
     }
 
@@ -94,15 +97,41 @@ public class LlmRouter : IDashboardGenerator
         InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
         AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        var generator = await ResolveAsync(ct);
+        var generator = await ResolveAsync(inquiry.Answer, requestingUser, ct);
         return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, requestingUser, lang, ct);
     }
 
-    private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)
+    private async Task<IDashboardGenerator> ResolveAsync(string question, AppUser? requestingUser, CancellationToken ct)
     {
         var settings = await _settings.GetAsync(ct);
         var provider = settings.Provider is { Length: > 0 } ? settings.Provider : _defaultProvider;
-        return ResolveProvider(provider);
+        return await ResolveOrRecordFailureAsync(provider, question, requestingUser, ct);
+    }
+
+    /// <summary>
+    /// Resolving a concrete client (below) constructs it — and that constructor throws when
+    /// its API key isn't configured (see e.g. ClaudeClient's ctor). That happens before the
+    /// client exists to call UsageTracker.Begin on itself, so without this the failure would
+    /// vanish from the Usage page entirely rather than showing up as a failed request — seen
+    /// live: an admin picks a provider for Settings' Image Analysis Model (or the main model
+    /// switcher) without having actually configured that provider's API key yet, sends a
+    /// question, gets a clear error, but Usage shows nothing at all for it. Records a minimal
+    /// entry here instead (no model id exists yet to log, so "(unresolved)" stands in for it),
+    /// then lets the original exception continue up to the caller unchanged.
+    /// </summary>
+    private async Task<IDashboardGenerator> ResolveOrRecordFailureAsync(
+        string provider, string question, AppUser? requestingUser, CancellationToken ct)
+    {
+        try
+        {
+            return ResolveProvider(provider);
+        }
+        catch (Exception ex)
+        {
+            var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
     }
 
     private IDashboardGenerator ResolveProvider(string provider) => provider switch
