@@ -250,18 +250,7 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
   0%,100%{box-shadow:0 0 0 4px var(--accent-soft)}
   50%{box-shadow:0 0 0 9px color-mix(in srgb, var(--accent) 22%, transparent)}
 }
-/* `to{}` deliberately omits `transform` — CSS resolves an omitted endpoint to whatever the
-   element's non-animated transform would be, so this same entrance animation settles into
-   either `none` (2D) or the .dim-3d tilt below, instead of the two fighting over the property. */
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
-/* "3D" view (#view-dim-toggle in the toolbar): a tasteful perspective tilt on every card,
-   small enough that text stays perfectly readable — a floating, dimensional feel, not an
-   actual 3D chart engine. Bar charts get real extra depth too: mountChart()'s post-render
-   pass (apply3dBarExtrusion) adds an extruded top/side face to each bar, which reads as
-   genuinely 3D once the whole card — bars included — tilts together as one rigid plane. */
-.grid.dim-3d{perspective:1600px}
-.grid.dim-3d .widget{transform:rotateX(9deg) rotateY(-7deg);box-shadow:var(--shadow-3d);transition:transform .2s ease}
-.grid.dim-3d .widget:hover{transform:rotateX(5deg) rotateY(-3deg) translateY(-3px)}
 .widget.kpi{justify-content:center;align-items:center;min-height:150px}
 /* Big number beside its description, not stacked above it — the dominant "basic numbers"
    composition in the brand's visual-system guide (a large colored figure as the focal
@@ -946,10 +935,6 @@ tr:last-child td{border-bottom:0}
         <button type="button" class="edit-toggle-btn active" data-mode="view">عرض</button>
         <button type="button" class="edit-toggle-btn" data-mode="edit">تحرير</button>
       </div>
-      <div class="edit-toggle" id="view-dim-toggle" title="عرض العناصر بشكل مسطّح أو بمنظور 3D">
-        <button type="button" class="edit-toggle-btn active" data-dim="2d">2D</button>
-        <button type="button" class="edit-toggle-btn" data-dim="3d">3D</button>
-      </div>
       <span id="autosave-status" class="autosave-status"></span>
       <button type="button" id="btn-refresh" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">🔄 تحديث</button>
       <button type="button" id="btn-undo" title="تراجع" disabled>↶ تراجع</button>
@@ -1436,7 +1421,6 @@ const state = {
   // edit/wizard controls for a Viewer and drives the disabled-state banner.
   dashboardIsActive: false, dashboardRole: null, dashboardDisabled: false, dashboardDisabledReason: '',
 };
-try { state.view3d = localStorage.getItem('chatToDashboardView3d') === '1'; } catch { state.view3d = false; }
 
 // Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
 // it) and a layout.size (small/wide/full) driving its grid span — neither exists in the
@@ -1586,9 +1570,13 @@ function sourcePopover(w) {
   const method = at > -1 ? source.slice(at + 2) : '';
   // Widgets built through the "+ إضافة عنصر" wizard carry their real structured query
   // (metric/aggregation/dimension/period) — shown verbatim here, never authored by the
-  // model. Chat-generated widgets have no `query`, so this block is simply omitted.
+  // model. A chat-generated widget's own `query` (see AnalyticsTools.cs's "حقل query"
+  // section) is only ever {table, sql} — set purely so dashboard filters/cross-filtering
+  // can re-run it, never carrying metric/dimension — so gate on q.metric specifically
+  // (not merely q being present) or this block renders with a "المؤشر" label and nothing
+  // under it for every chat-built widget.
   const q = w.query;
-  const queryBlock = q ? `
+  const queryBlock = q?.metric ? `
     <div class="src-block"><span class="src-lbl">المؤشر</span>${esc(q.metric || '')}${q.aggregation ? ` (${esc(q.aggregation.toUpperCase())})` : ''}</div>
     ${q.dimension ? `<div class="src-block"><span class="src-lbl">مجمّع حسب</span>${esc(q.dimension)}</div>` : ''}
     ${q.dateColumn && q.timeRange && q.timeRange !== 'all' ? `<div class="src-block"><span class="src-lbl">الفترة</span>${esc(timeRangeLabel(q.timeRange))}</div>` : ''}
@@ -1889,19 +1877,6 @@ el('edit-toggle').addEventListener('click', e => {
   renderDashboard();
 });
 
-// Reflects whatever localStorage had on load — a fresh page load shouldn't reset the choice
-// back to 2D. See applyTheme() above for the same pattern with the light/dark toggle.
-el('view-dim-toggle').querySelectorAll('.edit-toggle-btn').forEach(b =>
-  b.classList.toggle('active', b.dataset.dim === (state.view3d ? '3d' : '2d')));
-el('view-dim-toggle').addEventListener('click', e => {
-  const btn = e.target.closest('.edit-toggle-btn');
-  if (!btn) return;
-  state.view3d = btn.dataset.dim === '3d';
-  el('view-dim-toggle').querySelectorAll('.edit-toggle-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.dim === (state.view3d ? '3d' : '2d')));
-  try { localStorage.setItem('chatToDashboardView3d', state.view3d ? '1' : '0'); } catch {}
-  renderDashboard();
-});
 
 // ---------- autosave: updates the same history row instead of creating a new one per edit ----------
 let autosaveTimer = null;
@@ -2295,60 +2270,11 @@ function TableCard(w) {
   return card;
 }
 
-// Darkens (negative percent) or lightens (positive) a "#rrggbb" color toward black/white —
-// used only for the extra 3D "top"/"side" faces below, never for a chart's real fill.
-function shadeHex(hex, percent) {
-  const num = parseInt(hex.replace('#', ''), 16);
-  let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
-  const t = percent < 0 ? 0 : 255;
-  const p = Math.abs(percent);
-  r = Math.round((t - r) * p) + r; g = Math.round((t - g) * p) + g; b = Math.round((t - b) * p) + b;
-  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
-}
-
-// Fakes an extruded "3-D column" look — a top and a side face per bar, built from plain SVG
-// polygons next to each bar's real path — for the 3D view toggle. Only bar charts need this:
-// a donut or line chart already reads as sitting on a 3D plane once the whole card tilts (see
-// .dim-3d in the CSS); a flat circle/curve doesn't need per-mark extrusion to look dimensional.
-// Purely decorative — the bar's real geometry, data and hit area are untouched. `colors` is
-// the chart's own per-bar palette (distributed:true bars each have their own color now, see
-// chartConfig()) — cycled by index, same as ApexCharts itself does for the bars.
-function apply3dBarExtrusion(svg, colors) {
-  if (!svg) return;
-  svg.querySelectorAll('.bar-3d-face').forEach(el => el.remove()); // idempotent if ever re-run
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const depth = 9;
-  svg.querySelectorAll('.apexcharts-bar-area').forEach((bar, i) => {
-    const b = bar.getBBox();
-    if (b.width <= 0 || b.height <= 0) return;
-    const baseColor = colors[i % colors.length];
-    const topColor = shadeHex(baseColor, .35);
-    const sideColor = shadeHex(baseColor, -.35);
-    const side = document.createElementNS(svgNS, 'polygon');
-    side.setAttribute('class', 'bar-3d-face');
-    side.setAttribute('fill', sideColor);
-    side.setAttribute('points',
-      `${b.x + b.width},${b.y} ${b.x + b.width + depth},${b.y - depth} ` +
-      `${b.x + b.width + depth},${b.y + b.height - depth} ${b.x + b.width},${b.y + b.height}`);
-    const top = document.createElementNS(svgNS, 'polygon');
-    top.setAttribute('class', 'bar-3d-face');
-    top.setAttribute('fill', topColor);
-    top.setAttribute('points',
-      `${b.x},${b.y} ${b.x + depth},${b.y - depth} ` +
-      `${b.x + b.width + depth},${b.y - depth} ${b.x + b.width},${b.y}`);
-    bar.insertAdjacentElement('afterend', side);
-    side.insertAdjacentElement('afterend', top);
-  });
-}
-
 // Draws the "lollipop" bar decoration: a full-height, pill-shaped, muted background track
 // behind each bar (wider than the bar itself — ApexCharts' own backgroundBarColors only
-// draws a track the SAME width as the column, so this is plain SVG instead, same technique
-// as apply3dBarExtrusion above) plus a colored circular value badge at the top of the actual
-// filled bar. Purely decorative — the bar's real geometry/data/hit area are untouched.
-// Mutually exclusive with 3D extrusion (see the render loop): the two decorative treatments
-// were never designed to combine visually, and the reference "basic bar chart" is a flat,
-// non-tilted look anyway.
+// draws a track the SAME width as the column, so this is plain SVG instead) plus a colored
+// circular value badge at the top of the actual filled bar. Purely decorative — the bar's
+// real geometry/data/hit area are untouched.
 function applyLollipopStyle(svg, values, colors) {
   if (!svg) return;
   svg.querySelectorAll('.bar-lollipop-track,.bar-lollipop-badge').forEach(el => el.remove());
@@ -3151,7 +3077,7 @@ function renderDashboard() {
   const widgets = d.widgets || [];
   if (widgets.length) {
     const grid = document.createElement('div');
-    grid.className = 'grid' + (state.editMode ? ' edit-mode' : '') + (state.view3d ? ' dim-3d' : '');
+    grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
     widgets.forEach(w => grid.appendChild(buildWidget(w)));
     el.dash.appendChild(grid);
 
@@ -3194,27 +3120,24 @@ function renderDashboard() {
         labels.name.fontSize = capSize + 'px';
         labels.name.offsetY = Math.round(numSize * 0.55) + 3;
       }
-      // In 3D view, extrude bar charts with a fake top/side face once the entrance animation
-      // actually finishes — measuring bar geometry any earlier (mid-animation) would extrude
-      // from a not-yet-full-height bar. A donut/line chart needs no such per-mark treatment:
-      // once the whole card tilts (see .dim-3d in the CSS), a flat circle/curve already reads
-      // as sitting on a 3D plane on its own.
-      const is3dBar = state.view3d && options.chart.type === 'bar' && !options.__isForecast;
       // Lollipop decoration only for the single-series bar chart built by chartConfig() (see
-      // its plotOptions.bar.distributed:true — buildMultiSeriesChart never sets that), and
-      // only in 2D — the two decorative treatments were never designed to combine visually,
-      // and the reference "basic bar chart" is a flat, non-tilted look anyway.
-      const isLollipopBar = !state.view3d && options.chart.type === 'bar' && !options.__isForecast
+      // its plotOptions.bar.distributed:true — buildMultiSeriesChart never sets that) —
+      // drawn once the entrance animation actually finishes; measuring bar geometry any
+      // earlier (mid-animation) would decorate a not-yet-full-height bar.
+      const isLollipopBar = options.chart.type === 'bar' && !options.__isForecast
         && !!options.plotOptions?.bar?.distributed;
-      if (is3dBar || isLollipopBar) {
+      if (isLollipopBar) {
         const colors = options.colors;
         const values = options.series[0].data;
-        const draw = () => {
-          const svg = holder.querySelector('svg');
-          if (is3dBar) apply3dBarExtrusion(svg, colors);
-          else applyLollipopStyle(svg, values, colors);
+        // Stashed on the card (alongside __apexChart/__apexHolder below) so PPTX export can
+        // re-decorate the captured SVG defensively without needing to reverse-engineer
+        // ApexCharts' own internal color/series state — see widgetToPptxInput.
+        card.__lollipopValues = values;
+        card.__lollipopColors = colors;
+        options.chart = {
+          ...options.chart,
+          events: { animationEnd: () => applyLollipopStyle(holder.querySelector('svg'), values, colors) },
         };
-        options.chart = { ...options.chart, events: { animationEnd: draw } };
       }
       // Forecast charts (options.__isForecast) never reach here with a `widget` — their
       // categories mix real history with future, not-yet-real forecast periods, so
@@ -3225,7 +3148,7 @@ function renderDashboard() {
       card.__apexHolder = holder;
       card.__apexRendered = chart.render();
       chartInstances.push(chart);
-      if (is3dBar || isLollipopBar) {
+      if (isLollipopBar) {
         // Safety net: on the specific chart a cross-filter click just came from, ApexCharts'
         // own post-click bookkeeping can race with this destroy-and-recreate cycle and
         // "animationEnd" above simply never fires — leaving that one widget's bars
@@ -3237,9 +3160,7 @@ function renderDashboard() {
         const animMs = (options.chart.animations?.speed || 450) + (options.chart.animations?.animateGradually?.delay || 0);
         setTimeout(() => {
           const svg = holder.querySelector('svg');
-          if (!svg) return;
-          if (is3dBar && !svg.querySelector('.bar-3d-face')) apply3dBarExtrusion(svg, colors);
-          else if (isLollipopBar && !svg.querySelector('.bar-lollipop-badge')) applyLollipopStyle(svg, values, colors);
+          if (svg && !svg.querySelector('.bar-lollipop-badge')) applyLollipopStyle(svg, values, colors);
         }, animMs + 200);
       }
     });
@@ -3717,8 +3638,8 @@ async function widgetToPptxInput(w, card) {
     if (!svg) return base;
     // Re-applied defensively (it's idempotent) rather than relying solely on the
     // animationEnd hook in renderDashboard() — exporting fast enough to beat that event
-    // would otherwise capture bars with no extrusion yet.
-    if (state.view3d && base.type === 'bar' && !w.forecast) apply3dBarExtrusion(svg, THEME.palette[0]);
+    // would otherwise capture a lollipop bar with no track/badge yet.
+    if (card.__lollipopColors) applyLollipopStyle(svg, card.__lollipopValues, card.__lollipopColors);
     return { ...base, image: await svgElementToPngDataUrl(svg) };
   }
   catch { return base; }
