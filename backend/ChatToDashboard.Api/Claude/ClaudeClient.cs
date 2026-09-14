@@ -14,7 +14,7 @@ namespace ChatToDashboard.Api.Claude;
 /// Claude asks for list_files / query_data / search_documents, we execute the tool
 /// and send back tool_result blocks, until Claude returns the final dashboard JSON.
 /// </summary>
-public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
+public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -189,6 +189,39 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         {
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             throw;
+        }
+    }
+
+    /// <summary>See ITableNamingAssistant — a single, tool-free turn like
+    /// ExtractDocumentTextAsync above, just text in, text out. Never throws: an upload must
+    /// never fail over a naming suggestion, so any failure here is swallowed and reported as
+    /// null, leaving RepositoryStore.SaveAsync to fall back to its existing filename-derived
+    /// name.</summary>
+    public async Task<string?> SuggestTableNameAsync(
+        string displayName, string? description, IReadOnlyList<string> columnNames,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.TableNamingSystemPrompt;
+        var userText = AnalyticsTools.TableNamingUserMessage(displayName, description, columnNames);
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+
+        var trace = _usage.Begin("Anthropic", _model, $"🏷️ اقتراح اسم جدول: {displayName}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var responseContent = response["content"]?.AsArray()
+                ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+            var text = string.Concat(responseContent
+                .Where(b => b?["type"]?.GetValue<string>() == "text")
+                .Select(b => b!["text"]!.GetValue<string>())).Trim();
+            await trace.CompleteAsync(true, text, null, ct);
+            return text.Length > 0 ? text : null;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
         }
     }
 

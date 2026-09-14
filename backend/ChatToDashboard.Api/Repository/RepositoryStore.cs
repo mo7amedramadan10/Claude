@@ -1,6 +1,8 @@
 using System.Data;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Data;
+using ChatToDashboard.Api.Llm;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
@@ -17,11 +19,13 @@ namespace ChatToDashboard.Api.Repository;
 public class RepositoryStore
 {
     private readonly DataStore _db;
+    private readonly ITableNamingAssistant _tableNaming;
     private readonly ILogger<RepositoryStore> _logger;
 
-    public RepositoryStore(DataStore db, ILogger<RepositoryStore> logger)
+    public RepositoryStore(DataStore db, ITableNamingAssistant tableNaming, ILogger<RepositoryStore> logger)
     {
         _db = db;
+        _tableNaming = tableNaming;
         _logger = logger;
     }
 
@@ -239,12 +243,11 @@ public class RepositoryStore
         var columnsJson = "[]";
         if (parsed.Table is { } table && table.Columns.Count > 0)
         {
-            var bareName = $"repo_{DataFolderLoader.SanitizeTableName(
-                Path.GetFileNameWithoutExtension(parsed.FileName))}_{id[..6]}";
+            var columnNames = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
+            var bareName = await ResolveBareTableNameAsync(record.DisplayName, record.Description, columnNames, parsed.FileName, id, ct);
             record.TableName = _db.DisplayTable(bareName);
             await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
-            columnsJson = System.Text.Json.JsonSerializer.Serialize(
-                table.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+            columnsJson = System.Text.Json.JsonSerializer.Serialize(columnNames);
         }
 
         await connection.ExecuteAsync(
@@ -262,6 +265,71 @@ public class RepositoryStore
 
         _logger.LogInformation("Saved {File} to repository under category {Category}", record.DisplayName, record.Category);
         return record;
+    }
+
+    /// <summary>
+    /// New-file table naming only (see SaveAsync) — "update this file" always reuses the
+    /// existing TableName untouched (UpdateDataAsync below), since table identity must stay
+    /// stable across updates. Tries ITableNamingAssistant for a short, clean identifier first
+    /// (e.g. "opportunities" instead of "repo_Opportunities_Tracker_V_3_0__1__976323") — the
+    /// long filename-derived kind of name is exactly what the model tends to mentally
+    /// "simplify" when writing SQL later, which is how it ends up querying a table that
+    /// doesn't exist (see AnalyticsTools' "Invalid object name" error-hint fix, the other half
+    /// of this same problem). Falls back to the original filename-sanitized name — unchanged
+    /// from before this method existed — whenever the suggestion is missing, unusable, or the
+    /// call fails for any reason; ITableNamingAssistant itself never throws, but nothing here
+    /// depends on that promise holding.
+    /// </summary>
+    private async Task<string> ResolveBareTableNameAsync(
+        string displayName, string description, IReadOnlyList<string> columnNames,
+        string fileName, string id, CancellationToken ct)
+    {
+        var fallback = $"repo_{DataFolderLoader.SanitizeTableName(Path.GetFileNameWithoutExtension(fileName))}_{id[..6]}";
+
+        string? suggestion;
+        try
+        {
+            suggestion = await _tableNaming.SuggestTableNameAsync(displayName, description, columnNames, null, ct);
+        }
+        catch
+        {
+            suggestion = null;
+        }
+        var sanitized = SanitizeSuggestedTableName(suggestion);
+        if (sanitized is null) return fallback;
+
+        // Only the AI-suggested short name needs a collision check — the fallback above is
+        // already effectively unique on its own (filename plus 6 hex chars of the file's own
+        // new GUID), which a short generic name like "sales_orders" very much is not.
+        var existing = (await _db.GetSchemaAsync(ct))
+            .Select(t => _db.BareTableName(t.Table))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!existing.Contains(sanitized)) return sanitized;
+
+        for (var suffix = 2; ; suffix++)
+        {
+            var candidate = $"{sanitized}_{suffix}";
+            if (!existing.Contains(candidate)) return candidate;
+        }
+    }
+
+    /// <summary>Never trusts a model reply as already a safe SQL identifier: takes only its
+    /// first line, strips anything outside lowercase ASCII letters/digits/underscores, and
+    /// enforces the same "doesn't start with a digit" rule and a 30-character cap the way
+    /// DataFolderLoader.SanitizeTableName enforces its own (much looser, 100-character) rule
+    /// for the filename-derived fallback. Returns null for anything that sanitizes down to
+    /// nothing usable, telling the caller to fall back instead of using a mangled name.</summary>
+    private static string? SanitizeSuggestedTableName(string? suggestion)
+    {
+        if (string.IsNullOrWhiteSpace(suggestion)) return null;
+        var firstLine = suggestion.Split('\n', 2)[0].Trim().ToLowerInvariant();
+        var cleaned = Regex.Replace(firstLine, @"[^a-z0-9_]", "_");
+        cleaned = Regex.Replace(cleaned, @"_{2,}", "_").Trim('_');
+        if (cleaned.Length == 0) return null;
+        if (char.IsDigit(cleaned[0])) cleaned = "t_" + cleaned;
+        const int MaxLength = 30;
+        if (cleaned.Length > MaxLength) cleaned = cleaned[..MaxLength].TrimEnd('_');
+        return cleaned.Length == 0 ? null : cleaned;
     }
 
     /// <summary>

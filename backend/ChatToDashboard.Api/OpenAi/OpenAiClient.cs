@@ -14,7 +14,7 @@ namespace ChatToDashboard.Api.OpenAi;
 /// loop as the Claude client: the model requests list_files / query_data / search_documents,
 /// we execute each call and append a "tool" message, until it returns the dashboard JSON.
 /// </summary>
-public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
+public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -182,6 +182,38 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor
         {
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             throw;
+        }
+    }
+
+    /// <summary>See ClaudeClient.SuggestTableNameAsync / ITableNamingAssistant — same
+    /// contract, OpenAI's own plain choices[0].message.content response. Never throws.</summary>
+    public async Task<string?> SuggestTableNameAsync(
+        string displayName, string? description, IReadOnlyList<string> columnNames,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.TableNamingSystemPrompt;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.TableNamingUserMessage(displayName, description, columnNames) },
+        };
+
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, $"🏷️ اقتراح اسم جدول: {displayName}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+            var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
+                ?? throw new InvalidOperationException("OpenAI API response had no choices.");
+            var text = (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+            await trace.CompleteAsync(true, text, null, ct);
+            return text.Length > 0 ? text : null;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
         }
     }
 

@@ -26,7 +26,7 @@ namespace ChatToDashboard.Api.Ollama;
 ///   (see UsageTrace.RecordTurn, which already falls back to the response's top level).
 /// - "stream" is NOT omittable — Ollama defaults to streaming, so every request pins it false.
 /// </summary>
-public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
+public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -302,6 +302,36 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         var note = pagesRead == pageImageDataUrls.Count ? null : $"{pageImageDataUrls.Count - pagesRead} صفحة لم تُقرأ: {lastFailure?.Message}";
         await trace.CompleteAsync(true, text, note, CancellationToken.None);
         return new DocumentExtractionResult(text, pagesRead);
+    }
+
+    /// <summary>See ClaudeClient.SuggestTableNameAsync / ITableNamingAssistant — same
+    /// contract, Ollama's own message["content"] response shape. Never throws.</summary>
+    public async Task<string?> SuggestTableNameAsync(
+        string displayName, string? description, IReadOnlyList<string> columnNames,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.TableNamingSystemPrompt;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.TableNamingUserMessage(displayName, description, columnNames) },
+        };
+
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, $"🏷️ اقتراح اسم جدول: {displayName}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallChatAsync(model, messages, null, trace, ct);
+            var text = (response["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+            await trace.CompleteAsync(true, text, null, ct);
+            return text.Length > 0 ? text : null;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
     }
 
     /// <summary>Pulls the base64 payload out of a "data:&lt;mime&gt;;base64,&lt;data&gt;" URL —

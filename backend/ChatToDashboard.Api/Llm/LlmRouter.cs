@@ -21,7 +21,7 @@ namespace ChatToDashboard.Api.Llm;
 /// up front) means a provider whose API key isn't configured only fails if it's actually
 /// selected — the other two keep working regardless.
 /// </summary>
-public class LlmRouter : IDashboardGenerator
+public class LlmRouter : IDashboardGenerator, ITableNamingAssistant
 {
     public const string Anthropic = "Anthropic";
     public const string OpenAI = "OpenAI";
@@ -140,6 +140,35 @@ public class LlmRouter : IDashboardGenerator
         Ollama => _services.GetRequiredService<OllamaClient>(),
         _ => _services.GetRequiredService<ClaudeClient>(),
     };
+
+    /// <summary>See ITableNamingAssistant — routed through whichever provider normally builds
+    /// dashboards (not a separate independent setting the way ImageReaderProvider/
+    /// DocumentReaderProvider are; this is a single lightweight suggestion call, not a
+    /// recurring choice worth its own admin setting). Never throws: a misconfigured provider,
+    /// or any other failure, just means no suggestion — RepositoryStore.SaveAsync (the only
+    /// caller) falls back to its existing filename-derived table name in that case, exactly
+    /// as if this method didn't exist.</summary>
+    public async Task<string?> SuggestTableNameAsync(
+        string displayName, string? description, IReadOnlyList<string> columnNames,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var settings = await _settings.GetAsync(ct);
+            var provider = settings.Provider is { Length: > 0 } ? settings.Provider : _defaultProvider;
+            ITableNamingAssistant assistant = provider switch
+            {
+                OpenAI => _services.GetRequiredService<OpenAiClient>(),
+                Ollama => _services.GetRequiredService<OllamaClient>(),
+                _ => _services.GetRequiredService<ClaudeClient>(),
+            };
+            return await assistant.SuggestTableNameAsync(displayName, description, columnNames, requestingUser, ct);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
 
 /// <summary>The IDashboardGenerator equivalent of this router, for the document-reading side —

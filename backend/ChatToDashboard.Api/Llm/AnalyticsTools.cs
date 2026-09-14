@@ -414,6 +414,46 @@ public class AnalyticsTools
         """;
 
     /// <summary>
+    /// System prompt for ITableNamingAssistant.SuggestTableNameAsync — asked at upload time,
+    /// for a NEW file only (see RepositoryStore.SaveAsync), to propose a short SQL identifier
+    /// instead of the long, filename-derived one DataFolderLoader.SanitizeTableName would
+    /// otherwise produce (e.g. "repo_Opportunities_Tracker_V_3_0__1__976323") — a name long
+    /// enough that the model building dashboards later tends to mentally "simplify" it when
+    /// writing SQL, which is exactly how it ends up querying a table that doesn't exist. In
+    /// English throughout (unlike every other prompt in this file) since the identifier itself
+    /// must come back transliterated/English regardless of the file's own display language —
+    /// there's no Arabic business content for a bilingual instruction to serve here.
+    /// English/plain-text response, not JSON: the caller (RepositoryStore.SaveAsync) re-
+    /// validates and sanitizes whatever comes back server-side either way, so nothing here is
+    /// trusted as already-safe.
+    /// </summary>
+    public const string TableNamingSystemPrompt =
+        "You suggest short, clean SQL table identifiers for newly uploaded data files. Given a " +
+        "file's display name, description, and column headers, reply with ONLY the suggested " +
+        "table name on a single line — no explanation, no markdown, no quotes, nothing else.\n\n" +
+        "Rules for the name:\n" +
+        "- lowercase English letters, digits, and underscores only (no spaces, no punctuation, " +
+        "no accented characters)\n" +
+        "- must start with a letter\n" +
+        "- at most 30 characters\n" +
+        "- a short, clear identifier that captures what the data is about — transliterate or " +
+        "translate a non-English display name/description into English rather than copying its " +
+        "characters; this name is purely an internal SQL identifier the end user never sees, so " +
+        "an English name is always preferred over a literal transliteration\n" +
+        "- prefer the kind of short collective noun typical of SQL table names (e.g. " +
+        "\"sales_orders\", \"employees\", \"support_tickets\") over restating the whole display name";
+
+    /// <summary>The per-file prompt accompanying TableNamingSystemPrompt.</summary>
+    public static string TableNamingUserMessage(string displayName, string? description, IReadOnlyList<string> columnNames) =>
+        $"""
+        File display name: {displayName}
+        Description: {(string.IsNullOrWhiteSpace(description) ? "(none given)" : description)}
+        Columns: {string.Join(", ", columnNames)}
+
+        Suggest one short table name for this file.
+        """;
+
+    /// <summary>
     /// Prepended to both BuildSystemPrompt and BuildInquirySystemPrompt when the frontend's
     /// language toggle (see index.html's #lang-toggle) is set to English — everything else in
     /// either prompt stays exactly as tuned (in Arabic, addressed to the model), since an LLM
@@ -951,6 +991,30 @@ public class AnalyticsTools
         - ملفات مستودع الملفات المقفولة (لا يحق للمستخدم الوصول لها): {Bullets(context.DisabledFiles)}
         """;
 
+    /// <summary>Matches both dialects' "you referenced something that doesn't exist" errors —
+    /// SQL Server's "Invalid object name"/"Invalid column name" and SQLite's "no such table"/
+    /// "no such column" — see ExecuteToolAsync's DbException handling below.</summary>
+    private static readonly Regex InvalidNameErrorRegex = new(
+        @"invalid (object|column) name|no such (table|column)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>The same valid-table list list_files itself returns (see that case above),
+    /// reused as a hint appended to an "invalid object/column name" query_data error so the
+    /// model can self-correct with the real table name in its very next turn. Returns null
+    /// if there's nothing to list (nothing enabled, or nothing left after gating) — appending
+    /// an empty hint would be worse than no hint at all.</summary>
+    private async Task<string?> BuildValidTablesHintAsync(SourceContext context, CancellationToken ct)
+    {
+        var schema = await _loader.GetSchemaAsync(ct);
+        var validTables = schema
+            .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
+            .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
+            .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
+            .Select(t => t.Table)
+            .ToList();
+        return validTables.Count == 0 ? null : $"Valid tables are: {string.Join(", ", validTables)}.";
+    }
+
     public async Task<(string Result, bool IsError)> ExecuteToolAsync(
         string toolName, JsonObject input, SourceContext context, CancellationToken ct)
     {
@@ -1065,6 +1129,19 @@ public class AnalyticsTools
         {
             // Feed SQL errors back so the model can correct its query.
             _logger.LogWarning(ex, "SQL error executing tool {Tool}", toolName);
+            // query_data's most common failure mode in practice isn't a malformed query — it's
+            // the model inventing a plausible-but-wrong table name (e.g. "staging.opportunities")
+            // instead of the exact, often long and GUID-suffixed one list_files actually gave it
+            // (e.g. "staging.repo_Opportunities_Tracker_V_3_0__1__976323"). A bare "Invalid object
+            // name" leaves it to guess a replacement — appending the current valid table list
+            // (the same one list_files itself returns) lets it self-correct with the real name
+            // in the very next turn instead of guessing again or failing the whole response.
+            if (toolName == "query_data" && InvalidNameErrorRegex.IsMatch(ex.Message))
+            {
+                var validTablesHint = await BuildValidTablesHintAsync(context, ct);
+                if (validTablesHint is not null)
+                    return ($"{_db.DialectName} error: {ex.Message} {validTablesHint}", true);
+            }
             return ($"{_db.DialectName} error: {ex.Message}", true);
         }
         catch (Exception ex)

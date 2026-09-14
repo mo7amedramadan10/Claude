@@ -97,6 +97,12 @@ builder.Services.AddHttpClient<ChatToDashboard.Api.Ollama.OllamaClient>(client =
     client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 });
 builder.Services.AddSingleton<IDashboardGenerator, ChatToDashboard.Api.Llm.LlmRouter>();
+// Same LlmRouter singleton, exposed under its second interface too (RepositoryStore's table-
+// naming suggestion at upload time — see ITableNamingAssistant) — resolved via the
+// IDashboardGenerator registration above rather than a second AddSingleton<LlmRouter> so both
+// interfaces share the exact same instance instead of quietly constructing two.
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.ITableNamingAssistant>(
+    sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
 builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IDocumentReaderRouter, ChatToDashboard.Api.Llm.DocumentReaderRouter>();
 
 var app = builder.Build();
