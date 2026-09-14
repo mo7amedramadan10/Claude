@@ -79,13 +79,6 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         string? lang = null,
         CancellationToken ct = default)
     {
-        // Screenshot-to-dashboard needs a vision-capable model; the gateway's models list
-        // (all plain chat/instruct models) doesn't advertise that, so it's not offered here —
-        // the model would otherwise silently ignore the image.
-        if (!string.IsNullOrWhiteSpace(imageDataUrl))
-            throw new InvalidOperationException(
-                "الموديل الداخلي الحالي لا يدعم تحليل الصور. بدّل مؤقتًا إلى Claude أو GPT من إعدادات الموديل لهذا الطلب.");
-
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var systemPrompt = _tools.BuildSystemPrompt(context, lang);
@@ -97,7 +90,16 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
         // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
         // there is no separate multi-turn history to replay.
-        messages.Add(new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) });
+        var userMessage = new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) };
+        // Not every model on this gateway advertises vision support up front, and the ones
+        // that don't tend to just ignore an "images" field rather than reject the request —
+        // so, same as ExtractDocumentTextAsync's page images, this is sent through regardless
+        // and left to the model itself to use or ignore, rather than refused here on the
+        // client's own assumption. CompressForGateway keeps it under the gateway's request-
+        // size limit the same way a document page image already does.
+        if (TryExtractBase64(imageDataUrl, out var imageBase64))
+            userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
+        messages.Add(userMessage);
 
         var tools = BuildToolsJson(context);
         var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);

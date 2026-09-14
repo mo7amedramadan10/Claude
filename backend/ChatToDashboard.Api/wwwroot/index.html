@@ -373,6 +373,7 @@ tr:last-child td{border-bottom:0}
   width:23px;height:23px;font-size:14px;line-height:1;padding:0}
 .widget-menu-btn:hover{border-color:var(--accent);color:var(--accent)}
 .widget-menu{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:25;min-width:175px;
+  max-height:min(320px,calc(100vh - 90px));overflow-y:auto;
   padding:6px;background:var(--surface);border:1px solid var(--grid);border-radius:12px;box-shadow:var(--shadow)}
 .widget-menu.open{display:block}
 .widget-menu button{display:block;width:100%;text-align:start;padding:8px 10px;border:0;border-radius:8px;
@@ -2168,6 +2169,43 @@ function closeAllWidgetMenus() {
 }
 document.addEventListener('click', closeAllWidgetMenus);
 
+// Anchors a widget-menu to its ⋮ button so it always stays fully on screen, recomputed every
+// time the menu opens or its content is swapped (default/size/type — each a different
+// height). CSS alone (a fixed top:44px below the button) put the type submenu's 10 buttons
+// wherever the widget happened to sit on the page, with no way to bring the clipped tail
+// back into view once a short-viewport user hit it — this instead flips the menu to open
+// upward when there isn't room below, and clamps both axes to the viewport.
+//
+// Positions stay in `menu.offsetParent` (the widget card)'s own coordinate space, not the
+// viewport's — position:fixed would seem simpler, but .widget carries an entrance animation
+// (`animation:rise`, see its keyframes) whose `transform` makes it the CSS containing block
+// for any position:fixed descendant even after the animation ends (a fixed-position element
+// then positions relative to that transformed ancestor, not the real viewport, silently
+// breaking any viewport-relative math). Computing the desired viewport position and then
+// converting it into an offset from the card's own rect sidesteps that entirely.
+function positionWidgetMenu(btn, menu) {
+  const margin = 8;
+  const parent = menu.offsetParent || btn.closest('.widget') || document.body;
+  const parentRect = parent.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  let top = btnRect.bottom + 4;
+  if (top + menuRect.height > window.innerHeight - margin) {
+    top = Math.max(margin, btnRect.top - menuRect.height - 4);
+  }
+  // Neither the "below" nor the "flipped up" placement can help once the anchor button
+  // itself is barely on screen (near the very top or bottom edge) — this final clamp keeps
+  // the menu fully visible regardless, even if that means it no longer hugs the button.
+  top = Math.min(Math.max(top, margin), window.innerHeight - menuRect.height - margin);
+  const isRtl = document.documentElement.getAttribute('dir') !== 'ltr';
+  let left = isRtl ? btnRect.right - menuRect.width : btnRect.left;
+  left = Math.min(Math.max(left, margin), window.innerWidth - menuRect.width - margin);
+  menu.style.position = 'absolute';
+  menu.style.insetInlineEnd = 'auto';
+  menu.style.top = (top - parentRect.top) + 'px';
+  menu.style.left = (left - parentRect.left) + 'px';
+}
+
 function widgetMenu(w) {
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'widget-menu-btn'; btn.textContent = '⋮';
@@ -2180,8 +2218,13 @@ function widgetMenu(w) {
     e.stopPropagation();
     const open = menu.classList.contains('open');
     closeAllWidgetMenus();
-    if (!open) { renderWidgetMenuDefault(menu, w); menu.classList.add('open'); }
+    if (!open) {
+      renderWidgetMenuDefault(menu, w);
+      menu.classList.add('open');
+      positionWidgetMenu(btn, menu);
+    }
   });
+  menu.__anchorBtn = btn;
   menu.addEventListener('click', e => e.stopPropagation());
   return { btn, menu };
 }
@@ -2212,6 +2255,7 @@ function renderWidgetMenuSize(menu, w) {
     opts.map(([v, l]) => `<button data-size="${v}"${v === current ? ' class="current"' : ''}>${l}</button>`).join('');
   menu.querySelectorAll('[data-size]').forEach(b =>
     b.onclick = () => { setWidgetSize(w.id, b.dataset.size); closeAllWidgetMenus(); });
+  if (menu.__anchorBtn) positionWidgetMenu(menu.__anchorBtn, menu);
 }
 
 function renderWidgetMenuType(menu, w) {
@@ -2231,6 +2275,7 @@ function renderWidgetMenuType(menu, w) {
     types.map(([v, l]) => `<button data-type="${v}"${v === w.type ? ' class="current"' : ''}>${l}</button>`).join('');
   menu.querySelectorAll('[data-type]').forEach(b =>
     b.onclick = () => { setWidgetType(w.id, b.dataset.type); closeAllWidgetMenus(); });
+  if (menu.__anchorBtn) positionWidgetMenu(menu.__anchorBtn, menu);
 }
 
 function enableWidgetDragDrop(card, w) {
