@@ -107,6 +107,24 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IDocumentReaderRouter, Cha
 
 var app = builder.Build();
 
+// This is a JSON API consumed by the SPA's own fetch calls (see the 401/403 auth events
+// above) — every response from it needs to stay JSON, including an unhandled exception.
+// Without this, an exception thrown outside a controller action's own try/catch (or from
+// an action that simply doesn't have one — e.g. GET /api/repository/files) falls through to
+// ASP.NET Core's default handling, which in Development serves an HTML/plain-text
+// diagnostics page instead: the frontend's response.json() then throws "Unexpected token
+// 'M', 'Microsoft....' is not valid JSON" instead of showing the actual error. Placed first
+// so it wraps every middleware and endpoint below it.
+app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
+{
+    var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    context.RequestServices.GetRequiredService<ILogger<Program>>()
+        .LogError(error, "Unhandled exception on {Method} {Path}", context.Request.Method, context.Request.Path);
+    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    context.Response.ContentType = "application/json";
+    await context.Response.WriteAsJsonAsync(new { error = error?.Message ?? "حدث خطأ غير متوقع." });
+}));
+
 // The UI lives in wwwroot and is served from this same app — one project, one URL.
 // Static files (including index.html, which renders its own login screen) are served
 // before authentication runs, so the app shell always loads; every API call underneath
