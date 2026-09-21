@@ -4402,6 +4402,13 @@ el('new-dashboard-btn').addEventListener('click', () => {
 // existing rule (sources, filters, the tool loop) applies unchanged. Deliberately never
 // auto-sends: Arabic recognition can mishear a dialect word, a technical term, or an exact
 // entity name, so the transcript stays editable until the user presses "إرسال" themselves.
+//
+// continuous:true, not false: with continuous:false the browser itself decides when a
+// pause in speech means "done talking" and stops listening on its own — reported live as
+// the mic cutting off mid-sentence before the user finished. continuous:true keeps the
+// session open across pauses; only the user's own second click on مايك (stopListening,
+// below) — or leaving the page/an actual error — ends it, matching "keep listening until I
+// press it again."
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognitionCtor) {
   el('mic-btn').classList.remove('hidden');
@@ -4419,25 +4426,40 @@ if (SpeechRecognitionCtor) {
     recognition = new SpeechRecognitionCtor();
     recognition.lang = 'ar-SA';
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     listening = true;
     el('mic-btn').classList.add('listening');
+
+    // Text already confirmed by an earlier session, if the engine ends the session on its
+    // own — some browsers still do this after a long-enough silence even with
+    // continuous:true — and the 'end' handler below transparently restarts it. Each restart
+    // is technically a fresh session whose own ev.results starts over from empty, so without
+    // this, restarting would wipe out everything already said instead of just continuing it.
+    let baseTranscript = '';
 
     recognition.addEventListener('result', ev => {
       let transcript = '';
       for (let i = 0; i < ev.results.length; i++) transcript += ev.results[i][0].transcript;
-      el('q').value = transcript;
+      el('q').value = baseTranscript + transcript;
     });
     recognition.addEventListener('error', ev => {
+      // no-speech fires routinely in continuous mode during an ordinary pause between
+      // sentences — it is not the user stopping, so (unlike before) don't tear the session
+      // down for it; let it keep listening exactly as continuous:true promises.
+      if (ev.error === 'no-speech') return;
       stopListening();
-      if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+      if (ev.error === 'aborted') return;
       const messages = {
         'not-allowed': 'محتاج إذن استخدام الميكروفون من المتصفح.',
         'audio-capture': 'مفيش ميكروفون متاح.',
       };
       alert(messages[ev.error] || 'تعذّر التعرف على الصوت: ' + ev.error);
     });
-    recognition.addEventListener('end', stopListening);
+    recognition.addEventListener('end', () => {
+      if (!listening) return; // the user's own click (or a real error) already stopped it
+      baseTranscript = el('q').value;
+      try { recognition.start(); } catch { stopListening(); }
+    });
     try { recognition.start(); } catch { stopListening(); }
   });
 }
