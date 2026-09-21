@@ -3361,12 +3361,71 @@ function toneColor(tone) {
   return 'color-mix(in srgb, ' + THEME.tickColor + ' 35%, transparent)';
 }
 
+// ---------- reshaping generic data for the 5 bespoke widget types ----------
+// progress-table/trend-matrix/status-bar/radial-gauge/linear-gauge each have their own data
+// shape a widget built as bar/line/pie/table/kpi won't carry — switching the type of such a
+// widget via "🔀 تغيير نوع الرسم" used to just show that type's own empty state (reported
+// live as effectively a dead end: the card goes blank, and since w.data itself was never
+// touched by setWidgetType, switching back "should" have worked too — but a user hitting a
+// blank card with no visible explanation reasonably reads that as broken, not as "pick a
+// different type"). Each Card below now tries its own native shape first and, if w.data
+// doesn't look like it, derives a genuinely meaningful equivalent from the SAME generic
+// {rows, xKey, yKey} every bar/line/pie/table/kpi widget already carries (see keysFor) —
+// never mutating w.data itself, so switching to any other type afterward — including back
+// to the original — always still works from the same untouched source.
+function reshapeGenericForBespokeType(type, w) {
+  const { rows, xKey, yKey } = keysFor(w);
+  if (!rows.length) return null;
+  const values = rows.map(r => num(r[yKey]));
+  const total = values.reduce((s, v) => s + v, 0);
+  switch (type) {
+    case 'status-bar':
+      // Every row becomes one status badge, "ontrack" by default — a generic {label,value}
+      // row carries no severity of its own to map to severe/warning/ontrack.
+      return {
+        label: w.title || '',
+        total,
+        statuses: rows.map((r, i) => ({ label: String(r[xKey] ?? ''), count: values[i], severity: 'ontrack' })),
+      };
+    case 'radial-gauge': {
+      // The single largest row as the ring's value, against the sum of every row as its max
+      // — "this category's share of the total", e.g. the biggest region's % of all revenue.
+      let maxIdx = 0;
+      values.forEach((v, i) => { if (v > values[maxIdx]) maxIdx = i; });
+      return { value: values[maxIdx] || 0, max: total || values[maxIdx] || 1, label: String(rows[maxIdx][xKey] ?? '') };
+    }
+    case 'linear-gauge': {
+      // Every row as its own bar, all sharing the largest row's value as their common max —
+      // directly analogous to the bar chart this data would otherwise be, just as gauges.
+      const max = Math.max(...values, 1);
+      return rows.map((r, i) => ({ label: String(r[xKey] ?? ''), value: values[i], max, tone: 'accent' }));
+    }
+    case 'progress-table':
+      // Every row as its own single-segment progress bar, scaled against the largest row's
+      // value — there's no second number in generic {label,value} data to pair as a real
+      // target, so this is "how this row compares to the top one", not a spent/target ratio.
+      return rows.map((r, i) => ({
+        label: String(r[xKey] ?? ''), total: Math.max(...values, 1),
+        segments: [{ label: String(r[xKey] ?? ''), value: values[i], color: 'accent' }],
+      }));
+    case 'trend-matrix':
+      // The whole widget becomes one metric row, with every generic row as one of its
+      // periods — turns exactly the same data a line/bar chart would plot into a single-row
+      // trend view (sparkline + delta) instead.
+      return [{ metric: w.title || yKey || '', periods: rows.map((r, i) => ({ label: String(r[xKey] ?? ''), value: values[i] })) }];
+    default:
+      return null;
+  }
+}
+
 // ---------- new widget type: progress-table ----------
 // Each row's bar is scaled to that row's own `total` (its segments' values need not sum to
 // it — e.g. "spent" vs. a target — so the bar can visibly under- or over-fill).
 function ProgressTableCard(w) {
   const card = widgetShell(w, 'progress-table');
-  const rows = Array.isArray(w.data) ? w.data : [];
+  let rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.some(r => r && (Array.isArray(r.segments) || typeof r.total === 'number')))
+    rows = reshapeGenericForBespokeType('progress-table', w) || rows;
   if (!rows.length) return emptyBody(card);
   const wrap = document.createElement('div');
   wrap.className = 'tbl-wrap';
@@ -3395,7 +3454,9 @@ function ProgressTableCard(w) {
 // never model-specified — comparing strictly the last two points, per the design spec.
 function TrendMatrixCard(w) {
   const card = widgetShell(w, 'trend-matrix');
-  const rows = Array.isArray(w.data) ? w.data : [];
+  let rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.some(r => r && Array.isArray(r.periods)))
+    rows = reshapeGenericForBespokeType('trend-matrix', w) || rows;
   if (!rows.length) return emptyBody(card);
   const periodLabels = (rows[0].periods || []).map(p => p.label);
   const wrap = document.createElement('div');
@@ -3433,7 +3494,9 @@ function TrendMatrixCard(w) {
 // of these as separate widgets if it wants more than one breakdown on a dashboard.
 function StatusBarCard(w) {
   const card = widgetShell(w, 'status-bar');
-  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  let row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row || !(Array.isArray(row.statuses) || typeof row.total === 'number'))
+    row = reshapeGenericForBespokeType('status-bar', w) || row;
   if (!row) return emptyBody(card);
   const statuses = Array.isArray(row.statuses) ? row.statuses : [];
   const wrap = document.createElement('div');
@@ -3459,7 +3522,9 @@ function StatusBarCard(w) {
 // row (e.g. each team's own % of its own target), not a composition breakdown.
 function LinearGaugeCard(w) {
   const card = widgetShell(w, 'linear-gauge');
-  const rows = Array.isArray(w.data) ? w.data : [];
+  let rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.some(r => r && typeof r.value === 'number'))
+    rows = reshapeGenericForBespokeType('linear-gauge', w) || rows;
   if (!rows.length) return emptyBody(card);
   const wrap = document.createElement('div');
   wrap.className = 'tbl-wrap';
@@ -3513,7 +3578,8 @@ function radialGaugeConfig(value, max, tone) {
 }
 function RadialGaugeCard(w) {
   const card = widgetShell(w, 'radial-gauge');
-  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  let row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row || row.value == null) row = reshapeGenericForBespokeType('radial-gauge', w) || row;
   if (!row || row.value == null) return emptyBody(card);
   const value = num(row.value);
   const max = row.max != null ? num(row.max) : 100;
