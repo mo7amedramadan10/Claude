@@ -49,11 +49,14 @@ public class UpdateImageReaderRequest
 [Authorize(Roles = UserRoles.Admin)]
 public class LlmSettingsController : ControllerBase
 {
-    // The 4 models the gateway's Connection Guide listed as installed at the time this was
-    // built — used only if the live GET /models call to the gateway fails or is unreachable
-    // (e.g. no network path to it from wherever this app happens to run).
+    // The models the gateway's Connection Guide listed as installed — used only if the live
+    // GET /models call to the gateway fails or is unreachable (e.g. no network path to it
+    // from wherever this app happens to run). qwen3-vl:32b is vision-capable (unlike the
+    // text-only qwen3/gemma4 models above it) — pick it for the Image Analysis Model setting
+    // in الإعدادات, not just the main dashboard-building model, since it's the one model here
+    // that can actually read an attached image.
     private static readonly string[] FallbackOllamaModels =
-        { "qwen3:14b", "qwen3:32b", "qwen3:30b-a3b-instruct-2507-q4_K_M", "gemma4:31b" };
+        { "qwen3:14b", "qwen3:32b", "qwen3:30b-a3b-instruct-2507-q4_K_M", "gemma4:31b", "qwen3-vl:32b" };
 
     private readonly LlmSettingsStore _settings;
     private readonly IConfiguration _configuration;
