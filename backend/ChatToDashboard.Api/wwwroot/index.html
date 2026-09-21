@@ -706,24 +706,28 @@ tr:last-child td{border-bottom:0}
   .widget{box-shadow:none;border:1px solid #ccc;break-inside:avoid;background:#fff;color:#000}
   .widget h3{color:#555}
   .kpi .value{color:#000;text-shadow:none}
-  /* Exactly 3 widgets per printed page, side by side — mirrors the PPTX export's own
-     3-per-slide layout (PptxBuilder.CreateWidgetGroupSlide) so both exports read the same
-     way. On screen a chart/table/progress-table/linear-gauge (and anything sized "wide"/
-     "large"/"full") spans 2-3 of the live grid's columns; print always uses exactly 3 fixed
-     columns and forces every widget to one of them, so nothing still claims 2/3 of a row on
-     its own. nth-child(3n) then breaks the page after every 3rd widget, so a page never ends
-     up with a 4th item spilling down from the row above. */
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  /* Exactly 3 widgets per printed page — 2 side by side on top, the 3rd spanning the full
+     width below — mirrors the PPTX export's own layout (PptxBuilder.CreateWidgetGroupSlide)
+     so both exports read the same way. 3 equal columns packed every chart/table into a
+     cramped third of the page (titles wrapping across several lines, bars squeezed down to a
+     few pixels wide), reported live as unreadable; 2 columns gives each widget real width.
+     On screen a chart/table/progress-table/linear-gauge (and anything sized "wide"/"large"/
+     "full") spans 2-3 of the live grid's columns; print always uses exactly 2 fixed columns
+     and forces every widget to one of them, so nothing still claims a lopsided share of a
+     row on its own — nth-child(3n) then overrides that back to full width (specificity
+     .grid>.widget:nth-child beats a plain .widget.type rule, so this wins regardless of the
+     3rd widget's type) for the 3rd widget of every group, and breaks the page after it, so a
+     page never ends with a 4th item spilling down from the row above. */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
   .widget.chart,.widget.table,.widget.progress-table,.widget.linear-gauge,
   .widget[data-size="wide"],.widget[data-size="large"],.widget[data-size="full"]{grid-column:span 1}
   /* Without this, a grid item's default min-width:auto sizes its 1fr track to fit its
      content's intrinsic width — a table with several nowrap cells (td{white-space:nowrap})
-     ends up wider than a plain kpi/chart column, breaking the "3 equal columns" layout
-     (seen live: 401px/575px/400px instead of matching thirds). min-width:0 lets every column
-     stay genuinely equal; .tbl-wrap's own overflow:auto still clips a table that's wider
-     than its now-fixed column instead of bleeding into the next one. */
+     can end up wider than its column, breaking the "even columns" layout. min-width:0 lets
+     every column stay genuinely equal; .tbl-wrap's own overflow:auto still clips a table
+     that's wider than its now-fixed column instead of bleeding into the next one. */
   .grid>.widget{min-width:0}
-  .grid>.widget:nth-child(3n){break-after:page}
+  .grid>.widget:nth-child(3n){grid-column:1/-1;break-after:page}
 }
 
 /* ---------- share ---------- */
