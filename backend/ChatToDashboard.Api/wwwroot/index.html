@@ -4006,11 +4006,26 @@ function clearAllFilters() {
 // Equality/IN filters only (date_range/numeric_range aren't supported by the deterministic
 // backend yet — see WidgetQueryService — so they narrow the visible selection but don't
 // re-query; this is a known v1 limitation, not a silent bug).
+//
+// Two calls can overlap: nothing here awaits or cancels a previous still-in-flight call
+// before starting a new one, and every UI entry point (a filter dropdown, "✕ مسح كل
+// الفلاتر", a cross-filter chart click, "🔄 تحديث") just calls applyFilters() directly. A
+// user picking one filter value then quickly clearing it — or clicking two chart points in
+// a row — starts a second call while the first's per-widget fetches are still in flight,
+// and network timing gives no guarantee the *older* call's responses land first. Without a
+// guard, an older call's slower response can land after the newer one and overwrite its
+// correct (or correctly-cleared) w.data with stale filtered/empty data — a real, deterministic
+// bug distinct from any transient fetch failure, and one that would survive a DB-side fix
+// since nothing there was actually broken. applyFiltersSeq/mySeq below makes only the most
+// recently *started* call allowed to write w.data or trigger the final render; a superseded
+// call's in-flight responses are simply dropped once they arrive.
+let applyFiltersSeq = 0;
 async function applyFilters() {
   // A share is a frozen snapshot (Part 3) — nothing in it is ever re-run. Its filter
   // controls are read-only (buildFilterBarReadOnly) and it has no refresh button, so this
   // shouldn't normally be reachable in share view at all; the guard is defense in depth.
   if (state.shareId) return;
+  const mySeq = ++applyFiltersSeq;
   const activeByTable = {};
   getActiveFilters().forEach(({ def, values }) => {
     if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
@@ -4048,14 +4063,20 @@ async function applyFilters() {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filters }),
           });
+          // A newer applyFilters() call has started since this fetch went out — its own
+          // responses (for whatever filter selection is now actually active) are what should
+          // win, so this now-stale one is dropped rather than overwriting w.data out of order.
+          if (mySeq !== applyFiltersSeq) return;
           if (res.status === 409) {
             const payload = await res.json().catch(() => null);
+            if (mySeq !== applyFiltersSeq) return;
             state.dashboardDisabled = true;
             state.dashboardDisabledReason = payload?.reason || 'هذه اللوحة معطّلة حاليًا.';
             break;
           }
           if (!res.ok) { if (attempt === 1) failed++; continue; }
           const payload = await res.json();
+          if (mySeq !== applyFiltersSeq) return;
           w.data = payload.data;
           if ('xKey' in payload) w.xKey = payload.xKey;
           if ('yKey' in payload) w.yKey = payload.yKey;
@@ -4071,8 +4092,10 @@ async function applyFilters() {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sources, table: w.query.table, sql: w.query.sql, filters }),
           });
+          if (mySeq !== applyFiltersSeq) return;
           if (!res.ok) { if (attempt === 1) failed++; continue; }
           const payload = await res.json();
+          if (mySeq !== applyFiltersSeq) return;
           w.data = payload.data;
           break;
         }
@@ -4080,8 +4103,10 @@ async function applyFilters() {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sources, query: { ...w.query, filters } }),
         });
+        if (mySeq !== applyFiltersSeq) return;
         if (!res.ok) { if (attempt === 1) failed++; continue; }
         const payload = await res.json();
+        if (mySeq !== applyFiltersSeq) return;
         w.data = payload.data; w.xKey = payload.xKey; w.yKey = payload.yKey; w.source = payload.source;
         w.query = payload.query;
         break;
@@ -4091,6 +4116,10 @@ async function applyFilters() {
       }
     }
   }));
+
+  // A newer call already started (and owns rendering its own, more current result) — this
+  // one's "failed" count and render would only relitigate an outdated filter selection.
+  if (mySeq !== applyFiltersSeq) return;
 
   state.filterRefreshWarning = failed > 0
     ? (failed === 1 ? '⚠ تعذّر تحديث رسم واحد.' : `⚠ تعذّر تحديث ${failed} رسومات.`)
