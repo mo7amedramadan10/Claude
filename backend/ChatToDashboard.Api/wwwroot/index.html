@@ -4032,6 +4032,23 @@ function clearAllFilters() {
 // since nothing there was actually broken. applyFiltersSeq/mySeq below makes only the most
 // recently *started* call allowed to write w.data or trigger the final render; a superseded
 // call's in-flight responses are simply dropped once they arrive.
+// A declared filter's `table` and a widget's own `query.table` are both free-form strings —
+// a chat-authored dashboard's filter tool call and its widgets' own query tool calls are
+// separate model outputs, so nothing guarantees they spell the same table identically. The
+// backend's own ResolveTableAsync already matches table names case-insensitively (SQL
+// Server's schema-qualified "staging.Sales" is a live example of a name the model can easily
+// write inconsistently — with or without the schema prefix, in any case), but activeByTable's
+// lookup below is a plain JS object key: an exact-string requirement that a filter and its
+// widget disagree on gives a filter that silently matches nothing — no error, the request
+// still succeeds, it's just sent with an empty filter list — which reads as "the filter does
+// nothing at all". Comparing on this normalized form instead closes that gap.
+function normalizeTableKey(t) {
+  return String(t || '').trim().toLowerCase()
+    .replace(/["[\]]/g, '')     // SQL Server bracket / quoted identifiers
+    .replace(/^dbo\./, '')      // SQL Server's default schema is effectively invisible
+    .replace(/^staging[._]/, ''); // this app's own schema prefix — see DataStore.DisplayTable
+}
+
 let applyFiltersSeq = 0;
 async function applyFilters() {
   // A share is a frozen snapshot (Part 3) — nothing in it is ever re-run. Its filter
@@ -4044,7 +4061,7 @@ async function applyFilters() {
   const activeByTable = {};
   getActiveFilters().forEach(({ def, values }) => {
     if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
-    (activeByTable[def.table] ||= []).push({ field: def.field, values });
+    (activeByTable[normalizeTableKey(def.table)] ||= []).push({ field: def.field, values });
   });
 
   if (state.currentUser) el('autosave-status')?.classList.remove('hidden');
@@ -4065,7 +4082,7 @@ async function applyFilters() {
   let failed = 0;
   await Promise.all(widgets.map(async (w, index) => {
     if (!w.query || !w.query.table) return;
-    const filters = activeByTable[w.query.table] || [];
+    const filters = activeByTable[normalizeTableKey(w.query.table)] || [];
     for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt > 0) await new Promise(r => setTimeout(r, 400));
       try {
