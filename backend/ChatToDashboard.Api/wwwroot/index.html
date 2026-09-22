@@ -400,6 +400,13 @@ tr:last-child td{border-bottom:0}
 .widget-menu button.danger{color:var(--danger)}
 .widget-menu button.current{color:var(--accent);font-weight:600}
 .widget-menu .menu-label{padding:6px 10px 4px;font-size:11px;color:var(--muted);font-weight:600}
+/* "نوع الرسم" alone has 10 options — as a single column that's routinely taller than the
+   max-height above, forcing the awkward internal scrollbar (some options invisible until
+   scrolled) reported live as looking broken. Laid out 2-up instead, it's ~5 rows tall
+   instead of 10 — comfortably under the cap in the vast majority of cases — while the
+   default (5 items) and size (4 items) menus stay a single column, which already fits. */
+.widget-menu.type-grid{min-width:300px;display:grid;grid-template-columns:1fr 1fr;gap:2px;align-content:start}
+.widget-menu.type-grid .menu-label{grid-column:1/-1}
 /* widget size overrides — placed after the type rules above so they win by source order */
 .widget[data-size="small"]{grid-column:span 1}
 .widget[data-size="wide"]{grid-column:span 2}
@@ -2314,6 +2321,7 @@ function widgetMenu(w) {
 
 function renderWidgetMenuDefault(menu, w) {
   const canEditData = !!w.query; // only wizard-created widgets carry a re-runnable query
+  menu.classList.remove('type-grid'); // only the 10-option "نوع الرسم" list uses the grid layout
   menu.innerHTML = `
     <button data-act="type">🔀 تغيير نوع الرسم</button>
     <button data-act="size">↔️ تغيير الحجم</button>
@@ -2334,6 +2342,7 @@ function renderWidgetMenuDefault(menu, w) {
 function renderWidgetMenuSize(menu, w) {
   const current = (w.layout && w.layout.size) || (w.type === 'kpi' ? 'small' : 'wide');
   const opts = [['small', 'صغير'], ['wide', 'عريض (عمودين)'], ['large', 'واسع (3 أعمدة)'], ['full', 'عرض كامل']];
+  menu.classList.remove('type-grid');
   menu.innerHTML = `<div class="menu-label">الحجم</div>` +
     opts.map(([v, l]) => `<button data-size="${v}"${v === current ? ' class="current"' : ''}>${l}</button>`).join('');
   menu.querySelectorAll('[data-size]').forEach(b =>
@@ -2354,6 +2363,7 @@ function renderWidgetMenuType(menu, w) {
     ['progress-table', '📶 جدول تقدم'], ['trend-matrix', '📉 مصفوفة اتجاهات'], ['status-bar', '🚦 شريط حالة'],
     ['radial-gauge', '🎯 مؤشر دائري'], ['linear-gauge', '🎚️ مؤشر شريطي'],
   ];
+  menu.classList.add('type-grid');
   menu.innerHTML = `<div class="menu-label">نوع الرسم</div>` +
     types.map(([v, l]) => `<button data-type="${v}"${v === w.type ? ' class="current"' : ''}>${l}</button>`).join('');
   menu.querySelectorAll('[data-type]').forEach(b =>
