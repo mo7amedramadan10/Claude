@@ -154,7 +154,18 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 #chat-rail.rail-small{width:22%;min-width:220px}
 #chat-rail.rail-large{width:55%;min-width:420px}
 #chat-rail.rail-hidden{display:none}
-#dash-pane{flex:1;overflow-y:auto;padding:20px}
+#dash-pane{flex:1;overflow-y:auto;padding:20px;position:relative}
+/* Shown while applyFilters() has a request in flight (a filter change, a cross-filter
+   chart click, "🔄 تحديث") — dims the toolbar + widgets and blocks clicks on them so a
+   second click can't queue an overlapping request while the first is still loading (see
+   applyFiltersSeq in applyFilters() for the race that guards against even if one does). */
+#dash-pane.filters-loading #dash-toolbar,
+#dash-pane.filters-loading #dash{opacity:.45;filter:saturate(.7);pointer-events:none;transition:opacity .15s}
+.dash-loading-overlay{position:absolute;inset:0;z-index:50;display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.dash-loading-overlay.open{display:flex}
+.dash-loading-overlay .spinner{width:30px;height:30px;border-width:3px}
+.dash-loading-overlay span{font-size:13px;color:var(--ink-2);font-weight:600}
 
 .rail-size-toggle{display:inline-flex;border:1px solid var(--grid);border-radius:9px;overflow:hidden}
 .rail-size-toggle button{width:30px;height:31px;padding:0;border:0;border-inline-start:1px solid var(--grid);
@@ -1020,6 +1031,7 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
     </div>
     <div id="dash"></div>
+    <div id="dash-loading" class="dash-loading-overlay"><span class="spinner"></span><span>جارٍ التحديث…</span></div>
   </section>
 
 </main>
@@ -1968,6 +1980,7 @@ const state = {
   currentHistoryId: null, wizard: null,
   activeFilters: {}, // filterId -> selected values (or [from,to] for range types)
   filterRefreshWarning: null, // set by applyFilters() when a widget fetch still fails after its retry
+  filtersLoading: false, // true while applyFilters() has a request in flight — see updateFiltersLoadingUI()
   // Ad-hoc filter definitions created by clicking a chart's data point (see
   // toggleCrossFilter) for a table+field the dashboard has no declared DashboardFilter
   // for — same shape as one, just never sent to/persisted from the backend's own filters
@@ -4026,6 +4039,8 @@ async function applyFilters() {
   // shouldn't normally be reachable in share view at all; the guard is defense in depth.
   if (state.shareId) return;
   const mySeq = ++applyFiltersSeq;
+  state.filtersLoading = true;
+  updateFiltersLoadingUI();
   const activeByTable = {};
   getActiveFilters().forEach(({ def, values }) => {
     if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
@@ -4117,16 +4132,28 @@ async function applyFilters() {
     }
   }));
 
-  // A newer call already started (and owns rendering its own, more current result) — this
-  // one's "failed" count and render would only relitigate an outdated filter selection.
+  // A newer call already started (and owns rendering its own, more current result, including
+  // clearing the loading state once *it* finishes) — this one's "failed" count and render
+  // would only relitigate an outdated filter selection.
   if (mySeq !== applyFiltersSeq) return;
 
   state.filterRefreshWarning = failed > 0
     ? (failed === 1 ? '⚠ تعذّر تحديث رسم واحد.' : `⚠ تعذّر تحديث ${failed} رسومات.`)
     : null;
+  state.filtersLoading = false;
+  updateFiltersLoadingUI();
   renderDashboard();
   scheduleAutosave();
   updateUndoRedoButtons();
+}
+
+// Toggles the dashboard's loading overlay/dim without touching #dash's own contents — a
+// full renderDashboard() mid-flight would tear down and rebuild every widget (and its
+// ApexCharts instance) before the new data even arrives, which is wasted work and a visible
+// flicker; this only needs to add/remove a class and flip one element's visibility.
+function updateFiltersLoadingUI() {
+  el('dash-pane')?.classList.toggle('filters-loading', !!state.filtersLoading);
+  el('dash-loading')?.classList.toggle('open', !!state.filtersLoading);
 }
 
 // "🔄 تحديث": re-fetches every widget that carries query lineage straight from the live
