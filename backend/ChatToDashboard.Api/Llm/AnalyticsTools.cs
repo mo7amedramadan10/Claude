@@ -359,8 +359,8 @@ public class AnalyticsTools
             {{currentDashboardBlock}}مهمة إعادة هيكلة فقط — من غير أي نداء أداة (list_files أو query_data أو غيرها):
             الأرقام دي جاية فعليًا من استعلام سابق نُفِّذ بالفعل، ومهمتك دلوقتي إنك تحوّلها لعنصر
             أو أكتر (widgets) بالشكل المناسب حسب طبيعتها (kpi/bar/line/pie/table أو أحد الأنواع
-            الجديدة progress-table/trend-matrix/status-bar لو مناسب فعلًا)، من غير ما تخترع أي
-            رقم إضافي أو تحسب حاجة مختلفة عن اللي جاي تحت.
+            الجديدة progress-table/trend-matrix/status-bar/radial-gauge/linear-gauge لو مناسب
+            فعلًا)، من غير ما تخترع أي رقم إضافي أو تحسب حاجة مختلفة عن اللي جاي تحت.
 
             الإجابة النصية الأصلية (استرشد بيها لصياغة summary وnarration، من غير نسخ حرفي بالضرورة):
             {{inquiry.Answer}}
@@ -413,10 +413,82 @@ public class AnalyticsTools
         من غير أي مقدمة أو تلخيص أو تعليق من عندك خارج محتوى الصفحة نفسها.
         """;
 
+    /// <summary>
+    /// System prompt for ITableNamingAssistant.SuggestTableNameAsync — asked at upload time,
+    /// for a NEW file only (see RepositoryStore.SaveAsync), to propose a short SQL identifier
+    /// instead of the long, filename-derived one DataFolderLoader.SanitizeTableName would
+    /// otherwise produce (e.g. "repo_Opportunities_Tracker_V_3_0__1__976323") — a name long
+    /// enough that the model building dashboards later tends to mentally "simplify" it when
+    /// writing SQL, which is exactly how it ends up querying a table that doesn't exist. In
+    /// English throughout (unlike every other prompt in this file) since the identifier itself
+    /// must come back transliterated/English regardless of the file's own display language —
+    /// there's no Arabic business content for a bilingual instruction to serve here.
+    /// English/plain-text response, not JSON: the caller (RepositoryStore.SaveAsync) re-
+    /// validates and sanitizes whatever comes back server-side either way, so nothing here is
+    /// trusted as already-safe.
+    /// </summary>
+    public const string TableNamingSystemPrompt =
+        "You suggest short, clean SQL table identifiers for newly uploaded data files. Given a " +
+        "file's display name, description, and column headers, reply with ONLY the suggested " +
+        "table name on a single line — no explanation, no markdown, no quotes, nothing else.\n\n" +
+        "Rules for the name:\n" +
+        "- lowercase English letters, digits, and underscores only (no spaces, no punctuation, " +
+        "no accented characters)\n" +
+        "- must start with a letter\n" +
+        "- at most 30 characters\n" +
+        "- a short, clear identifier that captures what the data is about — transliterate or " +
+        "translate a non-English display name/description into English rather than copying its " +
+        "characters; this name is purely an internal SQL identifier the end user never sees, so " +
+        "an English name is always preferred over a literal transliteration\n" +
+        "- prefer the kind of short collective noun typical of SQL table names (e.g. " +
+        "\"sales_orders\", \"employees\", \"support_tickets\") over restating the whole display name";
+
+    /// <summary>The per-file prompt accompanying TableNamingSystemPrompt.</summary>
+    public static string TableNamingUserMessage(string displayName, string? description, IReadOnlyList<string> columnNames) =>
+        $"""
+        File display name: {displayName}
+        Description: {(string.IsNullOrWhiteSpace(description) ? "(none given)" : description)}
+        Columns: {string.Join(", ", columnNames)}
+
+        Suggest one short table name for this file.
+        """;
+
+    /// <summary>
+    /// Prepended to both BuildSystemPrompt and BuildInquirySystemPrompt when the frontend's
+    /// language toggle (see index.html's #lang-toggle) is set to English — everything else in
+    /// either prompt stays exactly as tuned (in Arabic, addressed to the model), since an LLM
+    /// follows instructions written in one language perfectly well while producing output in
+    /// another. Rewriting either ~500-line prompt into a parallel English copy would double the
+    /// maintenance burden for no behavioral gain — this single override, placed first so it
+    /// can't be missed, is what actually controls the *output* language the user sees. Null/
+    /// anything other than "en" changes nothing, so every existing call site (none of which
+    /// pass a language) keeps writing Arabic content exactly as before.
+    /// </summary>
+    private static string LanguageOverrideBlock(string? lang) => lang == "en"
+        ? """
+          LANGUAGE OVERRIDE — read this first: every instruction below this line is written in
+          Arabic and addressed to you, and you should still follow all of it exactly as written
+          (tool-calling rules, the JSON schema, the golden rule about never inventing numbers,
+          every formatting and validation requirement). The ONE thing that changes is the
+          *language of the content you generate*: write every user-facing text field (summary,
+          title, source, narration, answer, and any chart/table label or data value you author
+          yourself) in clear, professional English instead of Arabic. Do not mix the two
+          languages within a single field. This override takes priority over every Arabic
+          instruction below that tells you to write in Arabic (e.g. "اكتب كل النصوص الظاهرة
+          للمستخدم باللغة العربية" or "بالعربية الفصحى") — those instructions still describe
+          the required tone, register, and structure, just apply them in English now. Data
+          values that are themselves Arabic text (e.g. a category name stored in Arabic in the
+          user's own data, like a status or region name) should be passed through as-is, not
+          translated — only text you are composing yourself changes language.
+
+
+          """
+        : "";
+
     // $$ delimiters: {{expr}} interpolates, single braces stay literal for the JSON schema below.
-    public string BuildSystemPrompt(SourceContext context) =>
+    public string BuildSystemPrompt(SourceContext context, string? lang = null) =>
         $$"""
-        أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بتجاوب على أسئلة عن بيانات
+        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بتجاوب على أسئلة عن بيانات
         المؤسسة وترجع مواصفات لوحة معلومات بصيغة JSON. اكتب كل النصوص الظاهرة للمستخدم
         (summary وtitle وsource وnarration) باللغة العربية، بأسلوب مهني ومباشر وبدون حشو.
 
@@ -654,13 +726,14 @@ public class AnalyticsTools
           "narration": "شرح سردي أغنى بالفصحى، ٤ إلى ٨ جمل، يستعرض كل عنصر بالترتيب — شوف قسم (الشرح السردي) فوق",
           "widgets": [
             {
-              "type": "kpi | bar | line | pie | table | progress-table | trend-matrix | status-bar",
+              "type": "kpi | bar | line | pie | table | progress-table | trend-matrix | status-bar | radial-gauge | linear-gauge",
               "title": "عنوان العنصر",
               "data": [ ... ],
               "xKey": "اختياري، لـ bar/line: اسم حقل التصنيف",
               "yKey": "اختياري، لـ bar/line أحادي السلسلة: اسم الحقل الرقمي",
               "series": "اختياري، لـ bar/line متعدد السلاسل بدل yKey — شوف قسم (أشكال إضافية) تحت",
               "stacked": "اختياري، bar فقط مع series — true للتكديس، false أو غايب للتجاور",
+              "areaFill": "اختياري، line فقط مع series — شوف قسم (أشكال إضافية) تحت",
               "centerLabel": "اختياري، pie فقط — شوف قسم (أشكال إضافية) تحت",
               "comparison": "اختياري على أي نوع — تخطيط مقارنة، شوف قسم (تخطيط المقارنة) تحت",
               "source": "جملتان بالعربي: الأولى مصدر البيانات، والثانية طريقة الحساب.",
@@ -682,11 +755,11 @@ public class AnalyticsTools
         }
         حقل filters اختياري تمامًا — سيبه [] لو مفيش فلاتر مفيدة فعلًا (قسم "الفلاتر" فوق).
 
-        حقل type إجباري ولازم يكون بالظبط واحد من القيم التمانية: kpi أو bar أو line أو pie
-        أو table أو progress-table أو trend-matrix أو status-bar — أي قيمة تانية أو نوع
-        جديد مش موجود في القايمة دي هيترفض تلقائيًا من الواجهة ويتعرض كجدول احتياطي بدل ما
-        يختفي. لو مش متأكد أنهي نوع الأنسب لبيانات معيّنة، استخدم table لأنه بيقبل أي شكل
-        بيانات جدولية بأمان.
+        حقل type إجباري ولازم يكون بالظبط واحد من القيم العشرة: kpi أو bar أو line أو pie
+        أو table أو progress-table أو trend-matrix أو status-bar أو radial-gauge أو
+        linear-gauge — أي قيمة تانية أو نوع جديد مش موجود في القايمة دي هيترفض تلقائيًا من
+        الواجهة ويتعرض كجدول احتياطي بدل ما يختفي. لو مش متأكد أنهي نوع الأنسب لبيانات
+        معيّنة، استخدم table لأنه بيقبل أي شكل بيانات جدولية بأمان.
 
         حقل source إجباري في كل عنصر، ولازم يكون جملتين بالظبط تفصل بينهما نقطة ومسافة:
         - الجملة الأولى: منين جت البيانات — اسم الجدول أو الملف والتصنيف أو النظام.
@@ -735,6 +808,14 @@ public class AnalyticsTools
         نفس نظام ألوان التطبيق — ما تحطش حقل لون لأي سلسلة. لو مفيش مقارنة فعلية مطلوبة،
         استمر تستخدم yKey العادي بسلسلة واحدة زي أي وقت فات.
 
+        توسعة line متعدد السلاسل: تعبئة المساحة تحت الخط (areaFill)
+        افتراضيًا، line بعدة سلاسل (series) بيترسم كخطوط متقاطعة بسيطة من غير تعبئة تحتها.
+        حط "areaFill": true على مستوى العنصر عشان كل سلسلة تترسم كمساحة شفافة متدرجة تحت
+        خطها (شكل "جبال" متراكبة) بدل خط بسيط — مفيد لما السؤال يتطلب إبراز حجم/تراكم كل
+        سلسلة مش بس اتجاهها (مثلاً مقارنة حجمين متغيرين عبر الزمن). سيبه غايب أو false
+        للخطوط المتقاطعة البسيطة العادية. ما ينفعش مع bar، ولا لازم مع line بسلسلة واحدة
+        (دي أصلًا بترسم بتعبئة تحتها تلقائيًا من غير الحاجة لأي حقل إضافي).
+
         توسعة pie: تسمية مركز الدائرة
         حقل "centerLabel" اختياري — نص عربي قصير (كلمة أو كلمتين) بيوصف بالظبط إيه اللي
         الرقم في نص الدائرة بيمثله، مثلاً "مبادرة" لو الشرائح بتمثل عدد مبادرات، أو "مشروع"
@@ -770,7 +851,28 @@ public class AnalyticsTools
         من تصنيف إجمالي مختلف (مثلاً فئتين منفصلتين من المشاريع)، ابعت عنصر status-bar
         منفصل كامل لكل واحدة — ما تحطش أكتر من صف جوه data نفسها.
 
-        تخطيط المقارنة (comparison) — خيار عرض على أي نوع موجود، مش نوع سادس
+        radial-gauge (نوع جديد كليًا) — مؤشر دائري واحد بنسبة إنجاز
+        استخدمه لما السؤال عن نسبة إنجاز مؤشر واحد بس مقابل هدف/سقف واحد (مثلاً "نسبة
+        إنجاز الميزانية السنوية" أو "نسبة إغلاق التذاكر")، مش توزيع على فئات — لو فيه أكتر
+        من فئة، استخدم pie أو progress-table بدل كده. data: كائن واحد (مش مصفوفة)
+        {"value": <رقم الإنجاز الفعلي>, "max": <رقم الهدف/السقف، اختياري وافتراضه ١٠٠ لو
+        value أصلًا نسبة مئوية>, "label": "وصف قصير تحت الرقم، مثلاً (نسبة الإنجاز)",
+        "tone": "accent | danger | amber، اختياري وافتراضه accent"}. الواجهة بترسم حلقة
+        (دونات) ملوّنة بنسبة value/max وتكتب النسبة كرقم كبير في النص، والباقي رمادي محايد
+        — ما تحسبش النسبة إنت ولا تحطها كنص جاهز، خلي value وmax أرقام خام والواجهة تتولى
+        الحساب والرسم.
+
+        linear-gauge (نوع جديد كليًا) — قائمة صفوف بمؤشر شريطي بمقبض
+        استخدمه لما السؤال عن مقارنة نسبة إنجاز عدة عناصر مقابل نفس نوع الهدف كل واحد لوحده
+        (مثلاً "نسبة إنجاز كل فريق من هدفه" أو "نسبة استخدام كل خادم من سعته") — شريط واحد
+        مستمر لكل صف بمقبض دائري عند نقطة القيمة، مش أجزاء ملوّنة زي progress-table (لو
+        الصف نفسه مكوّن من أكتر من جزء/فئة يجمعوا على total واحد، استخدم progress-table
+        بدل كده). data: مصفوفة صفوف [{"label": "اسم الصف", "value": <رقم>, "max": <رقم
+        اختياري وافتراضه ١٠٠>, "tone": "accent | danger | amber، اختياري وافتراضه accent"}].
+        نفس منطق tone بتاع progress-table بالظبط. الواجهة بتحسب النسبة وترسم الشريط
+        والمقبض ورقم النسبة — سيب الحساب كله ليها.
+
+        تخطيط المقارنة (comparison) — خيار عرض على أي نوع موجود، مش نوع إضافي
         استخدمه لما السؤال فيه مقارنة صريحة بين فترتين أو سيناريوهين لنفس التوزيع أو نفس
         المؤشر (مثلاً "قارن حالة المبادرات بين الربع الأول والتاني" أو "قارن الإيرادات بين
         يناير وفبراير"). حط حقل "comparison" على مستوى العنصر بدل حقل data المباشر:
@@ -794,9 +896,9 @@ public class AnalyticsTools
         - حقل source في كل عنصر مطابق للأداة اللي ناديتها فعلًا؟
         - لو فيه افتراض اتخذته (فترة زمنية، تفسير غامض)، مذكور بوضوح في summary؟
         - الـ JSON مطابق للمخطط بالظبط (نفس الحقول، من غير حقول زيادة، وtype من القيم
-          التمانية المسموحة فقط)؟
-        - لو استخدمت series أو progress-table أو trend-matrix أو status-bar، كل حقل لون/
-          severity فيها واحد بالظبط من القيم المسموحة (accent/danger/amber/muted أو
+          العشرة المسموحة فقط)؟
+        - لو استخدمت progress-table أو status-bar أو radial-gauge أو linear-gauge، كل حقل
+          لون/severity فيها واحد بالظبط من القيم المسموحة (accent/danger/amber/muted أو
           severe/warning/ontrack) — مش لون hex ولا كلمة تانية مخترعة؟ ولو حطيت comparison،
           سيبت data في المستوى الأعلى فاضية وحطيت كل حاجة جوه left/right؟
         - لو المصدر مقفول أو غير مربوط، اتبعت "قواعد المصادر" بالظبط (widgets فاضية + توضيح)؟
@@ -825,9 +927,9 @@ public class AnalyticsTools
     /// vocabulary at all. Kept as its own separate prompt (not a parameterized branch of
     /// BuildSystemPrompt) so the carefully-tuned dashboard prompt is never touched by this.
     /// </summary>
-    public string BuildInquirySystemPrompt(SourceContext context) =>
+    public string BuildInquirySystemPrompt(SourceContext context, string? lang = null) =>
         $$"""
-        أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بترد على استفسارات عن بيانات
+        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بترد على استفسارات عن بيانات
         المؤسسة بإجابة نصية مباشرة وواضحة — من غير ما تبني لوحة معلومات أو أي عناصر رسوم
         بيانية أو تُرجع حقل widgets أصلًا. اكتب كل النصوص الظاهرة للمستخدم بالعربية الفصحى،
         بأسلوب مهني ومباشر وبدون حشو.
@@ -888,6 +990,30 @@ public class AnalyticsTools
         - ملفات مستودع الملفات المفعّلة: {Bullets(context.EnabledFiles)}
         - ملفات مستودع الملفات المقفولة (لا يحق للمستخدم الوصول لها): {Bullets(context.DisabledFiles)}
         """;
+
+    /// <summary>Matches both dialects' "you referenced something that doesn't exist" errors —
+    /// SQL Server's "Invalid object name"/"Invalid column name" and SQLite's "no such table"/
+    /// "no such column" — see ExecuteToolAsync's DbException handling below.</summary>
+    private static readonly Regex InvalidNameErrorRegex = new(
+        @"invalid (object|column) name|no such (table|column)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>The same valid-table list list_files itself returns (see that case above),
+    /// reused as a hint appended to an "invalid object/column name" query_data error so the
+    /// model can self-correct with the real table name in its very next turn. Returns null
+    /// if there's nothing to list (nothing enabled, or nothing left after gating) — appending
+    /// an empty hint would be worse than no hint at all.</summary>
+    private async Task<string?> BuildValidTablesHintAsync(SourceContext context, CancellationToken ct)
+    {
+        var schema = await _loader.GetSchemaAsync(ct);
+        var validTables = schema
+            .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
+            .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
+            .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
+            .Select(t => t.Table)
+            .ToList();
+        return validTables.Count == 0 ? null : $"Valid tables are: {string.Join(", ", validTables)}.";
+    }
 
     public async Task<(string Result, bool IsError)> ExecuteToolAsync(
         string toolName, JsonObject input, SourceContext context, CancellationToken ct)
@@ -1003,6 +1129,19 @@ public class AnalyticsTools
         {
             // Feed SQL errors back so the model can correct its query.
             _logger.LogWarning(ex, "SQL error executing tool {Tool}", toolName);
+            // query_data's most common failure mode in practice isn't a malformed query — it's
+            // the model inventing a plausible-but-wrong table name (e.g. "staging.opportunities")
+            // instead of the exact, often long and GUID-suffixed one list_files actually gave it
+            // (e.g. "staging.repo_Opportunities_Tracker_V_3_0__1__976323"). A bare "Invalid object
+            // name" leaves it to guess a replacement — appending the current valid table list
+            // (the same one list_files itself returns) lets it self-correct with the real name
+            // in the very next turn instead of guessing again or failing the whole response.
+            if (toolName == "query_data" && InvalidNameErrorRegex.IsMatch(ex.Message))
+            {
+                var validTablesHint = await BuildValidTablesHintAsync(context, ct);
+                if (validTablesHint is not null)
+                    return ($"{_db.DialectName} error: {ex.Message} {validTablesHint}", true);
+            }
             return ($"{_db.DialectName} error: {ex.Message}", true);
         }
         catch (Exception ex)

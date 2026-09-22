@@ -3,6 +3,7 @@ using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Ollama;
 using ChatToDashboard.Api.OpenAi;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Usage;
 using ChatToDashboard.Api.Users;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,7 +21,7 @@ namespace ChatToDashboard.Api.Llm;
 /// up front) means a provider whose API key isn't configured only fails if it's actually
 /// selected — the other two keep working regardless.
 /// </summary>
-public class LlmRouter : IDashboardGenerator
+public class LlmRouter : IDashboardGenerator, ITableNamingAssistant
 {
     public const string Anthropic = "Anthropic";
     public const string OpenAI = "OpenAI";
@@ -30,12 +31,14 @@ public class LlmRouter : IDashboardGenerator
     private readonly IServiceProvider _services;
     private readonly LlmSettingsStore _settings;
     private readonly string _defaultProvider;
+    private readonly UsageTracker _usage;
 
-    public LlmRouter(IServiceProvider services, LlmSettingsStore settings, IConfiguration configuration)
+    public LlmRouter(IServiceProvider services, LlmSettingsStore settings, IConfiguration configuration, UsageTracker usage)
     {
         _services = services;
         _settings = settings;
         _defaultProvider = configuration["Llm:Provider"] ?? Anthropic;
+        _usage = usage;
     }
 
     public async Task<DashboardSpec> GenerateDashboardAsync(
@@ -44,38 +47,127 @@ public class LlmRouter : IDashboardGenerator
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
+        string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default)
     {
-        var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, ct);
+        // modelOverride only ever comes from THIS method's own routing below (never from a
+        // caller — ChatController, the only caller, never passes one) — it exists on this
+        // signature purely to satisfy IDashboardGenerator; ignored here rather than threaded
+        // through, since this router is exactly what decides it in the first place.
+        _ = modelOverride;
+
+        // A reference image (screenshot-to-dashboard) can be routed to its own provider/
+        // sub-model — LlmSettingsStore.ImageReaderProvider — independent of whichever
+        // provider normally builds dashboards, e.g. when the gateway's currently selected
+        // internal model can't handle images at all (see OllamaClient.GenerateDashboardAsync's
+        // "multimodal" rejection). Empty/unset (the default) falls back to the normal
+        // provider below, unchanged from before this setting existed — this only ever
+        // affects a request that actually carries an image.
+        if (!string.IsNullOrWhiteSpace(imageDataUrl))
+        {
+            var settings = await _settings.GetAsync(ct);
+            if (settings.ImageReaderProvider is { Length: > 0 } imageProvider)
+            {
+                var imageModelOverride = imageProvider switch
+                {
+                    OpenAI => settings.ImageReaderOpenAiModel,
+                    Ollama => settings.ImageReaderOllamaModel,
+                    _ => null,
+                };
+                var imageGenerator = await ResolveOrRecordFailureAsync(imageProvider, question, requestingUser, ct);
+                return await imageGenerator.GenerateDashboardAsync(
+                    question, currentDashboard, sources, imageDataUrl, requestingUser, lang, imageModelOverride, ct);
+            }
+        }
+
+        var generator = await ResolveAsync(question, requestingUser, ct);
+        return await generator.GenerateDashboardAsync(question, currentDashboard, sources, imageDataUrl, requestingUser, lang, null, ct);
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
+        CancellationToken ct = default)
     {
-        var generator = await ResolveAsync(ct);
-        return await generator.GenerateInquiryAsync(question, sources, requestingUser, ct);
+        var generator = await ResolveAsync(question, requestingUser, ct);
+        return await generator.GenerateInquiryAsync(question, sources, requestingUser, lang, ct);
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
-        AppUser? requestingUser = null, CancellationToken ct = default)
+        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        var generator = await ResolveAsync(ct);
-        return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, requestingUser, ct);
+        var generator = await ResolveAsync(inquiry.Answer, requestingUser, ct);
+        return await generator.GenerateDashboardFromInquiryAsync(inquiry, currentDashboard, sources, requestingUser, lang, ct);
     }
 
-    private async Task<IDashboardGenerator> ResolveAsync(CancellationToken ct)
+    private async Task<IDashboardGenerator> ResolveAsync(string question, AppUser? requestingUser, CancellationToken ct)
     {
-        var (savedProvider, _, _, _, _, _) = await _settings.GetAsync(ct);
-        var provider = savedProvider is { Length: > 0 } ? savedProvider : _defaultProvider;
+        var settings = await _settings.GetAsync(ct);
+        var provider = settings.Provider is { Length: > 0 } ? settings.Provider : _defaultProvider;
+        return await ResolveOrRecordFailureAsync(provider, question, requestingUser, ct);
+    }
 
-        return provider switch
+    /// <summary>
+    /// Resolving a concrete client (below) constructs it — and that constructor throws when
+    /// its API key isn't configured (see e.g. ClaudeClient's ctor). That happens before the
+    /// client exists to call UsageTracker.Begin on itself, so without this the failure would
+    /// vanish from the Usage page entirely rather than showing up as a failed request — seen
+    /// live: an admin picks a provider for Settings' Image Analysis Model (or the main model
+    /// switcher) without having actually configured that provider's API key yet, sends a
+    /// question, gets a clear error, but Usage shows nothing at all for it. Records a minimal
+    /// entry here instead (no model id exists yet to log, so "(unresolved)" stands in for it),
+    /// then lets the original exception continue up to the caller unchanged.
+    /// </summary>
+    private async Task<IDashboardGenerator> ResolveOrRecordFailureAsync(
+        string provider, string question, AppUser? requestingUser, CancellationToken ct)
+    {
+        try
         {
-            OpenAI => _services.GetRequiredService<OpenAiClient>(),
-            Ollama => _services.GetRequiredService<OllamaClient>(),
-            _ => _services.GetRequiredService<ClaudeClient>(),
-        };
+            return ResolveProvider(provider);
+        }
+        catch (Exception ex)
+        {
+            var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            throw;
+        }
+    }
+
+    private IDashboardGenerator ResolveProvider(string provider) => provider switch
+    {
+        OpenAI => _services.GetRequiredService<OpenAiClient>(),
+        Ollama => _services.GetRequiredService<OllamaClient>(),
+        _ => _services.GetRequiredService<ClaudeClient>(),
+    };
+
+    /// <summary>See ITableNamingAssistant — routed through whichever provider normally builds
+    /// dashboards (not a separate independent setting the way ImageReaderProvider/
+    /// DocumentReaderProvider are; this is a single lightweight suggestion call, not a
+    /// recurring choice worth its own admin setting). Never throws: a misconfigured provider,
+    /// or any other failure, just means no suggestion — RepositoryStore.SaveAsync (the only
+    /// caller) falls back to its existing filename-derived table name in that case, exactly
+    /// as if this method didn't exist.</summary>
+    public async Task<string?> SuggestTableNameAsync(
+        string displayName, string? description, IReadOnlyList<string> columnNames,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var settings = await _settings.GetAsync(ct);
+            var provider = settings.Provider is { Length: > 0 } ? settings.Provider : _defaultProvider;
+            ITableNamingAssistant assistant = provider switch
+            {
+                OpenAI => _services.GetRequiredService<OpenAiClient>(),
+                Ollama => _services.GetRequiredService<OllamaClient>(),
+                _ => _services.GetRequiredService<ClaudeClient>(),
+            };
+            return await assistant.SuggestTableNameAsync(displayName, description, columnNames, requestingUser, ct);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
 
@@ -87,8 +179,9 @@ public interface IDocumentReaderRouter
 {
     Task<bool> IsEnabledAsync(CancellationToken ct = default);
 
-    Task<string?> ExtractTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default);
+    Task<DocumentExtractionResult?> ExtractTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -116,14 +209,15 @@ public class DocumentReaderRouter : IDocumentReaderRouter
     /// find out afterward that nothing is configured to read them.</summary>
     public async Task<bool> IsEnabledAsync(CancellationToken ct = default)
     {
-        var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
+        var documentReaderProvider = (await _settings.GetAsync(ct)).DocumentReaderProvider;
         return !string.IsNullOrWhiteSpace(documentReaderProvider);
     }
 
-    public async Task<string?> ExtractTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    public async Task<DocumentExtractionResult?> ExtractTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
-        var (_, _, _, documentReaderProvider, _, _) = await _settings.GetAsync(ct);
+        var documentReaderProvider = (await _settings.GetAsync(ct)).DocumentReaderProvider;
         if (string.IsNullOrWhiteSpace(documentReaderProvider)) return null;
 
         IDocumentTextExtractor extractor = documentReaderProvider switch
@@ -133,6 +227,6 @@ public class DocumentReaderRouter : IDocumentReaderRouter
             LlmRouter.Anthropic => _services.GetRequiredService<ClaudeClient>(),
             _ => throw new InvalidOperationException($"Unknown DocumentReaderProvider '{documentReaderProvider}'."),
         };
-        return await extractor.ExtractDocumentTextAsync(fileName, pageImageDataUrls, requestingUser, ct);
+        return await extractor.ExtractDocumentTextAsync(fileName, pageImageDataUrls, requestingUser, onPageRead, ct);
     }
 }

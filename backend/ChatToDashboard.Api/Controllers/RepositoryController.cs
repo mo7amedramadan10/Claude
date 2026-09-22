@@ -65,7 +65,8 @@ public class RepositoryController : ControllerBase
     /// </summary>
     [HttpPost("upload")]
     [RequestSizeLimit(MaxUploadBytes)]
-    public async Task<IActionResult> Upload([FromForm] IFormFileCollection files, CancellationToken ct)
+    public async Task<IActionResult> Upload(
+        [FromForm] IFormFileCollection files, [FromForm] string? progressToken, CancellationToken ct)
     {
         if (files is null || files.Count == 0)
             return BadRequest(new { error = "No files were uploaded." });
@@ -90,9 +91,22 @@ public class RepositoryController : ControllerBase
             }
 
             using var stream = file.OpenReadStream();
-            results.Add(await _parser.ParseAsync(file.FileName, stream, user, ct));
+            results.Add(await _parser.ParseAsync(file.FileName, stream, user, progressToken, ct));
         }
         return Ok(results);
+    }
+
+    /// <summary>Polled by the browser (see wwwroot/index.html's upload flow) while the POST
+    /// above is still running, for a PDF being read page-by-page by an AI document reader
+    /// (see UploadParser/OllamaClient) — not background processing, just a second connection
+    /// reading state the first one is updating live. 204 means nothing has been reported yet
+    /// (a non-PDF file, a provider that reads the whole document in one call, or the request
+    /// hasn't reached the AI-extraction step yet).</summary>
+    [HttpGet("upload-progress/{token}")]
+    public IActionResult UploadProgress(string token, [FromServices] UploadProgressTracker progress)
+    {
+        var current = progress.Get(token);
+        return current is null ? NoContent() : Ok(current);
     }
 
     /// <summary>"Upload new file" — a completely new file identity, unrelated to any existing one.</summary>

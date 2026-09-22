@@ -13,9 +13,10 @@ public class DashboardSpec
         new(StringComparer.OrdinalIgnoreCase)
         {
             "kpi", "bar", "line", "pie", "table",
-            // See BuildSystemPrompt's progress-table/trend-matrix/status-bar sections —
-            // each has its own "data" shape, handled specially below in Validate().
-            "progress-table", "trend-matrix", "status-bar",
+            // See BuildSystemPrompt's progress-table/trend-matrix/status-bar/radial-gauge/
+            // linear-gauge sections — each has its own "data" shape, handled specially below
+            // in Validate().
+            "progress-table", "trend-matrix", "status-bar", "radial-gauge", "linear-gauge",
         };
     private static readonly HashSet<string> AllowedFilterTypes =
         new(StringComparer.OrdinalIgnoreCase) { "single_select", "multi_select", "date_range", "numeric_range" };
@@ -65,20 +66,22 @@ public class DashboardSpec
                 if (w is null) { errors.Add($"widgets[{i}] is null."); continue; }
                 if (string.IsNullOrWhiteSpace(w.Type) || !AllowedWidgetTypes.Contains(w.Type))
                     errors.Add($"widgets[{i}].type must be one of: kpi, bar, line, pie, table, progress-table, " +
-                               $"trend-matrix, status-bar (got \"{w.Type}\").");
+                               $"trend-matrix, status-bar, radial-gauge, linear-gauge (got \"{w.Type}\").");
                 if (string.IsNullOrWhiteSpace(w.Title))
                     errors.Add($"widgets[{i}].title is required.");
-                // status-bar's data is a single object, not an array (see BuildSystemPrompt).
+                // status-bar and radial-gauge's data are each a single object, not an array
+                // (see BuildSystemPrompt) — one total+breakdown, one single gauge value.
                 // A widget carrying "comparison" instead puts its real data inside left/right
                 // and is told to leave the top-level "data" empty or absent entirely.
                 var hasComparison = w.Comparison is { ValueKind: JsonValueKind.Object };
                 if (!hasComparison)
                 {
-                    var expectedKind = string.Equals(w.Type, "status-bar", StringComparison.OrdinalIgnoreCase)
-                        ? JsonValueKind.Object : JsonValueKind.Array;
+                    var expectsObject = string.Equals(w.Type, "status-bar", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(w.Type, "radial-gauge", StringComparison.OrdinalIgnoreCase);
+                    var expectedKind = expectsObject ? JsonValueKind.Object : JsonValueKind.Array;
                     if (w.Data.ValueKind != expectedKind)
                         errors.Add(expectedKind == JsonValueKind.Object
-                            ? $"widgets[{i}].data must be a single JSON object for type \"status-bar\"."
+                            ? $"widgets[{i}].data must be a single JSON object for type \"{w.Type}\"."
                             : $"widgets[{i}].data must be a JSON array.");
                 }
                 if (string.IsNullOrWhiteSpace(w.Source))

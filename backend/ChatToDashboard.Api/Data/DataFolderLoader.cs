@@ -138,14 +138,14 @@ public class DataFolderLoader
         var range = sheet.RangeUsed();
         if (range is null) return (new List<string>(), new List<string?[]>());
 
+        var headerRow = FindHeaderRow(range);
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var headerRow = range.FirstRowUsed();
         var headers = headerRow.Cells(1, range.ColumnCount())
             .Select(c => SanitizeColumnName(c.GetString(), used))
             .ToList();
 
         var rows = new List<string?[]>();
-        foreach (var xlRow in range.RowsUsed().Skip(1))
+        foreach (var xlRow in range.RowsUsed().SkipWhile(r => r.RowNumber() <= headerRow.RowNumber()))
         {
             var row = new string?[headers.Count];
             for (var i = 0; i < headers.Count; i++)
@@ -159,6 +159,34 @@ public class DataFolderLoader
             rows.Add(row);
         }
         return (headers, rows);
+    }
+
+    /// <summary>Real-world exports routinely have one or more title/banner rows above the
+    /// actual column headers — a merged report title, a company name, a generated-on
+    /// timestamp — each spanning only a cell or two of an otherwise-blank row. Unconditionally
+    /// treating the file's first used row as the header row turns that banner into useless
+    /// generic column names ("Column", "Column_2", ...) and pushes the real headers down to
+    /// become the first "data" row instead (seen live: a real header row like "Internal ID,
+    /// Etiad ID, Opp. Name, ..." ended up rendered as ordinary row data under fallback
+    /// "Column_N" headers). Scans a handful of leading used rows and picks the first one that
+    /// looks like an actual header: most of its cells within the sheet's used column span are
+    /// filled in. Falls back to the very first used row — today's unconditional behavior — for
+    /// any file where nothing further down looks better, rather than guessing indefinitely.</summary>
+    private static IXLRangeRow FindHeaderRow(IXLRange range)
+    {
+        const int MaxRowsToScan = 5;
+        const double MinFilledFraction = 0.5;
+
+        var candidates = range.RowsUsed().Take(MaxRowsToScan).ToList();
+        if (candidates.Count == 0) return range.FirstRowUsed();
+
+        var columnCount = range.ColumnCount();
+        foreach (var row in candidates)
+        {
+            var filled = row.Cells(1, columnCount).Count(c => !c.IsEmpty());
+            if (filled >= columnCount * MinFilledFraction) return row;
+        }
+        return candidates[0];
     }
 
     private static (List<string> Headers, List<string?[]> Rows) ReadJson(string file)

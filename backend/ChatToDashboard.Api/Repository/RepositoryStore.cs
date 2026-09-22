@@ -1,6 +1,8 @@
 using System.Data;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Data;
+using ChatToDashboard.Api.Llm;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
@@ -17,13 +19,23 @@ namespace ChatToDashboard.Api.Repository;
 public class RepositoryStore
 {
     private readonly DataStore _db;
+    private readonly ITableNamingAssistant _tableNaming;
     private readonly ILogger<RepositoryStore> _logger;
 
-    public RepositoryStore(DataStore db, ILogger<RepositoryStore> logger)
+    public RepositoryStore(DataStore db, ITableNamingAssistant tableNaming, ILogger<RepositoryStore> logger)
     {
         _db = db;
+        _tableNaming = tableNaming;
         _logger = logger;
     }
+
+    /// <summary>Dapper's default SqlCommand timeout (30s) is fine for the small metadata
+    /// queries elsewhere in this class, but the two writes below also carry the file's raw
+    /// bytes (FileContent, VARBINARY(MAX)/BLOB) — seen live timing out ("Execution Timeout
+    /// Expired") on a real upload over a slower/shared SQL Server link, well after the actual
+    /// table load had already finished. A larger, generous ceiling here costs nothing on a
+    /// fast link and gives a slow one the room a single-row blob write can genuinely need.</summary>
+    private const int FileWriteCommandTimeoutSeconds = 120;
 
     private string CatalogueTable => _db.Provider == DbProvider.Sqlite
         ? "\"repo_Files\"" : "[staging].[repo_Files]";
@@ -234,20 +246,32 @@ public class RepositoryStore
             CreatedByUserId = createdByUserId,
         };
 
-        await using var connection = await _db.OpenConnectionAsync(ct);
-
+        // Resolved before opening the connection below — ResolveBareTableNameAsync makes its
+        // own independent, potentially slow LLM call (ITableNamingAssistant) plus its own
+        // separate GetSchemaAsync connection for the collision check, neither of which touch
+        // `connection`. Holding it open and idle across that call was a real bug (seen live,
+        // reported as "Execution Timeout Expired" on save): a pooled connection to a remote/
+        // shared SQL Server can be reset by an idle network hop while it sits unused, and the
+        // next command run on it then fails as if IT had timed out, even though the actual
+        // DROP/CREATE/bulk-copy work is fast. Resolving the name first and opening fresh right
+        // before it's used means the connection is never open longer than the DB work itself.
+        var table = parsed.Table;
         var columnsJson = "[]";
-        if (parsed.Table is { } table && table.Columns.Count > 0)
+        string? bareName = null;
+        if (table is not null && table.Columns.Count > 0)
         {
-            var bareName = $"repo_{DataFolderLoader.SanitizeTableName(
-                Path.GetFileNameWithoutExtension(parsed.FileName))}_{id[..6]}";
+            var columnNames = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
+            bareName = await ResolveBareTableNameAsync(record.DisplayName, record.Description, columnNames, parsed.FileName, id, ct);
             record.TableName = _db.DisplayTable(bareName);
-            await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
-            columnsJson = System.Text.Json.JsonSerializer.Serialize(
-                table.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+            columnsJson = System.Text.Json.JsonSerializer.Serialize(columnNames);
         }
 
-        await connection.ExecuteAsync(
+        await using var connection = await _db.OpenConnectionAsync(ct);
+
+        if (table is not null && bareName is not null)
+            await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
+
+        await connection.ExecuteAsync(new CommandDefinition(
             $"INSERT INTO {CatalogueTable} (Id, DisplayName, OriginalFileName, Description, Category, Kind, " +
             "[RowCount], ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
             "VALUES (@Id, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
@@ -258,10 +282,76 @@ public class RepositoryStore
                 record.Kind, record.RowCount, record.ColumnCount, record.PageCount, record.UploadedAt,
                 record.LastUpdatedAt, record.TableName, TextContent = parsed.Text, ColumnsJson = columnsJson,
                 record.CreatedByUserId, FileContent = parsed.Content,
-            });
+            },
+            commandTimeout: FileWriteCommandTimeoutSeconds, cancellationToken: ct));
 
         _logger.LogInformation("Saved {File} to repository under category {Category}", record.DisplayName, record.Category);
         return record;
+    }
+
+    /// <summary>
+    /// New-file table naming only (see SaveAsync) — "update this file" always reuses the
+    /// existing TableName untouched (UpdateDataAsync below), since table identity must stay
+    /// stable across updates. Tries ITableNamingAssistant for a short, clean identifier first
+    /// (e.g. "opportunities" instead of "repo_Opportunities_Tracker_V_3_0__1__976323") — the
+    /// long filename-derived kind of name is exactly what the model tends to mentally
+    /// "simplify" when writing SQL later, which is how it ends up querying a table that
+    /// doesn't exist (see AnalyticsTools' "Invalid object name" error-hint fix, the other half
+    /// of this same problem). Falls back to the original filename-sanitized name — unchanged
+    /// from before this method existed — whenever the suggestion is missing, unusable, or the
+    /// call fails for any reason; ITableNamingAssistant itself never throws, but nothing here
+    /// depends on that promise holding.
+    /// </summary>
+    private async Task<string> ResolveBareTableNameAsync(
+        string displayName, string description, IReadOnlyList<string> columnNames,
+        string fileName, string id, CancellationToken ct)
+    {
+        var fallback = $"repo_{DataFolderLoader.SanitizeTableName(Path.GetFileNameWithoutExtension(fileName))}_{id[..6]}";
+
+        string? suggestion;
+        try
+        {
+            suggestion = await _tableNaming.SuggestTableNameAsync(displayName, description, columnNames, null, ct);
+        }
+        catch
+        {
+            suggestion = null;
+        }
+        var sanitized = SanitizeSuggestedTableName(suggestion);
+        if (sanitized is null) return fallback;
+
+        // Only the AI-suggested short name needs a collision check — the fallback above is
+        // already effectively unique on its own (filename plus 6 hex chars of the file's own
+        // new GUID), which a short generic name like "sales_orders" very much is not.
+        var existing = (await _db.GetSchemaAsync(ct))
+            .Select(t => _db.BareTableName(t.Table))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!existing.Contains(sanitized)) return sanitized;
+
+        for (var suffix = 2; ; suffix++)
+        {
+            var candidate = $"{sanitized}_{suffix}";
+            if (!existing.Contains(candidate)) return candidate;
+        }
+    }
+
+    /// <summary>Never trusts a model reply as already a safe SQL identifier: takes only its
+    /// first line, strips anything outside lowercase ASCII letters/digits/underscores, and
+    /// enforces the same "doesn't start with a digit" rule and a 30-character cap the way
+    /// DataFolderLoader.SanitizeTableName enforces its own (much looser, 100-character) rule
+    /// for the filename-derived fallback. Returns null for anything that sanitizes down to
+    /// nothing usable, telling the caller to fall back instead of using a mangled name.</summary>
+    private static string? SanitizeSuggestedTableName(string? suggestion)
+    {
+        if (string.IsNullOrWhiteSpace(suggestion)) return null;
+        var firstLine = suggestion.Split('\n', 2)[0].Trim().ToLowerInvariant();
+        var cleaned = Regex.Replace(firstLine, @"[^a-z0-9_]", "_");
+        cleaned = Regex.Replace(cleaned, @"_{2,}", "_").Trim('_');
+        if (cleaned.Length == 0) return null;
+        if (char.IsDigit(cleaned[0])) cleaned = "t_" + cleaned;
+        const int MaxLength = 30;
+        if (cleaned.Length > MaxLength) cleaned = cleaned[..MaxLength].TrimEnd('_');
+        return cleaned.Length == 0 ? null : cleaned;
     }
 
     /// <summary>
@@ -300,7 +390,7 @@ public class RepositoryStore
                 schemaChangedAt = now;
         }
 
-        var updated = await connection.ExecuteAsync(
+        var updated = await connection.ExecuteAsync(new CommandDefinition(
             $"UPDATE {CatalogueTable} SET OriginalFileName = @OriginalFileName, [RowCount] = @RowCount, " +
             "ColumnCount = @ColumnCount, PageCount = @PageCount, LastUpdatedAt = @LastUpdatedAt, " +
             "TextContent = @TextContent, FileContent = @FileContent" +
@@ -313,7 +403,8 @@ public class RepositoryStore
                 ColumnCount = parsed.Table?.Columns.Count ?? 0, PageCount = parsed.PageCount,
                 LastUpdatedAt = now, TextContent = parsed.Text, FileContent = parsed.Content,
                 ColumnsJson = newColumnsJson, SchemaChangedAt = schemaChangedAt,
-            });
+            },
+            commandTimeout: FileWriteCommandTimeoutSeconds, cancellationToken: ct));
         if (updated == 0) return null;
 
         _logger.LogInformation("Updated data for repository file {Id}{Schema}", id,
