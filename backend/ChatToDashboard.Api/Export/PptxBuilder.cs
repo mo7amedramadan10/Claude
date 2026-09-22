@@ -6,12 +6,14 @@ using P = DocumentFormat.OpenXml.Presentation;
 namespace ChatToDashboard.Api.Export;
 
 /// <summary>
-/// Builds a .pptx from scratch — a title slide (question + summary) followed by one
-/// slide per widget. No template file: the theme/master/layout below are the minimal
-/// boilerplate every valid OOXML presentation needs, written once here. KPI values and
-/// table widgets become native PowerPoint text/tables (so they stay editable); bar,
-/// line and pie widgets become a picture, since the browser already rendered them as
-/// SVG and hands over a PNG snapshot of exactly what's on screen.
+/// Builds a .pptx from scratch — a title slide (question + summary) followed by one slide
+/// per group of up to <see cref="WidgetsPerSlide"/> widgets: 2 side by side on top and the
+/// 3rd spanning the full width below for a full group of 3, or however many fit evenly for a
+/// trailing group of 1 or 2 — see CreateWidgetGroupSlide. No template file: the theme/master/
+/// layout below are the minimal boilerplate every valid OOXML presentation needs, written
+/// once here. KPI values and table widgets become native PowerPoint text/tables (so they
+/// stay editable); bar, line and pie widgets become a picture, since the browser already
+/// rendered them as SVG and hands over a PNG snapshot of exactly what's on screen.
 /// </summary>
 public static class PptxBuilder
 {
@@ -23,6 +25,14 @@ public static class PptxBuilder
     private const long ContentTop = TitleTop + TitleHeight + 137160L;
     private static long ContentWidth => SlideWidth - 2 * Margin;
     private static long ContentHeight => SlideHeight - ContentTop - Margin;
+
+    /// <summary>How many widgets share one slide — see CreateWidgetGroupSlide.</summary>
+    private const int WidgetsPerSlide = 3;
+    private const long ColumnGap = 182880L;   // 0.2in between side-by-side widgets
+    private const long RowGap = 137160L;      // 0.15in between the top and bottom rows of a 3-widget slide
+    private const long ColumnTitleHeight = 400050L;
+    private const long TitleToBodyGap = 45720L;   // 0.05in
+    private const long SourceHeight = 228600L;   // 0.25in, reserved uniformly so bodies stay aligned
 
     public static byte[] Build(PptxExportRequest request)
     {
@@ -39,8 +49,8 @@ public static class PptxBuilder
             {
                 CreateTitleSlide(presentationPart, slideLayoutPart, request.Title, request.Summary),
             };
-            foreach (var widget in request.Widgets)
-                slideParts.Add(CreateWidgetSlide(presentationPart, slideLayoutPart, widget));
+            foreach (var group in request.Widgets.Chunk(WidgetsPerSlide))
+                slideParts.Add(CreateWidgetGroupSlide(presentationPart, slideLayoutPart, group));
 
             presentationPart.Presentation.Append(new P.SlideMasterIdList(new P.SlideMasterId
             {
@@ -235,47 +245,96 @@ public static class PptxBuilder
         return slidePart;
     }
 
-    private static SlidePart CreateWidgetSlide(
-        PresentationPart presentationPart, SlideLayoutPart layoutPart, PptxWidgetInput widget)
+    /// <summary>One slide holding up to <see cref="WidgetsPerSlide"/> widgets. A 3-widget group
+    /// gets 2 side by side on top and the 3rd spanning the full width below — 3 equal columns
+    /// packed every chart/table into a cramped third of the slide (titles wrapping across
+    /// several lines, bars squeezed down to a few pixels wide), reported live as unreadable.
+    /// Two widgets get 2 even side-by-side columns at full height; a single trailing widget
+    /// gets the whole slide, same as before.</summary>
+    private static SlidePart CreateWidgetGroupSlide(
+        PresentationPart presentationPart, SlideLayoutPart layoutPart, IReadOnlyList<PptxWidgetInput> widgets)
     {
         var slidePart = NewSlidePart(presentationPart, layoutPart);
         var tree = slidePart.Slide!.CommonSlideData!.ShapeTree!;
         uint nextId = 2;
 
-        tree.Append(TextBox(nextId++, widget.Title, Margin, TitleTop, ContentWidth, TitleHeight, 26, bold: true, colorHex: "2A78D6"));
+        switch (widgets.Count)
+        {
+            case 1:
+                AppendWidgetInRect(slidePart, tree, ref nextId, widgets[0], Margin, ContentTop, ContentWidth, ContentHeight);
+                break;
 
-        var sourceHeight = string.IsNullOrWhiteSpace(widget.Source) ? 0 : 320040L; // ~0.35in reserved at the bottom
-        var bodyHeight = ContentHeight - sourceHeight;
+            case 2:
+            {
+                var halfWidth = (ContentWidth - ColumnGap) / 2;
+                AppendWidgetInRect(slidePart, tree, ref nextId, widgets[0], Margin, ContentTop, halfWidth, ContentHeight);
+                AppendWidgetInRect(slidePart, tree, ref nextId, widgets[1], Margin + halfWidth + ColumnGap, ContentTop, halfWidth, ContentHeight);
+                break;
+            }
 
+            default: // 3 — two on top, one full-width below
+            {
+                var halfWidth = (ContentWidth - ColumnGap) / 2;
+                var topHeight = (ContentHeight - RowGap) / 2;
+                var bottomTop = ContentTop + topHeight + RowGap;
+                var bottomHeight = ContentHeight - topHeight - RowGap;
+
+                AppendWidgetInRect(slidePart, tree, ref nextId, widgets[0], Margin, ContentTop, halfWidth, topHeight);
+                AppendWidgetInRect(slidePart, tree, ref nextId, widgets[1], Margin + halfWidth + ColumnGap, ContentTop, halfWidth, topHeight);
+                AppendWidgetInRect(slidePart, tree, ref nextId, widgets[2], Margin, bottomTop, ContentWidth, bottomHeight);
+                break;
+            }
+        }
+
+        return slidePart;
+    }
+
+    /// <summary>Renders one widget's title, body and (optional) source note into the given
+    /// rect — shared by every cell of CreateWidgetGroupSlide's layout so a full-slide, half-
+    /// slide or third-of-a-row-and-half-column cell all lay out the same way, just scaled to
+    /// whatever rect they're given.</summary>
+    private static void AppendWidgetInRect(
+        SlidePart slidePart, P.ShapeTree tree, ref uint nextId, PptxWidgetInput widget, long x, long y, long width, long height)
+    {
+        tree.Append(TextBox(nextId++, widget.Title, x, y, width, ColumnTitleHeight, 16, bold: true, colorHex: "2A78D6"));
+
+        var bodyTop = y + ColumnTitleHeight + TitleToBodyGap;
+        var bodyHeight = height - ColumnTitleHeight - TitleToBodyGap - SourceHeight;
+        AppendWidgetBody(slidePart, tree, ref nextId, widget, x, bodyTop, width, bodyHeight);
+
+        if (!string.IsNullOrWhiteSpace(widget.Source))
+            tree.Append(TextBox(nextId++, widget.Source, x, y + height - SourceHeight + TitleToBodyGap, width, SourceHeight,
+                9, colorHex: "898781"));
+    }
+
+    /// <summary>Renders one widget's body (everything but its title/source, which the caller
+    /// places) into the given rect — shared by every cell of AppendWidgetInRect.</summary>
+    private static void AppendWidgetBody(
+        SlidePart slidePart, P.ShapeTree tree, ref uint nextId, PptxWidgetInput widget, long x, long y, long width, long height)
+    {
         switch ((widget.Type ?? "").ToLowerInvariant())
         {
             case "kpi":
-                tree.Append(TextBox(nextId++, widget.Value ?? "—", Margin, ContentTop, ContentWidth, bodyHeight / 2,
-                    54, bold: true, align: A.TextAlignmentTypeValues.Center));
+                tree.Append(TextBox(nextId++, widget.Value ?? "—", x, y, width, height / 2,
+                    44, bold: true, align: A.TextAlignmentTypeValues.Center));
                 if (!string.IsNullOrWhiteSpace(widget.Label))
-                    tree.Append(TextBox(nextId++, widget.Label, Margin, ContentTop + bodyHeight / 2, ContentWidth, bodyHeight / 2,
-                        22, colorHex: "52514E", align: A.TextAlignmentTypeValues.Center));
+                    tree.Append(TextBox(nextId++, widget.Label, x, y + height / 2, width, height / 2,
+                        18, colorHex: "52514E", align: A.TextAlignmentTypeValues.Center));
                 break;
 
             case "table":
-                tree.Append(BuildTable(nextId++, widget, Margin, ContentTop, ContentWidth, bodyHeight));
+                tree.Append(BuildTable(nextId++, widget, x, y, width, height));
                 break;
 
             default: // bar, line, pie — a snapshot of the SVG the browser already rendered
                 var imageBytes = TryDecodeImage(widget.Image);
                 if (imageBytes is not null)
-                    tree.Append(BuildPicture(slidePart, nextId++, imageBytes, Margin, ContentTop, ContentWidth, bodyHeight));
+                    tree.Append(BuildPicture(slidePart, nextId++, imageBytes, x, y, width, height));
                 else
-                    tree.Append(TextBox(nextId++, "تعذّر تضمين الرسم البياني.", Margin, ContentTop, ContentWidth, bodyHeight, 20,
+                    tree.Append(TextBox(nextId++, "تعذّر تضمين الرسم البياني.", x, y, width, height, 14,
                         colorHex: "898781", align: A.TextAlignmentTypeValues.Center));
                 break;
         }
-
-        if (!string.IsNullOrWhiteSpace(widget.Source))
-            tree.Append(TextBox(nextId, widget.Source, Margin, SlideHeight - Margin - sourceHeight + 45720, ContentWidth, sourceHeight,
-                12, colorHex: "898781"));
-
-        return slidePart;
     }
 
     private static P.GraphicFrame BuildTable(uint id, PptxWidgetInput widget, long x, long y, long cx, long cy)

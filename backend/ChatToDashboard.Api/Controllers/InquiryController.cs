@@ -40,7 +40,7 @@ public class InquiryController : ControllerBase
 
         try
         {
-            var answer = await _generator.GenerateInquiryAsync(request.Message.Trim(), effectiveSources, user, ct);
+            var answer = await _generator.GenerateInquiryAsync(request.Message.Trim(), effectiveSources, user, request.Lang, ct);
             return Ok(new InquiryApiResponse { Answer = answer });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -71,7 +71,7 @@ public class InquiryController : ControllerBase
 
         try
         {
-            var dashboard = await _generator.GenerateDashboardFromInquiryAsync(inquiry, request.CurrentDashboard, effectiveSources, user, ct);
+            var dashboard = await _generator.GenerateDashboardFromInquiryAsync(inquiry, request.CurrentDashboard, effectiveSources, user, request.Lang, ct);
             return Ok(new ChatResponse { Dashboard = dashboard });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

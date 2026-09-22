@@ -61,6 +61,21 @@ public class DataStore
     {
         var connection = CreateConnection();
         await connection.OpenAsync(ct);
+        if (Provider == DbProvider.Sqlite)
+        {
+            // Dashboard filters fire one read per widget concurrently (Promise.all on the
+            // frontend), and the same file also takes writes (autosave, uploads) from other
+            // requests landing at the same time. SQLite's default rollback-journal mode
+            // blocks a reader while a writer holds the commit lock, and with the default
+            // zero busy_timeout that surfaces immediately as "database is locked" — silently
+            // swallowed by the frontend's per-widget fetch, leaving that widget's data stuck
+            // on whatever it last showed. WAL lets readers proceed without waiting on a
+            // writer's commit in the first place; the busy_timeout is a second line of
+            // defense for the cases WAL alone doesn't cover (e.g. a concurrent schema change).
+            await using var pragma = connection.CreateCommand();
+            pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=10000;";
+            await pragma.ExecuteNonQueryAsync(ct);
+        }
         return connection;
     }
 
@@ -197,6 +212,13 @@ public class DataStore
 
     // ---- Loading ----
 
+    /// <summary>The default SqlCommand/SqlBulkCopy timeout (30s) is plenty on a fast local
+    /// connection, but real deployments hit it over a slower or more loaded shared SQL Server
+    /// link — seen live as "Execution Timeout Expired" while loading a ~1000-row upload. A
+    /// larger ceiling here costs nothing on a fast connection and gives a slow one the room a
+    /// bigger table load can genuinely need.</summary>
+    private const int LoadCommandTimeoutSeconds = 120;
+
     /// <summary>Drops and recreates the staging table, then loads every row of <paramref name="table"/>.</summary>
     public async Task RecreateAndLoadAsync(
         DbConnection connection, string tableName, DataTable table, CancellationToken ct = default)
@@ -208,11 +230,13 @@ public class DataStore
         await using (var drop = connection.CreateCommand())
         {
             drop.CommandText = $"DROP TABLE IF EXISTS {target}";
+            drop.CommandTimeout = LoadCommandTimeoutSeconds;
             await drop.ExecuteNonQueryAsync(ct);
         }
         await using (var create = connection.CreateCommand())
         {
             create.CommandText = $"CREATE TABLE {target} ({string.Join(", ", columnDefs)})";
+            create.CommandTimeout = LoadCommandTimeoutSeconds;
             await create.ExecuteNonQueryAsync(ct);
         }
 
@@ -231,6 +255,7 @@ public class DataStore
         {
             DestinationTableName = target,
             BatchSize = 5000,
+            BulkCopyTimeout = LoadCommandTimeoutSeconds,
         };
         foreach (DataColumn column in table.Columns)
             bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);

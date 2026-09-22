@@ -25,19 +25,24 @@ public class UploadParser
 
     private readonly ConcurrentDictionary<string, (ParsedUpload Upload, DateTime At)> _pending = new();
     private readonly IDocumentReaderRouter _documentReader;
+    private readonly UploadProgressTracker _progress;
     private readonly ILogger<UploadParser> _logger;
 
-    public UploadParser(IDocumentReaderRouter documentReader, ILogger<UploadParser> logger)
+    public UploadParser(IDocumentReaderRouter documentReader, UploadProgressTracker progress, ILogger<UploadParser> logger)
     {
         _documentReader = documentReader;
+        _progress = progress;
         _logger = logger;
     }
 
     public static bool IsSupported(string fileName) =>
         Path.GetExtension(fileName).ToLowerInvariant() is ".xlsx" or ".xls" or ".csv" or ".pdf";
 
+    /// <param name="progressToken">Optional, client-generated — when present, page-by-page AI
+    /// extraction progress for a PDF is published to <see cref="UploadProgressTracker"/> under
+    /// this key while this same call is still running, for the browser to poll.</param>
     public async Task<PendingUpload> ParseAsync(
-        string fileName, Stream content, AppUser? requestingUser = null, CancellationToken ct = default)
+        string fileName, Stream content, AppUser? requestingUser = null, string? progressToken = null, CancellationToken ct = default)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         var token = Guid.NewGuid().ToString("N");
@@ -58,7 +63,7 @@ public class UploadParser
                     DataFolderLoader.InferTypes(DataFolderLoader.ReadCsv(temp)), null, 0, bytes),
                 ".xlsx" or ".xls" => new ParsedUpload(fileName, "excel",
                     DataFolderLoader.InferTypes(DataFolderLoader.ReadXlsx(temp)), null, 0, bytes),
-                ".pdf" => await ParsePdfAsync(fileName, temp, bytes, requestingUser, ct),
+                ".pdf" => await ParsePdfAsync(fileName, temp, bytes, requestingUser, progressToken, ct),
                 _ => throw new NotSupportedException($"Unsupported file type: {extension}"),
             };
 
@@ -86,18 +91,16 @@ public class UploadParser
         }
     }
 
+    private static readonly System.Text.RegularExpressions.Regex PageMarker =
+        new(@"^--- صفحة (\d+) ---$", System.Text.RegularExpressions.RegexOptions.Multiline);
+
     private async Task<ParsedUpload> ParsePdfAsync(
-        string fileName, string path, byte[] bytes, AppUser? requestingUser, CancellationToken ct)
+        string fileName, string path, byte[] bytes, AppUser? requestingUser, string? progressToken, CancellationToken ct)
     {
         using var pdf = PdfDocument.Open(path);
-        var text = new StringBuilder();
-        var pages = 0;
-        foreach (var page in pdf.GetPages())
-        {
-            text.AppendLine(page.Text);
-            pages++;
-        }
-        var pdfPigText = text.ToString();
+        var pdfPigPages = new List<string>();
+        foreach (var page in pdf.GetPages()) pdfPigPages.Add(page.Text);
+        var pages = pdfPigPages.Count;
 
         // Per LlmSettingsStore.DocumentReaderProvider: when a document-reading model is
         // configured, its transcription of the rendered pages REPLACES PdfPig's text-layer
@@ -107,12 +110,51 @@ public class UploadParser
         // support) falls back to the PdfPig text already in hand rather than failing the
         // whole upload — a document search that's merely as good as before beats one that's
         // suddenly empty because of an unrelated setting.
-        var aiText = await TryExtractWithAiAsync(fileName, bytes, pages, requestingUser, ct);
-        return new ParsedUpload(fileName, "pdf", null, aiText ?? pdfPigText, pages, bytes);
+        //
+        // AI extraction can also come back PARTIAL (OllamaClient's per-page reads: some pages
+        // read fine, others didn't) — that's not treated as all-or-nothing either. The pages
+        // it did read replace PdfPig's text for those pages specifically; PdfPig's own text
+        // fills in whichever pages it didn't reach, so a slow/flaky page never costs the rest
+        // of a document that mostly extracted cleanly.
+        var aiResult = await TryExtractWithAiAsync(fileName, bytes, pages, requestingUser, progressToken, ct);
+        var finalText = aiResult is null
+            ? string.Join('\n', pdfPigPages)
+            : aiResult.PagesRead >= pages
+                ? aiResult.Text
+                : SpliceWithFallback(aiResult.Text, pdfPigPages);
+
+        return new ParsedUpload(fileName, "pdf", null, finalText, pages, bytes);
     }
 
-    private async Task<string?> TryExtractWithAiAsync(
-        string fileName, byte[] pdfBytes, int pageCount, AppUser? requestingUser, CancellationToken ct)
+    /// <summary>Rebuilds one "--- صفحة N ---" per page, using OllamaClient's own transcription
+    /// for whichever pages it marked (see the same marker format in
+    /// OllamaClient.ExtractDocumentTextAsync) and PdfPig's plain-text extraction for the rest.
+    /// Claude/OpenAI never reach this — they only ever return a full read or throw, so the
+    /// caller only calls this for a genuinely partial AI result.</summary>
+    private static string SpliceWithFallback(string aiText, IReadOnlyList<string> pdfPigPages)
+    {
+        var aiPages = new Dictionary<int, string>();
+        var matches = PageMarker.Matches(aiText);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var pageNumber = int.Parse(matches[i].Groups[1].Value);
+            var start = matches[i].Index + matches[i].Length;
+            var end = i + 1 < matches.Count ? matches[i + 1].Index : aiText.Length;
+            aiPages[pageNumber] = aiText[start..end].Trim();
+        }
+
+        var combined = new StringBuilder();
+        for (var i = 0; i < pdfPigPages.Count; i++)
+        {
+            var pageNumber = i + 1;
+            combined.AppendLine($"--- صفحة {pageNumber} ---");
+            combined.AppendLine(aiPages.TryGetValue(pageNumber, out var aiPageText) ? aiPageText : pdfPigPages[i]);
+        }
+        return combined.ToString();
+    }
+
+    private async Task<DocumentExtractionResult?> TryExtractWithAiAsync(
+        string fileName, byte[] pdfBytes, int pageCount, AppUser? requestingUser, string? progressToken, CancellationToken ct)
     {
         if (pageCount == 0 || !await _documentReader.IsEnabledAsync(ct)) return null;
         try
@@ -134,14 +176,23 @@ public class UploadParser
             }
             if (pageImages.Count == 0) return null;
 
-            var extracted = await _documentReader.ExtractTextAsync(fileName, pageImages, requestingUser, ct);
-            return string.IsNullOrWhiteSpace(extracted) ? null : extracted;
+            void ReportProgress(int pagesRead, int totalPages)
+            {
+                if (progressToken is { Length: > 0 }) _progress.Report(progressToken, fileName, pagesRead, totalPages);
+            }
+
+            var extracted = await _documentReader.ExtractTextAsync(fileName, pageImages, requestingUser, ReportProgress, ct);
+            return extracted is null || string.IsNullOrWhiteSpace(extracted.Text) ? null : extracted;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
                 "AI document extraction failed for {File} — keeping PdfPig's plain-text extraction instead.", fileName);
             return null;
+        }
+        finally
+        {
+            if (progressToken is { Length: > 0 }) _progress.Clear(progressToken);
         }
     }
 

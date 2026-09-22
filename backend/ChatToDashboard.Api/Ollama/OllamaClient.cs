@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
@@ -25,7 +26,7 @@ namespace ChatToDashboard.Api.Ollama;
 ///   (see UsageTrace.RecordTurn, which already falls back to the response's top level).
 /// - "stream" is NOT omittable — Ollama defaults to streaming, so every request pins it false.
 /// </summary>
-public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
+public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -75,18 +76,18 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
+        string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default)
     {
-        // Screenshot-to-dashboard needs a vision-capable model; the gateway's models list
-        // (all plain chat/instruct models) doesn't advertise that, so it's not offered here —
-        // the model would otherwise silently ignore the image.
-        if (!string.IsNullOrWhiteSpace(imageDataUrl))
-            throw new InvalidOperationException(
-                "الموديل الداخلي الحالي لا يدعم تحليل الصور. بدّل مؤقتًا إلى Claude أو GPT من إعدادات الموديل لهذا الطلب.");
-
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
+        // ImageReaderOllamaModel) wins over the normal dashboard-building sub-model choice —
+        // see IDashboardGenerator.GenerateDashboardAsync's remarks.
+        var model = modelOverride is { Length: > 0 }
+            ? modelOverride
+            : (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
@@ -95,22 +96,43 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
         // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
         // there is no separate multi-turn history to replay.
-        messages.Add(new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) });
+        var userMessage = new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) };
+        // Sent through unconditionally rather than refused here on the client's own
+        // assumption — same as ExtractDocumentTextAsync's page images, and CompressForGateway
+        // keeps it under the gateway's request-size limit the same way those already do.
+        // Whichever model is actually selected decides for itself whether it can use it: seen
+        // live, the gateway doesn't silently ignore an image a model can't handle — it rejects
+        // the whole request with 400 "Multimodal data provided, but model does not support
+        // multimodal requests", which the catch below turns into a plain-language message
+        // instead of the raw gateway JSON reaching the user.
+        var hasImage = TryExtractBase64(imageDataUrl, out var imageBase64);
+        if (hasImage) userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
+        messages.Add(userMessage);
 
         var tools = BuildToolsJson(context);
         var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        try
+        {
+            return await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (HttpRequestException ex) when (hasImage && ex.Message.Contains("multimodal", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"الموديل الداخلي الحالي ({model}) لا يدعم تحليل الصور. بدّل مؤقتًا إلى Claude أو GPT من إعدادات الموديل لهذا الطلب، أو اختر موديلاً داخليًا آخر يدعم الصور إن وُجد.",
+                ex);
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
+        CancellationToken ct = default)
     {
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context);
+        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
         // Inquiries is never continuation-aware — isolated from whatever dashboard is on
         // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
         var messages = new JsonArray
@@ -129,14 +151,14 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
-        AppUser? requestingUser = null, CancellationToken ct = default)
+        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
         // no new query_data/list_files call can happen here.
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
@@ -158,6 +180,15 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     private const int GatewayImageMaxDimension = 1400;
     private const int GatewayImageJpegQuality = 78;
 
+    // Pages read at once, instead of strictly one-at-a-time — seen live: an 18-page document
+    // against a large internal model (gemma4:31b) took ~18-175 seconds PER PAGE, and strictly
+    // sequential meant that time simply added up — 12.5 minutes for 12 pages before the user,
+    // seeing no progress at all, closed the tab and lost even the 12 pages that had already
+    // come back cleanly. A modest cap: enough to meaningfully cut the wall-clock wait without
+    // hammering a gateway that may itself only run one inference at a time (in which case this
+    // helps less, but never hurts correctness — see the partial-result handling below).
+    private const int MaxConcurrentPages = 3;
+
     /// <summary>See ClaudeClient.ExtractDocumentTextAsync. Unlike GenerateDashboardAsync's
     /// image rejection above (a screenshot mid-conversation, where failing fast and telling
     /// the user to switch models is the right call), a document upload already has a working
@@ -177,9 +208,18 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
     /// carries one page — no matter how many pages the document has; downscaling each page to
     /// GatewayImageMaxDimension/re-encoding as JPEG below additionally covers the case where
     /// even a single dense page's PNG (rendered once, upstream, for whichever provider ends up
-    /// reading it) would already be too large on its own.</summary>
-    public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    /// reading it) would already be too large on its own.
+    ///
+    /// Pages are read with bounded concurrency (MaxConcurrentPages at a time) rather than
+    /// strictly one after another, and a page that fails on its own — or the whole thing being
+    /// cancelled partway through — never discards pages that already came back: whatever
+    /// succeeded is returned as a genuine partial DocumentExtractionResult (PagesRead less than
+    /// the total), which the caller (UploadParser) fills in from PdfPig's own per-page text
+    /// rather than losing that work. Only a request that reads zero pages at all is a real
+    /// failure that propagates up for the caller's usual all-or-nothing PdfPig fallback.</summary>
+    public async Task<DocumentExtractionResult> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
         // Its own sub-model choice, independent of GenerateDashboardAsync's OllamaModel above —
         // an admin can run document reading on a different internal model than the one that
@@ -188,37 +228,109 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor
         var systemPrompt = AnalyticsTools.DocumentExtractionSystemPrompt;
         var trace = _usage.Begin("Ollama", model, $"📄 استخراج نص من مستند: {fileName}", $"{pageImageDataUrls.Count} صفحة", requestingUser);
         trace.SetSystemPrompt(systemPrompt);
+
+        var pageTexts = new string?[pageImageDataUrls.Count];
+        var pagesRead = 0;
+        Exception? lastFailure = null;
+        using var semaphore = new SemaphoreSlim(MaxConcurrentPages);
+
+        async Task ReadPageAsync(int index)
+        {
+            // The semaphore wait itself must stay inside the try/catch too — a cancellation
+            // (or a rare SemaphoreSlim fault) firing while a page is still queued, before it
+            // ever acquires the slot, would otherwise escape uncaught and fail Task.WhenAll for
+            // every page at once, which is exactly the all-or-nothing loss this method exists
+            // to avoid; whatever pages already finished stay in pageTexts either way.
+            try
+            {
+                await semaphore.WaitAsync(ct);
+                try
+                {
+                    if (!TryExtractBase64(pageImageDataUrls[index], out var base64Data)) return;
+                    var pageNumber = index + 1;
+                    var messages = new JsonArray
+                    {
+                        new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                        new JsonObject
+                        {
+                            ["role"] = "user",
+                            ["content"] = AnalyticsTools.DocumentExtractionPageInstruction(fileName, pageNumber, pageImageDataUrls.Count),
+                            ["images"] = new JsonArray { CompressForGateway(base64Data) },
+                        },
+                    };
+                    var response = await CallChatAsync(model, messages, null, trace, ct);
+                    var pageText = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+                    pageTexts[index] = pageText.Trim();
+                    Interlocked.Increment(ref pagesRead);
+                    onPageRead?.Invoke(Volatile.Read(ref pagesRead), pageImageDataUrls.Count);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }
+            catch (Exception ex)
+            {
+                // This one page didn't make it — every other page's own task is unaffected
+                // and keeps running; see the class-level remarks above.
+                lastFailure = ex;
+            }
+        }
+
+        await Task.WhenAll(Enumerable.Range(0, pageImageDataUrls.Count).Select(ReadPageAsync));
+
+        var combined = new StringBuilder();
+        for (var i = 0; i < pageTexts.Length; i++)
+        {
+            if (pageTexts[i] is null) continue;
+            combined.AppendLine($"--- صفحة {i + 1} ---");
+            combined.AppendLine(pageTexts[i]);
+        }
+        var text = combined.ToString();
+
+        if (pagesRead == 0)
+        {
+            // Nothing at all came back — a genuine failure, same as before: propagate it so
+            // the caller's fallback to PdfPig's plain-text extraction takes over entirely.
+            await trace.CompleteAsync(false, null, lastFailure?.Message ?? "No pages were read.", CancellationToken.None);
+            throw lastFailure ?? new InvalidOperationException("No pages were read.");
+        }
+
+        // At least one real page came back. Recorded as a success either way — the pages that
+        // DID make it are genuine, useful output, not a failure — with the count of what's
+        // missing noted for anyone reading the usage log, if this wasn't a full read.
+        var note = pagesRead == pageImageDataUrls.Count ? null : $"{pageImageDataUrls.Count - pagesRead} صفحة لم تُقرأ: {lastFailure?.Message}";
+        await trace.CompleteAsync(true, text, note, CancellationToken.None);
+        return new DocumentExtractionResult(text, pagesRead);
+    }
+
+    /// <summary>See ClaudeClient.SuggestTableNameAsync / ITableNamingAssistant — same
+    /// contract, Ollama's own message["content"] response shape. Never throws.</summary>
+    public async Task<string?> SuggestTableNameAsync(
+        string displayName, string? description, IReadOnlyList<string> columnNames,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.TableNamingSystemPrompt;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.TableNamingUserMessage(displayName, description, columnNames) },
+        };
+
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, $"🏷️ اقتراح اسم جدول: {displayName}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var combined = new StringBuilder();
-            for (var i = 0; i < pageImageDataUrls.Count; i++)
-            {
-                if (!TryExtractBase64(pageImageDataUrls[i], out var base64Data)) continue;
-                var pageNumber = i + 1;
-                var messages = new JsonArray
-                {
-                    new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-                    new JsonObject
-                    {
-                        ["role"] = "user",
-                        ["content"] = AnalyticsTools.DocumentExtractionPageInstruction(fileName, pageNumber, pageImageDataUrls.Count),
-                        ["images"] = new JsonArray { CompressForGateway(base64Data) },
-                    },
-                };
-                var response = await CallChatAsync(model, messages, null, trace, ct);
-                var pageText = response["message"]?["content"]?.GetValue<string>() ?? string.Empty;
-                combined.AppendLine($"--- صفحة {pageNumber} ---");
-                combined.AppendLine(pageText.Trim());
-            }
-
-            var text = combined.ToString();
+            var response = await CallChatAsync(model, messages, null, trace, ct);
+            var text = (response["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
             await trace.CompleteAsync(true, text, null, ct);
-            return text;
+            return text.Length > 0 ? text : null;
         }
         catch (Exception ex)
         {
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
-            throw;
+            return null;
         }
     }
 

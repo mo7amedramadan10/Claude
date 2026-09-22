@@ -36,6 +36,11 @@ public class UsageTrace
     private readonly CostCalculator _cost;
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
     private readonly UsageRecord _record;
+    // OllamaClient's document-extraction path now reads pages with bounded concurrency (see
+    // OllamaClient.ExtractDocumentTextAsync), so multiple pages' CallChatAsync calls can reach
+    // RecordTurn on this same trace at once — without this, concurrent List<T>.Add calls and
+    // the non-atomic "+=" accumulators below could corrupt _record.Turns or undercount tokens.
+    private readonly object _lock = new();
 
     internal UsageTrace(UsageStore store, CostCalculator cost, string provider, string model,
         string question, string enabledSources, AppUser? user)
@@ -66,40 +71,48 @@ public class UsageTrace
         // object at all and puts prompt_eval_count/eval_count on the response's top level —
         // fall back to the response object itself so that case is read too.
         var usage = response["usage"]?.AsObject() ?? response;
-        var turn = new UsageTurn
+        lock (_lock)
         {
-            Turn = _record.Turns.Count + 1,
-            // Each provider names these differently; read whichever is present.
-            InputTokens = Read(usage, "input_tokens", "prompt_tokens", "prompt_eval_count"),
-            OutputTokens = Read(usage, "output_tokens", "completion_tokens", "eval_count"),
-            CacheReadTokens = Read(usage, "cache_read_input_tokens")
-                + ReadNested(usage, "prompt_tokens_details", "cached_tokens"),
-            CacheWriteTokens = Read(usage, "cache_creation_input_tokens"),
-            StopReason = response["stop_reason"]?.GetValue<string>()
-                ?? response["choices"]?[0]?["finish_reason"]?.GetValue<string>()
-                ?? response["done_reason"]?.GetValue<string>(),
-            DurationMs = durationMs,
-            RequestBody = requestBody,
-            ResponseBody = responseBody,
-        };
-        _record.Turns.Add(turn);
+            var turn = new UsageTurn
+            {
+                Turn = _record.Turns.Count + 1,
+                // Each provider names these differently; read whichever is present.
+                InputTokens = Read(usage, "input_tokens", "prompt_tokens", "prompt_eval_count"),
+                OutputTokens = Read(usage, "output_tokens", "completion_tokens", "eval_count"),
+                CacheReadTokens = Read(usage, "cache_read_input_tokens")
+                    + ReadNested(usage, "prompt_tokens_details", "cached_tokens"),
+                CacheWriteTokens = Read(usage, "cache_creation_input_tokens"),
+                StopReason = response["stop_reason"]?.GetValue<string>()
+                    ?? response["choices"]?[0]?["finish_reason"]?.GetValue<string>()
+                    ?? response["done_reason"]?.GetValue<string>(),
+                DurationMs = durationMs,
+                RequestBody = requestBody,
+                ResponseBody = responseBody,
+            };
+            _record.Turns.Add(turn);
 
-        _record.InputTokens += turn.InputTokens;
-        _record.OutputTokens += turn.OutputTokens;
-        _record.CacheReadTokens += turn.CacheReadTokens;
-        _record.CacheWriteTokens += turn.CacheWriteTokens;
+            _record.InputTokens += turn.InputTokens;
+            _record.OutputTokens += turn.OutputTokens;
+            _record.CacheReadTokens += turn.CacheReadTokens;
+            _record.CacheWriteTokens += turn.CacheWriteTokens;
+        }
     }
 
-    public void RecordToolCall(string tool, string input, string result, bool isError, long durationMs) =>
-        _record.ToolCalls.Add(new UsageToolCall
+    public void RecordToolCall(string tool, string input, string result, bool isError, long durationMs)
+    {
+        lock (_lock)
         {
-            Turn = _record.Turns.Count,
-            Tool = tool,
-            Input = input,
-            Result = result,
-            IsError = isError,
-            DurationMs = durationMs,
-        });
+            _record.ToolCalls.Add(new UsageToolCall
+            {
+                Turn = _record.Turns.Count,
+                Tool = tool,
+                Input = input,
+                Result = result,
+                IsError = isError,
+                DurationMs = durationMs,
+            });
+        }
+    }
 
     public async Task CompleteAsync(bool success, string? finalResponse, string? error, CancellationToken ct = default)
     {

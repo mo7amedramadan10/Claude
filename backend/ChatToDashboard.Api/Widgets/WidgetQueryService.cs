@@ -40,6 +40,14 @@ public class WidgetQueryService
     // from any other text column there — this name heuristic fills that gap.
     private static readonly Regex DateNameHint = new(@"date|_at$|^at$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    // The default SqlCommand timeout (30s) is what previously caused live "Execution Timeout
+    // Expired" failures on a real, shared SQL Server link (see RepositoryStore/DataStore's own
+    // FileWriteCommandTimeoutSeconds/LoadCommandTimeoutSeconds) — every query here needs the
+    // same headroom, since a dashboard filter change fires one of these per widget
+    // concurrently, and a query that times out is swallowed by the frontend's own try/catch,
+    // leaving that widget stuck on stale data with nothing on screen explaining why.
+    private const int QueryCommandTimeoutSeconds = 120;
+
     private readonly DataStore _db;
     private readonly DataFolderLoader _loader;
     private readonly AnalyticsTools _tools;
@@ -100,7 +108,7 @@ public class WidgetQueryService
             : $"SELECT DISTINCT TOP {limit} {colQuoted} AS v FROM {tableRef} WHERE {colQuoted} IS NOT NULL ORDER BY v";
 
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var values = (await connection.QueryAsync<string>(new CommandDefinition(sql, cancellationToken: ct)))
+        var values = (await connection.QueryAsync<string>(new CommandDefinition(sql, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
             .Where(v => !string.IsNullOrEmpty(v))
             .ToList();
 
@@ -224,7 +232,7 @@ public class WidgetQueryService
 
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = (await connection.QueryAsync(
-                new CommandDefinition(filteredSql, parameters, commandTimeout: 30, cancellationToken: ct)))
+                new CommandDefinition(filteredSql, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
             .Take(AnalyticsTools.MaxRowsReturned)
             .Select(r => (IDictionary<string, object?>)r)
             .ToList<object>();
@@ -365,7 +373,7 @@ public class WidgetQueryService
             ? $"SELECT {selectList} FROM {tableRef}{where}{order} LIMIT {limit}"
             : $"SELECT TOP {limit} {selectList} FROM {tableRef}{where}{order}";
 
-        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, cancellationToken: ct)))
+        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r).ToList();
 
         return new WidgetQueryResult
@@ -388,7 +396,7 @@ public class WidgetQueryService
         var sql = $"SELECT {periodExpr} AS period, {aggExpr} AS value FROM {tableRef}{where} " +
                   $"GROUP BY {periodExpr} ORDER BY period ASC";
 
-        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, cancellationToken: ct)))
+        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r)
             .Select(r => new Dictionary<string, object?> { ["period"] = r["period"], ["value"] = r["value"] })
             .ToList<object>();
@@ -418,7 +426,7 @@ public class WidgetQueryService
             : $"SELECT TOP {topN} {dimQuoted} AS label, {aggExpr} AS value FROM {tableRef}{where} " +
               $"GROUP BY {dimQuoted} ORDER BY value {sortDir}";
 
-        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, cancellationToken: ct)))
+        var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r)
             .Select(r => new Dictionary<string, object?> { ["label"] = r["label"], ["value"] = r["value"] })
             .ToList<object>();
@@ -439,7 +447,7 @@ public class WidgetQueryService
         string filterNote, CancellationToken ct)
     {
         var sql = $"SELECT {aggExpr} AS value FROM {tableRef}{where}";
-        var value = await connection.ExecuteScalarAsync<double?>(new CommandDefinition(sql, parameters, cancellationToken: ct)) ?? 0;
+        var value = await connection.ExecuteScalarAsync<double?>(new CommandDefinition(sql, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)) ?? 0;
 
         var data = new List<object> { new Dictionary<string, object?> { ["label"] = request.Title ?? metricCol.Name, ["value"] = value } };
         var periodNote = where.Length > 0 && filterNote.Length == 0 ? " للفترة المحددة" : "";

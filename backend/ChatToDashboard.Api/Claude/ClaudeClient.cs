@@ -14,7 +14,7 @@ namespace ChatToDashboard.Api.Claude;
 /// Claude asks for list_files / query_data / search_documents, we execute the tool
 /// and send back tool_result blocks, until Claude returns the final dashboard JSON.
 /// </summary>
-public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
+public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -62,8 +62,17 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         SourceSelection? sources = null,
         string? imageDataUrl = null,
         AppUser? requestingUser = null,
+        string? lang = null,
+        string? modelOverride = null,
         CancellationToken ct = default)
     {
+        // Anthropic has just the one configured model (Anthropic:Model) — no per-request
+        // sub-model choice the way Ollama/OpenAI have (LlmSettingsStore.OllamaModel/
+        // OpenAiModel), and every current Claude model already supports vision, so there is
+        // nothing for LlmRouter's image-provider routing to actually override here; see
+        // IDashboardGenerator.GenerateDashboardAsync's remarks on modelOverride.
+        _ = modelOverride;
+
         // The dashboard currently on screen (when this is a continuation, not a fresh start —
         // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn,
         // so there is no separate multi-turn history to replay; a fresh request starts with
@@ -86,7 +95,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         }
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
         var tools = BuildToolsJson(context);
 
         var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
@@ -97,14 +106,15 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, CancellationToken ct = default)
+        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
+        CancellationToken ct = default)
     {
         // Inquiries is never continuation-aware — isolated from whatever dashboard is on
         // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
         var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = question } };
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context);
+        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
         var tools = BuildToolsJson(context);
 
         var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
@@ -116,7 +126,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
-        AppUser? requestingUser = null, CancellationToken ct = default)
+        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
         // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
@@ -125,7 +135,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
         var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context);
+        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
 
         var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
@@ -141,8 +151,9 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
     /// sections spanning a page break), and the reply is the transcribed text verbatim, not
     /// JSON — there's no dashboard schema to validate here.
     /// </summary>
-    public async Task<string> ExtractDocumentTextAsync(
-        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null, CancellationToken ct = default)
+    public async Task<DocumentExtractionResult> ExtractDocumentTextAsync(
+        string fileName, IReadOnlyList<string> pageImageDataUrls, AppUser? requestingUser = null,
+        Action<int, int>? onPageRead = null, CancellationToken ct = default)
     {
         var content = new JsonArray();
         foreach (var dataUrl in pageImageDataUrls)
@@ -169,12 +180,48 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor
                 .Where(b => b?["type"]?.GetValue<string>() == "text")
                 .Select(b => b!["text"]!.GetValue<string>()));
             await trace.CompleteAsync(true, text, null, ct);
-            return text;
+            // One bundled call for the whole document — either every page made it into this
+            // reply or the call above already threw; there's no partial case to report here.
+            onPageRead?.Invoke(pageImageDataUrls.Count, pageImageDataUrls.Count);
+            return new DocumentExtractionResult(text, pageImageDataUrls.Count);
         }
         catch (Exception ex)
         {
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             throw;
+        }
+    }
+
+    /// <summary>See ITableNamingAssistant — a single, tool-free turn like
+    /// ExtractDocumentTextAsync above, just text in, text out. Never throws: an upload must
+    /// never fail over a naming suggestion, so any failure here is swallowed and reported as
+    /// null, leaving RepositoryStore.SaveAsync to fall back to its existing filename-derived
+    /// name.</summary>
+    public async Task<string?> SuggestTableNameAsync(
+        string displayName, string? description, IReadOnlyList<string> columnNames,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.TableNamingSystemPrompt;
+        var userText = AnalyticsTools.TableNamingUserMessage(displayName, description, columnNames);
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+
+        var trace = _usage.Begin("Anthropic", _model, $"🏷️ اقتراح اسم جدول: {displayName}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var responseContent = response["content"]?.AsArray()
+                ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+            var text = string.Concat(responseContent
+                .Where(b => b?["type"]?.GetValue<string>() == "text")
+                .Select(b => b!["text"]!.GetValue<string>())).Trim();
+            await trace.CompleteAsync(true, text, null, ct);
+            return text.Length > 0 ? text : null;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
         }
     }
 
