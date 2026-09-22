@@ -61,6 +61,21 @@ public class DataStore
     {
         var connection = CreateConnection();
         await connection.OpenAsync(ct);
+        if (Provider == DbProvider.Sqlite)
+        {
+            // Dashboard filters fire one read per widget concurrently (Promise.all on the
+            // frontend), and the same file also takes writes (autosave, uploads) from other
+            // requests landing at the same time. SQLite's default rollback-journal mode
+            // blocks a reader while a writer holds the commit lock, and with the default
+            // zero busy_timeout that surfaces immediately as "database is locked" — silently
+            // swallowed by the frontend's per-widget fetch, leaving that widget's data stuck
+            // on whatever it last showed. WAL lets readers proceed without waiting on a
+            // writer's commit in the first place; the busy_timeout is a second line of
+            // defense for the cases WAL alone doesn't cover (e.g. a concurrent schema change).
+            await using var pragma = connection.CreateCommand();
+            pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=10000;";
+            await pragma.ExecuteNonQueryAsync(ct);
+        }
         return connection;
     }
 
