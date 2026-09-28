@@ -46,28 +46,45 @@ public interface IDashboardGenerator
     /// <summary>
     /// "الاستفسارات" mode — the exact same tool-use flow (list_files/query_data/forecast_data/
     /// search_documents, same source gating) as <see cref="GenerateDashboardAsync"/>, but the
-    /// model answers in plain text instead of building widgets. Never continuation-aware —
-    /// Inquiries is isolated from whatever dashboard is currently on screen.
+    /// model answers with a list of labeled blocks (data-grounded vs. general knowledge)
+    /// instead of building widgets. A real multi-turn conversation: <paramref
+    /// name="recentTurns"/>/<paramref name="priorSummary"/>/<paramref name="ledger"/> frame
+    /// this question as a continuation the same way <see cref="GenerateDashboardAsync"/>'s own
+    /// currentDashboard does for a dashboard follow-up (see AnalyticsTools.
+    /// ComposeInquiryUserMessage) — all three empty/null means a brand-new conversation.
     /// </summary>
+    /// <param name="recentTurns">The conversation's own tail, replayed verbatim (including
+    /// each turn's block labels) so wording stays consistent turn to turn.</param>
+    /// <param name="priorSummary">The model's own rolling summary (from the previous turn's
+    /// InquiryResponse.Summary) of everything before <paramref name="recentTurns"/>.</param>
+    /// <param name="ledger">Every "data" block produced anywhere in this conversation so far,
+    /// regardless of age — never summarized away, since it's the only place an old turn's real
+    /// figures survive once that turn itself has scrolled out of <paramref name="recentTurns"/>.
+    /// Already masked (see InquiryAccessService) before this is called, so a block the caller
+    /// can no longer access never reaches the model at all.</param>
     Task<InquiryResponse> GenerateInquiryAsync(
         string question,
+        IReadOnlyList<ConversationTurn>? recentTurns = null,
+        string? priorSummary = null,
+        IReadOnlyList<InquiryBlock>? ledger = null,
         SourceSelection? sources = null,
         AppUser? requestingUser = null,
         string? lang = null,
         CancellationToken ct = default);
 
     /// <summary>
-    /// "➕ أضف إلى لوحة المتابعة" — reshapes one already-answered Inquiries response's own data
-    /// into a dashboard, via a single non-tool-calling call (no new query_data/list_files/...).
+    /// "🔄 حوّله لداشبورد" — reshapes one already-answered Inquiries block's own data into a
+    /// dashboard, via a single non-tool-calling call (no new query_data/list_files/...).
     /// </summary>
     /// <param name="currentDashboard">
     /// Same contract as <see cref="GenerateDashboardAsync"/>'s parameter of the same name:
-    /// present means add this answer's data to it (every existing widget copied forward,
-    /// unchanged, plus the new one); absent means there's nothing to add to yet, so this just
-    /// builds a fresh dashboard containing this answer's data alone.
+    /// present means add this block's data to it (every existing widget copied forward,
+    /// unchanged, plus the new one); absent means either nothing is on screen yet, or the
+    /// user chose "استبدال" on the replace-or-add prompt — either way this just builds a
+    /// fresh dashboard containing this block's data alone.
     /// </param>
     Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry,
+        InquiryBlock block,
         DashboardStateInput? currentDashboard = null,
         SourceSelection? sources = null,
         AppUser? requestingUser = null,

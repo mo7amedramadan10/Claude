@@ -209,11 +209,37 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .msg.err{align-self:flex-end;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger)}
 .hint{margin:auto;padding:14px;border-radius:12px;background:var(--plane);color:var(--ink-2);text-align:center}
 .hint .ex{display:block;margin-top:6px;color:var(--muted);font-size:13px}
-.msg.bot.inquiry-answer{position:relative}
-.inquiry-answer-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.msg.bot.inquiry-answer{position:relative;display:flex;flex-direction:column;gap:10px}
+.inquiry-block{display:flex;flex-direction:column;gap:6px}
+.inquiry-block + .inquiry-block{padding-top:10px;border-top:1px solid var(--grid)}
+.inquiry-block-label{align-self:flex-start;padding:2px 9px;border-radius:999px;
+  font-size:10.5px;font-weight:700}
+.inquiry-block.data .inquiry-block-label{background:var(--accent-soft);color:var(--accent)}
+.inquiry-block.knowledge .inquiry-block-label{background:var(--plane);color:var(--ink-2)}
+.inquiry-block-date{font-size:10.5px;color:var(--muted)}
+.inquiry-block.masked{color:var(--muted);font-style:italic}
+.inquiry-answer-actions{display:flex;gap:6px;flex-wrap:wrap}
 .inquiry-convert-btn{border:1px solid var(--accent);background:transparent;color:var(--accent);
   padding:3px 10px;border-radius:8px;font-size:11.5px;cursor:pointer}
 .inquiry-convert-btn:hover{background:var(--accent-soft)}
+/* ---------- الاستفسارات: saved-conversations panel ---------- */
+#inquiry-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px 0;position:relative}
+.inquiry-tb-btn{padding:6px 11px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer}
+.inquiry-tb-btn:hover{border-color:var(--accent);color:var(--accent)}
+#inquiry-conv-panel{position:absolute;z-index:60;width:min(320px,88vw);max-height:60vh;
+  overflow-y:auto;background:var(--surface);border:1px solid var(--grid);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:8px}
+#inquiry-conv-panel.hidden{display:none}
+.inquiry-conv-item{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:9px;cursor:pointer}
+.inquiry-conv-item:hover{background:var(--plane)}
+.inquiry-conv-item.active{background:var(--accent-soft)}
+.inquiry-conv-title{flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.inquiry-conv-date{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.inquiry-conv-del{border:0;background:transparent;color:var(--muted);font-size:13px;padding:2px 4px}
+.inquiry-conv-del:hover{color:var(--danger)}
+.inquiry-conv-empty{padding:14px;text-align:center;color:var(--muted);font-size:12.5px}
 .dots span{display:inline-block;width:6px;height:6px;margin:0 1px;border-radius:50%;
   background:var(--muted);animation:b .9s infinite}
 .dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
@@ -975,6 +1001,11 @@ tr:last-child td{border-bottom:0}
       <button type="button" class="chat-mode-tab active" data-mode="dashboard">بناء اللوحة</button>
       <button type="button" class="chat-mode-tab" data-mode="inquiry">الاستفسارات</button>
     </div>
+    <div id="inquiry-toolbar" class="hidden">
+      <button type="button" class="inquiry-tb-btn" id="inquiry-new-btn">🆕 محادثة جديدة</button>
+      <button type="button" class="inquiry-tb-btn" id="inquiry-conv-btn">📂 المحادثات</button>
+      <div id="inquiry-conv-panel" class="hidden"></div>
+    </div>
     <div id="messages"></div>
     <div id="inquiry-messages" class="hidden"></div>
     <div id="repo-link">
@@ -1390,6 +1421,18 @@ tr:last-child td{border-bottom:0}
 
     <div class="modal-actions">
       <button type="button" id="share-close">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<div id="inquiry-convert-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>تحويل إلى لوحة معلومات</h3>
+    <p class="modal-note">في لوحة معلومات معروضة حاليًا — هل تريد استبدال محتواها بهذا الجزء، أم إضافته إليها؟</p>
+    <div class="modal-actions">
+      <button type="button" id="inquiry-convert-replace">استبدال</button>
+      <button type="button" id="inquiry-convert-add">إضافة</button>
+      <button type="button" id="inquiry-convert-cancel">إلغاء</button>
     </div>
   </div>
 </div>
@@ -1969,7 +2012,13 @@ const state = {
   // "الاستفسارات" sub-tab: fully isolated from the dashboard-building chat above — its own
   // message log, never touches state.dashboard/currentHistoryId unless the user explicitly
   // clicks "➕ أضف إلى لوحة المتابعة" on one answer (see convertInquiryToDashboard).
-  chatMode: 'dashboard', inquiryMessages: [],
+  chatMode: 'dashboard',
+  // الاستفسارات: state.inquiryTurns is the currently-open saved conversation's own turns
+  // ({role, text, blocks, createdAt} — see Models/ConversationModels.cs), never a bare
+  // {role,text} pair the way state.messages is — inquiryConversationId is null until the
+  // first ask() in a brand-new conversation gets back its generated id.
+  inquiryTurns: [], inquiryConversationId: null,
+  inquiryConversations: [], inquiryConversationsLoaded: false,
   systems: [], sourceFiles: [], tableLabels: {}, // available, from /api/sources
   onSystems: new Set(), onFiles: new Set(), // enabled
   files: [], pending: [], filter: 'الكل',
@@ -4794,48 +4843,73 @@ async function ask(question) {
   }
 }
 
-// ---------- الاستفسارات (Inquiries): a text-only sibling of ask() above ----------
+// ---------- الاستفسارات (Inquiries): a conversational, saved-history sibling of ask() above ----------
 // Two small sub-tabs inside the same side chat panel — never a top-level screen, and the
 // dashboard area (#dash-pane) is never hidden or cleared by switching between them. Isolated
 // from state.dashboard/state.messages entirely: an Inquiries question can never affect the
-// dashboard currently on screen, and its answers are never saved to السجل (state.history) —
-// only "➕ أضف إلى لوحة المتابعة" below ever bridges the two, and only on explicit click.
+// dashboard currently on screen — only "🔄 حوّله لداشبورد" below ever bridges the two, and only
+// on explicit click. Every conversation is saved server-side as it goes (see
+// Inquiry/ConversationStore.cs) — state.inquiryTurns mirrors whichever one is currently open.
 function setChatMode(mode) {
   state.chatMode = mode;
   document.querySelectorAll('.chat-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
   el('messages').classList.toggle('hidden', mode !== 'dashboard');
   el('inquiry-messages').classList.toggle('hidden', mode !== 'inquiry');
+  el('inquiry-toolbar').classList.toggle('hidden', mode !== 'inquiry');
   // Attaching a dashboard screenshot and "ابدأ لوحة جديدة" only make sense for بناء اللوحة.
   el('dash-image-attach-label').classList.toggle('hidden', mode !== 'dashboard');
   el('new-dashboard-btn').classList.toggle('hidden', mode !== 'dashboard');
   el('q').placeholder = mode === 'inquiry'
-    ? 'اسأل استفسارًا سريعًا عن بياناتك — إجابة نصية مباشرة، من غير بناء لوحة…'
+    ? 'اسأل استفسارًا عن بياناتك، أو تابع نقاشًا سابقًا — إجابة نصية مباشرة، من غير بناء لوحة…'
     : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
-  if (mode === 'inquiry') renderInquiryMessages(); else renderMessages();
+  if (mode === 'inquiry') {
+    renderInquiryMessages();
+    if (!state.inquiryConversationsLoaded) loadInquiryConversations();
+  } else renderMessages();
 }
 document.querySelectorAll('.chat-mode-tab').forEach(tab =>
   tab.addEventListener('click', () => { if (!state.loading) setChatMode(tab.dataset.mode); }));
 
+function inquiryBlockHtml(block, turnIndex, blockIndex) {
+  if (block.masked) {
+    return `<div class="inquiry-block masked">
+        <span class="inquiry-block-label">🔒 محجوب</span>
+        ${esc(block.text)}
+      </div>`;
+  }
+  const isData = block.kind === 'data';
+  const dateHtml = isData && block.extractedAt
+    ? `<span class="inquiry-block-date">بتاريخ ${new Date(block.extractedAt).toLocaleDateString('ar-EG')}</span>` : '';
+  const actions = isData ? `
+      <div class="inquiry-answer-actions">
+        <button type="button" class="src-btn">ⓘ المصدر</button>
+        <button type="button" class="inquiry-convert-btn" data-turn="${turnIndex}" data-block="${blockIndex}">🔄 حوّله لداشبورد</button>
+      </div>
+      ${sourcePopover({ source: block.source })}` : '';
+  return `<div class="inquiry-block ${isData ? 'data' : 'knowledge'}">
+      <span class="inquiry-block-label">${isData ? 'من بيانات الجهة' : 'من خارج البيانات'}</span>
+      ${esc(block.text)}
+      ${dateHtml}
+      ${actions}
+    </div>`;
+}
+
 function renderInquiryMessages() {
-  const items = state.inquiryMessages.map((m, i) => {
-    if (m.role === 'user') return `<div class="msg user">${esc(m.text)}</div>`;
-    if (m.error) return `<div class="msg err">${esc(m.text)}</div>`;
+  const items = state.inquiryTurns.map((t, ti) => {
+    if (t.role === 'user') return `<div class="msg user">${esc(t.text)}</div>`;
+    if (t.error) return `<div class="msg err">${esc(t.text)}</div>`;
     // Same ⓘ transparency popover a widget's source button already uses (sourcePopover),
-    // just surfaced next to a chat message instead of a widget card — see .msg.bot.inquiry-
+    // just surfaced next to each data block instead of a widget card — see .msg.bot.inquiry-
     // answer{position:relative} above for why .src-pop (position:absolute) lands correctly.
     return `<div class="msg bot inquiry-answer">
-        ${esc(m.text)}
-        <div class="inquiry-answer-actions">
-          <button type="button" class="src-btn">ⓘ المصدر</button>
-          <button type="button" class="inquiry-convert-btn" data-idx="${i}">➕ أضف إلى لوحة المتابعة</button>
-        </div>
-        ${sourcePopover({ source: m.source })}
+        ${(t.blocks || []).map((b, bi) => inquiryBlockHtml(b, ti, bi)).join('')}
       </div>`;
   }).join('');
   const typing = state.loading && state.chatMode === 'inquiry'
     ? `<div class="msg bot dots"><span></span><span></span><span></span></div>` : '';
-  const hint = state.inquiryMessages.length === 0 && !(state.loading && state.chatMode === 'inquiry')
-    ? `<div class="hint">اسأل استفسارًا وسيجاوبك المساعد بإجابة نصية مباشرة، من غير بناء لوحة.
+  const hint = state.inquiryTurns.length === 0 && !(state.loading && state.chatMode === 'inquiry')
+    ? `<div class="hint">اسأل استفسارًا وسيجاوبك المساعد بإجابة نصية مباشرة، من غير بناء لوحة — يقدر يتذكر
+         الأسئلة اللي قبله في نفس المحادثة، وتقدر ترجع لها لاحقًا من «📂 المحادثات».
          <span class="ex">جرّب: «كام إجمالي الإيرادات الشهر ده؟»</span></div>` : '';
   const box = el('inquiry-messages');
   box.innerHTML = hint + items + typing;
@@ -4845,18 +4919,19 @@ el('inquiry-messages').addEventListener('click', e => {
   const srcBtn = e.target.closest('.src-btn');
   if (srcBtn) {
     e.stopPropagation();
-    const pop = srcBtn.closest('.msg').querySelector('.src-pop');
+    const pop = srcBtn.closest('.inquiry-block').querySelector('.src-pop');
     const open = pop.classList.contains('open');
     closePopovers();
     if (!open) { pop.classList.add('open'); srcBtn.classList.add('active'); }
     return;
   }
   const convertBtn = e.target.closest('.inquiry-convert-btn');
-  if (convertBtn) convertInquiryToDashboard(state.inquiryMessages[Number(convertBtn.dataset.idx)]);
+  if (convertBtn) convertInquiryToDashboard(Number(convertBtn.dataset.turn), Number(convertBtn.dataset.block));
 });
 
 async function askInquiry(question) {
-  state.inquiryMessages.push({ role: 'user', text: question });
+  const userTurn = { role: 'user', text: question, createdAt: new Date().toISOString() };
+  state.inquiryTurns.push(userTurn);
   state.loading = true;
   renderInquiryMessages(); el.send.disabled = true;
 
@@ -4864,6 +4939,7 @@ async function askInquiry(question) {
     const res = await fetch('/api/inquiry', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        conversationId: state.inquiryConversationId,
         message: question,
         // Same on/off source toggle the dashboard-building chat uses — the exact same
         // tool-use flow and gating, just a different final response shape.
@@ -4872,36 +4948,147 @@ async function askInquiry(question) {
       }),
     });
     const payload = await res.json().catch(() => null);
-    if (!res.ok || !payload?.answer) {
-      state.inquiryMessages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
+    if (!res.ok || !payload?.turn) {
+      state.inquiryTurns.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
     } else {
-      state.inquiryMessages.push({
-        role: 'bot', text: payload.answer.answer, source: payload.answer.source, data: payload.answer.data,
-      });
+      state.inquiryTurns.push(payload.turn);
+      const isNew = !state.inquiryConversationId;
+      state.inquiryConversationId = payload.conversationId;
+      // Patch the sidebar list in place instead of a round trip: a new conversation is
+      // inserted at the top, an existing one is bumped there with a fresh timestamp — same
+      // "most recently touched first" order the server's own ORDER BY UpdatedAt gives.
+      if (isNew && payload.title) {
+        state.inquiryConversations.unshift({ id: payload.conversationId, title: payload.title, updatedAt: new Date().toISOString() });
+      } else {
+        const entry = state.inquiryConversations.find(c => c.id === payload.conversationId);
+        if (entry) {
+          entry.updatedAt = new Date().toISOString();
+          state.inquiryConversations = [entry, ...state.inquiryConversations.filter(c => c !== entry)];
+        }
+      }
     }
   } catch (err) {
-    state.inquiryMessages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
+    state.inquiryTurns.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
   } finally {
     state.loading = false; el.send.disabled = false;
     renderInquiryMessages();
   }
 }
 
-// "➕ أضف إلى لوحة المتابعة": never re-runs the question through the tool-calling loop — the
-// data this Inquiries answer already produced is handed to a single, tool-free call that only
-// reshapes it into widgets (see GenerateDashboardFromInquiryAsync). Mirrors ask()'s own
-// continuation contract exactly: it's added to whatever dashboard is already on screen (same
-// currentDashboard framing, same dropped-widget/filter safety net below) unless there's
-// nothing to add to yet, in which case it becomes a fresh dashboard on its own — same state
-// fields ask() itself sets on that path either way, so the usual "بناء اللوحة" autosave/
-// history machinery picks it up completely normally afterward. Lands in بناء اللوحة so that
-// tab's own conversation reflects it.
-async function convertInquiryToDashboard(msg) {
-  if (!msg || state.loading) return;
-  // Same "continue the dashboard on screen, unless 🆕 ابدأ لوحة جديدة was clicked" contract
-  // as ask() — see currentDashboard there. Only its absence (a fresh session, or right after
-  // that button) makes this build a brand-new dashboard containing just this answer's data.
-  const currentDashboard = state.dashboard?.widgets?.length
+// ---------- saved conversations (📂 المحادثات) ----------
+async function loadInquiryConversations() {
+  try {
+    const res = await fetch('/api/inquiry/conversations');
+    state.inquiryConversations = res.ok ? await res.json() : [];
+  } catch { state.inquiryConversations = []; }
+  state.inquiryConversationsLoaded = true;
+  renderInquiryConvPanel();
+}
+
+function renderInquiryConvPanel() {
+  const panel = el('inquiry-conv-panel');
+  if (!state.inquiryConversations.length) {
+    panel.innerHTML = `<div class="inquiry-conv-empty">لا توجد محادثات محفوظة بعد.</div>`;
+    return;
+  }
+  panel.innerHTML = state.inquiryConversations.map(c => `
+    <div class="inquiry-conv-item ${c.id === state.inquiryConversationId ? 'active' : ''}" data-id="${esc(c.id)}">
+      <span class="inquiry-conv-title">${esc(c.title)}</span>
+      <span class="inquiry-conv-date">${relTime(c.updatedAt)}</span>
+      <button type="button" class="inquiry-conv-del" data-id="${esc(c.id)}" title="حذف">✕</button>
+    </div>`).join('');
+}
+el('inquiry-conv-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const panel = el('inquiry-conv-panel');
+  const open = !panel.classList.contains('hidden');
+  if (open) { panel.classList.add('hidden'); return; }
+  renderInquiryConvPanel();
+  panel.classList.remove('hidden');
+});
+el('inquiry-conv-panel').addEventListener('click', e => e.stopPropagation());
+document.addEventListener('click', () => el('inquiry-conv-panel')?.classList.add('hidden'));
+
+el('inquiry-conv-panel').addEventListener('click', async e => {
+  const delBtn = e.target.closest('.inquiry-conv-del');
+  if (delBtn) {
+    const id = delBtn.dataset.id;
+    if (!confirm('حذف هذه المحادثة؟')) return;
+    await fetch('/api/inquiry/conversations/' + id, { method: 'DELETE' });
+    state.inquiryConversations = state.inquiryConversations.filter(c => c.id !== id);
+    if (state.inquiryConversationId === id) startNewInquiryConversation();
+    renderInquiryConvPanel();
+    return;
+  }
+  const item = e.target.closest('.inquiry-conv-item');
+  if (item) openInquiryConversation(item.dataset.id);
+});
+
+el('inquiry-new-btn').addEventListener('click', startNewInquiryConversation);
+function startNewInquiryConversation() {
+  state.inquiryConversationId = null;
+  state.inquiryTurns = [];
+  renderInquiryMessages();
+  el('inquiry-conv-panel').classList.add('hidden');
+}
+
+async function openInquiryConversation(id) {
+  if (state.loading) return;
+  state.loading = true; renderInquiryMessages();
+  try {
+    const res = await fetch('/api/inquiry/conversations/' + id);
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload) { alert('تعذّر فتح هذه المحادثة.'); return; }
+    state.inquiryConversationId = payload.id;
+    state.inquiryTurns = payload.turns || [];
+  } catch (err) {
+    alert('تعذّر الوصول إلى الخادم: ' + err.message);
+  } finally {
+    state.loading = false;
+    renderInquiryMessages();
+    el('inquiry-conv-panel').classList.add('hidden');
+  }
+}
+
+// "🔄 حوّله لداشبورد": never re-runs the question through the tool-calling loop — the data
+// this one block already produced is handed to a single, tool-free call that only reshapes
+// it into widgets (see GenerateDashboardFromInquiryAsync). If a dashboard is already on
+// screen, asks whether to replace it or add to it (see #inquiry-convert-modal below); if
+// nothing is on screen yet, builds a fresh one directly — same as choosing "استبدال" would.
+let pendingInquiryConvert = null;
+async function convertInquiryToDashboard(turnIndex, blockIndex) {
+  if (state.loading) return;
+  const block = state.inquiryTurns[turnIndex]?.blocks?.[blockIndex];
+  if (!block) return;
+  if (state.dashboard?.widgets?.length) {
+    pendingInquiryConvert = { turnIndex, blockIndex };
+    el('inquiry-convert-modal').classList.remove('hidden');
+    return;
+  }
+  await runInquiryConvert(turnIndex, blockIndex, false);
+}
+el('inquiry-convert-cancel').addEventListener('click', () => {
+  pendingInquiryConvert = null;
+  el('inquiry-convert-modal').classList.add('hidden');
+});
+el('inquiry-convert-replace').addEventListener('click', () => {
+  const p = pendingInquiryConvert; pendingInquiryConvert = null;
+  el('inquiry-convert-modal').classList.add('hidden');
+  if (p) runInquiryConvert(p.turnIndex, p.blockIndex, false);
+});
+el('inquiry-convert-add').addEventListener('click', () => {
+  const p = pendingInquiryConvert; pendingInquiryConvert = null;
+  el('inquiry-convert-modal').classList.add('hidden');
+  if (p) runInquiryConvert(p.turnIndex, p.blockIndex, true);
+});
+
+async function runInquiryConvert(turnIndex, blockIndex, addToExisting) {
+  const block = state.inquiryTurns[turnIndex]?.blocks?.[blockIndex];
+  if (!block) return;
+  // Same "continue the dashboard on screen" contract as ask()'s own continuation — only sent
+  // when the user explicitly chose "إضافة"; "استبدال" (or nothing on screen yet) sends none,
+  // which the backend treats identically to a brand-new dashboard (see ConvertInquiryBlockRequest).
+  const currentDashboard = addToExisting && state.dashboard?.widgets?.length
     ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
     : null;
   const isContinuation = !!currentDashboard;
@@ -4912,14 +5099,14 @@ async function convertInquiryToDashboard(msg) {
     const res = await fetch('/api/inquiry/convert', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        answer: msg.text, source: msg.source, data: msg.data, currentDashboard,
+        conversationId: state.inquiryConversationId, turnIndex, blockIndex, currentDashboard,
         sources: { systems: [...state.onSystems], files: [...state.onFiles] },
         lang: state.lang,
       }),
     });
     const payload = await res.json().catch(() => null);
     if (!res.ok || !payload?.dashboard) {
-      alert(payload?.error || `تعذّر إضافة الإجابة إلى اللوحة (${res.status})`);
+      alert(payload?.error || `تعذّر تحويل هذا الجزء إلى لوحة (${res.status})`);
       return;
     }
 
@@ -4952,7 +5139,7 @@ async function convertInquiryToDashboard(msg) {
     const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
     const narration = payload.dashboard.narration || payload.dashboard.summary;
     state.messages.push({ role: 'bot', text: narration, speechWidgets });
-    saveToHistory(msg.text, payload.dashboard);
+    saveToHistory(block.text, payload.dashboard);
     if (state.autoRead) speakText(narration, speechWidgets);
     if (isContinuation && getActiveFilters().length) await applyFilters();
     setChatMode('dashboard');

@@ -55,6 +55,8 @@ builder.Services.AddSingleton<HistoryStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.History.DashboardAccessService>();
 builder.Services.AddSingleton<ShareStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.ConversationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.InquiryAccessService>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
 // internal server with a self-signed certificate, and is opt-in per system.

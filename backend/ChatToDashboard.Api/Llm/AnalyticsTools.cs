@@ -327,7 +327,7 @@ public class AnalyticsTools
     }
 
     /// <summary>
-    /// "➕ أضف إلى لوحة المتابعة" — frames an already-answered Inquiries response as a pure
+    /// "🔄 حوّله لداشبورد" — frames one already-answered Inquiries block as a pure
     /// restructuring task: the real data is handed over verbatim, no tool call is offered
     /// (see IDashboardGenerator.GenerateDashboardFromInquiryAsync), and the model's only job
     /// is to shape it into the normal widgets JSON — never to re-derive or second-guess the
@@ -337,10 +337,12 @@ public class AnalyticsTools
     /// append behavior off that one phrase, so reusing it here (rather than duplicating those
     /// instructions) makes this call add to the existing dashboard exactly the same way a
     /// "بناء اللوحة" follow-up question would, with no changes to the system prompt itself.
+    /// Its absence — whether nothing is on screen yet, or the user chose "استبدال" on the
+    /// replace-or-add prompt (see ConvertInquiryBlockRequest) — builds a fresh dashboard.
     /// </summary>
-    public static string ComposeConversionUserMessage(InquiryResponse inquiry, DashboardStateInput? currentDashboard = null)
+    public static string ComposeConversionUserMessage(InquiryBlock block, DashboardStateInput? currentDashboard = null)
     {
-        var dataJson = JsonSerializer.Serialize(inquiry.Data, ToolResultJsonOptions);
+        var dataJson = JsonSerializer.Serialize(block.Data, ToolResultJsonOptions);
         var currentDashboardBlock = "";
         if (currentDashboard is { Widgets.Count: > 0 })
         {
@@ -355,6 +357,13 @@ public class AnalyticsTools
                 """;
         }
 
+        // A block from a resumed conversation can be days old — the widget's own source text
+        // should say so rather than reading as a live number, matching the spec's "show its
+        // extraction date so the user knows it is not live".
+        var staleness = block.ExtractedAt is { } at
+            ? $" (البيانات دي مستخرجة بتاريخ {at:yyyy-MM-dd}، مش لحظة إنشاء اللوحة دي.)"
+            : "";
+
         return $$"""
             {{currentDashboardBlock}}مهمة إعادة هيكلة فقط — من غير أي نداء أداة (list_files أو query_data أو غيرها):
             الأرقام دي جاية فعليًا من استعلام سابق نُفِّذ بالفعل، ومهمتك دلوقتي إنك تحوّلها لعنصر
@@ -363,10 +372,10 @@ public class AnalyticsTools
             فعلًا)، من غير ما تخترع أي رقم إضافي أو تحسب حاجة مختلفة عن اللي جاي تحت.
 
             الإجابة النصية الأصلية (استرشد بيها لصياغة summary وnarration، من غير نسخ حرفي بالضرورة):
-            {{inquiry.Answer}}
+            {{block.Text}}
 
             مصدر البيانات وطريقة حسابها (استخدمه كما هو في حقل source):
-            {{inquiry.Source}}
+            {{block.Source}}{{staleness}}
 
             البيانات الفعلية اللي استندت عليها الإجابة — استخدمها زي ما هي بالضبط:
             {{dataJson}}
@@ -922,32 +931,54 @@ public class AnalyticsTools
 
     /// <summary>
     /// "الاستفسارات" mode — same tool catalogue (BuildTools) and the exact same source-
-    /// permission rules as BuildSystemPrompt, but the final answer is a short, direct text
-    /// answer instead of a dashboard: no widgets, no narration, no filters, no chart-type
-    /// vocabulary at all. Kept as its own separate prompt (not a parameterized branch of
-    /// BuildSystemPrompt) so the carefully-tuned dashboard prompt is never touched by this.
+    /// permission rules as BuildSystemPrompt, but a real multi-turn conversation (see
+    /// AnalyticsTools.ComposeInquiryUserMessage — the caller replays recent turns/summary/
+    /// findings ledger as part of the single user turn, the same "continuation" pattern
+    /// BuildSystemPrompt's own dashboard-continuation already uses) that can draw on both the
+    /// organization's data and the model's own general knowledge, each part of the answer
+    /// labeled so the UI and later turns never confuse the two. Kept as its own separate
+    /// prompt (not a parameterized branch of BuildSystemPrompt) so the carefully-tuned
+    /// dashboard prompt is never touched by this.
     /// </summary>
     public string BuildInquirySystemPrompt(SourceContext context, string? lang = null) =>
         $$"""
-        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بترد على استفسارات عن بيانات
-        المؤسسة بإجابة نصية مباشرة وواضحة — من غير ما تبني لوحة معلومات أو أي عناصر رسوم
-        بيانية أو تُرجع حقل widgets أصلًا. اكتب كل النصوص الظاهرة للمستخدم بالعربية الفصحى،
+        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بتتحاور مع المستخدم حول بيانات
+        المؤسسة — محادثة حقيقية متعددة الأدوار، مش سؤال وجواب منفصلين؛ تقدر تتذكر وتبني على
+        اللي اتقال قبل كده في نفس المحادثة (هتشوف تحت ملخصًا وآخر التبادلات وسجل النتائج
+        السابقة لو المحادثة مستمرة). من غير ما تبني لوحة معلومات أو أي عناصر رسوم بيانية أو
+        تُرجع حقل widgets أصلًا. اكتب كل النصوص الظاهرة للمستخدم بالعربية الفصحى المبسّطة،
         بأسلوب مهني ومباشر وبدون حشو.
 
-        القاعدة الذهبية: ممنوع تختلق رقمًا أو تخمّنه أو "تقرّبه" من غير ما يكون جاي فعليًا
-        من نتيجة أداة ناديتها (list_files أو query_data أو forecast_data أو
-        search_documents). لو مش متاح عندك الرقم، قول كده صراحة في إجابتك بدل ما تخترعه
-        أو تسكت عن غيابه.
+        نطاق المعرفة — نوعان لازم تفرّق بينهما بوضوح في كل جزء من ردك
+        1. "بيانات المؤسسة": أي رقم أو حقيقة عن بيانات المؤسسة نفسها — ده لازم يجي حصرًا من
+           نتيجة أداة ناديتها فعليًا (list_files أو query_data أو forecast_data أو
+           search_documents)، أو يكون مأخوذ من سجل نتائج سابق فعلاً استخرجته في نفس المحادثة
+           (هتلاقيه تحت). القاعدة الذهبية: ممنوع تختلق رقمًا عن المؤسسة أو تخمّنه أو
+           "تقرّبه" من غير أداة أو سجل فعلي — لو مش متاح، قول كده صراحة بدل ما تخترعه أو
+           تسكت عن غيابه. المعرفة العامة ممنوع تحل محل بيانات ناقصة أو معطّلة — لو مصدر
+           مقفول أو البيانات مش متاحة، اعتذر ووضّح السبب (زي قواعد المصادر تحت)، وما تجاوبش
+           برقم تقديري من عندك بديل عنه.
+        2. "خارج البيانات": مفاهيم، أطر عمل، ممارسات شائعة، شرح، أو عصف ذهني — معرفتك العامة
+           كموديل، مش بيانات المؤسسة. استخدمها بحرية للسياق والتفسير والاقتراحات، لكن بصياغة
+           توضّح إنها اجتهاد عام مش رقم رسمي ("بشكل عام…"، "من الممارسات الشائعة…"، "قد يكون
+           السبب…" — مش "بيانات المؤسسة بتقول…"). تجنّب ذكر أرقام إحصائية خارجية محددة من
+           ذاكرتك؛ لو مفيش مفر، وضّح صراحة إنها غير موثّقة/غير مؤكدة. وممنوع تماما إن جزء
+           "خارج البيانات" يقدّم أي رقم جديد عن المؤسسة نفسها.
 
-        خطوات العمل
-        1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة والملفات المحفوظة في المستودع.
+        خطوات العمل لأي جزء "بيانات المؤسسة"
+        1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة والملفات المحفوظة في المستودع
+           (إلا لو الرقم موجود بالفعل في سجل النتائج السابق تحت وما يحتاجش تحديث).
         2. نادِ query_data باستعلام SELECT واحد مباشر (مجمّع لو محتاج) يرجّع بالظبط الرقم
-           أو الأرقام المطلوبة للإجابة على سؤال المستخدم — من غير ما تجيب صفوف خام زيادة
-           عن الحاجة.
+           أو الأرقام المطلوبة — من غير ما تجيب صفوف خام زيادة عن الحاجة.
         3. لو السؤال فيه طلب توقع/تنبؤ صريح لفترة مستقبلية، نادِ forecast_data بدل ما تحسب
-           أو تخمّن الرقم بنفسك — بنفس القواعد المعتادة (استعلام برجّع فترة وقيمة رقمية
-           بس، مرتب زمنيًا تصاعديًا).
-        4. قبل الرد، تأكد إن كل رقم هتذكره فعلاً موجود في نتيجة أداة ناديتها.
+           أو تخمّن الرقم بنفسك.
+        4. قبل الرد، تأكد إن كل رقم هتذكره في جزء "بيانات المؤسسة" فعلاً موجود في نتيجة أداة
+           ناديتها أو في سجل النتائج السابق تحت.
+
+        سجل النتائج والحداثة — لو المحادثة مستمرة، هتلاقي تحت "سجل نتائج سابقة" بتواريخ
+        استخراجها. اعتبرها "صحيحة حتى تاريخ استخراجها" مش بالضرورة حالة النهاردة — لو
+        المستخدم سأل صراحة عن الوضع الحالي أو استخدم كلمة زي "دلوقتي"/"حاليًا"، أعد الاستعلام
+        بأداة query_data بدل ما تعتمد على الرقم القديم من السجل.
 
         {{SourcesSummaryBullets(context)}}
 
@@ -961,23 +992,98 @@ public class AnalyticsTools
           الوصول له، لكن مفيش بيانات منه لسه لأنه لسه مش موصّل فعليًا. قول ده بوضوح.
         - "لا توجد بيانات" (مصدر مفعّل ومربوط لكن الاستعلام رجع صفوف فاضية فعليًا): وضّح إن
           البيانات مفحوصة فعلًا لكن مفيش نتائج تطابق الشرط المطلوب.
-        - في الحالات التلاتة، لسه لازم ترجع كائن JSON صحيح بنفس الصيغة تحت — answer يشرح
-          الحالة بوضوح (وليه مفيش رقم)، وsource يوضّح المصدر المقصود، وdata فاضية ({}).
+        - في الحالات التلاتة، لسه لازم ترجع بلوك "بيانات المؤسسة" واحد يشرح الحالة بوضوح
+          (وليه مفيش رقم)، مع source يوضّح المصدر المقصود، وdata فاضية ({}) وtable فاضي.
 
         صيغة الرد النهائي — إجباري، JSON فقط من غير أي نص خارجه أو markdown fence
         {
-          "answer": "الإجابة الكاملة بالعربية الفصحى — جملة أو فقرة قصيرة (لا تتعدى ٣-٤
-            جمل)، تجاوب على سؤال المستخدم مباشرة بالأرقام الفعلية، من غير أي تفاصيل تقنية
-            (اسم جدول أو ملف أو تصنيف أو كلمة \"استعلام\" أو \"قاعدة بيانات\") — كل ده مكانه
-            source بس.",
-          "source": "جملتان بالظبط، بنفس تنسيق حقل source في عناصر اللوحة العادية: الجملة
-            الأولى منين جت البيانات (اسم الجدول أو الملف والتصنيف أو النظام)، والتانية إزاي
-            اتحسبت.",
-          "data": "القيمة أو الصفوف الفعلية اللي استندت عليها الإجابة، بنفس شكلها من نتيجة
-            الأداة (رقم واحد، أو مصفوفة صفوف، أو كائن) — لازم تكون نفس الأرقام بالظبط اللي
-            ذكرتها في answer، من غير أي فرق، عشان ممكن تتحول لاحقًا لعنصر لوحة معلومات."
+          "blocks": [
+            {
+              "kind": "data أو knowledge — data لجزء مبني على بيانات المؤسسة، knowledge لجزء
+                من معرفتك العامة أو اجتهادك الشخصي",
+              "text": "نص هذا الجزء بالعربية الفصحى المبسّطة — جملة أو فقرة قصيرة، من غير أي
+                تفاصيل تقنية (اسم جدول أو ملف أو تصنيف أو كلمة \"استعلام\" أو \"قاعدة
+                بيانات\") — كل ده مكانه source بس.",
+              "source": "إلزامي لو kind=data فقط، ويُترك فاضي أو يُحذف لو kind=knowledge —
+                جملتان بالظبط: الأولى منين جت البيانات (اسم الجدول أو الملف والتصنيف أو
+                النظام)، والتانية إزاي اتحسبت.",
+              "table": "إلزامي لو kind=data فقط — الاسم الفعلي للجدول اللي جاي منه الرقم
+                (نفس الاسم اللي استخدمته في SQL)، عشان يُستخدم لاحقًا في تحويل الجزء ده
+                للوحة معلومات.",
+              "data": "إلزامي لو kind=data فقط — القيمة أو الصفوف الفعلية بنفس شكلها من نتيجة
+                الأداة (رقم واحد، أو مصفوفة صفوف، أو كائن) — لازم تكون نفس الأرقام بالظبط
+                اللي ذكرتها في text."
+            }
+          ],
+          "summary": "ملخص محدّث لكل المحادثة حتى الآن (المواضيع اللي اتناقشت، وأي اجتهاد
+            \"خارج البيانات\" اتقال — من غير أرقام بيانات المؤسسة نفسها، ده مكانه سجل
+            النتائج مش الملخص) — اكتبه كإنه هيستخدم بدل التفاصيل الكاملة لأقدم أجزاء المحادثة
+            في تركيزة جاية، فخلّيه شامل الخط العام للنقاش. لو المحادثة لسه أول سؤال فيها،
+            اكتب ملخص قصير لسؤال المستخدم وإجابتك."
         }
         """;
+
+    /// <summary>
+    /// Threads recent-turns/rolling-summary/findings-ledger context into a single Inquiries
+    /// user turn — same "continuation as one framed user message" pattern ComposeUserMessage
+    /// uses for a dashboard follow-up, not a real multi-message array, so it works identically
+    /// across every IDashboardGenerator implementation without touching each client's own
+    /// message-building code. <paramref name="recentTurns"/> is the tail of the conversation
+    /// (kept verbatim, in full, block labels included, for wording continuity);
+    /// <paramref name="priorSummary"/> covers everything older than that (see
+    /// InquiryResponse.Summary — refreshed by the model itself every turn);
+    /// <paramref name="ledger"/> is every "data" block ever produced in this conversation so
+    /// far, always included in full regardless of how old — the spec's "the ledger is never
+    /// summarized away", since only the ledger's own dated entries carry real MOI figures once
+    /// their surrounding turn has scrolled out of <paramref name="recentTurns"/>.
+    /// </summary>
+    public static string ComposeInquiryUserMessage(
+        string question, IReadOnlyList<ConversationTurn> recentTurns, string? priorSummary,
+        IReadOnlyList<InquiryBlock> ledger)
+    {
+        if (recentTurns.Count == 0 && string.IsNullOrWhiteSpace(priorSummary) && ledger.Count == 0)
+            return question;
+
+        var summaryBlock = string.IsNullOrWhiteSpace(priorSummary) ? "" : $$"""
+            ملخص لما سبق في هذه المحادثة (قبل التبادلات الأخيرة اللي جايه كاملة تحت):
+            {{priorSummary}}
+
+
+            """;
+
+        var ledgerBlock = ledger.Count == 0 ? "" : $$"""
+            سجل نتائج سابقة استخرجتها فعليًا في هذه المحادثة (بتاريخ كل واحدة — راجع تعليمات
+            "سجل النتائج والحداثة" فوق):
+            {{FormatLedger(ledger)}}
+
+
+            """;
+
+        var turnsBlock = recentTurns.Count == 0 ? "" : $$"""
+            آخر التبادلات في هذه المحادثة:
+            {{FormatTurns(recentTurns)}}
+
+
+            """;
+
+        return $$"""
+            {{summaryBlock}}{{ledgerBlock}}{{turnsBlock}}سؤال المستخدم الجديد:
+            {{question}}
+            """;
+    }
+
+    private static string FormatLedger(IReadOnlyList<InquiryBlock> ledger) =>
+        string.Join("\n", ledger.Select(b =>
+            $"- [{b.ExtractedAt:yyyy-MM-dd}] {b.Text} — الجدول: {b.Table}؛ القيمة: " +
+            JsonSerializer.Serialize(b.Data, ToolResultJsonOptions)));
+
+    private static string FormatTurns(IReadOnlyList<ConversationTurn> turns) =>
+        string.Join("\n", turns.Select(t => t.Role == ConversationRoles.User
+            ? $"المستخدم: {t.Text}"
+            : "أنت: " + string.Join(" | ", (t.Blocks ?? new List<InquiryBlock>())
+                .Select(b => b.Masked
+                    ? $"[محجوب — {b.MaskedReason}]"
+                    : $"[{(b.Kind == InquiryBlockKinds.Data ? "بيانات المؤسسة" : "خارج البيانات")}] {b.Text}"))));
 
     /// <summary>Shared between BuildSystemPrompt and BuildInquirySystemPrompt — kept as its
     /// own small helper (not extracted from BuildSystemPrompt's inline text) so neither
@@ -1396,9 +1502,9 @@ public class AnalyticsTools
     }
 
     /// <summary>
-    /// Parses and validates an Inquiries-mode final answer JSON (see InquiryModels.cs and
+    /// Parses and validates an Inquiries-mode final answer JSON (see ConversationModels.cs and
     /// BuildInquirySystemPrompt) — same tolerant extraction as <see cref="TryParseDashboard"/>,
-    /// just a much smaller contract.
+    /// just a smaller contract: a list of labeled blocks plus a rolling summary.
     /// </summary>
     public static (InquiryResponse? Inquiry, string? Error) TryParseInquiry(string text)
     {
@@ -1422,11 +1528,17 @@ public class AnalyticsTools
         if (validationErrors.Count > 0)
             return (null, string.Join(" ", validationErrors));
 
-        // Same Undefined-JsonElement serialization hazard as a dashboard widget's "data" —
-        // see TryParseDashboard. Here "data" is required by Validate() to be present at all
-        // only in spirit (the model is told to always include the real values), but nothing
-        // enforces it structurally, so guard the same way regardless.
-        if (spec.Data.ValueKind == JsonValueKind.Undefined) spec.Data = EmptyArrayElement;
+        var now = DateTime.UtcNow;
+        foreach (var block in spec.Blocks)
+        {
+            // Same Undefined-JsonElement serialization hazard as a dashboard widget's "data" —
+            // see TryParseDashboard.
+            if (block.Data.ValueKind == JsonValueKind.Undefined) block.Data = EmptyArrayElement;
+            // The model is never asked for a timestamp — it has no reliable notion of "now",
+            // and the point of ExtractedAt is when *we* actually ran the query, not when the
+            // model happened to write the token.
+            if (block.Kind == InquiryBlockKinds.Data) block.ExtractedAt = now;
+        }
 
         return (spec, null);
     }

@@ -127,18 +127,22 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
-        CancellationToken ct = default)
+        string question, IReadOnlyList<ConversationTurn>? recentTurns = null, string? priorSummary = null,
+        IReadOnlyList<InquiryBlock>? ledger = null, SourceSelection? sources = null, AppUser? requestingUser = null,
+        string? lang = null, CancellationToken ct = default)
     {
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
         var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
-        // Inquiries is never continuation-aware — isolated from whatever dashboard is on
-        // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
+        // Prior turns/summary/ledger are framed as part of this single user turn — same
+        // "continuation as one composed message" pattern GenerateDashboardAsync's own
+        // currentDashboard uses (see AnalyticsTools.ComposeInquiryUserMessage).
+        var userText = AnalyticsTools.ComposeInquiryUserMessage(
+            question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = question },
+            new JsonObject { ["role"] = "user", ["content"] = userText },
         };
 
         var tools = BuildToolsJson(context);
@@ -150,10 +154,10 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        InquiryBlock block, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
         AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
+        // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
         // already fetched, so no tools are offered at all (tools: null below), guaranteeing
         // no new query_data/list_files call can happen here.
         var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
@@ -162,10 +166,10 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard) },
+            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard) },
         };
 
-        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
+        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
         return await RunLoopAsync(
             model, messages, null, context, trace,
