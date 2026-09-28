@@ -96,7 +96,7 @@ public class InquiryController : ControllerBase
 
         var now = DateTime.UtcNow;
         var userTurn = new ConversationTurn { Role = ConversationRoles.User, Text = request.Message.Trim(), CreatedAt = now };
-        var botTurn = new ConversationTurn { Role = ConversationRoles.Bot, Blocks = answer.Blocks, CreatedAt = now };
+        var botTurn = new ConversationTurn { Role = ConversationRoles.Bot, Blocks = answer.Blocks, FollowUps = answer.FollowUps, CreatedAt = now };
 
         if (existing is null)
         {

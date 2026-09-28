@@ -43,6 +43,7 @@ public class InquiryAccessService
             result.Add(new ConversationTurn
             {
                 Role = turn.Role, Text = turn.Text, CreatedAt = turn.CreatedAt, Blocks = maskedBlocks,
+                FollowUps = turn.FollowUps,
             });
         }
         return result;

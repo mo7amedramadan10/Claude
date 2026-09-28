@@ -64,6 +64,12 @@ public class UsageTrace
 
     public void SetSystemPrompt(string prompt) => _record.SystemPrompt ??= prompt;
 
+    /// <summary>Every tool call recorded on this trace so far — read by GenerateInquiryAsync
+    /// after the loop completes to derive "تم فحص" (which real sources were actually queried
+    /// for this answer), the same already-recorded data the usage page itself reads, never a
+    /// separate parallel tracking mechanism.</summary>
+    public IReadOnlyList<UsageToolCall> ToolCalls => _record.ToolCalls;
+
     /// <summary>Records one model round-trip, with the exact bodies exchanged.</summary>
     public void RecordTurn(string requestBody, string responseBody, JsonObject response, long durationMs)
     {

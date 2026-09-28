@@ -148,9 +148,11 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         var tools = BuildToolsJson(context);
         var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
+        var response = await RunLoopAsync(
             model, messages, tools, context, trace,
             AnalyticsTools.TryParseInquiry, "inquiry", ct);
+        AnalyticsTools.ApplyExaminedSources(response, trace, context);
+        return response;
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(

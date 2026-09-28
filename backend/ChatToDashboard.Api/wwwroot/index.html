@@ -209,24 +209,100 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .msg.err{align-self:flex-end;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger)}
 .hint{margin:auto;padding:14px;border-radius:12px;background:var(--plane);color:var(--ink-2);text-align:center}
 .hint .ex{display:block;margin-top:6px;color:var(--muted);font-size:13px}
-.msg.bot.inquiry-answer{position:relative;display:flex;flex-direction:column;gap:10px}
-.inquiry-block{display:flex;flex-direction:column;gap:6px}
-.inquiry-block + .inquiry-block{padding-top:10px;border-top:1px solid var(--grid)}
-.inquiry-block-label{align-self:flex-start;padding:2px 9px;border-radius:999px;
-  font-size:10.5px;font-weight:700}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ---------- الاستفسارات message design ----------
+   Everything below is scoped under #inquiry-messages/.inquiry-* so بناء اللوحة's own
+   #messages/.msg (the bare rules just above) render byte-for-byte as before. */
+/* Quieter than a normal user bubble — light accent tint with the ordinary dark ink color, so
+   the AI's answer carries the visual weight, not the question. */
+#inquiry-messages .msg.user{background:var(--accent-soft);color:var(--ink)}
+/* The reply is never one big card — each block below is its own container; this wrapper is
+   just a vertical list spacing them out. */
+.msg.bot.inquiry-answer{max-width:94%;background:transparent;border:0;padding:0;
+  display:flex;flex-direction:column;gap:12px}
+
+.inquiry-block{display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:var(--radius)}
+.inquiry-block-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.inquiry-block-label{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.inquiry-block-text{margin:0;font-size:16px;line-height:1.9}
+.inquiry-block-text p{margin:0 0 10px;white-space:pre-wrap}
+.inquiry-block-text p:last-child{margin-bottom:0}
+.inquiry-block-text ol,.inquiry-block-text ul{margin:0 0 10px;padding-inline-start:22px;
+  display:flex;flex-direction:column;gap:4px}
+.inquiry-block-text ol:last-child,.inquiry-block-text ul:last-child{margin-bottom:0}
+
+/* "من بيانات الجهة" — white surface, hairline border. */
+.inquiry-block.data{background:var(--surface);border:1px solid var(--grid)}
 .inquiry-block.data .inquiry-block-label{background:var(--accent-soft);color:var(--accent)}
-.inquiry-block.knowledge .inquiry-block-label{background:var(--plane);color:var(--ink-2)}
-.inquiry-block-date{font-size:10.5px;color:var(--muted)}
-.inquiry-block.masked{color:var(--muted);font-style:italic}
-.inquiry-answer-actions{display:flex;gap:6px;flex-wrap:wrap}
-.inquiry-convert-btn{border:1px solid var(--accent);background:transparent;color:var(--accent);
-  padding:3px 10px;border-radius:8px;font-size:11.5px;cursor:pointer}
-.inquiry-convert-btn:hover{background:var(--accent-soft)}
+.inquiry-block-date{font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* "من خارج البيانات" — a visibly different material (warm tint + dashed border), not just a
+   different label color, so the two kinds are distinguishable at a glance (and not by color
+   alone — icon, label text and border style all differ too). */
+.inquiry-block.knowledge{background:color-mix(in srgb, var(--amber) 8%, var(--surface));
+  border:1px dashed color-mix(in srgb, var(--amber) 55%, var(--grid))}
+.inquiry-block.knowledge .inquiry-block-label{background:color-mix(in srgb, var(--amber) 24%, transparent);
+  color:color-mix(in srgb, var(--amber) 70%, black)}
+.inquiry-block-hint{font-size:12px;color:var(--ink-2)}
+
+/* "تم فحص" — chips naming what was actually examined, derived server-side from the recorded
+   tool calls (see InquiryBlock.Examined / AnalyticsTools.ExtractExaminedSources) — never
+   model-authored text, so this can't be fabricated. Omitted entirely when there's nothing to
+   show (see inquiryBlockHtml). */
+.inquiry-examined{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.inquiry-examined-label{font-weight:600;color:var(--muted)}
+.inquiry-chip{padding:2px 9px;border-radius:999px;background:var(--plane);color:var(--ink-2);font-size:11.5px}
+
+.inquiry-block-footer{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding-top:12px;border-top:1px solid var(--grid)}
+.inquiry-block-footer .src-pop{top:calc(100% + 8px);inset-inline-end:0}
+.inquiry-src-btn,.inquiry-convert-btn{min-height:44px;padding:0 16px;border-radius:10px;
+  font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.inquiry-src-btn{background:transparent;border:1px solid var(--grid);color:var(--ink-2)}
+.inquiry-src-btn:hover,.inquiry-src-btn.active{border-color:var(--accent);color:var(--accent)}
+.inquiry-convert-btn{background:var(--accent);border:1px solid var(--accent);color:#fff}
+.inquiry-convert-btn:hover{filter:brightness(1.08)}
+.inquiry-src-btn:focus-visible,.inquiry-convert-btn:focus-visible,.inquiry-followup-chip:focus-visible,
+.inquiry-tb-btn:focus-visible,.icp-add:focus-visible,.icp-replace:focus-visible,.icp-cancel:focus-visible,
+.inquiry-conv-del:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Masked (permission lost on reopen) — neutral, no actions; the real content never reaches
+   the DOM at all (masking stays server-side — see InquiryAccessService), this is only the
+   placeholder shell. */
+.inquiry-block.masked{background:var(--plane);border:1px solid var(--grid)}
+.inquiry-block.masked .inquiry-block-label{background:var(--surface);color:var(--muted);border:1px solid var(--grid)}
+.inquiry-block.masked .inquiry-block-text{color:var(--ink-2)}
+.inquiry-block-subtext{margin:0;font-size:13px;color:var(--muted)}
+
+/* Replace-or-add — an inline card appended right after the block being converted, not a modal. */
+.inquiry-convert-prompt{background:var(--plane);border:1px solid var(--grid);border-radius:var(--radius);
+  padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.inquiry-convert-prompt p{margin:0;font-size:13.5px;color:var(--ink)}
+.inquiry-convert-prompt-actions{display:flex;gap:8px;flex-wrap:wrap}
+.inquiry-convert-prompt-actions button{min-height:44px;padding:0 14px;border-radius:9px;
+  font-size:13px;font-weight:600;cursor:pointer}
+.icp-add{background:var(--accent);border:1px solid var(--accent);color:#fff}
+.icp-replace{background:transparent;border:1px solid var(--grid);color:var(--ink-2)}
+.icp-cancel{background:transparent;border:0;color:var(--muted)}
+
+/* Suggested follow-ups — only ever under the latest reply (see renderInquiryMessages), behind
+   Inquiry:SuggestFollowUps (off by default — see AnalyticsTools). */
+.inquiry-followups{display:flex;flex-wrap:wrap;gap:6px}
+.inquiry-followup-chip{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--grid);
+  background:var(--surface);color:var(--accent);font-size:12.5px;cursor:pointer}
+.inquiry-followup-chip:hover{background:var(--accent-soft);border-color:var(--accent)}
+
 /* ---------- الاستفسارات: saved-conversations panel ---------- */
 #inquiry-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px 0;position:relative}
-.inquiry-tb-btn{padding:6px 11px;border:1px solid var(--grid);border-radius:9px;
-  background:var(--surface);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer}
+#inquiry-toolbar.hidden{display:none}
+.inquiry-tb-btn{min-height:44px;padding:6px 12px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px}
 .inquiry-tb-btn:hover{border-color:var(--accent);color:var(--accent)}
+#inquiry-new-btn{background:var(--plane)}
 #inquiry-conv-panel{position:absolute;z-index:60;width:min(320px,88vw);max-height:60vh;
   overflow-y:auto;background:var(--surface);border:1px solid var(--grid);
   border-radius:var(--radius);box-shadow:var(--shadow);padding:8px}
@@ -261,6 +337,19 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
 #q:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 #send{padding:10px 18px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-weight:600}
 #send:disabled{opacity:.45;cursor:not-allowed}
+/* Inquiries composer — one rounded pill container instead of separate boxes, per the design
+   refresh; scoped to .inquiry-mode (toggled only while state.chatMode==='inquiry', see
+   setChatMode) so بناء اللوحة's own #q/#send/.attach-btn above render exactly as before. */
+.form-input-row.inquiry-mode{align-items:center;gap:0;padding:4px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--surface)}
+.form-input-row.inquiry-mode:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.form-input-row.inquiry-mode #q{border:0;background:transparent;padding:8px 12px}
+.form-input-row.inquiry-mode #q:focus{box-shadow:none}
+.form-input-row.inquiry-mode .attach-btn{border:0;background:transparent;width:36px}
+.form-input-row.inquiry-mode #send{width:44px;height:44px;min-width:44px;padding:0;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+/* Mirrored so the arrow visually points toward the send direction (the start edge) in RTL. */
+.form-input-row.inquiry-mode #send .send-icon{display:inline-block;transform:scaleX(-1)}
 .attach-btn{display:flex;align-items:center;justify-content:center;width:41px;
   border:1px solid var(--grid);border-radius:11px;background:var(--surface);font-size:16px}
 .attach-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
@@ -325,11 +414,6 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
 .src-btn{width:19px;height:19px;padding:0;border:1px solid var(--accent);border-radius:50%;
   background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1}
 .src-btn:hover,.src-btn.active{background:var(--accent);color:#06251C}
-/* In Inquiries mode this same button carries "ⓘ المصدر" (icon + label), not just the icon a
-   widget's ⓘ shows — the fixed 19px circle above clips/garbles that longer text, so here it
-   grows into a normal pill like .inquiry-convert-btn instead. */
-.inquiry-answer-actions .src-btn{width:auto;height:auto;border-radius:8px;padding:3px 10px;
-  font-size:11.5px;line-height:1.4}
 /* Deliberately the amber token, not the accent — ties the button to the forecast series'
    own color in the chart (see forecastChartConfig()) so the whole feature reads as one thing. */
 .forecast-btn{padding:4px 10px;border:1px solid var(--amber);border-radius:999px;
@@ -1002,7 +1086,7 @@ tr:last-child td{border-bottom:0}
       <button type="button" class="chat-mode-tab" data-mode="inquiry">الاستفسارات</button>
     </div>
     <div id="inquiry-toolbar" class="hidden">
-      <button type="button" class="inquiry-tb-btn" id="inquiry-new-btn">🆕 محادثة جديدة</button>
+      <button type="button" class="inquiry-tb-btn" id="inquiry-new-btn">➕ محادثة جديدة</button>
       <button type="button" class="inquiry-tb-btn" id="inquiry-conv-btn">📂 المحادثات</button>
       <div id="inquiry-conv-panel" class="hidden"></div>
     </div>
@@ -1039,8 +1123,9 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
       <div class="form-input-row">
+        <label for="q" class="visually-hidden">السؤال</label>
         <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
-        <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك">🎤</button>
+        <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك" aria-label="اسأل بصوتك">🎤</button>
         <button id="send" type="submit">إرسال</button>
       </div>
     </form>
@@ -1421,18 +1506,6 @@ tr:last-child td{border-bottom:0}
 
     <div class="modal-actions">
       <button type="button" id="share-close">إغلاق</button>
-    </div>
-  </div>
-</div>
-
-<div id="inquiry-convert-modal" class="modal-overlay hidden">
-  <div class="modal">
-    <h3>تحويل إلى لوحة معلومات</h3>
-    <p class="modal-note">في لوحة معلومات معروضة حاليًا — هل تريد استبدال محتواها بهذا الجزء، أم إضافته إليها؟</p>
-    <div class="modal-actions">
-      <button type="button" id="inquiry-convert-replace">استبدال</button>
-      <button type="button" id="inquiry-convert-add">إضافة</button>
-      <button type="button" id="inquiry-convert-cancel">إلغاء</button>
     </div>
   </div>
 </div>
@@ -2211,6 +2284,7 @@ function timeRangeLabel(v) { return (TIME_RANGE_OPTIONS.find(([k]) => k === v) |
 function closePopovers() {
   document.querySelectorAll('.src-pop.open').forEach(p => p.classList.remove('open'));
   document.querySelectorAll('.src-btn.active').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.inquiry-src-btn.active').forEach(b => b.classList.remove('active'));
 }
 document.addEventListener('click', closePopovers);
 
@@ -4862,6 +4936,15 @@ function setChatMode(mode) {
   el('q').placeholder = mode === 'inquiry'
     ? 'اسأل استفسارًا عن بياناتك، أو تابع نقاشًا سابقًا — إجابة نصية مباشرة، من غير بناء لوحة…'
     : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
+  document.querySelector('.form-input-row').classList.toggle('inquiry-mode', mode === 'inquiry');
+  const sendBtn = el('send');
+  if (mode === 'inquiry') {
+    sendBtn.innerHTML = '<span class="send-icon" aria-hidden="true">➤</span>';
+    sendBtn.setAttribute('aria-label', 'إرسال');
+  } else {
+    sendBtn.textContent = 'إرسال';
+    sendBtn.removeAttribute('aria-label');
+  }
   if (mode === 'inquiry') {
     renderInquiryMessages();
     if (!state.inquiryConversationsLoaded) loadInquiryConversations();
@@ -4870,39 +4953,113 @@ function setChatMode(mode) {
 document.querySelectorAll('.chat-mode-tab').forEach(tab =>
   tab.addEventListener('click', () => { if (!state.loading) setChatMode(tab.dataset.mode); }));
 
+// Turns a block's plain-text answer into real <p>/<ol>/<ul> markup instead of one run-in
+// paragraph — a "1) ... 2) ..." or "- ..." line sequence in the model's text becomes an actual
+// list, everything else stays a paragraph. Always escapes first; never trusts model text as HTML.
+function renderInquiryBlockText(text) {
+  const lines = String(text || '').split('\n');
+  const numbered = /^\s*\d+[.)]\s+(.*)$/;
+  const bulleted = /^\s*[-•]\s+(.*)$/;
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (numbered.test(lines[i]) || bulleted.test(lines[i])) {
+      const isNumbered = numbered.test(lines[i]);
+      const re = isNumbered ? numbered : bulleted;
+      const items = [];
+      while (i < lines.length && re.test(lines[i])) {
+        items.push(`<li>${esc(lines[i].match(re)[1].trim())}</li>`);
+        i++;
+      }
+      out.push(`<${isNumbered ? 'ol' : 'ul'}>${items.join('')}</${isNumbered ? 'ol' : 'ul'}>`);
+    } else {
+      const para = [];
+      while (i < lines.length && !numbered.test(lines[i]) && !bulleted.test(lines[i])) {
+        para.push(lines[i]); i++;
+      }
+      const joined = para.join('\n').trim();
+      if (joined) out.push(`<p>${esc(joined)}</p>`);
+    }
+  }
+  return out.join('');
+}
+
+// Tracks which block (if any) currently shows the inline "add to / replace the displayed
+// dashboard?" card — see convertInquiryToDashboard below. null when no card is showing.
+let pendingInquiryConvert = null;
+
 function inquiryBlockHtml(block, turnIndex, blockIndex) {
   if (block.masked) {
     return `<div class="inquiry-block masked">
-        <span class="inquiry-block-label">🔒 محجوب</span>
-        ${esc(block.text)}
+        <div class="inquiry-block-head"><span class="inquiry-block-label">🔒 من بيانات الجهة</span></div>
+        <p class="inquiry-block-text">${esc(block.text)}</p>
+        <p class="inquiry-block-subtext">لا يمكن عرضه أو تحويله إلى لوحة.</p>
       </div>`;
   }
   const isData = block.kind === 'data';
-  const dateHtml = isData && block.extractedAt
-    ? `<span class="inquiry-block-date">بتاريخ ${new Date(block.extractedAt).toLocaleDateString('ar-EG')}</span>` : '';
-  const actions = isData ? `
-      <div class="inquiry-answer-actions">
-        <button type="button" class="src-btn">ⓘ المصدر</button>
-        <button type="button" class="inquiry-convert-btn" data-turn="${turnIndex}" data-block="${blockIndex}">🔄 حوّله لداشبورد</button>
+  if (!isData) {
+    return `<div class="inquiry-block knowledge">
+        <div class="inquiry-block-head">
+          <span class="inquiry-block-label">💡 من خارج البيانات</span>
+          <span class="inquiry-block-hint">معرفة عامة، لا تعتمد على بيانات الجهة</span>
+        </div>
+        <div class="inquiry-block-text">${renderInquiryBlockText(block.text)}</div>
+      </div>`;
+  }
+  const dateHtml = block.extractedAt
+    ? `<span class="inquiry-block-date">بيانات بتاريخ ${new Date(block.extractedAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}</span>`
+    : '';
+  const examinedHtml = block.examined && block.examined.length
+    ? `<div class="inquiry-examined"><span class="inquiry-examined-label">تم فحص:</span>
+        ${block.examined.map(s => `<span class="inquiry-chip">${esc(s)}</span>`).join('')}
+      </div>` : '';
+  const pending = pendingInquiryConvert;
+  const isPending = pending && pending.turnIndex === turnIndex && pending.blockIndex === blockIndex;
+  const promptHtml = isPending ? `
+      <div class="inquiry-convert-prompt">
+        <p>توجد لوحة معروضة الآن. كيف تريد إضافة هذه النتيجة؟</p>
+        <div class="inquiry-convert-prompt-actions">
+          <button type="button" class="icp-add" data-turn="${turnIndex}" data-block="${blockIndex}">إضافة إلى اللوحة</button>
+          <button type="button" class="icp-replace" data-turn="${turnIndex}" data-block="${blockIndex}">استبدال اللوحة</button>
+          <button type="button" class="icp-cancel">إلغاء</button>
+        </div>
+      </div>` : '';
+  return `<div class="inquiry-block data">
+      <div class="inquiry-block-head">
+        <span class="inquiry-block-label">🗄️ من بيانات الجهة</span>
+        ${dateHtml}
       </div>
-      ${sourcePopover({ source: block.source })}` : '';
-  return `<div class="inquiry-block ${isData ? 'data' : 'knowledge'}">
-      <span class="inquiry-block-label">${isData ? 'من بيانات الجهة' : 'من خارج البيانات'}</span>
-      ${esc(block.text)}
-      ${dateHtml}
-      ${actions}
+      <div class="inquiry-block-text">${renderInquiryBlockText(block.text)}</div>
+      ${examinedHtml}
+      <div class="inquiry-block-footer">
+        <button type="button" class="inquiry-src-btn"><span aria-hidden="true">ⓘ</span> المصدر</button>
+        <button type="button" class="inquiry-convert-btn" data-turn="${turnIndex}" data-block="${blockIndex}">حوّله لداشبورد</button>
+        ${sourcePopover({ source: block.source })}
+      </div>
+      ${promptHtml}
     </div>`;
 }
 
 function renderInquiryMessages() {
+  const lastBotIndex = (() => {
+    for (let i = state.inquiryTurns.length - 1; i >= 0; i--) {
+      if (state.inquiryTurns[i].role !== 'user') return i;
+    }
+    return -1;
+  })();
   const items = state.inquiryTurns.map((t, ti) => {
     if (t.role === 'user') return `<div class="msg user">${esc(t.text)}</div>`;
     if (t.error) return `<div class="msg err">${esc(t.text)}</div>`;
-    // Same ⓘ transparency popover a widget's source button already uses (sourcePopover),
-    // just surfaced next to each data block instead of a widget card — see .msg.bot.inquiry-
-    // answer{position:relative} above for why .src-pop (position:absolute) lands correctly.
+    // Follow-up chips only ever sit under the LATEST reply — asking one re-sends it as the
+    // next question (see askInquiry below); the array is only ever populated server-side
+    // when Inquiry:SuggestFollowUps is on (see AnalyticsTools.BuildInquirySystemPrompt).
+    const followUps = ti === lastBotIndex && t.followUps && t.followUps.length
+      ? `<div class="inquiry-followups">
+          ${t.followUps.map(f => `<button type="button" class="inquiry-followup-chip">${esc(f)}</button>`).join('')}
+        </div>` : '';
     return `<div class="msg bot inquiry-answer">
         ${(t.blocks || []).map((b, bi) => inquiryBlockHtml(b, ti, bi)).join('')}
+        ${followUps}
       </div>`;
   }).join('');
   const typing = state.loading && state.chatMode === 'inquiry'
@@ -4916,7 +5073,7 @@ function renderInquiryMessages() {
   box.scrollTop = box.scrollHeight;
 }
 el('inquiry-messages').addEventListener('click', e => {
-  const srcBtn = e.target.closest('.src-btn');
+  const srcBtn = e.target.closest('.inquiry-src-btn');
   if (srcBtn) {
     e.stopPropagation();
     const pop = srcBtn.closest('.inquiry-block').querySelector('.src-pop');
@@ -4926,7 +5083,15 @@ el('inquiry-messages').addEventListener('click', e => {
     return;
   }
   const convertBtn = e.target.closest('.inquiry-convert-btn');
-  if (convertBtn) convertInquiryToDashboard(Number(convertBtn.dataset.turn), Number(convertBtn.dataset.block));
+  if (convertBtn) { convertInquiryToDashboard(Number(convertBtn.dataset.turn), Number(convertBtn.dataset.block)); return; }
+  const addBtn = e.target.closest('.icp-add');
+  if (addBtn) { pendingInquiryConvert = null; runInquiryConvert(Number(addBtn.dataset.turn), Number(addBtn.dataset.block), true); return; }
+  const replaceBtn = e.target.closest('.icp-replace');
+  if (replaceBtn) { pendingInquiryConvert = null; runInquiryConvert(Number(replaceBtn.dataset.turn), Number(replaceBtn.dataset.block), false); return; }
+  const cancelBtn = e.target.closest('.icp-cancel');
+  if (cancelBtn) { pendingInquiryConvert = null; renderInquiryMessages(); return; }
+  const chip = e.target.closest('.inquiry-followup-chip');
+  if (chip) { if (!state.loading) askInquiry(chip.textContent); }
 });
 
 async function askInquiry(question) {
@@ -4995,7 +5160,7 @@ function renderInquiryConvPanel() {
     <div class="inquiry-conv-item ${c.id === state.inquiryConversationId ? 'active' : ''}" data-id="${esc(c.id)}">
       <span class="inquiry-conv-title">${esc(c.title)}</span>
       <span class="inquiry-conv-date">${relTime(c.updatedAt)}</span>
-      <button type="button" class="inquiry-conv-del" data-id="${esc(c.id)}" title="حذف">✕</button>
+      <button type="button" class="inquiry-conv-del" data-id="${esc(c.id)}" title="حذف" aria-label="حذف المحادثة">✕</button>
     </div>`).join('');
 }
 el('inquiry-conv-btn').addEventListener('click', e => {
@@ -5050,37 +5215,24 @@ async function openInquiryConversation(id) {
   }
 }
 
-// "🔄 حوّله لداشبورد": never re-runs the question through the tool-calling loop — the data
+// "حوّله لداشبورد": never re-runs the question through the tool-calling loop — the data
 // this one block already produced is handed to a single, tool-free call that only reshapes
 // it into widgets (see GenerateDashboardFromInquiryAsync). If a dashboard is already on
-// screen, asks whether to replace it or add to it (see #inquiry-convert-modal below); if
-// nothing is on screen yet, builds a fresh one directly — same as choosing "استبدال" would.
-let pendingInquiryConvert = null;
+// screen, shows an inline "add or replace?" card right under the block (pendingInquiryConvert,
+// rendered by inquiryBlockHtml — its icp-add/icp-replace/icp-cancel clicks are handled in the
+// inquiry-messages delegated listener above); if nothing is on screen yet, builds a fresh one
+// directly — same as choosing "استبدال" would.
 async function convertInquiryToDashboard(turnIndex, blockIndex) {
   if (state.loading) return;
   const block = state.inquiryTurns[turnIndex]?.blocks?.[blockIndex];
   if (!block) return;
   if (state.dashboard?.widgets?.length) {
     pendingInquiryConvert = { turnIndex, blockIndex };
-    el('inquiry-convert-modal').classList.remove('hidden');
+    renderInquiryMessages();
     return;
   }
   await runInquiryConvert(turnIndex, blockIndex, false);
 }
-el('inquiry-convert-cancel').addEventListener('click', () => {
-  pendingInquiryConvert = null;
-  el('inquiry-convert-modal').classList.add('hidden');
-});
-el('inquiry-convert-replace').addEventListener('click', () => {
-  const p = pendingInquiryConvert; pendingInquiryConvert = null;
-  el('inquiry-convert-modal').classList.add('hidden');
-  if (p) runInquiryConvert(p.turnIndex, p.blockIndex, false);
-});
-el('inquiry-convert-add').addEventListener('click', () => {
-  const p = pendingInquiryConvert; pendingInquiryConvert = null;
-  el('inquiry-convert-modal').classList.add('hidden');
-  if (p) runInquiryConvert(p.turnIndex, p.blockIndex, true);
-});
 
 async function runInquiryConvert(turnIndex, blockIndex, addToExisting) {
   const block = state.inquiryTurns[turnIndex]?.blocks?.[blockIndex];

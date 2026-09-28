@@ -61,6 +61,14 @@ public class InquiryBlock
     /// for a "data" block.</summary>
     [JsonPropertyName("extractedAt")]
     public DateTime? ExtractedAt { get; set; }
+
+    /// <summary>Real, human-readable source names actually touched by the tool calls that
+    /// produced this turn's answer (see AnalyticsTools.ExtractExaminedSources) — set purely
+    /// server-side from the recorded tool-call log, never from text the model wrote, so this
+    /// "تم فحص" list can't be fabricated. Null/empty means omit the row entirely rather than
+    /// show it empty.</summary>
+    [JsonPropertyName("examined")]
+    public List<string>? Examined { get; set; }
 }
 
 /// <summary>
@@ -77,6 +85,13 @@ public class InquiryResponse
 
     [JsonPropertyName("summary")]
     public string Summary { get; set; } = "";
+
+    /// <summary>2-3 suggested follow-up questions, shown as chips under the latest reply only
+    /// — only ever populated when InquirySuggestFollowUps is enabled (see
+    /// AnalyticsTools.BuildInquirySystemPrompt) and only ever questions, never a statement
+    /// asserting something about the data (enforced by prompt + Validate() below).</summary>
+    [JsonPropertyName("followUps")]
+    public List<string>? FollowUps { get; set; }
 
     public IReadOnlyList<string> Validate()
     {
@@ -120,6 +135,11 @@ public class ConversationTurn
 
     [JsonPropertyName("blocks")]
     public List<InquiryBlock>? Blocks { get; set; }
+
+    /// <summary>Carried over from the InquiryResponse that produced this turn, so a reopened
+    /// conversation still shows the chips under its latest reply, not just a freshly-asked one.</summary>
+    [JsonPropertyName("followUps")]
+    public List<string>? FollowUps { get; set; }
 
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; }

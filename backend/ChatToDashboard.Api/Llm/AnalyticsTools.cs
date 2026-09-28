@@ -7,6 +7,7 @@ using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Repository;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Usage;
 using ChatToDashboard.Api.Widgets;
 using Dapper;
 using Microsoft.Extensions.Options;
@@ -69,6 +70,11 @@ public class AnalyticsTools
     private readonly SourceOptions _sources;
     private readonly ILogger<AnalyticsTools> _logger;
 
+    // Off by default — this whole feature is net-new, and defaulting off keeps every existing
+    // deployment's behavior exactly as it was until someone opts in. Set
+    // "Inquiry:SuggestFollowUps": true in appsettings.json (or via user-secrets) to enable it.
+    private readonly bool _suggestFollowUps;
+
     public AnalyticsTools(
         DataFolderLoader loader,
         DataStore db,
@@ -76,6 +82,7 @@ public class AnalyticsTools
         RepositoryStore repository,
         SystemApiLoader systemLoader,
         IOptions<SourceOptions> sources,
+        IConfiguration configuration,
         ILogger<AnalyticsTools> logger)
     {
         _loader = loader;
@@ -84,6 +91,7 @@ public class AnalyticsTools
         _repository = repository;
         _systemLoader = systemLoader;
         _sources = sources.Value;
+        _suggestFollowUps = configuration.GetValue("Inquiry:SuggestFollowUps", false);
         _logger = logger;
     }
 
@@ -940,8 +948,23 @@ public class AnalyticsTools
     /// prompt (not a parameterized branch of BuildSystemPrompt) so the carefully-tuned
     /// dashboard prompt is never touched by this.
     /// </summary>
-    public string BuildInquirySystemPrompt(SourceContext context, string? lang = null) =>
-        $$"""
+    public string BuildInquirySystemPrompt(SourceContext context, string? lang = null)
+    {
+        // Only ever added when explicitly turned on (see _suggestFollowUps above) — a stock
+        // deployment's prompt is byte-for-byte what it was before this existed.
+        var followUpsInstruction = _suggestFollowUps ? """
+
+            اقتراحات متابعة — اختياري ومفيد: لو فيه أسئلة متابعة طبيعية تنبني على إجابتك، رجّع
+            من ٢ إلى ٣ منها في حقل followUps تحت. لازم كل واحد يكون صياغته سؤال فعلي منتهي بعلامة
+            استفهام (؟) — أبدًا مش جملة خبرية أو ادّعاء عن البيانات، وأبدًا مش تكرار لنفس سؤال
+            المستخدم الحالي.
+            """ : "";
+        var followUpsSchemaField = _suggestFollowUps ? """
+            ,
+              "followUps": "اختياري — مصفوفة ٢-٣ أسئلة متابعة مقترحة، كل واحد منتهي بـ؟"
+            """ : "";
+
+        return $$"""
         {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بتتحاور مع المستخدم حول بيانات
         المؤسسة — محادثة حقيقية متعددة الأدوار، مش سؤال وجواب منفصلين؛ تقدر تتذكر وتبني على
         اللي اتقال قبل كده في نفس المحادثة (هتشوف تحت ملخصًا وآخر التبادلات وسجل النتائج
@@ -963,7 +986,14 @@ public class AnalyticsTools
            توضّح إنها اجتهاد عام مش رقم رسمي ("بشكل عام…"، "من الممارسات الشائعة…"، "قد يكون
            السبب…" — مش "بيانات المؤسسة بتقول…"). تجنّب ذكر أرقام إحصائية خارجية محددة من
            ذاكرتك؛ لو مفيش مفر، وضّح صراحة إنها غير موثّقة/غير مؤكدة. وممنوع تماما إن جزء
-           "خارج البيانات" يقدّم أي رقم جديد عن المؤسسة نفسها.
+           "خارج البيانات" يقدّم أي رقم جديد عن المؤسسة نفسها. القاعدة دي تشمل كمان أي رقم
+           توضيحي/افتراضي بتستخدمه كمثال (نسبة مئوية، عدد أيام، حد أدنى/أقصى) — حتى لو مش
+           بتنسبه للمؤسسة أو لمصدر خارجي بعينه، اختلاق رقم كمثال بيوهم إنه حقيقة محددة. اوصف
+           الأمثلة بصياغة وصفية بدل رقم مختلق: "فجوات مفاجئة دون تفسير" مش "فجوة ٣٠٪"،
+           "فترة طويلة من غير نشاط" مش "٩٠ يومًا".
+           لو النص فيه نقاط متعددة (خطوات، أسباب محتملة، توصيات)، رتّبها كقائمة حقيقية —
+           كل نقطة في سطر يبدأ بـ"- " (شرطة ومسافة) أو برقم متبوع بنقطة زي "1. "، مش فقرة
+           واحدة متصلة بأرقام داخلها زي "1) ... 2) ...".
 
         خطوات العمل لأي جزء "بيانات المؤسسة"
         1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة والملفات المحفوظة في المستودع
@@ -979,7 +1009,7 @@ public class AnalyticsTools
         استخراجها. اعتبرها "صحيحة حتى تاريخ استخراجها" مش بالضرورة حالة النهاردة — لو
         المستخدم سأل صراحة عن الوضع الحالي أو استخدم كلمة زي "دلوقتي"/"حاليًا"، أعد الاستعلام
         بأداة query_data بدل ما تعتمد على الرقم القديم من السجل.
-
+        {{followUpsInstruction}}
         {{SourcesSummaryBullets(context)}}
 
         قواعد المصادر — مهمة جدًا، وهي حدود صلاحيات حقيقية مش مجرد اقتراح (نفس القواعد
@@ -1019,9 +1049,10 @@ public class AnalyticsTools
             \"خارج البيانات\" اتقال — من غير أرقام بيانات المؤسسة نفسها، ده مكانه سجل
             النتائج مش الملخص) — اكتبه كإنه هيستخدم بدل التفاصيل الكاملة لأقدم أجزاء المحادثة
             في تركيزة جاية، فخلّيه شامل الخط العام للنقاش. لو المحادثة لسه أول سؤال فيها،
-            اكتب ملخص قصير لسؤال المستخدم وإجابتك."
+            اكتب ملخص قصير لسؤال المستخدم وإجابتك."{{followUpsSchemaField}}
         }
         """;
+    }
 
     /// <summary>
     /// Threads recent-turns/rolling-summary/findings-ledger context into a single Inquiries
@@ -1309,6 +1340,69 @@ public class AnalyticsTools
         return null;
     }
 
+    /// <summary>
+    /// "تم فحص" — the real, human-readable sources actually touched while producing one
+    /// Inquiries turn's answer, derived purely from the tool calls already recorded on the
+    /// trace (see UsageTrace.ToolCalls) — never from text the model wrote, so it can't be
+    /// fabricated. Scans every query_data/forecast_data call's own "sql" argument for a real
+    /// table name, the same substring heuristic <see cref="CheckSourcePermission"/> already
+    /// uses to decide which table a query touches, then resolves each to its display name (a
+    /// system's name, or a file's own display name) via the same dictionaries
+    /// DescribeSourcesAsync already built for this request.
+    /// </summary>
+    public static List<string> ExtractExaminedSources(IEnumerable<UsageToolCall> toolCalls, SourceContext context)
+    {
+        var allTables = context.TableSystems
+            .Concat(context.TableFiles)
+            .Concat(context.DisabledSystemTables)
+            .Concat(context.DisabledFileTables)
+            .GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Value, StringComparer.OrdinalIgnoreCase);
+
+        var examined = new List<string>();
+        foreach (var call in toolCalls)
+        {
+            if (call.IsError || call.Tool is not ("query_data" or "forecast_data")) continue;
+            string? sql;
+            try { sql = JsonNode.Parse(call.Input)?["sql"]?.GetValue<string>(); }
+            catch (JsonException) { continue; }
+            if (string.IsNullOrWhiteSpace(sql)) continue;
+
+            foreach (var (table, displayName) in allTables)
+            {
+                if (examined.Contains(displayName, StringComparer.OrdinalIgnoreCase)) continue;
+                if (sql.Contains(table, StringComparison.OrdinalIgnoreCase)
+                    || sql.Contains(table.Split('.').Last(), StringComparison.OrdinalIgnoreCase))
+                    examined.Add(displayName);
+            }
+        }
+        return examined;
+    }
+
+    /// <summary>Convenience wrapper around <see cref="ExtractExaminedSources"/> — computes the
+    /// examined-sources list once per response and stamps it onto every "data" block (turn-
+    /// level info shared by every block that turn's answer produced), unioned with each
+    /// block's own <see cref="InquiryBlock.Table"/> display name so a block's own primary
+    /// source is never missing from its own chip row even if, for some reason, it didn't show
+    /// up in the scanned SQL text.</summary>
+    public static void ApplyExaminedSources(InquiryResponse response, UsageTrace trace, SourceContext context)
+    {
+        var examined = ExtractExaminedSources(trace.ToolCalls, context);
+        foreach (var block in response.Blocks)
+        {
+            if (block.Kind != InquiryBlockKinds.Data) continue;
+            var own = !string.IsNullOrWhiteSpace(block.Table) && context.TableFiles.TryGetValue(block.Table, out var fileName)
+                ? fileName
+                : !string.IsNullOrWhiteSpace(block.Table) && context.TableSystems.TryGetValue(block.Table, out var systemName)
+                    ? systemName
+                    : null;
+            var list = own is not null && !examined.Contains(own, StringComparer.OrdinalIgnoreCase)
+                ? examined.Append(own).ToList()
+                : examined;
+            block.Examined = list.Count > 0 ? list : null;
+        }
+    }
+
     private async Task<(string Result, bool IsError)> ExecuteQueryAsync(string sql, CancellationToken ct)
     {
         var validationError = ValidateReadOnlySql(sql);
@@ -1538,6 +1632,20 @@ public class AnalyticsTools
             // and the point of ExtractedAt is when *we* actually ran the query, not when the
             // model happened to write the token.
             if (block.Kind == InquiryBlockKinds.Data) block.ExtractedAt = now;
+        }
+
+        // Dropped rather than failing the whole parse: a suggested chip is a minor nicety, not
+        // worth a JSON-repair retry over. Anything not phrased as a question is exactly the
+        // "statement/claim about the data" the spec forbids here, so it's filtered out instead
+        // of shown — a stray non-question slipping through would read as the model asserting
+        // something, not suggesting what to ask next.
+        if (spec.FollowUps is { Count: > 0 })
+        {
+            spec.FollowUps = spec.FollowUps
+                .Where(f => !string.IsNullOrWhiteSpace(f) && (f.TrimEnd().EndsWith('؟') || f.TrimEnd().EndsWith('?')))
+                .Take(3)
+                .ToList();
+            if (spec.FollowUps.Count == 0) spec.FollowUps = null;
         }
 
         return (spec, null);

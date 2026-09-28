@@ -121,9 +121,11 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
         var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
+        var response = await RunLoopAsync(
             model, messages, tools, context, trace,
             AnalyticsTools.TryParseInquiry, "inquiry", ct);
+        AnalyticsTools.ApplyExaminedSources(response, trace, context);
+        return response;
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(

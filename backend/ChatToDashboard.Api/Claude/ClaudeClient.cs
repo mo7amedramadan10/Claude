@@ -124,9 +124,11 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
 
         var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
         trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
+        var response = await RunLoopAsync(
             messages, systemPrompt, tools, context, trace,
             AnalyticsTools.TryParseInquiry, "inquiry", ct);
+        AnalyticsTools.ApplyExaminedSources(response, trace, context);
+        return response;
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
