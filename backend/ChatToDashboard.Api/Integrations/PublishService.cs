@@ -6,24 +6,36 @@ using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.Integrations;
 
-/// <summary>Lean, rendering-only shape of a widget sent to a client's write API — deliberately
-/// missing <see cref="DashboardWidget.Query"/> (the internal table name and read-only SELECT
-/// that produced it): an external system has no use for that internal SQL/schema detail, and
-/// not sending it is one less thing that could leak this app's internal table naming to a third
-/// party. Everything a client needs to actually render and explain the widget (type, data,
-/// axis keys, the ⓘ source text, an attached forecast/comparison) is still here.</summary>
+/// <summary>
+/// Structure-only shape of a widget sent to a client's write API — a Publish is a design
+/// change (which widgets exist, their type/title/layout), never a data delivery. Deliberately
+/// carries no values at all: no <see cref="DashboardWidget.Data"/>, no <see
+/// cref="DashboardWidget.Forecast"/>, no <see cref="DashboardWidget.Comparison"/>, and no <see
+/// cref="DashboardWidget.Query"/> (the internal table/SQL that produced a value, meaningless
+/// outside this app's own schema anyway). Every current number a viewer shows is computed live,
+/// on every page open, by the CLIENT'S OWN read API — never by us, never stored by us past this
+/// call. What stays here (type, title, xKey/yKey, the ⓘ source text) is exactly the human-
+/// readable context the client's own engineers need to wire that widget up to their live data
+/// once, the same ordinary integration work any API consumer does — no machine-parseable query
+/// descriptor is needed for that, and this shape makes no distinction between a widget built
+/// via the "+ إضافة عنصر" wizard and one built from a chat question: both carry the same fields.
+/// </summary>
 public class PublishedWidget
 {
     [JsonPropertyName("type")] public string Type { get; set; } = "";
     [JsonPropertyName("title")] public string Title { get; set; } = "";
-    [JsonPropertyName("data")] public JsonElement Data { get; set; }
     [JsonPropertyName("xKey")] public string? XKey { get; set; }
     [JsonPropertyName("yKey")] public string? YKey { get; set; }
     [JsonPropertyName("source")] public string? Source { get; set; }
-    [JsonPropertyName("forecast")] public WidgetForecast? Forecast { get; set; }
-    [JsonPropertyName("comparison")] public JsonElement? Comparison { get; set; }
 }
 
+/// <summary>
+/// What a Publish actually sends: the dashboard's shape, not its numbers. The client's write
+/// API stores this; its read API is expected to return this same structure back but with each
+/// widget's current live values freshly computed and attached (a "data" field per widget) —
+/// see IntegrationDeliverables' viewer.html, which renders whatever "data" the read API's
+/// response carries and never expects it to already be here.
+/// </summary>
 public class PublishedDashboardPayload
 {
     [JsonPropertyName("dashboardId")] public string DashboardId { get; set; } = "";
@@ -31,10 +43,10 @@ public class PublishedDashboardPayload
     [JsonPropertyName("publishedAt")] public string PublishedAt { get; set; } = "";
     [JsonPropertyName("widgets")] public List<PublishedWidget> Widgets { get; set; } = new();
 
-    // Narration is generated at chat time only and never persisted once a dashboard is saved
-    // (see DashboardHistoryEntry — no such column), so it cannot be included here; Summary is
-    // the closest persisted equivalent and is what the viewer page shows for the dashboard's
-    // own short description.
+    // A short, static description of the dashboard's purpose — not a data value, so it stays
+    // here despite the "structure only" rule above. Narration (the richer, spoken-aloud
+    // walkthrough) is generated at chat time only and never persisted once a dashboard is
+    // saved (see DashboardHistoryEntry — no such column), so it has no equivalent here.
     [JsonPropertyName("summary")] public string Summary { get; set; } = "";
 }
 
@@ -42,19 +54,15 @@ public record PublishResult(bool Success, string? Error, PublishedDashboardSlot?
 
 /// <summary>
 /// Part A's "Publish action" — a deliberately separate, explicit action from saving/editing a
-/// dashboard (never auto-triggered — see IntegrationsController, the only caller). Builds the
-/// lean JSON payload, POSTs it to the integration's own write API with its stored credential,
-/// and logs the attempt either way (IntegrationStore.LogPublishAsync) — same transparency
-/// principle as UsageTracker.
+/// dashboard (never auto-triggered — see IntegrationsController, the only caller), and a
+/// deliberately infrequent one: it ships a design change (a widget added/removed/restyled, or a
+/// whole new dashboard), not a data refresh — see PublishedDashboardPayload's remarks. Builds
+/// that structure-only JSON payload, POSTs it to the integration's own write API with its
+/// stored credential, and logs the attempt either way (IntegrationStore.LogPublishAsync) — same
+/// transparency principle as UsageTracker.
 /// </summary>
 public class PublishService
 {
-    // A comparison-carrying widget legitimately omits "data" (see DashboardSpec.Validate),
-    // which deserializes to a JsonElement with ValueKind Undefined — serializing that back out
-    // throws (same hazard AnalyticsTools.TryParseDashboard already guards against), so it is
-    // normalized to an empty array here too.
-    private static readonly JsonElement EmptyArrayElement = JsonDocument.Parse("[]").RootElement;
-
     private readonly HistoryStore _history;
     private readonly IntegrationStore _integrations;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -161,7 +169,8 @@ public class PublishService
     private static string DisplayName(AppUser user) => user.DisplayName is { Length: > 0 } d ? d : user.Username;
 
     /// <summary>Deserializes the Active dashboard's stored widgets and strips them down to
-    /// PublishedWidget's rendering-only shape (see its own remarks on why Query is dropped).</summary>
+    /// PublishedWidget's structure-only shape (see its own remarks on why every value-bearing
+    /// field — data/forecast/comparison/query — is dropped).</summary>
     private static List<PublishedWidget> ParseWidgets(string widgetsJson)
     {
         List<DashboardWidget>? widgets;
@@ -179,12 +188,9 @@ public class PublishService
         {
             Type = w.Type,
             Title = w.Title,
-            Data = w.Data.ValueKind == JsonValueKind.Undefined ? EmptyArrayElement : w.Data,
             XKey = w.XKey,
             YKey = w.YKey,
             Source = w.Source,
-            Forecast = w.Forecast,
-            Comparison = w.Comparison,
         }).ToList();
     }
 }

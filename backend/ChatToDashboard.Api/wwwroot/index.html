@@ -1544,7 +1544,9 @@ tr:last-child td{border-bottom:0}
         <div class="settings-banner-title">عرض لوحات المتابعة داخل نظام عميل خارجي</div>
         <div class="settings-banner-text">كل تكامل هنا يمثل نظام عميل واحد. بعد ضبط الإعدادات
           تنزّل ملفين جاهزين (صفحة عرض + صفحة إدارة صلاحيات) يستضيفهم فريق العميل التقني على
-          نطاقهم — النشر إلى العميل فعل منفصل دايمًا عن حفظ/تعديل اللوحة نفسها.</div>
+          نطاقهم. "نشر" بيبعت للعميل شكل اللوحة بس (العناصر وأنواعها وعناوينها) — الأرقام
+          نفسها بتتجاب حيّة من قاعدة بيانات العميل في كل مرة حد يفتح صفحة العرض عندهم، مش من
+          عندنا.</div>
       </div>
     </div>
 
@@ -1657,7 +1659,9 @@ tr:last-child td{border-bottom:0}
 <div id="publish-modal" class="modal-overlay hidden">
   <div class="modal rename-modal-box">
     <h3>نشر إلى تكامل خارجي</h3>
-    <p class="modal-note">النشر فعل منفصل عن حفظ/تعديل اللوحة — يرسل نسخة من بياناتها الحالية إلى نظام العميل المختار.</p>
+    <p class="modal-note">النشر فعل منفصل عن حفظ/تعديل اللوحة — يرسل شكل اللوحة فقط (العناصر، أنواعها،
+      عناوينها) إلى نظام العميل المختار. الأرقام والقيم الفعلية لا تُنشر من هنا؛ نظام العميل هو
+      اللي بيجيبها حيّة من قاعدة بياناته في كل مرة يُفتح فيها العرض عنده.</p>
     <label>التكامل
       <select id="publish-integration-select"></select>
     </label>
@@ -7535,7 +7539,7 @@ function renderIntegrationDetail() {
 
       <form id="integ-apis-form" class="integrations-form" style="display:flex;flex-direction:column;gap:14px">
         <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الكتابة (Publish إليها)</div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الكتابة (Publish إليها — شكل اللوحة فقط، بدون أرقام)</div>
           <div class="integrations-form-grid">
             <label>رابط نقطة الكتابة (Write API URL)
               <input type="text" id="ia-write-url" value="${escAttr(d.writeApiUrl)}" placeholder="https://client.example.com/api/dashboards">
@@ -7547,15 +7551,20 @@ function renderIntegrationDetail() {
               <input type="text" id="ia-write-auth-value" placeholder="${d.writeApiAuthConfigured ? '••••••••' : ''}">
             </label>
           </div>
+          <p class="model-switch-note">زرار "نشر" بيبعت هنا بس شكل اللوحة (العناصر، أنواعها، عناوينها) —
+            مفيش أرقام أو قيم فعلية. فريقكم التقني هو اللي يوصّل كل عنصر ببياناتكم الحقيقية.</p>
         </div>
         <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة القراءة (تستخدمها صفحة العرض)</div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة القراءة (تستخدمها صفحة العرض — لازم ترجّع القيم حيّة)</div>
           <div class="integrations-form-grid">
             <label>رابط نقطة القراءة الأساسي (Read API base URL)
               <input type="text" id="ia-read-url" value="${escAttr(d.readApiBaseUrl)}" placeholder="https://client.example.com/api/dashboards-read">
             </label>
           </div>
-          <p class="model-switch-note">استدعاء القائمة: GET على هذا الرابط. استدعاء لوحة واحدة: GET على نفس الرابط + "/" + معرّف اللوحة.</p>
+          <p class="model-switch-note">استدعاء القائمة: GET على هذا الرابط. استدعاء لوحة واحدة: GET على نفس
+            الرابط + "/" + معرّف اللوحة. صفحة العرض بتنادي عليها في كل مرة تُفتح — لازم الرد يحتوي
+            على القيم الحالية الفعلية لكل عنصر (مش نسخة مخزّنة من آخر نشر)، محسوبة من قاعدة
+            بياناتكم لحظة الطلب.</p>
         </div>
         <div>
           <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الدليل (اختياري — بحث للصفحة الإدارية)</div>
