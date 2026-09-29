@@ -105,7 +105,23 @@ builder.Services.AddSingleton<IDashboardGenerator, ChatToDashboard.Api.Llm.LlmRo
 // interfaces share the exact same instance instead of quietly constructing two.
 builder.Services.AddSingleton<ChatToDashboard.Api.Llm.ITableNamingAssistant>(
     sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
+// Same LlmRouter singleton again, for External Integrations' visual-identity/identity-
+// transport text suggestions (see IIntegrationSetupAssistant's remarks on why this shares
+// LlmRouter's normal provider resolution instead of its own independent setting).
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IIntegrationSetupAssistant>(
+    sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
 builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IDocumentReaderRouter, ChatToDashboard.Api.Llm.DocumentReaderRouter>();
+// Registered as its own concrete type (not just its interface) because VisualIdentityService
+// also needs DescribeAsync — its own method, not part of IVisualIdentityImageExtractor — to
+// tell "nothing configured" apart from "configured but not image-capable" for its refusal
+// message; same one-singleton-two-registrations shape as LlmRouter/IDashboardGenerator above.
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.VisualIdentityImageRouter>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IVisualIdentityImageExtractor>(
+    sp => sp.GetRequiredService<ChatToDashboard.Api.Llm.VisualIdentityImageRouter>());
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.VisualIdentityService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.PublishService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationDeliverables>();
 
 var app = builder.Build();
 

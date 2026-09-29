@@ -21,7 +21,7 @@ namespace ChatToDashboard.Api.Llm;
 /// up front) means a provider whose API key isn't configured only fails if it's actually
 /// selected — the other two keep working regardless.
 /// </summary>
-public class LlmRouter : IDashboardGenerator, ITableNamingAssistant
+public class LlmRouter : IDashboardGenerator, ITableNamingAssistant, IIntegrationSetupAssistant
 {
     public const string Anthropic = "Anthropic";
     public const string OpenAI = "OpenAI";
@@ -169,6 +169,129 @@ public class LlmRouter : IDashboardGenerator, ITableNamingAssistant
         {
             return null;
         }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant — routed through the normal dashboard-building
+    /// provider, exactly like SuggestTableNameAsync above (never its own independent setting;
+    /// see IIntegrationSetupAssistant's remarks on why).</summary>
+    public async Task<VisualIdentitySuggestion?> SuggestVisualIdentityAsync(
+        string? description, string? seedColor, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        try
+        {
+            return await ResolveIntegrationAssistant(ct)
+                is { } assistant
+                ? await assistant.SuggestVisualIdentityAsync(description, seedColor, requestingUser, ct)
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant — same routing as SuggestVisualIdentityAsync above.</summary>
+    public async Task<string?> SuggestFontFromPdfTextAsync(
+        string extractedPdfText, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        try
+        {
+            return await ResolveIntegrationAssistant(ct)
+                is { } assistant
+                ? await assistant.SuggestFontFromPdfTextAsync(extractedPdfText, requestingUser, ct)
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant — same routing as SuggestVisualIdentityAsync
+    /// above. Any failure falls back to Matched=false rather than throwing, same contract as
+    /// an unclear description would produce.</summary>
+    public async Task<IdentityTransportMatch> MatchIdentityTransportAsync(
+        string description, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        try
+        {
+            return await ResolveIntegrationAssistant(ct)
+                is { } assistant
+                ? await assistant.MatchIdentityTransportAsync(description, requestingUser, ct)
+                : new IdentityTransportMatch(false, null, null, "تعذّر الوصول لمزوّد الذكاء الاصطناعي حاليًا — أدخل الآلية يدويًا.");
+        }
+        catch
+        {
+            return new IdentityTransportMatch(false, null, null, "تعذّر تحليل الوصف — حاول تاني أو أدخل الآلية يدويًا.");
+        }
+    }
+
+    private async Task<IIntegrationSetupAssistant?> ResolveIntegrationAssistant(CancellationToken ct)
+    {
+        var settings = await _settings.GetAsync(ct);
+        var provider = settings.Provider is { Length: > 0 } ? settings.Provider : _defaultProvider;
+        return provider switch
+        {
+            OpenAI => _services.GetRequiredService<OpenAiClient>(),
+            Ollama => _services.GetRequiredService<OllamaClient>(),
+            _ => _services.GetRequiredService<ClaudeClient>(),
+        };
+    }
+}
+
+/// <summary>
+/// The IVisualIdentityImageExtractor equivalent of DocumentReaderRouter: resolves whichever
+/// concrete client is currently set as LlmSettingsStore's VisualIdentityReaderProvider — its
+/// own independent setting, completely separate from every provider choice above. Refuses
+/// outright (returns null with a clear reason) rather than sending an image to a provider that
+/// was never explicitly flagged as image-capable — see VisualIdentitySupportsImage's remarks.
+/// </summary>
+public class VisualIdentityImageRouter : IVisualIdentityImageExtractor
+{
+    private readonly IServiceProvider _services;
+    private readonly LlmSettingsStore _settings;
+
+    public VisualIdentityImageRouter(IServiceProvider services, LlmSettingsStore settings)
+    {
+        _services = services;
+        _settings = settings;
+    }
+
+    /// <summary>Null (never a thrown exception) both when nothing is configured and when a
+    /// provider IS configured but not flagged as supporting image input — the controller turns
+    /// either case into the same clear refusal message to the analyst; see
+    /// IntegrationsController's visual-identity endpoints.</summary>
+    public async Task<VisualIdentitySuggestion?> ExtractVisualIdentityFromImageAsync(
+        string imageDataUrl, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var (provider, refused) = await ResolveAsync(ct);
+        if (refused || provider is null) return null;
+        return await provider.ExtractVisualIdentityFromImageAsync(imageDataUrl, requestingUser, ct);
+    }
+
+    /// <summary>Exposed separately so the controller can tell "nothing configured" apart from
+    /// "configured but not image-capable" and word its refusal message accordingly, without a
+    /// second round of settings lookups.</summary>
+    public async Task<(bool Configured, bool SupportsImage)> DescribeAsync(CancellationToken ct = default)
+    {
+        var settings = await _settings.GetVisualIdentityReaderAsync(ct);
+        return (!string.IsNullOrWhiteSpace(settings.Provider), settings.SupportsImage);
+    }
+
+    private async Task<(IVisualIdentityImageExtractor? Provider, bool Refused)> ResolveAsync(CancellationToken ct)
+    {
+        var settings = await _settings.GetVisualIdentityReaderAsync(ct);
+        if (string.IsNullOrWhiteSpace(settings.Provider) || !settings.SupportsImage)
+            return (null, true);
+
+        IVisualIdentityImageExtractor extractor = settings.Provider switch
+        {
+            LlmRouter.OpenAI => _services.GetRequiredService<OpenAiClient>(),
+            LlmRouter.Ollama => _services.GetRequiredService<OllamaClient>(),
+            LlmRouter.Anthropic => _services.GetRequiredService<ClaudeClient>(),
+            _ => throw new InvalidOperationException($"Unknown VisualIdentityReaderProvider '{settings.Provider}'."),
+        };
+        return (extractor, false);
     }
 }
 

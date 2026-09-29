@@ -126,6 +126,38 @@ public class LlmSettingsStore
             {
             }
         }
+
+        // Migration for a table created before the External Integrations visual-identity
+        // extraction task had its own provider/sub-model choice — unlike ImageReaderProvider
+        // above, null/empty here means "disabled" (same contract as DocumentReaderProvider),
+        // never "fall back to the dashboard-building provider": sending a logo image to a
+        // provider nobody explicitly vetted for image input would defeat the whole point of
+        // VisualIdentitySupportsImage below. That flag is set explicitly by an admin — never
+        // inferred from the provider/model name — so a model without it is refused up front
+        // (see VisualIdentityImageRouter) instead of being sent an image and failing remotely.
+        foreach (var (column, sqliteType, sqlServerType) in new[]
+                 {
+                     ("VisualIdentityReaderProvider", "TEXT", "NVARCHAR(50)"),
+                     ("VisualIdentityReaderOllamaModel", "TEXT", "NVARCHAR(200)"),
+                     ("VisualIdentityReaderOpenAiModel", "TEXT", "NVARCHAR(200)"),
+                     ("VisualIdentitySupportsImage", "INTEGER", "BIT"),
+                 })
+        {
+            try
+            {
+                await using var alter = connection.CreateCommand();
+                alter.CommandText = _db.Provider == DbProvider.Sqlite
+                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqliteType}"
+                    : $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
+                await alter.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+            catch (SqlException ex) when (ex.Number == 2705)
+            {
+            }
+        }
     }
 
     /// <summary>Current override, if any has ever been saved — every field null otherwise.
@@ -227,6 +259,70 @@ public class LlmSettingsStore
         });
     }
 
+    /// <summary>Current override for the External Integrations visual-identity extraction
+    /// task — independent of every setting above, same "disabled by default" contract as
+    /// DocumentReaderProvider (see GetAsync's remarks). SupportsImage is never inferred from
+    /// the provider/model name; it is exactly whatever an admin explicitly ticked when saving
+    /// this setting, and defaults to false — so picking a model here without also ticking the
+    /// flag still gets refused by VisualIdentityImageRouter rather than silently sending it an
+    /// image.</summary>
+    public async Task<(string? Provider, string? OllamaModel, string? OpenAiModel, bool SupportsImage)>
+        GetVisualIdentityReaderAsync(CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var row = await connection.QuerySingleOrDefaultAsync<VisualIdentityRow>(
+            $"""
+            SELECT VisualIdentityReaderProvider, VisualIdentityReaderOllamaModel,
+                   VisualIdentityReaderOpenAiModel, VisualIdentitySupportsImage
+            FROM {Table} WHERE Id = 1
+            """);
+        return (row?.VisualIdentityReaderProvider, row?.VisualIdentityReaderOllamaModel,
+            row?.VisualIdentityReaderOpenAiModel, row?.VisualIdentitySupportsImage ?? false);
+    }
+
+    /// <summary>Sets (or clears, with null/"") the visual-identity provider, its own sub-model,
+    /// and the explicit supports-image flag — independent of every other setting in this
+    /// class. Unlike SetDocumentReaderAsync/SetImageReaderAsync, supportsImage is always
+    /// written (never COALESCE'd against the stored value): this is a deliberate admin
+    /// decision each time a provider/model is picked here, not a value that should silently
+    /// survive a provider switch.</summary>
+    public async Task SetVisualIdentityReaderAsync(
+        string? provider, string? ollamaModel, string? openAiModel, bool supportsImage, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var sql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               INSERT INTO {Table} (Id, VisualIdentityReaderProvider, VisualIdentityReaderOllamaModel,
+                 VisualIdentityReaderOpenAiModel, VisualIdentitySupportsImage)
+               VALUES (1, @provider, @ollamaModel, @openAiModel, @supportsImage)
+               ON CONFLICT(Id) DO UPDATE SET
+                 VisualIdentityReaderProvider = @provider,
+                 VisualIdentityReaderOllamaModel = COALESCE(@ollamaModel, VisualIdentityReaderOllamaModel),
+                 VisualIdentityReaderOpenAiModel = COALESCE(@openAiModel, VisualIdentityReaderOpenAiModel),
+                 VisualIdentitySupportsImage = @supportsImage
+               """
+            : $"""
+               MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
+               WHEN MATCHED THEN UPDATE SET
+                 VisualIdentityReaderProvider = @provider,
+                 VisualIdentityReaderOllamaModel = COALESCE(@ollamaModel, t.VisualIdentityReaderOllamaModel),
+                 VisualIdentityReaderOpenAiModel = COALESCE(@openAiModel, t.VisualIdentityReaderOpenAiModel),
+                 VisualIdentitySupportsImage = @supportsImage
+               WHEN NOT MATCHED THEN INSERT (Id, VisualIdentityReaderProvider, VisualIdentityReaderOllamaModel,
+                 VisualIdentityReaderOpenAiModel, VisualIdentitySupportsImage)
+                 VALUES (1, @provider, @ollamaModel, @openAiModel, @supportsImage);
+               """;
+        await connection.ExecuteAsync(sql, new
+        {
+            provider = string.IsNullOrWhiteSpace(provider) ? null : provider,
+            ollamaModel,
+            openAiModel,
+            supportsImage,
+        });
+    }
+
     /// <summary>
     /// Sets (or clears, with null/"") the reference-image provider and, when given, that
     /// provider's own sub-model — independent of SetAsync above, exactly like
@@ -274,5 +370,13 @@ public class LlmSettingsStore
         public string? ImageReaderProvider { get; set; }
         public string? ImageReaderOllamaModel { get; set; }
         public string? ImageReaderOpenAiModel { get; set; }
+    }
+
+    private class VisualIdentityRow
+    {
+        public string? VisualIdentityReaderProvider { get; set; }
+        public string? VisualIdentityReaderOllamaModel { get; set; }
+        public string? VisualIdentityReaderOpenAiModel { get; set; }
+        public bool VisualIdentitySupportsImage { get; set; }
     }
 }

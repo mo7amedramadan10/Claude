@@ -1,0 +1,284 @@
+using ChatToDashboard.Api.Data;
+using Dapper;
+
+namespace ChatToDashboard.Api.Integrations;
+
+/// <summary>
+/// Persists External Integrations, their published-dashboard slots, and the publish audit log —
+/// same SQLite/SqlServer dual-schema pattern as ConversationStore/HistoryStore. Admin-only
+/// (enforced by IntegrationsController, not here — this store trusts its caller, same as every
+/// other *Store in this app).
+/// </summary>
+public class IntegrationStore
+{
+    private readonly DataStore _db;
+
+    public IntegrationStore(DataStore db) => _db = db;
+
+    private string IntegrationsTable => _db.Provider == DbProvider.Sqlite
+        ? "\"ExternalIntegrations\"" : "[staging].[ExternalIntegrations]";
+    private string SlotsTable => _db.Provider == DbProvider.Sqlite
+        ? "\"PublishedDashboardSlots\"" : "[staging].[PublishedDashboardSlots]";
+    private string LogTable => _db.Provider == DbProvider.Sqlite
+        ? "\"IntegrationPublishLog\"" : "[staging].[IntegrationPublishLog]";
+
+    public async Task EnsureSchemaAsync(CancellationToken ct = default)
+    {
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await _db.CreateContainerIfMissingAsync(connection, ct);
+
+        var integrationsSql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               CREATE TABLE IF NOT EXISTS {IntegrationsTable} (
+                 "Id" TEXT PRIMARY KEY, "Name" TEXT,
+                 "WriteApiUrl" TEXT, "WriteApiAuthHeader" TEXT, "WriteApiAuthValue" TEXT,
+                 "ReadApiBaseUrl" TEXT, "DirectoryApiUrl" TEXT,
+                 "PermissionsApiUrl" TEXT, "PermissionsApiAuthHeader" TEXT, "PermissionsApiAuthValue" TEXT,
+                 "IdentityMechanism" TEXT, "IdentityParameterName" TEXT,
+                 "IdentityConfirmed" INTEGER, "IdentityConfirmedAt" TEXT, "IdentityConfirmedBy" TEXT,
+                 "AccentColor" TEXT, "SecondaryColor" TEXT, "FontFamily" TEXT,
+                 "CreatedBy" TEXT, "CreatedAt" TEXT, "UpdatedAt" TEXT)
+               """
+            : $"""
+               IF OBJECT_ID('staging.ExternalIntegrations') IS NULL
+               CREATE TABLE {IntegrationsTable} (
+                 [Id] NVARCHAR(64) PRIMARY KEY, [Name] NVARCHAR(200),
+                 [WriteApiUrl] NVARCHAR(1000), [WriteApiAuthHeader] NVARCHAR(200), [WriteApiAuthValue] NVARCHAR(1000),
+                 [ReadApiBaseUrl] NVARCHAR(1000), [DirectoryApiUrl] NVARCHAR(1000),
+                 [PermissionsApiUrl] NVARCHAR(1000), [PermissionsApiAuthHeader] NVARCHAR(200), [PermissionsApiAuthValue] NVARCHAR(1000),
+                 [IdentityMechanism] NVARCHAR(20), [IdentityParameterName] NVARCHAR(200),
+                 [IdentityConfirmed] BIT, [IdentityConfirmedAt] DATETIME2, [IdentityConfirmedBy] NVARCHAR(200),
+                 [AccentColor] NVARCHAR(20), [SecondaryColor] NVARCHAR(20), [FontFamily] NVARCHAR(200),
+                 [CreatedBy] NVARCHAR(200), [CreatedAt] DATETIME2, [UpdatedAt] DATETIME2)
+               """;
+        await using (var cmd = connection.CreateCommand()) { cmd.CommandText = integrationsSql; await cmd.ExecuteNonQueryAsync(ct); }
+
+        var slotsSql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               CREATE TABLE IF NOT EXISTS {SlotsTable} (
+                 "Id" TEXT PRIMARY KEY, "IntegrationId" TEXT, "ExternalDashboardId" TEXT,
+                 "LocalHistoryId" TEXT, "Title" TEXT,
+                 "FirstPublishedAt" TEXT, "LastPublishedAt" TEXT, "LastPublishedBy" TEXT)
+               """
+            : $"""
+               IF OBJECT_ID('staging.PublishedDashboardSlots') IS NULL
+               CREATE TABLE {SlotsTable} (
+                 [Id] NVARCHAR(64) PRIMARY KEY, [IntegrationId] NVARCHAR(64), [ExternalDashboardId] NVARCHAR(64),
+                 [LocalHistoryId] NVARCHAR(64), [Title] NVARCHAR(500),
+                 [FirstPublishedAt] DATETIME2, [LastPublishedAt] DATETIME2, [LastPublishedBy] NVARCHAR(200))
+               """;
+        await using (var cmd = connection.CreateCommand()) { cmd.CommandText = slotsSql; await cmd.ExecuteNonQueryAsync(ct); }
+
+        var logSql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               CREATE TABLE IF NOT EXISTS {LogTable} (
+                 "Id" TEXT PRIMARY KEY, "IntegrationId" TEXT, "ExternalDashboardId" TEXT,
+                 "LocalHistoryId" TEXT, "DashboardTitle" TEXT, "UserId" TEXT,
+                 "Success" INTEGER, "Error" TEXT, "CreatedAt" TEXT)
+               """
+            : $"""
+               IF OBJECT_ID('staging.IntegrationPublishLog') IS NULL
+               CREATE TABLE {LogTable} (
+                 [Id] NVARCHAR(64) PRIMARY KEY, [IntegrationId] NVARCHAR(64), [ExternalDashboardId] NVARCHAR(64),
+                 [LocalHistoryId] NVARCHAR(64), [DashboardTitle] NVARCHAR(500), [UserId] NVARCHAR(200),
+                 [Success] BIT, [Error] NVARCHAR(MAX), [CreatedAt] DATETIME2)
+               """;
+        await using (var cmd = connection.CreateCommand()) { cmd.CommandText = logSql; await cmd.ExecuteNonQueryAsync(ct); }
+    }
+
+    // ---------- integrations ----------
+
+    public async Task<ExternalIntegration> CreateAsync(string name, string createdBy, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        var now = DateTime.UtcNow;
+        var integration = new ExternalIntegration
+        {
+            Id = Guid.NewGuid().ToString("N"), Name = name, CreatedBy = createdBy, CreatedAt = now, UpdatedAt = now,
+        };
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"""
+            INSERT INTO {IntegrationsTable}
+              (Id, Name, IdentityConfirmed, CreatedBy, CreatedAt, UpdatedAt)
+            VALUES (@Id, @Name, 0, @CreatedBy, @CreatedAt, @UpdatedAt)
+            """, integration);
+        return integration;
+    }
+
+    public async Task<IReadOnlyList<ExternalIntegration>> ListAsync(CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<ExternalIntegration>(
+            $"SELECT * FROM {IntegrationsTable} ORDER BY CreatedAt DESC");
+        return rows.ToList();
+    }
+
+    public async Task<ExternalIntegration?> GetByIdAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<ExternalIntegration>(
+            $"SELECT * FROM {IntegrationsTable} WHERE Id = @id", new { id });
+    }
+
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"DELETE FROM {IntegrationsTable} WHERE Id = @id", new { id });
+        await connection.ExecuteAsync($"DELETE FROM {SlotsTable} WHERE IntegrationId = @id", new { id });
+        await connection.ExecuteAsync($"DELETE FROM {LogTable} WHERE IntegrationId = @id", new { id });
+    }
+
+    public async Task UpdateApisAsync(string id, UpdateIntegrationApisRequest request, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"""
+            UPDATE {IntegrationsTable} SET
+              WriteApiUrl = @WriteApiUrl, WriteApiAuthHeader = @WriteApiAuthHeader, WriteApiAuthValue = @WriteApiAuthValue,
+              ReadApiBaseUrl = @ReadApiBaseUrl, DirectoryApiUrl = @DirectoryApiUrl,
+              PermissionsApiUrl = @PermissionsApiUrl, PermissionsApiAuthHeader = @PermissionsApiAuthHeader,
+              PermissionsApiAuthValue = @PermissionsApiAuthValue, UpdatedAt = @UpdatedAt
+            WHERE Id = @Id
+            """,
+            new
+            {
+                Id = id, request.WriteApiUrl, request.WriteApiAuthHeader, request.WriteApiAuthValue,
+                request.ReadApiBaseUrl, request.DirectoryApiUrl, request.PermissionsApiUrl,
+                request.PermissionsApiAuthHeader, request.PermissionsApiAuthValue, UpdatedAt = DateTime.UtcNow,
+            });
+    }
+
+    public async Task UpdateVisualIdentityAsync(
+        string id, string accentColor, string secondaryColor, string fontFamily, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {IntegrationsTable} SET AccentColor = @accentColor, SecondaryColor = @secondaryColor, " +
+            "FontFamily = @fontFamily, UpdatedAt = @updatedAt WHERE Id = @id",
+            new { id, accentColor, secondaryColor, fontFamily, updatedAt = DateTime.UtcNow });
+    }
+
+    /// <summary>Stores a matched-but-not-yet-confirmed mechanism/parameter pair. Never sets
+    /// IdentityConfirmed — see ConfirmIdentityTransportAsync, a distinct, explicit step (Part C:
+    /// "require explicit confirmation" before activation).</summary>
+    public async Task SetIdentityTransportPendingAsync(
+        string id, string mechanism, string parameterName, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {IntegrationsTable} SET IdentityMechanism = @mechanism, IdentityParameterName = @parameterName, " +
+            "IdentityConfirmed = 0, IdentityConfirmedAt = NULL, IdentityConfirmedBy = NULL, UpdatedAt = @updatedAt WHERE Id = @id",
+            new { id, mechanism, parameterName, updatedAt = DateTime.UtcNow });
+    }
+
+    public async Task ConfirmIdentityTransportAsync(string id, string confirmedBy, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var now = DateTime.UtcNow;
+        await connection.ExecuteAsync(
+            $"UPDATE {IntegrationsTable} SET IdentityConfirmed = 1, IdentityConfirmedAt = @now, " +
+            "IdentityConfirmedBy = @confirmedBy, UpdatedAt = @now WHERE Id = @id",
+            new { id, confirmedBy, now });
+    }
+
+    // ---------- published-dashboard slots ----------
+
+    public async Task<IReadOnlyList<PublishedDashboardSlot>> ListSlotsAsync(string integrationId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<PublishedDashboardSlot>(
+            $"SELECT * FROM {SlotsTable} WHERE IntegrationId = @integrationId ORDER BY LastPublishedAt DESC",
+            new { integrationId });
+        return rows.ToList();
+    }
+
+    public async Task<PublishedDashboardSlot?> GetSlotAsync(string integrationId, string slotId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<PublishedDashboardSlot>(
+            $"SELECT * FROM {SlotsTable} WHERE Id = @slotId AND IntegrationId = @integrationId",
+            new { integrationId, slotId });
+    }
+
+    /// <summary>The slot (if any) an Active dashboard already occupies under this integration —
+    /// used by PublishService to offer "update the existing slot" as a default before falling
+    /// back to "create a new one".</summary>
+    public async Task<PublishedDashboardSlot?> FindSlotByLocalHistoryIdAsync(
+        string integrationId, string localHistoryId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<PublishedDashboardSlot>(
+            $"SELECT * FROM {SlotsTable} WHERE IntegrationId = @integrationId AND LocalHistoryId = @localHistoryId",
+            new { integrationId, localHistoryId });
+    }
+
+    public async Task<PublishedDashboardSlot> CreateSlotAsync(
+        string integrationId, string localHistoryId, string title, string publishedBy, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        var now = DateTime.UtcNow;
+        var slot = new PublishedDashboardSlot
+        {
+            Id = Guid.NewGuid().ToString("N"), IntegrationId = integrationId,
+            ExternalDashboardId = Guid.NewGuid().ToString("N"), LocalHistoryId = localHistoryId, Title = title,
+            FirstPublishedAt = now, LastPublishedAt = now, LastPublishedBy = publishedBy,
+        };
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"""
+            INSERT INTO {SlotsTable}
+              (Id, IntegrationId, ExternalDashboardId, LocalHistoryId, Title, FirstPublishedAt, LastPublishedAt, LastPublishedBy)
+            VALUES (@Id, @IntegrationId, @ExternalDashboardId, @LocalHistoryId, @Title, @FirstPublishedAt, @LastPublishedAt, @LastPublishedBy)
+            """, slot);
+        return slot;
+    }
+
+    public async Task TouchSlotAsync(string slotId, string title, string publishedBy, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {SlotsTable} SET Title = @title, LastPublishedAt = @now, LastPublishedBy = @publishedBy WHERE Id = @slotId",
+            new { slotId, title, publishedBy, now = DateTime.UtcNow });
+    }
+
+    // ---------- publish audit log ----------
+
+    public async Task LogPublishAsync(IntegrationPublishLogEntry entry, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        entry.Id = string.IsNullOrWhiteSpace(entry.Id) ? Guid.NewGuid().ToString("N") : entry.Id;
+        entry.CreatedAt = entry.CreatedAt == default ? DateTime.UtcNow : entry.CreatedAt;
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"""
+            INSERT INTO {LogTable}
+              (Id, IntegrationId, ExternalDashboardId, LocalHistoryId, DashboardTitle, UserId, Success, Error, CreatedAt)
+            VALUES (@Id, @IntegrationId, @ExternalDashboardId, @LocalHistoryId, @DashboardTitle, @UserId, @Success, @Error, @CreatedAt)
+            """, entry);
+    }
+
+    public async Task<IReadOnlyList<IntegrationPublishLogEntry>> ListPublishLogAsync(
+        string integrationId, int limit = 100, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
+        var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
+        var rows = await connection.QueryAsync<IntegrationPublishLogEntry>(
+            $"SELECT {top}* FROM {LogTable} WHERE IntegrationId = @integrationId ORDER BY CreatedAt DESC{tail}",
+            new { integrationId });
+        return rows.ToList();
+    }
+}

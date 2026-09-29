@@ -471,6 +471,171 @@ public class AnalyticsTools
         """;
 
     /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.SuggestVisualIdentityAsync — External
+    /// Integrations' Part B path 2 (AI-assisted suggestion). Deliberately restricted to the
+    /// exact same three-token set every other visual-identity path produces (accent color,
+    /// secondary color, font family) — never open-ended CSS — so a suggested set is a drop-in
+    /// replacement for a manually-entered one. Contrast is checked and, if needed, adjusted by
+    /// VisualIdentityService server-side after this returns — never trusted as already
+    /// accessible just because the model was told to aim for it.
+    /// </summary>
+    public const string VisualIdentitySystemPrompt =
+        "أنت مساعد يقترح هوية بصرية صغيرة لصفحة تكامل خارجي، من وصف مختصر أو لون واحد يديه لك " +
+        "المستخدم. رجّع مجموعة توكنز محدودة فقط — لون أساسي (accent)، لون ثانوي (secondary)، " +
+        "واسم خط (fontFamily) — أبدًا مش CSS حر أو أكتر من كده. اختر اسم خط شائع ومتاح فعليًا " +
+        "على الويب (مثلاً Cairo, Tajawal, IBM Plex Sans Arabic, Inter, Roboto) يناسب الوصف، مش " +
+        "اسم خط تخيّلي. اللونين لازم يكونا أكواد hex صحيحة (#RRGGBB). حاول قدر الإمكان إن التباين " +
+        "بين اللون الأساسي وخلفية بيضاء يكون مقروء (نسبة تباين معقولة)، لكن مش لازم تحسب النسبة " +
+        "بنفسك — فيه تحقق تلقائي بعد اقتراحك بيعدّل القيمة لو مش كافية.\n\n" +
+        "رجّع JSON فقط بالشكل:\n" +
+        """{ "accentColor": "#RRGGBB", "secondaryColor": "#RRGGBB", "fontFamily": "اسم الخط" }""";
+
+    /// <summary>The per-request prompt accompanying VisualIdentitySystemPrompt.</summary>
+    public static string VisualIdentityUserMessage(string? description, string? seedColor) =>
+        $"""
+        الوصف: {(string.IsNullOrWhiteSpace(description) ? "(لا يوجد)" : description)}
+        لون معروف بالفعل: {(string.IsNullOrWhiteSpace(seedColor) ? "(لا يوجد)" : seedColor)}
+
+        اقترح مجموعة الهوية البصرية.
+        """;
+
+    /// <summary>Tolerant JSON parse for VisualIdentitySystemPrompt's reply — same extraction
+    /// helper as TryParseDashboard/TryParseInquiry, a much smaller schema. Loose hex-color
+    /// validation only (VisualIdentityService does the real contrast check); a missing/invalid
+    /// field fails the whole parse rather than silently defaulting, since a partially-invented
+    /// token set is worse than falling back to manual entry.</summary>
+    public static (VisualIdentitySuggestion? Suggestion, string? Error) TryParseVisualIdentity(string text)
+    {
+        var (candidate, extractError) = ExtractJsonCandidate(text);
+        if (candidate is null) return (null, extractError);
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate);
+            var root = doc.RootElement;
+            var accent = root.TryGetProperty("accentColor", out var a) ? a.GetString() : null;
+            var secondary = root.TryGetProperty("secondaryColor", out var s) ? s.GetString() : null;
+            var font = root.TryGetProperty("fontFamily", out var f) ? f.GetString() : null;
+            if (!IsHexColor(accent) || !IsHexColor(secondary) || string.IsNullOrWhiteSpace(font))
+                return (null, "الرد ما فيهوش accentColor/secondaryColor (hex) و fontFamily صالحين.");
+            return (new VisualIdentitySuggestion(accent!, secondary!, font!.Trim(), null), null);
+        }
+        catch (JsonException ex)
+        {
+            return (null, $"JSON deserialization failed: {ex.Message}");
+        }
+    }
+
+    private static bool IsHexColor(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value.Trim(), @"^#[0-9A-Fa-f]{6}$");
+
+    /// <summary>System prompt for the vision-only path (Part B path 3, "genuine visual/image
+    /// understanding") — same JSON contract as VisualIdentitySystemPrompt/TryParseVisualIdentity
+    /// above, just fed an image instead of text. Only ever reached after the caller has already
+    /// verified LlmSettingsStore's VisualIdentitySupportsImage flag is set (see
+    /// VisualIdentityImageRouter) — this prompt itself does not repeat that check.</summary>
+    public const string VisualIdentityImageSystemPrompt =
+        "أنت مساعد يستخرج هوية بصرية من صورة (شعار أو دليل هوية) يرفعها المستخدم. افحص الصورة " +
+        "وحدد لون أساسي (accent) ولون ثانوي (secondary) بصيغة hex (#RRGGBB) يعكسان ألوان الصورة " +
+        "الفعلية، واسم خط شائع متاح على الويب يناسب طابعها لو قدرت تحدد طابع الخط من الصورة " +
+        "(وإلا رجّع أقرب خط عام مناسب). رجّع JSON فقط بالشكل:\n" +
+        """{ "accentColor": "#RRGGBB", "secondaryColor": "#RRGGBB", "fontFamily": "اسم الخط" }""";
+
+    public const string VisualIdentityImageInstruction =
+        "الصورة المرفقة شعار أو دليل هوية بصرية. استخرج منها مجموعة التوكنز المطلوبة.";
+
+    /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.SuggestFontFromPdfTextAsync — Part B path 3's
+    /// text-only half (locating an EXPLICIT font-name mention already written in a brand-guide
+    /// PDF's text layer, e.g. "الخط الرسمي: Cairo Bold"). Deliberately does not infer a font from
+    /// general document styling — PdfPig's text extraction carries no font-rendering info, only
+    /// characters — so this only ever succeeds when the document literally names its own font.
+    /// </summary>
+    public const string FontExtractionSystemPrompt =
+        "هيتم إديك نص مستخرج من ملف PDF (دليل هوية بصرية على الأغلب). مهمتك الوحيدة: هل النص ده " +
+        "فيه ذكر صريح لاسم خط (Font) متبنّى رسميًا؟ لو لقيت ذكر صريح، رجّع اسم الخط فقط في سطر " +
+        "واحد، من غير أي شرح. لو مفيش ذكر صريح لاسم خط في النص، رجّع بالضبط الكلمة: NONE. ممنوع " +
+        "تخمّن أو تقترح خط مش مذكور فعليًا في النص.";
+
+    public static string FontExtractionUserMessage(string extractedPdfText) =>
+        $"""
+        النص المستخرج من الملف:
+        ---
+        {extractedPdfText}
+        ---
+
+        فيه ذكر صريح لاسم خط؟
+        """;
+
+    /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.MatchIdentityTransportAsync — Part C. The
+    /// model's ONLY job is picking one of the three pre-written mechanisms and extracting the
+    /// variable part; it never writes new transport logic (see IdentityTransportMatch's
+    /// remarks). "matched": false plus a clarifying question is the required response whenever
+    /// the description doesn't clearly map to one of the three — guessing an approximation is
+    /// explicitly disallowed by this prompt.
+    /// </summary>
+    public const string IdentityTransportSystemPrompt =
+        "أنت تحلل وصف محلل لكيفية تعريف هوية المستخدم في نظام عميل خارجي، وتطابقه مع واحدة من " +
+        "ثلاث آليات ثابتة فقط — ممنوع تقترح أو تتخيل آلية رابعة:\n" +
+        "1) \"query\" — معامل ضمن رابط الصفحة (Query Parameter)\n" +
+        "2) \"header\" — رأس طلب HTTP مخصّص (Custom HTTP Header)\n" +
+        "3) \"cookie\" — كوكي ضمن نطاق العميل\n\n" +
+        "لو الوصف بيحدد بوضوح واحدة من التلاتة، واسم المعامل/الرأس/الكوكي مذكور أو ممكن تستنتجه " +
+        "بثقة، رجّع JSON بالشكل:\n" +
+        """{ "matched": true, "mechanism": "query|header|cookie", "parameterName": "الاسم الدقيق" }""" + "\n\n" +
+        "لو الوصف غامض أو ما بيحددش آلية واضحة من التلاتة أو اسم المعامل مش واضح، رجّع:\n" +
+        """{ "matched": false, "mechanism": null, "parameterName": null }""" + "\n\n" +
+        "رجّع الـ JSON فقط، من غير أي نص تاني.";
+
+    public static string IdentityTransportUserMessage(string description) =>
+        $"""
+        وصف المحلل: {description}
+
+        طابق الوصف مع آلية.
+        """;
+
+    private static readonly HashSet<string> KnownIdentityTransportMechanisms =
+        new(StringComparer.OrdinalIgnoreCase) { "query", "header", "cookie" };
+
+    /// <summary>Tolerant JSON parse for IdentityTransportSystemPrompt's reply, plus the
+    /// plain-language confirmation summary shown to the analyst before activation (Part C: "show
+    /// the analyst a plain-language summary ... and require explicit confirmation"). Any parse
+    /// failure, an unrecognized mechanism value, or matched=true with an empty parameterName all
+    /// fall back to Matched=false — never a guessed approximation.</summary>
+    public static IdentityTransportMatch ParseIdentityTransportMatch(string text)
+    {
+        var unclear = new IdentityTransportMatch(false, null, null,
+            "الوصف مش واضح بما يكفي — يُرجى تحديد الآلية (معامل في الرابط / رأس HTTP / كوكي) واسمها الدقيق.");
+        var (candidate, _) = ExtractJsonCandidate(text);
+        if (candidate is null) return unclear;
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate);
+            var root = doc.RootElement;
+            var matched = root.TryGetProperty("matched", out var m) && m.ValueKind == JsonValueKind.True;
+            if (!matched) return unclear;
+
+            var mechanism = root.TryGetProperty("mechanism", out var mech) ? mech.GetString() : null;
+            var parameterName = root.TryGetProperty("parameterName", out var p) ? p.GetString()?.Trim() : null;
+            if (mechanism is null || !KnownIdentityTransportMechanisms.Contains(mechanism) || string.IsNullOrWhiteSpace(parameterName))
+                return unclear;
+
+            var mechanismLabel = mechanism.ToLowerInvariant() switch
+            {
+                "query" => $"معامل ضمن رابط الصفحة اسمه \"{parameterName}\"",
+                "header" => $"رأس HTTP مخصّص اسمه \"{parameterName}\"",
+                _ => $"كوكي اسمه \"{parameterName}\"",
+            };
+            var summary = $"ستقرأ صفحة العرض هوية المستخدم من {mechanismLabel}، وترسلها بنفس الاسم إلى نقطة القراءة عندكم في كل استدعاء.";
+            return new IdentityTransportMatch(true, mechanism.ToLowerInvariant(), parameterName, summary);
+        }
+        catch (JsonException)
+        {
+            return unclear;
+        }
+    }
+
+    /// <summary>
     /// Prepended to both BuildSystemPrompt and BuildInquirySystemPrompt when the frontend's
     /// language toggle (see index.html's #lang-toggle) is set to English — everything else in
     /// either prompt stays exactly as tuned (in Arabic, addressed to the model), since an LLM

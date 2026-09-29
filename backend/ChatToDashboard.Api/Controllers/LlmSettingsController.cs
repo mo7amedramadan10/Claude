@@ -39,6 +39,23 @@ public class UpdateImageReaderRequest
     public string? OpenAiModel { get; set; }
 }
 
+public class UpdateVisualIdentityReaderRequest
+{
+    /// <summary>One of LlmRouter's known provider ids, or null/"" to disable — the External
+    /// Integrations visual-identity image extraction (a logo/brand image with no accompanying
+    /// text) refuses outright rather than falling back to any other provider.</summary>
+    public string? Provider { get; set; }
+
+    /// <summary>The visual-identity reader's OWN sub-model choice — independent of every other
+    /// model field on this controller. Only the field matching Provider is meaningful.</summary>
+    public string? OllamaModel { get; set; }
+    public string? OpenAiModel { get; set; }
+
+    /// <summary>Explicit, admin-set — never inferred from the provider/model name. Must be
+    /// true for the image-extraction action to run at all (see VisualIdentityImageRouter).</summary>
+    public bool SupportsImage { get; set; }
+}
+
 /// <summary>
 /// Which LLM answers questions, and which model for the providers that support picking one
 /// (Ollama, OpenAI) — admin-only, changeable from the dashboard without a restart. See
@@ -96,6 +113,16 @@ public class LlmSettingsController : ControllerBase
         var activeImageReaderOpenAiModel = saved.ImageReaderOpenAiModel is { Length: > 0 }
             ? saved.ImageReaderOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
 
+        // Same "disabled means genuinely disabled, no fallback" contract as the document
+        // reader — see UpdateVisualIdentityReaderRequest's remarks.
+        var visualIdentity = await _settings.GetVisualIdentityReaderAsync(ct);
+        var activeVisualIdentityProvider = visualIdentity.Provider is { Length: > 0 } ? visualIdentity.Provider : null;
+        var activeVisualIdentityOllamaModel = visualIdentity.OllamaModel is { Length: > 0 }
+            ? visualIdentity.OllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeVisualIdentityOpenAiModel = visualIdentity.OpenAiModel is { Length: > 0 }
+            ? visualIdentity.OpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
+        var activeVisualIdentitySupportsImage = visualIdentity.SupportsImage;
+
         return Ok(new
         {
             activeProvider,
@@ -107,6 +134,10 @@ public class LlmSettingsController : ControllerBase
             activeImageReaderProvider,
             activeImageReaderOllamaModel,
             activeImageReaderOpenAiModel,
+            activeVisualIdentityProvider,
+            activeVisualIdentityOllamaModel,
+            activeVisualIdentityOpenAiModel,
+            activeVisualIdentitySupportsImage,
             providers = new[]
             {
                 new { id = LlmRouter.Anthropic, label = "Claude (Anthropic)", configured = IsConfigured("Anthropic:ApiKey") },
@@ -200,6 +231,21 @@ public class LlmSettingsController : ControllerBase
             return BadRequest(new { error = "مزوّد غير معروف." });
 
         await _settings.SetImageReaderAsync(request.Provider, request.OllamaModel, request.OpenAiModel, ct);
+        return NoContent();
+    }
+
+    /// <summary>Which model (if any) reads a logo/brand image with no accompanying text for
+    /// External Integrations' visual-identity extraction — independent of every other setting
+    /// on this controller. SupportsImage is stored exactly as sent, never inferred.</summary>
+    [HttpPut("visual-identity-reader")]
+    public async Task<IActionResult> UpdateVisualIdentityReader([FromBody] UpdateVisualIdentityReaderRequest request, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(request.Provider) &&
+            !LlmRouter.KnownProviders.Contains(request.Provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+
+        await _settings.SetVisualIdentityReaderAsync(
+            request.Provider, request.OllamaModel, request.OpenAiModel, request.SupportsImage, ct);
         return NoContent();
     }
 

@@ -188,6 +188,7 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .model-switch-ollama-row label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2)}
 .model-switch-note{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.5}
 .model-switch-note.bad{color:var(--danger)}
+.settings-checkbox-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
 .model-switch-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 .model-switch-actions button{padding:6px 13px;border-radius:8px;font-size:12.5px}
 #settings-save{border:0;background:var(--accent);color:#fff;font-weight:600}
@@ -1016,6 +1017,38 @@ tr:last-child td{border-bottom:0}
   border-radius:9px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface)}
 
 /* ---------- user modal ---------- */
+/* ---------- التكاملات الخارجية ---------- */
+.integrations-list{display:flex;flex-direction:column;gap:8px}
+.integration-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--grid);
+  border-radius:var(--radius);background:var(--surface);cursor:pointer}
+.integration-row:hover{border-color:var(--accent)}
+.integration-row-name{font-weight:700;font-size:13.5px;flex:1}
+.integration-row-badges{display:flex;gap:6px;flex-wrap:wrap}
+.integration-badge{padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;background:var(--plane);color:var(--ink-2)}
+.integration-badge.ok{background:var(--accent-soft);color:var(--accent)}
+.integration-badge.warn{background:rgba(242,184,75,.18);color:#946200}
+.integrations-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+.integrations-form input[type="text"],.integrations-form textarea{
+  padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:13px;color:var(--ink);font-family:inherit}
+.integrations-form textarea{resize:vertical;min-height:60px}
+.integrations-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.vi-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.vi-tab{padding:6px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);
+  color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer}
+.vi-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.vi-pane{display:none}
+.vi-pane.active{display:block}
+.vi-swatches{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.vi-swatch{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.vi-swatch-dot{width:22px;height:22px;border-radius:50%;border:1px solid var(--grid)}
+.vi-proposal{margin-top:12px;padding:12px;border:1px dashed var(--accent);border-radius:10px;background:var(--accent-soft)}
+.vi-proposal-note{font-size:11.5px;color:#946200;margin-top:6px}
+.identity-status{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px}
+.identity-match-result{margin-top:10px;padding:10px 12px;border:1px solid var(--grid);border-radius:10px;background:var(--plane);font-size:12.5px;line-height:1.7}
+.integ-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+.integ-table th,.integ-table td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:start}
+.integ-table th{color:var(--ink-2);font-weight:700}
+.deliverable-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .user-modal-box{width:min(480px,100%);max-height:86vh;overflow-y:auto}
 #user-form{display:flex;flex-direction:column;gap:12px}
 #user-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
@@ -1058,6 +1091,7 @@ tr:last-child td{border-bottom:0}
     <button class="tab" data-screen="sharelinks">روابط المشاركة <span class="badge" id="sharelinks-badge">0</span></button>
     <button class="tab hidden" id="tab-users" data-screen="users">المستخدمون</button>
     <button class="tab hidden" id="tab-settings" data-screen="settings">الإعدادات</button>
+    <button class="tab hidden" id="tab-integrations" data-screen="integrations">التكاملات الخارجية</button>
     <a class="tab hidden" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
   </nav>
 
@@ -1143,6 +1177,7 @@ tr:last-child td{border-bottom:0}
       <button type="button" id="btn-redo" title="إعادة" disabled>↷ إعادة</button>
       <button type="button" id="btn-activate" class="hidden" title="حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين">✅ تفعيل اللوحة</button>
       <button type="button" id="btn-share">🔗 مشاركة</button>
+      <button type="button" id="btn-publish" class="hidden" title="نشر هذه اللوحة إلى نظام عميل خارجي (التكاملات الخارجية) — فعل منفصل عن الحفظ/التعديل">🚀 نشر</button>
       <button type="button" id="btn-export-pdf">🖨️ تصدير PDF</button>
       <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
     </div>
@@ -1443,6 +1478,36 @@ tr:last-child td{border-bottom:0}
     </div>
 
     <div class="settings-section">
+      <h3>نموذج استخراج الهوية البصرية (التكاملات الخارجية)</h3>
+      <p class="model-switch-note">يُستخدم فقط في شاشة «التكاملات الخارجية» لاستخراج هوية بصرية
+        من صورة شعار أو دليل هوية بلا نص مصاحب. مُعطّل افتراضيًا حتى تختار موديل صراحةً هنا
+        وتؤكد إنه يدعم تحليل الصور — أي عملية استخراج بصورة بدون هذا التأكيد تُرفض برسالة واضحة
+        بدل إرسال الصورة لموديل ما يدعمهاش.</p>
+      <div id="settings-vis-id-providers" class="model-switch-providers"></div>
+      <div id="settings-vis-id-ollama-row" class="model-switch-ollama-row hidden">
+        <label>الموديل الداخلي (Ollama)
+          <select id="settings-vis-id-ollama-select"></select>
+        </label>
+        <div id="settings-vis-id-ollama-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-vis-id-openai-row" class="model-switch-ollama-row hidden">
+        <label>موديل OpenAI
+          <select id="settings-vis-id-openai-select"></select>
+        </label>
+        <div id="settings-vis-id-openai-note" class="model-switch-note"></div>
+      </div>
+      <label class="settings-checkbox-row">
+        <input type="checkbox" id="settings-vis-id-supports-image">
+        هذا الموديل يدعم تحليل الصور فعليًا (لازم تأكيدها يدويًا — لا تُستنتج من اسم الموديل)
+      </label>
+      <div id="settings-vis-id-error" class="model-switch-note bad hidden"></div>
+      <div class="model-switch-actions">
+        <span id="settings-vis-id-save-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+        <button type="button" id="settings-vis-id-save">حفظ</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>معلومات عن الموديلات المتاحة</h3>
       <div class="settings-info-grid">
         <div class="settings-info-card" data-provider="Anthropic">
@@ -1468,6 +1533,32 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="screen-integrations" class="screen">
+  <div class="settings-wrap">
+    <div class="settings-banner">
+      <span class="settings-banner-icon">🔗</span>
+      <div>
+        <div class="settings-banner-title">عرض لوحات المتابعة داخل نظام عميل خارجي</div>
+        <div class="settings-banner-text">كل تكامل هنا يمثل نظام عميل واحد. بعد ضبط الإعدادات
+          تنزّل ملفين جاهزين (صفحة عرض + صفحة إدارة صلاحيات) يستضيفهم فريق العميل التقني على
+          نطاقهم — النشر إلى العميل فعل منفصل دايمًا عن حفظ/تعديل اللوحة نفسها.</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>التكاملات</h3>
+      <div id="integrations-list" class="integrations-list"><div class="model-switch-note">جارٍ التحميل…</div></div>
+      <div class="model-switch-actions">
+        <input type="text" id="new-integration-name" placeholder="اسم التكامل (مثلاً: نظام المشتريات)"
+          style="flex:1;padding:8px 12px;border:1px solid var(--grid);border-radius:9px;font-size:13px">
+        <button type="button" id="btn-new-integration">+ تكامل جديد</button>
+      </div>
+    </div>
+
+    <div id="integration-detail"></div>
   </div>
 </div>
 
@@ -1560,6 +1651,27 @@ tr:last-child td{border-bottom:0}
         <button type="submit" id="rename-save">حفظ</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div id="publish-modal" class="modal-overlay hidden">
+  <div class="modal rename-modal-box">
+    <h3>نشر إلى تكامل خارجي</h3>
+    <p class="modal-note">النشر فعل منفصل عن حفظ/تعديل اللوحة — يرسل نسخة من بياناتها الحالية إلى نظام العميل المختار.</p>
+    <label>التكامل
+      <select id="publish-integration-select"></select>
+    </label>
+    <div id="publish-slot-choice" class="hidden" style="margin-top:10px">
+      <p class="modal-note">هذه اللوحة منشورة بالفعل تحت هذا التكامل (<span id="publish-existing-title"></span>).</p>
+      <label class="chk-row"><input type="radio" name="publish-mode" value="update" checked> تحديث المنشور الحالي (نفس المعرّف عند العميل)</label>
+      <label class="chk-row"><input type="radio" name="publish-mode" value="new"> نشر كنسخة منفصلة (معرّف جديد)</label>
+    </div>
+    <div id="publish-error" class="roles-error hidden"></div>
+    <div id="publish-success" class="hidden" style="margin-top:10px;color:var(--accent);font-size:13px">✓ تم النشر بنجاح.</div>
+    <div class="modal-actions">
+      <button type="button" id="publish-cancel">إلغاء</button>
+      <button type="button" id="publish-submit">نشر</button>
+    </div>
   </div>
 </div>
 
@@ -3850,6 +3962,11 @@ function renderDashboard() {
   // ShareController.Create).
   el('btn-share').disabled = !state.dashboardIsActive;
   el('btn-share').title = state.dashboardIsActive ? '' : 'فعّل اللوحة أولاً قبل مشاركتها — زر «✅ تفعيل اللوحة» بجانبه.';
+  // النشر إلى تكامل خارجي يحتاج لوحة مفعّلة (Active) بنفس شرط المشاركة أعلاه — لا معنى لنشر
+  // Draft أو نسخة مشاركة مجمّدة. مخفي تمامًا (مش معطّل فقط) لغير المسؤولين — انظر renderIntegrationsAvailability.
+  el('btn-publish').classList.toggle('hidden', !state.currentUser || state.currentUser.role !== 'Admin');
+  el('btn-publish').disabled = !state.dashboardIsActive;
+  el('btn-publish').title = state.dashboardIsActive ? 'نشر هذه اللوحة إلى نظام عميل خارجي' : 'فعّل اللوحة أولاً قبل نشرها.';
   if (!editable) state.editMode = false;
   updateUndoRedoButtons();
 
@@ -6521,6 +6638,7 @@ function showScreen(name) {
   if (name === 'sharelinks') loadShareList();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
+  if (name === 'integrations') loadIntegrations();
 }
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
@@ -6667,6 +6785,81 @@ function openShareModal() {
   el('share-modal').classList.remove('hidden');
 }
 el('btn-share').addEventListener('click', openShareModal);
+
+// ---------- نشر إلى تكامل خارجي (External Integrations Part A) ----------
+// A separate, explicit action from saving/editing — see PublishService's own remarks. Only
+// ever available for an Active dashboard (same gating as المشاركة above).
+async function openPublishModal() {
+  if (!state.dashboardIsActive || !state.currentHistoryId) { alert('يجب تفعيل اللوحة أولاً قبل نشرها.'); return; }
+  el('publish-error').classList.add('hidden');
+  el('publish-success').classList.add('hidden');
+  el('publish-slot-choice').classList.add('hidden');
+  const select = el('publish-integration-select');
+  select.innerHTML = '<option>جارٍ التحميل…</option>';
+  el('publish-modal').classList.remove('hidden');
+  try {
+    const res = await fetch('/api/integrations');
+    const integrations = res.ok ? await res.json() : [];
+    if (!integrations.length) {
+      select.innerHTML = '<option value="">لا توجد تكاملات — أنشئ واحدًا من شاشة «التكاملات الخارجية»</option>';
+      return;
+    }
+    select.innerHTML = integrations.map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('');
+    await checkExistingSlot();
+  } catch {
+    select.innerHTML = '<option value="">تعذّر تحميل قائمة التكاملات</option>';
+  }
+}
+el('btn-publish').addEventListener('click', openPublishModal);
+
+async function checkExistingSlot() {
+  const integrationId = el('publish-integration-select').value;
+  if (!integrationId) { el('publish-slot-choice').classList.add('hidden'); return; }
+  try {
+    const res = await fetch(`/api/integrations/${integrationId}/existing-slot?localHistoryId=${encodeURIComponent(state.currentHistoryId)}`);
+    const data = await res.json();
+    if (data.exists) {
+      el('publish-existing-title').textContent = data.title;
+      el('publish-slot-choice').dataset.slotId = data.slotId;
+      el('publish-slot-choice').classList.remove('hidden');
+      el('publish-modal').querySelector('input[name="publish-mode"][value="update"]').checked = true;
+    } else {
+      el('publish-slot-choice').classList.add('hidden');
+    }
+  } catch { el('publish-slot-choice').classList.add('hidden'); }
+}
+el('publish-integration-select').addEventListener('change', checkExistingSlot);
+
+el('publish-cancel').addEventListener('click', () => el('publish-modal').classList.add('hidden'));
+el('publish-modal').addEventListener('click', e => { if (e.target.id === 'publish-modal') el('publish-modal').classList.add('hidden'); });
+
+el('publish-submit').addEventListener('click', async () => {
+  const integrationId = el('publish-integration-select').value;
+  if (!integrationId) return;
+  const useExisting = !el('publish-slot-choice').classList.contains('hidden') &&
+    el('publish-modal').querySelector('input[name="publish-mode"]:checked')?.value === 'update';
+  const slotId = useExisting ? el('publish-slot-choice').dataset.slotId : undefined;
+
+  const btn = el('publish-submit');
+  btn.disabled = true;
+  el('publish-error').classList.add('hidden');
+  try {
+    const res = await fetch(`/api/integrations/${integrationId}/publish`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dashboardId: state.currentHistoryId, slotId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { el('publish-error').textContent = data.error || `فشل النشر (${res.status})`; el('publish-error').classList.remove('hidden'); return; }
+    el('publish-success').classList.remove('hidden');
+    setTimeout(() => el('publish-modal').classList.add('hidden'), 1200);
+  } catch (err) {
+    el('publish-error').textContent = 'تعذّر الوصول إلى الخادم: ' + err.message;
+    el('publish-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 el('share-goto-list').addEventListener('click', () => {
   el('share-modal').classList.add('hidden');
   showScreen('sharelinks');
@@ -6855,6 +7048,7 @@ function renderCurrentUser() {
   el('current-user-name').textContent = `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
   el('tab-users').classList.toggle('hidden', u.role !== 'Admin');
   el('tab-settings').classList.toggle('hidden', u.role !== 'Admin');
+  el('tab-integrations').classList.toggle('hidden', u.role !== 'Admin');
   el('usage-link').classList.toggle('hidden', u.role !== 'Admin');
 }
 
@@ -6883,6 +7077,14 @@ const IMAGE_READER_MODEL_PICKERS = {
   Ollama: { endpoint: 'ollama-models', rowId: 'settings-image-reader-ollama-row', selectId: 'settings-image-reader-ollama-select', noteId: 'settings-image-reader-ollama-note', activeKey: 'activeImageReaderOllamaModel', bodyKey: 'ollamaModel' },
   OpenAI: { endpoint: 'openai-models', rowId: 'settings-image-reader-openai-row', selectId: 'settings-image-reader-openai-select', noteId: 'settings-image-reader-openai-note', activeKey: 'activeImageReaderOpenAiModel', bodyKey: 'openAiModel' },
 };
+// Same shape again for External Integrations' visual-identity extraction picker — its own
+// independent choice, LlmSettingsStore.VisualIdentityReaderProvider, read/written through
+// PUT /api/llm-settings/visual-identity-reader. Unlike the two pickers above, this one also
+// carries an explicit, never-inferred "supports image input" checkbox (activeVisualIdentitySupportsImage).
+const VIS_ID_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-vis-id-ollama-row', selectId: 'settings-vis-id-ollama-select', noteId: 'settings-vis-id-ollama-note', activeKey: 'activeVisualIdentityOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-vis-id-openai-row', selectId: 'settings-vis-id-openai-select', noteId: 'settings-vis-id-openai-note', activeKey: 'activeVisualIdentityOpenAiModel', bodyKey: 'openAiModel' },
+};
 // Keyed by provider id, shared between both picker maps above — it's the same live list of
 // models either way (what exists), just used to pre-select a different activeKey per picker.
 state.settingsModelChoices = {};
@@ -6898,6 +7100,7 @@ async function loadSettingsPage() {
     renderSettingsInfoBadges();
     renderSettingsDocReaderProviders();
     renderSettingsImageReaderProviders();
+    renderSettingsVisIdProviders();
   } catch {
     el('settings-current').textContent = 'تعذّر تحميل إعدادات الموديل.';
     el('settings-providers').innerHTML = '';
@@ -7019,6 +7222,63 @@ el('settings-image-reader-save').addEventListener('click', async () => {
   }
 });
 
+// "معطّل" (id: '') plus the same three providers — same "genuinely disabled, no fallback"
+// contract as the document reader (never "use the dashboard-building provider"): sending a
+// logo image to a provider nobody explicitly vetted for image input would defeat the whole
+// point of the supports-image checkbox below.
+function renderSettingsVisIdProviders() {
+  const s = state.llmSettings;
+  const current = s.activeVisualIdentityProvider || '';
+  const options = [
+    { id: '', label: 'معطّل (استخراج الشعار بالصور غير متاح)', configured: true },
+    ...s.providers,
+  ];
+  el('settings-vis-id-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-vis-id-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : ''}
+    </label>`).join('');
+  el('settings-vis-id-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleVisIdModelRow(inp.value)));
+  toggleVisIdModelRow(current);
+  el('settings-vis-id-supports-image').checked = !!s.activeVisualIdentitySupportsImage;
+}
+
+el('settings-vis-id-save').addEventListener('click', async () => {
+  const provider = el('settings-vis-id-providers').querySelector('input:checked')?.value ?? '';
+  const picker = VIS_ID_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null, supportsImage: el('settings-vis-id-supports-image').checked };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-vis-id-save');
+  btn.disabled = true;
+  el('settings-vis-id-error').classList.add('hidden');
+  el('settings-vis-id-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/visual-identity-reader', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeVisualIdentityProvider = provider || null;
+    state.llmSettings.activeVisualIdentitySupportsImage = body.supportsImage;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsVisIdProviders();
+    el('settings-vis-id-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-vis-id-error').textContent = err.message;
+    el('settings-vis-id-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 function renderSettingsCurrent() {
   const s = state.llmSettings;
   const modelName = s.activeProvider === 'Ollama' ? s.activeOllamaModel : s.activeProvider === 'OpenAI' ? s.activeOpenAiModel : '';
@@ -7043,6 +7303,7 @@ function renderSettingsProviders() {
 function toggleSettingsModelRow(provider) { toggleModelRow(SETTINGS_MODEL_PICKERS, provider); }
 function toggleDocReaderModelRow(provider) { toggleModelRow(DOC_READER_MODEL_PICKERS, provider); }
 function toggleImageReaderModelRow(provider) { toggleModelRow(IMAGE_READER_MODEL_PICKERS, provider); }
+function toggleVisIdModelRow(provider) { toggleModelRow(VIS_ID_MODEL_PICKERS, provider); }
 
 function toggleModelRow(pickers, provider) {
   for (const [id, picker] of Object.entries(pickers)) {
@@ -7182,6 +7443,474 @@ el('lang-toggle').addEventListener('click', () => {
   el('lang-toggle').textContent = current === 'en' ? 'AR' : 'EN';
   el('lang-toggle').title = current === 'en' ? 'التبديل للعربية' : 'Switch to English';
 })();
+
+// ---------- التكاملات الخارجية (External Integrations) ----------
+// Admin-only screen over /api/integrations — settings CRUD, the three visual-identity paths
+// (manual/AI-suggest/extraction), the identity-transport NL-match+confirm flow, the publish
+// log, and the two deliverable downloads. Publishing itself lives on the dashboard toolbar's
+// نشر button (see btn-publish below) — never here, since it acts on an Active dashboard, not
+// on integration settings.
+state.integrations = [];
+state.currentIntegrationId = null;
+state.integrationDetail = null;
+state.viProposal = null; // last suggest/extract result, pending the analyst's review+apply
+state.identityMatch = null;
+
+async function loadIntegrations() {
+  el('integrations-list').innerHTML = '<div class="model-switch-note">جارٍ التحميل…</div>';
+  try {
+    const res = await fetch('/api/integrations');
+    if (!res.ok) throw new Error();
+    state.integrations = await res.json();
+  } catch { state.integrations = []; }
+  renderIntegrationsList();
+}
+
+function renderIntegrationsList() {
+  const box = el('integrations-list');
+  if (!state.integrations.length) { box.innerHTML = '<div class="model-switch-note">لا توجد تكاملات بعد.</div>'; return; }
+  box.innerHTML = state.integrations.map(i => `
+    <div class="integration-row" data-id="${esc(i.id)}">
+      <span class="integration-row-name">${esc(i.name)}</span>
+      <div class="integration-row-badges">
+        <span class="integration-badge ${i.writeApiConfigured ? 'ok' : 'warn'}">${i.writeApiConfigured ? '✓ نقطة الكتابة' : '⚠️ لا توجد نقطة كتابة'}</span>
+        <span class="integration-badge ${i.readApiConfigured ? 'ok' : 'warn'}">${i.readApiConfigured ? '✓ نقطة القراءة' : '⚠️ لا توجد نقطة قراءة'}</span>
+        <span class="integration-badge ${i.identityConfirmed ? 'ok' : 'warn'}">${i.identityConfirmed ? '✓ هوية المستخدم مؤكدة' : '⚠️ هوية المستخدم غير مؤكدة'}</span>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.integration-row').forEach(row =>
+    row.addEventListener('click', () => openIntegration(row.dataset.id)));
+}
+
+el('btn-new-integration').addEventListener('click', async () => {
+  const nameInput = el('new-integration-name');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  const res = await fetch('/api/integrations', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+  });
+  if (!res.ok) { alert('تعذّر إنشاء التكامل.'); return; }
+  const created = await res.json();
+  nameInput.value = '';
+  await loadIntegrations();
+  openIntegration(created.id);
+});
+
+async function openIntegration(id) {
+  state.currentIntegrationId = id;
+  state.viProposal = null;
+  state.identityMatch = null;
+  const res = await fetch('/api/integrations/' + id);
+  if (!res.ok) { alert('تعذّر تحميل التكامل.'); return; }
+  state.integrationDetail = await res.json();
+  const [dashboards, log] = await Promise.all([
+    fetch('/api/integrations/' + id + '/dashboards').then(r => r.ok ? r.json() : []),
+    fetch('/api/integrations/' + id + '/publish-log').then(r => r.ok ? r.json() : []),
+  ]);
+  state.integrationDashboards = dashboards;
+  state.integrationPublishLog = log;
+  renderIntegrationDetail();
+  el('integration-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderIntegrationDetail() {
+  const d = state.integrationDetail;
+  const box = el('integration-detail');
+  if (!d) { box.innerHTML = ''; return; }
+
+  const identityStatusHtml = d.identityConfirmed
+    ? `<span class="integration-badge ok">✓ مؤكدة — ${identityMechanismLabel(d.identityMechanism)} باسم "${esc(d.identityParameterName)}"</span>`
+    : (d.identityMechanism
+        ? `<span class="integration-badge warn">⚠️ محدّدة لكن غير مؤكدة — ${identityMechanismLabel(d.identityMechanism)} باسم "${esc(d.identityParameterName)}"</span>`
+        : `<span class="integration-badge warn">⚠️ لم تُحدَّد بعد</span>`);
+
+  box.innerHTML = `
+    <div class="settings-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">⚙️ ${esc(d.name)}</h3>
+        <button type="button" id="btn-delete-integration"
+          style="border:1px solid var(--danger);color:var(--danger);background:transparent;padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer">
+          🗑️ حذف التكامل</button>
+      </div>
+
+      <form id="integ-apis-form" class="integrations-form" style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الكتابة (Publish إليها)</div>
+          <div class="integrations-form-grid">
+            <label>رابط نقطة الكتابة (Write API URL)
+              <input type="text" id="ia-write-url" value="${escAttr(d.writeApiUrl)}" placeholder="https://client.example.com/api/dashboards">
+            </label>
+            <label>اسم رأس المصادقة (Header)
+              <input type="text" id="ia-write-auth-header" value="${escAttr(d.writeApiAuthHeader)}" placeholder="X-Api-Key">
+            </label>
+            <label>قيمة المصادقة ${d.writeApiAuthConfigured ? '<span class="hint">(محفوظة — اكتب لاستبدالها)</span>' : ''}
+              <input type="text" id="ia-write-auth-value" placeholder="${d.writeApiAuthConfigured ? '••••••••' : ''}">
+            </label>
+          </div>
+        </div>
+        <div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة القراءة (تستخدمها صفحة العرض)</div>
+          <div class="integrations-form-grid">
+            <label>رابط نقطة القراءة الأساسي (Read API base URL)
+              <input type="text" id="ia-read-url" value="${escAttr(d.readApiBaseUrl)}" placeholder="https://client.example.com/api/dashboards-read">
+            </label>
+          </div>
+          <p class="model-switch-note">استدعاء القائمة: GET على هذا الرابط. استدعاء لوحة واحدة: GET على نفس الرابط + "/" + معرّف اللوحة.</p>
+        </div>
+        <div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الدليل (اختياري — بحث للصفحة الإدارية)</div>
+          <div class="integrations-form-grid">
+            <label>رابط نقطة الدليل (Directory API)
+              <input type="text" id="ia-directory-url" value="${escAttr(d.directoryApiUrl)}" placeholder="https://client.example.com/api/directory">
+            </label>
+          </div>
+        </div>
+        <div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة كتابة الصلاحيات (تستخدمها الصفحة الإدارية)</div>
+          <div class="integrations-form-grid">
+            <label>رابط نقطة كتابة الصلاحيات
+              <input type="text" id="ia-perm-url" value="${escAttr(d.permissionsApiUrl)}" placeholder="https://client.example.com/api/dashboard-permissions">
+            </label>
+            <label>اسم رأس المصادقة (اختياري)
+              <input type="text" id="ia-perm-auth-header" value="${escAttr(d.permissionsApiAuthHeader)}">
+            </label>
+            <label>قيمة المصادقة ${d.permissionsApiAuthConfigured ? '<span class="hint">(محفوظة — اكتب لاستبدالها)</span>' : ''}
+              <input type="text" id="ia-perm-auth-value" placeholder="${d.permissionsApiAuthConfigured ? '••••••••' : ''}">
+            </label>
+          </div>
+        </div>
+        <div class="model-switch-actions">
+          <span id="ia-apis-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+          <button type="submit">حفظ نقاط الاتصال</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="settings-section">
+      <h3>الهوية البصرية</h3>
+      <div class="vi-swatches">
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(d.accentColor) || '#2AB37F'}"></span>أساسي: ${esc(d.accentColor || '(افتراضي)')}</div>
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(d.secondaryColor) || '#0B2A22'}"></span>ثانوي: ${esc(d.secondaryColor || '(افتراضي)')}</div>
+        <div class="vi-swatch">الخط: ${esc(d.fontFamily || '(افتراضي)')}</div>
+      </div>
+      <div class="vi-tabs">
+        <button type="button" class="vi-tab active" data-pane="vi-manual">يدوي</button>
+        <button type="button" class="vi-tab" data-pane="vi-suggest">اقتراح بالذكاء الاصطناعي</button>
+        <button type="button" class="vi-tab" data-pane="vi-extract">استخراج من ملف</button>
+      </div>
+
+      <div id="vi-manual" class="vi-pane active">
+        <form id="integ-vi-manual-form" class="integrations-form">
+          <div class="integrations-form-grid">
+            <label>اللون الأساسي (hex)
+              <input type="text" id="vi-accent" value="${escAttr(d.accentColor) || '#2AB37F'}" placeholder="#2AB37F">
+            </label>
+            <label>اللون الثانوي (hex)
+              <input type="text" id="vi-secondary" value="${escAttr(d.secondaryColor) || '#0B2A22'}" placeholder="#0B2A22">
+            </label>
+            <label>اسم الخط
+              <input type="text" id="vi-font" value="${escAttr(d.fontFamily) || 'Inter'}" placeholder="Inter">
+            </label>
+          </div>
+          <div class="model-switch-actions">
+            <span id="ia-vi-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+            <button type="submit">حفظ الهوية البصرية</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="vi-suggest" class="vi-pane">
+        <div class="integrations-form">
+          <label>وصف مختصر (اختياري لو عندك لون)
+            <textarea id="vi-desc" placeholder="مثال: أزرق داكن وذهبي، خط رسمي"></textarea>
+          </label>
+          <label>لون معروف بالفعل (اختياري لو عندك وصف)
+            <input type="text" id="vi-seed-color" placeholder="#123456">
+          </label>
+          <div class="model-switch-actions">
+            <button type="button" id="btn-vi-suggest">اقترح هوية بصرية</button>
+          </div>
+        </div>
+        <div id="vi-suggest-result"></div>
+      </div>
+
+      <div id="vi-extract" class="vi-pane">
+        <div class="integrations-form" style="gap:10px">
+          <div class="deliverable-row">
+            <button type="button" id="btn-vi-extract-palette">🎨 استخراج ألوان من صورة (بدون AI)</button>
+            <input type="file" id="vi-file-palette" accept="image/*" class="hidden">
+          </div>
+          <div class="deliverable-row">
+            <button type="button" id="btn-vi-extract-font">🔤 استخراج اسم خط من ملف PDF</button>
+            <input type="file" id="vi-file-font" accept="application/pdf" class="hidden">
+          </div>
+          <div class="deliverable-row">
+            <button type="button" id="btn-vi-extract-image">🖼️ استخراج هوية من صورة شعار (AI بصري)</button>
+            <input type="file" id="vi-file-image" accept="image/*" class="hidden">
+          </div>
+          <p class="model-switch-note">الاستخراج بالصورة (AI بصري) يحتاج موديل مُعد صراحةً كداعم للصور من
+            <a href="#" id="link-to-vi-model-settings">إعدادات نموذج استخراج الهوية البصرية</a> — غير كده هيترفض بوضوح.</p>
+        </div>
+        <div id="vi-extract-result"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>آلية تعريف المستخدم الحالي</h3>
+      <div class="identity-status">${identityStatusHtml}</div>
+      <div class="integrations-form">
+        <label>اوصف إزاي نظام العميل بيعرّف هوية المستخدم الحالي (بالعربي، بلغتك)
+          <textarea id="id-transport-desc" placeholder="مثال: بيبعتوا معرف المستخدم في رأس HTTP اسمه X-User-Id"></textarea>
+        </label>
+        <div class="model-switch-actions">
+          <button type="button" id="btn-id-match">طابق الوصف مع آلية</button>
+        </div>
+      </div>
+      <div id="id-match-result"></div>
+
+      <div class="integrations-form" style="margin-top:14px">
+        <div class="integrations-form-grid">
+          <label>الآلية
+            <select id="id-mechanism">
+              <option value="query" ${d.identityMechanism === 'query' ? 'selected' : ''}>معامل ضمن الرابط (Query Parameter)</option>
+              <option value="header" ${d.identityMechanism === 'header' ? 'selected' : ''}>رأس HTTP مخصّص (Header)</option>
+              <option value="cookie" ${d.identityMechanism === 'cookie' ? 'selected' : ''}>كوكي (Cookie)</option>
+            </select>
+          </label>
+          <label>الاسم الدقيق للمعامل/الرأس/الكوكي
+            <input type="text" id="id-param-name" value="${escAttr(d.identityParameterName)}" placeholder="X-User-Id">
+          </label>
+        </div>
+        <div class="model-switch-actions">
+          <span id="ia-id-pending-note" class="settings-save-note hidden">✓ تم الحفظ كمعلّق</span>
+          <button type="button" id="btn-id-save-pending">حفظ كمعلّق</button>
+          <button type="button" id="btn-id-confirm" style="background:var(--accent);color:#fff;border:0">✅ تأكيد وتفعيل</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>اللوحات المنشورة وسجل النشر</h3>
+      ${integrationDashboardsTableHtml(state.integrationDashboards)}
+      <div class="model-switch-note" style="margin-top:14px;font-weight:700;color:var(--ink)">آخر عمليات النشر</div>
+      ${integrationPublishLogTableHtml(state.integrationPublishLog)}
+    </div>
+
+    <div class="settings-section">
+      <h3>الملفات الجاهزة للعميل</h3>
+      <p class="model-switch-note">نزّل الملفين وسلّمهم لفريق العميل التقني ليستضيفوهم على نطاقهم
+        (انظر متطلبات_تكامل_غرفة_القيادة_للعميل). أعد التنزيل بعد أي تعديل في الإعدادات أعلاه —
+        الملفان لا يتحدّثان تلقائيًا.</p>
+      <div class="deliverable-row">
+        <a href="/api/integrations/${esc(d.id)}/deliverables/viewer"><button type="button">⬇️ صفحة العرض (viewer.html)</button></a>
+        <a href="/api/integrations/${esc(d.id)}/deliverables/admin"><button type="button">⬇️ صفحة إدارة الصلاحيات (admin.html)</button></a>
+      </div>
+    </div>
+  `;
+  wireIntegrationDetailHandlers();
+}
+
+function identityMechanismLabel(m) {
+  return m === 'query' ? 'معامل رابط' : m === 'header' ? 'رأس HTTP' : m === 'cookie' ? 'كوكي' : m || '';
+}
+
+function integrationDashboardsTableHtml(rows) {
+  if (!rows || !rows.length) return '<p class="model-switch-note">لا توجد لوحات منشورة بعد — استخدم زر "نشر" من شريط أدوات أي لوحة مفعّلة (Active).</p>';
+  return `<table class="integ-table"><thead><tr><th>العنوان</th><th>معرّف اللوحة عند العميل</th><th>أول نشر</th><th>آخر نشر</th><th>بواسطة</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${esc(r.title)}</td><td style="font-family:var(--mono);font-size:11px">${esc(r.externalDashboardId)}</td>
+      <td>${esc(relTime(r.firstPublishedAt))}</td><td>${esc(relTime(r.lastPublishedAt))}</td><td>${esc(r.lastPublishedBy)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function integrationPublishLogTableHtml(rows) {
+  if (!rows || !rows.length) return '<p class="model-switch-note">لا يوجد سجل نشر بعد.</p>';
+  return `<table class="integ-table"><thead><tr><th>الحالة</th><th>اللوحة</th><th>الوقت</th><th>تفاصيل</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${r.success ? '✅' : '❌'}</td><td>${esc(r.dashboardTitle)}</td>
+      <td>${esc(relTime(r.createdAt))}</td><td style="color:var(--danger);font-size:11px">${esc(r.error || '')}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function wireIntegrationDetailHandlers() {
+  const id = state.currentIntegrationId;
+
+  el('btn-delete-integration').addEventListener('click', async () => {
+    if (!confirm('حذف هذا التكامل نهائيًا؟ هيتشال معاه سجل النشر واللوحات المرتبطة به.')) return;
+    await fetch('/api/integrations/' + id, { method: 'DELETE' });
+    state.currentIntegrationId = null;
+    state.integrationDetail = null;
+    el('integration-detail').innerHTML = '';
+    await loadIntegrations();
+  });
+
+  el('integ-apis-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const body = {
+      writeApiUrl: el('ia-write-url').value.trim() || null,
+      writeApiAuthHeader: el('ia-write-auth-header').value.trim() || null,
+      writeApiAuthValue: el('ia-write-auth-value').value.trim() || null,
+      readApiBaseUrl: el('ia-read-url').value.trim() || null,
+      directoryApiUrl: el('ia-directory-url').value.trim() || null,
+      permissionsApiUrl: el('ia-perm-url').value.trim() || null,
+      permissionsApiAuthHeader: el('ia-perm-auth-header').value.trim() || null,
+      permissionsApiAuthValue: el('ia-perm-auth-value').value.trim() || null,
+    };
+    const res = await fetch('/api/integrations/' + id + '/apis', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { alert('تعذّر الحفظ.'); return; }
+    el('ia-apis-note').classList.remove('hidden');
+    await loadIntegrations();
+    // Keep the credential-value fields blank (already-saved secrets are represented by the
+    // "configured" placeholder text, never echoed back) — a full re-render after refetching
+    // the detail keeps everything else in sync.
+    const refreshed = await fetch('/api/integrations/' + id).then(r => r.json());
+    state.integrationDetail = refreshed;
+    renderIntegrationDetail();
+  });
+
+  document.querySelectorAll('.vi-tab').forEach(tab => tab.addEventListener('click', () => {
+    document.querySelectorAll('.vi-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.vi-pane').forEach(p => p.classList.toggle('active', p.id === tab.dataset.pane));
+  }));
+
+  el('integ-vi-manual-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const body = { accentColor: el('vi-accent').value.trim(), secondaryColor: el('vi-secondary').value.trim(), fontFamily: el('vi-font').value.trim() };
+    const res = await fetch('/api/integrations/' + id + '/visual-identity', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر الحفظ.'); return; }
+    el('ia-vi-note').classList.remove('hidden');
+    await openIntegration(id);
+  });
+
+  el('btn-vi-suggest').addEventListener('click', async () => {
+    const description = el('vi-desc').value.trim();
+    const seedColor = el('vi-seed-color').value.trim();
+    const btn = el('btn-vi-suggest');
+    btn.disabled = true;
+    el('vi-suggest-result').innerHTML = '<p class="model-switch-note">جارٍ التوليد…</p>';
+    try {
+      const res = await fetch('/api/integrations/' + id + '/visual-identity/suggest', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, seedColor }),
+      });
+      const data = await res.json();
+      if (!res.ok) { el('vi-suggest-result').innerHTML = `<p class="model-switch-note bad">${esc(data.error || 'تعذّر التوليد.')}</p>`; return; }
+      renderViProposal('vi-suggest-result', data);
+    } finally { btn.disabled = false; }
+  });
+
+  wireViFileButton('btn-vi-extract-palette', 'vi-file-palette', '/visual-identity/extract-palette', 'vi-extract-result');
+  wireViFileButton('btn-vi-extract-font', 'vi-file-font', '/visual-identity/extract-pdf-font', 'vi-extract-result', true);
+  wireViFileButton('btn-vi-extract-image', 'vi-file-image', '/visual-identity/extract-image', 'vi-extract-result');
+
+  el('link-to-vi-model-settings').addEventListener('click', e => { e.preventDefault(); showScreen('settings'); });
+
+  el('btn-id-match').addEventListener('click', async () => {
+    const description = el('id-transport-desc').value.trim();
+    if (!description) return;
+    const btn = el('btn-id-match');
+    btn.disabled = true;
+    el('id-match-result').innerHTML = '<p class="model-switch-note">جارٍ التحليل…</p>';
+    try {
+      const res = await fetch('/api/integrations/' + id + '/identity-transport/match', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description }),
+      });
+      const match = await res.json();
+      el('id-match-result').innerHTML = `<div class="identity-match-result">${esc(match.summary)}</div>`;
+      if (match.matched) {
+        el('id-mechanism').value = match.mechanism;
+        el('id-param-name').value = match.parameterName;
+      }
+    } finally { btn.disabled = false; }
+  });
+
+  el('btn-id-save-pending').addEventListener('click', async () => {
+    const mechanism = el('id-mechanism').value;
+    const parameterName = el('id-param-name').value.trim();
+    if (!parameterName) { alert('اكتب اسم المعامل/الرأس/الكوكي أولاً.'); return; }
+    const res = await fetch('/api/integrations/' + id + '/identity-transport/pending', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mechanism, parameterName }),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر الحفظ.'); return; }
+    el('ia-id-pending-note').classList.remove('hidden');
+    const refreshed = await fetch('/api/integrations/' + id).then(r => r.json());
+    state.integrationDetail = refreshed;
+  });
+
+  el('btn-id-confirm').addEventListener('click', async () => {
+    const mechanism = el('id-mechanism').value;
+    const parameterName = el('id-param-name').value.trim();
+    if (!parameterName) { alert('اكتب اسم المعامل/الرأس/الكوكي أولاً.'); return; }
+    const summary = `ستقرأ صفحة العرض هوية المستخدم من ${identityMechanismLabel(mechanism)} اسمه "${parameterName}"، وترسلها بنفس الاسم إلى نقطة القراءة عندكم في كل استدعاء. متأكد إنك عايز تفعّل ده؟`;
+    if (!confirm(summary)) return;
+    await fetch('/api/integrations/' + id + '/identity-transport/pending', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mechanism, parameterName }),
+    });
+    const res = await fetch('/api/integrations/' + id + '/identity-transport/confirm', { method: 'POST' });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر التأكيد.'); return; }
+    await openIntegration(id);
+  });
+}
+
+function renderViProposal(targetId, proposal) {
+  const note = proposal.adjusted ? `<div class="vi-proposal-note">⚠️ ${esc(proposal.adjustmentNote)}</div>` : '';
+  el(targetId).innerHTML = `
+    <div class="vi-proposal">
+      <div class="vi-swatches">
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(proposal.accentColor)}"></span>${esc(proposal.accentColor)}</div>
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(proposal.secondaryColor)}"></span>${esc(proposal.secondaryColor)}</div>
+        <div class="vi-swatch">${esc(proposal.fontFamily)}</div>
+      </div>
+      ${note}
+      <div class="model-switch-actions"><button type="button" id="btn-vi-apply-proposal">تطبيق هذا الاقتراح</button></div>
+    </div>`;
+  el('btn-vi-apply-proposal').addEventListener('click', () => {
+    el('vi-accent').value = proposal.accentColor;
+    el('vi-secondary').value = proposal.secondaryColor;
+    el('vi-font').value = proposal.fontFamily;
+    document.querySelector('.vi-tab[data-pane="vi-manual"]').click();
+  });
+}
+
+/// Font extraction only returns { fontFamily } (a PDF's own text carries no colors) — its
+/// proposal box merges that with the CURRENT accent/secondary rather than the full three-token
+/// UI the other two paths show, since there is nothing else to apply.
+function renderFontProposal(targetId, fontFamily) {
+  el(targetId).innerHTML = `
+    <div class="vi-proposal">
+      <div class="vi-swatch">الخط المستخرج: <strong>${esc(fontFamily)}</strong></div>
+      <div class="model-switch-actions"><button type="button" id="btn-vi-apply-font">تطبيق اسم الخط هذا</button></div>
+    </div>`;
+  el('btn-vi-apply-font').addEventListener('click', () => {
+    el('vi-font').value = fontFamily;
+    document.querySelector('.vi-tab[data-pane="vi-manual"]').click();
+  });
+}
+
+function wireViFileButton(btnId, inputId, endpointSuffix, resultId, isFont) {
+  const btn = el(btnId);
+  const input = el(inputId);
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    input.value = '';
+    if (!file) return;
+    const id = state.currentIntegrationId;
+    const form = new FormData();
+    form.append('file', file);
+    el(resultId).innerHTML = '<p class="model-switch-note">جارٍ المعالجة…</p>';
+    try {
+      const res = await fetch('/api/integrations/' + id + endpointSuffix, { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) { el(resultId).innerHTML = `<p class="model-switch-note bad">${esc(data.error || 'تعذّرت المعالجة.')}</p>`; return; }
+      if (isFont) renderFontProposal(resultId, data.fontFamily);
+      else renderViProposal(resultId, data);
+    } catch (err) {
+      el(resultId).innerHTML = `<p class="model-switch-note bad">${esc(err.message)}</p>`;
+    }
+  });
+}
+
+function escAttr(s) { return esc(s ?? '').replace(/"/g, '&quot;'); }
 
 // ---------- guided tour ----------
 // A short, dismissible walkthrough of the main screens — starts automatically once per user

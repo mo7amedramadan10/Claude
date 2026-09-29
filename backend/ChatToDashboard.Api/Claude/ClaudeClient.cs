@@ -14,7 +14,8 @@ namespace ChatToDashboard.Api.Claude;
 /// Claude asks for list_files / query_data / search_documents, we execute the tool
 /// and send back tool_result blocks, until Claude returns the final dashboard JSON.
 /// </summary>
-public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
+public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+    IIntegrationSetupAssistant, IVisualIdentityImageExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -230,6 +231,135 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             return null;
         }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant.SuggestVisualIdentityAsync — same tool-free,
+    /// text-in/JSON-out shape as SuggestTableNameAsync above. Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> SuggestVisualIdentityAsync(
+        string? description, string? seedColor, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentitySystemPrompt;
+        var userText = AnalyticsTools.VisualIdentityUserMessage(description, seedColor);
+        var trace = _usage.Begin("Anthropic", _model, "🎨 اقتراح هوية بصرية لتكامل خارجي", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant.SuggestFontFromPdfTextAsync. Never throws.</summary>
+    public async Task<string?> SuggestFontFromPdfTextAsync(
+        string extractedPdfText, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.FontExtractionSystemPrompt;
+        var userText = AnalyticsTools.FontExtractionUserMessage(extractedPdfText);
+        var trace = _usage.Begin("Anthropic", _model, "🔤 استخراج اسم خط من PDF", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            await trace.CompleteAsync(true, text, null, ct);
+            return string.Equals(text, "NONE", StringComparison.OrdinalIgnoreCase) || text.Length == 0 ? null : text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant.MatchIdentityTransportAsync — Part C. Never
+    /// throws; any failure falls back to IdentityTransportMatch.Matched = false, same as an
+    /// unclear description would, so the analyst is always asked to clarify rather than seeing
+    /// an error.</summary>
+    public async Task<IdentityTransportMatch> MatchIdentityTransportAsync(
+        string description, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.IdentityTransportSystemPrompt;
+        var userText = AnalyticsTools.IdentityTransportUserMessage(description);
+        var trace = _usage.Begin("Anthropic", _model, "🔑 مطابقة آلية تعريف المستخدم", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseIdentityTransportMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new IdentityTransportMatch(false, null, null, "تعذّر تحليل الوصف — حاول تاني أو أدخل الآلية يدويًا.");
+        }
+    }
+
+    /// <summary>See IVisualIdentityImageExtractor — a single image, tool-free turn, same JSON
+    /// contract as SuggestVisualIdentityAsync above (VisualIdentitySystemPrompt vs.
+    /// VisualIdentityImageSystemPrompt only differ in describing text vs. an image as input).
+    /// Never throws. Callers must already have verified LlmSettingsStore's
+    /// VisualIdentitySupportsImage flag before reaching here (see VisualIdentityImageRouter) —
+    /// this method sends whatever image it is given unconditionally.</summary>
+    public async Task<VisualIdentitySuggestion?> ExtractVisualIdentityFromImageAsync(
+        string imageDataUrl, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentityImageSystemPrompt;
+        if (!TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
+            return null;
+
+        var content = new JsonArray
+        {
+            new JsonObject
+            {
+                ["type"] = "image",
+                ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
+            },
+            new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.VisualIdentityImageInstruction },
+        };
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = content } };
+
+        var trace = _usage.Begin("Anthropic", _model, "🎨 استخراج هوية بصرية من صورة", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var responseContent = response["content"]?.AsArray()
+                ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+            var text = string.Concat(responseContent
+                .Where(b => b?["type"]?.GetValue<string>() == "text")
+                .Select(b => b!["text"]!.GetValue<string>())).Trim();
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>Shared by the three tool-free text-only helpers above — calls the API with one
+    /// plain user turn and returns the concatenated, trimmed text content. Throws on any
+    /// failure (including an empty response array) — each caller wraps this in its own
+    /// try/catch since each needs its own fallback value.</summary>
+    private async Task<string> CallSingleTextTurnAsync(string systemPrompt, string userText, UsageTrace trace, CancellationToken ct)
+    {
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+        var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+        var responseContent = response["content"]?.AsArray()
+            ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+        return string.Concat(responseContent
+            .Where(b => b?["type"]?.GetValue<string>() == "text")
+            .Select(b => b!["text"]!.GetValue<string>())).Trim();
     }
 
     /// <summary>

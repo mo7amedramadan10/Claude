@@ -26,7 +26,8 @@ namespace ChatToDashboard.Api.Ollama;
 ///   (see UsageTrace.RecordTurn, which already falls back to the response's top level).
 /// - "stream" is NOT omittable — Ollama defaults to streaming, so every request pins it false.
 /// </summary>
-public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
+public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+    IIntegrationSetupAssistant, IVisualIdentityImageExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -338,6 +339,127 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             return null;
         }
+    }
+
+    /// <summary>See ClaudeClient.SuggestVisualIdentityAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> SuggestVisualIdentityAsync(
+        string? description, string? seedColor, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentitySystemPrompt;
+        var userText = AnalyticsTools.VisualIdentityUserMessage(description, seedColor);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🎨 اقتراح هوية بصرية لتكامل خارجي", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.SuggestFontFromPdfTextAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<string?> SuggestFontFromPdfTextAsync(
+        string extractedPdfText, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.FontExtractionSystemPrompt;
+        var userText = AnalyticsTools.FontExtractionUserMessage(extractedPdfText);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🔤 استخراج اسم خط من PDF", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            await trace.CompleteAsync(true, text, null, ct);
+            return string.Equals(text, "NONE", StringComparison.OrdinalIgnoreCase) || text.Length == 0 ? null : text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.MatchIdentityTransportAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<IdentityTransportMatch> MatchIdentityTransportAsync(
+        string description, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.IdentityTransportSystemPrompt;
+        var userText = AnalyticsTools.IdentityTransportUserMessage(description);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🔑 مطابقة آلية تعريف المستخدم", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseIdentityTransportMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new IdentityTransportMatch(false, null, null, "تعذّر تحليل الوصف — حاول تاني أو أدخل الآلية يدويًا.");
+        }
+    }
+
+    /// <summary>See IVisualIdentityImageExtractor — its own sub-model choice
+    /// (VisualIdentityReaderOllamaModel), independent of every other model field. A single
+    /// image, sent the same "images" field way ExtractDocumentTextAsync's per-page loop does.
+    /// Callers must already have verified VisualIdentitySupportsImage before reaching here (see
+    /// VisualIdentityImageRouter). Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> ExtractVisualIdentityFromImageAsync(
+        string imageDataUrl, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentityImageSystemPrompt;
+        if (!TryExtractBase64(imageDataUrl, out var base64Data))
+            return null;
+
+        var model = (await _settings.GetVisualIdentityReaderAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🎨 استخراج هوية بصرية من صورة", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] = AnalyticsTools.VisualIdentityImageInstruction,
+                    ["images"] = new JsonArray { CompressForGateway(base64Data) },
+                },
+            };
+            var response = await CallChatAsync(model, messages, null, trace, ct);
+            var text = (response["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>Shared by the three tool-free text-only helpers above — see
+    /// ClaudeClient.CallSingleTextTurnAsync.</summary>
+    private async Task<string> CallSingleTextTurnAsync(string model, string systemPrompt, string userText, UsageTrace trace, CancellationToken ct)
+    {
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = userText },
+        };
+        var response = await CallChatAsync(model, messages, null, trace, ct);
+        return (response["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
     }
 
     /// <summary>Pulls the base64 payload out of a "data:&lt;mime&gt;;base64,&lt;data&gt;" URL —

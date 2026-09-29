@@ -14,7 +14,8 @@ namespace ChatToDashboard.Api.OpenAi;
 /// loop as the Claude client: the model requests list_files / query_data / search_documents,
 /// we execute each call and append a "tool" message, until it returns the dashboard JSON.
 /// </summary>
-public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
+public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+    IIntegrationSetupAssistant, IVisualIdentityImageExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -221,6 +222,128 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             return null;
         }
+    }
+
+    /// <summary>See ClaudeClient.SuggestVisualIdentityAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> SuggestVisualIdentityAsync(
+        string? description, string? seedColor, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentitySystemPrompt;
+        var userText = AnalyticsTools.VisualIdentityUserMessage(description, seedColor);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🎨 اقتراح هوية بصرية لتكامل خارجي", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.SuggestFontFromPdfTextAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<string?> SuggestFontFromPdfTextAsync(
+        string extractedPdfText, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.FontExtractionSystemPrompt;
+        var userText = AnalyticsTools.FontExtractionUserMessage(extractedPdfText);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🔤 استخراج اسم خط من PDF", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            await trace.CompleteAsync(true, text, null, ct);
+            return string.Equals(text, "NONE", StringComparison.OrdinalIgnoreCase) || text.Length == 0 ? null : text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.MatchIdentityTransportAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<IdentityTransportMatch> MatchIdentityTransportAsync(
+        string description, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.IdentityTransportSystemPrompt;
+        var userText = AnalyticsTools.IdentityTransportUserMessage(description);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🔑 مطابقة آلية تعريف المستخدم", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseIdentityTransportMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new IdentityTransportMatch(false, null, null, "تعذّر تحليل الوصف — حاول تاني أو أدخل الآلية يدويًا.");
+        }
+    }
+
+    /// <summary>See IVisualIdentityImageExtractor — its own sub-model choice
+    /// (VisualIdentityReaderOpenAiModel), independent of every other model field. Callers must
+    /// already have verified VisualIdentitySupportsImage before reaching here (see
+    /// VisualIdentityImageRouter). Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> ExtractVisualIdentityFromImageAsync(
+        string imageDataUrl, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentityImageSystemPrompt;
+        var content = new JsonArray
+        {
+            new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.VisualIdentityImageInstruction },
+            new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } },
+        };
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = content },
+        };
+
+        var model = (await _settings.GetVisualIdentityReaderAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🎨 استخراج هوية بصرية من صورة", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+            var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
+                ?? throw new InvalidOperationException("OpenAI API response had no choices.");
+            var text = (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>Shared by the three tool-free text-only helpers above — see
+    /// ClaudeClient.CallSingleTextTurnAsync.</summary>
+    private async Task<string> CallSingleTextTurnAsync(string model, string systemPrompt, string userText, UsageTrace trace, CancellationToken ct)
+    {
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = userText },
+        };
+        var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+        var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
+            ?? throw new InvalidOperationException("OpenAI API response had no choices.");
+        return (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
     }
 
     /// <summary>
