@@ -51,6 +51,20 @@ public interface IIntegrationSetupAssistant
     /// system identifies the current user (e.g. "بيبعتوا X-User-Id في الهيدر").</param>
     Task<IdentityTransportMatch> MatchIdentityTransportAsync(
         string description, AppUser? requestingUser = null, CancellationToken ct = default);
+
+    /// <summary>"Build the dashboard directly on the client's own tables" — a faithful SQL-to-
+    /// SQL translation of one widget's query from this app's own schema to the external
+    /// client's real one (see ExternalIntegration.ClientSchemaDescription), so Publish can ship
+    /// a query the client's generated connector service can run verbatim, live, on every
+    /// viewer.html open — never this app's own internal SQL, which is meaningless (and usually
+    /// unreachable) outside this app's own database.</summary>
+    /// <param name="originalSql">This widget's own internal query, if it has one (see
+    /// DashboardWidget.Query) — given purely as an intent reference, never executed as-is.</param>
+    /// <returns>The retargeted query, or null if no honest equivalent exists against the given
+    /// schema (never a guess) — PublishService leaves such a widget's Sql unset in that case.</returns>
+    Task<string?> RetargetSqlAsync(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
+        AppUser? requestingUser = null, CancellationToken ct = default);
 }
 
 /// <summary>

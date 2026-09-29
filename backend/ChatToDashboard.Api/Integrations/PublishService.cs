@@ -1,24 +1,25 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ChatToDashboard.Api.History;
+using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.Integrations;
 
 /// <summary>
-/// Structure-only shape of a widget sent to a client's write API — a Publish is a design
-/// change (which widgets exist, their type/title/layout), never a data delivery. Deliberately
-/// carries no values at all: no <see cref="DashboardWidget.Data"/>, no <see
-/// cref="DashboardWidget.Forecast"/>, no <see cref="DashboardWidget.Comparison"/>, and no <see
-/// cref="DashboardWidget.Query"/> (the internal table/SQL that produced a value, meaningless
-/// outside this app's own schema anyway). Every current number a viewer shows is computed live,
-/// on every page open, by the CLIENT'S OWN read API — never by us, never stored by us past this
-/// call. What stays here (type, title, xKey/yKey, the ⓘ source text) is exactly the human-
-/// readable context the client's own engineers need to wire that widget up to their live data
-/// once, the same ordinary integration work any API consumer does — no machine-parseable query
-/// descriptor is needed for that, and this shape makes no distinction between a widget built
-/// via the "+ إضافة عنصر" wizard and one built from a chat question: both carry the same fields.
+/// A widget sent to a client's write API — "build the dashboard directly on the client's own
+/// tables". A Publish is a design change (which widgets exist, their type/title/layout, and now
+/// the live query each one runs), never a data delivery: it deliberately carries no computed
+/// values — no <see cref="DashboardWidget.Data"/>, no <see cref="DashboardWidget.Forecast"/>,
+/// no <see cref="DashboardWidget.Comparison"/> — those are always computed live, on every
+/// viewer.html open, by the generated connector service running the query below against the
+/// client's own live database. <see cref="Sql"/> is never this app's own internal query — it is
+/// a fresh translation of it against the client's real schema (see
+/// IIntegrationSetupAssistant.RetargetSqlAsync and PublishService.RetargetWidgetAsync), so it
+/// can run verbatim there. Null when the widget had no internal query to translate, or no
+/// honest equivalent exists against the client's given schema — the connector then serves that
+/// widget with no data rather than guessing.
 /// </summary>
 public class PublishedWidget
 {
@@ -27,14 +28,15 @@ public class PublishedWidget
     [JsonPropertyName("xKey")] public string? XKey { get; set; }
     [JsonPropertyName("yKey")] public string? YKey { get; set; }
     [JsonPropertyName("source")] public string? Source { get; set; }
+    [JsonPropertyName("sql")] public string? Sql { get; set; }
 }
 
 /// <summary>
-/// What a Publish actually sends: the dashboard's shape, not its numbers. The client's write
-/// API stores this; its read API is expected to return this same structure back but with each
-/// widget's current live values freshly computed and attached (a "data" field per widget) —
-/// see IntegrationDeliverables' viewer.html, which renders whatever "data" the read API's
-/// response carries and never expects it to already be here.
+/// What a Publish actually sends: the dashboard's shape plus, per widget, the live query that
+/// computes its current value on the client's own database — never a value itself. The
+/// generated connector service (Deliverable 3) stores this on its write endpoint, and on every
+/// read request re-runs each widget's Sql against the target database it's configured with,
+/// attaching a fresh "data" field per widget before answering viewer.html.
 /// </summary>
 public class PublishedDashboardPayload
 {
@@ -65,14 +67,17 @@ public class PublishService
 {
     private readonly HistoryStore _history;
     private readonly IntegrationStore _integrations;
+    private readonly IIntegrationSetupAssistant _assistant;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PublishService> _logger;
 
     public PublishService(
-        HistoryStore history, IntegrationStore integrations, IHttpClientFactory httpClientFactory, ILogger<PublishService> logger)
+        HistoryStore history, IntegrationStore integrations, IIntegrationSetupAssistant assistant,
+        IHttpClientFactory httpClientFactory, ILogger<PublishService> logger)
     {
         _history = history;
         _integrations = integrations;
+        _assistant = assistant;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -115,7 +120,8 @@ public class PublishService
             slot = await _integrations.CreateSlotAsync(integrationId, localHistoryId, entry.Question, DisplayName(requestingUser), ct);
         }
 
-        var widgets = ParseWidgets(entry.WidgetsJson);
+        var rawWidgets = ParseWidgets(entry.WidgetsJson);
+        var widgets = await BuildPublishedWidgetsAsync(rawWidgets, integration, requestingUser, ct);
         var payload = new PublishedDashboardPayload
         {
             DashboardId = slot.ExternalDashboardId,
@@ -168,29 +174,57 @@ public class PublishService
 
     private static string DisplayName(AppUser user) => user.DisplayName is { Length: > 0 } d ? d : user.Username;
 
-    /// <summary>Deserializes the Active dashboard's stored widgets and strips them down to
-    /// PublishedWidget's structure-only shape (see its own remarks on why every value-bearing
-    /// field — data/forecast/comparison/query — is dropped).</summary>
-    private static List<PublishedWidget> ParseWidgets(string widgetsJson)
+    /// <summary>Deserializes the Active dashboard's stored widgets as-is — including each
+    /// one's own internal Query, which BuildPublishedWidgetsAsync below uses purely as a
+    /// translation reference (never published verbatim; see PublishedWidget's remarks).</summary>
+    private static List<DashboardWidget> ParseWidgets(string widgetsJson)
     {
-        List<DashboardWidget>? widgets;
         try
         {
-            widgets = JsonSerializer.Deserialize<List<DashboardWidget>>(widgetsJson);
+            return JsonSerializer.Deserialize<List<DashboardWidget>>(widgetsJson) ?? new List<DashboardWidget>();
         }
         catch (JsonException)
         {
-            return new List<PublishedWidget>();
+            return new List<DashboardWidget>();
         }
-        if (widgets is null) return new List<PublishedWidget>();
+    }
 
-        return widgets.Select(w => new PublishedWidget
+    /// <summary>Strips each widget to PublishedWidget's shape and, when the integration has a
+    /// client schema on file, retargets its internal query to run against that schema (see
+    /// IIntegrationSetupAssistant.RetargetSqlAsync) — "build the dashboard directly on the
+    /// client's own tables". No client schema configured, no internal query to translate from,
+    /// a translation the model couldn't produce, or one that fails the same read-only check
+    /// every internally-executed query passes: any of these just leaves that widget's Sql null
+    /// rather than failing the whole publish — a dashboard can ship with some widgets live and
+    /// others not yet wired up.</summary>
+    private async Task<List<PublishedWidget>> BuildPublishedWidgetsAsync(
+        List<DashboardWidget> widgets, ExternalIntegration integration, AppUser requestingUser, CancellationToken ct)
+    {
+        var hasClientSchema = !string.IsNullOrWhiteSpace(integration.ClientDbProvider)
+            && !string.IsNullOrWhiteSpace(integration.ClientSchemaDescription);
+
+        var result = new List<PublishedWidget>(widgets.Count);
+        foreach (var w in widgets)
         {
-            Type = w.Type,
-            Title = w.Title,
-            XKey = w.XKey,
-            YKey = w.YKey,
-            Source = w.Source,
-        }).ToList();
+            string? sql = null;
+            if (hasClientSchema)
+            {
+                var candidate = await _assistant.RetargetSqlAsync(
+                    w.Title, w.Query?.Sql, integration.ClientDbProvider!, integration.ClientSchemaDescription!, requestingUser, ct);
+                if (candidate is not null && AnalyticsTools.ValidateReadOnlySql(candidate) is null)
+                    sql = candidate;
+            }
+
+            result.Add(new PublishedWidget
+            {
+                Type = w.Type,
+                Title = w.Title,
+                XKey = w.XKey,
+                YKey = w.YKey,
+                Source = w.Source,
+                Sql = sql,
+            });
+        }
+        return result;
     }
 }

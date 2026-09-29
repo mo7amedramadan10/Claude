@@ -1,5 +1,7 @@
 using ChatToDashboard.Api.Data;
 using Dapper;
+using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Integrations;
 
@@ -52,6 +54,32 @@ public class IntegrationStore
                  [CreatedBy] NVARCHAR(200), [CreatedAt] DATETIME2, [UpdatedAt] DATETIME2)
                """;
         await using (var cmd = connection.CreateCommand()) { cmd.CommandText = integrationsSql; await cmd.ExecuteNonQueryAsync(ct); }
+
+        // Migration for a table created before Publish could retarget a widget's query to the
+        // client's own real schema (see PublishService/RetargetSqlAsync) — null/empty means no
+        // schema was ever given, so Publish leaves every widget's Sql unset rather than
+        // guessing at a translation with nothing to translate against.
+        foreach (var (column, sqliteType, sqlServerType) in new[]
+                 {
+                     ("ClientDbProvider", "TEXT", "NVARCHAR(20)"),
+                     ("ClientSchemaDescription", "TEXT", "NVARCHAR(MAX)"),
+                 })
+        {
+            try
+            {
+                await using var alter = connection.CreateCommand();
+                alter.CommandText = _db.Provider == DbProvider.Sqlite
+                    ? $"ALTER TABLE {IntegrationsTable} ADD COLUMN \"{column}\" {sqliteType}"
+                    : $"ALTER TABLE {IntegrationsTable} ADD [{column}] {sqlServerType}";
+                await alter.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+            {
+            }
+            catch (SqlException ex) when (ex.Number == 2705)
+            {
+            }
+        }
 
         var slotsSql = _db.Provider == DbProvider.Sqlite
             ? $"""
@@ -162,6 +190,21 @@ public class IntegrationStore
             $"UPDATE {IntegrationsTable} SET AccentColor = @accentColor, SecondaryColor = @secondaryColor, " +
             "FontFamily = @fontFamily, UpdatedAt = @updatedAt WHERE Id = @id",
             new { id, accentColor, secondaryColor, fontFamily, updatedAt = DateTime.UtcNow });
+    }
+
+    /// <summary>The client's own database shape — captured once so Publish can retarget each
+    /// widget's query to run directly against it (see PublishService). Never touches the
+    /// connection string itself; that stays local to the generated connector service, never
+    /// given to us — see IntegrationDeliverables' connector project.</summary>
+    public async Task UpdateClientSchemaAsync(
+        string id, string clientDbProvider, string clientSchemaDescription, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {IntegrationsTable} SET ClientDbProvider = @clientDbProvider, " +
+            "ClientSchemaDescription = @clientSchemaDescription, UpdatedAt = @updatedAt WHERE Id = @id",
+            new { id, clientDbProvider, clientSchemaDescription, updatedAt = DateTime.UtcNow });
     }
 
     /// <summary>Stores a matched-but-not-yet-confirmed mechanism/parameter pair. Never sets

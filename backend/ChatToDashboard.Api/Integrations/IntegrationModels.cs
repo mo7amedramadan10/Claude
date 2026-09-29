@@ -10,6 +10,18 @@ public static class IdentityTransportMechanisms
     public static readonly IReadOnlyList<string> All = new[] { Query, Header, Cookie };
 }
 
+/// <summary>The two database engines the generated connector service (Deliverable 3) knows how
+/// to run a live query against — the same pair this app's own DataStore already supports, so
+/// the exact same driver packages (Microsoft.Data.SqlClient / Microsoft.Data.Sqlite) cover it.
+/// A client on a different engine isn't supported yet — surfaced as a clear "غير مدعوم" choice
+/// rather than silently accepting a value the connector can't act on.</summary>
+public static class ClientDbProviders
+{
+    public const string SqlServer = "SqlServer";
+    public const string Sqlite = "Sqlite";
+    public static readonly IReadOnlyList<string> All = new[] { SqlServer, Sqlite };
+}
+
 /// <summary>
 /// One external client system's whole integration setup — everything Part A/B/C describe:
 /// where we publish to (write API), what the client's own read/directory APIs are (baked into
@@ -60,6 +72,14 @@ public class ExternalIntegration
     public string? AccentColor { get; set; }
     public string? SecondaryColor { get; set; }
     public string? FontFamily { get; set; }
+
+    // The client's OWN database — tables/columns/types described once at integration setup, so
+    // Publish can retarget each widget's query to run directly against their real schema
+    // instead of ours (see AnalyticsTools.RetargetSqlSystemPrompt and PublishService). The
+    // connection string itself is never given to us — see the generated connector service,
+    // which the client configures with it locally, entirely outside our reach.
+    public string? ClientDbProvider { get; set; }
+    public string? ClientSchemaDescription { get; set; }
 
     public string CreatedBy { get; set; } = "";
     public DateTime CreatedAt { get; set; }
@@ -114,6 +134,12 @@ public class UpdateIntegrationApisRequest
     [JsonPropertyName("permissionsApiUrl")] public string? PermissionsApiUrl { get; set; }
     [JsonPropertyName("permissionsApiAuthHeader")] public string? PermissionsApiAuthHeader { get; set; }
     [JsonPropertyName("permissionsApiAuthValue")] public string? PermissionsApiAuthValue { get; set; }
+}
+
+public class UpdateClientSchemaRequest
+{
+    [JsonPropertyName("clientDbProvider")] public string ClientDbProvider { get; set; } = "";
+    [JsonPropertyName("clientSchemaDescription")] public string ClientSchemaDescription { get; set; } = "";
 }
 
 public class ManualVisualIdentityRequest

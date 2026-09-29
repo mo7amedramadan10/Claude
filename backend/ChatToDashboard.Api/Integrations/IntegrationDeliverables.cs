@@ -1,21 +1,25 @@
+using System.IO.Compression;
+using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace ChatToDashboard.Api.Integrations;
 
 /// <summary>
-/// Generates the two self-contained HTML files handed to a client (Part D and Part E) — each a
-/// single file with its own config baked in at generation time (read/directory/permissions API
-/// URLs, the confirmed identity-transport mechanism, the visual-identity tokens). Regenerate and
-/// re-download after changing any of those settings; nothing here calls back to our own backend
-/// at view-time — both files only ever talk to the client's own APIs, per Part D/E's "no
-/// dependency on our systems at view-time" requirement.
+/// Generates the three self-contained deliverables handed to a client. Deliverables 1 and 2
+/// (Part D and Part E) are single HTML files with their own config baked in at generation time
+/// (read/directory/permissions API URLs, the confirmed identity-transport mechanism, the
+/// visual-identity tokens) — nothing in either one calls back to our own backend at view-time,
+/// per Part D/E's "no dependency on our systems at view-time" requirement. Deliverable 3 is the
+/// connector microservice source (../IntegrationConnector, embedded into this assembly — see
+/// this project's .csproj) that the client builds and deploys themselves, pre-filled with
+/// whatever of its config this integration's settings already answer.
 ///
-/// Widget rendering covers the five core types (kpi/bar/line/pie/table) via Chart.js from a CDN
-/// — a deliberate, documented scope choice: reproducing every specialized widget type this
-/// app's own design system has (progress-table/trend-matrix/status-bar/radial-gauge/linear-
-/// gauge) inside a hand-generated single file would be its own multi-week effort; an
-/// unrecognized type falls back to a plain key/value table so nothing silently disappears.
+/// Widget rendering (Deliverables 1/2) covers the five core types (kpi/bar/line/pie/table) via
+/// Chart.js from a CDN — a deliberate, documented scope choice: reproducing every specialized
+/// widget type this app's own design system has (progress-table/trend-matrix/status-bar/radial-
+/// gauge/linear-gauge) inside a hand-generated single file would be its own multi-week effort;
+/// an unrecognized type falls back to a plain key/value table so nothing silently disappears.
 /// </summary>
 public class IntegrationDeliverables
 {
@@ -467,6 +471,53 @@ public class IntegrationDeliverables
         </html>
         """;
     }
+
+    /// <summary>Deliverable 3 — zips up the connector project's embedded source
+    /// (Program.cs/.csproj/README.md unchanged; appsettings.json with whatever this integration
+    /// already answers pre-filled) so the client can unzip, fill in their own
+    /// TargetConnectionString locally, and `dotnet run`. Never includes a connection string or
+    /// any other client secret — those never reach this app (see ExternalIntegration's remarks
+    /// on ClientDbProvider/ClientSchemaDescription).</summary>
+    public byte[] BuildConnectorZip(ExternalIntegration integration)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddEmbeddedEntry(zip, "connector.Program.cs", "Program.cs");
+            AddEmbeddedEntry(zip, "connector.IntegrationConnector.csproj", "IntegrationConnector.csproj");
+            AddEmbeddedEntry(zip, "connector.README.md", "README.md");
+
+            var appsettings = ReadEmbeddedText("connector.appsettings.json");
+            appsettings = appsettings
+                .Replace("\"TargetDbProvider\": \"SqlServer\"", $"\"TargetDbProvider\": \"{(integration.ClientDbProvider is { Length: > 0 } p ? p : "SqlServer")}\"")
+                .Replace("\"WriteApiKey\": \"\"", $"\"WriteApiKey\": \"{JsonEscape(integration.WriteApiAuthValue ?? "")}\"")
+                .Replace("\"WriteApiAuthHeader\": \"X-Api-Key\"", $"\"WriteApiAuthHeader\": \"{JsonEscape(integration.WriteApiAuthHeader is { Length: > 0 } h ? h : "X-Api-Key")}\"")
+                .Replace("\"IdentityParameterName\": \"\"", $"\"IdentityParameterName\": \"{(integration.IdentityConfirmed ? JsonEscape(integration.IdentityParameterName ?? "") : "")}\"");
+            var entry = zip.CreateEntry("appsettings.json", CompressionLevel.Optimal);
+            using (var writer = new StreamWriter(entry.Open()))
+                writer.Write(appsettings);
+        }
+        return ms.ToArray();
+    }
+
+    private static void AddEmbeddedEntry(ZipArchive zip, string resourceName, string entryName)
+    {
+        var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
+        using var source = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded connector resource not found: {resourceName}");
+        using var target = entry.Open();
+        source.CopyTo(target);
+    }
+
+    private static string ReadEmbeddedText(string resourceName)
+    {
+        using var source = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded connector resource not found: {resourceName}");
+        using var reader = new StreamReader(source);
+        return reader.ReadToEnd();
+    }
+
+    private static string JsonEscape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     private static (string Accent, string Secondary, string Font) ResolveTokens(ExternalIntegration integration) => (
         integration.AccentColor is { Length: > 0 } a ? a : "#2AB37F",

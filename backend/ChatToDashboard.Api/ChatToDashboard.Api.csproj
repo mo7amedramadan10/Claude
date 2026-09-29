@@ -22,4 +22,15 @@
     <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
   </ItemGroup>
 
+  <!-- The connector deliverable (Part D's third artifact) is a real standalone project the
+       client builds/deploys themselves (../IntegrationConnector) — never referenced or built as
+       part of this solution. Its source files are embedded here only so ConnectorPackager can
+       zip them up at download time regardless of how this app is deployed. -->
+  <ItemGroup>
+    <EmbeddedResource Include="../IntegrationConnector/Program.cs" LogicalName="connector.Program.cs" />
+    <EmbeddedResource Include="../IntegrationConnector/IntegrationConnector.csproj" LogicalName="connector.IntegrationConnector.csproj" />
+    <EmbeddedResource Include="../IntegrationConnector/README.md" LogicalName="connector.README.md" />
+    <EmbeddedResource Include="../IntegrationConnector/appsettings.json" LogicalName="connector.appsettings.json" />
+  </ItemGroup>
+
 </Project>

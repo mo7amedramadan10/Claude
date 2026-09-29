@@ -226,6 +226,26 @@ public class LlmRouter : IDashboardGenerator, ITableNamingAssistant, IIntegratio
         }
     }
 
+    /// <summary>See IIntegrationSetupAssistant.RetargetSqlAsync — same routing as
+    /// SuggestVisualIdentityAsync above. Any failure falls back to null (no live query for this
+    /// widget), never a guessed/broken one.</summary>
+    public async Task<string?> RetargetSqlAsync(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        try
+        {
+            return await ResolveIntegrationAssistant(ct)
+                is { } assistant
+                ? await assistant.RetargetSqlAsync(widgetTitle, originalSql, clientDbProvider, clientSchemaDescription, requestingUser, ct)
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private async Task<IIntegrationSetupAssistant?> ResolveIntegrationAssistant(CancellationToken ct)
     {
         var settings = await _settings.GetAsync(ct);

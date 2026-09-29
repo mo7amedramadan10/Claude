@@ -636,6 +636,56 @@ public class AnalyticsTools
     }
 
     /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.RetargetSqlAsync — External Integrations'
+    /// "build the dashboard directly on the client's own tables" design: a Publish retargets
+    /// each widget's query to the CLIENT's real schema (given once at integration setup, see
+    /// ExternalIntegration.ClientSchemaDescription) instead of shipping this app's own internal
+    /// SQL (meaningless — often unreachable — outside this app's own database). The model's
+    /// only job is a faithful SQL-to-SQL translation: same intent, different schema/dialect.
+    /// Never invents a table or column that isn't in the given schema description; a widget
+    /// whose intent has no honest equivalent there must come back NONE rather than a guess —
+    /// the caller (PublishService) leaves such a widget's Sql unset rather than shipping a
+    /// query that might silently return wrong data at the client's end.
+    /// </summary>
+    public const string RetargetSqlSystemPrompt =
+        "أنت تترجم استعلام SQL من قاعدة بيانات إلى قاعدة بيانات تانية، بنفس القصد بالظبط. " +
+        "هيتم إديك: (1) عنوان العنصر ونيّته، (2) الاستعلام الأصلي (لو موجود) كمرجع للفهم بس — " +
+        "مش للتنفيذ، لأنه شغّال على جداول مش موجودة عند الطرف التاني، (3) وصف بنية قاعدة بيانات " +
+        "الطرف التاني (الجداول والأعمدة وأنواعها) ونوع محرك قاعدة البيانات بتاعه.\n\n" +
+        "اكتب استعلام SELECT واحد بس (ممكن يبدأ بـ WITH)، يستخدم فقط الجداول والأعمدة المذكورة " +
+        "صراحة في وصف البنية المُعطى — ممنوع تمامًا تخترع اسم جدول أو عمود مش موجود في الوصف. " +
+        "اكتب الصياغة المناسبة لمحرك قاعدة البيانات المحدد (SQL Server أو SQLite). لازم يكون " +
+        "الاستعلام قراءة فقط (SELECT بس، بدون INSERT/UPDATE/DELETE/DDL). لو مفيش طريقة صادقة " +
+        "تحقق نفس القصد ببنية البيانات المُعطاة، رجّع بالضبط الكلمة: NONE. رجّع نص الاستعلام فقط " +
+        "(أو NONE)، من غير أي شرح أو Markdown.";
+
+    public static string RetargetSqlUserMessage(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription) =>
+        $"""
+        عنوان العنصر: {widgetTitle}
+        الاستعلام الأصلي (مرجع فهم فقط، مش قابل للتنفيذ عند الطرف التاني): {(string.IsNullOrWhiteSpace(originalSql) ? "(غير متاح)" : originalSql)}
+        نوع محرك قاعدة بيانات الطرف التاني: {clientDbProvider}
+        وصف بنية قاعدة بيانات الطرف التاني:
+        ---
+        {clientSchemaDescription}
+        ---
+
+        اكتب استعلامًا مكافئًا صحيحًا على بنية البيانات دي.
+        """;
+
+    /// <summary>Trims the model's reply and normalizes "no honest equivalent" to null — the
+    /// caller (PublishService) still re-validates the result is read-only via
+    /// ValidateReadOnlySql before ever including it in a publish payload; this only handles the
+    /// NONE/empty sentinel, not SQL safety.</summary>
+    public static string? ParseRetargetedSql(string text)
+    {
+        var trimmed = text.Trim().Trim('`');
+        if (trimmed.Length == 0 || string.Equals(trimmed, "NONE", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return trimmed;
+    }
+
+    /// <summary>
     /// Prepended to both BuildSystemPrompt and BuildInquirySystemPrompt when the frontend's
     /// language toggle (see index.html's #lang-toggle) is set to English — everything else in
     /// either prompt stays exactly as tuned (in Arabic, addressed to the model), since an LLM

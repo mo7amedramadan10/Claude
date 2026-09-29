@@ -292,6 +292,30 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>See ClaudeClient.RetargetSqlAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<string?> RetargetSqlAsync(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.RetargetSqlSystemPrompt;
+        var userText = AnalyticsTools.RetargetSqlUserMessage(widgetTitle, originalSql, clientDbProvider, clientSchemaDescription);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, $"🔁 إعادة توجيه استعلام: {widgetTitle}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var sql = AnalyticsTools.ParseRetargetedSql(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return sql;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
     /// <summary>See IVisualIdentityImageExtractor — its own sub-model choice
     /// (VisualIdentityReaderOpenAiModel), independent of every other model field. Callers must
     /// already have verified VisualIdentitySupportsImage before reaching here (see

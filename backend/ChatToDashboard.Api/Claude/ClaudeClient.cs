@@ -302,6 +302,31 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>See IIntegrationSetupAssistant.RetargetSqlAsync. Never throws — a failed
+    /// translation just means the widget publishes with no live query (PublishService), never
+    /// a broken/guessed one.</summary>
+    public async Task<string?> RetargetSqlAsync(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.RetargetSqlSystemPrompt;
+        var userText = AnalyticsTools.RetargetSqlUserMessage(widgetTitle, originalSql, clientDbProvider, clientSchemaDescription);
+        var trace = _usage.Begin("Anthropic", _model, $"🔁 إعادة توجيه استعلام: {widgetTitle}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var sql = AnalyticsTools.ParseRetargetedSql(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return sql;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
     /// <summary>See IVisualIdentityImageExtractor — a single image, tool-free turn, same JSON
     /// contract as SuggestVisualIdentityAsync above (VisualIdentitySystemPrompt vs.
     /// VisualIdentityImageSystemPrompt only differ in describing text vs. an image as input).

@@ -79,6 +79,20 @@ public class IntegrationsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>The client's own database shape — captured once so Publish can retarget each
+    /// widget's query to their real schema (see PublishService). Never the connection string
+    /// itself, which stays local to the generated connector service.</summary>
+    [HttpPut("{id}/client-schema")]
+    public async Task<IActionResult> UpdateClientSchema(string id, [FromBody] UpdateClientSchemaRequest request, CancellationToken ct)
+    {
+        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (!ClientDbProviders.All.Contains(request.ClientDbProvider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "نوع قاعدة بيانات غير مدعوم — لازم يكون SqlServer أو Sqlite." });
+
+        await _integrations.UpdateClientSchemaAsync(id, request.ClientDbProvider, request.ClientSchemaDescription?.Trim() ?? "", ct);
+        return NoContent();
+    }
+
     // ---------- visual identity (Part B) ----------
 
     /// <summary>Path 1 (manual) — also the single "save" endpoint every other path (2, 3a, 3b
@@ -271,6 +285,17 @@ public class IntegrationsController : ControllerBase
         return File(System.Text.Encoding.UTF8.GetBytes(html), "text/html", $"{Slugify(integration.Name)}-permissions-admin.html");
     }
 
+    /// <summary>Deliverable 3 — the connector microservice source, zipped, for the client to
+    /// build and deploy themselves. See IntegrationDeliverables.BuildConnectorZip.</summary>
+    [HttpGet("{id}/deliverables/connector")]
+    public async Task<IActionResult> DownloadConnector(string id, CancellationToken ct)
+    {
+        var integration = await _integrations.GetByIdAsync(id, ct);
+        if (integration is null) return NotFound();
+        var zip = _deliverables.BuildConnectorZip(integration);
+        return File(zip, "application/zip", $"{Slugify(integration.Name)}-connector.zip");
+    }
+
     // ---------- helpers ----------
 
     private static object ToSummary(ExternalIntegration i) => new
@@ -281,6 +306,7 @@ public class IntegrationsController : ControllerBase
         readApiConfigured = !string.IsNullOrWhiteSpace(i.ReadApiBaseUrl),
         identityConfirmed = i.IdentityConfirmed,
         visualIdentityConfigured = !string.IsNullOrWhiteSpace(i.AccentColor),
+        clientSchemaConfigured = !string.IsNullOrWhiteSpace(i.ClientSchemaDescription),
         i.CreatedAt,
         i.UpdatedAt,
     };
@@ -307,6 +333,8 @@ public class IntegrationsController : ControllerBase
         accentColor = i.AccentColor,
         secondaryColor = i.SecondaryColor,
         fontFamily = i.FontFamily,
+        clientDbProvider = i.ClientDbProvider,
+        clientSchemaDescription = i.ClientSchemaDescription,
         i.CreatedBy,
         i.CreatedAt,
         i.UpdatedAt,

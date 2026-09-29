@@ -1542,11 +1542,13 @@ tr:last-child td{border-bottom:0}
       <span class="settings-banner-icon">🔗</span>
       <div>
         <div class="settings-banner-title">عرض لوحات المتابعة داخل نظام عميل خارجي</div>
-        <div class="settings-banner-text">كل تكامل هنا يمثل نظام عميل واحد. بعد ضبط الإعدادات
-          تنزّل ملفين جاهزين (صفحة عرض + صفحة إدارة صلاحيات) يستضيفهم فريق العميل التقني على
-          نطاقهم. "نشر" بيبعت للعميل شكل اللوحة بس (العناصر وأنواعها وعناوينها) — الأرقام
-          نفسها بتتجاب حيّة من قاعدة بيانات العميل في كل مرة حد يفتح صفحة العرض عندهم، مش من
-          عندنا.</div>
+        <div class="settings-banner-text">كل تكامل هنا يمثل نظام عميل واحد، وفريق العميل التقني
+          مش محتاج يكتب أي كود — بس يوصّفلنا بنية قاعدة بياناتهم مرة واحدة (تحت)، وينزّل ويشغّل
+          3 ملفات جاهزة على شبكتهم: صفحة عرض، صفحة إدارة صلاحيات، وخدمة اتصال صغيرة
+          (connector) بتتصل بقاعدة بياناتهم مباشرة. "نشر" بيبعت للعميل شكل اللوحة بس (العناصر
+          وأنواعها وعناوينها) مع كويري جاهز لكل عنصر مكتوب على بنية بياناتهم هم — بدون أي أرقام
+          أو قيم فعلية؛ الخدمة الصغيرة دي هي اللي بتنفّذ الكويري ده حيّ على قاعدة بياناتهم في كل
+          مرة حد يفتح صفحة العرض، وترجّع القيم الحقيقية لحظتها.</div>
       </div>
     </div>
 
@@ -1660,8 +1662,9 @@ tr:last-child td{border-bottom:0}
   <div class="modal rename-modal-box">
     <h3>نشر إلى تكامل خارجي</h3>
     <p class="modal-note">النشر فعل منفصل عن حفظ/تعديل اللوحة — يرسل شكل اللوحة فقط (العناصر، أنواعها،
-      عناوينها) إلى نظام العميل المختار. الأرقام والقيم الفعلية لا تُنشر من هنا؛ نظام العميل هو
-      اللي بيجيبها حيّة من قاعدة بياناته في كل مرة يُفتح فيها العرض عنده.</p>
+      عناوينها) مع كويري جاهز لكل عنصر مكتوب على بنية قاعدة بيانات العميل، إلى التكامل المختار.
+      الأرقام والقيم الفعلية لا تُنشر من هنا؛ خدمة الاتصال (connector) المستضافة عند العميل هي
+      اللي بتنفّذ الكويري ده حيّ على قاعدة بياناتهم في كل مرة يُفتح فيها العرض عندهم.</p>
     <label>التكامل
       <select id="publish-integration-select"></select>
     </label>
@@ -7539,10 +7542,10 @@ function renderIntegrationDetail() {
 
       <form id="integ-apis-form" class="integrations-form" style="display:flex;flex-direction:column;gap:14px">
         <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الكتابة (Publish إليها — شكل اللوحة فقط، بدون أرقام)</div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الكتابة (Publish إليها — شكل اللوحة + كويري كل عنصر، بدون أرقام)</div>
           <div class="integrations-form-grid">
             <label>رابط نقطة الكتابة (Write API URL)
-              <input type="text" id="ia-write-url" value="${escAttr(d.writeApiUrl)}" placeholder="https://client.example.com/api/dashboards">
+              <input type="text" id="ia-write-url" value="${escAttr(d.writeApiUrl)}" placeholder="مثال: http://connector.client-network:5000/publish">
             </label>
             <label>اسم رأس المصادقة (Header)
               <input type="text" id="ia-write-auth-header" value="${escAttr(d.writeApiAuthHeader)}" placeholder="X-Api-Key">
@@ -7551,20 +7554,22 @@ function renderIntegrationDetail() {
               <input type="text" id="ia-write-auth-value" placeholder="${d.writeApiAuthConfigured ? '••••••••' : ''}">
             </label>
           </div>
-          <p class="model-switch-note">زرار "نشر" بيبعت هنا بس شكل اللوحة (العناصر، أنواعها، عناوينها) —
-            مفيش أرقام أو قيم فعلية. فريقكم التقني هو اللي يوصّل كل عنصر ببياناتكم الحقيقية.</p>
+          <p class="model-switch-note">زرار "نشر" بيبعت هنا شكل اللوحة (العناصر، أنواعها، عناوينها) مع كويري
+            جاهز لكل عنصر مكتوب على بنية قاعدة بيانات العميل نفسها — مفيش أرقام أو قيم فعلية. هذا الرابط
+            هو نقطة POST /publish بتاعة خدمة الاتصال (connector، تحت) بمجرد ما فريق العميل يشغّلها —
+            مفيش أي كود إضافي مطلوب منهم.</p>
         </div>
         <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة القراءة (تستخدمها صفحة العرض — لازم ترجّع القيم حيّة)</div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة القراءة (تستخدمها صفحة العرض — بتتوفّر تلقائيًا من خدمة الاتصال)</div>
           <div class="integrations-form-grid">
             <label>رابط نقطة القراءة الأساسي (Read API base URL)
-              <input type="text" id="ia-read-url" value="${escAttr(d.readApiBaseUrl)}" placeholder="https://client.example.com/api/dashboards-read">
+              <input type="text" id="ia-read-url" value="${escAttr(d.readApiBaseUrl)}" placeholder="مثال: http://connector.client-network:5000/dashboards">
             </label>
           </div>
           <p class="model-switch-note">استدعاء القائمة: GET على هذا الرابط. استدعاء لوحة واحدة: GET على نفس
-            الرابط + "/" + معرّف اللوحة. صفحة العرض بتنادي عليها في كل مرة تُفتح — لازم الرد يحتوي
-            على القيم الحالية الفعلية لكل عنصر (مش نسخة مخزّنة من آخر نشر)، محسوبة من قاعدة
-            بياناتكم لحظة الطلب.</p>
+            الرابط + "/" + معرّف اللوحة. صفحة العرض بتنادي عليها في كل مرة تُفتح — خدمة الاتصال
+            (connector) هي اللي بترجّع القيم الحالية الفعلية لكل عنصر، بتنفيذ الكويري بتاعه حيّ على
+            قاعدة بيانات العميل لحظة الطلب؛ مفيش أي حساب أو تخزين للقيم عندنا.</p>
         </div>
         <div>
           <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الدليل (اختياري — بحث للصفحة الإدارية)</div>
@@ -7591,6 +7596,31 @@ function renderIntegrationDetail() {
         <div class="model-switch-actions">
           <span id="ia-apis-note" class="settings-save-note hidden">✓ تم الحفظ</span>
           <button type="submit">حفظ نقاط الاتصال</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="settings-section">
+      <h3>بنية قاعدة بيانات العميل</h3>
+      <p class="model-switch-note">وصف مرة واحدة لجداول وأعمدة قاعدة بيانات العميل الحقيقية — بيستخدمه
+        "نشر" عشان يعيد كتابة كويري كل عنصر ليشتغل مباشرة على جداولهم هم بدل جداولنا، بدون ما يحتاج
+        فريقهم التقني يكتب حرف كود. رقم الاتصال (connection string) نفسه ميتبعتش لينا أبدًا — بيتحط
+        محليًا عندهم جوه إعدادات خدمة الاتصال (connector) بس.</p>
+      <form id="integ-client-schema-form" class="integrations-form">
+        <div class="integrations-form-grid">
+          <label>نوع محرك قاعدة البيانات
+            <select id="cs-provider">
+              <option value="SqlServer" ${d.clientDbProvider === 'SqlServer' ? 'selected' : ''}>SQL Server</option>
+              <option value="Sqlite" ${d.clientDbProvider === 'Sqlite' ? 'selected' : ''}>SQLite</option>
+            </select>
+          </label>
+        </div>
+        <label>وصف بنية قاعدة البيانات (الجداول والأعمدة وأنواعها)
+          <textarea id="cs-description" rows="6" placeholder="مثال:&#10;Sales(Id int, Region nvarchar, Amount decimal, SaleDate datetime)&#10;Customers(Id int, Name nvarchar, Region nvarchar)">${esc(d.clientSchemaDescription || '')}</textarea>
+        </label>
+        <div class="model-switch-actions">
+          <span id="ia-cs-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+          <button type="submit">حفظ بنية قاعدة البيانات</button>
         </div>
       </form>
     </div>
@@ -7707,12 +7737,14 @@ function renderIntegrationDetail() {
 
     <div class="settings-section">
       <h3>الملفات الجاهزة للعميل</h3>
-      <p class="model-switch-note">نزّل الملفين وسلّمهم لفريق العميل التقني ليستضيفوهم على نطاقهم
-        (انظر متطلبات_تكامل_غرفة_القيادة_للعميل). أعد التنزيل بعد أي تعديل في الإعدادات أعلاه —
-        الملفان لا يتحدّثان تلقائيًا.</p>
+      <p class="model-switch-note">نزّل الملفات الثلاثة وسلّمهم لفريق العميل التقني: صفحتا العرض
+        وإدارة الصلاحيات يُستضافوا على نطاقهم، وخدمة الاتصال (connector) تُشغَّل جوه شبكتهم بعد
+        ما يحطّوا فيها رقم الاتصال بقاعدة بياناتهم الحقيقية محليًا (شرح كامل داخل الملف نفسه —
+        README.md). أعد التنزيل بعد أي تعديل في الإعدادات أعلاه — الملفات لا تتحدّث تلقائيًا.</p>
       <div class="deliverable-row">
         <a href="/api/integrations/${esc(d.id)}/deliverables/viewer"><button type="button">⬇️ صفحة العرض (viewer.html)</button></a>
         <a href="/api/integrations/${esc(d.id)}/deliverables/admin"><button type="button">⬇️ صفحة إدارة الصلاحيات (admin.html)</button></a>
+        <a href="/api/integrations/${esc(d.id)}/deliverables/connector"><button type="button">⬇️ خدمة الاتصال بقاعدة البيانات (connector.zip)</button></a>
       </div>
     </div>
   `;
@@ -7773,6 +7805,20 @@ function wireIntegrationDetailHandlers() {
     const refreshed = await fetch('/api/integrations/' + id).then(r => r.json());
     state.integrationDetail = refreshed;
     renderIntegrationDetail();
+  });
+
+  el('integ-client-schema-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const body = {
+      clientDbProvider: el('cs-provider').value,
+      clientSchemaDescription: el('cs-description').value.trim(),
+    };
+    const res = await fetch('/api/integrations/' + id + '/client-schema', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر الحفظ.'); return; }
+    el('ia-cs-note').classList.remove('hidden');
+    await loadIntegrations();
   });
 
   document.querySelectorAll('.vi-tab').forEach(tab => tab.addEventListener('click', () => {
