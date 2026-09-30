@@ -1,0 +1,1062 @@
+/*
+ * Design tokens — the single source of truth for color/font/spacing across the whole
+ * app. Ported from the reference prototype's :root block and its renderWidgets() chart
+ * palette/config as closely as possible. Nothing below should hardcode a color, font or
+ * spacing value directly — it all traces back to one of these.
+ */
+:root{
+  --bg:#0C0D0E; --surface:#1A1B1D; --plane:#2A2B2E52; --ink:#EDEFF1; --ink-2:#9A9CA0; --muted:#9A9CA0;
+  --grid:#333436; --line:#333436; --accent:#3cb4e5; --accent-soft:#3cb4e522; --danger:#EF6461; --amber:#F2B84B;
+  --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35); --skeleton-a:#19191b; --skeleton-b:#242527;
+  --shadow-3d:0 26px 40px -18px rgba(0,0,0,.55),0 10px 18px -8px rgba(0,0,0,.4);
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  --display:'Tanseek Modern Pro','Space Grotesk',system-ui,-apple-system,sans-serif;
+  --body:'Tanseek Modern Pro Arabic','IBM Plex Sans Arabic',"Segoe UI","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;
+  /* Chart palette — fixed rotation shared by every chart component, never per-instance.
+     Kept identical across both themes (see THEME in the script below) so a category
+     means the same color whichever mode you're in. Straight from the AHAD corporate
+     colors spec: primary (298C) first, then the four secondary colors, ordered so the
+     two most-used slots (0: solo-series color, 1: forecast/second-series color) read as
+     clearly distinct hues (blue vs. purple) rather than two shades of the same blue. */
+  --chart-palette: #3cb4e5, #4d4184, #00bbb4, #007cbb, #9dd3c9;
+  /* Custom chevron for every <select> in the app (see the global "select" rule below) —
+     a plain SVG data URI, since url()-referenced background-image can't pick up
+     currentColor/CSS vars, so it's redefined per theme instead. */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239A9CA0' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+/* Light mode — same tokens, same accent hue (darkened for contrast on white), inverted
+   surfaces. Toggled via the 🌙/☀️ button; JS mirrors this exact palette in THEMES.light
+   so charts (drawn as inline SVG by ApexCharts, not styleable by CSS) match it too.
+   Neutrals (bg/surface/ink/grid) are the AHAD corporate dark-neutral (P179-14, #434345)
+   family rather than a blue-tinted gray, matching the guide's "40% white / 20% dark
+   neutral" color-balance rule — --ink here IS that spec color, not an approximation. */
+:root[data-theme="light"]{
+  --bg:#F6F6F7; --surface:#FFFFFF; --plane:#EFEFF0; --ink:#434345; --ink-2:#6B6D70; --muted:#6B6D70;
+  --grid:#E3E4E6; --line:#E3E4E6; --accent:#007cbb; --accent-soft:#007cbb18; --danger:#D3402F; --amber:#B8730A;
+  --shadow:0 1px 2px rgba(16,21,31,.05), 0 6px 18px rgba(16,21,31,.07);
+  --shadow-3d:0 24px 38px -18px rgba(16,21,31,.22),0 8px 14px -6px rgba(16,21,31,.14);
+  --skeleton-a:#EFEFF0; --skeleton-b:#F8F8F9;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6D70' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
+button{font:inherit;cursor:pointer}
+input{font:inherit}
+
+/* ---------- dropdowns (every <select> in the app) ---------- */
+/* One shared, larger, custom-chevron design instead of each screen's own small native
+   control — appearance:none strips the browser's tiny built-in arrow (and, on Firefox,
+   its default padding) so --select-arrow (a plain SVG, themed above) can replace it,
+   positioned for RTL: text starts at the right, so the icon sits on the left. The padding
+   below has to mirror that: the wider clearance belongs on the LEFT (where the icon
+   actually sits), not the right — it was left un-mirrored for RTL, so on a select without
+   much spare width (e.g. "الأكثر استخدامًا" in the repository sort dropdown) the
+   right-aligned text ran straight into/over the icon instead of stopping short of it.
+   Later, more specific selectors may still override individual properties (e.g. a fixed
+   width inside a tight toolbar) — this is the shared baseline everywhere else falls back to. */
+select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  padding:11px 16px 11px 44px; border:1px solid var(--grid); border-radius:11px;
+  background:var(--surface) var(--select-arrow) no-repeat left 14px center;
+  background-size:18px; color:var(--ink); font:inherit; font-size:14px; cursor:pointer;
+  transition:border-color .15s, box-shadow .15s;
+}
+select:hover{border-color:var(--accent)}
+select:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); outline:none}
+select:disabled{opacity:.55; cursor:not-allowed}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--grid)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700}
+.brand .dot{width:22px;height:22px;border-radius:6px;background:var(--accent)}
+nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
+.tab{padding:6px 14px;border:1px solid transparent;border-radius:999px;background:transparent;
+  color:var(--ink-2);text-decoration:none;display:inline-block}
+.tab:hover{background:var(--plane)}
+.tab.active{background:var(--accent-soft);color:var(--accent);border-color:#cfe1f8;font-weight:600}
+.tab .badge{display:inline-block;min-width:19px;padding:0 5px;margin-inline-start:6px;border-radius:999px;
+  background:var(--accent);color:#fff;font-size:11px;line-height:18px;text-align:center}
+
+/* ---------- sources dropdown ----------
+ * Lives in the chat form's .form-actions-row, next to #new-dashboard-btn, so the source
+ * selection is right there with every message rather than tucked away in the header —
+ * sized/styled to match .new-dash-btn (same height, border, hover) instead of its old
+ * header treatment. #sources-panel still anchors off .sources itself (position:relative),
+ * so the dropdown opens in the same place regardless of which container it lives in.
+ * Anchored with inset-inline-start (not -end): #chat-rail hugs the app's own inline-end
+ * edge (the screen's physical right in RTL), so .sources can end up right at that outer
+ * edge with zero room to spare on that side once it wraps onto the row alone at a narrow
+ * rail width — opening the panel from inset-inline-end there pushed it straight off the
+ * viewport. Opening from inset-inline-start instead always grows toward the rail's own
+ * interior (and the dash pane beyond it), which reliably has room regardless of rail width.
+ * Opens UPWARD (bottom, not top) for the same reason: this row sits right above the
+ * message input, at the very bottom of the chat rail, with the message list's open space
+ * above it and essentially nothing below — a downward panel here would routinely run off
+ * the bottom of the window the way it never did back when this control lived in the header. */
+.sources{position:relative}
+#sources-btn{display:flex;align-items:center;gap:6px;height:41px;padding:0 12px;max-width:170px;
+  border:1px solid var(--grid);border-radius:11px;background:var(--surface);color:var(--ink-2);
+  font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden}
+#sources-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+#sources-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sources-panel{position:absolute;inset-inline-start:0;bottom:calc(100% + 7px);z-index:40;
+  width:290px;max-width:calc(100vw - 32px);
+  max-height:70vh;overflow:auto;padding:8px;background:var(--surface);
+  border:1px solid var(--grid);border-radius:var(--radius);box-shadow:0 8px 28px rgba(11,11,11,.12)}
+#sources-panel.hidden{display:none}
+.source-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer}
+.source-item:hover{background:var(--plane)}
+.source-item input{accent-color:var(--accent);width:15px;height:15px}
+.source-item.head{font-weight:600}
+.source-item .note{margin-inline-start:auto;font-size:11px;color:var(--muted)}
+.source-item .grow{flex:1}
+.refresh-btn{padding:2px 8px;border:1px solid var(--grid);border-radius:7px;background:var(--surface);
+  color:var(--accent);font-size:11.5px;line-height:1.6}
+.refresh-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+.refresh-btn:disabled{opacity:.5;cursor:progress}
+.sys-status{padding:0 9px 6px 31px;font-size:11px;color:var(--muted);line-height:1.55}
+.sys-status.bad{color:var(--danger)}
+#sources-panel hr{border:0;border-top:1px solid var(--grid);margin:7px 4px}
+.nested{padding-inline-start:22px}
+.nested-empty{padding:6px 9px;font-size:12px;color:var(--muted)}
+
+/* ---------- layout ---------- */
+.screen{display:none}
+.screen.active{display:flex}
+#screen-chat{height:calc(100vh - 53px)}
+#chat-rail{width:35%;min-width:320px;display:flex;flex-direction:column;
+  background:var(--surface);border-inline-start:1px solid var(--grid)}
+#chat-rail.rail-small{width:22%;min-width:220px}
+#chat-rail.rail-large{width:55%;min-width:420px}
+#chat-rail.rail-hidden{display:none}
+#dash-pane{flex:1;overflow-y:auto;padding:20px;position:relative}
+/* Shown while applyFilters() has a request in flight (a filter change, a cross-filter
+   chart click, "🔄 تحديث") — dims the toolbar + widgets and blocks clicks on them so a
+   second click can't queue an overlapping request while the first is still loading (see
+   applyFiltersSeq in applyFilters() for the race that guards against even if one does). */
+#dash-pane.filters-loading #dash-toolbar,
+#dash-pane.filters-loading #dash{opacity:.45;filter:saturate(.7);pointer-events:none;transition:opacity .15s}
+.dash-loading-overlay{position:absolute;inset:0;z-index:50;display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.dash-loading-overlay.open{display:flex}
+.dash-loading-overlay .spinner{width:30px;height:30px;border-width:3px}
+.dash-loading-overlay span{font-size:13px;color:var(--ink-2);font-weight:600}
+
+.rail-size-toggle{display:inline-flex;border:1px solid var(--grid);border-radius:9px;overflow:hidden}
+.rail-size-toggle button{width:30px;height:31px;padding:0;border:0;border-inline-start:1px solid var(--grid);
+  background:var(--surface);color:var(--ink-2);font-size:14px;line-height:1}
+.rail-size-toggle button:first-child{border-inline-start:0}
+.rail-size-toggle button:hover:not(:disabled){background:var(--plane);color:var(--accent)}
+.rail-size-toggle button:disabled{opacity:.35;cursor:not-allowed}
+
+/* .model-switch-* below now backs only the الإعدادات page (see #screen-settings) — the
+   header popover version of this control was removed; model selection lives there only. */
+.model-switch-providers{display:flex;flex-direction:column;gap:6px}
+.model-switch-option{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:12.5px}
+.model-switch-option:hover{background:var(--plane)}
+.model-switch-option input{accent-color:var(--accent)}
+.model-switch-option .badge{margin-inline-start:auto;font-size:10.5px;padding:1px 7px;border-radius:999px;
+  background:var(--plane);color:var(--muted)}
+.model-switch-option .badge.ok{background:var(--accent-soft);color:var(--accent)}
+.model-switch-option.disabled{opacity:.5;cursor:not-allowed}
+.model-switch-ollama-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--grid)}
+.model-switch-ollama-row label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2)}
+.model-switch-note{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.5}
+.model-switch-note.bad{color:var(--danger)}
+.settings-checkbox-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
+.model-switch-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.model-switch-actions button{padding:6px 13px;border-radius:8px;font-size:12.5px}
+#settings-save{border:0;background:var(--accent);color:#fff;font-weight:600}
+#settings-save:disabled{opacity:.5;cursor:not-allowed}
+
+#chat-mode-tabs{display:flex;gap:6px;padding:10px 12px 0}
+.chat-mode-tab{flex:1;padding:8px 10px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12.5px;font-weight:600;cursor:pointer}
+.chat-mode-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.chat-mode-tab:hover:not(.active){background:var(--plane)}
+
+#messages,#inquiry-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+/* ID selectors above beat a bare class selector regardless of source order (see the
+   #shared-banner note below), so these need their own hidden override. */
+#messages.hidden,#inquiry-messages.hidden{display:none}
+.msg{max-width:86%;padding:9px 13px;border-radius:14px;line-height:1.65;white-space:pre-wrap}
+.msg.user{align-self:flex-start;background:var(--accent);color:#fff;border-end-start-radius:5px}
+.msg.bot{align-self:flex-end;background:var(--plane);border:1px solid var(--grid);border-end-end-radius:5px}
+.msg.err{align-self:flex-end;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger)}
+.hint{margin:auto;padding:14px;border-radius:12px;background:var(--plane);color:var(--ink-2);text-align:center}
+.hint .ex{display:block;margin-top:6px;color:var(--muted);font-size:13px}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ---------- الاستفسارات message design ----------
+   Everything below is scoped under #inquiry-messages/.inquiry-* so بناء اللوحة's own
+   #messages/.msg (the bare rules just above) render byte-for-byte as before. */
+/* Quieter than a normal user bubble — light accent tint with the ordinary dark ink color, so
+   the AI's answer carries the visual weight, not the question. */
+#inquiry-messages .msg.user{background:var(--accent-soft);color:var(--ink)}
+/* The reply is never one big card — each block below is its own container; this wrapper is
+   just a vertical list spacing them out. */
+.msg.bot.inquiry-answer{max-width:94%;background:transparent;border:0;padding:0;
+  display:flex;flex-direction:column;gap:12px}
+
+.inquiry-block{display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:var(--radius)}
+.inquiry-block-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.inquiry-block-label{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.inquiry-block-text{margin:0;font-size:16px;line-height:1.9}
+.inquiry-block-text p{margin:0 0 10px;white-space:pre-wrap}
+.inquiry-block-text p:last-child{margin-bottom:0}
+.inquiry-block-text ol,.inquiry-block-text ul{margin:0 0 10px;padding-inline-start:22px;
+  display:flex;flex-direction:column;gap:4px}
+.inquiry-block-text ol:last-child,.inquiry-block-text ul:last-child{margin-bottom:0}
+
+/* "من بيانات الجهة" — white surface, hairline border. */
+.inquiry-block.data{background:var(--surface);border:1px solid var(--grid)}
+.inquiry-block.data .inquiry-block-label{background:var(--accent-soft);color:var(--accent)}
+.inquiry-block-date{font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* "من خارج البيانات" — a visibly different material (warm tint + dashed border), not just a
+   different label color, so the two kinds are distinguishable at a glance (and not by color
+   alone — icon, label text and border style all differ too). */
+.inquiry-block.knowledge{background:color-mix(in srgb, var(--amber) 8%, var(--surface));
+  border:1px dashed color-mix(in srgb, var(--amber) 55%, var(--grid))}
+.inquiry-block.knowledge .inquiry-block-label{background:color-mix(in srgb, var(--amber) 24%, transparent);
+  color:color-mix(in srgb, var(--amber) 70%, black)}
+.inquiry-block-hint{font-size:12px;color:var(--ink-2)}
+
+/* "تم فحص" — chips naming what was actually examined, derived server-side from the recorded
+   tool calls (see InquiryBlock.Examined / AnalyticsTools.ExtractExaminedSources) — never
+   model-authored text, so this can't be fabricated. Omitted entirely when there's nothing to
+   show (see inquiryBlockHtml). */
+.inquiry-examined{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.inquiry-examined-label{font-weight:600;color:var(--muted)}
+.inquiry-chip{padding:2px 9px;border-radius:999px;background:var(--plane);color:var(--ink-2);font-size:11.5px}
+
+.inquiry-block-footer{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding-top:12px;border-top:1px solid var(--grid)}
+.inquiry-block-footer .src-pop{top:calc(100% + 8px);inset-inline-end:0}
+.inquiry-src-btn,.inquiry-convert-btn{min-height:44px;padding:0 16px;border-radius:10px;
+  font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.inquiry-src-btn{background:transparent;border:1px solid var(--grid);color:var(--ink-2)}
+.inquiry-src-btn:hover,.inquiry-src-btn.active{border-color:var(--accent);color:var(--accent)}
+.inquiry-convert-btn{background:var(--accent);border:1px solid var(--accent);color:#fff}
+.inquiry-convert-btn:hover{filter:brightness(1.08)}
+.inquiry-src-btn:focus-visible,.inquiry-convert-btn:focus-visible,.inquiry-followup-chip:focus-visible,
+.inquiry-tb-btn:focus-visible,.icp-add:focus-visible,.icp-replace:focus-visible,.icp-cancel:focus-visible,
+.inquiry-conv-del:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Masked (permission lost on reopen) — neutral, no actions; the real content never reaches
+   the DOM at all (masking stays server-side — see InquiryAccessService), this is only the
+   placeholder shell. */
+.inquiry-block.masked{background:var(--plane);border:1px solid var(--grid)}
+.inquiry-block.masked .inquiry-block-label{background:var(--surface);color:var(--muted);border:1px solid var(--grid)}
+.inquiry-block.masked .inquiry-block-text{color:var(--ink-2)}
+.inquiry-block-subtext{margin:0;font-size:13px;color:var(--muted)}
+
+/* Replace-or-add — an inline card appended right after the block being converted, not a modal. */
+.inquiry-convert-prompt{background:var(--plane);border:1px solid var(--grid);border-radius:var(--radius);
+  padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.inquiry-convert-prompt p{margin:0;font-size:13.5px;color:var(--ink)}
+.inquiry-convert-prompt-actions{display:flex;gap:8px;flex-wrap:wrap}
+.inquiry-convert-prompt-actions button{min-height:44px;padding:0 14px;border-radius:9px;
+  font-size:13px;font-weight:600;cursor:pointer}
+.icp-add{background:var(--accent);border:1px solid var(--accent);color:#fff}
+.icp-replace{background:transparent;border:1px solid var(--grid);color:var(--ink-2)}
+.icp-cancel{background:transparent;border:0;color:var(--muted)}
+
+/* Suggested follow-ups — only ever under the latest reply (see renderInquiryMessages), behind
+   Inquiry:SuggestFollowUps (off by default — see AnalyticsTools). */
+.inquiry-followups{display:flex;flex-wrap:wrap;gap:6px}
+.inquiry-followup-chip{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--grid);
+  background:var(--surface);color:var(--accent);font-size:12.5px;cursor:pointer}
+.inquiry-followup-chip:hover{background:var(--accent-soft);border-color:var(--accent)}
+
+/* ---------- الاستفسارات: saved-conversations panel ---------- */
+#inquiry-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px 0;position:relative}
+#inquiry-toolbar.hidden{display:none}
+.inquiry-tb-btn{min-height:44px;padding:6px 12px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px}
+.inquiry-tb-btn:hover{border-color:var(--accent);color:var(--accent)}
+#inquiry-new-btn{background:var(--plane)}
+#inquiry-conv-panel{position:absolute;z-index:60;width:min(320px,88vw);max-height:60vh;
+  overflow-y:auto;background:var(--surface);border:1px solid var(--grid);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:8px}
+#inquiry-conv-panel.hidden{display:none}
+.inquiry-conv-item{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:9px;cursor:pointer}
+.inquiry-conv-item:hover{background:var(--plane)}
+.inquiry-conv-item.active{background:var(--accent-soft)}
+.inquiry-conv-title{flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.inquiry-conv-date{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.inquiry-conv-del{border:0;background:transparent;color:var(--muted);font-size:13px;padding:2px 4px}
+.inquiry-conv-del:hover{color:var(--danger)}
+.inquiry-conv-empty{padding:14px;text-align:center;color:var(--muted);font-size:12.5px}
+.dots span{display:inline-block;width:6px;height:6px;margin:0 1px;border-radius:50%;
+  background:var(--muted);animation:b .9s infinite}
+.dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+.suggest-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px}
+.suggest-chip{padding:6px 12px;border:1px solid var(--grid);border-radius:999px;
+  background:var(--plane);color:var(--ink-2);font-size:12px}
+.suggest-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+#repo-link{display:flex;align-items:center;gap:10px;padding:9px 16px;
+  border-top:1px solid var(--grid);color:var(--ink-2);font-size:13px}
+#repo-link button{margin-inline-start:auto;padding:5px 11px;border:1px solid var(--grid);
+  border-radius:8px;background:var(--surface);color:var(--accent)}
+form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px solid var(--grid)}
+.form-actions-row{display:flex;gap:8px;flex-wrap:wrap}
+.form-input-row{display:flex;gap:8px}
+#q{flex:1;padding:10px 13px;border:1px solid var(--grid);border-radius:11px;outline:none}
+#q:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+#send{padding:10px 18px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-weight:600}
+#send:disabled{opacity:.45;cursor:not-allowed}
+/* Inquiries composer — one rounded pill container instead of separate boxes, per the design
+   refresh; scoped to .inquiry-mode (toggled only while state.chatMode==='inquiry', see
+   setChatMode) so بناء اللوحة's own #q/#send/.attach-btn above render exactly as before. */
+.form-input-row.inquiry-mode{align-items:center;gap:0;padding:4px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--surface)}
+.form-input-row.inquiry-mode:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.form-input-row.inquiry-mode #q{border:0;background:transparent;padding:8px 12px}
+.form-input-row.inquiry-mode #q:focus{box-shadow:none}
+.form-input-row.inquiry-mode .attach-btn{border:0;background:transparent;width:36px}
+.form-input-row.inquiry-mode #send{width:44px;height:44px;min-width:44px;padding:0;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+/* Mirrored so the arrow visually points toward the send direction (the start edge) in RTL. */
+.form-input-row.inquiry-mode #send .send-icon{display:inline-block;transform:scaleX(-1)}
+.attach-btn{display:flex;align-items:center;justify-content:center;width:41px;
+  border:1px solid var(--grid);border-radius:11px;background:var(--surface);font-size:16px}
+.attach-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+/* Empties the dashboard immediately on click — see its click handler in the chat section. */
+.new-dash-btn{display:flex;align-items:center;gap:4px;height:41px;padding:0 12px;
+  border:1px solid var(--grid);border-radius:11px;background:var(--surface);color:var(--ink-2);
+  font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+.new-dash-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+#mic-btn.listening{border-color:var(--danger);background:var(--danger);color:#fff;animation:mic-pulse 1.2s ease-in-out infinite}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent)}50%{box-shadow:0 0 0 8px transparent}}
+.attached-image{display:flex;align-items:center;gap:10px;margin:0 14px;padding:8px 10px;
+  background:var(--plane);border:1px solid var(--grid);border-radius:11px}
+.attached-image.hidden{display:none}
+.attached-image img{width:40px;height:40px;object-fit:cover;border-radius:7px;border:1px solid var(--grid)}
+.attached-image span{flex:1;font-size:12.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attached-image button{border:0;background:transparent;color:var(--danger);font-size:15px}
+
+/* ---------- widgets ----------
+ * Fixed grid rules keyed off the widget's *type* alone, never its content: a kpi is
+ * always the small card, bar/line/pie always span 2 columns, table always spans 2
+ * columns. Ported from the prototype's #dashboard/.widget rules — this is the one
+ * layout every dashboard renders through, regardless of what question produced it. */
+#summary{margin-bottom:16px;padding:14px 17px;background:var(--surface);
+  border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow);line-height:1.75}
+#dashboard-top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:-6px 0 14px}
+#dashboard-sources,#dashboard-status-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#dashboard-sources .ds-label{font-size:12px;color:var(--muted);font-weight:600}
+#dashboard-sources .ds-chip{display:inline-flex;align-items:center;padding:3px 10px;
+  border-radius:999px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-content:start}
+.widget{position:relative;background:var(--surface);border:1px solid var(--grid);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
+  display:flex;flex-direction:column;gap:10px;animation:rise .35s ease both;
+  transition:box-shadow .3s ease,border-color .3s ease}
+/* While TTS is reading a sentence that names this widget (see speakText's boundary
+   handling), it's marked unmistakably — not just a shadow, but a solid accent border, a
+   tinted background, a small pulsing 🔊 badge, and a gentle "breathing" ring — so it reads
+   clearly even at a glance or on a dim screen. All of it clears the moment speech moves to
+   a sentence naming a different widget, or ends. */
+.widget.tts-highlight{border:2px solid var(--accent);
+  background:color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow:0 0 0 4px var(--accent-soft);
+  animation:tts-pulse 1.6s ease-in-out infinite}
+.widget.tts-highlight::before{content:'🔊';position:absolute;top:-11px;inset-inline-start:14px;
+  width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:12px;line-height:24px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+@keyframes tts-pulse{
+  0%,100%{box-shadow:0 0 0 4px var(--accent-soft)}
+  50%{box-shadow:0 0 0 9px color-mix(in srgb, var(--accent) 22%, transparent)}
+}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.widget.kpi{justify-content:center;align-items:center;min-height:150px}
+/* Big number beside its description, not stacked above it — the dominant "basic numbers"
+   composition in the brand's visual-system guide (a large colored figure as the focal
+   point, a short caption riding its baseline to the side) rather than a centered KPI
+   stack. */
+.kpi-body{display:flex;align-items:baseline;gap:14px;justify-content:center;max-width:100%}
+.widget.chart{grid-column:span 2;min-height:300px}
+.widget.table{grid-column:span 2}
+.widget-head{display:flex;align-items:center;gap:8px}
+.widget h3{margin:0;font-size:12px;font-weight:500;color:var(--ink-2);font-family:var(--mono);letter-spacing:.3px}
+.src-btn{width:19px;height:19px;padding:0;border:1px solid var(--accent);border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1}
+.src-btn:hover,.src-btn.active{background:var(--accent);color:#06251C}
+/* Deliberately the amber token, not the accent — ties the button to the forecast series'
+   own color in the chart (see forecastChartConfig()) so the whole feature reads as one thing. */
+.forecast-btn{padding:4px 10px;border:1px solid var(--amber);border-radius:999px;
+  background:transparent;color:var(--amber);font-size:11px;white-space:nowrap}
+.forecast-btn:hover{background:var(--amber);color:#241a00}
+.forecast-btn:disabled{opacity:.6;cursor:progress}
+.forecast-note{font-size:11px;color:var(--amber);line-height:1.6;text-align:center}
+.src-pop{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:20;width:min(330px,90%);
+  padding:12px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;
+  box-shadow:var(--shadow);font-size:12.5px;line-height:1.7}
+.src-pop.open{display:block}
+.src-block+.src-block{margin-top:9px;padding-top:9px;border-top:1px solid var(--grid)}
+.src-lbl{display:block;margin-bottom:2px;font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)}
+/* A soft halo, not a hard neon outline — two low-opacity layers (the same tint already used
+   for badges/hover states) so the number reads as "glowing gently" without losing crispness
+   against its background. */
+.kpi .value{font-family:var(--display);font-size:42px;font-weight:700;color:var(--accent);
+  text-shadow:0 0 10px var(--accent-soft),0 0 28px var(--accent-soft);line-height:1;white-space:nowrap}
+.kpi-label{color:var(--ink);font-size:13px;line-height:1.5;text-align:start;max-width:170px}
+.widget .chart-holder{height:230px}
+/* A forecast chart also renders a legend (3 series) below its plot, which the plain 230px
+   box has no room for — ApexCharts then overflows past the box, colliding with .forecast-note
+   right under it. See the "chart container excludes its own axis/legend band" anti-pattern. */
+.widget .chart-holder.chart-holder-forecast{height:280px}
+.chart-note{font-size:11px;color:var(--muted);text-align:center}
+.tbl-wrap{max-height:340px;overflow:auto;border:1px solid var(--grid);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:var(--surface);text-align:start;padding:8px 11px;
+  font-weight:500;color:var(--ink-2);font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--grid);white-space:nowrap}
+td{padding:7px 11px;border-bottom:1px solid var(--grid);white-space:nowrap;font-family:var(--mono)}
+td.num{text-align:end;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+
+/* ---------- progress-table ---------- */
+.widget.progress-table{grid-column:span 2}
+.prog-cell{display:flex;align-items:center;gap:10px;font-family:var(--body);white-space:normal}
+.prog-track{flex:1;height:18px;border-radius:5px;background:var(--plane);overflow:hidden;display:flex}
+.prog-seg{height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-family:var(--mono);color:#06251C;min-width:2px}
+.prog-seg.tone-muted{color:var(--ink-2)}
+.prog-total{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);width:60px;
+  text-align:end;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* ---------- trend-matrix ---------- */
+.trend-cell{display:flex;align-items:center;white-space:nowrap}
+.trend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-inline-end:6px;flex-shrink:0}
+.trend-dot.up{background:var(--accent)}
+.trend-dot.down{background:var(--danger)}
+.trend-dot.flat{background:var(--muted)}
+.trend-delta{font-family:var(--mono);font-size:11.5px}
+.sparkline{display:inline-flex;align-items:flex-end;gap:2px;height:16px;margin-inline-start:8px}
+.spark-bar{width:3px;background:var(--muted);border-radius:1px;min-height:1px}
+
+/* ---------- status-bar ---------- */
+.widget.status-bar{align-items:stretch}
+.status-bar-row{display:flex;align-items:center;gap:18px}
+.status-bar-num{font-family:var(--display);font-size:30px;font-weight:700;
+  color:var(--accent);width:64px;text-align:center;flex-shrink:0}
+.status-bar-label{font-size:13px;margin-bottom:7px;color:var(--ink)}
+.status-badges{display:flex;gap:8px;flex-wrap:wrap}
+.status-badge{font-size:11px;padding:5px 11px;border-radius:14px;font-family:var(--mono);
+  display:flex;align-items:center;gap:5px;white-space:nowrap}
+.status-badge.severe{background:color-mix(in srgb, var(--danger) 14%, transparent);color:var(--danger)}
+.status-badge.warning{background:color-mix(in srgb, var(--amber) 16%, transparent);color:var(--amber)}
+.status-badge.ontrack{background:var(--accent-soft);color:var(--accent)}
+
+/* ---------- linear-gauge ---------- */
+.widget.linear-gauge{grid-column:span 2}
+.lg-cell{display:flex;align-items:center;gap:12px;font-family:var(--body);white-space:normal}
+.lg-track{flex:1;height:6px;border-radius:999px;background:var(--plane);position:relative}
+.lg-fill{height:100%;border-radius:999px;position:relative;min-width:6px}
+.lg-handle{position:absolute;inset-inline-end:-7px;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;border-radius:50%;background:var(--surface);border:3px solid;box-sizing:border-box}
+.lg-value{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);width:56px;
+  text-align:end;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* ---------- radial-gauge ---------- */
+.rg-caption{text-align:center;color:var(--ink-2);font-size:12.5px;margin-top:-8px}
+
+/* ---------- comparison layout (two widgets of the same type, side by side) ---------- */
+.comparison-wrap{background:transparent;border:0;box-shadow:none;padding:0}
+.comparison-wrap>.widget-head{margin-bottom:12px}
+.comparison-title{font-weight:600;font-size:14px;margin:0}
+.compare-row{display:flex;align-items:stretch;justify-content:center;gap:14px}
+.compare-row>.widget{flex:1;min-width:0;margin:0}
+.compare-arrow{font-size:22px;color:var(--muted);flex-shrink:0;display:flex;align-items:center}
+/* ---------- dashboard editor ---------- */
+.edit-toggle{display:inline-flex;border:1px solid var(--grid);border-radius:9px;overflow:hidden;margin-inline-end:auto}
+.edit-toggle-btn{padding:7px 14px;border:0;background:var(--surface);color:var(--ink-2);font-size:12.5px}
+.edit-toggle-btn.active{background:var(--accent);color:#fff;font-weight:600}
+.autosave-status{font-size:11.5px;color:var(--muted);min-width:8px;white-space:nowrap}
+.widget.editable{cursor:grab}
+.widget.editable.dragging{opacity:.35}
+.widget.editable.drag-over{outline:2px dashed var(--accent);outline-offset:2px}
+.widget-menu-btn{border:1px solid var(--grid);border-radius:7px;background:var(--surface);color:var(--ink-2);
+  width:23px;height:23px;font-size:14px;line-height:1;padding:0}
+.widget-menu-btn:hover{border-color:var(--accent);color:var(--accent)}
+.widget-menu{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:25;min-width:175px;
+  max-height:min(320px,calc(100vh - 90px));overflow-y:auto;
+  padding:6px;background:var(--surface);border:1px solid var(--grid);border-radius:12px;box-shadow:var(--shadow)}
+.widget-menu.open{display:block}
+.widget-menu button{display:block;width:100%;text-align:start;padding:8px 10px;border:0;border-radius:8px;
+  background:transparent;color:var(--ink);font-size:12.5px}
+.widget-menu button:hover{background:var(--plane)}
+.widget-menu button.danger{color:var(--danger)}
+.widget-menu button.current{color:var(--accent);font-weight:600}
+.widget-menu .menu-label{padding:6px 10px 4px;font-size:11px;color:var(--muted);font-weight:600}
+/* "نوع الرسم" alone has 10 options — as a single column that's routinely taller than the
+   max-height above, forcing the awkward internal scrollbar (some options invisible until
+   scrolled) reported live as looking broken. Laid out 2-up instead, it's ~5 rows tall
+   instead of 10 — comfortably under the cap in the vast majority of cases — while the
+   default (5 items) and size (4 items) menus stay a single column, which already fits. */
+.widget-menu.type-grid{min-width:300px;display:grid;grid-template-columns:1fr 1fr;gap:2px;align-content:start}
+.widget-menu.type-grid .menu-label{grid-column:1/-1}
+/* widget size overrides — placed after the type rules above so they win by source order */
+.widget[data-size="small"]{grid-column:span 1}
+.widget[data-size="wide"]{grid-column:span 2}
+.widget[data-size="large"]{grid-column:span 3}
+.widget[data-size="full"]{grid-column:1/-1}
+.add-widget-btn{display:block;margin:18px auto 0;padding:11px 22px;border:1.5px dashed var(--grid);
+  border-radius:12px;background:transparent;color:var(--accent);font-weight:600}
+.add-widget-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+
+/* ---------- add-widget wizard ---------- */
+.wizard-box{width:min(480px,100%);max-height:82vh;overflow-y:auto;display:flex;flex-direction:column}
+.wizard-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.wizard-head h3{margin:0}
+.wizard-x{border:0;background:transparent;color:var(--ink-2);font-size:18px}
+.wizard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wizard-option{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 10px;
+  border:1px solid var(--grid);border-radius:12px;background:var(--plane);color:var(--ink);font-size:13px}
+.wizard-option:hover{border-color:var(--accent);background:var(--accent-soft)}
+.wizard-option.wide{flex-direction:row;justify-content:flex-start;padding:12px 14px;width:100%}
+.wizard-option.current{border-color:var(--accent);color:var(--accent)}
+.wizard-icon{font-size:24px}
+.wizard-list{display:flex;flex-direction:column;gap:8px}
+.wizard-field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2);margin-bottom:12px}
+.wizard-field input{padding:9px 12px;border:1px solid var(--grid);border-radius:9px;color:var(--ink);background:var(--surface)}
+.wizard-checklist{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.wizard-checklist label{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px}
+.wizard-checklist input{width:15px;height:15px;accent-color:var(--accent)}
+.wizard-loading,.wizard-empty{padding:30px 10px;text-align:center;color:var(--muted)}
+.wizard-preview-card{padding:16px;border:1px solid var(--grid);border-radius:12px;background:var(--plane)}
+.wizard-preview-title{font-weight:700;margin-bottom:6px}
+.wizard-preview-meta{font-size:12px;color:var(--ink-2);line-height:1.6}
+.wizard-actions{display:flex;align-items:center;gap:10px;margin-top:16px}
+.wizard-back-btn{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2);padding:8px 14px;border-radius:9px}
+.wizard-next-btn{border:0;background:var(--accent);color:#fff;font-weight:600;padding:9px 18px;border-radius:9px;margin-inline-start:auto}
+.wizard-next-btn:disabled{opacity:.5;cursor:not-allowed}
+.wizard-next-btn.hidden,.wizard-back-btn.hidden{display:none}
+
+/* ---------- dashboard filters ---------- */
+#filter-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.filter-ctl{position:relative}
+.filter-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--surface);color:var(--ink-2);font-size:12.5px}
+.filter-btn:hover{border-color:var(--accent)}
+.filter-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
+.filter-panel{display:none;position:absolute;top:calc(100% + 6px);inset-inline-start:0;z-index:30;
+  min-width:200px;max-height:260px;overflow-y:auto;padding:8px;background:var(--surface);
+  border:1px solid var(--grid);border-radius:12px;box-shadow:var(--shadow)}
+.filter-panel.open{display:block}
+.filter-panel label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;font-size:12.5px}
+.filter-panel label:hover{background:var(--plane)}
+.filter-panel input[type="checkbox"],.filter-panel input[type="radio"]{accent-color:var(--accent)}
+.filter-range{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--surface)}
+.filter-range span{font-size:12px;color:var(--ink-2)}
+.filter-range input{width:118px;padding:4px 6px;border:1px solid var(--grid);border-radius:7px;font-size:12px}
+.filter-clear-btn{padding:6px 12px;border:1px solid var(--grid);border-radius:999px;background:transparent;
+  color:var(--danger);font-size:12px}
+.filter-clear-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.1)}
+.filter-badge-static{display:flex;align-items:center;padding:6px 12px;border:1px solid var(--grid);
+  border-radius:999px;background:var(--plane);color:var(--ink-2);font-size:12.5px}
+.filter-refresh-warning{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--danger);
+  border-radius:999px;background:rgba(239,100,97,.1);color:var(--danger);font-size:12.5px}
+.filter-refresh-retry{padding:3px 10px;border:1px solid var(--danger);border-radius:999px;background:var(--surface);
+  color:var(--danger);font-size:11.5px}
+.filter-refresh-retry:hover{background:var(--danger);color:#fff}
+/* A cross-filter chip (click-a-chart-to-filter — see toggleCrossFilter): styled like an
+   already-active .filter-btn, but turns "danger" on hover to signal that clicking it
+   removes the filter rather than opening a dropdown. */
+.xfilter-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--accent);
+  border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12.5px;font-weight:600}
+.xfilter-chip:hover{border-color:var(--danger);color:var(--danger);background:rgba(239,100,97,.1)}
+.xfilter-chip .xfilter-x{font-weight:700}
+/* A chart whose data points cross-filter the dashboard on click (see
+   attachCrossFilterClick) — the pointer cursor is the only hint needed; ApexCharts
+   already highlights the hovered mark itself. */
+.chart-holder.chart-clickable{cursor:pointer}
+.widget-unaffected{position:absolute;top:10px;inset-inline-start:10px;padding:2px 8px;border-radius:999px;
+  background:var(--plane);color:var(--muted);font-size:10.5px;border:1px solid var(--grid)}
+
+.empty{display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;color:var(--muted)}
+.empty .big{font-family:var(--display);font-size:17px;color:var(--ink);margin-bottom:5px}
+.skeleton .widget{height:230px}
+.skeleton .bar{height:100%;border-radius:9px;background:linear-gradient(90deg,var(--skeleton-a),var(--skeleton-b),var(--skeleton-a));
+  background-size:200% 100%;animation:sh 1.3s infinite}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ---------- repository screen ---------- */
+#screen-repo,#screen-active,#screen-sharelinks{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+.repo-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:11px;border:0;
+  background:var(--accent);color:#fff;font-weight:600}
+.upload-modal-box{width:min(820px,100%);max-height:86vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.upload-modal-pick{align-self:flex-start}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:5px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);color:var(--ink-2)}
+.chip.active{background:var(--accent-soft);border-color:#cfe1f8;color:var(--accent);font-weight:600}
+#pending{display:flex;flex-direction:column;gap:9px}
+.pending-card{display:flex;align-items:center;flex-wrap:wrap;gap:11px;padding:11px 14px;background:rgba(242,184,75,.10);
+  border:1px solid rgba(242,184,75,.35);border-radius:12px}
+.pending-card .name{flex:1 1 100%;font-size:13px}
+.pending-card input{flex:1 1 160px;min-width:140px;padding:7px 11px;border:1px solid var(--grid);border-radius:9px}
+.pending-card .save{padding:7px 14px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
+.pending-card .cancel{border:0;background:transparent;color:var(--danger);font-size:18px;font-weight:700}
+.pending-card.bad{background:rgba(239,100,97,.12);border-color:rgba(239,100,97,.35)}
+.pending-card.loading{background:var(--plane);border-color:var(--grid)}
+.pending-card.loading .name{flex:1 1 auto;color:var(--ink-2)}
+.spinner{width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  border:2px solid var(--grid);border-top-color:var(--accent);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.repo-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.cat-badge{display:inline-block;padding:3px 10px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:600;flex-shrink:0}
+.repo-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
+  border:1px dashed var(--grid);border-radius:var(--radius)}
+
+/* ---------- file repository: list-row layout ---------- */
+.file-list-head{display:flex;align-items:center;gap:16px;padding:0 18px 6px;font-size:11px;color:var(--muted)}
+/* flex:0 1 46% (not flex:1) so this column sizes the same on every row regardless of that
+   row's own name/description length — a short name no longer leaves the fixed-width columns
+   stranded behind a huge trailing gap, and every row's columns still land at the identical
+   horizontal position as every other row's (and the header's), since the basis is a share of
+   the row's own width, not of this row's content. */
+.file-list-head .col-main{flex:0 1 46%}
+.file-list-head .col-updated{width:96px;text-align:center}
+.file-list-head .col-usage{width:84px;text-align:center}
+.file-list-head .col-access{width:104px;text-align:center}
+.file-list-head .col-actions{width:230px}
+.file-list{display:flex;flex-direction:column;gap:8px}
+.file-row{background:var(--surface);border:1px solid var(--grid);border-radius:12px;
+  padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s;
+  /* .file-list is a column flexbox, so .file-row's own default min-width:auto (a flex
+     item's intrinsic content size) would otherwise let a long, nowrap fr-line2/fr-name
+     force the whole row — and the page — wider than the viewport before its own ellipsis
+     truncation ever gets a chance to apply. Without this, a long AI-generated summary blows
+     the row (and the whole page) out horizontally instead of truncating in place. */
+  min-width:0}
+.file-row:hover{border-color:var(--accent)}
+.file-row.stale{border-inline-start:3px solid #F2B84B}
+.fr-main{flex:0 1 46%;min-width:0;display:flex;gap:12px;align-items:flex-start}
+.fr-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.fr-text{min-width:0;flex:1}
+.fr-line1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fr-name{font-weight:600;font-size:14px}
+.badge-stale{font-size:10px;padding:2px 8px;border-radius:9px;background:rgba(242,184,75,.16);color:#c98a1f}
+.fr-line2{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.fr-line2 .orig-name{font-family:monospace;direction:ltr;unicode-bidi:embed}
+.fr-line2 .sep{margin:0 6px;opacity:.5}
+.fr-links{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.link-chip{font-size:10px;color:#8b5fbf;background:rgba(139,95,191,.13);padding:2px 8px;border-radius:9px}
+.col-updated{width:96px;text-align:center;font-size:11px;color:var(--muted);flex-shrink:0}
+.col-updated b{display:block;color:var(--ink);font-size:12px;margin-bottom:1px}
+.col-usage{width:84px;text-align:center;flex-shrink:0}
+.col-usage .num{font-size:16px;font-weight:700;color:var(--accent)}
+.col-usage .lbl{font-size:9.5px;color:var(--muted)}
+.col-access{width:104px;display:flex;justify-content:center;flex-shrink:0}
+.avatar-stack{display:flex}
+.avatar{width:22px;height:22px;border-radius:50%;background:var(--plane);border:2px solid var(--surface);
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-2);
+  margin-inline-start:-8px}
+.avatar:first-child{margin-inline-start:0}
+.avatar.owner{background:var(--accent);color:#fff;border-color:var(--surface);font-weight:700}
+.access-locked{font-size:11px;color:var(--muted)}
+.access-locked.ok{color:#1e9e46}
+/* 6 icon buttons × 32px + 5 × 6px gaps = 222px of actual content — the old 150px was too
+   narrow, so the leftover buttons visually spilled out of this box into .col-access next to
+   it (position/size stayed correctly at 150px, since overflow:visible doesn't grow the box
+   itself — only what's rendered past its edge). 230px gives it real room. */
+.col-actions{width:230px;display:flex;gap:6px;justify-content:flex-end;flex-shrink:0}
+.icon-btn{width:32px;height:32px;border-radius:8px;background:var(--plane);border:1px solid var(--grid);
+  color:var(--ink-2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none}
+.icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+.icon-btn:disabled{opacity:.5;cursor:progress}
+
+/* ---------- file detail modal (meta / permissions / relationships) ---------- */
+.file-modal-box{width:min(520px,100%);max-height:86vh;overflow-y:auto}
+#file-form{display:flex;flex-direction:column;gap:12px}
+#file-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+#file-form input[type="text"],#file-form textarea{padding:9px 12px;border:1px solid var(--grid);
+  border-radius:9px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface)}
+.rel-title{display:block;margin-bottom:8px;font-size:12.5px;color:var(--ink-2)}
+.rel-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rel-row .rel-label{flex:1;font-size:12.5px}
+.rel-row button{border:0;background:transparent;color:var(--danger);font-size:15px}
+.rel-add{display:flex;gap:8px;margin-top:8px}
+.rel-add select, .rel-add input{flex:1}
+.rel-add input{padding:7px 9px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px}
+.rel-add button{padding:7px 12px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;flex-shrink:0}
+@media (max-width:900px){
+  .col-updated, .col-usage, .col-access{display:none}
+  .file-list-head .col-updated, .file-list-head .col-usage, .file-list-head .col-access{display:none}
+}
+
+/* ---------- history screen ---------- */
+#screen-history{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+.hist-bar{display:flex;align-items:center;gap:14px}
+.hist-bar .count{color:var(--muted);font-size:13px}
+.clear-btn{margin-inline-start:auto;padding:7px 14px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--danger)}
+.clear-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.12)}
+.hist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.hist-card{display:flex;flex-direction:column;gap:8px;padding:16px;background:var(--surface);
+  border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow)}
+.hist-card .q{font-weight:600;font-size:13.5px;line-height:1.55}
+.hist-card .summary{color:var(--ink-2);font-size:12.5px;line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hist-card .meta{color:var(--muted);font-size:11.5px}
+.hist-card .actions{display:flex;gap:8px;margin-top:auto}
+.hist-card .actions button{flex:1;padding:7px 10px;border-radius:9px;font-size:12.5px}
+.hist-card .open-btn{border:0;background:var(--accent);color:#fff;font-weight:600}
+.hist-card .del-btn{border:1px solid var(--grid);background:var(--surface);color:var(--danger)}
+.hist-card .del-btn:hover{border-color:var(--danger);background:rgba(239,100,97,.12)}
+.hist-empty{grid-column:1/-1;padding:44px;text-align:center;color:var(--muted);
+  border:1px dashed var(--grid);border-radius:var(--radius)}
+
+/* ---------- Active dashboards: list row with a small mini preview thumbnail ---------- */
+.fr-thumb{width:76px;height:43px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1px solid var(--grid)}
+.fr-thumb svg{display:block;width:100%;height:100%}
+
+/* ---------- Part 2: dashboard states (Draft/Active), roles, owner transfer ---------- */
+.state-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  font-size:10.5px;font-weight:700;white-space:nowrap}
+.state-badge.draft{background:rgba(148,163,184,.18);color:var(--muted)}
+.state-badge.active{background:rgba(52,199,89,.16);color:#1e9e46}
+.role-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  font-size:10.5px;font-weight:600;background:rgba(59,130,246,.14);color:#2f6fdb;white-space:nowrap}
+.role-badge.role-viewer{background:rgba(148,163,184,.18);color:var(--muted)}
+.state-badge.disabled-badge{background:rgba(239,100,97,.16);color:var(--danger)}
+.hist-card .badges{display:flex;gap:6px;flex-wrap:wrap}
+.hist-card .owner-line{color:var(--muted);font-size:11px}
+.hist-card .actions button.activate-btn{border:1px solid var(--accent);background:transparent;color:var(--accent)}
+.hist-card .actions button.roles-btn{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2)}
+
+#dashboard-status-bar .manage-roles-btn{border:1px solid var(--grid);background:var(--surface);
+  color:var(--ink-2);padding:4px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+.dashboard-disabled-banner{display:flex;align-items:center;gap:8px;padding:12px 14px;
+  border-radius:10px;background:rgba(239,100,97,.1);border:1px solid rgba(239,100,97,.35);
+  color:var(--danger);font-size:13px;line-height:1.6;margin-bottom:14px}
+
+.roles-modal-box{max-width:480px}
+.roles-owner-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;
+  border-bottom:1px solid var(--grid);margin-bottom:10px}
+.roles-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:220px;overflow-y:auto}
+.role-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;
+  border:1px solid var(--grid);border-radius:9px;background:var(--surface-2,var(--surface))}
+.role-row .name{font-size:12.5px;font-weight:600}
+.role-row .remove-role-btn{border:0;background:transparent;color:var(--danger);cursor:pointer;font-size:12px}
+.role-add-row,.owner-transfer-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.role-add-row input,.owner-transfer-row input{flex:1}
+.role-add-row select{width:auto}
+.roles-section-title{font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px}
+.roles-error{color:var(--danger);font-size:12px;margin-top:4px}
+
+/* ---------- searchable user picker (file permissions; dashboard roles/owner-transfer) ---------- */
+.user-search-box{position:relative;flex:1}
+.user-search-box input{width:100%}
+.user-search-suggestions{position:absolute;top:calc(100% + 4px);inset-inline-start:0;inset-inline-end:0;
+  z-index:40;max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--grid);
+  border-radius:10px;box-shadow:var(--shadow)}
+.user-search-item{display:flex;flex-direction:column;gap:1px;padding:8px 12px;cursor:pointer;font-size:12.5px}
+.user-search-item:hover{background:var(--plane)}
+.user-search-item .uname{color:var(--muted);font-size:11px}
+.user-search-empty{padding:10px 12px;font-size:12px;color:var(--muted)}
+
+/* ---------- Part 3: static snapshot sharing (expiry, revoke, view count) ---------- */
+.share-modal-box{max-width:480px}
+.share-expiry-label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+#share-expiry-date{margin-top:8px}
+.share-row-meta{display:flex;flex-direction:column;gap:2px}
+.share-row-meta .q{font-size:12.5px;font-weight:600}
+.share-row-meta .meta{font-size:11px;color:var(--muted)}
+.share-row-actions{display:flex;gap:6px;align-items:center}
+.share-row-actions button{border:1px solid var(--grid);background:var(--surface);color:var(--ink-2);
+  padding:4px 10px;border-radius:7px;font-size:11.5px;cursor:pointer}
+.share-row-actions .revoke-share-btn{color:var(--danger)}
+.share-status-tag{font-size:10.5px;padding:1px 8px;border-radius:999px;font-weight:700}
+.share-status-tag.live{background:rgba(52,199,89,.16);color:#1e9e46}
+.share-status-tag.inactive{background:rgba(239,100,97,.16);color:var(--danger)}
+.link-btn{border:0;background:none;color:var(--accent);font-weight:600;font-size:inherit;
+  cursor:pointer;padding:0;text-decoration:underline}
+
+/* ---------- dashboard export toolbar ---------- */
+.dash-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
+.dash-toolbar.hidden{display:none}
+.dash-toolbar button{padding:7px 14px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12.5px}
+.dash-toolbar button:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.dash-toolbar button:disabled{opacity:.55;cursor:progress}
+/* Filled/accent rather than the toolbar's usual outline — this is the one action that
+   unlocks مشاركة right next to it, so it should read as the recommended next step. */
+#btn-activate{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+#btn-activate:hover{background:var(--accent);color:#fff}
+
+/* Printing (تصدير PDF): only the dashboard content, nothing else. */
+@media print{
+  header, #chat-rail, #dash-toolbar, .src-pop, #sources-panel, #shared-banner{display:none !important}
+  /* Force a light, ink-friendly printout regardless of the app's on-screen dark theme.
+     Scoped to .screen.active, not bare .screen: the base (non-print) rule is
+     .screen{display:none}/.screen.active{display:flex} — an unscoped .screen selector here
+     used !important to override THAT for every screen, not just the active one, so every
+     inactive screen (repo, history, settings, users, ...) got forced visible too and printed
+     as extra garbage pages after the real dashboard content (seen live: a 5-widget/2-page
+     printout came out as pages 1-2 of widgets followed by a page of the repository screen,
+     then settings). */
+  body, .screen.active, #screen-chat, #dash-pane{height:auto !important;overflow:visible !important;
+    display:block !important;padding:0 !important;margin:0 !important;background:#fff !important;color:#000 !important}
+  #summary{box-shadow:none;background:#fff;border-color:#ccc;color:#000}
+  .widget{box-shadow:none;border:1px solid #ccc;break-inside:avoid;background:#fff;color:#000}
+  .widget h3{color:#555}
+  .kpi .value{color:#000;text-shadow:none}
+  /* Exactly 3 widgets per printed page — 2 side by side on top, the 3rd spanning the full
+     width below — mirrors the PPTX export's own layout (PptxBuilder.CreateWidgetGroupSlide)
+     so both exports read the same way. 3 equal columns packed every chart/table into a
+     cramped third of the page (titles wrapping across several lines, bars squeezed down to a
+     few pixels wide), reported live as unreadable; 2 columns gives each widget real width.
+     On screen a chart/table/progress-table/linear-gauge (and anything sized "wide"/"large"/
+     "full") spans 2-3 of the live grid's columns; print always uses exactly 2 fixed columns
+     and forces every widget to one of them, so nothing still claims a lopsided share of a
+     row on its own — nth-child(3n) then overrides that back to full width (specificity
+     .grid>.widget:nth-child beats a plain .widget.type rule, so this wins regardless of the
+     3rd widget's type) for the 3rd widget of every group, and breaks the page after it, so a
+     page never ends with a 4th item spilling down from the row above. */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .widget.chart,.widget.table,.widget.progress-table,.widget.linear-gauge,
+  .widget[data-size="wide"],.widget[data-size="large"],.widget[data-size="full"]{grid-column:span 1}
+  /* Without this, a grid item's default min-width:auto sizes its 1fr track to fit its
+     content's intrinsic width — a table with several nowrap cells (td{white-space:nowrap})
+     can end up wider than its column, breaking the "even columns" layout. min-width:0 lets
+     every column stay genuinely equal; .tbl-wrap's own overflow:auto still clips a table
+     that's wider than its now-fixed column instead of bleeding into the next one. */
+  .grid>.widget{min-width:0}
+  .grid>.widget:nth-child(3n){grid-column:1/-1;break-after:page}
+}
+
+/* ---------- share ---------- */
+.modal-overlay{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(11,11,11,.4);padding:20px}
+.modal-overlay.hidden{display:none}
+.modal{width:min(460px,100%);background:var(--surface);border-radius:var(--radius);
+  box-shadow:0 20px 50px rgba(11,11,11,.25);padding:20px}
+.modal h3{margin:0 0 6px}
+.modal-note{margin:0 0 14px;color:var(--ink-2);font-size:12.5px;line-height:1.6}
+.modal-row{display:flex;gap:8px}
+#share-link{flex:1;padding:9px 12px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--plane);color:var(--ink-2);font-size:12.5px}
+.modal-row button{padding:9px 16px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-weight:600}
+.modal-actions{display:flex;justify-content:flex-end;margin-top:14px}
+.modal-actions button{padding:7px 16px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
+.modal-actions .file-modal-delete{margin-inline-end:auto;border-color:rgba(239,100,97,.35);color:var(--danger)}
+
+/* ---------- guided tour ---------- */
+/* The dim layer sits below whatever step's target element (see .tour-target) — a target's
+   own higher z-index is what makes it "pop" above the dim without needing an actual
+   spotlight-cutout mask. */
+#tour-dim{position:fixed;inset:0;z-index:300;background:rgba(11,11,11,.5);display:none}
+#tour-dim.open{display:block}
+.tour-target{position:relative;z-index:301;outline:3px solid var(--accent);outline-offset:3px;
+  border-radius:8px;box-shadow:0 0 0 6px rgba(27,175,122,.28)}
+#tour-pop{position:fixed;z-index:302;width:min(320px,88vw);background:var(--surface);
+  border:1px solid var(--grid);border-radius:14px;box-shadow:0 20px 50px rgba(11,11,11,.3);
+  padding:16px 18px;display:none}
+#tour-pop.open{display:block}
+#tour-pop h4{margin:0 0 8px;font-size:14.5px}
+#tour-pop p{margin:0 0 14px;font-size:13px;line-height:1.7;color:var(--ink-2)}
+.tour-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tour-step-count{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.tour-actions{display:flex;gap:8px}
+.tour-actions button{padding:6px 14px;border-radius:9px;border:1px solid var(--grid);
+  background:var(--plane);color:var(--ink-2);font-size:12.5px}
+.tour-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.tour-skip{display:block;margin-top:10px;border:0;background:transparent;color:var(--muted);
+  text-decoration:underline;font-size:12px;padding:2px}
+
+/* ---------- shared read-only view ---------- */
+#shared-banner{display:flex;align-items:center;gap:12px;padding:11px 20px;
+  background:var(--accent-soft);border-bottom:1px solid #cfe1f8;color:var(--ink-2)}
+/* An ID selector always beats a bare class selector regardless of source order, so plain
+   ".hidden{display:none}" alone can never override the "display:flex" above — this element
+   showed up on every screen, not just the share link, until it had its own hidden override. */
+#shared-banner.hidden{display:none}
+#shared-banner .q{font-weight:600;color:var(--ink)}
+#shared-banner a{margin-inline-start:auto;color:var(--accent);font-weight:600;text-decoration:none}
+
+/* ---------- login ---------- */
+.login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  background:var(--plane)}
+.login-screen.hidden{display:none}
+.login-card{width:min(360px,90vw);display:flex;flex-direction:column;gap:12px;padding:26px;
+  background:var(--surface);border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow)}
+.login-brand{display:flex;align-items:center;justify-content:center;gap:9px;font-weight:700;margin-bottom:6px}
+.login-brand .dot{width:22px;height:22px;border-radius:6px;background:var(--accent)}
+.login-card label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+.login-card input{padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:14px}
+.login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
+.login-error{padding:8px 11px;border-radius:9px;background:rgba(239,100,97,.12);border:1px solid rgba(239,100,97,.35);color:var(--danger);font-size:12.5px}
+.login-error.hidden{display:none}
+#login-submit{padding:10px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
+#login-submit:disabled{opacity:.6;cursor:progress}
+
+/* ---------- user menu ---------- */
+/* margin-inline-start:auto pushes this to the header's far end (physical left in RTL) —
+   it used to inherit that push for free from .sources sitting between nav.tabs and here
+   (.sources had the auto margin; .user-menu just followed after it in DOM order). Moving
+   .sources out of the header (now beside 🆕 ابدأ لوحة جديدة in the chat form) took that
+   spacer with it, so .user-menu lost its push and started packing right up against the nav
+   tabs near the brand instead of sitting at the far edge like before. Carrying the auto
+   margin here directly restores the original position without depending on .sources being
+   in the header at all. */
+.user-menu{display:flex;align-items:center;gap:10px;padding-inline-start:6px;margin-inline-start:auto}
+#current-user-name{font-size:12.5px;color:var(--ink-2)}
+#logout-btn{padding:6px 13px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
+#logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+#theme-toggle{width:33px;height:33px;padding:0;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);font-size:14px;line-height:1}
+#theme-toggle:hover{border-color:var(--accent)}
+#lang-toggle{width:33px;height:33px;padding:0;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:11px;font-weight:700;font-family:var(--mono)}
+#lang-toggle:hover{border-color:var(--accent);color:var(--accent)}
+#auto-read-toggle{padding:6px 12px;border:1px solid var(--grid);border-radius:9px;
+  background:var(--surface);color:var(--ink-2);font-size:12.5px}
+#auto-read-toggle:hover{border-color:var(--accent)}
+#auto-read-toggle.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.msg-speak-btn{border:0;background:transparent;color:inherit;opacity:.7;font-size:13px;
+  padding:0;margin-inline-start:6px;vertical-align:middle}
+.msg-speak-btn:hover{opacity:1}
+.tab.hidden,.hidden{display:none}
+
+/* ---------- users admin screen ---------- */
+#screen-users,#screen-settings{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+.users-bar{display:flex;align-items:center;gap:14px}
+.users-bar .count{color:var(--muted);font-size:13px}
+.new-btn{margin-inline-start:auto;padding:8px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
+.users-table-wrap{border:1px solid var(--grid);border-radius:var(--radius);overflow:auto;background:var(--surface)}
+.users-table{width:100%;border-collapse:collapse;font-size:13px}
+.users-table th{text-align:start;padding:10px 13px;background:var(--plane);font-weight:600;color:var(--ink-2);
+  border-bottom:1px solid var(--grid);white-space:nowrap}
+.users-table td{padding:10px 13px;border-bottom:1px solid var(--grid);white-space:nowrap}
+.users-table tr:last-child td{border-bottom:0}
+.role-badge{padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
+.role-badge.admin{background:rgba(242,184,75,.15);color:var(--amber)}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;background:var(--accent)}
+.status-dot.off{background:var(--muted)}
+.users-table .edit-btn,.users-table .del-btn{padding:5px 11px;border:1px solid var(--grid);border-radius:8px;
+  background:var(--surface);color:var(--ink-2);font-size:12px}
+.users-table .del-btn:hover{border-color:var(--danger);color:var(--danger)}
+.users-table .edit-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- settings screen (system-wide AI model) ---------- */
+.settings-wrap{display:flex;flex-direction:column;gap:20px}
+.settings-banner{display:flex;gap:12px;padding:14px 16px;border:1px solid var(--accent);border-radius:var(--radius);
+  background:var(--accent-soft)}
+.settings-banner-icon{font-size:20px;flex-shrink:0}
+.settings-banner-title{font-weight:700;font-size:13.5px;margin-bottom:4px}
+.settings-banner-text{font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+.settings-section{padding:16px;border:1px solid var(--grid);border-radius:var(--radius);background:var(--surface)}
+.settings-section h3{margin:0 0 12px;font-size:13.5px}
+.settings-current{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.settings-current-badge{padding:4px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.settings-current-model{color:var(--muted);font-family:var(--mono);font-size:12px}
+.settings-save-note{color:var(--accent);font-size:12.5px;font-weight:600;margin-inline-end:auto}
+.settings-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.settings-info-card{padding:12px 14px;border:1px solid var(--grid);border-radius:10px;background:var(--plane)}
+.settings-info-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.settings-info-title{font-weight:600;font-size:12.5px}
+.settings-info-badge{font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.18);color:var(--muted);white-space:nowrap}
+.settings-info-badge.ok{background:var(--accent-soft);color:var(--accent)}
+.settings-info-card p{margin:0;font-size:12px;line-height:1.6;color:var(--ink-2)}
+
+/* ---------- role-info modal (explains Owner/Editor/Viewer to a non-technical user) ---------- */
+.role-info-box{width:min(520px,100%);max-height:86vh;overflow-y:auto}
+.role-info-item{padding:12px 0;border-top:1px solid var(--grid)}
+.role-info-item:first-of-type{border-top:0}
+.role-info-item p{margin:8px 0;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+.role-info-item ul{margin:6px 0;padding-inline-start:20px;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+.role-info-item li{margin-bottom:4px}
+.role-info-head{display:flex;align-items:center;gap:8px}
+.role-info-sub{color:var(--muted);font-size:11.5px}
+.role-info-title{font-weight:700;font-size:13px}
+
+/* ---------- rename (active dashboard title/description) modal ---------- */
+.rename-modal-box{width:min(440px,100%)}
+#rename-form{display:flex;flex-direction:column;gap:12px}
+#rename-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+#rename-form input[type="text"],#rename-form textarea{padding:9px 12px;border:1px solid var(--grid);
+  border-radius:9px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface)}
+
+/* ---------- user modal ---------- */
+/* ---------- التكاملات الخارجية ---------- */
+.integrations-list{display:flex;flex-direction:column;gap:8px}
+.integration-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--grid);
+  border-radius:var(--radius);background:var(--surface);cursor:pointer}
+.integration-row:hover{border-color:var(--accent)}
+.integration-row-name{font-weight:700;font-size:13.5px;flex:1}
+.integration-row-badges{display:flex;gap:6px;flex-wrap:wrap}
+.integration-badge{padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;background:var(--plane);color:var(--ink-2)}
+.integration-badge.ok{background:var(--accent-soft);color:var(--accent)}
+.integration-badge.warn{background:rgba(242,184,75,.18);color:#946200}
+.integrations-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+.integrations-form input[type="text"],.integrations-form textarea{
+  padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:13px;color:var(--ink);font-family:inherit}
+.integrations-form textarea{resize:vertical;min-height:60px}
+.integrations-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.vi-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.vi-tab{padding:6px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);
+  color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer}
+.vi-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.vi-pane{display:none}
+.vi-pane.active{display:block}
+.vi-swatches{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.vi-swatch{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.vi-swatch-dot{width:22px;height:22px;border-radius:50%;border:1px solid var(--grid)}
+.vi-proposal{margin-top:12px;padding:12px;border:1px dashed var(--accent);border-radius:10px;background:var(--accent-soft)}
+.vi-proposal-note{font-size:11.5px;color:#946200;margin-top:6px}
+.identity-status{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px}
+.identity-match-result{margin-top:10px;padding:10px 12px;border:1px solid var(--grid);border-radius:10px;background:var(--plane);font-size:12.5px;line-height:1.7}
+.integ-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+.integ-table th,.integ-table td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:start}
+.integ-table th{color:var(--ink-2);font-weight:700}
+.deliverable-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.user-modal-box{width:min(480px,100%);max-height:86vh;overflow-y:auto}
+#user-form{display:flex;flex-direction:column;gap:12px}
+#user-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+#user-form input[type="text"],#user-form input[type="password"]{
+  padding:9px 12px;border:1px solid var(--grid);border-radius:9px;font-size:13.5px;color:var(--ink)}
+.chk-row{flex-direction:row !important;align-items:center;gap:8px !important}
+.chk-row input{width:16px;height:16px;accent-color:var(--accent)}
+.hint{color:var(--muted);font-weight:400;font-size:11px}
+.perm-block{padding:10px 12px;border:1px solid var(--grid);border-radius:10px;background:var(--plane)}
+.perm-list{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--grid)}
+.perm-list.hidden{display:none}
+.perm-list label{flex-direction:row !important;align-items:center;gap:6px !important;font-size:12.5px;color:var(--ink)}
+.perm-list input{width:15px;height:15px;accent-color:var(--accent)}
+.perm-list .empty{color:var(--muted);font-size:12px}
+
+/* التكاملات الخارجية — bigger, easier-to-read text and a two-column masonry layout for
+   the detail view so it doesn't force ~2x scroll on a normal laptop screen. Scoped to this
+   screen (rather than changed on .settings-section/.model-switch-note themselves) since
+   those classes are shared by every other admin settings screen in the app. */
+#screen-integrations .settings-section h3{font-size:15px}
+#screen-integrations .model-switch-note{font-size:12.5px}
+#screen-integrations .integrations-form label{font-size:13.5px}
+#screen-integrations .integrations-form input[type="text"],
+#screen-integrations .integrations-form textarea{font-size:14px;padding:10px 13px}
+#screen-integrations .integration-row-name{font-size:14.5px}
+#screen-integrations .integration-badge{font-size:12px;padding:3px 10px}
+#screen-integrations .integ-table{font-size:13.5px}
+#screen-integrations .identity-match-result{font-size:13.5px}
+
+#screen-integrations .settings-columns{display:flex;flex-direction:column;gap:18px}
+#screen-integrations .settings-columns-row{display:flex;flex-direction:column;gap:18px}
+#screen-integrations .settings-columns-row > .settings-section{flex:1;min-width:0}
+@media (min-width:1000px){
+  #screen-integrations .settings-columns-row{flex-direction:row}
+}
