@@ -4908,6 +4908,18 @@ function showScreen(name) {
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
 
+// ---------- admin menu dropdown ----------
+// Same toggle/outside-click-closes pattern as #sources-panel. No stopPropagation on the
+// panel itself: a click on one of its own [data-screen] items should both navigate (via
+// the generic handler above, target phase) and close the menu (this bubbled handler,
+// same click) — a menu closing itself the moment you pick something is the expected
+// behavior, unlike the sources checklist you tick multiple times before closing.
+el('admin-menu-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  el('admin-menu-panel').classList.toggle('hidden');
+});
+document.addEventListener('click', () => el('admin-menu-panel').classList.add('hidden'));
+
 // ---------- chat rail size (small / normal / large / hidden) ----------
 // Three controls, as requested: shrink, grow, hide-entirely. Independent of theme,
 // persisted the same way (localStorage) so the choice survives a reload.
@@ -5435,10 +5447,10 @@ function renderCurrentUser() {
   const u = state.currentUser;
   if (!u) return;
   el('current-user-name').textContent = `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
-  el('tab-users').classList.toggle('hidden', u.role !== 'Admin');
-  el('tab-settings').classList.toggle('hidden', u.role !== 'Admin');
-  el('tab-integrations').classList.toggle('hidden', u.role !== 'Admin');
-  el('usage-link').classList.toggle('hidden', u.role !== 'Admin');
+  // The four admin-only screens all share this one condition — toggled on their shared
+  // wrapper (see #admin-menu) rather than each item individually now that they live
+  // behind one dropdown instead of four flat tabs.
+  el('admin-menu').classList.toggle('hidden', u.role !== 'Admin');
 }
 
 // ---------- settings page (admin only) — the system-wide AI model/provider, via
@@ -6416,6 +6428,13 @@ function renderTourStep() {
 
   const targetEl = step.target ? document.querySelector(step.target) : null;
   if (targetEl) {
+    // A step targeting an admin-menu item (users/settings/usage — see #admin-menu-panel)
+    // needs that dropdown actually open first, or getBoundingClientRect() below measures
+    // a display:none ancestor and positions the popover at the viewport's top-left corner
+    // instead of near the real button. Left open afterward on purpose: the tour's own
+    // prev/next/skip buttons live outside the panel, so the existing outside-click-closes
+    // handler (see admin-menu-btn's own listener) closes it again the moment the step advances.
+    if (targetEl.closest('#admin-menu-panel')) el('admin-menu-panel').classList.remove('hidden');
     targetEl.classList.add('tour-target');
     positionTourPopover(targetEl, pop);
   } else {

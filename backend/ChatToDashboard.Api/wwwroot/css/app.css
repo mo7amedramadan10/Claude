@@ -78,6 +78,20 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 .tab .badge{display:inline-block;min-width:19px;padding:0 5px;margin-inline-start:6px;border-radius:999px;
   background:var(--accent);color:#fff;font-size:11px;line-height:18px;text-align:center}
 
+/* ---------- admin menu dropdown ----------
+ * Groups the admin-only screens (users/settings/integrations/usage) behind one toggle
+ * instead of each being its own flat tab in the header row — same open/close pattern as
+ * #sources-panel (click toggles, outside click closes), just anchored under the header
+ * instead of above the composer, since there's open space below it and none above. */
+.admin-menu{position:relative}
+.admin-menu.hidden{display:none}
+#admin-menu-panel{position:absolute;inset-inline-start:0;top:calc(100% + 6px);z-index:40;
+  min-width:210px;padding:6px;display:flex;flex-direction:column;gap:2px;
+  background:var(--surface);border:1px solid var(--grid);border-radius:var(--radius);
+  box-shadow:0 8px 28px rgba(11,11,11,.12)}
+#admin-menu-panel.hidden{display:none}
+#admin-menu-panel .tab{width:100%;text-align:start;border-radius:8px}
+
 /* ---------- sources dropdown ----------
  * Lives in the chat form's .form-actions-row, next to #new-dashboard-btn, so the source
  * selection is right there with every message rather than tucked away in the header —

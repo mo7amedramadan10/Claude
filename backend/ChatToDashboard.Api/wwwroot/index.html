@@ -47,10 +47,15 @@
     <button class="tab" data-screen="history">السجل <span class="badge" id="history-badge">0</span></button>
     <button class="tab" data-screen="active">اللوحات النشطة <span class="badge" id="active-badge">0</span></button>
     <button class="tab" data-screen="sharelinks">روابط المشاركة <span class="badge" id="sharelinks-badge">0</span></button>
-    <button class="tab hidden" id="tab-users" data-screen="users">المستخدمون</button>
-    <button class="tab hidden" id="tab-settings" data-screen="settings">الإعدادات</button>
-    <button class="tab hidden" id="tab-integrations" data-screen="integrations">التكاملات الخارجية</button>
-    <a class="tab hidden" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
+    <div class="admin-menu hidden" id="admin-menu">
+      <button type="button" class="tab" id="admin-menu-btn">⚙️ الإدارة</button>
+      <div id="admin-menu-panel" class="hidden">
+        <button class="tab" id="tab-users" data-screen="users">المستخدمون</button>
+        <button class="tab" id="tab-settings" data-screen="settings">الإعدادات</button>
+        <button class="tab" id="tab-integrations" data-screen="integrations">التكاملات الخارجية</button>
+        <a class="tab" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
+      </div>
+    </div>
   </nav>
 
   <div class="user-menu">
