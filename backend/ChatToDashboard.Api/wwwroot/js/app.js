@@ -574,6 +574,21 @@ function fmt(v) {
 }
 const num = v => typeof v === 'number' ? v : (parseFloat(v) || 0);
 
+// Counts a KPI up from 0 to its real value over ~700ms instead of just printing it — only
+// called for a freshly (re)generated dashboard's reveal (see revealNow), never on a filter
+// or edit re-render, where the number must just be correct immediately with no animation.
+function animateKpiValue(target, value) {
+  const start = performance.now();
+  const duration = 700;
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    target.textContent = fmt(value * eased);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 // A donut's idle center caption names what the number actually is — "مشروع" for a count of
 // projects, "خطر" for a count of risks — instead of the generic "الإجمالي", which said
 // nothing about the number itself. There's no structured "what this counts" field in the
@@ -674,6 +689,19 @@ let chartInstances = [];
 // #dash, so mountChart() only queues {card, holder, options} here; renderDashboard()
 // instantiates them right after the grid is actually in the DOM.
 let pendingCharts = [];
+
+// ---------- dashboard reveal animation ----------
+// Set right before a genuinely new/regenerated dashboard is rendered for the first time
+// (see ask() in the chat section) — never touched by a filter re-run, an edit, undo/redo,
+// or reopening a saved dashboard from السجل, so those all keep rendering instantly as
+// before. renderDashboard() consumes it into revealNow for that one render only; KpiCard
+// reads revealNow (still module-scope, set synchronously before widgets are built) to
+// decide whether to count up instead of just printing the number.
+let revealDashboardOnNextRender = false;
+let revealNow = false;
+function prefersReducedMotion() {
+  try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
+}
 
 function widgetShell(w, extraClass) {
   const card = document.createElement('div');
@@ -1356,7 +1384,8 @@ function KpiCard(w) {
   body.className = 'kpi-body';
   const val = document.createElement('div');
   val.className = 'value';
-  val.textContent = fmt(v);
+  if (revealNow && typeof v === 'number' && isFinite(v)) animateKpiValue(val, v);
+  else val.textContent = fmt(v);
   body.appendChild(val);
   if (e?.label) {
     const label = document.createElement('div');
@@ -2259,12 +2288,31 @@ function renderDashboard() {
     el.dash.appendChild(buildFilterBar(d.filters || []));
   }
 
+  // One-shot: true only for the render right after ask() lands a freshly (re)generated
+  // dashboard, never for a filter/edit/undo re-render of the same widgets — see
+  // revealDashboardOnNextRender's own comment above.
+  revealNow = revealDashboardOnNextRender && !prefersReducedMotion();
+  revealDashboardOnNextRender = false;
+
   const widgets = d.widgets || [];
   if (widgets.length) {
     const grid = document.createElement('div');
     grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
-    widgets.forEach(w => grid.appendChild(buildWidget(w)));
+    widgets.forEach((w, i) => {
+      const card = buildWidget(w);
+      if (revealNow) {
+        card.classList.add('widget-enter');
+        // Capped so a dashboard with many widgets doesn't leave the last ones waiting
+        // seconds to appear — beyond ~8 cards they all start together instead.
+        card.style.animationDelay = `${Math.min(i, 8) * 55}ms`;
+      }
+      grid.appendChild(card);
+    });
     el.dash.appendChild(grid);
+    // Scoped strictly to the loop above — cleared immediately after so a widget built
+    // outside a render pass (e.g. a comparison's own buildWidget() call is fine, it runs
+    // inside this same loop; anything built later never should be) never counts up.
+    revealNow = false;
 
     // Only now is every widget's chart-holder actually laid out with real dimensions —
     // instantiate the charts queued by mountChart() and keep each render's promise so
@@ -3269,6 +3317,9 @@ async function ask(question) {
       state.dashboard = ensureWidgetMeta(payload.dashboard);
       state.editHistory = { past: [], future: [] };
       state.currentHistoryId = null;
+      // A brand-new answer, never a filter/edit re-render — the next renderDashboard()
+      // call plays the entrance animation (see revealDashboardOnNextRender's own comment).
+      revealDashboardOnNextRender = true;
       // A chat answer always lands as a fresh Draft (per Part 2: "any question's result
       // goes to History as a frozen snapshot") — even when it continues an Active
       // dashboard, so the Active one's own state no longer describes what's on screen now.
