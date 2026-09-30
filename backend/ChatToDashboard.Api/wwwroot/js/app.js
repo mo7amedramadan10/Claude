@@ -3315,15 +3315,9 @@ function setChatMode(mode) {
   el('q').placeholder = mode === 'inquiry'
     ? 'اسأل استفسارًا عن بياناتك، أو تابع نقاشًا سابقًا — إجابة نصية مباشرة، من غير بناء لوحة…'
     : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
-  document.querySelector('.form-input-row').classList.toggle('inquiry-mode', mode === 'inquiry');
-  const sendBtn = el('send');
-  if (mode === 'inquiry') {
-    sendBtn.innerHTML = '<span class="send-icon" aria-hidden="true">➤</span>';
-    sendBtn.setAttribute('aria-label', 'إرسال');
-  } else {
-    sendBtn.textContent = 'إرسال';
-    sendBtn.removeAttribute('aria-label');
-  }
+  // Composer is a single rounded pill in both modes now, with a circular icon-only send button.
+  el('send').innerHTML = '<span class="send-icon" aria-hidden="true">➤</span>';
+  el('send').setAttribute('aria-label', 'إرسال');
   if (mode === 'inquiry') {
     renderInquiryMessages();
     if (!state.inquiryConversationsLoaded) loadInquiryConversations();

@@ -323,27 +323,23 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
   border-radius:8px;background:var(--surface);color:var(--accent)}
 form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px solid var(--grid)}
 .form-actions-row{display:flex;gap:8px;flex-wrap:wrap}
-.form-input-row{display:flex;gap:8px}
-#q{flex:1;padding:10px 13px;border:1px solid var(--grid);border-radius:11px;outline:none}
-#q:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-#send{padding:10px 18px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-weight:600}
-#send:disabled{opacity:.45;cursor:not-allowed}
-/* Inquiries composer — one rounded pill container instead of separate boxes, per the design
-   refresh; scoped to .inquiry-mode (toggled only while state.chatMode==='inquiry', see
-   setChatMode) so بناء اللوحة's own #q/#send/.attach-btn above render exactly as before. */
-.form-input-row.inquiry-mode{align-items:center;gap:0;padding:4px;border:1px solid var(--grid);
+/* One rounded pill container for the whole composer (input + attach + send), used in both
+   بناء اللوحة and الاستفسارات modes so the two look consistent. */
+.form-input-row{display:flex;align-items:center;gap:0;padding:4px;border:1px solid var(--grid);
   border-radius:999px;background:var(--surface)}
-.form-input-row.inquiry-mode:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.form-input-row.inquiry-mode #q{border:0;background:transparent;padding:8px 12px}
-.form-input-row.inquiry-mode #q:focus{box-shadow:none}
-.form-input-row.inquiry-mode .attach-btn{border:0;background:transparent;width:36px}
-.form-input-row.inquiry-mode #send{width:44px;height:44px;min-width:44px;padding:0;
-  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+.form-input-row:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+#q{flex:1;border:0;background:transparent;padding:8px 12px;outline:none}
+#q:focus{box-shadow:none}
+#send{width:44px;height:44px;min-width:44px;padding:0;border:0;border-radius:50%;
+  background:var(--accent);color:#fff;font-weight:600;display:flex;align-items:center;
+  justify-content:center;font-size:16px;transition:background .15s,transform .1s}
+#send:disabled{opacity:.45;cursor:not-allowed}
+#send:not(:disabled):hover{background:var(--accent-hover,var(--accent));transform:scale(1.05)}
 /* Mirrored so the arrow visually points toward the send direction (the start edge) in RTL. */
-.form-input-row.inquiry-mode #send .send-icon{display:inline-block;transform:scaleX(-1)}
-.attach-btn{display:flex;align-items:center;justify-content:center;width:41px;
-  border:1px solid var(--grid);border-radius:11px;background:var(--surface);font-size:16px}
-.attach-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+#send .send-icon{display:inline-block;transform:scaleX(-1)}
+.attach-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;
+  border:0;background:transparent;border-radius:50%;font-size:16px}
+.attach-btn:hover{background:var(--accent-soft)}
 /* Empties the dashboard immediately on click — see its click handler in the chat section. */
 .new-dash-btn{display:flex;align-items:center;gap:4px;height:41px;padding:0 12px;
   border:1px solid var(--grid);border-radius:11px;background:var(--surface);color:var(--ink-2);
