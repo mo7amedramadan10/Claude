@@ -257,7 +257,10 @@ public class ConnectorOptions
     public string? IdentityParameterName { get; set; }
 
     /// <summary>Where the local SQLite storage file (dashboards + permissions — NOT your own
-    /// business data) lives. Relative paths are relative to this service's working directory.</summary>
+    /// business data) lives. A relative value is resolved against this service's own binary
+    /// folder (see LocalStore) — never the process's current directory, which under IIS is
+    /// typically something like System32\inetsrv rather than the site folder, and whose account
+    /// (the App Pool identity) has no reason to be able to write there.</summary>
     public string LocalStoragePath { get; set; } = "connector-storage.db";
 }
 
@@ -312,7 +315,11 @@ public class LocalStore
 {
     private readonly string _connectionString;
 
-    public LocalStore(ConnectorOptions options) => _connectionString = $"Data Source={options.LocalStoragePath}";
+    // Path.Combine ignores its first argument when the second is already rooted, so an
+    // operator-supplied absolute path passes through unchanged — only the relative default
+    // actually gets anchored to the binary folder here.
+    public LocalStore(ConnectorOptions options) =>
+        _connectionString = $"Data Source={Path.Combine(AppContext.BaseDirectory, options.LocalStoragePath)}";
 
     private SqliteConnection Open()
     {
