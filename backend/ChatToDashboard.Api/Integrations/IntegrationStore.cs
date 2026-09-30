@@ -33,9 +33,7 @@ public class IntegrationStore
             ? $"""
                CREATE TABLE IF NOT EXISTS {IntegrationsTable} (
                  "Id" TEXT PRIMARY KEY, "Name" TEXT,
-                 "WriteApiUrl" TEXT, "WriteApiAuthHeader" TEXT, "WriteApiAuthValue" TEXT,
-                 "ReadApiBaseUrl" TEXT, "DirectoryApiUrl" TEXT,
-                 "PermissionsApiUrl" TEXT, "PermissionsApiAuthHeader" TEXT, "PermissionsApiAuthValue" TEXT,
+                 "ConnectorBaseUrl" TEXT, "ConnectorAuthHeader" TEXT, "ConnectorAuthValue" TEXT,
                  "IdentityMechanism" TEXT, "IdentityParameterName" TEXT,
                  "IdentityConfirmed" INTEGER, "IdentityConfirmedAt" TEXT, "IdentityConfirmedBy" TEXT,
                  "AccentColor" TEXT, "SecondaryColor" TEXT, "FontFamily" TEXT,
@@ -45,9 +43,7 @@ public class IntegrationStore
                IF OBJECT_ID('staging.ExternalIntegrations') IS NULL
                CREATE TABLE {IntegrationsTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Name] NVARCHAR(200),
-                 [WriteApiUrl] NVARCHAR(1000), [WriteApiAuthHeader] NVARCHAR(200), [WriteApiAuthValue] NVARCHAR(1000),
-                 [ReadApiBaseUrl] NVARCHAR(1000), [DirectoryApiUrl] NVARCHAR(1000),
-                 [PermissionsApiUrl] NVARCHAR(1000), [PermissionsApiAuthHeader] NVARCHAR(200), [PermissionsApiAuthValue] NVARCHAR(1000),
+                 [ConnectorBaseUrl] NVARCHAR(1000), [ConnectorAuthHeader] NVARCHAR(200), [ConnectorAuthValue] NVARCHAR(1000),
                  [IdentityMechanism] NVARCHAR(20), [IdentityParameterName] NVARCHAR(200),
                  [IdentityConfirmed] BIT, [IdentityConfirmedAt] DATETIME2, [IdentityConfirmedBy] NVARCHAR(200),
                  [AccentColor] NVARCHAR(20), [SecondaryColor] NVARCHAR(20), [FontFamily] NVARCHAR(200),
@@ -55,12 +51,15 @@ public class IntegrationStore
                """;
         await using (var cmd = connection.CreateCommand()) { cmd.CommandText = integrationsSql; await cmd.ExecuteNonQueryAsync(ct); }
 
-        // Migration for a table created before Publish could retarget a widget's query to the
-        // client's own real schema (see PublishService/RetargetSqlAsync) — null/empty means no
-        // schema was ever given, so Publish leaves every widget's Sql unset rather than
-        // guessing at a translation with nothing to translate against.
+        // Additive migrations for tables created before a given column existed — old
+        // WriteApiUrl/ReadApiBaseUrl/DirectoryApiUrl/PermissionsApiUrl* columns (superseded by
+        // the single ConnectorBaseUrl above, since the connector's route shape is fixed and
+        // known) are simply left behind, unused, on any such table rather than dropped.
         foreach (var (column, sqliteType, sqlServerType) in new[]
                  {
+                     ("ConnectorBaseUrl", "TEXT", "NVARCHAR(1000)"),
+                     ("ConnectorAuthHeader", "TEXT", "NVARCHAR(200)"),
+                     ("ConnectorAuthValue", "TEXT", "NVARCHAR(1000)"),
                      ("ClientDbProvider", "TEXT", "NVARCHAR(20)"),
                      ("ClientSchemaDescription", "TEXT", "NVARCHAR(MAX)"),
                  })
@@ -167,17 +166,14 @@ public class IntegrationStore
         await connection.ExecuteAsync(
             $"""
             UPDATE {IntegrationsTable} SET
-              WriteApiUrl = @WriteApiUrl, WriteApiAuthHeader = @WriteApiAuthHeader, WriteApiAuthValue = @WriteApiAuthValue,
-              ReadApiBaseUrl = @ReadApiBaseUrl, DirectoryApiUrl = @DirectoryApiUrl,
-              PermissionsApiUrl = @PermissionsApiUrl, PermissionsApiAuthHeader = @PermissionsApiAuthHeader,
-              PermissionsApiAuthValue = @PermissionsApiAuthValue, UpdatedAt = @UpdatedAt
+              ConnectorBaseUrl = @ConnectorBaseUrl, ConnectorAuthHeader = @ConnectorAuthHeader,
+              ConnectorAuthValue = @ConnectorAuthValue, UpdatedAt = @UpdatedAt
             WHERE Id = @Id
             """,
             new
             {
-                Id = id, request.WriteApiUrl, request.WriteApiAuthHeader, request.WriteApiAuthValue,
-                request.ReadApiBaseUrl, request.DirectoryApiUrl, request.PermissionsApiUrl,
-                request.PermissionsApiAuthHeader, request.PermissionsApiAuthValue, UpdatedAt = DateTime.UtcNow,
+                Id = id, request.ConnectorBaseUrl, request.ConnectorAuthHeader, request.ConnectorAuthValue,
+                UpdatedAt = DateTime.UtcNow,
             });
     }
 

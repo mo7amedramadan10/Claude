@@ -108,11 +108,12 @@ app.MapGet("/dashboards/{id}", async (string id, HttpRequest request, LocalStore
 });
 
 // ---------- permissions: admin.html writes each dashboard's visibility decision here ----------
-app.MapPost("/permissions", async (HttpRequest request, LocalStore store, ConnectorOptions options) =>
+// Not behind the backend API key — admin.html is a static file opened in whoever's browser has
+// it, same as /dashboards and /directory below, so there's no secret it could safely carry.
+// Access control for this endpoint is whatever network/hosting boundary you put around
+// admin.html itself (e.g. only reachable on your internal admin network).
+app.MapPost("/permissions", async (HttpRequest request, LocalStore store) =>
 {
-    if (!IsAuthorized(request, options))
-        return Results.Unauthorized();
-
     PermissionUpdate? update;
     try
     {

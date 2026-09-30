@@ -23,41 +23,39 @@ public static class ClientDbProviders
 }
 
 /// <summary>
-/// One external client system's whole integration setup — everything Part A/B/C describe:
-/// where we publish to (write API), what the client's own read/directory APIs are (baked into
-/// the two delivered files, never called by us directly — see IntegrationDeliverables), how the
-/// current user's identity is forwarded (Part C, requires <see cref="IdentityConfirmed"/> before
-/// use), and the visual-identity token set (Part B) applied to the viewer page. Credentials are
-/// stored as given (this is an admin-only internal settings surface, same posture as
-/// appsettings-configured Sources:Systems:Api:Headers) but never echoed back by the read
-/// endpoints — only an IsConfigured-style boolean, same convention as LlmSettingsController.
+/// One external client system's whole integration setup — everything Part A/B/C describe: the
+/// connector service's base URL (its route shape is fixed and known — see IntegrationConnector's
+/// Program.cs — so every endpoint Publish/viewer.html/admin.html need is derived from this one
+/// value, never separately configured), how the current user's identity is forwarded (Part C,
+/// requires <see cref="IdentityConfirmed"/> before use), and the visual-identity token set (Part
+/// B) applied to the viewer page. Credentials are stored as given (this is an admin-only internal
+/// settings surface, same posture as appsettings-configured Sources:Systems:Api:Headers) but
+/// never echoed back by the read endpoints — only an IsConfigured-style boolean, same convention
+/// as LlmSettingsController.
 /// </summary>
 public class ExternalIntegration
 {
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
 
-    // Part A — where a Publish action sends a dashboard's JSON.
-    public string? WriteApiUrl { get; set; }
-    public string? WriteApiAuthHeader { get; set; }
-    public string? WriteApiAuthValue { get; set; }
+    // The deployed connector's base URL (e.g. "http://connector.client-network:5000") and the
+    // one shared key protecting its backend-only endpoints (/publish, /schema — never
+    // /dashboards, /permissions or /directory, which the client's own browser calls directly and
+    // so can never safely carry a shared secret; see IntegrationConnector's Program.cs).
+    public string? ConnectorBaseUrl { get; set; }
+    public string? ConnectorAuthHeader { get; set; }
+    public string? ConnectorAuthValue { get; set; }
 
-    // Part D — the client's own read API base URL, baked into viewer.html at generation time.
-    // Never called from our backend; only the browser running viewer.html on the client's own
-    // domain calls it.
-    public string? ReadApiBaseUrl { get; set; }
+    // Part A/D/E — every endpoint the connector exposes, derived from ConnectorBaseUrl rather
+    // than configured separately, since we control both ends and its route shape never varies.
+    public string? PublishUrl => CombineUrl(ConnectorBaseUrl, "publish");
+    public string? DashboardsUrl => CombineUrl(ConnectorBaseUrl, "dashboards");
+    public string? DirectoryUrl => CombineUrl(ConnectorBaseUrl, "directory");
+    public string? PermissionsUrl => CombineUrl(ConnectorBaseUrl, "permissions");
+    public string? SchemaUrl => CombineUrl(ConnectorBaseUrl, "schema");
 
-    // Part E, optional — a type-ahead search API for permissions-admin.html.
-    public string? DirectoryApiUrl { get; set; }
-
-    // Part E — where permissions-admin.html writes each dashboard's everyone/restricted
-    // decision. Not specified as a separate concept in the client-facing requirements doc
-    // (which only describes "a simple table on your side" read by the Read API) — kept as its
-    // own configurable endpoint since the doc explicitly leaves the write mechanism to
-    // "whatever write mechanism the client's API exposes for it".
-    public string? PermissionsApiUrl { get; set; }
-    public string? PermissionsApiAuthHeader { get; set; }
-    public string? PermissionsApiAuthValue { get; set; }
+    private static string? CombineUrl(string? baseUrl, string path) =>
+        string.IsNullOrWhiteSpace(baseUrl) ? null : baseUrl.TrimEnd('/') + "/" + path;
 
     // Part C — fixed mechanism set; see IdentityTransportMechanisms. Never active (viewer.html
     // is generated with NO identity-forwarding code) until IdentityConfirmed is explicitly set —
@@ -73,11 +71,12 @@ public class ExternalIntegration
     public string? SecondaryColor { get; set; }
     public string? FontFamily { get; set; }
 
-    // The client's OWN database — tables/columns/types described once at integration setup, so
-    // Publish can retarget each widget's query to run directly against their real schema
-    // instead of ours (see AnalyticsTools.RetargetSqlSystemPrompt and PublishService). The
-    // connection string itself is never given to us — see the generated connector service,
-    // which the client configures with it locally, entirely outside our reach.
+    // The client's OWN database — tables/columns/types, discovered once from the connector's own
+    // GET /schema (see IntegrationsController.DiscoverClientSchema), so Publish can retarget
+    // each widget's query to run directly against their real schema instead of ours (see
+    // AnalyticsTools.RetargetSqlSystemPrompt and PublishService). The connection string itself is
+    // never given to us — it stays local to the connector's own config, entirely outside our
+    // reach.
     public string? ClientDbProvider { get; set; }
     public string? ClientSchemaDescription { get; set; }
 
@@ -126,14 +125,9 @@ public class CreateIntegrationRequest
 
 public class UpdateIntegrationApisRequest
 {
-    [JsonPropertyName("writeApiUrl")] public string? WriteApiUrl { get; set; }
-    [JsonPropertyName("writeApiAuthHeader")] public string? WriteApiAuthHeader { get; set; }
-    [JsonPropertyName("writeApiAuthValue")] public string? WriteApiAuthValue { get; set; }
-    [JsonPropertyName("readApiBaseUrl")] public string? ReadApiBaseUrl { get; set; }
-    [JsonPropertyName("directoryApiUrl")] public string? DirectoryApiUrl { get; set; }
-    [JsonPropertyName("permissionsApiUrl")] public string? PermissionsApiUrl { get; set; }
-    [JsonPropertyName("permissionsApiAuthHeader")] public string? PermissionsApiAuthHeader { get; set; }
-    [JsonPropertyName("permissionsApiAuthValue")] public string? PermissionsApiAuthValue { get; set; }
+    [JsonPropertyName("connectorBaseUrl")] public string? ConnectorBaseUrl { get; set; }
+    [JsonPropertyName("connectorAuthHeader")] public string? ConnectorAuthHeader { get; set; }
+    [JsonPropertyName("connectorAuthValue")] public string? ConnectorAuthValue { get; set; }
 }
 
 /// <summary>Shape of the connector's own GET /schema response (see IntegrationConnector's

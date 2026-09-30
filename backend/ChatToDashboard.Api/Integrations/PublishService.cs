@@ -97,8 +97,8 @@ public class PublishService
     {
         var integration = await _integrations.GetByIdAsync(integrationId, ct);
         if (integration is null) return new PublishResult(false, "لا يوجد تكامل بهذا المعرف.", null);
-        if (string.IsNullOrWhiteSpace(integration.WriteApiUrl))
-            return new PublishResult(false, "نقطة الكتابة (Write API) غير مضبوطة لهذا التكامل بعد.", null);
+        if (string.IsNullOrWhiteSpace(integration.ConnectorBaseUrl))
+            return new PublishResult(false, "رابط خدمة الاتصال (Connector Base URL) غير مضبوط لهذا التكامل بعد.", null);
 
         var entry = await _history.GetByIdAsync(localHistoryId, ct);
         if (entry is null || !entry.IsActive)
@@ -136,12 +136,12 @@ public class PublishService
         try
         {
             var client = _httpClientFactory.CreateClient();
-            using var request = new HttpRequestMessage(HttpMethod.Post, integration.WriteApiUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Post, integration.PublishUrl)
             {
                 Content = JsonContent.Create(payload),
             };
-            if (!string.IsNullOrWhiteSpace(integration.WriteApiAuthHeader) && !string.IsNullOrWhiteSpace(integration.WriteApiAuthValue))
-                request.Headers.TryAddWithoutValidation(integration.WriteApiAuthHeader, integration.WriteApiAuthValue);
+            if (!string.IsNullOrWhiteSpace(integration.ConnectorAuthHeader) && !string.IsNullOrWhiteSpace(integration.ConnectorAuthValue))
+                request.Headers.TryAddWithoutValidation(integration.ConnectorAuthHeader, integration.ConnectorAuthValue);
 
             using var response = await client.SendAsync(request, ct);
             success = response.IsSuccessStatusCode;

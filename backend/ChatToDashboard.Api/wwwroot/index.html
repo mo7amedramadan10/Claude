@@ -1546,9 +1546,9 @@ tr:last-child td{border-bottom:0}
       <div>
         <div class="settings-banner-title">عرض لوحات المتابعة داخل نظام عميل خارجي</div>
         <div class="settings-banner-text">كل تكامل هنا يمثل نظام عميل واحد، وفريق العميل التقني
-          مش محتاج يكتب أي كود — بس يوصّفلنا بنية قاعدة بياناتهم مرة واحدة (تحت)، وينزّل ويشغّل
-          3 ملفات جاهزة على شبكتهم: صفحة عرض، صفحة إدارة صلاحيات، وخدمة اتصال صغيرة
-          (connector) بتتصل بقاعدة بياناتهم مباشرة. "نشر" بيبعت للعميل شكل اللوحة بس (العناصر
+          مش محتاج يكتب أي كود — بس ينزّل ويشغّل 3 ملفات جاهزة على شبكتهم: صفحة عرض، صفحة إدارة
+          صلاحيات، وخدمة اتصال صغيرة (connector) بتتصل بقاعدة بياناتهم مباشرة وبتكتشف بنيتها
+          تلقائيًا (مفيش حد يكتبها يدويًا). "نشر" بيبعت للعميل شكل اللوحة بس (العناصر
           وأنواعها وعناوينها) مع كويري جاهز لكل عنصر مكتوب على بنية بياناتهم هم — بدون أي أرقام
           أو قيم فعلية؛ الخدمة الصغيرة دي هي اللي بتنفّذ الكويري ده حيّ على قاعدة بياناتهم في كل
           مرة حد يفتح صفحة العرض، وترجّع القيم الحقيقية لحظتها.</div>
@@ -7483,8 +7483,7 @@ function renderIntegrationsList() {
     <div class="integration-row" data-id="${esc(i.id)}">
       <span class="integration-row-name">${esc(i.name)}</span>
       <div class="integration-row-badges">
-        <span class="integration-badge ${i.writeApiConfigured ? 'ok' : 'warn'}">${i.writeApiConfigured ? '✓ نقطة الكتابة' : '⚠️ لا توجد نقطة كتابة'}</span>
-        <span class="integration-badge ${i.readApiConfigured ? 'ok' : 'warn'}">${i.readApiConfigured ? '✓ نقطة القراءة' : '⚠️ لا توجد نقطة قراءة'}</span>
+        <span class="integration-badge ${i.connectorConfigured ? 'ok' : 'warn'}">${i.connectorConfigured ? '✓ خدمة الاتصال مضبوطة' : '⚠️ خدمة الاتصال غير مضبوطة'}</span>
         <span class="integration-badge ${i.identityConfirmed ? 'ok' : 'warn'}">${i.identityConfirmed ? '✓ هوية المستخدم مؤكدة' : '⚠️ هوية المستخدم غير مؤكدة'}</span>
       </div>
     </div>`).join('');
@@ -7545,56 +7544,23 @@ function renderIntegrationDetail() {
 
       <form id="integ-apis-form" class="integrations-form" style="display:flex;flex-direction:column;gap:14px">
         <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الكتابة (Publish إليها — شكل اللوحة + كويري كل عنصر، بدون أرقام)</div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">خدمة الاتصال (connector)</div>
           <div class="integrations-form-grid">
-            <label>رابط نقطة الكتابة (Write API URL)
-              <input type="text" id="ia-write-url" value="${escAttr(d.writeApiUrl)}" placeholder="مثال: http://connector.client-network:5000/publish">
+            <label>رابط الخدمة الأساسي (Connector Base URL)
+              <input type="text" id="ia-connector-url" value="${escAttr(d.connectorBaseUrl)}" placeholder="مثال: http://connector.client-network:5000">
             </label>
             <label>اسم رأس المصادقة (Header)
-              <input type="text" id="ia-write-auth-header" value="${escAttr(d.writeApiAuthHeader)}" placeholder="X-Api-Key">
+              <input type="text" id="ia-connector-auth-header" value="${escAttr(d.connectorAuthHeader)}" placeholder="X-Api-Key">
             </label>
-            <label>قيمة المصادقة ${d.writeApiAuthConfigured ? '<span class="hint">(محفوظة — اكتب لاستبدالها)</span>' : ''}
-              <input type="text" id="ia-write-auth-value" placeholder="${d.writeApiAuthConfigured ? '••••••••' : ''}">
-            </label>
-          </div>
-          <p class="model-switch-note">زرار "نشر" بيبعت هنا شكل اللوحة (العناصر، أنواعها، عناوينها) مع كويري
-            جاهز لكل عنصر مكتوب على بنية قاعدة بيانات العميل نفسها — مفيش أرقام أو قيم فعلية. هذا الرابط
-            هو نقطة POST /publish بتاعة خدمة الاتصال (connector، تحت) بمجرد ما فريق العميل يشغّلها —
-            مفيش أي كود إضافي مطلوب منهم.</p>
-        </div>
-        <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة القراءة (تستخدمها صفحة العرض — بتتوفّر تلقائيًا من خدمة الاتصال)</div>
-          <div class="integrations-form-grid">
-            <label>رابط نقطة القراءة الأساسي (Read API base URL)
-              <input type="text" id="ia-read-url" value="${escAttr(d.readApiBaseUrl)}" placeholder="مثال: http://connector.client-network:5000/dashboards">
+            <label>قيمة المصادقة ${d.connectorAuthConfigured ? '<span class="hint">(محفوظة — اكتب لاستبدالها)</span>' : ''}
+              <input type="text" id="ia-connector-auth-value" placeholder="${d.connectorAuthConfigured ? '••••••••' : ''}">
             </label>
           </div>
-          <p class="model-switch-note">استدعاء القائمة: GET على هذا الرابط. استدعاء لوحة واحدة: GET على نفس
-            الرابط + "/" + معرّف اللوحة. صفحة العرض بتنادي عليها في كل مرة تُفتح — خدمة الاتصال
-            (connector) هي اللي بترجّع القيم الحالية الفعلية لكل عنصر، بتنفيذ الكويري بتاعه حيّ على
-            قاعدة بيانات العميل لحظة الطلب؛ مفيش أي حساب أو تخزين للقيم عندنا.</p>
-        </div>
-        <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة الدليل (اختياري — بحث للصفحة الإدارية)</div>
-          <div class="integrations-form-grid">
-            <label>رابط نقطة الدليل (Directory API)
-              <input type="text" id="ia-directory-url" value="${escAttr(d.directoryApiUrl)}" placeholder="https://client.example.com/api/directory">
-            </label>
-          </div>
-        </div>
-        <div>
-          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">نقطة كتابة الصلاحيات (تستخدمها الصفحة الإدارية)</div>
-          <div class="integrations-form-grid">
-            <label>رابط نقطة كتابة الصلاحيات
-              <input type="text" id="ia-perm-url" value="${escAttr(d.permissionsApiUrl)}" placeholder="https://client.example.com/api/dashboard-permissions">
-            </label>
-            <label>اسم رأس المصادقة (اختياري)
-              <input type="text" id="ia-perm-auth-header" value="${escAttr(d.permissionsApiAuthHeader)}">
-            </label>
-            <label>قيمة المصادقة ${d.permissionsApiAuthConfigured ? '<span class="hint">(محفوظة — اكتب لاستبدالها)</span>' : ''}
-              <input type="text" id="ia-perm-auth-value" placeholder="${d.permissionsApiAuthConfigured ? '••••••••' : ''}">
-            </label>
-          </div>
+          <p class="model-switch-note">رابط واحد بس — نقاط الاتصال كلها (الكتابة، القراءة، الصلاحيات،
+            الدليل، اكتشاف البنية) عايشة على نفس الخدمة الجاهزة (connector.zip تحت) بشكل ثابت، فمحتاجينش
+            نضبطهم كل واحد لوحده. مفتاح المصادقة ده بيحمي بس الاستدعاءات الجاية من عندنا (النشر واكتشاف
+            البنية) — صفحتا العرض والإدارة بتكلّموا الخدمة مباشرة من غير مفتاح، لأنهم ملفات ثابتة موزّعة
+            ومفيش سر ممكن نحطه فيهم بأمان؛ الحماية هناك بحدود شبكة العميل الداخلية.</p>
         </div>
         <div class="model-switch-actions">
           <span id="ia-apis-note" class="settings-save-note hidden">✓ تم الحفظ</span>
@@ -7783,20 +7749,14 @@ function wireIntegrationDetailHandlers() {
   el('integ-apis-form').addEventListener('submit', async e => {
     e.preventDefault();
     const body = {
-      writeApiUrl: el('ia-write-url').value.trim() || null,
-      writeApiAuthHeader: el('ia-write-auth-header').value.trim() || null,
-      writeApiAuthValue: el('ia-write-auth-value').value.trim() || null,
-      readApiBaseUrl: el('ia-read-url').value.trim() || null,
-      directoryApiUrl: el('ia-directory-url').value.trim() || null,
-      permissionsApiUrl: el('ia-perm-url').value.trim() || null,
-      permissionsApiAuthHeader: el('ia-perm-auth-header').value.trim() || null,
-      permissionsApiAuthValue: el('ia-perm-auth-value').value.trim() || null,
+      connectorBaseUrl: el('ia-connector-url').value.trim() || null,
+      connectorAuthHeader: el('ia-connector-auth-header').value.trim() || null,
+      connectorAuthValue: el('ia-connector-auth-value').value.trim() || null,
     };
     const res = await fetch('/api/integrations/' + id + '/apis', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
     if (!res.ok) { alert('تعذّر الحفظ.'); return; }
-    el('ia-apis-note').classList.remove('hidden');
     await loadIntegrations();
     // Keep the credential-value fields blank (already-saved secrets are represented by the
     // "configured" placeholder text, never echoed back) — a full re-render after refetching
@@ -7804,6 +7764,7 @@ function wireIntegrationDetailHandlers() {
     const refreshed = await fetch('/api/integrations/' + id).then(r => r.json());
     state.integrationDetail = refreshed;
     renderIntegrationDetail();
+    el('ia-apis-note').classList.remove('hidden');
   });
 
   el('btn-cs-discover').addEventListener('click', async () => {

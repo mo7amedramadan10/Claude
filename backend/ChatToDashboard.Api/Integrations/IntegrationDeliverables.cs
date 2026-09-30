@@ -28,7 +28,7 @@ public class IntegrationDeliverables
         var tokens = ResolveTokens(integration);
         var config = new
         {
-            readApiBaseUrl = integration.ReadApiBaseUrl ?? "",
+            readApiBaseUrl = integration.DashboardsUrl ?? "",
             identity = new
             {
                 mechanism = integration.IdentityConfirmed ? integration.IdentityMechanism : null,
@@ -239,10 +239,9 @@ public class IntegrationDeliverables
         var tokens = ResolveTokens(integration);
         var config = new
         {
-            readApiBaseUrl = integration.ReadApiBaseUrl ?? "",
-            directoryApiUrl = integration.DirectoryApiUrl ?? "",
-            permissionsApiUrl = integration.PermissionsApiUrl ?? "",
-            permissionsApiAuthHeader = integration.PermissionsApiAuthHeader ?? "",
+            readApiBaseUrl = integration.DashboardsUrl ?? "",
+            directoryApiUrl = integration.DirectoryUrl ?? "",
+            permissionsApiUrl = integration.PermissionsUrl ?? "",
             identity = new
             {
                 mechanism = integration.IdentityConfirmed ? integration.IdentityMechanism : null,
@@ -452,10 +451,8 @@ public class IntegrationDeliverables
             if (!CONFIG.permissionsApiUrl) { note.textContent = 'نقطة كتابة الصلاحيات غير مضبوطة.'; return; }
             note.textContent = 'جارٍ الحفظ…';
             try {
-              const headers = { 'Content-Type': 'application/json' };
-              if (CONFIG.permissionsApiAuthHeader) headers[CONFIG.permissionsApiAuthHeader] = '';
               const res = await fetch(CONFIG.permissionsApiUrl, {
-                method: 'POST', headers,
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dashboardId: id, mode: s.mode, allowedIdentifiers: s.allowed }),
               });
               note.textContent = res.ok ? 'تم الحفظ ✓' : 'فشل الحفظ (HTTP ' + res.status + ')';
@@ -490,8 +487,8 @@ public class IntegrationDeliverables
             var appsettings = ReadEmbeddedText("connector.appsettings.json");
             appsettings = appsettings
                 .Replace("\"TargetDbProvider\": \"SqlServer\"", $"\"TargetDbProvider\": \"{(integration.ClientDbProvider is { Length: > 0 } p ? p : "SqlServer")}\"")
-                .Replace("\"WriteApiKey\": \"\"", $"\"WriteApiKey\": \"{JsonEscape(integration.WriteApiAuthValue ?? "")}\"")
-                .Replace("\"WriteApiAuthHeader\": \"X-Api-Key\"", $"\"WriteApiAuthHeader\": \"{JsonEscape(integration.WriteApiAuthHeader is { Length: > 0 } h ? h : "X-Api-Key")}\"")
+                .Replace("\"WriteApiKey\": \"\"", $"\"WriteApiKey\": \"{JsonEscape(integration.ConnectorAuthValue ?? "")}\"")
+                .Replace("\"WriteApiAuthHeader\": \"X-Api-Key\"", $"\"WriteApiAuthHeader\": \"{JsonEscape(integration.ConnectorAuthHeader is { Length: > 0 } h ? h : "X-Api-Key")}\"")
                 .Replace("\"IdentityParameterName\": \"\"", $"\"IdentityParameterName\": \"{(integration.IdentityConfirmed ? JsonEscape(integration.IdentityParameterName ?? "") : "")}\"");
             var entry = zip.CreateEntry("appsettings.json", CompressionLevel.Optimal);
             using (var writer = new StreamWriter(entry.Open()))

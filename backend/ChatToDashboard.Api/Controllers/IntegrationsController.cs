@@ -96,20 +96,16 @@ public class IntegrationsController : ControllerBase
     {
         var integration = await _integrations.GetByIdAsync(id, ct);
         if (integration is null) return NotFound();
-        if (string.IsNullOrWhiteSpace(integration.WriteApiUrl))
-            return BadRequest(new { error = "اضبط رابط نقطة الكتابة (Write API URL) أولاً — نقطة اكتشاف البنية بتعيش جنبها على نفس الخدمة." });
-
-        var schemaUrl = BuildSchemaUrl(integration.WriteApiUrl);
-        if (schemaUrl is null)
-            return BadRequest(new { error = "تعذّر تحديد رابط نقطة اكتشاف البنية من رابط نقطة الكتابة." });
+        if (string.IsNullOrWhiteSpace(integration.ConnectorBaseUrl))
+            return BadRequest(new { error = "اضبط رابط خدمة الاتصال (Connector Base URL) أولاً." });
 
         ConnectorSchemaResponse? schema;
         try
         {
             var client = _httpClientFactory.CreateClient();
-            using var request = new HttpRequestMessage(HttpMethod.Get, schemaUrl);
-            if (!string.IsNullOrWhiteSpace(integration.WriteApiAuthHeader) && !string.IsNullOrWhiteSpace(integration.WriteApiAuthValue))
-                request.Headers.TryAddWithoutValidation(integration.WriteApiAuthHeader, integration.WriteApiAuthValue);
+            using var request = new HttpRequestMessage(HttpMethod.Get, integration.SchemaUrl);
+            if (!string.IsNullOrWhiteSpace(integration.ConnectorAuthHeader) && !string.IsNullOrWhiteSpace(integration.ConnectorAuthValue))
+                request.Headers.TryAddWithoutValidation(integration.ConnectorAuthHeader, integration.ConnectorAuthValue);
 
             using var response = await client.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode)
@@ -133,20 +129,6 @@ public class IntegrationsController : ControllerBase
 
         await _integrations.UpdateClientSchemaAsync(id, schema.Provider, description, ct);
         return Ok(new { clientDbProvider = schema.Provider, clientSchemaDescription = description, tableCount = schema.Tables.Count });
-    }
-
-    /// <summary>The connector's fixed route shape always puts /schema right beside /publish on
-    /// the same base — see IntegrationConnector's Program.cs. Falls back to swapping the write
-    /// URL's last path segment for an analyst who typed something other than the documented
-    /// ".../publish".</summary>
-    private static string? BuildSchemaUrl(string writeApiUrl)
-    {
-        var trimmed = writeApiUrl.TrimEnd('/');
-        const string suffix = "/publish";
-        if (trimmed.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-            return trimmed[..^suffix.Length] + "/schema";
-        var lastSlash = trimmed.LastIndexOf('/');
-        return lastSlash > 0 ? trimmed[..lastSlash] + "/schema" : null;
     }
 
     // ---------- visual identity (Part B) ----------
@@ -358,8 +340,7 @@ public class IntegrationsController : ControllerBase
     {
         i.Id,
         i.Name,
-        writeApiConfigured = !string.IsNullOrWhiteSpace(i.WriteApiUrl),
-        readApiConfigured = !string.IsNullOrWhiteSpace(i.ReadApiBaseUrl),
+        connectorConfigured = !string.IsNullOrWhiteSpace(i.ConnectorBaseUrl),
         identityConfirmed = i.IdentityConfirmed,
         visualIdentityConfigured = !string.IsNullOrWhiteSpace(i.AccentColor),
         clientSchemaConfigured = !string.IsNullOrWhiteSpace(i.ClientSchemaDescription),
@@ -373,14 +354,9 @@ public class IntegrationsController : ControllerBase
     {
         i.Id,
         i.Name,
-        writeApiUrl = i.WriteApiUrl,
-        writeApiAuthHeader = i.WriteApiAuthHeader,
-        writeApiAuthConfigured = !string.IsNullOrWhiteSpace(i.WriteApiAuthValue),
-        readApiBaseUrl = i.ReadApiBaseUrl,
-        directoryApiUrl = i.DirectoryApiUrl,
-        permissionsApiUrl = i.PermissionsApiUrl,
-        permissionsApiAuthHeader = i.PermissionsApiAuthHeader,
-        permissionsApiAuthConfigured = !string.IsNullOrWhiteSpace(i.PermissionsApiAuthValue),
+        connectorBaseUrl = i.ConnectorBaseUrl,
+        connectorAuthHeader = i.ConnectorAuthHeader,
+        connectorAuthConfigured = !string.IsNullOrWhiteSpace(i.ConnectorAuthValue),
         identityMechanism = i.IdentityMechanism,
         identityParameterName = i.IdentityParameterName,
         identityConfirmed = i.IdentityConfirmed,
