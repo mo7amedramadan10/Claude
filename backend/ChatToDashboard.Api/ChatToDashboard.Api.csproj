@@ -33,4 +33,12 @@
     <EmbeddedResource Include="../IntegrationConnector/appsettings.json" LogicalName="connector.appsettings.json" />
   </ItemGroup>
 
+  <!-- Chart.js, vendored (npm chart.js@4.4.4, dist/chart.umd.js) so viewer.html carries it
+       inline instead of pulling it from a public CDN at view-time — see
+       IntegrationDeliverables.BuildViewerHtml. A client's network may allow nothing but its own
+       domains, exactly the environment this whole connector architecture is meant to work in. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Integrations/vendor/chart.umd.js" LogicalName="vendor.chart.umd.js" />
+  </ItemGroup>
+
 </Project>
