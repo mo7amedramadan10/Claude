@@ -376,6 +376,7 @@ public class IntegrationsController : ControllerBase
         clientDbProvider = i.ClientDbProvider,
         clientSchemaDescription = i.ClientSchemaDescription,
         dataPermissionsAvailable = i.DataPermissionsAvailable,
+        lastSchemaDiscoveryError = i.LastSchemaDiscoveryError,
         i.CreatedBy,
         i.CreatedAt,
         i.UpdatedAt,

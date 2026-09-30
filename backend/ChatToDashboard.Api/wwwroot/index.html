@@ -7697,9 +7697,18 @@ function renderIntegrationDetail() {
   // source (see SourcesController.Get) — surfaced here so "why isn't it in the sources list?"
   // has a visible, self-diagnosable answer instead of a silent discovery failure.
   const tableCount = (d.clientSchemaDescription || '').split('\n').filter(Boolean).length;
+  const errorNoteHtml = d.lastSchemaDiscoveryError
+    ? `<div class="model-switch-note" style="color:var(--danger);margin-top:6px">السبب: ${esc(d.lastSchemaDiscoveryError)}</div>`
+    : `<p class="model-switch-note" style="margin-top:6px">تأكد إن خدمة الاتصال شغّالة ومتاحة على الرابط ده وإن قيمة/اسم المصادقة متطابقين، وبعدين احفظ نقاط الاتصال تاني لإعادة المحاولة.</p>`;
   const schemaStatusHtml = d.clientSchemaDescription
-    ? `<span class="integration-badge ok">✓ بنية مكتشفة — ${tableCount} جدول (${esc(d.clientDbProvider || '')})${d.dataPermissionsAvailable ? ' · جدول صلاحيات بيانات متاح' : ''}</span>`
-    : `<span class="integration-badge warn">⚠️ لسه مفيش بنية مكتشفة — التكامل مش هيظهر في قائمة المصادر لحد ما يتكشف. تأكد إن خدمة الاتصال شغّالة ومتاحة على الرابط ده وإن قيمة/اسم المصادقة متطابقين، وبعدين احفظ نقاط الاتصال تاني لإعادة المحاولة.</span>`;
+    ? `<span class="integration-badge ok">✓ بنية مكتشفة — ${tableCount} جدول (${esc(d.clientDbProvider || '')})${d.dataPermissionsAvailable ? ' · جدول صلاحيات بيانات متاح' : ''}</span>` +
+      // The schema itself is never wiped by a later failed refresh (see UpdateClientSchemaAsync/
+      // SetSchemaDiscoveryErrorAsync) — so a green badge alone could hide that the MOST RECENT
+      // save attempt actually failed and the schema on file may now be stale.
+      (d.lastSchemaDiscoveryError
+        ? `<div class="model-switch-note" style="color:var(--danger);margin-top:6px">⚠️ آخر محاولة تحديث فشلت — البنية المعروضة فوق من آخر مرة نجحت، ممكن تكون قديمة. السبب: ${esc(d.lastSchemaDiscoveryError)}</div>`
+        : '')
+    : `<span class="integration-badge warn">⚠️ لسه مفيش بنية مكتشفة — التكامل مش هيظهر في قائمة المصادر لحد ما يتكشف.</span>` + errorNoteHtml;
 
   box.innerHTML = `
     <div class="settings-columns">

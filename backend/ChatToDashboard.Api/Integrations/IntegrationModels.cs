@@ -98,6 +98,13 @@ public class ExternalIntegration
     // per-widget data-level-filtering UI: it only ever appears when this is true.
     public bool DataPermissionsAvailable { get; set; }
 
+    // The specific reason the LAST schema-discovery attempt failed (an HTTP status, "connector
+    // unreachable", etc.) — set by ClientSchemaDiscoveryService on every failed attempt, cleared
+    // back to null the moment one succeeds. A generic "لسه مفيش بنية مكتشفة" warning leaves an
+    // analyst no way to tell an auth-key mismatch from an unreachable service from their own
+    // screen — this is what the warning badge actually shows instead.
+    public string? LastSchemaDiscoveryError { get; set; }
+
     public string CreatedBy { get; set; } = "";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

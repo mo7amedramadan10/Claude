@@ -65,6 +65,7 @@ public class IntegrationStore
                      ("ClientDbProvider", "TEXT", "NVARCHAR(20)"),
                      ("ClientSchemaDescription", "TEXT", "NVARCHAR(MAX)"),
                      ("DataPermissionsAvailable", "INTEGER", "BIT"),
+                     ("LastSchemaDiscoveryError", "TEXT", "NVARCHAR(1000)"),
                  })
         {
             try
@@ -228,8 +229,22 @@ public class IntegrationStore
         await connection.ExecuteAsync(
             $"UPDATE {IntegrationsTable} SET ClientDbProvider = @clientDbProvider, " +
             "ClientSchemaDescription = @clientSchemaDescription, DataPermissionsAvailable = @dataPermissionsAvailable, " +
-            "UpdatedAt = @updatedAt WHERE Id = @id",
+            "LastSchemaDiscoveryError = NULL, UpdatedAt = @updatedAt WHERE Id = @id",
             new { id, clientDbProvider, clientSchemaDescription, dataPermissionsAvailable, updatedAt = DateTime.UtcNow });
+    }
+
+    /// <summary>Records why the last schema-discovery attempt failed (see
+    /// ClientSchemaDiscoveryService.TryDiscoverAsync) — never touches ClientSchemaDescription
+    /// itself, so a previously-discovered schema stays usable even while a later refresh attempt
+    /// is failing (e.g. right before a publish — see PublishService's own remarks on this being
+    /// best-effort).</summary>
+    public async Task SetSchemaDiscoveryErrorAsync(string id, string error, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {IntegrationsTable} SET LastSchemaDiscoveryError = @error, UpdatedAt = @updatedAt WHERE Id = @id",
+            new { id, error, updatedAt = DateTime.UtcNow });
     }
 
     /// <summary>Stores a matched-but-not-yet-confirmed mechanism/parameter pair. Never sets

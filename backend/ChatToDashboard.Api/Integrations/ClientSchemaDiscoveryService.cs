@@ -32,6 +32,16 @@ public class ClientSchemaDiscoveryService
     {
         if (string.IsNullOrWhiteSpace(integration.ConnectorBaseUrl)) return false;
 
+        // Every early return below goes through this, so the analyst's own screen shows the
+        // SPECIFIC reason discovery isn't working (a 401 vs. an unreachable service vs. a
+        // malformed response are three completely different fixes) instead of one generic
+        // warning — see ExternalIntegration.LastSchemaDiscoveryError.
+        async Task<bool> Fail(string error)
+        {
+            await _integrations.SetSchemaDiscoveryErrorAsync(integration.Id, error, ct);
+            return false;
+        }
+
         try
         {
             var client = _httpClientFactory.CreateClient();
@@ -40,12 +50,25 @@ public class ClientSchemaDiscoveryService
                 request.Headers.TryAddWithoutValidation(integration.ConnectorAuthHeader, integration.ConnectorAuthValue);
 
             using var response = await client.SendAsync(request, ct);
-            if (!response.IsSuccessStatusCode) return false;
+            if (!response.IsSuccessStatusCode)
+                return await Fail(response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                    ? "HTTP 401 — خدمة الاتصال رفضت الطلب: اسم/قيمة المصادقة هنا مش مطابقين لـ WriteApiAuthHeader/WriteApiKey في appsettings.json عند العميل."
+                    : $"HTTP {(int)response.StatusCode} من خدمة الاتصال عند طلب /schema.");
 
-            var schema = await response.Content.ReadFromJsonAsync<ConnectorSchemaResponse>(
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, ct);
-            if (schema is null || schema.Tables.Count == 0) return false;
-            if (!ClientDbProviders.All.Contains(schema.Provider, StringComparer.OrdinalIgnoreCase)) return false;
+            ConnectorSchemaResponse? schema;
+            try
+            {
+                schema = await response.Content.ReadFromJsonAsync<ConnectorSchemaResponse>(
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, ct);
+            }
+            catch (JsonException)
+            {
+                return await Fail("رد /schema مش JSON صالح — تأكد إن رابط الخدمة الأساسي صحيح ومش بيوصل لحاجة تانية (صفحة تسجيل دخول مثلًا).");
+            }
+            if (schema is null || schema.Tables.Count == 0)
+                return await Fail("رد /schema رجع من غير أي جداول — تأكد إن TargetConnectionString مضبوط عند العميل ويشاور على قاعدة بيانات فيها جداول.");
+            if (!ClientDbProviders.All.Contains(schema.Provider, StringComparer.OrdinalIgnoreCase))
+                return await Fail($"نوع قاعدة البيانات \"{schema.Provider}\" غير مدعوم (المدعوم: SqlServer أو Sqlite).");
 
             var dataPermissionsAvailable = schema.Tables.Any(
                 t => string.Equals(t.Name, DataPermissions.TableName, StringComparison.OrdinalIgnoreCase));
@@ -61,10 +84,24 @@ public class ClientSchemaDiscoveryService
             await _integrations.UpdateClientSchemaAsync(integration.Id, schema.Provider, description, dataPermissionsAvailable, ct);
             return true;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogInformation(ex, "Client schema discovery skipped for integration {IntegrationId}", integration.Id);
+            return await Fail($"تعذّر الوصول لخدمة الاتصال على الرابط ده: {ex.Message}");
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogInformation(ex, "Client schema discovery timed out for integration {IntegrationId}", integration.Id);
+            return await Fail("انتهت مهلة الاتصال بخدمة الاتصال (لا يوجد رد) — تأكد إنها شغّالة ومتاحة من هنا.");
+        }
+        catch (Exception) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogInformation(ex, "Client schema discovery skipped for integration {IntegrationId}", integration.Id);
-            return false;
+            return await Fail($"خطأ غير متوقع أثناء اكتشاف البنية: {ex.Message}");
         }
     }
 
