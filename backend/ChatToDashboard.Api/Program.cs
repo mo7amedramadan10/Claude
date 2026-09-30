@@ -120,6 +120,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IVisualIdentityImageExtrac
     sp => sp.GetRequiredService<ChatToDashboard.Api.Llm.VisualIdentityImageRouter>());
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.VisualIdentityService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.ClientSchemaDiscoveryService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.PublishService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationDeliverables>();
 

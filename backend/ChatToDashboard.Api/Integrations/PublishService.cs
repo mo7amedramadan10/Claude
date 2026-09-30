@@ -68,16 +68,18 @@ public class PublishService
     private readonly HistoryStore _history;
     private readonly IntegrationStore _integrations;
     private readonly IIntegrationSetupAssistant _assistant;
+    private readonly ClientSchemaDiscoveryService _schemaDiscovery;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PublishService> _logger;
 
     public PublishService(
         HistoryStore history, IntegrationStore integrations, IIntegrationSetupAssistant assistant,
-        IHttpClientFactory httpClientFactory, ILogger<PublishService> logger)
+        ClientSchemaDiscoveryService schemaDiscovery, IHttpClientFactory httpClientFactory, ILogger<PublishService> logger)
     {
         _history = history;
         _integrations = integrations;
         _assistant = assistant;
+        _schemaDiscovery = schemaDiscovery;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -119,6 +121,15 @@ public class PublishService
         {
             slot = await _integrations.CreateSlotAsync(integrationId, localHistoryId, entry.Question, DisplayName(requestingUser), ct);
         }
+
+        // Refresh the client's DB schema from their connector right before retargeting against
+        // it (see ClientSchemaDiscoveryService) — catches a connector that's only just now been
+        // pointed at a real database, or a schema that changed since it was last discovered,
+        // without anyone having to remember to refresh it themselves. Best-effort: a stale or
+        // still-missing schema just means BuildPublishedWidgetsAsync leaves more widgets' Sql
+        // unset below, never a failed publish.
+        if (await _schemaDiscovery.TryDiscoverAsync(integration, ct))
+            integration = await _integrations.GetByIdAsync(integrationId, ct) ?? integration;
 
         var rawWidgets = ParseWidgets(entry.WidgetsJson);
         var widgets = await BuildPublishedWidgetsAsync(rawWidgets, integration, requestingUser, ct);

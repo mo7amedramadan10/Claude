@@ -1,6 +1,4 @@
-using System.Net.Http.Json;
 using System.Security.Claims;
-using System.Text.Json;
 using ChatToDashboard.Api.Integrations;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Users;
@@ -28,12 +26,12 @@ public class IntegrationsController : ControllerBase
     private readonly PublishService _publish;
     private readonly IntegrationDeliverables _deliverables;
     private readonly PermissionsService _permissions;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ClientSchemaDiscoveryService _schemaDiscovery;
 
     public IntegrationsController(
         IntegrationStore integrations, VisualIdentityService visualIdentity, IIntegrationSetupAssistant assistant,
         PublishService publish, IntegrationDeliverables deliverables, PermissionsService permissions,
-        IHttpClientFactory httpClientFactory)
+        ClientSchemaDiscoveryService schemaDiscovery)
     {
         _integrations = integrations;
         _visualIdentity = visualIdentity;
@@ -41,7 +39,7 @@ public class IntegrationsController : ControllerBase
         _publish = publish;
         _deliverables = deliverables;
         _permissions = permissions;
-        _httpClientFactory = httpClientFactory;
+        _schemaDiscovery = schemaDiscovery;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -76,59 +74,21 @@ public class IntegrationsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Also triggers client-DB-schema discovery whenever the connector base URL is set
+    /// or changed (best-effort — see ClientSchemaDiscoveryService), so nobody has to remember to
+    /// press a separate button: the schema Publish retargets against (see PublishService) stays
+    /// current from the moment a connector is linked, and PublishService refreshes it again right
+    /// before every publish besides.</summary>
     [HttpPut("{id}/apis")]
     public async Task<IActionResult> UpdateApis(string id, [FromBody] UpdateIntegrationApisRequest request, CancellationToken ct)
     {
         if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
         await _integrations.UpdateApisAsync(id, request, ct);
+
+        var updated = await _integrations.GetByIdAsync(id, ct);
+        if (updated is not null) await _schemaDiscovery.TryDiscoverAsync(updated, ct);
+
         return NoContent();
-    }
-
-    /// <summary>The client's own database shape — discovered automatically from the deployed
-    /// connector's own GET /schema (see IntegrationConnector's TargetDatabase.GetSchemaAsync),
-    /// never typed by hand. Requires the write API URL (the connector's POST /publish) to
-    /// already be configured and reachable — /schema lives right alongside it on the same
-    /// service, behind the same write-API auth. Captured so Publish can retarget each widget's
-    /// query to the client's real schema (see PublishService); the connection string itself
-    /// never reaches us — see the connector's own local config.</summary>
-    [HttpPost("{id}/client-schema/discover")]
-    public async Task<IActionResult> DiscoverClientSchema(string id, CancellationToken ct)
-    {
-        var integration = await _integrations.GetByIdAsync(id, ct);
-        if (integration is null) return NotFound();
-        if (string.IsNullOrWhiteSpace(integration.ConnectorBaseUrl))
-            return BadRequest(new { error = "اضبط رابط خدمة الاتصال (Connector Base URL) أولاً." });
-
-        ConnectorSchemaResponse? schema;
-        try
-        {
-            var client = _httpClientFactory.CreateClient();
-            using var request = new HttpRequestMessage(HttpMethod.Get, integration.SchemaUrl);
-            if (!string.IsNullOrWhiteSpace(integration.ConnectorAuthHeader) && !string.IsNullOrWhiteSpace(integration.ConnectorAuthValue))
-                request.Headers.TryAddWithoutValidation(integration.ConnectorAuthHeader, integration.ConnectorAuthValue);
-
-            using var response = await client.SendAsync(request, ct);
-            if (!response.IsSuccessStatusCode)
-                return UnprocessableEntity(new { error = $"استجابة غير ناجحة من خدمة الاتصال: HTTP {(int)response.StatusCode}." });
-
-            schema = await response.Content.ReadFromJsonAsync<ConnectorSchemaResponse>(
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, ct);
-        }
-        catch (Exception ex)
-        {
-            return UnprocessableEntity(new { error = $"تعذّر الوصول لخدمة الاتصال: {ex.Message}" });
-        }
-
-        if (schema is null || schema.Tables.Count == 0)
-            return UnprocessableEntity(new { error = "الخدمة ردّت لكن بدون جداول — تأكد إن TargetConnectionString مضبوط هناك." });
-        if (!ClientDbProviders.All.Contains(schema.Provider, StringComparer.OrdinalIgnoreCase))
-            return UnprocessableEntity(new { error = $"نوع قاعدة بيانات غير مدعوم من الخدمة: {schema.Provider}" });
-
-        var description = string.Join("\n", schema.Tables.Select(t =>
-            $"{t.Name}({string.Join(", ", t.Columns.Select(c => $"{c.Name} {c.Type}"))})"));
-
-        await _integrations.UpdateClientSchemaAsync(id, schema.Provider, description, ct);
-        return Ok(new { clientDbProvider = schema.Provider, clientSchemaDescription = description, tableCount = schema.Tables.Count });
     }
 
     // ---------- visual identity (Part B) ----------
