@@ -224,6 +224,80 @@ app.MapGet("/permission-filter-keys", async (HttpRequest request, TargetDatabase
     return Results.Ok(await target.GetDistinctPermissionFilterKeysAsync());
 });
 
+// ---------- status page + health check: is this service even reachable and working? ----------
+// No WriteApiKey — this reveals no business data and no secrets (TargetDatabase.CheckHealthAsync
+// and LocalStore.CheckHealthAsync both deliberately never include a connection string in their
+// result), only whether the two things this service depends on are actually working. This is
+// deliberately the first thing anyone hits when opening the base URL in a browser: a real
+// deployment's operator needed exactly this — "is it even running, and if not, why" — to find a
+// SQL Server connectivity bug that otherwise only ever surfaced as a bare 502 to غرفة القيادة.
+app.MapGet("/health", async (LocalStore store, TargetDatabase target, ConnectorOptions options) =>
+{
+    var (localOk, localDetail) = await store.CheckHealthAsync();
+    var (targetOk, targetDetail) = await target.CheckHealthAsync();
+    return Results.Ok(new
+    {
+        status = localOk && targetOk ? "ok" : "degraded",
+        service = "غرفة القيادة — External Integration Connector",
+        utc = DateTime.UtcNow.ToString("o"),
+        localStorage = new { ok = localOk, detail = localDetail },
+        targetDatabase = new { ok = targetOk, provider = options.TargetDbProvider, detail = targetDetail },
+        writeApiKeyConfigured = !string.IsNullOrWhiteSpace(options.WriteApiKey),
+        identityParameterName = options.IdentityParameterName,
+    });
+});
+
+app.MapGet("/", async (LocalStore store, TargetDatabase target) =>
+{
+    var (localOk, _) = await store.CheckHealthAsync();
+    var (targetOk, _) = await target.CheckHealthAsync();
+    var healthy = localOk && targetOk;
+    var icon = healthy ? "✅" : "⚠️";
+    var statusText = healthy ? "الخدمة شغّالة" : "الخدمة شغّالة لكن فيها مشكلة — شوف /health";
+    var badgeColor = healthy ? "#16a34a" : "#d97706";
+    var html = $$"""
+        <!doctype html>
+        <html lang="ar" dir="rtl">
+        <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>غرفة القيادة — Connector</title>
+        <style>
+        body{font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;max-width:640px;
+          margin:60px auto;padding:0 20px;color:#1a1a1a;line-height:1.8}
+        h1{display:flex;align-items:center;gap:10px;font-size:20px}
+        .badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;
+          border-radius:8px;background:{{badgeColor}}22;color:{{badgeColor}}}
+        p{color:#555;font-size:14px}
+        ul{list-style:none;padding:0;margin-top:20px}
+        li{padding:10px 0;border-bottom:1px solid #eee;font-size:14px;display:flex;justify-content:space-between;gap:10px}
+        code{background:#f3f3f3;padding:2px 8px;border-radius:6px;font-size:12.5px;direction:ltr;display:inline-block}
+        .auth{color:#999;font-size:12px}
+        a{color:#2563eb}
+        </style>
+        </head>
+        <body>
+        <h1><span class="badge">{{icon}}</span> {{statusText}}</h1>
+        <p>لو بتقرأ الصفحة دي يبقى الموصّل قايم وبيستقبل طلبات على المنفذ ده.</p>
+        <p>للتأكد من التخزين المحلي والاتصال بقاعدة بياناتكم: <a href="/health">/health</a></p>
+        <h3>النقاط المتاحة</h3>
+        <ul>
+          <li><code>GET /health</code> <span>حالة الخدمة</span></li>
+          <li><code>GET /dashboards</code> <span>قائمة اللوحات الظاهرة للمستخدم الحالي</span></li>
+          <li><code>GET /dashboards/{id}</code> <span>لوحة واحدة ببياناتها الحيّة</span></li>
+          <li><code>POST /publish</code> <span>نشر تصميم لوحة <span class="auth">(محمي بـ WriteApiKey)</span></span></li>
+          <li><code>GET /schema</code> <span>بنية قاعدة بياناتكم فقط <span class="auth">(محمي بـ WriteApiKey)</span></span></li>
+          <li><code>POST /query</code> <span>كويري قراءة مباشر أثناء بناء اللوحة <span class="auth">(محمي بـ WriteApiKey)</span></span></li>
+          <li><code>GET /permission-filter-keys</code> <span>قيم صلاحيات البيانات المتاحة <span class="auth">(محمي بـ WriteApiKey)</span></span></li>
+          <li><code>POST /permissions</code> <span>حفظ قرار صلاحيات لوحة</span></li>
+          <li><code>GET /directory</code> <span>دليل مستخدمين/أدوار (اختياري)</span></li>
+        </ul>
+        </body>
+        </html>
+        """;
+    return Results.Content(html, "text/html; charset=utf-8");
+});
+
 app.Run();
 
 // ---------- helpers ----------
@@ -450,6 +524,26 @@ public class LocalStore
             });
         return Task.CompletedTask;
     }
+
+    /// <summary>Opens the local storage file and runs a trivial query — used only by GET
+    /// /health, so a path/permissions problem (see ConnectorOptions.LocalStoragePath's own
+    /// remarks — this is exactly what an IIS deployment with no write access there hits) is
+    /// visible from the service's own status page instead of only a crash at startup. The
+    /// "Data Source=..." string is a local file path, never a secret, unlike
+    /// TargetDatabase.CheckHealthAsync's connection string below.</summary>
+    public Task<(bool Ok, string Detail)> CheckHealthAsync()
+    {
+        try
+        {
+            using var connection = Open();
+            var count = connection.ExecuteScalar<long>("SELECT COUNT(*) FROM Dashboards");
+            return Task.FromResult((true, $"{_connectionString} — {count} dashboard(s) stored"));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult((false, ex.Message));
+        }
+    }
 }
 
 // Dapper row shapes for LocalStore's raw SQL — kept strongly typed (rather than Dapper's bare
@@ -594,6 +688,34 @@ public class TargetDatabase
         }
 
         return new SchemaInfo { Provider = _options.TargetDbProvider, Tables = tables };
+    }
+
+    /// <summary>Opens your real target database and runs a trivial round-trip — used only by
+    /// GET /health. Never includes TargetConnectionString in the result (it may carry a
+    /// password) — only whether the open+round-trip actually succeeded and, on failure, the
+    /// driver's own error text (e.g. exactly how "Globalization Invariant Mode is not
+    /// supported." first surfaced here, before this health check existed).</summary>
+    public async Task<(bool Ok, string Detail)> CheckHealthAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_options.TargetConnectionString))
+            return (false, "TargetConnectionString غير مضبوط.");
+        try
+        {
+            var isSqlServer = _options.TargetDbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase);
+            await using DbConnection connection = isSqlServer
+                ? new SqlConnection(_options.TargetConnectionString)
+                : new SqliteConnection(_options.TargetConnectionString);
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1";
+            command.CommandTimeout = 5;
+            await command.ExecuteScalarAsync();
+            return (true, "الاتصال ناجح.");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
     }
 }
 
