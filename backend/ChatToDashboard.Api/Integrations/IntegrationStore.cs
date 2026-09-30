@@ -180,11 +180,19 @@ public class IntegrationStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
+        // ConnectorAuthValue is the one field here whose real stored value is NEVER echoed back
+        // to the analyst (the form only ever shows a "••••••••" placeholder — see
+        // renderIntegrationDetail) — unlike ConnectorBaseUrl/ConnectorAuthHeader, which the form
+        // always shows in full, so a blank submission there is an explicit, visible choice to
+        // clear it. A blank ConnectorAuthValue is never that: the analyst has no way to see it's
+        // blank before submitting, so it only ever means "didn't mean to touch this" (e.g.
+        // re-saving the base URL alone to retry schema discovery) — COALESCE keeps whatever
+        // secret was already stored unless a real replacement value is actually sent.
         await connection.ExecuteAsync(
             $"""
             UPDATE {IntegrationsTable} SET
               ConnectorBaseUrl = @ConnectorBaseUrl, ConnectorAuthHeader = @ConnectorAuthHeader,
-              ConnectorAuthValue = @ConnectorAuthValue, UpdatedAt = @UpdatedAt
+              ConnectorAuthValue = COALESCE(@ConnectorAuthValue, ConnectorAuthValue), UpdatedAt = @UpdatedAt
             WHERE Id = @Id
             """,
             new
