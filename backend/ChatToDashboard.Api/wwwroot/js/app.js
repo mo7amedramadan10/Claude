@@ -3707,7 +3707,7 @@ function renderSources() {
       ${s.kind === 'integration' ? '<span class="note">🔗 تكامل خارجي</span>' : (s.connected ? '' : '<span class="note">غير مربوط بعد</span>')}
       ${s.refreshable ? `<button type="button" class="refresh-btn" data-refresh="${esc(s.id)}">⟳ جلب</button>` : ''}
     </label>
-    ${s.refreshable ? `<div class="sys-status${s.error ? ' bad' : ''}" data-status="${esc(s.id)}">${systemStatusText(s)}</div>` : ''}`).join('');
+    ${s.refreshable ? `<div class="sys-status${s.error ? ' bad' : ''}" data-status="${esc(s.id)}"${s.error ? ` title="${esc(s.error)}"` : ''}>${systemStatusText(s)}</div>` : ''}`).join('');
 
   // Each repository file is its own independent source, at the same level as a system —
   // not grouped by category (a small category hint still shown alongside the name, purely
@@ -3736,7 +3736,10 @@ function renderSources() {
 }
 
 function systemStatusText(s) {
-  if (s.error) return 'تعذّر الجلب: ' + esc(s.error);
+  // The raw fetch error (often a .NET exception message, in English) goes in the row's
+  // title tooltip instead of inline — dumping it into the list directly mixed English
+  // technical text into the Arabic RTL flow and made the row balloon to several lines.
+  if (s.error) return 'تعذّر الجلب من النظام — مرّر المؤشر لعرض السبب';
   if (!s.lastRefreshed) return 'لم يتم الجلب بعد — اضغط «جلب»';
   const when = new Date(s.lastRefreshed + (s.lastRefreshed.endsWith('Z') ? '' : 'Z'));
   return `${s.records.toLocaleString('en-US')} سجل · آخر جلب ${when.toLocaleTimeString('ar-EG')}`;
@@ -3753,7 +3756,11 @@ async function refreshSystem(btn) {
     if (!res.ok) throw new Error(payload.error || `فشل الجلب (${res.status})`);
     await loadSources();
   } catch (err) {
-    if (status) { status.className = 'sys-status bad'; status.textContent = 'تعذّر الجلب: ' + err.message; }
+    if (status) {
+      status.className = 'sys-status bad';
+      status.textContent = 'تعذّر الجلب من النظام — مرّر المؤشر لعرض السبب';
+      status.title = err.message;
+    }
     btn.disabled = false; btn.textContent = '⟳ جلب';
   }
 }
