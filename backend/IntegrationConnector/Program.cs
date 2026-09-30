@@ -30,7 +30,24 @@ builder.Services.AddSingleton(config);
 builder.Services.AddSingleton<LocalStore>();
 builder.Services.AddSingleton<TargetDatabase>();
 
+// viewer.html/admin.html are static files hosted on YOUR OWN domain — almost always a
+// different origin than this service (a different host and/or port), so every fetch() they
+// make here is cross-origin. Without CORS headers the browser blocks it outright, no matter
+// how the network itself is configured. Reflecting the caller's own Origin (rather than "*")
+// is what lets this also work for the cookie identity mechanism, which needs
+// Access-Control-Allow-Credentials — the two are mutually exclusive with a wildcard origin.
+// This widens no real attack surface: /publish and /schema stay behind WriteApiKey regardless
+// of what CORS allows, and /dashboards, /permissions, /directory were already designed to be
+// called from any browser with no shared secret — see their own remarks below.
+const string CorsPolicy = "AllowAnyOriginWithCredentials";
+builder.Services.AddCors(o => o.AddPolicy(CorsPolicy, p => p
+    .SetIsOriginAllowed(_ => true)
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials()));
+
 var app = builder.Build();
+app.UseCors(CorsPolicy);
 
 // Runs once at startup — creates the local storage file (dashboards + permissions) if it
 // doesn't exist yet. Entirely separate from your own live database.

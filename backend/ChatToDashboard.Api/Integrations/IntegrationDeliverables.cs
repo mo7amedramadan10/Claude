@@ -179,7 +179,12 @@ public class IntegrationDeliverables
           const type = (w.type || '').toLowerCase();
           const data = Array.isArray(w.data) ? w.data : (w.data ? [w.data] : []);
           if (type === 'kpi') {
-            const value = data[0]?.value ?? w.value ?? '—';
+            // The retargeted query's result column is never guaranteed to be named "value" —
+            // it's whatever name the client's own schema (or the retargeting step) gave it — so
+            // fall back to the first column of the first row, same "just take what's there"
+            // approach the bar/line/pie x/yKey fallback below uses.
+            const row0 = data[0] || {};
+            const value = ('value' in row0) ? row0.value : (Object.values(row0)[0] ?? w.value ?? '—');
             body.innerHTML = '<div class="kpi-value">' + esc(value) + '</div>';
             return;
           }
