@@ -5942,16 +5942,22 @@ function renderIntegrationDetail() {
     : `<span class="integration-badge warn">⚠️ لسه مفيش بنية مكتشفة — التكامل مش هيظهر في قائمة المصادر لحد ما يتكشف.</span>` + errorNoteHtml;
 
   box.innerHTML = `
-    <div class="settings-columns">
-    <div class="settings-columns-row">
-    <div class="settings-section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <h3 style="margin:0">⚙️ ${esc(d.name)}</h3>
-        <button type="button" id="btn-delete-integration"
-          style="border:1px solid var(--danger);color:var(--danger);background:transparent;padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer">
-          🗑️ حذف التكامل</button>
-      </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">⚙️ ${esc(d.name)}</h3>
+      <button type="button" id="btn-delete-integration"
+        style="border:1px solid var(--danger);color:var(--danger);background:transparent;padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer">
+        🗑️ حذف التكامل</button>
+    </div>
 
+    <div class="integ-tabs">
+      <button type="button" class="integ-tab active" data-pane="integ-connection">الاتصال</button>
+      <button type="button" class="integ-tab" data-pane="integ-visual">الهوية البصرية</button>
+      <button type="button" class="integ-tab" data-pane="integ-identity">هوية المستخدم</button>
+      <button type="button" class="integ-tab" data-pane="integ-files">الملفات والنشر</button>
+    </div>
+
+    <div id="integ-connection" class="integ-pane active">
+    <div class="settings-section">
       <form id="integ-apis-form" class="integrations-form" style="display:flex;flex-direction:column;gap:14px">
         <div>
           <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">خدمة الاتصال (connector)</div>
@@ -5981,8 +5987,9 @@ function renderIntegrationDetail() {
         </div>
       </form>
     </div>
+    </div>
 
-
+    <div id="integ-visual" class="integ-pane">
     <div class="settings-section">
       <h3>الهوية البصرية</h3>
       <div class="vi-swatches">
@@ -6053,7 +6060,7 @@ function renderIntegrationDetail() {
     </div>
     </div>
 
-    <div class="settings-columns-row">
+    <div id="integ-identity" class="integ-pane">
     <div class="settings-section">
       <h3>آلية تعريف المستخدم الحالي</h3>
       <div class="identity-status">${identityStatusHtml}</div>
@@ -6087,7 +6094,9 @@ function renderIntegrationDetail() {
         </div>
       </div>
     </div>
+    </div>
 
+    <div id="integ-files" class="integ-pane">
     <div class="settings-section">
       <h3>الملفات الجاهزة للعميل</h3>
       <p class="model-switch-note">نزّل الملفات الثلاثة وسلّمهم لفريق العميل التقني: صفحتا العرض
@@ -6099,7 +6108,6 @@ function renderIntegrationDetail() {
         <a href="/api/integrations/${esc(d.id)}/deliverables/admin"><button type="button">⬇️ صفحة إدارة الصلاحيات (admin.html)</button></a>
         <a href="/api/integrations/${esc(d.id)}/deliverables/connector"><button type="button">⬇️ خدمة الاتصال بقاعدة البيانات (connector.zip)</button></a>
       </div>
-    </div>
     </div>
 
     <div class="settings-section">
@@ -6133,6 +6141,11 @@ function integrationPublishLogTableHtml(rows) {
 
 function wireIntegrationDetailHandlers() {
   const id = state.currentIntegrationId;
+
+  document.querySelectorAll('.integ-tab').forEach(tab => tab.addEventListener('click', () => {
+    document.querySelectorAll('.integ-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.integ-pane').forEach(p => p.classList.toggle('active', p.id === tab.dataset.pane));
+  }));
 
   el('btn-delete-integration').addEventListener('click', async () => {
     if (!confirm('حذف هذا التكامل نهائيًا؟ هيتشال معاه سجل النشر واللوحات المرتبطة به.')) return;
