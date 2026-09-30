@@ -1063,6 +1063,27 @@ tr:last-child td{border-bottom:0}
 .perm-list label{flex-direction:row !important;align-items:center;gap:6px !important;font-size:12.5px;color:var(--ink)}
 .perm-list input{width:15px;height:15px;accent-color:var(--accent)}
 .perm-list .empty{color:var(--muted);font-size:12px}
+
+/* التكاملات الخارجية — bigger, easier-to-read text and a two-column masonry layout for
+   the detail view so it doesn't force ~2x scroll on a normal laptop screen. Scoped to this
+   screen (rather than changed on .settings-section/.model-switch-note themselves) since
+   those classes are shared by every other admin settings screen in the app. */
+#screen-integrations .settings-section h3{font-size:15px}
+#screen-integrations .model-switch-note{font-size:12.5px}
+#screen-integrations .integrations-form label{font-size:13.5px}
+#screen-integrations .integrations-form input[type="text"],
+#screen-integrations .integrations-form textarea{font-size:14px;padding:10px 13px}
+#screen-integrations .integration-row-name{font-size:14.5px}
+#screen-integrations .integration-badge{font-size:12px;padding:3px 10px}
+#screen-integrations .integ-table{font-size:13.5px}
+#screen-integrations .identity-match-result{font-size:13.5px}
+
+#screen-integrations .settings-columns{display:flex;flex-direction:column;gap:18px}
+#screen-integrations .settings-columns-row{display:flex;flex-direction:column;gap:18px}
+#screen-integrations .settings-columns-row > .settings-section{flex:1;min-width:0}
+@media (min-width:1000px){
+  #screen-integrations .settings-columns-row{flex-direction:row}
+}
 </style>
 </head>
 <body>
@@ -7531,6 +7552,8 @@ function renderIntegrationDetail() {
         : `<span class="integration-badge warn">⚠️ لم تُحدَّد بعد</span>`);
 
   box.innerHTML = `
+    <div class="settings-columns">
+    <div class="settings-columns-row">
     <div class="settings-section">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 style="margin:0">⚙️ ${esc(d.name)}</h3>
@@ -7637,7 +7660,9 @@ function renderIntegrationDetail() {
         <div id="vi-extract-result"></div>
       </div>
     </div>
+    </div>
 
+    <div class="settings-columns-row">
     <div class="settings-section">
       <h3>آلية تعريف المستخدم الحالي</h3>
       <div class="identity-status">${identityStatusHtml}</div>
@@ -7673,13 +7698,6 @@ function renderIntegrationDetail() {
     </div>
 
     <div class="settings-section">
-      <h3>اللوحات المنشورة وسجل النشر</h3>
-      ${integrationDashboardsTableHtml(state.integrationDashboards)}
-      <div class="model-switch-note" style="margin-top:14px;font-weight:700;color:var(--ink)">آخر عمليات النشر</div>
-      ${integrationPublishLogTableHtml(state.integrationPublishLog)}
-    </div>
-
-    <div class="settings-section">
       <h3>الملفات الجاهزة للعميل</h3>
       <p class="model-switch-note">نزّل الملفات الثلاثة وسلّمهم لفريق العميل التقني: صفحتا العرض
         وإدارة الصلاحيات يُستضافوا على نطاقهم، وخدمة الاتصال (connector) تُشغَّل جوه شبكتهم بعد
@@ -7690,6 +7708,15 @@ function renderIntegrationDetail() {
         <a href="/api/integrations/${esc(d.id)}/deliverables/admin"><button type="button">⬇️ صفحة إدارة الصلاحيات (admin.html)</button></a>
         <a href="/api/integrations/${esc(d.id)}/deliverables/connector"><button type="button">⬇️ خدمة الاتصال بقاعدة البيانات (connector.zip)</button></a>
       </div>
+    </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>اللوحات المنشورة وسجل النشر</h3>
+      ${integrationDashboardsTableHtml(state.integrationDashboards)}
+      <div class="model-switch-note" style="margin-top:14px;font-weight:700;color:var(--ink)">آخر عمليات النشر</div>
+      ${integrationPublishLogTableHtml(state.integrationPublishLog)}
+    </div>
     </div>
   `;
   wireIntegrationDetailHandlers();
