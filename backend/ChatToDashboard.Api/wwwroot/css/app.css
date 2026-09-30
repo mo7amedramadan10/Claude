@@ -869,6 +869,13 @@ tr:last-child td{border-bottom:0}
 .modal-actions{display:flex;justify-content:flex-end;margin-top:14px}
 .modal-actions button{padding:7px 16px;border:1px solid var(--grid);border-radius:9px;background:var(--surface);color:var(--ink-2)}
 .modal-actions .file-modal-delete{margin-inline-end:auto;border-color:rgba(239,100,97,.35);color:var(--danger)}
+/* The modal's own actual save/confirm action, visually distinguished from إلغاء/إغلاق next
+   to it — previously only one modal (publish's column-confirm step) did this, via its own
+   one-off inline style, so every other modal's primary button looked identical to Cancel.
+   type="submit" covers the form-based modals (file/rename/user) for free; .primary covers
+   the ones whose primary action isn't a form submit (share, publish). */
+.modal-actions button[type="submit"], .modal-actions button.primary{
+  background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ---------- guided tour ---------- */
 /* The dim layer sits below whatever step's target element (see .tour-target) — a target's
