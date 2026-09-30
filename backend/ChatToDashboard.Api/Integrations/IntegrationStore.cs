@@ -23,6 +23,8 @@ public class IntegrationStore
         ? "\"PublishedDashboardSlots\"" : "[staging].[PublishedDashboardSlots]";
     private string LogTable => _db.Provider == DbProvider.Sqlite
         ? "\"IntegrationPublishLog\"" : "[staging].[IntegrationPublishLog]";
+    private string WidgetFiltersTable => _db.Provider == DbProvider.Sqlite
+        ? "\"WidgetDataFilters\"" : "[staging].[WidgetDataFilters]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -62,6 +64,7 @@ public class IntegrationStore
                      ("ConnectorAuthValue", "TEXT", "NVARCHAR(1000)"),
                      ("ClientDbProvider", "TEXT", "NVARCHAR(20)"),
                      ("ClientSchemaDescription", "TEXT", "NVARCHAR(MAX)"),
+                     ("DataPermissionsAvailable", "INTEGER", "BIT"),
                  })
         {
             try
@@ -111,6 +114,20 @@ public class IntegrationStore
                  [Success] BIT, [Error] NVARCHAR(MAX), [CreatedAt] DATETIME2)
                """;
         await using (var cmd = connection.CreateCommand()) { cmd.CommandText = logSql; await cmd.ExecuteNonQueryAsync(ct); }
+
+        var widgetFiltersSql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               CREATE TABLE IF NOT EXISTS {WidgetFiltersTable} (
+                 "IntegrationId" TEXT, "LocalHistoryId" TEXT, "WidgetIndex" INTEGER, "FilterKey" TEXT,
+                 PRIMARY KEY ("IntegrationId", "LocalHistoryId", "WidgetIndex"))
+               """
+            : $"""
+               IF OBJECT_ID('staging.WidgetDataFilters') IS NULL
+               CREATE TABLE {WidgetFiltersTable} (
+                 [IntegrationId] NVARCHAR(64), [LocalHistoryId] NVARCHAR(64), [WidgetIndex] INT, [FilterKey] NVARCHAR(100),
+                 PRIMARY KEY ([IntegrationId], [LocalHistoryId], [WidgetIndex]))
+               """;
+        await using (var cmd = connection.CreateCommand()) { cmd.CommandText = widgetFiltersSql; await cmd.ExecuteNonQueryAsync(ct); }
     }
 
     // ---------- integrations ----------
@@ -191,16 +208,20 @@ public class IntegrationStore
     /// <summary>The client's own database shape — captured once so Publish can retarget each
     /// widget's query to run directly against it (see PublishService). Never touches the
     /// connection string itself; that stays local to the generated connector service, never
-    /// given to us — see IntegrationDeliverables' connector project.</summary>
+    /// given to us — see IntegrationDeliverables' connector project.
+    /// <paramref name="dataPermissionsAvailable"/> is whether the discovered schema contains a
+    /// table named DataPermissions.TableName — never set by hand, always derived from what was
+    /// actually discovered (see ClientSchemaDiscoveryService).</summary>
     public async Task UpdateClientSchemaAsync(
-        string id, string clientDbProvider, string clientSchemaDescription, CancellationToken ct = default)
+        string id, string clientDbProvider, string clientSchemaDescription, bool dataPermissionsAvailable, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"UPDATE {IntegrationsTable} SET ClientDbProvider = @clientDbProvider, " +
-            "ClientSchemaDescription = @clientSchemaDescription, UpdatedAt = @updatedAt WHERE Id = @id",
-            new { id, clientDbProvider, clientSchemaDescription, updatedAt = DateTime.UtcNow });
+            "ClientSchemaDescription = @clientSchemaDescription, DataPermissionsAvailable = @dataPermissionsAvailable, " +
+            "UpdatedAt = @updatedAt WHERE Id = @id",
+            new { id, clientDbProvider, clientSchemaDescription, dataPermissionsAvailable, updatedAt = DateTime.UtcNow });
     }
 
     /// <summary>Stores a matched-but-not-yet-confirmed mechanism/parameter pair. Never sets
@@ -319,5 +340,36 @@ public class IntegrationStore
             $"SELECT {top}* FROM {LogTable} WHERE IntegrationId = @integrationId ORDER BY CreatedAt DESC{tail}",
             new { integrationId });
         return rows.ToList();
+    }
+
+    // ---------- widget-level data-permission marks (Part E, data-level extension) ----------
+
+    public async Task<IReadOnlyList<WidgetDataFilter>> GetWidgetDataFiltersAsync(
+        string integrationId, string localHistoryId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<WidgetDataFilter>(
+            $"SELECT * FROM {WidgetFiltersTable} WHERE IntegrationId = @integrationId AND LocalHistoryId = @localHistoryId",
+            new { integrationId, localHistoryId });
+        return rows.ToList();
+    }
+
+    /// <summary>Replaces the complete set of marks for this (integration, dashboard) pair —
+    /// <paramref name="filters"/> is the full desired set, not a delta; an empty list clears
+    /// everything.</summary>
+    public async Task SetWidgetDataFiltersAsync(
+        string integrationId, string localHistoryId, IReadOnlyList<WidgetDataFilterEntry> filters, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"DELETE FROM {WidgetFiltersTable} WHERE IntegrationId = @integrationId AND LocalHistoryId = @localHistoryId",
+            new { integrationId, localHistoryId });
+        if (filters.Count == 0) return;
+        await connection.ExecuteAsync(
+            $"INSERT INTO {WidgetFiltersTable} (IntegrationId, LocalHistoryId, WidgetIndex, FilterKey) " +
+            "VALUES (@IntegrationId, @LocalHistoryId, @WidgetIndex, @FilterKey)",
+            filters.Select(f => new { IntegrationId = integrationId, LocalHistoryId = localHistoryId, f.WidgetIndex, f.FilterKey }));
     }
 }

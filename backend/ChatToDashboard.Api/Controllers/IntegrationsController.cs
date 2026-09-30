@@ -245,14 +245,61 @@ public class IntegrationsController : ControllerBase
             });
     }
 
-    [HttpPost("{id}/publish")]
-    public async Task<IActionResult> Publish(string id, [FromBody] PublishRequest request, CancellationToken ct)
+    /// <summary>Step 1 of publish — retargets every widget's SQL and, for any the analyst has
+    /// marked with a data-level filter, returns its actual output columns so the modal can offer
+    /// a real column picker (see PublishService.PrepareAsync). Nothing is sent to the connector
+    /// or logged yet; <see cref="PublishPrepareResult.PreviewId"/> is what ConfirmPublish needs
+    /// next. request.SlotId is accepted but unused here (kept only so the same PublishRequest
+    /// shape works for both endpoints) — the real update-vs-new decision happens in Confirm.</summary>
+    [HttpPost("{id}/publish/prepare")]
+    public async Task<IActionResult> PreparePublish(string id, [FromBody] PublishRequest request, CancellationToken ct)
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var result = await _publish.PublishAsync(id, request.DashboardId, request.SlotId, user, ct);
+        var (result, error) = await _publish.PrepareAsync(id, request.DashboardId, user, ct);
+        if (result is null) return UnprocessableEntity(new { error });
+        return Ok(result);
+    }
+
+    /// <summary>Step 2 — wraps any data-level-filtered widgets with the analyst's confirmed
+    /// column choice and actually publishes (see PublishService.ConfirmAsync). Most publishes
+    /// (no flagged widgets) call this immediately after Prepare with an empty columnChoices, so
+    /// the two calls are invisible as a single "نشر" click from the analyst's side.</summary>
+    [HttpPost("{id}/publish/confirm")]
+    public async Task<IActionResult> ConfirmPublish(string id, [FromBody] ConfirmPublishRequest request, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var result = await _publish.ConfirmAsync(id, request.PreviewId, request.SlotId, request.ColumnChoices, user, ct);
         if (!result.Success) return UnprocessableEntity(new { error = result.Error });
         return Ok(new { slotId = result.Slot!.Id, externalDashboardId = result.Slot.ExternalDashboardId });
+    }
+
+    // ---------- data-level permissions (Part E, data-level extension) ----------
+
+    /// <summary>FilterKey values already sitting in the client's own data-permissions table (see
+    /// ClientSchemaDiscoveryService.GetPermissionFilterKeysAsync) — a picklist, never free typing.</summary>
+    [HttpGet("{id}/data-permission-keys")]
+    public async Task<IActionResult> DataPermissionKeys(string id, CancellationToken ct)
+    {
+        var integration = await _integrations.GetByIdAsync(id, ct);
+        if (integration is null) return NotFound();
+        return Ok(await _schemaDiscovery.GetPermissionFilterKeysAsync(integration, ct));
+    }
+
+    [HttpGet("{id}/dashboards/{localHistoryId}/widget-filters")]
+    public async Task<IActionResult> GetWidgetDataFilters(string id, string localHistoryId, CancellationToken ct) =>
+        Ok(await _integrations.GetWidgetDataFiltersAsync(id, localHistoryId, ct));
+
+    /// <summary>Replaces the complete set of data-level-filter marks for this (integration,
+    /// dashboard) pair — set once by the analyst, in the publish modal, reused on every future
+    /// publish of the same dashboard to the same integration.</summary>
+    [HttpPut("{id}/dashboards/{localHistoryId}/widget-filters")]
+    public async Task<IActionResult> SetWidgetDataFilters(
+        string id, string localHistoryId, [FromBody] SetWidgetDataFiltersRequest request, CancellationToken ct)
+    {
+        await _integrations.SetWidgetDataFiltersAsync(id, localHistoryId, request.Filters, ct);
+        return NoContent();
     }
 
     [HttpGet("{id}/dashboards")]
@@ -304,6 +351,7 @@ public class IntegrationsController : ControllerBase
         identityConfirmed = i.IdentityConfirmed,
         visualIdentityConfigured = !string.IsNullOrWhiteSpace(i.AccentColor),
         clientSchemaConfigured = !string.IsNullOrWhiteSpace(i.ClientSchemaDescription),
+        dataPermissionsAvailable = i.DataPermissionsAvailable,
         i.CreatedAt,
         i.UpdatedAt,
     };
@@ -327,6 +375,7 @@ public class IntegrationsController : ControllerBase
         fontFamily = i.FontFamily,
         clientDbProvider = i.ClientDbProvider,
         clientSchemaDescription = i.ClientSchemaDescription,
+        dataPermissionsAvailable = i.DataPermissionsAvailable,
         i.CreatedBy,
         i.CreatedAt,
         i.UpdatedAt,

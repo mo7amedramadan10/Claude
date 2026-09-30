@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
@@ -86,29 +88,133 @@ public class PublishService
 
     /// <summary>Whether <paramref name="localHistoryId"/> has already been published under
     /// <paramref name="integrationId"/> — the controller uses this to decide whether to ask
-    /// "update the existing slot or create a new one?" before calling PublishAsync (see Part A:
+    /// "update the existing slot or create a new one?" before calling PrepareAsync (see Part A:
     /// "If it was published before: ask..."). Null means never published there.</summary>
     public Task<PublishedDashboardSlot?> FindExistingSlotAsync(string integrationId, string localHistoryId, CancellationToken ct = default) =>
         _integrations.FindSlotByLocalHistoryIdAsync(integrationId, localHistoryId, ct);
 
-    /// <param name="slotId">Null/absent creates a brand-new dashboardId slot; set updates that
-    /// existing slot in place — the caller (IntegrationsController) is what turns the analyst's
-    /// explicit "استبدال المنشور الحالي / انشر كمنفصل" choice into this parameter.</param>
-    public async Task<PublishResult> PublishAsync(
-        string integrationId, string localHistoryId, string? slotId, AppUser requestingUser, CancellationToken ct = default)
+    /// <summary>Server-held state between Prepare and Confirm (Part E, data-level extension) —
+    /// short-lived, in-memory, never persisted: losing it (a restart, or just letting it expire)
+    /// costs the analyst nothing worse than clicking "نشر" again to re-prepare. Keyed by a random
+    /// token neither guessable nor tied to anything else, so Confirm can never be pointed at
+    /// widgets/columns the analyst never actually saw in the preview.</summary>
+    private sealed class PreparedPublish
     {
+        public required string IntegrationId;
+        public required string LocalHistoryId;
+        public required string Question;
+        public required string Summary;
+        public required List<PublishedWidget> Widgets;
+        public required Dictionary<int, (string FilterKey, List<string> Columns)> Flagged;
+        public DateTime CreatedAt = DateTime.UtcNow;
+    }
+
+    private readonly ConcurrentDictionary<string, PreparedPublish> _pending = new();
+    private static readonly TimeSpan PendingTtl = TimeSpan.FromMinutes(30);
+
+    private void PrunePending()
+    {
+        var cutoff = DateTime.UtcNow - PendingTtl;
+        foreach (var (key, value) in _pending)
+            if (value.CreatedAt < cutoff) _pending.TryRemove(key, out _);
+    }
+
+    /// <summary>Refreshes the client's schema, retargets every widget's SQL (unchanged from
+    /// before), and — new — for any widget the analyst has marked with a data-level filter (see
+    /// IntegrationStore.GetWidgetDataFiltersAsync), parses its retargeted query's own real output
+    /// columns so the analyst picks a filter column from what the query actually returns rather
+    /// than typing/guessing one. Nothing is sent to the connector yet, and nothing is logged —
+    /// see ConfirmAsync, the only step that actually publishes.</summary>
+    public async Task<(PublishPrepareResult? Result, string? Error)> PrepareAsync(
+        string integrationId, string localHistoryId, AppUser requestingUser, CancellationToken ct = default)
+    {
+        PrunePending();
+
         var integration = await _integrations.GetByIdAsync(integrationId, ct);
-        if (integration is null) return new PublishResult(false, "لا يوجد تكامل بهذا المعرف.", null);
+        if (integration is null) return (null, "لا يوجد تكامل بهذا المعرف.");
         if (string.IsNullOrWhiteSpace(integration.ConnectorBaseUrl))
-            return new PublishResult(false, "رابط خدمة الاتصال (Connector Base URL) غير مضبوط لهذا التكامل بعد.", null);
+            return (null, "رابط خدمة الاتصال (Connector Base URL) غير مضبوط لهذا التكامل بعد.");
 
         var entry = await _history.GetByIdAsync(localHistoryId, ct);
         if (entry is null || !entry.IsActive)
-            return new PublishResult(false, "اللوحة غير موجودة أو ليست لوحة مفعّلة (Active) — النشر متاح للوحات المفعّلة فقط.", null);
+            return (null, "اللوحة غير موجودة أو ليست لوحة مفعّلة (Active) — النشر متاح للوحات المفعّلة فقط.");
 
         var role = await _history.ResolveRoleAsync(requestingUser.Id, entry, ct);
-        if (role is null)
-            return new PublishResult(false, "ليس لديك صلاحية وصول لهذه اللوحة.", null);
+        if (role is null) return (null, "ليس لديك صلاحية وصول لهذه اللوحة.");
+
+        // Refresh the client's DB schema from their connector right before retargeting against
+        // it (see ClientSchemaDiscoveryService) — catches a connector that's only just now been
+        // pointed at a real database, or a schema that changed since it was last discovered,
+        // without anyone having to remember to refresh it themselves. Best-effort: a stale or
+        // still-missing schema just means BuildPublishedWidgetsAsync leaves more widgets' Sql
+        // unset below, never a failed prepare.
+        if (await _schemaDiscovery.TryDiscoverAsync(integration, ct))
+            integration = await _integrations.GetByIdAsync(integrationId, ct) ?? integration;
+
+        var rawWidgets = ParseWidgets(entry.WidgetsJson);
+        var widgets = await BuildPublishedWidgetsAsync(rawWidgets, integration, requestingUser, ct);
+
+        var marks = integration.DataPermissionsAvailable
+            ? await _integrations.GetWidgetDataFiltersAsync(integrationId, localHistoryId, ct)
+            : Array.Empty<WidgetDataFilter>();
+
+        var flagged = new Dictionary<int, (string, List<string>)>();
+        var widgetsNeedingColumn = new List<PublishPreviewWidget>();
+        foreach (var mark in marks)
+        {
+            if (mark.WidgetIndex < 0 || mark.WidgetIndex >= widgets.Count) continue;
+            var widget = widgets[mark.WidgetIndex];
+            var columns = widget.Sql is { Length: > 0 } sql ? ExtractSelectColumns(sql) : new List<string>();
+            flagged[mark.WidgetIndex] = (mark.FilterKey, columns);
+            widgetsNeedingColumn.Add(new PublishPreviewWidget
+            {
+                Index = mark.WidgetIndex, Title = widget.Title, Sql = widget.Sql, Columns = columns, FilterKey = mark.FilterKey,
+            });
+        }
+
+        var previewId = Guid.NewGuid().ToString("N");
+        _pending[previewId] = new PreparedPublish
+        {
+            IntegrationId = integrationId, LocalHistoryId = localHistoryId,
+            Question = entry.Question, Summary = entry.Summary, Widgets = widgets, Flagged = flagged,
+        };
+
+        return (new PublishPrepareResult { PreviewId = previewId, WidgetsNeedingColumn = widgetsNeedingColumn }, null);
+    }
+
+    /// <param name="slotId">Null/absent creates a brand-new dashboardId slot; set updates that
+    /// existing slot in place — the caller (IntegrationsController) is what turns the analyst's
+    /// explicit "استبدال المنشور الحالي / انشر كمنفصل" choice into this parameter.</param>
+    public async Task<PublishResult> ConfirmAsync(
+        string integrationId, string previewId, string? slotId, List<ConfirmColumnChoice> columnChoices,
+        AppUser requestingUser, CancellationToken ct = default)
+    {
+        PrunePending();
+
+        if (!_pending.TryRemove(previewId, out var prepared) || prepared.IntegrationId != integrationId)
+            return new PublishResult(false, "انتهت صلاحية معاينة النشر أو أُرسلت بالفعل — دوس «نشر» تاني.", null);
+
+        var integration = await _integrations.GetByIdAsync(integrationId, ct);
+        if (integration is null) return new PublishResult(false, "لا يوجد تكامل بهذا المعرف.", null);
+
+        // Every widget the analyst flagged for data-level filtering MUST get a valid column
+        // choice — one of the exact columns Prepare actually offered, never an arbitrary string
+        // (defense in depth against a client calling this endpoint directly, bypassing the UI).
+        // A flagged widget with no valid choice fails the whole publish rather than shipping
+        // unfiltered: silently downgrading a widget someone deliberately marked as sensitive is
+        // exactly the kind of guess this design never makes.
+        var choiceByIndex = columnChoices.ToDictionary(c => c.WidgetIndex, c => c.Column);
+        foreach (var (index, (filterKey, columns)) in prepared.Flagged)
+        {
+            if (prepared.Widgets[index].Sql is not { Length: > 0 } sql) continue; // nothing to wrap — no retargeted query at all
+            if (!choiceByIndex.TryGetValue(index, out var column) || !columns.Contains(column, StringComparer.Ordinal))
+                return new PublishResult(false, $"العنصر «{prepared.Widgets[index].Title}» معلّم بفلترة البيانات لكن مفيش عمود مؤكّد له.", null);
+
+            var wrapped = WrapWithDataPermissionFilter(sql, column, filterKey);
+            if (AnalyticsTools.ValidateReadOnlySql(wrapped) is not null)
+                return new PublishResult(false, $"تعذّر بناء استعلام آمن للعنصر «{prepared.Widgets[index].Title}».", null);
+            prepared.Widgets[index].Sql = wrapped;
+        }
 
         PublishedDashboardSlot slot;
         if (!string.IsNullOrWhiteSpace(slotId))
@@ -119,27 +225,16 @@ public class PublishService
         }
         else
         {
-            slot = await _integrations.CreateSlotAsync(integrationId, localHistoryId, entry.Question, DisplayName(requestingUser), ct);
+            slot = await _integrations.CreateSlotAsync(integrationId, prepared.LocalHistoryId, prepared.Question, DisplayName(requestingUser), ct);
         }
 
-        // Refresh the client's DB schema from their connector right before retargeting against
-        // it (see ClientSchemaDiscoveryService) — catches a connector that's only just now been
-        // pointed at a real database, or a schema that changed since it was last discovered,
-        // without anyone having to remember to refresh it themselves. Best-effort: a stale or
-        // still-missing schema just means BuildPublishedWidgetsAsync leaves more widgets' Sql
-        // unset below, never a failed publish.
-        if (await _schemaDiscovery.TryDiscoverAsync(integration, ct))
-            integration = await _integrations.GetByIdAsync(integrationId, ct) ?? integration;
-
-        var rawWidgets = ParseWidgets(entry.WidgetsJson);
-        var widgets = await BuildPublishedWidgetsAsync(rawWidgets, integration, requestingUser, ct);
         var payload = new PublishedDashboardPayload
         {
             DashboardId = slot.ExternalDashboardId,
-            Title = entry.Question,
+            Title = prepared.Question,
             PublishedAt = DateTime.UtcNow.ToString("o"),
-            Widgets = widgets,
-            Summary = entry.Summary,
+            Widgets = prepared.Widgets,
+            Summary = prepared.Summary,
         };
 
         bool success;
@@ -167,14 +262,14 @@ public class PublishService
         }
 
         if (success && !string.IsNullOrWhiteSpace(slotId))
-            await _integrations.TouchSlotAsync(slot.Id, entry.Question, DisplayName(requestingUser), ct);
+            await _integrations.TouchSlotAsync(slot.Id, prepared.Question, DisplayName(requestingUser), ct);
 
         await _integrations.LogPublishAsync(new IntegrationPublishLogEntry
         {
             IntegrationId = integrationId,
             ExternalDashboardId = slot.ExternalDashboardId,
-            LocalHistoryId = localHistoryId,
-            DashboardTitle = entry.Question,
+            LocalHistoryId = prepared.LocalHistoryId,
+            DashboardTitle = prepared.Question,
             UserId = requestingUser.Id,
             Success = success,
             Error = error,
@@ -184,6 +279,61 @@ public class PublishService
     }
 
     private static string DisplayName(AppUser user) => user.DisplayName is { Length: > 0 } d ? d : user.Username;
+
+    /// <summary>Wraps an already-retargeted widget query in a deterministic, code-built subquery
+    /// — never LLM-written — that only lets through rows whose value in <paramref name="column"/>
+    /// appears in the client's own data-permissions table for the current viewer's identity and
+    /// the analyst-chosen <paramref name="filterKey"/> (see DataPermissions and the connector's
+    /// own remarks on @__viewer_identity__). <paramref name="column"/> was already checked
+    /// against Prepare's own parsed column list by the caller; <paramref name="filterKey"/> is
+    /// escaped here as a literal since it never varies per request (chosen once, at publish
+    /// time) — only the viewer's identity is a real bound parameter, filled in by the connector
+    /// per request.</summary>
+    private static string WrapWithDataPermissionFilter(string sql, string column, string filterKey) =>
+        $"SELECT * FROM ({sql}) AS _base WHERE _base.{column} IN " +
+        $"(SELECT FilterValue FROM {DataPermissions.TableName} WHERE UserId = @__viewer_identity__ AND FilterKey = '{filterKey.Replace("'", "''")}')";
+
+    /// <summary>Parses the top-level SELECT list of a widget's retargeted query to name its own
+    /// output columns — deterministic, our own code, never the model's self-report — so the
+    /// column picker in the publish modal only ever offers what the query actually returns.
+    /// Handles the shapes RetargetSqlAsync actually produces (a plain SELECT, no leading WITH);
+    /// an expression with neither a bare name nor an explicit "AS alias" is simply left out
+    /// rather than guessed at — the analyst then just has fewer choices, never a wrong one.</summary>
+    private static List<string> ExtractSelectColumns(string sql)
+    {
+        var match = Regex.Match(sql, @"^\s*SELECT\s+(.*?)\s+FROM\s", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        if (!match.Success) return new List<string>();
+
+        var selectList = match.Groups[1].Value;
+        var parts = new List<string>();
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < selectList.Length; i++)
+        {
+            if (selectList[i] == '(') depth++;
+            else if (selectList[i] == ')') depth--;
+            else if (selectList[i] == ',' && depth == 0)
+            {
+                parts.Add(selectList[start..i]);
+                start = i + 1;
+            }
+        }
+        parts.Add(selectList[start..]);
+
+        var columns = new List<string>();
+        foreach (var part in parts)
+        {
+            var trimmed = part.Trim();
+            var asMatch = Regex.Match(trimmed, @"\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$", RegexOptions.IgnoreCase);
+            if (asMatch.Success) { columns.Add(asMatch.Groups[1].Value); continue; }
+
+            var bareMatch = Regex.Match(trimmed, @"^([A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)$");
+            if (bareMatch.Success) { columns.Add(bareMatch.Groups[2].Value); continue; }
+            // An unaliased expression (e.g. a bare COUNT(*)) — can't safely name it, so it's
+            // simply not offered as a filter-column choice.
+        }
+        return columns;
+    }
 
     /// <summary>Deserializes the Active dashboard's stored widgets as-is — including each
     /// one's own internal Query, which BuildPublishedWidgetsAsync below uses purely as a

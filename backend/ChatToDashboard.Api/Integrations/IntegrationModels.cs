@@ -22,6 +22,17 @@ public static class ClientDbProviders
     public static readonly IReadOnlyList<string> All = new[] { SqlServer, Sqlite };
 }
 
+/// <summary>Data-level (row) permissions — an optional second layer beneath the whole-dashboard
+/// everyone/restricted check (Part E). A table with this exact fixed name and shape (UserId,
+/// FilterKey, FilterValue — see IntegrationConnector's own DataPermissions class, duplicated
+/// there since it has no reference back to this codebase), if the client creates and populates
+/// one, is auto-detected from the discovered schema — never configured here, never something an
+/// analyst names or designs. The client alone decides what goes in it.</summary>
+public static class DataPermissions
+{
+    public const string TableName = "ChatToDashboard_DataPermissions";
+}
+
 /// <summary>
 /// One external client system's whole integration setup — everything Part A/B/C describe: the
 /// connector service's base URL (its route shape is fixed and known — see IntegrationConnector's
@@ -53,6 +64,7 @@ public class ExternalIntegration
     public string? DirectoryUrl => CombineUrl(ConnectorBaseUrl, "directory");
     public string? PermissionsUrl => CombineUrl(ConnectorBaseUrl, "permissions");
     public string? SchemaUrl => CombineUrl(ConnectorBaseUrl, "schema");
+    public string? PermissionFilterKeysUrl => CombineUrl(ConnectorBaseUrl, "permission-filter-keys");
 
     private static string? CombineUrl(string? baseUrl, string path) =>
         string.IsNullOrWhiteSpace(baseUrl) ? null : baseUrl.TrimEnd('/') + "/" + path;
@@ -80,6 +92,11 @@ public class ExternalIntegration
     public string? ClientDbProvider { get; set; }
     public string? ClientSchemaDescription { get; set; }
 
+    // Set automatically by ClientSchemaDiscoveryService whenever the discovered schema contains
+    // a table named DataPermissions.TableName — never set by hand. Gates the publish-modal's
+    // per-widget data-level-filtering UI: it only ever appears when this is true.
+    public bool DataPermissionsAvailable { get; set; }
+
     public string CreatedBy { get; set; } = "";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -98,6 +115,19 @@ public class PublishedDashboardSlot
     public DateTime FirstPublishedAt { get; set; }
     public DateTime LastPublishedAt { get; set; }
     public string LastPublishedBy { get; set; } = "";
+}
+
+/// <summary>One widget's data-level-filtering mark, per (integration, dashboard) — set once by
+/// the analyst in the publish modal (Part E, data-level extension), reused on every future
+/// publish of that same dashboard to that same integration. Identifies the widget by its position
+/// in the dashboard's own WidgetsJson array, since widgets have no separate id of their own.
+/// Never applies unless <see cref="ExternalIntegration.DataPermissionsAvailable"/> is true.</summary>
+public class WidgetDataFilter
+{
+    public string IntegrationId { get; set; } = "";
+    public string LocalHistoryId { get; set; } = "";
+    public int WidgetIndex { get; set; }
+    public string FilterKey { get; set; } = "";
 }
 
 /// <summary>One publish attempt, success or failure — "log every publish (who, when, which
@@ -128,6 +158,51 @@ public class UpdateIntegrationApisRequest
     [JsonPropertyName("connectorBaseUrl")] public string? ConnectorBaseUrl { get; set; }
     [JsonPropertyName("connectorAuthHeader")] public string? ConnectorAuthHeader { get; set; }
     [JsonPropertyName("connectorAuthValue")] public string? ConnectorAuthValue { get; set; }
+}
+
+public class WidgetDataFilterEntry
+{
+    [JsonPropertyName("widgetIndex")] public int WidgetIndex { get; set; }
+    [JsonPropertyName("filterKey")] public string FilterKey { get; set; } = "";
+}
+
+public class SetWidgetDataFiltersRequest
+{
+    /// <summary>The complete set of marked widgets for this (integration, dashboard) pair —
+    /// replaces whatever was there before; an empty list clears all marks.</summary>
+    [JsonPropertyName("filters")] public List<WidgetDataFilterEntry> Filters { get; set; } = new();
+}
+
+/// <summary>One widget's retargeted-and-cached publish preview (see PublishService.PrepareAsync)
+/// — <see cref="Columns"/> are the real output columns of <see cref="Sql"/>, parsed from the
+/// query text itself, so the analyst picks a data-level filter column from what the query
+/// actually returns rather than typing/guessing a name.</summary>
+public class PublishPreviewWidget
+{
+    [JsonPropertyName("index")] public int Index { get; set; }
+    [JsonPropertyName("title")] public string Title { get; set; } = "";
+    [JsonPropertyName("sql")] public string? Sql { get; set; }
+    [JsonPropertyName("columns")] public List<string> Columns { get; set; } = new();
+    [JsonPropertyName("filterKey")] public string? FilterKey { get; set; }
+}
+
+public class PublishPrepareResult
+{
+    [JsonPropertyName("previewId")] public string PreviewId { get; set; } = "";
+    [JsonPropertyName("widgetsNeedingColumn")] public List<PublishPreviewWidget> WidgetsNeedingColumn { get; set; } = new();
+}
+
+public class ConfirmColumnChoice
+{
+    [JsonPropertyName("widgetIndex")] public int WidgetIndex { get; set; }
+    [JsonPropertyName("column")] public string Column { get; set; } = "";
+}
+
+public class ConfirmPublishRequest
+{
+    [JsonPropertyName("previewId")] public string PreviewId { get; set; } = "";
+    [JsonPropertyName("slotId")] public string? SlotId { get; set; }
+    [JsonPropertyName("columnChoices")] public List<ConfirmColumnChoice> ColumnChoices { get; set; } = new();
 }
 
 /// <summary>Shape of the connector's own GET /schema response (see IntegrationConnector's

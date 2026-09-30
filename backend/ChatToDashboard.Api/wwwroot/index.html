@@ -1694,11 +1694,26 @@ tr:last-child td{border-bottom:0}
       <label class="chk-row"><input type="radio" name="publish-mode" value="update" checked> تحديث المنشور الحالي (نفس المعرّف عند العميل)</label>
       <label class="chk-row"><input type="radio" name="publish-mode" value="new"> نشر كنسخة منفصلة (معرّف جديد)</label>
     </div>
+
+    <div id="publish-data-filters" class="hidden" style="margin-top:14px">
+      <div class="model-switch-note" style="font-weight:700;color:var(--ink);margin-bottom:4px">🔒 فلترة بيانات حسب المستخدم (اختياري)</div>
+      <p class="modal-note">علّم أي عنصر عايز كل مستخدم يشوف فيه بس البيانات المسموح له بيها — حسب جدول
+        الصلاحيات اللي العميل عامله عنده. غير المعلّمين يفضلوا زي ما هم، من غير فلترة.</p>
+      <div id="publish-data-filters-list"></div>
+    </div>
+
+    <div id="publish-column-confirm" class="hidden" style="margin-top:14px">
+      <div class="model-switch-note" style="font-weight:700;color:var(--ink);margin-bottom:4px">تأكيد عمود الفلترة</div>
+      <p class="modal-note">دول الأعمدة الفعلية اللي رجعت من ترجمة كل عنصر — اختار العمود اللي يمثّل الفلترة لكل واحد.</p>
+      <div id="publish-column-confirm-list"></div>
+    </div>
+
     <div id="publish-error" class="roles-error hidden"></div>
     <div id="publish-success" class="hidden" style="margin-top:10px;color:var(--accent);font-size:13px">✓ تم النشر بنجاح.</div>
     <div class="modal-actions">
       <button type="button" id="publish-cancel">إلغاء</button>
       <button type="button" id="publish-submit">نشر</button>
+      <button type="button" id="publish-confirm-columns" class="hidden" style="background:var(--accent);color:#fff;border:0">✅ تأكيد ونشر</button>
     </div>
   </div>
 </div>
@@ -6822,18 +6837,20 @@ async function openPublishModal() {
   el('publish-error').classList.add('hidden');
   el('publish-success').classList.add('hidden');
   el('publish-slot-choice').classList.add('hidden');
+  resetPublishColumnConfirm();
   const select = el('publish-integration-select');
   select.innerHTML = '<option>جارٍ التحميل…</option>';
   el('publish-modal').classList.remove('hidden');
   try {
     const res = await fetch('/api/integrations');
     const integrations = res.ok ? await res.json() : [];
+    state.publishIntegrations = integrations;
     if (!integrations.length) {
       select.innerHTML = '<option value="">لا توجد تكاملات — أنشئ واحدًا من شاشة «التكاملات الخارجية»</option>';
       return;
     }
     select.innerHTML = integrations.map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('');
-    await checkExistingSlot();
+    await Promise.all([checkExistingSlot(), loadPublishDataFilters()]);
   } catch {
     select.innerHTML = '<option value="">تعذّر تحميل قائمة التكاملات</option>';
   }
@@ -6856,10 +6873,90 @@ async function checkExistingSlot() {
     }
   } catch { el('publish-slot-choice').classList.add('hidden'); }
 }
-el('publish-integration-select').addEventListener('change', checkExistingSlot);
+
+// ---------- فلترة بيانات حسب المستخدم (Part E, data-level extension) ----------
+// Only ever shown when the selected integration's connector has auto-detected the client's own
+// fixed-shape permissions table — see ClientSchemaDiscoveryService. Marks are saved immediately
+// on every change (PUT, full-replace) rather than only at publish time, so they survive a
+// cancelled modal and are already there the next time this dashboard is published.
+async function loadPublishDataFilters() {
+  resetPublishColumnConfirm();
+  const box = el('publish-data-filters');
+  const integrationId = el('publish-integration-select').value;
+  const integ = (state.publishIntegrations || []).find(i => i.id === integrationId);
+  const widgets = state.dashboard?.widgets || [];
+  if (!integ?.dataPermissionsAvailable || !widgets.length) { box.classList.add('hidden'); return; }
+
+  try {
+    const [keysRes, marksRes] = await Promise.all([
+      fetch(`/api/integrations/${integrationId}/data-permission-keys`),
+      fetch(`/api/integrations/${integrationId}/dashboards/${encodeURIComponent(state.currentHistoryId)}/widget-filters`),
+    ]);
+    const keys = keysRes.ok ? await keysRes.json() : [];
+    const marks = marksRes.ok ? await marksRes.json() : [];
+    if (!keys.length) { box.classList.add('hidden'); return; }
+
+    box.classList.remove('hidden');
+    const list = el('publish-data-filters-list');
+    list.innerHTML = widgets.map((w, i) => {
+      const mark = marks.find(m => m.widgetIndex === i);
+      return `
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--grid)">
+          <label class="chk-row" style="flex:1"><input type="checkbox" class="pdf-toggle" data-index="${i}" ${mark ? 'checked' : ''}>
+            ${esc(w.title || ('عنصر ' + (i + 1)))}</label>
+          <select class="pdf-key" data-index="${i}" ${mark ? '' : 'disabled'} style="max-width:160px">
+            ${keys.map(k => `<option value="${esc(k)}" ${mark && mark.filterKey === k ? 'selected' : ''}>${esc(k)}</option>`).join('')}
+          </select>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.pdf-toggle').forEach(cb => cb.addEventListener('change', () => {
+      list.querySelector(`.pdf-key[data-index="${cb.dataset.index}"]`).disabled = !cb.checked;
+      savePublishDataFilterMarks(integrationId);
+    }));
+    list.querySelectorAll('.pdf-key').forEach(sel => sel.addEventListener('change', () => savePublishDataFilterMarks(integrationId)));
+  } catch { box.classList.add('hidden'); }
+}
+
+async function savePublishDataFilterMarks(integrationId) {
+  const list = el('publish-data-filters-list');
+  const filters = [...list.querySelectorAll('.pdf-toggle')].filter(cb => cb.checked).map(cb => ({
+    widgetIndex: Number(cb.dataset.index),
+    filterKey: list.querySelector(`.pdf-key[data-index="${cb.dataset.index}"]`).value,
+  }));
+  try {
+    await fetch(`/api/integrations/${integrationId}/dashboards/${encodeURIComponent(state.currentHistoryId)}/widget-filters`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters }),
+    });
+  } catch { /* best-effort — a save that fails here just means the mark isn't remembered next time */ }
+}
+
+el('publish-integration-select').addEventListener('change', () => {
+  checkExistingSlot();
+  loadPublishDataFilters();
+});
+
+function resetPublishColumnConfirm() {
+  state.publishPending = null;
+  el('publish-column-confirm').classList.add('hidden');
+  el('publish-column-confirm-list').innerHTML = '';
+  el('publish-submit').classList.remove('hidden');
+  el('publish-confirm-columns').classList.add('hidden');
+}
 
 el('publish-cancel').addEventListener('click', () => el('publish-modal').classList.add('hidden'));
 el('publish-modal').addEventListener('click', e => { if (e.target.id === 'publish-modal') el('publish-modal').classList.add('hidden'); });
+
+async function runPublishConfirm(integrationId, previewId, slotId, columnChoices) {
+  const res = await fetch(`/api/integrations/${integrationId}/publish/confirm`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ previewId, slotId, columnChoices }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { el('publish-error').textContent = data.error || `فشل النشر (${res.status})`; el('publish-error').classList.remove('hidden'); return; }
+  el('publish-success').classList.remove('hidden');
+  setTimeout(() => el('publish-modal').classList.add('hidden'), 1200);
+}
 
 el('publish-submit').addEventListener('click', async () => {
   const integrationId = el('publish-integration-select').value;
@@ -6872,14 +6969,56 @@ el('publish-submit').addEventListener('click', async () => {
   btn.disabled = true;
   el('publish-error').classList.add('hidden');
   try {
-    const res = await fetch(`/api/integrations/${integrationId}/publish`, {
+    const prepRes = await fetch(`/api/integrations/${integrationId}/publish/prepare`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dashboardId: state.currentHistoryId, slotId }),
+      body: JSON.stringify({ dashboardId: state.currentHistoryId }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) { el('publish-error').textContent = data.error || `فشل النشر (${res.status})`; el('publish-error').classList.remove('hidden'); return; }
-    el('publish-success').classList.remove('hidden');
-    setTimeout(() => el('publish-modal').classList.add('hidden'), 1200);
+    const prep = await prepRes.json().catch(() => ({}));
+    if (!prepRes.ok) {
+      el('publish-error').textContent = prep.error || `تعذّر تجهيز النشر (${prepRes.status})`;
+      el('publish-error').classList.remove('hidden');
+      return;
+    }
+
+    // Only widgets whose retargeted query actually has real output columns need a confirmed
+    // choice — one whose translation produced nothing (see PrepareAsync) is simply skipped, it
+    // ships no data regardless of any filtering intent.
+    const needsColumn = (prep.widgetsNeedingColumn || []).filter(w => w.columns && w.columns.length);
+    if (needsColumn.length) {
+      el('publish-column-confirm-list').innerHTML = needsColumn.map(w => `
+        <div style="padding:6px 0;border-bottom:1px solid var(--grid)">
+          <div class="model-switch-note" style="font-weight:700;color:var(--ink);margin-bottom:4px">${esc(w.title)} — فلترة حسب "${esc(w.filterKey)}"</div>
+          <select class="pcc-column" data-index="${w.index}">
+            ${w.columns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          </select>
+        </div>`).join('');
+      state.publishPending = { integrationId, previewId: prep.previewId, slotId };
+      el('publish-column-confirm').classList.remove('hidden');
+      btn.classList.add('hidden');
+      el('publish-confirm-columns').classList.remove('hidden');
+      return;
+    }
+
+    await runPublishConfirm(integrationId, prep.previewId, slotId, []);
+  } catch (err) {
+    el('publish-error').textContent = 'تعذّر الوصول إلى الخادم: ' + err.message;
+    el('publish-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el('publish-confirm-columns').addEventListener('click', async () => {
+  const pending = state.publishPending;
+  if (!pending) return;
+  const btn = el('publish-confirm-columns');
+  btn.disabled = true;
+  el('publish-error').classList.add('hidden');
+  const columnChoices = [...document.querySelectorAll('.pcc-column')].map(sel => ({
+    widgetIndex: Number(sel.dataset.index), column: sel.value,
+  }));
+  try {
+    await runPublishConfirm(pending.integrationId, pending.previewId, pending.slotId, columnChoices);
   } catch (err) {
     el('publish-error').textContent = 'تعذّر الوصول إلى الخادم: ' + err.message;
     el('publish-error').classList.remove('hidden');

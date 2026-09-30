@@ -108,7 +108,7 @@ app.MapGet("/dashboards/{id}", async (string id, HttpRequest request, LocalStore
         {
             try
             {
-                data = await target.RunReadOnlyQueryAsync(sql);
+                data = await target.RunReadOnlyQueryAsync(sql, identity);
             }
             catch (Exception ex)
             {
@@ -172,6 +172,16 @@ app.MapGet("/schema", async (HttpRequest request, TargetDatabase target, Connect
     }
 });
 
+// ---------- data-level permission keys: what FilterKey values you've actually populated ----------
+// Optional — only meaningful once you've created a table named DataPermissions.TableName (see
+// its own remarks) and started filling it in. Never an error if you haven't; just an empty list.
+app.MapGet("/permission-filter-keys", async (HttpRequest request, TargetDatabase target, ConnectorOptions options) =>
+{
+    if (!IsAuthorized(request, options))
+        return Results.Unauthorized();
+    return Results.Ok(await target.GetDistinctPermissionFilterKeysAsync());
+});
+
 app.Run();
 
 // ---------- helpers ----------
@@ -205,6 +215,20 @@ static bool IsVisibleTo(StoredDashboard dashboard, string? identity)
 internal static class Json
 {
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+}
+
+/// <summary>Data-level (row) permissions — a second, optional layer beneath the whole-dashboard
+/// everyone/restricted check above. If you create a table with this exact name and these three
+/// columns (UserId, FilterKey, FilterValue — all text), a widget غرفة القيادة marks as needing
+/// per-viewer filtering gets wrapped, at publish time, as a subquery that only returns rows whose
+/// value in a chosen column appears in your own table for the current viewer's identity and a
+/// chosen FilterKey. You populate this table entirely yourself, with whatever authorization facts
+/// your business actually has (e.g. "ahmed can see Finance and IT department rows") — this
+/// service only ever reads it as a value-answers-value lookup, never writes to it, and never
+/// invents what belongs in it.</summary>
+internal static class DataPermissions
+{
+    public const string TableName = "ChatToDashboard_DataPermissions";
 }
 
 // ---------- config ----------
@@ -398,7 +422,12 @@ public class TargetDatabase
 
     public TargetDatabase(ConnectorOptions options) => _options = options;
 
-    public async Task<List<Dictionary<string, object?>>> RunReadOnlyQueryAsync(string sql)
+    /// <param name="identity">The current viewer's identity (see ExtractIdentity), bound as a
+    /// real query parameter — never string-interpolated — when the widget's SQL references
+    /// @__viewer_identity__ (see PublishedWidget's remarks on data-level permissions). Absent for
+    /// plain widgets with no such reference; this method never adds the parameter unless the SQL
+    /// text actually names it, so an ordinary widget's query is completely unaffected.</param>
+    public async Task<List<Dictionary<string, object?>>> RunReadOnlyQueryAsync(string sql, string? identity = null)
     {
         var reason = ReadOnlySqlValidator.Validate(sql);
         if (reason is not null) throw new InvalidOperationException($"query rejected: {reason}");
@@ -414,6 +443,13 @@ public class TargetDatabase
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
         command.CommandTimeout = 30;
+        if (sql.Contains("@__viewer_identity__", StringComparison.Ordinal))
+        {
+            var identityParam = command.CreateParameter();
+            identityParam.ParameterName = "__viewer_identity__";
+            identityParam.Value = (object?)identity ?? DBNull.Value;
+            command.Parameters.Add(identityParam);
+        }
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
@@ -423,6 +459,32 @@ public class TargetDatabase
             rows.Add(row);
         }
         return rows;
+    }
+
+    /// <summary>Distinct FilterKey values already sitting in your own data-permissions table
+    /// (see DataPermissions.TableName) — lets غرفة القيادة offer them as a picklist instead of
+    /// anyone typing a FilterKey name that might not match what you've actually populated. An
+    /// empty list (never an error) if you haven't created that table — data-level permissions
+    /// are entirely optional, and most integrations will never have one.</summary>
+    public async Task<List<string>> GetDistinctPermissionFilterKeysAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_options.TargetConnectionString)) return new();
+        try
+        {
+            await using DbConnection connection = _options.TargetDbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
+                ? new SqlConnection(_options.TargetConnectionString)
+                : new SqliteConnection(_options.TargetConnectionString);
+            await connection.OpenAsync();
+            var keys = await connection.QueryAsync<string>(
+                $"SELECT DISTINCT FilterKey FROM {DataPermissions.TableName} ORDER BY FilterKey");
+            return keys.ToList();
+        }
+        catch
+        {
+            // Table doesn't exist, or any other read failure — same as "not configured": data-
+            // level permissions just aren't available for this integration, never a hard error.
+            return new();
+        }
     }
 
     /// <summary>Structure only — table and column names/types, never a data row. SQL Server via
