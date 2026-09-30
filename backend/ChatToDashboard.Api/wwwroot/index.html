@@ -7693,6 +7693,14 @@ function renderIntegrationDetail() {
         ? `<span class="integration-badge warn">⚠️ محدّدة لكن غير مؤكدة — ${identityMechanismLabel(d.identityMechanism)} باسم "${esc(d.identityParameterName)}"</span>`
         : `<span class="integration-badge warn">⚠️ لم تُحدَّد بعد</span>`);
 
+  // The one thing that actually gates whether this integration shows up as a buildable data
+  // source (see SourcesController.Get) — surfaced here so "why isn't it in the sources list?"
+  // has a visible, self-diagnosable answer instead of a silent discovery failure.
+  const tableCount = (d.clientSchemaDescription || '').split('\n').filter(Boolean).length;
+  const schemaStatusHtml = d.clientSchemaDescription
+    ? `<span class="integration-badge ok">✓ بنية مكتشفة — ${tableCount} جدول (${esc(d.clientDbProvider || '')})${d.dataPermissionsAvailable ? ' · جدول صلاحيات بيانات متاح' : ''}</span>`
+    : `<span class="integration-badge warn">⚠️ لسه مفيش بنية مكتشفة — التكامل مش هيظهر في قائمة المصادر لحد ما يتكشف. تأكد إن خدمة الاتصال شغّالة ومتاحة على الرابط ده وإن قيمة/اسم المصادقة متطابقين، وبعدين احفظ نقاط الاتصال تاني لإعادة المحاولة.</span>`;
+
   box.innerHTML = `
     <div class="settings-columns">
     <div class="settings-columns-row">
@@ -7725,6 +7733,7 @@ function renderIntegrationDetail() {
             ومفيش سر ممكن نحطه فيهم بأمان؛ الحماية هناك بحدود شبكة العميل الداخلية. بمجرد ما الخدمة
             تشتغل عند العميل بقاعدة بياناته الحقيقية وتحفظ الرابط هنا، بنكتشف بنية قاعدة بياناته
             تلقائيًا (وبنعيد الاكتشاف تاني قبل كل عملية نشر) — من غير أي زرار أو خطوة إضافية.</p>
+          <div style="margin:8px 0">${schemaStatusHtml}</div>
         </div>
         <div class="model-switch-actions">
           <span id="ia-apis-note" class="settings-save-note hidden">✓ تم الحفظ</span>
