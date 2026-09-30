@@ -121,6 +121,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IVisualIdentityImageExtrac
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.VisualIdentityService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.ClientSchemaDiscoveryService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.ClientQueryService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.PublishService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationDeliverables>();
 

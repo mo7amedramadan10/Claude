@@ -221,6 +221,14 @@ public class WidgetSqlQuery
 
     [JsonPropertyName("sql")]
     public string Sql { get; set; } = string.Empty;
+
+    /// <summary>Set only when this query was built via query_client_data (self-reported by the
+    /// model, same as Table/Sql above) — the id of the ExternalIntegration whose real database
+    /// schema this SQL is already written against. Absent for a widget built on this app's own
+    /// internal sources. See WidgetQueryService (filter re-runs) and PublishService (publish
+    /// skips retargeting for a widget published to this same integration).</summary>
+    [JsonPropertyName("integrationId")]
+    public string? IntegrationId { get; set; }
 }
 
 public class WidgetForecast

@@ -68,6 +68,8 @@ public class AnalyticsTools
     private readonly RepositoryStore _repository;
     private readonly SystemApiLoader _systemLoader;
     private readonly SourceOptions _sources;
+    private readonly Integrations.IntegrationStore _integrations;
+    private readonly Integrations.ClientQueryService _clientQuery;
     private readonly ILogger<AnalyticsTools> _logger;
 
     // Off by default — this whole feature is net-new, and defaulting off keeps every existing
@@ -82,6 +84,8 @@ public class AnalyticsTools
         RepositoryStore repository,
         SystemApiLoader systemLoader,
         IOptions<SourceOptions> sources,
+        Integrations.IntegrationStore integrations,
+        Integrations.ClientQueryService clientQuery,
         IConfiguration configuration,
         ILogger<AnalyticsTools> logger)
     {
@@ -91,6 +95,8 @@ public class AnalyticsTools
         _repository = repository;
         _systemLoader = systemLoader;
         _sources = sources.Value;
+        _integrations = integrations;
+        _clientQuery = clientQuery;
         _suggestFollowUps = configuration.GetValue("Inquiry:SuggestFollowUps", false);
         _logger = logger;
     }
@@ -127,7 +133,17 @@ public class AnalyticsTools
         // from DisabledFileTables since the reason is per-user identity, not the on/off
         // toggle every file also carries.
         IReadOnlyDictionary<string, string> RestrictedFileTables,
-        bool HasDocuments);
+        bool HasDocuments,
+        // External integrations the user has toggled on as a source (see SourceSelection —
+        // reuses the exact same Systems list/AllowsSystem check a configured system already
+        // gets, an integration id just being another entry in it), and whose client schema has
+        // actually been discovered — an integration with no schema yet offers nothing to build
+        // on, so it's simply left out rather than offered as an empty, unusable source.
+        IReadOnlyList<EnabledIntegration> EnabledIntegrations);
+
+    /// <summary>One toggled-on, schema-discovered integration — everything query_client_data's
+    /// tool description needs to let the model write correct SQL against it.</summary>
+    public record EnabledIntegration(string Id, string Name, string DbProvider, string SchemaDescription);
 
     public async Task<SourceContext> DescribeSourcesAsync(
         SourceSelection selection, CancellationToken ct = default)
@@ -197,10 +213,17 @@ public class AnalyticsTools
 
         var hasDocuments = files.Any(f => f.Kind == "pdf" && selection.AllowsFile(f.Id));
 
+        var allIntegrations = await _integrations.ListAsync(ct);
+        var enabledIntegrations = allIntegrations
+            .Where(i => selection.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
+            .Select(i => new EnabledIntegration(i.Id, i.Name, i.ClientDbProvider!, i.ClientSchemaDescription!))
+            .ToList();
+
         return new SourceContext(
             enabledSystems, disabledSystems, unconnected,
             enabledFiles, disabledFiles, enabledFileIds, tableFiles,
-            systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments);
+            systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments,
+            enabledIntegrations);
     }
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
@@ -297,6 +320,42 @@ public class AnalyticsTools
                         },
                     },
                     ["required"] = new JsonArray { "query" },
+                }));
+        }
+
+        if (context.EnabledIntegrations.Count > 0)
+        {
+            var integrationsBlock = string.Join("\n\n", context.EnabledIntegrations.Select(i =>
+                $"- integrationId \"{i.Id}\" — \"{i.Name}\" ({i.DbProvider} dialect). Tables:\n{i.SchemaDescription}"));
+            // 500 mirrors the connector's own AdHocQueryMaxRows constant — kept as a literal
+            // here rather than shared code since the two projects never reference each other.
+            tools.Add(new ToolSpec(
+                "query_client_data",
+                "Runs a read-only SELECT query LIVE against an external client system's own real " +
+                "database — not this app's own data — so a widget built this way shows the client's " +
+                "actual current rows immediately while building, the same way it will once published. " +
+                "Only SELECT statements are allowed; results are capped at 500 rows. Use ONLY the " +
+                "tables/columns listed below for the chosen integrationId — never invent one, and never " +
+                "mix a table from one integration into a query against another. Write the SQL in that " +
+                "integration's own dialect, not this app's.\n\n" +
+                "Available integrations:\n" + integrationsBlock,
+                new JsonObject
+                {
+                    ["type"] = "object",
+                    ["properties"] = new JsonObject
+                    {
+                        ["integrationId"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "Exactly one of the integrationId values listed above.",
+                        },
+                        ["sql"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "A single SELECT statement, in that integration's own SQL dialect.",
+                        },
+                    },
+                    ["required"] = new JsonArray { "integrationId", "sql" },
                 }));
         }
 
@@ -1008,10 +1067,13 @@ public class AnalyticsTools
         - "sql" لازم يكون النص الحرفي اللي بعته لـ query_data، مش نسخة معدّلة أو مبسّطة —
           الواجهة بتضيف شرط WHERE فوقه لاحقًا لما المستخدم يختار فلتر، فأي اختلاف عن
           الاستعلام الحقيقي هيدّي نتيجة غلط.
-        - سيب query غايبة (من غير الحقل خالص) لو العنصر مبني من أكتر من نداء query_data
-          مجمّعين، أو من list_files/search_documents بس، أو كان forecast — في الحالات دي
-          مفيش استعلام واحد واضح يترجعله الفلتر، والعنصر هيظهر ببساطة "غير متأثر بالفلتر"
-          وده أفضل من query غلط بيرجّع نتيجة غير صحيحة.
+        - لو العنصر مبني من نداء query_client_data بدل query_data، حط "integrationId" كمان
+          جوه query بنفس القيمة اللي استخدمتها ("table" و"sql" زي ما هما، بلهجة قاعدة بيانات
+          التكامل ده): { "table": "...", "sql": "...", "integrationId": "..." }
+        - سيب query غايبة (من غير الحقل خالص) لو العنصر مبني من أكتر من نداء query_data/
+          query_client_data مجمّعين، أو من list_files/search_documents بس، أو كان forecast —
+          في الحالات دي مفيش استعلام واحد واضح يترجعله الفلتر، والعنصر هيظهر ببساطة "غير
+          متأثر بالفلتر" وده أفضل من query غلط بيرجّع نتيجة غير صحيحة.
         - ده منفصل تمامًا عن source: source نص عربي للعرض، وquery بيانات تقنية خام للتنفيذ
           الآلي فقط — الاثنين لازم يوصفوا نفس الاستعلام لكن بصيغتين مختلفتين تمامًا.
 
@@ -1428,6 +1490,27 @@ public class AnalyticsTools
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteQueryAsync(sql, ct);
+                }
+                case "query_client_data":
+                {
+                    var integrationId = input["integrationId"]?.GetValue<string>();
+                    var sql = input["sql"]?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(integrationId) || string.IsNullOrWhiteSpace(sql))
+                        return ("Error: 'integrationId' and 'sql' inputs are required.", true);
+
+                    // Never trust the model's own integrationId choice — it must be one this
+                    // exact request actually offered (context.EnabledIntegrations), the same
+                    // permission surface query_data's own CheckSourcePermission enforces for
+                    // internal sources.
+                    if (!context.EnabledIntegrations.Any(i => string.Equals(i.Id, integrationId, StringComparison.OrdinalIgnoreCase)))
+                        return ("Error: unknown or disabled integrationId — use only one from the tool's own description.", true);
+
+                    var integration = await _integrations.GetByIdAsync(integrationId, ct);
+                    if (integration is null)
+                        return ("Error: integration no longer exists.", true);
+
+                    var (resultJson, error) = await _clientQuery.RunQueryAsync(integration, sql, ct);
+                    return resultJson is not null ? (resultJson, false) : (error ?? "Error: query failed.", true);
                 }
                 case "forecast_data":
                 {

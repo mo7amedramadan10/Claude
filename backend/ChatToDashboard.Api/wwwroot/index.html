@@ -2493,7 +2493,7 @@ function widgetShell(w, extraClass) {
   }
   card.appendChild(head);
 
-  if (getActiveFilterTables().size && (!w.query || !getActiveFilterTables().has(w.query.table))) {
+  if (getActiveFilterTables().size && (!w.query || w.query.integrationId || !getActiveFilterTables().has(w.query.table))) {
     const badge = document.createElement('span');
     badge.className = 'widget-unaffected';
     badge.textContent = 'غير متأثر بالفلتر';
@@ -4364,7 +4364,7 @@ async function applyFilters() {
   // retry, so the user gets an honest status instead of the previous silent no-op.
   let failed = 0;
   await Promise.all(widgets.map(async (w, index) => {
-    if (!w.query || !w.query.table) return;
+    if (!w.query || !w.query.table || w.query.integrationId) return;
     const filters = activeByTable[normalizeTableKey(w.query.table)] || [];
     for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt > 0) await new Promise(r => setTimeout(r, 400));
@@ -5470,7 +5470,10 @@ async function loadSources() {
   const knownSystems = new Set(state.systems.map(s => s.id));
   const knownFiles = new Set(state.sourceFiles.map(f => f.id));
 
-  state.systems = data.systems || [];
+  // An external integration is offered as just another toggleable "system" — same shape
+  // ({id, name, connected}), same onSystems set, same "systems" list sent back with every
+  // chat request (see SourceSelection.AllowsSystem, reused verbatim for integration ids).
+  state.systems = [...(data.systems || []), ...(data.integrations || [])];
   state.sourceFiles = data.files || [];
   state.tableLabels = data.tableLabels || {};
 
@@ -5488,7 +5491,7 @@ function renderSources() {
     <label class="source-item">
       <input type="checkbox" class="sys-cb" data-id="${esc(s.id)}" ${state.onSystems.has(s.id) ? 'checked' : ''}>
       <span class="grow">${esc(s.name)}</span>
-      ${s.connected ? '' : '<span class="note">غير مربوط بعد</span>'}
+      ${s.kind === 'integration' ? '<span class="note">🔗 تكامل خارجي</span>' : (s.connected ? '' : '<span class="note">غير مربوط بعد</span>')}
       ${s.refreshable ? `<button type="button" class="refresh-btn" data-refresh="${esc(s.id)}">⟳ جلب</button>` : ''}
     </label>
     ${s.refreshable ? `<div class="sys-status${s.error ? ' bad' : ''}" data-status="${esc(s.id)}">${systemStatusText(s)}</div>` : ''}`).join('');

@@ -65,6 +65,7 @@ public class ExternalIntegration
     public string? PermissionsUrl => CombineUrl(ConnectorBaseUrl, "permissions");
     public string? SchemaUrl => CombineUrl(ConnectorBaseUrl, "schema");
     public string? PermissionFilterKeysUrl => CombineUrl(ConnectorBaseUrl, "permission-filter-keys");
+    public string? QueryUrl => CombineUrl(ConnectorBaseUrl, "query");
 
     private static string? CombineUrl(string? baseUrl, string path) =>
         string.IsNullOrWhiteSpace(baseUrl) ? null : baseUrl.TrimEnd('/') + "/" + path;

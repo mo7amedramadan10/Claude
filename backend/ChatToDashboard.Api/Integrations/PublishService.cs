@@ -368,7 +368,18 @@ public class PublishService
         foreach (var w in widgets)
         {
             string? sql = null;
-            if (hasClientSchema)
+            if (w.Query?.IntegrationId is { Length: > 0 } sourceIntegrationId)
+            {
+                // Built directly against a client's real schema via query_client_data — there's
+                // nothing to retarget, it was never internal SQL to begin with. Only honest when
+                // publishing to that SAME integration; publishing to a different one has no
+                // meaningful equivalent, so — same as a widget the model couldn't translate at
+                // all — it just ships with no live query rather than a guess.
+                if (string.Equals(sourceIntegrationId, integration.Id, StringComparison.OrdinalIgnoreCase)
+                    && AnalyticsTools.ValidateReadOnlySql(w.Query.Sql) is null)
+                    sql = w.Query.Sql;
+            }
+            else if (hasClientSchema)
             {
                 var candidate = await _assistant.RetargetSqlAsync(
                     w.Title, w.Query?.Sql, integration.ClientDbProvider!, integration.ClientSchemaDescription!, requestingUser, ct);

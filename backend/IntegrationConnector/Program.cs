@@ -172,6 +172,48 @@ app.MapGet("/schema", async (HttpRequest request, TargetDatabase target, Connect
     }
 });
 
+// ---------- ad-hoc live query: an analyst building a dashboard on غرفة القيادة picked your ----------
+// integration as a data source — lets them see real rows from your database WHILE BUILDING,
+// not only once a dashboard is published and someone opens viewer.html. Same double safeguard
+// as every other query this service ever runs: read-only validated here independently (never
+// trusting that غرفة القيادة already checked it), and capped to a fixed row count since this
+// SQL is written live in a chat session, never reviewed ahead of time the way a published
+// widget's fixed query is.
+const int AdHocQueryMaxRows = 500;
+app.MapPost("/query", async (HttpRequest request, TargetDatabase target, ConnectorOptions options) =>
+{
+    if (!IsAuthorized(request, options))
+        return Results.Unauthorized();
+
+    AdHocQueryRequest? body;
+    try
+    {
+        body = await JsonSerializer.DeserializeAsync<AdHocQueryRequest>(request.Body, Json.Options);
+    }
+    catch (JsonException)
+    {
+        return Results.BadRequest(new { error = "invalid JSON body" });
+    }
+    if (string.IsNullOrWhiteSpace(body?.Sql))
+        return Results.BadRequest(new { error = "sql is required" });
+
+    try
+    {
+        var rows = await target.RunReadOnlyQueryAsync(body.Sql, identity: null, maxRows: AdHocQueryMaxRows);
+        return Results.Ok(new { rowCount = rows.Count, rows });
+    }
+    catch (InvalidOperationException ex)
+    {
+        // Covers both ReadOnlySqlValidator's rejection and a missing TargetConnectionString —
+        // either way, the caller gets a clear reason back rather than a bare 500.
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"query failed: {ex.Message}", statusCode: 502);
+    }
+});
+
 // ---------- data-level permission keys: what FilterKey values you've actually populated ----------
 // Optional — only meaningful once you've created a table named DataPermissions.TableName (see
 // its own remarks) and started filling it in. Never an error if you haven't; just an empty list.
@@ -297,6 +339,12 @@ public class PermissionUpdate
     public string DashboardId { get; set; } = "";
     public string Mode { get; set; } = "everyone"; // "everyone" | "restricted"
     public List<AllowedIdentifier> AllowedIdentifiers { get; set; } = new();
+}
+
+/// <summary>Body of POST /query — see its own remarks above.</summary>
+public class AdHocQueryRequest
+{
+    public string Sql { get; set; } = "";
 }
 
 public class StoredDashboard
@@ -434,7 +482,11 @@ public class TargetDatabase
     /// @__viewer_identity__ (see PublishedWidget's remarks on data-level permissions). Absent for
     /// plain widgets with no such reference; this method never adds the parameter unless the SQL
     /// text actually names it, so an ordinary widget's query is completely unaffected.</param>
-    public async Task<List<Dictionary<string, object?>>> RunReadOnlyQueryAsync(string sql, string? identity = null)
+    /// <param name="maxRows">Stops reading after this many rows. Null (the default, used for a
+    /// published widget's own fixed, already-reviewed query) means no cap — kept exactly as it
+    /// was before this parameter existed. The ad-hoc /query endpoint passes a real cap, since
+    /// that SQL is written live during a chat session, never reviewed ahead of time.</param>
+    public async Task<List<Dictionary<string, object?>>> RunReadOnlyQueryAsync(string sql, string? identity = null, int? maxRows = null)
     {
         var reason = ReadOnlySqlValidator.Validate(sql);
         if (reason is not null) throw new InvalidOperationException($"query rejected: {reason}");
@@ -458,7 +510,7 @@ public class TargetDatabase
             command.Parameters.Add(identityParam);
         }
         await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        while ((maxRows is null || rows.Count < maxRows) && await reader.ReadAsync())
         {
             var row = new Dictionary<string, object?>();
             for (var i = 0; i < reader.FieldCount; i++)

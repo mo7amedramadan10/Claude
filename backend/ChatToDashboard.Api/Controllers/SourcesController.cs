@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Integrations;
 using ChatToDashboard.Api.Repository;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Users;
@@ -15,14 +16,17 @@ public class SourcesController : ControllerBase
     private readonly RepositoryStore _store;
     private readonly SystemApiLoader _systems;
     private readonly PermissionsService _permissions;
+    private readonly IntegrationStore _integrations;
 
     public SourcesController(
-        IOptions<SourceOptions> options, RepositoryStore store, SystemApiLoader systems, PermissionsService permissions)
+        IOptions<SourceOptions> options, RepositoryStore store, SystemApiLoader systems,
+        PermissionsService permissions, IntegrationStore integrations)
     {
         _options = options.Value;
         _store = store;
         _systems = systems;
         _permissions = permissions;
+        _integrations = integrations;
     }
 
     /// <summary>Re-fetches one system's records from its endpoint, on demand — an operational action, admin only.</summary>
@@ -66,6 +70,18 @@ public class SourcesController : ControllerBase
                 || f.PermittedUserIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase)))
             .Select(f => new { id = f.Id, name = f.DisplayName, category = f.Category })
             .ToList();
+
+        // External integrations, offered as data sources exactly like a configured system —
+        // an integration id is just another entry in the same "systems" toggle list the
+        // frontend already sends per chat request (see SourceSelection/AnalyticsTools.
+        // DescribeSourcesAsync). Only one whose client schema has actually been discovered is
+        // worth offering — an integration still being set up has nothing to build on yet.
+        var allIntegrations = await _integrations.ListAsync(ct);
+        var integrations = allIntegrations
+            .Where(i => allowed.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
+            .Select(i => new { id = i.Id, name = i.Name, connected = true, kind = "integration" })
+            .ToList();
+
         return Ok(new
         {
             systems = _options.Systems.Where(s => allowed.AllowsSystem(s.Id)).Select(s =>
@@ -85,6 +101,7 @@ public class SourcesController : ControllerBase
                 };
             }),
             files,
+            integrations,
             tableLabels = BuildTableLabels(repoFiles, allowed),
         });
     }
