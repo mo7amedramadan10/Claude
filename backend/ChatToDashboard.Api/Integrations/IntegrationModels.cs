@@ -136,10 +136,25 @@ public class UpdateIntegrationApisRequest
     [JsonPropertyName("permissionsApiAuthValue")] public string? PermissionsApiAuthValue { get; set; }
 }
 
-public class UpdateClientSchemaRequest
+/// <summary>Shape of the connector's own GET /schema response (see IntegrationConnector's
+/// SchemaInfo/SchemaTable/SchemaColumn) — structure only, deserialized case-insensitively since
+/// it's produced by a separate project's default ASP.NET Core JSON casing.</summary>
+public class ConnectorSchemaResponse
 {
-    [JsonPropertyName("clientDbProvider")] public string ClientDbProvider { get; set; } = "";
-    [JsonPropertyName("clientSchemaDescription")] public string ClientSchemaDescription { get; set; } = "";
+    public string Provider { get; set; } = "";
+    public List<ConnectorSchemaTable> Tables { get; set; } = new();
+}
+
+public class ConnectorSchemaTable
+{
+    public string Name { get; set; } = "";
+    public List<ConnectorSchemaColumn> Columns { get; set; } = new();
+}
+
+public class ConnectorSchemaColumn
+{
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "";
 }
 
 public class ManualVisualIdentityRequest

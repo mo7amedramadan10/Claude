@@ -1,4 +1,6 @@
+using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Text.Json;
 using ChatToDashboard.Api.Integrations;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Users;
@@ -26,10 +28,12 @@ public class IntegrationsController : ControllerBase
     private readonly PublishService _publish;
     private readonly IntegrationDeliverables _deliverables;
     private readonly PermissionsService _permissions;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public IntegrationsController(
         IntegrationStore integrations, VisualIdentityService visualIdentity, IIntegrationSetupAssistant assistant,
-        PublishService publish, IntegrationDeliverables deliverables, PermissionsService permissions)
+        PublishService publish, IntegrationDeliverables deliverables, PermissionsService permissions,
+        IHttpClientFactory httpClientFactory)
     {
         _integrations = integrations;
         _visualIdentity = visualIdentity;
@@ -37,6 +41,7 @@ public class IntegrationsController : ControllerBase
         _publish = publish;
         _deliverables = deliverables;
         _permissions = permissions;
+        _httpClientFactory = httpClientFactory;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -79,18 +84,69 @@ public class IntegrationsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>The client's own database shape — captured once so Publish can retarget each
-    /// widget's query to their real schema (see PublishService). Never the connection string
-    /// itself, which stays local to the generated connector service.</summary>
-    [HttpPut("{id}/client-schema")]
-    public async Task<IActionResult> UpdateClientSchema(string id, [FromBody] UpdateClientSchemaRequest request, CancellationToken ct)
+    /// <summary>The client's own database shape — discovered automatically from the deployed
+    /// connector's own GET /schema (see IntegrationConnector's TargetDatabase.GetSchemaAsync),
+    /// never typed by hand. Requires the write API URL (the connector's POST /publish) to
+    /// already be configured and reachable — /schema lives right alongside it on the same
+    /// service, behind the same write-API auth. Captured so Publish can retarget each widget's
+    /// query to the client's real schema (see PublishService); the connection string itself
+    /// never reaches us — see the connector's own local config.</summary>
+    [HttpPost("{id}/client-schema/discover")]
+    public async Task<IActionResult> DiscoverClientSchema(string id, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
-        if (!ClientDbProviders.All.Contains(request.ClientDbProvider, StringComparer.OrdinalIgnoreCase))
-            return BadRequest(new { error = "نوع قاعدة بيانات غير مدعوم — لازم يكون SqlServer أو Sqlite." });
+        var integration = await _integrations.GetByIdAsync(id, ct);
+        if (integration is null) return NotFound();
+        if (string.IsNullOrWhiteSpace(integration.WriteApiUrl))
+            return BadRequest(new { error = "اضبط رابط نقطة الكتابة (Write API URL) أولاً — نقطة اكتشاف البنية بتعيش جنبها على نفس الخدمة." });
 
-        await _integrations.UpdateClientSchemaAsync(id, request.ClientDbProvider, request.ClientSchemaDescription?.Trim() ?? "", ct);
-        return NoContent();
+        var schemaUrl = BuildSchemaUrl(integration.WriteApiUrl);
+        if (schemaUrl is null)
+            return BadRequest(new { error = "تعذّر تحديد رابط نقطة اكتشاف البنية من رابط نقطة الكتابة." });
+
+        ConnectorSchemaResponse? schema;
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Get, schemaUrl);
+            if (!string.IsNullOrWhiteSpace(integration.WriteApiAuthHeader) && !string.IsNullOrWhiteSpace(integration.WriteApiAuthValue))
+                request.Headers.TryAddWithoutValidation(integration.WriteApiAuthHeader, integration.WriteApiAuthValue);
+
+            using var response = await client.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+                return UnprocessableEntity(new { error = $"استجابة غير ناجحة من خدمة الاتصال: HTTP {(int)response.StatusCode}." });
+
+            schema = await response.Content.ReadFromJsonAsync<ConnectorSchemaResponse>(
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, ct);
+        }
+        catch (Exception ex)
+        {
+            return UnprocessableEntity(new { error = $"تعذّر الوصول لخدمة الاتصال: {ex.Message}" });
+        }
+
+        if (schema is null || schema.Tables.Count == 0)
+            return UnprocessableEntity(new { error = "الخدمة ردّت لكن بدون جداول — تأكد إن TargetConnectionString مضبوط هناك." });
+        if (!ClientDbProviders.All.Contains(schema.Provider, StringComparer.OrdinalIgnoreCase))
+            return UnprocessableEntity(new { error = $"نوع قاعدة بيانات غير مدعوم من الخدمة: {schema.Provider}" });
+
+        var description = string.Join("\n", schema.Tables.Select(t =>
+            $"{t.Name}({string.Join(", ", t.Columns.Select(c => $"{c.Name} {c.Type}"))})"));
+
+        await _integrations.UpdateClientSchemaAsync(id, schema.Provider, description, ct);
+        return Ok(new { clientDbProvider = schema.Provider, clientSchemaDescription = description, tableCount = schema.Tables.Count });
+    }
+
+    /// <summary>The connector's fixed route shape always puts /schema right beside /publish on
+    /// the same base — see IntegrationConnector's Program.cs. Falls back to swapping the write
+    /// URL's last path segment for an analyst who typed something other than the documented
+    /// ".../publish".</summary>
+    private static string? BuildSchemaUrl(string writeApiUrl)
+    {
+        var trimmed = writeApiUrl.TrimEnd('/');
+        const string suffix = "/publish";
+        if (trimmed.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            return trimmed[..^suffix.Length] + "/schema";
+        var lastSlash = trimmed.LastIndexOf('/');
+        return lastSlash > 0 ? trimmed[..lastSlash] + "/schema" : null;
     }
 
     // ---------- visual identity (Part B) ----------

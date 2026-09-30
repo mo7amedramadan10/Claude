@@ -134,6 +134,26 @@ app.MapPost("/permissions", async (HttpRequest request, LocalStore store, Connec
 // Wire this up to your own user/role directory if you want live search suggestions instead.
 app.MapGet("/directory", (string? q) => Results.Ok(Array.Empty<object>()));
 
+// ---------- schema discovery: غرفة القيادة reads your DB's real shape here, once, at setup ----------
+// Lets an analyst there build dashboards directly against your real tables/columns without
+// anyone typing your schema out by hand — this endpoint answers with structure only (table and
+// column names/types), never a row of your actual data.
+app.MapGet("/schema", async (HttpRequest request, TargetDatabase target, ConnectorOptions options) =>
+{
+    if (!IsAuthorized(request, options))
+        return Results.Unauthorized();
+
+    try
+    {
+        var schema = await target.GetSchemaAsync();
+        return Results.Ok(schema);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"could not read schema: {ex.Message}", statusCode: 502);
+    }
+});
+
 app.Run();
 
 // ---------- helpers ----------
@@ -386,6 +406,74 @@ public class TargetDatabase
         }
         return rows;
     }
+
+    /// <summary>Structure only — table and column names/types, never a data row. SQL Server via
+    /// INFORMATION_SCHEMA.COLUMNS; SQLite via sqlite_master + pragma_table_info (no
+    /// INFORMATION_SCHEMA there). Ordered by table then column position, so the result reads the
+    /// same way a hand-written description would.</summary>
+    public async Task<SchemaInfo> GetSchemaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_options.TargetConnectionString))
+            throw new InvalidOperationException("TargetConnectionString is not configured.");
+
+        var isSqlServer = _options.TargetDbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase);
+        await using DbConnection connection = isSqlServer
+            ? new SqlConnection(_options.TargetConnectionString)
+            : new SqliteConnection(_options.TargetConnectionString);
+        await connection.OpenAsync();
+
+        var tables = new List<SchemaTable>();
+        if (isSqlServer)
+        {
+            var rows = await connection.QueryAsync(
+                """
+                SELECT TABLE_NAME AS TableName, COLUMN_NAME AS ColumnName, DATA_TYPE AS DataType
+                FROM INFORMATION_SCHEMA.COLUMNS
+                ORDER BY TABLE_NAME, ORDINAL_POSITION
+                """);
+            foreach (var group in rows.GroupBy(r => (string)r.TableName))
+                tables.Add(new SchemaTable
+                {
+                    Name = group.Key,
+                    Columns = group.Select(r => new SchemaColumn { Name = r.ColumnName, Type = r.DataType }).ToList(),
+                });
+        }
+        else
+        {
+            var tableNames = await connection.QueryAsync<string>(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+            foreach (var tableName in tableNames)
+            {
+                var columns = await connection.QueryAsync(
+                    $"SELECT name AS ColumnName, type AS DataType FROM pragma_table_info('{tableName.Replace("'", "''")}')");
+                tables.Add(new SchemaTable
+                {
+                    Name = tableName,
+                    Columns = columns.Select(r => new SchemaColumn { Name = r.ColumnName, Type = (string)(r.DataType ?? "") }).ToList(),
+                });
+            }
+        }
+
+        return new SchemaInfo { Provider = _options.TargetDbProvider, Tables = tables };
+    }
+}
+
+public class SchemaInfo
+{
+    public string Provider { get; set; } = "";
+    public List<SchemaTable> Tables { get; set; } = new();
+}
+
+public class SchemaTable
+{
+    public string Name { get; set; } = "";
+    public List<SchemaColumn> Columns { get; set; } = new();
+}
+
+public class SchemaColumn
+{
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "";
 }
 
 /// <summary>Same read-only check غرفة القيادة itself runs before ever publishing a query to

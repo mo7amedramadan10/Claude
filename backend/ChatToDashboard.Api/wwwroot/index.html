@@ -1049,6 +1049,9 @@ tr:last-child td{border-bottom:0}
 .integ-table th,.integ-table td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:start}
 .integ-table th{color:var(--ink-2);font-weight:700}
 .deliverable-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cs-schema-pre{white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:11.5px;
+  background:var(--plane);border:1px solid var(--grid);border-radius:9px;padding:10px 12px;
+  max-height:260px;overflow-y:auto;margin:8px 0 0}
 .user-modal-box{width:min(480px,100%);max-height:86vh;overflow-y:auto}
 #user-form{display:flex;flex-direction:column;gap:12px}
 #user-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
@@ -7602,27 +7605,23 @@ function renderIntegrationDetail() {
 
     <div class="settings-section">
       <h3>بنية قاعدة بيانات العميل</h3>
-      <p class="model-switch-note">وصف مرة واحدة لجداول وأعمدة قاعدة بيانات العميل الحقيقية — بيستخدمه
-        "نشر" عشان يعيد كتابة كويري كل عنصر ليشتغل مباشرة على جداولهم هم بدل جداولنا، بدون ما يحتاج
-        فريقهم التقني يكتب حرف كود. رقم الاتصال (connection string) نفسه ميتبعتش لينا أبدًا — بيتحط
-        محليًا عندهم جوه إعدادات خدمة الاتصال (connector) بس.</p>
-      <form id="integ-client-schema-form" class="integrations-form">
-        <div class="integrations-form-grid">
-          <label>نوع محرك قاعدة البيانات
-            <select id="cs-provider">
-              <option value="SqlServer" ${d.clientDbProvider === 'SqlServer' ? 'selected' : ''}>SQL Server</option>
-              <option value="Sqlite" ${d.clientDbProvider === 'Sqlite' ? 'selected' : ''}>SQLite</option>
-            </select>
-          </label>
-        </div>
-        <label>وصف بنية قاعدة البيانات (الجداول والأعمدة وأنواعها)
-          <textarea id="cs-description" rows="6" placeholder="مثال:&#10;Sales(Id int, Region nvarchar, Amount decimal, SaleDate datetime)&#10;Customers(Id int, Name nvarchar, Region nvarchar)">${esc(d.clientSchemaDescription || '')}</textarea>
-        </label>
-        <div class="model-switch-actions">
-          <span id="ia-cs-note" class="settings-save-note hidden">✓ تم الحفظ</span>
-          <button type="submit">حفظ بنية قاعدة البيانات</button>
-        </div>
-      </form>
+      <p class="model-switch-note">بتتكتشف تلقائيًا من خدمة الاتصال (connector) بعد ما العميل يشغّلها
+        بقاعدة بياناته الحقيقية — مفيش داعي حد يكتبها يدويًا. "نشر" بيستخدمها عشان يعيد كتابة كويري
+        كل عنصر ليشتغل مباشرة على جداولهم هم بدل جداولنا. رقم الاتصال (connection string) نفسه
+        ميتبعتش لينا أبدًا — بيتحط محليًا عندهم جوه إعدادات خدمة الاتصال بس؛ اللي بيوصلنا هنا بنية
+        الجداول والأعمدة فقط (أسماء وأنواع، بدون أي بيانات).</p>
+      <div id="cs-preview">
+        ${d.clientSchemaDescription
+          ? `<div class="vi-swatches"><div class="vi-swatch">نوع المحرك: ${esc(d.clientDbProvider || '')}</div></div>
+             <pre class="cs-schema-pre">${esc(d.clientSchemaDescription)}</pre>`
+          : `<p class="model-switch-note">لسه معملتش اكتشاف — شغّل خدمة الاتصال عند العميل بقاعدة بياناته
+               الحقيقية، واضبط رابط نقطة الكتابة فوق، وبعدين دوس الزرار.</p>`}
+      </div>
+      <div class="model-switch-actions">
+        <span id="ia-cs-note" class="settings-save-note hidden">✓ تم الاكتشاف والحفظ</span>
+        <span id="cs-error" class="roles-error hidden"></span>
+        <button type="button" id="btn-cs-discover">🔍 اكتشاف تلقائي من الخدمة</button>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -7807,18 +7806,33 @@ function wireIntegrationDetailHandlers() {
     renderIntegrationDetail();
   });
 
-  el('integ-client-schema-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const body = {
-      clientDbProvider: el('cs-provider').value,
-      clientSchemaDescription: el('cs-description').value.trim(),
-    };
-    const res = await fetch('/api/integrations/' + id + '/client-schema', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر الحفظ.'); return; }
-    el('ia-cs-note').classList.remove('hidden');
-    await loadIntegrations();
+  el('btn-cs-discover').addEventListener('click', async () => {
+    const btn = el('btn-cs-discover');
+    const errBox = el('cs-error');
+    errBox.classList.add('hidden');
+    el('ia-cs-note').classList.add('hidden');
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الاكتشاف…';
+    try {
+      const res = await fetch('/api/integrations/' + id + '/client-schema/discover', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errBox.textContent = data.error || 'تعذّر الاكتشاف.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+      const refreshed = await fetch('/api/integrations/' + id).then(r => r.json());
+      state.integrationDetail = refreshed;
+      renderIntegrationDetail();
+      el('ia-cs-note').classList.remove('hidden');
+      await loadIntegrations();
+    } catch (ex) {
+      errBox.textContent = 'تعذّر الوصول للخادم.';
+      errBox.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔍 اكتشاف تلقائي من الخدمة';
+    }
   });
 
   document.querySelectorAll('.vi-tab').forEach(tab => tab.addEventListener('click', () => {
