@@ -1,0 +1,408 @@
+<title>التكامل مع الأنظمة الخارجية</title>
+<meta name="description" content="شرح فكرة عرض لوحات المتابعة داخل نظام العميل، مكوّناتها الثلاثة، خطوات إعدادها، وتدفّق النشر والعرض الحي بينها.">
+<style>
+  /* اللغة اتجاه: مستند فني بلغة عربية RTL. تخطيط عمود واحد يشبه مقالة تقنية، مع
+     لوحة ألوان تفرّق بصريًا بين "عندنا" (غرفة القيادة) و"عند العميل" — نفس التفرقة
+     اللي المستند بيشرحها فعليًا، بدل لون تمييز واحد بلا معنى. */
+  :root{
+    --bg:#F7F5F1; --surface:#FFFFFF; --border:#E4DFD6; --fg:#241F19; --fg-muted:#6B6255;
+    --ours:#4C3AA8; --ours-soft:#EFECFA; --client:#0E7C66; --client-soft:#E4F3EE;
+    --warn:#9A5B12; --warn-soft:#FBEEDD; --code-bg:#F1EEE7;
+    --display:'Cairo',system-ui,sans-serif; --body:'Tajawal',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#171410; --surface:#221E17; --border:#3A342A; --fg:#F1ECE2; --fg-muted:#B4AA98;
+      --ours:#B3A4F5; --ours-soft:#2A2350; --client:#6BD4B8; --client-soft:#123029;
+      --warn:#F2B25C; --warn-soft:#3A2A10; --code-bg:#2A251C; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#171410; --surface:#221E17; --border:#3A342A; --fg:#F1ECE2; --fg-muted:#B4AA98;
+    --ours:#B3A4F5; --ours-soft:#2A2350; --client:#6BD4B8; --client-soft:#123029;
+    --warn:#F2B25C; --warn-soft:#3A2A10; --code-bg:#2A251C; color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:var(--body);direction:rtl;
+    padding-inline:20px;padding-block:40px;line-height:1.75}
+  .page{max-width:840px;margin:0 auto}
+
+  h1,h2,h3{font-family:var(--display);font-weight:800;text-wrap:balance;color:var(--fg)}
+  h1{font-size:clamp(26px,5vw,36px);margin:0 0 6px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--fg-muted);
+    text-transform:uppercase;margin-bottom:10px}
+  .lede{font-size:17px;color:var(--fg-muted);max-width:60ch;margin:0 0 36px}
+
+  h2{font-size:22px;margin:56px 0 6px;display:flex;align-items:center;gap:10px}
+  h2 .tag{font-family:var(--mono);font-size:12px;color:var(--fg-muted);font-weight:500}
+  .section-note{color:var(--fg-muted);font-size:15px;max-width:68ch;margin:0 0 22px}
+
+  .idea-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:22px 26px;margin:18px 0 40px;font-size:17px}
+  .idea-card b{color:var(--ours)}
+
+  code, .pill{font-family:var(--mono);font-size:.85em}
+  .pill{background:var(--code-bg);border:1px solid var(--border);border-radius:7px;padding:1px 8px}
+
+  /* عندنا / عند العميل — نفس التمييز بالألوان مستخدم في النص والرسومات */
+  .side{display:inline-flex;align-items:center;gap:6px;font-weight:700;border-radius:999px;
+    padding:2px 12px;font-size:13px}
+  .side.ours{background:var(--ours-soft);color:var(--ours)}
+  .side.client{background:var(--client-soft);color:var(--client)}
+  .side .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+
+  figure{margin:26px 0 36px;background:var(--surface);border:1px solid var(--border);
+    border-radius:16px;padding:20px 18px 16px}
+  figure svg{display:block;width:100%;height:auto;max-width:100%}
+  figcaption{font-size:13.5px;color:var(--fg-muted);text-align:center;margin-top:10px;line-height:1.6}
+  .diagram-legend{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:10px;
+    font-size:12.5px;color:var(--fg-muted)}
+  .diagram-legend span{display:inline-flex;align-items:center;gap:6px}
+  .diagram-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  /* خطوات الإعداد — ترقيم حقيقي (ترتيب فعلي محتاج تتبعه، مش زخرفة) */
+  ol.steps{list-style:none;padding:0;margin:22px 0;counter-reset:step}
+  ol.steps > li{counter-increment:step;position:relative;padding-inline-start:52px;
+    padding-block:14px;border-top:1px solid var(--border)}
+  ol.steps > li:first-child{border-top:none}
+  ol.steps > li::before{content:counter(step);position:absolute;inset-inline-start:0;top:14px;
+    width:34px;height:34px;border-radius:10px;background:var(--ours-soft);color:var(--ours);
+    font-family:var(--display);font-weight:800;font-size:15px;display:flex;align-items:center;
+    justify-content:center}
+  ol.steps h3{font-size:16px;margin:0 0 4px;font-weight:700}
+  ol.steps p{margin:0;color:var(--fg-muted);font-size:14.5px}
+
+  .principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:22px 0}
+  .principle{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+  .principle .icon{font-size:20px;margin-bottom:8px;display:block}
+  .principle h3{font-size:14.5px;margin:0 0 6px}
+  .principle p{font-size:13.5px;color:var(--fg-muted);margin:0;line-height:1.65}
+
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+  th,td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:start;vertical-align:top}
+  th{color:var(--fg-muted);font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em}
+  td .pill{display:inline-block;margin-bottom:2px}
+
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);
+    color:var(--fg-muted);font-size:13px;text-align:center}
+
+  @media (max-width:520px){
+    ol.steps > li{padding-inline-start:44px}
+    ol.steps > li::before{width:30px;height:30px;font-size:13px;top:14px}
+  }
+</style>
+
+<div class="page">
+
+  <div class="kicker">غرفة القيادة · التكامل مع الأنظمة الخارجية</div>
+  <h1>عرض اللوحات جوه نظام العميل، من غير ما يشغّل أي بنية تحتية للذكاء الاصطناعي</h1>
+  <p class="lede">شرح كامل للفكرة، الأطراف التلاتة اللي بتتكلم مع بعض، خطوات الإعداد بالترتيب،
+    وتدفّق البيانات لحظة النشر ولحظة العرض — مدعوم برسومات توضّح الربط.</p>
+
+  <div class="idea-card">
+    <b>الفكرة في جملة واحدة:</b> العميل يشوف لوحة المتابعة جوه نظامه هو، بس البيانات المعروضة
+    بتتجاب حيّة من قاعدة بياناته الحقيقية في كل مرة يفتحها — مش نسخة مخزّنة عندنا، ومش رقم اتصال
+    قاعدة بياناته وصل لينا يومًا.
+  </div>
+
+  <h2>المكوّنات التلاتة</h2>
+  <p class="section-note">التكامل قائم على ثلاثة أطراف بس، كل واحد بيعرف دوره ومحدود بيه.</p>
+
+  <figure>
+    <svg viewBox="0 0 900 460" role="img" aria-label="غرفة القيادة تنشر شكل اللوحة وتكتشف بنية قاعدة البيانات من خدمة الاتصال؛ خدمة الاتصال، قاعدة بيانات العميل، وصفحتا العرض والإدارة كلهم داخل شبكة العميل">
+      <defs>
+        <marker id="arrow-ours" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--ours)"/>
+        </marker>
+        <marker id="arrow-client" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--client)"/>
+        </marker>
+      </defs>
+
+      <!-- حدود شبكة العميل -->
+      <rect x="40" y="40" width="600" height="380" rx="18" fill="none" stroke="var(--client)" stroke-width="1.6" stroke-dasharray="6 6"/>
+      <text x="340" y="66" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="14" fill="var(--client)">داخل شبكة العميل</text>
+
+      <!-- غرفة القيادة -->
+      <rect x="700" y="150" width="160" height="100" rx="14" fill="var(--ours-soft)" stroke="var(--ours)" stroke-width="1.6"/>
+      <text x="780" y="192" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="15" fill="var(--ours)">غرفة القيادة</text>
+      <text x="780" y="214" text-anchor="middle" font-family="var(--body)" font-size="12" fill="var(--fg-muted)">(عندنا)</text>
+
+      <!-- خدمة الاتصال -->
+      <rect x="410" y="150" width="180" height="100" rx="14" fill="var(--surface)" stroke="var(--client)" stroke-width="1.6"/>
+      <text x="500" y="188" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="14" fill="var(--fg)">خدمة الاتصال</text>
+      <text x="500" y="207" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--fg-muted)">(connector)</text>
+      <text x="500" y="225" text-anchor="middle" font-family="var(--body)" font-size="11.5" fill="var(--fg-muted)">شغّالة عند العميل</text>
+
+      <!-- قاعدة بيانات العميل -->
+      <rect x="410" y="310" width="180" height="90" rx="14" fill="var(--surface)" stroke="var(--client)" stroke-width="1.6"/>
+      <text x="500" y="350" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="14" fill="var(--fg)">قاعدة بيانات العميل</text>
+      <text x="500" y="370" text-anchor="middle" font-family="var(--body)" font-size="11.5" fill="var(--fg-muted)">الحقيقية والحيّة</text>
+
+      <!-- viewer/admin -->
+      <rect x="70" y="150" width="230" height="100" rx="14" fill="var(--surface)" stroke="var(--client)" stroke-width="1.6"/>
+      <text x="185" y="185" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="13.5" fill="var(--fg)">viewer.html / admin.html</text>
+      <text x="185" y="205" text-anchor="middle" font-family="var(--body)" font-size="11.5" fill="var(--fg-muted)">متصفح مستخدم العميل</text>
+      <text x="185" y="223" text-anchor="middle" font-family="var(--body)" font-size="11.5" fill="var(--fg-muted)">مستضافة على نطاق العميل</text>
+
+      <!-- سهم: غرفة القيادة -> connector (نشر) -->
+      <line x1="700" y1="178" x2="592" y2="178" stroke="var(--ours)" stroke-width="1.6" marker-end="url(#arrow-ours)"/>
+      <text x="646" y="168" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ours)">POST /publish</text>
+      <text x="646" y="196" text-anchor="middle" font-family="var(--body)" font-size="10.5" fill="var(--fg-muted)">شكل اللوحة + كويري، بدون أرقام</text>
+
+      <!-- سهم: غرفة القيادة -> connector (اكتشاف) -->
+      <line x1="700" y1="225" x2="592" y2="225" stroke="var(--ours)" stroke-width="1.6" marker-end="url(#arrow-ours)"/>
+      <text x="646" y="240" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ours)">GET /schema</text>
+      <text x="646" y="253" text-anchor="middle" font-family="var(--body)" font-size="10.5" fill="var(--fg-muted)">اكتشاف البنية تلقائيًا</text>
+
+      <!-- سهم: connector <-> db -->
+      <line x1="500" y1="250" x2="500" y2="310" stroke="var(--client)" stroke-width="1.6" marker-end="url(#arrow-client)" marker-start="url(#arrow-client)"/>
+      <text x="522" y="284" text-anchor="start" font-family="var(--body)" font-size="10.5" fill="var(--fg-muted)">تنفيذ كويري حيّ (SELECT فقط)</text>
+
+      <!-- سهم: viewer/admin <-> connector -->
+      <line x1="410" y1="200" x2="300" y2="200" stroke="var(--client)" stroke-width="1.6" marker-end="url(#arrow-client)" marker-start="url(#arrow-client)"/>
+      <text x="355" y="188" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--client)">GET /dashboards</text>
+      <text x="355" y="216" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--client)">POST /permissions</text>
+
+      <text x="470" y="440" text-anchor="middle" font-family="var(--body)" font-size="11.5" fill="var(--fg-muted)">رقم الاتصال بقاعدة البيانات نفسه لا يغادر هذا الإطار المنقّط أبدًا</text>
+    </svg>
+    <figcaption>
+      <b>الرسم 1 — من بيتكلم مع مين.</b> غرفة القيادة بتبدأ الاتصال بخدمة الاتصال بس (نشر واكتشاف
+      البنية)؛ صفحتا العرض والإدارة بتكلّموا خدمة الاتصال مباشرة من متصفح المستخدم، من غير ما يمروا
+      علينا خالص.
+    </figcaption>
+    <div class="diagram-legend">
+      <span><i style="background:var(--ours)"></i> غرفة القيادة (عندنا)</span>
+      <span><i style="background:var(--client)"></i> داخل شبكة العميل</span>
+    </div>
+  </figure>
+
+  <h2>خطوات الإعداد <span class="tag">بالترتيب</span></h2>
+  <p class="section-note">كل خطوة محتاجة اللي قبلها — مفيش نشر قبل ما خدمة الاتصال تشتغل، ومفيش
+    اكتشاف بنية قبل ما رابطها يتضبط.</p>
+
+  <ol class="steps">
+    <li>
+      <h3>إنشاء تكامل جديد</h3>
+      <p>اسم بس (مثلاً "نظام المشتريات") — من شاشة «التكاملات الخارجية».</p>
+    </li>
+    <li>
+      <h3>ضبط الهوية البصرية</h3>
+      <p>3 طرق: يدوي (الألوان + الخط)، اقتراح بالذكاء الاصطناعي من وصف، أو استخراج من صورة شعار/ملف PDF.
+        النتيجة دايمًا نفس الثلاثة توكِن: لون أساسي، لون ثانوي، خط.</p>
+    </li>
+    <li>
+      <h3>تحديد آلية تعريف هوية المستخدم</h3>
+      <p>وصف حر بالعربي لإزاي نظام العميل بيعرّف المستخدم الحالي ← مطابقة تلقائية مع واحدة من 3
+        آليات ثابتة (<span class="pill">query</span> / <span class="pill">header</span> /
+        <span class="pill">cookie</span>) ← تأكيد صريح منفصل قبل ما تتفعّل فعليًا.</p>
+    </li>
+    <li>
+      <h3>تسليم خدمة الاتصال لفريق العميل التقني</h3>
+      <p>ملف <span class="pill">connector.zip</span> جاهز — يحطّوا فيه رقم الاتصال الحقيقي بقاعدة
+        بياناتهم محليًا، ويشغّلوه (<span class="pill">dotnet run</span>). لسه مفيش أي ربط بينا وبينهم
+        في اللحظة دي.</p>
+    </li>
+    <li>
+      <h3>ضبط رابط الخدمة في غرفة القيادة</h3>
+      <p>رابط واحد (Connector Base URL) + مفتاح مصادقة. بمجرد الحفظ، بنكتشف بنية قاعدة بياناتهم
+        (الجداول والأعمدة) تلقائيًا — ونعيد الاكتشاف تاني قبل كل عملية نشر.</p>
+    </li>
+    <li>
+      <h3>تسليم صفحتي العرض والإدارة</h3>
+      <p><span class="pill">viewer.html</span> و<span class="pill">admin.html</span> — ملفان ثابتان
+        يستضيفهم العميل على نطاقه، بيكلّموا خدمة الاتصال مباشرة من المتصفح.</p>
+    </li>
+    <li>
+      <h3>الضغط على «نشر» من أي لوحة مفعّلة</h3>
+      <p>بيبعت شكل اللوحة (العناصر وأنواعها وعناوينها) مع كويري كل عنصر — معاد كتابته على بنية
+        قاعدة بيانات العميل الحقيقية — بدون أي أرقام أو قيم فعلية.</p>
+    </li>
+    <li>
+      <h3>العميل يفتح صفحة العرض</h3>
+      <p>خدمة الاتصال بتنفّذ كويري كل عنصر لحظتها على قاعدة بياناته الحيّة وترجّع القيم الحقيقية —
+        في كل مرة تُفتح فيها الصفحة، مش نسخة قديمة.</p>
+    </li>
+  </ol>
+
+  <h2>تدفّق النشر</h2>
+  <p class="section-note">"نشر" فعل منفصل عن حفظ/تعديل اللوحة — بيحصل بضغطة واحدة، بس فيه خطوتان
+    تلقائيتان قبل ما أي حاجة تتبعت.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 380" role="img" aria-label="تسلسل نشر اللوحة: المحلل يضغط نشر، غرفة القيادة تكتشف بنية قاعدة البيانات من خدمة الاتصال، تعيد كتابة كل كويري، ثم تبعت شكل اللوحة لخدمة الاتصال اللي تتحقق منه وتخزّنه">
+      <!-- lifelines -->
+      <line x1="660" y1="50" x2="660" y2="350" stroke="var(--border)" stroke-width="1.4"/>
+      <line x1="400" y1="50" x2="400" y2="350" stroke="var(--border)" stroke-width="1.4"/>
+      <line x1="120" y1="50" x2="120" y2="350" stroke="var(--border)" stroke-width="1.4"/>
+
+      <rect x="590" y="18" width="140" height="34" rx="9" fill="var(--ours-soft)" stroke="var(--ours)"/>
+      <text x="660" y="40" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="12.5" fill="var(--ours)">المحلل</text>
+
+      <rect x="330" y="18" width="140" height="34" rx="9" fill="var(--ours-soft)" stroke="var(--ours)"/>
+      <text x="400" y="40" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="12.5" fill="var(--ours)">غرفة القيادة</text>
+
+      <rect x="50" y="18" width="140" height="34" rx="9" fill="var(--client-soft)" stroke="var(--client)"/>
+      <text x="120" y="40" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="12.5" fill="var(--client)">خدمة الاتصال</text>
+
+      <defs>
+        <marker id="seq-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <!-- 1: analyst -> غرفة القيادة -->
+      <line x1="660" y1="88" x2="404" y2="88" stroke="var(--fg)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--fg)"/>
+      <text x="530" y="80" text-anchor="middle" font-family="var(--body)" font-size="11.5" fill="var(--fg)">يضغط «نشر»</text>
+
+      <!-- 2: غرفة القيادة -> connector: GET /schema -->
+      <line x1="396" y1="128" x2="124" y2="128" stroke="var(--ours)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--ours)"/>
+      <text x="260" y="120" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ours)">GET /schema</text>
+
+      <!-- 3: connector -> غرفة القيادة: بنية الجداول -->
+      <line x1="120" y1="166" x2="396" y2="166" stroke="var(--client)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--client)"/>
+      <text x="260" y="158" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--client)">بنية الجداول الحالية</text>
+
+      <!-- 4: self-note على غرفة القيادة -->
+      <rect x="405" y="188" width="230" height="46" rx="10" fill="var(--surface)" stroke="var(--border)"/>
+      <text x="400" y="205" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--fg-muted)"> </text>
+      <text x="520" y="206" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--fg)">إعادة كتابة كويري كل عنصر</text>
+      <text x="520" y="222" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--fg)">على بنية العميل (نموذج لغوي)</text>
+
+      <!-- 5: غرفة القيادة -> connector: POST /publish -->
+      <line x1="396" y1="266" x2="124" y2="266" stroke="var(--ours)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--ours)"/>
+      <text x="260" y="258" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ours)">POST /publish</text>
+      <text x="260" y="282" text-anchor="middle" font-family="var(--body)" font-size="10.5" fill="var(--fg-muted)">شكل + كويري — صفر أرقام</text>
+
+      <!-- 6: self-note على connector -->
+      <rect x="15" y="300" width="210" height="46" rx="10" fill="var(--surface)" stroke="var(--border)"/>
+      <text x="120" y="318" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--fg)">يتحقق إنه SELECT فقط</text>
+      <text x="120" y="334" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--fg)">ويخزّنه محليًا</text>
+    </svg>
+    <figcaption>
+      <b>الرسم 2 — لحظة الضغط على «نشر».</b> الوقت بينزل من فوق لتحت. البنية بتتحدّث تلقائيًا قبل
+      إعادة كتابة أي كويري، وخدمة الاتصال هي اللي بتتحقق من الكويري مرة تانية قبل ما تخزّنه — دفاع
+      مزدوج، مش ثقة في جهة واحدة.
+    </figcaption>
+  </figure>
+
+  <h2>تدفّق العرض الحي</h2>
+  <p class="section-note">كل مرة حد يفتح صفحة العرض، مفيش أي بيانات محسوبة أو مخزّنة من قبل — كل
+    حاجة بتتحسب لحظتها.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 320" role="img" aria-label="تسلسل العرض الحي: مستخدم العميل يفتح صفحة العرض، خدمة الاتصال تتحقق من الصلاحيات ثم تنفّذ كويري كل عنصر على قاعدة البيانات الحقيقية وترجّع القيم">
+      <line x1="660" y1="50" x2="660" y2="290" stroke="var(--border)" stroke-width="1.4"/>
+      <line x1="400" y1="50" x2="400" y2="290" stroke="var(--border)" stroke-width="1.4"/>
+      <line x1="120" y1="50" x2="120" y2="290" stroke="var(--border)" stroke-width="1.4"/>
+
+      <rect x="580" y="18" width="160" height="34" rx="9" fill="var(--client-soft)" stroke="var(--client)"/>
+      <text x="660" y="40" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="12" fill="var(--client)">مستخدم العميل</text>
+
+      <rect x="330" y="18" width="140" height="34" rx="9" fill="var(--client-soft)" stroke="var(--client)"/>
+      <text x="400" y="40" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="12.5" fill="var(--client)">خدمة الاتصال</text>
+
+      <rect x="50" y="18" width="140" height="34" rx="9" fill="var(--client-soft)" stroke="var(--client)"/>
+      <text x="120" y="40" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="12.5" fill="var(--client)">قاعدة بيانات العميل</text>
+
+      <!-- 1: user -> connector -->
+      <line x1="660" y1="88" x2="404" y2="88" stroke="var(--fg)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--fg)"/>
+      <text x="530" y="76" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--fg)">GET /dashboards/{id}</text>
+      <text x="530" y="99" text-anchor="middle" font-family="var(--body)" font-size="10.5" fill="var(--fg-muted)">+ هوية المستخدم الحالي</text>
+
+      <!-- self-note: permission check -->
+      <rect x="285" y="118" width="230" height="40" rx="10" fill="var(--surface)" stroke="var(--border)"/>
+      <text x="400" y="136" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--fg)">فحص الصلاحيات</text>
+      <text x="400" y="152" text-anchor="middle" font-family="var(--body)" font-size="11" fill="var(--fg)">(عامة أو مقيّدة لهويته)</text>
+
+      <!-- connector -> db -->
+      <line x1="396" y1="188" x2="124" y2="188" stroke="var(--client)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--client)"/>
+      <text x="260" y="180" text-anchor="middle" font-family="var(--body)" font-size="10.5" fill="var(--client)">تنفيذ كويري كل عنصر (SELECT)</text>
+
+      <!-- db -> connector -->
+      <line x1="120" y1="218" x2="396" y2="218" stroke="var(--client)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--client)"/>
+      <text x="260" y="234" text-anchor="middle" font-family="var(--body)" font-size="10.5" fill="var(--client)">القيم الحالية الحقيقية</text>
+
+      <!-- connector -> user -->
+      <line x1="404" y1="260" x2="656" y2="260" stroke="var(--client)" stroke-width="1.4" marker-end="url(#seq-arrow)" color="var(--client)"/>
+      <text x="530" y="252" text-anchor="middle" font-family="var(--body)" font-size="10.5" fill="var(--client)">JSON: شكل اللوحة + القيم الحيّة</text>
+    </svg>
+    <figcaption>
+      <b>الرسم 3 — كل فتحة لصفحة العرض من الصفر.</b> ما فيش خطوة اسمها "اجلب من المخزّن" — القيمة
+      دايمًا حديثة على قدر حداثة قاعدة بيانات العميل نفسها.
+    </figcaption>
+  </figure>
+
+  <h2>مبادئ الأمان</h2>
+  <p class="section-note">القواعد اللي التصميم كله بُني حواليها.</p>
+
+  <div class="principles">
+    <div class="principle">
+      <span class="icon">🔒</span>
+      <h3>رقم الاتصال بقاعدة البيانات ما يغادرش شبكة العميل</h3>
+      <p>موجود بس في إعدادات خدمة الاتصال المحلية — مش في غرفة القيادة، ومش في أي ملف بيتبعت.</p>
+    </div>
+    <div class="principle">
+      <span class="icon">✅</span>
+      <h3>كل كويري بيتفحص مرتين إنه قراءة فقط</h3>
+      <p>مرة عندنا قبل النشر، ومرة تانية مستقلة عند خدمة الاتصال — أي كويري غير SELECT بيترفض
+        في الحالتين.</p>
+    </div>
+    <div class="principle">
+      <span class="icon">🪪</span>
+      <h3>3 آليات ثابتة بس لتعريف الهوية</h3>
+      <p>معامل رابط، رأس HTTP، أو كوكي — من غير أي كود جديد يُخترع، وبتأكيد صريح منفصل قبل التفعيل.</p>
+    </div>
+    <div class="principle">
+      <span class="icon">🧩</span>
+      <h3>الصلاحيات بتتفلتر عند العميل، مش عندنا</h3>
+      <p>خدمة الاتصال هي اللي بتقرر مين يشوف أنهي لوحة، بناءً على هوية المستخدم اللي وصلتها.</p>
+    </div>
+    <div class="principle">
+      <span class="icon">🔑</span>
+      <h3>مفتاح واحد لاستدعاءاتنا إحنا بس</h3>
+      <p>محمي بيه <span class="pill">/publish</span> و<span class="pill">/schema</span>. صفحتا
+        العرض والإدارة بتتكلّموا الخدمة من غير مفتاح — ملفات ثابتة موزّعة، مفيش سر ممكن نحطه فيها
+        بأمان؛ الحماية هناك بحدود شبكة العميل.</p>
+    </div>
+    <div class="principle">
+      <span class="icon">📐</span>
+      <h3>صفر أرقام في أي رسالة بتتبعت لينا أو منّا</h3>
+      <p>النشر بيبعت شكل وكويري بس؛ القيم الفعلية بتتحسب وتتبعت مباشرة بين خدمة الاتصال والمتصفح.</p>
+    </div>
+  </div>
+
+  <h2>الملفات الثلاثة الجاهزة للعميل</h2>
+  <p class="section-note">فريق العميل التقني ميكتبش أي كود — بس يستضيف وينزّل ويشغّل.</p>
+
+  <table>
+    <thead>
+      <tr><th>الملف</th><th>مين بيستضيفه</th><th>وظيفته</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="pill">viewer.html</span></td>
+        <td><span class="side client"><span class="dot"></span>العميل</span></td>
+        <td>عرض اللوحات — بينادي خدمة الاتصال مباشرة من المتصفح في كل فتحة.</td>
+      </tr>
+      <tr>
+        <td><span class="pill">admin.html</span></td>
+        <td><span class="side client"><span class="dot"></span>العميل</span></td>
+        <td>إدارة صلاحيات كل لوحة — عامة أو مقيّدة، وقائمة المسموح لهم.</td>
+      </tr>
+      <tr>
+        <td><span class="pill">connector.zip</span></td>
+        <td><span class="side client"><span class="dot"></span>شبكة العميل الداخلية</span></td>
+        <td>مايكروسيرفس ‎.NET‎ جاهزة، متصلة بقاعدة بيانات العميل الحقيقية — بتخزّن شكل اللوحات
+          وتنفّذ كويرياتها حيّة.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <footer>
+    غرفة القيادة — التكامل مع الأنظمة الخارجية · آخر تحديث يعكس معمارية «نشر البنية فقط + خدمة
+    اتصال جاهزة + اكتشاف تلقائي للبنية»
+  </footer>
+
+</div>
