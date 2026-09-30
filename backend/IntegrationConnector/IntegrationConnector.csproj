@@ -4,7 +4,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Left at the default (false, i.e. full globalization/ICU) on purpose: Microsoft.Data.
+         SqlClient cannot open a SQL Server connection at all under Invariant Globalization Mode
+         ("Globalization Invariant Mode is not supported.", thrown the moment it's opened) — this
+         is a hard SqlClient limitation, not a config knob, and TargetDbProvider=SqlServer is a
+         real, expected deployment target for this project. -->
   </PropertyGroup>
 
   <ItemGroup>
