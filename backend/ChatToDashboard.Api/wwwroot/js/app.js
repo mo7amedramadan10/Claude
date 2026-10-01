@@ -5257,7 +5257,13 @@ el('publish-submit').addEventListener('click', async () => {
   const slotId = useExisting ? el('publish-slot-choice').dataset.slotId : undefined;
 
   const btn = el('publish-submit');
+  // /publish/prepare does a live round-trip to the client's own connector (schema
+  // re-discovery, possibly an LLM retargeting call per widget) — easily a few seconds, and
+  // with nothing but a quietly-disabled button to show for it this read as "nothing
+  // happens" when clicked. The disabled state alone isn't enough; say so explicitly.
+  const originalLabel = btn.textContent;
   btn.disabled = true;
+  btn.textContent = 'جارٍ التجهيز…';
   el('publish-error').classList.add('hidden');
   try {
     const prepRes = await fetch(`/api/integrations/${integrationId}/publish/prepare`, {
@@ -5296,6 +5302,7 @@ el('publish-submit').addEventListener('click', async () => {
     el('publish-error').classList.remove('hidden');
   } finally {
     btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 });
 
@@ -5303,7 +5310,9 @@ el('publish-confirm-columns').addEventListener('click', async () => {
   const pending = state.publishPending;
   if (!pending) return;
   const btn = el('publish-confirm-columns');
+  const originalLabel = btn.textContent;
   btn.disabled = true;
+  btn.textContent = 'جارٍ النشر…';
   el('publish-error').classList.add('hidden');
   const columnChoices = [...document.querySelectorAll('.pcc-column')].map(sel => ({
     widgetIndex: Number(sel.dataset.index), column: sel.value,
@@ -5315,6 +5324,7 @@ el('publish-confirm-columns').addEventListener('click', async () => {
     el('publish-error').classList.remove('hidden');
   } finally {
     btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 });
 
