@@ -84,12 +84,20 @@ app.MapPost("/publish", async (HttpRequest request, LocalStore store, ConnectorO
 });
 
 // ---------- read endpoint (list): viewer.html calls this first ----------
+// admin.html calls this exact same endpoint for its own management list — an identity listed
+// in options.AdminIdentifiers bypasses the per-dashboard restriction below entirely (see
+// IsVisibleTo) and every item also carries permissionMode/allowedIdentifiers, which viewer.html
+// ignores but admin.html needs to show each dashboard's actual current restriction state.
 app.MapGet("/dashboards", async (HttpRequest request, LocalStore store, ConnectorOptions options) =>
 {
     var identity = ExtractIdentity(request, options.IdentityParameterName);
     var dashboards = await store.ListDashboardsAsync();
-    var visible = dashboards.Where(d => IsVisibleTo(d, identity));
-    return Results.Ok(visible.Select(d => new { dashboardId = d.DashboardId, title = d.Title }));
+    var visible = dashboards.Where(d => IsVisibleTo(d, identity, options));
+    return Results.Ok(visible.Select(d => new
+    {
+        dashboardId = d.DashboardId, title = d.Title,
+        permissionMode = d.PermissionMode, allowedIdentifiers = d.AllowedIdentifiers,
+    }));
 });
 
 // ---------- read endpoint (one dashboard): live query execution happens here ----------
@@ -97,7 +105,7 @@ app.MapGet("/dashboards/{id}", async (string id, HttpRequest request, LocalStore
 {
     var identity = ExtractIdentity(request, options.IdentityParameterName);
     var dashboard = await store.GetDashboardAsync(id);
-    if (dashboard is null || !IsVisibleTo(dashboard, identity))
+    if (dashboard is null || !IsVisibleTo(dashboard, identity, options))
         return Results.NotFound();
 
     var widgetsWithData = new List<object>();
@@ -321,8 +329,14 @@ static string? ExtractIdentity(HttpRequest request, string? parameterName)
     return null;
 }
 
-static bool IsVisibleTo(StoredDashboard dashboard, string? identity)
+// An identity listed in options.AdminIdentifiers always sees every dashboard regardless of its
+// restriction — without this, an admin who sets a dashboard to "restricted" without adding their
+// own identity to the allow list immediately loses the ability to see (and so manage) that exact
+// dashboard again from admin.html, since it calls this same GET /dashboards/IsVisibleTo path.
+static bool IsVisibleTo(StoredDashboard dashboard, string? identity, ConnectorOptions options)
 {
+    if (identity is not null && options.AdminIdentifiers.Any(a => string.Equals(a, identity, StringComparison.OrdinalIgnoreCase)))
+        return true;
     if (!string.Equals(dashboard.PermissionMode, "restricted", StringComparison.OrdinalIgnoreCase)) return true;
     if (dashboard.AllowedIdentifiers.Count == 0) return false; // Part E's explicit empty-state rule: restricted + empty = visible to no one
     return identity is not null && dashboard.AllowedIdentifiers.Any(a => string.Equals(a.Id, identity, StringComparison.OrdinalIgnoreCase));
@@ -358,10 +372,11 @@ public class ConnectorOptions
     /// set this here (or via the Connector__TargetConnectionString environment variable) only.</summary>
     public string TargetConnectionString { get; set; } = "";
 
-    /// <summary>The shared secret غرفة القيادة sends on /publish and admin.html sends on
-    /// /permissions — must match what you entered as "قيمة المصادقة" for this integration's
-    /// write API. Leave empty to accept requests with no check (fine only on a fully trusted
-    /// internal network — not recommended if this service is reachable from outside it).</summary>
+    /// <summary>The shared secret غرفة القيادة sends on /publish and /query — must match what you
+    /// entered as "قيمة المصادقة" for this integration's write API. Leave empty to accept requests
+    /// with no check (fine only on a fully trusted internal network — not recommended if this
+    /// service is reachable from outside it). Not checked on /permissions — see that endpoint's
+    /// own remarks for why (no secret a static admin.html page could safely carry).</summary>
     public string? WriteApiKey { get; set; }
 
     /// <summary>The header name the key above arrives on — must match "اسم رأس المصادقة".</summary>
@@ -371,6 +386,15 @@ public class ConnectorOptions
     /// integration's identity-transport mechanism (see غرفة القيادة's "آلية تعريف المستخدم
     /// الحالي"). Leave empty to treat every dashboard as visible to everyone.</summary>
     public string? IdentityParameterName { get; set; }
+
+    /// <summary>Identity values (same shape as what arrives via IdentityParameterName — your own
+    /// system decides who gets sent one of these) that always see every dashboard regardless of
+    /// its restriction. admin.html calls the exact same GET /dashboards as viewer.html, so
+    /// without this an admin who restricts a dashboard without adding themselves to its own
+    /// allow list can never see — or manage — that dashboard again. Set this to whatever
+    /// identity value(s) your own system sends for a verified admin session; empty means no
+    /// identity ever bypasses a restriction.</summary>
+    public List<string> AdminIdentifiers { get; set; } = new();
 
     /// <summary>Where the local SQLite storage file (dashboards + permissions — NOT your own
     /// business data) lives. A relative value is resolved against this service's own binary

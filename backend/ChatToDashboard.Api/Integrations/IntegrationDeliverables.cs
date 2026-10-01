@@ -335,9 +335,11 @@ public class IntegrationDeliverables
             return;
           }
           try {
-            // Assumes your read API returns every published dashboard (not permission-filtered)
-            // when called with an admin identity — the same identity-transport mechanism
-            // confirmed for the viewer page. See غرفة القيادة's own integration guide.
+            // Calls the exact same read endpoint viewer.html does, with the exact same identity
+            // mechanism — your connector must recognize the identity this admin session sends as
+            // one of its own configured AdminIdentifiers, or any dashboard this page restricts
+            // without also allow-listing that identity disappears from this very list on the
+            // next load. See the connector's own README (ConnectorOptions.AdminIdentifiers).
             const res = await fetchWithIdentity(CONFIG.readApiBaseUrl);
             if (!res.ok) throw new Error('HTTP ' + res.status);
             let body = await res.json();

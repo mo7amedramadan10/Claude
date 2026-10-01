@@ -360,6 +360,14 @@
       <p>خدمة الاتصال هي اللي بتقرر مين يشوف أنهي لوحة، بناءً على هوية المستخدم اللي وصلتها.</p>
     </div>
     <div class="principle">
+      <span class="icon">🛡️</span>
+      <h3>صفحة الإدارة محتاجة هوية مسؤول معرّفة عندكم</h3>
+      <p><span class="pill">admin.html</span> بتنادي نفس نقطة القراءة اللي <span class="pill">viewer.html</span>
+        بتستخدمها — فلازم تضبطوا <code>AdminIdentifiers</code> في إعدادات خدمة الاتصال بقيمة هوية
+        جلسة المسؤول عندكم، وإلا أي لوحة يقيّدها المسؤول من غير ما يضيف نفسه لقائمة المسموح لهم
+        هتختفي من صفحة الإدارة نفسها وميقدرش يديرها تاني.</p>
+    </div>
+    <div class="principle">
       <span class="icon">🔑</span>
       <h3>مفتاح واحد لاستدعاءاتنا إحنا بس</h3>
       <p>محمي بيه <span class="pill">/publish</span> و<span class="pill">/schema</span>. صفحتا
