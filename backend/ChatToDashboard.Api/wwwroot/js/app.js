@@ -4956,6 +4956,11 @@ function showScreen(name) {
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
   if (name === 'integrations') loadIntegrations();
+  // Coming back to المحادثة re-fetches the sources list — state.systems is otherwise only
+  // ever loaded once at startApp(), so an integration newly set up (or newly schema-
+  // discovered) in التكاملات الخارجية never appeared in the sources popover until a full
+  // page reload, even though its own detail screen already showed it ready.
+  if (name === 'chat') loadSources();
 }
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
