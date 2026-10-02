@@ -76,10 +76,29 @@
         <span class="org-avatar">👑</span>
         <span class="org-meta"><strong>مالك المنصّة</strong><span>كل المنظمات المشتركة</span></span>
       </div>
+      <div class="sb-label"><span>المنظمة</span></div>
       <ul class="nav">
         <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span></button></li>
-        <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة</span></button></li>
-        <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">مستودع الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
+      </ul>
+
+      <div class="sb-label"><span>المشروع الحالي</span></div>
+      <ul class="nav">
+        <li class="proj-item is-open" id="current-project-item">
+          <a href="#" class="nav-link" id="current-project-link" aria-expanded="true">
+            <span class="proj-dot" id="current-project-dot">؟</span>
+            <span class="nav-text" id="current-project-name">المشروع</span>
+            <svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg>
+          </a>
+          <ul class="proj-sub">
+            <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></button></li>
+            <li><button type="button" class="nav-link tab" data-screen="sources"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></button></li>
+            <li><button type="button" class="nav-link tab hidden" id="proj-permissions-link" data-screen="users"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></button></li>
+            <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
+          </ul>
+        </li>
+      </ul>
+
+      <ul class="nav">
         <li><button type="button" class="nav-link tab" data-screen="history"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg><span class="nav-text">السجل</span><span class="badge" id="history-badge">0</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="active"><svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات النشطة</span><span class="badge" id="active-badge">0</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="sharelinks"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">روابط المشاركة</span><span class="badge" id="sharelinks-badge">0</span></button></li>
@@ -257,6 +276,15 @@
       </div>
       <div class="table-foot"><span id="organizations-count-label">عرض 0 منظمة</span></div>
     </section>
+  </div>
+</div>
+
+<div id="screen-sources" class="screen">
+  <div class="page">
+    <section class="page-head">
+      <div><h1>مصادر المشروع</h1><p>البيانات اللي جيم بيقدر يقرأ منها هنا — الأنظمة المتصلة وملفات المستودع.</p></div>
+    </section>
+    <div class="src-grid" id="sources-page-grid"></div>
   </div>
 </div>
 

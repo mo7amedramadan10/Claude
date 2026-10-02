@@ -3786,6 +3786,63 @@ function renderSources() {
   syncSourceHeaders();
 }
 
+// ---------- صفحة "المصادر" (الصفحة الثانية من الأربع تحت اسم المشروع) ----------
+// نفس state.systems/state.sourceFiles اللي لوحة المصادر المنسدلة في الشات بتستخدمها —
+// عرض مختلف (صفحة كاملة بدل Dropdown) لنفس البيانات الحقيقية، مفيش بيانات وهمية
+// (زي حالة اتصال Connector أو نسب مزامنة) مش موجودة أصلًا في النظام.
+async function loadSourcesPage() {
+  await loadSources(); // يحدّث state.systems/state.sourceFiles ويعيد رسم اللوحة المنسدلة كمان
+  renderSourcesPage();
+}
+
+function renderSourcesPage() {
+  const sysCards = state.systems.map(s => {
+    const statusClass = s.error ? 'danger' : (s.connected || s.kind === 'integration' ? 'ok' : 'off');
+    const statusText = s.error ? 'به مشكلة' : (s.kind === 'integration' ? 'تكامل خارجي' : (s.connected ? 'متصل' : 'غير مربوط بعد'));
+    return `
+    <article class="card src-card">
+      <div class="top">
+        <span class="src-ic"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg></span>
+        <div><h3>${esc(s.name)}</h3><span class="type">${s.kind === 'integration' ? 'تكامل خارجي' : 'نظام داخلي'}</span></div>
+        <span class="status ${statusClass}">${statusText}</span>
+      </div>
+      ${s.refreshable ? `<div class="foot"><button type="button" class="btn btn-sm" data-refresh-source="${esc(s.id)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>تحديث الآن</button></div>` : ''}
+    </article>`;
+  }).join('');
+
+  const fileCards = state.sourceFiles.map(f => `
+    <article class="card src-card">
+      <div class="top">
+        <span class="src-ic"><svg class="icon" aria-hidden="true"><use href="#i-sheet"/></svg></span>
+        <div><h3>${esc(f.name)}</h3><span class="type">ملف · ${esc(f.category)}</span></div>
+        <span class="status ok">جاهز</span>
+      </div>
+    </article>`).join('');
+
+  const empty = (!state.systems.length && !state.sourceFiles.length)
+    ? '<div class="nested-empty">لا يوجد مصادر بعد — من المحادثة يمكنك إرفاق ملف، أو من «التكاملات الخارجية» ربط نظام.</div>' : '';
+
+  el('sources-page-grid').innerHTML = sysCards + fileCards + empty;
+
+  el('sources-page-grid').querySelectorAll('[data-refresh-source]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.refreshSource;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/sources/${encodeURIComponent(id)}/refresh`, { method: 'POST' });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(payload.error || `فشل الجلب (${res.status})`);
+        }
+        await loadSources();
+      } catch (err) {
+        alert('تعذّر التحديث: ' + err.message);
+      } finally {
+        renderSourcesPage();
+      }
+    }));
+}
+
 function systemStatusText(s) {
   // The raw fetch error (often a .NET exception message, in English) goes in the row's
   // title tooltip instead of inline — dumping it into the list directly mixed English
@@ -4955,6 +5012,7 @@ function showScreen(name) {
   if (name === 'integrations') loadIntegrations();
   if (name === 'projects') loadProjects();
   if (name === 'organizations') loadOrganizations();
+  if (name === 'sources') loadSourcesPage();
   // Coming back to المحادثة re-fetches the sources list — state.systems is otherwise only
   // ever loaded once at startApp(), so an integration newly set up (or newly schema-
   // discovered) in التكاملات الخارجية never appeared in the sources popover until a full
@@ -4983,6 +5041,28 @@ el('topbar-menu-btn').addEventListener('click', () => { appShell.classList.add('
 scrimEl?.addEventListener('click', closeMobileNav);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileNav(); });
 document.querySelectorAll('.sidebar [data-screen]').forEach(b => b.addEventListener('click', closeMobileNav));
+
+// ---------- اسم المشروع في القائمة الجانبية (طيّ/فتح شجرة صفحاته الأربع) ----------
+el('current-project-link').addEventListener('click', e => {
+  e.preventDefault();
+  const item = el('current-project-item');
+  const open = item.classList.toggle('is-open');
+  el('current-project-link').setAttribute('aria-expanded', String(open));
+});
+
+// المشروع الحي الوحيد فعليًا اليوم هو أول مشروع بالمنظمة (نفس التعريف المستخدم في
+// renderProjects لصفحة "المشاريع") — اسمه وحرفه الأول هما اللي بيظهروا هنا.
+async function loadCurrentProjectNav() {
+  try {
+    const res = await fetch('/api/projects');
+    if (!res.ok) return;
+    const data = await res.json();
+    const project = data.projects?.[0];
+    if (!project) return;
+    el('current-project-name').textContent = project.name;
+    el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
+  } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
+}
 
 // ---------- chat rail size (small / normal / large / hidden) ----------
 // Three controls, as requested: shrink, grow, hide-entirely. Independent of theme,
@@ -5525,6 +5605,9 @@ function renderCurrentUser() {
   // wrapper (see #admin-menu) rather than each item individually now that they live
   // behind one dropdown instead of four flat tabs.
   el('admin-menu').classList.toggle('hidden', u.role !== 'Admin');
+  // "الصلاحيات" تحت المشروع الحالي رابط تاني لنفس شاشة المستخدمين الحقيقية (الأدوار +
+  // صلاحيات الأنظمة/الملفات لكل مستخدم) — نفس شرط ظهور #admin-menu بالظبط.
+  el('proj-permissions-link').classList.toggle('hidden', u.role !== 'Admin');
   // Platform owner (us) sees every organization, not just their own — see
   // AppUser.IsPlatformOwner and OrganizationsController.
   el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
@@ -6567,6 +6650,7 @@ async function startApp() {
   renderDashboard();
   await loadSources();
   await loadFiles();
+  loadCurrentProjectNav();
   maybeAutoStartTour();
 }
 
