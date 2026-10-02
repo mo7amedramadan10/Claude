@@ -3367,7 +3367,7 @@ function setChatMode(mode) {
     ? 'اسأل استفسارًا عن بياناتك، أو تابع نقاشًا سابقًا — إجابة نصية مباشرة، من غير بناء لوحة…'
     : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
   // Composer is a single rounded pill in both modes now, with a circular icon-only send button.
-  el('send').innerHTML = '<span class="send-icon" aria-hidden="true">➤</span>';
+  el('send').innerHTML = '<svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>';
   el('send').setAttribute('aria-label', 'إرسال');
   if (mode === 'inquiry') {
     renderInquiryMessages();

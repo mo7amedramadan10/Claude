@@ -123,7 +123,11 @@
 
 <main id="screen-chat" class="screen active">
   <aside id="chat-rail">
-    <div id="chat-mode-tabs">
+    <div class="chat-head">
+      <span class="ai-ava"><img src="img/logo-mark.svg" alt=""></span>
+      <div class="grow"><h2>اسأل جيم</h2><p>يبني ويعدّل اللوحة من سؤالك</p></div>
+    </div>
+    <div id="chat-mode-tabs" role="group" aria-label="وضع المحادثة">
       <button type="button" class="chat-mode-tab active" data-mode="dashboard">بناء اللوحة</button>
       <button type="button" class="chat-mode-tab" data-mode="inquiry">الاستفسارات</button>
     </div>
@@ -132,8 +136,8 @@
       <button type="button" class="inquiry-tb-btn" id="inquiry-conv-btn">📂 المحادثات</button>
       <div id="inquiry-conv-panel" class="hidden"></div>
     </div>
-    <div id="messages"></div>
-    <div id="inquiry-messages" class="hidden"></div>
+    <div id="messages" class="thread"></div>
+    <div id="inquiry-messages" class="thread hidden"></div>
     <div id="repo-link">
       <span id="repo-link-text">📁 لا يوجد ملفات في المستودع</span>
       <button data-screen="repo">إدارة الملفات ←</button>
@@ -143,17 +147,21 @@
       <span id="attached-image-name"></span>
       <button type="button" id="attached-image-remove" title="إزالة الصورة">✕</button>
     </div>
-    <form id="form">
-      <div class="form-actions-row">
+    <form id="form" class="composer">
+      <div class="sources-row">
         <label class="attach-btn" id="dash-image-attach-label" title="إرفاق صورة داشبورد لإعادة بنائه ببياناتك">
-          🖼️
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"/></svg>
           <input type="file" id="dash-image-input" accept="image/*" hidden>
         </label>
-        <button type="button" id="new-dashboard-btn" class="new-dash-btn"
-          title="يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر">🆕 ابدأ لوحة جديدة</button>
+        <button type="button" id="new-dashboard-btn" class="btn btn-ghost btn-sm"
+          title="يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>لوحة جديدة
+        </button>
         <div class="sources">
-          <button type="button" id="sources-btn">
-            <span>📁</span><span id="sources-label">كل المصادر مفعّلة</span><span>▾</span>
+          <button type="button" id="sources-btn" class="chip">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>
+            <span id="sources-label">كل المصادر مفعّلة</span>
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
           </button>
           <div id="sources-panel" class="hidden">
             <label class="source-item head"><input type="checkbox" id="sys-all" checked>الأنظمة — تحديد الكل</label>
@@ -164,11 +172,14 @@
           </div>
         </div>
       </div>
-      <div class="form-input-row">
+      <div class="input-box">
         <label for="q" class="visually-hidden">السؤال</label>
         <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
-        <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك" aria-label="اسأل بصوتك">🎤</button>
-        <button id="send" type="submit">إرسال</button>
+        <div class="input-tools">
+          <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك" aria-label="اسأل بصوتك"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-mic"/></svg></button>
+          <span class="grow"></span>
+          <button id="send" class="send" type="submit" aria-label="إرسال"></button>
+        </div>
       </div>
     </form>
   </aside>
