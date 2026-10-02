@@ -126,6 +126,10 @@
     <div class="chat-head">
       <span class="ai-ava"><img src="img/logo-mark.svg" alt=""></span>
       <div class="grow"><h2>اسأل جيم</h2><p>يبني ويعدّل اللوحة من سؤالك</p></div>
+      <button type="button" id="new-dashboard-btn" class="btn btn-ghost btn-sm"
+        title="يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>لوحة جديدة
+      </button>
     </div>
     <div id="chat-mode-tabs" role="group" aria-label="وضع المحادثة">
       <button type="button" class="chat-mode-tab active" data-mode="dashboard">بناء اللوحة</button>
@@ -149,14 +153,7 @@
     </div>
     <form id="form" class="composer">
       <div class="sources-row">
-        <label class="attach-btn" id="dash-image-attach-label" title="إرفاق صورة داشبورد لإعادة بنائه ببياناتك">
-          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"/></svg>
-          <input type="file" id="dash-image-input" accept="image/*" hidden>
-        </label>
-        <button type="button" id="new-dashboard-btn" class="btn btn-ghost btn-sm"
-          title="يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر">
-          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>لوحة جديدة
-        </button>
+        <span class="lbl">المصادر:</span>
         <div class="sources">
           <button type="button" id="sources-btn" class="chip">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>
@@ -176,8 +173,13 @@
         <label for="q" class="visually-hidden">السؤال</label>
         <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
         <div class="input-tools">
+          <label class="attach-btn" id="dash-image-attach-label" title="إرفاق صورة داشبورد لإعادة بنائه ببياناتك">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"/></svg>
+            <input type="file" id="dash-image-input" accept="image/*" hidden>
+          </label>
           <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك" aria-label="اسأل بصوتك"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-mic"/></svg></button>
           <span class="grow"></span>
+          <span class="hint">Enter للإرسال</span>
           <button id="send" class="send" type="submit" aria-label="إرسال"></button>
         </div>
       </div>
