@@ -72,7 +72,12 @@
     </div>
 
     <nav class="sb-scroll">
+      <div class="platform-badge hidden" id="platform-badge">
+        <span class="org-avatar">👑</span>
+        <span class="org-meta"><strong>مالك المنصّة</strong><span>كل المنظمات المشتركة</span></span>
+      </div>
       <ul class="nav">
+        <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span></button></li>
         <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">مستودع الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="history"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg><span class="nav-text">السجل</span><span class="badge" id="history-badge">0</span></button></li>
@@ -87,6 +92,13 @@
           <li><button type="button" class="nav-link tab" id="tab-settings" data-screen="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات</span></button></li>
           <li><button type="button" class="nav-link tab" id="tab-integrations" data-screen="integrations"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">التكاملات الخارجية</span></button></li>
           <li><a class="nav-link" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">الاستهلاك</span></a></li>
+        </ul>
+      </div>
+
+      <div class="admin-menu hidden" id="platform-menu">
+        <div class="sb-label"><span>المنصّة</span></div>
+        <ul class="nav">
+          <li><button type="button" class="nav-link tab" id="tab-organizations" data-screen="organizations"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المنظمات</span></button></li>
         </ul>
       </div>
     </nav>
@@ -203,6 +215,79 @@
   </section>
 
 </main>
+
+<div id="screen-projects" class="screen">
+  <div class="page">
+    <section class="page-head">
+      <div>
+        <h1>مشاريع <span id="projects-org-name">المنظمة</span></h1>
+        <p>كل مشروع له محادثته الخاصة ولوحاته ومصادره — اضغط على مشروع لفتح مساحة عمله.</p>
+      </div>
+    </section>
+    <div class="proj-grid" id="projects-grid"></div>
+  </div>
+</div>
+
+<div id="screen-organizations" class="screen">
+  <div class="page">
+    <section class="page-head">
+      <div>
+        <div class="eyebrow"><span class="jbars"><i></i><i></i><i></i></span>إدارة المنصّة</div>
+        <h1>المنظمات المشتركة</h1>
+        <p>كل منظمة لها مشاريعها ومستخدموها الخاصون بها.</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="new-org-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>منظمة جديدة</button>
+    </section>
+
+    <section class="org-hero">
+      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>منظمات نشطة</span><span class="stat-value num" id="org-stat-active">0</span><span class="stat-foot" id="org-stat-total-label">من 0 مسجلة</span></div>
+      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg>إجمالي المشاريع</span><span class="stat-value num" id="org-stat-projects">0</span><span class="stat-foot">عبر كل المنظمات</span></div>
+      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>إجمالي المستخدمين</span><span class="stat-value num" id="org-stat-users">0</span><span class="stat-foot">عبر كل المنظمات</span></div>
+    </section>
+
+    <section class="card" style="overflow:hidden">
+      <div class="toolbar" style="padding:16px 20px">
+        <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" id="org-search" placeholder="ابحث بالاسم"></label>
+      </div>
+      <div class="dtable-wrap">
+        <table class="dtable">
+          <thead><tr><th>المنظمة</th><th>الحالة</th><th>المشاريع</th><th>المستخدمون</th><th>تاريخ الإنشاء</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+          <tbody id="organizations-table-body"></tbody>
+        </table>
+      </div>
+      <div class="table-foot"><span id="organizations-count-label">عرض 0 منظمة</span></div>
+    </section>
+  </div>
+</div>
+
+<div id="new-org-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>منظمة جديدة</h3>
+    <p class="modal-note">هيتعمل لها مشروع افتراضي تلقائيًا باسم «المشروع الرئيسي».</p>
+    <form id="new-org-form">
+      <div class="field"><label for="new-org-name">اسم المنظمة</label><input id="new-org-name" type="text" required placeholder="مثال: شركة ثقة"></div>
+      <div id="new-org-error" class="roles-error hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="new-org-cancel">إلغاء</button>
+        <button type="submit" id="new-org-save">إنشاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="new-project-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>مشروع جديد</h3>
+    <form id="new-project-form">
+      <div class="field"><label for="new-project-name">اسم المشروع</label><input id="new-project-name" type="text" required placeholder="مثال: منصة المبيعات"></div>
+      <div id="new-project-error" class="roles-error hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="new-project-cancel">إلغاء</button>
+        <button type="submit" id="new-project-save">إنشاء</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <div id="screen-repo" class="screen">
   <div class="repo-bar">

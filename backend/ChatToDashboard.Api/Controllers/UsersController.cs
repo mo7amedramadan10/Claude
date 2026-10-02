@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -43,6 +44,10 @@ public class UsersController : ControllerBase
             // here — see the same note on Update below.
             AllowAllFiles = true,
             AllowedFilesJson = "[]",
+            // New accounts join the creating admin's own organization — see the SaaS
+            // hierarchy remarks on AppUser.OrganizationId. Never the platform owner by
+            // default (IsPlatformOwner stays false); that's reserved for the seed account.
+            OrganizationId = User.FindFirstValue("OrganizationId"),
         };
         var created = await _users.CreateAsync(user, ct);
         return Ok(UserStore.ToInfo(created));

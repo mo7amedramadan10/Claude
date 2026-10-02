@@ -31,9 +31,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Events.OnRedirectToAccessDenied = context => { context.Response.StatusCode = 403; return Task.CompletedTask; };
     });
 builder.Services.AddAuthorization(options =>
-    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+    // Platform-level endpoints (Controllers/OrganizationsController) — every organization,
+    // not just the caller's own. A claim rather than a Role value: see AppUser.IsPlatformOwner.
+    options.AddPolicy("PlatformOwner", policy => policy.RequireClaim("IsPlatformOwner", "true"));
+});
 
 builder.Services.AddSingleton<UserStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Organizations.OrganizationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Projects.ProjectStore>();
 builder.Services.AddSingleton<PermissionsService>();
 builder.Services.Configure<LdapOptions>(builder.Configuration.GetSection(LdapOptions.SectionName));
 builder.Services.AddSingleton<LdapAuthenticator>();
@@ -182,6 +189,33 @@ using (var scope = app.Services.CreateScope())
     // gets created — a silent lockout, since there's no self-signup to fall back on.
     await dataStore.EnsureDatabaseExistsAsync(logger);
 
+    // SaaS hierarchy (Platform → Organization → Project — see Organizations/Projects): every
+    // install needs at least a default organization and project for its existing/first users
+    // and data to belong to. Created once, here, before the admin-seeding step below so a
+    // brand-new install's seed admin can be attached to it directly.
+    ChatToDashboard.Api.Organizations.Organization? defaultOrg = null;
+    try
+    {
+        var orgStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Organizations.OrganizationStore>();
+        var projectStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Projects.ProjectStore>();
+        defaultOrg = await orgStore.FirstAsync();
+        if (defaultOrg is null)
+        {
+            defaultOrg = await orgStore.CreateAsync("المنظمة الافتراضية");
+            await projectStore.CreateAsync(defaultOrg.Id, "المشروع الرئيسي");
+            logger.LogInformation("Created the default organization + project.");
+        }
+
+        // Attach any account that predates this feature (including a fresh seed-admin
+        // scenario can't hit this — CountAsync below is still 0 then) to the default org.
+        var userStoreForBackfill = scope.ServiceProvider.GetRequiredService<UserStore>();
+        await userStoreForBackfill.BackfillMissingOrganizationAsync(defaultOrg.Id);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to ensure the default organization/project exist.");
+    }
+
     // Accounts are admin-provisioned only (no self-signup) — so the very first admin has
     // to come from somewhere. If no account exists yet at all, create one: from
     // Auth:SeedAdmin:Username/Password if set (user-secrets, same as every other
@@ -207,6 +241,10 @@ using (var scope = app.Services.CreateScope())
                 IsActive = true,
                 AllowAllSystems = true,
                 AllowAllFiles = true,
+                // The very first account is, by definition, us — the platform owner — until
+                // real customer organizations exist (see AppUser.IsPlatformOwner).
+                OrganizationId = defaultOrg?.Id,
+                IsPlatformOwner = true,
             });
 
             if (generated)

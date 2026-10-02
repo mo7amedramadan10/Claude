@@ -39,6 +39,16 @@ public class AppUser
     public bool AllowAllFiles { get; set; } = true;
     public string AllowedFilesJson { get; set; } = "[]";
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Which SaaS tenant (Organizations.Organization) this account belongs to —
+    /// null only transiently, between a fresh row's INSERT and the startup backfill that
+    /// assigns every pre-existing account to the default organization (see Program.cs).</summary>
+    public string? OrganizationId { get; set; }
+
+    /// <summary>Platform owner (us) — sees/manages every organization, not just their own.
+    /// A separate flag rather than a third Role value so every existing [Authorize(Roles =
+    /// UserRoles.Admin)] endpoint keeps working unchanged for an org admin who isn't one.</summary>
+    public bool IsPlatformOwner { get; set; }
 }
 
 /// <summary>What the client sees — never the password hash.</summary>
@@ -55,6 +65,8 @@ public class UserInfo
     [JsonPropertyName("allowAllFiles")] public bool AllowAllFiles { get; set; }
     [JsonPropertyName("allowedFiles")] public List<string> AllowedFiles { get; set; } = new();
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("organizationId")] public string? OrganizationId { get; set; }
+    [JsonPropertyName("isPlatformOwner")] public bool IsPlatformOwner { get; set; }
 }
 
 public class LoginRequest

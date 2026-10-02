@@ -55,6 +55,9 @@ public class UserStore
                  {
                      ("AllowAllFiles", "INTEGER", "BIT"),
                      ("AllowedFilesJson", "TEXT", "NVARCHAR(MAX)"),
+                     // SaaS hierarchy (Platform → Organization → Project) — see AppUser's remarks.
+                     ("OrganizationId", "TEXT", "NVARCHAR(64)"),
+                     ("IsPlatformOwner", "INTEGER", "BIT"),
                  })
         {
             try
@@ -76,6 +79,14 @@ public class UserStore
             catch (SqlException ex) when (ex.Number == 2705)
             {
             }
+        }
+
+        // IsPlatformOwner is non-nullable on AppUser — a row from before this column existed
+        // reads back as NULL otherwise, which Dapper can't cast to bool.
+        await using (var platformOwnerBackfill = connection.CreateCommand())
+        {
+            platformOwnerBackfill.CommandText = $"UPDATE {Table} SET IsPlatformOwner = 0 WHERE IsPlatformOwner IS NULL";
+            await platformOwnerBackfill.ExecuteNonQueryAsync(ct);
         }
 
         // Backfill: a row from before this migration has AllowAllFiles = NULL. Copy the old
@@ -117,6 +128,40 @@ public class UserStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM {Table}");
+    }
+
+    public async Task<int> CountByOrganizationAsync(string organizationId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {Table} WHERE OrganizationId = @organizationId", new { organizationId });
+    }
+
+    public async Task<IReadOnlyList<AppUser>> ListByOrganizationAsync(string organizationId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<AppUser>(
+            $"SELECT * FROM {Table} WHERE OrganizationId = @organizationId ORDER BY Username", new { organizationId });
+        return rows.ToList();
+    }
+
+    /// <summary>Attaches every account that predates the SaaS hierarchy (OrganizationId still
+    /// NULL/empty) to <paramref name="organizationId"/> — run once at startup (see Program.cs)
+    /// so an existing install's users/data land in the organization created to hold them.
+    /// Any such account that's an Admin also becomes the platform owner: before this
+    /// migration they administered the whole (single-tenant) system, so post-upgrade they
+    /// should still be able to see/manage every organization, not just this default one.</summary>
+    public async Task BackfillMissingOrganizationAsync(string organizationId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {Table} SET OrganizationId = @organizationId, " +
+            "IsPlatformOwner = CASE WHEN Role = 'Admin' THEN 1 ELSE IsPlatformOwner END " +
+            "WHERE OrganizationId IS NULL OR OrganizationId = ''",
+            new { organizationId });
     }
 
     public async Task<IReadOnlyList<AppUser>> ListAsync(CancellationToken ct = default)
@@ -169,9 +214,11 @@ public class UserStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"INSERT INTO {Table} (Id, Username, DisplayName, PasswordHash, AuthMethod, Role, IsActive, " +
-            "AllowAllSystems, AllowedSystemsJson, AllowAllFiles, AllowedFilesJson, CreatedAt) " +
+            "AllowAllSystems, AllowedSystemsJson, AllowAllFiles, AllowedFilesJson, CreatedAt, " +
+            "OrganizationId, IsPlatformOwner) " +
             "VALUES (@Id, @Username, @DisplayName, @PasswordHash, @AuthMethod, @Role, @IsActive, " +
-            "@AllowAllSystems, @AllowedSystemsJson, @AllowAllFiles, @AllowedFilesJson, @CreatedAt)",
+            "@AllowAllSystems, @AllowedSystemsJson, @AllowAllFiles, @AllowedFilesJson, @CreatedAt, " +
+            "@OrganizationId, @IsPlatformOwner)",
             user);
         _logger.LogInformation("User {Username} created ({AuthMethod}, role {Role})", user.Username, user.AuthMethod, user.Role);
         return user;
@@ -208,6 +255,8 @@ public class UserStore
         AllowAllFiles = user.AllowAllFiles,
         AllowedFiles = Deserialize(user.AllowedFilesJson),
         CreatedAt = user.CreatedAt,
+        OrganizationId = user.OrganizationId,
+        IsPlatformOwner = user.IsPlatformOwner,
     };
 
     private static List<string> Deserialize(string? json) =>

@@ -55,6 +55,8 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Role, user.Role),
             new Claim("DisplayName", user.DisplayName),
+            new Claim("OrganizationId", user.OrganizationId ?? ""),
+            new Claim("IsPlatformOwner", user.IsPlatformOwner ? "true" : "false"),
         }, CookieAuthenticationDefaults.AuthenticationScheme);
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity),

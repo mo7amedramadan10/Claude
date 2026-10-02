@@ -4953,6 +4953,8 @@ function showScreen(name) {
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
   if (name === 'integrations') loadIntegrations();
+  if (name === 'projects') loadProjects();
+  if (name === 'organizations') loadOrganizations();
   // Coming back to المحادثة re-fetches the sources list — state.systems is otherwise only
   // ever loaded once at startApp(), so an integration newly set up (or newly schema-
   // discovered) in التكاملات الخارجية never appeared in the sources popover until a full
@@ -5523,6 +5525,10 @@ function renderCurrentUser() {
   // wrapper (see #admin-menu) rather than each item individually now that they live
   // behind one dropdown instead of four flat tabs.
   el('admin-menu').classList.toggle('hidden', u.role !== 'Admin');
+  // Platform owner (us) sees every organization, not just their own — see
+  // AppUser.IsPlatformOwner and OrganizationsController.
+  el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
+  el('platform-badge').classList.toggle('hidden', !u.isPlatformOwner);
 }
 
 // ---------- settings page (admin only) — the system-wide AI model/provider, via
@@ -6565,6 +6571,127 @@ async function startApp() {
 }
 
 // ---------- users admin ----------
+// ---------- هيكل SaaS: المنصّة (كل المنظمات، لمالك المنصّة فقط) والمشاريع (مستوى المنظمة) ----------
+async function loadOrganizations() {
+  const res = await fetch('/api/organizations');
+  const orgs = res.ok ? await res.json() : [];
+  renderOrganizations(orgs);
+}
+
+function renderOrganizations(orgs) {
+  el('org-stat-active').textContent = orgs.filter(o => o.isActive).length;
+  el('org-stat-total-label').textContent = `من ${orgs.length} مسجلة`;
+  el('org-stat-projects').textContent = orgs.reduce((sum, o) => sum + o.projectCount, 0);
+  el('org-stat-users').textContent = orgs.reduce((sum, o) => sum + o.userCount, 0);
+
+  el('organizations-table-body').innerHTML = orgs.map(o => `
+    <tr>
+      <td><div class="cell-user"><span class="org-avatar" style="width:36px;height:36px;font-size:15px">${esc((o.name || '؟').trim().slice(0, 1))}</span><div><strong>${esc(o.name)}</strong><span>${esc(o.slug)}</span></div></div></td>
+      <td><span class="status ${o.isActive ? 'ok' : 'off'}">${o.isActive ? 'نشطة' : 'معطّلة'}</span></td>
+      <td><span class="num">${o.projectCount}</span></td>
+      <td><span class="num">${o.userCount}</span></td>
+      <td class="muted">${new Date(o.createdAt).toLocaleDateString('ar-EG')}</td>
+      <td><div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-toggle-org="${esc(o.id)}" data-active="${o.isActive}">${o.isActive ? 'تعطيل' : 'تفعيل'}</button></div></td>
+    </tr>`).join('');
+  el('organizations-count-label').textContent = `عرض ${orgs.length} منظمة`;
+
+  el('organizations-table-body').querySelectorAll('[data-toggle-org]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const activate = btn.dataset.active !== 'true';
+      await fetch(`/api/organizations/${btn.dataset.toggleOrg}/${activate ? 'activate' : 'suspend'}`, { method: 'POST' });
+      loadOrganizations();
+    }));
+}
+
+el('new-org-btn').addEventListener('click', () => {
+  el('new-org-error').classList.add('hidden');
+  el('new-org-name').value = '';
+  el('new-org-modal').classList.remove('hidden');
+});
+el('new-org-cancel').addEventListener('click', () => el('new-org-modal').classList.add('hidden'));
+el('new-org-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = el('new-org-name').value.trim();
+  if (!name) return;
+  const btn = el('new-org-save');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/organizations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'تعذّر إنشاء المنظمة.');
+    el('new-org-modal').classList.add('hidden');
+    loadOrganizations();
+  } catch (err) {
+    el('new-org-error').textContent = err.message;
+    el('new-org-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function loadProjects() {
+  const res = await fetch('/api/projects');
+  if (!res.ok) { el('projects-grid').innerHTML = ''; return; }
+  const data = await res.json();
+  el('projects-org-name').textContent = data.organization.name;
+  renderProjects(data.projects);
+}
+
+// أول مشروع (الافتراضي، المُنشأ تلقائيًا مع المنظمة) هو الوحيد المرتبط فعليًا بمساحة
+// العمل الحالية (المحادثة/اللوحات/المصادر/الملفات) — أي مشروع تاني لسه مجرد سجل، لحد ما
+// يبقى في تبديل حقيقي بين المشاريع على مستوى البيانات (خطوة تالية، مش جزء من هذا البناء).
+function renderProjects(projects) {
+  const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
+  const liveProjectId = projects.length ? projects[0].id : null;
+  const cards = projects.map(p => {
+    const isLive = p.id === liveProjectId;
+    return `
+    <a href="#" class="proj-card ${isLive ? 'is-live' : 'is-pending'}" data-project="${esc(p.id)}" data-live="${isLive}">
+      <div class="top">
+        <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg></span>
+        <div><h3>${esc(p.name)}</h3><p class="desc">${isLive ? 'مساحة العمل النشطة الآن' : 'سيُربط بمساحة عمل خاصة قريبًا'}</p></div>
+      </div>
+    </a>`;
+  }).join('');
+  const newCard = isAdmin
+    ? '<button type="button" class="new-card" id="new-project-card"><span class="plus"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><strong>مشروع جديد</strong></button>'
+    : '';
+  el('projects-grid').innerHTML = cards + newCard;
+
+  el('projects-grid').querySelectorAll('[data-project]').forEach(card =>
+    card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); }));
+  el('new-project-card')?.addEventListener('click', () => {
+    el('new-project-error').classList.add('hidden');
+    el('new-project-name').value = '';
+    el('new-project-modal').classList.remove('hidden');
+  });
+}
+
+el('new-project-cancel').addEventListener('click', () => el('new-project-modal').classList.add('hidden'));
+el('new-project-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = el('new-project-name').value.trim();
+  if (!name) return;
+  const btn = el('new-project-save');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'تعذّر إنشاء المشروع.');
+    el('new-project-modal').classList.add('hidden');
+    loadProjects();
+  } catch (err) {
+    el('new-project-error').textContent = err.message;
+    el('new-project-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 async function loadUsers() {
   const res = await fetch('/api/users');
   state.users = res.ok ? await res.json() : [];
