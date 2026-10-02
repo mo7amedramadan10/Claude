@@ -316,4 +316,16 @@
 
 /* ---------- شاشة الدخول: حاوية كاملة الشاشة فوق كل حاجة ---------- */
 #login-screen.jeem-scope { position: fixed; inset: 0; z-index: 200; overflow-y: auto; background: var(--surface); }
+
+/* ---------- الاستجابة: القائمة الجانبية وشريط العنوان (موبايل) ---------- */
+@media (max-width: 860px) {
+  .app, .app.is-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: fixed; inset-block: 0; inset-inline-start: 0; width: var(--sidebar-w); transform: translateX(105%); transition: transform .3s var(--ease); box-shadow: var(--shadow-3); z-index: 40; }
+  .app.nav-open .sidebar { transform: none; }
+  .sb-collapse { display: none; }
+  .btn.menu-btn { display: inline-flex; }
+  .topbar { padding: 10px 16px; }
+}
+.scrim { display: none; }
+@media (max-width: 1080px) { .scrim.is-on { display: block; position: fixed; inset: 0; background: rgba(30,40,50,.3); z-index: 35; } }
 #login-screen .auth-error { padding: 10px 14px; border-radius: var(--r-sm); background: var(--danger-50); border: 1px solid var(--danger); color: var(--danger); font-size: var(--fs-sm); }

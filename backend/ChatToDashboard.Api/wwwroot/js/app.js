@@ -4965,17 +4965,25 @@ function showScreen(name) {
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
 
-// ---------- admin menu dropdown ----------
-// Same toggle/outside-click-closes pattern as #sources-panel. No stopPropagation on the
-// panel itself: a click on one of its own [data-screen] items should both navigate (via
-// the generic handler above, target phase) and close the menu (this bubbled handler,
-// same click) — a menu closing itself the moment you pick something is the expected
-// behavior, unlike the sources checklist you tick multiple times before closing.
-el('admin-menu-btn').addEventListener('click', e => {
-  e.stopPropagation();
-  el('admin-menu-panel').classList.toggle('hidden');
+// ---------- طي القائمة الجانبية (يُحفظ لكل مستخدم في المتصفح) ----------
+const appShell = el('app-shell');
+if (localStorage.getItem('jeem.sidebar') === 'collapsed') appShell.classList.add('is-collapsed');
+const sbCollapseBtn = el('sb-collapse-btn');
+sbCollapseBtn.addEventListener('click', () => {
+  appShell.classList.toggle('is-collapsed');
+  const collapsed = appShell.classList.contains('is-collapsed');
+  sbCollapseBtn.setAttribute('aria-expanded', String(!collapsed));
+  try { localStorage.setItem('jeem.sidebar', collapsed ? 'collapsed' : 'open'); } catch (e) { /* تجاهل */ }
+  window.dispatchEvent(new Event('resize')); // لإعادة رسم الرسوم البيانية المفتوحة
 });
-document.addEventListener('click', () => el('admin-menu-panel').classList.add('hidden'));
+
+// ---------- القائمة على الجوال (sidebar drawer + scrim) ----------
+const scrimEl = document.querySelector('.scrim');
+const closeMobileNav = () => { appShell.classList.remove('nav-open'); scrimEl?.classList.remove('is-on'); };
+el('topbar-menu-btn').addEventListener('click', () => { appShell.classList.add('nav-open'); scrimEl?.classList.add('is-on'); });
+scrimEl?.addEventListener('click', closeMobileNav);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileNav(); });
+document.querySelectorAll('.sidebar [data-screen]').forEach(b => b.addEventListener('click', closeMobileNav));
 
 // ---------- chat rail size (small / normal / large / hidden) ----------
 // Three controls, as requested: shrink, grow, hide-entirely. Independent of theme,
@@ -6508,13 +6516,6 @@ function renderTourStep() {
 
   const targetEl = step.target ? document.querySelector(step.target) : null;
   if (targetEl) {
-    // A step targeting an admin-menu item (users/settings/usage — see #admin-menu-panel)
-    // needs that dropdown actually open first, or getBoundingClientRect() below measures
-    // a display:none ancestor and positions the popover at the viewport's top-left corner
-    // instead of near the real button. Left open afterward on purpose: the tour's own
-    // prev/next/skip buttons live outside the panel, so the existing outside-click-closes
-    // handler (see admin-menu-btn's own listener) closes it again the moment the step advances.
-    if (targetEl.closest('#admin-menu-panel')) el('admin-menu-panel').classList.remove('hidden');
     targetEl.classList.add('tour-target');
     positionTourPopover(targetEl, pop);
   } else {

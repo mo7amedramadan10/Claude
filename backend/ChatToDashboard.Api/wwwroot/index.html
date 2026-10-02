@@ -61,43 +61,65 @@
   <span>📤 عرض مشاركة —</span><span class="q" id="shared-banner-q"></span>
   <a href="/">افتح التطبيق الكامل ←</a>
 </div>
-<header>
-  <div class="brand"><span class="dot"></span><span>المحادثة إلى لوحة معلومات</span></div>
+<div class="app jeem-scope" id="app-shell">
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="/" aria-label="جيم">
+        <img class="lockup" src="img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" id="sb-collapse-btn" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
 
-  <nav class="tabs">
-    <button class="tab active" data-screen="chat">المحادثة</button>
-    <button class="tab" data-screen="repo">مستودع الملفات <span class="badge" id="repo-badge">0</span></button>
-    <button class="tab" data-screen="history">السجل <span class="badge" id="history-badge">0</span></button>
-    <button class="tab" data-screen="active">اللوحات النشطة <span class="badge" id="active-badge">0</span></button>
-    <button class="tab" data-screen="sharelinks">روابط المشاركة <span class="badge" id="sharelinks-badge">0</span></button>
-    <div class="admin-menu hidden" id="admin-menu">
-      <button type="button" class="tab" id="admin-menu-btn">⚙️ الإدارة</button>
-      <div id="admin-menu-panel" class="hidden">
-        <button class="tab" id="tab-users" data-screen="users">المستخدمون</button>
-        <button class="tab" id="tab-settings" data-screen="settings">الإعدادات</button>
-        <button class="tab" id="tab-integrations" data-screen="integrations">التكاملات الخارجية</button>
-        <a class="tab" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك">الاستهلاك ↗</a>
+    <nav class="sb-scroll">
+      <ul class="nav">
+        <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة</span></button></li>
+        <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">مستودع الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
+        <li><button type="button" class="nav-link tab" data-screen="history"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg><span class="nav-text">السجل</span><span class="badge" id="history-badge">0</span></button></li>
+        <li><button type="button" class="nav-link tab" data-screen="active"><svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات النشطة</span><span class="badge" id="active-badge">0</span></button></li>
+        <li><button type="button" class="nav-link tab" data-screen="sharelinks"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">روابط المشاركة</span><span class="badge" id="sharelinks-badge">0</span></button></li>
+      </ul>
+
+      <div class="admin-menu hidden" id="admin-menu">
+        <div class="sb-label"><span>الإدارة</span></div>
+        <ul class="nav">
+          <li><button type="button" class="nav-link tab" id="tab-users" data-screen="users"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span></button></li>
+          <li><button type="button" class="nav-link tab" id="tab-settings" data-screen="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات</span></button></li>
+          <li><button type="button" class="nav-link tab" id="tab-integrations" data-screen="integrations"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">التكاملات الخارجية</span></button></li>
+          <li><a class="nav-link" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">الاستهلاك</span></a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="sb-foot">
+      <button type="button" id="auto-read-toggle" class="nav-link hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-headset"/></svg><span class="nav-text">قراءة تلقائية</span></button>
+      <button type="button" id="tour-btn" class="nav-link" title="دليل استخدام النظام"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg><span class="nav-text">دليل الاستخدام</span></button>
+      <div class="user-card">
+        <span class="avatar" id="current-user-avatar">?</span>
+        <span class="meta"><strong id="current-user-name"></strong></span>
+        <button type="button" id="theme-toggle" class="btn btn-ghost btn-icon btn-sm" title="تبديل المظهر">🌙</button>
+        <button type="button" id="lang-toggle" class="btn btn-ghost btn-icon btn-sm" title="Switch to English">EN</button>
+        <button type="button" id="logout-btn" class="btn btn-ghost btn-icon btn-sm" title="خروج" aria-label="خروج"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-logout"/></svg></button>
       </div>
     </div>
-  </nav>
+  </aside>
 
-  <div class="user-menu">
-    <div class="rail-size-toggle" id="rail-size-toggle">
-      <button type="button" id="rail-shrink" title="تصغير لوحة المحادثة">–</button>
-      <button type="button" id="rail-grow" title="تكبير لوحة المحادثة">+</button>
-      <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
-    </div>
-    <button type="button" id="auto-read-toggle" class="hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد">🔇 قراءة تلقائية</button>
-    <button type="button" id="tour-btn" title="دليل استخدام النظام">❓</button>
-    <button type="button" id="theme-toggle" title="تبديل المظهر">🌙</button>
-    <button type="button" id="lang-toggle" title="Switch to English">EN</button>
-    <span id="current-user-name"></span>
-    <button type="button" id="logout-btn">خروج</button>
-  </div>
-</header>
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" id="topbar-menu-btn" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><strong>جيم</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions">
+        <div class="rail-size-toggle" id="rail-size-toggle">
+          <button type="button" id="rail-shrink" title="تصغير لوحة المحادثة">–</button>
+          <button type="button" id="rail-grow" title="تكبير لوحة المحادثة">+</button>
+          <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
+        </div>
+      </div>
+    </header>
 
-<div id="tour-dim"></div>
-<div id="tour-pop"></div>
+    <div id="tour-dim"></div>
+    <div id="tour-pop"></div>
 
 <main id="screen-chat" class="screen active">
   <aside id="chat-rail">
@@ -738,6 +760,10 @@
     </form>
   </div>
 </div>
+
+  </div><!-- /.main -->
+</div><!-- /.app -->
+<div class="scrim"></div>
 
 <!-- Vendored locally (wwwroot/lib/) rather than a CDN — the app is meant to work with
      no internet access at all. See README for how it's fetched/updated. Pinned to 5.0.0,
