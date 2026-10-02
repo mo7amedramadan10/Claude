@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>المحادثة إلى لوحة معلومات</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230C0D0E'/%3E%3Crect x='8' y='16' width='4' height='9' rx='1.5' fill='%233cb4e5'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1.5' fill='%233cb4e5'/%3E%3Crect x='20' y='7' width='4' height='18' rx='1.5' fill='%233cb4e5'/%3E%3C/svg%3E" />
+<title>جيم</title>
+<link rel="icon" href="img/logo-mark.svg" />
 <script>
 // Set before the stylesheet paints anything, so the remembered theme/language apply on
 // first frame instead of flashing the default and then switching. English flips the whole
@@ -22,16 +22,39 @@
 })();
 </script>
 <link rel="stylesheet" href="css/app.css">
+<!-- الهوية الجديدة (جيم) — tokens.css يعرّف متغيراتها مقيّدة بـ .jeem-scope عشان متتعارضش
+     مع متغيرات app.css القديمة (نفس الأسماء، قيم مختلفة) على الشاشات اللي لسه مابتحولتش. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/jeem.css">
 </head>
 <body>
-<div id="login-screen" class="login-screen hidden">
-  <form id="login-form" class="login-card">
-    <div class="login-brand"><span class="dot"></span><span>المحادثة إلى لوحة معلومات</span></div>
-    <label>اسم المستخدم<input id="login-username" type="text" autocomplete="username" required></label>
-    <label>كلمة المرور<input id="login-password" type="password" autocomplete="current-password" required></label>
-    <div id="login-error" class="login-error hidden"></div>
-    <button type="submit" id="login-submit">تسجيل الدخول</button>
-  </form>
+<script src="js/icons.js"></script>
+<div id="login-screen" class="hidden jeem-scope">
+  <div class="auth">
+    <main class="auth-form">
+      <span class="brand"><img src="img/logo-lockup.svg" alt="جيم"></span>
+      <div><h1>أهلًا بعودتك</h1><p class="lead">اسأل عن بياناتك، واحصل على لوحتك في ثوانٍ.</p></div>
+      <form id="login-form">
+        <div class="field"><label for="login-username">اسم المستخدم</label><input id="login-username" type="text" autocomplete="username" required></div>
+        <div class="field"><label for="login-password">كلمة المرور</label><input id="login-password" type="password" autocomplete="current-password" required></div>
+        <div id="login-error" class="auth-error hidden"></div>
+        <button class="btn btn-primary" type="submit" id="login-submit">تسجيل الدخول</button>
+      </form>
+      <div class="auth-foot"><span>© 2026 جيم</span></div>
+    </main>
+    <aside class="auth-side" aria-hidden="true">
+      <img class="bgmark" src="img/logo-mark.svg" alt="">
+      <div class="demo">
+        <div class="tagline">عليك <em>السين</em>..<br>وعلينا <em>الجيم</em>.</div>
+        <div class="q">كم حققنا من المستهدف هذا الربع؟</div>
+        <div class="a">
+          <div style="display:flex;align-items:center;gap:10px;font-size:var(--fs-sm);color:var(--ink-2)"><span class="jbars"><i></i><i></i><i></i></span>جهّز جيم لوحتك</div>
+          <div class="row"><div class="tile"><span>تحقيق المستهدف</span><b class="num">97%</b></div><div class="tile"><span>إجمالي المبيعات</span><b class="num">50.6م</b></div></div>
+          <div class="bars"><i style="height:42%"></i><i style="height:50%"></i><i style="height:58%"></i><i style="height:55%"></i><i style="height:68%"></i><i style="height:74%"></i><i style="height:80%"></i><i style="height:88%"></i><i style="height:100%"></i></div>
+        </div>
+      </div>
+    </aside>
+  </div>
 </div>
 
 <div id="shared-banner" class="hidden">

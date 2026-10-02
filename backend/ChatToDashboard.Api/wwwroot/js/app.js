@@ -3895,8 +3895,8 @@ function renderRepo() {
   const cats = ['الكل', ...repoCategories()];
   if (!cats.includes(state.filter)) state.filter = 'الكل';
   el('filters').innerHTML = cats.map(c =>
-    `<button class="chip${c === state.filter ? ' active' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
-  el('filters').querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+    `<button class="chip-old${c === state.filter ? ' active' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+  el('filters').querySelectorAll('.chip-old').forEach(chip => chip.addEventListener('click', () => {
     state.filter = chip.dataset.cat; renderRepo();
   }));
 

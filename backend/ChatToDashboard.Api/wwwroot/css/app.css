@@ -626,8 +626,10 @@ tr:last-child td{border-bottom:0}
 .upload-modal-box{width:min(820px,100%);max-height:86vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .upload-modal-pick{align-self:flex-start}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{padding:5px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);color:var(--ink-2)}
-.chip.active{background:var(--accent-soft);border-color:#cfe1f8;color:var(--accent);font-weight:600}
+/* Renamed from .chip — freed up for the jeem identity's own .chip in jeem.css, which
+   would otherwise collide with this exact class name on screens not yet migrated. */
+.chip-old{padding:5px 13px;border:1px solid var(--grid);border-radius:999px;background:var(--surface);color:var(--ink-2)}
+.chip-old.active{background:var(--accent-soft);border-color:#cfe1f8;color:var(--accent);font-weight:600}
 #pending{display:flex;flex-direction:column;gap:9px}
 .pending-card{display:flex;align-items:center;flex-wrap:wrap;gap:11px;padding:11px 14px;background:rgba(242,184,75,.10);
   border:1px solid rgba(242,184,75,.35);border-radius:12px}
