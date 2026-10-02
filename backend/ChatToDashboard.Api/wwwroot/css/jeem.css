@@ -399,10 +399,6 @@
 }
 .hint .ex { display: block; margin-top: 8px; color: var(--ink-3); font-size: var(--fs-xs); }
 
-#repo-link { display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-top: 1px solid var(--line-2); color: var(--ink-2); font-size: var(--fs-sm); }
-#repo-link button { margin-inline-start: auto; padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); color: var(--brand-blue); font-size: var(--fs-xs); font-weight: 500; }
-#repo-link button:hover { border-color: var(--brand-blue); background: var(--blue-50); }
-
 .attached-image { display: flex; align-items: center; gap: 10px; margin: 0 20px 12px; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r-md); }
 .attached-image.hidden { display: none; }
 .attached-image img { width: 40px; height: 40px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line); }

@@ -3888,9 +3888,6 @@ function userInitials(userId) {
 
 function renderRepo() {
   el('repo-badge').textContent = state.files.length;
-  el('repo-link-text').textContent = state.files.length
-    ? `📁 ${state.files.length} ملف في المستودع`
-    : '📁 لا يوجد ملفات في المستودع';
 
   const cats = ['الكل', ...repoCategories()];
   if (!cats.includes(state.filter)) state.filter = 'الكل';
