@@ -60,7 +60,7 @@
   overflow: hidden;
   z-index: 30;
 }
-.sb-brand { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 8px; min-height: 48px; }
+.sb-brand { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 12px; min-height: 48px; margin-bottom: 4px; border-bottom: 1px solid var(--line-2); }
 .sb-brand .lockup { height: 34px; }
 .sb-brand .mark { height: 36px; display: none; }
 .sb-collapse {
