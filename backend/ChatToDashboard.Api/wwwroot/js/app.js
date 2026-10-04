@@ -5085,13 +5085,12 @@ const SCREEN_LABELS = {
 function updateCrumbs(name) {
   const crumbs = el('crumbs');
   if (!crumbs) return;
-  const parts = [];
+  const parts = ['جيم'];
   if (name === 'organizations') parts.push('المنصّة');
   else if (state.orgName) parts.push(state.orgName);
   if (PROJECT_SCOPED_SCREENS.has(name) && state.projectName) parts.push(state.projectName);
   const label = SCREEN_LABELS[name];
   if (label) parts.push(label);
-  if (!parts.length) parts.push('جيم');
   crumbs.innerHTML = parts.map((p, i) => {
     const seg = i === parts.length - 1 ? `<strong>${esc(p)}</strong>` : `<span>${esc(p)}</span>`;
     return i === 0 ? seg : `<span class="sep">/</span>${seg}`;
