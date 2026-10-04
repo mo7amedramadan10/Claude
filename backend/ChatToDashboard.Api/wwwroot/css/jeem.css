@@ -355,7 +355,8 @@
    بترتيب بصري فقط (order) بدل نقل الـ DOM، عشان تبقى التعديلات محصورة في CSS. */
 #chat-rail {
   order: 2;
-  width: 35%; min-width: 320px; display: flex; flex-direction: column;
+  /* ثابت بعرض --chat-w (زي الديزين بالظبط) بدل 35% من الشاشة — كان أعرض بكتير من المقصود. */
+  width: var(--chat-w); min-width: 0; flex: none; display: flex; flex-direction: column;
   background: var(--surface); border-inline-start: 1px solid var(--line);
 }
 #chat-rail.rail-hidden { display: none; }
