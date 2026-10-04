@@ -215,19 +215,32 @@
 
   <section id="dash-pane">
     <div id="dash-toolbar" class="dash-toolbar hidden">
-      <div class="edit-toggle" id="edit-toggle">
+      <div class="segmented" id="edit-toggle" role="group" aria-label="وضع العرض">
         <button type="button" class="edit-toggle-btn active" data-mode="view">عرض</button>
         <button type="button" class="edit-toggle-btn" data-mode="edit">تحرير</button>
       </div>
       <span id="autosave-status" class="autosave-status"></span>
-      <button type="button" id="btn-refresh" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">🔄 تحديث</button>
-      <button type="button" id="btn-undo" title="تراجع" disabled>↶ تراجع</button>
-      <button type="button" id="btn-redo" title="إعادة" disabled>↷ إعادة</button>
-      <button type="button" id="btn-activate" class="hidden" title="حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين">✅ تفعيل اللوحة</button>
-      <button type="button" id="btn-share">🔗 مشاركة</button>
-      <button type="button" id="btn-publish" class="hidden" title="نشر هذه اللوحة إلى نظام عميل خارجي (التكاملات الخارجية) — فعل منفصل عن الحفظ/التعديل">🚀 نشر</button>
-      <button type="button" id="btn-export-pdf">🖨️ تصدير PDF</button>
-      <button type="button" id="btn-export-pptx">📊 تصدير PowerPoint</button>
+      <span class="grow"></span>
+      <button type="button" id="btn-refresh" class="btn btn-ghost btn-sm" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">
+        <span aria-hidden="true">🔄</span><span class="btn-label">تحديث</span>
+      </button>
+      <button type="button" id="btn-undo" class="btn btn-ghost btn-sm btn-icon" title="تراجع" aria-label="تراجع" disabled>↶</button>
+      <button type="button" id="btn-redo" class="btn btn-ghost btn-sm btn-icon" title="إعادة" aria-label="إعادة" disabled>↷</button>
+      <button type="button" id="btn-activate" class="btn btn-soft btn-sm hidden" title="حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg><span class="btn-label">تفعيل اللوحة</span>
+      </button>
+      <button type="button" id="btn-share" class="btn btn-ghost btn-sm">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-share"/></svg><span class="btn-label">مشاركة</span>
+      </button>
+      <button type="button" id="btn-publish" class="btn btn-primary btn-sm hidden" title="نشر هذه اللوحة إلى نظام عميل خارجي (التكاملات الخارجية) — فعل منفصل عن الحفظ/التعديل">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg><span class="btn-label">نشر</span>
+      </button>
+      <button type="button" id="btn-export-pdf" class="btn btn-ghost btn-sm">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">PDF</span>
+      </button>
+      <button type="button" id="btn-export-pptx" class="btn btn-ghost btn-sm">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">PowerPoint</span>
+      </button>
     </div>
     <div id="dash"></div>
     <div id="dash-loading" class="dash-loading-overlay"><span class="spinner"></span><span>جارٍ التحديث…</span></div>

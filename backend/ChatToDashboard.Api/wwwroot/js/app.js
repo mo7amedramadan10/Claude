@@ -2972,7 +2972,11 @@ async function exportPptx() {
   const d = state.dashboard;
   if (!d?.widgets?.length) return;
   const btn = el('btn-export-pptx');
-  btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ التصدير…';
+  // .btn-label بس (مش الزرار كله) — عشان الأيقونة ما تتمسحش لما النص يترجع زي ما كان
+  // (btn.textContent= كان بيشيل أي عنصر SVG جوه الزرار نهائيًا).
+  const label = btn.querySelector('.btn-label');
+  const original = label.textContent;
+  btn.disabled = true; label.textContent = 'جارٍ التصدير…';
   try {
     const cards = [...document.querySelectorAll('#dash .grid > .widget')];
     const widgets = await Promise.all(d.widgets.map((w, i) => widgetToPptxInput(w, cards[i])));
@@ -2992,7 +2996,7 @@ async function exportPptx() {
   } catch (err) {
     alert('تعذّر تصدير العرض التقديمي: ' + err.message);
   } finally {
-    btn.disabled = false; btn.textContent = original;
+    btn.disabled = false; label.textContent = original;
   }
 }
 el('btn-export-pptx').addEventListener('click', exportPptx);
