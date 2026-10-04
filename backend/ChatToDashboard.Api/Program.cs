@@ -264,6 +264,74 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "Failed to ensure an initial admin account exists.");
     }
 
+    // Demo accounts showing the two non-platform-owner permission shapes this app supports:
+    // an org Admin (Role=Admin — sees/manages everything in their own organization, same as
+    // any org admin) and a plain "User" account scoped to exactly one project via
+    // ProjectRoles (see ProjectsController.List / HistoryController.CurrentProjectIdAsync —
+    // a project, unlike a dashboard, has no single natural owner, so this is a named role
+    // row rather than an OwnerId column). Looked up by name/username first so a restart
+    // never recreates or duplicates them; the role assignment is re-applied every time
+    // regardless, so it self-heals if ever removed by hand.
+    try
+    {
+        var orgStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Organizations.OrganizationStore>();
+        var projectStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Projects.ProjectStore>();
+        var userStore = scope.ServiceProvider.GetRequiredService<UserStore>();
+
+        var demoOrg = (await orgStore.ListAsync()).FirstOrDefault(o => o.Name == "شركة النموذج التجريبي")
+            ?? await orgStore.CreateAsync("شركة النموذج التجريبي");
+        var demoProject = (await projectStore.ListByOrganizationAsync(demoOrg.Id)).FirstOrDefault(p => p.Name == "المشروع الأول")
+            ?? await projectStore.CreateAsync(demoOrg.Id, "المشروع الأول");
+
+        if (await userStore.FindByUsernameAsync("org.admin") is null)
+        {
+            var pw = RandomNumberGenerator.GetHexString(12);
+            await userStore.CreateAsync(new AppUser
+            {
+                Username = "org.admin",
+                DisplayName = $"مسؤول {demoOrg.Name}",
+                Role = UserRoles.Admin,
+                AuthMethod = AuthMethods.Local,
+                PasswordHash = PasswordHasher.Hash(pw),
+                IsActive = true,
+                AllowAllSystems = true,
+                AllowAllFiles = true,
+                OrganizationId = demoOrg.Id,
+                IsPlatformOwner = false,
+            });
+            logger.LogWarning(
+                "Seeded an org-admin demo account for {Org}. Username: {Username} | Password: {Password}",
+                demoOrg.Name, "org.admin", pw);
+        }
+
+        var projectUser = await userStore.FindByUsernameAsync("project.owner");
+        if (projectUser is null)
+        {
+            var pw = RandomNumberGenerator.GetHexString(12);
+            projectUser = await userStore.CreateAsync(new AppUser
+            {
+                Username = "project.owner",
+                DisplayName = $"مسؤول {demoProject.Name}",
+                Role = UserRoles.User,
+                AuthMethod = AuthMethods.Local,
+                PasswordHash = PasswordHasher.Hash(pw),
+                IsActive = true,
+                AllowAllSystems = true,
+                AllowAllFiles = true,
+                OrganizationId = demoOrg.Id,
+                IsPlatformOwner = false,
+            });
+            logger.LogWarning(
+                "Seeded a project-owner demo account for {Project}. Username: {Username} | Password: {Password}",
+                demoProject.Name, "project.owner", pw);
+        }
+        await projectStore.SetRoleAsync(demoProject.Id, projectUser.Id, ChatToDashboard.Api.Projects.ProjectRoles.Owner);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to seed the demo organization/project/users.");
+    }
+
     try
     {
         var loader = scope.ServiceProvider.GetRequiredService<DataFolderLoader>();

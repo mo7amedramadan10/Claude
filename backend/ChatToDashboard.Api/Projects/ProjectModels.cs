@@ -32,3 +32,30 @@ public class ProjectRequest
 {
     [JsonPropertyName("name")] public string Name { get; set; } = "";
 }
+
+/// <summary>One row of <c>ProjectRoles</c>: a named user's role on one project — unlike
+/// DashboardRoles (where the Owner lives on the dashboard row itself), a project has no
+/// single natural "creator" owner, so Owner/Editor/Viewer all live here alike. An org
+/// Admin/platform owner always sees every project in their org regardless of this table —
+/// it only ever narrows a plain "User" account down to the project(s) they're named on.</summary>
+public class ProjectRoleEntry
+{
+    public string ProjectId { get; set; } = "";
+    public string UserId { get; set; } = "";
+
+    /// <summary>"owner", "editor" or "viewer".</summary>
+    public string Role { get; set; } = "";
+}
+
+public static class ProjectRoles
+{
+    public const string Owner = "owner";
+    public const string Editor = "editor";
+    public const string Viewer = "viewer";
+}
+
+/// <summary>Body of PUT /api/projects/{id}/roles/{userId}.</summary>
+public class SetProjectRoleRequest
+{
+    [JsonPropertyName("role")] public string Role { get; set; } = "";
+}

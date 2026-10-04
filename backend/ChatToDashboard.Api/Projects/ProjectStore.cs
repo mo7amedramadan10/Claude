@@ -12,6 +12,7 @@ public class ProjectStore
     public ProjectStore(DataStore db) => _db = db;
 
     private string Table => _db.Provider == DbProvider.Sqlite ? "\"Projects\"" : "[staging].[Projects]";
+    private string RolesTable => _db.Provider == DbProvider.Sqlite ? "\"ProjectRoles\"" : "[staging].[ProjectRoles]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -30,9 +31,31 @@ public class ProjectStore
                  [Slug] NVARCHAR(200), [CreatedAt] DATETIME2)
                """;
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = text;
-        await command.ExecuteNonQueryAsync(ct);
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = text;
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        // Owner/Editor/Viewer roles on a project — mirrors DashboardRoles' shape (see its
+        // own remarks), except Owner lives here too since a Project has no OwnerId column.
+        var rolesText = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               CREATE TABLE IF NOT EXISTS {RolesTable} (
+                 "ProjectId" TEXT NOT NULL, "UserId" TEXT NOT NULL, "Role" TEXT NOT NULL,
+                 PRIMARY KEY ("ProjectId", "UserId"))
+               """
+            : $"""
+               IF OBJECT_ID('staging.ProjectRoles') IS NULL
+               CREATE TABLE {RolesTable} (
+                 [ProjectId] NVARCHAR(64) NOT NULL, [UserId] NVARCHAR(200) NOT NULL, [Role] NVARCHAR(20) NOT NULL,
+                 PRIMARY KEY ([ProjectId], [UserId]))
+               """;
+        await using (var rolesCommand = connection.CreateCommand())
+        {
+            rolesCommand.CommandText = rolesText;
+            await rolesCommand.ExecuteNonQueryAsync(ct);
+        }
     }
 
     public async Task<int> CountForOrganizationAsync(string organizationId, CancellationToken ct = default)
@@ -89,6 +112,48 @@ public class ProjectStore
             "VALUES (@Id, @OrganizationId, @Name, @Slug, @CreatedAt)",
             project);
         return project;
+    }
+
+    public async Task<IReadOnlyList<ProjectRoleEntry>> ListRolesAsync(string projectId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<ProjectRoleEntry>(
+            $"SELECT ProjectId, UserId, Role FROM {RolesTable} WHERE ProjectId = @projectId", new { projectId });
+        return rows.ToList();
+    }
+
+    /// <summary>Every project (within <paramref name="organizationId"/>) this user holds any
+    /// role on — what narrows a plain "User" account's project list/current-project down from
+    /// "every project in the org" (the Admin/platform-owner view) to just their own.</summary>
+    public async Task<IReadOnlyList<Project>> ListForUserAsync(string userId, string organizationId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<Project>(
+            $"SELECT p.* FROM {Table} p JOIN {RolesTable} r ON r.ProjectId = p.Id " +
+            "WHERE r.UserId = @userId AND p.OrganizationId = @organizationId ORDER BY p.CreatedAt",
+            new { userId, organizationId });
+        return rows.ToList();
+    }
+
+    public async Task SetRoleAsync(string projectId, string userId, string role, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"DELETE FROM {RolesTable} WHERE ProjectId = @projectId AND UserId = @userId", new { projectId, userId });
+        await connection.ExecuteAsync(
+            $"INSERT INTO {RolesTable} (ProjectId, UserId, Role) VALUES (@projectId, @userId, @role)",
+            new { projectId, userId, role });
+    }
+
+    public async Task RemoveRoleAsync(string projectId, string userId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"DELETE FROM {RolesTable} WHERE ProjectId = @projectId AND UserId = @userId", new { projectId, userId });
     }
 
     private async Task<string> UniqueSlugAsync(string organizationId, string name, CancellationToken ct)

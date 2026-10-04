@@ -36,14 +36,25 @@ public class HistoryController : ControllerBase
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(Users.UserRoles.Admin);
 
-    /// <summary>The caller's currently selected project — today always the organization's
-    /// single wired-up one (see ProjectStore.FirstForOrganizationAsync's own remarks). Null
-    /// for an account with no organization at all, which disables project filtering rather
-    /// than hiding everything.</summary>
+    /// <summary>The caller's currently selected project. An Admin always gets the
+    /// organization's first (default) project — still the only one actually wired into a
+    /// multi-project org's live workspace (see ProjectStore.FirstForOrganizationAsync's own
+    /// remarks). A plain "User" account instead gets the first project ProjectRoles actually
+    /// names them on, if any — so a user scoped to one project genuinely only ever sees that
+    /// project's history, even in an org that holds several. Falls back to the same
+    /// first-for-org default when they hold no project role at all (the common case before
+    /// that table existed), so no pre-existing account's behavior changes. Null only for an
+    /// account with no organization at all, which disables project filtering rather than
+    /// hiding everything.</summary>
     private async Task<string?> CurrentProjectIdAsync(CancellationToken ct)
     {
         var organizationId = User.FindFirstValue("OrganizationId");
         if (string.IsNullOrEmpty(organizationId)) return null;
+        if (!IsAdmin)
+        {
+            var owned = await _projects.ListForUserAsync(UserId, organizationId, ct);
+            if (owned.Count > 0) return owned[0].Id;
+        }
         var project = await _projects.FirstForOrganizationAsync(organizationId, ct);
         return project?.Id;
     }
