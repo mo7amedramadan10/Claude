@@ -420,6 +420,93 @@
 }
 .msg-speak-btn { border: 0; background: transparent; cursor: pointer; margin-inline-start: 6px; opacity: .6; font-size: 13px; }
 .msg-speak-btn:hover { opacity: 1; }
+
+/* ---------- إجابات الاستفسارات (inquiry-answer blocks) ----------
+   لسه كانت بألوان/خطوط app.css القديمة (var(--accent)/var(--grid)/var(--plane)) بدل
+   رموز جيم — هنا إعادة تصريح كاملة بنفس أسماء الكلاسات. .msg.bot.inquiry-answer بالذات
+   لازم نفس تخصيص الـ selector القديم (3 كلاسات) عشان تكسب على التعادل بترتيب التحميل،
+   وتحافظ على padding-inline-start:40px (مكان أيقونة جيم من .msg.bot::before) بدل
+   ما يتصفّر زي ما كانت القديمة بتعمل. */
+.msg.bot.inquiry-answer {
+  max-width: 100%; background: none; border: 0; padding: 0; padding-inline-start: 40px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.inquiry-block { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: var(--r-lg); }
+.inquiry-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.inquiry-block-label {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+  border-radius: var(--r-full); font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.inquiry-block-text { margin: 0; font-size: var(--fs-md); line-height: 1.9; color: var(--ink); }
+.inquiry-block-text p { margin: 0 0 10px; white-space: pre-wrap; }
+.inquiry-block-text p:last-child { margin-bottom: 0; }
+.inquiry-block-text ol, .inquiry-block-text ul { margin: 0 0 10px; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 4px; }
+.inquiry-block-text ol:last-child, .inquiry-block-text ul:last-child { margin-bottom: 0; }
+
+/* "من بيانات الجهة" — بطاقة بيضاء زي .card. */
+.inquiry-block.data { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1); }
+.inquiry-block.data .inquiry-block-label { background: var(--blue-50); color: var(--blue-700); }
+.inquiry-block-date { font-size: var(--fs-xs); color: var(--ink-3); white-space: nowrap; }
+
+/* "من خارج البيانات" — مادة مختلفة بوضوح (تلوين دافئ + حدود متقطعة)، مش بس لون تاني. */
+.inquiry-block.knowledge { background: var(--warn-50); border: 1px dashed color-mix(in srgb, var(--warn) 55%, var(--line)); }
+.inquiry-block.knowledge .inquiry-block-label { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
+.inquiry-block-hint { font-size: var(--fs-xs); color: var(--ink-2); }
+
+.inquiry-examined { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-xs); color: var(--ink-2); }
+.inquiry-examined-label { font-weight: 600; color: var(--ink-3); }
+.inquiry-chip { padding: 2px 9px; border-radius: var(--r-full); background: var(--surface-2); color: var(--ink-2); font-size: 11px; border: 1px solid var(--line-2); }
+
+.inquiry-block-footer { position: relative; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line-2); }
+.inquiry-src-btn, .inquiry-convert-btn {
+  height: 32px; padding: 0 14px; border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: 500;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+}
+.inquiry-src-btn { background: transparent; border: 1px solid var(--line); color: var(--ink-2); }
+.inquiry-src-btn:hover, .inquiry-src-btn.active { border-color: var(--brand-blue); color: var(--brand-blue); }
+.inquiry-convert-btn { background: var(--brand-blue); border: 1px solid var(--brand-blue); color: #fff; }
+.inquiry-convert-btn:hover { background: var(--blue-600); border-color: var(--blue-600); }
+
+/* مُقنَّعة (الصلاحية اتشالت وقت إعادة الفتح) — محايدة، من غير أي إجراءات. */
+.inquiry-block.masked { background: var(--surface-2); border: 1px solid var(--line); }
+.inquiry-block.masked .inquiry-block-label { background: var(--surface); color: var(--ink-3); border: 1px solid var(--line); }
+.inquiry-block.masked .inquiry-block-text { color: var(--ink-2); }
+.inquiry-block-subtext { margin: 0; font-size: var(--fs-xs); color: var(--ink-3); }
+
+.inquiry-followups { display: flex; flex-wrap: wrap; gap: 6px; }
+.inquiry-followup-chip {
+  height: 32px; padding: 0 14px; border-radius: var(--r-full); border: 1px solid var(--line);
+  background: var(--surface); color: var(--brand-blue); font-size: var(--fs-xs); font-weight: 500; cursor: pointer; font-family: inherit;
+}
+.inquiry-followup-chip:hover { background: var(--blue-50); border-color: var(--blue-100); }
+
+/* "إضافة/استبدال اللوحة؟" — بطاقة داخلية صغيرة تظهر بعد الضغط على "حوّله لداشبورد". */
+.inquiry-convert-prompt {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.inquiry-convert-prompt p { margin: 0; font-size: var(--fs-sm); color: var(--ink); }
+.inquiry-convert-prompt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inquiry-convert-prompt-actions button {
+  height: 36px; padding: 0 14px; border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: 500; cursor: pointer; font-family: inherit;
+}
+.icp-add { background: var(--brand-blue); border: 1px solid var(--brand-blue); color: #fff; }
+.icp-add:hover { background: var(--blue-600); }
+.icp-replace { background: transparent; border: 1px solid var(--line); color: var(--ink-2); }
+.icp-replace:hover { background: var(--surface-2); }
+.icp-cancel { background: transparent; border: 0; color: var(--ink-3); }
+
+/* نافذة مصدر البيانات (ⓘ المصدر) — نفس .src-pop العامة بس بتخصيص أعلى (class مزدوج)
+   محصور بـ .inquiry-block-footer، عشان ميأثرش على نسخة .src-pop بتاعة عناصر اللوحة. */
+.inquiry-block-footer .src-pop {
+  display: none; position: absolute; top: calc(100% + 8px); inset-inline-end: 0; z-index: 20;
+  width: min(300px, 90vw); padding: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  box-shadow: var(--shadow-2, 0 8px 28px rgba(11,11,11,.14)); font-size: var(--fs-xs); line-height: 1.7;
+}
+.inquiry-block-footer .src-pop.open { display: block; }
+.inquiry-block-footer .src-block + .src-block { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line-2); }
+.inquiry-block-footer .src-lbl { display: block; margin-bottom: 2px; font-size: 11px; font-weight: 700; color: var(--brand-blue); }
 .hint {
   margin: auto; padding: 20px; border-radius: var(--r-md); background: var(--surface-2);
   border: 1px solid var(--line-2); color: var(--ink-2); text-align: center; font-size: var(--fs-sm);
