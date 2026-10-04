@@ -186,16 +186,31 @@
     </div>
     <div id="chat-mode-tabs" class="chat-modes" role="tablist" aria-label="وضع المحادثة">
       <button type="button" class="chat-mode-tab active" role="tab" aria-selected="true" data-mode="dashboard">
-        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>
-        <span><b>بناء اللوحة</b><small>يبني ويعدّل اللوحة الحالية</small></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><b>بناء اللوحة</b>
       </button>
       <button type="button" class="chat-mode-tab" role="tab" aria-selected="false" data-mode="inquiry">
-        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg>
-        <span><b>استفسارات</b><small>إجابة سريعة بدون تعديل اللوحة</small></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><b>استفسارات</b>
+      </button>
+      <button type="button" class="chat-mode-tab" role="tab" aria-selected="false" data-mode="templates">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg><b>النماذج</b>
       </button>
     </div>
     <div id="messages" class="thread"></div>
     <div id="inquiry-messages" class="thread hidden"></div>
+    <div id="templates-panel" class="thread tpl-panel hidden">
+      <label class="tpl-search">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+        <input type="search" id="tpl-search-input" placeholder="ابحث في النماذج…">
+      </label>
+      <div id="tpl-cats" class="tpl-cats" role="group" aria-label="تصنيف النماذج">
+        <button type="button" class="chip is-on" data-cat="all">الكل</button>
+        <button type="button" class="chip" data-cat="kpi">مؤشرات</button>
+        <button type="button" class="chip" data-cat="chart">رسوم بيانية</button>
+        <button type="button" class="chip" data-cat="table">جداول</button>
+      </div>
+      <p class="tpl-hint"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط على أي نموذج ليُضاف للوحة الحالية ببيانات مشروعك.</p>
+      <div id="tpl-grid" class="tpl-grid"></div>
+    </div>
     <div id="attached-image" class="attached-image hidden">
       <img id="attached-image-preview" alt="الصورة المرفقة" />
       <span id="attached-image-name"></span>

@@ -466,6 +466,9 @@ const state = {
   // first ask() in a brand-new conversation gets back its generated id.
   inquiryTurns: [], inquiryConversationId: null,
   inquiryConversations: [], inquiryConversationsLoaded: false,
+  // "النماذج" sub-tab: a static catalog (see TEMPLATES below), filtered client-side only —
+  // picking one just calls ask() with its prompt, exactly like typing that request by hand.
+  templateCategory: 'all', templateSearch: '',
   systems: [], sourceFiles: [], tableLabels: {}, // available, from /api/sources
   onSystems: new Set(), onFiles: new Set(), // enabled
   files: [], pending: [], filter: 'الكل',
@@ -3354,6 +3357,70 @@ async function ask(question) {
   }
 }
 
+// ---------- النماذج (Templates): a static catalog of ready-made widget requests ----------
+// Each entry's `prompt` is just a normal dashboard-building request — clicking "إضافة" calls
+// ask(prompt) exactly as if the user had typed it, so it goes through the real pipeline (real
+// connected sources, real AI-picked data) rather than inserting any canned/fake widget.
+const TEMPLATES = [
+  { id: 'kpi-target-region', cat: 'kpi', icon: 'spark', title: 'تحقيق المستهدف بالمناطق',
+    desc: 'نسبة الوفاء بالمستهدف لكل منطقة، مع أعلى وأقل منطقة أداءً.',
+    prompt: 'أضف مؤشرًا يوضح نسبة تحقيق المستهدف موزّعة حسب المناطق، مع إبراز أعلى وأقل منطقة أداءً.' },
+  { id: 'kpi-trend', cat: 'kpi', icon: 'up', title: 'مؤشر رقمي مع اتجاه',
+    desc: 'أهم رقم عندك، مع نسبة تغيّره عن الفترة السابقة.',
+    prompt: 'أضف مؤشرًا رقميًا لأهم قيمة في بياناتي، مع نسبة التغيّر مقارنة بالفترة السابقة.' },
+  { id: 'chart-growth', cat: 'chart', icon: 'chart', title: 'نمو العملاء الجدد',
+    desc: 'رسم خطي لعدد العملاء الجدد شهريًا خلال آخر سنة.',
+    prompt: 'أضف رسمًا بيانيًا خطيًا يوضح نمو عدد العملاء الجدد شهريًا خلال آخر 12 شهرًا.' },
+  { id: 'chart-yoy', cat: 'chart', icon: 'calendar', title: 'مقارنة سنوية',
+    desc: 'أهم مؤشر عندك مقارنًا شهريًا بنفس الفترة من السنة السابقة.',
+    prompt: 'أضف رسمًا بيانيًا يقارن أهم مؤشر في بياناتي بين هذه السنة والسنة السابقة شهريًا.' },
+  { id: 'chart-funnel', cat: 'chart', icon: 'filter', title: 'مراحل الصفقات',
+    desc: 'توزيع الصفقات أو الطلبات على مراحلها كقمع.',
+    prompt: 'أضف رسم قمع (funnel) يوضح توزيع الصفقات أو الطلبات على مراحلها المختلفة.' },
+  { id: 'chart-channels', cat: 'chart', icon: 'share', title: 'توزيع قنوات البيع',
+    desc: 'رسم دائري لحصة كل قناة أو مصدر من إجمالي المبيعات.',
+    prompt: 'أضف رسمًا دائريًا (donut) يوضح توزيع المبيعات أو الطلبات حسب القناة أو المصدر.' },
+  { id: 'table-top', cat: 'table', icon: 'list', title: 'أعلى العناصر أداءً',
+    desc: 'جدول لأعلى 10 عناصر (منتجات/عملاء/فروع) مع قيمها ونموها.',
+    prompt: 'أضف جدولًا يعرض أعلى 10 عناصر (منتجات أو عملاء أو فروع حسب بياناتي) أداءً، مع قيمها ونسبة نموها.' },
+  { id: 'table-status', cat: 'table', icon: 'grid', title: 'ملخص الحالة',
+    desc: 'جدول يلخّص توزيع السجلات حسب حالتها، بالعدد والنسبة.',
+    prompt: 'أضف جدولًا يلخّص توزيع السجلات حسب حالتها (مثل: مكتمل، قيد التنفيذ، ملغى)، مع العدد والنسبة لكل حالة.' },
+];
+const TEMPLATE_CAT_COLOR = { kpi: 'blue', chart: 'teal', table: 'purple' };
+
+function renderTemplatesPanel() {
+  const q = state.templateSearch.trim().toLowerCase();
+  const items = TEMPLATES.filter(t =>
+    (state.templateCategory === 'all' || t.cat === state.templateCategory) &&
+    (!q || t.title.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q)));
+  el('tpl-grid').innerHTML = items.length ? items.map(t => `
+    <article class="tpl-card">
+      <div class="tpl-thumb tpl-thumb-${TEMPLATE_CAT_COLOR[t.cat]}"><svg class="icon" aria-hidden="true"><use href="#i-${t.icon}"/></svg></div>
+      <h4>${esc(t.title)}</h4>
+      <p>${esc(t.desc)}</p>
+      <button type="button" class="tpl-add-btn" data-tpl="${esc(t.id)}" ${state.loading ? 'disabled' : ''}>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة
+      </button>
+    </article>`).join('') : `<p class="tpl-empty">لا توجد نماذج مطابقة.</p>`;
+}
+el('tpl-search-input').addEventListener('input', e => { state.templateSearch = e.target.value; renderTemplatesPanel(); });
+el('tpl-cats').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.templateCategory = btn.dataset.cat;
+  el('tpl-cats').querySelectorAll('.chip').forEach(c => c.classList.toggle('is-on', c === btn));
+  renderTemplatesPanel();
+});
+el('tpl-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.tpl-add-btn');
+  if (!btn || state.loading) return;
+  const tpl = TEMPLATES.find(t => t.id === btn.dataset.tpl);
+  if (!tpl) return;
+  setChatMode('dashboard');
+  ask(tpl.prompt);
+});
+
 // ---------- الاستفسارات (Inquiries): a conversational, saved-history sibling of ask() above ----------
 // Two small sub-tabs inside the same side chat panel — never a top-level screen, and the
 // dashboard area (#dash-pane) is never hidden or cleared by switching between them. Isolated
@@ -3370,23 +3437,30 @@ function setChatMode(mode) {
   });
   el('messages').classList.toggle('hidden', mode !== 'dashboard');
   el('inquiry-messages').classList.toggle('hidden', mode !== 'inquiry');
+  el('templates-panel').classList.toggle('hidden', mode !== 'templates');
   el('inquiry-new-btn').classList.toggle('hidden', mode !== 'inquiry');
   el('inquiry-conv-btn').classList.toggle('hidden', mode !== 'inquiry');
   // Attaching a dashboard screenshot and "ابدأ لوحة جديدة" only make sense for بناء اللوحة.
   el('dash-image-attach-label').classList.toggle('hidden', mode !== 'dashboard');
   el('new-dashboard-btn').classList.toggle('hidden', mode !== 'dashboard');
+  // النماذج is click-to-add (see renderTemplatesPanel) — no free-text question to type there.
+  el('form').classList.toggle('hidden', mode === 'templates');
   el('q').placeholder = mode === 'inquiry'
     ? 'اسأل استفسارًا عن بياناتك، أو تابع نقاشًا سابقًا — إجابة نصية مباشرة، من غير بناء لوحة…'
     : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
-  // نفس نص وصف "استفسارات" في chat-mode-tabs — يبقى متّسق بدل جملة "بناء اللوحة" الثابتة.
-  el('chat-head-desc').textContent = mode === 'inquiry'
-    ? 'إجابة سريعة بدون تعديل اللوحة' : 'يبني ويعدّل اللوحة من سؤالك';
+  // نفس نص وصف التبويبات في chat-mode-tabs — يبقى متّسق بدل جملة "بناء اللوحة" الثابتة.
+  el('chat-head-desc').textContent =
+    mode === 'inquiry' ? 'إجابة سريعة بدون تعديل اللوحة'
+    : mode === 'templates' ? 'عناصر جاهزة تُضاف للوحة الحالية بضغطة'
+    : 'يبني ويعدّل اللوحة من سؤالك';
   // Composer is a single rounded pill in both modes now, with a circular icon-only send button.
   el('send').innerHTML = '<svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>';
   el('send').setAttribute('aria-label', 'إرسال');
   if (mode === 'inquiry') {
     renderInquiryMessages();
     if (!state.inquiryConversationsLoaded) loadInquiryConversations();
+  } else if (mode === 'templates') {
+    renderTemplatesPanel();
   } else renderMessages();
 }
 document.querySelectorAll('.chat-mode-tab').forEach(tab =>
@@ -6579,8 +6653,8 @@ function buildTourSteps() {
     },
     {
       target: '#chat-mode-tabs',
-      title: '🧭 بناء اللوحة / الاستفسارات',
-      body: '«بناء اللوحة» يحوّل سؤالك إلى عناصر رسومية وجداول. أما «الاستفسارات» فيقدّم إجابة نصية سريعة دون بناء لوحة — مناسب للأسئلة المباشرة.',
+      title: '🧭 بناء اللوحة / الاستفسارات / النماذج',
+      body: '«بناء اللوحة» يحوّل سؤالك إلى عناصر رسومية وجداول. «الاستفسارات» يقدّم إجابة نصية سريعة دون بناء لوحة. «النماذج» عناصر جاهزة تُضاف للوحة الحالية بضغطة واحدة.',
     },
     {
       target: '#sources-btn',
