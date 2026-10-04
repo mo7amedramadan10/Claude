@@ -414,6 +414,7 @@
 .tpl-thumb-blue { background: var(--blue-50); color: var(--brand-blue); }
 .tpl-thumb-teal { background: var(--teal-50); color: var(--brand-teal); }
 .tpl-thumb-purple { background: var(--purple-50); color: var(--brand-purple); }
+.tpl-thumb-cyan { background: var(--cyan-50); color: var(--brand-cyan); }
 .tpl-card h4 { margin: 0; font-size: var(--fs-sm); font-weight: 500; color: var(--ink); line-height: 1.4; }
 .tpl-card p { margin: 0; font-size: 11px; color: var(--ink-3); line-height: 1.6; flex: 1; }
 .tpl-add-btn {
@@ -429,6 +430,31 @@
   scroll-behavior: smooth;
 }
 #messages.hidden, #inquiry-messages.hidden, #templates-panel.hidden { display: none; }
+
+/* ---------- معرض قوالب اللوحات الكاملة (فاضي الشات بس — أول استخدام أو بعد "لوحة
+   جديدة") — نفس فكرة PowerPoint وقت إنشاء عرض تقديمي جديد: تختار قالب فيتبني لك منه
+   عشرة عناصر دفعة واحدة، بدل ما تبدأ من صفحة فاضية. */
+.dash-tpl-gallery { padding-top: 20px; }
+.dash-tpl-gallery-hint { margin: 0 0 14px; font-size: var(--fs-sm); color: var(--ink-2); text-align: center; line-height: 1.7; }
+.dash-tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dash-tpl-card {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-1);
+}
+.dash-tpl-card .tpl-thumb { width: 44px; height: 44px; }
+.dash-tpl-card .tpl-thumb .icon { width: 22px; height: 22px; }
+.dash-tpl-card h4 { margin: 0; font-size: var(--fs-sm); font-weight: 500; color: var(--ink); line-height: 1.4; }
+.dash-tpl-card p { margin: 0; font-size: 11px; color: var(--ink-3); line-height: 1.6; flex: 1; }
+.dash-tpl-count {
+  align-self: flex-start; padding: 2px 9px; border-radius: var(--r-full);
+  background: var(--surface-2); color: var(--ink-3); font-size: 10.5px; font-weight: 500;
+}
+.dash-tpl-btn {
+  height: 32px; border: 0; border-radius: var(--r-sm); background: var(--brand-blue); color: #fff;
+  font-family: inherit; font-size: var(--fs-xs); font-weight: 500; cursor: pointer;
+}
+.dash-tpl-btn:hover:not(:disabled) { background: var(--blue-600); }
+.dash-tpl-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .msg { max-width: 86%; line-height: 1.8; white-space: pre-wrap; font-weight: 300; animation: rise .35s var(--ease) both; }
 .msg.user {
