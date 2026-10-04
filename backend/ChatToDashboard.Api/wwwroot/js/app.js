@@ -486,6 +486,17 @@ const state = {
   // Set only while the open dashboard is an Active one (see openHistoryEntry): gates
   // edit/wizard controls for a Viewer and drives the disabled-state banner.
   dashboardIsActive: false, dashboardRole: null, dashboardDisabled: false, dashboardDisabledReason: '',
+  // When the widgets currently on screen last actually got their data — set on a fresh
+  // chat answer, on applyFilters() (filter change or "🔄 تحديث"), or to a Draft history
+  // entry's own CreatedAt when reopened (an Active one then overwrites it via the
+  // applyFilters() call openHistoryEntry triggers). Drives the "آخر تحديث" line in the
+  // dashboard header — null (no line shown) rather than guessed when truly unknown (e.g.
+  // a public share view, which never calls any of the above).
+  lastRefreshedAt: null,
+  // The signed-in user's own organization/current-project names (loadCurrentProjectNav)
+  // and the currently-open screen's name — together drive the topbar breadcrumb
+  // (updateCrumbs). Both names start null until that fetch resolves.
+  orgName: null, projectName: null, currentScreen: 'chat',
 };
 
 // Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
@@ -2280,7 +2291,13 @@ function renderDashboard() {
   // when it was saved or last renamed) — show that at the top instead of the summary text,
   // matching what "اللوحات النشطة" itself lists it as. A brand-new, not-yet-saved chat
   // dashboard has no name yet, so it keeps showing its summary as before.
-  el.dash.innerHTML = `<div id="summary">${esc(d.name || d.summary)}</div>` + dashboardTopBarHtml(d.widgets);
+  const updatedText = formatUpdatedAt(state.lastRefreshedAt);
+  el.dash.innerHTML = `<section class="dash-head">
+      <div class="dash-title">
+        <h1>${esc(d.name || d.summary)}</h1>
+        ${updatedText ? `<div class="dash-meta"><span>${esc(updatedText)}</span></div>` : ''}
+      </div>
+    </section>` + dashboardTopBarHtml(d.widgets);
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
   if (state.shareId) {
@@ -2709,6 +2726,7 @@ async function applyFilters() {
     ? (failed === 1 ? '⚠ تعذّر تحديث رسم واحد.' : `⚠ تعذّر تحديث ${failed} رسومات.`)
     : null;
   state.filtersLoading = false;
+  state.lastRefreshedAt = new Date();
   updateFiltersLoadingUI();
   renderDashboard();
   scheduleAutosave();
@@ -3320,6 +3338,7 @@ async function ask(question) {
         state.activeFilters = {}; state.crossFilterDefs = {}; state.filterRefreshWarning = null;
       }
       state.dashboard = ensureWidgetMeta(payload.dashboard);
+      state.lastRefreshedAt = new Date();
       state.editHistory = { past: [], future: [] };
       state.currentHistoryId = null;
       // A brand-new answer, never a filter/edit re-render — the next renderDashboard()
@@ -3712,6 +3731,7 @@ async function runInquiryConvert(turnIndex, blockIndex, addToExisting) {
       state.activeFilters = {}; state.crossFilterDefs = {}; state.filterRefreshWarning = null;
     }
     state.dashboard = ensureWidgetMeta(payload.dashboard);
+    state.lastRefreshedAt = new Date();
     state.editHistory = { past: [], future: [] };
     state.currentHistoryId = null;
     state.dashboardIsActive = false; state.dashboardRole = null;
@@ -3962,6 +3982,16 @@ function relTime(dateStr) {
   if (diffDays < 30) return `قبل ${diffDays} يوم`;
   const months = Math.floor(diffDays / 30);
   return months <= 1 ? 'قبل شهر' : `منذ ${months} أشهر`;
+}
+
+// "آخر تحديث 10:42 ص" for a dashboard still updated today, else the date too — shown in
+// the dashboard header from state.lastRefreshedAt (see its own comment for what sets it).
+function formatUpdatedAt(date) {
+  if (!date) return '';
+  const time = date.toLocaleTimeString(state.lang === 'en' ? 'en-US' : 'ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const sameDay = date.toDateString() === new Date().toDateString();
+  const label = state.lang === 'en' ? 'Last updated' : 'آخر تحديث';
+  return sameDay ? `${label} ${time}` : `${label} ${date.toLocaleDateString(state.lang === 'en' ? 'en-US' : 'ar-EG')} ${time}`;
 }
 
 function userInitials(userId) {
@@ -4865,6 +4895,10 @@ function openHistoryEntry(id) {
     name: entry.question, summary: entry.summary, widgets: parseWidgets(entry.widgetsJson),
     filters: parseFilters(entry.filtersJson),
   });
+  // A Draft shows its own saved-at time (the frozen snapshot's actual age) — overwritten
+  // with "now" below by applyFilters() if this turns out to be an Active dashboard, since
+  // that call re-executes every widget live.
+  state.lastRefreshedAt = entry.createdAt ? new Date(entry.createdAt + (entry.createdAt.endsWith('Z') ? '' : 'Z')) : null;
   state.editHistory = { past: [], future: [] };
   state.currentHistoryId = entry.id; // further edits autosave onto this same saved entry
   state.activeFilters = parseActiveFilters(entry.activeFiltersJson);
@@ -5025,11 +5059,49 @@ el('history-clear').addEventListener('click', async () => {
 });
 
 // ---------- screens ----------
+// The breadcrumb's middle segments: only these screens sit "inside" the current project
+// (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
+// integrations) and the platform-only "organizations" screen never show a project name,
+// since you're managing the organization/platform itself there, not a project within it.
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+// Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
+// lookup here instead of reading the DOM, since the same data-screen value can be the
+// target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
+// "المستخدمون" under الإدارة).
+const SCREEN_LABELS = {
+  chat: 'المحادثة واللوحات', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
+  history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
+  projects: 'المشاريع', settings: 'الإعدادات', integrations: 'التكاملات الخارجية',
+  organizations: 'المنظمات',
+};
+// Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
+// organizations screen) > المشروع الحالي (project-scoped screens only) > الصفحة الحالية.
+// state.orgName/projectName come from loadCurrentProjectNav()'s /api/projects response —
+// re-run here (not just at startup) so the breadcrumb stays correct even before that fetch
+// first resolves, and every time it resolves or the screen changes.
+function updateCrumbs(name) {
+  const crumbs = el('crumbs');
+  if (!crumbs) return;
+  const parts = [];
+  if (name === 'organizations') parts.push('المنصّة');
+  else if (state.orgName) parts.push(state.orgName);
+  if (PROJECT_SCOPED_SCREENS.has(name) && state.projectName) parts.push(state.projectName);
+  const label = SCREEN_LABELS[name];
+  if (label) parts.push(label);
+  if (!parts.length) parts.push('جيم');
+  crumbs.innerHTML = parts.map((p, i) => {
+    const seg = i === parts.length - 1 ? `<strong>${esc(p)}</strong>` : `<span>${esc(p)}</span>`;
+    return i === 0 ? seg : `<span class="sep">/</span>${seg}`;
+  }).join('');
+}
+
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   el('rail-size-toggle').classList.toggle('hidden', name !== 'chat');
   el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
+  state.currentScreen = name;
+  updateCrumbs(name);
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
@@ -5084,10 +5156,14 @@ async function loadCurrentProjectNav() {
     const res = await fetch('/api/projects');
     if (!res.ok) return;
     const data = await res.json();
+    state.orgName = data.organization?.name || null;
     const project = data.projects?.[0];
-    if (!project) return;
-    el('current-project-name').textContent = project.name;
-    el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
+    if (project) {
+      state.projectName = project.name;
+      el('current-project-name').textContent = project.name;
+      el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
+    }
+    updateCrumbs(state.currentScreen);
   } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
 }
 
