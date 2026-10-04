@@ -2253,6 +2253,9 @@ function renderDashboard() {
   el('btn-redo').classList.toggle('hidden', !editable);
   // A share is a frozen snapshot (Part 3) — there is nothing for "🔄 تحديث" to re-fetch.
   el('btn-refresh').classList.toggle('hidden', !!state.shareId);
+  // Same gating the old bottom-of-grid "+ إضافة عنصر" button had (editable AND already in
+  // تحرير mode) — only relocated into the toolbar, not a behavior change.
+  el('btn-add-widget').classList.toggle('hidden', !(editable && state.editMode));
   // A Draft has no Owner and can't be shared (see btn-share below) — offer to activate it
   // right here instead of sending the user to "السجل" to do it. Once Active, this hides and
   // مشاركة unlocks.
@@ -2292,12 +2295,16 @@ function renderDashboard() {
   // matching what "اللوحات النشطة" itself lists it as. A brand-new, not-yet-saved chat
   // dashboard has no name yet, so it keeps showing its summary as before.
   const updatedText = formatUpdatedAt(state.lastRefreshedAt);
+  const sourceLabels = computeDashboardSources(d.widgets);
+  const sourceText = sourceLabels.length ? `مصادر البيانات: ${sourceLabels.join('، ')}` : '';
+  const metaHtml = [sourceText, updatedText].filter(Boolean)
+    .map(t => `<span>${esc(t)}</span>`).join('<span class="dot-sep"></span>');
   el.dash.innerHTML = `<section class="dash-head">
       <div class="dash-title">
         <h1>${esc(d.name || d.summary)}</h1>
-        ${updatedText ? `<div class="dash-meta"><span>${esc(updatedText)}</span></div>` : ''}
+        ${metaHtml ? `<div class="dash-meta">${metaHtml}</div>` : ''}
       </div>
-    </section>` + dashboardTopBarHtml(d.widgets);
+    </section>` + dashboardTopBarHtml();
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
   if (state.shareId) {
@@ -2417,7 +2424,6 @@ function renderDashboard() {
     });
     pendingCharts = [];
   }
-  if (editable && state.editMode) el.dash.appendChild(buildAddWidgetButton());
 }
 
 // ---------- dashboard filters ----------
@@ -2442,7 +2448,7 @@ function getActiveFilterTables() {
 
 function buildFilterBar(filters) {
   const bar = document.createElement('div');
-  bar.id = 'filter-bar';
+  bar.id = 'filter-bar'; bar.className = 'filters';
   filters.forEach(f => bar.appendChild(buildFilterControl(f)));
   // Ad-hoc cross-filters only ever show up here once they're actually active — there's no
   // "options" list to browse ahead of time the way a declared filter's dropdown has, so an
@@ -2495,7 +2501,7 @@ function buildCrossFilterChip(f) {
 // published — plain badges, no click handlers; nothing behind them can be re-run.
 function buildFilterBarReadOnly(filters) {
   const bar = document.createElement('div');
-  bar.id = 'filter-bar';
+  bar.id = 'filter-bar'; bar.className = 'filters';
   filters.forEach(f => {
     const values = state.activeFilters[f.id];
     const text = Array.isArray(values) && values.length
@@ -2755,14 +2761,9 @@ el('btn-refresh').addEventListener('click', async () => {
   finally { btn.disabled = false; }
 });
 
-function buildAddWidgetButton() {
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.className = 'add-widget-btn'; btn.textContent = '+ إضافة عنصر';
-  btn.addEventListener('click', openWizard);
-  return btn;
-}
+el('btn-add-widget').addEventListener('click', openWizard);
 
-// ---------- data-source badges (shown at the top of any dashboard, Draft or Active) ----------
+// ---------- data sources (shown in the dash-head's .dash-meta line, next to آخر تحديث) ----------
 // Every widget built from a single query_data call carries query.table (see AnalyticsTools'
 // system prompt) — the same structured lineage the dashboard-filter/refresh features already
 // rely on. A widget with none (built from several aggregated calls, list_files/
@@ -2779,13 +2780,6 @@ function computeDashboardSources(widgets) {
     .map(t => state.tableLabels[t] || t)
     .sort((a, b) => a.localeCompare(b, 'ar'));
 }
-function dashboardSourcesHtml(widgets) {
-  const labels = computeDashboardSources(widgets);
-  if (!labels.length) return '';
-  return `<span class="ds-label">🗄️ مصادر البيانات:</span>
-    ${labels.map(l => `<span class="ds-chip">${esc(l)}</span>`).join('')}`;
-}
-
 // ---------- Part 2: Active-dashboard status bar (state badge, role badge, manage-roles) ----------
 const ROLE_LABELS = { owner: 'مالك', editor: 'محرر', viewer: 'مشاهد' };
 function dashboardStatusBadgesHtml() {
@@ -2802,14 +2796,12 @@ function dashboardDisabledBannerHtml() {
     : '';
 }
 
-// Data sources on one side, the Active-dashboard state/role/manage-roles badges on the
-// other — one row, opposite ends — rather than two separate stacked rows.
-function dashboardTopBarHtml(widgets) {
-  const sources = dashboardSourcesHtml(widgets);
+// The Active-dashboard state/role/manage-roles badges — data sources moved up into the
+// title's own .dash-meta line (see renderDashboard) instead of a separate row here.
+function dashboardTopBarHtml() {
   const status = state.dashboardIsActive ? dashboardStatusBadgesHtml() : '';
-  if (!sources && !status) return '';
+  if (!status) return '';
   return `<div id="dashboard-top-bar">
-      <div id="dashboard-sources">${sources}</div>
       <div id="dashboard-status-bar">${status}</div>
     </div>` + dashboardDisabledBannerHtml();
 }
@@ -3380,7 +3372,11 @@ async function ask(question) {
 // Inquiry/ConversationStore.cs) — state.inquiryTurns mirrors whichever one is currently open.
 function setChatMode(mode) {
   state.chatMode = mode;
-  document.querySelectorAll('.chat-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  document.querySelectorAll('.chat-mode-tab').forEach(t => {
+    const selected = t.dataset.mode === mode;
+    t.classList.toggle('active', selected);
+    t.setAttribute('aria-selected', String(selected));
+  });
   el('messages').classList.toggle('hidden', mode !== 'dashboard');
   el('inquiry-messages').classList.toggle('hidden', mode !== 'inquiry');
   el('inquiry-toolbar').classList.toggle('hidden', mode !== 'inquiry');

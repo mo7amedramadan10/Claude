@@ -67,6 +67,7 @@ public class HistoryStore
                      ("ActiveFiltersJson", "TEXT", "NVARCHAR(MAX)"),
                      ("IsActive", "INTEGER", "BIT"),
                      ("OwnerId", "TEXT", "NVARCHAR(200)"),
+                     ("ProjectId", "TEXT", "NVARCHAR(64)"),
                  })
         {
             try
@@ -119,9 +120,9 @@ public class HistoryStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"INSERT INTO {Table} (Id, UserId, Question, QueryDescription, Summary, WidgetsJson, " +
-            "FiltersJson, ActiveFiltersJson, CreatedAt) " +
+            "FiltersJson, ActiveFiltersJson, CreatedAt, ProjectId) " +
             "VALUES (@Id, @UserId, @Question, @QueryDescription, @Summary, @WidgetsJson, " +
-            "@FiltersJson, @ActiveFiltersJson, @CreatedAt)",
+            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ProjectId)",
             entry);
 
         // Retention: keep only the latest MaxPerUser rows for this user. Simplest inline
@@ -143,24 +144,31 @@ public class HistoryStore
     /// stays exactly as private as before this feature; only Active dashboards are ever
     /// visible to someone other than their creator.
     /// </summary>
+    /// <param name="projectId">When given, only entries saved under this project (plus any
+    /// saved before <see cref="DashboardHistoryEntry.ProjectId"/> existed, which carry a
+    /// null) are returned — "سجل اللوحات" scoped to the caller's currently selected
+    /// project. Null means no project filtering at all (every project the row-level
+    /// Draft/Active rule above already lets through).</param>
     public async Task<IReadOnlyList<DashboardHistoryEntry>> ListAsync(
-        string userId, int limit = MaxPerUser, CancellationToken ct = default)
+        string userId, string? projectId = null, int limit = MaxPerUser, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
         var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
+        var projectFilter = projectId is null ? "" : "AND (t.ProjectId = @projectId OR t.ProjectId IS NULL) ";
         // COALESCE covers rows saved before FiltersJson/ActiveFiltersJson/IsActive existed —
         // the migration in EnsureSchemaAsync adds the columns as NULL on old rows.
         var rows = await connection.QueryAsync<DashboardHistoryEntry>(
             $"SELECT {top}t.Id, t.UserId, t.Question, t.QueryDescription, t.Summary, t.WidgetsJson, " +
             "COALESCE(t.FiltersJson, '[]') AS FiltersJson, COALESCE(t.ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
-            "COALESCE(t.IsActive, 0) AS IsActive, t.OwnerId, t.CreatedAt " +
-            $"FROM {Table} t WHERE (COALESCE(t.IsActive, 0) = 0 AND t.UserId = @userId) " +
+            "COALESCE(t.IsActive, 0) AS IsActive, t.OwnerId, t.CreatedAt, t.ProjectId " +
+            $"FROM {Table} t WHERE ((COALESCE(t.IsActive, 0) = 0 AND t.UserId = @userId) " +
             $"OR (COALESCE(t.IsActive, 0) = 1 AND (t.OwnerId = @userId " +
-            $"OR EXISTS (SELECT 1 FROM {RolesTable} r WHERE r.DashboardId = t.Id AND r.UserId = @userId))) " +
+            $"OR EXISTS (SELECT 1 FROM {RolesTable} r WHERE r.DashboardId = t.Id AND r.UserId = @userId)))) " +
+            $"{projectFilter}" +
             $"ORDER BY t.CreatedAt DESC{tail}",
-            new { userId });
+            new { userId, projectId });
         return rows.ToList();
     }
 

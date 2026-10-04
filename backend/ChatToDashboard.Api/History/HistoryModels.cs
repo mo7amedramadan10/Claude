@@ -32,6 +32,13 @@ public class DashboardHistoryEntry
     public string ActiveFiltersJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>The project this dashboard was saved under (the org's single wired-up
+    /// workspace today — see ProjectStore.FirstForOrganizationAsync). Null on every row
+    /// saved before this column existed; HistoryStore.ListAsync treats a null the same as a
+    /// match so old dashboards don't disappear from "سجل اللوحات" once project-filtering
+    /// is added, rather than running a one-off backfill.</summary>
+    public string? ProjectId { get; set; }
+
     /// <summary>Draft (false, default) — a frozen snapshot, unchanged behavior. Active (true)
     /// — the user explicitly promoted it: it gets an Owner/roles and re-executes its widgets
     /// live on every open instead of showing the frozen <see cref="WidgetsJson"/>.</summary>

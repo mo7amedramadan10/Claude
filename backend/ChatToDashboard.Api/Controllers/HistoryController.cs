@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using ChatToDashboard.Api.History;
+using ChatToDashboard.Api.Projects;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Users;
 using ChatToDashboard.Api.Widgets;
@@ -20,17 +21,32 @@ public class HistoryController : ControllerBase
     private readonly DashboardAccessService _access;
     private readonly UserStore _users;
     private readonly WidgetQueryService _widgets;
+    private readonly ProjectStore _projects;
 
-    public HistoryController(HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets)
+    public HistoryController(
+        HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets, ProjectStore projects)
     {
         _store = store;
         _access = access;
         _users = users;
         _widgets = widgets;
+        _projects = projects;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(Users.UserRoles.Admin);
+
+    /// <summary>The caller's currently selected project — today always the organization's
+    /// single wired-up one (see ProjectStore.FirstForOrganizationAsync's own remarks). Null
+    /// for an account with no organization at all, which disables project filtering rather
+    /// than hiding everything.</summary>
+    private async Task<string?> CurrentProjectIdAsync(CancellationToken ct)
+    {
+        var organizationId = User.FindFirstValue("OrganizationId");
+        if (string.IsNullOrEmpty(organizationId)) return null;
+        var project = await _projects.FirstForOrganizationAsync(organizationId, ct);
+        return project?.Id;
+    }
 
     /// <summary>Saves a generated dashboard. Called right after the chat flow renders one.
     /// Always creates a Draft — promoting to Active is a separate, explicit step.</summary>
@@ -58,6 +74,7 @@ public class HistoryController : ControllerBase
             ActiveFiltersJson = request.ActiveFilters.ValueKind == System.Text.Json.JsonValueKind.Undefined
                 ? "{}"
                 : request.ActiveFilters.GetRawText(),
+            ProjectId = await CurrentProjectIdAsync(ct),
         };
 
         var saved = await _store.SaveAsync(entry, ct);
@@ -70,7 +87,8 @@ public class HistoryController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
-        var entries = await _store.ListAsync(UserId, ct: ct);
+        var projectId = await CurrentProjectIdAsync(ct);
+        var entries = await _store.ListAsync(UserId, projectId: projectId, ct: ct);
         var roles = await _store.GetMyRolesAsync(UserId, entries.Select(e => e.Id).ToList(), ct);
         var results = new List<object>();
         foreach (var entry in entries)
