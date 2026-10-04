@@ -205,6 +205,10 @@
 .crumbs strong { color: var(--ink); font-weight: 500; }
 .topbar .spacer { flex: 1; }
 .topbar .actions { display: flex; align-items: center; gap: var(--sp-2); }
+/* سجل اللوحات/اللوحات النشطة/روابط المشاركة — محصورين بعرض --chat-w (نفس عرض لوحة
+   المحادثة تحتهم بالظبط) عشان يصطفّوا فوقها بدل ما يمتدوا أوسع منها؛ لو ضاقت المساحة
+   يلفّوا لسطر تاني بدل ما يفيضوا يمين الصفحة. */
+.topbar-nav-group { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: var(--chat-w); }
 
 /* ---------- أزرار ---------- */
 .btn {
