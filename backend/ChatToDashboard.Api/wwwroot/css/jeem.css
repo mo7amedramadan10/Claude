@@ -602,14 +602,18 @@ form#form.composer { padding: 14px 20px 18px; border-top: 1px solid var(--line-2
    #dash-toolbar زي ما هي لسه مش محوّلة بالكامل (لوحة الـ widgets جوّاها لسه قديمة)، فبنعيد
    تصريح كل خاصية كان .dash-toolbar/.dash-toolbar button القديمين بيحددوها — وإلا فضلت شغالة
    (نفس درس #sources-btn/.msg.bot) رغم إن الأزرار بقت .btن الجديدة.
-   الشريط ده دلوقتي عايش داخل .topbar .actions (مش فوق #dash-pane كالسابق)، عشان يبقى
-   ظاهر "فوق الشات" زي ما طلب المستخدم. #dash-toolbar-wrap هو اللي showScreen() بيحكم
-   ظهوره حسب الشاشة الحالية (display:contents وهو مش hidden، عشان ما يكسرش flex gap
-   بتاع .actions)، وفضل #dash-toolbar نفسه بيحكم ظهوره بناءً على وجود لوحة فعلاً — hidden
-   متداخلين زي كده يتصرفوا صح (أي واحد منهم hidden كافي يخفي الفرع كله). */
+   الشريط اتقسم لحتتين: #dash-toolbar فضل في مكانه الأصلي فوق #dash (عرض/تحرير، تحديث،
+   تراجع/إعادة — المستخدم طلب تحديدًا إنهم يفضلوا بنفس مكانهم)، و#dash-toolbar-top
+   انتقل لـ .topbar .actions (تفعيل اللوحة + قائمتي تصدير/نشر) عشان يبقى ظاهر "فوق الشات".
+   #dash-toolbar-wrap هو اللي showScreen() بيحكم ظهوره حسب الشاشة الحالية (display:contents
+   وهو مش hidden، عشان ما يكسرش flex gap بتاع .actions) — بيغلّف #dash-toolbar-top بس.
+   كل واحد من الاتنين (#dash-toolbar و#dash-toolbar-top) بيحكم ظهوره هو نفسه كمان بناءً على
+   وجود لوحة فعلاً (renderDashboard). */
 #dash-toolbar-wrap { display: contents; }
 #dash-toolbar-wrap.hidden { display: none; }
-#dash-toolbar.dash-toolbar { display: flex; align-items: center; gap: 8px; }
+#dash-toolbar.dash-toolbar,
+#dash-toolbar-top.dash-toolbar { display: flex; align-items: center; gap: 8px; }
+#dash-toolbar.dash-toolbar { margin-bottom: 12px; }
 .dash-toolbar .btn {
   height: 32px; padding: 0 12px; border-width: 1px; border-style: solid; border-radius: var(--r-sm);
   font-size: var(--fs-xs); font-weight: 500; gap: 6px; font-family: inherit;

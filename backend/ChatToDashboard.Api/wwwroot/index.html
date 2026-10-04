@@ -142,17 +142,7 @@
       <span class="spacer"></span>
       <div class="actions">
         <div id="dash-toolbar-wrap" class="hidden">
-          <div id="dash-toolbar" class="dash-toolbar hidden">
-            <div class="segmented" id="edit-toggle" role="group" aria-label="وضع العرض">
-              <button type="button" class="edit-toggle-btn active" data-mode="view">عرض</button>
-              <button type="button" class="edit-toggle-btn" data-mode="edit">تحرير</button>
-            </div>
-            <span id="autosave-status" class="autosave-status"></span>
-            <button type="button" id="btn-refresh" class="btn btn-ghost btn-sm" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">
-              <span aria-hidden="true">🔄</span><span class="btn-label">تحديث</span>
-            </button>
-            <button type="button" id="btn-undo" class="btn btn-ghost btn-sm btn-icon" title="تراجع" aria-label="تراجع" disabled>↶</button>
-            <button type="button" id="btn-redo" class="btn btn-ghost btn-sm btn-icon" title="إعادة" aria-label="إعادة" disabled>↷</button>
+          <div id="dash-toolbar-top" class="dash-toolbar hidden">
             <button type="button" id="btn-activate" class="btn btn-soft btn-sm hidden" title="حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين">
               <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg><span class="btn-label">تفعيل اللوحة</span>
             </button>
@@ -259,6 +249,19 @@
   </aside>
 
   <section id="dash-pane">
+    <div id="dash-toolbar" class="dash-toolbar hidden">
+      <div class="segmented" id="edit-toggle" role="group" aria-label="وضع العرض">
+        <button type="button" class="edit-toggle-btn active" data-mode="view">عرض</button>
+        <button type="button" class="edit-toggle-btn" data-mode="edit">تحرير</button>
+      </div>
+      <span id="autosave-status" class="autosave-status"></span>
+      <span class="grow"></span>
+      <button type="button" id="btn-refresh" class="btn btn-ghost btn-sm" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">
+        <span aria-hidden="true">🔄</span><span class="btn-label">تحديث</span>
+      </button>
+      <button type="button" id="btn-undo" class="btn btn-ghost btn-sm btn-icon" title="تراجع" aria-label="تراجع" disabled>↶</button>
+      <button type="button" id="btn-redo" class="btn btn-ghost btn-sm btn-icon" title="إعادة" aria-label="إعادة" disabled>↷</button>
+    </div>
     <div id="dash"></div>
     <div id="dash-loading" class="dash-loading-overlay"><span class="spinner"></span><span>جارٍ التحديث…</span></div>
   </section>

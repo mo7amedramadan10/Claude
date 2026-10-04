@@ -2235,6 +2235,7 @@ function renderDashboard() {
   // actually checked when they do, same as a fresh question — see DashboardAccessService).
   const editable = !!state.currentUser && state.dashboardRole !== 'viewer';
   el('dash-toolbar').classList.toggle('hidden', !d || !(d.widgets || []).length);
+  el('dash-toolbar-top').classList.toggle('hidden', !d || !(d.widgets || []).length);
   el('edit-toggle').classList.toggle('hidden', !editable);
   el('autosave-status').classList.toggle('hidden', !editable);
   el('btn-undo').classList.toggle('hidden', !editable);
