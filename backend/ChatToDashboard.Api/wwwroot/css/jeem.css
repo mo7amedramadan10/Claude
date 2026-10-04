@@ -358,8 +358,6 @@
   width: 35%; min-width: 320px; display: flex; flex-direction: column;
   background: var(--surface); border-inline-start: 1px solid var(--line);
 }
-#chat-rail.rail-small { width: 22%; min-width: 220px; }
-#chat-rail.rail-large { width: 55%; min-width: 420px; }
 #chat-rail.rail-hidden { display: none; }
 #dash-pane { order: 1; }
 
@@ -489,13 +487,10 @@ form#form.composer { padding: 14px 20px 18px; border-top: 1px solid var(--line-2
 #send.send:not(:disabled):hover { background: var(--blue-600); transform: translateY(-1px); }
 #send .icon { transform: scaleX(-1); }
 
-/* مجموعة تصغير/تكبير/إخفاء لوحة المحادثة في شريط العنوان — إعادة تصريح كل خاصية كانت
-   العناصر دي بتاخدها من app.css القديم (نفس درس #sources-btn) عشان متفضلش حدود داكنة. */
-.rail-size-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
-.rail-size-toggle button { width: 32px; height: 32px; padding: 0; border: 0; border-inline-start: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: var(--fs-md); line-height: 1; }
-.rail-size-toggle button:first-child { border-inline-start: 0; }
-.rail-size-toggle button:hover:not(:disabled) { background: var(--blue-50); color: var(--brand-blue); }
-.rail-size-toggle button:disabled { opacity: .35; cursor: not-allowed; }
+/* فتح/إغلاق لوحة المحادثة — زرين بسيطين (مش شريط تصغير/تكبير/إخفاء قديم): #chat-hide-btn
+   في رأس المحادثة نفسه (مرئي لما تكون مفتوحة)، و#chat-fab دائري في أزرار الشريط العلوي
+   (مرئي بس لما تكون مقفولة) — زي الديزين بالظبط. */
+#chat-fab { border-radius: var(--r-full); }
 
 /* ==========================================================
    هيكل SaaS — المنصّة (كل المنظمات) ومستوى المنظمة (المشاريع)

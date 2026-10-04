@@ -5094,7 +5094,6 @@ function updateCrumbs(name) {
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
-  el('rail-size-toggle').classList.toggle('hidden', name !== 'chat');
   el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
   state.currentScreen = name;
   updateCrumbs(name);
@@ -5163,56 +5162,26 @@ async function loadCurrentProjectNav() {
   } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
 }
 
-// ---------- chat rail size (small / normal / large / hidden) ----------
-// Three controls, as requested: shrink, grow, hide-entirely. Independent of theme,
-// persisted the same way (localStorage) so the choice survives a reload.
-const RAIL_SIZES = ['small', 'normal', 'large'];
-function loadRailPrefs() {
-  let size = 'normal', hidden = false;
-  try {
-    const storedSize = localStorage.getItem('chatToDashboardRailSize');
-    if (RAIL_SIZES.includes(storedSize)) size = storedSize;
-    hidden = localStorage.getItem('chatToDashboardRailHidden') === '1';
-  } catch {}
-  return { size, hidden };
+// ---------- chat panel open/closed ----------
+// Two states only (per the design reference, not the old shrink/grow/hide rail-size
+// control): open — #chat-rail shows as usual, with its own إخفاء button (#chat-hide-btn,
+// top-right of the chat header) — or closed — #chat-rail disappears entirely (#dash-pane's
+// own flex:1 fills the freed width) and a round #chat-fab button appears among the topbar
+// actions to bring it back. Persisted the same way (localStorage) as before.
+function loadChatHiddenPref() {
+  try { return localStorage.getItem('chatToDashboardRailHidden') === '1'; } catch { return false; }
 }
-const railState = loadRailPrefs();
+let chatHidden = loadChatHiddenPref();
 
-function applyRailState() {
-  const rail = el('chat-rail');
-  rail.classList.remove('rail-small', 'rail-large', 'rail-hidden');
-  if (railState.hidden) rail.classList.add('rail-hidden');
-  else if (railState.size === 'small') rail.classList.add('rail-small');
-  else if (railState.size === 'large') rail.classList.add('rail-large');
-
-  el('rail-hide').textContent = railState.hidden ? '💬' : '🗕';
-  el('rail-hide').title = railState.hidden ? 'إظهار لوحة المحادثة' : 'إخفاء لوحة المحادثة';
-  el('rail-shrink').disabled = !railState.hidden && railState.size === 'small';
-  el('rail-grow').disabled = !railState.hidden && railState.size === 'large';
-
-  try {
-    localStorage.setItem('chatToDashboardRailSize', railState.size);
-    localStorage.setItem('chatToDashboardRailHidden', railState.hidden ? '1' : '0');
-  } catch {}
+function applyChatVisibility() {
+  el('chat-rail').classList.toggle('rail-hidden', chatHidden);
+  el('chat-fab').classList.toggle('hidden', !chatHidden);
+  try { localStorage.setItem('chatToDashboardRailHidden', chatHidden ? '1' : '0'); } catch {}
 }
-applyRailState();
+applyChatVisibility();
 
-el('rail-shrink').addEventListener('click', () => {
-  railState.hidden = false;
-  const idx = RAIL_SIZES.indexOf(railState.size);
-  if (idx > 0) railState.size = RAIL_SIZES[idx - 1];
-  applyRailState();
-});
-el('rail-grow').addEventListener('click', () => {
-  railState.hidden = false;
-  const idx = RAIL_SIZES.indexOf(railState.size);
-  if (idx < RAIL_SIZES.length - 1) railState.size = RAIL_SIZES[idx + 1];
-  applyRailState();
-});
-el('rail-hide').addEventListener('click', () => {
-  railState.hidden = !railState.hidden;
-  applyRailState();
-});
+el('chat-hide-btn').addEventListener('click', () => { chatHidden = true; applyChatVisibility(); });
+el('chat-fab').addEventListener('click', () => { chatHidden = false; applyChatVisibility(); });
 
 // ---------- boot ----------
 el.dash = el('dash'); el.messages = el('messages'); el.send = el('send');

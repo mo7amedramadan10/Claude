@@ -177,11 +177,9 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="rail-size-toggle" id="rail-size-toggle">
-          <button type="button" id="rail-shrink" title="تصغير لوحة المحادثة">–</button>
-          <button type="button" id="rail-grow" title="تكبير لوحة المحادثة">+</button>
-          <button type="button" id="rail-hide" title="إخفاء لوحة المحادثة">🗕</button>
+          <button type="button" id="chat-fab" class="btn btn-soft btn-icon hidden" aria-label="فتح المحادثة" title="فتح المحادثة">
+            <svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>
+          </button>
         </div>
       </div>
     </header>
@@ -197,6 +195,9 @@
       <button type="button" id="new-dashboard-btn" class="btn btn-ghost btn-sm"
         title="يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر">
         <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>لوحة جديدة
+      </button>
+      <button type="button" id="chat-hide-btn" class="btn btn-ghost btn-sm btn-icon" aria-label="إخفاء المحادثة" title="إخفاء المحادثة">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg>
       </button>
     </div>
     <div id="chat-mode-tabs" class="chat-modes" role="tablist" aria-label="وضع المحادثة">
