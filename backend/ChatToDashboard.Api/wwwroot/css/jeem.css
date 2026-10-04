@@ -375,7 +375,7 @@
 
 /* تبويبتين كبيرتين (أيقونة + عنوان غامق + وصف صغير تحته) بدل الزرين النصيين الصغار
    القدام — زي تبويب "بناء اللوحة"/"استفسارات" في الديزين المرسل. */
-#chat-mode-tabs { display: flex; margin: 0 20px 14px; padding: 4px; border-radius: var(--r-md); background: var(--line-2); gap: 4px; }
+#chat-mode-tabs { display: flex; margin: 14px 20px; padding: 4px; border-radius: var(--r-md); background: var(--line-2); gap: 4px; }
 .chat-mode-tab {
   flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0;
   border-radius: calc(var(--r-md) - 4px); background: transparent; color: var(--ink-3);
