@@ -464,8 +464,10 @@
 }
 .inquiry-src-btn { background: transparent; border: 1px solid var(--line); color: var(--ink-2); }
 .inquiry-src-btn:hover, .inquiry-src-btn.active { border-color: var(--brand-blue); color: var(--brand-blue); }
-.inquiry-convert-btn { background: var(--brand-blue); border: 1px solid var(--brand-blue); color: #fff; }
-.inquiry-convert-btn:hover { background: var(--blue-600); border-color: var(--blue-600); }
+/* نفس خلفية أيقونة جيم (.ai-ava/.msg.bot::before) — سماوي فاتح بدل الأزرق الصلب، بما إن
+   الزرار ده إجراء ثانوي جوّه رد جيم نفسه مش إجراء أساسي مستقل. */
+.inquiry-convert-btn { background: var(--cyan-50); border: 1px solid transparent; color: var(--brand-blue); }
+.inquiry-convert-btn:hover { background: var(--cyan-100); }
 
 /* مُقنَّعة (الصلاحية اتشالت وقت إعادة الفتح) — محايدة، من غير أي إجراءات. */
 .inquiry-block.masked { background: var(--surface-2); border: 1px solid var(--line); }
@@ -497,16 +499,25 @@
 .icp-cancel { background: transparent; border: 0; color: var(--ink-3); }
 
 /* نافذة مصدر البيانات (ⓘ المصدر) — نفس .src-pop العامة بس بتخصيص أعلى (class مزدوج)
-   محصور بـ .inquiry-block-footer، عشان ميأثرش على نسخة .src-pop بتاعة عناصر اللوحة. */
+   محصور بـ .inquiry-block-footer، عشان ميأثرش على نسخة .src-pop بتاعة عناصر اللوحة.
+   لازم نعيد تصريح .src-block/.src-lbl هنا كمان (مش بس .src-pop نفسها) — القديمة في
+   app.css بتحط عليهم font-family:var(--mono) (خط كود) بيتعارض بصريًا مع باقي خط جيم،
+   وده كان أكبر سبب إن البوب حاسس إنه "مش من نفس التصميم". */
 .inquiry-block-footer .src-pop {
   display: none; position: absolute; top: calc(100% + 8px); inset-inline-end: 0; z-index: 20;
-  width: min(300px, 90vw); padding: 12px;
+  width: min(300px, 90vw); padding: 14px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
-  box-shadow: var(--shadow-2, 0 8px 28px rgba(11,11,11,.14)); font-size: var(--fs-xs); line-height: 1.7;
+  box-shadow: var(--shadow-2, 0 8px 28px rgba(11,11,11,.14));
+  font-family: inherit; font-size: var(--fs-sm); line-height: 1.6; color: var(--ink);
 }
 .inquiry-block-footer .src-pop.open { display: block; }
-.inquiry-block-footer .src-block + .src-block { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line-2); }
-.inquiry-block-footer .src-lbl { display: block; margin-bottom: 2px; font-size: 11px; font-weight: 700; color: var(--brand-blue); }
+.inquiry-block-footer .src-block { font-family: inherit; }
+.inquiry-block-footer .src-block + .src-block { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-2); }
+.inquiry-block-footer .src-lbl {
+  display: inline-block; margin-bottom: 4px; padding: 2px 9px; border-radius: var(--r-full);
+  background: var(--blue-50); color: var(--blue-700); font-family: inherit;
+  font-size: 10.5px; font-weight: 700;
+}
 .hint {
   margin: auto; padding: 20px; border-radius: var(--r-md); background: var(--surface-2);
   border: 1px solid var(--line-2); color: var(--ink-2); text-align: center; font-size: var(--fs-sm);
