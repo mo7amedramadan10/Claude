@@ -697,6 +697,11 @@ form#form.composer { padding: 14px 20px 18px; border-top: 1px solid var(--line-2
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
   box-shadow: var(--shadow-2, 0 8px 28px rgba(11,11,11,.14));
 }
+/* الـ display:flex فوق ده بقوة id+class (110) بيكسب حتى .dropdown-panel.hidden العادية
+   (20) — لازم id+class+class هنا عشان .hidden فعلاً يشتغل، وإلا القائمة تفضل ظاهرة
+   طول الوقت بمجرد ما renderInquiryConvPanel() تتنادى أول مرة (مثلاً عند الدخول لوضع
+   استفسارات)، مش بس وقت الكليك على زر المحادثات. */
+#inquiry-conv-panel.dropdown-panel.hidden { display: none; }
 .inquiry-conv-item {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer;
 }

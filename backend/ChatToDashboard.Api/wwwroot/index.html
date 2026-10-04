@@ -98,11 +98,6 @@
         </li>
       </ul>
 
-      <ul class="nav">
-        <li><button type="button" class="nav-link tab" data-screen="active"><svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات النشطة</span><span class="badge" id="active-badge">0</span></button></li>
-        <li><button type="button" class="nav-link tab" data-screen="sharelinks"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">روابط المشاركة</span><span class="badge" id="sharelinks-badge">0</span></button></li>
-      </ul>
-
       <div class="admin-menu hidden" id="admin-menu">
         <div class="sb-label"><span>الإدارة</span></div>
         <ul class="nav">
@@ -140,42 +135,20 @@
       <nav class="crumbs" id="crumbs" aria-label="مسار التنقل"><strong>جيم</strong></nav>
       <span class="spacer"></span>
       <div class="actions">
+        <button type="button" class="btn btn-ghost tab" data-screen="history" title="سجل اللوحات المحفوظة لهذا المشروع">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg><span class="btn-label">سجل اللوحات</span><span class="badge" id="history-badge">0</span>
+        </button>
+        <button type="button" class="btn btn-ghost tab" data-screen="active" title="اللوحات النشطة">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="btn-label">اللوحات النشطة</span><span class="badge" id="active-badge">0</span>
+        </button>
+        <button type="button" class="btn btn-ghost tab" data-screen="sharelinks" title="روابط المشاركة">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-share"/></svg><span class="btn-label">روابط المشاركة</span><span class="badge" id="sharelinks-badge">0</span>
+        </button>
         <div id="dash-toolbar-wrap" class="hidden">
-          <button type="button" class="btn btn-ghost tab" data-screen="history" title="سجل اللوحات المحفوظة لهذا المشروع">
-            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg><span class="btn-label">سجل اللوحات</span><span class="badge" id="history-badge">0</span>
-          </button>
           <div id="dash-toolbar-top" class="dash-toolbar hidden">
             <button type="button" id="btn-activate" class="btn btn-soft hidden" title="حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين">
               <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg><span class="btn-label">تفعيل اللوحة</span>
             </button>
-            <div class="dropdown" id="export-menu">
-              <button type="button" id="export-menu-btn" class="btn btn-ghost">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">تصدير</span>
-                <svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-down"/></svg>
-              </button>
-              <div id="export-menu-panel" class="dropdown-panel hidden">
-                <button type="button" id="btn-export-pdf" class="dropdown-item">
-                  <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">PDF</span>
-                </button>
-                <button type="button" id="btn-export-pptx" class="dropdown-item">
-                  <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">PowerPoint</span>
-                </button>
-              </div>
-            </div>
-            <div class="dropdown" id="publish-menu">
-              <button type="button" id="publish-menu-btn" class="btn btn-primary">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg><span class="btn-label">نشر</span>
-                <svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-down"/></svg>
-              </button>
-              <div id="publish-menu-panel" class="dropdown-panel hidden">
-                <button type="button" id="btn-share" class="dropdown-item">
-                  <svg class="icon icon-sm" aria-hidden="true"><use href="#i-share"/></svg><span class="btn-label">مشاركة</span>
-                </button>
-                <button type="button" id="btn-publish" class="dropdown-item hidden" title="نشر هذه اللوحة إلى نظام عميل خارجي (التكاملات الخارجية) — فعل منفصل عن الحفظ/التعديل">
-                  <svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg><span class="btn-label">نشر</span>
-                </button>
-              </div>
-            </div>
           </div>
           <button type="button" id="chat-fab" class="btn btn-soft btn-icon hidden" aria-label="فتح المحادثة" title="فتح المحادثة">
             <svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>
@@ -272,6 +245,34 @@
       <button type="button" id="btn-refresh" class="btn btn-ghost" title="يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا">
         <span aria-hidden="true">🔄</span><span class="btn-label">تحديث</span>
       </button>
+      <div class="dropdown" id="export-menu">
+        <button type="button" id="export-menu-btn" class="btn btn-ghost">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">تصدير</span>
+          <svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-down"/></svg>
+        </button>
+        <div id="export-menu-panel" class="dropdown-panel hidden">
+          <button type="button" id="btn-export-pdf" class="dropdown-item">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">PDF</span>
+          </button>
+          <button type="button" id="btn-export-pptx" class="dropdown-item">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span class="btn-label">PowerPoint</span>
+          </button>
+        </div>
+      </div>
+      <div class="dropdown" id="publish-menu">
+        <button type="button" id="publish-menu-btn" class="btn btn-primary">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg><span class="btn-label">نشر</span>
+          <svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-down"/></svg>
+        </button>
+        <div id="publish-menu-panel" class="dropdown-panel hidden">
+          <button type="button" id="btn-share" class="dropdown-item">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-share"/></svg><span class="btn-label">مشاركة</span>
+          </button>
+          <button type="button" id="btn-publish" class="dropdown-item hidden" title="نشر هذه اللوحة إلى نظام عميل خارجي (التكاملات الخارجية) — فعل منفصل عن الحفظ/التعديل">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg><span class="btn-label">نشر</span>
+          </button>
+        </div>
+      </div>
       <button type="button" id="btn-undo" class="btn btn-ghost btn-sm btn-icon" title="تراجع" aria-label="تراجع" disabled>↶</button>
       <button type="button" id="btn-redo" class="btn btn-ghost btn-sm btn-icon" title="إعادة" aria-label="إعادة" disabled>↷</button>
       <button type="button" id="btn-add-widget" class="btn btn-ghost hidden">
