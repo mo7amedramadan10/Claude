@@ -3387,6 +3387,9 @@ function setChatMode(mode) {
   el('q').placeholder = mode === 'inquiry'
     ? 'اسأل استفسارًا عن بياناتك، أو تابع نقاشًا سابقًا — إجابة نصية مباشرة، من غير بناء لوحة…'
     : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
+  // نفس نص وصف "استفسارات" في chat-mode-tabs — يبقى متّسق بدل جملة "بناء اللوحة" الثابتة.
+  el('chat-head-desc').textContent = mode === 'inquiry'
+    ? 'إجابة سريعة بدون تعديل اللوحة' : 'يبني ويعدّل اللوحة من سؤالك';
   // Composer is a single rounded pill in both modes now, with a circular icon-only send button.
   el('send').innerHTML = '<svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>';
   el('send').setAttribute('aria-label', 'إرسال');

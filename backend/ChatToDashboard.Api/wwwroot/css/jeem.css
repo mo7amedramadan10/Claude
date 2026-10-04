@@ -366,7 +366,7 @@
 .chat-head .ai-ava { width: 40px; height: 40px; border-radius: 12px; background: var(--cyan-50); display: grid; place-items: center; flex: none; }
 .chat-head .ai-ava img { height: 26px; }
 .chat-head h2 { font-size: var(--fs-lg); font-weight: 500; }
-.chat-head p { font-size: var(--fs-xs); color: var(--ink-3); }
+.chat-head p { font-size: var(--fs-xs); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-head .grow { flex: 1; min-width: 0; }
 
 /* تبويبتين كبيرتين (أيقونة + عنوان غامق + وصف صغير تحته) بدل الزرين النصيين الصغار
