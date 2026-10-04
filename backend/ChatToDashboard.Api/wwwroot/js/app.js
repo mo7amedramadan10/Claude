@@ -3896,6 +3896,27 @@ el('sources-btn').addEventListener('click', e => {
 el('sources-panel').addEventListener('click', e => e.stopPropagation());
 document.addEventListener('click', () => el('sources-panel').classList.add('hidden'));
 
+// ---------- قوائم تصدير / نشر منسدلة (شريط اللوحة) ----------
+const closeAllDropdowns = () => {
+  document.querySelectorAll('.dropdown-panel').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.dropdown.is-open').forEach(d => d.classList.remove('is-open'));
+};
+[['export-menu', 'export-menu-btn', 'export-menu-panel'], ['publish-menu', 'publish-menu-btn', 'publish-menu-panel']].forEach(([wrapId, btnId, panelId]) => {
+  const wrap = el(wrapId), btn = el(btnId), panel = el(panelId);
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const willOpen = panel.classList.contains('hidden');
+    closeAllDropdowns();
+    panel.classList.toggle('hidden', !willOpen);
+    wrap.classList.toggle('is-open', willOpen);
+  });
+  panel.addEventListener('click', e => {
+    e.stopPropagation();
+    if (e.target.closest('.dropdown-item')) closeAllDropdowns();
+  });
+});
+document.addEventListener('click', closeAllDropdowns);
+
 el('sys-all').addEventListener('change', e => {
   state.onSystems = e.target.checked ? new Set(state.systems.map(s => s.id)) : new Set();
   renderSources();
@@ -5007,6 +5028,7 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   el('rail-size-toggle').classList.toggle('hidden', name !== 'chat');
+  el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
