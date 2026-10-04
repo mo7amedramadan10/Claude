@@ -6,7 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
-/// <summary>Account management — creating/editing users and their per-source permissions. Admin only.</summary>
+/// <summary>Account management — creating/editing users and their per-source permissions.
+/// Admin only, and always scoped to the caller's own organization: List/Update/Delete here
+/// never reach into another organization's accounts, even for the platform owner (who has
+/// their own cross-every-organization view on OrganizationsController.Get instead).</summary>
 [ApiController]
 [Route("api/users")]
 [Authorize(Roles = UserRoles.Admin)]
@@ -16,9 +19,15 @@ public class UsersController : ControllerBase
 
     public UsersController(UserStore users) => _users = users;
 
+    private string? OrganizationId => User.FindFirstValue("OrganizationId") is { Length: > 0 } id ? id : null;
+
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken ct) =>
-        Ok((await _users.ListAsync(ct)).Select(UserStore.ToInfo));
+    public async Task<IActionResult> List(CancellationToken ct)
+    {
+        var organizationId = OrganizationId;
+        if (organizationId is null) return Ok(Array.Empty<UserInfo>());
+        return Ok((await _users.ListByOrganizationAsync(organizationId, ct)).Select(UserStore.ToInfo));
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] UserRequest request, CancellationToken ct)
@@ -56,17 +65,20 @@ public class UsersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(string id, [FromBody] UserRequest request, CancellationToken ct)
     {
+        var organizationId = OrganizationId;
         var user = await _users.FindByIdAsync(id, ct);
-        if (user is null) return NotFound(new { error = "المستخدم غير موجود." });
+        if (organizationId is null || user is null || user.OrganizationId != organizationId)
+            return NotFound(new { error = "المستخدم غير موجود." });
 
         var error = ValidateRequest(request, isCreate: false);
         if (error is not null) return BadRequest(new { error });
 
         // Never allow the last remaining admin to demote or deactivate themselves by
-        // accident — that would lock everyone out of user management.
+        // accident — that would lock everyone out of user management. Scoped to this same
+        // organization: another org's admin headcount is none of this check's business.
         if (user.Role == UserRoles.Admin && (request.Role != UserRoles.Admin || !request.IsActive))
         {
-            var otherActiveAdmins = (await _users.ListAsync(ct))
+            var otherActiveAdmins = (await _users.ListByOrganizationAsync(organizationId, ct))
                 .Any(u => u.Id != user.Id && u.Role == UserRoles.Admin && u.IsActive);
             if (!otherActiveAdmins)
                 return BadRequest(new { error = "لازم يفضل مسؤول واحد نشط على الأقل." });
@@ -99,11 +111,14 @@ public class UsersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
+        var organizationId = OrganizationId;
         var user = await _users.FindByIdAsync(id, ct);
-        if (user is null) return NotFound(new { error = "المستخدم غير موجود." });
+        if (organizationId is null || user is null || user.OrganizationId != organizationId)
+            return NotFound(new { error = "المستخدم غير موجود." });
         if (user.Role == UserRoles.Admin)
         {
-            var otherActiveAdmins = (await _users.ListAsync(ct)).Any(u => u.Id != id && u.Role == UserRoles.Admin && u.IsActive);
+            var otherActiveAdmins = (await _users.ListByOrganizationAsync(organizationId, ct))
+                .Any(u => u.Id != id && u.Role == UserRoles.Admin && u.IsActive);
             if (!otherActiveAdmins) return BadRequest(new { error = "لازم يفضل مسؤول واحد نشط على الأقل." });
         }
         await _users.DeleteAsync(id, ct);

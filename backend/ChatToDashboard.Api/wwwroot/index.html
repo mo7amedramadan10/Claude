@@ -360,10 +360,32 @@
     <p class="modal-note">هيتعمل لها مشروع افتراضي تلقائيًا باسم «المشروع الرئيسي».</p>
     <form id="new-org-form">
       <div class="field"><label for="new-org-name">اسم المنظمة</label><input id="new-org-name" type="text" required placeholder="مثال: شركة ثقة"></div>
+      <div class="roles-section-title">مسؤول المنظمة (اختياري — تقدر تضيفه بعدين)</div>
+      <div class="field"><label for="new-org-admin-username">اسم المستخدم</label><input id="new-org-admin-username" type="text" placeholder="مثال: org.admin" autocomplete="off"></div>
+      <div class="field"><label for="new-org-admin-name">الاسم الظاهر</label><input id="new-org-admin-name" type="text" placeholder="مثال: مسؤول شركة ثقة"></div>
+      <div class="field"><label for="new-org-admin-password">كلمة المرور</label><input id="new-org-admin-password" type="text" placeholder="اتركها فاضية لو مش محتاج تضيف مسؤول الآن" autocomplete="off"></div>
       <div id="new-org-error" class="roles-error hidden"></div>
       <div class="modal-actions">
         <button type="button" id="new-org-cancel">إلغاء</button>
         <button type="submit" id="new-org-save">إنشاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="new-org-admin-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>تعيين مسؤول</h3>
+    <p class="modal-note">هيبقى مسؤول (Admin) على منظمة «<span id="new-org-admin-org-name">—</span>» فقط.</p>
+    <input type="hidden" id="new-org-admin-org-id">
+    <form id="new-org-admin-form">
+      <div class="field"><label for="org-admin-username">اسم المستخدم</label><input id="org-admin-username" type="text" required autocomplete="off"></div>
+      <div class="field"><label for="org-admin-name">الاسم الظاهر</label><input id="org-admin-name" type="text"></div>
+      <div class="field"><label for="org-admin-password">كلمة المرور</label><input id="org-admin-password" type="text" required autocomplete="off"></div>
+      <div id="new-org-admin-error" class="roles-error hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="new-org-admin-cancel">إلغاء</button>
+        <button type="submit" id="new-org-admin-save">تعيين</button>
       </div>
     </form>
   </div>
@@ -380,6 +402,29 @@
         <button type="submit" id="new-project-save">إنشاء</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div id="project-roles-modal" class="modal-overlay hidden">
+  <div class="modal roles-modal-box">
+    <h3>أعضاء المشروع</h3>
+    <p class="modal-note">المشروع: <strong id="project-roles-name">—</strong></p>
+    <input type="hidden" id="project-roles-id" />
+    <div class="roles-section-title">إضافة عضو</div>
+    <div class="role-add-row">
+      <select id="project-role-add-user"></select>
+      <select id="project-role-add-select">
+        <option value="owner">مالك</option>
+        <option value="editor">محرر</option>
+        <option value="viewer">مشاهد</option>
+      </select>
+      <button type="button" id="project-role-add-btn" class="btn btn-primary btn-sm">إضافة</button>
+    </div>
+    <div id="project-roles-list" class="roles-list"></div>
+    <div id="project-roles-error" class="roles-error hidden"></div>
+    <div class="modal-actions">
+      <button type="button" id="project-roles-modal-close">إغلاق</button>
+    </div>
   </div>
 </div>
 

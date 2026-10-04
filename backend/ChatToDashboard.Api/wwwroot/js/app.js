@@ -6822,7 +6822,10 @@ function renderOrganizations(orgs) {
       <td><span class="num">${o.projectCount}</span></td>
       <td><span class="num">${o.userCount}</span></td>
       <td class="muted">${new Date(o.createdAt).toLocaleDateString('ar-EG')}</td>
-      <td><div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-toggle-org="${esc(o.id)}" data-active="${o.isActive}">${o.isActive ? 'تعطيل' : 'تفعيل'}</button></div></td>
+      <td><div class="row-actions">
+        <button type="button" class="btn btn-ghost btn-sm" data-assign-admin="${esc(o.id)}" data-org-name="${esc(o.name)}">تعيين مسؤول</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-toggle-org="${esc(o.id)}" data-active="${o.isActive}">${o.isActive ? 'تعطيل' : 'تفعيل'}</button>
+      </div></td>
     </tr>`).join('');
   el('organizations-count-label').textContent = `عرض ${orgs.length} منظمة`;
 
@@ -6832,11 +6835,16 @@ function renderOrganizations(orgs) {
       await fetch(`/api/organizations/${btn.dataset.toggleOrg}/${activate ? 'activate' : 'suspend'}`, { method: 'POST' });
       loadOrganizations();
     }));
+  el('organizations-table-body').querySelectorAll('[data-assign-admin]').forEach(btn =>
+    btn.addEventListener('click', () => openOrgAdminModal(btn.dataset.assignAdmin, btn.dataset.orgName)));
 }
 
 el('new-org-btn').addEventListener('click', () => {
   el('new-org-error').classList.add('hidden');
   el('new-org-name').value = '';
+  el('new-org-admin-username').value = '';
+  el('new-org-admin-name').value = '';
+  el('new-org-admin-password').value = '';
   el('new-org-modal').classList.remove('hidden');
 });
 el('new-org-cancel').addEventListener('click', () => el('new-org-modal').classList.add('hidden'));
@@ -6844,6 +6852,15 @@ el('new-org-form').addEventListener('submit', async e => {
   e.preventDefault();
   const name = el('new-org-name').value.trim();
   if (!name) return;
+  const adminUsername = el('new-org-admin-username').value.trim();
+  const adminPassword = el('new-org-admin-password').value;
+  // Either both admin fields are given (create the org's first admin in the same step)
+  // or neither is — half-filled would silently create an org with no working admin login.
+  if (!!adminUsername !== !!adminPassword) {
+    el('new-org-error').textContent = 'لو هتضيف مسؤول دلوقتي، لازم اسم المستخدم وكلمة المرور مع بعض.';
+    el('new-org-error').classList.remove('hidden');
+    return;
+  }
   const btn = el('new-org-save');
   btn.disabled = true;
   try {
@@ -6852,11 +6869,54 @@ el('new-org-form').addEventListener('submit', async e => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'تعذّر إنشاء المنظمة.');
+    if (adminUsername) {
+      const adminRes = await fetch(`/api/organizations/${data.organization.id}/admins`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: adminUsername, displayName: el('new-org-admin-name').value.trim(), password: adminPassword }),
+      });
+      const adminData = await adminRes.json().catch(() => null);
+      if (!adminRes.ok) throw new Error(`اتعملت المنظمة، لكن تعذّر تعيين المسؤول: ${adminData?.error || adminRes.status}`);
+    }
     el('new-org-modal').classList.add('hidden');
     loadOrganizations();
   } catch (err) {
     el('new-org-error').textContent = err.message;
     el('new-org-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function openOrgAdminModal(orgId, orgName) {
+  el('new-org-admin-error').classList.add('hidden');
+  el('new-org-admin-org-id').value = orgId;
+  el('new-org-admin-org-name').textContent = orgName;
+  el('org-admin-username').value = '';
+  el('org-admin-name').value = '';
+  el('org-admin-password').value = '';
+  el('new-org-admin-modal').classList.remove('hidden');
+}
+el('new-org-admin-cancel').addEventListener('click', () => el('new-org-admin-modal').classList.add('hidden'));
+el('new-org-admin-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const orgId = el('new-org-admin-org-id').value;
+  const username = el('org-admin-username').value.trim();
+  const password = el('org-admin-password').value;
+  if (!username || !password) return;
+  const btn = el('new-org-admin-save');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/organizations/${orgId}/admins`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, displayName: el('org-admin-name').value.trim(), password }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || 'تعذّر تعيين المسؤول.');
+    el('new-org-admin-modal').classList.add('hidden');
+    loadOrganizations();
+  } catch (err) {
+    el('new-org-admin-error').textContent = err.message;
+    el('new-org-admin-error').classList.remove('hidden');
   } finally {
     btn.disabled = false;
   }
@@ -6883,6 +6943,7 @@ function renderProjects(projects) {
       <div class="top">
         <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg></span>
         <div><h3>${esc(p.name)}</h3><p class="desc">${isLive ? 'مساحة العمل النشطة الآن' : 'سيُربط بمساحة عمل خاصة قريبًا'}</p></div>
+        ${isAdmin ? `<button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="أعضاء المشروع" aria-label="أعضاء المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button>` : ''}
       </div>
     </a>`;
   }).join('');
@@ -6893,6 +6954,8 @@ function renderProjects(projects) {
 
   el('projects-grid').querySelectorAll('[data-project]').forEach(card =>
     card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); }));
+  el('projects-grid').querySelectorAll('[data-members]').forEach(btn =>
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openProjectRolesModal(btn.dataset.members, btn.dataset.pname); }));
   el('new-project-card')?.addEventListener('click', () => {
     el('new-project-error').classList.add('hidden');
     el('new-project-name').value = '';
@@ -6922,6 +6985,60 @@ el('new-project-form').addEventListener('submit', async e => {
     btn.disabled = false;
   }
 });
+
+// ---------- project members (Owner/Editor/Viewer roles on a project) ----------
+async function openProjectRolesModal(projectId, projectName) {
+  el('project-roles-error').classList.add('hidden');
+  el('project-roles-id').value = projectId;
+  el('project-roles-name').textContent = projectName;
+  el('project-roles-list').innerHTML = '';
+  if (!state.users.length) await loadUsers();
+  el('project-role-add-user').innerHTML = state.users.length
+    ? state.users.filter(u => u.isActive).map(u => `<option value="${esc(u.id)}">${esc(u.displayName || u.username)}</option>`).join('')
+    : '<option value="">لا يوجد مستخدمون آخرون بعد</option>';
+  el('project-roles-modal').classList.remove('hidden');
+  await reloadProjectRolesModal();
+}
+
+async function reloadProjectRolesModal() {
+  const id = el('project-roles-id').value;
+  const res = await fetch(`/api/projects/${encodeURIComponent(id)}/roles`);
+  if (!res.ok) {
+    el('project-roles-error').textContent = 'تعذّر تحميل الأعضاء.';
+    el('project-roles-error').classList.remove('hidden');
+    return;
+  }
+  const data = await res.json();
+  el('project-roles-list').innerHTML = data.roles.length ? data.roles.map(r => `
+      <div class="role-row">
+        <span class="name">${esc(r.displayName)} — ${ROLE_LABELS[r.role] || r.role}</span>
+        <button type="button" class="remove-role-btn" data-remove="${esc(r.userId)}">إزالة</button>
+      </div>`).join('') : `<div class="owner-line">لا يوجد أعضاء بعد — المشروع متاح للمسؤولين فقط.</div>`;
+  el('project-roles-list').querySelectorAll('[data-remove]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      await fetch(`/api/projects/${encodeURIComponent(id)}/roles/${encodeURIComponent(btn.dataset.remove)}`, { method: 'DELETE' });
+      await reloadProjectRolesModal();
+    }));
+}
+
+el('project-role-add-btn').addEventListener('click', async () => {
+  const id = el('project-roles-id').value;
+  const userId = el('project-role-add-user').value;
+  const role = el('project-role-add-select').value;
+  if (!userId) return;
+  const res = await fetch(`/api/projects/${encodeURIComponent(id)}/roles/${encodeURIComponent(userId)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    el('project-roles-error').textContent = data?.error || 'تعذّر إضافة العضو.';
+    el('project-roles-error').classList.remove('hidden');
+    return;
+  }
+  el('project-roles-error').classList.add('hidden');
+  await reloadProjectRolesModal();
+});
+el('project-roles-modal-close').addEventListener('click', () => el('project-roles-modal').classList.add('hidden'));
 
 async function loadUsers() {
   const res = await fetch('/api/users');

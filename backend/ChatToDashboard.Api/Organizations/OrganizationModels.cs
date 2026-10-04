@@ -34,3 +34,14 @@ public class OrganizationRequest
 {
     [JsonPropertyName("name")] public string Name { get; set; } = "";
 }
+
+/// <summary>Body of POST /api/organizations/{id}/admins — the platform owner assigning (or
+/// adding another) Admin-role account to someone else's organization. Always Local auth and
+/// Role=Admin; there's no case for creating an Active-Directory or non-admin account here —
+/// that's the org's own Admin's job via UsersController once one exists.</summary>
+public class CreateOrgAdminRequest
+{
+    [JsonPropertyName("username")] public string Username { get; set; } = "";
+    [JsonPropertyName("displayName")] public string DisplayName { get; set; } = "";
+    [JsonPropertyName("password")] public string Password { get; set; } = "";
+}

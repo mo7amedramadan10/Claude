@@ -90,6 +90,37 @@ public class OrganizationsController : ControllerBase
         });
     }
 
+    /// <summary>Assigns (creates) an Admin account for someone else's organization — the
+    /// platform owner's half of "build an organization and put an admin on it"; the org's
+    /// own Admin then creates everyone else through UsersController, which only ever works
+    /// within the caller's own organization.</summary>
+    [HttpPost("{id}/admins")]
+    public async Task<IActionResult> CreateAdmin(string id, [FromBody] CreateOrgAdminRequest request, CancellationToken ct)
+    {
+        var org = await _organizations.FindByIdAsync(id, ct);
+        if (org is null) return NotFound(new { error = "المنظمة غير موجودة." });
+        if (string.IsNullOrWhiteSpace(request.Username)) return BadRequest(new { error = "اسم المستخدم مطلوب." });
+        if (string.IsNullOrWhiteSpace(request.Password)) return BadRequest(new { error = "كلمة المرور مطلوبة." });
+        if (await _users.FindByUsernameAsync(request.Username.Trim(), ct) is not null)
+            return Conflict(new { error = "اسم المستخدم ده موجود بالفعل." });
+
+        var admin = new AppUser
+        {
+            Username = request.Username.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? request.Username.Trim() : request.DisplayName.Trim(),
+            AuthMethod = AuthMethods.Local,
+            Role = UserRoles.Admin,
+            IsActive = true,
+            PasswordHash = PasswordHasher.Hash(request.Password),
+            AllowAllSystems = true,
+            AllowAllFiles = true,
+            OrganizationId = org.Id,
+            IsPlatformOwner = false,
+        };
+        var created = await _users.CreateAsync(admin, ct);
+        return Ok(UserStore.ToInfo(created));
+    }
+
     [HttpPost("{id}/activate")]
     public async Task<IActionResult> Activate(string id, CancellationToken ct) => await SetActive(id, true, ct);
 

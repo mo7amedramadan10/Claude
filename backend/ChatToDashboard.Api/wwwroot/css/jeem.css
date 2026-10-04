@@ -698,6 +698,8 @@ form#form.composer.hidden { display: none; }
 .proj-card h3 { font-size: var(--fs-lg); }
 .proj-card .desc { font-size: var(--fs-xs); color: var(--ink-3); margin-top: 2px; }
 .proj-card.is-pending { opacity: .7; }
+/* زرار "أعضاء المشروع" — ملاصق لحافة الكارت المقابلة، مش لاصق في النص جنبه مباشرة. */
+.proj-card .top [data-members] { margin-inline-start: auto; flex: none; position: relative; z-index: 1; }
 
 .new-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center;
