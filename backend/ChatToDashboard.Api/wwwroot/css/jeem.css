@@ -479,7 +479,13 @@ form#form.composer { padding: 14px 20px 18px; border-top: 1px solid var(--line-2
 .input-box #q::placeholder { color: var(--ink-3); }
 .input-tools { display: flex; align-items: center; gap: 4px; }
 .input-tools .grow { flex: 1; }
-.input-tools .hint { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+/* .hint العامة (صندوق الأمثلة الفارغ) بتحط padding/border/background/border-radius —
+   هنا مجرد كلمة تعريفية "Enter للإرسال" بجانب أزرار الإدخال، مش صندوق ولا زر، فلازم
+   نلغي كل خاصية من .hint العامة صراحةً (إعادة تصريحها هنا مش كافية إلا لو شملت الكل). */
+.input-tools .hint {
+  margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent;
+  font-size: 11px; color: var(--ink-3); white-space: nowrap;
+}
 #mic-btn.listening { background: var(--danger) !important; color: #fff !important; animation: jeem-mic-pulse 1.2s ease-in-out infinite; }
 @keyframes jeem-mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
 
