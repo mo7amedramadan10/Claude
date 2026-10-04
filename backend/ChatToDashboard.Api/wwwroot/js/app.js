@@ -2256,6 +2256,8 @@ function renderDashboard() {
   // Same gating the old bottom-of-grid "+ إضافة عنصر" button had (editable AND already in
   // تحرير mode) — only relocated into the toolbar, not a behavior change.
   el('btn-add-widget').classList.toggle('hidden', !(editable && state.editMode));
+  // "إدارة الصلاحيات" — Owner-only, same condition the old dash-meta button had.
+  el('btn-manage-roles').classList.toggle('hidden', !(state.dashboardIsActive && state.dashboardRole === 'owner'));
   // A Draft has no Owner and can't be shared (see btn-share below) — offer to activate it
   // right here instead of sending the user to "السجل" to do it. Once Active, this hides and
   // مشاركة unlocks.
@@ -2297,14 +2299,20 @@ function renderDashboard() {
   const updatedText = formatUpdatedAt(state.lastRefreshedAt);
   const sourceLabels = computeDashboardSources(d.widgets);
   const sourceText = sourceLabels.length ? `مصادر البيانات: ${sourceLabels.join('، ')}` : '';
-  const metaHtml = [sourceText, updatedText].filter(Boolean)
-    .map(t => `<span>${esc(t)}</span>`).join('<span class="dot-sep"></span>');
+  // حالة اللوحة (نشطة/الدور) جنب تاريخ آخر تحديث في نفس سطر .dash-meta، بدل صف منفصل
+  // تحتها — زر "إدارة الصلاحيات" نفسه انتقل لشريط الأدوات (جنب تحديث/تراجع/إعادة).
+  const metaBits = [
+    sourceText && `<span>${esc(sourceText)}</span>`,
+    updatedText && `<span>${esc(updatedText)}</span>`,
+    state.dashboardIsActive && dashboardStatusBadgesHtml(),
+  ].filter(Boolean);
+  const metaHtml = metaBits.join('<span class="dot-sep"></span>');
   el.dash.innerHTML = `<section class="dash-head">
       <div class="dash-title">
         <h1>${esc(d.name || d.summary)}</h1>
         ${metaHtml ? `<div class="dash-meta">${metaHtml}</div>` : ''}
       </div>
-    </section>` + dashboardTopBarHtml();
+    </section>${dashboardDisabledBannerHtml()}`;
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
   if (state.shareId) {
@@ -2780,39 +2788,22 @@ function computeDashboardSources(widgets) {
     .map(t => state.tableLabels[t] || t)
     .sort((a, b) => a.localeCompare(b, 'ar'));
 }
-// ---------- Part 2: Active-dashboard status bar (state badge, role badge, manage-roles) ----------
+// ---------- Part 2: Active-dashboard status badges (state + role) ----------
+// "⚙️ إدارة الصلاحيات" itself lives in the toolbar now (#btn-manage-roles, next to
+// تحديث/تراجع/إعادة) — see its own hidden-toggle + click handler below.
 const ROLE_LABELS = { owner: 'مالك', editor: 'محرر', viewer: 'مشاهد' };
 function dashboardStatusBadgesHtml() {
   const roleBadge = state.dashboardRole
     ? `<span class="role-badge${state.dashboardRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[state.dashboardRole] || state.dashboardRole}</span>`
     : '';
-  const manageBtn = state.dashboardRole === 'owner'
-    ? `<button type="button" class="manage-roles-btn" data-id="${esc(state.currentHistoryId || '')}">⚙️ إدارة الصلاحيات</button>` : '';
-  return `<span class="state-badge active">نشطة</span>${roleBadge}${manageBtn}`;
+  return `<span class="state-badge active">نشطة</span>${roleBadge}`;
 }
 function dashboardDisabledBannerHtml() {
   return state.dashboardDisabled
     ? `<div class="dashboard-disabled-banner">⚠️ ${esc(state.dashboardDisabledReason || 'هذه اللوحة معطّلة حاليًا.')}</div>`
     : '';
 }
-
-// The Active-dashboard state/role/manage-roles badges — data sources moved up into the
-// title's own .dash-meta line (see renderDashboard) instead of a separate row here.
-function dashboardTopBarHtml() {
-  const status = state.dashboardIsActive ? dashboardStatusBadgesHtml() : '';
-  if (!status) return '';
-  return `<div id="dashboard-top-bar">
-      <div id="dashboard-status-bar">${status}</div>
-    </div>` + dashboardDisabledBannerHtml();
-}
-// Delegated (not re-bound every render, since #dashboard-status-bar's own HTML is replaced
-// wholesale by renderDashboard() each time) — #dash is the stable ancestor. (el.dash isn't
-// cached yet at this point in the script — see the "boot" section near the bottom — so this
-// resolves the element directly instead.)
-el('dash').addEventListener('click', e => {
-  const btn = e.target.closest('.manage-roles-btn');
-  if (btn?.dataset.id) openRolesModal(btn.dataset.id);
-});
+el('btn-manage-roles').addEventListener('click', () => openRolesModal(state.currentHistoryId));
 
 // ---------- export (PDF / PowerPoint) ----------
 // PDF: the browser's own print-to-PDF, steered by the @media print rules above —
