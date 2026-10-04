@@ -520,20 +520,16 @@
 .attached-image button { border: 0; background: transparent; color: var(--danger); font-size: 15px; }
 
 form#form.composer { padding: 14px 20px 18px; border-top: 1px solid var(--line-2); display: flex; flex-direction: column; gap: 10px; }
-.sources-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.sources-row .lbl { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
 .sources { position: relative; }
-/* إعادة تصريح كل خاصية كان #sources-btn القديم (بنفس المعرّف، فيفوز بالأقدمية دايمًا على
-   .chip وحدها) بيحددها — وإلا فضلت قيمه القديمة (حدود داكنة افتراضيًا، زوايا غير دائرية)
-   شغالة رغم ترتيب التحميل، لأن معرّف ID دايمًا بيكسب الـ class بغض النظر عن ترتيب الملفات. */
-#sources-btn.chip {
-  display: inline-flex; align-items: center; gap: 6px; max-width: 200px; height: 32px;
-  padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-full);
-  background: var(--surface); color: var(--ink-2); font-size: var(--fs-xs); font-weight: 500;
-  white-space: nowrap; overflow: hidden;
+/* المصادر بقت أيقونة جوّه .input-tools جنب زر المايك (بدل شريط/chip منفصل فوق صندوق
+   الكتابة) — #sources-btn.attach-btn (id+class) بتاخد شكل .attach-btn بالظبط (32×32،
+   بدون حدود/خلفية) وبتكسب أقدمية #sources-btn القديم في app.css (id لوحده، حدود داكنة
+   وعرض 41px) بغض النظر عن ترتيب التحميل، لأن id+class أعلى تخصيصًا من id وحدها. */
+#sources-btn.attach-btn {
+  display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+  border: 0; background: transparent; border-radius: var(--r-sm); color: var(--ink-2); flex: none; cursor: pointer;
 }
-#sources-btn.chip:hover { border-color: var(--brand-blue); color: var(--brand-blue); background: var(--blue-50); }
-#sources-btn.chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#sources-btn.attach-btn:hover { background: var(--blue-50); color: var(--brand-blue); }
 #sources-panel {
   position: absolute; inset-inline-start: 0; bottom: calc(100% + 8px); z-index: 40; width: min(300px, 86vw);
   max-height: 60vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line);

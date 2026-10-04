@@ -3912,11 +3912,14 @@ function syncSourceHeaders() {
   el('file-all').checked = state.sourceFiles.length > 0 && state.onFiles.size === state.sourceFiles.length;
   const total = state.systems.length + state.sourceFiles.length;
   const on = state.onSystems.size + state.onFiles.size;
-  el('sources-label').textContent =
+  const label =
     total === 0 ? 'لا يوجد مصادر'
     : on === 0 ? 'لا يوجد مصدر مفعّل'
     : on === total ? `كل المصادر مفعّلة (${total})`
     : `${on} من ${total} مصادر مفعّلة`;
+  el('sources-label').textContent = label;
+  el('sources-btn').title = `المصادر: ${label}`;
+  el('sources-btn').setAttribute('aria-label', `المصادر: ${label}`);
 }
 
 el('sources-btn').addEventListener('click', e => {

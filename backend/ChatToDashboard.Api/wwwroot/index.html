@@ -202,23 +202,6 @@
       <button type="button" id="attached-image-remove" title="إزالة الصورة">✕</button>
     </div>
     <form id="form" class="composer">
-      <div class="sources-row">
-        <span class="lbl">المصادر:</span>
-        <div class="sources">
-          <button type="button" id="sources-btn" class="chip">
-            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>
-            <span id="sources-label">كل المصادر مفعّلة</span>
-            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
-          </button>
-          <div id="sources-panel" class="hidden">
-            <label class="source-item head"><input type="checkbox" id="sys-all" checked>الأنظمة — تحديد الكل</label>
-            <div id="system-toggles" class="nested"></div>
-            <hr>
-            <label class="source-item head"><input type="checkbox" id="file-all" checked>مستودع الملفات — تحديد الكل</label>
-            <div id="file-toggles" class="nested"></div>
-          </div>
-        </div>
-      </div>
       <div class="input-box">
         <label for="q" class="visually-hidden">السؤال</label>
         <input id="q" type="text" placeholder="اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…" autocomplete="off" />
@@ -227,6 +210,19 @@
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"/></svg>
             <input type="file" id="dash-image-input" accept="image/*" hidden>
           </label>
+          <div class="sources">
+            <button type="button" id="sources-btn" class="attach-btn" title="المصادر">
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>
+              <span id="sources-label" class="visually-hidden">كل المصادر مفعّلة</span>
+            </button>
+            <div id="sources-panel" class="hidden">
+              <label class="source-item head"><input type="checkbox" id="sys-all" checked>الأنظمة — تحديد الكل</label>
+              <div id="system-toggles" class="nested"></div>
+              <hr>
+              <label class="source-item head"><input type="checkbox" id="file-all" checked>مستودع الملفات — تحديد الكل</label>
+              <div id="file-toggles" class="nested"></div>
+            </div>
+          </div>
           <button type="button" id="mic-btn" class="attach-btn hidden" title="اسأل بصوتك" aria-label="اسأل بصوتك"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-mic"/></svg></button>
           <span class="grow"></span>
           <span class="hint">Enter للإرسال</span>
