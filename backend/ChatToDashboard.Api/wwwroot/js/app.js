@@ -655,6 +655,16 @@ function capRows(rows, xKey, yKey) {
  * Widget sources are authored as two sentences: "<where it came from>. <how it was calculated>."
  * Split on the first ". " so each half gets its own labelled block in the ⓘ popover.
  */
+/** Short label for a source chip's visible text: the "<where it came from>" sentence,
+ * trimmed of its trailing period. Falls back to "المصدر" when there's no source text. */
+function sourceSystemLabel(source) {
+  const s = String(source || '').trim();
+  if (!s) return 'المصدر';
+  const at = s.indexOf('. ');
+  const from = (at > -1 ? s.slice(0, at) : s).replace(/\.$/, '').trim();
+  return from || 'المصدر';
+}
+
 function sourcePopover(w) {
   const source = w.source || '';
   const at = source.indexOf('. ');
@@ -3471,8 +3481,13 @@ function inquiryBlockHtml(block, turnIndex, blockIndex) {
       <div class="inquiry-block-text">${renderInquiryBlockText(block.text)}</div>
       ${examinedHtml}
       <div class="inquiry-block-footer">
-        <button type="button" class="inquiry-src-btn"><span aria-hidden="true">ⓘ</span> المصدر</button>
-        <button type="button" class="inquiry-convert-btn" data-turn="${turnIndex}" data-block="${blockIndex}">حوّله لداشبورد</button>
+        <button type="button" class="inquiry-convert-btn" data-turn="${turnIndex}" data-block="${blockIndex}">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>أضف للوحة
+        </button>
+        <button type="button" class="inquiry-src-btn">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>
+          <span class="inquiry-src-btn-text">${esc(sourceSystemLabel(block.source))}</span>
+        </button>
         ${sourcePopover({ source: block.source })}
       </div>
       ${promptHtml}
