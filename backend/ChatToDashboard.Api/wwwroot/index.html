@@ -196,6 +196,15 @@
         title="يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر">
         <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>لوحة جديدة
       </button>
+      <button type="button" id="inquiry-new-btn" class="btn btn-ghost btn-sm hidden" title="بدء محادثة استفسارات جديدة">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>محادثة جديدة
+      </button>
+      <div class="dropdown" id="inquiry-conv-dropdown">
+        <button type="button" id="inquiry-conv-btn" class="btn btn-ghost btn-sm hidden" title="المحادثات المحفوظة">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg>المحادثات
+        </button>
+        <div id="inquiry-conv-panel" class="dropdown-panel hidden"></div>
+      </div>
       <button type="button" id="chat-hide-btn" class="btn btn-ghost btn-sm btn-icon" aria-label="إخفاء المحادثة" title="إخفاء المحادثة">
         <svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg>
       </button>
@@ -209,11 +218,6 @@
         <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg>
         <span><b>استفسارات</b><small>إجابة سريعة بدون تعديل اللوحة</small></span>
       </button>
-    </div>
-    <div id="inquiry-toolbar" class="hidden">
-      <button type="button" class="inquiry-tb-btn" id="inquiry-new-btn">➕ محادثة جديدة</button>
-      <button type="button" class="inquiry-tb-btn" id="inquiry-conv-btn">📂 المحادثات</button>
-      <div id="inquiry-conv-panel" class="hidden"></div>
     </div>
     <div id="messages" class="thread"></div>
     <div id="inquiry-messages" class="thread hidden"></div>

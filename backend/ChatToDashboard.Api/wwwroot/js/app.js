@@ -3379,7 +3379,8 @@ function setChatMode(mode) {
   });
   el('messages').classList.toggle('hidden', mode !== 'dashboard');
   el('inquiry-messages').classList.toggle('hidden', mode !== 'inquiry');
-  el('inquiry-toolbar').classList.toggle('hidden', mode !== 'inquiry');
+  el('inquiry-new-btn').classList.toggle('hidden', mode !== 'inquiry');
+  el('inquiry-conv-btn').classList.toggle('hidden', mode !== 'inquiry');
   // Attaching a dashboard screenshot and "ابدأ لوحة جديدة" only make sense for بناء اللوحة.
   el('dash-image-attach-label').classList.toggle('hidden', mode !== 'dashboard');
   el('new-dashboard-btn').classList.toggle('hidden', mode !== 'dashboard');
@@ -3607,16 +3608,19 @@ function renderInquiryConvPanel() {
       <button type="button" class="inquiry-conv-del" data-id="${esc(c.id)}" title="حذف" aria-label="حذف المحادثة">✕</button>
     </div>`).join('');
 }
+// #inquiry-conv-panel now carries the shared .dropdown-panel class (see the تصدير/نشر
+// dropdowns above), so the generic closeAllDropdowns() — already bound on every document
+// click — closes it too; no bespoke outside-click listener needed here anymore.
 el('inquiry-conv-btn').addEventListener('click', e => {
   e.stopPropagation();
   const panel = el('inquiry-conv-panel');
-  const open = !panel.classList.contains('hidden');
-  if (open) { panel.classList.add('hidden'); return; }
+  const wasOpen = !panel.classList.contains('hidden');
+  closeAllDropdowns();
+  if (wasOpen) return;
   renderInquiryConvPanel();
   panel.classList.remove('hidden');
 });
 el('inquiry-conv-panel').addEventListener('click', e => e.stopPropagation());
-document.addEventListener('click', () => el('inquiry-conv-panel')?.classList.add('hidden'));
 
 el('inquiry-conv-panel').addEventListener('click', async e => {
   const delBtn = e.target.closest('.inquiry-conv-del');
