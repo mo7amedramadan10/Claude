@@ -119,7 +119,8 @@ public class TemplatePromptService
             var specs = over?.WidgetsJson is { Length: > 0 } json
                 ? JsonSerializer.Deserialize<List<BuiltinDashboardWidgetSpec>>(json, JsonOptions) ?? new()
                 : builtin?.Widgets.ToList() ?? new();
-            var list = string.Join("\n", specs.Select((w, i) => $"{i + 1}) {w.Title}"));
+            var list = string.Join("\n", specs.Select((w, i) =>
+                $"{i + 1}) {w.Title}" + (string.IsNullOrWhiteSpace(w.Prompt) ? "" : $" — {w.Prompt}")));
             prompt = prompt.Replace("{{widgets}}", list);
         }
         return (prompt, null);

@@ -2,7 +2,10 @@ namespace ChatToDashboard.Api.Templates;
 
 public record BuiltinWidgetTemplate(string Id, string Category, string Icon, string Title, string Description, string Prompt);
 
-public record BuiltinDashboardWidgetSpec(string Type, string Title);
+/// <summary>One of a dashboard template's 10 sub-widgets. <paramref name="Prompt"/> is optional
+/// extra instruction text for this one widget specifically — appended to its title when the
+/// {{widgets}} variable is expanded (see TemplatePromptService.ResolveDashboardAsync).</summary>
+public record BuiltinDashboardWidgetSpec(string Type, string Title, string? Prompt = null);
 
 public record BuiltinDashboardTemplate(
     string Id, string Layout, string Category, string Name, bool Popular, string Description,

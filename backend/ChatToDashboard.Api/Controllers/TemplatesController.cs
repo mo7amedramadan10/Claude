@@ -123,7 +123,7 @@ public class TemplatesController : ControllerBase
             foreach (var b in BuiltinTemplates.Dashboards)
                 items.Add(ToAdminItem(kind, b.Id, false, overrides.GetValueOrDefault(b.Id),
                     b.Name, b.Description, null, b.Category, b.Sources.ToList(),
-                    b.Widgets.Select(w => new { type = w.Type, title = w.Title }), b.Prompt));
+                    b.Widgets.Select(w => new { type = w.Type, title = w.Title, prompt = w.Prompt }), b.Prompt));
         }
         foreach (var o in overrides.Values.Where(o => o.IsCustom))
             items.Add(ToAdminItem(kind, o.Key, true, o, o.Title ?? "", o.Description ?? "", o.Icon,
@@ -331,7 +331,7 @@ public class TemplatesController : ControllerBase
         title = over?.Title ?? title, description = over?.Description ?? description,
         icon = over?.Icon ?? icon, category = over?.Category ?? category,
         sources = DeserializeSources(over?.SourcesJson) ?? sources ?? new List<string>(),
-        widgets = DeserializeWidgets(over?.WidgetsJson) ?? widgets,
+        widgets = DeserializeWidgetsFull(over?.WidgetsJson) ?? widgets,
         promptText = over?.PromptText ?? prompt,
         version = over?.Version ?? 0, updatedByName = over?.UpdatedByName, updatedAt = over?.UpdatedAt,
     };
@@ -350,9 +350,19 @@ public class TemplatesController : ControllerBase
     private static List<string>? DeserializeSources(string? json) =>
         json is { Length: > 0 } ? JsonSerializer.Deserialize<List<string>>(json, TemplatePromptService.JsonOptions) : null;
 
+    /// <summary>Type+title only — used by the public catalog, where a per-widget Prompt (extra
+    /// AI instruction text, same sensitivity as the main PromptText) must never appear.</summary>
     private static List<object>? DeserializeWidgets(string? json) =>
         json is { Length: > 0 }
             ? JsonSerializer.Deserialize<List<BuiltinDashboardWidgetSpec>>(json, TemplatePromptService.JsonOptions)
                 ?.Select(w => (object)new { type = w.Type, title = w.Title }).ToList()
+            : null;
+
+    /// <summary>Includes each widget's own Prompt — admin-only (see ToAdminItem), never
+    /// reachable from the public catalog endpoint.</summary>
+    private static List<object>? DeserializeWidgetsFull(string? json) =>
+        json is { Length: > 0 }
+            ? JsonSerializer.Deserialize<List<BuiltinDashboardWidgetSpec>>(json, TemplatePromptService.JsonOptions)
+                ?.Select(w => (object)new { type = w.Type, title = w.Title, prompt = w.Prompt }).ToList()
             : null;
 }

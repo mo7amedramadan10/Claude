@@ -414,101 +414,20 @@
         <h1>مكتبة النماذج</h1>
         <p>كل النماذج التي يراها المستخدمون في المحادثة ومعرض «لوحة جديدة»، مع النص الذي يُرسل لجيم عند اختيار كل نموذج — المستخدم العادي لا يرى ولا يقدر يغيّر هذا النص؛ هو يبعت رقم النموذج بس، وجيم يجمّع النص النهائي من هنا. أي تعديل يُطبّق على كل المنظمات.</p>
       </div>
-      <button type="button" class="btn btn-primary hidden" id="tpladm-new-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg><span>عنصر جديد</span></button>
+      <button type="button" class="btn btn-primary hidden" id="tpladm-new-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg><span id="tpladm-new-btn-label">عنصر جديد</span></button>
     </section>
 
-    <div class="tabs" id="tpladm-tabs" role="tablist" aria-label="أنواع النماذج">
-      <button type="button" class="tab active" data-tpladm-tab="widget" role="tab" aria-selected="true">نماذج الشات <span class="badge" id="tpladm-count-widget">0</span></button>
-      <button type="button" class="tab" data-tpladm-tab="dashboard" role="tab" aria-selected="false">نماذج اللوحات <span class="badge" id="tpladm-count-dashboard">0</span></button>
-      <button type="button" class="tab" data-tpladm-tab="kpi" role="tab" aria-selected="false">مكتبة المؤشرات <span class="badge" id="tpladm-count-kpi">0</span></button>
-      <button type="button" class="tab" data-tpladm-tab="rules" role="tab" aria-selected="false">القواعد العامة</button>
-    </div>
+    <section class="org-hero cols-4" id="tpladm-stats" aria-label="ملخص المكتبة"></section>
 
-    <section class="card" id="tpladm-pane-widget">
-      <div class="toolbar" style="padding:16px 20px">
-        <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" id="tpladm-search-widget" placeholder="ابحث بالعنوان"></label>
-      </div>
-      <div class="dtable-wrap"><table class="dtable">
-        <thead><tr><th>العنوان</th><th>الفئة</th><th>الحالة</th><th>آخر تعديل</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
-        <tbody id="tpladm-table-widget"></tbody>
-      </table></div>
-    </section>
-
-    <section class="card hidden" id="tpladm-pane-dashboard">
-      <div class="toolbar" style="padding:16px 20px">
-        <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" id="tpladm-search-dashboard" placeholder="ابحث بالعنوان"></label>
-      </div>
-      <div class="dtable-wrap"><table class="dtable">
-        <thead><tr><th>العنوان</th><th>الفئة</th><th>الحالة</th><th>آخر تعديل</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
-        <tbody id="tpladm-table-dashboard"></tbody>
-      </table></div>
-    </section>
-
-    <section class="card hidden" id="tpladm-pane-kpi">
-      <div class="toolbar" style="padding:16px 20px;gap:10px;flex-wrap:wrap">
-        <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" id="tpladm-kpi-search" placeholder="ابحث بالعربي أو English"></label>
-        <select id="tpladm-kpi-cat" class="select"><option value="">كل التصنيفات</option></select>
-        <select id="tpladm-kpi-mt" class="select"><option value="">كل أنواع القياس</option></select>
-        <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost btn-sm" id="tpladm-kpi-mtypes-btn">تعديل قوالب أنواع القياس (6)</button>
-      </div>
-      <div class="dtable-wrap"><table class="dtable">
-        <thead><tr><th>المؤشر</th><th>التصنيف</th><th>نوع القياس</th><th>الحالة</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
-        <tbody id="tpladm-table-kpi"></tbody>
-      </table></div>
-      <div class="table-foot"><span id="tpladm-kpi-count-label"></span><button type="button" class="btn btn-ghost btn-sm" id="tpladm-kpi-more" hidden>عرض المزيد</button></div>
-    </section>
-
-    <section class="card hidden" id="tpladm-pane-rules">
-      <div class="page" style="padding:20px;max-width:720px">
-        <div class="field">
-          <label for="tpladm-rules-text">نص يُضاف تلقائيًا قبل كل نموذج (شات/لوحة/مؤشر) — مثال: لغة الكتابة، العملة، أسلوب العرض</label>
-          <textarea id="tpladm-rules-text" rows="6" placeholder="مثال: استخدم اللغة العربية الرسمية دائمًا، واعرض القيم المالية بالريال السعودي."></textarea>
-        </div>
-        <div class="tpladm-vars" id="tpladm-rules-vars"></div>
-        <div class="modal-actions" style="justify-content:flex-start;padding:0">
-          <button type="button" class="btn btn-primary" id="tpladm-rules-save">حفظ</button>
-          <span class="muted" id="tpladm-rules-meta"></span>
-        </div>
-      </div>
+    <section class="card lib" id="tpladm-lib">
+      <div class="tabs" id="tpladm-tabs" role="tablist" aria-label="أنواع النماذج"></div>
+      <div id="tpladm-pane"></div>
     </section>
   </div>
 </div>
 
 <div id="tpladm-editor-modal" class="modal-overlay hidden">
-  <div class="modal tpladm-editor">
-    <h3 id="tpladm-editor-title">تعديل النموذج</h3>
-    <form id="tpladm-editor-form">
-      <div id="tpladm-editor-meta-fields">
-        <div class="field"><label for="tpladm-f-title">العنوان</label><input id="tpladm-f-title" type="text"></div>
-        <div class="field"><label for="tpladm-f-desc">الوصف (يظهر للمستخدم)</label><input id="tpladm-f-desc" type="text"></div>
-      </div>
-      <div class="field">
-        <label for="tpladm-f-prompt">النص المُرسل لجيم</label>
-        <textarea id="tpladm-f-prompt" rows="6" required></textarea>
-      </div>
-      <div class="tpladm-vars" id="tpladm-editor-vars"></div>
-      <div class="field"><label>معاينة (بقيم تجريبية توضيحية فقط)</label><div class="tpladm-preview" id="tpladm-editor-preview"></div></div>
-      <div id="tpladm-editor-unknown-warning" class="roles-error hidden"></div>
-      <div class="field"><label for="tpladm-f-status">الحالة</label>
-        <select id="tpladm-f-status" class="select">
-          <option value="published">منشور — يظهر للمستخدمين</option>
-          <option value="draft">مسودة — مخفي، قيد التجربة</option>
-          <option value="stopped">متوقف — مخفي مؤقتًا</option>
-        </select>
-      </div>
-      <div class="modal-actions" style="justify-content:space-between">
-        <div>
-          <button type="button" class="btn btn-ghost btn-sm hidden" id="tpladm-revert-btn">رجوع للنص الأصلي</button>
-          <button type="button" class="btn btn-ghost btn-sm hidden" id="tpladm-delete-btn">حذف</button>
-        </div>
-        <div>
-          <button type="button" id="tpladm-editor-cancel">إلغاء</button>
-          <button type="submit" id="tpladm-editor-save">حفظ</button>
-        </div>
-      </div>
-    </form>
-  </div>
+  <div class="modal tpladm-editor" id="tpladm-editor-box"></div>
 </div>
 
 <div id="screen-sources" class="screen">

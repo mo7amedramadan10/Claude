@@ -7289,400 +7289,622 @@ el('new-org-admin-form').addEventListener('submit', async e => {
 });
 
 // ---------- مكتبة النماذج (platform-templates admin) ----------
-// مسؤول المنصة بس (screen-templates-admin, خلف PlatformOwner). النص الفعلي المُرسل لجيم
-// (promptText) بيتحمّل وبيتعدّل هنا فقط؛ المستخدم العادي شايف العنوان/الوصف بس (انظر
-// loadTemplateCatalog فوق) وبيبعت templateId عند الإضافة — جيم (TemplatePromptService) هو
-// اللي بيجمّع النص النهائي من هنا، فمفيش طريقة للمستخدم يغيّر الوصف المُرسل للموديل.
+// مسؤول المنصة بس (screen-templates-admin, خلف PlatformOwner). مطابق لتصميم jeem-ui المرجعي
+// (platform-templates.html/js): صف إحصائيات أعلى الصفحة، تبويبات بعدد كل نوع، قائمة بفلاتر
+// حالة/تصنيف وجدول يعرض "وصف الذكاء الاصطناعي" نفسه (مع تمييز {{متغيرات}})، ومحرّر بمعاينة
+// حية جانبية. النص الفعلي المُرسل لجيم (promptText) بيتحمّل وبيتعدّل هنا فقط؛ المستخدم العادي
+// شايف العنوان/الوصف بس (انظر loadTemplateCatalog فوق) وبيبعت templateId عند الإضافة — جيم
+// (TemplatePromptService) هو اللي بيجمّع النص النهائي، عشان المستخدم مايقدرش يغيّره من عنده.
 //
-// قائمة المتغيرات ومعانيها التجريبية هنا نسخة من TemplatePromptService.KnownVariables —
-// للمعاينة الفورية في المتصفح بس؛ التحقق الحاسم (منع حفظ متغير غير معروف) بيتكرّر فعليًا
-// على السيرفر (TemplatePromptService.FindUnknownVariables) فمفيش طريقة لتجاوزه من هنا.
-const TPLADM_SAMPLE_VARS = {
-  project_name: 'مشروع تجربة', org_name: 'شركة تجربة', sources: 'نظام ERP، ملف المبيعات.xlsx',
-  widgets: '1) إجمالي المبيعات\n2) عدد الطلبات', kpi_name: 'رضا العملاء', kpi_name_en: 'Customer Satisfaction',
-  category: 'خدمة العملاء', measure_type: 'نسبة مئوية',
-};
-const TPLADM_VARS_BY_KIND = {
-  widget: ['project_name', 'org_name', 'sources'],
-  dashboard: ['project_name', 'org_name', 'sources', 'widgets'],
-  kpi: ['kpi_name', 'kpi_name_en', 'category', 'measure_type', 'project_name', 'org_name', 'sources'],
-  kpi_mtype: ['kpi_name', 'kpi_name_en', 'category', 'measure_type', 'project_name', 'org_name', 'sources'],
-  rules: ['project_name', 'org_name', 'sources'],
-};
-const TPLADM_VAR_LABELS = {
-  project_name: 'اسم المشروع', org_name: 'اسم المنظمة', sources: 'المصادر المفعّلة', widgets: 'عناصر اللوحة',
-  kpi_name: 'اسم المؤشر', kpi_name_en: 'اسم المؤشر (إنجليزي)', category: 'التصنيف', measure_type: 'نوع القياس',
-};
+// قرار متعمّد يخالف المرجع: المرجع بيستخدم "قالب عام" واحد لكل مكتبة المؤشرات (1,899 مؤشر)
+// معتمدًا على {{measure_type}} للتفريق بين الأنواع. هنا فضّلنا الإبقاء على 6 قوالب جاهزة (نسبة/
+// زمن/مالي/تقييم/عدد/أخرى) لأنها كانت الصيغة الأصلية الأدق لكل نوع قياس (TEMPLATE_PROMPT سابقًا
+// في app.js) — معروضة في «مكتبة المؤشرات» كبطاقة «قوالب أنواع القياس» بدل القالب الواحد.
+const tplIc = (n, c = 'icon icon-sm') => `<svg class="${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 
+const TPLADM_VARS = [
+  { key: 'project_name', label: 'اسم المشروع', sample: 'منصّة المبيعات', scope: 'all' },
+  { key: 'org_name', label: 'اسم المنظمة', sample: 'شركة تجربة', scope: 'all' },
+  { key: 'sources', label: 'المصادر المفعّلة', sample: 'نظام ERP، ملف المبيعات.xlsx', scope: 'all' },
+  { key: 'widgets', label: 'قائمة العناصر العشرة', sample: '1) إجمالي المبيعات\n2) عدد الطلبات', scope: 'dashboard' },
+  { key: 'kpi_name', label: 'اسم المؤشر', sample: 'رضا العملاء', scope: 'kpi' },
+  { key: 'kpi_name_en', label: 'اسم المؤشر (إنجليزي)', sample: 'Customer Satisfaction', scope: 'kpi' },
+  { key: 'category', label: 'تصنيف المؤشر', sample: 'خدمة العملاء', scope: 'kpi' },
+  { key: 'measure_type', label: 'نوع القياس', sample: 'نسبة مئوية', scope: 'kpi' },
+];
+const tpladmVarScope = kind => kind === 'dashboard' ? 'dashboard' : (kind === 'kpi' || kind === 'kpi_mtype') ? 'kpi' : null;
+const tpladmVarsFor = kind => TPLADM_VARS.filter(v => v.scope === 'all' || v.scope === tpladmVarScope(kind));
+// نفس نمط \w+ المستخدم في TemplatePromptService.FindUnknownVariables على السيرفر بالظبط —
+// عشان التحقق هنا (فوري، للراحة) يطابق التحقق الحاسم هناك (اللي مفيش طريقة لتجاوزه).
 function tpladmUnknownVars(text, kind) {
-  const known = new Set(TPLADM_VARS_BY_KIND[kind] || []);
+  const known = new Set(tpladmVarsFor(kind).map(v => v.key));
   const found = new Set();
   (text.match(/\{\{\s*(\w+)\s*\}\}/g) || []).forEach(m => {
-    const name = m.replace(/[{}\s]/g, '');
+    const name = m.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
     if (!known.has(name)) found.add(name);
   });
   return [...found];
 }
-function tpladmPreviewHtml(text, kind) {
-  const known = TPLADM_VARS_BY_KIND[kind] || [];
-  return esc(text || '').replace(/\{\{\s*(\w+)\s*\}\}/g, (m, name) =>
-    known.includes(name) ? `<mark>${esc(TPLADM_SAMPLE_VARS[name] ?? '')}</mark>` : `<span class="tpladm-unknown-var">${esc(m)}</span>`);
+function tpladmFillHtml(text, kind, extra) {
+  const ctx = {}; tpladmVarsFor(kind).forEach(v => { ctx[v.key] = v.sample; });
+  Object.assign(ctx, extra || {});
+  return esc(text || '').replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) =>
+    ctx[k] != null && ctx[k] !== '' ? `<b class="pv-var" title="{{${esc(k)}}}">${esc(ctx[k])}</b>` : `<mark class="pv-bad" title="متغير غير معروف">${esc(m)}</mark>`);
+}
+const tpladmCodeVars = text => esc(text || '').replace(/\{\{\s*(\w+)\s*\}\}/g, '<code dir="ltr">{{$1}}</code>');
+const tpladmVarChips = kind => `<div class="var-chips" role="group" aria-label="إدراج متغير">${tpladmVarsFor(kind).map(v =>
+  `<button type="button" class="var-chip" data-var="${v.key}" title="${esc(v.label)}"><code dir="ltr">{{${v.key}}}</code><span>${esc(v.label)}</span></button>`).join('')}</div>`;
+
+function tpladmToast(msg) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.innerHTML = `${tplIc('check')}${esc(msg)}`;
+  t.classList.remove('is-on'); void t.offsetWidth; t.classList.add('is-on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), 2800);
 }
 
-const tpladm = {
-  tab: 'widget', widgets: [], dashboards: [],
-  searchWidget: '', searchDashboard: '',
-  kpiMode: 'rows', kpiSearch: '', kpiCat: '', kpiMt: '', kpiHits: [], kpiShown: 0,
-  kpiOverrides: {}, // index(string) -> {status, promptText, version, updatedByName, updatedAt}
-  kpiMtypes: [], // 6 rows from /api/templates/admin/kpi-mtypes
+const TPLADM_KINDS = {
+  widget: { tab: 'عناصر المحادثة', one: 'عنصر', add: 'عنصر جديد', icon: 'chat', where: 'يظهر في تبويب «النماذج» داخل المحادثة، ويُضاف للوحة الحالية بضغطة.' },
+  dashboard: { tab: 'نماذج اللوحات', one: 'نموذج لوحة', add: 'نموذج لوحة جديد', icon: 'dashboard', where: 'يظهر في معرض «لوحة جديدة»، وينشئ لوحة كاملة من 10 عناصر.' },
+  kpi: { tab: 'مكتبة المؤشرات', one: 'مؤشر', icon: 'target', where: 'يظهر في «النماذج ← مكتبة المؤشرات» داخل المحادثة.' },
+  rules: { tab: 'القواعد العامة', icon: 'shield' },
 };
-const TPLADM_KPI_PAGE_SIZE = 40;
+const TPLADM_STATUS = { published: ['منشور', 'ok'], draft: ['مسودة', 'warn'], stopped: ['موقوف', 'off'] };
+const tpladmStatusPill = s => { const v = TPLADM_STATUS[s] || TPLADM_STATUS.published; return `<span class="status ${v[1]}">${v[0]}</span>`; };
+const TPLADM_STATUS_OPTS = [['', 'الكل'], ['published', 'منشور'], ['draft', 'مسودة'], ['stopped', 'موقوف']];
+const TPLADM_WIDGET_CATS = [['kpi', 'مؤشر'], ['chart', 'رسم بياني'], ['table', 'جدول']];
+const TPLADM_WIDGET_ICONS = ['spark', 'up', 'chart', 'calendar', 'filter', 'share', 'list', 'grid', 'target', 'percent', 'wallet', 'star', 'hash'];
+const TPLADM_DASH_CATS = DASH_GAL_CATS.filter(c => c[0] !== 'all').map(c => [c[0], c[1]]);
+const TPLADM_CHART_TYPES = [['line', 'خط'], ['donut', 'دائري'], ['hbars', 'أعمدة أفقي'], ['cbars', 'أعمدة مقارنة'], ['table', 'جدول'], ['funnel', 'قمع'], ['heat', 'خريطة حرارية']];
+const tpladmBlankWidgets = () => [
+  { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' },
+  { type: 'line', title: '', prompt: '' }, { type: 'donut', title: '', prompt: '' }, { type: 'hbars', title: '', prompt: '' },
+  { type: 'cbars', title: '', prompt: '' }, { type: 'table', title: '', prompt: '' }, { type: 'funnel', title: '', prompt: '' },
+];
+
+const TPLADM = {
+  kind: 'widget', widgets: [], dashboards: [], kpiOverrides: {}, kpiMtypes: [],
+  filt: { widget: { q: '', s: '', c: '' }, dashboard: { q: '', s: '', c: '' }, kpi: { q: '', s: '', c: '', m: '', p: 0 } },
+};
+let TPLADM_RULES_CACHE = '';
+let TPLADM_ED = null;
+
+async function tpladmLoadWidgets() { const r = await fetch('/api/templates/admin/widget'); TPLADM.widgets = r.ok ? await r.json() : []; }
+async function tpladmLoadDashboards() { const r = await fetch('/api/templates/admin/dashboard'); TPLADM.dashboards = r.ok ? await r.json() : []; }
+async function tpladmLoadKpiOverrides() {
+  const r = await fetch('/api/templates/admin/kpi-overrides');
+  const rows = r.ok ? await r.json() : [];
+  TPLADM.kpiOverrides = {}; rows.forEach(x => { TPLADM.kpiOverrides[x.index] = x; });
+}
+async function tpladmLoadKpiMtypes() { const r = await fetch('/api/templates/admin/kpi-mtypes'); TPLADM.kpiMtypes = r.ok ? await r.json() : []; }
+async function tpladmLoadRulesCache() { const r = await fetch('/api/templates/admin/rules'); TPLADM_RULES_CACHE = r.ok ? (await r.json()).promptText || '' : ''; }
+async function tpladmRefreshKind(kind) { if (kind === 'widget') await tpladmLoadWidgets(); else if (kind === 'dashboard') await tpladmLoadDashboards(); }
 
 async function loadTemplatesAdmin() {
-  await Promise.all([loadTpladmWidgets(), loadTpladmDashboards()]);
-  if (KPI_LIB) {
-    if (!el('tpladm-kpi-cat').dataset.built) {
-      el('tpladm-kpi-cat').insertAdjacentHTML('beforeend',
-        KPI_LIB.cats.map((c, i) => `<option value="${i}">${esc(c[0])}</option>`).join(''));
-      el('tpladm-kpi-mt').insertAdjacentHTML('beforeend',
-        KPI_LIB.mtypes.map((m, i) => `<option value="${i}">${esc(m)}</option>`).join(''));
-      el('tpladm-kpi-cat').dataset.built = '1';
-    }
-    await loadTpladmKpiOverrides();
-    el('tpladm-count-kpi').textContent = KPI_LIB.rows.length.toLocaleString('en-US');
-  }
-  renderTpladmPane();
+  await Promise.all([tpladmLoadWidgets(), tpladmLoadDashboards(), tpladmLoadKpiOverrides(), tpladmLoadKpiMtypes(), tpladmLoadRulesCache()]);
+  tpladmStats();
+  tpladmRender();
 }
 
-el('tpladm-tabs').addEventListener('click', e => {
-  const btn = e.target.closest('[data-tpladm-tab]');
-  if (!btn) return;
-  tpladm.tab = btn.dataset.tpladmTab;
-  el('tpladm-tabs').querySelectorAll('[data-tpladm-tab]').forEach(b => {
-    const on = b === btn;
-    b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on));
-  });
-  renderTpladmPane();
-});
-
-function renderTpladmPane() {
-  ['widget', 'dashboard', 'kpi', 'rules'].forEach(k =>
-    el(`tpladm-pane-${k}`).classList.toggle('hidden', k !== tpladm.tab));
-  el('tpladm-new-btn').classList.toggle('hidden', tpladm.tab !== 'widget' && tpladm.tab !== 'dashboard');
-  if (tpladm.tab === 'widget') renderTpladmTable('widget');
-  else if (tpladm.tab === 'dashboard') renderTpladmTable('dashboard');
-  else if (tpladm.tab === 'kpi') renderTpladmKpiPane();
-  else if (tpladm.tab === 'rules') loadTpladmRules();
+function tpladmStats() {
+  const W = TPLADM.widgets, D = TPLADM.dashboards;
+  const drafts = W.concat(D).filter(x => x.status !== 'published').length;
+  let custom = 0, stopped = 0;
+  Object.values(TPLADM.kpiOverrides).forEach(o => { if (o.promptText) custom++; if (o.status && o.status !== 'published') stopped++; });
+  const kpiCount = KPI_LIB ? KPI_LIB.rows.length.toLocaleString('en-US') : '0';
+  el('tpladm-stats').innerHTML = `
+    <div style="background:var(--surface)"><span class="stat-label">${tplIc('chat')}عناصر المحادثة</span><span class="stat-value num">${W.length}</span><span class="stat-foot"><span class="num">${W.filter(x => x.status === 'published').length}</span> منشور</span></div>
+    <div><span class="stat-label">${tplIc('dashboard')}نماذج اللوحات</span><span class="stat-value num">${D.length}</span><span class="stat-foot">10 عناصر لكل نموذج</span></div>
+    <div><span class="stat-label">${tplIc('target')}مكتبة المؤشرات</span><span class="stat-value num">${kpiCount}</span><span class="stat-foot"><span class="num">${custom}</span> بوصف مخصص · <span class="num">${stopped}</span> موقوف</span></div>
+    <div><span class="stat-label">${tplIc('edit')}مسودات وموقوفة</span><span class="stat-value num">${drafts}</span><span class="stat-foot">لا تظهر للمستخدمين</span></div>`;
 }
 
-async function loadTpladmWidgets() {
-  const res = await fetch('/api/templates/admin/widget');
-  tpladm.widgets = res.ok ? await res.json() : [];
-  el('tpladm-count-widget').textContent = tpladm.widgets.length;
-}
-async function loadTpladmDashboards() {
-  const res = await fetch('/api/templates/admin/dashboard');
-  tpladm.dashboards = res.ok ? await res.json() : [];
-  el('tpladm-count-dashboard').textContent = tpladm.dashboards.length;
-}
-async function loadTpladmKpiOverrides() {
-  const res = await fetch('/api/templates/admin/kpi-overrides');
-  const rows = res.ok ? await res.json() : [];
-  tpladm.kpiOverrides = {};
-  rows.forEach(r => { tpladm.kpiOverrides[r.index] = r; });
+function tpladmTabs() {
+  const n = { widget: TPLADM.widgets.length, dashboard: TPLADM.dashboards.length, kpi: KPI_LIB ? KPI_LIB.rows.length : 0 };
+  el('tpladm-tabs').innerHTML = Object.entries(TPLADM_KINDS).map(([k, v]) =>
+    `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === TPLADM.kind}">${tplIc(v.icon)}${v.tab}${n[k] != null ? ` <span class="tab-n num">${n[k].toLocaleString('en-US')}</span>` : ''}</button>`).join('');
+  el('tpladm-tabs').querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { TPLADM.kind = b.dataset.kind; tpladmRender(); }));
+  el('tpladm-new-btn').classList.toggle('hidden', TPLADM.kind !== 'widget' && TPLADM.kind !== 'dashboard');
+  el('tpladm-new-btn-label').textContent = TPLADM_KINDS[TPLADM.kind]?.add || 'عنصر جديد';
 }
 
-const TPLADM_STATUS_LABEL = { published: ['منشور', 'ok'], draft: ['مسودة', 'warn'], stopped: ['متوقف', 'off'] };
-
-function renderTpladmTable(kind) {
-  const search = (kind === 'widget' ? tpladm.searchWidget : tpladm.searchDashboard).trim().toLowerCase();
-  const items = (kind === 'widget' ? tpladm.widgets : tpladm.dashboards)
-    .filter(it => !search || it.title.toLowerCase().includes(search));
-  el(`tpladm-table-${kind}`).innerHTML = items.map(it => {
-    const [label, cls] = TPLADM_STATUS_LABEL[it.status] || ['—', 'off'];
-    return `<tr>
-      <td><strong>${esc(it.title)}</strong>${it.isCustom ? ' <span class="badge">مُضاف</span>' : ''}</td>
-      <td class="muted">${esc(it.category || '—')}</td>
-      <td><span class="status ${cls}">${label}</span></td>
-      <td class="muted">${it.updatedAt ? new Date(it.updatedAt).toLocaleDateString('ar-EG') + (it.updatedByName ? ' · ' + esc(it.updatedByName) : '') : '—'}</td>
-      <td><div class="row-actions">
-        <button type="button" class="btn btn-ghost btn-sm" data-edit="${esc(it.key)}">تعديل</button>
-        ${it.isOverridden && !it.isCustom ? `<button type="button" class="btn btn-ghost btn-sm" data-revert="${esc(it.key)}">رجوع للأصل</button>` : ''}
-        ${it.isCustom ? `<button type="button" class="btn btn-ghost btn-sm" data-delete="${esc(it.key)}">حذف</button>` : ''}
-      </div></td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="5" class="muted">لا توجد نتائج.</td></tr>`;
-
-  el(`tpladm-table-${kind}`).querySelectorAll('[data-edit]').forEach(btn =>
-    btn.addEventListener('click', () => {
-      const it = items.find(x => x.key === btn.dataset.edit);
-      openTpladmEditor({
-        kind, key: it.key, title: it.title, desc: it.description, promptText: it.promptText, status: it.status,
-        isCustom: it.isCustom, hasMeta: true, canRevert: it.isOverridden && !it.isCustom, canDelete: it.isCustom,
-      });
-    }));
-  el(`tpladm-table-${kind}`).querySelectorAll('[data-revert]').forEach(btn =>
-    btn.addEventListener('click', () => tpladmRevert(kind, btn.dataset.revert)));
-  el(`tpladm-table-${kind}`).querySelectorAll('[data-delete]').forEach(btn =>
-    btn.addEventListener('click', () => tpladmDelete(kind, btn.dataset.delete)));
+function tpladmRender() {
+  tpladmTabs();
+  if (TPLADM.kind === 'widget') tpladmListPane('widget');
+  else if (TPLADM.kind === 'dashboard') tpladmListPane('dashboard');
+  else if (TPLADM.kind === 'kpi') tpladmKpiPane();
+  else tpladmRulesPane();
 }
-el('tpladm-search-widget').addEventListener('input', e => { tpladm.searchWidget = e.target.value; renderTpladmTable('widget'); });
-el('tpladm-search-dashboard').addEventListener('input', e => { tpladm.searchDashboard = e.target.value; renderTpladmTable('dashboard'); });
-
 el('tpladm-new-btn').addEventListener('click', () => {
-  openTpladmEditor({ kind: tpladm.tab, key: null, title: '', desc: '', promptText: '', status: 'draft', isNew: true, hasMeta: true });
+  if (TPLADM.kind === 'widget') tpladmOpenEditor('widget', null, true);
+  else if (TPLADM.kind === 'dashboard') tpladmOpenEditor('dashboard', null, true);
 });
+
+function tpladmSegmented(cur, opts, key) {
+  return `<div class="segmented" role="group" aria-label="الحالة">${opts.map(([v, t]) => `<button type="button" data-${key}="${v}" aria-pressed="${cur === v}">${t}</button>`).join('')}</div>`;
+}
+
+// ---------- قائمة "نماذج الشات" / "نماذج اللوحات" ----------
+function tpladmListPane(kind) {
+  const f = TPLADM.filt[kind];
+  const all = kind === 'widget' ? TPLADM.widgets : TPLADM.dashboards;
+  const cats = kind === 'widget' ? TPLADM_WIDGET_CATS : TPLADM_DASH_CATS;
+  const q = f.q.trim().toLowerCase();
+  const rows = all.filter(x => (!f.s || x.status === f.s) && (!f.c || x.category === f.c) &&
+    (!q || (x.title + ' ' + (x.description || '') + ' ' + (x.promptText || '')).toLowerCase().includes(q)));
+  const catName = c => { const m = cats.find(([k]) => k === c); return m ? m[1] : (c || '—'); };
+  const thumbOf = x => kind === 'widget'
+    ? `<span class="lib-thumb">${tplIc(x.icon || 'spark', 'icon')}</span>`
+    : `<span class="lib-thumb is-dash">${dashGalThumb(x)}</span>`;
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS[kind].where)}</p>
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث</span><input type="search" id="tpladm-q" value="${esc(f.q)}" placeholder="ابحث بالاسم أو داخل وصف الذكاء الاصطناعي"></label>
+      ${tpladmSegmented(f.s, TPLADM_STATUS_OPTS, 'st')}
+      <label class="sr-only" for="tpladm-cat">التصنيف</label>
+      <select id="tpladm-cat" class="select"><option value="">كل التصنيفات</option>${cats.map(([k, n]) => `<option value="${k}"${f.c === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+    </div>
+    <div class="dtable-wrap"><table class="dtable lib-table">
+      <thead><tr><th>النموذج</th><th>التصنيف</th><th>وصف الذكاء الاصطناعي</th><th>الحالة</th><th>الإصدار</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+      <tbody>${rows.map(x => `
+        <tr data-key="${esc(x.key)}">
+          <td><div class="lib-name">${thumbOf(x)}<div><strong>${esc(x.title)}${x.isCustom ? ' <span class="badge badge-blue">مضاف</span>' : x.isOverridden ? ' <span class="badge">معدّل</span>' : ''}</strong><span>${esc(x.description || '')}</span></div></div></td>
+          <td><span class="badge">${esc(catName(x.category))}</span></td>
+          <td><p class="lib-prompt">${tpladmCodeVars(x.promptText)}</p></td>
+          <td>${tpladmStatusPill(x.status)}</td>
+          <td class="muted"><span class="num">v${x.version || 1}</span><span class="lib-date num">${x.updatedAt ? new Date(x.updatedAt).toLocaleDateString('ar-EG') : ''}</span></td>
+          <td><div class="row-actions">
+            <button class="btn btn-sm" type="button" data-act="edit">${tplIc('edit')}تعديل</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="dup" aria-label="نسخ كنموذج جديد" title="نسخ كنموذج جديد">${tplIc('layers')}</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="toggle" aria-label="${x.status === 'published' ? 'إيقاف' : 'نشر'}" title="${x.status === 'published' ? 'إيقاف' : 'نشر'}">${tplIc(x.status === 'published' ? 'pause' : 'play')}</button>
+          </div></td>
+        </tr>`).join('') || `<tr><td colspan="6"><div class="lib-empty">لا توجد نماذج مطابقة.</div></td></tr>`}</tbody>
+    </table></div>
+    <div class="table-foot"><span>عرض <span class="num">${rows.length}</span> من <span class="num">${all.length}</span></span></div>`;
+
+  const rerender = () => tpladmListPane(kind);
+  let t;
+  el('tpladm-q').addEventListener('input', e => { f.q = e.target.value; clearTimeout(t); t = setTimeout(rerender, 180); });
+  el('tpladm-pane').querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => { f.s = b.dataset.st; rerender(); }));
+  el('tpladm-cat').addEventListener('change', e => { f.c = e.target.value; rerender(); });
+
+  el('tpladm-pane').querySelectorAll('tr[data-key]').forEach(tr => {
+    const key = tr.dataset.key;
+    const item = () => all.find(x => x.key === key);
+    tr.querySelector('[data-act="edit"]').addEventListener('click', () => tpladmOpenEditor(kind, item()));
+    tr.querySelector('[data-act="dup"]').addEventListener('click', () => {
+      const src = item();
+      tpladmOpenEditor(kind, { ...src, title: src.title + ' (نسخة)', status: 'draft' }, true);
+    });
+    tr.querySelector('[data-act="toggle"]').addEventListener('click', () => tpladmToggleStatus(kind, item()));
+  });
+}
+
+async function tpladmToggleStatus(kind, item) {
+  const next = item.status === 'published' ? 'stopped' : 'published';
+  if (kind === 'widget' || kind === 'dashboard') {
+    const body = { title: item.title, description: item.description, icon: item.icon, category: item.category, sources: item.sources, widgets: item.widgets, promptText: item.promptText, status: next };
+    const res = await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(item.key)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { alert('تعذّر التحديث.'); return; }
+    tpladmToast(next === 'published' ? `تم نشر «${item.title}»` : `تم إيقاف «${item.title}» ولن يظهر للمستخدمين`);
+    await tpladmRefreshKind(kind);
+  } else if (kind === 'kpi') {
+    const res = await fetch(`/api/templates/admin/kpi/${item.index}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: item.promptText || '', status: next }) });
+    if (!res.ok) { alert('تعذّر التحديث.'); return; }
+    tpladmToast(next === 'published' ? 'تم النشر' : 'تم الإيقاف');
+    await tpladmLoadKpiOverrides();
+  }
+  tpladmStats(); tpladmRender();
+}
+
+// ---------- مكتبة المؤشرات ----------
+function tpladmKpiTplCard() {
+  if (!KPI_LIB) return '';
+  return `<div class="kpi-tpl-card">
+    <div class="kt-head"><div><b>${tplIc('layers')}قوالب أنواع القياس</b><span>تُرسل لجيم مع أي مؤشر ليس له وصف مخصص، حسب نوع قياسه.</span></div></div>
+    <div class="row-actions" style="flex-wrap:wrap;margin-top:10px">
+      ${KPI_LIB.mtypes.map((n, i) => `<button type="button" class="btn btn-ghost btn-sm" data-edit-mt="${i}">${tplIc('edit')}${esc(n)}</button>`).join('')}
+    </div>
+  </div>`;
+}
+function tpladmKpiPane() {
+  if (!KPI_LIB) { el('tpladm-pane').innerHTML = `<div class="lib-empty">مكتبة المؤشرات غير متاحة.</div>`; return; }
+  const f = TPLADM.filt.kpi, PAGE = 25;
+  const qs = kpiNorm(f.q.trim()).split(/\s+/).filter(Boolean);
+  const hits = [];
+  KPI_LIB.rows.forEach((r, i) => {
+    if (f.c !== '' && r[0] !== +f.c) return;
+    if (f.m !== '' && r[4] !== +f.m) return;
+    const over = TPLADM.kpiOverrides[i], status = over?.status || 'published';
+    if (f.s === 'custom' ? !over?.promptText : f.s && status !== f.s) return;
+    if (qs.length) { const t = kpiNorm(r[2] + ' ' + r[3]); if (!qs.every(w => t.includes(w))) return; }
+    hits.push(i);
+  });
+  const pages = Math.max(1, Math.ceil(hits.length / PAGE));
+  f.p = Math.min(f.p, pages - 1);
+  const slice = hits.slice(f.p * PAGE, f.p * PAGE + PAGE);
+  const opt = (c, i) => `<option value="${i}"${f.c === String(i) ? ' selected' : ''}>${esc(c[0])}</option>`;
+
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.kpi.where)} المصدر: مكتبة Spider Strategies، والترجمة ونوع القياس من جيم.</p>
+    ${tpladmKpiTplCard()}
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث في المؤشرات</span><input type="search" id="tpladm-kpi-q" value="${esc(f.q)}" placeholder="ابحث بالعربي أو English"></label>
+      ${tpladmSegmented(f.s, [['', 'الكل'], ['published', 'منشور'], ['stopped', 'موقوف'], ['custom', 'وصف مخصص']], 'st')}
+      <label class="sr-only" for="tpladm-kpi-cat">التصنيف</label>
+      <select id="tpladm-kpi-cat" class="select"><option value="">كل التصنيفات</option><optgroup label="الأقسام الوظيفية">${KPI_LIB.cats.map((c, i) => c[2] === 0 ? opt(c, i) : '').join('')}</optgroup><optgroup label="القطاعات">${KPI_LIB.cats.map((c, i) => c[2] === 1 ? opt(c, i) : '').join('')}</optgroup></select>
+      <label class="sr-only" for="tpladm-kpi-mt">نوع القياس</label>
+      <select id="tpladm-kpi-mt" class="select"><option value="">كل أنواع القياس</option>${KPI_LIB.mtypes.map((m, i) => `<option value="${i}"${f.m === String(i) ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select>
+    </div>
+    <div class="dtable-wrap"><table class="dtable lib-table">
+      <thead><tr><th>المؤشر</th><th>التصنيف</th><th>نوع القياس</th><th>الوصف المرسل</th><th>الحالة</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+      <tbody>${slice.map(i => {
+        const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]], over = TPLADM.kpiOverrides[i], status = over?.status || 'published';
+        return `<tr data-k="${i}">
+          <td><div class="lib-kpi"><strong>${esc(r[2])}</strong><span dir="ltr">${esc(r[3])}</span></div></td>
+          <td class="muted">${esc(c[0])}</td>
+          <td><span class="badge">${esc(KPI_LIB.mtypes[r[4]])}</span></td>
+          <td>${over?.promptText ? `<span class="badge badge-blue">مخصص</span><p class="lib-prompt one">${tpladmCodeVars(over.promptText)}</p>` : '<span class="muted">قالب نوع القياس</span>'}</td>
+          <td>${tpladmStatusPill(status)}</td>
+          <td><div class="row-actions">
+            <button class="btn btn-sm" type="button" data-act="edit">${tplIc('edit')}تعديل</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="toggle" aria-label="${status === 'published' ? 'إيقاف' : 'نشر'}" title="${status === 'published' ? 'إيقاف' : 'نشر'}">${tplIc(status === 'published' ? 'pause' : 'play')}</button>
+          </div></td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="6"><div class="lib-empty">لا توجد مؤشرات مطابقة.</div></td></tr>`}</tbody>
+    </table></div>
+    <div class="table-foot"><span>عرض <span class="num">${hits.length ? (f.p * PAGE + 1).toLocaleString('en-US') + '–' + (f.p * PAGE + slice.length).toLocaleString('en-US') : 0}</span> من <span class="num">${hits.length.toLocaleString('en-US')}</span></span>
+      <div class="pager"><button type="button" data-pg="-1" ${f.p ? '' : 'disabled'} aria-label="السابق">السابق</button><button type="button" aria-current="true"><span class="num">${f.p + 1} / ${pages}</span></button><button type="button" data-pg="1" ${f.p < pages - 1 ? '' : 'disabled'} aria-label="التالي">التالي</button></div></div>`;
+
+  const rerender = () => tpladmKpiPane();
+  let t;
+  el('tpladm-kpi-q').addEventListener('input', e => { f.q = e.target.value; f.p = 0; clearTimeout(t); t = setTimeout(rerender, 180); });
+  el('tpladm-pane').querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => { f.s = b.dataset.st; f.p = 0; rerender(); }));
+  el('tpladm-kpi-cat').addEventListener('change', e => { f.c = e.target.value; f.p = 0; rerender(); });
+  el('tpladm-kpi-mt').addEventListener('change', e => { f.m = e.target.value; f.p = 0; rerender(); });
+  el('tpladm-pane').querySelectorAll('[data-pg]').forEach(b => b.addEventListener('click', () => { f.p += +b.dataset.pg; rerender(); el('tpladm-pane').scrollIntoView({ block: 'start', behavior: 'smooth' }); }));
+
+  el('tpladm-pane').querySelectorAll('[data-edit-mt]').forEach(b => b.addEventListener('click', () => {
+    const mt = +b.dataset.editMt;
+    const m = TPLADM.kpiMtypes.find(x => x.mtype === mt) || { mtype: mt, promptText: '', status: 'published', isOverridden: false };
+    tpladmOpenEditor('kpi_mtype', { key: String(mt), label: KPI_LIB.mtypes[mt], promptText: m.promptText, status: m.status, isOverridden: m.isOverridden });
+  }));
+  el('tpladm-pane').querySelectorAll('tr[data-k]').forEach(tr => {
+    const i = +tr.dataset.k;
+    tr.querySelector('[data-act="edit"]').addEventListener('click', () => {
+      const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]], over = TPLADM.kpiOverrides[i];
+      const mt = TPLADM.kpiMtypes.find(x => x.mtype === r[4]);
+      tpladmOpenEditor('kpi', {
+        key: String(i), index: i, nameAr: r[2], nameEn: r[3], catName: c[0], mtName: KPI_LIB.mtypes[r[4]],
+        mtPromptText: mt?.promptText || '', promptText: over?.promptText || '', status: over?.status || 'published',
+        hasOverrideRow: !!over,
+      });
+    });
+    tr.querySelector('[data-act="toggle"]').addEventListener('click', () => {
+      const over = TPLADM.kpiOverrides[i];
+      tpladmToggleStatus('kpi', { index: i, status: over?.status || 'published', promptText: over?.promptText || '' });
+    });
+  });
+}
+
+// ---------- القواعد العامة ----------
+async function tpladmRulesPane() {
+  const r = await fetch('/api/templates/admin/rules');
+  const data = r.ok ? await r.json() : { promptText: '' };
+  TPLADM_RULES_CACHE = data.promptText || '';
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}تُرسل هذه القواعد لجيم قبل وصف أي نموذج (عنصر أو لوحة أو مؤشر)، في كل المنظمات.</p>
+    <div class="rules-grid">
+      <div class="field">
+        <label for="rulesTa">القواعد العامة المرسلة مع كل نموذج</label>
+        ${tpladmVarChips('rules')}
+        <textarea id="rulesTa" class="prompt-box" rows="12" dir="rtl">${esc(data.promptText || '')}</textarea>
+        <div class="prompt-meta"><span class="pm-warn" hidden></span><span><span class="num pm-count">${(data.promptText || '').length.toLocaleString('en-US')}</span> حرف</span></div>
+        <div class="row-actions" style="margin-top:10px"><button class="btn btn-primary" type="button" id="tpladm-rules-save">${tplIc('check')}حفظ القواعد</button><span class="muted" id="tpladm-rules-meta">${data.updatedAt ? `آخر تعديل: ${new Date(data.updatedAt).toLocaleDateString('ar-EG')}${data.updatedByName ? ' · ' + esc(data.updatedByName) : ''}` : ''}</span></div>
+      </div>
+      <div class="field">
+        <label>المتغيرات المتاحة</label>
+        <div class="dtable-wrap"><table class="dtable vars-table"><thead><tr><th>المتغير</th><th>المعنى</th><th>يُستخدم في</th></tr></thead><tbody>
+          ${TPLADM_VARS.map(v => `<tr><td><code dir="ltr">{{${v.key}}}</code></td><td>${esc(v.label)}<span class="muted vs">مثال: ${esc(v.sample)}</span></td><td><span class="badge">${{ all: 'الكل', dashboard: 'اللوحات', kpi: 'المؤشرات' }[v.scope]}</span></td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+    </div>`;
+  const ta = el('rulesTa');
+  const meta = () => {
+    const bad = tpladmUnknownVars(ta.value, 'rules');
+    const w = document.querySelector('#tpladm-pane .pm-warn');
+    document.querySelector('#tpladm-pane .pm-count').textContent = ta.value.length.toLocaleString('en-US');
+    w.hidden = !bad.length;
+    w.innerHTML = bad.length ? `${tplIc('info')}متغير غير معروف: <code dir="ltr">${bad.map(b => `{{${esc(b)}}}`).join('، ')}</code>` : '';
+  };
+  ta.addEventListener('input', meta);
+  el('tpladm-pane').querySelectorAll('[data-var]').forEach(b => b.addEventListener('click', () => {
+    const a = ta.selectionStart ?? ta.value.length, z = ta.selectionEnd ?? a, t = `{{${b.dataset.var}}}`;
+    ta.value = ta.value.slice(0, a) + t + ta.value.slice(z); ta.focus(); meta();
+  }));
+  el('tpladm-rules-save').addEventListener('click', async () => {
+    const promptText = ta.value.trim();
+    const unknown = tpladmUnknownVars(promptText, 'rules');
+    if (unknown.length) { alert('متغيرات غير معروفة: ' + unknown.join(', ')); return; }
+    const res = await fetch('/api/templates/admin/rules', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText, status: 'published' }) });
+    if (!res.ok) { const d = await res.json().catch(() => null); alert(d?.error || 'تعذّر الحفظ.'); return; }
+    TPLADM_RULES_CACHE = promptText;
+    tpladmToast('تم حفظ القواعد العامة — تُطبّق على كل الطلبات الجديدة');
+    tpladmRulesPane();
+  });
+  meta();
+}
+
+// ---------- المحرِّر (نافذة واحدة لكل الأنواع) ----------
+function tpladmPromptField(val, kind, hint) {
+  return `<div class="field ed-prompt">
+    <label for="ed-prompt">وصف الذكاء الاصطناعي <span class="req" aria-hidden="true">*</span></label>
+    <span class="hint">${hint}</span>
+    ${tpladmVarChips(kind)}
+    <textarea id="ed-prompt" class="prompt-box" rows="9" dir="rtl">${esc(val || '')}</textarea>
+    <div class="prompt-meta"><span class="pm-warn" hidden></span><span><span class="num pm-count">0</span> حرف</span></div>
+  </div>`;
+}
+function tpladmStatusField(s) {
+  return `<div class="field"><span class="flabel" id="ed-st-l">الحالة</span><div class="segmented" role="group" aria-labelledby="ed-st-l">${Object.entries(TPLADM_STATUS).map(([k, v]) => `<button type="button" data-status="${k}" aria-pressed="${(s || 'published') === k}">${v[0]}</button>`).join('')}</div><span class="hint">المسودة والموقوف لا يظهران للمستخدمين.</span></div>`;
+}
+function tpladmEdSide() {
+  return `<aside class="ed-side" aria-label="معاينة">
+    <div class="ed-thumb" id="ed-thumb"></div>
+    <div class="ed-out-head"><h3>النص النهائي المرسل لجيم</h3><label class="check sm"><input type="checkbox" id="ed-withrules">مع القواعد العامة</label></div>
+    <div class="prompt-out" id="ed-out" aria-live="polite"></div>
+    <p class="ed-note">${tplIc('info')}القيم المميّزة مُعوّضة بقيم تجريبية توضيحية. في الاستخدام الفعلي تُستبدل بقيم مشروع المستخدم الحقيقية.</p>
+  </aside>`;
+}
+function tpladmWidgetRows(ws) {
+  return ws.map((w, i) => `
+    <li class="dw-row" data-i="${i}">
+      <span class="dw-n num">${i + 1}</span>
+      <span class="dw-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>
+      ${i < 4 ? `<span class="dw-type is-fixed">مؤشر رقمي</span>` : `<label class="sr-only" for="dw-t${i}">نوع العنصر ${i + 1}</label><select id="dw-t${i}" class="select dw-type" data-k="type">${TPLADM_CHART_TYPES.map(([k, n]) => `<option value="${k}"${k === w.type ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>`}
+      <label class="sr-only" for="dw-n${i}">عنوان العنصر ${i + 1}</label><input id="dw-n${i}" data-k="title" value="${esc(w.title || '')}" placeholder="${i < 4 ? 'مثال: إجمالي المبيعات' : 'مثال: المبيعات الشهرية'}">
+      <label class="sr-only" for="dw-p${i}">تعليمات إضافية للعنصر ${i + 1}</label><input id="dw-p${i}" data-k="prompt" class="dw-prompt" value="${esc(w.prompt || '')}" placeholder="تعليمات إضافية لجيم (اختياري)">
+    </li>`).join('');
+}
+
+function tpladmOpenEditor(kind, item, isNew) {
+  TPLADM_ED = { kind, isNew: !!isNew, key: isNew ? null : item?.key, orig: item };
+  let title, sub, formHtml, sideHtml = tpladmEdSide();
+
+  if (kind === 'widget') {
+    const x = item || { title: '', description: '', icon: 'spark', category: 'kpi', promptText: '', status: 'draft' };
+    title = isNew ? 'عنصر جديد' : `تعديل: ${x.title}`; sub = TPLADM_KINDS.widget.where;
+    formHtml = `
+      <div class="ed-row">
+        <div class="field"><label for="ed-title">الاسم الظاهر للمستخدم</label><input id="ed-title" value="${esc(x.title)}" required placeholder="مثال: المبيعات حسب المنطقة"></div>
+        <div class="field"><label for="ed-cat">التصنيف</label><select id="ed-cat" class="select">${TPLADM_WIDGET_CATS.map(([c, n]) => `<option value="${c}"${c === x.category ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label for="ed-desc">الوصف المختصر (يظهر تحت الاسم)</label><input id="ed-desc" value="${esc(x.description || '')}" placeholder="جملة واحدة توضح ما يعرضه العنصر"></div>
+      <div class="field"><label for="ed-icon">الأيقونة</label><select id="ed-icon" class="select">${TPLADM_WIDGET_ICONS.map(i => `<option value="${i}"${i === (x.icon || 'spark') ? ' selected' : ''}>${esc(i)}</option>`).join('')}</select></div>
+      ${tpladmPromptField(x.promptText, 'widget', 'يُرسل لجيم عند ضغط المستخدم على العنصر. اكتب ما يحسبه العنصر، ومن أين، وكيف يُعرض، وماذا يفعل إذا نقصت البيانات.')}
+      ${tpladmStatusField(x.status)}`;
+  } else if (kind === 'dashboard') {
+    const x = item || { title: '', description: '', category: 'sales', sources: [], widgets: tpladmBlankWidgets(), layout: 'a', promptText: 'ابنِ لوحة «» بالعناصر التالية:\n{{widgets}}', status: 'draft' };
+    const widgets = (x.widgets && x.widgets.length === 10) ? x.widgets.map(w => ({ ...w })) : tpladmBlankWidgets();
+    title = isNew ? 'نموذج لوحة جديد' : `تعديل: ${x.title}`; sub = TPLADM_KINDS.dashboard.where;
+    formHtml = `
+      <div class="ed-row">
+        <div class="field"><label for="ed-title">اسم النموذج</label><input id="ed-title" value="${esc(x.title)}" required placeholder="مثال: أداء الفروع"></div>
+        <div class="field"><label for="ed-cat">التصنيف</label><select id="ed-cat" class="select">${TPLADM_DASH_CATS.map(([c, n]) => `<option value="${c}"${c === x.category ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label for="ed-desc">الوصف (يظهر في المعرض)</label><input id="ed-desc" value="${esc(x.description || '')}" placeholder="لمن هذه اللوحة وماذا تجيب عنه"></div>
+      <div class="ed-row">
+        <div class="field"><label for="ed-sources">المصادر المطلوبة</label><input id="ed-sources" value="${esc((x.sources || []).join('، '))}" placeholder="افصل بينها بفاصلة"><span class="hint">تظهر للمستخدم كتلميح فقط.</span></div>
+        <div class="field"><label for="ed-layout">التوزيع (شكل المصغّرة)</label><select id="ed-layout" class="select">${['a', 'b', 'c', 'd'].map((l, i) => `<option value="${l}"${l === (x.layout || 'a') ? ' selected' : ''}>توزيع ${['أ', 'ب', 'ج', 'د'][i]}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><span class="flabel">العناصر العشرة <span class="muted" style="font-weight:300">· الأربعة الأولى مؤشرات رقمية، والستة رسوم</span></span><ol class="dw-list" id="ed-dw-list">${tpladmWidgetRows(widgets)}</ol></div>
+      ${tpladmPromptField(x.promptText, 'dashboard', 'يُرسل لجيم عند اختيار النموذج. استخدم <code dir="ltr">{{widgets}}</code> ليُدرج جيم قائمة العناصر العشرة وتعليماتها تلقائيًا.')}
+      ${tpladmStatusField(x.status)}`;
+  } else if (kind === 'kpi') {
+    const x = item;
+    title = `تعديل: ${x.nameAr}`; sub = TPLADM_KINDS.kpi.where;
+    formHtml = `
+      <div class="ed-row">
+        <div class="field"><span class="flabel">اسم المؤشر</span><p class="muted" style="margin:0">${esc(x.nameAr)} <span dir="ltr">(${esc(x.nameEn)})</span></p></div>
+        <div class="field"><span class="flabel">التصنيف ونوع القياس</span><p class="muted" style="margin:0">${esc(x.catName)} · ${esc(x.mtName)}</p></div>
+      </div>
+      <div class="field"><span class="flabel" id="ed-pm-l">مصدر الوصف</span><div class="segmented" role="group" aria-labelledby="ed-pm-l"><button type="button" data-pmode="tpl" aria-pressed="${!x.promptText}">قالب نوع القياس</button><button type="button" data-pmode="custom" aria-pressed="${!!x.promptText}">وصف مخصص لهذا المؤشر</button></div></div>
+      ${tpladmPromptField(x.promptText || x.mtPromptText, 'kpi', 'عند اختيار «قالب نوع القياس» يُستخدم القالب كما هو. اختر «وصف مخصص» لكتابة طريقة حساب أدق لهذا المؤشر.')}
+      ${tpladmStatusField(x.status)}`;
+  } else if (kind === 'kpi_mtype') {
+    const x = item;
+    title = `قالب نوع القياس: ${x.label}`; sub = `يُطبّق على كل مؤشرات «${x.label}» التي ليس لها وصف مخصص.`;
+    formHtml = `${tpladmPromptField(x.promptText, 'kpi_mtype', 'استخدم متغيرات المؤشر ليصبح الوصف خاصًا بكل مؤشر تلقائيًا.')}${tpladmStatusField(x.status)}`;
+  }
+
+  const canRevert = (kind === 'widget' || kind === 'dashboard') ? !!(item && item.isOverridden && !item.isCustom)
+    : kind === 'kpi_mtype' ? !!(item && item.isOverridden)
+      : kind === 'kpi' ? !!(item && item.hasOverrideRow) : false;
+  const canDelete = (kind === 'widget' || kind === 'dashboard') && !!(item && item.isCustom);
+
+  el('tpladm-editor-box').innerHTML = `
+    <form id="tpladm-ed-form" class="ed" novalidate>
+      <div class="modal-head">
+        <div><span class="badge">${esc(TPLADM_KINDS[kind]?.one || '')}${!isNew && item?.version ? ` · <span class="num">v${item.version}</span>` : ''}</span><h2 id="tpladm-ed-title">${esc(title)}</h2><p>${esc(sub)}</p></div>
+        <button class="btn btn-ghost btn-icon btn-sm" type="button" data-close aria-label="إغلاق">${tplIc('x')}</button>
+      </div>
+      <div class="ed-body"><div class="ed-form">${formHtml}</div>${sideHtml}</div>
+      <div class="modal-foot">
+        ${canDelete ? `<button class="btn btn-ghost danger-txt" type="button" data-del>${tplIc('trash')}حذف النموذج</button>` : ''}
+        ${canRevert ? `<button class="btn btn-ghost" type="button" data-revert>${tplIc('history')}استعادة الأصل</button>` : ''}
+        <span class="note ed-err" role="alert"></span>
+        <button class="btn btn-ghost" type="button" data-close>إلغاء</button>
+        <button class="btn btn-primary" type="submit">${tplIc('check')}${isNew ? 'إضافة النموذج' : 'حفظ التغييرات'}</button>
+      </div>
+    </form>`;
+  el('tpladm-editor-modal').classList.remove('hidden');
+  tpladmWireEditor();
+}
+
+function tpladmReadForm() {
+  const kind = TPLADM_ED.kind;
+  const v = id => el(id)?.value?.trim() ?? '';
+  const status = document.querySelector('#tpladm-ed-form [data-status][aria-pressed="true"]')?.dataset.status || 'published';
+  const promptText = el('ed-prompt')?.value.trim() || '';
+  if (kind === 'widget') return { title: v('ed-title'), description: v('ed-desc'), icon: el('ed-icon')?.value, category: el('ed-cat')?.value, promptText, status };
+  if (kind === 'dashboard') {
+    const widgets = [...document.querySelectorAll('#ed-dw-list .dw-row')].map((row, i) => ({
+      type: i < 4 ? 'kpi' : row.querySelector('[data-k=type]').value,
+      title: row.querySelector('[data-k=title]').value.trim(),
+      prompt: row.querySelector('[data-k=prompt]').value.trim(),
+    }));
+    return { title: v('ed-title'), description: v('ed-desc'), category: el('ed-cat')?.value, sources: v('ed-sources').split(/[،,]/).map(s => s.trim()).filter(Boolean), layout: el('ed-layout')?.value, widgets, promptText, status };
+  }
+  if (kind === 'kpi') {
+    const custom = document.querySelector('[data-pmode="custom"]')?.getAttribute('aria-pressed') === 'true';
+    return { promptText: custom ? promptText : '', status };
+  }
+  return { promptText, status }; // kpi_mtype
+}
+
+function tpladmPreview() {
+  if (!TPLADM_ED) return;
+  const kind = TPLADM_ED.kind, x = tpladmReadForm();
+  let text = x.promptText, extra = {};
+  if (kind === 'dashboard') extra.widgets = (x.widgets || []).map((w, i) => `${i + 1}) ${w.title || '—'}${w.prompt ? ' — ' + w.prompt : ''}`).join('\n');
+  if (kind === 'kpi' || kind === 'kpi_mtype') {
+    const o = TPLADM_ED.orig;
+    extra = { kpi_name: o.nameAr || 'نسبة رضا العملاء', kpi_name_en: o.nameEn || 'Customer satisfaction rate', category: o.catName || 'خدمة العملاء', measure_type: o.mtName || o.label || 'نسبة مئوية' };
+    if (kind === 'kpi' && !x.promptText) text = o.mtPromptText || '';
+  }
+  const withRules = el('ed-withrules')?.checked;
+  const rulesHtml = withRules && TPLADM_RULES_CACHE ? `<div class="po-rules">${tpladmFillHtml(TPLADM_RULES_CACHE, kind, extra)}</div>` : '';
+  const out = el('ed-out');
+  if (out) out.innerHTML = rulesHtml + `<div>${tpladmFillHtml(text, kind, extra) || '<span class="muted">اكتب الوصف ليظهر هنا…</span>'}</div>`;
+  const th = el('ed-thumb');
+  if (!th) return;
+  if (kind === 'widget') th.innerHTML = `<div class="et-w"><span class="lib-thumb">${tplIc(x.icon || 'spark', 'icon')}</span><b>${esc(x.title) || 'اسم العنصر'}</b><small>${esc(x.description) || 'الوصف المختصر'}</small></div><span class="et-cap">كما يظهر في تبويب «النماذج»</span>`;
+  else if (kind === 'dashboard') th.innerHTML = `${dashGalThumb({ widgets: x.widgets, layout: x.layout })}<span class="et-cap">${esc(x.title) || 'اسم النموذج'} · 10 عناصر</span>`;
+  else { const o = TPLADM_ED.orig; th.innerHTML = `<div class="et-k"><b>${esc(o.nameAr || o.label || 'اسم المؤشر')}</b>${o.nameEn ? `<small dir="ltr">${esc(o.nameEn)}</small>` : ''}<span class="badge">${esc(o.mtName || o.label || '')}</span></div>`; }
+}
+
+function tpladmWireEditor() {
+  const form = el('tpladm-ed-form'), ta = el('ed-prompt');
+  const meta = () => {
+    const bad = tpladmUnknownVars(ta.value, TPLADM_ED.kind);
+    const w = form.querySelector('.pm-warn');
+    form.querySelector('.pm-count').textContent = ta.value.length.toLocaleString('en-US');
+    w.hidden = !bad.length;
+    w.innerHTML = bad.length ? `${tplIc('info')}متغير غير معروف: <code dir="ltr">${bad.map(b => `{{${esc(b)}}}`).join('، ')}</code>` : '';
+    tpladmPreview();
+  };
+  ta.addEventListener('input', meta);
+  form.querySelectorAll('[data-var]').forEach(b => b.addEventListener('click', () => {
+    const a = ta.selectionStart ?? ta.value.length, z = ta.selectionEnd ?? a, t = `{{${b.dataset.var}}}`;
+    if (ta.setRangeText) ta.setRangeText(t, a, z, 'end'); else ta.value = ta.value.slice(0, a) + t + ta.value.slice(z);
+    ta.focus(); meta();
+  }));
+  form.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => el('tpladm-editor-modal').classList.add('hidden')));
+  form.addEventListener('input', tpladmPreview);
+  form.addEventListener('change', tpladmPreview);
+  form.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', () => {
+    form.querySelectorAll('[data-status]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    tpladmPreview();
+  }));
+
+  const pm = form.querySelectorAll('[data-pmode]');
+  if (pm.length) {
+    const setMode = custom => {
+      pm.forEach(b => b.setAttribute('aria-pressed', String((b.dataset.pmode === 'custom') === custom)));
+      ta.readOnly = !custom; ta.classList.toggle('is-ro', !custom);
+      if (!custom) ta.value = TPLADM_ED.orig.mtPromptText || '';
+      const chips = form.querySelector('.ed-prompt .var-chips'); if (chips) chips.style.display = custom ? '' : 'none';
+      meta();
+    };
+    pm.forEach(b => b.addEventListener('click', () => setMode(b.dataset.pmode === 'custom')));
+    setMode(!!TPLADM_ED.orig.promptText);
+  }
+
+  const list = el('ed-dw-list');
+  if (list) list.addEventListener('change', e => {
+    if (e.target.dataset.k === 'type') e.target.closest('.dw-row').querySelector('.dw-ic').innerHTML = DASH_GAL_GLYPH[e.target.value] || '';
+    tpladmPreview();
+  });
+  el('ed-withrules')?.addEventListener('change', tpladmPreview);
+
+  form.querySelector('[data-del]')?.addEventListener('click', function () {
+    if (!this.dataset.sure) { this.dataset.sure = '1'; this.innerHTML = `${tplIc('trash')}اضغط مرة أخرى للتأكيد`; setTimeout(() => { if (this.isConnected) { delete this.dataset.sure; this.innerHTML = `${tplIc('trash')}حذف النموذج`; } }, 3000); return; }
+    tpladmDelete(TPLADM_ED.kind, TPLADM_ED.key);
+  });
+  form.querySelector('[data-revert]')?.addEventListener('click', () => tpladmRevert(TPLADM_ED.kind, TPLADM_ED.key));
+  form.addEventListener('submit', tpladmSubmitEditor);
+  meta();
+}
+
+async function tpladmSubmitEditor(e) {
+  e.preventDefault();
+  const kind = TPLADM_ED.kind, x = tpladmReadForm();
+  const form = el('tpladm-ed-form'), err = form.querySelector('.ed-err');
+  const bad = [];
+  if ((kind === 'widget' || kind === 'dashboard') && !x.title) bad.push('ed-title');
+  if (kind === 'dashboard') [...document.querySelectorAll('#ed-dw-list [data-k=title]')].forEach(i => { if (!i.value.trim()) bad.push(i.id); });
+  if (kind !== 'kpi' && !el('ed-prompt').value.trim()) bad.push('ed-prompt');
+  form.querySelectorAll('[aria-invalid]').forEach(i => i.removeAttribute('aria-invalid'));
+  if (bad.length) { bad.forEach(id => el(id)?.setAttribute('aria-invalid', 'true')); err.textContent = 'أكمل الحقول المطلوبة المميّزة باللون الأحمر.'; el(bad[0])?.focus(); return; }
+  const checkText = kind === 'kpi' ? x.promptText : el('ed-prompt').value.trim();
+  if (checkText && tpladmUnknownVars(checkText, kind).length) { err.textContent = 'في الوصف متغير غير معروف، صحّحه أو احذفه قبل الحفظ.'; el('ed-prompt').focus(); return; }
+
+  const btn = form.querySelector('[type=submit]');
+  btn.disabled = true;
+  try {
+    let res, data, msg;
+    if (kind === 'widget' || kind === 'dashboard') {
+      const body = { title: x.title, description: x.description, icon: x.icon, category: x.category, sources: x.sources, widgets: x.widgets, promptText: x.promptText, status: x.status };
+      res = TPLADM_ED.isNew
+        ? await fetch(`/api/templates/admin/${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        : await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(TPLADM_ED.key)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      data = await res.json().catch(() => null);
+      if (!res.ok) { err.textContent = data?.error || 'تعذّر الحفظ.'; return; }
+      msg = `${TPLADM_ED.isNew ? 'تمت إضافة' : 'تم حفظ'} «${x.title}»`;
+      await tpladmRefreshKind(kind);
+    } else if (kind === 'kpi') {
+      res = await fetch(`/api/templates/admin/kpi/${TPLADM_ED.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: x.promptText, status: x.status }) });
+      data = await res.json().catch(() => null);
+      if (!res.ok) { err.textContent = data?.error || 'تعذّر الحفظ.'; return; }
+      msg = `تم حفظ «${TPLADM_ED.orig.nameAr}»`;
+      await tpladmLoadKpiOverrides();
+    } else {
+      res = await fetch(`/api/templates/admin/kpi-mtypes/${TPLADM_ED.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: x.promptText, status: x.status }) });
+      data = await res.json().catch(() => null);
+      if (!res.ok) { err.textContent = data?.error || 'تعذّر الحفظ.'; return; }
+      msg = `تم حفظ قالب «${TPLADM_ED.orig.label}»`;
+      await tpladmLoadKpiMtypes();
+    }
+    el('tpladm-editor-modal').classList.add('hidden');
+    tpladmToast(msg);
+    tpladmStats(); tpladmRender();
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 async function tpladmRevert(kind, key) {
   if (!confirm('رجوع هذا العنصر للنص الأصلي؟ هيتم تجاهل كل تعديلاتك عليه.')) return;
-  await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(key)}/revert`, { method: 'POST' });
-  if (kind === 'widget') await loadTpladmWidgets(); else if (kind === 'dashboard') await loadTpladmDashboards();
-  renderTpladmTable(kind);
+  const url = kind === 'kpi_mtype' ? `/api/templates/admin/kpi-mtypes/${key}/revert` : `/api/templates/admin/${kind}/${encodeURIComponent(key)}/revert`;
+  await fetch(url, { method: 'POST' });
+  el('tpladm-editor-modal').classList.add('hidden');
+  tpladmToast('تمت الاستعادة للأصل');
+  if (kind === 'widget' || kind === 'dashboard') await tpladmRefreshKind(kind);
+  else if (kind === 'kpi_mtype') await tpladmLoadKpiMtypes();
+  tpladmStats(); tpladmRender();
 }
 async function tpladmDelete(kind, key) {
   if (!confirm('حذف هذا العنصر نهائيًا؟ لن يظهر للمستخدمين بعد الآن.')) return;
   const res = await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(key)}`, { method: 'DELETE' });
   if (!res.ok) { alert('تعذّر الحذف.'); return; }
-  if (kind === 'widget') await loadTpladmWidgets(); else if (kind === 'dashboard') await loadTpladmDashboards();
-  renderTpladmTable(kind);
+  el('tpladm-editor-modal').classList.add('hidden');
+  tpladmToast('تم الحذف');
+  await tpladmRefreshKind(kind);
+  tpladmStats(); tpladmRender();
 }
 
-// ---------- مكتبة المؤشرات (تبويب الإدارة) ----------
-function renderTpladmKpiPane() {
-  el('tpladm-kpi-mtypes-btn').textContent = tpladm.kpiMode === 'rows'
-    ? 'تعديل قوالب أنواع القياس (6)' : '← رجوع لمكتبة المؤشرات';
-  el('tpladm-kpi-search').closest('.toolbar').querySelectorAll('.search, .select').forEach(elm =>
-    elm.classList.toggle('hidden', tpladm.kpiMode !== 'rows'));
-  if (tpladm.kpiMode === 'mtypes') { renderTpladmKpiMtypes(); return; }
-  if (!KPI_LIB) { el('tpladm-table-kpi').innerHTML = `<tr><td colspan="5" class="muted">مكتبة المؤشرات غير متاحة.</td></tr>`; return; }
-  runTpladmKpiFilter();
-}
-el('tpladm-kpi-mtypes-btn').addEventListener('click', () => {
-  tpladm.kpiMode = tpladm.kpiMode === 'rows' ? 'mtypes' : 'rows';
-  renderTpladmKpiPane();
-});
-
-async function renderTpladmKpiMtypes() {
-  el('tpladm-kpi-more').hidden = true;
-  el('tpladm-kpi-count-label').textContent = '';
-  const res = await fetch('/api/templates/admin/kpi-mtypes');
-  tpladm.kpiMtypes = res.ok ? await res.json() : [];
-  const mtNames = KPI_LIB ? KPI_LIB.mtypes : ['نسبة مئوية', 'زمن', 'مالي', 'تقييم', 'عدد', 'أخرى'];
-  el('tpladm-table-kpi').innerHTML = tpladm.kpiMtypes.map(m => {
-    const [label, cls] = TPLADM_STATUS_LABEL[m.status] || ['—', 'off'];
-    return `<tr>
-      <td><strong>${esc(mtNames[m.mtype] || `نوع ${m.mtype}`)}</strong></td>
-      <td class="muted">—</td><td class="muted">قالب عام</td>
-      <td><span class="status ${cls}">${label}</span></td>
-      <td><div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-edit-mt="${m.mtype}">تعديل</button>
-        ${m.isOverridden ? `<button type="button" class="btn btn-ghost btn-sm" data-revert-mt="${m.mtype}">رجوع للأصل</button>` : ''}
-      </div></td>
-    </tr>`;
-  }).join('');
-  el('tpladm-table-kpi').querySelectorAll('[data-edit-mt]').forEach(btn =>
-    btn.addEventListener('click', () => {
-      const m = tpladm.kpiMtypes.find(x => x.mtype === +btn.dataset.editMt);
-      openTpladmEditor({
-        kind: 'kpi_mtype', key: String(m.mtype), title: mtNames[m.mtype], promptText: m.promptText, status: m.status,
-        hasMeta: false, canRevert: m.isOverridden,
-      });
-    }));
-  el('tpladm-table-kpi').querySelectorAll('[data-revert-mt]').forEach(btn =>
-    btn.addEventListener('click', async () => {
-      if (!confirm('رجوع هذا القالب للنص الأصلي؟')) return;
-      await fetch(`/api/templates/admin/kpi-mtypes/${btn.dataset.revertMt}/revert`, { method: 'POST' });
-      renderTpladmKpiMtypes();
-    }));
-}
-
-function runTpladmKpiFilter() {
-  const qs = kpiNorm(tpladm.kpiSearch.trim()).split(/\s+/).filter(Boolean);
-  tpladm.kpiHits = [];
-  KPI_LIB.rows.forEach((r, i) => {
-    if (tpladm.kpiCat !== '' && r[0] !== +tpladm.kpiCat) return;
-    if (tpladm.kpiMt !== '' && r[4] !== +tpladm.kpiMt) return;
-    if (qs.length) {
-      const hay = kpiNorm(r[2] + ' ' + r[3] + ' ' + KPI_LIB.cats[r[0]][0]);
-      if (!qs.every(w => hay.includes(w))) return;
-    }
-    tpladm.kpiHits.push(i);
-  });
-  tpladm.kpiShown = 0;
-  el('tpladm-table-kpi').innerHTML = '';
-  el('tpladm-kpi-count-label').textContent = `${tpladm.kpiHits.length.toLocaleString('en-US')} مؤشر`;
-  pageTpladmKpi();
-}
-function pageTpladmKpi() {
-  const next = tpladm.kpiHits.slice(tpladm.kpiShown, tpladm.kpiShown + TPLADM_KPI_PAGE_SIZE);
-  el('tpladm-table-kpi').insertAdjacentHTML('beforeend', next.map(i => {
-    const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]];
-    const over = tpladm.kpiOverrides[i];
-    const status = over?.status || 'published';
-    const [label, cls] = TPLADM_STATUS_LABEL[status] || ['—', 'off'];
-    return `<tr>
-      <td><div class="kpi-row-name"><strong>${esc(r[2])}</strong><small dir="ltr">${esc(r[3])}</small></div></td>
-      <td class="muted">${esc(c[0])}</td><td class="muted">${esc(KPI_LIB.mtypes[r[4]])}</td>
-      <td><span class="status ${cls}">${label}</span>${over?.promptText ? ' <span class="badge">نص مخصّص</span>' : ''}</td>
-      <td><div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-edit-kpi="${i}">تعديل</button></div></td>
-    </tr>`;
-  }).join(''));
-  tpladm.kpiShown += next.length;
-  const left = tpladm.kpiHits.length - tpladm.kpiShown;
-  el('tpladm-kpi-more').hidden = left <= 0;
-  el('tpladm-kpi-more').textContent = `عرض المزيد (${left.toLocaleString('en-US')} متبقٍ)`;
-  el('tpladm-table-kpi').querySelectorAll('[data-edit-kpi]').forEach(btn =>
-    btn.addEventListener('click', () => {
-      const i = +btn.dataset.editKpi;
-      const r = KPI_LIB.rows[i];
-      const over = tpladm.kpiOverrides[i];
-      openTpladmEditor({
-        kind: 'kpi', key: String(i), title: r[2], promptText: over?.promptText || '', status: over?.status || 'published',
-        hasMeta: false, canRevert: !!over,
-        placeholderNote: 'اتركه فاضي لاستخدام قالب نوع القياس العام — أو اكتب نصًا خاصًا بهذا المؤشر وحده.',
-      });
-    }));
-}
-let tpladmKpiDebounce;
-el('tpladm-kpi-search').addEventListener('input', e => {
-  tpladm.kpiSearch = e.target.value; clearTimeout(tpladmKpiDebounce); tpladmKpiDebounce = setTimeout(runTpladmKpiFilter, 150);
-});
-el('tpladm-kpi-cat').addEventListener('change', e => { tpladm.kpiCat = e.target.value; runTpladmKpiFilter(); });
-el('tpladm-kpi-mt').addEventListener('change', e => { tpladm.kpiMt = e.target.value; runTpladmKpiFilter(); });
-el('tpladm-kpi-more').addEventListener('click', pageTpladmKpi);
-
-// ---------- القواعد العامة ----------
-async function loadTpladmRules() {
-  const res = await fetch('/api/templates/admin/rules');
-  const data = res.ok ? await res.json() : { promptText: '' };
-  el('tpladm-rules-text').value = data.promptText || '';
-  el('tpladm-rules-meta').textContent = data.updatedAt
-    ? `آخر تعديل: ${new Date(data.updatedAt).toLocaleDateString('ar-EG')}${data.updatedByName ? ' · ' + data.updatedByName : ''}` : '';
-  el('tpladm-rules-vars').innerHTML = tpladmVarChips('rules');
-}
-function tpladmVarChips(kind) {
-  return (TPLADM_VARS_BY_KIND[kind] || []).map(name =>
-    `<button type="button" class="tpladm-var-chip" data-insert-var="{{${name}}}">${esc(TPLADM_VAR_LABELS[name] || name)} <code>{{${name}}}</code></button>`).join('');
-}
-el('tpladm-rules-vars').addEventListener('click', e => {
-  const btn = e.target.closest('[data-insert-var]');
-  if (btn) insertAtCursor(el('tpladm-rules-text'), btn.dataset.insertVar);
-});
-el('tpladm-rules-save').addEventListener('click', async () => {
-  const promptText = el('tpladm-rules-text').value;
-  const unknown = tpladmUnknownVars(promptText, 'rules');
-  if (unknown.length) { alert('متغيرات غير معروفة: ' + unknown.join(', ')); return; }
-  const res = await fetch('/api/templates/admin/rules', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText, status: 'published' }),
-  });
-  if (!res.ok) { const d = await res.json().catch(() => null); alert(d?.error || 'تعذّر الحفظ.'); return; }
-  loadTpladmRules();
-});
-
-function insertAtCursor(textarea, text) {
-  const start = textarea.selectionStart ?? textarea.value.length, end = textarea.selectionEnd ?? textarea.value.length;
-  textarea.value = textarea.value.slice(0, start) + text + textarea.value.slice(end);
-  textarea.selectionStart = textarea.selectionEnd = start + text.length;
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  textarea.focus();
-}
-
-// ---------- محرِّر النموذج (مشترك بين الأنواع الأربعة) ----------
-let tpladmEditing = null;
-function openTpladmEditor(opts) {
-  tpladmEditing = opts;
-  el('tpladm-editor-title').textContent = opts.isNew
-    ? (opts.kind === 'widget' ? 'نموذج شات جديد' : 'نموذج لوحة جديد')
-    : `تعديل: ${opts.title || ''}`;
-  el('tpladm-editor-meta-fields').classList.toggle('hidden', !opts.hasMeta);
-  el('tpladm-f-title').value = opts.title || '';
-  el('tpladm-f-desc').value = opts.desc || '';
-  el('tpladm-f-prompt').value = opts.promptText || '';
-  el('tpladm-f-prompt').placeholder = opts.placeholderNote || '';
-  // Only a KPI row may be left empty (falls back to its measure-type's own template server-side —
-  // see TemplatePromptService.ResolveKpiAsync) — every other kind always needs real instruction text.
-  el('tpladm-f-prompt').required = opts.kind !== 'kpi';
-  el('tpladm-f-status').value = opts.status || 'published';
-  el('tpladm-editor-vars').innerHTML = tpladmVarChips(opts.kind);
-  el('tpladm-editor-unknown-warning').classList.add('hidden');
-  el('tpladm-revert-btn').classList.toggle('hidden', !opts.canRevert);
-  el('tpladm-delete-btn').classList.toggle('hidden', !opts.canDelete);
-  renderTpladmEditorPreview();
-  el('tpladm-editor-modal').classList.remove('hidden');
-}
-function renderTpladmEditorPreview() {
-  el('tpladm-editor-preview').innerHTML = tpladmPreviewHtml(el('tpladm-f-prompt').value, tpladmEditing?.kind) || '<span class="muted">—</span>';
-}
-el('tpladm-f-prompt').addEventListener('input', renderTpladmEditorPreview);
-el('tpladm-editor-vars').addEventListener('click', e => {
-  const btn = e.target.closest('[data-insert-var]');
-  if (btn) insertAtCursor(el('tpladm-f-prompt'), btn.dataset.insertVar);
-});
-el('tpladm-editor-cancel').addEventListener('click', () => el('tpladm-editor-modal').classList.add('hidden'));
 el('tpladm-editor-modal').addEventListener('click', e => { if (e.target.id === 'tpladm-editor-modal') el('tpladm-editor-modal').classList.add('hidden'); });
 
-el('tpladm-editor-form').addEventListener('submit', async e => {
-  e.preventDefault();
-  const opts = tpladmEditing;
-  const promptText = el('tpladm-f-prompt').value.trim();
-  const unknown = tpladmUnknownVars(promptText, opts.kind);
-  if (unknown.length) {
-    el('tpladm-editor-unknown-warning').textContent = 'متغيرات غير معروفة: ' + unknown.join(', ');
-    el('tpladm-editor-unknown-warning').classList.remove('hidden');
-    return;
-  }
-  const body = {
-    title: opts.hasMeta ? el('tpladm-f-title').value.trim() : undefined,
-    description: opts.hasMeta ? el('tpladm-f-desc').value.trim() : undefined,
-    promptText, status: el('tpladm-f-status').value,
-  };
-  const btn = el('tpladm-editor-save');
-  btn.disabled = true;
-  try {
-    let res;
-    if (opts.kind === 'kpi_mtype') res = await fetch(`/api/templates/admin/kpi-mtypes/${opts.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    else if (opts.kind === 'kpi') res = await fetch(`/api/templates/admin/kpi/${opts.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    else if (opts.isNew) res = await fetch(`/api/templates/admin/${opts.kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    else res = await fetch(`/api/templates/admin/${opts.kind}/${encodeURIComponent(opts.key)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-
-    const data = await res.json().catch(() => null);
-    if (!res.ok) { el('tpladm-editor-unknown-warning').textContent = data?.error || 'تعذّر الحفظ.'; el('tpladm-editor-unknown-warning').classList.remove('hidden'); return; }
-    el('tpladm-editor-modal').classList.add('hidden');
-    if (opts.kind === 'widget') await loadTpladmWidgets();
-    else if (opts.kind === 'dashboard') await loadTpladmDashboards();
-    else if (opts.kind === 'kpi_mtype') { await renderTpladmKpiMtypes(); return; }
-    else if (opts.kind === 'kpi') { await loadTpladmKpiOverrides(); pageTpladmKpiRerenderCurrentPage(); return; }
-    renderTpladmPane();
-  } finally {
-    btn.disabled = false;
-  }
-});
-function pageTpladmKpiRerenderCurrentPage() {
-  const shown = tpladm.kpiShown; tpladm.kpiShown = 0;
-  el('tpladm-table-kpi').innerHTML = '';
-  while (tpladm.kpiShown < shown && tpladm.kpiShown < tpladm.kpiHits.length) pageTpladmKpi();
-}
-el('tpladm-revert-btn').addEventListener('click', async () => {
-  const opts = tpladmEditing;
-  if (!confirm('رجوع هذا العنصر للنص الأصلي؟')) return;
-  const url = opts.kind === 'kpi_mtype' ? `/api/templates/admin/kpi-mtypes/${opts.key}/revert`
-    : opts.kind === 'kpi' ? `/api/templates/admin/kpi/${opts.key}/revert`
-    : `/api/templates/admin/${opts.kind}/${encodeURIComponent(opts.key)}/revert`;
-  await fetch(url, { method: 'POST' });
-  el('tpladm-editor-modal').classList.add('hidden');
-  if (opts.kind === 'widget') await loadTpladmWidgets();
-  else if (opts.kind === 'dashboard') await loadTpladmDashboards();
-  else if (opts.kind === 'kpi_mtype') { await renderTpladmKpiMtypes(); return; }
-  else if (opts.kind === 'kpi') { await loadTpladmKpiOverrides(); pageTpladmKpiRerenderCurrentPage(); return; }
-  renderTpladmPane();
-});
-el('tpladm-delete-btn').addEventListener('click', async () => {
-  const opts = tpladmEditing;
-  if (!confirm('حذف هذا العنصر نهائيًا؟')) return;
-  await fetch(`/api/templates/admin/${opts.kind}/${encodeURIComponent(opts.key)}`, { method: 'DELETE' });
-  el('tpladm-editor-modal').classList.add('hidden');
-  if (opts.kind === 'widget') await loadTpladmWidgets(); else if (opts.kind === 'dashboard') await loadTpladmDashboards();
-  renderTpladmPane();
-});
 
 const state_projects = { all: [], rolesByProject: {}, filter: 'all', search: '' };
 
