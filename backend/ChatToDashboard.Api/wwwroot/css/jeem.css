@@ -25,6 +25,15 @@
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  /* The dashboard/widget area (table cells, widget titles, KPI numbers, …) is old app.css,
+     never migrated off its own pre-jeem :root tokens --mono ("IBM Plex Mono") and --display
+     ("Tanseek Modern Pro"/"Space Grotesk") — two different, unbranded font stacks neither of
+     which is the identity's actual Tanseek font. Since #app-shell (and every screen inside
+     it) carries .jeem-scope, overriding both here reaches every such rule through ordinary
+     inheritance without having to touch each one individually — only sizes/weights that
+     still disagree with the spec need their own fix below. */
+  --mono: var(--font);
+  --display: var(--font);
 }
 .jeem-scope h1, .jeem-scope h2, .jeem-scope h3, .jeem-scope h4 { margin: 0; font-weight: 700; line-height: 1.3; }
 .jeem-scope p { margin: 0; }
@@ -343,6 +352,7 @@
   .sb-collapse { display: none; }
   .btn.menu-btn { display: inline-flex; }
   .topbar { padding: 10px 16px; }
+  .page-head h1 { font-size: var(--fs-2xl); }
 }
 .scrim { display: none; }
 @media (max-width: 1080px) { .scrim.is-on { display: block; position: fixed; inset: 0; background: rgba(30,40,50,.3); z-index: 35; } }

@@ -532,18 +532,23 @@ window.fetch = async (...args) => {
 // they all go through THEME so every chart, on every dashboard, looks like one system.
 // Light and dark — same chart palette in both (a category means the same color either
 // way), only the grid/tick/accent colors change, mirroring the CSS :root tokens above.
+// ApexCharts never inherits the page's own font — every chart config has to be told it
+// explicitly (see THEME.fontFamily below). This used to name a font ("Tanseek Modern Pro
+// Arabic") with no matching @font-face anywhere, so every chart silently fell back to the
+// browser default instead of the identity's actual Tanseek font (see tokens.css's --font).
+const CHART_FONT_FAMILY = '"Tanseek", "Microsoft Sans Serif", Tahoma, sans-serif';
 const THEMES = {
   dark: {
     palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
     accent: '#3cb4e5', danger: '#EF6461', amber: '#F2B84B',
     gridColor: '#333436', tickColor: '#9A9CA0', ink: '#EDEFF1', surface: '#1A1B1D',
-    fontFamily: 'Tanseek Modern Pro Arabic',
+    fontFamily: CHART_FONT_FAMILY,
   },
   light: {
     palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
     accent: '#007cbb', danger: '#D3402F', amber: '#B8730A',
     gridColor: '#E3E4E6', tickColor: '#6B6D70', ink: '#434345', surface: '#FFFFFF',
-    fontFamily: 'Tanseek Modern Pro Arabic',
+    fontFamily: CHART_FONT_FAMILY,
   },
 };
 // Reassigned by applyTheme() below — every chart component reads THEME.x at render
@@ -1421,7 +1426,7 @@ function TableCard(w) {
   wrap.innerHTML = `<table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
     <tbody>${rows.map(r => `<tr>${cols.map(c => {
       const v = r[c], n = typeof v === 'number';
-      return `<td class="${n ? 'num' : ''}">${esc(n ? fmt(v) : (v ?? '—'))}</td>`;
+      return `<td class="${n ? 'cell-num' : ''}">${n ? `<span class="num">${esc(fmt(v))}</span>` : esc(v ?? '—')}</td>`;
     }).join('')}</tr>`).join('')}</tbody></table>`;
   card.appendChild(wrap);
   return card;
@@ -2038,7 +2043,7 @@ function TrendMatrixCard(w) {
     <tbody>${rows.map(r => {
       const periods = Array.isArray(r.periods) ? r.periods : [];
       const values = periods.map(p => num(p.value));
-      const cells = periods.map(p => `<td class="num">${esc(fmt(num(p.value)))}</td>`).join('');
+      const cells = periods.map(p => `<td class="cell-num"><span class="num">${esc(fmt(num(p.value)))}</span></td>`).join('');
       const last = values[values.length - 1], prev = values[values.length - 2];
       const dir = (last === undefined || prev === undefined) ? 'flat' : last > prev ? 'up' : last < prev ? 'down' : 'flat';
       const delta = (last !== undefined && prev !== undefined) ? last - prev : null;
