@@ -391,6 +391,43 @@
   </div>
 </div>
 
+<div id="dash-gallery-modal" class="modal-overlay hidden">
+  <div class="modal dash-gallery-box">
+    <div class="gal-head">
+      <div><h2>لوحة جديدة</h2><p>اختر نموذجًا جاهزًا (10 عناصر)، أو ابدأ من الصفر، أو اطلب من جيم.</p></div>
+      <label class="gal-search">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+        <span class="sr-only">بحث في نماذج اللوحات</span>
+        <input type="search" id="gal-search-input" placeholder="ابحث في النماذج… مثال: ميزانية">
+      </label>
+      <button type="button" class="btn btn-ghost btn-icon" id="gal-close" aria-label="إغلاق">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="gal-body">
+      <nav class="gal-cats" id="gal-cats" aria-label="تصنيفات النماذج"></nav>
+      <div class="gal-main">
+        <section class="gal-view" id="gal-view-list">
+          <div class="gal-quick">
+            <button type="button" class="quick-card" id="gal-start-blank">
+              <span class="qi"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-plus"/></svg></span>
+              <span><b>لوحة فارغة</b><small>ابدأ من الصفر وأضف العناصر بنفسك أو من «النماذج»</small></span>
+            </button>
+            <button type="button" class="quick-card ai" id="gal-start-ai">
+              <span class="qi"><img src="img/logo-mark.svg" alt=""></span>
+              <span><b>اطلب من جيم</b><small>اكتب وصف اللوحة اللي محتاجها وجيم يبنيها من مصادرك</small></span>
+            </button>
+          </div>
+          <h3 class="gal-sub">النماذج <span class="muted">· كل نموذج 10 عناصر جاهزة</span></h3>
+          <div class="gal-grid" id="gal-grid"></div>
+          <p class="gal-empty hidden" id="gal-empty">لا توجد نماذج مطابقة. جرّب «اطلب من جيم».</p>
+        </section>
+        <section class="gal-view gal-preview hidden" id="gal-view-preview"></section>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="new-project-modal" class="modal-overlay hidden">
   <div class="modal">
     <h3>مشروع جديد</h3>

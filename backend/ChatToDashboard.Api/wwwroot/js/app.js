@@ -3006,46 +3006,6 @@ async function exportPptx() {
 }
 el('btn-export-pptx').addEventListener('click', exportPptx);
 
-// ---------- قوالب لوحات كاملة (معروضة فقط لما الشات فاضي — أول استخدام أو بعد "لوحة
-// جديدة") — كل قالب ده مجرد سؤال بناء مُفصّل بيعدد 10 عناصر، بيتبعت لنفس ask() اللي
-// بيتبعتلها أي سؤال مكتوب يدويًا، فجيم بيبنيه من المصادر الفعلية المتاحة للمشروع —
-// مفيش أي رقم أو بيانات وهمية متحطة هنا، القالب بس بيوصف *نوع* العناصر المطلوبة. ----------
-const DASHBOARD_TEMPLATES = [
-  { id: 'sales', icon: 'cart', title: 'أداء المبيعات',
-    desc: 'إيرادات، طلبات، مقارنات شهرية وسنوية، وأعلى المنتجات والعملاء.',
-    prompt: 'ابنِ لي لوحة أداء مبيعات كاملة تتضمن: 1) إجمالي المبيعات كمؤشر رقمي مع نسبة النمو عن الفترة السابقة، 2) عدد الطلبات كمؤشر رقمي، 3) متوسط قيمة الطلب كمؤشر رقمي، 4) نسبة تحقيق المستهدف كمؤشر رقمي، 5) رسم خطي للمبيعات الشهرية خلال آخر 12 شهرًا، 6) رسم أعمدة يقارن المبيعات هذا العام بالعام السابق شهريًا، 7) رسم دائري لتوزيع المبيعات حسب المنطقة، 8) رسم أعمدة لتوزيع المبيعات حسب القطاع أو الفئة، 9) جدول لأعلى 10 منتجات مبيعًا، 10) جدول لأعلى 10 عملاء أو فروع من حيث المبيعات.' },
-  { id: 'hr', icon: 'users', title: 'الموارد البشرية',
-    desc: 'عدد الموظفين، معدل الدوران، التوظيف، وتوزيع الأقسام.',
-    prompt: 'ابنِ لي لوحة موارد بشرية كاملة تتضمن: 1) إجمالي عدد الموظفين كمؤشر رقمي، 2) معدل دوران الموظفين كمؤشر رقمي، 3) عدد الوظائف الشاغرة كمؤشر رقمي، 4) متوسط مدة بقاء الموظف كمؤشر رقمي، 5) رسم خطي لنمو عدد الموظفين شهريًا خلال آخر سنة، 6) رسم أعمدة لتوزيع الموظفين حسب القسم أو الإدارة، 7) رسم دائري لتوزيع الموظفين حسب الفئة العمرية أو الجنس، 8) رسم قمع لمراحل التوظيف من التقديم حتى التعيين، 9) جدول لأعلى الأقسام من حيث معدل الدوران، 10) جدول بآخر الموظفين المعيّنين.' },
-  { id: 'procurement', icon: 'briefcase', title: 'المشتريات',
-    desc: 'الإنفاق، دورة الشراء، أداء الموردين، وأوامر الشراء المتأخرة.',
-    prompt: 'ابنِ لي لوحة مشتريات كاملة تتضمن: 1) إجمالي الإنفاق كمؤشر رقمي مع نسبة التغيّر، 2) عدد أوامر الشراء كمؤشر رقمي، 3) متوسط مدة دورة الشراء كمؤشر رقمي، 4) نسبة الالتزام بالميزانية كمؤشر رقمي، 5) رسم خطي للإنفاق الشهري خلال آخر سنة، 6) رسم أعمدة لتوزيع الإنفاق حسب فئة الشراء، 7) رسم دائري لتوزيع الإنفاق حسب المورد، 8) رسم أعمدة يقارن الإنفاق الفعلي بالمخطط شهريًا، 9) جدول لأعلى 10 موردين من حيث قيمة التعاملات، 10) جدول بأوامر الشراء المتأخرة أو المعلّقة.' },
-  { id: 'support', icon: 'headset', title: 'خدمة العملاء',
-    desc: 'التذاكر، وقت الاستجابة والحل، ورضا العملاء.',
-    prompt: 'ابنِ لي لوحة خدمة عملاء كاملة تتضمن: 1) إجمالي عدد التذاكر كمؤشر رقمي، 2) متوسط وقت الاستجابة كمؤشر رقمي، 3) متوسط وقت الحل كمؤشر رقمي، 4) نسبة رضا العملاء كمؤشر رقمي، 5) رسم خطي لعدد التذاكر الواردة أسبوعيًا خلال آخر 3 أشهر، 6) رسم أعمدة لتوزيع التذاكر حسب النوع أو الفئة، 7) رسم دائري لتوزيع التذاكر حسب الحالة (مفتوحة/قيد المعالجة/مغلقة)، 8) رسم أعمدة لمقارنة أداء أعضاء فريق الدعم، 9) جدول لأعلى 10 عملاء من حيث عدد التذاكر، 10) جدول بالتذاكر المتأخرة عن اتفاقية مستوى الخدمة.' },
-  { id: 'finance', icon: 'chart', title: 'الأداء المالي',
-    desc: 'الإيرادات والمصروفات، الربحية، والتدفق النقدي.',
-    prompt: 'ابنِ لي لوحة أداء مالي كاملة تتضمن: 1) إجمالي الإيرادات كمؤشر رقمي مع نسبة النمو، 2) إجمالي المصروفات كمؤشر رقمي، 3) صافي الربح كمؤشر رقمي، 4) هامش الربح كمؤشر رقمي، 5) رسم خطي للإيرادات والمصروفات الشهرية خلال آخر سنة، 6) رسم أعمدة يقارن الإيرادات الفعلية بالمستهدف شهريًا، 7) رسم دائري لتوزيع المصروفات حسب البند، 8) رسم أعمدة للتدفق النقدي الشهري، 9) جدول لأعلى بنود المصروفات، 10) جدول بملخص الأرباح والخسائر حسب الربع.' },
-  { id: 'marketing', icon: 'spark', title: 'التسويق',
-    desc: 'العملاء المحتملون، أداء القنوات، والتحويل.',
-    prompt: 'ابنِ لي لوحة أداء تسويقي كاملة تتضمن: 1) إجمالي عدد العملاء المحتملين كمؤشر رقمي، 2) تكلفة اكتساب العميل كمؤشر رقمي، 3) نسبة التحويل كمؤشر رقمي، 4) العائد على الإنفاق التسويقي كمؤشر رقمي، 5) رسم خطي لعدد العملاء المحتملين شهريًا خلال آخر سنة، 6) رسم أعمدة يقارن أداء القنوات التسويقية المختلفة، 7) رسم دائري لتوزيع الإنفاق التسويقي حسب القناة، 8) رسم قمع لمراحل تحويل العميل من زائر إلى عميل، 9) جدول لأعلى الحملات أداءً، 10) جدول بأحدث العملاء المحتملين المكتسبين.' },
-];
-const DASHBOARD_TEMPLATE_COLORS = ['blue', 'teal', 'purple', 'cyan'];
-
-function dashboardTemplateGalleryHtml() {
-  const cards = DASHBOARD_TEMPLATES.map((t, i) => `
-    <article class="dash-tpl-card">
-      <div class="tpl-thumb tpl-thumb-${DASHBOARD_TEMPLATE_COLORS[i % DASHBOARD_TEMPLATE_COLORS.length]}"><svg class="icon" aria-hidden="true"><use href="#i-${t.icon}"/></svg></div>
-      <h4>${esc(t.title)}</h4>
-      <p>${esc(t.desc)}</p>
-      <span class="dash-tpl-count">10 عناصر</span>
-      <button type="button" class="dash-tpl-btn" data-dash-tpl="${esc(t.id)}" ${state.loading ? 'disabled' : ''}>استخدام القالب</button>
-    </article>`).join('');
-  return `<div class="dash-tpl-gallery">
-      <p class="dash-tpl-gallery-hint">اختر قالب لوحة جاهز ليبنيه جيم كاملاً من بياناتك الفعلية، أو اكتب سؤالك الخاص تحت.</p>
-      <div class="dash-tpl-grid">${cards}</div>
-    </div>`;
-}
 // ---------- chat ----------
 function renderMessages() {
   const items = state.messages.map((m, i) => {
@@ -3059,25 +3019,17 @@ function renderMessages() {
   const typing = state.loading
     ? `<div class="msg bot dots"><span></span><span></span><span></span></div>` : '';
   const hint = state.messages.length === 0 && !state.loading
-    ? dashboardTemplateGalleryHtml() : '';
+    ? `<div class="hint">اسأل سؤالاً عن بياناتك وسيبني لك المساعد لوحة معلومات.
+         <span class="ex">جرّب: «ما إجمالي الإيرادات حسب المنطقة؟»</span></div>` : '';
   el.messages.innerHTML = hint + items + typing;
   el.messages.scrollTop = el.messages.scrollHeight;
   renderSuggestions();
 }
 el('messages').addEventListener('click', e => {
-  const tplBtn = e.target.closest('[data-dash-tpl]');
-  if (tplBtn) {
-    if (!state.loading) {
-      const tpl = DASHBOARD_TEMPLATES.find(t => t.id === tplBtn.dataset.dashTpl);
-      if (tpl) ask(tpl.prompt);
-    }
-    return;
-  }
   const speakBtn = e.target.closest('.msg-speak-btn');
-  if (speakBtn) {
-    const msg = state.messages[Number(speakBtn.dataset.idx)];
-    speakText(msg?.text || '', msg?.speechWidgets);
-  }
+  if (!speakBtn) return;
+  const msg = state.messages[Number(speakBtn.dataset.idx)];
+  speakText(msg?.text || '', msg?.speechWidgets);
 });
 
 // ---------- voice: text-to-speech (the model talks back) ----------
@@ -3169,13 +3121,13 @@ if (ttsSupported()) {
   });
 }
 
-// ---------- continuation: "🆕 ابدأ لوحة جديدة" ----------
+// ---------- continuation: "🆕 لوحة جديدة" ----------
 // Empties the dashboard AND the chat transcript immediately — a real "start over", not just
 // a flag for the next question. Since ask() only sends the current dashboard as continuation
 // context when one actually exists (state.dashboard?.widgets?.length), an empty dashboard
 // already means the next question is answered from scratch — no separate "armed" state
-// needed. Deliberately a button, not wording detection — see AnalyticsTools.ComposeUserMessage.
-el('new-dashboard-btn').addEventListener('click', () => {
+// needed.
+function startBlankDashboard() {
   state.dashboard = null;
   state.editHistory = { past: [], future: [] };
   state.currentHistoryId = null;
@@ -3186,6 +3138,225 @@ el('new-dashboard-btn').addEventListener('click', () => {
   if (ttsSupported()) window.speechSynthesis.cancel(); // don't keep reading a wiped-out message
   renderDashboard();
   renderMessages();
+}
+// "لوحة جديدة" now opens the template gallery (below) instead of clearing immediately —
+// the actual reset only happens once the user picks something inside it (a template, "لوحة
+// فارغة", or "اطلب من جيم"), so an accidental click no longer destroys the current dashboard.
+el('new-dashboard-btn').addEventListener('click', openDashGallery);
+
+// ---------- معرض نماذج اللوحات الكاملة ("لوحة جديدة") ----------
+// بوب أب زي شاشة البداية في PowerPoint: تختار نموذج لوحة كامل (10 عناصر: 4 مؤشرات + 6
+// رسوم) فتشوف معاينة لعناصره العشرة، أو تبدأ بلوحة فارغة، أو تطلب من جيم مباشرة.
+// اختيار نموذج بيستدعي نفس ask() اللي أي سؤال مكتوب يدويًا بيعدي عليه — الوصف المفصّل
+// لعناصر النموذج هو نص السؤال نفسه، فجيم بيبني العناصر الحقيقية من مصادر المشروع
+// الفعلية. المصغّرات (GLYPH) أشكال تجريدية بترمز لنوع كل عنصر بس — مفيش رقم أو بيانات
+// وهمية متعروضة في أي مكان من المعرض، ولا قبل ولا بعد الاختيار.
+const DASH_GAL_GLYPH = {
+  kpi: '<svg viewBox="0 0 40 20"><rect x="4" y="5" width="16" height="5" rx="1.5" fill="var(--chart-1)"/><rect x="4" y="13" width="26" height="2.5" rx="1.2" fill="#D3DAE1"/></svg>',
+  line: '<svg viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="2,26 14,20 26,22 38,14 50,15 62,8 78,4" fill="none" stroke="var(--chart-1)" stroke-width="2.4" vector-effect="non-scaling-stroke"/></svg>',
+  donut: '<svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="9" fill="none" stroke="var(--chart-1)" stroke-width="5" stroke-dasharray="26 60" transform="rotate(-90 15 15)"/><circle cx="15" cy="15" r="9" fill="none" stroke="var(--chart-2)" stroke-width="5" stroke-dasharray="17 60" stroke-dashoffset="-27" transform="rotate(-90 15 15)"/><circle cx="15" cy="15" r="9" fill="none" stroke="var(--chart-3)" stroke-width="5" stroke-dasharray="12 60" stroke-dashoffset="-45" transform="rotate(-90 15 15)"/></svg>',
+  hbars: '<svg viewBox="0 0 40 24">' + [30, 22, 16, 10].map((w, i) => `<rect x="${38 - w}" y="${2 + i * 6}" width="${w}" height="4" rx="1.2" fill="var(--chart-1)"/>`).join('') + '</svg>',
+  cbars: '<svg viewBox="0 0 40 24">' + [10, 14, 18].map((h, i) => `<rect x="${5 + i * 12}" y="${22 - h}" width="4" height="${h}" rx="1" fill="#BFD9EC"/><rect x="${10 + i * 12}" y="${20 - h}" width="4" height="${h + 2}" rx="1" fill="var(--chart-1)"/>`).join('') + '</svg>',
+  table: '<svg viewBox="0 0 40 24"><rect x="2" y="2" width="36" height="4" rx="1" fill="#D3DAE1"/>' + [0, 1, 2].map(i => `<rect x="2" y="${9 + i * 5}" width="${18 - i * 3}" height="2.5" rx="1" fill="var(--chart-1)"/><rect x="28" y="${9 + i * 5}" width="10" height="2.5" rx="1" fill="#D3DAE1"/>`).join('') + '</svg>',
+  funnel: '<svg viewBox="0 0 40 24">' + [34, 26, 18, 10].map((w, i) => `<rect x="${(40 - w) / 2}" y="${2 + i * 5.5}" width="${w}" height="4" rx="1" fill="${i === 3 ? 'var(--chart-4)' : 'var(--chart-1)'}"/>`).join('') + '</svg>',
+  heat: '<svg viewBox="0 0 40 24">' + Array.from({ length: 18 }, (_, i) => `<rect x="${3 + (i % 6) * 6}" y="${3 + Math.floor(i / 6) * 6.5}" width="5" height="5.5" rx="1" fill="var(--chart-1)" opacity="${[.25, .5, .8, 1, .4, .65][(i * 5) % 6]}"/>`).join('') + '</svg>',
+};
+// توزيع الـ6 رسوم على شبكة 12 عمود — 4 تراتيب مختلفة عشان المصغّرات متبقاش كلها متطابقة.
+const DASH_GAL_LAYOUTS = {
+  a: { order: [0, 1, 2, 3, 4, 5], spans: [8, 4, 6, 6, 7, 5] },
+  b: { order: [3, 1, 0, 2, 5, 4], spans: [7, 5, 8, 4, 5, 7] },
+  c: { order: [1, 0, 4, 5, 2, 3], spans: [4, 8, 7, 5, 6, 6] },
+  d: { order: [2, 3, 0, 5, 1, 4], spans: [6, 6, 8, 4, 5, 7] },
+};
+function dashGalArrange(d) {
+  const L = DASH_GAL_LAYOUTS[d.layout || 'a'];
+  const kpis = d.widgets.slice(0, 4).map(w => ({ ...w, span: 3 }));
+  const charts = d.widgets.slice(4);
+  return kpis.concat(L.order.map((o, i) => ({ ...charts[o], span: L.spans[i] })));
+}
+function dashGalThumb(d) {
+  return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
+    `<i class="s${w.span} t-${w.type}">${DASH_GAL_GLYPH[w.type]}</i>`).join('')}</span>`;
+}
+
+// كل نموذج = 4 مؤشرات + 6 رسوم (10 عناصر). `widgets[].title` بس هو اللي بيتعرض في
+// المعرض والمعاينة (مفيش value/delta — دول مش بيانات حقيقية فمش هنعرضهم كأنهم كذلك)؛
+// `prompt` هو النص الكامل اللي بيتبعت لـ ask() فعليًا لما تضغط "استخدم هذا النموذج".
+const DASH_GALLERY = [
+  { id: 'sales-exec', layout: 'a', cat: 'sales', name: 'أداء المبيعات التنفيذي', popular: true,
+    desc: 'نظرة شاملة للإدارة العليا على المبيعات والمستهدفات والمناطق.', sources: ['ERP المبيعات', 'المستهدفات'],
+    widgets: [
+      { type: 'kpi', title: 'إجمالي المبيعات' }, { type: 'kpi', title: 'عدد الطلبات' },
+      { type: 'kpi', title: 'متوسط قيمة الطلب' }, { type: 'kpi', title: 'نسبة تحقيق المستهدف' },
+      { type: 'line', title: 'المبيعات الشهرية' }, { type: 'donut', title: 'التوزيع حسب القطاع' },
+      { type: 'hbars', title: 'المبيعات حسب المنطقة' }, { type: 'cbars', title: 'مقارنة ربع سنوية' },
+      { type: 'table', title: 'أعلى المنتجات' }, { type: 'funnel', title: 'مراحل الصفقات' }],
+    prompt: 'ابنِ لي لوحة أداء مبيعات تنفيذية كاملة تتضمن: 1) إجمالي المبيعات كمؤشر رقمي مع نسبة النمو عن الفترة السابقة، 2) عدد الطلبات كمؤشر رقمي، 3) متوسط قيمة الطلب كمؤشر رقمي، 4) نسبة تحقيق المستهدف كمؤشر رقمي، 5) رسم خطي للمبيعات الشهرية خلال آخر 12 شهرًا، 6) رسم دائري لتوزيع المبيعات حسب القطاع، 7) رسم أعمدة أفقي للمبيعات حسب المنطقة، 8) رسم أعمدة يقارن المبيعات ربعيًا بين هذا العام والعام السابق، 9) جدول لأعلى 10 منتجات مبيعًا، 10) رسم قمع لمراحل الصفقات من عرض السعر حتى الإغلاق.' },
+  { id: 'pmo', layout: 'b', cat: 'projects', name: 'متابعة المشاريع والمبادرات', popular: true,
+    desc: 'حالة المشاريع ونسب الإنجاز والميزانيات والمخاطر لمكتب إدارة المشاريع.', sources: ['نظام المشاريع', 'الميزانية'],
+    widgets: [
+      { type: 'kpi', title: 'المشاريع النشطة' }, { type: 'kpi', title: 'متوسط الإنجاز' },
+      { type: 'kpi', title: 'مشاريع متأخرة' }, { type: 'kpi', title: 'الصرف من الميزانية' },
+      { type: 'line', title: 'نسبة الإنجاز التراكمية' }, { type: 'donut', title: 'المشاريع حسب الحالة' },
+      { type: 'hbars', title: 'الإنجاز حسب القطاع' }, { type: 'cbars', title: 'الميزانية: المخطط مقابل الفعلي' },
+      { type: 'table', title: 'المشاريع الأعلى مخاطرة' }, { type: 'funnel', title: 'مراحل المبادرات' }],
+    prompt: 'ابنِ لي لوحة متابعة مشاريع ومبادرات كاملة تتضمن: 1) عدد المشاريع النشطة كمؤشر رقمي، 2) متوسط نسبة الإنجاز كمؤشر رقمي، 3) عدد المشاريع المتأخرة كمؤشر رقمي، 4) نسبة الصرف من الميزانية كمؤشر رقمي، 5) رسم خطي لنسبة الإنجاز التراكمية شهريًا، 6) رسم دائري لتوزيع المشاريع حسب حالتها (في المسار/تحت المراقبة/متأخر)، 7) رسم أعمدة أفقي لمتوسط الإنجاز حسب القطاع أو الإدارة، 8) رسم أعمدة يقارن الميزانية المخططة بالفعلية لكل ربع، 9) جدول لأعلى المشاريع مخاطرة من حيث التأخير، 10) رسم قمع لمراحل المبادرات من الفكرة حتى الإغلاق.' },
+  { id: 'hr', layout: 'c', cat: 'hr', name: 'الموارد البشرية والقوى العاملة',
+    desc: 'التوظيف والدوران الوظيفي والحضور والتوطين في لوحة واحدة.', sources: ['نظام الموارد البشرية', 'الحضور'],
+    widgets: [
+      { type: 'kpi', title: 'إجمالي الموظفين' }, { type: 'kpi', title: 'نسبة التوطين' },
+      { type: 'kpi', title: 'معدل الدوران' }, { type: 'kpi', title: 'نسبة الحضور' },
+      { type: 'line', title: 'عدد الموظفين شهريًا' }, { type: 'donut', title: 'التوزيع حسب الفئة' },
+      { type: 'hbars', title: 'الموظفون حسب الإدارة' }, { type: 'cbars', title: 'التعيينات مقابل الاستقالات' },
+      { type: 'table', title: 'وظائف شاغرة طويلة' }, { type: 'heat', title: 'الغياب حسب اليوم' }],
+    prompt: 'ابنِ لي لوحة موارد بشرية وقوى عاملة كاملة تتضمن: 1) إجمالي عدد الموظفين كمؤشر رقمي، 2) نسبة التوطين كمؤشر رقمي، 3) معدل الدوران الوظيفي كمؤشر رقمي، 4) نسبة الحضور كمؤشر رقمي، 5) رسم خطي لعدد الموظفين شهريًا (صافي بعد التعيين والاستقالات)، 6) رسم دائري لتوزيع الموظفين حسب الفئة الوظيفية، 7) رسم أعمدة أفقي لعدد الموظفين حسب الإدارة، 8) رسم أعمدة يقارن عدد التعيينات بالاستقالات لكل ربع، 9) جدول بالوظائف الشاغرة لأكثر من 60 يومًا، 10) خريطة حرارية للغياب حسب أيام الأسبوع.' },
+  { id: 'finance', layout: 'd', cat: 'finance', name: 'المالية والميزانية',
+    desc: 'الإيرادات والمصروفات والتدفق النقدي والانحراف عن الميزانية.', sources: ['النظام المالي', 'الميزانية'],
+    widgets: [
+      { type: 'kpi', title: 'الإيرادات' }, { type: 'kpi', title: 'المصروفات' },
+      { type: 'kpi', title: 'صافي الربح' }, { type: 'kpi', title: 'الانحراف عن الميزانية' },
+      { type: 'line', title: 'التدفق النقدي الشهري' }, { type: 'donut', title: 'المصروفات حسب البند' },
+      { type: 'hbars', title: 'الإيرادات حسب النشاط' }, { type: 'cbars', title: 'الميزانية مقابل الفعلي' },
+      { type: 'table', title: 'أكبر المستحقات' }, { type: 'funnel', title: 'دورة التحصيل' }],
+    prompt: 'ابنِ لي لوحة مالية وميزانية كاملة تتضمن: 1) إجمالي الإيرادات كمؤشر رقمي مع نسبة النمو، 2) إجمالي المصروفات كمؤشر رقمي، 3) صافي الربح كمؤشر رقمي، 4) نسبة الانحراف عن الميزانية كمؤشر رقمي، 5) رسم خطي للتدفق النقدي الشهري، 6) رسم دائري لتوزيع المصروفات حسب البند، 7) رسم أعمدة أفقي للإيرادات حسب النشاط أو الخط التجاري، 8) رسم أعمدة يقارن الميزانية المخططة بالمصروفات الفعلية ربعيًا، 9) جدول لأكبر المستحقات المتأخرة السداد، 10) رسم قمع لدورة التحصيل من الفاتورة حتى التحصيل.' },
+  { id: 'procurement', layout: 'c', cat: 'procurement', name: 'المشتريات والموردين',
+    desc: 'أوامر الشراء وأداء الموردين ودورة الاعتماد والتوفير المحقق.', sources: ['نظام المشتريات'],
+    widgets: [
+      { type: 'kpi', title: 'أوامر الشراء' }, { type: 'kpi', title: 'قيمة المشتريات' },
+      { type: 'kpi', title: 'متوسط مدة الاعتماد' }, { type: 'kpi', title: 'التوفير المحقق' },
+      { type: 'line', title: 'قيمة المشتريات الشهرية' }, { type: 'donut', title: 'المشتريات حسب الفئة' },
+      { type: 'hbars', title: 'أعلى الموردين' }, { type: 'cbars', title: 'التسليم في الموعد' },
+      { type: 'table', title: 'تقييم الموردين' }, { type: 'funnel', title: 'دورة الشراء' }],
+    prompt: 'ابنِ لي لوحة مشتريات وموردين كاملة تتضمن: 1) عدد أوامر الشراء كمؤشر رقمي، 2) إجمالي قيمة المشتريات كمؤشر رقمي، 3) متوسط مدة دورة الاعتماد كمؤشر رقمي، 4) قيمة التوفير المحقق كمؤشر رقمي، 5) رسم خطي لقيمة المشتريات الشهرية، 6) رسم دائري لتوزيع المشتريات حسب الفئة، 7) رسم أعمدة أفقي لأعلى الموردين من حيث قيمة التعاملات، 8) رسم أعمدة يقارن عدد الأوامر المسلّمة في الموعد بالمتأخرة لكل ربع، 9) جدول لتقييم الموردين من حيث الجودة والالتزام، 10) رسم قمع لدورة الشراء من طلب الشراء حتى الاستلام.' },
+  { id: 'cx', layout: 'b', cat: 'cx', name: 'تجربة العملاء والشكاوى',
+    desc: 'رضا العملاء وزمن الاستجابة والشكاوى حسب القناة والسبب.', sources: ['نظام التذاكر', 'الاستبيانات'],
+    widgets: [
+      { type: 'kpi', title: 'رضا العملاء' }, { type: 'kpi', title: 'التذاكر المفتوحة' },
+      { type: 'kpi', title: 'زمن أول رد' }, { type: 'kpi', title: 'مؤشر التوصية NPS' },
+      { type: 'line', title: 'التذاكر الواردة' }, { type: 'donut', title: 'التذاكر حسب القناة' },
+      { type: 'hbars', title: 'أسباب الشكاوى' }, { type: 'cbars', title: 'الالتزام بمستوى الخدمة' },
+      { type: 'table', title: 'أداء الفرق' }, { type: 'heat', title: 'أوقات الذروة' }],
+    prompt: 'ابنِ لي لوحة تجربة عملاء وشكاوى كاملة تتضمن: 1) نسبة رضا العملاء كمؤشر رقمي، 2) عدد التذاكر المفتوحة كمؤشر رقمي، 3) متوسط زمن أول رد كمؤشر رقمي، 4) مؤشر التوصية NPS كمؤشر رقمي، 5) رسم خطي لعدد التذاكر الواردة شهريًا، 6) رسم دائري لتوزيع التذاكر حسب القناة، 7) رسم أعمدة أفقي لأسباب الشكاوى الأكثر تكرارًا، 8) رسم أعمدة يقارن الالتزام المستهدف بمستوى الخدمة بالفعلي لكل ربع، 9) جدول بأداء فرق الدعم (تذاكر محلولة ونسبة الرضا)، 10) خريطة حرارية لأوقات ذروة التذاكر حسب اليوم والساعة.' },
+  { id: 'ops', layout: 'd', cat: 'ops', name: 'العمليات والتشغيل',
+    desc: 'الإنتاجية وجاهزية الأصول وأوامر العمل والصيانة.', sources: ['نظام التشغيل', 'الصيانة'],
+    widgets: [
+      { type: 'kpi', title: 'أوامر العمل المنجزة' }, { type: 'kpi', title: 'جاهزية الأصول' },
+      { type: 'kpi', title: 'أعطال حرجة' }, { type: 'kpi', title: 'تكلفة الصيانة' },
+      { type: 'line', title: 'الإنتاجية اليومية' }, { type: 'donut', title: 'أوامر العمل حسب النوع' },
+      { type: 'hbars', title: 'الأعطال حسب الموقع' }, { type: 'cbars', title: 'المخطط مقابل المنفذ' },
+      { type: 'table', title: 'الأصول الأكثر توقفًا' }, { type: 'heat', title: 'الأعطال حسب الوردية' }],
+    prompt: 'ابنِ لي لوحة عمليات وتشغيل كاملة تتضمن: 1) عدد أوامر العمل المنجزة كمؤشر رقمي، 2) نسبة جاهزية الأصول كمؤشر رقمي، 3) عدد الأعطال الحرجة كمؤشر رقمي، 4) تكلفة الصيانة كمؤشر رقمي، 5) رسم خطي للإنتاجية اليومية، 6) رسم دائري لتوزيع أوامر العمل حسب النوع (وقائية/تصحيحية/طارئة)، 7) رسم أعمدة أفقي للأعطال حسب الموقع، 8) رسم أعمدة يقارن أوامر الصيانة الوقائية المخططة بالمنفذة لكل ربع، 9) جدول بالأصول الأكثر توقفًا من حيث ساعات التوقف، 10) خريطة حرارية للأعطال حسب الوردية.' },
+  { id: 'marketing', layout: 'b', cat: 'sales', name: 'التسويق والحملات',
+    desc: 'أداء الحملات والعملاء المحتملين وتكلفة الاستحواذ والعائد.', sources: ['CRM', 'منصات الإعلان'],
+    widgets: [
+      { type: 'kpi', title: 'العملاء المحتملون' }, { type: 'kpi', title: 'معدل التحويل' },
+      { type: 'kpi', title: 'تكلفة الاستحواذ' }, { type: 'kpi', title: 'العائد على الإنفاق' },
+      { type: 'line', title: 'العملاء المحتملون شهريًا' }, { type: 'donut', title: 'المصادر' },
+      { type: 'hbars', title: 'أفضل الحملات' }, { type: 'cbars', title: 'الإنفاق مقابل الإيراد' },
+      { type: 'table', title: 'أداء القنوات' }, { type: 'funnel', title: 'رحلة العميل' }],
+    prompt: 'ابنِ لي لوحة تسويق وحملات كاملة تتضمن: 1) عدد العملاء المحتملين كمؤشر رقمي، 2) معدل التحويل كمؤشر رقمي، 3) تكلفة اكتساب العميل كمؤشر رقمي، 4) العائد على الإنفاق التسويقي كمؤشر رقمي، 5) رسم خطي لعدد العملاء المحتملين شهريًا، 6) رسم دائري لتوزيع العملاء المحتملين حسب المصدر، 7) رسم أعمدة أفقي لأفضل الحملات من حيث العائد، 8) رسم أعمدة يقارن الإنفاق التسويقي بالإيراد الناتج لكل ربع، 9) جدول بأداء القنوات التسويقية (عدد العملاء ونسبة التحويل)، 10) رسم قمع لرحلة العميل من الزيارة حتى الشراء.' },
+];
+const DASH_GAL_CATS = [
+  ['all', 'كل النماذج', 'grid'], ['sales', 'المبيعات والتسويق', 'chart'], ['projects', 'المشاريع', 'layers'],
+  ['finance', 'المالية', 'sheet'], ['hr', 'الموارد البشرية', 'users'], ['procurement', 'المشتريات', 'briefcase'],
+  ['cx', 'تجربة العملاء', 'headset'], ['ops', 'العمليات', 'settings'],
+];
+
+let dashGalCat = 'all', dashGalQuery = '';
+
+function openDashGallery() {
+  dashGalCat = 'all'; dashGalQuery = '';
+  el('gal-search-input').value = '';
+  renderDashGalCats();
+  renderDashGalGrid();
+  el('gal-view-list').classList.remove('hidden');
+  el('gal-view-preview').classList.add('hidden');
+  el('dash-gallery-modal').classList.remove('hidden');
+}
+function closeDashGallery() { el('dash-gallery-modal').classList.add('hidden'); }
+
+function renderDashGalCats() {
+  el('gal-cats').innerHTML = DASH_GAL_CATS.map(([k, name, icon]) => {
+    const count = k === 'all' ? DASH_GALLERY.length : DASH_GALLERY.filter(d => d.cat === k).length;
+    return `<button type="button" data-cat="${k}" aria-pressed="${k === dashGalCat}">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}</span><em>${count}</em>
+      </button>`;
+  }).join('');
+  el('gal-cats').querySelectorAll('[data-cat]').forEach(btn => btn.addEventListener('click', () => {
+    dashGalCat = btn.dataset.cat;
+    renderDashGalCats();
+    renderDashGalGrid();
+  }));
+}
+function renderDashGalGrid() {
+  const q = dashGalQuery.toLowerCase();
+  const items = DASH_GALLERY.filter(d =>
+    (dashGalCat === 'all' || d.cat === dashGalCat) &&
+    (!q || (d.name + d.desc + d.sources.join()).toLowerCase().includes(q)));
+  el('gal-grid').innerHTML = items.map(d => `
+    <button type="button" class="dash-card" data-dash="${esc(d.id)}">
+      ${dashGalThumb(d)}
+      <span class="dc-body">
+        <b>${esc(d.name)}${d.popular ? ' <span class="badge badge-blue">الأكثر استخدامًا</span>' : ''}</b>
+        <small>${esc(d.desc)}</small>
+        <span class="dc-meta">
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>10 عناصر</span>
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(d.sources.join('، '))}</span>
+        </span>
+      </span>
+    </button>`).join('');
+  el('gal-empty').classList.toggle('hidden', items.length > 0);
+  el('gal-grid').querySelectorAll('[data-dash]').forEach(card =>
+    card.addEventListener('click', () => openDashGalPreview(DASH_GALLERY.find(d => d.id === card.dataset.dash))));
+}
+el('gal-search-input').addEventListener('input', e => { dashGalQuery = e.target.value.trim(); renderDashGalGrid(); });
+el('gal-close').addEventListener('click', closeDashGallery);
+el('dash-gallery-modal').addEventListener('click', e => { if (e.target.id === 'dash-gallery-modal') closeDashGallery(); });
+
+function openDashGalPreview(d) {
+  el('gal-view-preview').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>كل النماذج</span>
+    </button>
+    <div class="pv-grid">
+      <div class="pv-thumb">${dashGalThumb(d)}</div>
+      <div class="pv-info">
+        <h3>${esc(d.name)}</h3><p>${esc(d.desc)}</p>
+        <div class="pv-src">${d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')}</div>
+        <h4>العناصر العشرة</h4>
+        <ol class="pv-list">${dashGalArrange(d).map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type]}</span>${esc(w.title)}</li>`).join('')}</ol>
+        <div class="pv-actions">
+          <button type="button" class="btn btn-primary" id="gal-use-btn">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+          </button>
+          <span class="muted" style="font-size:var(--fs-xs)">تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.</span>
+        </div>
+      </div>
+    </div>`;
+  el('gal-back-btn').addEventListener('click', () => {
+    el('gal-view-preview').classList.add('hidden');
+    el('gal-view-list').classList.remove('hidden');
+  });
+  el('gal-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    ask(d.prompt);
+  });
+  el('gal-view-list').classList.add('hidden');
+  el('gal-view-preview').classList.remove('hidden');
+}
+
+el('gal-start-blank').addEventListener('click', () => {
+  closeDashGallery();
+  startBlankDashboard();
+});
+el('gal-start-ai').addEventListener('click', () => {
+  closeDashGallery();
+  startBlankDashboard();
+  setChatMode('dashboard');
+  el('q').value = 'اعمل لي لوحة جديدة توضح ';
+  el('q').focus();
 });
 
 // ---------- voice: speech-to-text (the user talks to the model) ----------
