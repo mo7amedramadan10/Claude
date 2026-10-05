@@ -7085,8 +7085,9 @@ el('new-org-form').addEventListener('submit', async e => {
     const res = await fetch('/api/organizations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'تعذّر إنشاء المنظمة.');
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || `تعذّر إنشاء المنظمة (${res.status}).`);
+    if (!data?.organization?.id) throw new Error('تعذّر إنشاء المنظمة: رد غير متوقع من الخادم.');
     if (adminUsername) {
       const adminRes = await fetch(`/api/organizations/${data.organization.id}/admins`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -7140,46 +7141,117 @@ el('new-org-admin-form').addEventListener('submit', async e => {
   }
 });
 
+const state_projects = { all: [], rolesByProject: {}, filter: 'all', search: '' };
+
+function openNewProjectModal() {
+  el('new-project-error').classList.add('hidden');
+  el('new-project-name').value = '';
+  el('new-project-modal').classList.remove('hidden');
+}
+
 async function loadProjects() {
+  const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
   const res = await fetch('/api/projects');
   if (!res.ok) { el('projects-grid').innerHTML = ''; return; }
   const data = await res.json();
   el('projects-org-name').textContent = data.organization.name;
-  renderProjects(data.projects);
+  state_projects.all = data.projects;
+
+  // صف الإحصاءات أعلى الصفحة — كله أرقام حقيقية من endpoints موجودة فعلًا، مفيش فيها أي
+  // رقم مُلفّق: المصادر والمشروعات من نفس الاستجابة، اللوحات من سجل المستخدم، والأعضاء من
+  // قائمة مستخدمي المنظمة (للمسؤول فقط، لأنها endpoint مقصورة عليه).
+  el('proj-stat-projects').textContent = data.projects.length;
+  el('proj-stat-users-box').classList.toggle('hidden', !isAdmin);
+  document.getElementById('projects-hero').classList.toggle('cols-3', !isAdmin);
+  document.getElementById('projects-hero').classList.toggle('cols-4', isAdmin);
+
+  const [sourcesRes, historyRes] = await Promise.all([
+    fetch('/api/sources').then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/api/history').then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  if (sourcesRes) {
+    const count = (sourcesRes.systems?.length || 0) + (sourcesRes.files?.length || 0) + (sourcesRes.integrations?.length || 0);
+    el('proj-stat-sources').textContent = count;
+  }
+  if (historyRes) el('proj-stat-dashboards').textContent = historyRes.length;
+
+  if (isAdmin) {
+    if (!state.users.length) await loadUsers();
+    el('proj-stat-users').textContent = state.users.length;
+    state_projects.rolesByProject = {};
+    await Promise.all(data.projects.map(async p => {
+      const r = await fetch(`/api/projects/${encodeURIComponent(p.id)}/roles`).then(r => r.ok ? r.json() : { roles: [] }).catch(() => ({ roles: [] }));
+      state_projects.rolesByProject[p.id] = r.roles || [];
+    }));
+  }
+
+  el('new-project-btn-top').classList.toggle('hidden', !isAdmin);
+  renderProjects();
 }
 
 // أول مشروع (الافتراضي، المُنشأ تلقائيًا مع المنظمة) هو الوحيد المرتبط فعليًا بمساحة
 // العمل الحالية (المحادثة/اللوحات/المصادر/الملفات) — أي مشروع تاني لسه مجرد سجل، لحد ما
 // يبقى في تبديل حقيقي بين المشاريع على مستوى البيانات (خطوة تالية، مش جزء من هذا البناء).
-function renderProjects(projects) {
+function renderProjects() {
   const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
-  const liveProjectId = projects.length ? projects[0].id : null;
+  const myId = state.currentUser?.id;
+  const liveProjectId = state_projects.all.length ? state_projects.all[0].id : null;
+
+  let projects = state_projects.all;
+  if (state_projects.search.trim()) {
+    const q = state_projects.search.trim().toLowerCase();
+    projects = projects.filter(p => p.name.toLowerCase().includes(q));
+  }
+  if (isAdmin && state_projects.filter === 'mine') {
+    projects = projects.filter(p => (state_projects.rolesByProject[p.id] || []).some(r => r.userId === myId));
+  }
+
   const cards = projects.map(p => {
     const isLive = p.id === liveProjectId;
+    const roles = state_projects.rolesByProject[p.id];
+    const myRole = roles?.find(r => r.userId === myId)?.role;
+    const badge = myRole ? `<span class="proj-role-badge">${esc(ROLE_LABELS[myRole] || myRole)}</span>` : '';
+    const statsLine = isAdmin && roles
+      ? `<div class="stats-line"><span class="s"><b>${roles.length}</b><span>أعضاء</span></span></div>`
+      : '';
     return `
     <a href="#" class="proj-card ${isLive ? 'is-live' : 'is-pending'}" data-project="${esc(p.id)}" data-live="${isLive}">
+      ${badge}
       <div class="top">
         <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg></span>
         <div><h3>${esc(p.name)}</h3><p class="desc">${isLive ? 'مساحة العمل النشطة الآن' : 'سيُربط بمساحة عمل خاصة قريبًا'}</p></div>
         ${isAdmin ? `<button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="أعضاء المشروع" aria-label="أعضاء المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button>` : ''}
       </div>
+      ${statsLine}
     </a>`;
   }).join('');
   const newCard = isAdmin
     ? '<button type="button" class="new-card" id="new-project-card"><span class="plus"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><strong>مشروع جديد</strong></button>'
     : '';
   el('projects-grid').innerHTML = cards + newCard;
+  el('projects-empty-note').classList.toggle('hidden', projects.length > 0);
+  el('projects-toolbar').classList.toggle('hidden', state_projects.all.length === 0);
+  document.getElementById('projects-filter').classList.toggle('hidden', !isAdmin);
 
   el('projects-grid').querySelectorAll('[data-project]').forEach(card =>
     card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); }));
   el('projects-grid').querySelectorAll('[data-members]').forEach(btn =>
     btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openProjectRolesModal(btn.dataset.members, btn.dataset.pname); }));
-  el('new-project-card')?.addEventListener('click', () => {
-    el('new-project-error').classList.add('hidden');
-    el('new-project-name').value = '';
-    el('new-project-modal').classList.remove('hidden');
-  });
+  el('new-project-card')?.addEventListener('click', openNewProjectModal);
 }
+
+el('new-project-btn-top').addEventListener('click', openNewProjectModal);
+el('projects-search').addEventListener('input', e => { state_projects.search = e.target.value; renderProjects(); });
+document.getElementById('projects-filter').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-filter]');
+  if (!btn) return;
+  state_projects.filter = btn.dataset.filter;
+  document.getElementById('projects-filter').querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b === btn);
+    b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+  });
+  renderProjects();
+});
 
 el('new-project-cancel').addEventListener('click', () => el('new-project-modal').classList.add('hidden'));
 el('new-project-form').addEventListener('submit', async e => {

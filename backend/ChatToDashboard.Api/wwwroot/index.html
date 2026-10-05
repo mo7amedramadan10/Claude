@@ -306,8 +306,27 @@
         <h1>مشاريع <span id="projects-org-name">المنظمة</span></h1>
         <p>كل مشروع له محادثته الخاصة ولوحاته ومصادره — اضغط على مشروع لفتح مساحة عمله.</p>
       </div>
+      <button type="button" class="btn btn-primary hidden" id="new-project-btn-top"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>مشروع جديد</button>
     </section>
+
+    <section class="org-hero cols-4" id="projects-hero">
+      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>المشاريع</span><span class="stat-value num" id="proj-stat-projects">0</span><span class="stat-foot">في هذه المنظمة</span></div>
+      <div id="proj-stat-users-box"><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>الأعضاء</span><span class="stat-value num" id="proj-stat-users">0</span><span class="stat-foot">مستخدمون في المنظمة</span></div>
+      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>المصادر</span><span class="stat-value num" id="proj-stat-sources">0</span><span class="stat-foot">مصدر بيانات متاح</span></div>
+      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>اللوحات</span><span class="stat-value num" id="proj-stat-dashboards">0</span><span class="stat-foot">لوحة محفوظة لك</span></div>
+    </section>
+
+    <section class="toolbar" id="projects-toolbar">
+      <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" id="projects-search" placeholder="ابحث في المشاريع"></label>
+      <span class="grow"></span>
+      <div class="segmented" id="projects-filter" role="group" aria-label="تصفية المشاريع">
+        <button type="button" class="active" data-filter="all" aria-pressed="true">الكل</button>
+        <button type="button" data-filter="mine" aria-pressed="false">مشاريعي</button>
+      </div>
+    </section>
+
     <div class="proj-grid" id="projects-grid"></div>
+    <p class="muted hidden" id="projects-empty-note">لا توجد مشاريع مطابقة.</p>
   </div>
 </div>
 

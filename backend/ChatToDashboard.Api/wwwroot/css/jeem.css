@@ -800,8 +800,23 @@ form#form.composer.hidden { display: none; }
 .alert.info { background: var(--blue-50); color: var(--blue-700); }
 .alert .grow { flex: 1; }
 
+/* صف إحصاءات صفحة المشاريع — نفس مكوّن .org-hero بس بعرض 4 أعمدة (أو 3 لغير المسؤول،
+   لأن إحصاء الأعضاء endpoint مقصورة على المسؤول) */
+.org-hero.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.org-hero.cols-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) {
+  .org-hero.cols-4, .org-hero.cols-3 { grid-template-columns: repeat(2, 1fr); }
+  .org-hero.cols-4 > div:nth-child(2), .org-hero.cols-3 > div:nth-child(2) { border-inline-start: 0; }
+}
+/* .org-hero > div (specificity 11) and .segmented (specificity 10, but may load after
+   .hidden) both silently beat the plain .hidden{display:none} utility — same tie-breaking
+   issue hit repeatedly elsewhere in this file, fixed the same way: a same-or-higher-
+   specificity override that ends in display:none. */
+.org-hero > div.hidden { display: none; }
+#projects-filter.hidden { display: none; }
+
 /* بطاقات المشاريع (مستوى المنظمة) */
-.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-4); }
+.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-4); }
 .proj-card {
   position: relative; display: flex; flex-direction: column; gap: 14px;
   padding: 20px; border-radius: var(--r-lg);
@@ -817,6 +832,26 @@ form#form.composer.hidden { display: none; }
 .proj-card.is-pending { opacity: .7; }
 /* زرار "أعضاء المشروع" — ملاصق لحافة الكارت المقابلة، مش لاصق في النص جنبه مباشرة. */
 .proj-card .top [data-members] { margin-inline-start: auto; flex: none; position: relative; z-index: 1; }
+
+.proj-role-badge {
+  position: absolute; top: -9px; inset-inline-start: 16px; font-size: 11px; font-weight: 700;
+  padding: 3px 9px; border-radius: var(--r-full); background: var(--blue-50); color: var(--blue-700);
+  border: 1px solid var(--surface); box-shadow: var(--shadow-1);
+}
+.proj-card .stats-line { display: flex; gap: var(--sp-5); padding-top: 12px; border-top: 1px solid var(--line-2); }
+.proj-card .stats-line .s { display: flex; flex-direction: column; gap: 2px; }
+.proj-card .stats-line .s b { font-size: var(--fs-lg); font-weight: 700; line-height: 1; }
+.proj-card .stats-line .s span { font-size: 11px; color: var(--ink-3); }
+
+.new-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center;
+  min-height: 160px; border-radius: var(--r-lg); border: 2px dashed #CFD8E0; background: transparent;
+  color: var(--ink-2); transition: all .2s var(--ease); width: 100%; cursor: pointer;
+}
+.new-card:hover { border-color: var(--brand-blue); background: var(--blue-50); color: var(--blue-700); }
+.new-card .plus { width: 48px; height: 48px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; color: var(--brand-blue); transition: transform .3s var(--ease); }
+.new-card:hover .plus { transform: rotate(90deg); }
+.new-card strong { font-size: var(--fs-md); font-weight: 700; }
 
 .new-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center;
