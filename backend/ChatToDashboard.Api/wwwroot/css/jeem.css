@@ -1124,3 +1124,22 @@ form#form.composer.hidden { display: none; }
   display: inline-flex; align-items: center; height: 32px; padding: 0 12px;
   border-radius: var(--r-full); background: var(--surface-2); font-size: var(--fs-xs); font-weight: 500; color: var(--ink-2);
 }
+
+/* مكتبة النماذج (platform-templates admin) — شريط متغيّرات قابلة للإدراج في محرّر النص،
+   ومربع المعاينة بقيم تجريبية (انظر TemplatePromptService.KnownVariables). */
+.tpladm-vars { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
+.tpladm-var-chip {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: var(--r-full);
+  border: 1px dashed var(--line); background: var(--surface-2); font-size: var(--fs-xs); font-weight: 500;
+  color: var(--brand-blue); font-family: var(--mono); cursor: pointer; transition: all .15s;
+}
+.tpladm-var-chip:hover { border-color: var(--brand-blue); border-style: solid; background: var(--blue-50); }
+.tpladm-preview {
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2);
+  padding: 12px 14px; font-size: var(--fs-sm); color: var(--ink-2); white-space: pre-wrap; min-height: 48px;
+}
+.tpladm-preview mark { background: var(--blue-50); color: var(--blue-700); border-radius: 4px; padding: 0 2px; }
+.tpladm-unknown-var { background: var(--danger-50); color: var(--danger); border-radius: 4px; padding: 0 2px; }
+.tpladm-editor { max-width: 640px; }
+.kpi-row-name { display: flex; flex-direction: column; gap: 2px; }
+.kpi-row-name small { color: var(--ink-3); font-size: var(--fs-xs); }

@@ -1,6 +1,7 @@
 using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
+using ChatToDashboard.Api.Templates;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,21 +18,24 @@ public class ChatController : ControllerBase
     private readonly IDashboardGenerator _generator;
     private readonly PermissionsService _permissions;
     private readonly HistoryStore _history;
+    private readonly TemplatePromptService _templatePrompts;
     private readonly ILogger<ChatController> _logger;
 
     public ChatController(
-        IDashboardGenerator generator, PermissionsService permissions, HistoryStore history, ILogger<ChatController> logger)
+        IDashboardGenerator generator, PermissionsService permissions, HistoryStore history,
+        TemplatePromptService templatePrompts, ILogger<ChatController> logger)
     {
         _generator = generator;
         _permissions = permissions;
         _history = history;
+        _templatePrompts = templatePrompts;
         _logger = logger;
     }
 
     [HttpPost]
     public async Task<ActionResult<ChatResponse>> Post([FromBody] ChatRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Message))
+        if (request.Template is null && string.IsNullOrWhiteSpace(request.Message))
             return BadRequest(new ChatResponse { Error = "message is required." });
         if (request.Image is { Length: > 0 } image &&
             (!image.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) || image.Length > MaxImageDataUrlLength))
@@ -43,10 +47,26 @@ public class ChatController : ControllerBase
         // requested selection can only ever shrink, never widen, what it's allowed to see.
         var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
 
+        // A template-originated question (chat-widget/dashboard-gallery/KPI-library "add"):
+        // the browser sent only a TemplateRef, never prompt text, so the actual instruction
+        // sent to the model is assembled here — request.Message is never used as the prompt
+        // in this branch, only as a display label the frontend already showed in the bubble.
+        string prompt;
+        if (request.Template is not null)
+        {
+            var (resolved, error) = await _templatePrompts.ResolveAsync(request.Template, user, effectiveSources, ct);
+            if (resolved is null) return BadRequest(new ChatResponse { Error = error ?? "تعذّر تحميل هذا النموذج." });
+            prompt = resolved;
+        }
+        else
+        {
+            prompt = request.Message.Trim();
+        }
+
         try
         {
             var dashboard = await _generator.GenerateDashboardAsync(
-                request.Message.Trim(), request.CurrentDashboard, effectiveSources, request.Image, user, request.Lang, ct: ct);
+                prompt, request.CurrentDashboard, effectiveSources, request.Image, user, request.Lang, ct: ct);
 
             // Mirrors HistoryController.Update's Owner-only new-data-source guard, but on the
             // chat-continuation path: without this, an Editor could reach the same outcome —

@@ -3184,82 +3184,12 @@ function dashGalThumb(d) {
 }
 
 // كل نموذج = 4 مؤشرات + 6 رسوم (10 عناصر). `widgets[].title` بس هو اللي بيتعرض في
-// المعرض والمعاينة (مفيش value/delta — دول مش بيانات حقيقية فمش هنعرضهم كأنهم كذلك)؛
-// `prompt` هو النص الكامل اللي بيتبعت لـ ask() فعليًا لما تضغط "استخدم هذا النموذج".
-const DASH_GALLERY = [
-  { id: 'sales-exec', layout: 'a', cat: 'sales', name: 'أداء المبيعات التنفيذي', popular: true,
-    desc: 'نظرة شاملة للإدارة العليا على المبيعات والمستهدفات والمناطق.', sources: ['ERP المبيعات', 'المستهدفات'],
-    widgets: [
-      { type: 'kpi', title: 'إجمالي المبيعات' }, { type: 'kpi', title: 'عدد الطلبات' },
-      { type: 'kpi', title: 'متوسط قيمة الطلب' }, { type: 'kpi', title: 'نسبة تحقيق المستهدف' },
-      { type: 'line', title: 'المبيعات الشهرية' }, { type: 'donut', title: 'التوزيع حسب القطاع' },
-      { type: 'hbars', title: 'المبيعات حسب المنطقة' }, { type: 'cbars', title: 'مقارنة ربع سنوية' },
-      { type: 'table', title: 'أعلى المنتجات' }, { type: 'funnel', title: 'مراحل الصفقات' }],
-    prompt: 'ابنِ لي لوحة أداء مبيعات تنفيذية كاملة تتضمن: 1) إجمالي المبيعات كمؤشر رقمي مع نسبة النمو عن الفترة السابقة، 2) عدد الطلبات كمؤشر رقمي، 3) متوسط قيمة الطلب كمؤشر رقمي، 4) نسبة تحقيق المستهدف كمؤشر رقمي، 5) رسم خطي للمبيعات الشهرية خلال آخر 12 شهرًا، 6) رسم دائري لتوزيع المبيعات حسب القطاع، 7) رسم أعمدة أفقي للمبيعات حسب المنطقة، 8) رسم أعمدة يقارن المبيعات ربعيًا بين هذا العام والعام السابق، 9) جدول لأعلى 10 منتجات مبيعًا، 10) رسم قمع لمراحل الصفقات من عرض السعر حتى الإغلاق.' },
-  { id: 'pmo', layout: 'b', cat: 'projects', name: 'متابعة المشاريع والمبادرات', popular: true,
-    desc: 'حالة المشاريع ونسب الإنجاز والميزانيات والمخاطر لمكتب إدارة المشاريع.', sources: ['نظام المشاريع', 'الميزانية'],
-    widgets: [
-      { type: 'kpi', title: 'المشاريع النشطة' }, { type: 'kpi', title: 'متوسط الإنجاز' },
-      { type: 'kpi', title: 'مشاريع متأخرة' }, { type: 'kpi', title: 'الصرف من الميزانية' },
-      { type: 'line', title: 'نسبة الإنجاز التراكمية' }, { type: 'donut', title: 'المشاريع حسب الحالة' },
-      { type: 'hbars', title: 'الإنجاز حسب القطاع' }, { type: 'cbars', title: 'الميزانية: المخطط مقابل الفعلي' },
-      { type: 'table', title: 'المشاريع الأعلى مخاطرة' }, { type: 'funnel', title: 'مراحل المبادرات' }],
-    prompt: 'ابنِ لي لوحة متابعة مشاريع ومبادرات كاملة تتضمن: 1) عدد المشاريع النشطة كمؤشر رقمي، 2) متوسط نسبة الإنجاز كمؤشر رقمي، 3) عدد المشاريع المتأخرة كمؤشر رقمي، 4) نسبة الصرف من الميزانية كمؤشر رقمي، 5) رسم خطي لنسبة الإنجاز التراكمية شهريًا، 6) رسم دائري لتوزيع المشاريع حسب حالتها (في المسار/تحت المراقبة/متأخر)، 7) رسم أعمدة أفقي لمتوسط الإنجاز حسب القطاع أو الإدارة، 8) رسم أعمدة يقارن الميزانية المخططة بالفعلية لكل ربع، 9) جدول لأعلى المشاريع مخاطرة من حيث التأخير، 10) رسم قمع لمراحل المبادرات من الفكرة حتى الإغلاق.' },
-  { id: 'hr', layout: 'c', cat: 'hr', name: 'الموارد البشرية والقوى العاملة',
-    desc: 'التوظيف والدوران الوظيفي والحضور والتوطين في لوحة واحدة.', sources: ['نظام الموارد البشرية', 'الحضور'],
-    widgets: [
-      { type: 'kpi', title: 'إجمالي الموظفين' }, { type: 'kpi', title: 'نسبة التوطين' },
-      { type: 'kpi', title: 'معدل الدوران' }, { type: 'kpi', title: 'نسبة الحضور' },
-      { type: 'line', title: 'عدد الموظفين شهريًا' }, { type: 'donut', title: 'التوزيع حسب الفئة' },
-      { type: 'hbars', title: 'الموظفون حسب الإدارة' }, { type: 'cbars', title: 'التعيينات مقابل الاستقالات' },
-      { type: 'table', title: 'وظائف شاغرة طويلة' }, { type: 'heat', title: 'الغياب حسب اليوم' }],
-    prompt: 'ابنِ لي لوحة موارد بشرية وقوى عاملة كاملة تتضمن: 1) إجمالي عدد الموظفين كمؤشر رقمي، 2) نسبة التوطين كمؤشر رقمي، 3) معدل الدوران الوظيفي كمؤشر رقمي، 4) نسبة الحضور كمؤشر رقمي، 5) رسم خطي لعدد الموظفين شهريًا (صافي بعد التعيين والاستقالات)، 6) رسم دائري لتوزيع الموظفين حسب الفئة الوظيفية، 7) رسم أعمدة أفقي لعدد الموظفين حسب الإدارة، 8) رسم أعمدة يقارن عدد التعيينات بالاستقالات لكل ربع، 9) جدول بالوظائف الشاغرة لأكثر من 60 يومًا، 10) خريطة حرارية للغياب حسب أيام الأسبوع.' },
-  { id: 'finance', layout: 'd', cat: 'finance', name: 'المالية والميزانية',
-    desc: 'الإيرادات والمصروفات والتدفق النقدي والانحراف عن الميزانية.', sources: ['النظام المالي', 'الميزانية'],
-    widgets: [
-      { type: 'kpi', title: 'الإيرادات' }, { type: 'kpi', title: 'المصروفات' },
-      { type: 'kpi', title: 'صافي الربح' }, { type: 'kpi', title: 'الانحراف عن الميزانية' },
-      { type: 'line', title: 'التدفق النقدي الشهري' }, { type: 'donut', title: 'المصروفات حسب البند' },
-      { type: 'hbars', title: 'الإيرادات حسب النشاط' }, { type: 'cbars', title: 'الميزانية مقابل الفعلي' },
-      { type: 'table', title: 'أكبر المستحقات' }, { type: 'funnel', title: 'دورة التحصيل' }],
-    prompt: 'ابنِ لي لوحة مالية وميزانية كاملة تتضمن: 1) إجمالي الإيرادات كمؤشر رقمي مع نسبة النمو، 2) إجمالي المصروفات كمؤشر رقمي، 3) صافي الربح كمؤشر رقمي، 4) نسبة الانحراف عن الميزانية كمؤشر رقمي، 5) رسم خطي للتدفق النقدي الشهري، 6) رسم دائري لتوزيع المصروفات حسب البند، 7) رسم أعمدة أفقي للإيرادات حسب النشاط أو الخط التجاري، 8) رسم أعمدة يقارن الميزانية المخططة بالمصروفات الفعلية ربعيًا، 9) جدول لأكبر المستحقات المتأخرة السداد، 10) رسم قمع لدورة التحصيل من الفاتورة حتى التحصيل.' },
-  { id: 'procurement', layout: 'c', cat: 'procurement', name: 'المشتريات والموردين',
-    desc: 'أوامر الشراء وأداء الموردين ودورة الاعتماد والتوفير المحقق.', sources: ['نظام المشتريات'],
-    widgets: [
-      { type: 'kpi', title: 'أوامر الشراء' }, { type: 'kpi', title: 'قيمة المشتريات' },
-      { type: 'kpi', title: 'متوسط مدة الاعتماد' }, { type: 'kpi', title: 'التوفير المحقق' },
-      { type: 'line', title: 'قيمة المشتريات الشهرية' }, { type: 'donut', title: 'المشتريات حسب الفئة' },
-      { type: 'hbars', title: 'أعلى الموردين' }, { type: 'cbars', title: 'التسليم في الموعد' },
-      { type: 'table', title: 'تقييم الموردين' }, { type: 'funnel', title: 'دورة الشراء' }],
-    prompt: 'ابنِ لي لوحة مشتريات وموردين كاملة تتضمن: 1) عدد أوامر الشراء كمؤشر رقمي، 2) إجمالي قيمة المشتريات كمؤشر رقمي، 3) متوسط مدة دورة الاعتماد كمؤشر رقمي، 4) قيمة التوفير المحقق كمؤشر رقمي، 5) رسم خطي لقيمة المشتريات الشهرية، 6) رسم دائري لتوزيع المشتريات حسب الفئة، 7) رسم أعمدة أفقي لأعلى الموردين من حيث قيمة التعاملات، 8) رسم أعمدة يقارن عدد الأوامر المسلّمة في الموعد بالمتأخرة لكل ربع، 9) جدول لتقييم الموردين من حيث الجودة والالتزام، 10) رسم قمع لدورة الشراء من طلب الشراء حتى الاستلام.' },
-  { id: 'cx', layout: 'b', cat: 'cx', name: 'تجربة العملاء والشكاوى',
-    desc: 'رضا العملاء وزمن الاستجابة والشكاوى حسب القناة والسبب.', sources: ['نظام التذاكر', 'الاستبيانات'],
-    widgets: [
-      { type: 'kpi', title: 'رضا العملاء' }, { type: 'kpi', title: 'التذاكر المفتوحة' },
-      { type: 'kpi', title: 'زمن أول رد' }, { type: 'kpi', title: 'مؤشر التوصية NPS' },
-      { type: 'line', title: 'التذاكر الواردة' }, { type: 'donut', title: 'التذاكر حسب القناة' },
-      { type: 'hbars', title: 'أسباب الشكاوى' }, { type: 'cbars', title: 'الالتزام بمستوى الخدمة' },
-      { type: 'table', title: 'أداء الفرق' }, { type: 'heat', title: 'أوقات الذروة' }],
-    prompt: 'ابنِ لي لوحة تجربة عملاء وشكاوى كاملة تتضمن: 1) نسبة رضا العملاء كمؤشر رقمي، 2) عدد التذاكر المفتوحة كمؤشر رقمي، 3) متوسط زمن أول رد كمؤشر رقمي، 4) مؤشر التوصية NPS كمؤشر رقمي، 5) رسم خطي لعدد التذاكر الواردة شهريًا، 6) رسم دائري لتوزيع التذاكر حسب القناة، 7) رسم أعمدة أفقي لأسباب الشكاوى الأكثر تكرارًا، 8) رسم أعمدة يقارن الالتزام المستهدف بمستوى الخدمة بالفعلي لكل ربع، 9) جدول بأداء فرق الدعم (تذاكر محلولة ونسبة الرضا)، 10) خريطة حرارية لأوقات ذروة التذاكر حسب اليوم والساعة.' },
-  { id: 'ops', layout: 'd', cat: 'ops', name: 'العمليات والتشغيل',
-    desc: 'الإنتاجية وجاهزية الأصول وأوامر العمل والصيانة.', sources: ['نظام التشغيل', 'الصيانة'],
-    widgets: [
-      { type: 'kpi', title: 'أوامر العمل المنجزة' }, { type: 'kpi', title: 'جاهزية الأصول' },
-      { type: 'kpi', title: 'أعطال حرجة' }, { type: 'kpi', title: 'تكلفة الصيانة' },
-      { type: 'line', title: 'الإنتاجية اليومية' }, { type: 'donut', title: 'أوامر العمل حسب النوع' },
-      { type: 'hbars', title: 'الأعطال حسب الموقع' }, { type: 'cbars', title: 'المخطط مقابل المنفذ' },
-      { type: 'table', title: 'الأصول الأكثر توقفًا' }, { type: 'heat', title: 'الأعطال حسب الوردية' }],
-    prompt: 'ابنِ لي لوحة عمليات وتشغيل كاملة تتضمن: 1) عدد أوامر العمل المنجزة كمؤشر رقمي، 2) نسبة جاهزية الأصول كمؤشر رقمي، 3) عدد الأعطال الحرجة كمؤشر رقمي، 4) تكلفة الصيانة كمؤشر رقمي، 5) رسم خطي للإنتاجية اليومية، 6) رسم دائري لتوزيع أوامر العمل حسب النوع (وقائية/تصحيحية/طارئة)، 7) رسم أعمدة أفقي للأعطال حسب الموقع، 8) رسم أعمدة يقارن أوامر الصيانة الوقائية المخططة بالمنفذة لكل ربع، 9) جدول بالأصول الأكثر توقفًا من حيث ساعات التوقف، 10) خريطة حرارية للأعطال حسب الوردية.' },
-  { id: 'marketing', layout: 'b', cat: 'sales', name: 'التسويق والحملات',
-    desc: 'أداء الحملات والعملاء المحتملين وتكلفة الاستحواذ والعائد.', sources: ['CRM', 'منصات الإعلان'],
-    widgets: [
-      { type: 'kpi', title: 'العملاء المحتملون' }, { type: 'kpi', title: 'معدل التحويل' },
-      { type: 'kpi', title: 'تكلفة الاستحواذ' }, { type: 'kpi', title: 'العائد على الإنفاق' },
-      { type: 'line', title: 'العملاء المحتملون شهريًا' }, { type: 'donut', title: 'المصادر' },
-      { type: 'hbars', title: 'أفضل الحملات' }, { type: 'cbars', title: 'الإنفاق مقابل الإيراد' },
-      { type: 'table', title: 'أداء القنوات' }, { type: 'funnel', title: 'رحلة العميل' }],
-    prompt: 'ابنِ لي لوحة تسويق وحملات كاملة تتضمن: 1) عدد العملاء المحتملين كمؤشر رقمي، 2) معدل التحويل كمؤشر رقمي، 3) تكلفة اكتساب العميل كمؤشر رقمي، 4) العائد على الإنفاق التسويقي كمؤشر رقمي، 5) رسم خطي لعدد العملاء المحتملين شهريًا، 6) رسم دائري لتوزيع العملاء المحتملين حسب المصدر، 7) رسم أعمدة أفقي لأفضل الحملات من حيث العائد، 8) رسم أعمدة يقارن الإنفاق التسويقي بالإيراد الناتج لكل ربع، 9) جدول بأداء القنوات التسويقية (عدد العملاء ونسبة التحويل)، 10) رسم قمع لرحلة العميل من الزيارة حتى الشراء.' },
-];
+// المعرض والمعاينة (مفيش value/delta — دول مش بيانات حقيقية فمش هنعرضهم كأنهم كذلك).
+// النص الكامل اللي بيتبعت لـ ask() فعليًا لما تضغط "استخدم هذا النموذج" ماعاد بيترسل من هنا
+// أصلًا — المتصفح بيبعت id النموذج بس، وجيم (TemplatePromptService) هو اللي بيجمّع النص
+// النهائي من مكتبة النماذج اللي مسؤول المنصة بيعدّلها، عشان المستخدم مايقدرش يغيّر الوصف
+// المُرسل للموديل من عنده. انظر loadTemplateCatalog() وask() (التمبلت ريف).
+let DASH_GALLERY = []; // fetched from /api/templates/catalog — see loadTemplateCatalog()
 const DASH_GAL_CATS = [
   ['all', 'كل النماذج', 'grid'], ['sales', 'المبيعات والتسويق', 'chart'], ['projects', 'المشاريع', 'layers'],
   ['finance', 'المالية', 'sheet'], ['hr', 'الموارد البشرية', 'users'], ['procurement', 'المشتريات', 'briefcase'],
@@ -3345,7 +3275,7 @@ function openDashGalPreview(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
-    ask(d.prompt, `📊 بناء لوحة «${d.name}»`);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   el('gal-view-list').classList.add('hidden');
   el('gal-view-preview').classList.remove('hidden');
@@ -3490,7 +3420,12 @@ function renderSuggestions() {
 // ... 10)."), fine for the model to read but unreadable crammed into a chat bubble as if the
 // user had typed it — every other caller (a typed question, a single-widget template's short
 // one-line prompt) leaves displayText unset and behaves exactly as before.
-async function ask(question, displayText) {
+// `templateRef`, when given (a chat-widget/dashboard-gallery/KPI-library "إضافة" click), is
+// {kind, key, ...} — see Templates.TemplateRef on the backend. `question` is then ONLY the
+// display label (never sent as the AI prompt): the server resolves the real instruction from
+// its own templates library by templateRef alone, so nothing the browser sends can change what
+// the model is actually asked for a given template (see ChatController.Post).
+async function ask(question, displayText, templateRef) {
   const currentDashboard = state.dashboard?.widgets?.length
     ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
     : null;
@@ -3507,7 +3442,7 @@ async function ask(question, displayText) {
     const res = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: question, currentDashboard, image,
+        message: question, template: templateRef, currentDashboard, image,
         // Only when actually continuing an Active dashboard (never a Draft) — lets the
         // server re-apply the same "Editors can't introduce a new data source" rule the
         // autosave/wizard path already enforces, since a chat continuation would otherwise
@@ -3587,36 +3522,14 @@ async function ask(question, displayText) {
   }
 }
 
-// ---------- النماذج (Templates): a static catalog of ready-made widget requests ----------
-// Each entry's `prompt` is just a normal dashboard-building request — clicking "إضافة" calls
-// ask(prompt) exactly as if the user had typed it, so it goes through the real pipeline (real
-// connected sources, real AI-picked data) rather than inserting any canned/fake widget.
-const TEMPLATES = [
-  { id: 'kpi-target-region', cat: 'kpi', icon: 'spark', title: 'تحقيق المستهدف بالمناطق',
-    desc: 'نسبة الوفاء بالمستهدف لكل منطقة، مع أعلى وأقل منطقة أداءً.',
-    prompt: 'أضف مؤشرًا يوضح نسبة تحقيق المستهدف موزّعة حسب المناطق، مع إبراز أعلى وأقل منطقة أداءً.' },
-  { id: 'kpi-trend', cat: 'kpi', icon: 'up', title: 'مؤشر رقمي مع اتجاه',
-    desc: 'أهم رقم عندك، مع نسبة تغيّره عن الفترة السابقة.',
-    prompt: 'أضف مؤشرًا رقميًا لأهم قيمة في بياناتي، مع نسبة التغيّر مقارنة بالفترة السابقة.' },
-  { id: 'chart-growth', cat: 'chart', icon: 'chart', title: 'نمو العملاء الجدد',
-    desc: 'رسم خطي لعدد العملاء الجدد شهريًا خلال آخر سنة.',
-    prompt: 'أضف رسمًا بيانيًا خطيًا يوضح نمو عدد العملاء الجدد شهريًا خلال آخر 12 شهرًا.' },
-  { id: 'chart-yoy', cat: 'chart', icon: 'calendar', title: 'مقارنة سنوية',
-    desc: 'أهم مؤشر عندك مقارنًا شهريًا بنفس الفترة من السنة السابقة.',
-    prompt: 'أضف رسمًا بيانيًا يقارن أهم مؤشر في بياناتي بين هذه السنة والسنة السابقة شهريًا.' },
-  { id: 'chart-funnel', cat: 'chart', icon: 'filter', title: 'مراحل الصفقات',
-    desc: 'توزيع الصفقات أو الطلبات على مراحلها كقمع.',
-    prompt: 'أضف رسم قمع (funnel) يوضح توزيع الصفقات أو الطلبات على مراحلها المختلفة.' },
-  { id: 'chart-channels', cat: 'chart', icon: 'share', title: 'توزيع قنوات البيع',
-    desc: 'رسم دائري لحصة كل قناة أو مصدر من إجمالي المبيعات.',
-    prompt: 'أضف رسمًا دائريًا (donut) يوضح توزيع المبيعات أو الطلبات حسب القناة أو المصدر.' },
-  { id: 'table-top', cat: 'table', icon: 'list', title: 'أعلى العناصر أداءً',
-    desc: 'جدول لأعلى 10 عناصر (منتجات/عملاء/فروع) مع قيمها ونموها.',
-    prompt: 'أضف جدولًا يعرض أعلى 10 عناصر (منتجات أو عملاء أو فروع حسب بياناتي) أداءً، مع قيمها ونسبة نموها.' },
-  { id: 'table-status', cat: 'table', icon: 'grid', title: 'ملخص الحالة',
-    desc: 'جدول يلخّص توزيع السجلات حسب حالتها، بالعدد والنسبة.',
-    prompt: 'أضف جدولًا يلخّص توزيع السجلات حسب حالتها (مثل: مكتمل، قيد التنفيذ، ملغى)، مع العدد والنسبة لكل حالة.' },
-];
+// ---------- النماذج (Templates): a catalog of ready-made widget requests ----------
+// Display data only (id/cat/icon/title/desc) — fetched from /api/templates/catalog, see
+// loadTemplateCatalog(). The actual prompt text is never sent to the browser: clicking "إضافة"
+// calls ask() with a templateRef (just this item's id), and the server resolves the real
+// instruction from its own templates library (see TemplatePromptService) — the same library
+// the platform-owner edits, and the same reason it's done this way: so nobody can tamper with
+// what gets sent to the model by editing the request from the browser.
+let TEMPLATES = []; // fetched from /api/templates/catalog — see loadTemplateCatalog()
 const TEMPLATE_CAT_COLOR = { kpi: 'blue', chart: 'teal', table: 'purple' };
 
 function renderTemplatesPanel() {
@@ -3649,7 +3562,7 @@ el('tpl-grid').addEventListener('click', e => {
   const tpl = TEMPLATES.find(t => t.id === btn.dataset.tpl);
   if (!tpl) return;
   setChatMode('dashboard');
-  ask(tpl.prompt);
+  ask(`✨ ${tpl.title}`, undefined, { kind: 'widget', key: tpl.id });
 });
 
 // ---------- مكتبة المؤشرات (تبويب فرعي داخل «النماذج») ----------
@@ -3668,16 +3581,11 @@ const KPI_MT_ICON = ['percent', 'clock', 'wallet', 'star', 'hash', 'target'];
 const KPI_MT_KEY = ['pct', 'time', 'money', 'score', 'count', 'other'];
 const KPI_PAGE_SIZE = 40;
 
-// جملة الطلب المُرسلة فعليًا لـ ask() — نص واحد بسيط لكل نوع قياس، بنفس أسلوب TEMPLATES فوق،
-// مفيهوش أي رقم أو قيمة، جيم هو اللي هيجيب القيمة الحقيقية من مصادر المشروع.
-const KPI_PROMPT_BY_MTYPE = [
-  name => `أضف مؤشرًا بعنوان "${name}" كنسبة مئوية من بياناتي، مع شريط تقدّم يوضح مدى تحقيق المستهدف إن وُجد مستهدف في المصدر.`,
-  name => `أضف مؤشرًا بعنوان "${name}" بوحدة زمنية (أيام أو ساعات حسب بياناتي)، مع اتجاهه مقارنة بالفترة السابقة — علمًا أن القيمة الأقل تُعتبر أفضل هنا.`,
-  name => `أضف مؤشرًا ماليًا بعنوان "${name}"، مع نسبة التغيّر مقارنة بالفترة السابقة.`,
-  name => `أضف مؤشرًا بعنوان "${name}" كدرجة تقييم من 5، بناءً على بياناتي.`,
-  name => `أضف مؤشرًا بعنوان "${name}" يوضح العدد موزّعًا على آخر 6 أشهر كرسم أعمدة.`,
-  name => `أضف مؤشرًا يوضح "${name}" من بياناتي.`,
-];
+// جملة الطلب نفسها (ونوع القياس المختار) ماعادت بتتولّد هنا — الضغط على مؤشر بيبعت templateRef
+// {kind:'kpi', key: index, kpiName, ...} بس، وجيم (TemplatePromptService) هو اللي بيجمّع النص
+// الفعلي من مكتبة النماذج اللي مسؤول المنصة بيتحكّم فيها، بنفس مبدأ TEMPLATES/DASH_GALLERY فوق.
+// `KPI_ROW_OVERRIDES` (من catalog endpoint) بيقول أي صفوف اتوقفت فتُستثنى من النتائج هنا.
+let KPI_ROW_OVERRIDES = {};
 
 // توحيد أشكال الألف والتاء المربوطة والياء — نفس تطبيع البحث في النسخة المرجعية، عشان
 // البحث عن «الاداء» يلاقي «الأداء».
@@ -3740,6 +3648,7 @@ function initKpiLibrary() {
     const qs = kpiNorm(fq.trim()).split(/\s+/).filter(Boolean);
     hits = [];
     KPI_LIB.rows.forEach((r, i) => {
+      if (KPI_ROW_OVERRIDES[i] === 'stopped') return;
       if (fc !== '' && r[0] !== +fc) return;
       if (fm !== '' && r[4] !== +fm) return;
       if (qs.length && !qs.every(w => idx[i].includes(w))) return;
@@ -3766,9 +3675,12 @@ function initKpiLibrary() {
     const btn = e.target.closest('.kpi-item');
     if (!btn || state.loading) return;
     const i = +btn.dataset.k;
-    const r = KPI_LIB.rows[i];
+    const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]];
     setChatMode('dashboard');
-    ask(KPI_PROMPT_BY_MTYPE[r[4]](r[2]), `📊 ${r[2]}`);
+    ask(`📊 ${r[2]}`, undefined, {
+      kind: 'kpi', key: String(i),
+      kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]],
+    });
   });
   run();
 }
@@ -4194,6 +4106,21 @@ async function runInquiryConvert(turnIndex, blockIndex, addToExisting) {
     state.loading = false;
     renderInquiryMessages(); renderMessages(); renderDashboard();
   }
+}
+
+// ---------- النماذج: catalog (display data only — see TemplatePromptService's remarks on
+// why the prompt text itself never travels over this endpoint) ----------
+async function loadTemplateCatalog() {
+  try {
+    const res = await fetch('/api/templates/catalog');
+    if (!res.ok) return;
+    const data = await res.json();
+    TEMPLATES = data.widgets || [];
+    DASH_GALLERY = data.dashboards || [];
+    KPI_ROW_OVERRIDES = data.kpiOverrides || {};
+  } catch { /* keeps whatever was already loaded (empty on first failure) */ }
+  if (!el('templates-panel').classList.contains('hidden')) renderTemplatesPanel();
+  if (!el('dash-gallery-modal').classList.contains('hidden')) renderDashGalGrid();
 }
 
 // ---------- sources ----------
@@ -5519,7 +5446,7 @@ const SCREEN_LABELS = {
   chat: 'المحادثة واللوحات', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
   projects: 'المشاريع', settings: 'الإعدادات', integrations: 'التكاملات الخارجية',
-  organizations: 'المنظمات',
+  organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
 // organizations screen) > المشروع الحالي (project-scoped screens only) > الصفحة الحالية.
@@ -5530,7 +5457,7 @@ function updateCrumbs(name) {
   const crumbs = el('crumbs');
   if (!crumbs) return;
   const parts = ['جيم'];
-  if (name === 'organizations') parts.push('المنصّة');
+  if (name === 'organizations' || name === 'templates-admin') parts.push('المنصّة');
   else if (state.orgName) parts.push(state.orgName);
   if (PROJECT_SCOPED_SCREENS.has(name) && state.projectName) parts.push(state.projectName);
   const label = SCREEN_LABELS[name];
@@ -5556,6 +5483,7 @@ function showScreen(name) {
   if (name === 'integrations') loadIntegrations();
   if (name === 'projects') loadProjects();
   if (name === 'organizations') loadOrganizations();
+  if (name === 'templates-admin') loadTemplatesAdmin();
   if (name === 'sources') loadSourcesPage();
   // Coming back to المحادثة re-fetches the sources list — state.systems is otherwise only
   // ever loaded once at startApp(), so an integration newly set up (or newly schema-
@@ -7222,6 +7150,7 @@ async function startApp() {
   renderDashboard();
   await loadSources();
   await loadFiles();
+  await loadTemplateCatalog();
   loadCurrentProjectNav();
   maybeAutoStartTour();
 }
@@ -7357,6 +7286,402 @@ el('new-org-admin-form').addEventListener('submit', async e => {
   } finally {
     btn.disabled = false;
   }
+});
+
+// ---------- مكتبة النماذج (platform-templates admin) ----------
+// مسؤول المنصة بس (screen-templates-admin, خلف PlatformOwner). النص الفعلي المُرسل لجيم
+// (promptText) بيتحمّل وبيتعدّل هنا فقط؛ المستخدم العادي شايف العنوان/الوصف بس (انظر
+// loadTemplateCatalog فوق) وبيبعت templateId عند الإضافة — جيم (TemplatePromptService) هو
+// اللي بيجمّع النص النهائي من هنا، فمفيش طريقة للمستخدم يغيّر الوصف المُرسل للموديل.
+//
+// قائمة المتغيرات ومعانيها التجريبية هنا نسخة من TemplatePromptService.KnownVariables —
+// للمعاينة الفورية في المتصفح بس؛ التحقق الحاسم (منع حفظ متغير غير معروف) بيتكرّر فعليًا
+// على السيرفر (TemplatePromptService.FindUnknownVariables) فمفيش طريقة لتجاوزه من هنا.
+const TPLADM_SAMPLE_VARS = {
+  project_name: 'مشروع تجربة', org_name: 'شركة تجربة', sources: 'نظام ERP، ملف المبيعات.xlsx',
+  widgets: '1) إجمالي المبيعات\n2) عدد الطلبات', kpi_name: 'رضا العملاء', kpi_name_en: 'Customer Satisfaction',
+  category: 'خدمة العملاء', measure_type: 'نسبة مئوية',
+};
+const TPLADM_VARS_BY_KIND = {
+  widget: ['project_name', 'org_name', 'sources'],
+  dashboard: ['project_name', 'org_name', 'sources', 'widgets'],
+  kpi: ['kpi_name', 'kpi_name_en', 'category', 'measure_type', 'project_name', 'org_name', 'sources'],
+  kpi_mtype: ['kpi_name', 'kpi_name_en', 'category', 'measure_type', 'project_name', 'org_name', 'sources'],
+  rules: ['project_name', 'org_name', 'sources'],
+};
+const TPLADM_VAR_LABELS = {
+  project_name: 'اسم المشروع', org_name: 'اسم المنظمة', sources: 'المصادر المفعّلة', widgets: 'عناصر اللوحة',
+  kpi_name: 'اسم المؤشر', kpi_name_en: 'اسم المؤشر (إنجليزي)', category: 'التصنيف', measure_type: 'نوع القياس',
+};
+
+function tpladmUnknownVars(text, kind) {
+  const known = new Set(TPLADM_VARS_BY_KIND[kind] || []);
+  const found = new Set();
+  (text.match(/\{\{\s*(\w+)\s*\}\}/g) || []).forEach(m => {
+    const name = m.replace(/[{}\s]/g, '');
+    if (!known.has(name)) found.add(name);
+  });
+  return [...found];
+}
+function tpladmPreviewHtml(text, kind) {
+  const known = TPLADM_VARS_BY_KIND[kind] || [];
+  return esc(text || '').replace(/\{\{\s*(\w+)\s*\}\}/g, (m, name) =>
+    known.includes(name) ? `<mark>${esc(TPLADM_SAMPLE_VARS[name] ?? '')}</mark>` : `<span class="tpladm-unknown-var">${esc(m)}</span>`);
+}
+
+const tpladm = {
+  tab: 'widget', widgets: [], dashboards: [],
+  searchWidget: '', searchDashboard: '',
+  kpiMode: 'rows', kpiSearch: '', kpiCat: '', kpiMt: '', kpiHits: [], kpiShown: 0,
+  kpiOverrides: {}, // index(string) -> {status, promptText, version, updatedByName, updatedAt}
+  kpiMtypes: [], // 6 rows from /api/templates/admin/kpi-mtypes
+};
+const TPLADM_KPI_PAGE_SIZE = 40;
+
+async function loadTemplatesAdmin() {
+  await Promise.all([loadTpladmWidgets(), loadTpladmDashboards()]);
+  if (KPI_LIB) {
+    if (!el('tpladm-kpi-cat').dataset.built) {
+      el('tpladm-kpi-cat').insertAdjacentHTML('beforeend',
+        KPI_LIB.cats.map((c, i) => `<option value="${i}">${esc(c[0])}</option>`).join(''));
+      el('tpladm-kpi-mt').insertAdjacentHTML('beforeend',
+        KPI_LIB.mtypes.map((m, i) => `<option value="${i}">${esc(m)}</option>`).join(''));
+      el('tpladm-kpi-cat').dataset.built = '1';
+    }
+    await loadTpladmKpiOverrides();
+    el('tpladm-count-kpi').textContent = KPI_LIB.rows.length.toLocaleString('en-US');
+  }
+  renderTpladmPane();
+}
+
+el('tpladm-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('[data-tpladm-tab]');
+  if (!btn) return;
+  tpladm.tab = btn.dataset.tpladmTab;
+  el('tpladm-tabs').querySelectorAll('[data-tpladm-tab]').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on));
+  });
+  renderTpladmPane();
+});
+
+function renderTpladmPane() {
+  ['widget', 'dashboard', 'kpi', 'rules'].forEach(k =>
+    el(`tpladm-pane-${k}`).classList.toggle('hidden', k !== tpladm.tab));
+  el('tpladm-new-btn').classList.toggle('hidden', tpladm.tab !== 'widget' && tpladm.tab !== 'dashboard');
+  if (tpladm.tab === 'widget') renderTpladmTable('widget');
+  else if (tpladm.tab === 'dashboard') renderTpladmTable('dashboard');
+  else if (tpladm.tab === 'kpi') renderTpladmKpiPane();
+  else if (tpladm.tab === 'rules') loadTpladmRules();
+}
+
+async function loadTpladmWidgets() {
+  const res = await fetch('/api/templates/admin/widget');
+  tpladm.widgets = res.ok ? await res.json() : [];
+  el('tpladm-count-widget').textContent = tpladm.widgets.length;
+}
+async function loadTpladmDashboards() {
+  const res = await fetch('/api/templates/admin/dashboard');
+  tpladm.dashboards = res.ok ? await res.json() : [];
+  el('tpladm-count-dashboard').textContent = tpladm.dashboards.length;
+}
+async function loadTpladmKpiOverrides() {
+  const res = await fetch('/api/templates/admin/kpi-overrides');
+  const rows = res.ok ? await res.json() : [];
+  tpladm.kpiOverrides = {};
+  rows.forEach(r => { tpladm.kpiOverrides[r.index] = r; });
+}
+
+const TPLADM_STATUS_LABEL = { published: ['منشور', 'ok'], draft: ['مسودة', 'warn'], stopped: ['متوقف', 'off'] };
+
+function renderTpladmTable(kind) {
+  const search = (kind === 'widget' ? tpladm.searchWidget : tpladm.searchDashboard).trim().toLowerCase();
+  const items = (kind === 'widget' ? tpladm.widgets : tpladm.dashboards)
+    .filter(it => !search || it.title.toLowerCase().includes(search));
+  el(`tpladm-table-${kind}`).innerHTML = items.map(it => {
+    const [label, cls] = TPLADM_STATUS_LABEL[it.status] || ['—', 'off'];
+    return `<tr>
+      <td><strong>${esc(it.title)}</strong>${it.isCustom ? ' <span class="badge">مُضاف</span>' : ''}</td>
+      <td class="muted">${esc(it.category || '—')}</td>
+      <td><span class="status ${cls}">${label}</span></td>
+      <td class="muted">${it.updatedAt ? new Date(it.updatedAt).toLocaleDateString('ar-EG') + (it.updatedByName ? ' · ' + esc(it.updatedByName) : '') : '—'}</td>
+      <td><div class="row-actions">
+        <button type="button" class="btn btn-ghost btn-sm" data-edit="${esc(it.key)}">تعديل</button>
+        ${it.isOverridden && !it.isCustom ? `<button type="button" class="btn btn-ghost btn-sm" data-revert="${esc(it.key)}">رجوع للأصل</button>` : ''}
+        ${it.isCustom ? `<button type="button" class="btn btn-ghost btn-sm" data-delete="${esc(it.key)}">حذف</button>` : ''}
+      </div></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="5" class="muted">لا توجد نتائج.</td></tr>`;
+
+  el(`tpladm-table-${kind}`).querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const it = items.find(x => x.key === btn.dataset.edit);
+      openTpladmEditor({
+        kind, key: it.key, title: it.title, desc: it.description, promptText: it.promptText, status: it.status,
+        isCustom: it.isCustom, hasMeta: true, canRevert: it.isOverridden && !it.isCustom, canDelete: it.isCustom,
+      });
+    }));
+  el(`tpladm-table-${kind}`).querySelectorAll('[data-revert]').forEach(btn =>
+    btn.addEventListener('click', () => tpladmRevert(kind, btn.dataset.revert)));
+  el(`tpladm-table-${kind}`).querySelectorAll('[data-delete]').forEach(btn =>
+    btn.addEventListener('click', () => tpladmDelete(kind, btn.dataset.delete)));
+}
+el('tpladm-search-widget').addEventListener('input', e => { tpladm.searchWidget = e.target.value; renderTpladmTable('widget'); });
+el('tpladm-search-dashboard').addEventListener('input', e => { tpladm.searchDashboard = e.target.value; renderTpladmTable('dashboard'); });
+
+el('tpladm-new-btn').addEventListener('click', () => {
+  openTpladmEditor({ kind: tpladm.tab, key: null, title: '', desc: '', promptText: '', status: 'draft', isNew: true, hasMeta: true });
+});
+
+async function tpladmRevert(kind, key) {
+  if (!confirm('رجوع هذا العنصر للنص الأصلي؟ هيتم تجاهل كل تعديلاتك عليه.')) return;
+  await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(key)}/revert`, { method: 'POST' });
+  if (kind === 'widget') await loadTpladmWidgets(); else if (kind === 'dashboard') await loadTpladmDashboards();
+  renderTpladmTable(kind);
+}
+async function tpladmDelete(kind, key) {
+  if (!confirm('حذف هذا العنصر نهائيًا؟ لن يظهر للمستخدمين بعد الآن.')) return;
+  const res = await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(key)}`, { method: 'DELETE' });
+  if (!res.ok) { alert('تعذّر الحذف.'); return; }
+  if (kind === 'widget') await loadTpladmWidgets(); else if (kind === 'dashboard') await loadTpladmDashboards();
+  renderTpladmTable(kind);
+}
+
+// ---------- مكتبة المؤشرات (تبويب الإدارة) ----------
+function renderTpladmKpiPane() {
+  el('tpladm-kpi-mtypes-btn').textContent = tpladm.kpiMode === 'rows'
+    ? 'تعديل قوالب أنواع القياس (6)' : '← رجوع لمكتبة المؤشرات';
+  el('tpladm-kpi-search').closest('.toolbar').querySelectorAll('.search, .select').forEach(elm =>
+    elm.classList.toggle('hidden', tpladm.kpiMode !== 'rows'));
+  if (tpladm.kpiMode === 'mtypes') { renderTpladmKpiMtypes(); return; }
+  if (!KPI_LIB) { el('tpladm-table-kpi').innerHTML = `<tr><td colspan="5" class="muted">مكتبة المؤشرات غير متاحة.</td></tr>`; return; }
+  runTpladmKpiFilter();
+}
+el('tpladm-kpi-mtypes-btn').addEventListener('click', () => {
+  tpladm.kpiMode = tpladm.kpiMode === 'rows' ? 'mtypes' : 'rows';
+  renderTpladmKpiPane();
+});
+
+async function renderTpladmKpiMtypes() {
+  el('tpladm-kpi-more').hidden = true;
+  el('tpladm-kpi-count-label').textContent = '';
+  const res = await fetch('/api/templates/admin/kpi-mtypes');
+  tpladm.kpiMtypes = res.ok ? await res.json() : [];
+  const mtNames = KPI_LIB ? KPI_LIB.mtypes : ['نسبة مئوية', 'زمن', 'مالي', 'تقييم', 'عدد', 'أخرى'];
+  el('tpladm-table-kpi').innerHTML = tpladm.kpiMtypes.map(m => {
+    const [label, cls] = TPLADM_STATUS_LABEL[m.status] || ['—', 'off'];
+    return `<tr>
+      <td><strong>${esc(mtNames[m.mtype] || `نوع ${m.mtype}`)}</strong></td>
+      <td class="muted">—</td><td class="muted">قالب عام</td>
+      <td><span class="status ${cls}">${label}</span></td>
+      <td><div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-edit-mt="${m.mtype}">تعديل</button>
+        ${m.isOverridden ? `<button type="button" class="btn btn-ghost btn-sm" data-revert-mt="${m.mtype}">رجوع للأصل</button>` : ''}
+      </div></td>
+    </tr>`;
+  }).join('');
+  el('tpladm-table-kpi').querySelectorAll('[data-edit-mt]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const m = tpladm.kpiMtypes.find(x => x.mtype === +btn.dataset.editMt);
+      openTpladmEditor({
+        kind: 'kpi_mtype', key: String(m.mtype), title: mtNames[m.mtype], promptText: m.promptText, status: m.status,
+        hasMeta: false, canRevert: m.isOverridden,
+      });
+    }));
+  el('tpladm-table-kpi').querySelectorAll('[data-revert-mt]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      if (!confirm('رجوع هذا القالب للنص الأصلي؟')) return;
+      await fetch(`/api/templates/admin/kpi-mtypes/${btn.dataset.revertMt}/revert`, { method: 'POST' });
+      renderTpladmKpiMtypes();
+    }));
+}
+
+function runTpladmKpiFilter() {
+  const qs = kpiNorm(tpladm.kpiSearch.trim()).split(/\s+/).filter(Boolean);
+  tpladm.kpiHits = [];
+  KPI_LIB.rows.forEach((r, i) => {
+    if (tpladm.kpiCat !== '' && r[0] !== +tpladm.kpiCat) return;
+    if (tpladm.kpiMt !== '' && r[4] !== +tpladm.kpiMt) return;
+    if (qs.length) {
+      const hay = kpiNorm(r[2] + ' ' + r[3] + ' ' + KPI_LIB.cats[r[0]][0]);
+      if (!qs.every(w => hay.includes(w))) return;
+    }
+    tpladm.kpiHits.push(i);
+  });
+  tpladm.kpiShown = 0;
+  el('tpladm-table-kpi').innerHTML = '';
+  el('tpladm-kpi-count-label').textContent = `${tpladm.kpiHits.length.toLocaleString('en-US')} مؤشر`;
+  pageTpladmKpi();
+}
+function pageTpladmKpi() {
+  const next = tpladm.kpiHits.slice(tpladm.kpiShown, tpladm.kpiShown + TPLADM_KPI_PAGE_SIZE);
+  el('tpladm-table-kpi').insertAdjacentHTML('beforeend', next.map(i => {
+    const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]];
+    const over = tpladm.kpiOverrides[i];
+    const status = over?.status || 'published';
+    const [label, cls] = TPLADM_STATUS_LABEL[status] || ['—', 'off'];
+    return `<tr>
+      <td><div class="kpi-row-name"><strong>${esc(r[2])}</strong><small dir="ltr">${esc(r[3])}</small></div></td>
+      <td class="muted">${esc(c[0])}</td><td class="muted">${esc(KPI_LIB.mtypes[r[4]])}</td>
+      <td><span class="status ${cls}">${label}</span>${over?.promptText ? ' <span class="badge">نص مخصّص</span>' : ''}</td>
+      <td><div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-edit-kpi="${i}">تعديل</button></div></td>
+    </tr>`;
+  }).join(''));
+  tpladm.kpiShown += next.length;
+  const left = tpladm.kpiHits.length - tpladm.kpiShown;
+  el('tpladm-kpi-more').hidden = left <= 0;
+  el('tpladm-kpi-more').textContent = `عرض المزيد (${left.toLocaleString('en-US')} متبقٍ)`;
+  el('tpladm-table-kpi').querySelectorAll('[data-edit-kpi]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.editKpi;
+      const r = KPI_LIB.rows[i];
+      const over = tpladm.kpiOverrides[i];
+      openTpladmEditor({
+        kind: 'kpi', key: String(i), title: r[2], promptText: over?.promptText || '', status: over?.status || 'published',
+        hasMeta: false, canRevert: !!over,
+        placeholderNote: 'اتركه فاضي لاستخدام قالب نوع القياس العام — أو اكتب نصًا خاصًا بهذا المؤشر وحده.',
+      });
+    }));
+}
+let tpladmKpiDebounce;
+el('tpladm-kpi-search').addEventListener('input', e => {
+  tpladm.kpiSearch = e.target.value; clearTimeout(tpladmKpiDebounce); tpladmKpiDebounce = setTimeout(runTpladmKpiFilter, 150);
+});
+el('tpladm-kpi-cat').addEventListener('change', e => { tpladm.kpiCat = e.target.value; runTpladmKpiFilter(); });
+el('tpladm-kpi-mt').addEventListener('change', e => { tpladm.kpiMt = e.target.value; runTpladmKpiFilter(); });
+el('tpladm-kpi-more').addEventListener('click', pageTpladmKpi);
+
+// ---------- القواعد العامة ----------
+async function loadTpladmRules() {
+  const res = await fetch('/api/templates/admin/rules');
+  const data = res.ok ? await res.json() : { promptText: '' };
+  el('tpladm-rules-text').value = data.promptText || '';
+  el('tpladm-rules-meta').textContent = data.updatedAt
+    ? `آخر تعديل: ${new Date(data.updatedAt).toLocaleDateString('ar-EG')}${data.updatedByName ? ' · ' + data.updatedByName : ''}` : '';
+  el('tpladm-rules-vars').innerHTML = tpladmVarChips('rules');
+}
+function tpladmVarChips(kind) {
+  return (TPLADM_VARS_BY_KIND[kind] || []).map(name =>
+    `<button type="button" class="tpladm-var-chip" data-insert-var="{{${name}}}">${esc(TPLADM_VAR_LABELS[name] || name)} <code>{{${name}}}</code></button>`).join('');
+}
+el('tpladm-rules-vars').addEventListener('click', e => {
+  const btn = e.target.closest('[data-insert-var]');
+  if (btn) insertAtCursor(el('tpladm-rules-text'), btn.dataset.insertVar);
+});
+el('tpladm-rules-save').addEventListener('click', async () => {
+  const promptText = el('tpladm-rules-text').value;
+  const unknown = tpladmUnknownVars(promptText, 'rules');
+  if (unknown.length) { alert('متغيرات غير معروفة: ' + unknown.join(', ')); return; }
+  const res = await fetch('/api/templates/admin/rules', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText, status: 'published' }),
+  });
+  if (!res.ok) { const d = await res.json().catch(() => null); alert(d?.error || 'تعذّر الحفظ.'); return; }
+  loadTpladmRules();
+});
+
+function insertAtCursor(textarea, text) {
+  const start = textarea.selectionStart ?? textarea.value.length, end = textarea.selectionEnd ?? textarea.value.length;
+  textarea.value = textarea.value.slice(0, start) + text + textarea.value.slice(end);
+  textarea.selectionStart = textarea.selectionEnd = start + text.length;
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  textarea.focus();
+}
+
+// ---------- محرِّر النموذج (مشترك بين الأنواع الأربعة) ----------
+let tpladmEditing = null;
+function openTpladmEditor(opts) {
+  tpladmEditing = opts;
+  el('tpladm-editor-title').textContent = opts.isNew
+    ? (opts.kind === 'widget' ? 'نموذج شات جديد' : 'نموذج لوحة جديد')
+    : `تعديل: ${opts.title || ''}`;
+  el('tpladm-editor-meta-fields').classList.toggle('hidden', !opts.hasMeta);
+  el('tpladm-f-title').value = opts.title || '';
+  el('tpladm-f-desc').value = opts.desc || '';
+  el('tpladm-f-prompt').value = opts.promptText || '';
+  el('tpladm-f-prompt').placeholder = opts.placeholderNote || '';
+  // Only a KPI row may be left empty (falls back to its measure-type's own template server-side —
+  // see TemplatePromptService.ResolveKpiAsync) — every other kind always needs real instruction text.
+  el('tpladm-f-prompt').required = opts.kind !== 'kpi';
+  el('tpladm-f-status').value = opts.status || 'published';
+  el('tpladm-editor-vars').innerHTML = tpladmVarChips(opts.kind);
+  el('tpladm-editor-unknown-warning').classList.add('hidden');
+  el('tpladm-revert-btn').classList.toggle('hidden', !opts.canRevert);
+  el('tpladm-delete-btn').classList.toggle('hidden', !opts.canDelete);
+  renderTpladmEditorPreview();
+  el('tpladm-editor-modal').classList.remove('hidden');
+}
+function renderTpladmEditorPreview() {
+  el('tpladm-editor-preview').innerHTML = tpladmPreviewHtml(el('tpladm-f-prompt').value, tpladmEditing?.kind) || '<span class="muted">—</span>';
+}
+el('tpladm-f-prompt').addEventListener('input', renderTpladmEditorPreview);
+el('tpladm-editor-vars').addEventListener('click', e => {
+  const btn = e.target.closest('[data-insert-var]');
+  if (btn) insertAtCursor(el('tpladm-f-prompt'), btn.dataset.insertVar);
+});
+el('tpladm-editor-cancel').addEventListener('click', () => el('tpladm-editor-modal').classList.add('hidden'));
+el('tpladm-editor-modal').addEventListener('click', e => { if (e.target.id === 'tpladm-editor-modal') el('tpladm-editor-modal').classList.add('hidden'); });
+
+el('tpladm-editor-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const opts = tpladmEditing;
+  const promptText = el('tpladm-f-prompt').value.trim();
+  const unknown = tpladmUnknownVars(promptText, opts.kind);
+  if (unknown.length) {
+    el('tpladm-editor-unknown-warning').textContent = 'متغيرات غير معروفة: ' + unknown.join(', ');
+    el('tpladm-editor-unknown-warning').classList.remove('hidden');
+    return;
+  }
+  const body = {
+    title: opts.hasMeta ? el('tpladm-f-title').value.trim() : undefined,
+    description: opts.hasMeta ? el('tpladm-f-desc').value.trim() : undefined,
+    promptText, status: el('tpladm-f-status').value,
+  };
+  const btn = el('tpladm-editor-save');
+  btn.disabled = true;
+  try {
+    let res;
+    if (opts.kind === 'kpi_mtype') res = await fetch(`/api/templates/admin/kpi-mtypes/${opts.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    else if (opts.kind === 'kpi') res = await fetch(`/api/templates/admin/kpi/${opts.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    else if (opts.isNew) res = await fetch(`/api/templates/admin/${opts.kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    else res = await fetch(`/api/templates/admin/${opts.kind}/${encodeURIComponent(opts.key)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { el('tpladm-editor-unknown-warning').textContent = data?.error || 'تعذّر الحفظ.'; el('tpladm-editor-unknown-warning').classList.remove('hidden'); return; }
+    el('tpladm-editor-modal').classList.add('hidden');
+    if (opts.kind === 'widget') await loadTpladmWidgets();
+    else if (opts.kind === 'dashboard') await loadTpladmDashboards();
+    else if (opts.kind === 'kpi_mtype') { await renderTpladmKpiMtypes(); return; }
+    else if (opts.kind === 'kpi') { await loadTpladmKpiOverrides(); pageTpladmKpiRerenderCurrentPage(); return; }
+    renderTpladmPane();
+  } finally {
+    btn.disabled = false;
+  }
+});
+function pageTpladmKpiRerenderCurrentPage() {
+  const shown = tpladm.kpiShown; tpladm.kpiShown = 0;
+  el('tpladm-table-kpi').innerHTML = '';
+  while (tpladm.kpiShown < shown && tpladm.kpiShown < tpladm.kpiHits.length) pageTpladmKpi();
+}
+el('tpladm-revert-btn').addEventListener('click', async () => {
+  const opts = tpladmEditing;
+  if (!confirm('رجوع هذا العنصر للنص الأصلي؟')) return;
+  const url = opts.kind === 'kpi_mtype' ? `/api/templates/admin/kpi-mtypes/${opts.key}/revert`
+    : opts.kind === 'kpi' ? `/api/templates/admin/kpi/${opts.key}/revert`
+    : `/api/templates/admin/${opts.kind}/${encodeURIComponent(opts.key)}/revert`;
+  await fetch(url, { method: 'POST' });
+  el('tpladm-editor-modal').classList.add('hidden');
+  if (opts.kind === 'widget') await loadTpladmWidgets();
+  else if (opts.kind === 'dashboard') await loadTpladmDashboards();
+  else if (opts.kind === 'kpi_mtype') { await renderTpladmKpiMtypes(); return; }
+  else if (opts.kind === 'kpi') { await loadTpladmKpiOverrides(); pageTpladmKpiRerenderCurrentPage(); return; }
+  renderTpladmPane();
+});
+el('tpladm-delete-btn').addEventListener('click', async () => {
+  const opts = tpladmEditing;
+  if (!confirm('حذف هذا العنصر نهائيًا؟')) return;
+  await fetch(`/api/templates/admin/${opts.kind}/${encodeURIComponent(opts.key)}`, { method: 'DELETE' });
+  el('tpladm-editor-modal').classList.add('hidden');
+  if (opts.kind === 'widget') await loadTpladmWidgets(); else if (opts.kind === 'dashboard') await loadTpladmDashboards();
+  renderTpladmPane();
 });
 
 const state_projects = { all: [], rolesByProject: {}, filter: 'all', search: '' };
