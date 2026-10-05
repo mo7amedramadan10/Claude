@@ -19,6 +19,10 @@ public class TemplateStore
     public TemplateStore(DataStore db) => _db = db;
 
     private string Table => _db.Provider == DbProvider.Sqlite ? "\"PromptTemplateOverrides\"" : "[staging].[PromptTemplateOverrides]";
+    // "Key" is a reserved word in SQL Server (used in PRIMARY KEY/FOREIGN KEY) — referencing it
+    // unquoted in the INSERT column list below throws a syntax error there (SQLite is lenient
+    // about it, which is how this went unnoticed against the Sqlite-only path tested so far).
+    private string KeyCol => _db.Provider == DbProvider.Sqlite ? "\"Key\"" : "[Key]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -105,7 +109,7 @@ public class TemplateStore
         {
             await connection.ExecuteAsync($"""
                 INSERT INTO {Table}
-                  (Id, Kind, Key, IsCustom, Status, Title, Description, Icon, Category, SourcesJson, WidgetsJson,
+                  (Id, Kind, {KeyCol}, IsCustom, Status, Title, Description, Icon, Category, SourcesJson, WidgetsJson,
                    PromptText, Version, UpdatedByUserId, UpdatedByName, UpdatedAt, CreatedAt)
                 VALUES
                   (@Id, @Kind, @Key, @IsCustom, @Status, @Title, @Description, @Icon, @Category, @SourcesJson, @WidgetsJson,

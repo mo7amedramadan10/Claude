@@ -7562,22 +7562,27 @@ function tpladmKpiCatStats() {
   });
   return m;
 }
+// ملحوظة: الكتابة هنا لازم تتأكد من نجاحها فعليًا (res.ok) قبل ما نحدّث الحالة محليًا أو نعرض
+// توست نجاح — خطأ صامت هنا بالظبط هو اللي كان بيخلي التصنيف يرجع يظهر بعد إعادة تحميل الصفحة
+// (الواجهة كانت بتفترض النجاح وتحدّث TPLADM.kpiCatOff محليًا حتى لو فشل الطلب فعليًا).
 async function tpladmSetCats(ids, on) {
   const prev = ids.map(i => [i, !TPLADM.kpiCatOff.has(i)]);
   const changed = prev.filter(([, was]) => was !== on);
   if (!changed.length) { tpladmToast(on ? 'كل التصنيفات المحددة ظاهرة بالفعل' : 'كل التصنيفات المحددة موقوفة بالفعل'); return; }
   const indices = changed.map(p => p[0]);
-  await fetch('/api/templates/admin/kpi-categories/bulk', {
+  const res = await fetch('/api/templates/admin/kpi-categories/bulk', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ indices, isOn: on }),
   });
+  if (!res.ok) { alert('تعذّر حفظ التغيير على الخادم — حاول مرة أخرى.'); return; }
   changed.forEach(([i]) => { on ? TPLADM.kpiCatOff.delete(i) : TPLADM.kpiCatOff.add(i); });
   const n = changed.reduce((a, [i]) => a + KPI_LIB.rows.filter(r => r[0] === i).length, 0);
   const what = changed.length === 1 ? `تصنيف «${KPI_LIB.cats[changed[0][0]][0]}»` : `${changed.length} تصنيفات`;
   tpladmToast(on ? `تم إظهار ${what} · ${n.toLocaleString('en-US')} مؤشرًا` : `تم إيقاف ${what} · ${n.toLocaleString('en-US')} مؤشرًا لن يظهر للمستخدمين`,
     async () => {
-      await fetch('/api/templates/admin/kpi-categories/bulk', {
+      const undoRes = await fetch('/api/templates/admin/kpi-categories/bulk', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ indices, isOn: !on }),
       });
+      if (!undoRes.ok) { alert('تعذّر التراجع على الخادم.'); return; }
       changed.forEach(([i]) => { !on ? TPLADM.kpiCatOff.delete(i) : TPLADM.kpiCatOff.add(i); });
       tpladmToast('تم التراجع'); tpladmStats(); tpladmRender();
     });
