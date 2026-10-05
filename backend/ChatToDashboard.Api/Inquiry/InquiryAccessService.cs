@@ -17,10 +17,12 @@ namespace ChatToDashboard.Api.Inquiry;
 public class InquiryAccessService
 {
     private readonly AnalyticsTools _tools;
+    private readonly PermissionsService _permissions;
 
-    public InquiryAccessService(AnalyticsTools tools)
+    public InquiryAccessService(AnalyticsTools tools, PermissionsService permissions)
     {
         _tools = tools;
+        _permissions = permissions;
     }
 
     /// <summary>Returns a new list of turns with every inaccessible "data" block replaced by a
@@ -31,7 +33,7 @@ public class InquiryAccessService
     public async Task<List<ConversationTurn>> MaskInaccessibleBlocksAsync(
         AppUser user, IReadOnlyList<ConversationTurn> turns, SourceSelection? sources, CancellationToken ct = default)
     {
-        var selection = PermissionsService.GetEffectiveSelection(user, sources ?? SourceSelection.AllEnabled());
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, sources ?? SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
 
         var result = new List<ConversationTurn>(turns.Count);
@@ -56,7 +58,7 @@ public class InquiryAccessService
         AppUser user, InquiryBlock block, SourceSelection? sources, CancellationToken ct = default)
     {
         if (block.Kind != InquiryBlockKinds.Data || string.IsNullOrWhiteSpace(block.Table)) return null;
-        var selection = PermissionsService.GetEffectiveSelection(user, sources ?? SourceSelection.AllEnabled());
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, sources ?? SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         return AnalyticsTools.CheckSourcePermission(block.Table, context);
     }

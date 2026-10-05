@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using ChatToDashboard.Api.Integrations;
 using ChatToDashboard.Api.Llm;
+using ChatToDashboard.Api.Projects;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,11 +28,12 @@ public class IntegrationsController : ControllerBase
     private readonly IntegrationDeliverables _deliverables;
     private readonly PermissionsService _permissions;
     private readonly ClientSchemaDiscoveryService _schemaDiscovery;
+    private readonly ProjectStore _projects;
 
     public IntegrationsController(
         IntegrationStore integrations, VisualIdentityService visualIdentity, IIntegrationSetupAssistant assistant,
         PublishService publish, IntegrationDeliverables deliverables, PermissionsService permissions,
-        ClientSchemaDiscoveryService schemaDiscovery)
+        ClientSchemaDiscoveryService schemaDiscovery, ProjectStore projects)
     {
         _integrations = integrations;
         _visualIdentity = visualIdentity;
@@ -40,29 +42,49 @@ public class IntegrationsController : ControllerBase
         _deliverables = deliverables;
         _permissions = permissions;
         _schemaDiscovery = schemaDiscovery;
+        _projects = projects;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    // Every action here is [Authorize(Roles = UserRoles.Admin)] already (class-level), so the
+    // caller is always an org Admin — ResolveCurrentProjectIdAsync's isAdmin branch always
+    // applies, same single "current workspace project" every other controller resolves to.
+    private Task<string?> CurrentProjectIdAsync(CancellationToken ct) =>
+        _projects.ResolveCurrentProjectIdAsync(User.FindFirstValue("OrganizationId"), UserId, true, ct);
+
+    /// <summary>Resolves an integration by id AND checks it belongs to the caller's current
+    /// project — every by-id endpoint below uses this instead of calling
+    /// IntegrationStore.GetByIdAsync directly, so an integration that exists but belongs to a
+    /// different project 404s exactly like one that doesn't exist at all, the same treatment
+    /// RepositoryController gives a file from a different project.</summary>
+    private async Task<ExternalIntegration?> GetOwnedIntegrationAsync(string id, CancellationToken ct)
+    {
+        var integration = await _integrations.GetByIdAsync(id, ct);
+        if (integration is null) return null;
+        var projectId = await CurrentProjectIdAsync(ct);
+        return string.Equals(integration.ProjectId, projectId, StringComparison.OrdinalIgnoreCase) ? integration : null;
+    }
 
     // ---------- CRUD ----------
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct) =>
-        Ok((await _integrations.ListAsync(ct)).Select(ToSummary));
+        Ok((await _integrations.ListAsync(await CurrentProjectIdAsync(ct), ct)).Select(ToSummary));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateIntegrationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
             return BadRequest(new { error = "اسم التكامل مطلوب." });
-        var integration = await _integrations.CreateAsync(request.Name.Trim(), UserId, ct);
+        var integration = await _integrations.CreateAsync(request.Name.Trim(), UserId, await CurrentProjectIdAsync(ct), ct);
         return Ok(ToDetail(integration));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id, CancellationToken ct)
     {
-        var integration = await _integrations.GetByIdAsync(id, ct);
+        var integration = await GetOwnedIntegrationAsync(id, ct);
         if (integration is null) return NotFound();
         return Ok(ToDetail(integration));
     }
@@ -70,6 +92,7 @@ public class IntegrationsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         await _integrations.DeleteAsync(id, ct);
         return NoContent();
     }
@@ -82,7 +105,7 @@ public class IntegrationsController : ControllerBase
     [HttpPut("{id}/apis")]
     public async Task<IActionResult> UpdateApis(string id, [FromBody] UpdateIntegrationApisRequest request, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         await _integrations.UpdateApisAsync(id, request, ct);
 
         var updated = await _integrations.GetByIdAsync(id, ct);
@@ -100,7 +123,7 @@ public class IntegrationsController : ControllerBase
     [HttpPut("{id}/visual-identity")]
     public async Task<IActionResult> SetVisualIdentity(string id, [FromBody] ManualVisualIdentityRequest request, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         var (valid, error) = VisualIdentityService.ValidateManual(request.AccentColor, request.SecondaryColor, request.FontFamily);
         if (!valid) return BadRequest(new { error });
         await _integrations.UpdateVisualIdentityAsync(id, request.AccentColor.Trim(), request.SecondaryColor.Trim(), request.FontFamily.Trim(), ct);
@@ -112,7 +135,7 @@ public class IntegrationsController : ControllerBase
     [HttpPost("{id}/visual-identity/suggest")]
     public async Task<IActionResult> SuggestVisualIdentity(string id, [FromBody] SuggestVisualIdentityRequest request, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         if (string.IsNullOrWhiteSpace(request.Description) && string.IsNullOrWhiteSpace(request.SeedColor))
             return BadRequest(new { error = "أدخل وصفًا أو لونًا واحدًا على الأقل." });
 
@@ -128,7 +151,7 @@ public class IntegrationsController : ControllerBase
     [RequestSizeLimit(MaxUploadBytes)]
     public async Task<IActionResult> ExtractPalette(string id, IFormFile file, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         var bytes = await ReadUploadAsync(file, ct);
         if (bytes is null) return BadRequest(new { error = "ملف غير صالح." });
 
@@ -152,7 +175,7 @@ public class IntegrationsController : ControllerBase
     [RequestSizeLimit(MaxUploadBytes)]
     public async Task<IActionResult> ExtractPdfFont(string id, IFormFile file, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         var bytes = await ReadUploadAsync(file, ct);
         if (bytes is null) return BadRequest(new { error = "ملف غير صالح." });
 
@@ -170,7 +193,7 @@ public class IntegrationsController : ControllerBase
     [RequestSizeLimit(MaxUploadBytes)]
     public async Task<IActionResult> ExtractFromImage(string id, IFormFile file, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         var dataUrl = await ReadUploadAsDataUrlAsync(file, ct);
         if (dataUrl is null) return BadRequest(new { error = "ملف غير صالح — ارفع صورة (PNG/JPEG)." });
 
@@ -188,7 +211,7 @@ public class IntegrationsController : ControllerBase
     [HttpPost("{id}/identity-transport/match")]
     public async Task<IActionResult> MatchIdentityTransport(string id, [FromBody] MatchIdentityTransportRequest request, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         if (string.IsNullOrWhiteSpace(request.Description))
             return BadRequest(new { error = "الوصف مطلوب." });
 
@@ -204,7 +227,7 @@ public class IntegrationsController : ControllerBase
     [HttpPut("{id}/identity-transport/pending")]
     public async Task<IActionResult> SetIdentityTransportPending(string id, [FromBody] ConfirmIdentityTransportRequest request, CancellationToken ct)
     {
-        if (await _integrations.GetByIdAsync(id, ct) is null) return NotFound();
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         if (!IdentityTransportMechanisms.All.Contains(request.Mechanism, StringComparer.OrdinalIgnoreCase))
             return BadRequest(new { error = "آلية غير معروفة — لازم تكون query أو header أو cookie." });
         if (string.IsNullOrWhiteSpace(request.ParameterName))
@@ -217,7 +240,7 @@ public class IntegrationsController : ControllerBase
     [HttpPost("{id}/identity-transport/confirm")]
     public async Task<IActionResult> ConfirmIdentityTransport(string id, CancellationToken ct)
     {
-        var integration = await _integrations.GetByIdAsync(id, ct);
+        var integration = await GetOwnedIntegrationAsync(id, ct);
         if (integration is null) return NotFound();
         if (integration.IdentityMechanism is null || integration.IdentityParameterName is null)
             return BadRequest(new { error = "حدّد الآلية واسم المعامل أولاً قبل التأكيد." });
@@ -232,6 +255,7 @@ public class IntegrationsController : ControllerBase
     [HttpGet("{id}/existing-slot")]
     public async Task<IActionResult> ExistingSlot(string id, [FromQuery] string localHistoryId, CancellationToken ct)
     {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         var slot = await _publish.FindExistingSlotAsync(id, localHistoryId, ct);
         return Ok(slot is null
             ? new { exists = false }
@@ -254,6 +278,7 @@ public class IntegrationsController : ControllerBase
     [HttpPost("{id}/publish/prepare")]
     public async Task<IActionResult> PreparePublish(string id, [FromBody] PublishRequest request, CancellationToken ct)
     {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var (result, error) = await _publish.PrepareAsync(id, request.DashboardId, user, ct);
@@ -268,6 +293,7 @@ public class IntegrationsController : ControllerBase
     [HttpPost("{id}/publish/confirm")]
     public async Task<IActionResult> ConfirmPublish(string id, [FromBody] ConfirmPublishRequest request, CancellationToken ct)
     {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var result = await _publish.ConfirmAsync(id, request.PreviewId, request.SlotId, request.ColumnChoices, user, ct);
@@ -282,14 +308,17 @@ public class IntegrationsController : ControllerBase
     [HttpGet("{id}/data-permission-keys")]
     public async Task<IActionResult> DataPermissionKeys(string id, CancellationToken ct)
     {
-        var integration = await _integrations.GetByIdAsync(id, ct);
+        var integration = await GetOwnedIntegrationAsync(id, ct);
         if (integration is null) return NotFound();
         return Ok(await _schemaDiscovery.GetPermissionFilterKeysAsync(integration, ct));
     }
 
     [HttpGet("{id}/dashboards/{localHistoryId}/widget-filters")]
-    public async Task<IActionResult> GetWidgetDataFilters(string id, string localHistoryId, CancellationToken ct) =>
-        Ok(await _integrations.GetWidgetDataFiltersAsync(id, localHistoryId, ct));
+    public async Task<IActionResult> GetWidgetDataFilters(string id, string localHistoryId, CancellationToken ct)
+    {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
+        return Ok(await _integrations.GetWidgetDataFiltersAsync(id, localHistoryId, ct));
+    }
 
     /// <summary>Replaces the complete set of data-level-filter marks for this (integration,
     /// dashboard) pair — set once by the analyst, in the publish modal, reused on every future
@@ -298,24 +327,31 @@ public class IntegrationsController : ControllerBase
     public async Task<IActionResult> SetWidgetDataFilters(
         string id, string localHistoryId, [FromBody] SetWidgetDataFiltersRequest request, CancellationToken ct)
     {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
         await _integrations.SetWidgetDataFiltersAsync(id, localHistoryId, request.Filters, ct);
         return NoContent();
     }
 
     [HttpGet("{id}/dashboards")]
-    public async Task<IActionResult> ListPublishedDashboards(string id, CancellationToken ct) =>
-        Ok(await _integrations.ListSlotsAsync(id, ct));
+    public async Task<IActionResult> ListPublishedDashboards(string id, CancellationToken ct)
+    {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
+        return Ok(await _integrations.ListSlotsAsync(id, ct));
+    }
 
     [HttpGet("{id}/publish-log")]
-    public async Task<IActionResult> PublishLog(string id, CancellationToken ct) =>
-        Ok(await _integrations.ListPublishLogAsync(id, ct: ct));
+    public async Task<IActionResult> PublishLog(string id, CancellationToken ct)
+    {
+        if (await GetOwnedIntegrationAsync(id, ct) is null) return NotFound();
+        return Ok(await _integrations.ListPublishLogAsync(id, ct: ct));
+    }
 
     // ---------- deliverables (Part D / Part E) ----------
 
     [HttpGet("{id}/deliverables/viewer")]
     public async Task<IActionResult> DownloadViewer(string id, CancellationToken ct)
     {
-        var integration = await _integrations.GetByIdAsync(id, ct);
+        var integration = await GetOwnedIntegrationAsync(id, ct);
         if (integration is null) return NotFound();
         var html = _deliverables.BuildViewerHtml(integration);
         return File(System.Text.Encoding.UTF8.GetBytes(html), "text/html", $"{Slugify(integration.Name)}-dashboard-viewer.html");
@@ -324,7 +360,7 @@ public class IntegrationsController : ControllerBase
     [HttpGet("{id}/deliverables/admin")]
     public async Task<IActionResult> DownloadAdmin(string id, CancellationToken ct)
     {
-        var integration = await _integrations.GetByIdAsync(id, ct);
+        var integration = await GetOwnedIntegrationAsync(id, ct);
         if (integration is null) return NotFound();
         var html = _deliverables.BuildPermissionsAdminHtml(integration);
         return File(System.Text.Encoding.UTF8.GetBytes(html), "text/html", $"{Slugify(integration.Name)}-permissions-admin.html");
@@ -335,7 +371,7 @@ public class IntegrationsController : ControllerBase
     [HttpGet("{id}/deliverables/connector")]
     public async Task<IActionResult> DownloadConnector(string id, CancellationToken ct)
     {
-        var integration = await _integrations.GetByIdAsync(id, ct);
+        var integration = await GetOwnedIntegrationAsync(id, ct);
         if (integration is null) return NotFound();
         var zip = _deliverables.BuildConnectorZip(integration);
         return File(zip, "application/zip", $"{Slugify(integration.Name)}-connector.zip");

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using ChatToDashboard.Api.Projects;
 using ChatToDashboard.Api.Sources;
 
 namespace ChatToDashboard.Api.Users;
@@ -15,8 +16,13 @@ namespace ChatToDashboard.Api.Users;
 public class PermissionsService
 {
     private readonly UserStore _users;
+    private readonly ProjectStore _projects;
 
-    public PermissionsService(UserStore users) => _users = users;
+    public PermissionsService(UserStore users, ProjectStore projects)
+    {
+        _users = users;
+        _projects = projects;
+    }
 
     public static string? UserId(ClaimsPrincipal principal) => principal.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -26,15 +32,23 @@ public class PermissionsService
         return id is null ? null : await _users.FindByIdAsync(id, ct);
     }
 
-    /// <summary>Intersects the client's requested selection with what <paramref name="user"/> may access.</summary>
-    public static SourceSelection GetEffectiveSelection(AppUser user, SourceSelection? requested)
+    /// <summary>Intersects the client's requested selection with what <paramref name="user"/>
+    /// may access, and stamps the user's current project (see
+    /// ProjectStore.ResolveCurrentProjectIdAsync) so AnalyticsTools.DescribeSourcesAsync can
+    /// scope repository files and integrations to it — an instance method (not the static
+    /// helper this used to be) purely because resolving the project needs a DB round trip.</summary>
+    public async Task<SourceSelection> GetEffectiveSelectionAsync(
+        AppUser user, SourceSelection? requested, CancellationToken ct = default)
     {
         var isAdmin = user.Role == UserRoles.Admin;
+        var projectId = await _projects.ResolveCurrentProjectIdAsync(user.OrganizationId, user.Id, isAdmin, ct);
+
         if (isAdmin)
         {
             var admin = requested ?? SourceSelection.AllEnabled();
             admin.UserId = user.Id;
             admin.IsAdmin = true;
+            admin.ProjectId = projectId;
             return admin;
         }
 
@@ -46,7 +60,7 @@ public class PermissionsService
         {
             SystemsUnset = systemsUnset, Systems = systems,
             FilesUnset = filesUnset, Files = files,
-            UserId = user.Id, IsAdmin = false,
+            UserId = user.Id, IsAdmin = false, ProjectId = projectId,
         };
     }
 

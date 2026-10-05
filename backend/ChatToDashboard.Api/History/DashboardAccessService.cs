@@ -17,11 +17,13 @@ public class DashboardAccessService
 {
     private readonly AnalyticsTools _tools;
     private readonly UserStore _users;
+    private readonly PermissionsService _permissions;
 
-    public DashboardAccessService(AnalyticsTools tools, UserStore users)
+    public DashboardAccessService(AnalyticsTools tools, UserStore users, PermissionsService permissions)
     {
         _tools = tools;
         _users = users;
+        _permissions = permissions;
     }
 
     /// <summary>Null if <paramref name="candidate"/> may own a dashboard whose widgets are
@@ -31,7 +33,7 @@ public class DashboardAccessService
         var blob = ExtractQueryBlob(widgetsJson);
         if (blob.Length == 0) return null; // no data-backed widgets to depend on
 
-        var selection = PermissionsService.GetEffectiveSelection(candidate, SourceSelection.AllEnabled());
+        var selection = await _permissions.GetEffectiveSelectionAsync(candidate, SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         return AnalyticsTools.CheckSourcePermission(blob, context);
     }

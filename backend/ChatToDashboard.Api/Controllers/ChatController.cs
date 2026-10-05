@@ -41,7 +41,7 @@ public class ChatController : ControllerBase
         if (user is null) return Unauthorized();
         // Narrowed server-side against this user's own permissions — the client's
         // requested selection can only ever shrink, never widen, what it's allowed to see.
-        var effectiveSources = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
 
         try
         {

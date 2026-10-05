@@ -57,10 +57,10 @@ public class SourcesController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var allowed = PermissionsService.GetEffectiveSelection(user, null);
+        var allowed = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         var isAdmin = user.Role == UserRoles.Admin;
 
-        var repoFiles = await _store.ListAsync(ct);
+        var repoFiles = await _store.ListAsync(allowed.ProjectId, ct);
         // allowed.AllowsFile is now always true (file access is never set per-user anymore —
         // see UsersController), so the actual gate for a non-Admin is the same creator/
         // explicitly-granted rule RepositoryController.Files applies to the file list itself.
@@ -76,7 +76,7 @@ public class SourcesController : ControllerBase
         // frontend already sends per chat request (see SourceSelection/AnalyticsTools.
         // DescribeSourcesAsync). Only one whose client schema has actually been discovered is
         // worth offering — an integration still being set up has nothing to build on yet.
-        var allIntegrations = await _integrations.ListAsync(ct);
+        var allIntegrations = await _integrations.ListAsync(allowed.ProjectId, ct);
         var integrations = allIntegrations
             .Where(i => allowed.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
             .Select(i => new { id = i.Id, name = i.Name, connected = true, kind = "integration" })

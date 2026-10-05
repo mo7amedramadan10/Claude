@@ -49,7 +49,7 @@ public class WidgetsController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
         return Ok(await _service.GetAvailableFieldsAsync(effective, ct));
     }
 
@@ -58,7 +58,7 @@ public class WidgetsController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, body.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, body.Sources, ct);
         try
         {
             return Ok(await _service.ExecuteAsync(body.Query, effective, ct));
@@ -121,7 +121,7 @@ public class WidgetsController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
         try
         {
             return Ok(await _service.ExecuteSqlFilterAsync(request.Table, request.Sql, request.Filters, effective, ct));
@@ -138,7 +138,7 @@ public class WidgetsController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
         try
         {
             return Ok(await _service.GetFilterValuesAsync(request.Table, request.Field, effective, ct));

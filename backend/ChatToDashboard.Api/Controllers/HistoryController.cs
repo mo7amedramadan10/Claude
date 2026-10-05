@@ -22,15 +22,18 @@ public class HistoryController : ControllerBase
     private readonly UserStore _users;
     private readonly WidgetQueryService _widgets;
     private readonly ProjectStore _projects;
+    private readonly PermissionsService _permissions;
 
     public HistoryController(
-        HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets, ProjectStore projects)
+        HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets,
+        ProjectStore projects, PermissionsService permissions)
     {
         _store = store;
         _access = access;
         _users = users;
         _widgets = widgets;
         _projects = projects;
+        _permissions = permissions;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -46,18 +49,8 @@ public class HistoryController : ControllerBase
     /// that table existed), so no pre-existing account's behavior changes. Null only for an
     /// account with no organization at all, which disables project filtering rather than
     /// hiding everything.</summary>
-    private async Task<string?> CurrentProjectIdAsync(CancellationToken ct)
-    {
-        var organizationId = User.FindFirstValue("OrganizationId");
-        if (string.IsNullOrEmpty(organizationId)) return null;
-        if (!IsAdmin)
-        {
-            var owned = await _projects.ListForUserAsync(UserId, organizationId, ct);
-            if (owned.Count > 0) return owned[0].Id;
-        }
-        var project = await _projects.FirstForOrganizationAsync(organizationId, ct);
-        return project?.Id;
-    }
+    private Task<string?> CurrentProjectIdAsync(CancellationToken ct) =>
+        _projects.ResolveCurrentProjectIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
 
     /// <summary>Saves a generated dashboard. Called right after the chat flow renders one.
     /// Always creates a Draft — promoting to Active is a separate, explicit step.</summary>
@@ -343,7 +336,7 @@ public class HistoryController : ControllerBase
                          "قم بنقل الملكية إلى شخص يملك صلاحية الوصول.",
             });
 
-        var selection = PermissionsService.GetEffectiveSelection(owner, SourceSelection.AllEnabled());
+        var selection = await _permissions.GetEffectiveSelectionAsync(owner, SourceSelection.AllEnabled(), ct);
 
         JsonElement widget;
         try

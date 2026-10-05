@@ -35,7 +35,7 @@ public class SourceSelection
 
     /// <summary>
     /// The account this selection is being resolved for — stamped by
-    /// PermissionsService.GetEffectiveSelection, never sent by the client. Lets
+    /// PermissionsService.GetEffectiveSelectionAsync, never sent by the client. Lets
     /// AnalyticsTools.DescribeSourcesAsync check a repository file's per-file named-user
     /// permission list (see RepositoryFile.PermittedUserIds) without widening every call
     /// site that already threads a SourceSelection through (ChatController, WidgetsController,
@@ -48,6 +48,14 @@ public class SourceSelection
     /// bypass category/system narrowing.</summary>
     [JsonIgnore]
     public bool IsAdmin { get; set; }
+
+    /// <summary>The signed-in user's current project — stamped by
+    /// PermissionsService.GetEffectiveSelectionAsync, never sent by the client. Scopes which
+    /// repository files and integrations AnalyticsTools.DescribeSourcesAsync even considers,
+    /// so a file or integration that belongs to a different project in the same organization
+    /// never reaches the agent, exactly like UserId already does for per-file permissions.</summary>
+    [JsonIgnore]
+    public string? ProjectId { get; set; }
 
     public static SourceSelection AllEnabled() => new() { SystemsUnset = true, FilesUnset = true };
 

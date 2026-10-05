@@ -210,6 +210,21 @@ using (var scope = app.Services.CreateScope())
         // scenario can't hit this — CountAsync below is still 0 then) to the default org.
         var userStoreForBackfill = scope.ServiceProvider.GetRequiredService<UserStore>();
         await userStoreForBackfill.BackfillMissingOrganizationAsync(defaultOrg.Id);
+
+        // Files and external integrations predate project-level isolation entirely — every
+        // one of them, on any pre-existing install, implicitly belonged to "the" single
+        // workspace that existed before organizations/projects did, which is exactly the
+        // default organization's own default project. Without this, a brand-new organization
+        // would see every pre-existing file/integration too (ProjectId NULL never matches a
+        // real project id) — the leak this whole ProjectId column exists to close.
+        var defaultProject = await projectStore.FirstForOrganizationAsync(defaultOrg.Id);
+        if (defaultProject is not null)
+        {
+            var repositoryStoreForBackfill = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Repository.RepositoryStore>();
+            await repositoryStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
+            var integrationStoreForBackfill = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Integrations.IntegrationStore>();
+            await integrationStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
+        }
     }
     catch (Exception ex)
     {

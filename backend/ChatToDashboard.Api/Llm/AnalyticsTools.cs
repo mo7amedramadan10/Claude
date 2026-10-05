@@ -139,7 +139,12 @@ public class AnalyticsTools
         // gets, an integration id just being another entry in it), and whose client schema has
         // actually been discovered — an integration with no schema yet offers nothing to build
         // on, so it's simply left out rather than offered as an empty, unusable source.
-        IReadOnlyList<EnabledIntegration> EnabledIntegrations);
+        IReadOnlyList<EnabledIntegration> EnabledIntegrations,
+        // Carried through from SourceSelection.ProjectId so ExecuteToolAsync's list_files/
+        // search_documents handlers (which only receive this context, not the original
+        // selection) can scope their own direct RepositoryStore calls the same way
+        // DescribeSourcesAsync already scoped the file/integration lists above.
+        string? ProjectId);
 
     /// <summary>One toggled-on, schema-discovered integration — everything query_client_data's
     /// tool description needs to let the model write correct SQL against it.</summary>
@@ -169,7 +174,7 @@ public class AnalyticsTools
             if (!system.IsConnected) unconnected.Add(system.Name);
         }
 
-        var files = await _repository.ListAsync(ct);
+        var files = await _repository.ListAsync(selection.ProjectId, ct);
         var enabledFiles = new List<string>();
         var disabledFiles = new List<string>();
         var enabledFileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -213,7 +218,7 @@ public class AnalyticsTools
 
         var hasDocuments = files.Any(f => f.Kind == "pdf" && selection.AllowsFile(f.Id));
 
-        var allIntegrations = await _integrations.ListAsync(ct);
+        var allIntegrations = await _integrations.ListAsync(selection.ProjectId, ct);
         var enabledIntegrations = allIntegrations
             .Where(i => selection.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
             .Select(i => new EnabledIntegration(i.Id, i.Name, i.ClientDbProvider!, i.ClientSchemaDescription!))
@@ -223,7 +228,7 @@ public class AnalyticsTools
             enabledSystems, disabledSystems, unconnected,
             enabledFiles, disabledFiles, enabledFileIds, tableFiles,
             systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments,
-            enabledIntegrations);
+            enabledIntegrations, selection.ProjectId);
     }
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
@@ -1454,7 +1459,7 @@ public class AnalyticsTools
                         });
                     // The repository's own catalogue: a PDF contributes no table, so without
                     // this the model has no way to know the file exists at all.
-                    var files = await _repository.ListAsync(ct);
+                    var files = await _repository.ListAsync(context.ProjectId, ct);
                     var visibleFiles = files
                         .Where(f => context.EnabledFileIds.Contains(f.Id))
                         .Where(f => f.TableName is null || !context.RestrictedFileTables.ContainsKey(f.TableName))
@@ -1540,7 +1545,7 @@ public class AnalyticsTools
                             file = string.Empty, category = (string?)null, score = 0d, text = string.Empty,
                         });
 
-                    var documents = await _repository.GetTextDocumentsAsync(ct);
+                    var documents = await _repository.GetTextDocumentsAsync(context.ProjectId, ct);
                     var repositoryHits = documents
                         .Where(d => context.EnabledFileIds.Contains(d.Id))
                         .Select(d => new

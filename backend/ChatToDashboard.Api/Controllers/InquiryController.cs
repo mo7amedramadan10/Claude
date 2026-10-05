@@ -53,7 +53,7 @@ public class InquiryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         // Narrowed server-side against this user's own permissions — same rule as /api/chat.
-        var effectiveSources = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
 
         InquiryConversationEntry? existing = null;
         var maskedTurns = new List<ConversationTurn>();
@@ -159,7 +159,7 @@ public class InquiryController : ControllerBase
 
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effectiveSources = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
 
         var entry = await _conversations.GetByIdAsync(user.Id, request.ConversationId, ct);
         if (entry is null) return NotFound(new ChatResponse { Error = "المحادثة غير موجودة." });

@@ -94,6 +94,30 @@ public class ProjectStore
             $"SELECT {top}* FROM {Table} WHERE OrganizationId = @organizationId ORDER BY CreatedAt{tail}", new { organizationId });
     }
 
+    /// <summary>
+    /// Resolves "the caller's current project" the one consistent way every place that scopes
+    /// data by project needs it — originally HistoryController's own CurrentProjectIdAsync,
+    /// pulled out here so RepositoryStore/IntegrationStore scoping (via
+    /// PermissionsService.GetEffectiveSelectionAsync/SourceSelection.ProjectId) and every
+    /// controller that touches files, integrations or dashboards resolve it identically. An
+    /// Admin always gets their org's first (default) project — unchanged legacy behavior, since
+    /// an Admin manages the whole org, not one project. A plain User gets the first project
+    /// ProjectRoles names them on, falling back to the org's first project for an account with
+    /// no explicit role yet (every pre-existing account before ProjectRoles existed).
+    /// </summary>
+    public async Task<string?> ResolveCurrentProjectIdAsync(
+        string? organizationId, string userId, bool isAdmin, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(organizationId)) return null;
+        if (!isAdmin)
+        {
+            var owned = await ListForUserAsync(userId, organizationId, ct);
+            if (owned.Count > 0) return owned[0].Id;
+        }
+        var project = await FirstForOrganizationAsync(organizationId, ct);
+        return project?.Id;
+    }
+
     public async Task<Project> CreateAsync(string organizationId, string name, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

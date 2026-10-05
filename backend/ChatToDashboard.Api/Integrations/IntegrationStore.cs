@@ -66,6 +66,7 @@ public class IntegrationStore
                      ("ClientSchemaDescription", "TEXT", "NVARCHAR(MAX)"),
                      ("DataPermissionsAvailable", "INTEGER", "BIT"),
                      ("LastSchemaDiscoveryError", "TEXT", "NVARCHAR(1000)"),
+                     ("ProjectId", "TEXT", "NVARCHAR(64)"),
                  })
         {
             try
@@ -133,30 +134,48 @@ public class IntegrationStore
 
     // ---------- integrations ----------
 
-    public async Task<ExternalIntegration> CreateAsync(string name, string createdBy, CancellationToken ct = default)
+    public async Task<ExternalIntegration> CreateAsync(
+        string name, string createdBy, string? projectId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         var now = DateTime.UtcNow;
         var integration = new ExternalIntegration
         {
-            Id = Guid.NewGuid().ToString("N"), Name = name, CreatedBy = createdBy, CreatedAt = now, UpdatedAt = now,
+            Id = Guid.NewGuid().ToString("N"), ProjectId = projectId, Name = name, CreatedBy = createdBy, CreatedAt = now, UpdatedAt = now,
         };
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"""
             INSERT INTO {IntegrationsTable}
-              (Id, Name, IdentityConfirmed, CreatedBy, CreatedAt, UpdatedAt)
-            VALUES (@Id, @Name, 0, @CreatedBy, @CreatedAt, @UpdatedAt)
+              (Id, ProjectId, Name, IdentityConfirmed, CreatedBy, CreatedAt, UpdatedAt)
+            VALUES (@Id, @ProjectId, @Name, 0, @CreatedBy, @CreatedAt, @UpdatedAt)
             """, integration);
         return integration;
     }
 
-    public async Task<IReadOnlyList<ExternalIntegration>> ListAsync(CancellationToken ct = default)
+    /// <summary>Attaches every integration that predates project scoping (ProjectId still
+    /// NULL) to the organization's default project — called once from Program.cs's startup,
+    /// the same backfill RepositoryStore.BackfillMissingProjectAsync does for files.</summary>
+    public async Task BackfillMissingProjectAsync(string projectId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            $"UPDATE {IntegrationsTable} SET ProjectId = @projectId WHERE ProjectId IS NULL OR ProjectId = ''",
+            new { projectId });
+    }
+
+    /// <summary>Every integration belonging to <paramref name="projectId"/> — the same project
+    /// isolation boundary RepositoryStore.ListAsync applies to files (see
+    /// ExternalIntegration.ProjectId). Passing null returns every integration regardless of
+    /// project; only Program.cs's startup backfill should ever do that.</summary>
+    public async Task<IReadOnlyList<ExternalIntegration>> ListAsync(string? projectId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var where = projectId is null ? "" : " WHERE ProjectId = @projectId";
         var rows = await connection.QueryAsync<ExternalIntegration>(
-            $"SELECT * FROM {IntegrationsTable} ORDER BY CreatedAt DESC");
+            $"SELECT * FROM {IntegrationsTable}{where} ORDER BY CreatedAt DESC", new { projectId });
         return rows.ToList();
     }
 

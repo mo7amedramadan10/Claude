@@ -41,10 +41,10 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
 
-        var files = await _store.ListAsync(ct);
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        var files = await _store.ListAsync(selection.ProjectId, ct);
         if (user.Role == UserRoles.Admin) return Ok(files);
 
-        var selection = PermissionsService.GetEffectiveSelection(user, null);
         var visible = files.Where(f =>
             selection.AllowsFile(f.Id) &&
             (string.IsNullOrWhiteSpace(f.CreatedByUserId)
@@ -55,7 +55,24 @@ public class RepositoryController : ControllerBase
     }
 
     [HttpGet("categories")]
-    public async Task<IActionResult> Categories(CancellationToken ct) => Ok(await _store.ListCategoriesAsync(ct));
+    public async Task<IActionResult> Categories(CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        return Ok(await _store.ListCategoriesAsync(selection.ProjectId, ct));
+    }
+
+    /// <summary>True only if <paramref name="id"/> names a file that actually belongs to the
+    /// caller's current project — every by-id endpoint below checks this before acting, so a
+    /// real file belonging to a different project 404s exactly like one that doesn't exist at
+    /// all, the same "don't even confirm it exists" treatment UsersController gives a
+    /// cross-organization user id.</summary>
+    private async Task<bool> FileInCallerProjectAsync(string fileId, string? callerProjectId, CancellationToken ct)
+    {
+        var fileProjectId = await _store.GetProjectIdAsync(fileId, ct);
+        return fileProjectId is not null && string.Equals(fileProjectId, callerProjectId, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Parses uploaded files on the server and returns them as "pending" — they are only
@@ -124,7 +141,9 @@ public class RepositoryController : ControllerBase
 
         try
         {
-            var saved = await _store.SaveAsync(parsed, request.DisplayName, request.Description, request.Category, user.Id, ct);
+            var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+            var saved = await _store.SaveAsync(
+                parsed, request.DisplayName, request.Description, request.Category, user.Id, selection.ProjectId, ct);
             return Ok(saved);
         }
         catch (Exception ex)
@@ -144,6 +163,11 @@ public class RepositoryController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Token))
             return BadRequest(new { error = "token is required." });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
         if (!_parser.TryTake(request.Token, out var parsed))
             return NotFound(new { error = "انتهت صلاحية الملف المرفوع. ارفعه من جديد." });
 
@@ -172,6 +196,10 @@ public class RepositoryController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
+
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
 
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
         if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
@@ -207,6 +235,11 @@ public class RepositoryController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.DisplayName))
             return BadRequest(new { error = "displayName is required." });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
         var ok = await _store.UpdateMetaAsync(id, request.DisplayName, request.Description, request.Category, ct);
         return ok ? NoContent() : NotFound(new { error = "الملف غير موجود." });
     }
@@ -218,6 +251,12 @@ public class RepositoryController : ControllerBase
     [HttpGet("files/{id}/permissions")]
     public async Task<IActionResult> GetPermissions(string id, CancellationToken ct)
     {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
+
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
         if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
 
@@ -248,6 +287,9 @@ public class RepositoryController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
         if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
         if (user.Role != UserRoles.Admin && !string.Equals(createdByUserId, user.Id, StringComparison.OrdinalIgnoreCase))
@@ -262,6 +304,12 @@ public class RepositoryController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.RelatedFileId) || string.IsNullOrWhiteSpace(request.SharedColumn))
             return BadRequest(new { error = "relatedFileId and sharedColumn are required." });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)
+            || !await FileInCallerProjectAsync(request.RelatedFileId, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
         var relationship = await _store.AddRelationshipAsync(id, request.RelatedFileId, request.SharedColumn, ct);
         return Ok(relationship);
     }
@@ -269,6 +317,11 @@ public class RepositoryController : ControllerBase
     [HttpDelete("files/{id}/relationships/{relationshipId}")]
     public async Task<IActionResult> DeleteRelationship(string id, string relationshipId, CancellationToken ct)
     {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
         await _store.DeleteRelationshipAsync(id, relationshipId, ct);
         return NoContent();
     }
@@ -289,6 +342,9 @@ public class RepositoryController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+            return NotFound(new { error = "الملف غير موجود." });
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
         if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
         if (user.Role != UserRoles.Admin && !string.Equals(createdByUserId, user.Id, StringComparison.OrdinalIgnoreCase))
