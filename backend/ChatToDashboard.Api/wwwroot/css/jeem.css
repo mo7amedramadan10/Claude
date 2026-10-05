@@ -873,21 +873,18 @@ form#form.composer.hidden { display: none; }
 .dash-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--ink-3); }
 .dot-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--line); flex: none; }
 
-/* ---------- شريط أدوات اللوحة (عرض/تحرير، تحديث، تراجع/إعادة، تفعيل، تصدير، نشر) ----------
+/* ---------- شريط أدوات اللوحة (عرض/تحرير، تحديث، تفعيل، تراجع/إعادة، تصدير، نشر) ----------
    #dash-toolbar زي ما هي لسه مش محوّلة بالكامل (لوحة الـ widgets جوّاها لسه قديمة)، فبنعيد
    تصريح كل خاصية كان .dash-toolbar/.dash-toolbar button القديمين بيحددوها — وإلا فضلت شغالة
    (نفس درس #sources-btn/.msg.bot) رغم إن الأزرار بقت .btن الجديدة.
-   الشريط اتقسم لحتتين: #dash-toolbar فضل في مكانه الأصلي فوق #dash (عرض/تحرير، تحديث،
-   تراجع/إعادة — المستخدم طلب تحديدًا إنهم يفضلوا بنفس مكانهم)، و#dash-toolbar-top
-   انتقل لـ .topbar .actions (تفعيل اللوحة + قائمتي تصدير/نشر) عشان يبقى ظاهر "فوق الشات".
-   #dash-toolbar-wrap هو اللي showScreen() بيحكم ظهوره حسب الشاشة الحالية (display:contents
-   وهو مش hidden، عشان ما يكسرش flex gap بتاع .actions) — بيغلّف #dash-toolbar-top بس.
-   كل واحد من الاتنين (#dash-toolbar و#dash-toolbar-top) بيحكم ظهوره هو نفسه كمان بناءً على
-   وجود لوحة فعلاً (renderDashboard). */
+   كل أزرار الشريط (عرض/تحرير، تحديث، تفعيل اللوحة، تراجع/إعادة، تصدير، نشر، إدارة
+   الصلاحيات، إضافة عنصر) رجعت كلها لمكانها الأصلي فوق #dash — #dash-toolbar-wrap/
+   #chat-fab بس هما اللي لسه في .topbar .actions (فتح المحادثة لما تتقفل)،
+   showScreen() بيحكم ظهور #dash-toolbar-wrap حسب الشاشة الحالية (display:contents
+   وهو مش hidden، عشان ما يكسرش flex gap بتاع .actions). */
 #dash-toolbar-wrap { display: contents; }
 #dash-toolbar-wrap.hidden { display: none; }
-#dash-toolbar.dash-toolbar,
-#dash-toolbar-top.dash-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; row-gap: 10px; }
+#dash-toolbar.dash-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; row-gap: 10px; }
 #dash-toolbar.dash-toolbar { margin-bottom: 12px; }
 /* الأزرار الأساسية (تحديث/إضافة عنصر/تفعيل/تصدير/نشر/سجل اللوحات) بحجم .btn الطبيعي
    (40px، أوضح/أكبر زي الديزين المرسل) — .btn-sm (تراجع/إعادة فقط، زرين أيقونة صغيرين
@@ -921,9 +918,10 @@ form#form.composer.hidden { display: none; }
 .edit-toggle-btn.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); font-weight: 500; }
 
 /* #btn-activate (ID) القديمة كانت بتلوّنه بنفسها — لازم override بنفس قوة الـ ID
-   (مش .dash-toolbar .btn-soft العادية) عشان تكسبها. */
-#btn-activate.btn-soft { border-color: transparent; background: var(--blue-50); color: var(--blue-700); font-weight: 500; }
-#btn-activate.btn-soft:hover { background: var(--blue-100); color: var(--blue-700); }
+   (مش .dash-toolbar .btn-primary العادية) عشان تكسبها. لون صلب (مش .btn-soft الباهت)
+   لأنه بقى جنب أزرار .btn-ghost (تحديث/تصدير/نشر) — محتاج يكون الإجراء البارز فعلاً. */
+#btn-activate.btn-primary { border-color: var(--brand-blue); background: var(--brand-blue); color: #fff; font-weight: 500; }
+#btn-activate.btn-primary:hover { background: var(--blue-600); border-color: var(--blue-600); color: #fff; }
 
 /* تصدير/نشر — قائمتين منسدلتين (نفس نمط فتح/غلق #sources-panel: كليك يفتح، كليك برّا يقفل).
    .chev بتتلف 180deg وقت الفتح (JS بيضيف is-open على .dropdown). */
