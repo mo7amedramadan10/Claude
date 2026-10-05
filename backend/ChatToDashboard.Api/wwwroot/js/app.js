@@ -3620,6 +3620,7 @@ const TEMPLATES = [
 const TEMPLATE_CAT_COLOR = { kpi: 'blue', chart: 'teal', table: 'purple' };
 
 function renderTemplatesPanel() {
+  el('tpl-count-widgets').textContent = TEMPLATES.length;
   const q = state.templateSearch.trim().toLowerCase();
   const items = TEMPLATES.filter(t =>
     (state.templateCategory === 'all' || t.cat === state.templateCategory) &&
@@ -3650,6 +3651,146 @@ el('tpl-grid').addEventListener('click', e => {
   setChatMode('dashboard');
   ask(tpl.prompt);
 });
+
+// ---------- مكتبة المؤشرات (تبويب فرعي داخل «النماذج») ----------
+// معاينة window.JEEM_KPI_LIBRARY (kpi-library.js — 1,899 مؤشرًا من Spider Strategies، مصدر
+// البيانات موصوف في IMPLEMENTATION.md لنسخة jeem-ui المرجعية). النسخة المرجعية كانت بتضيف
+// للوحة عنصرًا بقيم عشوائية ثابتة (seeded) — بما يخالف مبدأ الصدق المتّبع في كل الأماكن التانية
+// هنا (نماذج اللوحات الكاملة، النماذج الجاهزة فوق): مفيش رقم وهمي يتعرض كأنه حقيقي أبدًا.
+// فبدل ما نولّد قيمة وهمية، الضغط على مؤشر بيبني جملة طلب طبيعية حسب نوع القياس وبيبعتها
+// لنفس مسار ask() اللي أي سؤال بيتبع — فجيم بيبني العنصر فعليًا من مصادر المشروع الحقيقية
+// (أو يقول إنه مالقاش مصدر مناسب)، بالظبط زي TEMPLATES فوق.
+// قرار متعمّد: اقتراح IMPLEMENTATION.md ببناء جدول KpiDefinitions + API بحث من السيرفر
+// غير لازم هنا — المكتبة كتالوج ثابت (177 كيلوبايت، فلترة فورية في المتصفح)، بالظبط زي
+// TEMPLATES/DASH_GALLERY فوق، فمفيش داعي لتعقيد إضافي على مستوى الباك إند.
+const KPI_LIB = window.JEEM_KPI_LIBRARY || null;
+const KPI_MT_ICON = ['percent', 'clock', 'wallet', 'star', 'hash', 'target'];
+const KPI_MT_KEY = ['pct', 'time', 'money', 'score', 'count', 'other'];
+const KPI_PAGE_SIZE = 40;
+
+// جملة الطلب المُرسلة فعليًا لـ ask() — نص واحد بسيط لكل نوع قياس، بنفس أسلوب TEMPLATES فوق،
+// مفيهوش أي رقم أو قيمة، جيم هو اللي هيجيب القيمة الحقيقية من مصادر المشروع.
+const KPI_PROMPT_BY_MTYPE = [
+  name => `أضف مؤشرًا بعنوان "${name}" كنسبة مئوية من بياناتي، مع شريط تقدّم يوضح مدى تحقيق المستهدف إن وُجد مستهدف في المصدر.`,
+  name => `أضف مؤشرًا بعنوان "${name}" بوحدة زمنية (أيام أو ساعات حسب بياناتي)، مع اتجاهه مقارنة بالفترة السابقة — علمًا أن القيمة الأقل تُعتبر أفضل هنا.`,
+  name => `أضف مؤشرًا ماليًا بعنوان "${name}"، مع نسبة التغيّر مقارنة بالفترة السابقة.`,
+  name => `أضف مؤشرًا بعنوان "${name}" كدرجة تقييم من 5، بناءً على بياناتي.`,
+  name => `أضف مؤشرًا بعنوان "${name}" يوضح العدد موزّعًا على آخر 6 أشهر كرسم أعمدة.`,
+  name => `أضف مؤشرًا يوضح "${name}" من بياناتي.`,
+];
+
+// توحيد أشكال الألف والتاء المربوطة والياء — نفس تطبيع البحث في النسخة المرجعية، عشان
+// البحث عن «الاداء» يلاقي «الأداء».
+const kpiNorm = x => x.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ً-ْـ]/g, '');
+
+let kpiLibInitialized = false;
+function initKpiLibrary() {
+  if (kpiLibInitialized || !KPI_LIB) return;
+  kpiLibInitialized = true;
+  const view = el('tpl-view-kpis');
+  const deps = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c]) => c[2] === 0);
+  const inds = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c]) => c[2] === 1);
+  const opt = ([c, i]) => `<option value="${i}">${esc(c[0])}</option>`;
+  view.innerHTML = `
+    <label class="tpl-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <input type="search" id="kpi-search-input" placeholder="ابحث بالعربي أو English… مثل: رضا، churn">
+    </label>
+    <div class="kpi-filters">
+      <select id="kpi-cat-select" class="select">
+        <option value="">كل التصنيفات (${KPI_LIB.cats.length})</option>
+        <optgroup label="الأقسام الوظيفية">${deps.map(opt).join('')}</optgroup>
+        <optgroup label="القطاعات">${inds.map(opt).join('')}</optgroup>
+      </select>
+    </div>
+    <div class="tpl-cats" id="kpi-mt-chips" role="group" aria-label="نوع القياس">
+      <button type="button" class="chip is-on" data-mt="">الكل</button>
+      ${KPI_LIB.mtypes.map((m, i) => `<button type="button" class="chip" data-mt="${i}">${esc(m)}</button>`).join('')}
+    </div>
+    <p class="kpi-count" id="kpi-count" aria-live="polite"></p>
+    <ul class="kpi-list" id="kpi-list" role="list"></ul>
+    <button type="button" class="btn btn-ghost btn-sm kpi-more" id="kpi-more" hidden></button>
+    <p class="kpi-credit">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      المصدر: مكتبة <a href="https://www.spiderstrategies.com/kpi/" target="_blank" rel="noopener">Spider Strategies</a> ·
+      التصنيف العربي ونوع القياس من جيم، والعنصر يُبنى فعليًا من مصادر مشروعك عند الإضافة.
+    </p>`;
+
+  const idx = KPI_LIB.rows.map(r => kpiNorm(r[2] + ' ' + r[3] + ' ' + KPI_LIB.cats[r[0]][0] + ' ' + KPI_LIB.cats[r[0]][1]));
+  const list = el('kpi-list'), more = el('kpi-more'), count = el('kpi-count');
+  let fq = '', fc = '', fm = '', hits = [], shown = 0;
+
+  const item = i => {
+    const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]];
+    return `<li><button type="button" class="kpi-item" data-k="${i}" ${state.loading ? 'disabled' : ''} aria-label="إضافة مؤشر ${esc(r[2])} للوحة">
+      <span class="kpi-ic mt-${KPI_MT_KEY[r[4]]}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${KPI_MT_ICON[r[4]]}"/></svg></span>
+      <span class="kpi-txt"><b>${esc(r[2])}</b><small dir="ltr">${esc(r[3])}</small>
+        <em><span>${esc(c[0])}</span><span class="mt mt-${KPI_MT_KEY[r[4]]}">${esc(KPI_LIB.mtypes[r[4]])}</span></em></span>
+      <span class="kpi-plus"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></span></button></li>`;
+  };
+  const page = () => {
+    const next = hits.slice(shown, shown + KPI_PAGE_SIZE);
+    list.insertAdjacentHTML('beforeend', next.map(item).join(''));
+    shown += next.length;
+    const left = hits.length - shown;
+    more.hidden = left <= 0;
+    more.textContent = `عرض المزيد (${left.toLocaleString('en-US')} متبقٍ)`;
+  };
+  const run = () => {
+    const qs = kpiNorm(fq.trim()).split(/\s+/).filter(Boolean);
+    hits = [];
+    KPI_LIB.rows.forEach((r, i) => {
+      if (fc !== '' && r[0] !== +fc) return;
+      if (fm !== '' && r[4] !== +fm) return;
+      if (qs.length && !qs.every(w => idx[i].includes(w))) return;
+      hits.push(i);
+    });
+    list.innerHTML = ''; shown = 0;
+    count.innerHTML = hits.length
+      ? `<b class="num">${hits.length.toLocaleString('en-US')}</b> مؤشر${fc !== '' ? ` في «${esc(KPI_LIB.cats[+fc][0])}»` : ''}`
+      : `لا توجد نتائج — جرّب كلمة أخرى، أو اطلب من جيم مباشرة في تبويب «بناء اللوحة».`;
+    page();
+  };
+  let t;
+  el('kpi-search-input').addEventListener('input', e => { fq = e.target.value; clearTimeout(t); t = setTimeout(run, 120); });
+  el('kpi-cat-select').addEventListener('change', e => { fc = e.target.value; run(); });
+  el('kpi-mt-chips').addEventListener('click', e => {
+    const btn = e.target.closest('[data-mt]');
+    if (!btn) return;
+    fm = btn.dataset.mt;
+    el('kpi-mt-chips').querySelectorAll('.chip').forEach(c => c.classList.toggle('is-on', c === btn));
+    run();
+  });
+  more.addEventListener('click', page);
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('.kpi-item');
+    if (!btn || state.loading) return;
+    const i = +btn.dataset.k;
+    const r = KPI_LIB.rows[i];
+    setChatMode('dashboard');
+    ask(KPI_PROMPT_BY_MTYPE[r[4]](r[2]), `📊 ${r[2]}`);
+  });
+  run();
+}
+
+el('tpl-views').addEventListener('click', e => {
+  const btn = e.target.closest('[data-view]');
+  if (!btn) return;
+  const v = btn.dataset.view;
+  el('tpl-views').querySelectorAll('[data-view]').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  el('tpl-view-widgets').classList.toggle('hidden', v !== 'widgets');
+  el('tpl-view-kpis').classList.toggle('hidden', v !== 'kpis');
+  if (v === 'kpis') initKpiLibrary();
+});
+if (KPI_LIB) {
+  el('tpl-count-kpis').textContent = KPI_LIB.rows.length.toLocaleString('en-US');
+} else {
+  el('tpl-views').querySelector('[data-view="kpis"]')?.classList.add('hidden');
+}
 
 // ---------- الاستفسارات (Inquiries): a conversational, saved-history sibling of ask() above ----------
 // Two small sub-tabs inside the same side chat panel — never a top-level screen, and the

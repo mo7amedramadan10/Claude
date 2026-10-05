@@ -227,18 +227,27 @@
     <div id="messages" class="thread"></div>
     <div id="inquiry-messages" class="thread hidden"></div>
     <div id="templates-panel" class="thread tpl-panel hidden">
-      <label class="tpl-search">
-        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
-        <input type="search" id="tpl-search-input" placeholder="ابحث في النماذج…">
-      </label>
-      <div id="tpl-cats" class="tpl-cats" role="group" aria-label="تصنيف النماذج">
-        <button type="button" class="chip is-on" data-cat="all">الكل</button>
-        <button type="button" class="chip" data-cat="kpi">مؤشرات</button>
-        <button type="button" class="chip" data-cat="chart">رسوم بيانية</button>
-        <button type="button" class="chip" data-cat="table">جداول</button>
+      <div class="tpl-views" id="tpl-views" role="tablist" aria-label="نوع النماذج">
+        <button type="button" role="tab" class="is-on" aria-selected="true" data-view="widgets">عناصر جاهزة <span class="num" id="tpl-count-widgets">0</span></button>
+        <button type="button" role="tab" aria-selected="false" data-view="kpis">مكتبة المؤشرات <span class="num" id="tpl-count-kpis">0</span></button>
       </div>
-      <p class="tpl-hint"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط على أي نموذج ليُضاف للوحة الحالية ببيانات مشروعك.</p>
-      <div id="tpl-grid" class="tpl-grid"></div>
+
+      <section id="tpl-view-widgets" class="tpl-view">
+        <label class="tpl-search">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+          <input type="search" id="tpl-search-input" placeholder="ابحث في النماذج…">
+        </label>
+        <div id="tpl-cats" class="tpl-cats" role="group" aria-label="تصنيف النماذج">
+          <button type="button" class="chip is-on" data-cat="all">الكل</button>
+          <button type="button" class="chip" data-cat="kpi">مؤشرات</button>
+          <button type="button" class="chip" data-cat="chart">رسوم بيانية</button>
+          <button type="button" class="chip" data-cat="table">جداول</button>
+        </div>
+        <p class="tpl-hint"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط على أي نموذج ليُضاف للوحة الحالية ببيانات مشروعك.</p>
+        <div id="tpl-grid" class="tpl-grid"></div>
+      </section>
+
+      <section id="tpl-view-kpis" class="tpl-view hidden"></section>
     </div>
     <div id="attached-image" class="attached-image hidden">
       <img id="attached-image-preview" alt="الصورة المرفقة" />
@@ -1090,6 +1099,7 @@
      no internet access at all. See README for how it's fetched/updated. Pinned to 5.0.0,
      the last MIT-licensed release (5.1+ requires a paid license above $2M/yr revenue). -->
 <script src="lib/apexcharts.min.js"></script>
+<script src="js/kpi-library.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
