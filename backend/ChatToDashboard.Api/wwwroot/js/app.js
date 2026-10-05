@@ -3340,7 +3340,7 @@ function openDashGalPreview(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
-    ask(d.prompt);
+    ask(d.prompt, `📊 بناء لوحة «${d.name}»`);
   });
   el('gal-view-list').classList.add('hidden');
   el('gal-view-preview').classList.remove('hidden');
@@ -3479,14 +3479,21 @@ function renderSuggestions() {
 // all) so a follow-up like "اعرضلي بس القطاع الرقمي" can refine what's already there. Once "🆕
 // ابدأ لوحة جديدة" empties state.dashboard, there is nothing to send and the next question
 // starts from scratch automatically.
-async function ask(question) {
+// `displayText`, when given, is what actually shows in the chat bubble — `question` itself
+// still goes to the backend unchanged. Only the dashboard-gallery's "استخدم هذا النموذج"
+// needs this: its prompt is a single dense sentence enumerating all 10 widgets ("1) ... 2)
+// ... 10)."), fine for the model to read but unreadable crammed into a chat bubble as if the
+// user had typed it — every other caller (a typed question, a single-widget template's short
+// one-line prompt) leaves displayText unset and behaves exactly as before.
+async function ask(question, displayText) {
   const currentDashboard = state.dashboard?.widgets?.length
     ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
     : null;
   const isContinuation = !!currentDashboard;
   const image = state.attachedImage;
 
-  state.messages.push({ role: 'user', text: image ? `📎 ${state.attachedImageName}\n${question}` : question });
+  const shown = displayText ?? question;
+  state.messages.push({ role: 'user', text: image ? `📎 ${state.attachedImageName}\n${shown}` : shown });
   state.attachedImage = null; state.attachedImageName = ''; renderAttachedImage();
   state.loading = true;
   renderMessages(); renderDashboard(); el.send.disabled = true;
