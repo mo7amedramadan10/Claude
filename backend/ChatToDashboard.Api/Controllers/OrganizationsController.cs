@@ -101,8 +101,8 @@ public class OrganizationsController : ControllerBase
         if (org is null) return NotFound(new { error = "المنظمة غير موجودة." });
         if (string.IsNullOrWhiteSpace(request.Username)) return BadRequest(new { error = "اسم المستخدم مطلوب." });
         if (string.IsNullOrWhiteSpace(request.Password)) return BadRequest(new { error = "كلمة المرور مطلوبة." });
-        if (await _users.FindByUsernameAsync(request.Username.Trim(), ct) is not null)
-            return Conflict(new { error = "اسم المستخدم ده موجود بالفعل." });
+        if (await _users.FindByUsernameInOrganizationAsync(org.Id, request.Username.Trim(), ct) is not null)
+            return Conflict(new { error = "اسم المستخدم ده موجود بالفعل في هذه المنظمة." });
 
         var admin = new AppUser
         {

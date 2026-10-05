@@ -346,7 +346,10 @@
 }
 .scrim { display: none; }
 @media (max-width: 1080px) { .scrim.is-on { display: block; position: fixed; inset: 0; background: rgba(30,40,50,.3); z-index: 35; } }
-#login-screen .auth-error { padding: 10px 14px; border-radius: var(--r-sm); background: var(--danger-50); border: 1px solid var(--danger); color: var(--danger); font-size: var(--fs-sm); }
+#login-screen .auth-error, #org-picker-screen .auth-error { padding: 10px 14px; border-radius: var(--r-sm); background: var(--danger-50); border: 1px solid var(--danger); color: var(--danger); font-size: var(--fs-sm); }
+.auth-org-banner { font-size: var(--fs-sm); color: var(--ink-2); background: var(--blue-50); border: 1px solid var(--blue-100); border-radius: var(--r-sm); padding: 10px 14px; margin-top: -8px; }
+.auth-org-banner strong { color: var(--blue-700); }
+.auth-org-banner button { background: none; border: 0; color: var(--brand-blue); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
 
 /* ==========================================================
    جزء الشات — شريط المحادثة في شاشة المحادثة (#chat-rail)

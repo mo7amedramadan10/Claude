@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using ChatToDashboard.Api.Auth;
+using ChatToDashboard.Api.Organizations;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -13,14 +14,29 @@ namespace ChatToDashboard.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly UserStore _users;
+    private readonly OrganizationStore _organizations;
     private readonly LdapAuthenticator _ldap;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(UserStore users, LdapAuthenticator ldap, ILogger<AuthController> logger)
+    public AuthController(UserStore users, OrganizationStore organizations, LdapAuthenticator ldap, ILogger<AuthController> logger)
     {
         _users = users;
+        _organizations = organizations;
         _ldap = ldap;
         _logger = logger;
+    }
+
+    /// <summary>The organization a /o/{slug} link names — public (name + slug only), so the
+    /// login screen can greet the right organization by name before any credential is
+    /// entered. See OrganizationStore.FindBySlugAsync's remarks on why this is safe to expose
+    /// anonymously.</summary>
+    [HttpGet("org/{slug}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> OrganizationBySlug(string slug, CancellationToken ct)
+    {
+        var org = await _organizations.FindBySlugAsync(slug, ct);
+        if (org is null || !org.IsActive) return NotFound(new { error = "المنظمة غير موجودة." });
+        return Ok(new { id = org.Id, name = org.Name, slug = org.Slug });
     }
 
     [HttpPost("login")]
@@ -29,8 +45,14 @@ public class AuthController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
             return BadRequest(new { error = "اسم المستخدم وكلمة المرور مطلوبان." });
+        if (string.IsNullOrWhiteSpace(request.OrgSlug))
+            return BadRequest(new { error = "رابط المنظمة مطلوب — استخدم رابط تسجيل الدخول الخاص بمنظمتك." });
 
-        var user = await _users.FindByUsernameAsync(request.Username.Trim(), ct);
+        var org = await _organizations.FindBySlugAsync(request.OrgSlug.Trim(), ct);
+        if (org is null || !org.IsActive)
+            return Unauthorized(new { error = "اسم المستخدم أو كلمة المرور غير صحيحة." });
+
+        var user = await _users.FindByUsernameInOrganizationAsync(org.Id, request.Username.Trim(), ct);
         if (user is null || !user.IsActive)
             return Unauthorized(new { error = "اسم المستخدم أو كلمة المرور غير صحيحة." });
 

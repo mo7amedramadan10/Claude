@@ -73,6 +73,11 @@ public class LoginRequest
 {
     [JsonPropertyName("username")] public string Username { get; set; } = "";
     [JsonPropertyName("password")] public string Password { get; set; } = "";
+
+    /// <summary>The organization's slug, from its /o/{slug} link — required now that usernames
+    /// are only unique within an organization, not system-wide (see
+    /// AuthController.Login/UserStore.FindByUsernameInOrganizationAsync).</summary>
+    [JsonPropertyName("orgSlug")] public string OrgSlug { get; set; } = "";
 }
 
 /// <summary>Body for both creating and updating a user (PUT leaves Password empty to keep it unchanged).</summary>

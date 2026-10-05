@@ -72,6 +72,18 @@ public class OrganizationStore
         return await connection.QuerySingleOrDefaultAsync<Organization>($"SELECT * FROM {Table} WHERE Id = @id", new { id });
     }
 
+    /// <summary>Resolves the organization a /o/{slug} link names — the public, anonymous-safe
+    /// half of login (see AuthController.OrganizationBySlug/Login): the slug and name are
+    /// treated as public (an organization's own identity, shown on its login screen before
+    /// any credential is entered), unlike everything else in this store.</summary>
+    public async Task<Organization?> FindBySlugAsync(string slug, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Organization>(
+            $"SELECT * FROM {Table} WHERE LOWER(Slug) = LOWER(@slug)", new { slug });
+    }
+
     public async Task<Organization> CreateAsync(string name, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

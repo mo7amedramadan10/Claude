@@ -170,6 +170,15 @@ app.MapGet("/usage", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "usage.html"), "text/html"))
     .RequireAuthorization(policy => policy.RequireRole(UserRoles.Admin));
 
+// /o/{slug} (and anything else with no matching static file or API route) still serves the
+// same single-page app — app.js reads the slug from location.pathname itself (see
+// resolveOrgScopedLoginAsync) to show the right organization's login screen. Only ever
+// reached for a GET that matched nothing above, so it never shadows a real API route.
+// AllowAnonymous is required here — every endpoint requires a signed-in user by default
+// (FallbackPolicy above), which would otherwise 401 this before the signed-out visitor it's
+// actually for ever sees the login screen.
+app.MapFallbackToFile("index.html").AllowAnonymous();
+
 // Initial load: scan the data folder and (re)create the staging tables so the
 // shared SQL Server copy reflects the current files. Failures are logged but do
 // not prevent startup — POST /api/data/refresh can retry once SQL is reachable.

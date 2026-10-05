@@ -4,6 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>جيم</title>
+<!-- Every asset reference below is relative ("css/app.css", not "/css/app.css") — fine as
+     long as the page is only ever served from "/", but now that an organization's own
+     /o/{slug} link serves this same file (see Program.cs's MapFallbackToFile), those would
+     otherwise resolve against "/o/{slug}/css/app.css" and 404. <base> pins every relative
+     URL in the document back to the real root regardless of the current path. -->
+<base href="/">
 <link rel="icon" href="img/logo-mark.svg" />
 <script>
 // Set before the stylesheet paints anything, so the remembered theme/language apply on
@@ -29,11 +35,39 @@
 </head>
 <body>
 <script src="js/icons.js"></script>
+<div id="org-picker-screen" class="hidden jeem-scope">
+  <div class="auth">
+    <main class="auth-form">
+      <span class="brand"><img src="img/logo-lockup.svg" alt="جيم"></span>
+      <div><h1>وين منظمتك؟</h1><p class="lead">كل منظمة لها رابط دخول خاص بها — استخدم الرابط اللي معاك، أو اكتب اسم منظمتك هنا.</p></div>
+      <form id="org-picker-form">
+        <div class="field"><label for="org-picker-input">اسم المنظمة أو رابطها</label><input id="org-picker-input" type="text" required placeholder="مثال: شركة ثقة"></div>
+        <div id="org-picker-error" class="auth-error hidden"></div>
+        <button class="btn btn-primary" type="submit" id="org-picker-submit">متابعة</button>
+      </form>
+      <div class="auth-foot"><span>© 2026 جيم</span></div>
+    </main>
+    <aside class="auth-side" aria-hidden="true">
+      <img class="bgmark" src="img/logo-mark.svg" alt="">
+      <div class="demo">
+        <div class="tagline">عليك <em>السين</em>..<br>وعلينا <em>الجيم</em>.</div>
+        <div class="q">كم حققنا من المستهدف هذا الربع؟</div>
+        <div class="a">
+          <div style="display:flex;align-items:center;gap:10px;font-size:var(--fs-sm);color:var(--ink-2)"><span class="jbars"><i></i><i></i><i></i></span>جهّز جيم لوحتك</div>
+          <div class="row"><div class="tile"><span>تحقيق المستهدف</span><b class="num">97%</b></div><div class="tile"><span>إجمالي المبيعات</span><b class="num">50.6م</b></div></div>
+          <div class="bars"><i style="height:42%"></i><i style="height:50%"></i><i style="height:58%"></i><i style="height:55%"></i><i style="height:68%"></i><i style="height:74%"></i><i style="height:80%"></i><i style="height:88%"></i><i style="height:100%"></i></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
 <div id="login-screen" class="hidden jeem-scope">
   <div class="auth">
     <main class="auth-form">
       <span class="brand"><img src="img/logo-lockup.svg" alt="جيم"></span>
       <div><h1>أهلًا بعودتك</h1><p class="lead">اسأل عن بياناتك، واحصل على لوحتك في ثوانٍ.</p></div>
+      <p class="auth-org-banner hidden" id="login-org-banner">تسجيل الدخول إلى <strong id="login-org-name"></strong> — <button type="button" id="login-org-change">مش منظمتك؟</button></p>
       <form id="login-form">
         <div class="field"><label for="login-username">اسم المستخدم</label><input id="login-username" type="text" autocomplete="username" required></div>
         <div class="field"><label for="login-password">كلمة المرور</label><input id="login-password" type="password" autocomplete="current-password" required></div>

@@ -35,8 +35,10 @@ public class UsersController : ControllerBase
         var error = ValidateRequest(request, isCreate: true);
         if (error is not null) return BadRequest(new { error });
 
-        if (await _users.FindByUsernameAsync(request.Username.Trim(), ct) is not null)
-            return Conflict(new { error = "اسم المستخدم ده موجود بالفعل." });
+        var organizationId = OrganizationId;
+        if (organizationId is null) return BadRequest(new { error = "الحساب غير مرتبط بأي منظمة." });
+        if (await _users.FindByUsernameInOrganizationAsync(organizationId, request.Username.Trim(), ct) is not null)
+            return Conflict(new { error = "اسم المستخدم ده موجود بالفعل في هذه المنظمة." });
 
         var user = new AppUser
         {

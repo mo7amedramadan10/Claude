@@ -121,6 +121,131 @@ public class UserStore
                 $"UPDATE {Table} SET AllowAllFiles = 1, AllowedFilesJson = '[]' WHERE AllowAllFiles = 0 OR AllowAllFiles IS NULL";
             await filesBackfill.ExecuteNonQueryAsync(ct);
         }
+
+        await RelaxUsernameUniquenessAsync(connection, ct);
+    }
+
+    /// <summary>
+    /// Username used to be globally UNIQUE at the database level (see the CREATE TABLE above,
+    /// which still shows the original column — that clause is now dead on any table this
+    /// migration has already run against). That's wrong for a multi-tenant deployment: two
+    /// different organizations each wanting an "admin" account could never coexist. Username
+    /// now only needs to be unique *within* an organization (see
+    /// FindByUsernameInOrganizationAsync and AuthController's /o/{slug}-scoped login), so this
+    /// replaces the single-column constraint with a composite one on (OrganizationId,
+    /// Username).
+    ///
+    /// SQLite has no ALTER TABLE ... DROP CONSTRAINT, so the only way to actually remove a
+    /// column-level UNIQUE is the standard SQLite pattern: rebuild the table without it, copy
+    /// every row across, swap it in. Guarded by inspecting sqlite_master's stored CREATE TABLE
+    /// text so this only ever runs once per database, not on every startup. SQL Server's
+    /// inline UNIQUE became an auto-named constraint, discoverable (but not guessable) via
+    /// sys.key_constraints — dropped by that discovered name, then replaced by a filtered
+    /// unique index (filtered so legacy rows with OrganizationId still NULL, pre-backfill,
+    /// never collide with each other under the new index).
+    /// </summary>
+    private async Task RelaxUsernameUniquenessAsync(System.Data.Common.DbConnection connection, CancellationToken ct)
+    {
+        if (_db.Provider == DbProvider.Sqlite)
+        {
+            var createSql = await connection.ExecuteScalarAsync<string?>(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'AppUsers'");
+            if (createSql is null || !createSql.Contains("\"Username\" TEXT UNIQUE", StringComparison.Ordinal))
+                return; // already rebuilt, or a brand-new table that never had the old clause
+
+            await using var transaction = await connection.BeginTransactionAsync(ct);
+            try
+            {
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.Transaction = (SqliteTransaction)transaction;
+                    cmd.CommandText = """
+                        CREATE TABLE "AppUsers_rebuild" (
+                          "Id" TEXT PRIMARY KEY, "Username" TEXT, "DisplayName" TEXT,
+                          "PasswordHash" TEXT, "AuthMethod" TEXT, "Role" TEXT, "IsActive" INTEGER,
+                          "AllowAllSystems" INTEGER, "AllowedSystemsJson" TEXT,
+                          "AllowAllFiles" INTEGER, "AllowedFilesJson" TEXT, "CreatedAt" TEXT,
+                          "OrganizationId" TEXT, "IsPlatformOwner" INTEGER)
+                        """;
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.Transaction = (SqliteTransaction)transaction;
+                    cmd.CommandText = """
+                        INSERT INTO "AppUsers_rebuild"
+                          (Id, Username, DisplayName, PasswordHash, AuthMethod, Role, IsActive,
+                           AllowAllSystems, AllowedSystemsJson, AllowAllFiles, AllowedFilesJson, CreatedAt,
+                           OrganizationId, IsPlatformOwner)
+                        SELECT Id, Username, DisplayName, PasswordHash, AuthMethod, Role, IsActive,
+                               AllowAllSystems, AllowedSystemsJson, AllowAllFiles, AllowedFilesJson, CreatedAt,
+                               OrganizationId, IsPlatformOwner
+                        FROM "AppUsers"
+                        """;
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.Transaction = (SqliteTransaction)transaction;
+                    cmd.CommandText = "DROP TABLE \"AppUsers\"";
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.Transaction = (SqliteTransaction)transaction;
+                    cmd.CommandText = "ALTER TABLE \"AppUsers_rebuild\" RENAME TO \"AppUsers\"";
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.Transaction = (SqliteTransaction)transaction;
+                    // SQLite treats each NULL as distinct under a UNIQUE index (unlike SQL
+                    // Server), so pre-backfill rows with OrganizationId still NULL never
+                    // collide with each other here — no WHERE filter needed.
+                    cmd.CommandText = "CREATE UNIQUE INDEX \"idx_appusers_org_username\" ON \"AppUsers\" (\"OrganizationId\", \"Username\")";
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+                await transaction.CommitAsync(ct);
+                _logger.LogInformation("Migrated AppUsers.Username from a globally-unique to an organization-scoped unique constraint.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(ct);
+                _logger.LogError(ex, "Failed to relax AppUsers.Username's uniqueness constraint — usernames remain globally unique until this is retried.");
+            }
+        }
+        else
+        {
+            try
+            {
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = """
+                        DECLARE @constraintName NVARCHAR(200);
+                        SELECT @constraintName = kc.name
+                        FROM sys.key_constraints kc
+                        JOIN sys.index_columns ic ON ic.object_id = kc.parent_object_id AND ic.index_id = kc.unique_index_id
+                        JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+                        WHERE kc.parent_object_id = OBJECT_ID('staging.AppUsers') AND c.name = 'Username' AND kc.type = 'UQ';
+                        IF @constraintName IS NOT NULL
+                          EXEC('ALTER TABLE staging.AppUsers DROP CONSTRAINT [' + @constraintName + ']');
+                        """;
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = """
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_appusers_org_username' AND object_id = OBJECT_ID('staging.AppUsers'))
+                          CREATE UNIQUE INDEX idx_appusers_org_username ON staging.AppUsers (OrganizationId, Username) WHERE OrganizationId IS NOT NULL;
+                        """;
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Failed to relax AppUsers.Username's uniqueness constraint — usernames remain globally unique until this is retried.");
+            }
+        }
     }
 
     public async Task<int> CountAsync(CancellationToken ct = default)
@@ -179,6 +304,12 @@ public class UserStore
         return await connection.QuerySingleOrDefaultAsync<AppUser>($"SELECT * FROM {Table} WHERE Id = @id", new { id });
     }
 
+    /// <summary>Global, cross-organization lookup — safe only where there is genuinely no
+    /// organization context yet (Program.cs's own fixed-name seed/demo accounts) or where
+    /// ambiguity across organizations is acceptable. Username is no longer unique
+    /// system-wide (see RelaxUsernameUniquenessAsync), so this can return any one of several
+    /// same-named accounts in different organizations — every other caller (login, in-org
+    /// uniqueness checks, the user directory) uses FindByUsernameInOrganizationAsync instead.</summary>
     public async Task<AppUser?> FindByUsernameAsync(string username, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
@@ -187,10 +318,25 @@ public class UserStore
             $"SELECT * FROM {Table} WHERE LOWER(Username) = LOWER(@username)", new { username });
     }
 
-    /// <summary>Active users whose username or display name contains <paramref name="query"/>
-    /// — capped small and narrow (never the full roster) so a non-Admin can search for
-    /// someone to grant a permission/role to without the Admin-only GET /api/users listing.</summary>
-    public async Task<IReadOnlyList<AppUser>> SearchAsync(string query, int limit, CancellationToken ct = default)
+    /// <summary>The one real lookup login/account-creation use — scoped to a single
+    /// organization, so "admin" in one organization never matches "admin" in another.</summary>
+    public async Task<AppUser?> FindByUsernameInOrganizationAsync(
+        string organizationId, string username, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<AppUser>(
+            $"SELECT * FROM {Table} WHERE OrganizationId = @organizationId AND LOWER(Username) = LOWER(@username)",
+            new { organizationId, username });
+    }
+
+    /// <summary>Active users, within <paramref name="organizationId"/> only, whose username or
+    /// display name contains <paramref name="query"/> — capped small and narrow (never the
+    /// full roster) so a non-Admin can search for someone to grant a permission/role to
+    /// without the Admin-only GET /api/users listing, and without reaching into another
+    /// organization's accounts now that usernames aren't globally unique.</summary>
+    public async Task<IReadOnlyList<AppUser>> SearchAsync(
+        string organizationId, string query, int limit, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
@@ -198,10 +344,10 @@ public class UserStore
         var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
         var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
         var rows = await connection.QueryAsync<AppUser>(
-            $"SELECT {top}* FROM {Table} WHERE IsActive = 1 AND " +
+            $"SELECT {top}* FROM {Table} WHERE IsActive = 1 AND OrganizationId = @organizationId AND " +
             "(LOWER(Username) LIKE LOWER(@like) OR LOWER(DisplayName) LIKE LOWER(@like)) " +
             $"ORDER BY Username{tail}",
-            new { like, limit });
+            new { organizationId, like, limit });
         return rows.ToList();
     }
 

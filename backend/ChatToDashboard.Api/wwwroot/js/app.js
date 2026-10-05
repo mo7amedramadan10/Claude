@@ -5953,14 +5953,68 @@ async function bootSharedView(shareId) {
 }
 
 // ---------- auth ----------
+// Every organization — including the default one — is only reached through its own
+// /o/{slug} link (see AuthController.Login/OrganizationBySlug): usernames are unique per
+// organization now, not system-wide, so login has to know which organization's "admin" (say)
+// is meant before it can even look the username up. state.loginOrgSlug carries that slug from
+// the moment it's resolved (from the URL, or typed into the org picker) through to the actual
+// login POST below.
+function showOrgPicker(message) {
+  el('org-picker-screen').classList.remove('hidden');
+  el('login-screen').classList.add('hidden');
+  el('org-picker-error').classList.toggle('hidden', !message);
+  if (message) el('org-picker-error').textContent = message;
+}
 function showLoginScreen(message) {
   el('login-screen').classList.remove('hidden');
+  el('org-picker-screen').classList.add('hidden');
   if (message) {
     el('login-error').textContent = message;
     el('login-error').classList.remove('hidden');
   }
 }
-function hideLoginScreen() { el('login-screen').classList.add('hidden'); }
+function hideLoginScreen() {
+  el('login-screen').classList.add('hidden');
+  el('org-picker-screen').classList.add('hidden');
+}
+
+// Mirrors OrganizationStore.Slugify server-side (lowercase, keep letters/digits — Arabic
+// included — everything else becomes '-', collapse/trim dashes) so a name typed into the org
+// picker resolves to the same slug the organization was actually created with.
+function slugifyOrgName(name) {
+  let cleaned = Array.from(name.trim().toLowerCase())
+    .map(c => /[\p{L}\p{N}]/u.test(c) ? c : '-').join('');
+  cleaned = cleaned.replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
+  return cleaned || 'org';
+}
+
+// Resolves which organization this browser is signed out in front of — from the /o/{slug}
+// path if the URL already carries one (a real login link), otherwise shows the org picker so
+// the user can type their organization's name and get redirected to its own link.
+async function resolveOrgScopedLoginAsync() {
+  const match = location.pathname.match(/^\/o\/([^/]+)\/?$/);
+  if (!match) { showOrgPicker(); return; }
+  const slug = decodeURIComponent(match[1]);
+  try {
+    const res = await fetch(`/api/auth/org/${encodeURIComponent(slug)}`);
+    if (!res.ok) { showOrgPicker('تعذّر العثور على هذه المنظمة — تأكد من الرابط، أو اكتب اسم منظمتك.'); return; }
+    const org = await res.json();
+    state.loginOrgSlug = org.slug;
+    el('login-org-name').textContent = org.name;
+    el('login-org-banner').classList.remove('hidden');
+    showLoginScreen();
+  } catch {
+    showOrgPicker('تعذّر الاتصال بالخادم — حاول مرة أخرى.');
+  }
+}
+
+el('org-picker-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = el('org-picker-input').value.trim();
+  if (!name) return;
+  location.href = `/o/${encodeURIComponent(slugifyOrgName(name))}`;
+});
+el('login-org-change').addEventListener('click', () => { location.href = '/'; });
 
 function renderCurrentUser() {
   const u = state.currentUser;
@@ -6320,7 +6374,7 @@ el('login-form').addEventListener('submit', async e => {
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, orgSlug: state.loginOrgSlug || '' }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -7041,6 +7095,7 @@ function renderOrganizations(orgs) {
       <td><span class="num">${o.userCount}</span></td>
       <td class="muted">${new Date(o.createdAt).toLocaleDateString('ar-EG')}</td>
       <td><div class="row-actions">
+        <button type="button" class="btn btn-ghost btn-sm" data-copy-login-link="${esc(o.slug)}" title="نسخ رابط تسجيل الدخول الخاص بهذه المنظمة">نسخ رابط الدخول</button>
         <button type="button" class="btn btn-ghost btn-sm" data-assign-admin="${esc(o.id)}" data-org-name="${esc(o.name)}">تعيين مسؤول</button>
         <button type="button" class="btn btn-ghost btn-sm" data-toggle-org="${esc(o.id)}" data-active="${o.isActive}">${o.isActive ? 'تعطيل' : 'تفعيل'}</button>
       </div></td>
@@ -7055,6 +7110,16 @@ function renderOrganizations(orgs) {
     }));
   el('organizations-table-body').querySelectorAll('[data-assign-admin]').forEach(btn =>
     btn.addEventListener('click', () => openOrgAdminModal(btn.dataset.assignAdmin, btn.dataset.orgName)));
+  el('organizations-table-body').querySelectorAll('[data-copy-login-link]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const link = `${location.origin}/o/${btn.dataset.copyLoginLink}`;
+      try {
+        await navigator.clipboard.writeText(link);
+        const original = btn.textContent;
+        btn.textContent = 'تم النسخ ✓';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      } catch { /* clipboard access denied — nothing to recover from here */ }
+    }));
 }
 
 el('new-org-btn').addEventListener('click', () => {
@@ -7455,7 +7520,7 @@ async function deleteUser(id) {
   if (shareId) { await bootSharedView(shareId); return; }
 
   const res = await fetch('/api/auth/me');
-  if (!res.ok) { showLoginScreen(); return; }
+  if (!res.ok) { await resolveOrgScopedLoginAsync(); return; }
   state.currentUser = await res.json();
   await startApp();
 })();
