@@ -135,6 +135,15 @@ public class TemplatePromptService
         var name = (templateRef.KpiName ?? "").Trim();
         if (string.IsNullOrWhiteSpace(name) || name.Length > 200) return (null, "اسم المؤشر غير صالح.");
 
+        // Category-off is authoritative and independent of the row's own status (see
+        // TemplateKinds.KpiCategory) — checked against the index the client sent, never the
+        // free-text category name, so nothing short of the real category id can bypass it.
+        if (templateRef.KpiCategoryIndex is { } catIndex)
+        {
+            var disabledCats = await _templates.GetDisabledKpiCategoriesAsync(ct);
+            if (disabledCats.Contains(catIndex)) return (null, "هذا التصنيف موقوف حاليًا.");
+        }
+
         var rowOver = await _templates.GetAsync(TemplateKinds.Kpi, rowIndex.ToString(), ct);
         if (rowOver is { Status: not TemplateStatuses.Published }) return (null, "هذا المؤشر غير متاح حاليًا.");
 

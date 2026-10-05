@@ -14,6 +14,12 @@ public static class TemplateKinds
     /// <summary>A single KPI-library row's own override, keyed by its stable index into
     /// kpi-library.js's `rows` array (that file is static/baked, so the index is a stable id).</summary>
     public const string Kpi = "kpi";
+    /// <summary>Whether a whole KPI-library category (keyed by its stable index into
+    /// kpi-library.js's `cats` array) is shown to end users at all — see TemplateStore's
+    /// remarks on how presence-only rows represent this (no Status/PromptText used). Disabling
+    /// a category hides every KPI under it without touching each row's own status (see
+    /// TemplatePromptService.ResolveKpiAsync and the Kpi kind above).</summary>
+    public const string KpiCategory = "kpi_category";
     /// <summary>Singleton (Key is always "general") — free text prepended to every
     /// template-originated prompt, same as every other kind's override row.</summary>
     public const string Rules = "rules";
@@ -66,6 +72,10 @@ public class TemplateRef
     [JsonPropertyName("kpiName")] public string? KpiName { get; set; }
     [JsonPropertyName("kpiNameEn")] public string? KpiNameEn { get; set; }
     [JsonPropertyName("kpiCategory")] public string? KpiCategory { get; set; }
+    /// <summary>Index into kpi-library.js's `cats` array — the authoritative field for the
+    /// category-disabled check (see TemplatePromptService.ResolveKpiAsync); <see
+    /// cref="KpiCategory"/> above is display text only, never trusted for that check.</summary>
+    [JsonPropertyName("kpiCategoryIndex")] public int? KpiCategoryIndex { get; set; }
     [JsonPropertyName("kpiMeasureType")] public int? KpiMeasureType { get; set; }
     [JsonPropertyName("kpiMeasureTypeLabel")] public string? KpiMeasureTypeLabel { get; set; }
 }

@@ -23,6 +23,19 @@ public class SaveTemplateRequest
     [JsonPropertyName("status")] public string Status { get; set; } = TemplateStatuses.Published;
 }
 
+/// <summary>Body of PUT api/templates/admin/kpi-categories/{index}.</summary>
+public class SetKpiCategoryRequest
+{
+    [JsonPropertyName("isOn")] public bool IsOn { get; set; }
+}
+
+/// <summary>Body of POST api/templates/admin/kpi-categories/bulk — "إظهار الكل"/"إيقاف الكل" per group.</summary>
+public class BulkKpiCategoryRequest
+{
+    [JsonPropertyName("indices")] public List<int>? Indices { get; set; }
+    [JsonPropertyName("isOn")] public bool IsOn { get; set; }
+}
+
 /// <summary>Platform-owner CRUD over every AI-facing template (see TemplateStore/
 /// TemplatePromptService) plus the read-only, promptText-free catalog every signed-in user's
 /// chat/gallery/KPI-library screens fetch instead of the old hardcoded TEMPLATES/DASH_GALLERY
@@ -98,8 +111,9 @@ public class TemplatesController : ControllerBase
         var kpiOverrides = kpiStatuses
             .Where(kv => kv.Value != TemplateStatuses.Published)
             .ToDictionary(kv => kv.Key.ToString(), kv => kv.Value);
+        var disabledCats = await _templates.GetDisabledKpiCategoriesAsync(ct);
 
-        return Ok(new { widgets, dashboards, kpiOverrides });
+        return Ok(new { widgets, dashboards, kpiOverrides, kpiDisabledCategories = disabledCats });
     }
 
     // ---------- Admin: widget / dashboard templates ----------
@@ -317,6 +331,55 @@ public class TemplatesController : ControllerBase
     {
         await _templates.DeleteAsync(TemplateKinds.Kpi, index.ToString(), ct);
         return Ok(new { ok = true });
+    }
+
+    // ---------- Admin: KPI-library categories (stop/show every indicator under one at once) ----------
+
+    /// <summary>Sparse — only the categories currently disabled (see TemplateKinds.KpiCategory);
+    /// an index absent here is on. The admin KPI tab pairs this with the client's own static
+    /// kpi-library.js `cats` array for names/counts, same reasoning as AdminListKpiOverrides.</summary>
+    [HttpGet("admin/kpi-categories")]
+    [Authorize(Policy = "PlatformOwner")]
+    public async Task<IActionResult> AdminListKpiCategories(CancellationToken ct)
+    {
+        var rows = await _templates.ListByKindAsync(TemplateKinds.KpiCategory, ct);
+        return Ok(rows.Select(o => new
+        {
+            index = int.Parse(o.Key), updatedByName = o.UpdatedByName, updatedAt = o.UpdatedAt,
+        }));
+    }
+
+    [HttpPut("admin/kpi-categories/{index}")]
+    [Authorize(Policy = "PlatformOwner")]
+    public async Task<IActionResult> AdminSetKpiCategory(int index, [FromBody] SetKpiCategoryRequest body, CancellationToken ct)
+    {
+        if (index < 0) return BadRequest(new { error = "تصنيف غير صالح." });
+        await ApplyKpiCategoryAsync(index, body.IsOn, ct);
+        return Ok(new { ok = true });
+    }
+
+    [HttpPost("admin/kpi-categories/bulk")]
+    [Authorize(Policy = "PlatformOwner")]
+    public async Task<IActionResult> AdminBulkSetKpiCategories([FromBody] BulkKpiCategoryRequest body, CancellationToken ct)
+    {
+        foreach (var index in body.Indices ?? new List<int>())
+            if (index >= 0) await ApplyKpiCategoryAsync(index, body.IsOn, ct);
+        return Ok(new { ok = true });
+    }
+
+    private async Task ApplyKpiCategoryAsync(int index, bool isOn, CancellationToken ct)
+    {
+        if (isOn)
+        {
+            await _templates.DeleteAsync(TemplateKinds.KpiCategory, index.ToString(), ct);
+            return;
+        }
+        var existing = await _templates.GetAsync(TemplateKinds.KpiCategory, index.ToString(), ct);
+        var row = existing ?? new TemplateOverride { Kind = TemplateKinds.KpiCategory, Key = index.ToString(), IsCustom = false };
+        row.Status = TemplateStatuses.Stopped;
+        row.UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        row.UpdatedByName = HttpContext.User.Identity?.Name;
+        await _templates.UpsertAsync(row, ct);
     }
 
     // ---------- helpers ----------

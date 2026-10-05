@@ -77,6 +77,18 @@ public class TemplateStore
         return result;
     }
 
+    /// <summary>Every kpi-library.js category index the platform-owner has disabled — a row's
+    /// mere presence here means "off" (see TemplateKinds.KpiCategory); re-enabling a category
+    /// is just deleting its row, same "revert" shape as every other kind.</summary>
+    public async Task<IReadOnlySet<int>> GetDisabledKpiCategoriesAsync(CancellationToken ct = default)
+    {
+        var rows = await ListByKindAsync(TemplateKinds.KpiCategory, ct);
+        var result = new HashSet<int>();
+        foreach (var r in rows)
+            if (int.TryParse(r.Key, out var idx)) result.Add(idx);
+        return result;
+    }
+
     /// <summary>Upserts an override row, bumping Version (1 on first save). <paramref
     /// name="row"/>'s Id/Version/CreatedAt/UpdatedAt are set/overwritten here.</summary>
     public async Task<TemplateOverride> UpsertAsync(TemplateOverride row, CancellationToken ct = default)

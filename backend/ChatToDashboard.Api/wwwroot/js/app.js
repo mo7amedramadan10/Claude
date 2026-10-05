@@ -3586,6 +3586,10 @@ const KPI_PAGE_SIZE = 40;
 // الفعلي من مكتبة النماذج اللي مسؤول المنصة بيتحكّم فيها، بنفس مبدأ TEMPLATES/DASH_GALLERY فوق.
 // `KPI_ROW_OVERRIDES` (من catalog endpoint) بيقول أي صفوف اتوقفت فتُستثنى من النتائج هنا.
 let KPI_ROW_OVERRIDES = {};
+// `KPI_CAT_OFF` بيقول أي تصنيفات كاملة أوقفها مسؤول المنصة — تصنيف موقوف بيخفي كل مؤشراته
+// فورًا (مهما كانت حالة كل مؤشر فرديًا)، وبيختفي من قائمة التصنيفات تمامًا. انظر
+// TemplateKinds.KpiCategory على السيرفر.
+let KPI_CAT_OFF = new Set();
 
 // توحيد أشكال الألف والتاء المربوطة والياء — نفس تطبيع البحث في النسخة المرجعية، عشان
 // البحث عن «الاداء» يلاقي «الأداء».
@@ -3596,9 +3600,12 @@ function initKpiLibrary() {
   if (kpiLibInitialized || !KPI_LIB) return;
   kpiLibInitialized = true;
   const view = el('tpl-view-kpis');
-  const deps = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c]) => c[2] === 0);
-  const inds = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c]) => c[2] === 1);
+  // تصنيف موقوف (من مسؤول المنصة) بيختفي من قائمة التصنيفات هنا تمامًا — مؤشراته أصلًا
+  // مستبعدة من نتائج البحث في run() تحت، فمفيش داعي يظهر كخيار فلتر بيرجع صفر نتائج.
+  const deps = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c, i]) => c[2] === 0 && !KPI_CAT_OFF.has(i));
+  const inds = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c, i]) => c[2] === 1 && !KPI_CAT_OFF.has(i));
   const opt = ([c, i]) => `<option value="${i}">${esc(c[0])}</option>`;
+  const visibleCatCount = KPI_LIB.cats.length - KPI_CAT_OFF.size;
   view.innerHTML = `
     <label class="tpl-search">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
@@ -3606,7 +3613,7 @@ function initKpiLibrary() {
     </label>
     <div class="kpi-filters">
       <select id="kpi-cat-select" class="select">
-        <option value="">كل التصنيفات (${KPI_LIB.cats.length})</option>
+        <option value="">كل التصنيفات (${visibleCatCount})</option>
         <optgroup label="الأقسام الوظيفية">${deps.map(opt).join('')}</optgroup>
         <optgroup label="القطاعات">${inds.map(opt).join('')}</optgroup>
       </select>
@@ -3649,6 +3656,7 @@ function initKpiLibrary() {
     hits = [];
     KPI_LIB.rows.forEach((r, i) => {
       if (KPI_ROW_OVERRIDES[i] === 'stopped') return;
+      if (KPI_CAT_OFF.has(r[0])) return;
       if (fc !== '' && r[0] !== +fc) return;
       if (fm !== '' && r[4] !== +fm) return;
       if (qs.length && !qs.every(w => idx[i].includes(w))) return;
@@ -3679,7 +3687,8 @@ function initKpiLibrary() {
     setChatMode('dashboard');
     ask(`📊 ${r[2]}`, undefined, {
       kind: 'kpi', key: String(i),
-      kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]],
+      kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiCategoryIndex: r[0],
+      kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]],
     });
   });
   run();
@@ -4118,6 +4127,12 @@ async function loadTemplateCatalog() {
     TEMPLATES = data.widgets || [];
     DASH_GALLERY = data.dashboards || [];
     KPI_ROW_OVERRIDES = data.kpiOverrides || {};
+    KPI_CAT_OFF = new Set(data.kpiDisabledCategories || []);
+    if (KPI_LIB) {
+      const visible = KPI_LIB.rows.reduce((n, r, i) =>
+        n + (KPI_ROW_OVERRIDES[i] === 'stopped' || KPI_CAT_OFF.has(r[0]) ? 0 : 1), 0);
+      el('tpl-count-kpis').textContent = visible.toLocaleString('en-US');
+    }
   } catch { /* keeps whatever was already loaded (empty on first failure) */ }
   if (!el('templates-panel').classList.contains('hidden')) renderTemplatesPanel();
   if (!el('dash-gallery-modal').classList.contains('hidden')) renderDashGalGrid();
@@ -7335,12 +7350,13 @@ const tpladmCodeVars = text => esc(text || '').replace(/\{\{\s*(\w+)\s*\}\}/g, '
 const tpladmVarChips = kind => `<div class="var-chips" role="group" aria-label="إدراج متغير">${tpladmVarsFor(kind).map(v =>
   `<button type="button" class="var-chip" data-var="${v.key}" title="${esc(v.label)}"><code dir="ltr">{{${v.key}}}</code><span>${esc(v.label)}</span></button>`).join('')}</div>`;
 
-function tpladmToast(msg) {
+function tpladmToast(msg, undo) {
   let t = document.querySelector('.toast');
   if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-  t.innerHTML = `${tplIc('check')}${esc(msg)}`;
+  t.innerHTML = `${tplIc('check')}<span>${esc(msg)}</span>${undo ? '<button type="button" class="toast-undo">تراجع</button>' : ''}`;
+  if (undo) t.querySelector('.toast-undo').addEventListener('click', () => { clearTimeout(t._h); t.classList.remove('is-on'); undo(); });
   t.classList.remove('is-on'); void t.offsetWidth; t.classList.add('is-on');
-  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), 2800);
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), undo ? 6000 : 2800);
 }
 
 const TPLADM_KINDS = {
@@ -7363,8 +7379,11 @@ const tpladmBlankWidgets = () => [
 ];
 
 const TPLADM = {
-  kind: 'widget', widgets: [], dashboards: [], kpiOverrides: {}, kpiMtypes: [],
-  filt: { widget: { q: '', s: '', c: '' }, dashboard: { q: '', s: '', c: '' }, kpi: { q: '', s: '', c: '', m: '', p: 0 } },
+  kind: 'widget', widgets: [], dashboards: [], kpiOverrides: {}, kpiMtypes: [], kpiCatOff: new Set(),
+  filt: {
+    widget: { q: '', s: '', c: '' }, dashboard: { q: '', s: '', c: '' },
+    kpi: { v: 'cats', q: '', s: '', c: '', m: '', p: 0, cq: '', cs: '' },
+  },
 };
 let TPLADM_RULES_CACHE = '';
 let TPLADM_ED = null;
@@ -7376,12 +7395,20 @@ async function tpladmLoadKpiOverrides() {
   const rows = r.ok ? await r.json() : [];
   TPLADM.kpiOverrides = {}; rows.forEach(x => { TPLADM.kpiOverrides[x.index] = x; });
 }
+async function tpladmLoadKpiCategories() {
+  const r = await fetch('/api/templates/admin/kpi-categories');
+  const rows = r.ok ? await r.json() : [];
+  TPLADM.kpiCatOff = new Set(rows.map(x => x.index));
+}
 async function tpladmLoadKpiMtypes() { const r = await fetch('/api/templates/admin/kpi-mtypes'); TPLADM.kpiMtypes = r.ok ? await r.json() : []; }
 async function tpladmLoadRulesCache() { const r = await fetch('/api/templates/admin/rules'); TPLADM_RULES_CACHE = r.ok ? (await r.json()).promptText || '' : ''; }
 async function tpladmRefreshKind(kind) { if (kind === 'widget') await tpladmLoadWidgets(); else if (kind === 'dashboard') await tpladmLoadDashboards(); }
 
 async function loadTemplatesAdmin() {
-  await Promise.all([tpladmLoadWidgets(), tpladmLoadDashboards(), tpladmLoadKpiOverrides(), tpladmLoadKpiMtypes(), tpladmLoadRulesCache()]);
+  await Promise.all([
+    tpladmLoadWidgets(), tpladmLoadDashboards(), tpladmLoadKpiOverrides(),
+    tpladmLoadKpiCategories(), tpladmLoadKpiMtypes(), tpladmLoadRulesCache(),
+  ]);
   tpladmStats();
   tpladmRender();
 }
@@ -7395,7 +7422,7 @@ function tpladmStats() {
   el('tpladm-stats').innerHTML = `
     <div style="background:var(--surface)"><span class="stat-label">${tplIc('chat')}عناصر المحادثة</span><span class="stat-value num">${W.length}</span><span class="stat-foot"><span class="num">${W.filter(x => x.status === 'published').length}</span> منشور</span></div>
     <div><span class="stat-label">${tplIc('dashboard')}نماذج اللوحات</span><span class="stat-value num">${D.length}</span><span class="stat-foot">10 عناصر لكل نموذج</span></div>
-    <div><span class="stat-label">${tplIc('target')}مكتبة المؤشرات</span><span class="stat-value num">${kpiCount}</span><span class="stat-foot"><span class="num">${custom}</span> بوصف مخصص · <span class="num">${stopped}</span> موقوف</span></div>
+    <div><span class="stat-label">${tplIc('target')}مكتبة المؤشرات</span><span class="stat-value num">${kpiCount}</span><span class="stat-foot"><span class="num">${custom}</span> بوصف مخصص · <span class="num">${TPLADM.kpiCatOff.size}</span> تصنيف موقوف · <span class="num">${stopped}</span> موقوف فرديًا</span></div>
     <div><span class="stat-label">${tplIc('edit')}مسودات وموقوفة</span><span class="stat-value num">${drafts}</span><span class="stat-foot">لا تظهر للمستخدمين</span></div>`;
 }
 
@@ -7509,6 +7536,115 @@ function tpladmKpiTplCard() {
 }
 function tpladmKpiPane() {
   if (!KPI_LIB) { el('tpladm-pane').innerHTML = `<div class="lib-empty">مكتبة المؤشرات غير متاحة.</div>`; return; }
+  const f = TPLADM.filt.kpi; f.v = f.v || 'cats';
+  const head = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.kpi.where)} المصدر: مكتبة Spider Strategies، والترجمة ونوع القياس من جيم.</p>
+    ${tpladmKpiTplCard()}
+    <div class="kv-switch">${tpladmSegmented(f.v, [['cats', 'حسب التصنيف'], ['list', 'كل المؤشرات']], 'kv')}</div>`;
+  el('tpladm-pane').innerHTML = head + (f.v === 'cats' ? tpladmKpiCatsViewHtml() : tpladmKpiListViewHtml());
+  el('tpladm-pane').querySelectorAll('[data-edit-mt]').forEach(b => b.addEventListener('click', () => {
+    const mt = +b.dataset.editMt;
+    const m = TPLADM.kpiMtypes.find(x => x.mtype === mt) || { mtype: mt, promptText: '', status: 'published', isOverridden: false };
+    tpladmOpenEditor('kpi_mtype', { key: String(mt), label: KPI_LIB.mtypes[mt], promptText: m.promptText, status: m.status, isOverridden: m.isOverridden });
+  }));
+  el('tpladm-pane').querySelectorAll('[data-kv]').forEach(b => b.addEventListener('click', () => { f.v = b.dataset.kv; tpladmKpiPane(); }));
+  (f.v === 'cats' ? tpladmBindKpiCats : tpladmBindKpiList)();
+}
+
+/* -- إيقاف/إظهار تصنيف أو مجموعة تصنيفات، مع «تراجع» -- */
+const TPLADM_KPI_GROUPS = [[0, 'الأقسام الوظيفية'], [1, 'القطاعات']];
+function tpladmKpiCatStats() {
+  const m = KPI_LIB.cats.map(() => ({ total: 0, ownOn: 0, custom: 0 }));
+  KPI_LIB.rows.forEach((r, i) => {
+    const c = m[r[0]]; c.total++;
+    if ((TPLADM.kpiOverrides[i]?.status || 'published') === 'published') c.ownOn++;
+    if (TPLADM.kpiOverrides[i]?.promptText) c.custom++;
+  });
+  return m;
+}
+async function tpladmSetCats(ids, on) {
+  const prev = ids.map(i => [i, !TPLADM.kpiCatOff.has(i)]);
+  const changed = prev.filter(([, was]) => was !== on);
+  if (!changed.length) { tpladmToast(on ? 'كل التصنيفات المحددة ظاهرة بالفعل' : 'كل التصنيفات المحددة موقوفة بالفعل'); return; }
+  const indices = changed.map(p => p[0]);
+  await fetch('/api/templates/admin/kpi-categories/bulk', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ indices, isOn: on }),
+  });
+  changed.forEach(([i]) => { on ? TPLADM.kpiCatOff.delete(i) : TPLADM.kpiCatOff.add(i); });
+  const n = changed.reduce((a, [i]) => a + KPI_LIB.rows.filter(r => r[0] === i).length, 0);
+  const what = changed.length === 1 ? `تصنيف «${KPI_LIB.cats[changed[0][0]][0]}»` : `${changed.length} تصنيفات`;
+  tpladmToast(on ? `تم إظهار ${what} · ${n.toLocaleString('en-US')} مؤشرًا` : `تم إيقاف ${what} · ${n.toLocaleString('en-US')} مؤشرًا لن يظهر للمستخدمين`,
+    async () => {
+      await fetch('/api/templates/admin/kpi-categories/bulk', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ indices, isOn: !on }),
+      });
+      changed.forEach(([i]) => { !on ? TPLADM.kpiCatOff.delete(i) : TPLADM.kpiCatOff.add(i); });
+      tpladmToast('تم التراجع'); tpladmStats(); tpladmRender();
+    });
+  tpladmStats(); tpladmRender();
+}
+
+function tpladmKpiCatsViewHtml() {
+  const f = TPLADM.filt.kpi, m = tpladmKpiCatStats(), qs = kpiNorm(f.cq || ''), cs = f.cs || '';
+  const groups = TPLADM_KPI_GROUPS.map(([g, title]) => {
+    const ids = KPI_LIB.cats.map((c, i) => i).filter(i => KPI_LIB.cats[i][2] === g);
+    const shown = ids.filter(i => (!qs || kpiNorm(KPI_LIB.cats[i][0] + ' ' + KPI_LIB.cats[i][1]).includes(qs)) &&
+      (!cs || (cs === 'on') === !TPLADM.kpiCatOff.has(i)));
+    const onN = ids.filter(i => !TPLADM.kpiCatOff.has(i)).length;
+    if (!shown.length) return '';
+    return `
+      <section class="cat-group" data-group="${g}">
+        <div class="cg-head">
+          <div><h3>${esc(title)}</h3><span><span class="num">${onN}</span> ظاهر من <span class="num">${ids.length}</span> · <span class="num">${ids.reduce((a, i) => a + m[i].total, 0).toLocaleString('en-US')}</span> مؤشرًا</span></div>
+          <div class="cg-actions">
+            <button class="btn btn-sm" type="button" data-grp-on="${g}"${onN === ids.length ? ' disabled' : ''}>${tplIc('play')}إظهار الكل</button>
+            <button class="btn btn-sm btn-ghost danger-txt" type="button" data-grp-off="${g}"${onN === 0 ? ' disabled' : ''}>${tplIc('pause')}إيقاف الكل</button>
+          </div>
+        </div>
+        <div class="cat-grid">${shown.map(i => {
+          const c = KPI_LIB.cats[i], on = !TPLADM.kpiCatOff.has(i), x = m[i], vis = on ? x.ownOn : 0;
+          return `
+          <article class="cat-card${on ? '' : ' is-off'}" data-cat="${i}">
+            <div class="cc-top">
+              <div class="cc-name"><b>${esc(c[0])}</b><small dir="ltr">${esc(c[1])}</small></div>
+              <label class="switch" title="${on ? 'إيقاف التصنيف' : 'إظهار التصنيف'}"><input type="checkbox" data-cat-toggle="${i}"${on ? ' checked' : ''} aria-label="إظهار تصنيف ${esc(c[0])} للمستخدمين"><span></span></label>
+            </div>
+            <div class="cc-bar" role="img" aria-label="${vis} ظاهر من ${x.total}"><i style="width:${x.total ? (vis / x.total * 100).toFixed(1) : 0}%"></i></div>
+            <div class="cc-meta">
+              <span><b class="num">${vis.toLocaleString('en-US')}</b> ظاهر من <span class="num">${x.total.toLocaleString('en-US')}</span></span>
+              ${on && x.total - x.ownOn ? `<span class="muted"><span class="num">${x.total - x.ownOn}</span> موقوف فرديًا</span>` : ''}
+              ${x.custom ? `<span class="badge badge-blue"><span class="num">${x.custom}</span> وصف مخصص</span>` : ''}
+            </div>
+            <div class="cc-foot">${on ? tpladmStatusPill('published') : `<span class="status off">موقوف — لا يظهر أي مؤشر منه</span>`}
+              <button class="btn btn-ghost btn-sm" type="button" data-cat-open="${i}">عرض المؤشرات ${tplIc('chev-left')}</button></div>
+          </article>`;
+        }).join('')}</div>
+      </section>`;
+  }).join('');
+  return `
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث في التصنيفات</span><input type="search" id="tpladm-cat-q" value="${esc(f.cq || '')}" placeholder="ابحث باسم التصنيف"></label>
+      ${tpladmSegmented(cs, [['', 'كل التصنيفات'], ['on', 'ظاهرة'], ['off', 'موقوفة']], 'cs')}
+    </div>
+    <p class="cat-note">${tplIc('info')}إيقاف التصنيف يخفي كل مؤشراته من المحادثة فورًا، ولا يغيّر حالة المؤشرات نفسها: عند إظهاره مرة أخرى يرجع كل مؤشر لحالته السابقة.</p>
+    ${groups || '<div class="lib-empty">لا توجد تصنيفات مطابقة.</div>'}`;
+}
+function tpladmBindKpiCats() {
+  const f = TPLADM.filt.kpi;
+  let t;
+  el('tpladm-cat-q').addEventListener('input', e => { f.cq = e.target.value; clearTimeout(t); t = setTimeout(() => tpladmKpiPane(), 150); });
+  el('tpladm-pane').querySelectorAll('[data-cs]').forEach(b => b.addEventListener('click', () => { f.cs = b.dataset.cs; tpladmKpiPane(); }));
+  el('tpladm-pane').querySelectorAll('[data-cat-toggle]').forEach(c => c.addEventListener('change', () => tpladmSetCats([+c.dataset.catToggle], c.checked)));
+  const grp = (g, on) => tpladmSetCats(KPI_LIB.cats.map((c, i) => i).filter(i => KPI_LIB.cats[i][2] === +g), on);
+  el('tpladm-pane').querySelectorAll('[data-grp-on]').forEach(b => b.addEventListener('click', () => grp(b.dataset.grpOn, true)));
+  el('tpladm-pane').querySelectorAll('[data-grp-off]').forEach(b => b.addEventListener('click', () => grp(b.dataset.grpOff, false)));
+  el('tpladm-pane').querySelectorAll('[data-cat-open]').forEach(b => b.addEventListener('click', () => {
+    Object.assign(f, { v: 'list', c: b.dataset.catOpen, q: '', s: '', m: '', p: 0 }); tpladmKpiPane();
+  }));
+}
+
+/* -- عرض كل المؤشرات -- */
+function tpladmKpiListViewHtml() {
   const f = TPLADM.filt.kpi, PAGE = 25;
   const qs = kpiNorm(f.q.trim()).split(/\s+/).filter(Boolean);
   const hits = [];
@@ -7523,11 +7659,10 @@ function tpladmKpiPane() {
   const pages = Math.max(1, Math.ceil(hits.length / PAGE));
   f.p = Math.min(f.p, pages - 1);
   const slice = hits.slice(f.p * PAGE, f.p * PAGE + PAGE);
-  const opt = (c, i) => `<option value="${i}"${f.c === String(i) ? ' selected' : ''}>${esc(c[0])}</option>`;
+  const opt = (c, i) => `<option value="${i}"${f.c === String(i) ? ' selected' : ''}>${esc(c[0])}${TPLADM.kpiCatOff.has(i) ? ' (موقوف)' : ''}</option>`;
+  const sel = f.c !== '' ? +f.c : null, selOn = sel != null && !TPLADM.kpiCatOff.has(sel);
 
-  el('tpladm-pane').innerHTML = `
-    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.kpi.where)} المصدر: مكتبة Spider Strategies، والترجمة ونوع القياس من جيم.</p>
-    ${tpladmKpiTplCard()}
+  return `
     <div class="toolbar lib-toolbar">
       <label class="search">${tplIc('search')}<span class="sr-only">بحث في المؤشرات</span><input type="search" id="tpladm-kpi-q" value="${esc(f.q)}" placeholder="ابحث بالعربي أو English"></label>
       ${tpladmSegmented(f.s, [['', 'الكل'], ['published', 'منشور'], ['stopped', 'موقوف'], ['custom', 'وصف مخصص']], 'st')}
@@ -7536,39 +7671,43 @@ function tpladmKpiPane() {
       <label class="sr-only" for="tpladm-kpi-mt">نوع القياس</label>
       <select id="tpladm-kpi-mt" class="select"><option value="">كل أنواع القياس</option>${KPI_LIB.mtypes.map((m, i) => `<option value="${i}"${f.m === String(i) ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select>
     </div>
+    ${sel != null ? `
+    <div class="cat-banner${selOn ? '' : ' is-off'}">
+      <div><b>تصنيف «${esc(KPI_LIB.cats[sel][0])}»</b><span>${selOn ? 'ظاهر للمستخدمين. يمكنك إيقاف مؤشرات بعينها، أو إيقاف التصنيف كله.' : 'موقوف: لا يظهر أي مؤشر منه للمستخدمين، مهما كانت حالة المؤشر.'}</span></div>
+      <label class="switch"><input type="checkbox" data-cat-toggle="${sel}"${selOn ? ' checked' : ''} aria-label="إظهار تصنيف ${esc(KPI_LIB.cats[sel][0])} للمستخدمين"><span></span></label>
+    </div>` : ''}
     <div class="dtable-wrap"><table class="dtable lib-table">
       <thead><tr><th>المؤشر</th><th>التصنيف</th><th>نوع القياس</th><th>الوصف المرسل</th><th>الحالة</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
       <tbody>${slice.map(i => {
-        const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]], over = TPLADM.kpiOverrides[i], status = over?.status || 'published';
-        return `<tr data-k="${i}">
+        const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]], over = TPLADM.kpiOverrides[i];
+        const catOff = TPLADM.kpiCatOff.has(r[0]), own = over?.status || 'published';
+        return `<tr data-k="${i}"${catOff ? ' class="is-cat-off"' : ''}>
           <td><div class="lib-kpi"><strong>${esc(r[2])}</strong><span dir="ltr">${esc(r[3])}</span></div></td>
           <td class="muted">${esc(c[0])}</td>
           <td><span class="badge">${esc(KPI_LIB.mtypes[r[4]])}</span></td>
           <td>${over?.promptText ? `<span class="badge badge-blue">مخصص</span><p class="lib-prompt one">${tpladmCodeVars(over.promptText)}</p>` : '<span class="muted">قالب نوع القياس</span>'}</td>
-          <td>${tpladmStatusPill(status)}</td>
+          <td>${catOff ? '<span class="status off">موقوف مع التصنيف</span>' : tpladmStatusPill(own)}</td>
           <td><div class="row-actions">
             <button class="btn btn-sm" type="button" data-act="edit">${tplIc('edit')}تعديل</button>
-            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="toggle" aria-label="${status === 'published' ? 'إيقاف' : 'نشر'}" title="${status === 'published' ? 'إيقاف' : 'نشر'}">${tplIc(status === 'published' ? 'pause' : 'play')}</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="toggle"${catOff ? ' disabled title="التصنيف كله موقوف — أظهِر التصنيف أولًا"' : ` title="${own === 'published' ? 'إيقاف' : 'نشر'}"`} aria-label="${own === 'published' ? 'إيقاف' : 'نشر'} المؤشر">${tplIc(own === 'published' ? 'pause' : 'play')}</button>
           </div></td>
         </tr>`;
       }).join('') || `<tr><td colspan="6"><div class="lib-empty">لا توجد مؤشرات مطابقة.</div></td></tr>`}</tbody>
     </table></div>
     <div class="table-foot"><span>عرض <span class="num">${hits.length ? (f.p * PAGE + 1).toLocaleString('en-US') + '–' + (f.p * PAGE + slice.length).toLocaleString('en-US') : 0}</span> من <span class="num">${hits.length.toLocaleString('en-US')}</span></span>
       <div class="pager"><button type="button" data-pg="-1" ${f.p ? '' : 'disabled'} aria-label="السابق">السابق</button><button type="button" aria-current="true"><span class="num">${f.p + 1} / ${pages}</span></button><button type="button" data-pg="1" ${f.p < pages - 1 ? '' : 'disabled'} aria-label="التالي">التالي</button></div></div>`;
-
+}
+function tpladmBindKpiList() {
+  const f = TPLADM.filt.kpi;
   const rerender = () => tpladmKpiPane();
   let t;
   el('tpladm-kpi-q').addEventListener('input', e => { f.q = e.target.value; f.p = 0; clearTimeout(t); t = setTimeout(rerender, 180); });
   el('tpladm-pane').querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => { f.s = b.dataset.st; f.p = 0; rerender(); }));
   el('tpladm-kpi-cat').addEventListener('change', e => { f.c = e.target.value; f.p = 0; rerender(); });
   el('tpladm-kpi-mt').addEventListener('change', e => { f.m = e.target.value; f.p = 0; rerender(); });
+  el('tpladm-pane').querySelector('.cat-banner [data-cat-toggle]')?.addEventListener('change', e => tpladmSetCats([+e.target.dataset.catToggle], e.target.checked));
   el('tpladm-pane').querySelectorAll('[data-pg]').forEach(b => b.addEventListener('click', () => { f.p += +b.dataset.pg; rerender(); el('tpladm-pane').scrollIntoView({ block: 'start', behavior: 'smooth' }); }));
 
-  el('tpladm-pane').querySelectorAll('[data-edit-mt]').forEach(b => b.addEventListener('click', () => {
-    const mt = +b.dataset.editMt;
-    const m = TPLADM.kpiMtypes.find(x => x.mtype === mt) || { mtype: mt, promptText: '', status: 'published', isOverridden: false };
-    tpladmOpenEditor('kpi_mtype', { key: String(mt), label: KPI_LIB.mtypes[mt], promptText: m.promptText, status: m.status, isOverridden: m.isOverridden });
-  }));
   el('tpladm-pane').querySelectorAll('tr[data-k]').forEach(tr => {
     const i = +tr.dataset.k;
     tr.querySelector('[data-act="edit"]').addEventListener('click', () => {
@@ -7580,7 +7719,8 @@ function tpladmKpiPane() {
         hasOverrideRow: !!over,
       });
     });
-    tr.querySelector('[data-act="toggle"]').addEventListener('click', () => {
+    const toggleBtn = tr.querySelector('[data-act="toggle"]');
+    if (!toggleBtn.disabled) toggleBtn.addEventListener('click', () => {
       const over = TPLADM.kpiOverrides[i];
       tpladmToggleStatus('kpi', { index: i, status: over?.status || 'published', promptText: over?.promptText || '' });
     });
