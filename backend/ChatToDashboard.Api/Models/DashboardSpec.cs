@@ -185,6 +185,17 @@ public class DashboardWidget
     [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The reference design's own tab/page name for a multi-page template dashboard (e.g.
+    /// "المحفظة"/"الميزانية") — absent for a single-page one. Never set from the model's own
+    /// response; ChatController.Post stamps it by matching this widget's Title against the
+    /// template's declared BuiltinDashboardWidgetSpec list, so the frontend's tab bar
+    /// (renderDashboard's getDashboardPages/buildDashTabs) can rely on it even though nothing
+    /// requires the model to understand or echo the concept.
+    /// </summary>
+    [JsonPropertyName("page")]
+    public string? Page { get; set; }
+
     [JsonPropertyName("data")]
     public JsonElement Data { get; set; }
 

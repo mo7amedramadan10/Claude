@@ -78,18 +78,41 @@ public class ChatController : ControllerBase
             // silently vanishing from the dashboard the user asked for by its known shape.
             if (requiredWidgets is { Count: > 0 })
             {
-                var present = new HashSet<string>(
-                    dashboard.Widgets.Select(w => w.Title), StringComparer.OrdinalIgnoreCase);
-                foreach (var req in requiredWidgets)
+                // Grouped (not a simple "is this title present at all" HashSet) because a
+                // multi-page template can legitimately require the SAME literal title twice —
+                // e.g. "استهلاك الميزانية" appears once under "المحفظة" and again under
+                // "الميزانية" in the project-portfolio template — so one matching widget in the
+                // response must only satisfy one occurrence, not both. Matched positionally
+                // within each title group (response order vs. the template's own declared
+                // order), which also doubles as the only place a widget's Page is ever set: the
+                // model is never asked to echo a page/tab field itself, so the real tab bar
+                // (app.js's getDashboardPages) relies entirely on this match against the
+                // template's own declared, page-tagged widget list.
+                var requiredByTitle = requiredWidgets
+                    .GroupBy(w => w.Title, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+                var responseByTitle = dashboard.Widgets
+                    .GroupBy(w => w.Title, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+                foreach (var (title, reqGroup) in requiredByTitle)
                 {
-                    if (present.Contains(req.Title)) continue;
-                    dashboard.Widgets.Add(new DashboardWidget
+                    var respGroup = responseByTitle.TryGetValue(title, out var r) ? r : new List<DashboardWidget>();
+                    var matched = Math.Min(reqGroup.Count, respGroup.Count);
+                    for (var i = 0; i < matched; i++)
+                        if (reqGroup[i].Page is not null) respGroup[i].Page = reqGroup[i].Page;
+                    for (var i = matched; i < reqGroup.Count; i++)
                     {
-                        Type = req.Type,
-                        Title = req.Title,
-                        NoData = true,
-                        MissingReason = "لم يتم تضمين هذا العنصر في رد النموذج — جرّب تحديد مصدر بيانات له يدويًا.",
-                    });
+                        var req = reqGroup[i];
+                        dashboard.Widgets.Add(new DashboardWidget
+                        {
+                            Type = req.Type,
+                            Title = req.Title,
+                            Page = req.Page,
+                            NoData = true,
+                            MissingReason = "لم يتم تضمين هذا العنصر في رد النموذج — جرّب تحديد مصدر بيانات له يدويًا.",
+                        });
+                    }
                 }
             }
 

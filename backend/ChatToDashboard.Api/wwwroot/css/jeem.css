@@ -1073,30 +1073,14 @@ form#form.composer.hidden { display: none; }
 
 /* ---------- شريط فلاتر اللوحة ---------- */
 /* #filter-bar القديمة (id فقط) بتتحكم في display/gap/margin — لازم id+class عشان تكسبها،
-   زي درس #dash-toolbar. الأزرار/اللوحات المنسدلة جوّاها بتاخد شكل .chip/.dropdown-panel
-   الموجودين أصلاً، بدل الألوان القديمة (var(--accent)/var(--grid)). */
-#filter-bar.filters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.filter-ctl { position: relative; }
-.filter-btn {
-  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
-  border-radius: var(--r-full); border: 1px solid var(--line); background: var(--surface);
-  font-size: var(--fs-xs); font-weight: 500; color: var(--ink-2); font-family: inherit; cursor: pointer;
-}
-.filter-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
-.filter-btn.active { background: var(--blue-50); border-color: var(--blue-100); color: var(--blue-700); font-weight: 500; }
-.filter-panel {
-  display: none; position: absolute; top: calc(100% + 6px); inset-inline-start: 0; z-index: 30;
-  min-width: 190px; max-width: 260px; padding: 6px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
-  box-shadow: var(--shadow-2, 0 8px 28px rgba(11,11,11,.14));
-}
-.filter-panel.open { display: block; }
-.filter-panel label {
-  display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--r-sm);
-  font-size: var(--fs-xs); color: var(--ink); cursor: pointer;
-}
-.filter-panel label:hover { background: var(--surface-2); }
-.filter-panel input[type="checkbox"], .filter-panel input[type="radio"] { accent-color: var(--brand-blue); }
+   زي درس #dash-toolbar. */
+#filter-bar.filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px 22px; margin-bottom: 14px; }
+/* كل فلتر single/multi_select: تسمية فوق صف شرائح .chip دايمًا ظاهرة (مطابق للتصميم
+   المرجعي) بدل زرار منسدل مقفول — القيمة المختارة بتتلون مباشرة بـ .chip.is-on من غير
+   ما تحتاج تفتح أي حاجة. */
+.filter-ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.filter-ctl-label { font-size: var(--fs-xs); color: var(--ink-3); }
+.filter-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .filter-range {
   display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
   border-radius: var(--r-full); border: 1px solid var(--line); background: var(--surface);
@@ -1119,7 +1103,7 @@ form#form.composer.hidden { display: none; }
   border: 0; background: transparent; color: inherit; font-weight: 700; font-size: var(--fs-xs); font-family: inherit;
   cursor: pointer; text-decoration: underline;
 }
-/* كروس-فلتر (كليك على نقطة في رسم) — نفس شكل .filter-btn.active، بس بـ ✕ وhover بلون الخطر
+/* كروس-فلتر (كليك على نقطة في رسم) — نفس شكل .chip.is-on، بس بـ ✕ وhover بلون الخطر
    عشان يوضّح إن الكليك عليه بيمسحه. */
 .xfilter-chip {
   display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
@@ -1143,6 +1127,9 @@ form#form.composer.hidden { display: none; }
 .tabs [aria-selected="true"]::after, .tabs [aria-current="page"]::after { content: ""; position: absolute; inset-inline: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--brand-blue); }
 .tab-n { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--line-2); color: var(--ink-3); }
 .tabs [aria-selected="true"] .tab-n { background: var(--blue-50); color: var(--blue-700); }
+/* شريط تبويبات صفحات اللوحة (المحفظة/الميزانية/...) — نفس .tabs المستخدم في إدارة
+   النماذج، بس بمسافة سفلية قبل شريط الفلاتر/الشبكة اللي بعده مباشرة. */
+.dash-tabs { margin-bottom: 14px; }
 
 .pager { display: flex; gap: 4px; }
 .pager button { min-width: 32px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font-size: var(--fs-xs); cursor: pointer; }

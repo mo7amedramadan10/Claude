@@ -477,6 +477,12 @@ const state = {
   currentUser: null, users: [],
   editMode: false, editHistory: { past: [], future: [] },
   currentHistoryId: null, wizard: null,
+  // Which page/tab is showing for a multi-page template dashboard (see renderDashboard's
+  // getDashboardPages/buildDashTabs) — never reset explicitly when a new dashboard loads; it
+  // self-corrects every render instead (falls back to the first tab whenever it isn't one of
+  // the current dashboard's own page names), so every "a fresh dashboard just landed" call
+  // site doesn't also need to remember to clear it.
+  activeDashTab: null,
   activeFilters: {}, // filterId -> selected values (or [from,to] for range types)
   filterRefreshWarning: null, // set by applyFilters() when a widget fetch still fails after its retry
   filtersLoading: false, // true while applyFilters() has a request in flight — see updateFiltersLoadingUI()
@@ -2330,6 +2336,34 @@ function buildWidget(raw) {
   return WIDGET_COMPONENTS[type](raw);
 }
 
+// ---------- dashboard page/tab bar ----------
+// Distinct w.page values in first-seen order — the template's own declared page order (see
+// BuiltinDashboardsGenerated/ChatController's reconciliation), since widgets are reconciled
+// into state.dashboard.widgets in that same order.
+function getDashboardPages(widgets) {
+  const pages = [];
+  for (const w of widgets) if (w.page && !pages.includes(w.page)) pages.push(w.page);
+  return pages;
+}
+
+function buildDashTabs(tabs, active) {
+  const nav = document.createElement('nav');
+  nav.className = 'tabs dash-tabs';
+  tabs.forEach(name => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = name;
+    btn.setAttribute('aria-selected', String(name === active));
+    btn.addEventListener('click', () => {
+      if (state.activeDashTab === name) return;
+      state.activeDashTab = name;
+      renderDashboard();
+    });
+    nav.appendChild(btn);
+  });
+  return nav;
+}
+
 // ---------- dashboard rendering ----------
 function renderDashboard() {
   const d = state.dashboard;
@@ -2404,6 +2438,24 @@ function renderDashboard() {
         ${metaHtml ? `<div class="dash-meta">${metaHtml}</div>` : ''}
       </div>
     </section>${dashboardDisabledBannerHtml()}`;
+
+  // A multi-page template build (see BuiltinDashboardsGenerated/ChatController's
+  // reconciliation) tags each widget with the page/tab it belongs to — a free-form chat
+  // dashboard and the original 8 hand-written templates never set .page at all, so this stays
+  // a no-op for them and the grid below renders every widget exactly as before.
+  const allWidgets = d.widgets || [];
+  const pages = getDashboardPages(allWidgets);
+  let widgets = allWidgets;
+  if (pages.length > 1) {
+    const hasOther = allWidgets.some(w => !w.page);
+    const tabs = hasOther ? [...pages, 'عناصر أخرى'] : pages;
+    if (!tabs.includes(state.activeDashTab)) state.activeDashTab = tabs[0];
+    el.dash.appendChild(buildDashTabs(tabs, state.activeDashTab));
+    widgets = hasOther && state.activeDashTab === 'عناصر أخرى'
+      ? allWidgets.filter(w => !w.page)
+      : allWidgets.filter(w => w.page === state.activeDashTab);
+  }
+
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
   if (state.shareId) {
@@ -2418,7 +2470,6 @@ function renderDashboard() {
   revealNow = revealDashboardOnNextRender && !prefersReducedMotion();
   revealDashboardOnNextRender = false;
 
-  const widgets = d.widgets || [];
   if (widgets.length) {
     const grid = document.createElement('div');
     grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
@@ -2429,6 +2480,14 @@ function renderDashboard() {
         // Capped so a dashboard with many widgets doesn't leave the last ones waiting
         // seconds to appear — beyond ~8 cards they all start together instead.
         card.style.animationDelay = `${Math.min(i, 8) * 55}ms`;
+        // The animation's own end state (translateY(0) scale(1)) is a non-"none" transform,
+        // which — left in place by the `both` fill-mode after the animation finishes —
+        // permanently makes this card its own CSS stacking context. That traps its ⋮ widget
+        // menu's z-index (meant to float above everything) under any later-in-DOM-order
+        // sibling card instead, since z-index only ranks within the stacking context it's
+        // created in. Dropping the class once the animation is actually done removes that
+        // leftover transform entirely, restoring normal stacking.
+        card.addEventListener('animationend', () => card.classList.remove('widget-enter'), { once: true });
       }
       grid.appendChild(card);
     });
@@ -2618,39 +2677,51 @@ function buildFilterControl(f) {
   return (f.type === 'date_range' || f.type === 'numeric_range') ? buildRangeFilterControl(f) : buildSelectFilterControl(f);
 }
 
+// Always-visible row of option chips under the filter's label (matching the reference
+// design), instead of a collapsed dropdown button — every value is on screen at once, picked
+// by clicking its own chip directly.
 function buildSelectFilterControl(f) {
   const wrap = document.createElement('div');
   wrap.className = 'filter-ctl';
   const selected = state.activeFilters[f.id] || [];
   const isMulti = f.type === 'multi_select';
 
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.className = 'filter-btn' + (selected.length ? ' active' : '');
-  btn.textContent = `${f.label}${selected.length ? ` (${selected.length})` : ''} ▾`;
+  const label = document.createElement('span');
+  label.className = 'filter-ctl-label';
+  label.textContent = f.label;
+  wrap.appendChild(label);
 
-  const panel = document.createElement('div');
-  panel.className = 'filter-panel';
-  const allChecked = !selected.length ? 'checked' : '';
-  const optionsHtml = (f.options || []).map(o => `
-    <label><input type="${isMulti ? 'checkbox' : 'radio'}" name="filter-${esc(f.id)}" value="${esc(o.value)}"
-      ${selected.includes(o.value) ? 'checked' : ''}> ${esc(o.label)}</label>`).join('');
-  panel.innerHTML = isMulti ? optionsHtml
-    : `<label><input type="radio" name="filter-${esc(f.id)}" value="" ${allChecked}> الكل</label>${optionsHtml}`;
+  const row = document.createElement('div');
+  row.className = 'filter-chip-row';
 
-  btn.addEventListener('click', e => {
-    e.stopPropagation();
-    const open = panel.classList.contains('open');
-    closeAllFilterPanels();
-    if (!open) panel.classList.add('open');
+  // single_select only: an explicit "الكل" chip clears the selection — multi_select has no
+  // equivalent "all" state, same as the old radio-list version only showed it for single_select.
+  if (!isMulti) {
+    const allChip = document.createElement('button');
+    allChip.type = 'button';
+    allChip.className = 'chip' + (selected.length ? '' : ' is-on');
+    allChip.textContent = 'الكل';
+    allChip.addEventListener('click', () => setFilterValue(f.id, []));
+    row.appendChild(allChip);
+  }
+
+  (f.options || []).forEach(o => {
+    const isOn = selected.includes(o.value);
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (isOn ? ' is-on' : '');
+    chip.textContent = o.label;
+    chip.addEventListener('click', () => {
+      if (isMulti) {
+        setFilterValue(f.id, isOn ? selected.filter(v => v !== o.value) : [...selected, o.value]);
+      } else {
+        setFilterValue(f.id, isOn ? [] : [o.value]);
+      }
+    });
+    row.appendChild(chip);
   });
-  panel.addEventListener('click', e => e.stopPropagation());
-  panel.addEventListener('change', () => {
-    const checked = [...panel.querySelectorAll('input:checked')].map(i => i.value).filter(v => v !== '');
-    setFilterValue(f.id, checked);
-  });
 
-  wrap.appendChild(btn);
-  wrap.appendChild(panel);
+  wrap.appendChild(row);
   return wrap;
 }
 
@@ -2671,11 +2742,6 @@ function buildRangeFilterControl(f) {
   wrap.querySelectorAll('input').forEach(inp => inp.addEventListener('change', apply));
   return wrap;
 }
-
-function closeAllFilterPanels() {
-  document.querySelectorAll('.filter-panel.open').forEach(p => p.classList.remove('open'));
-}
-document.addEventListener('click', closeAllFilterPanels);
 
 function setFilterValue(filterId, values) {
   pushUndo();

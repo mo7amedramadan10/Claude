@@ -582,18 +582,9 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- dashboard filters ---------- */
 #filter-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.filter-ctl{position:relative}
-.filter-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--grid);
-  border-radius:999px;background:var(--surface);color:var(--ink-2);font-size:12.5px}
-.filter-btn:hover{border-color:var(--accent)}
-.filter-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
-.filter-panel{display:none;position:absolute;top:calc(100% + 6px);inset-inline-start:0;z-index:30;
-  min-width:200px;max-height:260px;overflow-y:auto;padding:8px;background:var(--surface);
-  border:1px solid var(--grid);border-radius:12px;box-shadow:var(--shadow)}
-.filter-panel.open{display:block}
-.filter-panel label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;font-size:12.5px}
-.filter-panel label:hover{background:var(--plane)}
-.filter-panel input[type="checkbox"],.filter-panel input[type="radio"]{accent-color:var(--accent)}
+.filter-ctl{display:flex;flex-direction:column;gap:6px;min-width:0}
+.filter-ctl-label{font-size:11px;color:var(--ink-2)}
+.filter-chip-row{display:flex;flex-wrap:wrap;gap:6px}
 .filter-range{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--grid);
   border-radius:999px;background:var(--surface)}
 .filter-range span{font-size:12px;color:var(--ink-2)}

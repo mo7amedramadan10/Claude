@@ -102,10 +102,32 @@ public class TemplatePromptService
     /// dashboard template regardless of who wrote its prompt.</summary>
     private static string BuildRequiredWidgetsBlock(IReadOnlyList<BuiltinDashboardWidgetSpec> widgets)
     {
-        var list = string.Join("\n", widgets.Select((w, i) => $"{i + 1}) {w.Title} (نوع مقترح: {w.Type})"));
+        // Page is purely a display/tab grouping the frontend derives on its own by matching the
+        // model's literal titles back against this same list (see ChatController.Post) — the
+        // model never needs to echo it. It's shown here only so a multi-page template's widgets
+        // keep whatever "theme" context their page name used to carry when it was still baked
+        // into the title string as a prefix (e.g. "المحفظة — ..."), now that the title itself is
+        // the bare original text.
+        var hasPages = widgets.Any(w => w.Page is not null);
+        string list;
+        if (hasPages)
+        {
+            var n = 0;
+            list = string.Join("\n\n", widgets
+                .GroupBy(w => w.Page ?? "")
+                .Select(g => $"صفحة «{g.Key}»:\n" + string.Join("\n",
+                    g.Select(w => $"{++n}) {w.Title} (نوع مقترح: {w.Type})"))));
+        }
+        else
+        {
+            list = string.Join("\n", widgets.Select((w, i) => $"{i + 1}) {w.Title} (نوع مقترح: {w.Type})"));
+        }
+        var pagesNote = hasPages
+            ? "\nمقسّمة هنا إلى صفحات/تبويبات لتوضيح سياق كل عنصر فقط — ده تبويب عرض في الواجهة، ومالوش تأثير على عنوان العنصر نفسه أو على شكل الرد.\n"
+            : "";
         return $"""
             عناصر هذه اللوحة المطلوبة — إلزامي
-            القائمة دي كل عناصر اللوحة المطلوبة، بنفس العدد والعناوين الحرفية بالضبط:
+            القائمة دي كل عناصر اللوحة المطلوبة، بنفس العدد والعناوين الحرفية بالضبط:{pagesNote}
             {list}
             لازم يظهر كل عنصر من دول في ردك، بنفس العنوان الحرفي، من غير أي حذف أو دمج أو
             إعادة صياغة — حتى لو بعضهم صعب تجيب له بيانات حقيقية. لكل عنصر، حالتين بس:

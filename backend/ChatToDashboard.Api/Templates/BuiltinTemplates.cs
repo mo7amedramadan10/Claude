@@ -4,10 +4,14 @@ namespace ChatToDashboard.Api.Templates;
 
 public record BuiltinWidgetTemplate(string Id, string Category, string Icon, string Title, string Description, string Prompt);
 
-/// <summary>One of a dashboard template's 10 sub-widgets. <paramref name="Prompt"/> is optional
+/// <summary>One of a dashboard template's sub-widgets. <paramref name="Prompt"/> is optional
 /// extra instruction text for this one widget specifically — appended to its title when the
-/// {{widgets}} variable is expanded (see TemplatePromptService.ResolveDashboardAsync).</summary>
-public record BuiltinDashboardWidgetSpec(string Type, string Title, string? Prompt = null);
+/// {{widgets}} variable is expanded (see TemplatePromptService.ResolveDashboardAsync).
+/// <paramref name="Page"/> is the reference design's own tab/page name for a multi-page
+/// template (null for a single-page one) — ChatController.Post reconciles the model's response
+/// against this list by literal title match and stamps each resulting DashboardWidget.Page from
+/// here, so the real tab bar never depends on the model echoing a page field itself.</summary>
+public record BuiltinDashboardWidgetSpec(string Type, string Title, string? Prompt = null, string? Page = null);
 
 public record BuiltinDashboardTemplate(
     string Id, string Layout, string Category, string Name, bool Popular, string Description,
