@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace ChatToDashboard.Api.Templates;
 
 public record BuiltinWidgetTemplate(string Id, string Category, string Icon, string Title, string Description, string Prompt);
@@ -136,7 +138,7 @@ public static class BuiltinTemplates
                 new BuiltinDashboardWidgetSpec("table", "أداء القنوات"), new BuiltinDashboardWidgetSpec("funnel", "رحلة العميل"),
             },
             "ابنِ لي لوحة تسويق وحملات كاملة تتضمن: 1) عدد العملاء المحتملين كمؤشر رقمي، 2) معدل التحويل كمؤشر رقمي، 3) تكلفة اكتساب العميل كمؤشر رقمي، 4) العائد على الإنفاق التسويقي كمؤشر رقمي، 5) رسم خطي لعدد العملاء المحتملين شهريًا، 6) رسم دائري لتوزيع العملاء المحتملين حسب المصدر، 7) رسم أعمدة أفقي لأفضل الحملات من حيث العائد، 8) رسم أعمدة يقارن الإنفاق التسويقي بالإيراد الناتج لكل ربع، 9) جدول بأداء القنوات التسويقية (عدد العملاء ونسبة التحويل)، 10) رسم قمع لرحلة العميل من الزيارة حتى الشراء."),
-    };
+    }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
     /// kpi-library.js's own KPI_MT_KEY/mtypes ordering. {{kpi_name}} is the only placeholder —

@@ -1240,7 +1240,7 @@ form#form.composer.hidden { display: none; }
 .tp.is-on { border-color: var(--brand-purple); box-shadow: 0 0 0 3px var(--purple-50); color: var(--brand-purple); font-weight: 700; }
 
 .dw-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.dw-row { display: grid; grid-template-columns: 22px 34px 130px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+.dw-row { display: grid; grid-template-columns: 22px 34px 130px minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 8px; align-items: center; }
 .dw-row input { height: 38px !important; font-size: var(--fs-xs); }
 .dw-row .select { height: 38px !important; font-size: var(--fs-xs); }
 .dw-n { font-size: 11px; color: var(--ink-3); text-align: center; }

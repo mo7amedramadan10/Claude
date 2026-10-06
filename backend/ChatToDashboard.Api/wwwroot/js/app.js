@@ -3172,11 +3172,17 @@ const DASH_GAL_LAYOUTS = {
   c: { order: [1, 0, 4, 5, 2, 3], spans: [4, 8, 7, 5, 6, 6] },
   d: { order: [2, 3, 0, 5, 1, 4], spans: [6, 6, 8, 4, 5, 7] },
 };
+// `d.widgets` is exactly 10 items for the original 8 hand-built templates, but the 55 ported
+// real-data dashboards (see BuiltinDashboardsGenerated.cs) range from 8 to 40 flattened items —
+// L.order indexes 6 "chart" slots that may not all exist there, so this only renders the ones
+// that do instead of spreading `undefined` into the thumbnail (which rendered a literal
+// "t-undefined"/"undefined" glyph for any dashboard with fewer than 10 widgets total).
 function dashGalArrange(d) {
   const L = DASH_GAL_LAYOUTS[d.layout || 'a'];
   const kpis = d.widgets.slice(0, 4).map(w => ({ ...w, span: 3 }));
   const charts = d.widgets.slice(4);
-  return kpis.concat(L.order.map((o, i) => ({ ...charts[o], span: L.spans[i] })));
+  const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
+  return kpis.concat(rest);
 }
 function dashGalThumb(d) {
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -3190,10 +3196,17 @@ function dashGalThumb(d) {
 // النهائي من مكتبة النماذج اللي مسؤول المنصة بيعدّلها، عشان المستخدم مايقدرش يغيّر الوصف
 // المُرسل للموديل من عنده. انظر loadTemplateCatalog() وask() (التمبلت ريف).
 let DASH_GALLERY = []; // fetched from /api/templates/catalog — see loadTemplateCatalog()
+// الفئات الأصلية الثمانية + الفئات الجديدة اللي جابتها الـ55 لوحة (BuiltinDashboardsGenerated.cs
+// على السيرفر بيستخدم نفس المفاتيح دي بالظبط — retail/banking/supply/hse/saas/health/
+// hospitality/gov/other — فلازم تفضل متطابقة هنا وهناك).
 const DASH_GAL_CATS = [
   ['all', 'كل النماذج', 'grid'], ['sales', 'المبيعات والتسويق', 'chart'], ['projects', 'المشاريع', 'layers'],
   ['finance', 'المالية', 'sheet'], ['hr', 'الموارد البشرية', 'users'], ['procurement', 'المشتريات', 'briefcase'],
   ['cx', 'تجربة العملاء', 'headset'], ['ops', 'العمليات', 'settings'],
+  ['retail', 'التجزئة والتجارة الإلكترونية', 'cart'], ['banking', 'البنوك والتأمين', 'wallet'],
+  ['supply', 'سلاسل الإمداد', 'server'], ['hse', 'السلامة', 'shield'], ['saas', 'الاشتراكات', 'layers'],
+  ['health', 'الصحة', 'headset'], ['hospitality', 'الضيافة والسفر', 'star'], ['gov', 'القطاع الحكومي', 'briefcase'],
+  ['other', 'أخرى', 'more'],
 ];
 
 let dashGalCat = 'all', dashGalQuery = '';
@@ -3234,7 +3247,7 @@ function renderDashGalGrid() {
         <b>${esc(d.name)}${d.popular ? ' <span class="badge badge-blue">الأكثر استخدامًا</span>' : ''}</b>
         <small>${esc(d.desc)}</small>
         <span class="dc-meta">
-          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>10 عناصر</span>
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>${d.widgets.length.toLocaleString('en-US')} عنصر</span>
           <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(d.sources.join('، '))}</span>
         </span>
       </span>
@@ -3257,8 +3270,8 @@ function openDashGalPreview(d) {
       <div class="pv-info">
         <h3>${esc(d.name)}</h3><p>${esc(d.desc)}</p>
         <div class="pv-src">${d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')}</div>
-        <h4>العناصر العشرة</h4>
-        <ol class="pv-list">${dashGalArrange(d).map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type]}</span>${esc(w.title)}</li>`).join('')}</ol>
+        <h4>عناصر اللوحة (${d.widgets.length.toLocaleString('en-US')})</h4>
+        <ol class="pv-list">${d.widgets.map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>${esc(w.title)}</li>`).join('')}</ol>
         <div class="pv-actions">
           <button type="button" class="btn btn-primary" id="gal-use-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
@@ -7361,7 +7374,7 @@ function tpladmToast(msg, undo) {
 
 const TPLADM_KINDS = {
   widget: { tab: 'عناصر المحادثة', one: 'عنصر', add: 'عنصر جديد', icon: 'chat', where: 'يظهر في تبويب «النماذج» داخل المحادثة، ويُضاف للوحة الحالية بضغطة.' },
-  dashboard: { tab: 'نماذج اللوحات', one: 'نموذج لوحة', add: 'نموذج لوحة جديد', icon: 'dashboard', where: 'يظهر في معرض «لوحة جديدة»، وينشئ لوحة كاملة من 10 عناصر.' },
+  dashboard: { tab: 'نماذج اللوحات', one: 'نموذج لوحة', add: 'نموذج لوحة جديد', icon: 'dashboard', where: 'يظهر في معرض «لوحة جديدة»، وينشئ لوحة كاملة بعناصره.' },
   kpi: { tab: 'مكتبة المؤشرات', one: 'مؤشر', icon: 'target', where: 'يظهر في «النماذج ← مكتبة المؤشرات» داخل المحادثة.' },
   rules: { tab: 'القواعد العامة', icon: 'shield' },
 };
@@ -7372,6 +7385,7 @@ const TPLADM_WIDGET_CATS = [['kpi', 'مؤشر'], ['chart', 'رسم بياني'],
 const TPLADM_WIDGET_ICONS = ['spark', 'up', 'chart', 'calendar', 'filter', 'share', 'list', 'grid', 'target', 'percent', 'wallet', 'star', 'hash'];
 const TPLADM_DASH_CATS = DASH_GAL_CATS.filter(c => c[0] !== 'all').map(c => [c[0], c[1]]);
 const TPLADM_CHART_TYPES = [['line', 'خط'], ['donut', 'دائري'], ['hbars', 'أعمدة أفقي'], ['cbars', 'أعمدة مقارنة'], ['table', 'جدول'], ['funnel', 'قمع'], ['heat', 'خريطة حرارية']];
+const TPLADM_WIDGET_TYPES = [['kpi', 'مؤشر رقمي'], ...TPLADM_CHART_TYPES];
 const tpladmBlankWidgets = () => [
   { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' },
   { type: 'line', title: '', prompt: '' }, { type: 'donut', title: '', prompt: '' }, { type: 'hbars', title: '', prompt: '' },
@@ -7421,7 +7435,7 @@ function tpladmStats() {
   const kpiCount = KPI_LIB ? KPI_LIB.rows.length.toLocaleString('en-US') : '0';
   el('tpladm-stats').innerHTML = `
     <div style="background:var(--surface)"><span class="stat-label">${tplIc('chat')}عناصر المحادثة</span><span class="stat-value num">${W.length}</span><span class="stat-foot"><span class="num">${W.filter(x => x.status === 'published').length}</span> منشور</span></div>
-    <div><span class="stat-label">${tplIc('dashboard')}نماذج اللوحات</span><span class="stat-value num">${D.length}</span><span class="stat-foot">10 عناصر لكل نموذج</span></div>
+    <div><span class="stat-label">${tplIc('dashboard')}نماذج اللوحات</span><span class="stat-value num">${D.length}</span><span class="stat-foot"><span class="num">${D.reduce((s, x) => s + (x.widgets ? x.widgets.length : 0), 0).toLocaleString('en-US')}</span> عنصر إجمالاً</span></div>
     <div><span class="stat-label">${tplIc('target')}مكتبة المؤشرات</span><span class="stat-value num">${kpiCount}</span><span class="stat-foot"><span class="num">${custom}</span> بوصف مخصص · <span class="num">${TPLADM.kpiCatOff.size}</span> تصنيف موقوف · <span class="num">${stopped}</span> موقوف فرديًا</span></div>
     <div><span class="stat-label">${tplIc('edit')}مسودات وموقوفة</span><span class="stat-value num">${drafts}</span><span class="stat-foot">لا تظهر للمستخدمين</span></div>`;
 }
@@ -7801,14 +7815,18 @@ function tpladmEdSide() {
     <p class="ed-note">${tplIc('info')}القيم المميّزة مُعوّضة بقيم تجريبية توضيحية. في الاستخدام الفعلي تُستبدل بقيم مشروع المستخدم الحقيقية.</p>
   </aside>`;
 }
+// مش كل نموذج لوحة بقى بالضبط 4 مؤشرات + 6 رسوم: النماذج الـ55 المنقولة من كتالوج لوحات
+// Power BI المرجعي (BuiltinDashboardsGenerated.cs) متفاوتة العدد والتركيب (8 لـ40 عنصر). فبدل
+// افتراض إن أول 4 عناصر مؤشرات دايمًا، كل صف بقى له اختيار نوع حر (بما فيه "مؤشر رقمي").
 function tpladmWidgetRows(ws) {
   return ws.map((w, i) => `
     <li class="dw-row" data-i="${i}">
       <span class="dw-n num">${i + 1}</span>
       <span class="dw-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>
-      ${i < 4 ? `<span class="dw-type is-fixed">مؤشر رقمي</span>` : `<label class="sr-only" for="dw-t${i}">نوع العنصر ${i + 1}</label><select id="dw-t${i}" class="select dw-type" data-k="type">${TPLADM_CHART_TYPES.map(([k, n]) => `<option value="${k}"${k === w.type ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>`}
-      <label class="sr-only" for="dw-n${i}">عنوان العنصر ${i + 1}</label><input id="dw-n${i}" data-k="title" value="${esc(w.title || '')}" placeholder="${i < 4 ? 'مثال: إجمالي المبيعات' : 'مثال: المبيعات الشهرية'}">
+      <label class="sr-only" for="dw-t${i}">نوع العنصر ${i + 1}</label><select id="dw-t${i}" class="select dw-type" data-k="type">${TPLADM_WIDGET_TYPES.map(([k, n]) => `<option value="${k}"${k === w.type ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+      <label class="sr-only" for="dw-n${i}">عنوان العنصر ${i + 1}</label><input id="dw-n${i}" data-k="title" value="${esc(w.title || '')}" placeholder="مثال: إجمالي المبيعات">
       <label class="sr-only" for="dw-p${i}">تعليمات إضافية للعنصر ${i + 1}</label><input id="dw-p${i}" data-k="prompt" class="dw-prompt" value="${esc(w.prompt || '')}" placeholder="تعليمات إضافية لجيم (اختياري)">
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-dw-del aria-label="حذف العنصر ${i + 1}" title="حذف العنصر">${tplIc('x')}</button>
     </li>`).join('');
 }
 
@@ -7830,7 +7848,7 @@ function tpladmOpenEditor(kind, item, isNew) {
       ${tpladmStatusField(x.status)}`;
   } else if (kind === 'dashboard') {
     const x = item || { title: '', description: '', category: 'sales', sources: [], widgets: tpladmBlankWidgets(), layout: 'a', promptText: 'ابنِ لوحة «» بالعناصر التالية:\n{{widgets}}', status: 'draft' };
-    const widgets = (x.widgets && x.widgets.length === 10) ? x.widgets.map(w => ({ ...w })) : tpladmBlankWidgets();
+    const widgets = (x.widgets && x.widgets.length) ? x.widgets.map(w => ({ ...w })) : tpladmBlankWidgets();
     title = isNew ? 'نموذج لوحة جديد' : `تعديل: ${x.title}`; sub = TPLADM_KINDS.dashboard.where;
     formHtml = `
       <div class="ed-row">
@@ -7842,8 +7860,9 @@ function tpladmOpenEditor(kind, item, isNew) {
         <div class="field"><label for="ed-sources">المصادر المطلوبة</label><input id="ed-sources" value="${esc((x.sources || []).join('، '))}" placeholder="افصل بينها بفاصلة"><span class="hint">تظهر للمستخدم كتلميح فقط.</span></div>
         <div class="field"><label for="ed-layout">التوزيع (شكل المصغّرة)</label><select id="ed-layout" class="select">${['a', 'b', 'c', 'd'].map((l, i) => `<option value="${l}"${l === (x.layout || 'a') ? ' selected' : ''}>توزيع ${['أ', 'ب', 'ج', 'د'][i]}</option>`).join('')}</select></div>
       </div>
-      <div class="field"><span class="flabel">العناصر العشرة <span class="muted" style="font-weight:300">· الأربعة الأولى مؤشرات رقمية، والستة رسوم</span></span><ol class="dw-list" id="ed-dw-list">${tpladmWidgetRows(widgets)}</ol></div>
-      ${tpladmPromptField(x.promptText, 'dashboard', 'يُرسل لجيم عند اختيار النموذج. استخدم <code dir="ltr">{{widgets}}</code> ليُدرج جيم قائمة العناصر العشرة وتعليماتها تلقائيًا.')}
+      <div class="field"><span class="flabel">عناصر اللوحة <span class="muted" style="font-weight:300">· <span class="num" id="ed-dw-count">${widgets.length}</span> عنصر — اختر نوع كل عنصر وعنوانه</span></span><ol class="dw-list" id="ed-dw-list">${tpladmWidgetRows(widgets)}</ol>
+        <button class="btn btn-ghost btn-sm" type="button" id="ed-dw-add" style="align-self:flex-start;margin-top:8px">${tplIc('plus')}إضافة عنصر</button></div>
+      ${tpladmPromptField(x.promptText, 'dashboard', 'يُرسل لجيم عند اختيار النموذج. استخدم <code dir="ltr">{{widgets}}</code> ليُدرج جيم قائمة العناصر وتعليماتها تلقائيًا.')}
       ${tpladmStatusField(x.status)}`;
   } else if (kind === 'kpi') {
     const x = item;
@@ -7893,8 +7912,8 @@ function tpladmReadForm() {
   const promptText = el('ed-prompt')?.value.trim() || '';
   if (kind === 'widget') return { title: v('ed-title'), description: v('ed-desc'), icon: el('ed-icon')?.value, category: el('ed-cat')?.value, promptText, status };
   if (kind === 'dashboard') {
-    const widgets = [...document.querySelectorAll('#ed-dw-list .dw-row')].map((row, i) => ({
-      type: i < 4 ? 'kpi' : row.querySelector('[data-k=type]').value,
+    const widgets = [...document.querySelectorAll('#ed-dw-list .dw-row')].map(row => ({
+      type: row.querySelector('[data-k=type]').value,
       title: row.querySelector('[data-k=title]').value.trim(),
       prompt: row.querySelector('[data-k=prompt]').value.trim(),
     }));
@@ -7924,7 +7943,7 @@ function tpladmPreview() {
   const th = el('ed-thumb');
   if (!th) return;
   if (kind === 'widget') th.innerHTML = `<div class="et-w"><span class="lib-thumb">${tplIc(x.icon || 'spark', 'icon')}</span><b>${esc(x.title) || 'اسم العنصر'}</b><small>${esc(x.description) || 'الوصف المختصر'}</small></div><span class="et-cap">كما يظهر في تبويب «النماذج»</span>`;
-  else if (kind === 'dashboard') th.innerHTML = `${dashGalThumb({ widgets: x.widgets, layout: x.layout })}<span class="et-cap">${esc(x.title) || 'اسم النموذج'} · 10 عناصر</span>`;
+  else if (kind === 'dashboard') th.innerHTML = `${dashGalThumb({ widgets: x.widgets, layout: x.layout })}<span class="et-cap">${esc(x.title) || 'اسم النموذج'} · ${(x.widgets ? x.widgets.length : 0).toLocaleString('en-US')} عنصر</span>`;
   else { const o = TPLADM_ED.orig; th.innerHTML = `<div class="et-k"><b>${esc(o.nameAr || o.label || 'اسم المؤشر')}</b>${o.nameEn ? `<small dir="ltr">${esc(o.nameEn)}</small>` : ''}<span class="badge">${esc(o.mtName || o.label || '')}</span></div>`; }
 }
 
@@ -7966,10 +7985,29 @@ function tpladmWireEditor() {
   }
 
   const list = el('ed-dw-list');
-  if (list) list.addEventListener('change', e => {
-    if (e.target.dataset.k === 'type') e.target.closest('.dw-row').querySelector('.dw-ic').innerHTML = DASH_GAL_GLYPH[e.target.value] || '';
-    tpladmPreview();
-  });
+  if (list) {
+    list.addEventListener('change', e => {
+      if (e.target.dataset.k === 'type') e.target.closest('.dw-row').querySelector('.dw-ic').innerHTML = DASH_GAL_GLYPH[e.target.value] || '';
+      tpladmPreview();
+    });
+    list.addEventListener('click', e => {
+      const del = e.target.closest('[data-dw-del]');
+      if (!del) return;
+      del.closest('.dw-row').remove();
+      list.querySelectorAll('.dw-row').forEach((row, i) => { row.dataset.i = i; row.querySelector('.dw-n').textContent = i + 1; });
+      const c = el('ed-dw-count'); if (c) c.textContent = list.querySelectorAll('.dw-row').length;
+      tpladmPreview();
+    });
+    el('ed-dw-add')?.addEventListener('click', () => {
+      const i = list.querySelectorAll('.dw-row').length;
+      list.insertAdjacentHTML('beforeend', tpladmWidgetRows([{ type: 'kpi', title: '', prompt: '' }]).replace('data-i="0"', `data-i="${i}"`).replace(/dw-(t|n|p)0/g, `dw-$1${i}`));
+      const c = el('ed-dw-count'); if (c) c.textContent = list.querySelectorAll('.dw-row').length;
+      const lastRow = list.lastElementChild;
+      lastRow.querySelector('.dw-n').textContent = i + 1;
+      lastRow.querySelector('[data-k=title]').focus();
+      tpladmPreview();
+    });
+  }
   el('ed-withrules')?.addEventListener('change', tpladmPreview);
 
   form.querySelector('[data-del]')?.addEventListener('click', function () {
