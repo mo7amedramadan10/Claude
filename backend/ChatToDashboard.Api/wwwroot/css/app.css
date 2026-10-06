@@ -373,7 +373,7 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-content:start}
 .widget{position:relative;background:var(--surface);border:1px solid var(--grid);
   border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
-  display:flex;flex-direction:column;gap:10px;animation:rise .35s ease both;
+  display:flex;flex-direction:column;gap:10px;
   transition:box-shadow .3s ease,border-color .3s ease}
 /* While TTS is reading a sentence that names this widget (see speakText's boundary
    handling), it's marked unmistakably — not just a shadow, but a solid accent border, a
@@ -392,11 +392,27 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
   50%{box-shadow:0 0 0 9px color-mix(in srgb, var(--accent) 22%, transparent)}
 }
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+/* Quick settle-in fade for every freshly mounted widget card (filter reapply, tab switch,
+   undo/redo — any re-render that creates new card elements), added/removed in
+   renderDashboard() rather than baked into the bare .widget rule above. This has to be a
+   removable class, not a permanent part of .widget: a CSS animation's fill-mode:both end
+   state reports a real (if visually identity) `transform: matrix(1,0,0,1,0,0)` — never the
+   literal "none" keyword, even when the keyframe never sets transform at all — and ANY
+   non-"none" transform establishes a stacking context (CSS Transforms §Stacking). Baked
+   permanently into .widget, this silently trapped every widget's own popovers/menus (⋮, ⓘ)
+   under whichever sibling card happens to come later in the DOM — see the animationend
+   listener in renderDashboard() that strips this class the moment the animation is actually
+   done, which is the real fix; the class split here only makes that removable without
+   touching the rest of .widget's own (non-animation) styling. */
+.widget.widget-mount{animation:rise .35s ease both}
 /* Bigger, staggered entrance for a freshly (re)generated dashboard only — added alongside
-   the ordinary .widget class for just that one render (see revealNow in renderDashboard()),
-   never for a filter/edit/undo re-render of the same widgets, which keep the plain "rise"
-   above. .widget.widget-enter's extra specificity overrides .widget's own animation; each
-   card's stagger delay is set inline (style.animationDelay) where the class is added. */
+   widget-mount for just that one render (see revealNow in renderDashboard()), never for a
+   filter/edit/undo re-render of the same widgets, which keep the plain "rise" above.
+   .widget.widget-enter's extra specificity (and its later position here, since both rules
+   tie at two classes' specificity) overrides widget-mount's own animation when both are
+   present; each card's stagger delay is set inline (style.animationDelay) where the class is
+   added. Removed the same way, for the same reason — see renderDashboard()'s animationend
+   listener. */
 @keyframes widget-enter{
   from{opacity:0;transform:translateY(16px) scale(.94)}
   to{opacity:1;transform:translateY(0) scale(1)}

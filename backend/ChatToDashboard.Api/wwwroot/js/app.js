@@ -2475,20 +2475,29 @@ function renderDashboard() {
     grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
     widgets.forEach((w, i) => {
       const card = buildWidget(w);
+      // Every freshly mounted card gets a quick settle-in fade (widget-mount, see its own
+      // comment in app.css) — not just a freshly revealed dashboard's bigger staggered one
+      // (widget-enter). Both are added here as removable classes rather than being baked
+      // into the bare .widget rule, and BOTH get stripped the moment their own animation
+      // actually finishes: a CSS animation's fill-mode:both end state reports a real (if
+      // visually identity) transform — never the literal "none" keyword, even when the
+      // keyframe never touches transform at all — and any non-"none" transform permanently
+      // makes that card its own CSS stacking context. Left in place, that silently traps the
+      // card's own popovers/menus (⋮, ⓘ) under whichever sibling card happens to come later
+      // in the DOM — this is what the user's screenshots showed. Stripping the class once
+      // the animation is actually done removes that leftover transform and restores normal
+      // stacking, for every card on every render — not only a freshly revealed dashboard's.
+      card.classList.add(revealNow ? 'widget-enter' : 'widget-mount');
       if (revealNow) {
-        card.classList.add('widget-enter');
         // Capped so a dashboard with many widgets doesn't leave the last ones waiting
         // seconds to appear — beyond ~8 cards they all start together instead.
         card.style.animationDelay = `${Math.min(i, 8) * 55}ms`;
-        // The animation's own end state (translateY(0) scale(1)) is a non-"none" transform,
-        // which — left in place by the `both` fill-mode after the animation finishes —
-        // permanently makes this card its own CSS stacking context. That traps its ⋮ widget
-        // menu's z-index (meant to float above everything) under any later-in-DOM-order
-        // sibling card instead, since z-index only ranks within the stacking context it's
-        // created in. Dropping the class once the animation is actually done removes that
-        // leftover transform entirely, restoring normal stacking.
-        card.addEventListener('animationend', () => card.classList.remove('widget-enter'), { once: true });
       }
+      card.addEventListener(
+        'animationend',
+        () => card.classList.remove('widget-enter', 'widget-mount'),
+        { once: true },
+      );
       grid.appendChild(card);
     });
     el.dash.appendChild(grid);
