@@ -3248,7 +3248,7 @@ function renderDashGalGrid() {
         <small>${esc(d.desc)}</small>
         <span class="dc-meta">
           <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>${d.widgets.length.toLocaleString('en-US')} عنصر</span>
-          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(d.sources.join('، '))}</span>
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${d.sources.length ? esc(d.sources.join('، ')) : 'حسب مصادر مشروعك المتاحة'}</span>
         </span>
       </span>
     </button>`).join('');
@@ -3269,7 +3269,9 @@ function openDashGalPreview(d) {
       <div class="pv-thumb">${dashGalThumb(d)}</div>
       <div class="pv-info">
         <h3>${esc(d.name)}</h3><p>${esc(d.desc)}</p>
-        <div class="pv-src">${d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')}</div>
+        <div class="pv-src">${d.sources.length
+          ? d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')
+          : `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>حسب مصادر مشروعك المتاحة</span>`}</div>
         <h4>عناصر اللوحة (${d.widgets.length.toLocaleString('en-US')})</h4>
         <ol class="pv-list">${d.widgets.map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>${esc(w.title)}</li>`).join('')}</ol>
         <div class="pv-actions">
