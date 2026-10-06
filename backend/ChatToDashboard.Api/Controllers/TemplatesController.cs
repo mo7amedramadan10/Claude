@@ -8,9 +8,10 @@ namespace ChatToDashboard.Api.Controllers;
 
 /// <summary>Body of PUT api/templates/admin/{kind}/{key} and POST api/templates/admin/{kind}
 /// — every field the platform-owner's editor modal can set. Widget/dashboard items use
-/// Title/Description/Icon/Category/Sources(+Widgets for dashboards)/PromptText/Status; KPI
-/// measure-type and per-row items use only PromptText/Status (their display fields live in
-/// the static kpi-library.js, not here — see TemplateRef's remarks).</summary>
+/// Title/Description/Icon/Category/Sources(+Widgets for dashboards, each widget carrying its
+/// own Table/Sql draft query)/PromptText/Status; KPI measure-type items use only PromptText/
+/// Status; a per-row KPI item also uses Table/Sql (its display fields otherwise live in the
+/// static kpi-library.js, not here — see TemplateRef's remarks).</summary>
 public class SaveTemplateRequest
 {
     [JsonPropertyName("title")] public string? Title { get; set; }
@@ -21,7 +22,18 @@ public class SaveTemplateRequest
     [JsonPropertyName("widgets")] public List<BuiltinDashboardWidgetSpec>? Widgets { get; set; }
     [JsonPropertyName("promptText")] public string? PromptText { get; set; }
     [JsonPropertyName("status")] public string Status { get; set; } = TemplateStatuses.Published;
+    /// <summary>KPI per-row saves only — the draft "expected" SELECT's table/SQL text (see
+    /// BuiltinDashboardWidgetSpec's own remarks on what this is and isn't). Stored in the
+    /// override row's WidgetsJson column (reused — a KPI row has no widgets of its own) as
+    /// {"table":...,"sql":...} rather than adding a dedicated column.</summary>
+    [JsonPropertyName("table")] public string? Table { get; set; }
+    [JsonPropertyName("sql")] public string? Sql { get; set; }
 }
+
+/// <summary>What a KPI per-row override's WidgetsJson column actually holds (reused from the
+/// dashboard-widgets use of that column — a KPI row has no widgets of its own; see
+/// SaveTemplateRequest.Table's remarks).</summary>
+public record KpiQueryOverride(string? Table, string? Sql);
 
 /// <summary>Body of PUT api/templates/admin/kpi-categories/{index}.</summary>
 public class SetKpiCategoryRequest
@@ -137,7 +149,7 @@ public class TemplatesController : ControllerBase
             foreach (var b in BuiltinTemplates.Dashboards)
                 items.Add(ToAdminItem(kind, b.Id, false, overrides.GetValueOrDefault(b.Id),
                     b.Name, b.Description, null, b.Category, b.Sources.ToList(),
-                    b.Widgets.Select(w => new { type = w.Type, title = w.Title, prompt = w.Prompt }), b.Prompt));
+                    b.Widgets.Select(w => new { type = w.Type, title = w.Title, prompt = w.Prompt, table = w.Table, sql = w.Sql }), b.Prompt));
         }
         foreach (var o in overrides.Values.Where(o => o.IsCustom))
             items.Add(ToAdminItem(kind, o.Key, true, o, o.Title ?? "", o.Description ?? "", o.Icon,
@@ -296,10 +308,15 @@ public class TemplatesController : ControllerBase
     public async Task<IActionResult> AdminListKpiOverrides(CancellationToken ct)
     {
         var rows = await _templates.ListByKindAsync(TemplateKinds.Kpi, ct);
-        return Ok(rows.Select(o => new
+        return Ok(rows.Select(o =>
         {
-            index = int.Parse(o.Key), status = o.Status, promptText = o.PromptText,
-            version = o.Version, updatedByName = o.UpdatedByName, updatedAt = o.UpdatedAt,
+            var q = DeserializeKpiQuery(o.WidgetsJson);
+            return new
+            {
+                index = int.Parse(o.Key), status = o.Status, promptText = o.PromptText,
+                table = q?.Table, sql = q?.Sql,
+                version = o.Version, updatedByName = o.UpdatedByName, updatedAt = o.UpdatedAt,
+            };
         }));
     }
 
@@ -319,6 +336,11 @@ public class TemplatesController : ControllerBase
         // Empty promptText means "use the measure-type's own template" — only Status is then overridden.
         row.PromptText = string.IsNullOrWhiteSpace(body.PromptText) ? null : body.PromptText;
         row.Status = body.Status;
+        // Same convention: both blank means "use the auto-generated draft from kpi-library.js
+        // itself" — nothing to override here, so no WidgetsJson row at all for this part.
+        row.WidgetsJson = string.IsNullOrWhiteSpace(body.Table) && string.IsNullOrWhiteSpace(body.Sql)
+            ? null
+            : JsonSerializer.Serialize(new KpiQueryOverride(body.Table, body.Sql), TemplatePromptService.JsonOptions);
         row.UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         row.UpdatedByName = HttpContext.User.Identity?.Name;
         var saved = await _templates.UpsertAsync(row, ct);
@@ -410,6 +432,9 @@ public class TemplatesController : ControllerBase
         return null;
     }
 
+    private static KpiQueryOverride? DeserializeKpiQuery(string? json) =>
+        json is { Length: > 0 } ? JsonSerializer.Deserialize<KpiQueryOverride>(json, TemplatePromptService.JsonOptions) : null;
+
     private static List<string>? DeserializeSources(string? json) =>
         json is { Length: > 0 } ? JsonSerializer.Deserialize<List<string>>(json, TemplatePromptService.JsonOptions) : null;
 
@@ -421,11 +446,11 @@ public class TemplatesController : ControllerBase
                 ?.Select(w => (object)new { type = w.Type, title = w.Title }).ToList()
             : null;
 
-    /// <summary>Includes each widget's own Prompt — admin-only (see ToAdminItem), never
-    /// reachable from the public catalog endpoint.</summary>
+    /// <summary>Includes each widget's own Prompt and draft Table/Sql — admin-only (see
+    /// ToAdminItem), never reachable from the public catalog endpoint.</summary>
     private static List<object>? DeserializeWidgetsFull(string? json) =>
         json is { Length: > 0 }
             ? JsonSerializer.Deserialize<List<BuiltinDashboardWidgetSpec>>(json, TemplatePromptService.JsonOptions)
-                ?.Select(w => (object)new { type = w.Type, title = w.Title, prompt = w.Prompt }).ToList()
+                ?.Select(w => (object)new { type = w.Type, title = w.Title, prompt = w.Prompt, table = w.Table, sql = w.Sql }).ToList()
             : null;
 }

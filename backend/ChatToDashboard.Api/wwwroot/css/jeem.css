@@ -1235,15 +1235,22 @@ form#form.composer.hidden { display: none; }
 .tp-th svg { width: 100%; height: 100%; }
 .tp.is-on { border-color: var(--brand-purple); box-shadow: 0 0 0 3px var(--purple-50); color: var(--brand-purple); font-weight: 700; }
 
-.dw-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.dw-row { display: grid; grid-template-columns: 22px 34px 130px minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 8px; align-items: center; }
-.dw-row input { height: 38px !important; font-size: var(--fs-xs); }
-.dw-row .select { height: 38px !important; font-size: var(--fs-xs); }
+.dw-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.dw-row { display: flex; flex-direction: column; gap: 5px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.dw-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.dw-row-main { display: grid; grid-template-columns: 22px 34px 130px minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 8px; align-items: center; }
+.dw-row-main input { height: 38px !important; font-size: var(--fs-xs); }
+.dw-row-main .select { height: 38px !important; font-size: var(--fs-xs); }
 .dw-n { font-size: 11px; color: var(--ink-3); text-align: center; }
 .dw-ic { display: block; width: 34px; height: 24px; padding: 2px; border-radius: 6px; background: var(--surface-2); }
 .dw-ic svg { width: 100%; height: 100%; }
 .dw-type.is-fixed { display: flex; align-items: center; height: 38px; padding: 0 10px; border-radius: var(--r-sm); background: var(--surface-2); font-size: var(--fs-xs); color: var(--ink-3); }
 .dw-prompt { color: var(--ink-2); }
+/* صف جملة الـselect المفترضة تحت كل عنصر لوحة — نفس مسافة إزاحة عمودي النوع/الرقم فوقه
+   (22+34+8+8=72px) عشان يبان تابع للعنصر نفسه، بخط mono لسهولة قراءة SQL. */
+.dw-row-query { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 8px; padding-inline-start: 72px; }
+.dw-row-query input { height: 32px !important; font-size: 11px; font-family: var(--mono, ui-monospace, monospace); color: var(--ink-3); }
+.dw-row-query input:focus { color: var(--ink); }
 
 .danger-txt { color: var(--danger) !important; }
 

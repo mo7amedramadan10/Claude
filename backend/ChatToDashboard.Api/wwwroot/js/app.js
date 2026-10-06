@@ -7751,7 +7751,7 @@ async function tpladmToggleStatus(kind, item) {
     tpladmToast(next === 'published' ? `تم نشر «${item.title}»` : `تم إيقاف «${item.title}» ولن يظهر للمستخدمين`);
     await tpladmRefreshKind(kind);
   } else if (kind === 'kpi') {
-    const res = await fetch(`/api/templates/admin/kpi/${item.index}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: item.promptText || '', status: next }) });
+    const res = await fetch(`/api/templates/admin/kpi/${item.index}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: item.promptText || '', status: next, table: item.table || '', sql: item.sql || '' }) });
     if (!res.ok) { alert('تعذّر التحديث.'); return; }
     tpladmToast(next === 'published' ? 'تم النشر' : 'تم الإيقاف');
     await tpladmLoadKpiOverrides();
@@ -7953,16 +7953,21 @@ function tpladmBindKpiList() {
     tr.querySelector('[data-act="edit"]').addEventListener('click', () => {
       const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]], over = TPLADM.kpiOverrides[i];
       const mt = TPLADM.kpiMtypes.find(x => x.mtype === r[4]);
+      const [defTable, defSql] = r[5] || ['', ''];
       tpladmOpenEditor('kpi', {
         key: String(i), index: i, nameAr: r[2], nameEn: r[3], catName: c[0], mtName: KPI_LIB.mtypes[r[4]],
         mtPromptText: mt?.promptText || '', promptText: over?.promptText || '', status: over?.status || 'published',
         hasOverrideRow: !!over,
+        table: over?.table || defTable, sql: over?.sql || defSql,
       });
     });
     const toggleBtn = tr.querySelector('[data-act="toggle"]');
     if (!toggleBtn.disabled) toggleBtn.addEventListener('click', () => {
       const over = TPLADM.kpiOverrides[i];
-      tpladmToggleStatus('kpi', { index: i, status: over?.status || 'published', promptText: over?.promptText || '' });
+      tpladmToggleStatus('kpi', {
+        index: i, status: over?.status || 'published', promptText: over?.promptText || '',
+        table: over?.table || '', sql: over?.sql || '',
+      });
     });
   });
 }
@@ -8039,15 +8044,24 @@ function tpladmEdSide() {
 // مش كل نموذج لوحة بقى بالضبط 4 مؤشرات + 6 رسوم: النماذج الـ55 المنقولة من كتالوج لوحات
 // Power BI المرجعي (BuiltinDashboardsGenerated.cs) متفاوتة العدد والتركيب (8 لـ40 عنصر). فبدل
 // افتراض إن أول 4 عناصر مؤشرات دايمًا، كل صف بقى له اختيار نوع حر (بما فيه "مؤشر رقمي").
+// صف كل عنصر لوحة: سطر رئيسي (نوع/عنوان/تعليمات) + سطر ثانٍ لجملة الـselect المتوقعة
+// (الجدول المفترض وجملة SELECT) — مسودة أولى مولّدة آليًا (انظر BuiltinDashboardWidgetSpec)،
+// معروضة هنا وقابلة للتعديل تمهيدًا لمرحلة لاحقة يعتمد فيها جيم عليها بدل تأليف SQL من الصفر.
 function tpladmWidgetRows(ws) {
   return ws.map((w, i) => `
     <li class="dw-row" data-i="${i}">
-      <span class="dw-n num">${i + 1}</span>
-      <span class="dw-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>
-      <label class="sr-only" for="dw-t${i}">نوع العنصر ${i + 1}</label><select id="dw-t${i}" class="select dw-type" data-k="type">${TPLADM_WIDGET_TYPES.map(([k, n]) => `<option value="${k}"${k === w.type ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
-      <label class="sr-only" for="dw-n${i}">عنوان العنصر ${i + 1}</label><input id="dw-n${i}" data-k="title" value="${esc(w.title || '')}" placeholder="مثال: إجمالي المبيعات">
-      <label class="sr-only" for="dw-p${i}">تعليمات إضافية للعنصر ${i + 1}</label><input id="dw-p${i}" data-k="prompt" class="dw-prompt" value="${esc(w.prompt || '')}" placeholder="تعليمات إضافية لجيم (اختياري)">
-      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-dw-del aria-label="حذف العنصر ${i + 1}" title="حذف العنصر">${tplIc('x')}</button>
+      <div class="dw-row-main">
+        <span class="dw-n num">${i + 1}</span>
+        <span class="dw-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>
+        <label class="sr-only" for="dw-t${i}">نوع العنصر ${i + 1}</label><select id="dw-t${i}" class="select dw-type" data-k="type">${TPLADM_WIDGET_TYPES.map(([k, n]) => `<option value="${k}"${k === w.type ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+        <label class="sr-only" for="dw-n${i}">عنوان العنصر ${i + 1}</label><input id="dw-n${i}" data-k="title" value="${esc(w.title || '')}" placeholder="مثال: إجمالي المبيعات">
+        <label class="sr-only" for="dw-p${i}">تعليمات إضافية للعنصر ${i + 1}</label><input id="dw-p${i}" data-k="prompt" class="dw-prompt" value="${esc(w.prompt || '')}" placeholder="تعليمات إضافية لجيم (اختياري)">
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" data-dw-del aria-label="حذف العنصر ${i + 1}" title="حذف العنصر">${tplIc('x')}</button>
+      </div>
+      <div class="dw-row-query">
+        <label class="sr-only" for="dw-tb${i}">الجدول المفترض للعنصر ${i + 1}</label><input id="dw-tb${i}" data-k="table" class="dw-table" value="${esc(w.table || '')}" placeholder="الجدول المفترض، مثال: staging_budget">
+        <label class="sr-only" for="dw-sq${i}">جملة SELECT المفترضة للعنصر ${i + 1}</label><input id="dw-sq${i}" data-k="sql" class="dw-sql" dir="ltr" value="${esc(w.sql || '')}" placeholder="SELECT ... FROM ... GROUP BY ...">
+      </div>
     </li>`).join('');
 }
 
@@ -8081,7 +8095,7 @@ function tpladmOpenEditor(kind, item, isNew) {
         <div class="field"><label for="ed-sources">المصادر المطلوبة</label><input id="ed-sources" value="${esc((x.sources || []).join('، '))}" placeholder="افصل بينها بفاصلة"><span class="hint">تظهر للمستخدم كتلميح فقط.</span></div>
         <div class="field"><label for="ed-layout">التوزيع (شكل المصغّرة)</label><select id="ed-layout" class="select">${['a', 'b', 'c', 'd'].map((l, i) => `<option value="${l}"${l === (x.layout || 'a') ? ' selected' : ''}>توزيع ${['أ', 'ب', 'ج', 'د'][i]}</option>`).join('')}</select></div>
       </div>
-      <div class="field"><span class="flabel">عناصر اللوحة <span class="muted" style="font-weight:300">· <span class="num" id="ed-dw-count">${widgets.length}</span> عنصر — اختر نوع كل عنصر وعنوانه</span></span><ol class="dw-list" id="ed-dw-list">${tpladmWidgetRows(widgets)}</ol>
+      <div class="field"><span class="flabel">عناصر اللوحة <span class="muted" style="font-weight:300">· <span class="num" id="ed-dw-count">${widgets.length}</span> عنصر — اختر نوع كل عنصر وعنوانه، وتحت كل عنصر جملة الـselect المفترضة (مسودة أولى قابلة للتعديل، مش استعلامًا فعليًا بعد)</span></span><ol class="dw-list" id="ed-dw-list">${tpladmWidgetRows(widgets)}</ol>
         <button class="btn btn-ghost btn-sm" type="button" id="ed-dw-add" style="align-self:flex-start;margin-top:8px">${tplIc('plus')}إضافة عنصر</button></div>
       ${tpladmPromptField(x.promptText, 'dashboard', 'يُرسل لجيم عند اختيار النموذج. استخدم <code dir="ltr">{{widgets}}</code> ليُدرج جيم قائمة العناصر وتعليماتها تلقائيًا.')}
       ${tpladmStatusField(x.status)}`;
@@ -8095,6 +8109,11 @@ function tpladmOpenEditor(kind, item, isNew) {
       </div>
       <div class="field"><span class="flabel" id="ed-pm-l">مصدر الوصف</span><div class="segmented" role="group" aria-labelledby="ed-pm-l"><button type="button" data-pmode="tpl" aria-pressed="${!x.promptText}">قالب نوع القياس</button><button type="button" data-pmode="custom" aria-pressed="${!!x.promptText}">وصف مخصص لهذا المؤشر</button></div></div>
       ${tpladmPromptField(x.promptText || x.mtPromptText, 'kpi', 'عند اختيار «قالب نوع القياس» يُستخدم القالب كما هو. اختر «وصف مخصص» لكتابة طريقة حساب أدق لهذا المؤشر.')}
+      <div class="ed-row">
+        <div class="field"><label for="ed-kpi-table">الجدول المفترض</label><input id="ed-kpi-table" value="${esc(x.table || '')}" placeholder="مثال: staging_budget"></div>
+        <div class="field"><label for="ed-kpi-sql">جملة SELECT المفترضة</label><input id="ed-kpi-sql" dir="ltr" value="${esc(x.sql || '')}" placeholder="SELECT ... FROM ... GROUP BY ..."></div>
+      </div>
+      <p class="hint">مسودة أولى مولّدة آليًا من اسم المؤشر — جدول وأعمدة افتراضية، مش استعلامًا فعليًا يُنفَّذ كما هو حاليًا. عدّلها لتقريبها من بياناتك الحقيقية.</p>
       ${tpladmStatusField(x.status)}`;
   } else if (kind === 'kpi_mtype') {
     const x = item;
@@ -8137,12 +8156,17 @@ function tpladmReadForm() {
       type: row.querySelector('[data-k=type]').value,
       title: row.querySelector('[data-k=title]').value.trim(),
       prompt: row.querySelector('[data-k=prompt]').value.trim(),
+      table: row.querySelector('[data-k=table]').value.trim(),
+      sql: row.querySelector('[data-k=sql]').value.trim(),
     }));
     return { title: v('ed-title'), description: v('ed-desc'), category: el('ed-cat')?.value, sources: v('ed-sources').split(/[،,]/).map(s => s.trim()).filter(Boolean), layout: el('ed-layout')?.value, widgets, promptText, status };
   }
   if (kind === 'kpi') {
     const custom = document.querySelector('[data-pmode="custom"]')?.getAttribute('aria-pressed') === 'true';
-    return { promptText: custom ? promptText : '', status };
+    return {
+      promptText: custom ? promptText : '', status,
+      table: el('ed-kpi-table')?.value.trim() || '', sql: el('ed-kpi-sql')?.value.trim() || '',
+    };
   }
   return { promptText, status }; // kpi_mtype
 }
@@ -8221,7 +8245,7 @@ function tpladmWireEditor() {
     });
     el('ed-dw-add')?.addEventListener('click', () => {
       const i = list.querySelectorAll('.dw-row').length;
-      list.insertAdjacentHTML('beforeend', tpladmWidgetRows([{ type: 'kpi', title: '', prompt: '' }]).replace('data-i="0"', `data-i="${i}"`).replace(/dw-(t|n|p)0/g, `dw-$1${i}`));
+      list.insertAdjacentHTML('beforeend', tpladmWidgetRows([{ type: 'kpi', title: '', prompt: '' }]).replace('data-i="0"', `data-i="${i}"`).replace(/dw-(t|n|p|tb|sq)0/g, `dw-$1${i}`));
       const c = el('ed-dw-count'); if (c) c.textContent = list.querySelectorAll('.dw-row').length;
       const lastRow = list.lastElementChild;
       lastRow.querySelector('.dw-n').textContent = i + 1;
@@ -8267,7 +8291,7 @@ async function tpladmSubmitEditor(e) {
       msg = `${TPLADM_ED.isNew ? 'تمت إضافة' : 'تم حفظ'} «${x.title}»`;
       await tpladmRefreshKind(kind);
     } else if (kind === 'kpi') {
-      res = await fetch(`/api/templates/admin/kpi/${TPLADM_ED.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: x.promptText, status: x.status }) });
+      res = await fetch(`/api/templates/admin/kpi/${TPLADM_ED.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: x.promptText, status: x.status, table: x.table, sql: x.sql }) });
       data = await res.json().catch(() => null);
       if (!res.ok) { err.textContent = data?.error || 'تعذّر الحفظ.'; return; }
       msg = `تم حفظ «${TPLADM_ED.orig.nameAr}»`;
