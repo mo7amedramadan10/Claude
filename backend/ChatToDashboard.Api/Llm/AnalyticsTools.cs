@@ -231,6 +231,14 @@ public class AnalyticsTools
             enabledIntegrations, selection.ProjectId);
     }
 
+    /// <summary>Forwards to <see cref="Data.DataFolderLoader.GetSchemaAsync"/> — the full table
+    /// list across every project on this deployment (see <see cref="IsTableKnownToProject"/>)
+    /// — for callers outside this class that need it alongside a <see cref="SourceContext"/> to
+    /// call <see cref="CheckSourcePermission"/> (DashboardAccessService, InquiryAccessService).
+    /// WidgetQueryService holds its own DataFolderLoader directly and doesn't need this.</summary>
+    public Task<IReadOnlyList<Data.TableSchema>> GetSchemaAsync(CancellationToken ct = default) =>
+        _loader.GetSchemaAsync(ct);
+
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
     {
         var rowCap = _db.Provider == DbProvider.Sqlite ? "LIMIT 500" : "TOP 500";
@@ -1459,8 +1467,13 @@ public class AnalyticsTools
     /// both exposed those other projects' table/column names to this one and — on a deployment
     /// with enough projects — was large enough by itself to blow past the model's context
     /// window (observed live: a single list_files result over 100k tokens).
+    /// Internal (not private): <see cref="Widgets.WidgetQueryService"/> applies the same
+    /// project-ownership check to the table name the UI's structured widget wizard sends
+    /// directly (see ResolveTableAsync/GetAvailableFieldsAsync there) — a table the client
+    /// names explicitly, not one the LLM writes into generated SQL, but foreign to this
+    /// project in exactly the same way.
     /// </summary>
-    private static bool IsTableKnownToProject(string table, SourceContext context) =>
+    internal static bool IsTableKnownToProject(string table, SourceContext context) =>
         context.TableFiles.ContainsKey(table) || context.TableSystems.ContainsKey(table);
 
     public async Task<(string Result, bool IsError)> ExecuteToolAsync(
@@ -1524,7 +1537,7 @@ public class AnalyticsTools
                     if (string.IsNullOrWhiteSpace(sql))
                         return ("Error: 'sql' input is required.", true);
 
-                    var permissionError = CheckSourcePermission(sql, context);
+                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteQueryAsync(sql, ct);
@@ -1560,7 +1573,7 @@ public class AnalyticsTools
                     periodsAhead = Math.Clamp(periodsAhead, 1, 12);
                     int? seasonLength = input["seasonLength"] is JsonValue seasonNode && seasonNode.TryGetValue<int>(out var sl) ? sl : null;
 
-                    var permissionError = CheckSourcePermission(sql, context);
+                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteForecastAsync(sql, periodsAhead, seasonLength, ct);
@@ -1649,8 +1662,13 @@ public class AnalyticsTools
     /// model. Internal (not private) so <see cref="Widgets.WidgetQueryService"/> can apply the
     /// exact same table/category gate to a widget's stored SQL before re-executing it with a
     /// filter spliced in — the same permission surface as the LLM's own query_data tool.
+    /// <paramref name="schema"/> is the full table list from <see
+    /// cref="Data.DataFolderLoader.GetSchemaAsync"/> (every table in the shared database, not
+    /// just this project's — see <see cref="IsTableKnownToProject"/>), needed for the last
+    /// check below; callers already have it or can fetch it cheaply (a metadata-only scan).
     /// </summary>
-    internal static string? CheckSourcePermission(string sql, SourceContext context)
+    internal static string? CheckSourcePermission(
+        string sql, SourceContext context, IReadOnlyList<Data.TableSchema> schema)
     {
         var blockedSystem = context.DisabledSystemTables
             .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
@@ -1672,6 +1690,19 @@ public class AnalyticsTools
         if (restrictedFile.Key is not null)
             return $"الاستعلام مرفوض: الجدول {restrictedFile.Key} تابع لملف \"{restrictedFile.Value}\" " +
                    "وصلاحية استخدامه كمصدر بيانات غير ممنوحة لهذا المستخدم.";
+
+        // The three checks above only catch a table THIS project's own dictionaries record as
+        // disabled/restricted. A table belonging to a completely different project on a shared
+        // SQL Server deployment is neither enabled nor disabled from this project's own point
+        // of view — DescribeSourcesAsync never even saw it — so none of them match it, and
+        // without this it would run unchecked. Same substring-match style as the checks above,
+        // just over "every table this project has never heard of at all" instead of "a table
+        // it knows about and has turned off".
+        var foreignTable = schema.FirstOrDefault(t => !IsTableKnownToProject(t.Table, context)
+            && (sql.Contains(t.Table, StringComparison.OrdinalIgnoreCase)
+                || sql.Contains(t.Table.Split('.').Last(), StringComparison.OrdinalIgnoreCase)));
+        if (foreignTable is not null)
+            return $"الاستعلام مرفوض: الجدول {foreignTable.Table} غير معروف أو غير تابع لهذا المشروع.";
 
         return null;
     }

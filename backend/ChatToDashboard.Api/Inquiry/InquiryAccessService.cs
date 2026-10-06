@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
@@ -35,13 +36,14 @@ public class InquiryAccessService
     {
         var selection = await _permissions.GetEffectiveSelectionAsync(user, sources ?? SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var schema = await _tools.GetSchemaAsync(ct);
 
         var result = new List<ConversationTurn>(turns.Count);
         foreach (var turn in turns)
         {
             if (turn.Blocks is null) { result.Add(turn); continue; }
 
-            var maskedBlocks = turn.Blocks.Select(b => MaskIfNeeded(b, context)).ToList();
+            var maskedBlocks = turn.Blocks.Select(b => MaskIfNeeded(b, context, schema)).ToList();
             result.Add(new ConversationTurn
             {
                 Role = turn.Role, Text = turn.Text, CreatedAt = turn.CreatedAt, Blocks = maskedBlocks,
@@ -60,13 +62,14 @@ public class InquiryAccessService
         if (block.Kind != InquiryBlockKinds.Data || string.IsNullOrWhiteSpace(block.Table)) return null;
         var selection = await _permissions.GetEffectiveSelectionAsync(user, sources ?? SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        return AnalyticsTools.CheckSourcePermission(block.Table, context);
+        return AnalyticsTools.CheckSourcePermission(block.Table, context, await _tools.GetSchemaAsync(ct));
     }
 
-    private static InquiryBlock MaskIfNeeded(InquiryBlock block, AnalyticsTools.SourceContext context)
+    private static InquiryBlock MaskIfNeeded(
+        InquiryBlock block, AnalyticsTools.SourceContext context, IReadOnlyList<TableSchema> schema)
     {
         if (block.Kind != InquiryBlockKinds.Data || string.IsNullOrWhiteSpace(block.Table)) return block;
-        var reason = AnalyticsTools.CheckSourcePermission(block.Table, context);
+        var reason = AnalyticsTools.CheckSourcePermission(block.Table, context, schema);
         if (reason is null) return block;
 
         return new InquiryBlock

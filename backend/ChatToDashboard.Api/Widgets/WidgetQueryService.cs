@@ -65,6 +65,10 @@ public class WidgetQueryService
         var schema = await _loader.GetSchemaAsync(ct);
 
         var tables = schema
+            // Keep only tables this project actually knows about — GetSchemaAsync otherwise
+            // reflects every project's tables on a shared deployment (see
+            // AnalyticsTools.IsTableKnownToProject).
+            .Where(t => AnalyticsTools.IsTableKnownToProject(t.Table, context))
             .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
             .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
             // Every file is now auto-restricted to its creator (see
@@ -220,7 +224,8 @@ public class WidgetQueryService
         var table = await ResolveTableAsync(tableName, selection, ct);
 
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        if (AnalyticsTools.CheckSourcePermission(sql, context) is not null)
+        var schema = await _loader.GetSchemaAsync(ct);
+        if (AnalyticsTools.CheckSourcePermission(sql, context, schema) is not null)
             throw new WidgetQueryValidationException("لا يوجد صلاحية لتنفيذ هذا الاستعلام.");
 
         var parameters = new DynamicParameters();
@@ -310,7 +315,17 @@ public class WidgetQueryService
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var schema = await _loader.GetSchemaAsync(ct);
 
-        var table = schema.FirstOrDefault(t => string.Equals(t.Table, tableName, StringComparison.OrdinalIgnoreCase))
+        // tableName comes straight from the client (the widget wizard's own picker, or a
+        // stored widget's query.table replayed on a filter click) — unlike query_data's SQL,
+        // there's no model in the loop to have followed any instruction about which project's
+        // tables it may name. schema is every table on the whole shared deployment, so without
+        // the IsTableKnownToProject check, a table name simply guessed or reused from another
+        // project would resolve successfully here and this service would go on to query (and
+        // return) that other project's actual data. Treated identically to "doesn't exist" —
+        // same exception, same message — so a prober can't tell "foreign table" apart from
+        // "no such table" by the error alone.
+        var table = schema.FirstOrDefault(t => string.Equals(t.Table, tableName, StringComparison.OrdinalIgnoreCase)
+                && AnalyticsTools.IsTableKnownToProject(t.Table, context))
             ?? throw new WidgetQueryValidationException("الجدول المطلوب غير موجود أو غير متاح.");
 
         // Same permission gate query_data enforces for the LLM path.

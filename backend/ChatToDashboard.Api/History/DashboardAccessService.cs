@@ -35,7 +35,7 @@ public class DashboardAccessService
 
         var selection = await _permissions.GetEffectiveSelectionAsync(candidate, SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        return AnalyticsTools.CheckSourcePermission(blob, context);
+        return AnalyticsTools.CheckSourcePermission(blob, context, await _tools.GetSchemaAsync(ct));
     }
 
     /// <summary>Convenience overload resolving the user by id first.</summary>
