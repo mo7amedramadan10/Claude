@@ -3277,7 +3277,7 @@ function openDashGalPreview(d) {
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
           </button>
           ${window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id) ? `
-          <button type="button" class="btn btn-ghost" id="gal-demo-btn">
+          <button type="button" class="btn btn-soft" id="gal-demo-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية بأرقام توضيحية
           </button>` : ''}
           <span class="muted" style="font-size:var(--fs-xs)">تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.</span>

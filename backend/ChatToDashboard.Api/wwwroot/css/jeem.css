@@ -237,12 +237,21 @@
    وبما إن jeem.css بيتحمّل بعدها، .btn كانت هتكسب وتبوّظ إخفاء أي زرار .btn.hidden
    (زي #btn-activate/#btn-publish اللي بتتخفى/تتظهر ديناميكيًا). */
 .btn.hidden { display: none; }
-.btn-primary { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
-.btn-primary:hover { background: var(--blue-600); border-color: var(--blue-600); color: #fff; box-shadow: 0 6px 16px rgba(18,125,189,.25); }
-.btn-soft { background: var(--blue-50); border-color: transparent; color: var(--blue-700); }
-.btn-soft:hover { background: var(--blue-100); border-color: transparent; }
-.btn-ghost { border-color: transparent; background: transparent; color: var(--ink-2); }
-.btn-ghost:hover { background: var(--surface); border-color: var(--line); }
+/* .btn-primary/.btn-soft/.btn-ghost{color:…} (تخصيص 0,1,0) كانوا بيتهزموا بقاعدة الإعادة
+   للوضع الافتراضي `.jeem-scope button{color:inherit}` (تخصيص 0,1,1 — عنصر + كلاس، أعلى من
+   كلاس واحد بس)، فالنص والأيقونة كانوا بيورثوا --ink من body (الثيم القديم) بدل اللون
+   المقصود — زرار "استخدم هذا النموذج" الأزرق كان نصه شبه مختفي بدل أبيض. الحل: `.btn.btn-x`
+   (تخصيص 0,2,0) بدل `.btn-x` لوحدها، زي ما اتعمل فعلاً مع .btn.hidden فوق بالظبط. */
+.btn.btn-primary { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
+.btn.btn-primary:hover { background: var(--blue-600); border-color: var(--blue-600); color: #fff; box-shadow: 0 6px 16px rgba(18,125,189,.25); }
+/* أزرار ثانوية بلون أزرق فاتح هادي (بدل الأبيض اللي بيضيع على خلفية الصفحة/الكروت البيضاء) —
+   نفس عيلة --brand-blue بس أفتح، فيها تباين كافٍ للقراءة (~5.5:1) ومفهومة كـ"ثانوي" مقابل
+   الأزرق الغامق "الأساسي". */
+.btn.btn-soft { background: #E3F0F8; border-color: #B9D9EE; color: var(--blue-700); }
+.btn.btn-soft:hover { background: #D6EAF6; border-color: #9CCBE8; color: var(--blue-700); }
+.btn.btn-soft:active { background: #C8E2F3; border-color: #9CCBE8; color: #0B5583; }
+.btn.btn-ghost { border-color: transparent; background: transparent; color: var(--ink-2); }
+.btn.btn-ghost:hover { background: var(--surface); border-color: var(--line); }
 .btn-icon { width: 40px; padding: 0; }
 .btn-sm { height: 32px; padding: 0 12px; font-size: var(--fs-xs); }
 .btn-sm.btn-icon { width: 32px; padding: 0; }
