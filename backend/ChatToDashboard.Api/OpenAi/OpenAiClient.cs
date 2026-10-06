@@ -177,7 +177,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+            var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
             var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
             var text = choice["message"]?["content"]?.GetValue<string>() ?? string.Empty;
@@ -210,7 +210,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+            var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
             var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
             var text = (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
@@ -340,7 +340,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+            var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
             var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
             var text = (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
@@ -364,7 +364,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
             new JsonObject { ["role"] = "user", ["content"] = userText },
         };
-        var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+        var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
         var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
             ?? throw new InvalidOperationException("OpenAI API response had no choices.");
         return (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
@@ -403,7 +403,17 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
-                var response = await CallChatCompletionsAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+                // Force the very first call of every loop to make a tool call when tools are
+                // offered: a model that answers straight away, with zero tool calls, has no
+                // way to have actually checked whether the sources it was just told are
+                // "enabled" really have usable data — that's exactly the failure this
+                // mechanically forecloses (observed live: the model declining a dashboard
+                // build outright, citing "not authorized", without ever calling list_files).
+                // Only the first iteration is forced; every later one stays "auto" so the
+                // model can still choose to stop calling tools once it has what it needs.
+                var forceToolUse = iteration == 0 && !forceFinalAnswer;
+                var response = await CallChatCompletionsAsync(
+                    model, messages, forceFinalAnswer ? null : tools, forceToolUse, trace, ct);
 
                 var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                     ?? throw new InvalidOperationException("OpenAI API response had no choices.");
@@ -530,7 +540,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     }
 
     private async Task<JsonObject> CallChatCompletionsAsync(
-        string model, JsonArray messages, JsonArray? tools, UsageTrace trace, CancellationToken ct)
+        string model, JsonArray messages, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct)
     {
         var body = new JsonObject
         {
@@ -540,7 +550,14 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         // OpenAI rejects an empty "tools" array outright (400: minimum length 1) — omit the
         // field entirely rather than send "[]" when forcing a tools-less final answer.
         if (tools is { Count: > 0 })
+        {
             body["tools"] = tools.DeepClone();
+            // "required" (not a specific tool name): the model still picks which tool fits —
+            // almost always list_files, per its own step-0/step-1 instructions — this only
+            // rules out answering with zero tool calls at all on this one call.
+            if (forceToolUse)
+                body["tool_choice"] = "required";
+        }
         // Reasoning models (the gpt-5.x family) default to a reasoning_effort that refuses to
         // mix with function tools on this endpoint ("Function tools with reasoning_effort are
         // not supported ... set reasoning_effort to 'none'"). Every call here uses tools, so

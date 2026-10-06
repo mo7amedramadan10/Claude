@@ -181,7 +181,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
             var responseContent = response["content"]?.AsArray()
                 ?? throw new InvalidOperationException("Anthropic API response had no content array.");
             var text = string.Concat(responseContent
@@ -217,7 +217,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
             var responseContent = response["content"]?.AsArray()
                 ?? throw new InvalidOperationException("Anthropic API response had no content array.");
             var text = string.Concat(responseContent
@@ -355,7 +355,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
             var responseContent = response["content"]?.AsArray()
                 ?? throw new InvalidOperationException("Anthropic API response had no content array.");
             var text = string.Concat(responseContent
@@ -379,7 +379,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     private async Task<string> CallSingleTextTurnAsync(string systemPrompt, string userText, UsageTrace trace, CancellationToken ct)
     {
         var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
-        var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+        var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
         var responseContent = response["content"]?.AsArray()
             ?? throw new InvalidOperationException("Anthropic API response had no content array.");
         return string.Concat(responseContent
@@ -420,8 +420,14 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
+                // Force the very first call of every loop to make a tool call when tools are
+                // offered — see the matching comment in OpenAiClient.RunLoopAsync for why:
+                // a model that answers straight away, with zero tool calls, has no way to have
+                // actually checked whether the sources it was just told are "enabled" really
+                // have usable data.
+                var forceToolUse = iteration == 0 && !forceFinalAnswer;
                 var response = await CallMessagesApiAsync(
-                    messages, systemPrompt, forceFinalAnswer ? null : tools, trace, ct);
+                    messages, systemPrompt, forceFinalAnswer ? null : tools, forceToolUse, trace, ct);
 
                 var stopReason = response["stop_reason"]?.GetValue<string>();
                 var content = response["content"]?.AsArray()
@@ -548,7 +554,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     }
 
     private async Task<JsonObject> CallMessagesApiAsync(
-        JsonArray messages, string systemPrompt, JsonArray? tools, UsageTrace trace, CancellationToken ct)
+        JsonArray messages, string systemPrompt, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct)
     {
         // Prompt caching: one breakpoint after the stable prefix (tools + system), and one
         // on the last message so each tool-loop iteration reuses the growing conversation
@@ -571,7 +577,14 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             ["messages"] = messages.DeepClone(),
         };
         if (tools is { Count: > 0 })
+        {
             body["tools"] = tools.DeepClone();
+            // "any" (not a specific tool name): the model still picks which tool fits — almost
+            // always list_files, per its own step-0/step-1 instructions — this only rules out
+            // answering with zero tool calls at all on this one call.
+            if (forceToolUse)
+                body["tool_choice"] = new JsonObject { ["type"] = "any" };
+        }
         MarkLastMessageCacheable(body["messages"]!.AsArray());
 
         var requestBody = body.ToJsonString();
