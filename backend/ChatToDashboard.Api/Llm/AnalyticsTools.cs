@@ -1437,6 +1437,7 @@ public class AnalyticsTools
     {
         var schema = await _loader.GetSchemaAsync(ct);
         var validTables = schema
+            .Where(t => IsTableKnownToProject(t.Table, context))
             .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
             .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
             .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
@@ -1444,6 +1445,23 @@ public class AnalyticsTools
             .ToList();
         return validTables.Count == 0 ? null : $"Valid tables are: {string.Join(", ", validTables)}.";
     }
+
+    /// <summary>
+    /// _loader.GetSchemaAsync() reflects every table in the shared database's "staging" schema
+    /// — across every project/organization on this deployment, not just the current one — since
+    /// the underlying SQL (DataStore.GetSchemaAsync) has no project filter at all. A table is
+    /// only "known" here if it owns up to a file or system DescribeSourcesAsync actually found
+    /// for THIS project (TableFiles/TableSystems are populated for every file/system it iterates,
+    /// enabled or disabled — see that method). Without this positive check, every table
+    /// belonging to every OTHER project on a shared SQL Server deployment would silently pass
+    /// list_files' and BuildValidTablesHintAsync's purely negative "not explicitly disabled"
+    /// filter (disabled-for-this-project is the only thing those dictionaries record), which
+    /// both exposed those other projects' table/column names to this one and — on a deployment
+    /// with enough projects — was large enough by itself to blow past the model's context
+    /// window (observed live: a single list_files result over 100k tokens).
+    /// </summary>
+    private static bool IsTableKnownToProject(string table, SourceContext context) =>
+        context.TableFiles.ContainsKey(table) || context.TableSystems.ContainsKey(table);
 
     public async Task<(string Result, bool IsError)> ExecuteToolAsync(
         string toolName, JsonObject input, SourceContext context, CancellationToken ct)
@@ -1455,9 +1473,13 @@ public class AnalyticsTools
                 case "list_files":
                 {
                     var schema = await _loader.GetSchemaAsync(ct);
-                    // Hide tables belonging to a switched-off repository file, and label
-                    // the rest so the model can attribute each number to a real source.
+                    // Keep only tables this project actually knows about (see
+                    // IsTableKnownToProject — GetSchemaAsync otherwise reflects every project's
+                    // tables on a shared deployment), then hide ones belonging to a switched-off
+                    // repository file, and label the rest so the model can attribute each number
+                    // to a real source.
                     var visible = schema
+                        .Where(t => IsTableKnownToProject(t.Table, context))
                         .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
                         .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
                         .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
