@@ -1946,6 +1946,11 @@ public class AnalyticsTools
         if (spec is null)
             return (null, "JSON deserialized to null.");
 
+        // Before validating: a malformed filter entry (missing field/table, an empty
+        // "options" for a select type, ...) is dropped rather than failing the whole
+        // response — see DashboardSpec.SanitizeFilters' doc comment.
+        spec.SanitizeFilters();
+
         var validationErrors = spec.Validate();
         if (validationErrors.Count > 0)
             return (null, string.Join(" ", validationErrors));

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -46,7 +47,37 @@ public class DashboardSpec
     [JsonPropertyName("filters")]
     public List<DashboardFilter> Filters { get; set; } = new();
 
-    /// <summary>Returns a list of validation problems; empty means the spec is valid.</summary>
+    /// <summary>
+    /// Drops any filter entry that fails its own structural requirements (missing field/
+    /// table, an unrecognized type, or a select type with no real queried options) instead
+    /// of letting it fail the whole response. Filters are explicitly optional/best-effort —
+    /// the comment on <see cref="Filters"/> already says an absent/empty array is valid — so
+    /// one malformed entry (observed live: a smaller model repeatedly re-sending a
+    /// multi_select filter with an empty "options" after an empty-results query, instead of
+    /// either re-querying for the real distinct values or dropping the filter per its own
+    /// instructions) shouldn't burn every JSON-repair retry and fail an otherwise perfectly
+    /// valid, real-data dashboard. Call once right after deserializing, before <see
+    /// cref="Validate"/>, so nothing downstream ever sees a broken filter.
+    /// </summary>
+    public void SanitizeFilters()
+    {
+        if (Filters is null) { Filters = new(); return; }
+        Filters = Filters.Where(f =>
+            f is not null
+            && !string.IsNullOrWhiteSpace(f.Field)
+            && !string.IsNullOrWhiteSpace(f.Table)
+            && !string.IsNullOrWhiteSpace(f.Type) && AllowedFilterTypes.Contains(f.Type)
+            && (!NeedsOptions(f.Type) || f.Options is { Count: > 0 })
+        ).ToList();
+    }
+
+    private static bool NeedsOptions(string type) =>
+        string.Equals(type, "single_select", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(type, "multi_select", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Returns a list of validation problems; empty means the spec is valid. Filters
+    /// are intentionally not checked here — see <see cref="SanitizeFilters"/>, which should
+    /// run first and leaves only already-valid ones behind.</summary>
     public IReadOnlyList<string> Validate()
     {
         var errors = new List<string>();
@@ -98,25 +129,6 @@ public class DashboardSpec
             }
         }
 
-        if (Filters is not null)
-        {
-            for (var i = 0; i < Filters.Count; i++)
-            {
-                var f = Filters[i];
-                if (f is null) { errors.Add($"filters[{i}] is null."); continue; }
-                if (string.IsNullOrWhiteSpace(f.Field))
-                    errors.Add($"filters[{i}].field is required.");
-                if (string.IsNullOrWhiteSpace(f.Table))
-                    errors.Add($"filters[{i}].table is required.");
-                if (string.IsNullOrWhiteSpace(f.Type) || !AllowedFilterTypes.Contains(f.Type))
-                    errors.Add($"filters[{i}].type must be one of: single_select, multi_select, date_range, numeric_range (got \"{f.Type}\").");
-                var needsOptions = string.Equals(f.Type, "single_select", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(f.Type, "multi_select", StringComparison.OrdinalIgnoreCase);
-                if (needsOptions && (f.Options is null || f.Options.Count == 0))
-                    errors.Add($"filters[{i}].options must be a non-empty array for type \"{f.Type}\" " +
-                               "(values actually queried, never invented).");
-            }
-        }
         return errors;
     }
 }
