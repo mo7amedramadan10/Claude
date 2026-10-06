@@ -40,36 +40,42 @@ public class TemplatePromptService
     }
 
     /// <summary>Resolves the template into its final prompt, or null with <paramref
-    /// name="error"/> set when the kind/key is unknown, deleted, or not currently published.</summary>
-    public async Task<(string? Prompt, string? Error)> ResolveAsync(
+    /// name="error"/> set when the kind/key is unknown, deleted, or not currently published.
+    /// <paramref name="RequiredWidgets"/> is non-null only for a Dashboard template with a
+    /// declared widget list — see ChatController.Post, which reconciles the model's actual
+    /// response against it so a dropped widget becomes an explicit "no data" placeholder
+    /// instead of silently disappearing.</summary>
+    public async Task<(string? Prompt, string? Error, IReadOnlyList<BuiltinDashboardWidgetSpec>? RequiredWidgets)> ResolveAsync(
         TemplateRef templateRef, AppUser user, SourceSelection effectiveSources, CancellationToken ct = default)
     {
         string body;
+        IReadOnlyList<BuiltinDashboardWidgetSpec>? requiredWidgets = null;
         switch (templateRef.Kind)
         {
             case TemplateKinds.Widget:
             {
                 var resolved = await ResolveWidgetAsync(templateRef.Key, ct);
-                if (resolved.Error is not null) return (null, resolved.Error);
+                if (resolved.Error is not null) return (null, resolved.Error, null);
                 body = resolved.Prompt!;
                 break;
             }
             case TemplateKinds.Dashboard:
             {
                 var resolved = await ResolveDashboardAsync(templateRef.Key, ct);
-                if (resolved.Error is not null) return (null, resolved.Error);
+                if (resolved.Error is not null) return (null, resolved.Error, null);
                 body = resolved.Prompt!;
+                requiredWidgets = resolved.Widgets;
                 break;
             }
             case TemplateKinds.Kpi:
             {
                 var resolved = await ResolveKpiAsync(templateRef, ct);
-                if (resolved.Error is not null) return (null, resolved.Error);
+                if (resolved.Error is not null) return (null, resolved.Error, null);
                 body = resolved.Prompt!;
                 break;
             }
             default:
-                return (null, "نوع النموذج غير معروف.");
+                return (null, "نوع النموذج غير معروف.", null);
         }
 
         var vars = await BuildCommonVariablesAsync(user, effectiveSources, ct);
@@ -79,7 +85,45 @@ public class TemplatePromptService
         if (!string.IsNullOrWhiteSpace(rules?.PromptText))
             body = $"{Substitute(rules.PromptText, vars)}\n\n{body}";
 
-        return (body, null);
+        // Appended last (after the general rules block) so it reads as the final, most
+        // specific instruction for this particular request — a template's own declared
+        // widgets are a hard requirement this build must account for, not a stylistic
+        // preference like the rest of the prompt above it.
+        if (requiredWidgets is { Count: > 0 })
+            body = $"{body}\n\n{BuildRequiredWidgetsBlock(requiredWidgets)}";
+
+        return (body, null, requiredWidgets);
+    }
+
+    /// <summary>The "every declared widget must appear, real or explicitly flagged" rule a
+    /// template-originated dashboard build gets on top of the normal system prompt — see
+    /// <see cref="ResolveAsync"/>. Kept separate from the per-template PromptText (which stays
+    /// focused on what the dashboard is *about*) since this applies identically to every
+    /// dashboard template regardless of who wrote its prompt.</summary>
+    private static string BuildRequiredWidgetsBlock(IReadOnlyList<BuiltinDashboardWidgetSpec> widgets)
+    {
+        var list = string.Join("\n", widgets.Select((w, i) => $"{i + 1}) {w.Title} (نوع مقترح: {w.Type})"));
+        return $"""
+            عناصر هذه اللوحة المطلوبة — إلزامي
+            القائمة دي كل عناصر اللوحة المطلوبة، بنفس العدد والعناوين الحرفية بالضبط:
+            {list}
+            لازم يظهر كل عنصر من دول في ردك، بنفس العنوان الحرفي، من غير أي حذف أو دمج أو
+            إعادة صياغة — حتى لو بعضهم صعب تجيب له بيانات حقيقية. لكل عنصر، حالتين بس:
+            - لقيت مصدر بيانات حقيقي مطابق فعليًا (بعد ما تنادي list_files/query_data وتتأكد):
+              ابنيه عادي زي أي عنصر، بكل قواعد الدقة والمصدر المعتادة.
+              - مفيش مصدر بيانات مطابق متاح لك دلوقتي (المصدر غير مفعّل، أو غير مربوط، أو
+              مفيش جدول/عمود يطابق المطلوب أصلًا): أرجعه بنفس العنوان الحرفي بالظبط، وحط
+              "noData": true، و"missingReason" بجملة عربية قصيرة وصادقة توضح السبب (مثلاً
+              "يحتاج نظام المبيعات، وهو غير مفعّل حاليًا" أو "لا يوجد عمود يحدد هذا المقياس في
+              المصادر المتاحة") — واترك "data" مصفوفة فاضية وممنوع تحط "source". النوع
+              المقترح جنب كل عنصر فوق مجرد توجيه؛ لو شكل تاني من المخطط التسعة (kpi/bar/
+              line/pie/table/progress-table/trend-matrix/status-bar/radial-gauge/linear-gauge)
+              أنسب للبيانات اللي لقيتها فعلًا، استخدمه بدل المقترح.
+            ممنوع تحذف أي عنصر من القائمة من ردك النهائي لأي سبب — حتى لو كل عناصر اللوحة
+            طلعوا noData، كلهم لازم يظهروا. ده استثناء صريح من قاعدة "widgets فاضية لو
+            المصدر مقفول/غير مربوط" العادية فوق: هنا بالذات، كل عنصر بيترجم noData فردي
+            بعنوانه، مش مصفوفة widgets فاضية بالكامل.
+            """;
     }
 
     private async Task<(string? Prompt, string? Error)> ResolveWidgetAsync(string key, CancellationToken ct)
@@ -97,33 +141,37 @@ public class TemplatePromptService
         return (prompt, null);
     }
 
-    private async Task<(string? Prompt, string? Error)> ResolveDashboardAsync(string key, CancellationToken ct)
+    private async Task<(string? Prompt, string? Error, IReadOnlyList<BuiltinDashboardWidgetSpec>? Widgets)> ResolveDashboardAsync(
+        string key, CancellationToken ct)
     {
         var builtin = BuiltinTemplates.FindDashboard(key);
         var over = await _templates.GetAsync(TemplateKinds.Dashboard, key, ct);
-        if (builtin is null && over is null) return (null, "هذا النموذج غير موجود.");
-        if (builtin is null && over is { IsCustom: false }) return (null, "هذا النموذج غير موجود.");
+        if (builtin is null && over is null) return (null, "هذا النموذج غير موجود.", null);
+        if (builtin is null && over is { IsCustom: false }) return (null, "هذا النموذج غير موجود.", null);
 
         var status = over?.Status ?? TemplateStatuses.Published;
-        if (status != TemplateStatuses.Published) return (null, "هذا النموذج غير متاح للمستخدمين حاليًا.");
+        if (status != TemplateStatuses.Published) return (null, "هذا النموذج غير متاح للمستخدمين حاليًا.", null);
 
         var prompt = over?.PromptText ?? builtin?.Prompt;
-        if (string.IsNullOrWhiteSpace(prompt)) return (null, "هذا النموذج غير مكتمل الإعداد.");
+        if (string.IsNullOrWhiteSpace(prompt)) return (null, "هذا النموذج غير مكتمل الإعداد.", null);
 
-        // {{widgets}} only matters when the stored prompt actually references it (every
-        // built-in's own hand-written sentence already enumerates its 10 widgets inline and
-        // never does) — generated from whichever widget list is authoritative for this item:
-        // the override's own WidgetsJson if the platform-owner edited it, else the built-in's.
+        // The override's own WidgetsJson if the platform-owner edited it, else the built-in's —
+        // the one authoritative widget list for this item either way. Computed unconditionally
+        // (not just when the prompt references {{widgets}}) since ResolveAsync's caller also
+        // needs it for the required-widgets instruction block and later reconciliation, even
+        // for the original 8 built-ins, whose hand-written prompt text already enumerates its
+        // widgets inline and never uses {{widgets}} itself.
+        var specs = over?.WidgetsJson is { Length: > 0 } json
+            ? JsonSerializer.Deserialize<List<BuiltinDashboardWidgetSpec>>(json, JsonOptions) ?? new()
+            : builtin?.Widgets.ToList() ?? new();
+
         if (prompt.Contains("{{widgets}}"))
         {
-            var specs = over?.WidgetsJson is { Length: > 0 } json
-                ? JsonSerializer.Deserialize<List<BuiltinDashboardWidgetSpec>>(json, JsonOptions) ?? new()
-                : builtin?.Widgets.ToList() ?? new();
             var list = string.Join("\n", specs.Select((w, i) =>
                 $"{i + 1}) {w.Title}" + (string.IsNullOrWhiteSpace(w.Prompt) ? "" : $" — {w.Prompt}")));
             prompt = prompt.Replace("{{widgets}}", list);
         }
-        return (prompt, null);
+        return (prompt, null, specs);
     }
 
     private async Task<(string? Prompt, string? Error)> ResolveKpiAsync(TemplateRef templateRef, CancellationToken ct)

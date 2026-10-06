@@ -52,11 +52,13 @@ public class ChatController : ControllerBase
         // sent to the model is assembled here — request.Message is never used as the prompt
         // in this branch, only as a display label the frontend already showed in the bubble.
         string prompt;
+        IReadOnlyList<BuiltinDashboardWidgetSpec>? requiredWidgets = null;
         if (request.Template is not null)
         {
-            var (resolved, error) = await _templatePrompts.ResolveAsync(request.Template, user, effectiveSources, ct);
+            var (resolved, error, templateWidgets) = await _templatePrompts.ResolveAsync(request.Template, user, effectiveSources, ct);
             if (resolved is null) return BadRequest(new ChatResponse { Error = error ?? "تعذّر تحميل هذا النموذج." });
             prompt = resolved;
+            requiredWidgets = templateWidgets;
         }
         else
         {
@@ -67,6 +69,29 @@ public class ChatController : ControllerBase
         {
             var dashboard = await _generator.GenerateDashboardAsync(
                 prompt, request.CurrentDashboard, effectiveSources, request.Image, user, request.Lang, ct: ct);
+
+            // Defense in depth alongside TemplatePromptService's own required-widgets
+            // instruction block: the model is told every declared template widget must appear
+            // (real or an explicit noData placeholder), but nothing guarantees it actually
+            // did — so reconcile here too. A required title missing from the response
+            // entirely (not even as a noData placeholder) gets one appended rather than
+            // silently vanishing from the dashboard the user asked for by its known shape.
+            if (requiredWidgets is { Count: > 0 })
+            {
+                var present = new HashSet<string>(
+                    dashboard.Widgets.Select(w => w.Title), StringComparer.OrdinalIgnoreCase);
+                foreach (var req in requiredWidgets)
+                {
+                    if (present.Contains(req.Title)) continue;
+                    dashboard.Widgets.Add(new DashboardWidget
+                    {
+                        Type = req.Type,
+                        Title = req.Title,
+                        NoData = true,
+                        MissingReason = "لم يتم تضمين هذا العنصر في رد النموذج — جرّب تحديد مصدر بيانات له يدويًا.",
+                    });
+                }
+            }
 
             // Mirrors HistoryController.Update's Owner-only new-data-source guard, but on the
             // chat-continuation path: without this, an Editor could reach the same outcome —

@@ -406,6 +406,13 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
   .widget.widget-enter{animation:none}
 }
 .widget.kpi{justify-content:center;align-items:center;min-height:150px}
+/* ---------- noData placeholder (see NoDataPlaceholderCard in app.js) ---------- */
+.widget.widget-nodata{border-style:dashed;border-color:var(--grid);min-height:150px}
+.nodata-body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;flex:1;padding:18px 14px;text-align:center}
+.nodata-icon{width:28px;height:28px;color:var(--muted);opacity:.7}
+.nodata-reason{margin:0;font-size:12.5px;line-height:1.7;color:var(--muted);max-width:360px}
+.nodata-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:2px}
 /* Big number beside its description, not stacked above it — the dominant "basic numbers"
    composition in the brand's visual-system guide (a large colored figure as the focal
    point, a short caption riding its baseline to the side) rather than a centered KPI

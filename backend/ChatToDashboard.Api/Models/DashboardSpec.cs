@@ -100,24 +100,32 @@ public class DashboardSpec
                                $"trend-matrix, status-bar, radial-gauge, linear-gauge (got \"{w.Type}\").");
                 if (string.IsNullOrWhiteSpace(w.Title))
                     errors.Add($"widgets[{i}].title is required.");
-                // status-bar and radial-gauge's data are each a single object, not an array
-                // (see BuildSystemPrompt) — one total+breakdown, one single gauge value.
-                // A widget carrying "comparison" instead puts its real data inside left/right
-                // and is told to leave the top-level "data" empty or absent entirely.
-                var hasComparison = w.Comparison is { ValueKind: JsonValueKind.Object };
-                if (!hasComparison)
+                // A noData placeholder (see DashboardWidget.NoData) is a declared template
+                // widget the model couldn't build from any available source — it carries no
+                // real data or provenance, so neither is required; only type/title (checked
+                // above) matter, so the frontend can still render it as the right kind of
+                // empty-state card and the user can later fill it in.
+                if (!w.NoData)
                 {
-                    var expectsObject = string.Equals(w.Type, "status-bar", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(w.Type, "radial-gauge", StringComparison.OrdinalIgnoreCase);
-                    var expectedKind = expectsObject ? JsonValueKind.Object : JsonValueKind.Array;
-                    if (w.Data.ValueKind != expectedKind)
-                        errors.Add(expectedKind == JsonValueKind.Object
-                            ? $"widgets[{i}].data must be a single JSON object for type \"{w.Type}\"."
-                            : $"widgets[{i}].data must be a JSON array.");
+                    // status-bar and radial-gauge's data are each a single object, not an array
+                    // (see BuildSystemPrompt) — one total+breakdown, one single gauge value.
+                    // A widget carrying "comparison" instead puts its real data inside left/right
+                    // and is told to leave the top-level "data" empty or absent entirely.
+                    var hasComparison = w.Comparison is { ValueKind: JsonValueKind.Object };
+                    if (!hasComparison)
+                    {
+                        var expectsObject = string.Equals(w.Type, "status-bar", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(w.Type, "radial-gauge", StringComparison.OrdinalIgnoreCase);
+                        var expectedKind = expectsObject ? JsonValueKind.Object : JsonValueKind.Array;
+                        if (w.Data.ValueKind != expectedKind)
+                            errors.Add(expectedKind == JsonValueKind.Object
+                                ? $"widgets[{i}].data must be a single JSON object for type \"{w.Type}\"."
+                                : $"widgets[{i}].data must be a JSON array.");
+                    }
+                    if (string.IsNullOrWhiteSpace(w.Source))
+                        errors.Add($"widgets[{i}].source is required: two sentences — where the data came " +
+                                   "from, then how it was calculated.");
                 }
-                if (string.IsNullOrWhiteSpace(w.Source))
-                    errors.Add($"widgets[{i}].source is required: two sentences — where the data came " +
-                               "from, then how it was calculated.");
                 if (w.Forecast is not null)
                 {
                     var f = w.Forecast;
@@ -223,6 +231,28 @@ public class DashboardWidget
     /// </summary>
     [JsonPropertyName("comparison")]
     public JsonElement? Comparison { get; set; }
+
+    /// <summary>
+    /// True for a declared template widget (see BuiltinDashboardTemplate/
+    /// BuiltinDashboardWidgetSpec) the model couldn't build from any source currently
+    /// enabled — no real <see cref="Data"/>/<see cref="Source"/>, just the original intended
+    /// Type/Title so the dashboard still shows the template's full, familiar shape instead of
+    /// silently dropping items. The frontend renders this as an explicit empty-state card
+    /// (never faked data) with an action to pick a source for it — either the structured
+    /// "Add Widget" wizard, or a follow-up chat question naming an alternate source — either
+    /// of which replaces this placeholder with a normal, real widget in place. Set either by
+    /// the model itself (instructed in TemplatePromptService's required-widgets block) or by
+    /// ChatController's own reconciliation pass when the model dropped a required widget
+    /// outright instead of marking it — see ChatController.Post.
+    /// </summary>
+    [JsonPropertyName("noData")]
+    public bool NoData { get; set; }
+
+    /// <summary>Short, honest Arabic reason shown on a <see cref="NoData"/> card — e.g. which
+    /// source would be needed. Never a technical error message; same tone as a normal
+    /// widget's refusal-to-fabricate explanation elsewhere in the system prompt.</summary>
+    [JsonPropertyName("missingReason")]
+    public string? MissingReason { get; set; }
 }
 
 /// <summary>See <see cref="DashboardWidget.Query"/>.</summary>

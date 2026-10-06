@@ -1134,6 +1134,34 @@ function openPeriodEditor(w) {
   renderWizardStep();
 }
 
+// "اختر مصدر يدويًا" on a noData placeholder (see NoDataPlaceholderCard) — same structured
+// table/metric/aggregation wizard "+ إضافة عنصر" uses, just targeting an existing widget by
+// id instead of appending a new one (see confirmWizardResult's 'fill-placeholder' branch).
+// Starts at the normal 'kind' step like a fresh add: the wizard only knows kpi/bar/line/pie/
+// table shapes, not the template's own suggested type (one of the newer progress-table/
+// trend-matrix/... types a template widget may have asked for), so the user picks whichever
+// of the wizard's supported shapes fits the real data they choose.
+function openFillPlaceholderWizard(w) {
+  state.wizard = { mode: 'fill-placeholder', targetId: w.id, step: 'kind', stack: [], kind: null, table: null,
+    dimension: null, metric: null, dateColumn: null, timeRange: 'all', granularity: 'month',
+    columns: [], columnsTouched: false, sort: 'desc', fields: null, gen: 0 };
+  el('wizard-next').classList.add('hidden');
+  el('wizard-modal').classList.remove('hidden');
+  renderWizardStep();
+}
+
+// "اطلب من جيم" on a noData placeholder — pre-fills the normal chat box with a targeted
+// follow-up naming the widget, exactly like gal-start-ai's "اطلب من جيم" quick-start does for
+// a blank dashboard, and leaves it to the user to add detail (an alternate source name) before
+// pressing إرسال themselves. Sent through the exact same ask()/continuation path as any typed
+// question — the system prompt's own "عنصر... noData" rule (see AnalyticsTools.cs) is what
+// actually tells the model to retry building just this one widget instead of leaving it as is.
+function askForPlaceholderWidget(w) {
+  el('q').value = `جرّب تبني عنصر «${w.title}» من مصدر بيانات تاني — `;
+  el('q').focus();
+  el('q').scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 function closeWizard() { el('wizard-modal').classList.add('hidden'); state.wizard = null; }
 el('wizard-close').addEventListener('click', closeWizard);
 el('wizard-modal').addEventListener('click', e => { if (e.target.id === 'wizard-modal') closeWizard(); });
@@ -1222,6 +1250,18 @@ function confirmWizardResult() {
       target.type = w.result.type; target.data = w.result.data;
       target.xKey = w.result.xKey; target.yKey = w.result.yKey;
       target.source = w.result.source; target.query = w.result.query;
+    }
+  } else if (w.mode === 'fill-placeholder') {
+    // Fills a noData template widget in place (see NoDataPlaceholderCard/
+    // openFillPlaceholderWizard) — keeps its id/position/original title (the template's own
+    // declared wording, not whatever generic title the wizard's preview came up with) so the
+    // dashboard keeps the exact shape the user picked, just with this one slot now real.
+    const target = findWidget(w.targetId);
+    if (target) {
+      target.type = w.result.type; target.data = w.result.data;
+      target.xKey = w.result.xKey; target.yKey = w.result.yKey;
+      target.source = w.result.source; target.query = w.result.query;
+      delete target.noData; delete target.missingReason;
     }
   } else {
     const widget = {
@@ -2236,7 +2276,51 @@ function ComparisonCard(raw) {
   return wrap;
 }
 
+// ---------- noData placeholder (template widget with no matching data source yet) ----------
+// Never fakes data — shows the widget's real intended title with an explicit, honest "no
+// matching source" state instead, plus the two ways to fill it in (see openFillPlaceholderWizard/
+// askForPlaceholderWidget). Deliberately its own minimal shell rather than widgetShell(): no
+// source ⓘ (there is no source yet), no forecast button (no data to forecast from), no
+// "غير متأثر بالفلتر" badge (not meaningfully "unaffected" — it has nothing at all yet).
+function NoDataPlaceholderCard(w) {
+  const card = document.createElement('div');
+  card.className = 'widget widget-nodata';
+  card.dataset.size = (w.layout && w.layout.size) || 'wide';
+  if (w.id) card.dataset.widgetId = w.id;
+
+  const head = document.createElement('div');
+  head.className = 'widget-head';
+  const title = document.createElement('h3');
+  title.textContent = w.title || '';
+  head.appendChild(title);
+  const editable = !!state.currentUser && state.dashboardRole !== 'viewer';
+  if (state.editMode && w.id) {
+    const { btn: menuBtn, menu } = widgetMenu(w);
+    head.appendChild(menuBtn);
+    card.appendChild(menu);
+    enableWidgetDragDrop(card, w);
+  }
+  card.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'nodata-body';
+  body.innerHTML = `
+    <svg class="icon icon-lg nodata-icon" aria-hidden="true"><use href="#i-database"/></svg>
+    <p class="nodata-reason">${esc(w.missingReason || 'لم يتم العثور على مصدر بيانات مطابق لهذا العنصر.')}</p>
+    ${editable ? `<div class="nodata-actions">
+      <button type="button" class="btn btn-soft btn-sm" data-act="manual">اختر مصدر يدويًا</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-act="ask">اطلب من جيم</button>
+    </div>` : ''}`;
+  card.appendChild(body);
+  if (editable) {
+    body.querySelector('[data-act="manual"]').addEventListener('click', () => openFillPlaceholderWizard(w));
+    body.querySelector('[data-act="ask"]').addEventListener('click', () => askForPlaceholderWidget(w));
+  }
+  return card;
+}
+
 function buildWidget(raw) {
+  if (raw.noData) return NoDataPlaceholderCard(raw);
   if (raw.comparison && typeof raw.comparison === 'object') return ComparisonCard(raw);
   const type = (raw.type || '').toLowerCase();
   if (!WIDGET_TYPES.includes(type)) {
