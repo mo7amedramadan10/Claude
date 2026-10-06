@@ -3276,6 +3276,10 @@ function openDashGalPreview(d) {
           <button type="button" class="btn btn-primary" id="gal-use-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
           </button>
+          ${window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id) ? `
+          <button type="button" class="btn btn-ghost" id="gal-demo-btn">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية بأرقام توضيحية
+          </button>` : ''}
           <span class="muted" style="font-size:var(--fs-xs)">تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.</span>
         </div>
       </div>
@@ -3290,9 +3294,63 @@ function openDashGalPreview(d) {
     setChatMode('dashboard');
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
+  el('gal-demo-btn')?.addEventListener('click', () => openDashGalDemo(d));
   el('gal-view-list').classList.add('hidden');
   el('gal-view-preview').classList.remove('hidden');
 }
+
+// ---------- معاينة توضيحية تفاعلية (معرض الأمثلة) ----------
+// هنا، وهنا فقط، في الـAI تعرض بيانات/أرقام مش حقيقية — عشان تعطي المستخدم فكرة بصرية
+// كاملة عن شكل اللوحة النهائي (صفحات، فلاتر، 28 نوع رسم) قبل ما يبنيها فعليًا. المحرك
+// (dash-render.js → window.JR) ومكتبة البيانات (dash-library.js → window.JEEM_DASH_LIBRARY)
+// منفصلين تمامًا عن مسار البناء الحقيقي: الأرقام هنا ثابتة/عشوائية مشتقة من اسم اللوحة
+// نفسها (نفس القيمة كل مرة، تتغيّر فقط بشكل بصري لما تغيّر فلتر لمحاكاة التفاعل) ومكتوب
+// عليها تحذير صريح في كل مكان. زرار "استخدم هذا النموذج" هنا هو نفسه المسؤول عن الانتقال
+// لمسار البناء الحقيقي (ask() + templateRef) — نفس الزرار بتاع المعاينة البسيطة بالظبط.
+function openDashGalDemo(d) {
+  const entry = (window.JEEM_DASH_LIBRARY || []).find(x => x.id === d.id);
+  if (!entry || !window.JR) return;
+  const nPages = entry.p.length, nWidgets = entry.p.reduce((s, p) => s + p.w.length, 0);
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل اللوحة — ليست بيانات حقيقية من مشروعك، وتتغيّر بشكل
+      شكلي عند تغيير الفلاتر لمحاكاة التفاعل. لبناء اللوحة الفعلية ببيانات مشروعك الحقيقية،
+      اضغط «استخدم هذا النموذج».
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(entry.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">
+          ${ic2('layers')}${nPages.toLocaleString('en-US')} ${nPages > 1 ? 'صفحات' : 'صفحة'} ·
+          ${ic2('dashboard')}${nWidgets.toLocaleString('en-US')} عنصرًا ·
+          ${entry.sources.map(s => esc(s)).join('، ')}
+        </span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <div class="jr-bar" id="gal-demo-bar"></div>
+    <div class="grid" id="gal-demo-grid"></div>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JR.mount(entry, el('gal-demo-grid'), { bar: el('gal-demo-bar') });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function ic2(n) { return `<svg class="icon icon-sm" aria-hidden="true"><use href="#i-${n}"/></svg>`; }
 
 el('gal-start-blank').addEventListener('click', () => {
   closeDashGallery();
