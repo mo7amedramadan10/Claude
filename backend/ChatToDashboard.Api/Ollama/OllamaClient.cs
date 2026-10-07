@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
+using ChatToDashboard.Api.Analyst;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
@@ -177,6 +178,276 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         return await RunLoopAsync(
             model, messages, null, context, trace,
             AnalyticsTools.TryParseDashboard, "dashboard", ct);
+    }
+
+    /// <summary>
+    /// "المحلل الذكي" — see Analyst.AnalystPrompts/Analyst.AnalystLoopTypes for the contract this
+    /// drives. Always Ollama/Qwen, never routed through LlmRouter's provider selection (see the
+    /// spec's own "الستاك الحالي" section) — called directly by AnalystController, not through
+    /// IDashboardGenerator, so this and its two new stage-emitting steps below live here without
+    /// touching Chat/Inquiry's own RunLoopAsync&lt;T&gt; at all.
+    ///
+    /// Two real SSE stages happen inside this one call (see AnalystStageCallback): "understand"
+    /// (the classification turn) and, for an org_data question only, "query" (the tool loop
+    /// itself — list_files/query_data/query_client_data, reusing AnalyticsTools.BuildTools/
+    /// ExecuteToolAsync verbatim, same permission/internal-table gating Chat and Inquiry already
+    /// get for free). "sources"/"verify"/"compose" are the caller's own job (AnalystController) —
+    /// they're either pure server-side work (resolving SourceSelection) or persistence, neither
+    /// of which this class has any business doing.
+    /// </summary>
+    public async Task<AnalystLoopResult> GenerateAnalystAsync(
+        string question, SourceSelection? sources, AppUser? requestingUser, AnalystStageCallback onStage, CancellationToken ct = default)
+    {
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+
+        AnalystKnowledgeScope scope;
+        await onStage(AnalystStages.Understand, AnalystStageStates.Running);
+        try
+        {
+            var classifyMessages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = AnalystPrompts.ClassifySystemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = AnalystPrompts.ClassifyUserMessage(question) },
+            };
+            var classifyResponse = await CallChatAsync(model, classifyMessages, null, trace, ct);
+            var classifyText = classifyResponse["message"]?["content"]?.GetValue<string>() ?? "";
+            scope = AnalystPrompts.ParseClassification(classifyText);
+        }
+        catch (Exception ex)
+        {
+            await onStage(AnalystStages.Understand, AnalystStageStates.Failed);
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+        }
+        await onStage(AnalystStages.Understand, AnalystStageStates.Done);
+
+        if (scope == AnalystKnowledgeScope.OutOfScope)
+        {
+            await trace.CompleteAsync(true, "out_of_scope", null, ct);
+            return new AnalystLoopResult(AnalystLoopOutcome.OutOfScope, null, EmptyCapturedQueries, null);
+        }
+
+        if (scope == AnalystKnowledgeScope.General)
+        {
+            await onStage(AnalystStages.Query, AnalystStageStates.Running);
+            try
+            {
+                var generalMessages = new JsonArray
+                {
+                    new JsonObject { ["role"] = "system", ["content"] = AnalystPrompts.GeneralKnowledgeSystemPrompt },
+                    new JsonObject { ["role"] = "user", ["content"] = question },
+                };
+                trace.SetSystemPrompt(AnalystPrompts.GeneralKnowledgeSystemPrompt);
+                var response = await CallChatAsync(model, generalMessages, null, trace, ct);
+                var text = response["message"]?["content"]?.GetValue<string>() ?? "";
+                var (parsed, error) = AnalystPrompts.TryParseAnalystResult(text);
+                if (parsed is null)
+                {
+                    await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+                    await trace.CompleteAsync(false, text, error, ct);
+                    return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, error);
+                }
+                await onStage(AnalystStages.Query, AnalystStageStates.Done);
+                await trace.CompleteAsync(true, text, null, ct);
+                return new AnalystLoopResult(AnalystLoopOutcome.General, parsed, EmptyCapturedQueries, null);
+            }
+            catch (Exception ex)
+            {
+                await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+                await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+                return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+            }
+        }
+
+        // org_data — the real tool loop.
+        var systemPrompt = AnalystPrompts.BuildAnalystSystemPrompt(context);
+        trace.SetSystemPrompt(systemPrompt);
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = question },
+        };
+        var tools = BuildToolsJson(context);
+
+        await onStage(AnalystStages.Query, AnalystStageStates.Running);
+        try
+        {
+            var (result, capturedQueries) = await RunAnalystToolLoopAsync(model, messages, tools, context, trace, ct);
+            if (result is null)
+            {
+                await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+                return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, capturedQueries, "تعذّر الحصول على رد صالح من الموديل.");
+            }
+            await onStage(AnalystStages.Query, AnalystStageStates.Done);
+            return new AnalystLoopResult(AnalystLoopOutcome.OrgData, result, capturedQueries, null);
+        }
+        catch (Exception ex)
+        {
+            await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+        }
+    }
+
+    private static readonly IReadOnlyDictionary<string, AnalystCapturedQuery> EmptyCapturedQueries =
+        new Dictionary<string, AnalystCapturedQuery>();
+
+    /// <summary>Same tool-calling mechanics as <see cref="RunLoopAsync{T}"/> (call, execute any
+    /// requested tool, loop; JSON-repair retries on an invalid final answer) but specialized for
+    /// the Analyst contract: every successful query_data/query_client_data call is captured under
+    /// a sequential id ("q1", "q2", ...) — see AnalystCapturedQuery — so the final answer's
+    /// result_query_id can point back at real, already-fetched rows instead of the model ever
+    /// restating them. A separate method rather than a generic-T branch inside RunLoopAsync
+    /// itself, specifically so Chat/Inquiry's own loop is untouched by this.</summary>
+    private async Task<(AnalystModelResult? Result, IReadOnlyDictionary<string, AnalystCapturedQuery> Captured)> RunAnalystToolLoopAsync(
+        string model, JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context, UsageTrace trace, CancellationToken ct)
+    {
+        var captured = new Dictionary<string, AnalystCapturedQuery>();
+        var queryCounter = 0;
+        var jsonRepairAttempts = 0;
+        var forcedFinalAnswerNoticeSent = false;
+
+        try
+        {
+            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var forceFinalAnswer = iteration >= ForceFinalAnswerAtIteration;
+                if (forceFinalAnswer && !forcedFinalAnswerNoticeSent)
+                {
+                    forcedFinalAnswerNoticeSent = true;
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] =
+                            "لقد استدعيت عددًا كافيًا من الأدوات بالفعل. لا تنادِ أي أداة أخرى — " +
+                            "استخدم فقط النتائج التي جمعتها حتى الآن، وأجب فورًا بكائن JSON النهائي " +
+                            "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
+                    });
+                }
+                var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+                var message = response["message"]?.AsObject()
+                    ?? throw new InvalidOperationException("Ollama gateway response had no 'message'.");
+                messages.Add(message.DeepClone());
+
+                var toolCalls = message["tool_calls"]?.AsArray();
+                if (toolCalls is { Count: > 0 })
+                {
+                    foreach (var call in toolCalls)
+                    {
+                        var function = call?["function"]?.AsObject();
+                        if (function is null) continue;
+                        var toolName = function["name"]?.GetValue<string>() ?? "";
+                        var argumentsNode = function["arguments"];
+                        JsonObject arguments = argumentsNode switch
+                        {
+                            JsonObject obj => obj,
+                            JsonValue val when val.TryGetValue<string>(out var raw) && !string.IsNullOrWhiteSpace(raw)
+                                => TryParseArguments(raw),
+                            _ => new JsonObject(),
+                        };
+
+                        var toolClock = System.Diagnostics.Stopwatch.StartNew();
+                        var (result, isError) = await _tools.ExecuteToolAsync(toolName, arguments, context, ct);
+                        trace.RecordToolCall(toolName, arguments.ToJsonString(), result, isError, toolClock.ElapsedMilliseconds);
+
+                        if (!isError && (toolName == "query_data" || toolName == "query_client_data"))
+                        {
+                            queryCounter++;
+                            var id = $"q{queryCounter}";
+                            if (TryExtractRows(result, out var columns, out var rows))
+                                captured[id] = new AnalystCapturedQuery(arguments["sql"]?.GetValue<string>() ?? "", columns, rows);
+                            // The model addresses its own captured queries by id in the final
+                            // JSON, so it has to know what each one is called — appended to the
+                            // tool result text itself rather than a separate message, keeping
+                            // the id right next to the data it labels.
+                            result = $"[query id: {id}] {result}";
+                        }
+                        messages.Add(ToolResultMessage(toolName, result, isError));
+                    }
+                    continue;
+                }
+
+                var text = message["content"]?.GetValue<string>() ?? string.Empty;
+                var (parsed, parseError) = AnalystPrompts.TryParseAnalystResult(text);
+                if (parsed is not null)
+                {
+                    await trace.CompleteAsync(true, text, null, ct);
+                    return (parsed, captured);
+                }
+
+                jsonRepairAttempts++;
+                _logger.LogWarning("Analyst JSON invalid (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
+                if (jsonRepairAttempts >= MaxJsonRepairAttempts)
+                {
+                    await trace.CompleteAsync(false, text, parseError, ct);
+                    return (null, captured);
+                }
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] =
+                        $"ردّك السابق مش JSON صالح مطابق للمخطط. الخطأ: {parseError}\n" +
+                        "رُد تاني بكائن JSON واحد بس مطابق للمخطط المطلوب، من غير أي نص أو markdown حواليه.",
+                });
+            }
+
+            await trace.CompleteAsync(false, null, $"Tool-calling loop did not converge within {MaxToolIterations} iterations.", CancellationToken.None);
+            return (null, captured);
+        }
+        catch (Exception)
+        {
+            // Caller (GenerateAnalystAsync) owns trace.CompleteAsync for the failure path here —
+            // it already wraps this call in its own try/catch with the stage-failed callback.
+            throw;
+        }
+    }
+
+    /// <summary>Parses a query_data/query_client_data tool result's own {"rowCount":N,"rows":[...]}
+    /// shape (see AnalyticsTools.ExecuteQueryAsync/ClientQueryService.RunQueryAsync) back into a
+    /// captured query's columns/rows. False on anything else (an error string, an unexpected
+    /// shape) — the query is then simply not captured, same "degrade, don't crash" rule as
+    /// every other best-effort parse in this feature.</summary>
+    private static bool TryExtractRows(string resultJson, out IReadOnlyList<string> columns, out IReadOnlyList<Dictionary<string, object?>> rows)
+    {
+        columns = Array.Empty<string>();
+        rows = Array.Empty<Dictionary<string, object?>>();
+        try
+        {
+            using var doc = JsonDocument.Parse(resultJson);
+            if (!doc.RootElement.TryGetProperty("rows", out var rowsEl) || rowsEl.ValueKind != JsonValueKind.Array)
+                return false;
+
+            var parsedRows = new List<Dictionary<string, object?>>();
+            var columnSet = new List<string>();
+            foreach (var rowEl in rowsEl.EnumerateArray())
+            {
+                var row = new Dictionary<string, object?>();
+                foreach (var prop in rowEl.EnumerateObject())
+                {
+                    if (!columnSet.Contains(prop.Name)) columnSet.Add(prop.Name);
+                    row[prop.Name] = prop.Value.ValueKind switch
+                    {
+                        JsonValueKind.Number => prop.Value.TryGetInt64(out var l) ? l : prop.Value.GetDouble(),
+                        JsonValueKind.String => prop.Value.GetString(),
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        JsonValueKind.Null => null,
+                        _ => prop.Value.GetRawText(),
+                    };
+                }
+                parsedRows.Add(row);
+            }
+            columns = columnSet;
+            rows = parsedRows;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     // Long side of a page image sent to the internal gateway, after re-encoding to JPEG below.

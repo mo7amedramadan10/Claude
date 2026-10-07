@@ -1914,9 +1914,11 @@ public class AnalyticsTools
     /// <summary>
     /// Pulls the single JSON object out of a model's final-turn text — tolerates a markdown
     /// code fence or stray prose around it. Shared by every "parse the model's final answer"
-    /// path (dashboard, Inquiries); each does its own typed deserialization/validation after.
+    /// path (dashboard, Inquiries, and — internal, since Analyst.AnalystPrompts is a different
+    /// namespace in this same assembly — the Project Analyst's own result JSON); each caller
+    /// does its own typed deserialization/validation after.
     /// </summary>
-    private static (string? Candidate, string? Error) ExtractJsonCandidate(string text)
+    internal static (string? Candidate, string? Error) ExtractJsonCandidate(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return (null, "the response contained no text.");
