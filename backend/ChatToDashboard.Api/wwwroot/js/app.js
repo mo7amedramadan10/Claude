@@ -3355,17 +3355,21 @@ function dashGalThumb(d) {
 // النهائي من مكتبة النماذج اللي مسؤول المنصة بيعدّلها، عشان المستخدم مايقدرش يغيّر الوصف
 // المُرسل للموديل من عنده. انظر loadTemplateCatalog() وask() (التمبلت ريف).
 let DASH_GALLERY = []; // fetched from /api/templates/catalog — see loadTemplateCatalog()
-// الفئات الأصلية الثمانية + الفئات الجديدة اللي جابتها الـ55 لوحة (BuiltinDashboardsGenerated.cs
-// على السيرفر بيستخدم نفس المفاتيح دي بالظبط — retail/banking/supply/hse/saas/health/
-// hospitality/gov/other — فلازم تفضل متطابقة هنا وهناك).
+// الفئات الأصلية الثمانية + الفئات اللي جابتها الـ55 لوحة + الأربعة الجديدة من لوحات
+// Databox الـ157 (marketing/ads/social/dev — انظر IMPLEMENTATION.md "لوحات معرض Databox").
+// BuiltinDashboardsGenerated.cs على السيرفر بيستخدم نفس المفاتيح دي بالظبط، فلازم تفضل
+// متطابقة هنا وهناك. اسم "sales"/"cx" اتغيّر ليعكس إن "المبيعات والتسويق"/"تجربة العملاء"
+// بقى لهم تصنيفات تسويقية منفصلة دلوقتي (marketing/ads/social).
 const DASH_GAL_CATS = [
-  ['all', 'كل النماذج', 'grid'], ['sales', 'المبيعات والتسويق', 'chart'], ['projects', 'المشاريع', 'layers'],
+  ['all', 'كل النماذج', 'grid'], ['sales', 'المبيعات وإدارة العملاء', 'chart'], ['projects', 'المشاريع', 'layers'],
   ['finance', 'المالية', 'sheet'], ['hr', 'الموارد البشرية', 'users'], ['procurement', 'المشتريات', 'briefcase'],
-  ['cx', 'تجربة العملاء', 'headset'], ['ops', 'العمليات', 'settings'],
+  ['cx', 'خدمة العملاء ونجاحهم', 'headset'], ['ops', 'العمليات', 'settings'],
   ['retail', 'التجزئة والتجارة الإلكترونية', 'cart'], ['banking', 'البنوك والتأمين', 'wallet'],
   ['supply', 'سلاسل الإمداد', 'server'], ['hse', 'السلامة', 'shield'], ['saas', 'الاشتراكات', 'layers'],
   ['health', 'الصحة', 'headset'], ['hospitality', 'الضيافة والسفر', 'star'], ['gov', 'القطاع الحكومي', 'briefcase'],
   ['other', 'أخرى', 'more'],
+  ['marketing', 'التسويق الرقمي', 'target'], ['ads', 'الإعلانات المدفوعة', 'send'],
+  ['social', 'التواصل الاجتماعي والمحتوى', 'chat'], ['dev', 'التطوير والتطبيقات', 'grid'],
 ];
 
 let dashGalCat = 'all', dashGalQuery = '';
@@ -7710,7 +7714,7 @@ function tpladmListPane(kind) {
       <thead><tr><th>النموذج</th><th>التصنيف</th><th>وصف الذكاء الاصطناعي</th><th>الحالة</th><th>الإصدار</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
       <tbody>${rows.map(x => `
         <tr data-key="${esc(x.key)}">
-          <td><div class="lib-name">${thumbOf(x)}<div><strong>${esc(x.title)}${x.isCustom ? ' <span class="badge badge-blue">مضاف</span>' : x.isOverridden ? ' <span class="badge">معدّل</span>' : ''}</strong><span>${esc(x.description || '')}</span></div></div></td>
+          <td><div class="lib-name">${thumbOf(x)}<div><strong>${esc(x.title)}${x.isCustom ? ' <span class="badge badge-blue">مضاف</span>' : x.isOverridden ? ' <span class="badge">معدّل</span>' : ''}</strong><span>${esc(x.description || '')}</span>${x.databoxRef ? `<span class="muted" style="display:block;font-size:11px">${tplIc('link', 'icon icon-sm')} مرجع التصميم (لا يظهر للعميل): ${esc(x.databoxRef)}</span>` : ''}</div></div></td>
           <td><span class="badge">${esc(catName(x.category))}</span></td>
           <td><p class="lib-prompt">${tpladmCodeVars(x.promptText)}</p></td>
           <td>${tpladmStatusPill(x.status)}</td>

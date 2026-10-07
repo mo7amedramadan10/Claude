@@ -149,7 +149,8 @@ public class TemplatesController : ControllerBase
             foreach (var b in BuiltinTemplates.Dashboards)
                 items.Add(ToAdminItem(kind, b.Id, false, overrides.GetValueOrDefault(b.Id),
                     b.Name, b.Description, null, b.Category, b.Sources.ToList(),
-                    b.Widgets.Select(w => new { type = w.Type, title = w.Title, prompt = w.Prompt, table = w.Table, sql = w.Sql }), b.Prompt));
+                    b.Widgets.Select(w => new { type = w.Type, title = w.Title, prompt = w.Prompt, table = w.Table, sql = w.Sql }), b.Prompt,
+                    b.DataboxRef));
         }
         foreach (var o in overrides.Values.Where(o => o.IsCustom))
             items.Add(ToAdminItem(kind, o.Key, true, o, o.Title ?? "", o.Description ?? "", o.Icon,
@@ -409,7 +410,7 @@ public class TemplatesController : ControllerBase
     private static object ToAdminItem(
         string kind, string key, bool isCustom, TemplateOverride? over,
         string title, string description, string? icon, string? category,
-        List<string>? sources, object? widgets, string prompt) => new
+        List<string>? sources, object? widgets, string prompt, string? databoxRef = null) => new
     {
         kind, key, isCustom, isOverridden = over is not null,
         status = over?.Status ?? TemplateStatuses.Published,
@@ -418,6 +419,10 @@ public class TemplatesController : ControllerBase
         sources = DeserializeSources(over?.SourcesJson) ?? sources ?? new List<string>(),
         widgets = DeserializeWidgetsFull(over?.WidgetsJson) ?? widgets,
         promptText = over?.PromptText ?? prompt,
+        // Design-inspiration tracking only (see BuiltinDashboardTemplate.DataboxRef's own
+        // remarks) — never user-editable, so there's no override to merge in here the way
+        // every other field above has.
+        databoxRef,
         version = over?.Version ?? 0, updatedByName = over?.UpdatedByName, updatedAt = over?.UpdatedAt,
     };
 

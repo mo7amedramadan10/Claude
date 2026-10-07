@@ -21,9 +21,15 @@ public record BuiltinDashboardWidgetSpec(
     string Type, string Title, string? Prompt = null, string? Page = null,
     string? Table = null, string? Sql = null);
 
+/// <summary><paramref name="DataboxRef"/> names the original https://databox.com/dashboard-examples
+/// template(s) this one is design-inspired by (comma-joined when several tool variants were
+/// merged into one, e.g. "SaaS Marketing Dashboard (CMO)") — null for every dashboard not
+/// sourced that way. Admin-only (see TemplatesController.AdminList/ToAdminItem): never reaches
+/// the public catalog or the AI prompt. Internal tracking only, not a claim of copied content —
+/// see IMPLEMENTATION.md's "لوحات معرض Databox" section for the legal note this mirrors.</summary>
 public record BuiltinDashboardTemplate(
     string Id, string Layout, string Category, string Name, bool Popular, string Description,
-    string[] Sources, BuiltinDashboardWidgetSpec[] Widgets, string Prompt);
+    string[] Sources, BuiltinDashboardWidgetSpec[] Widgets, string Prompt, string? DataboxRef = null);
 
 /// <summary>The 8 chat-widget templates, 8 dashboard templates and 6 KPI measure-type prompts
 /// that shipped baked into wwwroot/js/app.js before the "مكتبة النماذج" admin screen — ported
