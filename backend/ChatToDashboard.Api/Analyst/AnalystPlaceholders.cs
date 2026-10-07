@@ -9,28 +9,40 @@ namespace ChatToDashboard.Api.Analyst;
 /// sum/avg/min/max/top1-5/bottom1-3/share_top3 per column), so every number in a composed
 /// message traces back to a real cell, never the model's own arithmetic or invention.
 ///
-/// Phase 1 scope note: this is the substitution engine only. The spec's own Phase 3
-/// ("القالب والأرقام") additionally calls for a GUARD — scanning the model's answer_template for
-/// any stray digit outside a recognized token and retrying/failing the composition if one slips
-/// through — plus the regex needs to handle Arabic-Indic digits in the model's own output. That
-/// guard is deliberately NOT implemented here yet (see the Phase 1 report); this engine renders
-/// correctly today but a model that free-types a number next to a placeholder would currently go
-/// unflagged. Built now anyway, not as a throwaway, specifically so Phase 3 only has to add the
-/// guard on top of this rather than build substitution from scratch too.
+/// Phase 3 ("القالب والأرقام") adds <see cref="HasStrayDigits"/>, the number guard the system
+/// prompt's own instructions rely on but nothing used to enforce: the model is TOLD never to
+/// write a literal number in answer_template, but a model is not a validator, so the caller
+/// (OllamaClient.RunAnalystToolLoopAsync) runs this check against every parsed answer_template
+/// before accepting it, and retries with a corrective message the same way an invalid-JSON
+/// response is retried, up to the same attempt budget.
 /// </summary>
 public static class AnalystPlaceholders
 {
     private static readonly Regex Token = new(@"\{\{\s*([A-Za-z0-9_.]+)(?:\|([A-Za-z]))?\s*\}\}", RegexOptions.Compiled);
     private static readonly Regex TopPattern = new(@"^top([1-5])$", RegexOptions.Compiled);
     private static readonly Regex BottomPattern = new(@"^bottom([1-3])$", RegexOptions.Compiled);
+    // Western 0-9, Arabic-Indic ٠-٩ (U+0660-0669), and Extended Arabic-Indic (Persian) ۰-۹
+    // (U+06F0-06F9) — the model answers in Arabic and could write a literal number in any of the
+    // three, so all three count as a guard violation.
+    private static readonly Regex AnyDigit = new(@"[0-9٠-٩۰-۹]", RegexOptions.Compiled);
+
+    /// <summary>True if <paramref name="template"/> has a digit outside any {{...}} token — a
+    /// contract violation: every number in a composed answer must come from a placeholder this
+    /// engine fills from real rows, never typed literally by the model. Strips every recognized
+    /// token first (a token's own key may legitimately contain digits, e.g. top1/bottom3) and
+    /// scans what is left over.</summary>
+    public static bool HasStrayDigits(string template) => AnyDigit.IsMatch(Token.Replace(template, ""));
 
     public record RenderResult(string Text, IReadOnlyList<string> MissingKeys);
 
     /// <summary>Renders every token it can; a key with no matching data (an unknown column, a
     /// topN beyond the row count) is left as the literal "missing" list — the caller (the
-    /// compose step) decides what to do with that (Phase 1: log and keep the literal token in
-    /// place rather than silently drop it, so a broken template is visibly broken, not silently
-    /// wrong — Phase 3 is where this becomes a real retry-then-fail per spec section 6).</summary>
+    /// compose step) decides what to do with that. As of Phase 3 this call is also run upstream,
+    /// against the same captured rows, by OllamaClient's own guard before an answer_template is
+    /// ever accepted (see ValidateAnswerTemplate), so MissingKeys should be empty here in
+    /// practice; the caller still only logs and keeps the literal token in place rather than
+    /// assuming that pre-check always ran — a result with no result_query_id skips it entirely —
+    /// so a broken template stays visibly broken, never silently wrong.</summary>
     public static RenderResult Render(
         string template, IReadOnlyList<string> columns, IReadOnlyList<Dictionary<string, object?>> rows, string? primaryMeasure)
     {

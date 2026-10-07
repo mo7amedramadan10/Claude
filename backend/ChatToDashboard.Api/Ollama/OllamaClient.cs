@@ -295,12 +295,17 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         new Dictionary<string, AnalystCapturedQuery>();
 
     /// <summary>Same tool-calling mechanics as <see cref="RunLoopAsync{T}"/> (call, execute any
-    /// requested tool, loop; JSON-repair retries on an invalid final answer) but specialized for
-    /// the Analyst contract: every successful query_data/query_client_data call is captured under
-    /// a sequential id ("q1", "q2", ...) — see AnalystCapturedQuery — so the final answer's
+    /// requested tool, loop; retries on an invalid final answer) but specialized for the Analyst
+    /// contract: every successful query_data/query_client_data call is captured under a
+    /// sequential id ("q1", "q2", ...) — see AnalystCapturedQuery — so the final answer's
     /// result_query_id can point back at real, already-fetched rows instead of the model ever
     /// restating them. A separate method rather than a generic-T branch inside RunLoopAsync
-    /// itself, specifically so Chat/Inquiry's own loop is untouched by this.</summary>
+    /// itself, specifically so Chat/Inquiry's own loop is untouched by this.
+    ///
+    /// The same retry budget also covers <see cref="ValidateAnswerTemplate"/> (Phase 3's number
+    /// guard): an answer that parses as valid JSON but writes a literal number, or references a
+    /// placeholder key that doesn't resolve against its own captured query, is rejected exactly
+    /// like invalid JSON — the model gets a corrective message and another attempt.</summary>
     private async Task<(AnalystModelResult? Result, IReadOnlyDictionary<string, AnalystCapturedQuery> Captured)> RunAnalystToolLoopAsync(
         string model, JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context, UsageTrace trace, CancellationToken ct)
     {
@@ -374,12 +379,16 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 var (parsed, parseError) = AnalystPrompts.TryParseAnalystResult(text);
                 if (parsed is not null)
                 {
-                    await trace.CompleteAsync(true, text, null, ct);
-                    return (parsed, captured);
+                    parseError = ValidateAnswerTemplate(parsed, captured);
+                    if (parseError is null)
+                    {
+                        await trace.CompleteAsync(true, text, null, ct);
+                        return (parsed, captured);
+                    }
                 }
 
                 jsonRepairAttempts++;
-                _logger.LogWarning("Analyst JSON invalid (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
+                _logger.LogWarning("Analyst answer rejected (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
                 if (jsonRepairAttempts >= MaxJsonRepairAttempts)
                 {
                     await trace.CompleteAsync(false, text, parseError, ct);
@@ -389,8 +398,9 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 {
                     ["role"] = "user",
                     ["content"] =
-                        $"ردّك السابق مش JSON صالح مطابق للمخطط. الخطأ: {parseError}\n" +
-                        "رُد تاني بكائن JSON واحد بس مطابق للمخطط المطلوب، من غير أي نص أو markdown حواليه.",
+                        $"ردّك السابق مرفوض. السبب: {parseError}\n" +
+                        "رُد تاني بكائن JSON واحد بس مطابق للمخطط المطلوب، من غير أي نص أو markdown حواليه، " +
+                        "وبدون أي رقم مكتوب حرفيًا في answer_template — كل رقم لازم يكون {{مفتاح}} من القائمة المتاحة.",
                 });
             }
 
@@ -403,6 +413,31 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             // it already wraps this call in its own try/catch with the stage-failed callback.
             throw;
         }
+    }
+
+    /// <summary>Phase 3's number guard (spec section 6) — null means the answer_template is
+    /// accepted as-is; non-null is a rejection reason fed back to the model verbatim. Two checks:
+    /// (1) no digit anywhere outside a recognized {{...}} token (AnalystPlaceholders.HasStrayDigits
+    /// — the model is told never to type a literal number, this is what actually enforces it);
+    /// (2) when the answer names a result_query_id we actually captured, every placeholder key in
+    /// the template must resolve against that query's own columns/rows — run the real Render call
+    /// here so a typo'd column or an out-of-range topN/bottomN is caught before the user ever sees
+    /// a broken literal "{{...}}" in the composed answer, not just logged after the fact. A
+    /// result_query_id we didn't capture, or none at all (the "couldn't find data for this"
+    /// sentence case), skips check 2 — AnalystController's own fallback handles that path.</summary>
+    private static string? ValidateAnswerTemplate(AnalystModelResult parsed, IReadOnlyDictionary<string, AnalystCapturedQuery> captured)
+    {
+        if (AnalystPlaceholders.HasStrayDigits(parsed.AnswerTemplate))
+            return "answer_template فيه رقم مكتوب حرفيًا خارج أي {{مفتاح}}.";
+
+        if (!string.IsNullOrWhiteSpace(parsed.ResultQueryId) && captured.TryGetValue(parsed.ResultQueryId, out var query))
+        {
+            var render = AnalystPlaceholders.Render(parsed.AnswerTemplate, query.Columns, query.Rows, parsed.PrimaryMeasure);
+            if (render.MissingKeys.Count > 0)
+                return $"answer_template فيه مفاتيح مش موجودة في نتيجة {parsed.ResultQueryId}: {string.Join("، ", render.MissingKeys)}.";
+        }
+
+        return null;
     }
 
     /// <summary>Parses a query_data/query_client_data tool result's own {"rowCount":N,"rows":[...]}

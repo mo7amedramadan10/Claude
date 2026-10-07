@@ -233,7 +233,14 @@ public class AnalystController : ControllerBase
             var isTruncated = allRows.Count > MaxStoredRows;
             var storedRows = isTruncated ? allRows.Take(MaxStoredRows).ToList() : allRows.ToList();
 
-            var render = AnalystPlaceholders.Render(model.AnswerTemplate, columns, storedRows, model.PrimaryMeasure);
+            // Render against the FULL captured rows, not storedRows — MaxStoredRows caps what
+            // gets persisted for the table/export view, but a sum/avg/top computed only over a
+            // truncated slice would be a wrong number, not an honestly-smaller one. The guard
+            // upstream (OllamaClient.ValidateAnswerTemplate) already validated this exact call
+            // against the same full rows, so MissingKeys should be empty here in practice; still
+            // logged, not silently dropped, for the one path the guard doesn't cover (no
+            // result_query_id at all) and as a defensive trace if it ever isn't.
+            var render = AnalystPlaceholders.Render(model.AnswerTemplate, columns, allRows, model.PrimaryMeasure);
             finalText = render.Text;
             if (render.MissingKeys.Count > 0)
                 _logger.LogWarning("Analyst answer_template referenced unknown keys: {Keys}", string.Join(", ", render.MissingKeys));
