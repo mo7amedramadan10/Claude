@@ -5692,13 +5692,13 @@ el('history-clear').addEventListener('click', async () => {
 // (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
 // integrations) and the platform-only "organizations" screen never show a project name,
 // since you're managing the organization/platform itself there, not a project within it.
-const PROJECT_SCOPED_SCREENS = new Set(['chat', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'analyst', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
 // Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
 // lookup here instead of reading the DOM, since the same data-screen value can be the
 // target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
 // "المستخدمون" under الإدارة).
 const SCREEN_LABELS = {
-  chat: 'المحادثة واللوحات', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
+  chat: 'المحادثة واللوحات', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
   projects: 'المشاريع', settings: 'الإعدادات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
@@ -5729,6 +5729,7 @@ function showScreen(name) {
   el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
   state.currentScreen = name;
   updateCrumbs(name);
+  if (name === 'analyst') { window.loadAnalystScreen?.(); loadSources().then(() => window.loadAnalystScreen?.()); }
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }

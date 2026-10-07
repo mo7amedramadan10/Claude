@@ -143,6 +143,11 @@ public class AnalystController : ControllerBase
         {
             conversation = await _store.CreateConversationAsync(effectiveSources.ProjectId, user.Id, MakeTitle(request.Question), ct);
         }
+        // So the frontend can pass this back as conversationId on the next question in the same
+        // session — the spec's own event list (section 4) doesn't name this event explicitly,
+        // but conversationId has to reach the client somehow, and a dedicated early event is
+        // simpler than repeating it on every later event.
+        await emit("conversation", new { conversationId = conversation.Id, title = conversation.Title });
 
         await _store.AddMessageAsync(new AnalystMessage
         {
@@ -206,7 +211,7 @@ public class AnalystController : ControllerBase
         {
             status = "unverified",
             checks = Array.Empty<object>(),
-            reason = "فحوصات التحقق الكاملة (C1-C4) ستُفعَّل في المرحلة 4.",
+            reason = "لم يتم التحقق من مطابقة هذه الأرقام لإجماليات المصدر بعد.",
         });
         await emitStage(AnalystStages.Verify, AnalystStageStates.Done);
 
@@ -351,5 +356,35 @@ public class AnalystController : ControllerBase
             }),
             createdAt = result.CreatedAt,
         });
+    }
+
+    /// <summary>GET /api/analyst/results/{id}/export.csv — spec section 4/8 ("تنزيل CSV"),
+    /// Phase 2 scope. UTF-8 with a BOM so Excel opens Arabic text correctly (same requirement
+    /// the spec calls out explicitly) — plain string concatenation is fine here since every
+    /// value is quoted and internal quotes doubled, the one escaping rule CSV actually needs.</summary>
+    [HttpGet("results/{id}/export.csv")]
+    public async Task<IActionResult> ExportCsv(string id, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, SourceSelection.AllEnabled(), ct);
+        if (effectiveSources.ProjectId is null) return NotFound();
+
+        var result = await _store.GetResultAsync(effectiveSources.ProjectId, id, ct);
+        if (result is null) return NotFound();
+
+        var columns = AnalystStore.DeserializeColumns(result.ColumnsJson);
+        var rows = AnalystStore.DeserializeRows(result.RowsJson);
+
+        string CsvField(object? value) => "\"" + (value?.ToString() ?? "").Replace("\"", "\"\"") + "\"";
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(string.Join(",", columns.Select(CsvField)));
+        foreach (var row in rows)
+            sb.AppendLine(string.Join(",", columns.Select(c => CsvField(row.GetValueOrDefault(c)))));
+
+        var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
+        var fileName = (string.IsNullOrWhiteSpace(result.Title) ? "نتيجة" : result.Title) + ".csv";
+        return File(bytes, "text/csv; charset=utf-8", fileName);
     }
 }

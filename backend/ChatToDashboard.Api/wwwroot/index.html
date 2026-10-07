@@ -125,6 +125,7 @@
           </a>
           <ul class="proj-sub">
             <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></button></li>
+            <li><button type="button" class="nav-link tab" data-screen="analyst"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="sources"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></button></li>
             <li><button type="button" class="nav-link tab hidden" id="proj-permissions-link" data-screen="users"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
@@ -342,6 +343,28 @@
   </section>
 
 </main>
+
+<div id="screen-analyst" class="screen">
+  <div class="an" id="anRoot">
+    <section class="an-canvas" id="anCanvas" aria-label="مساحة التحليل" aria-live="polite"></section>
+    <aside class="an-chat" aria-label="محادثة المحلل الذكي">
+      <div class="an-chathead"><b><img src="img/logo-mark.svg" alt="">المحلل الذكي</b><span class="badge">جلسة تحليل</span><button type="button" class="btn btn-ghost btn-sm" id="anNew"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>جلسة جديدة</button></div>
+      <div class="an-thread" id="anThread" role="log" aria-label="الأسئلة والإجابات"></div>
+      <form class="an-composer" id="anForm">
+        <div class="an-sugs" id="anSug" aria-label="أسئلة مقترحة"></div>
+        <div class="an-box">
+          <label class="sr-only" for="anIn">اسأل عن بيانات المشروع</label>
+          <textarea id="anIn" rows="1" placeholder="اسأل عن بيانات المشروع…"></textarea>
+          <button type="button" class="an-ib" id="anMic" aria-label="إدخال صوتي"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg></button>
+          <button type="button" class="an-ib" id="anAttach" aria-label="اختيار المصادر" aria-expanded="false" aria-haspopup="menu"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg></button>
+          <button type="submit" class="an-send" id="anSend" aria-label="إرسال"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></button>
+        </div>
+        <div class="an-chips" id="anChips"></div>
+        <div class="an-pick" id="anPick" role="menu" hidden></div>
+      </form>
+    </aside>
+  </div>
+</div>
 
 <div id="screen-projects" class="screen">
   <div class="page">
@@ -1131,6 +1154,7 @@
      انظر التعليق عند تعريف openDashGalDemo. -->
 <script src="js/dash-render.js"></script>
 <script src="js/dash-library.js"></script>
+<script src="js/analyst.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
