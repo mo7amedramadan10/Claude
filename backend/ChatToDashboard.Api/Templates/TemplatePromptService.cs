@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Organizations;
 using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.SchemaLibrary;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Users;
 
@@ -29,14 +30,17 @@ public class TemplatePromptService
     private readonly OrganizationStore _organizations;
     private readonly ProjectStore _projects;
     private readonly AnalyticsTools _analytics;
+    private readonly SchemaMatchingService _schemaMatching;
 
     public TemplatePromptService(
-        TemplateStore templates, OrganizationStore organizations, ProjectStore projects, AnalyticsTools analytics)
+        TemplateStore templates, OrganizationStore organizations, ProjectStore projects, AnalyticsTools analytics,
+        SchemaMatchingService schemaMatching)
     {
         _templates = templates;
         _organizations = organizations;
         _projects = projects;
         _analytics = analytics;
+        _schemaMatching = schemaMatching;
     }
 
     /// <summary>Resolves the template into its final prompt, or null with <paramref
@@ -48,6 +52,11 @@ public class TemplatePromptService
     public async Task<(string? Prompt, string? Error, IReadOnlyList<BuiltinDashboardWidgetSpec>? RequiredWidgets)> ResolveAsync(
         TemplateRef templateRef, AppUser user, SourceSelection effectiveSources, CancellationToken ct = default)
     {
+        // Fetched once here (rather than separately inside BuildCommonVariablesAsync, as before
+        // this feature) so EnabledIntegrations is available for schema matching below too,
+        // without describing sources against the DB/connectors twice per request.
+        var sourceContext = await _analytics.DescribeSourcesAsync(effectiveSources, ct);
+
         string body;
         IReadOnlyList<BuiltinDashboardWidgetSpec>? requiredWidgets = null;
         switch (templateRef.Kind)
@@ -72,13 +81,19 @@ public class TemplatePromptService
                 var resolved = await ResolveKpiAsync(templateRef, ct);
                 if (resolved.Error is not null) return (null, resolved.Error, null);
                 body = resolved.Prompt!;
+                // A single KPI build is treated as a one-item required-widget list too — same
+                // "must appear, real or an honest noData placeholder" guarantee BuildRequiredWidgetsBlock
+                // already gives a dashboard template, extended here to the KPI-library "add" path for
+                // the first time, plus whatever Table/Sql draft this row carries feeds schema matching
+                // below exactly like a dashboard widget's own.
+                if (resolved.Widget is not null) requiredWidgets = new[] { resolved.Widget };
                 break;
             }
             default:
                 return (null, "نوع النموذج غير معروف.", null);
         }
 
-        var vars = await BuildCommonVariablesAsync(user, effectiveSources, ct);
+        var vars = await BuildCommonVariablesAsync(user, sourceContext, ct);
         body = Substitute(body, vars);
 
         var rules = await _templates.GetAsync(TemplateKinds.Rules, "general", ct);
@@ -90,7 +105,20 @@ public class TemplatePromptService
         // widgets are a hard requirement this build must account for, not a stylistic
         // preference like the rest of the prompt above it.
         if (requiredWidgets is { Count: > 0 })
+        {
             body = $"{body}\n\n{BuildRequiredWidgetsBlock(requiredWidgets)}";
+
+            // The field/table alias library's deterministic pre-match (see SchemaMatchingService)
+            // — only ever adds a hint on top of the instruction above, never replaces it: an
+            // unmatched or wrongly-matched widget still falls back to the model exploring the
+            // real schema itself exactly as before this feature existed.
+            if (sourceContext.EnabledIntegrations.Count > 0)
+            {
+                var matches = await _schemaMatching.MatchAsync(requiredWidgets, sourceContext.EnabledIntegrations, ct);
+                if (SchemaMatchingService.BuildPromptHintBlock(matches) is { } hint)
+                    body = $"{body}\n\n{hint}";
+            }
+        }
 
         return (body, null, requiredWidgets);
     }
@@ -196,14 +224,15 @@ public class TemplatePromptService
         return (prompt, null, specs);
     }
 
-    private async Task<(string? Prompt, string? Error)> ResolveKpiAsync(TemplateRef templateRef, CancellationToken ct)
+    private async Task<(string? Prompt, string? Error, BuiltinDashboardWidgetSpec? Widget)> ResolveKpiAsync(
+        TemplateRef templateRef, CancellationToken ct)
     {
         if (!int.TryParse(templateRef.Key, out var rowIndex) || rowIndex < 0)
-            return (null, "مؤشر غير صالح.");
+            return (null, "مؤشر غير صالح.", null);
         var mtype = templateRef.KpiMeasureType ?? -1;
-        if (mtype < 0 || mtype > 5) return (null, "نوع قياس غير صالح.");
+        if (mtype < 0 || mtype > 5) return (null, "نوع قياس غير صالح.", null);
         var name = (templateRef.KpiName ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 200) return (null, "اسم المؤشر غير صالح.");
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 200) return (null, "اسم المؤشر غير صالح.", null);
 
         // Category-off is authoritative and independent of the row's own status (see
         // TemplateKinds.KpiCategory) — checked against the index the client sent, never the
@@ -211,14 +240,14 @@ public class TemplatePromptService
         if (templateRef.KpiCategoryIndex is { } catIndex)
         {
             var disabledCats = await _templates.GetDisabledKpiCategoriesAsync(ct);
-            if (disabledCats.Contains(catIndex)) return (null, "هذا التصنيف موقوف حاليًا.");
+            if (disabledCats.Contains(catIndex)) return (null, "هذا التصنيف موقوف حاليًا.", null);
         }
 
         var rowOver = await _templates.GetAsync(TemplateKinds.Kpi, rowIndex.ToString(), ct);
-        if (rowOver is { Status: not TemplateStatuses.Published }) return (null, "هذا المؤشر غير متاح حاليًا.");
+        if (rowOver is { Status: not TemplateStatuses.Published }) return (null, "هذا المؤشر غير متاح حاليًا.", null);
 
         var mtypeOver = await _templates.GetAsync(TemplateKinds.KpiMeasureType, mtype.ToString(), ct);
-        if (mtypeOver is { Status: not TemplateStatuses.Published }) return (null, "هذا نوع من المؤشرات غير متاح حاليًا.");
+        if (mtypeOver is { Status: not TemplateStatuses.Published }) return (null, "هذا نوع من المؤشرات غير متاح حاليًا.", null);
 
         var template = rowOver?.PromptText ?? mtypeOver?.PromptText ?? BuiltinTemplates.KpiMeasureTypePrompts[mtype];
 
@@ -229,11 +258,24 @@ public class TemplatePromptService
             ["category"] = Truncate(templateRef.KpiCategory, 120),
             ["measure_type"] = Truncate(templateRef.KpiMeasureTypeLabel, 60),
         };
-        return (Substitute(template, vars), null);
+
+        // Same "both blank means fall back to kpi-library.js's own draft" convention as the
+        // admin editor (see TemplatesController.AdminSaveKpiRow) — an admin override on this
+        // row always wins, even a deliberately-blanked one.
+        var over = rowOver?.WidgetsJson is { Length: > 0 } json
+            ? JsonSerializer.Deserialize<KpiQueryOverride>(json, JsonOptions)
+            : null;
+        var table = over?.Table ?? templateRef.KpiTable;
+        var sql = over?.Sql ?? templateRef.KpiSql;
+        var widget = string.IsNullOrWhiteSpace(table)
+            ? null
+            : new BuiltinDashboardWidgetSpec("kpi", name, Table: table, Sql: sql);
+
+        return (Substitute(template, vars), null, widget);
     }
 
     private async Task<Dictionary<string, string>> BuildCommonVariablesAsync(
-        AppUser user, SourceSelection effectiveSources, CancellationToken ct)
+        AppUser user, AnalyticsTools.SourceContext ctx, CancellationToken ct)
     {
         var vars = new Dictionary<string, string>();
 
@@ -243,13 +285,12 @@ public class TemplatePromptService
             vars["org_name"] = org?.Name ?? "";
         }
 
-        if (!string.IsNullOrWhiteSpace(effectiveSources.ProjectId))
+        if (!string.IsNullOrWhiteSpace(ctx.ProjectId))
         {
-            var project = await _projects.FindByIdAsync(effectiveSources.ProjectId, ct);
+            var project = await _projects.FindByIdAsync(ctx.ProjectId, ct);
             vars["project_name"] = project?.Name ?? "";
         }
 
-        var ctx = await _analytics.DescribeSourcesAsync(effectiveSources, ct);
         var sourceNames = ctx.EnabledSystems
             .Concat(ctx.EnabledFiles)
             .Concat(ctx.EnabledIntegrations.Select(i => i.Name))

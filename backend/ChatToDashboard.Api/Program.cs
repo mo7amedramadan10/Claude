@@ -65,6 +65,8 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.ConversationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.InquiryAccessService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplateStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaAliasStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaMatchingService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplatePromptService>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
@@ -240,6 +242,32 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex, "Failed to ensure the default organization/project exist.");
+    }
+
+    // Field/table alias library (see ChatToDashboard.Api.SchemaLibrary) — seeded once, the
+    // first time this table is ever empty, by mining kpi-library.js's own draft "expected
+    // SELECT" for the (table, value-column, group-column) concepts it already implies. A no-op
+    // on every later startup (SeedIfEmptyAsync checks first) — never re-runs against a library
+    // an admin has already started curating, and never blocks startup if it fails.
+    try
+    {
+        var aliasStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.SchemaLibrary.SchemaAliasStore>();
+        if (!await aliasStore.HasAnyAsync())
+        {
+            var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            var kpiLibraryPath = Path.Combine(env.WebRootPath, "js", "kpi-library.js");
+            if (File.Exists(kpiLibraryPath))
+            {
+                var content = await File.ReadAllTextAsync(kpiLibraryPath);
+                var seedRows = ChatToDashboard.Api.SchemaLibrary.SchemaAliasSeedGenerator.BuildFromKpiLibraryJs(content);
+                await aliasStore.SeedIfEmptyAsync(seedRows);
+                logger.LogInformation("Seeded the field/table alias library: {Count} candidate names.", seedRows.Count);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to seed the field/table alias library.");
     }
 
     // Accounts are admin-provisioned only (no self-signup) — so the very first admin has

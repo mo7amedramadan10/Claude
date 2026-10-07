@@ -13,10 +13,12 @@ public record BuiltinWidgetTemplate(string Id, string Category, string Icon, str
 /// here, so the real tab bar never depends on the model echoing a page field itself.
 /// <paramref name="Table"/>/<paramref name="Sql"/> are a draft, auto-generated "expected" SELECT
 /// statement for this widget — an assumed table/column shape, not a real query ever executed as
-/// written — shown and editable in "مكتبة النماذج" admin so a platform-owner can correct it
-/// ahead of a later phase where the model retargets this known shape onto a project's real
-/// schema instead of composing SQL from scratch for templates that already declare one. Not read
-/// by the AI build path yet (see TemplatePromptService) — purely descriptive until that phase.</summary>
+/// written — shown and editable in "مكتبة النماذج" admin so a platform-owner can correct it. Also
+/// this widget's "concept" for the field/table alias library (see ChatToDashboard.Api.SchemaLibrary):
+/// TemplatePromptService.ResolveAsync tries to resolve Table and the columns implied by Sql against
+/// every currently-enabled integration's real schema before the model ever sees the build request —
+/// a match becomes a strong prompt hint, never a requirement; the model still falls back to reading
+/// the real schema itself exactly as before when nothing matches.</summary>
 public record BuiltinDashboardWidgetSpec(
     string Type, string Title, string? Prompt = null, string? Page = null,
     string? Table = null, string? Sql = null);

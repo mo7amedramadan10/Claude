@@ -3922,11 +3922,13 @@ function initKpiLibrary() {
     if (!btn || state.loading) return;
     const i = +btn.dataset.k;
     const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]];
+    const [defTable, defSql] = r[5] || ['', ''];
     setChatMode('dashboard');
     ask(`📊 ${r[2]}`, undefined, {
       kind: 'kpi', key: String(i),
       kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiCategoryIndex: r[0],
       kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]],
+      kpiTable: defTable, kpiSql: defSql,
     });
   });
   run();
@@ -7601,6 +7603,7 @@ const TPLADM_KINDS = {
   widget: { tab: 'عناصر المحادثة', one: 'عنصر', add: 'عنصر جديد', icon: 'chat', where: 'يظهر في تبويب «النماذج» داخل المحادثة، ويُضاف للوحة الحالية بضغطة.' },
   dashboard: { tab: 'نماذج اللوحات', one: 'نموذج لوحة', add: 'نموذج لوحة جديد', icon: 'dashboard', where: 'يظهر في معرض «لوحة جديدة»، وينشئ لوحة كاملة بعناصره.' },
   kpi: { tab: 'مكتبة المؤشرات', one: 'مؤشر', icon: 'target', where: 'يظهر في «النماذج ← مكتبة المؤشرات» داخل المحادثة.' },
+  schema: { tab: 'مكتبة الحقول والجداول', icon: 'database', where: 'الأسماء المرشّحة لكل جدول/عمود يستخدمه أي مؤشر أو نموذج لوحة — تُستخدم وقت بناء لوحة فعلية على مصدر متصل لمطابقة البنية الحقيقية بدل تخمين الموديل من الصفر.' },
   rules: { tab: 'القواعد العامة', icon: 'shield' },
 };
 const TPLADM_STATUS = { published: ['منشور', 'ok'], draft: ['مسودة', 'warn'], stopped: ['موقوف', 'off'] };
@@ -7618,10 +7621,11 @@ const tpladmBlankWidgets = () => [
 ];
 
 const TPLADM = {
-  kind: 'widget', widgets: [], dashboards: [], kpiOverrides: {}, kpiMtypes: [], kpiCatOff: new Set(),
+  kind: 'widget', widgets: [], dashboards: [], kpiOverrides: {}, kpiMtypes: [], kpiCatOff: new Set(), schemaRows: [],
   filt: {
     widget: { q: '', s: '', c: '' }, dashboard: { q: '', s: '', c: '' },
     kpi: { v: 'cats', q: '', s: '', c: '', m: '', p: 0, cq: '', cs: '' },
+    schema: { q: '' },
   },
 };
 let TPLADM_RULES_CACHE = '';
@@ -7641,12 +7645,13 @@ async function tpladmLoadKpiCategories() {
 }
 async function tpladmLoadKpiMtypes() { const r = await fetch('/api/templates/admin/kpi-mtypes'); TPLADM.kpiMtypes = r.ok ? await r.json() : []; }
 async function tpladmLoadRulesCache() { const r = await fetch('/api/templates/admin/rules'); TPLADM_RULES_CACHE = r.ok ? (await r.json()).promptText || '' : ''; }
+async function tpladmLoadSchemaAliases() { const r = await fetch('/api/schema-aliases'); TPLADM.schemaRows = r.ok ? await r.json() : []; }
 async function tpladmRefreshKind(kind) { if (kind === 'widget') await tpladmLoadWidgets(); else if (kind === 'dashboard') await tpladmLoadDashboards(); }
 
 async function loadTemplatesAdmin() {
   await Promise.all([
     tpladmLoadWidgets(), tpladmLoadDashboards(), tpladmLoadKpiOverrides(),
-    tpladmLoadKpiCategories(), tpladmLoadKpiMtypes(), tpladmLoadRulesCache(),
+    tpladmLoadKpiCategories(), tpladmLoadKpiMtypes(), tpladmLoadRulesCache(), tpladmLoadSchemaAliases(),
   ]);
   tpladmStats();
   tpladmRender();
@@ -7666,7 +7671,7 @@ function tpladmStats() {
 }
 
 function tpladmTabs() {
-  const n = { widget: TPLADM.widgets.length, dashboard: TPLADM.dashboards.length, kpi: KPI_LIB ? KPI_LIB.rows.length : 0 };
+  const n = { widget: TPLADM.widgets.length, dashboard: TPLADM.dashboards.length, kpi: KPI_LIB ? KPI_LIB.rows.length : 0, schema: TPLADM.schemaRows.length };
   el('tpladm-tabs').innerHTML = Object.entries(TPLADM_KINDS).map(([k, v]) =>
     `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === TPLADM.kind}">${tplIc(v.icon)}${v.tab}${n[k] != null ? ` <span class="tab-n num">${n[k].toLocaleString('en-US')}</span>` : ''}</button>`).join('');
   el('tpladm-tabs').querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { TPLADM.kind = b.dataset.kind; tpladmRender(); }));
@@ -7679,6 +7684,7 @@ function tpladmRender() {
   if (TPLADM.kind === 'widget') tpladmListPane('widget');
   else if (TPLADM.kind === 'dashboard') tpladmListPane('dashboard');
   else if (TPLADM.kind === 'kpi') tpladmKpiPane();
+  else if (TPLADM.kind === 'schema') tpladmSchemaPane();
   else tpladmRulesPane();
 }
 el('tpladm-new-btn').addEventListener('click', () => {
@@ -7974,6 +7980,128 @@ function tpladmBindKpiList() {
       });
     });
   });
+}
+
+// ---------- مكتبة الحقول والجداول ----------
+function tpladmSchemaPane() {
+  const f = TPLADM.filt.schema;
+  const groups = {};
+  TPLADM.schemaRows.forEach(r => { (groups[r.conceptId] ||= []).push(r); });
+  const qs = kpiNorm((f.q || '').trim());
+  const conceptIds = Object.keys(groups)
+    .filter(cid => {
+      if (!qs) return true;
+      const g = groups[cid];
+      return kpiNorm(cid + ' ' + (g[0].label || '') + ' ' + g.map(r => r.name).join(' ')).includes(qs);
+    })
+    .sort((a, b) => a.localeCompare(b));
+
+  const rowHtml = r => `
+    <tr data-id="${esc(r.id)}">
+      <td><input type="text" data-f="name" value="${esc(r.name)}" dir="ltr"></td>
+      <td><input type="number" data-f="score" value="${r.score.toFixed(2)}" min="0" max="1" step="0.05" style="width:76px"></td>
+      <td>${r.source === 'learned' ? '<span class="badge badge-blue">تعلّم تلقائي</span>' : '<span class="badge">أساسي</span>'}</td>
+      <td><button type="button" class="icon-btn danger-txt" data-del="${esc(r.id)}" title="حذف">${tplIc('trash')}</button></td>
+    </tr>`;
+
+  const conceptCard = cid => {
+    const rows = groups[cid].slice().sort((a, b) => b.score - a.score);
+    const first = rows[0];
+    const kindLabel = first.kind === 'table' ? 'جدول' : 'عمود';
+    const parentNote = first.parentTable ? ` — تحت جدول: <code dir="ltr">${esc(first.parentTable)}</code>` : '';
+    return `
+      <article class="cat-card" data-concept="${esc(cid)}">
+        <div class="cc-top">
+          <div class="cc-name"><b>${esc(first.label || cid)}</b><small dir="ltr">${esc(cid)}${parentNote}</small></div>
+          <span class="badge">${kindLabel}</span>
+        </div>
+        <table class="dtable" style="margin-top:8px">
+          <thead><tr><th>الاسم المرشّح</th><th>Score</th><th>المصدر</th><th><span class="sr-only">حذف</span></th></tr></thead>
+          <tbody>
+            ${rows.map(rowHtml).join('')}
+            <tr class="schema-add-row" data-add-concept="${esc(cid)}" data-kind="${esc(first.kind)}" data-parent="${esc(first.parentTable || '')}" data-label="${esc(first.label || '')}">
+              <td><input type="text" data-add-name placeholder="اسم مرشّح جديد" dir="ltr"></td>
+              <td><input type="number" data-add-score value="0.50" min="0" max="1" step="0.05" style="width:76px"></td>
+              <td colspan="2"><button type="button" class="btn btn-sm" data-add-btn>${tplIc('plus')}إضافة</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </article>`;
+  };
+
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.schema.where)}</p>
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث</span><input type="search" id="tpladm-schema-q" value="${esc(f.q)}" placeholder="ابحث باسم الجدول/العمود أو أي اسم مرشّح"></label>
+      <span class="muted"><span class="num">${conceptIds.length.toLocaleString('en-US')}</span> مفهوم · <span class="num">${TPLADM.schemaRows.length.toLocaleString('en-US')}</span> اسم مرشّح</span>
+    </div>
+    <div class="cat-grid">${conceptIds.length ? conceptIds.map(conceptCard).join('') : '<div class="lib-empty">لا توجد نتائج.</div>'}</div>`;
+
+  tpladmBindSchemaPane();
+}
+
+function tpladmBindSchemaPane() {
+  const f = TPLADM.filt.schema;
+  let t;
+  el('tpladm-schema-q').addEventListener('input', e => { f.q = e.target.value; clearTimeout(t); t = setTimeout(() => tpladmSchemaPane(), 150); });
+
+  el('tpladm-pane').querySelectorAll('.dtable tbody tr[data-id]').forEach(row => {
+    const id = row.dataset.id;
+    const save = async () => {
+      const name = row.querySelector('[data-f="name"]').value.trim();
+      const score = Math.max(0, Math.min(1, +row.querySelector('[data-f="score"]').value || 0));
+      if (!name) return;
+      const r = TPLADM.schemaRows.find(x => x.id === id);
+      const res = await fetch(`/api/schema-aliases/${encodeURIComponent(id)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, score, label: r?.label || '' }),
+      });
+      if (!res.ok) { alert('تعذّر الحفظ على الخادم.'); return; }
+      if (r) { r.name = name; r.score = score; }
+      tpladmToast('تم الحفظ');
+    };
+    row.querySelector('[data-f="name"]').addEventListener('change', save);
+    row.querySelector('[data-f="score"]').addEventListener('change', save);
+  });
+
+  el('tpladm-pane').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.del;
+    const removed = TPLADM.schemaRows.find(x => x.id === id);
+    const res = await fetch(`/api/schema-aliases/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) { alert('تعذّر الحذف على الخادم.'); return; }
+    TPLADM.schemaRows = TPLADM.schemaRows.filter(x => x.id !== id);
+    tpladmStats(); tpladmTabs(); tpladmSchemaPane();
+    if (removed) tpladmToast('تم الحذف', async () => {
+      const addRes = await fetch('/api/schema-aliases', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conceptId: removed.conceptId, kind: removed.kind, parentTable: removed.parentTable,
+          label: removed.label, name: removed.name, score: removed.score,
+        }),
+      });
+      if (!addRes.ok) { alert('تعذّر التراجع على الخادم.'); return; }
+      TPLADM.schemaRows.push(await addRes.json());
+      tpladmStats(); tpladmTabs(); tpladmSchemaPane();
+    });
+  }));
+
+  el('tpladm-pane').querySelectorAll('[data-add-btn]').forEach(btn => btn.addEventListener('click', async () => {
+    const row = btn.closest('[data-add-concept]');
+    const name = row.querySelector('[data-add-name]').value.trim();
+    const score = Math.max(0, Math.min(1, +row.querySelector('[data-add-score]').value || 0.5));
+    if (!name) return;
+    const res = await fetch('/api/schema-aliases', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conceptId: row.dataset.addConcept, kind: row.dataset.kind, parentTable: row.dataset.parent || null,
+        label: row.dataset.label, name, score,
+      }),
+    });
+    if (!res.ok) { alert('تعذّر الإضافة على الخادم.'); return; }
+    TPLADM.schemaRows.push(await res.json());
+    tpladmStats(); tpladmTabs(); tpladmSchemaPane();
+    tpladmToast('تمت الإضافة');
+  }));
 }
 
 // ---------- القواعد العامة ----------

@@ -30,11 +30,6 @@ public class SaveTemplateRequest
     [JsonPropertyName("sql")] public string? Sql { get; set; }
 }
 
-/// <summary>What a KPI per-row override's WidgetsJson column actually holds (reused from the
-/// dashboard-widgets use of that column — a KPI row has no widgets of its own; see
-/// SaveTemplateRequest.Table's remarks).</summary>
-public record KpiQueryOverride(string? Table, string? Sql);
-
 /// <summary>Body of PUT api/templates/admin/kpi-categories/{index}.</summary>
 public class SetKpiCategoryRequest
 {

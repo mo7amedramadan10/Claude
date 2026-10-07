@@ -78,4 +78,18 @@ public class TemplateRef
     [JsonPropertyName("kpiCategoryIndex")] public int? KpiCategoryIndex { get; set; }
     [JsonPropertyName("kpiMeasureType")] public int? KpiMeasureType { get; set; }
     [JsonPropertyName("kpiMeasureTypeLabel")] public string? KpiMeasureTypeLabel { get; set; }
+    /// <summary>The row's own draft "expected SELECT" — kpi-library.js's 6th row element
+    /// ([table, sql]) — same display-data-only treatment as the fields above: substituted as
+    /// literal data (here, into SchemaMatchingService's matching, never into the prompt
+    /// verbatim), never trusted as an instruction. See TemplatePromptService.ResolveKpiAsync,
+    /// which prefers the row's own admin override over these when one exists.</summary>
+    [JsonPropertyName("kpiTable")] public string? KpiTable { get; set; }
+    [JsonPropertyName("kpiSql")] public string? KpiSql { get; set; }
 }
+
+/// <summary>What a KPI per-row override's WidgetsJson column actually holds (reused from the
+/// dashboard-widgets use of that column — a KPI row has no widgets of its own; see
+/// Controllers.SaveTemplateRequest.Table's remarks). Lives here rather than in
+/// TemplatesController so TemplatePromptService.ResolveKpiAsync can read it too without a
+/// service-layer-depending-on-controller reference.</summary>
+public record KpiQueryOverride(string? Table, string? Sql);

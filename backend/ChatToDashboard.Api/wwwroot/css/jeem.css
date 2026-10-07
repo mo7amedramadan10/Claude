@@ -1252,6 +1252,16 @@ form#form.composer.hidden { display: none; }
 .dw-row-query input { height: 32px !important; font-size: 11px; font-family: var(--mono, ui-monospace, monospace); color: var(--ink-3); }
 .dw-row-query input:focus { color: var(--ink); }
 
+/* مكتبة الحقول والجداول — جدول الأسماء المرشّحة داخل كل بطاقة مفهوم (.cat-card) */
+.cat-card .dtable { min-width: 0; font-size: var(--fs-xs); }
+.cat-card .dtable th, .cat-card .dtable td { padding: 6px 8px; }
+.cat-card .dtable input {
+  width: 100%; height: 30px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm);
+  outline: none; background: var(--surface); font-size: var(--fs-xs); font-family: inherit;
+}
+.cat-card .dtable input:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 3px var(--blue-50); }
+.schema-add-row { background: var(--surface-2); }
+
 .danger-txt { color: var(--danger) !important; }
 
 /* إيقاف/إظهار تصنيف كامل بمؤشراته (مكتبة المؤشرات) — مطابق لتصميم jeem-ui المرجعي. */

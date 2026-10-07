@@ -1,6 +1,7 @@
 using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
+using ChatToDashboard.Api.SchemaLibrary;
 using ChatToDashboard.Api.Templates;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Mvc;
@@ -19,16 +20,18 @@ public class ChatController : ControllerBase
     private readonly PermissionsService _permissions;
     private readonly HistoryStore _history;
     private readonly TemplatePromptService _templatePrompts;
+    private readonly SchemaMatchingService _schemaMatching;
     private readonly ILogger<ChatController> _logger;
 
     public ChatController(
         IDashboardGenerator generator, PermissionsService permissions, HistoryStore history,
-        TemplatePromptService templatePrompts, ILogger<ChatController> logger)
+        TemplatePromptService templatePrompts, SchemaMatchingService schemaMatching, ILogger<ChatController> logger)
     {
         _generator = generator;
         _permissions = permissions;
         _history = history;
         _templatePrompts = templatePrompts;
+        _schemaMatching = schemaMatching;
         _logger = logger;
     }
 
@@ -100,7 +103,23 @@ public class ChatController : ControllerBase
                     var respGroup = responseByTitle.TryGetValue(title, out var r) ? r : new List<DashboardWidget>();
                     var matched = Math.Min(reqGroup.Count, respGroup.Count);
                     for (var i = 0; i < matched; i++)
+                    {
                         if (reqGroup[i].Page is not null) respGroup[i].Page = reqGroup[i].Page;
+
+                        // Field/table alias library learning (see SchemaLibrary.SchemaMatchingService):
+                        // a required widget that carries a known draft concept (Table/Sql) and actually
+                        // got built with real data straight from an integration's live schema
+                        // (Query.IntegrationId set — see WidgetSqlQuery's own remarks) tells us exactly
+                        // which real table/columns the model resolved that concept to this time. Never
+                        // allowed to fail the response itself — purely opportunistic, same spirit as
+                        // every other best-effort side channel in this method.
+                        var built = respGroup[i];
+                        if (!built.NoData && built.Query?.IntegrationId is { Length: > 0 } && !string.IsNullOrWhiteSpace(reqGroup[i].Table))
+                        {
+                            try { await _schemaMatching.RecordLearningAsync(reqGroup[i], built.Query.Sql, ct); }
+                            catch (Exception ex) { _logger.LogInformation(ex, "Schema-alias learning skipped for widget {Title}", built.Title); }
+                        }
+                    }
                     for (var i = matched; i < reqGroup.Count; i++)
                     {
                         var req = reqGroup[i];
