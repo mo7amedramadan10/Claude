@@ -161,6 +161,18 @@ public class AnalystStore
         return rows.ToList();
     }
 
+    /// <summary>The one message carrying this ResultId — set once, in AddMessageAsync, for the
+    /// final assistant message a result was created for, so no ORDER BY/LIMIT tiebreak is
+    /// needed. Used by AnalystController.Reverify to recover the original answer_template
+    /// (TemplateText) for re-running C4 — AnalystResult itself never stores it.</summary>
+    public async Task<AnalystMessage?> GetMessageByResultIdAsync(string resultId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<AnalystMessage>(
+            $"SELECT * FROM {MessagesTable} WHERE ResultId = @resultId", new { resultId });
+    }
+
     // ---- Results ----
 
     public async Task<AnalystResult> AddResultAsync(AnalystResult result, CancellationToken ct = default)
@@ -200,6 +212,47 @@ public class AnalystStore
         foreach (var s in sources)
         {
             s.Id = string.IsNullOrEmpty(s.Id) ? Guid.NewGuid().ToString("N") : s.Id;
+            await connection.ExecuteAsync($"""
+                INSERT INTO {ResultSourcesTable}
+                  (Id, ResultId, SourceId, SourceDisplayName, SourceKind, TablesJson, SourceLastUpdatedAt, IsStale)
+                VALUES (@Id, @ResultId, @SourceId, @SourceDisplayName, @SourceKind, @TablesJson, @SourceLastUpdatedAt, @IsStale)
+                """, s, transaction);
+        }
+        await transaction.CommitAsync(ct);
+    }
+
+    /// <summary>"تحقق الآن" (spec section 7) — refreshes the stored verification, and the rows/
+    /// columns/DataVersion if a re-run of the original ExecutedSql came back different, on an
+    /// existing result. Everything else (Title, ResultType, ExecutedSql, AuditSql, ...) is
+    /// immutable after creation, so only these columns are ever touched here.</summary>
+    public async Task UpdateResultVerificationAsync(
+        string id, string columnsJson, string rowsJson, int dataVersion, bool isTruncated, string verificationJson,
+        CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"""
+            UPDATE {ResultsTable}
+            SET ColumnsJson = @columnsJson, RowsJson = @rowsJson, DataVersion = @dataVersion,
+                IsTruncated = @isTruncated, VerificationJson = @verificationJson
+            WHERE Id = @id
+            """, new { id, columnsJson, rowsJson, dataVersion, isTruncated, verificationJson });
+    }
+
+    /// <summary>Replaces (delete-then-insert, not append) a result's recorded sources — a
+    /// reverify re-derives the same source list from the same touched tables every time, so
+    /// repeated calls must not pile up duplicate rows the way calling AddResultSourcesAsync
+    /// again would.</summary>
+    public async Task ReplaceResultSourcesAsync(string resultId, IReadOnlyList<AnalystResultSource> sources, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        await connection.ExecuteAsync($"DELETE FROM {ResultSourcesTable} WHERE ResultId = @resultId", new { resultId }, transaction);
+        foreach (var s in sources)
+        {
+            s.Id = string.IsNullOrEmpty(s.Id) ? Guid.NewGuid().ToString("N") : s.Id;
+            s.ResultId = resultId;
             await connection.ExecuteAsync($"""
                 INSERT INTO {ResultSourcesTable}
                   (Id, ResultId, SourceId, SourceDisplayName, SourceKind, TablesJson, SourceLastUpdatedAt, IsStale)

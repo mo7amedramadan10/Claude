@@ -1,12 +1,13 @@
 /* ==========================================================
-   جيم — المحلل الذكي (Phase 2: الواجهة الحقيقية)
+   جيم — المحلل الذكي (Phase 4: التوثيق الحقيقي C1-C4 + «تحقق الآن»)
    يستهلك POST /api/analyst/ask (SSE حقيقي) وGET /api/analyst/results/{id} — لا بيانات تجريبية.
    مراحل العرض (sources/understand/query/verify/compose) بتُحدَّث لحظيًا من أحداث SSE الفعلية،
    مش من تايمر. حالة التوثيق (verified/unverified) من VerificationJson الحقيقي اللي الباك إند
-   بيرجّعه — في المرحلة ١-٢ كل نتيجة org_data بتطلع "unverified" بسبب صريح (الفحوصات الكاملة
-   C1-C4 لسه المرحلة ٤)، مش حكم وهمي.
-   أزرار «لخّص/قارن/صِف الأفضل» (مرحلة ٥) و«تحقق الآن» (مرحلة ٤) و«حفظ كتقرير/مشاركة» (مرحلة ٦)
-   ظاهرة زي التصميم بالظبط لكن بتاخد رسالة «قريبًا» بدل نداء نقطة نهاية مش موجودة بعد.
+   بيرجّعه بعد فحوصات C1/C3/C4 فعلية (C2 غير مطبّق — يحتاج إجماليات وقت الرفع مش مسجَّلة في هذا
+   التطبيق بعد، وده اختياري في السبسيفكيشن أصلًا). زر «تحقق الآن» بينادي POST
+   /api/analyst/results/{id}/reverify الحقيقي ويحدّث شارة الرسالة ومساحة التحليل معًا.
+   أزرار «لخّص/قارن/صِف الأفضل» (مرحلة ٥) و«حفظ كتقرير/مشاركة» (مرحلة ٦) لسه ظاهرة زي التصميم
+   بالظبط لكن بتاخد رسالة «قريبًا» بدل نداء نقطة نهاية مش موجودة بعد.
    ========================================================== */
 (function () {
   const root = document.getElementById('anRoot'); if (!root) return;
@@ -181,6 +182,40 @@
     }
   }
 
+  /* ---------- تحقق الآن (مرحلة ٤) ---------- */
+  function updateMessageBadge(resultId, verified) {
+    // Only an org_data message ever carries data-result-id (a general-knowledge one has no
+    // resultId at all), so the one .an-unv this bubble can contain is the verification badge —
+    // never the separate "من خارج البيانات" one, which only general-knowledge messages render.
+    const elp = thread.querySelector(`.an-a[data-result-id="${CSS.escape(resultId)}"]`);
+    if (!elp) return;
+    const mark = $('.an-mark', elp);
+    if (mark) { mark.className = `an-mark ${verified ? 'ok' : 'warn'}`; mark.innerHTML = verified ? ic('check') : '!'; }
+    const ans = $('.an-ans', elp);
+    const existingUnv = ans?.querySelector('.an-unv');
+    if (verified) existingUnv?.remove();
+    else if (ans && !existingUnv) ans.insertAdjacentHTML('afterbegin', `<span class="an-unv">${ic('info')}غير موثّقة</span>`);
+  }
+
+  async function reverify(resultId) {
+    const btn = $('#anCanvas [data-verify]');
+    if (btn) btn.disabled = true;
+    toast('جارٍ التحقق من الأرقام…');
+    try {
+      const res = await fetch('/api/analyst/results/' + encodeURIComponent(resultId) + '/reverify', { method: 'POST' });
+      if (!res.ok) { toast('تعذّر التحقق الآن — حاول مرة أخرى بعد قليل.'); if (btn) btn.disabled = false; return; }
+      const result = await res.json();
+      AN.resultsCache[resultId] = result;
+      const verified = result.verification?.status === 'verified';
+      if (AN.curResultId === resultId) canvas();
+      updateMessageBadge(resultId, verified);
+      toast(verified ? 'تم التحقق — الأرقام مطابقة الآن.' : `ما زالت غير موثّقة: ${result.verification?.reason || ''}`);
+    } catch {
+      toast('تعذّر التحقق الآن — حاول مرة أخرى بعد قليل.');
+      if (btn) btn.disabled = false;
+    }
+  }
+
   /* ---------- مساحة التحليل (يمين) ---------- */
   function openResult(resultId, sourceEl) {
     AN.curResultId = resultId;
@@ -306,7 +341,7 @@
     const tb = t.closest('[data-tab]'); if (tb) { AN.tab = tb.dataset.tab; return tabPanel(); }
     if (t.closest('.an-col')) { const sec = t.closest('.an-sec'), b = $('.an-col', sec), x = b.getAttribute('aria-expanded') === 'true'; b.setAttribute('aria-expanded', String(!x)); $('.an-sb', sec).hidden = x; return; }
     if (t.closest('[data-src]')) { const p = $('#anCanvas .an-srcpanel'), b = t.closest('[data-src]'); p.hidden = !p.hidden; b.setAttribute('aria-expanded', String(!p.hidden)); return; }
-    if (t.closest('[data-verify]')) { toast('ميزة التحقق التلقائي الكامل قيد التطوير وستتوفر قريبًا.'); return; }
+    if (t.closest('[data-verify]')) { if (AN.curResultId) reverify(AN.curResultId); return; }
     if (t.closest('[data-dl]')) { if (AN.curResultId) window.open('/api/analyst/results/' + encodeURIComponent(AN.curResultId) + '/export.csv', '_blank'); return; }
     const ac = t.closest('[data-act]'); if (ac) {
       if (ac.dataset.act === 'follow') { $('#anIn').focus(); return; }

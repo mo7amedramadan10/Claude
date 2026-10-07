@@ -120,6 +120,13 @@ public class AnalyticsTools
         // (all of them, enabled or not) — used to label list_files' "tables" entries and to
         // name the file in a refusal message.
         IReadOnlyDictionary<string, string> TableFiles,
+        // Table -> that file's RepositoryFile.LastUpdatedAt — the only per-source freshness
+        // timestamp this app tracks anywhere today (see AnalystVerification's C3: a connected
+        // system/integration has no equivalent "last synced at" field anywhere in this codebase,
+        // so freshness only ever applies to file sources). A table with no entry here either
+        // isn't a file's table at all, or the file predates LastUpdatedAt — either way, "no data
+        // to check" rather than "fails the check".
+        IReadOnlyDictionary<string, DateTime> TableFileLastUpdated,
         IReadOnlyDictionary<string, string> TableSystems,
         IReadOnlyDictionary<string, string> DisabledSystemTables,
         // Table -> owning file's display name, DISABLED files only — the query-blocking
@@ -179,10 +186,15 @@ public class AnalyticsTools
         var disabledFiles = new List<string>();
         var enabledFileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var tableFiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var tableFileLastUpdated = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         var disabledFileTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var f in files)
         {
-            if (!string.IsNullOrWhiteSpace(f.TableName)) tableFiles[f.TableName!] = f.DisplayName;
+            if (!string.IsNullOrWhiteSpace(f.TableName))
+            {
+                tableFiles[f.TableName!] = f.DisplayName;
+                tableFileLastUpdated[f.TableName!] = f.LastUpdatedAt;
+            }
 
             if (selection.AllowsFile(f.Id))
             {
@@ -226,7 +238,7 @@ public class AnalyticsTools
 
         return new SourceContext(
             enabledSystems, disabledSystems, unconnected,
-            enabledFiles, disabledFiles, enabledFileIds, tableFiles,
+            enabledFiles, disabledFiles, enabledFileIds, tableFiles, tableFileLastUpdated,
             systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments,
             enabledIntegrations, selection.ProjectId);
     }
@@ -1664,6 +1676,18 @@ public class AnalyticsTools
         var term = Terms(query).FirstOrDefault(t => text.Contains(t, StringComparison.OrdinalIgnoreCase));
         var index = term is null ? 0 : Math.Max(0, text.IndexOf(term, StringComparison.OrdinalIgnoreCase) - window / 4);
         return text.Substring(index, Math.Min(window, text.Length - index));
+    }
+
+    /// <summary>Runs a read-only SELECT through the exact same gate the model's own query_data
+    /// tool call goes through (<see cref="CheckSourcePermission"/> then <see
+    /// cref="ExecuteQueryAsync"/>) — for a caller outside the tool loop that still needs to run
+    /// one real, scoped, read-only query. Used by AnalystVerification's C1 (audit_sql) and by
+    /// AnalystController's reverify (re-running a stored ExecutedSql), so a stray/forged query
+    /// can never reach a source it shouldn't, same as a model-issued one couldn't.</summary>
+    public async Task<(string Result, bool IsError)> RunReadOnlyQueryAsync(string sql, SourceContext context, CancellationToken ct)
+    {
+        var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(ct));
+        return permissionError is not null ? (permissionError, true) : await ExecuteQueryAsync(sql, ct);
     }
 
     /// <summary>

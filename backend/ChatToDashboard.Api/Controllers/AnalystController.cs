@@ -23,10 +23,12 @@ public class AnalystAskRequest
 }
 
 /// <summary>
-/// "المحلل الذكي" — see the Project Analyst spec (session transcript) for the full design this
-/// is Phase 1 of: contracts + storage only. POST ask streams Server-Sent Events; every other
-/// action here is a plain JSON endpoint. Always Ollama/Qwen (see OllamaClient.GenerateAnalystAsync) —
-/// never routed through LlmRouter's provider selection, per the spec's own fixed stack section.
+/// "المحلل الذكي" — see the Project Analyst spec (session transcript) for the full design.
+/// POST ask streams Server-Sent Events; every other action here is a plain JSON endpoint.
+/// Always Ollama/Qwen (see OllamaClient.GenerateAnalystAsync) — never routed through LlmRouter's
+/// provider selection, per the spec's own fixed stack section. As of Phase 4, every org_data
+/// result's VerificationJson comes from AnalystVerification's real C1/C3/C4 checks (see Ask's
+/// own remarks), not a stub, and Reverify implements "تحقق الآن" (spec section 7).
 /// </summary>
 [ApiController]
 [Route("api/analyst")]
@@ -198,32 +200,24 @@ public class AnalystController : ControllerBase
         }
 
         // OrgData.
-        await emitStage(AnalystStages.Verify, AnalystStageStates.Running);
         var model = loopResult.Model!;
         AnalystCapturedQuery? capturedQuery = null;
         if (!string.IsNullOrWhiteSpace(model.ResultQueryId))
             loopResult.CapturedQueries.TryGetValue(model.ResultQueryId, out capturedQuery);
 
-        // Phase 4 owns the real C1-C4 checks (reconciliation against audit_sql, file totals,
-        // freshness) — this phase only records that they haven't run yet, rather than claiming
-        // a "verified" status nothing has actually earned. See the Phase 1 report.
-        var verificationJson = JsonSerializer.Serialize(new
-        {
-            status = "unverified",
-            checks = Array.Empty<object>(),
-            reason = "لم يتم التحقق من مطابقة هذه الأرقام لإجماليات المصدر بعد.",
-        });
-        await emitStage(AnalystStages.Verify, AnalystStageStates.Done);
-
-        await emitStage(AnalystStages.Compose, AnalystStageStates.Running);
+        await emitStage(AnalystStages.Verify, AnalystStageStates.Running);
         string finalText;
         string? resultId = null;
         if (capturedQuery is null)
         {
             // The model answered org_data but either found nothing to point at, or named a
             // query id we never actually captured (a contract violation) — either way, no
-            // AnalystResult to store; the template is shown as-is (it should already read as an
-            // honest "couldn't find this" sentence per the system prompt's own instructions).
+            // AnalystResult to verify or store; the template is shown as-is (it should already
+            // read as an honest "couldn't find this" sentence per the system prompt's own
+            // instructions). Both stages still fire Done here — spec section 4: every stage
+            // always emits, even when a given case has no real work for it.
+            await emitStage(AnalystStages.Verify, AnalystStageStates.Done);
+            await emitStage(AnalystStages.Compose, AnalystStageStates.Running);
             finalText = model.AnswerTemplate;
         }
         else
@@ -233,6 +227,29 @@ public class AnalystController : ControllerBase
             var isTruncated = allRows.Count > MaxStoredRows;
             var storedRows = isTruncated ? allRows.Take(MaxStoredRows).ToList() : allRows.ToList();
 
+            var sourceContext = await _analytics.DescribeSourcesAsync(effectiveSources, ct);
+            var resultSources = DetectTouchedSources(capturedQuery.Sql, sourceContext).Select(s => new AnalystResultSource
+            {
+                SourceId = s.Id, SourceDisplayName = s.Name, SourceKind = s.Kind,
+                TablesJson = JsonSerializer.Serialize(new[] { s.Table }), SourceLastUpdatedAt = s.LastUpdatedAt,
+            }).ToList();
+
+            // The real C1/C3/C4 checks (spec section 7) — genuinely async (C1 executes audit_sql
+            // against the database), so Verify's Running→Done window now reflects real work, not
+            // a timer (spec section 4's own rule). Replaces the Phase 1-3 stub that always
+            // marked every org_data result "unverified" with an honest "not checked yet" reason.
+            var outcome = await AnalystVerification.RunAsync(
+                _analytics, sourceContext, model.PrimaryMeasure, model.AuditSql, columns, allRows,
+                model.AnswerTemplate, resultSources, _configuration, ct);
+            var verificationJson = JsonSerializer.Serialize(new
+            {
+                status = outcome.Status,
+                checks = outcome.Checks.Select(c => new { id = c.Id, pass = c.Pass, detail = c.Detail }),
+                reason = outcome.Reason,
+            });
+            await emitStage(AnalystStages.Verify, AnalystStageStates.Done);
+
+            await emitStage(AnalystStages.Compose, AnalystStageStates.Running);
             // Render against the FULL captured rows, not storedRows — MaxStoredRows caps what
             // gets persisted for the table/export view, but a sum/avg/top computed only over a
             // truncated slice would be a wrong number, not an honestly-smaller one. The guard
@@ -263,13 +280,9 @@ public class AnalystController : ControllerBase
             }, ct);
             resultId = result.Id;
 
-            var sourceContext = await _analytics.DescribeSourcesAsync(effectiveSources, ct);
-            var sources = DetectTouchedSources(capturedQuery.Sql, sourceContext);
-            if (sources.Count > 0)
-                await _store.AddResultSourcesAsync(sources.Select(s => new AnalystResultSource
-                {
-                    ResultId = result.Id, SourceId = s.Id, SourceDisplayName = s.Name, SourceKind = s.Kind, TablesJson = JsonSerializer.Serialize(new[] { s.Table }),
-                }).ToList(), ct);
+            if (resultSources.Count > 0)
+                await _store.AddResultSourcesAsync(
+                    resultSources.Select(s => { s.ResultId = result.Id; return s; }).ToList(), ct);
         }
 
         var finalMessage = await _store.AddMessageAsync(new AnalystMessage
@@ -289,7 +302,7 @@ public class AnalystController : ControllerBase
         await emit("done", new { });
     }
 
-    private record TouchedSource(string Id, string Name, string Kind, string Table);
+    private record TouchedSource(string Id, string Name, string Kind, string Table, DateTime? LastUpdatedAt);
 
     /// <summary>Heuristic, not a SQL parser: a captured query's table/column list is already
     /// known from its own result rows' column names, but which SOURCE (file/system) it came
@@ -302,10 +315,12 @@ public class AnalystController : ControllerBase
         var found = new List<TouchedSource>();
         foreach (var (table, systemName) in context.TableSystems)
             if (sql.Contains(table, StringComparison.OrdinalIgnoreCase))
-                found.Add(new TouchedSource(systemName, systemName, AnalystSourceKinds.System, table));
+                found.Add(new TouchedSource(systemName, systemName, AnalystSourceKinds.System, table, null));
         foreach (var (table, fileName) in context.TableFiles)
             if (sql.Contains(table, StringComparison.OrdinalIgnoreCase))
-                found.Add(new TouchedSource(fileName, fileName, AnalystSourceKinds.File, table));
+                found.Add(new TouchedSource(
+                    fileName, fileName, AnalystSourceKinds.File, table,
+                    context.TableFileLastUpdated.TryGetValue(table, out var updated) ? updated : null));
         return found;
     }
 
@@ -342,27 +357,109 @@ public class AnalystController : ControllerBase
         if (result is null) return NotFound();
 
         var sources = await _store.ListResultSourcesAsync(id, ct);
-        return Ok(new
+        return Ok(BuildResultPayload(result, sources));
+    }
+
+    /// <summary>Shared response shape for GetResult and Reverify — both return the exact same
+    /// "full result" contract (spec section 4), just after a different amount of work to get
+    /// there, so the frontend's AN.resultsCache[id] = &lt;response&gt; works identically either
+    /// way with no special-casing.</summary>
+    private static object BuildResultPayload(AnalystResult result, IReadOnlyList<AnalystResultSource> sources) => new
+    {
+        id = result.Id,
+        title = result.Title,
+        resultType = result.ResultType,
+        columns = AnalystStore.DeserializeColumns(result.ColumnsJson),
+        rows = AnalystStore.DeserializeRows(result.RowsJson),
+        keyColumn = result.KeyColumn,
+        primaryMeasure = result.PrimaryMeasure,
+        executedSql = result.ExecutedSql,
+        auditSql = result.AuditSql,
+        verification = JsonDocument.Parse(result.VerificationJson).RootElement,
+        dataVersion = result.DataVersion,
+        isTruncated = result.IsTruncated,
+        sources = sources.Select(s => new
         {
-            id = result.Id,
-            title = result.Title,
-            resultType = result.ResultType,
-            columns = AnalystStore.DeserializeColumns(result.ColumnsJson),
-            rows = AnalystStore.DeserializeRows(result.RowsJson),
-            keyColumn = result.KeyColumn,
-            primaryMeasure = result.PrimaryMeasure,
-            executedSql = result.ExecutedSql,
-            auditSql = result.AuditSql,
-            verification = JsonDocument.Parse(result.VerificationJson).RootElement,
-            dataVersion = result.DataVersion,
-            isTruncated = result.IsTruncated,
-            sources = sources.Select(s => new
+            sourceId = s.SourceId, sourceDisplayName = s.SourceDisplayName, sourceKind = s.SourceKind,
+            tables = JsonSerializer.Deserialize<string[]>(s.TablesJson), sourceLastUpdatedAt = s.SourceLastUpdatedAt, isStale = s.IsStale,
+        }),
+        createdAt = result.CreatedAt,
+    };
+
+    /// <summary>POST /api/analyst/results/{id}/reverify — "تحقق الآن" (spec section 7). Re-reads
+    /// source metadata, re-runs ExecutedSql for a changed-data check (spec: "للمصادر النظامية
+    /// أعد تنفيذ الاستعلام" — in practice this app has exactly one read path for any source, so
+    /// re-running ExecutedSql itself covers both system and file sources uniformly rather than
+    /// branching by source kind), re-runs all applicable checks, and persists whatever changed
+    /// (rows/DataVersion only when the re-run actually came back different, VerificationJson and
+    /// each source's IsStale always).</summary>
+    [HttpPost("results/{id}/reverify")]
+    public async Task<ActionResult<object>> Reverify(string id, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, SourceSelection.AllEnabled(), ct);
+        if (effectiveSources.ProjectId is null) return NotFound();
+
+        var result = await _store.GetResultAsync(effectiveSources.ProjectId, id, ct);
+        if (result is null) return NotFound();
+
+        var sourceContext = await _analytics.DescribeSourcesAsync(effectiveSources, ct);
+
+        var columns = AnalystStore.DeserializeColumns(result.ColumnsJson);
+        var rows = AnalystStore.DeserializeRows(result.RowsJson);
+        var dataVersion = result.DataVersion;
+        var isTruncated = result.IsTruncated;
+        if (!string.IsNullOrWhiteSpace(result.ExecutedSql))
+        {
+            var (queryResult, isError) = await _analytics.RunReadOnlyQueryAsync(result.ExecutedSql, sourceContext, ct);
+            if (!isError && OllamaClient.TryExtractRows(queryResult, out var freshColumns, out var freshRows))
             {
-                sourceId = s.SourceId, sourceDisplayName = s.SourceDisplayName, sourceKind = s.SourceKind,
-                tables = JsonSerializer.Deserialize<string[]>(s.TablesJson), sourceLastUpdatedAt = s.SourceLastUpdatedAt, isStale = s.IsStale,
-            }),
-            createdAt = result.CreatedAt,
+                var freshIsTruncated = freshRows.Count > MaxStoredRows;
+                var freshStoredRows = freshIsTruncated ? freshRows.Take(MaxStoredRows).ToList() : freshRows.ToList();
+                var changed = JsonSerializer.Serialize(freshColumns) != result.ColumnsJson
+                    || JsonSerializer.Serialize(freshStoredRows) != result.RowsJson;
+                if (changed)
+                {
+                    columns = freshColumns.ToList();
+                    rows = freshStoredRows;
+                    isTruncated = freshIsTruncated;
+                    dataVersion++;
+                }
+            }
+            // A failed re-run (permission/connectivity) leaves the stored rows exactly as they
+            // were — reverify re-checks against the best data it can currently reach, it never
+            // blanks out a previously good result just because this one attempt couldn't refresh it.
+        }
+
+        var existingSources = (await _store.ListResultSourcesAsync(id, ct)).ToList();
+        foreach (var source in existingSources)
+        {
+            var table = JsonSerializer.Deserialize<string[]>(source.TablesJson)?.FirstOrDefault();
+            if (table is not null && sourceContext.TableFileLastUpdated.TryGetValue(table, out var updated))
+                source.SourceLastUpdatedAt = updated;
+        }
+
+        var outcome = await AnalystVerification.RunAsync(
+            _analytics, sourceContext, result.PrimaryMeasure, result.AuditSql, columns, rows,
+            (await _store.GetMessageByResultIdAsync(id, ct))?.TemplateText ?? "", existingSources, _configuration, ct);
+        var verificationJson = JsonSerializer.Serialize(new
+        {
+            status = outcome.Status,
+            checks = outcome.Checks.Select(c => new { id = c.Id, pass = c.Pass, detail = c.Detail }),
+            reason = outcome.Reason,
         });
+
+        await _store.UpdateResultVerificationAsync(
+            id, JsonSerializer.Serialize(columns), JsonSerializer.Serialize(rows), dataVersion, isTruncated, verificationJson, ct);
+        await _store.ReplaceResultSourcesAsync(id, existingSources, ct);
+
+        result.ColumnsJson = JsonSerializer.Serialize(columns);
+        result.RowsJson = JsonSerializer.Serialize(rows);
+        result.DataVersion = dataVersion;
+        result.IsTruncated = isTruncated;
+        result.VerificationJson = verificationJson;
+        return Ok(BuildResultPayload(result, existingSources));
     }
 
     /// <summary>GET /api/analyst/results/{id}/export.csv — spec section 4/8 ("تنزيل CSV"),

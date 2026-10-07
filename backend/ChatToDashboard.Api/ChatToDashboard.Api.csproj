@@ -10,6 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- So ChatToDashboard.Api.Tests can unit-test internal-but-pure helpers (e.g.
+         AnalystVerification.ReconciliationPasses/IsFresh) directly, without widening them to
+         public API just for test visibility. -->
+    <InternalsVisibleTo Include="ChatToDashboard.Api.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
     <PackageReference Include="Dapper" Version="2.1.66" />

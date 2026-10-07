@@ -304,8 +304,11 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     ///
     /// The same retry budget also covers <see cref="ValidateAnswerTemplate"/> (Phase 3's number
     /// guard): an answer that parses as valid JSON but writes a literal number, or references a
-    /// placeholder key that doesn't resolve against its own captured query, is rejected exactly
-    /// like invalid JSON — the model gets a corrective message and another attempt.</summary>
+    /// placeholder key that doesn't resolve against its own captured query, gets a corrective
+    /// message and another attempt — same as invalid JSON. They differ only once the budget is
+    /// exhausted: invalid JSON (no parsed object at all) is a hard failure (null), but a guard
+    /// violation on an otherwise-valid parsed answer is returned anyway — see the exhaustion
+    /// branch below for why (spec section 6: unverified, not absent).</summary>
     private async Task<(AnalystModelResult? Result, IReadOnlyDictionary<string, AnalystCapturedQuery> Captured)> RunAnalystToolLoopAsync(
         string model, JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context, UsageTrace trace, CancellationToken ct)
     {
@@ -391,8 +394,16 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 _logger.LogWarning("Analyst answer rejected (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
                 if (jsonRepairAttempts >= MaxJsonRepairAttempts)
                 {
-                    await trace.CompleteAsync(false, text, parseError, ct);
-                    return (null, captured);
+                    // Spec section 6: a number-guard violation that never clears after a retry is
+                    // NOT a hard failure — the result still gets created and shown, just
+                    // permanently flagged unverified ("أرقام غير مرتبطة بالبيانات"). Only a
+                    // genuine JSON-parse failure (parsed is null — no usable template to even try
+                    // composing from) hard-fails the turn. Returning `parsed` here rather than
+                    // null is what makes that distinction: AnalystVerification's C4 independently
+                    // re-runs the exact same guard against this same answer_template and marks
+                    // the result unverified for it — no separate "why" needs threading through.
+                    await trace.CompleteAsync(parsed is not null, text, parseError, ct);
+                    return (parsed, captured);
                 }
                 messages.Add(new JsonObject
                 {
@@ -444,8 +455,11 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// shape (see AnalyticsTools.ExecuteQueryAsync/ClientQueryService.RunQueryAsync) back into a
     /// captured query's columns/rows. False on anything else (an error string, an unexpected
     /// shape) — the query is then simply not captured, same "degrade, don't crash" rule as
-    /// every other best-effort parse in this feature.</summary>
-    private static bool TryExtractRows(string resultJson, out IReadOnlyList<string> columns, out IReadOnlyList<Dictionary<string, object?>> rows)
+    /// every other best-effort parse in this feature. Internal (not private) so
+    /// AnalystVerification's C1 and AnalystController's reverify can parse an audit_sql/
+    /// ExecutedSql result the exact same way, rather than a second JSON-shape parser existing
+    /// anywhere in this feature.</summary>
+    internal static bool TryExtractRows(string resultJson, out IReadOnlyList<string> columns, out IReadOnlyList<Dictionary<string, object?>> rows)
     {
         columns = Array.Empty<string>();
         rows = Array.Empty<Dictionary<string, object?>>();

@@ -70,9 +70,9 @@ public class AnalystMessage
 }
 
 /// <summary>One query result a question produced — see spec section 3/8. <see
-/// cref="VerificationJson"/> in this phase is always the Phase-1 placeholder shape (see
-/// AnalystVerification.NotYetChecked) — the real C1-C4 checks are Phase 4's job; storing the
-/// column from the start avoids a later migration.</summary>
+/// cref="VerificationJson"/> is the {status, checks, reason} shape AnalystVerification.RunAsync
+/// produces (spec section 7's real C1-C4 checks, as of Phase 4) — refreshed in place by
+/// AnalystController.Reverify on "تحقق الآن", never re-created.</summary>
 public class AnalystResult
 {
     public string Id { get; set; } = "";
