@@ -33,10 +33,13 @@ public record BuiltinDashboardWidgetSpec(
 /// template. "network" marks a template whose "لوحة" isn't a widget grid at all but one of the
 /// "لوحات تفاعلية" network engines (see wwwroot/js/network-graph.js + graph-drill.js) — the
 /// public catalog passes this straight through so the frontend gallery knows to render its
-/// thumbnail/demo preview with that engine instead of JR.mount, and to skip the normal
-/// ask()-driven AI build (there is no mechanism yet for the model to "build" a network; see
-/// TemplatesController.Catalog and app.js's dash-gallery code for both branches). Widgets is
-/// empty for a network-kind template — it has no 10-slot widget grid to speak of.
+/// thumbnail/demo preview with that engine instead of JR.mount (see app.js's dash-gallery code).
+/// "استخدم هذا النموذج" still goes through the same ask()-driven AI build as every other
+/// template (TemplatePromptService.ResolveDashboardAsync reads this entry's own Prompt exactly
+/// like any other) — the model currently has no way to emit a real network shape from it, so it
+/// comes back as an ordinary widget-grid dashboard about the same topic, same as it would for
+/// any dashboard idea the model doesn't have a specialized widget type for. Widgets is empty for
+/// a network-kind template — it has no 10-slot widget grid of its own to speak of.
 public record BuiltinDashboardTemplate(
     string Id, string Layout, string Category, string Name, bool Popular, string Description,
     string[] Sources, BuiltinDashboardWidgetSpec[] Widgets, string Prompt, string? DataboxRef = null,
@@ -168,13 +171,14 @@ public static class BuiltinTemplates
             },
             "ابنِ لي لوحة تسويق وحملات كاملة تتضمن: 1) عدد العملاء المحتملين كمؤشر رقمي، 2) معدل التحويل كمؤشر رقمي، 3) تكلفة اكتساب العميل كمؤشر رقمي، 4) العائد على الإنفاق التسويقي كمؤشر رقمي، 5) رسم خطي لعدد العملاء المحتملين شهريًا، 6) رسم دائري لتوزيع العملاء المحتملين حسب المصدر، 7) رسم أعمدة أفقي لأفضل الحملات من حيث العائد، 8) رسم أعمدة يقارن الإنفاق التسويقي بالإيراد الناتج لكل ربع، 9) جدول بأداء القنوات التسويقية (عدد العملاء ونسبة التحويل)، 10) رسم قمع لرحلة العميل من الزيارة حتى الشراء."),
         // أول "لوحة تفاعلية" (RenderKind "network") — انظر تعليق BuiltinDashboardTemplate. Widgets
-        // فاضية عمدًا (لا يوجد شبكة 10 عناصر هنا)، والنص هنا موصوف للبناء المستقبلي عبر الذكاء
-        // الاصطناعي لو اتوصلت يومًا بشبكة حقيقية من مصادر المشروع — غير مستخدم حاليًا لأن زرار
-        // "استخدم هذا النموذج" لهذا النوع تحديدًا بيتخطى ask() (انظر app.js).
+        // فاضية عمدًا (لا توجد شبكة 10 عناصر ثابتة هنا). "استخدم هذا النموذج" يبني عبر ask() بنفس
+        // مسار أي لوحة أخرى — الموديل لسه ملوش شكل "شبكة" يتعامل معاه، فالنص هنا مكتوب بصيغة
+        // لوحة مؤشرات/رسوم عادية (نفس أسلوب باقي اللوحات فوق) حتى يخرج بناء متماسك بدل تعليمات
+        // شبكية (النزول داخل عقدة... إلخ) محاولاً تنفيذها بمحرك مش موجود عنده.
         new BuiltinDashboardTemplate("policy-network", "a", "network", "شبكة الأنظمة واللوائح", false,
             "كل نظام كشبكة حية: اللوائح التي تفصّله، والجهات المُلزمة به، والمنصات التي يُنفَّذ عبرها، والشكاوى التي تنشأ عنه.",
             Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
-            "ابنِ لي شبكة تفاعلية تربط أنظمة ولوائح مشروعي بالجهات المُلزمة بها والمنصات التي تُنفَّذ عبرها والشكاوى الناشئة عنها، مع إمكانية النزول داخل أي عقدة لرؤية تفاصيلها وارتباطاتها.",
+            "ابنِ لي لوحة متابعة أنظمة ولوائح كاملة تتضمن: 1) عدد الأنظمة واللوائح النشطة كمؤشر رقمي، 2) عدد الجهات المُلزمة بها كمؤشر رقمي، 3) عدد الشكاوى المرتبطة خلال آخر 12 شهرًا كمؤشر رقمي، 4) متوسط نسبة امتثال الجهات كمؤشر رقمي، 5) رسم خطي للشكاوى الشهرية، 6) رسم دائري لتوزيع الشكاوى حسب حالتها، 7) رسم أعمدة أفقي للشكاوى حسب الجهة، 8) رسم أعمدة يقارن نسبة الامتثال المستهدفة بالفعلية لكل ربع، 9) جدول بأعلى الأنظمة واللوائح من حيث عدد الشكاوى المرتبطة، 10) رسم قمع لمراحل معالجة الشكوى من التسجيل حتى الإغلاق.",
             RenderKind: "network"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 

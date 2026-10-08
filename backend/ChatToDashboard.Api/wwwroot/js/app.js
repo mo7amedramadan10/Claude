@@ -3450,9 +3450,7 @@ function openDashGalPreview(d) {
           <button type="button" class="btn btn-soft" id="gal-demo-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية بأرقام توضيحية
           </button>` : ''}
-          <span class="muted" style="font-size:var(--fs-xs)">${d.renderKind === 'network'
-            ? 'لا يوجد بناء تلقائي لهذا النوع بعد — اضغط «معاينة تفاعلية» لتجربتها، أو «استخدم هذا النموذج» لفتح لوحة فارغة.'
-            : 'تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.'}</span>
+          <span class="muted" style="font-size:var(--fs-xs)">تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.</span>
         </div>
       </div>
     </div>`;
@@ -3464,9 +3462,7 @@ function openDashGalPreview(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
-    // "لوحات تفاعلية" (شبكات) ليس لها آلية بناء بالذكاء الاصطناعي بعد (انظر BuiltinDashboardTemplate's
-    // remarks) — تُفتح لوحة فارغة فقط دون رسالة بناء وهمية.
-    if (d.renderKind !== 'network') ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   el('gal-demo-btn')?.addEventListener('click', () => d.renderKind === 'network' ? openNetworkGalDemo(d) : openDashGalDemo(d));
   el('gal-view-list').classList.add('hidden');
@@ -3539,8 +3535,8 @@ function openNetworkGalDemo(d) {
     </button>
     <div class="gal-demo-banner">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
-      بيانات تجريبية توضيحية فقط لعرض شكل الشبكة — ليست بيانات حقيقية من مشروعك. لا يوجد بناء
-      تلقائي لهذا النوع عبر الذكاء الاصطناعي بعد؛ زرار «استخدم هذا النموذج» هنا يفتح لوحة فارغة فقط.
+      بيانات تجريبية توضيحية فقط لعرض شكل الشبكة — ليست بيانات حقيقية من مشروعك. اضغط «استخدم هذا
+      النموذج» لبناء لوحة ببيانات مشروعك الفعلية عبر جيم.
     </div>
     <div class="gal-demo-top">
       <div class="gal-demo-title">
@@ -3607,6 +3603,7 @@ function openNetworkGalDemo(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_DRILL_INIT?.();
   window.JEEM_NET_MOUNT({ types: cfg.types, rels: cfg.rels, cfg: cfg.cfg, asks: cfg.asks || [], nodes: entry.nodes, edges: entry.edges });
