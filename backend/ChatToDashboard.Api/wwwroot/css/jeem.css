@@ -1526,8 +1526,13 @@ form#form.composer.hidden { display: none; }
 
 /* المحلل الذكي — مُنقول شبه حرفي من jeem-ui project-analyst.html/app.css (69px/100dvh الأصليين
    استُبدلا بـ 53px لمطابقة ارتفاع الشريط العلوي الفعلي هنا — نفس الرقم المستخدم في
-   #screen-chat{height:calc(100vh - 53px)} الموجود بالفعل). */
-.an { flex: none; height: calc(100vh - 53px); min-height: 520px; display: grid; grid-template-columns: minmax(0, 1fr) 440px; background: linear-gradient(135deg, #F3F8FB, #F7F5FB); }
+   #screen-chat{height:calc(100vh - 53px)} الموجود بالفعل).
+   flex:1 (مش flex:none زي الأصل): في التصميم المرجعي .main مش flex container، فـ.an كانت بتاخد
+   عرض 100% تلقائيًا كعنصر block عادي. عندنا #screen-analyst.active بقت flex (.screen.active)
+   زي #screen-chat بالظبط (#dash-pane فيها flex:1 لنفس السبب) — فـ flex:none كانت بتخلي .an
+   تنكمش لعرض محتواها الداخلي بس (مساحة فاضية كبيرة على الطرف + مساحة التقرير بقت شريط ضيق جدًا
+   جنب الشات بدل ما تاخد الباقي). */
+.an { flex: 1; min-width: 0; height: calc(100vh - 53px); min-height: 520px; display: grid; grid-template-columns: minmax(0, 1fr) 440px; background: linear-gradient(135deg, #F3F8FB, #F7F5FB); }
 .an-canvas { min-width: 0; overflow-y: auto; padding: 22px 26px 28px; display: flex; flex-direction: column; gap: 16px; background: var(--surface); border-inline-end: 1px solid var(--line); }
 .an-chat { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .an-chathead { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line-2); }
