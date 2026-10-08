@@ -69,6 +69,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaAliasStore
 builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaMatchingService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplatePromptService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Analyst.AnalystStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Graph.GraphStore>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
 // internal server with a self-signed certificate, and is opt-in per system.
