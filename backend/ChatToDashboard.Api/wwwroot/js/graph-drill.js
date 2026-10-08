@@ -12,12 +12,20 @@
    ========================================================== */
 (function () {
   window.JEEM_DRILL = true;
-  const root = document.getElementById('pgRoot'); if (!root) return;
-  root.addEventListener('pg:ready', init, { once: true });
+  // #pgRoot is recreated fresh (innerHTML) each time the gallery's "معاينة تفاعلية" demo
+  // reopens for a network template (see app.js's openNetworkGalDemo), so the one-time
+  // 'pg:ready' listener below has to be re-attached to the NEW #pgRoot on every mount —
+  // network-graph.js's JEEM_NET_MOUNT caller is expected to call this right before (or right
+  // after building the fresh markup and) invoking JEEM_NET_MOUNT, which dispatches 'pg:ready'
+  // once it finishes building the network against that same #pgRoot.
+  window.JEEM_DRILL_INIT = function () {
+    const root = document.getElementById('pgRoot'); if (!root) return;
+    root.addEventListener('pg:ready', init, { once: true });
+  };
 
   function init() {
     const A = window.JEEM_NET; if (!A) return;
-    const { T, C, G, U, byId, esc, ic, nf } = A, RM = A.reduceMotion, NS = 'http://www.w3.org/2000/svg';
+    const { T, C, G, U, byId, esc, ic, nf, root } = A, RM = A.reduceMotion, NS = 'http://www.w3.org/2000/svg';
     const stage = root.querySelector('.pg-stage'); if (!stage) return;
     const relOf = (a, b) => { const e = A.E.find(e => (e.a === a && e.b === b) || (e.a === b && e.b === a)); if (!e) return ''; return e.a === a ? G.rels[e.r] : ((C.rev || {})[e.r] || G.rels[e.r]); };
     const nbs = n => [...n.nb].map(id => byId[id]).filter(A.visible);

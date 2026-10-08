@@ -29,9 +29,18 @@ public record BuiltinDashboardWidgetSpec(
 /// sourced that way. Admin-only (see TemplatesController.AdminList/ToAdminItem): never reaches
 /// the public catalog or the AI prompt. Internal tracking only, not a claim of copied content —
 /// see IMPLEMENTATION.md's "لوحات معرض Databox" section for the legal note this mirrors.</summary>
+/// <paramref name="RenderKind"/> — null (the default) for every ordinary widget-grid dashboard
+/// template. "network" marks a template whose "لوحة" isn't a widget grid at all but one of the
+/// "لوحات تفاعلية" network engines (see wwwroot/js/network-graph.js + graph-drill.js) — the
+/// public catalog passes this straight through so the frontend gallery knows to render its
+/// thumbnail/demo preview with that engine instead of JR.mount, and to skip the normal
+/// ask()-driven AI build (there is no mechanism yet for the model to "build" a network; see
+/// TemplatesController.Catalog and app.js's dash-gallery code for both branches). Widgets is
+/// empty for a network-kind template — it has no 10-slot widget grid to speak of.
 public record BuiltinDashboardTemplate(
     string Id, string Layout, string Category, string Name, bool Popular, string Description,
-    string[] Sources, BuiltinDashboardWidgetSpec[] Widgets, string Prompt, string? DataboxRef = null);
+    string[] Sources, BuiltinDashboardWidgetSpec[] Widgets, string Prompt, string? DataboxRef = null,
+    string? RenderKind = null);
 
 /// <summary>The 8 chat-widget templates, 8 dashboard templates and 6 KPI measure-type prompts
 /// that shipped baked into wwwroot/js/app.js before the "مكتبة النماذج" admin screen — ported
@@ -158,6 +167,15 @@ public static class BuiltinTemplates
                 new BuiltinDashboardWidgetSpec("table", "أداء القنوات", Table: "staging_sales", Sql: "SELECT SUM(PerformanceChannels) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("funnel", "رحلة العميل", Table: "staging_sales", Sql: "SELECT SUM(Value) AS value FROM staging_sales"),
             },
             "ابنِ لي لوحة تسويق وحملات كاملة تتضمن: 1) عدد العملاء المحتملين كمؤشر رقمي، 2) معدل التحويل كمؤشر رقمي، 3) تكلفة اكتساب العميل كمؤشر رقمي، 4) العائد على الإنفاق التسويقي كمؤشر رقمي، 5) رسم خطي لعدد العملاء المحتملين شهريًا، 6) رسم دائري لتوزيع العملاء المحتملين حسب المصدر، 7) رسم أعمدة أفقي لأفضل الحملات من حيث العائد، 8) رسم أعمدة يقارن الإنفاق التسويقي بالإيراد الناتج لكل ربع، 9) جدول بأداء القنوات التسويقية (عدد العملاء ونسبة التحويل)، 10) رسم قمع لرحلة العميل من الزيارة حتى الشراء."),
+        // أول "لوحة تفاعلية" (RenderKind "network") — انظر تعليق BuiltinDashboardTemplate. Widgets
+        // فاضية عمدًا (لا يوجد شبكة 10 عناصر هنا)، والنص هنا موصوف للبناء المستقبلي عبر الذكاء
+        // الاصطناعي لو اتوصلت يومًا بشبكة حقيقية من مصادر المشروع — غير مستخدم حاليًا لأن زرار
+        // "استخدم هذا النموذج" لهذا النوع تحديدًا بيتخطى ask() (انظر app.js).
+        new BuiltinDashboardTemplate("policy-network", "a", "network", "شبكة الأنظمة واللوائح", false,
+            "كل نظام كشبكة حية: اللوائح التي تفصّله، والجهات المُلزمة به، والمنصات التي يُنفَّذ عبرها، والشكاوى التي تنشأ عنه.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي شبكة تفاعلية تربط أنظمة ولوائح مشروعي بالجهات المُلزمة بها والمنصات التي تُنفَّذ عبرها والشكاوى الناشئة عنها، مع إمكانية النزول داخل أي عقدة لرؤية تفاصيلها وارتباطاتها.",
+            RenderKind: "network"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

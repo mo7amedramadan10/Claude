@@ -126,7 +126,6 @@
           <ul class="proj-sub">
             <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="analyst"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></button></li>
-            <li><button type="button" class="nav-link tab" data-screen="policy-network"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">شبكة الأنظمة واللوائح</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="sources"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></button></li>
             <li><button type="button" class="nav-link tab hidden" id="proj-permissions-link" data-screen="users"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
@@ -365,57 +364,6 @@
       </form>
     </aside>
   </div>
-</div>
-
-<div id="screen-policy-network" class="screen">
-  <main class="canvas pg-canvas" id="pgRoot">
-    <section class="pg-head">
-      <div>
-        <div class="dg-title"><span class="badge badge-blue">لوحة تفاعلية</span><h1>شبكة الأنظمة واللوائح</h1></div>
-        <p>كل نظام كشبكة حية: اللوائح التي تفصّله، والجهات المُلزمة به، والمنصات التي يُنفَّذ عبرها، والشكاوى التي تنشأ عنه.</p>
-        <span class="dg-demo"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بيانات تجريبية للعرض · <span id="pgScope"></span></span>
-      </div>
-      <div class="pg-law" role="group" aria-label="اختر النظام"></div>
-    </section>
-    <div class="grid pg-kpis" id="pgKpis"></div>
-    <form class="pg-ask" id="pgAsk" role="search">
-      <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
-      <label class="sr-only" for="pgAskIn">اسأل جيم عن الشبكة</label>
-      <input id="pgAskIn" type="text" placeholder="اسأل جيم… مثال: أين تتركز الشكاوى في نظام المنافسات؟" autocomplete="off">
-      <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
-      <div class="pg-ask-chips" id="pgAskChips"></div>
-    </form>
-    <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
-    <div class="pg-body">
-      <article class="widget pg-graph">
-        <div class="pg-tools">
-          <div class="pg-types" id="pgTypes" role="group" aria-label="إظهار أو إخفاء الأنواع"></div>
-          <span class="spacer"></span>
-          <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث في الشبكة</span><input id="pgSearch" type="search" placeholder="ابحث عن نظام أو جهة…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
-          <div class="pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="graph" aria-pressed="true">شبكة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
-        </div>
-        <div class="pg-stage">
-          <svg id="pgSvg" role="group" aria-label="شبكة الأنظمة واللوائح"></svg>
-          <div class="pg-table" id="pgTable" hidden></div>
-          <div class="pg-zoom" role="group" aria-label="التكبير">
-            <button type="button" id="pgZoomIn" aria-label="تكبير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></button>
-            <span id="pgZoomVal" class="num">100%</span>
-            <button type="button" id="pgZoomOut" aria-label="تصغير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-minus"/></svg></button>
-            <button type="button" id="pgFit" aria-label="ملاءمة الشبكة للشاشة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-expand"/></svg></button>
-          </div>
-          <p class="pg-hint">نقرتان على عقدة للنزول داخلها · اسحب الخلفية للتحريك · العجلة للتكبير</p>
-        </div>
-        <div class="pg-time">
-          <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
-          <label class="pg-range"><span class="sr-only">الفترة</span><input type="range" id="pgYear" step="1">
-            <span class="pg-ticks" aria-hidden="true"></span></label>
-          <span class="pg-year">حتى <b class="num" id="pgYearOut"></b></span>
-        </div>
-      </article>
-      <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
-    </div>
-    <div class="grid" id="pgGrid"></div>
-  </main>
 </div>
 
 <div id="screen-projects" class="screen">
@@ -1208,6 +1156,7 @@
 <script src="js/dash-library.js"></script>
 <script src="js/analyst.js"></script>
 <script src="js/policy-network.js"></script>
+<script src="js/policy-network-demo.js"></script>
 <script src="js/graph-drill.js"></script>
 <script src="js/network-graph.js"></script>
 <script src="js/app.js"></script>

@@ -3344,6 +3344,7 @@ function dashGalArrange(d) {
   return kpis.concat(rest);
 }
 function dashGalThumb(d) {
+  if (d.renderKind === 'network') return `<span class="dash-thumb dash-thumb-network">${ic2('share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
     `<i class="s${w.span} t-${w.type}">${DASH_GAL_GLYPH[w.type]}</i>`).join('')}</span>`;
 }
@@ -3370,6 +3371,9 @@ const DASH_GAL_CATS = [
   ['other', 'أخرى', 'more'],
   ['marketing', 'التسويق الرقمي', 'target'], ['ads', 'الإعلانات المدفوعة', 'send'],
   ['social', 'التواصل الاجتماعي والمحتوى', 'chat'], ['dev', 'التطوير والتطبيقات', 'grid'],
+  // لوحات تفاعلية (renderKind "network") — شبكات حية بدل شبكة ويدجتس عادية، انظر
+  // BuiltinDashboardTemplate's وremarks وdashGalThumb/openDashGalPreview/openNetworkGalDemo أدناه.
+  ['network', 'لوحات تفاعلية', 'share'],
 ];
 
 let dashGalCat = 'all', dashGalQuery = '';
@@ -3435,17 +3439,20 @@ function openDashGalPreview(d) {
         <div class="pv-src">${d.sources.length
           ? d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')
           : `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>حسب مصادر مشروعك المتاحة</span>`}</div>
+        ${d.renderKind === 'network' ? '' : `
         <h4>عناصر اللوحة (${d.widgets.length.toLocaleString('en-US')})</h4>
-        <ol class="pv-list">${d.widgets.map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>${esc(w.title)}</li>`).join('')}</ol>
+        <ol class="pv-list">${d.widgets.map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>${esc(w.title)}</li>`).join('')}</ol>`}
         <div class="pv-actions">
           <button type="button" class="btn btn-primary" id="gal-use-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
           </button>
-          ${window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id) ? `
+          ${(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id)) || (window.JEEM_NETWORK_LIBRARY && window.JEEM_NETWORK_LIBRARY.some(x => x.id === d.id)) ? `
           <button type="button" class="btn btn-soft" id="gal-demo-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية بأرقام توضيحية
           </button>` : ''}
-          <span class="muted" style="font-size:var(--fs-xs)">تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.</span>
+          <span class="muted" style="font-size:var(--fs-xs)">${d.renderKind === 'network'
+            ? 'لا يوجد بناء تلقائي لهذا النوع بعد — اضغط «معاينة تفاعلية» لتجربتها، أو «استخدم هذا النموذج» لفتح لوحة فارغة.'
+            : 'تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.'}</span>
         </div>
       </div>
     </div>`;
@@ -3457,9 +3464,11 @@ function openDashGalPreview(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+    // "لوحات تفاعلية" (شبكات) ليس لها آلية بناء بالذكاء الاصطناعي بعد (انظر BuiltinDashboardTemplate's
+    // remarks) — تُفتح لوحة فارغة فقط دون رسالة بناء وهمية.
+    if (d.renderKind !== 'network') ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
-  el('gal-demo-btn')?.addEventListener('click', () => openDashGalDemo(d));
+  el('gal-demo-btn')?.addEventListener('click', () => d.renderKind === 'network' ? openNetworkGalDemo(d) : openDashGalDemo(d));
   el('gal-view-list').classList.add('hidden');
   el('gal-view-preview').classList.remove('hidden');
 }
@@ -3516,6 +3525,94 @@ function openDashGalDemo(d) {
   el('gal-view-demo').classList.remove('hidden');
 }
 function ic2(n) { return `<svg class="icon icon-sm" aria-hidden="true"><use href="#i-${n}"/></svg>`; }
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (شبكة) ----------
+// نفس مكان العرض (#gal-view-demo) ونفس اتفاقية التحذير اللي فوق، لكن المحرك هنا شبكي
+// (network-graph.js + graph-drill.js) مش JR.mount — انظر BuiltinDashboardTemplate's remarks.
+function openNetworkGalDemo(d) {
+  const entry = (window.JEEM_NETWORK_LIBRARY || []).find(x => x.id === d.id);
+  const cfg = window.JEEM_NETWORK_CONFIG;
+  if (!entry || !cfg || !window.JEEM_NET_MOUNT) return;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل الشبكة — ليست بيانات حقيقية من مشروعك. لا يوجد بناء
+      تلقائي لهذا النوع عبر الذكاء الاصطناعي بعد؛ زرار «استخدم هذا النموذج» هنا يفتح لوحة فارغة فقط.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('share')}لوحة تفاعلية — شبكة حية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <main class="canvas pg-canvas" id="pgRoot">
+      <section class="pg-head">
+        <div>
+          <div class="dg-title"><h1>${esc(d.name)}</h1></div>
+          <p>${esc(d.desc)}</p>
+          <span class="sr-only" id="pgScope"></span>
+        </div>
+        <div class="pg-law" role="group" aria-label="اختر النظام"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن الشبكة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم… مثال: أين تتركز الشكاوى في نظام المنافسات؟" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="إظهار أو إخفاء الأنواع"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث في الشبكة</span><input id="pgSearch" type="search" placeholder="ابحث عن نظام أو جهة…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="graph" aria-pressed="true">شبكة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage">
+            <svg id="pgSvg" role="group" aria-label="${esc(d.name)}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+            <div class="pg-zoom" role="group" aria-label="التكبير">
+              <button type="button" id="pgZoomIn" aria-label="تكبير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              <span id="pgZoomVal" class="num">100%</span>
+              <button type="button" id="pgZoomOut" aria-label="تصغير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-minus"/></svg></button>
+              <button type="button" id="pgFit" aria-label="ملاءمة الشبكة للشاشة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-expand"/></svg></button>
+            </div>
+            <p class="pg-hint">نقرتان على عقدة للنزول داخلها · اسحب الخلفية للتحريك · العجلة للتكبير</p>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">الفترة</span><input type="range" id="pgYear" step="1">
+              <span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="pgYearOut"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+  });
+  window.JEEM_DRILL_INIT?.();
+  window.JEEM_NET_MOUNT({ types: cfg.types, rels: cfg.rels, cfg: cfg.cfg, asks: cfg.asks || [], nodes: entry.nodes, edges: entry.edges });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
 
 el('gal-start-blank').addEventListener('click', () => {
   closeDashGallery();
@@ -5692,13 +5789,13 @@ el('history-clear').addEventListener('click', async () => {
 // (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
 // integrations) and the platform-only "organizations" screen never show a project name,
 // since you're managing the organization/platform itself there, not a project within it.
-const PROJECT_SCOPED_SCREENS = new Set(['chat', 'analyst', 'policy-network', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'analyst', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
 // Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
 // lookup here instead of reading the DOM, since the same data-screen value can be the
 // target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
 // "المستخدمون" under الإدارة).
 const SCREEN_LABELS = {
-  chat: 'المحادثة واللوحات', analyst: 'المحلل الذكي', 'policy-network': 'شبكة الأنظمة واللوائح', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
+  chat: 'المحادثة واللوحات', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
   projects: 'المشاريع', settings: 'الإعدادات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
@@ -5730,7 +5827,6 @@ function showScreen(name) {
   state.currentScreen = name;
   updateCrumbs(name);
   if (name === 'analyst') { window.loadAnalystScreen?.(); loadSources().then(() => window.loadAnalystScreen?.()); }
-  if (name === 'policy-network') window.loadPolicyNetworkScreen?.();
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }

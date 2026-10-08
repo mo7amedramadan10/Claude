@@ -6,37 +6,16 @@
    - سحب العقد، تكبير بعجلة الماوس، سحب الخلفية للتحريك.
    - تصفية حسب النوع، شريط زمني بتشغيل تلقائي، بحث، عرض كجدول، و«اسأل جيم».
 
-   البيانات الحقيقية (nodes/edges) تُجلب من GET /api/graph/{networkKey} — لا توجد بيانات
-   تجريبية مكتوبة هنا. كل ما يخص المجال (الأنواع، العلاقات، أسماء المؤشرات، الرسوم، الأعمدة،
-   الكلمات المفتاحية) يبقى كإعداد في ملف المجال الخاص به (مثل policy-network.js)، الذي يضبط
-   window.JEEM_NETWORK_CONFIG = { networkKey, types, rels, cfg, asks } قبل تحميل هذا الملف.
+   محرك عام بلا بيانات خاصة به — مُجرَّد تمامًا عن أي مصدر بيانات. المستدعي (حاليًا: معاينة
+   «لوحات تفاعلية» التفاعلية في معرض النماذج، app.js's openNetworkGalDemo) يبني كائن G كاملاً
+   { types, rels, cfg, asks, nodes, edges } — من بيانات ثابتة توضيحية أو لاحقًا من API حقيقي —
+   ويستدعي window.JEEM_NET_MOUNT(G) بعد التأكد من وجود <main id="pgRoot"> في DOM. كل استدعاء
+   يبني الشبكة من الصفر داخل #pgRoot الموجود وقتها (لا حالة محفوظة بين الاستدعاءات).
    ========================================================== */
 (function () {
-  // #pgRoot lives inside a `.screen` that's `display:none` until the user opens this tab (see
-  // app.css's .screen{display:none}/.screen.active{display:flex}), so this can't just run at
-  // script-load time the way the reference's own standalone page did — the stage would measure
-  // 0×0 and the camera's initial fit() would compute garbage. app.js's showScreen() dispatch
-  // calls this once the screen is actually visible (same lazy-load convention as
-  // loadAnalystScreen/loadSourcesScreen elsewhere in this app).
-  let started = false;
-  window.loadPolicyNetworkScreen = function () {
-    if (started) return;
-    started = true;
-    const CFG = window.JEEM_NETWORK_CONFIG;
+  window.JEEM_NET_MOUNT = function (G) {
     const root = document.getElementById('pgRoot');
-    if (!CFG || !root) return;
-
-    fetch('/api/graph/' + encodeURIComponent(CFG.networkKey))
-      .then(res => res.ok ? res.json() : Promise.reject(res.status))
-      .then(data => start({ types: CFG.types, rels: CFG.rels, cfg: CFG.cfg, asks: CFG.asks || [], nodes: data.nodes, edges: data.edges }))
-      .catch(() => {
-        const stage = root.querySelector('.pg-stage');
-        if (stage) stage.innerHTML = '<p class="muted" style="padding:24px">تعذّر تحميل بيانات الشبكة — لا توجد بيانات متاحة لهذا المشروع بعد.</p>';
-      });
-  };
-
-  function start(G) {
-    const root = document.getElementById('pgRoot');
+    if (!G || !root) return;
   const JR = window.JR;
   if (!JR) return;
   const $ = (s, el = root) => el.querySelector(s), $$ = (s, el = root) => [...el.querySelectorAll(s)];

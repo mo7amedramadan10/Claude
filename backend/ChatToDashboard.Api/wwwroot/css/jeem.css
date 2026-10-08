@@ -573,6 +573,9 @@
 .dash-thumb .s3 { grid-column: span 3; } .dash-thumb .s4 { grid-column: span 4; } .dash-thumb .s5 { grid-column: span 5; }
 .dash-thumb .s6 { grid-column: span 6; } .dash-thumb .s7 { grid-column: span 7; } .dash-thumb .s8 { grid-column: span 8; }
 .dash-thumb .t-line, .dash-thumb .t-donut, .dash-thumb .t-hbars, .dash-thumb .t-cbars, .dash-thumb .t-table, .dash-thumb .t-funnel, .dash-thumb .t-heat { grid-row: span 2; }
+/* نموذج "لوحة تفاعلية" (renderKind network) — أيقونة واحدة متمركزة بدل شبكة الويدجتس */
+.dash-thumb-network { display: flex; align-items: center; justify-content: center; }
+.dash-thumb-network .icon { width: 42%; height: 42%; color: var(--brand-blue); }
 
 /* معاينة النموذج — قائمة العشرة عناصر قبل التأكيد */
 .dash-gallery-box .gal-back { align-self: flex-start; }

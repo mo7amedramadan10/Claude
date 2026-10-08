@@ -100,6 +100,7 @@ public class TemplatesController : ControllerBase
                 name = o?.Title ?? b.Name, popular = b.Popular, desc = o?.Description ?? b.Description,
                 sources = DeserializeSources(o?.SourcesJson) ?? b.Sources.ToList(),
                 widgets = DeserializeWidgets(o?.WidgetsJson) ?? b.Widgets.Select(w => (object)new { type = w.Type, title = w.Title }).ToList(),
+                renderKind = b.RenderKind,
             });
         }
         foreach (var o in dashboardOverrides.Values.Where(o => o.IsCustom))
@@ -111,6 +112,7 @@ public class TemplatesController : ControllerBase
                 name = o.Title ?? "", popular = false, desc = o.Description ?? "",
                 sources = DeserializeSources(o.SourcesJson) ?? new List<string>(),
                 widgets = DeserializeWidgets(o.WidgetsJson) ?? Enumerable.Empty<object>(),
+                renderKind = (string?)null,
             });
         }
 
