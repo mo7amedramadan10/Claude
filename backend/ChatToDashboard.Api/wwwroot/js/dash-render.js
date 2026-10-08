@@ -87,7 +87,7 @@
     const all = series.flat(), max = Math.max(...all) * 1.05, min = area || cum ? 0 : Math.min(...all) * .9;
     const paths = series.map((v, i) => { const p = linePath(v, min, max); const col = i === 1 && w.ly ? OTHER : C[i];
       return (area && i === 0 ? `<path d="M${p.join(' L')} L0,${SVGH} L${SVGW},${SVGH}Z" fill="${col}" opacity=".12"/>` : '') +
-        `<polyline points="${p.join(' ')}" fill="none" stroke="${col}" stroke-width="2" ${i === 1 && w.ly ? 'stroke-dasharray="5 4"' : ''} vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`; }).join('');
+        `<polyline points="${p.join(' ')}" fill="none" stroke="${col}" stroke-width="2" ${(i === 1 && w.ly) || (w.dash || []).includes(i) ? 'stroke-dasharray="5 4"' : ''} vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`; }).join('');
     const tg = w.tg != null ? (() => { const y = (SVGH - 8 - (w.tg - min) / (max - min) * (SVGH - 24)).toFixed(1); return `<line x1="0" x2="${SVGW}" y1="${y}" y2="${y}" stroke="var(--ink-3)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`; })() : '';
     const k = w.k, last = series[0][series[0].length - 1], mx = Math.max(...series[0]), mi = Math.min(...series[0]);
     const cols = x.map((lab, i) => `<i${tip(lab, names.map((n, j) => `${n}: ${fmt(series[j][i], k)}`).join(' · '))}></i>`).join('');
@@ -102,7 +102,7 @@
     const x = dim(w.x || 'M12'), names = mode === 'single' ? [w.ti] : (w.s || ['السابق', 'الحالي']).slice(0, 4);
     const data = names.map((_, i) => x.map(() => (w.b || 100) * (.45 + r() * .7) * (mode === 'stack' ? 1 / (i + 1) : 1 - i * .08)));
     const tot = x.map((_, j) => mode === 'stack' ? data.reduce((s, s2) => s + s2[j], 0) : Math.max(...data.map(d => d[j])));
-    const max = Math.max(...tot) * 1.08, k = w.k, hiIdx = mode === 'single' ? tot.indexOf(Math.max(...tot)) : -1;
+    const max = Math.max(...tot) * 1.08, k = w.k, hiIdx = mode === 'single' ? (w.spot === 'last' ? tot.length - 1 : typeof w.spot === 'number' ? w.spot : tot.indexOf(Math.max(...tot))) : -1;
     const cols = (i) => mode === 'stack' ? C[i] : names.length === 2 && w.s ? [SOFT, C[0]][i] : C[i];
     const showVal = x.length <= 8;
     return `${names.length > 1 ? legend(names, names.map((_, i) => cols(i))) : ''}
@@ -110,14 +110,14 @@
         ${showVal || j === hiIdx ? `<b class="num">${fmt(tot[j], k)}</b>` : '<b></b>'}
         <div class="jr-bars">${mode === 'stack'
           ? `<div class="jr-stack" style="height:${(tot[j] / max * 100).toFixed(1)}%">${data.map((d, i) => `<i style="flex:${d[j].toFixed(2)};background:${cols(i)}"></i>`).join('')}</div>`
-          : data.map((d, i) => `<i style="height:${(d[j] / max * 100).toFixed(1)}%;background:${mode === 'single' ? (j === hiIdx ? C[0] : SOFT) : cols(i)}"></i>`).join('')}</div>
+          : data.map((d, i) => `<i style="height:${(d[j] / max * 100).toFixed(1)}%;background:${mode === 'single' ? (j === hiIdx ? C[0] : w.spot != null ? '#E3E8EE' : SOFT) : cols(i)}"></i>`).join('')}</div>
         <span>${esc(lab)}</span></div>`).join('')}</div>`;
   }
   /* أشرطة أفقية مرتبة */
   function hbarChart(w, r, { rank = false } = {}) {
-    const x = dim(w.x || 'DEPT:6'), k = w.k, v = (w.ns ? x.map(() => (w.b || 100) * (.4 + r() * .7)) : ranked(r, x.length, w.b || 100, w.dec || .82));
-    if (k === 'pct' && !w.b) v.forEach((_, i) => v[i] = Math.min(99, 55 + r() * 42)); if (k === 'pct' && !w.ns) v.sort((a, b) => b - a);
-    const max = (k === 'pct' && !w.b ? 100 : Math.max(...v) * 1.05), sum = v.reduce((a, b) => a + b, 0);
+    const x = dim(w.x || 'DEPT:6'), k = w.k, v = w.vals ? w.vals.slice() : (w.ns ? x.map(() => (w.b || 100) * (.4 + r() * .7)) : ranked(r, x.length, w.b || 100, w.dec || .82));
+    if (!w.vals && k === 'pct' && !w.b) v.forEach((_, i) => v[i] = Math.min(99, 55 + r() * 42)); if (!w.vals && k === 'pct' && !w.ns) v.sort((a, b) => b - a);
+    const max = (k === 'pct' && !w.b ? 100 : Math.max(...v, 1e-9) * 1.05), sum = v.reduce((a, b) => a + b, 0);
     return `<ul class="jr-hbars">${x.map((lab, i) => `<li${tip(lab, fmt(v[i], k) + (w.u ? ' ' + w.u : ''))}>${rank ? `<em class="num">${i + 1}</em>` : ''}<span class="lbl">${esc(lab)}</span><span class="trk"><span class="fill" style="width:${(v[i] / max * 100).toFixed(1)}%;${i && !w.mono ? 'opacity:.78' : ''}"></span>${w.tg ? `<i class="tgt" style="inset-inline-start:${w.tg}%"></i>` : ''}</span><span class="val num">${fmt(v[i], k)}${rank && k !== 'pct' ? `<small>${nf(v[i] / sum * 100, 1)}%</small>` : ''}</span></li>`).join('')}</ul>`;
   }
   /* مقارنة العام السابق بالحالي لكل بند */
@@ -158,15 +158,15 @@
       return `<div class="jr-g"${tip(lab, `${nf(v, 1)}% · المستهدف ${tg}%`)}><svg viewBox="0 0 100 58"><path d="M10,50 A40,40 0 0 1 90,50" fill="none" stroke="var(--line-2)" stroke-width="10"/><path d="M10,50 A40,40 0 0 1 ${arc(a)}" fill="none" stroke="${v >= tg ? 'var(--ok)' : C[0]}" stroke-width="10"/><line x1="${(50 + 33 * Math.cos(tA)).toFixed(1)}" y1="${(50 - 33 * Math.sin(tA)).toFixed(1)}" x2="${(50 + 47 * Math.cos(tA)).toFixed(1)}" y2="${(50 - 47 * Math.sin(tA)).toFixed(1)}" stroke="var(--ink)" stroke-width="2"/></svg><b class="num">${nf(v, 1)}%</b><span>${esc(lab)}</span></div>`; }).join('')}</div>`;
   }
   function funnel(w, r) {
-    const x = dim(w.x); let v = w.b || 1000; const vals = x.map((_, i) => i ? (v = v * (.48 + r() * .35)) : v);
+    const x = dim(w.x); let v = w.b || 1000; const vals = x.map((_, i) => i ? (v = v * (.48 + r() * .35)) : v).map(y => w.int ? Math.max(1, Math.round(y)) : y);
     return `<div class="jr-funnel">${x.map((lab, i) => `<div class="fr"${tip(lab, fmt(vals[i], w.k))}><span class="fb" style="width:${Math.max(18, vals[i] / vals[0] * 100).toFixed(1)}%;${i === x.length - 1 ? 'background:var(--chart-2)' : ''}"><b class="num">${fmt(vals[i], w.k)}</b></span><span class="fl">${esc(lab)}${i ? `<small class="num">${nf(vals[i] / vals[i - 1] * 100, 0)}%</small>` : ''}</span></div>`).join('')}</div>`;
   }
   /* خريطة حرارية / مصفوفة أرقام */
   function heat(w, r) {
     const rows = dim(w.rows || 'DAY5'), cols = dim(w.cols || 'HR8'), k = w.k;
-    const vals = rows.map(() => cols.map(() => (w.b || 100) * (.15 + r() * .85))), max = Math.max(...vals.flat());
+    const vals = w.vals || rows.map(() => cols.map(() => (w.b || 100) * (.15 + r() * .85))), max = Math.max(...vals.flat(), 1e-9);
     return `<div class="jr-heat${w.num ? ' num-mode' : ''}" style="grid-template-columns:minmax(72px,auto) repeat(${cols.length},minmax(0,1fr))"><span></span>${cols.map(c => `<span class="h">${esc(c)}</span>`).join('')}
-      ${rows.map((rl, i) => `<span class="d">${esc(rl)}</span>${vals[i].map((v, j) => `<i style="--o:${(.12 + v / max * .88).toFixed(2)}"${tip(rl + ' · ' + cols[j], fmt(v, k))}>${w.num ? `<b class="num">${fmt(v, k)}</b>` : ''}</i>`).join('')}`).join('')}</div>
+      ${rows.map((rl, i) => `<span class="d">${esc(rl)}</span>${vals[i].map((v, j) => `<i style="--o:${v ? (.12 + v / max * .88).toFixed(2) : .03}"${tip(rl + ' · ' + cols[j], fmt(v, k))}>${w.num && v ? `<b class="num">${fmt(v, k)}</b>` : ''}</i>`).join('')}`).join('')}</div>
       <div class="jr-scale"><span>أقل</span><i></i><span>أعلى</span></div>`;
   }
   function riskMatrix(w, r) {
@@ -196,12 +196,15 @@
     const cols = w.c || [['البند', 'l'], ['القيمة', 'sar'], ['التغيّر', 'dp']], rows = w.rows ? dim(w.rows) : dim('DEPT:6'), n = Math.min(rows.length, w.n || 8);
     const colMax = {}; const cell = (kind, ci, ri) => {
       const rr = seed(w.ti + ci + '|' + ri);
+      /* قيم فعلية بدل التجريبية: w.vals[صف][عمود] */
+      const fv = w.vals && w.vals[ri] ? w.vals[ri][ci] : null;
+      if (fv != null) { if (kind === 'st') { const t = (w.sts || []).find(x => x[0] === fv); return `<td><span class="jr-tag ${t ? t[1] : 'info'}">${esc(fv)}</span></td>`; } return `<td><span class="num${kind === 'id' ? ' mono' : ''}">${esc(fv)}</span></td>`; }
       if (kind[0] === '@') { const a = dim(kind.slice(1)); return `<td>${esc(a[(ri * 3 + ci) % a.length])}</td>`; }
       switch (kind) {
         case 'l': return `<td>${esc(rows[ri])}</td>`;
         case 'p': return `<td>${esc(dim('PERSON')[ri % 10])}</td>`;
-        case 'dt': return `<td class="num">2026-0${1 + (ri % 9)}-${String(10 + ri).slice(-2)}</td>`;
-        case 'id': return `<td class="num mono">${esc((w.idp || 'ID-') + (1001 + ri))}</td>`;
+        case 'dt': return `<td><span class="num">2026-0${1 + (ri % 9)}-${String(10 + ri).slice(-2)}</span></td>`;
+        case 'id': return `<td><span class="num mono">${esc((w.idp || 'ID-') + (1001 + ri))}</span></td>`;
         case 'dp': { const d = (rr() - .35) * 30; return `<td><span class="num ${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '+' : ''}${nf(d, 1)}%</span></td>`; }
         case 'st': { const sts = w.sts || [['في المسار', 'ok'], ['تحت المراقبة', 'warn'], ['متأخر', 'bad']]; const s = sts[Math.floor(rr() * sts.length)]; return `<td><span class="jr-tag ${s[1]}">${esc(s[0])}</span></td>`; }
         case 'sp': { const v = walk(rr, 8, 50); const mx = Math.max(...v), mi = Math.min(...v); return `<td><svg class="jr-sp" viewBox="0 0 60 18" preserveAspectRatio="none"><polyline points="${v.map((y, i) => `${60 - i * 60 / 7},${(16 - (y - mi) / (mx - mi || 1) * 14).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--chart-1)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg></td>`; }
@@ -231,7 +234,7 @@
     const good = w.g ?? !String(d).startsWith('-');
     const sp = w.spk ? (() => { const v = walk(r, 10, 50, .12, good ? .02 : -.02); const mx = Math.max(...v), mi = Math.min(...v); return `<svg class="jr-ksp" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="${v.map((y, i) => `${100 - i * 100 / 9},${(22 - (y - mi) / (mx - mi || 1) * 20).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--chart-1)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`; })() : '';
     return `<div class="jr-kpi${w.hl ? ' hl' : ''}"><span class="lab">${w.ic ? ic(w.ic) : ''}${esc(w.ti)}</span><div class="v"><span class="num">${esc(w.v)}</span>${w.u ? `<small>${esc(w.u)}</small>` : ''}</div>
-      ${w.d === '' ? (w.n ? `<div class="cmp">${esc(w.n)}</div>` : '') : `<div class="cmp">${deltaHtml(d, good)} ${esc(w.n || 'عن الفترة السابقة')}</div>`}${sp}</div>`;
+      ${w.d === '' ? (w.n ? `<div class="cmp">${esc(w.n)}</div>` : '') : `<div class="cmp">${deltaHtml(d, good)} ${esc(w.n || 'عن الفترة السابقة')}</div>`}${sp}${w.tg != null ? `<div class="jr-ktg ${w.tg >= 100 ? 'ok' : w.tg >= (w.risk || 80) ? 'mid' : 'low'}"><span class="h"><span>المستهدف${w.tgv ? ` <b class="num">${esc(w.tgv)}</b>` : ''}</span><b class="num">${nf(w.tg, 0)}%</b></span><span class="bar"><i style="width:${Math.min(100, w.tg)}%"></i></span>${w.per ? `<small>${ic('calendar')}${esc(w.per)}</small>` : ''}</div>` : ''}</div>`;
   }
   function kpiyoy(w) {
     const good = w.g ?? !String(w.d).startsWith('-');
@@ -241,34 +244,174 @@
     return `<div class="jr-hero"><span class="lab">${esc(w.ti)}</span><div class="v"><span class="num">${esc(w.v)}</span>${w.u ? `<small>${esc(w.u)}</small>` : ''}</div>${(w.it || []).map(([a, b]) => `<div class="hi"><small>${esc(a)}</small><b class="num">${esc(b)}</b></div>`).join('')}</div>`;
   }
   function note(w) { return `<div class="jr-note">${(w.tx || []).map(t => `<p>${esc(t)}</p>`).join('')}</div>`; }
+  /* مؤشر رصاصي: الفعلي مقابل المستهدف لكل بند (it: [[الاسم، الفعلي، المستهدف، مفتاح اختياري]]) — اللون حالة: ضمن / قريب / متجاوز */
+  function bullet(w) {
+    const risk = w.risk || .8, inv = !!w.inv, hi = !!w.hi;
+    return `<ul class="wf-bullets">${(w.it || []).map(([lab, v, tg, key]) => { const r = tg ? v / tg : 0, st = hi ? (r >= 1 ? 'ok' : r >= risk ? 'warn' : 'bad') : inv ? (r <= 1 ? 'ok' : 'bad') : (r >= 1 ? 'bad' : r >= risk ? 'warn' : 'ok');
+      return `<li${key ? ` data-stage-go="${esc(key)}"` : ''}${tip(lab, `الفعلي ${nf(v, 1)} · المستهدف ${nf(tg, 0)}`)}><span class="lbl">${esc(lab)}</span><span class="trk"><i class="st-${st}" style="width:${(Math.min(2, r) / 2 * 100).toFixed(1)}%"></i><b></b></span><span class="val num">${nf(v, 1)} <small>/ ${nf(tg, 0)}</small></span></li>`; }).join('')}</ul>`;
+  }
+
+  /* ================= أنواع جديدة (من مراجعة Consist وNexus) ================= */
+  /* رادار: ملف أداء على 5–8 محاور بنفس المقياس، لكيان واحد أو مقارنة 2–3 كيانات فوق بعض.
+     w.x المحاور، w.s أسماء السلاسل، w.vals [[قيمة لكل محور] لكل سلسلة] على مقياس w.max (افتراضي 100). */
+  function radar(w, r) {
+    const ax = dim(w.x || ['الجودة', 'الالتزام بالمواعيد', 'السعر', 'الاستجابة', 'الامتثال', 'الاستدامة']), names = (w.s || [w.ti]).slice(0, 3), mx = w.max || 100, n = ax.length;
+    const vals = w.vals || names.map((_, i) => ax.map(() => Math.round(mx * (.45 + r() * .5 - i * .05))));
+    const R0 = 78, pt = (i, v) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [Math.cos(a) * R0 * v / mx, Math.sin(a) * R0 * v / mx]; };
+    const cols = w.cols || names.map((_, i) => C[i]);
+    const grid = [.25, .5, .75, 1].map(f => `<polygon class="g" points="${ax.map((_, i) => pt(i, mx * f).map(c => c.toFixed(1)).join(',')).join(' ')}"/>`).join('')
+      + ax.map((_, i) => { const [x, y] = pt(i, mx); return `<line class="g" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
+    const labs = ax.map((a, i) => { const [x, y] = pt(i, mx * 1.2), anc = Math.abs(x) < 6 ? 'middle' : x > 0 ? 'start' : 'end';
+      return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="${anc}">${esc(a)}${names.length === 1 ? `<tspan class="v" x="${x.toFixed(1)}" dy="12">${nf(vals[0][i])}</tspan>` : ''}</text>`; }).join('');
+    const polys = vals.map((vs, s) => `<g class="ser" data-s="${s}" style="--c:${cols[s]};--i:${s}"><polygon points="${vs.map((v, i) => pt(i, v).map(c => c.toFixed(1)).join(',')).join(' ')}"/>${vs.map((v, i) => { const [x, y] = pt(i, v); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6"${tip(`${names[s]} · ${ax[i]}`, `${nf(v)} من ${mx}`)}/>`; }).join('')}</g>`).join('');
+    return `${names.length > 1 ? legend(names, cols) : ''}<div class="jr-radar"><svg viewBox="-150 -112 300 224" role="img" aria-label="${esc(w.ti)}">${grid}${polys}${labs}</svg></div>`;
+  }
+  /* نصف دائرة مقسّمة: إجمالي واحد مقسوم لجزئين أو ثلاثة (ليس عدادًا مقابل هدف). w.x الأجزاء، w.vals القيم */
+  function semi(w, r) {
+    const x = dim(w.x || ['مميز', 'أساسي']).slice(0, 3), v = w.vals || parts(r, x.length).map(p => p * (w.b || 2400) / 100), tot = v.reduce((a, b) => a + b, 0), k = w.k;
+    const L = Math.PI * 40; let acc = 0; const cols = w.cols || x.map((_, i) => C[i]);
+    const segs = v.map((val, i) => { const len = val / tot * L - (i < v.length - 1 ? 1.6 : 0), s = `<path d="M10,50 A40,40 0 0 1 90,50" class="sg" stroke="${cols[i]}" stroke-dasharray="${Math.max(0, len).toFixed(2)} ${L + 4}" stroke-dashoffset="${(-acc).toFixed(2)}" style="--i:${i}"${tip(x[i], `${fmt(val, k)} · ${nf(val / tot * 100, 1)}%`)}/>`; acc += val / tot * L; return s; }).join('');
+    return `<div class="jr-semi"><div class="arc"><svg viewBox="0 0 100 56"><path d="M10,50 A40,40 0 0 1 90,50" class="tr"/>${segs}</svg><span><b class="num">${esc(w.tot || fmt(tot, k))}</b>${esc(w.tl || 'الإجمالي')}</span></div>
+      <ul>${x.map((n, i) => `<li style="--c:${cols[i]}"><span>${esc(n)}</span><b class="num">${fmt(v[i], k)}</b><small class="num">${nf(v[i] / tot * 100, 1)}%</small></li>`).join('')}</ul></div>`;
+  }
+  /* دائرة بعناوين خارجية: 3–5 أجزاء، خط من كل جزء إلى اسمه ونسبته (بدل مفتاح منفصل) */
+  function donutCo(w, r) {
+    let x = dim(w.x || 'CH:4').slice(0, 5); const p = w.vals ? (() => { const s = w.vals.reduce((a, b) => a + b, 0); return w.vals.map(v => v / s * 100); })() : parts(r, x.length);
+    const cols = w.cols || x.map((_, i) => C[i]), R0 = 46, L = 2 * Math.PI * R0; let acc = 0;
+    const segs = p.map((v, i) => { const len = v / 100 * L - 2.5, s = `<circle r="${R0}" class="sg" stroke="${cols[i]}" stroke-dasharray="${Math.max(0, len).toFixed(2)} ${L}" stroke-dashoffset="${(-acc).toFixed(2)}" transform="rotate(-90)" style="--i:${i}"${tip(x[i], nf(v, 1) + '%')}/>`; acc += v / 100 * L; return s; }).join('');
+    let a0 = 0; const used = [];
+    const labs = p.map((v, i) => { const mid = (a0 + v / 2) / 100 * 2 * Math.PI - Math.PI / 2; a0 += v; const c = Math.cos(mid), s = Math.sin(mid), side = c >= 0 ? 1 : -1;
+      let ly = s * 72; used.filter(u => u[0] === side).forEach(u => { if (Math.abs(u[1] - ly) < 26) ly = u[1] + (ly >= u[1] ? 26 : -26); }); used.push([side, ly]);
+      const x1 = c * (R0 + 10), y1 = s * (R0 + 10), x2 = c * 66, x3 = side * 92;
+      return `<g class="co" style="--i:${i}"><polyline points="${x1.toFixed(1)},${y1.toFixed(1)} ${x2.toFixed(1)},${ly.toFixed(1)} ${x3},${ly.toFixed(1)}" stroke="${cols[i]}"/><circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="2.2" fill="${cols[i]}"/>
+        <text x="${x3 + side * 4}" y="${(ly - 3).toFixed(1)}" text-anchor="${side > 0 ? 'start' : 'end'}">${esc(x[i])}</text><text class="v" x="${x3 + side * 4}" y="${(ly + 11).toFixed(1)}" text-anchor="${side > 0 ? 'start' : 'end'}">${nf(v, 1)}%</text></g>`; }).join('');
+    const tot = w.tot || (w.b ? fmt(w.b, w.k) : '');
+    return `<div class="jr-dco"><svg viewBox="-160 -100 320 200" role="img" aria-label="${esc(w.ti)}"><circle r="${R0}" class="tr"/>${segs}${labs}${tot ? `<text class="t" y="2">${esc(tot)}</text><text class="tl" y="16">${esc(w.tl || 'الإجمالي')}</text>` : ''}</svg></div>`;
+  }
+  /* ترتيب بأيقونة أو رمز: دول، منصات، جهات. w.av رموز قصيرة (SA، AE…) أو تُؤخذ أول حرف */
+  function iconRank(w, r) {
+    const x = dim(w.x || 'CNTRY:5'), k = w.k, v = w.vals ? w.vals.slice() : ranked(r, x.length, w.b || 900, w.dec || .78), max = Math.max(...v) * 1.04, sum = v.reduce((a, b) => a + b, 0);
+    const av = w.av || x.map(n => n.replace('ال', '')[0]);
+    return `<ul class="jr-irank">${x.map((lab, i) => `<li${tip(lab, w.nopct ? fmt(v[i], k) + (w.u ? ' ' + w.u : '') : `${fmt(v[i], k)} · ${nf(v[i] / sum * 100, 1)}%`)} style="--i:${i};--h:${(i * 57 + 200) % 360}"><span class="av">${esc(av[i])}</span><span class="m"><span class="t"><span class="lbl">${esc(lab)}</span><span class="val"><b class="num">${fmt(v[i], k)}</b>${w.nopct ? '' : `<small class="num">${nf(v[i] / sum * 100, 1)}%</small>`}</span></span><span class="trk"><span class="fill" style="width:${(v[i] / max * 100).toFixed(1)}%"></span></span></span></li>`).join('')}</ul>`;
+  }
+  /* أعمدة مكدّسة بشرائط تربط كل فئة بين الفترات: تُظهر كيف تتغير حصة كل فئة. الفترة الأولى يمينًا */
+  function ribbon(w, r) {
+    const x = dim(w.x || 'Q4').slice(0, 6), names = (w.s || dim('CH:4')).slice(0, 5), k = w.k, n = x.length;
+    const data = w.vals || x.map((_, j) => names.map((_, i) => (w.b || 100) * (1 / (i + 1.3)) * (.6 + r() * .8)));
+    const tot = data.map(c => c.reduce((a, b) => a + b, 0)), mx = Math.max(...tot) * 1.14, W = 600, H = 230, B = H - 26, slot = (W - 20) / n, cw = Math.min(70, slot * .44);
+    const cols = w.cols || names.map((_, i) => [C[0], C[1], C[2], C[3], '#9DD5CA'][i]);
+    const G = data.map((c, j) => { let y = B; const cx = W - 10 - slot * (j + .5); return { cx, seg: c.map(v => { const h = v / mx * (B - 22), s = [y - h, y]; y -= h; return s; }) }; });
+    let rb = ''; for (let j = 0; j < n - 1; j++) { const a = G[j], b = G[j + 1], xa = a.cx - cw / 2, xb = b.cx + cw / 2, m = (xa + xb) / 2;
+      names.forEach((_, i) => { const p = a.seg[i], q = b.seg[i]; rb += `<path class="rb" fill="${cols[i]}" style="--i:${j}" d="M${xa.toFixed(1)},${(p[0] + 1).toFixed(1)} C${m.toFixed(1)},${(p[0] + 1).toFixed(1)} ${m.toFixed(1)},${(q[0] + 1).toFixed(1)} ${xb.toFixed(1)},${(q[0] + 1).toFixed(1)} L${xb.toFixed(1)},${(q[1] - 1).toFixed(1)} C${m.toFixed(1)},${(q[1] - 1).toFixed(1)} ${m.toFixed(1)},${(p[1] - 1).toFixed(1)} ${xa.toFixed(1)},${(p[1] - 1).toFixed(1)}Z"/>`; }); }
+    const bars = G.map((g, j) => g.seg.map((s, i) => `<rect class="sg" x="${(g.cx - cw / 2).toFixed(1)}" y="${(s[0] + 1).toFixed(1)}" width="${cw.toFixed(1)}" height="${Math.max(0, s[1] - s[0] - 2).toFixed(1)}" rx="4" fill="${cols[i]}" style="--i:${j * names.length + i}"${tip(`${x[j]} · ${names[i]}`, `${fmt(data[j][i], k)} · ${nf(data[j][i] / tot[j] * 100, 1)}%`)}/>`).join('')
+      + `<text class="tl" x="${g.cx.toFixed(1)}" y="${(g.seg[g.seg.length - 1][0] - 7).toFixed(1)}">${fmt(tot[j], k)}</text><text class="xl" x="${g.cx.toFixed(1)}" y="${H - 6}">${esc(x[j])}</text>`).join('');
+    return `${legend(names, cols)}<div class="jr-ribbon"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(w.ti)}"><line class="bl" x1="10" x2="${W - 10}" y1="${B}" y2="${B}"/>${rb}${bars}</svg></div>`;
+  }
+
+  /* ================= أنواع جديدة (من مراجعة SaleGrow) ================= */
+  /* بطاقة أشخاص أو فرق: حروف أولى + الرقم + نسبة الهدف (اختياري). w.it [[الاسم، القيمة، النسبة من الهدف؟، الدور؟]] */
+  function people(w, r) {
+    const it = w.it || dim(w.x || 'PERSON:5').map(n => [n, Math.round((w.b || 100) * (.5 + r() * .6)), Math.round(55 + r() * 55)]);
+    const L = it.map((a, i) => ({ n: a[0], v: a[1], p: a[2], role: a[3], i })).sort((a, b) => b.v - a.v), k = w.k;
+    const ini = n => n.split(' ').slice(0, 2).map(x => x.replace(/^ال/, '')[0]).join('‌');
+    return `<ul class="jr-people">${L.map((o, j) => { const st = o.p == null ? '' : o.p >= 100 ? 'ok' : o.p >= (w.risk || 80) ? 'mid' : 'low';
+      return `<li class="${j === 0 ? 'top' : ''}" style="--i:${j};--h:${(o.i * 61 + 190) % 360}" data-person="${esc(o.n)}" tabindex="0" role="button"${tip(o.n, `${fmt(o.v, k)}${w.u ? ' ' + w.u : ''}${o.p != null ? ` · ${o.p}% من الهدف` : ''}`)}>
+        ${j === 0 ? `<span class="crown" aria-label="الأعلى">${ic('star')}</span>` : `<span class="rk num">${j + 1}</span>`}<span class="av">${esc(ini(o.n))}</span><b class="nm">${esc(o.n)}</b>${o.role ? `<small>${esc(o.role)}</small>` : ''}
+        <span class="v"><span class="num">${fmt(o.v, k)}</span>${w.u ? `<small>${esc(w.u)}</small>` : ''}</span>
+        ${o.p != null ? `<span class="pg ${st}"><i style="width:${Math.min(100, o.p)}%"></i></span><small class="pp num">${o.p}%</small>` : ''}</li>`; }).join('')}</ul>`;
+  }
+  /* قائمة نشاط: آخر المعاملات أو الطلبات بحالة (أيقونة + لون + نص). w.it [[العنوان، الوصف، القيمة، الحالة ok|pend|bad|info، الوقت]] */
+  const FEED_ST = { ok: ['check', 'مكتمل'], pend: ['clock', 'معلّق'], bad: ['x', 'مرفوض'], info: ['info', 'جديد'] };
+  function feed(w) {
+    const it = w.it || [];
+    return `<ul class="jr-feed">${it.map(([t, s, v, st, tm, who], i) => { const S = FEED_ST[st] || FEED_ST.info;
+      return `<li class="st-${st}" style="--i:${i}"${who ? ` data-who="${esc(who)}"` : ''}><span class="av" aria-hidden="true">${ic(S[0])}</span><span class="m"><b>${esc(t)}</b><small>${esc(s || '')}</small></span><span class="e"><b class="num">${esc(v)}</b><span class="tag">${esc(w.lab && w.lab[st] || S[1])}</span>${tm ? `<small>${esc(tm)}</small>` : ''}</span></li>`; }).join('') || '<li class="none">لا نشاط في هذه الفترة.</li>'}</ul>`;
+  }
+  /* رسالة الهدف: جملة تُكتب من البيانات وتتغير نبرتها حسب نسبة التحقيق. w.p النسبة، w.per الفترة، w.rem المتبقي، w.who */
+  function goal(w) {
+    const p = w.p ?? 0, st = p >= 100 ? 'ok' : p >= (w.risk || 80) ? 'mid' : p >= 50 ? 'low' : 'bad';
+    const head = { ok: 'تجاوزت الهدف، أداء ممتاز', mid: 'أداء جيد، اقتربت من الهدف', low: 'في المسار، لكن الوتيرة تحتاج تسريعًا', bad: 'بعيد عن الهدف، يلزم تدخل' }[st];
+    const icn = { ok: 'check', mid: 'up', low: 'clock', bad: 'info' }[st];
+    return `<div class="jr-goal st-${st}"><span class="gi">${ic(icn, 'icon')}</span><div class="gt"><b>${esc(w.head || head)}</b>
+      <p>${w.who ? esc(w.who) + ' — ' : ''}حققت <b class="num">${nf(p, 0)}%</b> من هدف ${esc(w.per || 'الفترة')}${w.rem ? `، والمتبقي <b class="num">${esc(w.rem)}</b>` : ''}${w.days ? ` خلال <b class="num">${w.days}</b> يومًا` : ''}.</p>
+      <span class="gp"><i style="width:${Math.min(100, p)}%"></i></span></div></div>`;
+  }
+
+  /* ---------- الحالة الفارغة لكل نوع: تظهر قبل ربط مصدر البيانات ---------- */
+  const EMPTY_SHAPE = {
+    line: () => `<svg viewBox="0 0 600 120" preserveAspectRatio="none" class="es-line"><line x1="0" x2="600" y1="30" y2="30"/><line x1="0" x2="600" y1="70" y2="70"/><line class="b" x1="0" x2="600" y1="110" y2="110"/></svg>`,
+    cbars: () => `<div class="es-cols">${[40, 62, 30, 75, 50, 66, 38].map(h => `<i style="height:${h}%"></i>`).join('')}</div>`,
+    hbars: () => `<div class="es-rows">${[88, 70, 56, 42, 30].map(h => `<i style="width:${h}%"></i>`).join('')}</div>`,
+    donut: () => `<svg viewBox="0 0 100 100" class="es-ring"><circle cx="50" cy="50" r="36"/></svg>`,
+    semi: () => `<svg viewBox="0 0 100 56" class="es-ring"><path d="M10,50 A40,40 0 0 1 90,50"/></svg>`,
+    radar: () => `<svg viewBox="-60 -60 120 120" class="es-web">${[.33, .66, 1].map(f => `<polygon points="${[0, 1, 2, 3, 4, 5].map(i => { const a = -Math.PI / 2 + i * Math.PI / 3; return `${(Math.cos(a) * 50 * f).toFixed(1)},${(Math.sin(a) * 50 * f).toFixed(1)}`; }).join(' ')}"/>`).join('')}</svg>`,
+    table: () => `<div class="es-rows t">${[0, 1, 2, 3].map(() => '<i></i>').join('')}</div>`,
+    funnel: () => `<div class="es-rows c">${[90, 72, 54, 36].map(h => `<i style="width:${h}%"></i>`).join('')}</div>`,
+    heat: () => `<div class="es-heat">${Array.from({ length: 24 }, () => '<i></i>').join('')}</div>`
+  };
+  const emptyKind = t => ({ radar: 'radar', semi: 'semi', iconrank: 'hbars', ribbon: 'cbars', bullet: 'hbars', people: 'table', feed: 'table', goal: 'hbars' })[t] || (GLYPH_OF[t] === 'kpi' ? 'kpi' : GLYPH_OF[t]) || 'table';
+  function emptyBody(w) {
+    const k = emptyKind(w.t), shape = (EMPTY_SHAPE[k] || EMPTY_SHAPE.table)();
+    return `<div class="jr-empty" data-kind="${k}"><div class="es-shape" aria-hidden="true">${shape}</div><div class="es-msg">${ic('database')}<b>لا توجد بيانات بعد</b><small>اربط مصدرًا أو اعرض ببيانات تجريبية</small></div></div>`;
+  }
 
   const R = {
     line: (w, r) => lineChart(w, r), area: (w, r) => lineChart(w, r, { area: true }), cum: (w, r) => lineChart(w, r, { area: true, cum: true }),
     bars: (w, r) => colChart(w, r, 'single'), grouped: (w, r) => colChart(w, r, 'group'), stacked: (w, r) => colChart(w, r, 'stack'),
     hbars: (w, r) => hbarChart(w, r), rank: (w, r) => hbarChart(w, r, { rank: true }), compare: compareChart, s100: stack100,
     donut, ring, gauges, funnel, heat, risk: riskMatrix, waterfall, div: diverging, scatter: (w, r) => scatter(w, r, false), bubble: (w, r) => scatter(w, r, true),
-    table, cohort, insights, combo, note
+    table, cohort, insights, combo, note, bullet, radar, semi, iconrank: iconRank, ribbon,
+    dco: donutCo, people, feed, goal
   };
-  const DEF = { line: 8, area: 8, cum: 6, combo: 8, bars: 6, grouped: 6, stacked: 6, hbars: 4, rank: 4, compare: 6, s100: 6, donut: 4, ring: 4, gauges: 12, funnel: 4, heat: 6, risk: 4, waterfall: 6, div: 6, scatter: 6, bubble: 6, table: 6, cohort: 6, insights: 6, note: 4, hero: 4 };
+  const DEF = { line: 8, area: 8, cum: 6, combo: 8, bars: 6, grouped: 6, stacked: 6, hbars: 4, rank: 4, compare: 6, s100: 6, donut: 4, ring: 4, gauges: 12, funnel: 4, heat: 6, risk: 4, waterfall: 6, div: 6, scatter: 6, bubble: 6, table: 6, cohort: 6, insights: 6, note: 4, hero: 4, bullet: 6, radar: 6, semi: 4, iconrank: 4, ribbon: 8, dco: 4, people: 8, feed: 4, goal: 4 };
   const SPANS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
   const snap = n => SPANS.reduce((a, b) => Math.abs(b - n) < Math.abs(a - n) ? b : a);
 
   /* ---------- تجميع الصفحة: صفوف المؤشرات + شبكة 12 عمودًا، وآخر عنصر في كل صف يتمدد ليكمله ---------- */
   const isK = w => w.t === 'kpi' || w.t === 'kpiyoy';
-  function renderPage(d, page, salt = '') {
+  function renderPage(d, page, salt = '', opt = {}) {
     const rs = w => seed(d.id + '|' + page.n + '|' + w.ti + '|' + salt), html = [], runs = [];
     page.w.forEach(w => { const k = isK(w), last = runs[runs.length - 1]; if (last && last.k === k) last.ws.push(w); else runs.push({ k, ws: [w] }); });
     runs.forEach(run => {
-      if (run.k) { html.push(`<div class="jr-kpis span-12" style="--n:${Math.min(run.ws.length, 8)}">${run.ws.map(w => w.t === 'kpi' ? kpi(w, rs(w)) : kpiyoy(w)).join('')}</div>`); return; }
+      if (run.k) { html.push(`<div class="jr-kpis span-12" style="--n:${Math.min(run.ws.length, 8)}">${run.ws.map(w => opt.empty ? `<div class="jr-kpi is-empty"><span class="lab">${w.ic ? ic(w.ic) : ''}${esc(w.ti)}</span><div class="v"><span class="num">—</span></div><div class="cmp">لا توجد بيانات بعد</div></div>` : w.t === 'kpi' ? kpi(w, rs(w)) : kpiyoy(w)).join('')}</div>`); return; }
       const rows = []; let row = [], used = 0;
       run.ws.forEach(w => { const sp = w.sp || DEF[w.t] || 6; if (used + sp > 12 && row.length) { rows.push(row); row = []; used = 0; } row.push({ w, sp }); used += sp; });
       if (row.length) rows.push(row);
       rows.forEach(rw => { const tot = rw.reduce((a, b) => a + b.sp, 0); if (tot < 12) rw[rw.length - 1].sp += 12 - tot;
         rw.forEach(({ w, sp }) => html.push(w.t === 'hero'
           ? `<div class="span-${snap(sp)} jr-cell">${hero(w)}</div>`
-          : `<article class="widget jr-w span-${snap(sp)}" data-type="${w.t}"><div class="w-head"><div><h3>${esc(w.ti)}</h3>${w.su ? `<p>${esc(w.su)}</p>` : ''}</div></div><div class="jr-body">${R[w.t] ? R[w.t](w, rs(w)) : ''}</div></article>`)); });
+          : `<article class="widget jr-w span-${snap(sp)}" data-type="${w.t}"><div class="w-head"><div><h3>${esc(w.ti)}</h3>${w.su ? `<p>${esc(w.su)}</p>` : ''}</div></div><div class="jr-body">${opt.empty ? emptyBody(w) : R[w.t] ? R[w.t](w, rs(w)) : ''}</div></article>`)); });
     });
     return html.join('');
+  }
+
+  /* ---------- حركة الدخول (مشتركة لكل اللوحات) ----------
+     عدّ الأرقام في المؤشرات، رسم الخطوط تدريجيًا، اكتساح الحلقات، تتابع ظهور البطاقات.
+     تُعطَّل تلقائيًا مع إعداد «تقليل الحركة». */
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function countUp(el, dur = 900) {
+    const txt = el.textContent, m = txt.match(/-?[\d,]*\.?\d+/); if (!m || RM) return;
+    const raw = m[0], dec = (raw.split('.')[1] || '').length, to = parseFloat(raw.replace(/,/g, '')), pre = txt.slice(0, m.index), post = txt.slice(m.index + raw.length), comma = raw.includes(',') || Math.abs(to) >= 1000;
+    const t0 = performance.now(), f = v => (comma ? Number(v).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : v.toFixed(dec));
+    const step = t => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = pre + f(to * e) + post; if (p < 1) requestAnimationFrame(step); else el.textContent = txt; };
+    requestAnimationFrame(step);
+  }
+  /* عدّاد دوّار: كل خانة رقمية تلف من 0 إلى قيمتها (للمؤشرات الكبيرة عند وصول البيانات) */
+  function roll(el, dur = 1100) {
+    if (RM || el.dataset.rolled) return; const txt = el.textContent; el.dataset.rolled = 1; el.setAttribute('aria-label', txt);
+    let di = 0; el.innerHTML = [...txt].map(ch => /\d/.test(ch) ? `<span class="jr-od" aria-hidden="true"><span style="--n:${ch};--d:${(di++ * 70)}ms">${'0123456789'.split('').map(x => `<i>${x}</i>`).join('')}</span></span>` : `<span aria-hidden="true">${esc(ch)}</span>`).join('');
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('go')));
+    setTimeout(() => { el.textContent = txt; delete el.dataset.rolled; el.classList.remove('go'); }, dur + di * 70 + 200);
+  }
+  function animate(root, o = {}) {
+    if (!root || RM) return;
+    root.querySelectorAll('.jr-kpi:not(.is-empty) .v .num, .jr-hero .v .num, .jr-kpi .yy .big').forEach(el => o.roll ? roll(el) : countUp(el));
+    /* كشف المنحنى من اليمين لليسار (اتجاه الزمن) بقصّ بدل طول الخط، لأن pathLength لا يعمل مع non-scaling-stroke */
+    root.querySelectorAll('.jr-area polyline, .jr-area path').forEach(pl => pl.classList.add('jr-reveal'));
+    root.querySelectorAll('.jr-dring circle[stroke-dasharray]').forEach((c, i) => { c.style.setProperty('--d', (i * 90) + 'ms'); c.classList.add('jr-sweep'); });
+    /* jr-enter (مش jr-in): اسم .jr-in مستخدم بالفعل لبطاقة عنصر insights — نفس الاسم هنا كان
+       هيتعارض مع تنسيقها (padding/background/border) على كل بطاقة/مؤشر في اللوحة. */
+    root.querySelectorAll('.jr-w, .jr-kpis > *').forEach((el, i) => { el.style.setProperty('--i', Math.min(i, 12)); el.classList.add('jr-enter'); });
   }
 
   /* ---------- تركيب لوحة كاملة: عنوان + صفحات + فلاتر ---------- */
@@ -279,7 +422,7 @@
     const draw = () => {
       host.innerHTML = `${d.p.length > 1 ? `<div class="jr-tabs" role="tablist" aria-label="صفحات اللوحة">${d.p.map((p, i) => `<button type="button" role="tab" aria-selected="${i === pi}" data-pg="${i}">${esc(p.n)}</button>`).join('')}</div>` : ''}
         ${(d.f || []).length ? `<div class="jr-filters" role="group" aria-label="فلاتر اللوحة">${d.f.map(([lab, opts], fi) => `<div class="jr-f"><span>${esc(lab)}</span><div>${opts.map(o => `<button type="button" class="chip${sel[fi] === o ? ' is-on' : ''}" data-f="${fi}" data-o="${esc(o)}" aria-pressed="${sel[fi] === o}">${esc(o)}</button>`).join('')}</div></div>`).join('')}${Object.keys(sel).length ? `<button type="button" class="btn btn-ghost btn-sm" data-clear>${ic('x')}مسح الفلاتر</button>` : ''}</div>` : ''}`;
-      grid.innerHTML = renderPage(d, d.p[pi], salt);
+      grid.innerHTML = renderPage(d, d.p[pi], salt); animate(grid);
       host.querySelectorAll('[data-pg]').forEach(b => b.addEventListener('click', () => { pi = +b.dataset.pg; draw(); onPage && onPage(pi); }));
       host.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => { const fi = b.dataset.f, o = b.dataset.o; if (sel[fi] === o) delete sel[fi]; else sel[fi] = o; salt = JSON.stringify(sel); draw(); }));
       host.querySelector('[data-clear]')?.addEventListener('click', () => { for (const k in sel) delete sel[k]; salt = ''; draw(); });
@@ -299,7 +442,7 @@
   document.addEventListener('scroll', () => tipEl && (tipEl.hidden = true), true);
 
   /* مصغّر: أنواع العناصر ← رموز المعرض */
-  const GLYPH_OF = { line: 'line', area: 'line', cum: 'line', combo: 'line', bars: 'cbars', grouped: 'cbars', stacked: 'cbars', waterfall: 'cbars', hbars: 'hbars', rank: 'hbars', compare: 'hbars', s100: 'hbars', div: 'hbars', donut: 'donut', ring: 'donut', gauges: 'donut', funnel: 'funnel', heat: 'heat', cohort: 'heat', risk: 'heat', scatter: 'heat', bubble: 'heat', table: 'table', insights: 'table', note: 'table', hero: 'kpi', kpi: 'kpi', kpiyoy: 'kpi' };
+  const GLYPH_OF = { line: 'line', area: 'line', cum: 'line', combo: 'line', bars: 'cbars', grouped: 'cbars', stacked: 'cbars', waterfall: 'cbars', hbars: 'hbars', rank: 'hbars', compare: 'hbars', s100: 'hbars', div: 'hbars', donut: 'donut', ring: 'donut', gauges: 'donut', funnel: 'funnel', heat: 'heat', cohort: 'heat', risk: 'heat', scatter: 'heat', bubble: 'heat', table: 'table', insights: 'table', note: 'table', bullet: 'hbars', hero: 'kpi', kpi: 'kpi', kpiyoy: 'kpi', radar: 'donut', semi: 'donut', dco: 'donut', iconrank: 'hbars', ribbon: 'cbars', people: 'table', feed: 'table', goal: 'kpi' };
   const thumbItems = d => {
     const ws = d.p[0].w, ks = ws.filter(isK).slice(0, 4), cs = ws.filter(w => !isK(w));
     const out = ks.map(w => ({ type: 'kpi', span: 12 / ks.length, title: w.ti }));
@@ -308,5 +451,5 @@
     return out.map(o => Object.assign(o, { span: snap(o.span) }));
   };
 
-  window.JR = { renderPage, mount, thumbItems, dim, glyphOf: t => GLYPH_OF[t] || 'table', TYPES: Object.keys(R).concat(['kpi', 'kpiyoy', 'hero']) };
+  window.JR = { renderPage, mount, animate, countUp, roll, thumbItems, dim, glyphOf: t => GLYPH_OF[t] || 'table', TYPES: Object.keys(R).concat(['kpi', 'kpiyoy', 'hero']) };
 })();
