@@ -420,12 +420,14 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
-                // Force the very first call of every loop to make a tool call when tools are
+                // Force the first two calls of every loop to make a tool call when tools are
                 // offered — see the matching comment in OpenAiClient.RunLoopAsync for why:
-                // a model that answers straight away, with zero tool calls, has no way to have
-                // actually checked whether the sources it was just told are "enabled" really
-                // have usable data.
-                var forceToolUse = iteration == 0 && !forceFinalAnswer;
+                // forcing only the first call stopped a model from declining a build outright
+                // with zero tool calls, but still let it stop dead after a single list_files
+                // and never actually check the real schema against the widgets it was asked
+                // for. Forcing round two as well makes it pick another tool again (normally
+                // query_data) before it's allowed to free-answer.
+                var forceToolUse = iteration <= 1 && !forceFinalAnswer;
                 var response = await CallMessagesApiAsync(
                     messages, systemPrompt, forceFinalAnswer ? null : tools, forceToolUse, trace, ct);
 

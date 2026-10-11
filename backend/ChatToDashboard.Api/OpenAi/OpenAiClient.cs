@@ -403,15 +403,20 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
-                // Force the very first call of every loop to make a tool call when tools are
-                // offered: a model that answers straight away, with zero tool calls, has no
-                // way to have actually checked whether the sources it was just told are
-                // "enabled" really have usable data — that's exactly the failure this
-                // mechanically forecloses (observed live: the model declining a dashboard
-                // build outright, citing "not authorized", without ever calling list_files).
-                // Only the first iteration is forced; every later one stays "auto" so the
-                // model can still choose to stop calling tools once it has what it needs.
-                var forceToolUse = iteration == 0 && !forceFinalAnswer;
+                // Force the first two calls of every loop to make a tool call when tools are
+                // offered. Forcing only iteration 0 (the original fix) stopped a model from
+                // declining a build outright with zero tool calls at all (observed live:
+                // "not authorized", without ever calling list_files) — but left a second,
+                // equally real failure open: a model that calls list_files once, sees the
+                // real schema, and then just answers "stop" without ever calling query_data
+                // to actually check it against the widgets it was asked for (observed live:
+                // a whole dashboard of real, matching columns returned 100% noData because
+                // the model never got past round one). Forcing round two as well means that
+                // right after list_files, the model is made to pick another tool again
+                // (almost always query_data) before it's allowed to free-answer — then every
+                // iteration from here stays "auto" so it can still stop once it actually has
+                // what it needs, same as before.
+                var forceToolUse = iteration <= 1 && !forceFinalAnswer;
                 var response = await CallChatCompletionsAsync(
                     model, messages, forceFinalAnswer ? null : tools, forceToolUse, trace, ct);
 
