@@ -52,11 +52,13 @@ public class DataController : ControllerBase
         }
     }
 
-    /// <summary>Returns the tables currently loaded in the staging schema.</summary>
+    /// <summary>Returns the tables currently loaded in the shared schema — an admin-only
+    /// operational view, deliberately not scoped to any one project (see DataFolderLoader's own
+    /// doc comment: this is deployment-wide reference data, not any project's own).</summary>
     [HttpGet("tables")]
     public async Task<IActionResult> Tables(CancellationToken ct)
     {
-        var schema = await _loader.GetSchemaAsync(ct);
+        var schema = await _loader.GetSchemaAsync(null, ct);
         return Ok(schema);
     }
 }

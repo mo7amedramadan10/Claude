@@ -45,7 +45,7 @@ public class SystemApiLoader
 
     /// <summary>The staging table a system's records land in.</summary>
     public string TableFor(SystemSource system) =>
-        _db.DisplayTable("sys_" + DataFolderLoader.SanitizeTableName(system.Id));
+        _db.DisplayTable(null, "sys_" + DataFolderLoader.SanitizeTableName(system.Id));
 
     public SystemStatus StatusFor(string systemId) =>
         _status.TryGetValue(systemId, out var status) ? status : new SystemStatus(null, 0, null, false);
@@ -94,7 +94,7 @@ public class SystemApiLoader
 
             await using var connection = await _db.OpenConnectionAsync(ct);
             await _db.CreateContainerIfMissingAsync(connection, ct);
-            await _db.RecreateAndLoadAsync(connection, bareName, table, ct);
+            await _db.RecreateAndLoadAsync(connection, null, bareName, table, ct);
 
             _status[system.Id] = new SystemStatus(DateTime.UtcNow, table.Rows.Count, null, false);
             _logger.LogInformation("Loaded {Count} record(s) from {System} into {Table}",

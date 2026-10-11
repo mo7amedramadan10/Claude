@@ -36,7 +36,7 @@ public class InquiryAccessService
     {
         var selection = await _permissions.GetEffectiveSelectionAsync(user, sources ?? SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _tools.GetSchemaAsync(ct);
+        var schema = await _tools.GetSchemaAsync(context.ProjectId, ct);
 
         var result = new List<ConversationTurn>(turns.Count);
         foreach (var turn in turns)
@@ -62,7 +62,7 @@ public class InquiryAccessService
         if (block.Kind != InquiryBlockKinds.Data || string.IsNullOrWhiteSpace(block.Table)) return null;
         var selection = await _permissions.GetEffectiveSelectionAsync(user, sources ?? SourceSelection.AllEnabled(), ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        return AnalyticsTools.CheckSourcePermission(block.Table, context, await _tools.GetSchemaAsync(ct));
+        return AnalyticsTools.CheckSourcePermission(block.Table, context, await _tools.GetSchemaAsync(context.ProjectId, ct));
     }
 
     private static InquiryBlock MaskIfNeeded(

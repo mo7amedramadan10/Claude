@@ -239,6 +239,13 @@ using (var scope = app.Services.CreateScope())
             await repositoryStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
             var integrationStoreForBackfill = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Integrations.IntegrationStore>();
             await integrationStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
+
+            // Now that every repository file has a real ProjectId (just backfilled above, or
+            // already had one), move each one's uploaded-data table out of the shared SQL
+            // Server schema into its own project's schema — see RepositoryStore.MigrateExisting-
+            // TablesToProjectSchemasAsync's own doc comment. No-op on SQLite, and idempotent
+            // (re-checked by OBJECT_ID, not a flag) so it's cheap to run on every startup.
+            await repositoryStoreForBackfill.MigrateExistingTablesToProjectSchemasAsync();
         }
     }
     catch (Exception ex)

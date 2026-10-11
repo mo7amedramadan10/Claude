@@ -113,34 +113,73 @@ public class DataStore
 
     // ---- Naming ----
 
-    /// <summary>Quoted table reference for generated DDL/DML.</summary>
-    private string QualifiedTable(string tableName) => Provider == DbProvider.Sqlite
+    /// <summary>The schema a project's own uploaded-file tables live in — SQL Server only.
+    /// SQLite has no real schema concept, so every project keeps sharing the single
+    /// <c>staging_</c> prefix there (SQLite is the local/trial path, never a real multi-tenant
+    /// deployment — see <see cref="DbProvider"/>'s own doc comments). Falls back to the shared
+    /// "staging" schema when <paramref name="projectId"/> is null/blank or doesn't look like one
+    /// of this app's own ids (defensive: an unexpected value never flows into a dynamically
+    /// built schema name). System-sourced and data-folder tables (see SystemApiLoader,
+    /// DataFolderLoader) have no project of their own and always stay in "staging" — only
+    /// RepositoryStore's uploaded files get their own project schema.</summary>
+    internal string ProjectSchema(string? projectId)
+    {
+        if (Provider == DbProvider.Sqlite) return SqlServerSchema;
+        if (string.IsNullOrWhiteSpace(projectId) || !IsValidProjectId(projectId)) return SqlServerSchema;
+        return "proj_" + projectId;
+    }
+
+    private static bool IsValidProjectId(string projectId) =>
+        projectId.Length is > 0 and <= 64 && projectId.All(char.IsAsciiHexDigit);
+
+    /// <summary>Quoted table reference for generated DDL/DML. <paramref name="schema"/> is
+    /// ignored on SQLite (no real schema concept there — the prefix stands in).</summary>
+    internal string QualifiedTable(string schema, string tableName) => Provider == DbProvider.Sqlite
         ? Quote(SqlitePrefix + tableName)
-        : $"[{SqlServerSchema}].[{tableName.Replace("]", "]]")}]";
+        : $"[{schema}].[{tableName.Replace("]", "]]")}]";
 
-    /// <summary>The name Claude sees and writes in its queries, for a freshly loaded file.</summary>
-    public string DisplayTable(string tableName) => Provider == DbProvider.Sqlite
+    /// <summary>Same as the two-argument overload, but for a display name already carrying its
+    /// own schema/prefix (e.g. "proj_xxx.Sales" or "staging.Sales" on SQL Server, "staging_sales"
+    /// on SQLite) — as returned by <see cref="GetSchemaAsync"/>, never built from client input.
+    /// Generic over whichever schema the name actually carries (shared or any project's), so
+    /// callers never need to know or re-derive which one a given table lives in.</summary>
+    internal string QualifiedTable(string displayName)
+    {
+        if (Provider == DbProvider.Sqlite) return Quote(displayName);
+        var parts = displayName.Split('.');
+        return string.Join(".", parts.Select(p => $"[{p.Replace("]", "]]")}]"));
+    }
+
+    /// <summary>The name Claude sees and writes in its queries, for a freshly loaded file —
+    /// under <paramref name="projectId"/>'s own schema on SQL Server, or the single shared
+    /// prefix on SQLite.</summary>
+    public string DisplayTable(string? projectId, string tableName) => Provider == DbProvider.Sqlite
         ? SqlitePrefix + tableName
-        : $"{SqlServerSchema}.{tableName}";
+        : $"{ProjectSchema(projectId)}.{tableName}";
 
-    /// <summary>Strips the schema/prefix from a display name, giving the bare table name.</summary>
+    /// <summary>Strips the schema/prefix from a display name, giving the bare table name. Works
+    /// the same regardless of which SQL Server schema (shared or per-project) the name carries —
+    /// it only looks for the single '.' separator, not a specific schema name.</summary>
     public string BareTableName(string displayName) => Provider == DbProvider.Sqlite
         ? (displayName.StartsWith(SqlitePrefix, StringComparison.Ordinal)
             ? displayName[SqlitePrefix.Length..]
             : displayName)
         : (displayName.Contains('.') ? displayName.Split('.').Last() : displayName);
 
-    public async Task DropTableAsync(DbConnection connection, string bareName, CancellationToken ct = default)
+    public async Task DropTableAsync(DbConnection connection, string? projectId, string bareName, CancellationToken ct = default)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE IF EXISTS {QualifiedTable(bareName)}";
+        command.CommandText = $"DROP TABLE IF EXISTS {QualifiedTable(ProjectSchema(projectId), bareName)}";
         await command.ExecuteNonQueryAsync(ct);
     }
 
-    /// <summary>The name Claude sees, for a table name as returned by the catalog query.</summary>
-    private string CatalogDisplayTable(string rawName) => Provider == DbProvider.Sqlite
+    /// <summary>The name Claude sees, for a table name as returned by the catalog query —
+    /// <paramref name="schema"/> is whichever schema that particular row actually came from
+    /// (shared or a specific project's), since <see cref="GetSchemaAsync"/> can return rows from
+    /// both in one call.</summary>
+    private string CatalogDisplayTable(string schema, string rawName) => Provider == DbProvider.Sqlite
         ? rawName // SQLite table names already carry the staging_ prefix.
-        : $"{SqlServerSchema}.{rawName}";
+        : $"{schema}.{rawName}";
 
     private string Quote(string identifier) => Provider == DbProvider.Sqlite
         ? $"\"{identifier.Replace("\"", "\"\"")}\""
@@ -162,22 +201,42 @@ public class DataStore
 
     // ---- Schema ----
 
-    public async Task<IReadOnlyList<TableSchema>> GetSchemaAsync(CancellationToken ct = default)
+    /// <summary>Every column of every table visible to <paramref name="projectId"/>: the shared
+    /// schema (system sources, data-folder reference tables) on its own when
+    /// <paramref name="projectId"/> is null, or unioned with that project's own uploaded-file
+    /// schema when it isn't. On SQL Server this scopes the scan at the SQL level — a project
+    /// never sees, and the scan never even reads, another project's tables — rather than relying
+    /// solely on the application-level <c>IsTableKnownToProject</c> filter every caller still
+    /// applies on top (kept as a second, now-redundant layer of defense). SQLite has no per-
+    /// project schema (see <see cref="ProjectSchema"/>), so <paramref name="projectId"/> is
+    /// ignored there and the single shared prefix is scanned exactly as before.</summary>
+    public async Task<IReadOnlyList<TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default)
     {
+        var projectSchema = ProjectSchema(projectId);
+        var scopedToProject = Provider != DbProvider.Sqlite
+            && !string.Equals(projectSchema, SqlServerSchema, StringComparison.Ordinal);
+
         var sql = Provider == DbProvider.Sqlite
             ? """
-              SELECT m.name AS TableName, p.name AS ColumnName, p.type AS DataType
+              SELECT 'staging' AS TableSchema, m.name AS TableName, p.name AS ColumnName, p.type AS DataType
               FROM sqlite_master m
               JOIN pragma_table_info(m.name) p
               WHERE m.type = 'table' AND m.name LIKE 'staging\_%' ESCAPE '\'
               ORDER BY m.name, p.cid
               """
-            : """
-              SELECT c.TABLE_NAME AS TableName, c.COLUMN_NAME AS ColumnName, c.DATA_TYPE AS DataType
-              FROM INFORMATION_SCHEMA.COLUMNS c
-              WHERE c.TABLE_SCHEMA = 'staging'
-              ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION
-              """;
+            : scopedToProject
+                ? """
+                  SELECT c.TABLE_SCHEMA AS TableSchema, c.TABLE_NAME AS TableName, c.COLUMN_NAME AS ColumnName, c.DATA_TYPE AS DataType
+                  FROM INFORMATION_SCHEMA.COLUMNS c
+                  WHERE c.TABLE_SCHEMA IN (@shared, @project)
+                  ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION
+                  """
+                : """
+                  SELECT c.TABLE_SCHEMA AS TableSchema, c.TABLE_NAME AS TableName, c.COLUMN_NAME AS ColumnName, c.DATA_TYPE AS DataType
+                  FROM INFORMATION_SCHEMA.COLUMNS c
+                  WHERE c.TABLE_SCHEMA = @shared
+                  ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION
+                  """;
 
         await using var connection = await OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
@@ -186,26 +245,38 @@ public class DataStore
         // this runs ahead of every new upload's save (see RepositoryStore.ResolveBareTable-
         // NameAsync's collision check) and was seen live hitting SqlCommand's 30s default on
         // its own, as "Execution Timeout Expired" on save well before the actual table load
-        // — scanning INFORMATION_SCHEMA.COLUMNS for every staging table is cheap on a fast
-        // link but not free on a loaded one.
+        // — scanning INFORMATION_SCHEMA.COLUMNS is cheap on a fast link but not free on a
+        // loaded one, even now that it's scoped to (at most) two schemas instead of every table
+        // on the server.
         command.CommandTimeout = LoadCommandTimeoutSeconds;
+        if (Provider != DbProvider.Sqlite)
+        {
+            command.Parameters.Add(new SqlParameter("@shared", SqlServerSchema));
+            if (scopedToProject) command.Parameters.Add(new SqlParameter("@project", projectSchema));
+        }
 
-        var tables = new Dictionary<string, List<TableColumn>>();
+        var tables = new Dictionary<string, (string Schema, string Table, List<TableColumn> Columns)>();
         var order = new List<string>();
         await using var reader = await command.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            var table = reader.GetString(0);
-            if (!tables.TryGetValue(table, out var columns))
+            var schema = reader.GetString(0);
+            var table = reader.GetString(1);
+            var key = schema + "." + table;
+            if (!tables.TryGetValue(key, out var entry))
             {
-                columns = new List<TableColumn>();
-                tables[table] = columns;
-                order.Add(table);
+                entry = (schema, table, new List<TableColumn>());
+                tables[key] = entry;
+                order.Add(key);
             }
-            columns.Add(new TableColumn(reader.GetString(1), reader.GetString(2)));
+            entry.Columns.Add(new TableColumn(reader.GetString(2), reader.GetString(3)));
         }
 
-        return order.Select(t => new TableSchema(CatalogDisplayTable(t), tables[t])).ToList();
+        return order.Select(k =>
+        {
+            var entry = tables[k];
+            return new TableSchema(CatalogDisplayTable(entry.Schema, entry.Table), entry.Columns);
+        }).ToList();
     }
 
     public async Task CreateContainerIfMissingAsync(DbConnection connection, CancellationToken ct = default)
@@ -214,6 +285,23 @@ public class DataStore
 
         await using var command = connection.CreateCommand();
         command.CommandText = $"IF SCHEMA_ID('{SqlServerSchema}') IS NULL EXEC('CREATE SCHEMA [{SqlServerSchema}]')";
+        await command.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>Same as <see cref="CreateContainerIfMissingAsync"/> but for one project's own
+    /// schema (SQL Server only — a no-op on SQLite, and a no-op when <paramref name="projectId"/>
+    /// resolves to the shared schema, which <see cref="CreateContainerIfMissingAsync"/> already
+    /// covers). Called lazily, right before a project's first upload needs its schema to exist —
+    /// the same lazy, idempotent, first-use pattern every schema in this app is already created
+    /// by; no eager hook at project-creation time.</summary>
+    public async Task CreateProjectSchemaIfMissingAsync(DbConnection connection, string? projectId, CancellationToken ct = default)
+    {
+        if (Provider == DbProvider.Sqlite) return;
+        var schema = ProjectSchema(projectId);
+        if (string.Equals(schema, SqlServerSchema, StringComparison.Ordinal)) return;
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"IF SCHEMA_ID('{schema}') IS NULL EXEC('CREATE SCHEMA [{schema}]')";
         await command.ExecuteNonQueryAsync(ct);
     }
 
@@ -226,11 +314,13 @@ public class DataStore
     /// bigger table load can genuinely need.</summary>
     private const int LoadCommandTimeoutSeconds = 120;
 
-    /// <summary>Drops and recreates the staging table, then loads every row of <paramref name="table"/>.</summary>
+    /// <summary>Drops and recreates the table under <paramref name="projectId"/>'s own schema
+    /// (or the shared schema when null — used by SystemApiLoader/DataFolderLoader, which have
+    /// no project of their own), then loads every row of <paramref name="table"/>.</summary>
     public async Task RecreateAndLoadAsync(
-        DbConnection connection, string tableName, DataTable table, CancellationToken ct = default)
+        DbConnection connection, string? projectId, string tableName, DataTable table, CancellationToken ct = default)
     {
-        var target = QualifiedTable(tableName);
+        var target = QualifiedTable(ProjectSchema(projectId), tableName);
         var columnDefs = table.Columns.Cast<DataColumn>()
             .Select(c => $"{Quote(c.ColumnName)} {SqlTypeFor(c.DataType)} NULL");
 
@@ -303,11 +393,14 @@ public class DataStore
 
     public string DialectName => Provider == DbProvider.Sqlite ? "SQLite" : "Microsoft SQL Server (T-SQL)";
 
-    public string TableNamingHint => Provider == DbProvider.Sqlite
+    /// <summary><paramref name="projectId"/> picks which schema the hint names — a project's
+    /// own uploaded files live under its own schema on SQL Server now, not the shared one.</summary>
+    public string TableNamingHint(string? projectId) => Provider == DbProvider.Sqlite
         ? "staging_<TableName> (SQLite has no schemas, so the prefix is part of the name)"
-        : "staging.<TableName>";
+        : $"{ProjectSchema(projectId)}.<TableName> for your own uploaded files, or staging.<TableName> for shared/system tables";
 
-    public string DialectPrompt => Provider == DbProvider.Sqlite
+    /// <summary>Same <paramref name="projectId"/> scoping as <see cref="TableNamingHint"/>.</summary>
+    public string DialectPrompt(string? projectId) => Provider == DbProvider.Sqlite
         ? """
           SQL DIALECT — this is SQLite, NOT SQL Server or PostgreSQL:
           - Use LIMIT 500 to cap results; there is no TOP.
@@ -318,12 +411,13 @@ public class DataStore
           - Only SELECT statements are allowed. Any INSERT/UPDATE/DELETE/DDL/PRAGMA is rejected.
           - If a query fails, read the error message and correct your SQL.
           """
-        : """
+        : $"""
           SQL DIALECT — this is Microsoft SQL Server (T-SQL), NOT PostgreSQL or MySQL:
           - Use TOP N, never LIMIT. Always cap results: SELECT TOP 500 ...
           - Use GETDATE() instead of NOW(); DATEADD/DATEDIFF for date math; FORMAT() or CONVERT() for formatting.
           - Quote identifiers with [square brackets], not double quotes.
-          - Tables live in the staging schema; always reference them as staging.[TableName].
+          - Reference a table exactly as it was listed to you (either {ProjectSchema(projectId)}.[TableName]
+            or staging.[TableName]) — never assume one schema for every table.
           - Only SELECT statements are allowed. Any INSERT/UPDATE/DELETE/DDL is rejected.
           - If a query fails, read the error message and correct your SQL.
           """;

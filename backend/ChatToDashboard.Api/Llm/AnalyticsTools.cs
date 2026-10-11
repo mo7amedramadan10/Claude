@@ -243,13 +243,15 @@ public class AnalyticsTools
             enabledIntegrations, selection.ProjectId);
     }
 
-    /// <summary>Forwards to <see cref="Data.DataFolderLoader.GetSchemaAsync"/> — the full table
-    /// list across every project on this deployment (see <see cref="IsTableKnownToProject"/>)
-    /// — for callers outside this class that need it alongside a <see cref="SourceContext"/> to
-    /// call <see cref="CheckSourcePermission"/> (DashboardAccessService, InquiryAccessService).
-    /// WidgetQueryService holds its own DataFolderLoader directly and doesn't need this.</summary>
-    public Task<IReadOnlyList<Data.TableSchema>> GetSchemaAsync(CancellationToken ct = default) =>
-        _loader.GetSchemaAsync(ct);
+    /// <summary>Forwards to <see cref="Data.DataFolderLoader.GetSchemaAsync"/> — the shared
+    /// schema's tables, unioned with <paramref name="projectId"/>'s own uploaded-file schema
+    /// when given (see <see cref="IsTableKnownToProject"/> for the app-level filter every caller
+    /// still applies on top) — for callers outside this class that need it alongside a
+    /// <see cref="SourceContext"/> to call <see cref="CheckSourcePermission"/>
+    /// (DashboardAccessService, InquiryAccessService). WidgetQueryService holds its own
+    /// DataFolderLoader directly and doesn't need this.</summary>
+    public Task<IReadOnlyList<Data.TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default) =>
+        _loader.GetSchemaAsync(projectId, ct);
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
     {
@@ -273,7 +275,7 @@ public class AnalyticsTools
                 "query_data",
                 $"Runs a read-only SELECT query ({_db.DialectName} dialect) against the loaded data tables " +
                 $"and returns the rows as JSON. Only SELECT statements are allowed; results are capped at " +
-                $"{MaxRowsReturned} rows, so always use {rowCap} (or less). Reference tables as {_db.TableNamingHint}.",
+                $"{MaxRowsReturned} rows, so always use {rowCap} (or less). Reference tables as {_db.TableNamingHint(context.ProjectId)}.",
                 new JsonObject
                 {
                     ["type"] = "object",
@@ -1021,7 +1023,7 @@ public class AnalyticsTools
         - ملفات الـ PDF مالهاش جداول: بياناتها الوصفية بترجع في list_files، ومحتواها بيتبحث فيه
           بـ search_documents. لو السؤال عن عدد الملفات أو أسمائها، استخدم list_files.
 
-        {{_db.DialectPrompt}}
+        {{_db.DialectPrompt(context.ProjectId)}}
 
         قواعد إضافية على الاستعلام
         - لو مش متأكد من اسم عمود أو جدول بالظبط، ارجع لنتيجة list_files تاني بدل ما تخمّن
@@ -1464,7 +1466,7 @@ public class AnalyticsTools
     /// an empty hint would be worse than no hint at all.</summary>
     private async Task<string?> BuildValidTablesHintAsync(SourceContext context, CancellationToken ct)
     {
-        var schema = await _loader.GetSchemaAsync(ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
         var validTables = schema
             .Where(t => IsTableKnownToProject(t.Table, context))
             .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
@@ -1506,7 +1508,7 @@ public class AnalyticsTools
             {
                 case "list_files":
                 {
-                    var schema = await _loader.GetSchemaAsync(ct);
+                    var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
                     // Keep only tables this project actually knows about (see
                     // IsTableKnownToProject — GetSchemaAsync otherwise reflects every project's
                     // tables on a shared deployment), then hide ones belonging to a switched-off
@@ -1558,7 +1560,7 @@ public class AnalyticsTools
                     if (string.IsNullOrWhiteSpace(sql))
                         return ("Error: 'sql' input is required.", true);
 
-                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(ct));
+                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteQueryAsync(sql, ct);
@@ -1594,7 +1596,7 @@ public class AnalyticsTools
                     periodsAhead = Math.Clamp(periodsAhead, 1, 12);
                     int? seasonLength = input["seasonLength"] is JsonValue seasonNode && seasonNode.TryGetValue<int>(out var sl) ? sl : null;
 
-                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(ct));
+                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteForecastAsync(sql, periodsAhead, seasonLength, ct);
@@ -1686,7 +1688,7 @@ public class AnalyticsTools
     /// can never reach a source it shouldn't, same as a model-issued one couldn't.</summary>
     public async Task<(string Result, bool IsError)> RunReadOnlyQueryAsync(string sql, SourceContext context, CancellationToken ct)
     {
-        var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(ct));
+        var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
         return permissionError is not null ? (permissionError, true) : await ExecuteQueryAsync(sql, ct);
     }
 

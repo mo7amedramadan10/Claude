@@ -62,7 +62,7 @@ public class WidgetQueryService
     public async Task<FieldsResponse> GetAvailableFieldsAsync(SourceSelection selection, CancellationToken ct)
     {
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
 
         var tables = schema
             // Keep only tables this project actually knows about — GetSchemaAsync otherwise
@@ -104,7 +104,7 @@ public class WidgetQueryService
         var col = FindColumn(table, field)
             ?? throw new WidgetQueryValidationException("العمود المطلوب غير موجود في هذا الجدول.");
 
-        var tableRef = QualifiedTable(table.Table);
+        var tableRef = _db.QualifiedTable(table.Table);
         var colQuoted = Quote(col.Name);
         var limit = 50;
         var sql = _db.Provider == DbProvider.Sqlite
@@ -152,7 +152,7 @@ public class WidgetQueryService
             dateCol = FindColumn(table, request.DateColumn)
                 ?? throw new WidgetQueryValidationException("حقل التاريخ المطلوب غير موجود في هذا الجدول.");
 
-        var tableRef = QualifiedTable(table.Table);
+        var tableRef = _db.QualifiedTable(table.Table);
 
         // Every filter value becomes a real parameter — never string-interpolated — even
         // though the field name itself is schema-verified like any other identifier here.
@@ -224,7 +224,7 @@ public class WidgetQueryService
         var table = await ResolveTableAsync(tableName, selection, ct);
 
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
         if (AnalyticsTools.CheckSourcePermission(sql, context, schema) is not null)
             throw new WidgetQueryValidationException("لا يوجد صلاحية لتنفيذ هذا الاستعلام.");
 
@@ -313,7 +313,7 @@ public class WidgetQueryService
     private async Task<TableSchema> ResolveTableAsync(string tableName, SourceSelection selection, CancellationToken ct)
     {
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
 
         // tableName comes straight from the client (the widget wizard's own picker, or a
         // stored widget's query.table replayed on a filter click) — unlike query_data's SQL,
@@ -433,7 +433,7 @@ public class WidgetQueryService
     {
         var topN = Cap(request.TopN, 10);
         var sortDir = string.Equals(request.Sort, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
-        var tableRef = QualifiedTable(table.Table);
+        var tableRef = _db.QualifiedTable(table.Table);
         var dimQuoted = Quote(dimensionCol.Name);
         var sql = _db.Provider == DbProvider.Sqlite
             ? $"SELECT {dimQuoted} AS label, {aggExpr} AS value FROM {tableRef}{where} " +
@@ -491,18 +491,6 @@ public class WidgetQueryService
     private string Quote(string identifier) => _db.Provider == DbProvider.Sqlite
         ? $"\"{identifier.Replace("\"", "\"\"")}\""
         : $"[{identifier.Replace("]", "]]")}]";
-
-    /// <summary>
-    /// The display table name from the schema (e.g. "staging_sales" for SQLite, or the
-    /// dotted "staging.Sales" for SQL Server) turned into a properly bracket/quote-qualified
-    /// SQL reference — never built from client input, only from a name the schema itself returned.
-    /// </summary>
-    private string QualifiedTable(string displayName)
-    {
-        if (_db.Provider == DbProvider.Sqlite) return Quote(displayName);
-        var parts = displayName.Split('.');
-        return string.Join(".", parts.Select(p => $"[{p.Replace("]", "]]")}]"));
-    }
 
     private string PeriodExpr(string dateColName, string granularity)
     {
