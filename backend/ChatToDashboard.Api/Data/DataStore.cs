@@ -182,6 +182,13 @@ public class DataStore
         await using var connection = await OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
+        // Same slow/shared-SQL-Server reasoning as LoadCommandTimeoutSeconds's own comment:
+        // this runs ahead of every new upload's save (see RepositoryStore.ResolveBareTable-
+        // NameAsync's collision check) and was seen live hitting SqlCommand's 30s default on
+        // its own, as "Execution Timeout Expired" on save well before the actual table load
+        // — scanning INFORMATION_SCHEMA.COLUMNS for every staging table is cheap on a fast
+        // link but not free on a loaded one.
+        command.CommandTimeout = LoadCommandTimeoutSeconds;
 
         var tables = new Dictionary<string, List<TableColumn>>();
         var order = new List<string>();
