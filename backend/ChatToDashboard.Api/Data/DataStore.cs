@@ -294,15 +294,44 @@ public class DataStore
     /// covers). Called lazily, right before a project's first upload needs its schema to exist —
     /// the same lazy, idempotent, first-use pattern every schema in this app is already created
     /// by; no eager hook at project-creation time.</summary>
-    public async Task CreateProjectSchemaIfMissingAsync(DbConnection connection, string? projectId, CancellationToken ct = default)
+    /// <param name="projectName">When given, stamped onto the schema as its MS_Description
+    /// extended property (what SSMS/Object Explorer shows as the schema's description/tooltip),
+    /// purely so a human browsing the database can tell which project <c>proj_&lt;id&gt;</c>
+    /// belongs to without a lookup. Never affects the schema's own name — every query, DDL
+    /// statement and the LLM's own prompt keep referencing the short, stable <c>proj_&lt;id&gt;</c>
+    /// form; embedding the (often Arabic, always mutable) display name into the identifier
+    /// itself would make every generated query longer and would orphan the name the moment the
+    /// project is renamed. Kept up to date on every call (not just the first) via
+    /// sp_updateextendedproperty, so a later rename is reflected without a special migration
+    /// path of its own.</param>
+    public async Task CreateProjectSchemaIfMissingAsync(
+        DbConnection connection, string? projectId, string? projectName = null, CancellationToken ct = default)
     {
         if (Provider == DbProvider.Sqlite) return;
         var schema = ProjectSchema(projectId);
         if (string.Equals(schema, SqlServerSchema, StringComparison.Ordinal)) return;
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"IF SCHEMA_ID('{schema}') IS NULL EXEC('CREATE SCHEMA [{schema}]')";
-        await command.ExecuteNonQueryAsync(ct);
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = $"IF SCHEMA_ID('{schema}') IS NULL EXEC('CREATE SCHEMA [{schema}]')";
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        if (string.IsNullOrWhiteSpace(projectName)) return;
+
+        await using var prop = connection.CreateCommand();
+        prop.CommandText = """
+            IF EXISTS (SELECT 1 FROM sys.extended_properties
+                       WHERE class = 3 AND major_id = SCHEMA_ID(@schema) AND name = N'MS_Description')
+                EXEC sp_updateextendedproperty @name = N'MS_Description', @value = @projectName,
+                    @level0type = N'SCHEMA', @level0name = @schema;
+            ELSE
+                EXEC sp_addextendedproperty @name = N'MS_Description', @value = @projectName,
+                    @level0type = N'SCHEMA', @level0name = @schema;
+            """;
+        prop.Parameters.Add(new SqlParameter("@schema", schema));
+        prop.Parameters.Add(new SqlParameter("@projectName", projectName));
+        await prop.ExecuteNonQueryAsync(ct);
     }
 
     // ---- Loading ----

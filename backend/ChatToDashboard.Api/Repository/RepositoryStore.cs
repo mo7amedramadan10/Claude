@@ -20,12 +20,15 @@ public class RepositoryStore
 {
     private readonly DataStore _db;
     private readonly ITableNamingAssistant _tableNaming;
+    private readonly Projects.ProjectStore _projects;
     private readonly ILogger<RepositoryStore> _logger;
 
-    public RepositoryStore(DataStore db, ITableNamingAssistant tableNaming, ILogger<RepositoryStore> logger)
+    public RepositoryStore(
+        DataStore db, ITableNamingAssistant tableNaming, Projects.ProjectStore projects, ILogger<RepositoryStore> logger)
     {
         _db = db;
         _tableNaming = tableNaming;
+        _projects = projects;
         _logger = logger;
     }
 
@@ -198,7 +201,8 @@ public class RepositoryStore
             var bareName = _db.BareTableName(row.TableName);
             try
             {
-                await _db.CreateProjectSchemaIfMissingAsync(connection, row.ProjectId, ct);
+                var project = await _projects.FindByIdAsync(row.ProjectId, ct);
+                await _db.CreateProjectSchemaIfMissingAsync(connection, row.ProjectId, project?.Name, ct);
 
                 await using var check = connection.CreateCommand();
                 check.CommandText = "SELECT OBJECT_ID(@target)";
@@ -348,7 +352,8 @@ public class RepositoryStore
 
         if (table is not null && bareName is not null)
         {
-            await _db.CreateProjectSchemaIfMissingAsync(connection, projectId, ct);
+            var project = projectId is null ? null : await _projects.FindByIdAsync(projectId, ct);
+            await _db.CreateProjectSchemaIfMissingAsync(connection, projectId, project?.Name, ct);
             await _db.RecreateAndLoadAsync(connection, projectId, bareName, table, ct);
         }
 
@@ -464,7 +469,8 @@ public class RepositoryStore
         if (parsed.Table is { } table && table.Columns.Count > 0 && !string.IsNullOrWhiteSpace(existingTableName))
         {
             var bareName = _db.BareTableName(existingTableName);
-            await _db.CreateProjectSchemaIfMissingAsync(connection, projectId, ct);
+            var project = projectId is null ? null : await _projects.FindByIdAsync(projectId, ct);
+            await _db.CreateProjectSchemaIfMissingAsync(connection, projectId, project?.Name, ct);
             await _db.RecreateAndLoadAsync(connection, projectId, bareName, table, ct);
 
             var newColumns = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
