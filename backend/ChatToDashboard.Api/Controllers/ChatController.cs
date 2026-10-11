@@ -108,13 +108,13 @@ public class ChatController : ControllerBase
 
                         // Field/table alias library learning (see SchemaLibrary.SchemaMatchingService):
                         // a required widget that carries a known draft concept (Table/Sql) and actually
-                        // got built with real data straight from an integration's live schema
-                        // (Query.IntegrationId set — see WidgetSqlQuery's own remarks) tells us exactly
-                        // which real table/columns the model resolved that concept to this time. Never
-                        // allowed to fail the response itself — purely opportunistic, same spirit as
-                        // every other best-effort side channel in this method.
+                        // got built with real data (Query.Sql set — against either an integration's
+                        // schema, when Query.IntegrationId is also set, or this project's own internal
+                        // tables otherwise) tells us exactly which real table/columns the model resolved
+                        // that concept to this time. Never allowed to fail the response itself — purely
+                        // opportunistic, same spirit as every other best-effort side channel here.
                         var built = respGroup[i];
-                        if (!built.NoData && built.Query?.IntegrationId is { Length: > 0 } && !string.IsNullOrWhiteSpace(reqGroup[i].Table))
+                        if (!built.NoData && built.Query?.Sql is { Length: > 0 } && !string.IsNullOrWhiteSpace(reqGroup[i].Table))
                         {
                             try { await _schemaMatching.RecordLearningAsync(reqGroup[i], built.Query.Sql, ct); }
                             catch (Exception ex) { _logger.LogInformation(ex, "Schema-alias learning skipped for widget {Title}", built.Title); }

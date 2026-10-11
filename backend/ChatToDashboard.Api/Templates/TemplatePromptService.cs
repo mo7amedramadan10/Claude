@@ -111,10 +111,15 @@ public class TemplatePromptService
             // The field/table alias library's deterministic pre-match (see SchemaMatchingService)
             // — only ever adds a hint on top of the instruction above, never replaces it: an
             // unmatched or wrongly-matched widget still falls back to the model exploring the
-            // real schema itself exactly as before this feature existed.
-            if (sourceContext.EnabledIntegrations.Count > 0)
+            // real schema itself exactly as before this feature existed. Tried against the
+            // project's own visible tables (uploaded files, connected systems) first, and
+            // against any enabled integration's discovered schema — a plain upload-only project
+            // (no integration at all, the common case) still gets the same deterministic help.
+            var internalTables = await _analytics.GetVisibleTablesAsync(sourceContext, ct);
+            if (sourceContext.EnabledIntegrations.Count > 0 || internalTables.Count > 0)
             {
-                var matches = await _schemaMatching.MatchAsync(requiredWidgets, sourceContext.EnabledIntegrations, ct);
+                var matches = await _schemaMatching.MatchAsync(
+                    requiredWidgets, sourceContext.EnabledIntegrations, internalTables, ct);
                 if (SchemaMatchingService.BuildPromptHintBlock(matches) is { } hint)
                     body = $"{body}\n\n{hint}";
             }

@@ -1459,6 +1459,23 @@ public class AnalyticsTools
         @"invalid (object|column) name|no such (table|column)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>Every table this request can actually see and use — known to this project (see
+    /// <see cref="IsTableKnownToProject"/>), not disabled, not restricted. The same gate
+    /// list_files and <see cref="BuildValidTablesHintAsync"/> apply, extracted here so
+    /// <see cref="Templates.TemplatePromptService"/> can reuse it to feed
+    /// SchemaMatchingService's internal-table matching the exact same set a template build is
+    /// actually allowed to query — never a table the request can't reach, even as a hint.</summary>
+    public async Task<IReadOnlyList<Data.TableSchema>> GetVisibleTablesAsync(SourceContext context, CancellationToken ct)
+    {
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        return schema
+            .Where(t => IsTableKnownToProject(t.Table, context))
+            .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
+            .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
+            .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
+            .ToList();
+    }
+
     /// <summary>The same valid-table list list_files itself returns (see that case above),
     /// reused as a hint appended to an "invalid object/column name" query_data error so the
     /// model can self-correct with the real table name in its very next turn. Returns null
@@ -1466,14 +1483,7 @@ public class AnalyticsTools
     /// an empty hint would be worse than no hint at all.</summary>
     private async Task<string?> BuildValidTablesHintAsync(SourceContext context, CancellationToken ct)
     {
-        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
-        var validTables = schema
-            .Where(t => IsTableKnownToProject(t.Table, context))
-            .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
-            .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
-            .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
-            .Select(t => t.Table)
-            .ToList();
+        var validTables = (await GetVisibleTablesAsync(context, ct)).Select(t => t.Table).ToList();
         return validTables.Count == 0 ? null : $"Valid tables are: {string.Join(", ", validTables)}.";
     }
 
@@ -1508,17 +1518,9 @@ public class AnalyticsTools
             {
                 case "list_files":
                 {
-                    var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
-                    // Keep only tables this project actually knows about (see
-                    // IsTableKnownToProject — GetSchemaAsync otherwise reflects every project's
-                    // tables on a shared deployment), then hide ones belonging to a switched-off
-                    // repository file, and label the rest so the model can attribute each number
-                    // to a real source.
-                    var visible = schema
-                        .Where(t => IsTableKnownToProject(t.Table, context))
-                        .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
-                        .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
-                        .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
+                    // Hides a table belonging to a switched-off repository file (and every
+                    // table this project doesn't own at all) — see GetVisibleTablesAsync.
+                    var visible = (await GetVisibleTablesAsync(context, ct))
                         .Select(t => new
                         {
                             table = t.Table,
