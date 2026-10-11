@@ -1708,22 +1708,19 @@ public class AnalyticsTools
         string sql, SourceContext context, IReadOnlyList<Data.TableSchema> schema)
     {
         var blockedSystem = context.DisabledSystemTables
-            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(kv => ReferencesTable(sql, kv.Key) || ReferencesTable(sql, kv.Key.Split('.').Last()));
         if (blockedSystem.Key is not null)
             return $"الاستعلام مرفوض: الجدول {blockedSystem.Key} تابع لـ\"{blockedSystem.Value}\" " +
                    "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
 
         var blockedFile = context.DisabledFileTables
-            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(kv => ReferencesTable(sql, kv.Key) || ReferencesTable(sql, kv.Key.Split('.').Last()));
         if (blockedFile.Key is not null)
             return $"الاستعلام مرفوض: الجدول {blockedFile.Key} تابع لملف \"{blockedFile.Value}\" " +
                    "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
 
         var restrictedFile = context.RestrictedFileTables
-            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(kv => ReferencesTable(sql, kv.Key) || ReferencesTable(sql, kv.Key.Split('.').Last()));
         if (restrictedFile.Key is not null)
             return $"الاستعلام مرفوض: الجدول {restrictedFile.Key} تابع لملف \"{restrictedFile.Value}\" " +
                    "وصلاحية استخدامه كمصدر بيانات غير ممنوحة لهذا المستخدم.";
@@ -1736,13 +1733,26 @@ public class AnalyticsTools
         // just over "every table this project has never heard of at all" instead of "a table
         // it knows about and has turned off".
         var foreignTable = schema.FirstOrDefault(t => !IsTableKnownToProject(t.Table, context)
-            && (sql.Contains(t.Table, StringComparison.OrdinalIgnoreCase)
-                || sql.Contains(t.Table.Split('.').Last(), StringComparison.OrdinalIgnoreCase)));
+            && (ReferencesTable(sql, t.Table) || ReferencesTable(sql, t.Table.Split('.').Last())));
         if (foreignTable is not null)
             return $"الاستعلام مرفوض: الجدول {foreignTable.Table} غير معروف أو غير تابع لهذا المشروع.";
 
         return null;
     }
+
+    /// <summary>True if <paramref name="sql"/> references <paramref name="tableName"/> as a
+    /// whole identifier, not merely as a substring of a longer one — observed live: an orphaned
+    /// stale table "staging.business_opportunities" (no catalog row pointed to it any more, left
+    /// behind by an old upload/delete) blocked every query against the real, currently-uploaded
+    /// table "business_opportunities_2", because the plain .Contains check used here before
+    /// found "business_opportunities" sitting right inside "business_opportunities_2" and
+    /// treated that as a reference to the orphan. SQL identifier characters are letters, digits
+    /// and underscore — exactly .NET regex \w — so requiring a non-\w boundary (or start/end of
+    /// string) on both sides is what "whole identifier" means here. Still a plain substring
+    /// heuristic, not a SQL parser — this only closes the one specific failure mode where one
+    /// table's name happens to be a textual prefix of another's.</summary>
+    private static bool ReferencesTable(string sql, string tableName) =>
+        Regex.IsMatch(sql, $@"(?<!\w){Regex.Escape(tableName)}(?!\w)", RegexOptions.IgnoreCase);
 
     /// <summary>
     /// "تم فحص" — the real, human-readable sources actually touched while producing one
@@ -1775,8 +1785,7 @@ public class AnalyticsTools
             foreach (var (table, displayName) in allTables)
             {
                 if (examined.Contains(displayName, StringComparer.OrdinalIgnoreCase)) continue;
-                if (sql.Contains(table, StringComparison.OrdinalIgnoreCase)
-                    || sql.Contains(table.Split('.').Last(), StringComparison.OrdinalIgnoreCase))
+                if (ReferencesTable(sql, table) || ReferencesTable(sql, table.Split('.').Last()))
                     examined.Add(displayName);
             }
         }
