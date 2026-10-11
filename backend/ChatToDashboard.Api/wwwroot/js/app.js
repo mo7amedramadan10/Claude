@@ -3343,8 +3343,9 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users' };
 function dashGalThumb(d) {
-  if (d.renderKind === 'network') return `<span class="dash-thumb dash-thumb-network">${ic2('share')}</span>`;
+  if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
     `<i class="s${w.span} t-${w.type}">${DASH_GAL_GLYPH[w.type]}</i>`).join('')}</span>`;
 }
@@ -3427,6 +3428,12 @@ el('gal-search-input').addEventListener('input', e => { dashGalQuery = e.target.
 el('gal-close').addEventListener('click', closeDashGallery);
 el('dash-gallery-modal').addEventListener('click', e => { if (e.target.id === 'dash-gallery-modal') closeDashGallery(); });
 
+function dashGalDemoAvailable(d) {
+  if (d.renderKind === 'network') return !!(window.JEEM_NETWORK_LIBRARY && window.JEEM_NETWORK_LIBRARY.some(x => x.id === d.id));
+  if (d.renderKind === 'workflow') return !!window.JEEM_WORKFLOW;
+  if (d.renderKind === 'marketplace') return !!window.JEEM_MARKET;
+  return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
+}
 function openDashGalPreview(d) {
   el('gal-view-preview').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-back-btn">
@@ -3439,14 +3446,14 @@ function openDashGalPreview(d) {
         <div class="pv-src">${d.sources.length
           ? d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')
           : `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>حسب مصادر مشروعك المتاحة</span>`}</div>
-        ${d.renderKind === 'network' ? '' : `
+        ${d.renderKind ? '' : `
         <h4>عناصر اللوحة (${d.widgets.length.toLocaleString('en-US')})</h4>
         <ol class="pv-list">${d.widgets.map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>${esc(w.title)}</li>`).join('')}</ol>`}
         <div class="pv-actions">
           <button type="button" class="btn btn-primary" id="gal-use-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
           </button>
-          ${(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id)) || (window.JEEM_NETWORK_LIBRARY && window.JEEM_NETWORK_LIBRARY.some(x => x.id === d.id)) ? `
+          ${dashGalDemoAvailable(d) ? `
           <button type="button" class="btn btn-soft" id="gal-demo-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية بأرقام توضيحية
           </button>` : ''}
@@ -3464,7 +3471,12 @@ function openDashGalPreview(d) {
     setChatMode('dashboard');
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
-  el('gal-demo-btn')?.addEventListener('click', () => d.renderKind === 'network' ? openNetworkGalDemo(d) : openDashGalDemo(d));
+  el('gal-demo-btn')?.addEventListener('click', () => {
+    if (d.renderKind === 'network') return openNetworkGalDemo(d);
+    if (d.renderKind === 'workflow') return openWorkflowGalDemo(d);
+    if (d.renderKind === 'marketplace') return openMarketplaceGalDemo(d);
+    return openDashGalDemo(d);
+  });
   el('gal-view-list').classList.add('hidden');
   el('gal-view-preview').classList.remove('hidden');
 }
@@ -3606,6 +3618,162 @@ function openNetworkGalDemo(d) {
   });
   window.JEEM_DRILL_INIT?.();
   window.JEEM_NET_MOUNT(entry);
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (سير عمل/SLA) ----------
+// نفس مكان العرض ونفس اتفاقية التحذير، لكن المحرك هنا خريطة مراحل متحركة (workflow-graph.js)
+// مش شبكة عقد ومش JR.mount — يستخدم window.JEEM_WORKFLOW مباشرة (نموذج واحد فقط حاليًا).
+function openWorkflowGalDemo(d) {
+  if (!window.JEEM_WORKFLOW || !window.JEEM_WORKFLOW_MOUNT) return;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل سير العمل — ليست بيانات حقيقية من مشروعك. اضغط «استخدم
+      هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية عبر جيم.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('layers')}لوحة تفاعلية — خريطة سير عمل</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <main class="canvas pg-canvas" id="wfRoot">
+      <section class="pg-head">
+        <div>
+          <div class="dg-title"><h1>${esc(d.name)}</h1></div>
+          <p>${esc(d.desc)}</p>
+          <span class="sr-only" id="pgScope"></span>
+        </div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن سير العمل</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم… مثال: أين عنق الزجاجة في سير العمل؟" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب الالتزام بالمدة"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن طلب أو مورد</span><input id="pgSearch" type="search" placeholder="ابحث برقم الطلب أو اسمه أو المورد…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="map" aria-pressed="true">خريطة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="wfSvg" role="group" aria-label="${esc(d.name)}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="wfDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_WORKFLOW_MOUNT(window.JEEM_WORKFLOW);
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (منصة/Sankey) ----------
+// نفس مكان العرض ونفس اتفاقية التحذير، لكن المحرك هنا تدفق Sankey (marketplace-graph.js) —
+// يستخدم window.JEEM_MARKET المُحمَّل سلفًا لشبكة العملاء والموردين (Phase 3).
+function openMarketplaceGalDemo(d) {
+  if (!window.JEEM_MARKET || !window.JEEM_MARKETPLACE_MOUNT) return;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل تدفق الطلبات — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية عبر جيم.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('users')}لوحة تفاعلية — تدفق المنصة</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <main class="canvas pg-canvas" id="mkRoot">
+      <section class="pg-head">
+        <div>
+          <div class="dg-title"><h1>${esc(d.name)}</h1></div>
+          <p>${esc(d.desc)}</p>
+          <span class="sr-only" id="pgScope"></span>
+        </div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن المنصة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم… مثال: أين تتركز الطلبات المتأخرة؟" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب حالة الطلب"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن عميل أو مورد أو نوع</span><input id="pgSearch" type="search" placeholder="ابحث عن عميل أو مورد أو نوع طلب…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="flow" aria-pressed="true">تدفق</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="mkSvg" role="group" aria-label="${esc(d.name)}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="mkDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_MARKETPLACE_MOUNT(window.JEEM_MARKET);
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

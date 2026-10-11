@@ -30,16 +30,19 @@ public record BuiltinDashboardWidgetSpec(
 /// the public catalog or the AI prompt. Internal tracking only, not a claim of copied content —
 /// see IMPLEMENTATION.md's "لوحات معرض Databox" section for the legal note this mirrors.</summary>
 /// <paramref name="RenderKind"/> — null (the default) for every ordinary widget-grid dashboard
-/// template. "network" marks a template whose "لوحة" isn't a widget grid at all but one of the
-/// "لوحات تفاعلية" network engines (see wwwroot/js/network-graph.js + graph-drill.js) — the
-/// public catalog passes this straight through so the frontend gallery knows to render its
-/// thumbnail/demo preview with that engine instead of JR.mount (see app.js's dash-gallery code).
-/// "استخدم هذا النموذج" still goes through the same ask()-driven AI build as every other
-/// template (TemplatePromptService.ResolveDashboardAsync reads this entry's own Prompt exactly
-/// like any other) — the model currently has no way to emit a real network shape from it, so it
-/// comes back as an ordinary widget-grid dashboard about the same topic, same as it would for
-/// any dashboard idea the model doesn't have a specialized widget type for. Widgets is empty for
-/// a network-kind template — it has no 10-slot widget grid of its own to speak of.
+/// template. Three other values mark a template whose "لوحة" isn't a widget grid at all but one
+/// of the "لوحات تفاعلية" live engines: "network" for the force-directed network engine (see
+/// wwwroot/js/network-graph.js + graph-drill.js), "workflow" for the SLA/workflow-map engine
+/// (wwwroot/js/workflow-graph.js), and "marketplace" for the Sankey-style flow engine
+/// (wwwroot/js/marketplace-graph.js). The public catalog passes this straight through so the
+/// frontend gallery knows which engine to mount for the thumbnail/demo preview instead of
+/// JR.mount (see app.js's dash-gallery code). "استخدم هذا النموذج" still goes through the same
+/// ask()-driven AI build as every other template (TemplatePromptService.ResolveDashboardAsync
+/// reads this entry's own Prompt exactly like any other) — the model currently has no way to
+/// emit a real network/workflow/marketplace shape from it, so it comes back as an ordinary
+/// widget-grid dashboard about the same topic, same as it would for any dashboard idea the model
+/// doesn't have a specialized widget type for. Widgets is empty for every non-null-RenderKind
+/// template — it has no 10-slot widget grid of its own to speak of.
 public record BuiltinDashboardTemplate(
     string Id, string Layout, string Category, string Name, bool Popular, string Description,
     string[] Sources, BuiltinDashboardWidgetSpec[] Widgets, string Prompt, string? DataboxRef = null,
@@ -192,6 +195,21 @@ public static class BuiltinTemplates
             Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
             "ابنِ لي لوحة متابعة علاقات عملاء وموردين كاملة تتضمن: 1) عدد العملاء كمؤشر رقمي، 2) عدد الموردين كمؤشر رقمي، 3) عدد المشاريع المشتركة بين عملاء وموردين كمؤشر رقمي، 4) عدد الطلبات المتأخرة حاليًا كمؤشر رقمي، 5) مصفوفة حرارية للطلبات المرساة بين كل عميل ومورد، 6) رسم أعمدة أفقي للطلبات المرساة حسب حالتها، 7) جدول بأكبر المشاريع مرتبة بعدد الطلبات، 8) رسم دائري لتوزيع الموردين حسب نوع الخدمة، 9) رسم خطي لنسبة الالتزام بالمواعيد شهريًا، 10) جدول بالموردين الأكثر تأخيرًا وعدد العملاء المتأثرين.",
             RenderKind: "network"),
+        // "لوحة تفاعلية" بمحرك مختلف (RenderKind "workflow" — خريطة مراحل/SLA متحركة، ليست
+        // شبكة عقد). نفس الملاحظات: Widgets فاضية، والنص بصيغة لوحة عادية لأن ask() يمر بنفس
+        // مسار أي قالب آخر ولا يعرف شكل "خريطة سير عمل".
+        new BuiltinDashboardTemplate("procurement-workflow", "a", "network", "سير عمل المشتريات ومدة الخدمة", false,
+            "كل طلب شراء نقطة تتحرك بين مراحل سير العمل، ولونها وشكلها يوضحان التزامها بمدة المرحلة. العملاء مدخل الخريطة، والموردون مرتبطون بمرحلة التوريد.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي لوحة متابعة سير عمل المشتريات ومدة الخدمة كاملة تتضمن: 1) عدد الطلبات قيد التنفيذ كمؤشر رقمي، 2) عدد الطلبات المتجاوزة لمدة الخدمة الآن كمؤشر رقمي، 3) نسبة الطلبات المكتملة في الموعد كمؤشر رقمي، 4) متوسط زمن الدورة الكامل بالأيام كمؤشر رقمي، 5) رسم أعمدة يقارن الوقت الفعلي بمدة الخدمة المستهدفة لكل مرحلة، 6) رسم أعمدة أفقي لالتزام الموردين بمدة التوريد، 7) رسم أعمدة أفقي للطلبات المتجاوزة للمدة حسب العميل، 8) جدول بأقدم الطلبات المتجاوزة للمدة وحالتها، 9) رسم خطي لعدد الطلبات المستلمة شهريًا، 10) رسم قمع لمراحل الطلب من الاستلام حتى الإغلاق.",
+            RenderKind: "workflow"),
+        // "لوحة تفاعلية" بمحرك ثالث (RenderKind "marketplace" — تدفق Sankey من العملاء عبر
+        // المنصة إلى الموردين). نفس الملاحظات أعلاه بخصوص Widgets وask().
+        new BuiltinDashboardTemplate("procurement-marketplace", "a", "network", "منصة المشتريات: العملاء والموردون", false,
+            "العملاء يطلبون، والمنصة تجمع الطلبات وتطرحها، والموردون يلبّونها. عرض كل شريط = عدد الطلبات، ولونه = نوع الطلب، وحالة كل طلب داخل البطاقات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي لوحة متابعة منصة مشتريات كاملة تتضمن: 1) إجمالي عدد الطلبات عبر المنصة كمؤشر رقمي، 2) عدد العملاء النشطين كمؤشر رقمي، 3) عدد الموردين النشطين كمؤشر رقمي، 4) عدد الطلبات المتأخرة الآن كمؤشر رقمي، 5) مصفوفة حرارية للطلبات المرساة بين كل عميل ومورد، 6) رسم أعمدة يقارن زمن التنفيذ الفعلي بالمدة المستهدفة لكل نوع طلب، 7) رسم أعمدة أفقي لنسبة التأخير لدى كل مورد، 8) جدول بالطلبات المتأخرة وتفاصيلها، 9) رسم دائري لتوزيع الطلبات حسب نوعها، 10) رسم خطي لعدد الطلبات المرساة شهريًا.",
+            RenderKind: "marketplace"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
