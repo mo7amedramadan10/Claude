@@ -82,40 +82,43 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         string? modelOverride = null,
         CancellationToken ct = default)
     {
-        // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
-        // ImageReaderOllamaModel) wins over the normal dashboard-building sub-model choice —
-        // see IDashboardGenerator.GenerateDashboardAsync's remarks.
-        var model = modelOverride is { Length: > 0 }
-            ? modelOverride
-            : (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
-        {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-        };
-
-        // The dashboard currently on screen (when this is a continuation, not a fresh start —
-        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
-        // there is no separate multi-turn history to replay.
-        var userMessage = new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) };
-        // Sent through unconditionally rather than refused here on the client's own
-        // assumption — same as ExtractDocumentTextAsync's page images, and CompressForGateway
-        // keeps it under the gateway's request-size limit the same way those already do.
-        // Whichever model is actually selected decides for itself whether it can use it: seen
-        // live, the gateway doesn't silently ignore an image a model can't handle — it rejects
-        // the whole request with 400 "Multimodal data provided, but model does not support
-        // multimodal requests", which the catch below turns into a plain-language message
-        // instead of the raw gateway JSON reaching the user.
-        var hasImage = TryExtractBase64(imageDataUrl, out var imageBase64);
-        if (hasImage) userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
-        messages.Add(userMessage);
-
-        var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
+        UsageTrace? trace = null;
+        var hasImage = false;
+        var model = _defaultModel;
         try
         {
+            // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
+            // ImageReaderOllamaModel) wins over the normal dashboard-building sub-model choice —
+            // see IDashboardGenerator.GenerateDashboardAsync's remarks.
+            model = modelOverride is { Length: > 0 }
+                ? modelOverride
+                : (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            };
+
+            // The dashboard currently on screen (when this is a continuation, not a fresh start —
+            // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
+            // there is no separate multi-turn history to replay.
+            var userMessage = new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) };
+            // Sent through unconditionally rather than refused here on the client's own
+            // assumption — same as ExtractDocumentTextAsync's page images, and CompressForGateway
+            // keeps it under the gateway's request-size limit the same way those already do.
+            // Whichever model is actually selected decides for itself whether it can use it: seen
+            // live, the gateway doesn't silently ignore an image a model can't handle — it rejects
+            // the whole request with 400 "Multimodal data provided, but model does not support
+            // multimodal requests", which the catch below turns into a plain-language message
+            // instead of the raw gateway JSON reaching the user.
+            hasImage = TryExtractBase64(imageDataUrl, out var imageBase64);
+            if (hasImage) userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
+            messages.Add(userMessage);
+
+            var tools = BuildToolsJson(context);
+            trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
             return await RunLoopAsync(
                 model, messages, tools, context, trace,
                 AnalyticsTools.TryParseDashboard, "dashboard", ct);
@@ -126,6 +129,11 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 $"الموديل الداخلي الحالي ({model}) لا يدعم تحليل الصور. بدّل مؤقتًا إلى Claude أو GPT من إعدادات الموديل لهذا الطلب، أو اختر موديلاً داخليًا آخر يدعم الصور إن وُجد.",
                 ex);
         }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Ollama", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
@@ -133,51 +141,80 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         IReadOnlyList<InquiryBlock>? ledger = null, SourceSelection? sources = null, AppUser? requestingUser = null,
         string? lang = null, CancellationToken ct = default)
     {
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
-        // Prior turns/summary/ledger are framed as part of this single user turn — same
-        // "continuation as one composed message" pattern GenerateDashboardAsync's own
-        // currentDashboard uses (see AnalyticsTools.ComposeInquiryUserMessage).
-        var userText = AnalyticsTools.ComposeInquiryUserMessage(
-            question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = userText },
-        };
+            var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
+            // Prior turns/summary/ledger are framed as part of this single user turn — same
+            // "continuation as one composed message" pattern GenerateDashboardAsync's own
+            // currentDashboard uses (see AnalyticsTools.ComposeInquiryUserMessage).
+            var userText = AnalyticsTools.ComposeInquiryUserMessage(
+                question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = userText },
+            };
 
-        var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        var response = await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseInquiry, "inquiry", ct);
-        AnalyticsTools.ApplyExaminedSources(response, trace, context);
-        return response;
+            var tools = BuildToolsJson(context);
+            trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            var response = await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            AnalyticsTools.ApplyExaminedSources(response, trace, context);
+            return response;
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Ollama", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryBlock block, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
         AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
-        // already fetched, so no tools are offered at all (tools: null below), guaranteeing
-        // no new query_data/list_files call can happen here.
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard) },
-        };
+            // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+            // already fetched, so no tools are offered at all (tools: null below), guaranteeing
+            // no new query_data/list_files call can happen here.
+            var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard) },
+            };
 
-        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, null, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+            trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                model, messages, null, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Ollama", "🔄 تحويل استفسار إلى لوحة: " + block.Text, requestingUser, ex);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a minimal failed row for an exception thrown before a trace existed at
+    /// all — DescribeSourcesAsync, settings lookup, BuildSystemPrompt, etc. — so the request
+    /// doesn't vanish from the Usage page entirely. Mirrors
+    /// LlmRouter.ResolveOrRecordFailureAsync's identical fix for provider-resolution failures,
+    /// extended to cover every step before RunLoopAsync's own try/catch takes over logging.</summary>
+    private async Task RecordPreTraceFailureAsync(string provider, string question, AppUser? requestingUser, Exception ex)
+    {
+        var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+        await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
     }
 
     /// <summary>
@@ -198,12 +235,27 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     public async Task<AnalystLoopResult> GenerateAnalystAsync(
         string question, SourceSelection? sources, AppUser? requestingUser, AnalystStageCallback onStage, CancellationToken ct = default)
     {
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+        await onStage(AnalystStages.Understand, AnalystStageStates.Running);
+
+        string model;
+        AnalyticsTools.SourceContext context;
+        UsageTrace trace;
+        try
+        {
+            model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+        }
+        catch (Exception ex)
+        {
+            // DescribeSourcesAsync/settings lookup failing here left nothing logged at all —
+            // no trace exists yet to complete (see RecordPreTraceFailureAsync).
+            await onStage(AnalystStages.Understand, AnalystStageStates.Failed);
+            await RecordPreTraceFailureAsync("Ollama", question, requestingUser, ex);
+            return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+        }
 
         AnalystKnowledgeScope scope;
-        await onStage(AnalystStages.Understand, AnalystStageStates.Running);
         try
         {
             var classifyMessages = new JsonArray

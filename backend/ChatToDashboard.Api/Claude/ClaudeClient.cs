@@ -67,43 +67,52 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         string? modelOverride = null,
         CancellationToken ct = default)
     {
-        // Anthropic has just the one configured model (Anthropic:Model) — no per-request
-        // sub-model choice the way Ollama/OpenAI have (LlmSettingsStore.OllamaModel/
-        // OpenAiModel), and every current Claude model already supports vision, so there is
-        // nothing for LlmRouter's image-provider routing to actually override here; see
-        // IDashboardGenerator.GenerateDashboardAsync's remarks on modelOverride.
-        _ = modelOverride;
-
-        // The dashboard currently on screen (when this is a continuation, not a fresh start —
-        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn,
-        // so there is no separate multi-turn history to replay; a fresh request starts with
-        // exactly this one turn.
-        var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
-        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
-
-        // A reference image, if attached, rides along on this question's turn only.
-        if (TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
+        UsageTrace? trace = null;
+        try
         {
-            var last = messages[^1]!.AsObject();
-            var text = last["content"]!.GetValue<string>();
-            last["content"] = new JsonArray(
-                new JsonObject
-                {
-                    ["type"] = "image",
-                    ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
-                },
-                new JsonObject { ["type"] = "text", ["text"] = text });
+            // Anthropic has just the one configured model (Anthropic:Model) — no per-request
+            // sub-model choice the way Ollama/OpenAI have (LlmSettingsStore.OllamaModel/
+            // OpenAiModel), and every current Claude model already supports vision, so there is
+            // nothing for LlmRouter's image-provider routing to actually override here; see
+            // IDashboardGenerator.GenerateDashboardAsync's remarks on modelOverride.
+            _ = modelOverride;
+
+            // The dashboard currently on screen (when this is a continuation, not a fresh start —
+            // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn,
+            // so there is no separate multi-turn history to replay; a fresh request starts with
+            // exactly this one turn.
+            var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
+            var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+
+            // A reference image, if attached, rides along on this question's turn only.
+            if (TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
+            {
+                var last = messages[^1]!.AsObject();
+                var text = last["content"]!.GetValue<string>();
+                last["content"] = new JsonArray(
+                    new JsonObject
+                    {
+                        ["type"] = "image",
+                        ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
+                    },
+                    new JsonObject { ["type"] = "text", ["text"] = text });
+            }
+
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var tools = BuildToolsJson(context);
+
+            trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                messages, systemPrompt, tools, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
         }
-
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var tools = BuildToolsJson(context);
-
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            messages, systemPrompt, tools, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Anthropic", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
@@ -111,45 +120,74 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         IReadOnlyList<InquiryBlock>? ledger = null, SourceSelection? sources = null, AppUser? requestingUser = null,
         string? lang = null, CancellationToken ct = default)
     {
-        // Prior turns/summary/ledger are framed as part of this single user turn — same
-        // "continuation as one composed message" pattern GenerateDashboardAsync's own
-        // currentDashboard uses, not a real multi-message array (see
-        // AnalyticsTools.ComposeInquiryUserMessage).
-        var userText = AnalyticsTools.ComposeInquiryUserMessage(
-            question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
-        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+        UsageTrace? trace = null;
+        try
+        {
+            // Prior turns/summary/ledger are framed as part of this single user turn — same
+            // "continuation as one composed message" pattern GenerateDashboardAsync's own
+            // currentDashboard uses, not a real multi-message array (see
+            // AnalyticsTools.ComposeInquiryUserMessage).
+            var userText = AnalyticsTools.ComposeInquiryUserMessage(
+                question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
+            var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
-        var tools = BuildToolsJson(context);
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
+            var tools = BuildToolsJson(context);
 
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        var response = await RunLoopAsync(
-            messages, systemPrompt, tools, context, trace,
-            AnalyticsTools.TryParseInquiry, "inquiry", ct);
-        AnalyticsTools.ApplyExaminedSources(response, trace, context);
-        return response;
+            trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            var response = await RunLoopAsync(
+                messages, systemPrompt, tools, context, trace,
+                AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            AnalyticsTools.ApplyExaminedSources(response, trace, context);
+            return response;
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Anthropic", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryBlock block, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
         AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
-        // already fetched, so no tools are offered at all (tools: null below), guaranteeing
-        // no new query_data/list_files call can happen here.
-        var userText = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard);
-        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+        UsageTrace? trace = null;
+        try
+        {
+            // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+            // already fetched, so no tools are offered at all (tools: null below), guaranteeing
+            // no new query_data/list_files call can happen here.
+            var userText = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard);
+            var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
 
-        var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            messages, systemPrompt, null, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+            trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                messages, systemPrompt, null, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Anthropic", "🔄 تحويل استفسار إلى لوحة: " + block.Text, requestingUser, ex);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a minimal failed row for an exception thrown before a trace existed at
+    /// all — DescribeSourcesAsync, BuildSystemPrompt, etc. — so the request doesn't vanish
+    /// from the Usage page entirely. Mirrors LlmRouter.ResolveOrRecordFailureAsync's identical
+    /// fix for provider-resolution failures, extended to cover every step before RunLoopAsync's
+    /// own try/catch takes over logging.</summary>
+    private async Task RecordPreTraceFailureAsync(string provider, string question, AppUser? requestingUser, Exception ex)
+    {
+        var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+        await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
     }
 
     /// <summary>

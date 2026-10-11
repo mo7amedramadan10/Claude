@@ -68,36 +68,45 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         string? modelOverride = null,
         CancellationToken ct = default)
     {
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-        };
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            };
 
-        // The dashboard currently on screen (when this is a continuation, not a fresh start —
-        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
-        // there is no separate multi-turn history to replay.
-        var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
-        JsonNode userContent = string.IsNullOrWhiteSpace(imageDataUrl)
-            ? userText
-            : new JsonArray(
-                new JsonObject { ["type"] = "text", ["text"] = userText },
-                new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } });
-        messages.Add(new JsonObject { ["role"] = "user", ["content"] = userContent });
+            // The dashboard currently on screen (when this is a continuation, not a fresh start —
+            // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
+            // there is no separate multi-turn history to replay.
+            var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
+            JsonNode userContent = string.IsNullOrWhiteSpace(imageDataUrl)
+                ? userText
+                : new JsonArray(
+                    new JsonObject { ["type"] = "text", ["text"] = userText },
+                    new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } });
+            messages.Add(new JsonObject { ["role"] = "user", ["content"] = userContent });
 
-        var tools = BuildToolsJson(context);
-        // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
-        // ImageReaderOpenAiModel) wins over the normal dashboard-building sub-model choice —
-        // see IDashboardGenerator.GenerateDashboardAsync's remarks.
-        var model = modelOverride is { Length: > 0 }
-            ? modelOverride
-            : (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+            var tools = BuildToolsJson(context);
+            // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
+            // ImageReaderOpenAiModel) wins over the normal dashboard-building sub-model choice —
+            // see IDashboardGenerator.GenerateDashboardAsync's remarks.
+            var model = modelOverride is { Length: > 0 }
+                ? modelOverride
+                : (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+            trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("OpenAI", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
@@ -105,51 +114,80 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         IReadOnlyList<InquiryBlock>? ledger = null, SourceSelection? sources = null, AppUser? requestingUser = null,
         string? lang = null, CancellationToken ct = default)
     {
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
-        // Prior turns/summary/ledger are framed as part of this single user turn — same
-        // "continuation as one composed message" pattern GenerateDashboardAsync's own
-        // currentDashboard uses (see AnalyticsTools.ComposeInquiryUserMessage).
-        var userText = AnalyticsTools.ComposeInquiryUserMessage(
-            question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = userText },
-        };
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
+            // Prior turns/summary/ledger are framed as part of this single user turn — same
+            // "continuation as one composed message" pattern GenerateDashboardAsync's own
+            // currentDashboard uses (see AnalyticsTools.ComposeInquiryUserMessage).
+            var userText = AnalyticsTools.ComposeInquiryUserMessage(
+                question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = userText },
+            };
 
-        var tools = BuildToolsJson(context);
-        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        var response = await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseInquiry, "inquiry", ct);
-        AnalyticsTools.ApplyExaminedSources(response, trace, context);
-        return response;
+            var tools = BuildToolsJson(context);
+            var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+            trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            var response = await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            AnalyticsTools.ApplyExaminedSources(response, trace, context);
+            return response;
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("OpenAI", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
         InquiryBlock block, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
         AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
-        // already fetched, so no tools are offered at all (tools: null below), guaranteeing
-        // no new query_data/list_files call can happen here.
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard) },
-        };
+            // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+            // already fetched, so no tools are offered at all (tools: null below), guaranteeing
+            // no new query_data/list_files call can happen here.
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard) },
+            };
 
-        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, null, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+            var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+            trace = _usage.Begin("OpenAI", model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                model, messages, null, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("OpenAI", "🔄 تحويل استفسار إلى لوحة: " + block.Text, requestingUser, ex);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a minimal failed row for an exception thrown before a trace existed at
+    /// all — DescribeSourcesAsync, settings lookup, BuildSystemPrompt, etc. — so the request
+    /// doesn't vanish from the Usage page entirely. Mirrors
+    /// LlmRouter.ResolveOrRecordFailureAsync's identical fix for provider-resolution failures,
+    /// extended to cover every step before RunLoopAsync's own try/catch takes over logging.</summary>
+    private async Task RecordPreTraceFailureAsync(string provider, string question, AppUser? requestingUser, Exception ex)
+    {
+        var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+        await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
     }
 
     /// <summary>See ClaudeClient.ExtractDocumentTextAsync — same contract, OpenAI's own
