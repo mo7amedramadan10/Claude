@@ -3527,8 +3527,7 @@ function ic2(n) { return `<svg class="icon icon-sm" aria-hidden="true"><use href
 // (network-graph.js + graph-drill.js) مش JR.mount — انظر BuiltinDashboardTemplate's remarks.
 function openNetworkGalDemo(d) {
   const entry = (window.JEEM_NETWORK_LIBRARY || []).find(x => x.id === d.id);
-  const cfg = window.JEEM_NETWORK_CONFIG;
-  if (!entry || !cfg || !window.JEEM_NET_MOUNT) return;
+  if (!entry || !window.JEEM_NET_MOUNT) return;
   el('gal-view-demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
@@ -3606,7 +3605,7 @@ function openNetworkGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_DRILL_INIT?.();
-  window.JEEM_NET_MOUNT({ types: cfg.types, rels: cfg.rels, cfg: cfg.cfg, asks: cfg.asks || [], nodes: entry.nodes, edges: entry.edges });
+  window.JEEM_NET_MOUNT(entry);
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

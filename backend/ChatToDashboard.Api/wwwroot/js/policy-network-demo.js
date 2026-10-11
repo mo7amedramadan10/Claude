@@ -1,14 +1,15 @@
 /* ==========================================================
    جيم — بيانات تجريبية ثابتة لمعاينة «شبكة الأنظمة واللوائح» في معرض النماذج
    نفس اتفاقية dash-library.js (JEEM_DASH_LIBRARY): بيانات توضيحية ثابتة لعرض شكل اللوحة
-   قبل بنائها فعليًا — وليست بيانات حقيقية من أي مشروع. تُدمَج مع
-   window.JEEM_NETWORK_CONFIG (الأنواع/العلاقات/الإعداد — policy-network.js) داخل
-   app.js's openNetworkGalDemo لبناء G ثم window.JEEM_NET_MOUNT(G).
+   قبل بنائها فعليًا — وليست بيانات حقيقية من أي مشروع. تُدمَج هنا مع
+   window.JEEM_NETWORK_CONFIG (الأنواع/العلاقات/الإعداد — policy-network.js، لازم يُحمَّل قبل
+   هذا الملف) في كائن G كامل يُسجَّل في window.JEEM_NETWORK_LIBRARY — نفس شكل أي شبكة أخرى فيها
+   (procurement-network-demo.js / client-supplier-network-demo.js)، فـ app.js's
+   openNetworkGalDemo بيعمل بحث واحد بالـ id بغض النظر عن الشبكة.
    كل الأرقام والسنوات للعرض فقط ولا تمثل بيانات رسمية.
    ========================================================== */
-window.JEEM_NETWORK_LIBRARY = [{
-  id: 'policy-network',
-  nodes: [
+(function () {
+  const nodes = [
     /* الأنظمة */
     { id: 'L1', t: 'law', n: 'نظام المنافسات والمشتريات الحكومية', d: 'ينظم طرح المنافسات الحكومية وترسيتها والتعاقد عليها، ويضمن الشفافية وتكافؤ الفرص بين المتنافسين.', y: 2019, c: 1284, cm: 82, s: 18 },
     { id: 'L2', t: 'law', n: 'نظام حماية البيانات الشخصية', d: 'يحدد حقوق أصحاب البيانات والتزامات الجهات في جمع البيانات الشخصية ومعالجتها ونقلها.', y: 2021, c: 642, cm: 71, s: 9 },
@@ -70,8 +71,8 @@ window.JEEM_NETWORK_LIBRARY = [{
     { id: 'K7', t: 'complaint', n: 'رسائل تسويقية دون موافقة', d: 'شكاوى أصحاب البيانات من استخدام بياناتهم دون موافقة.', y: 2023, c: 152, cm: 0, s: -35 },
     { id: 'K8', t: 'complaint', n: 'طول مدة البت في التظلم', d: 'شكاوى من تجاوز المدد النظامية للبت.', y: 2022, c: 58, cm: 0, s: -24 },
     { id: 'K9', t: 'complaint', n: 'غموض توزيع المخاطر في عقود الشراكة', d: 'ملاحظات المستثمرين على بنود المخاطر.', y: 2022, c: 23, cm: 0, s: -12 },
-  ],
-  edges: [
+  ];
+  const edges = [
     { a: 'L1', b: 'C1', r: 'has' }, { a: 'L1', b: 'C2', r: 'has' }, { a: 'L1', b: 'C3', r: 'has' }, { a: 'L1', b: 'C4', r: 'has' }, { a: 'L1', b: 'C5', r: 'has' }, { a: 'L1', b: 'C6', r: 'has' },
     { a: 'L2', b: 'C7', r: 'has' }, { a: 'L2', b: 'C8', r: 'has' }, { a: 'L2', b: 'C9', r: 'has' }, { a: 'L3', b: 'C10', r: 'has' },
     { a: 'R1', b: 'L1', r: 'exec' }, { a: 'R2', b: 'L1', r: 'exec' }, { a: 'R3', b: 'L1', r: 'exec' }, { a: 'R4', b: 'R1', r: 'amend', y: 2024 }, { a: 'R5', b: 'C6', r: 'amend', y: 2025 }, { a: 'R4', b: 'C1', r: 'amend', y: 2024 },
@@ -92,5 +93,12 @@ window.JEEM_NETWORK_LIBRARY = [{
     { a: 'K7', b: 'C7', r: 'under' }, { a: 'K7', b: 'E14', r: 'against' },
     { a: 'K8', b: 'C6', r: 'under' }, { a: 'K8', b: 'P2', r: 'against' },
     { a: 'K9', b: 'C10', r: 'under' }, { a: 'K9', b: 'E7', r: 'against' },
-  ],
-}];
+  ];
+
+  const CFG = window.JEEM_NETWORK_CONFIG;
+  if (!CFG) return;
+  window.JEEM_NETWORK_LIBRARY = window.JEEM_NETWORK_LIBRARY || [];
+  window.JEEM_NETWORK_LIBRARY.push({
+    id: 'policy-network', types: CFG.types, rels: CFG.rels, cfg: CFG.cfg, asks: CFG.asks || [], nodes, edges,
+  });
+})();
