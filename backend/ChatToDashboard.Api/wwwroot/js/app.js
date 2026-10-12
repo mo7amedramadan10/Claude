@@ -4006,6 +4006,22 @@ async function ask(question, displayText, templateRef) {
           payload.dashboard.widgets = [...missing, ...newWidgets];
         }
 
+        // A multi-page template's .page tag (see getDashboardPages/ChatController's own
+        // reconciliation) is stamped server-side only on the ORIGINAL template build — a
+        // continuation turn is plain chat, so the model is never told to set or echo it at
+        // all. An untouched widget the model just copies forward verbatim (the full current
+        // JSON was handed to it as context) naturally keeps its .page along with everything
+        // else, but a widget it actually REBUILDS this turn — e.g. "جرّب تبني عنصر «X» من
+        // مصدر بيانات تاني" filling in a noData placeholder — is authored fresh against the
+        // widget-schema instructions, which never mention .page, so that one specific widget
+        // loses it and falls into the catch-all "عناصر أخرى" tab instead of staying on its
+        // own page. Restore it from the old widget of the same title whenever dropped.
+        const oldPageByTitle = new Map();
+        for (const w of oldWidgets) if (w.page) oldPageByTitle.set(w.title, w.page);
+        for (const w of payload.dashboard.widgets) {
+          if (!w.page && oldPageByTitle.has(w.title)) w.page = oldPageByTitle.get(w.title);
+        }
+
         // The model isn't told what filters already exist (only summary+widgets travel as
         // continuation context — see ComposeUserMessage), so it has no way to deliberately
         // keep them; left alone, every continuation turn would silently replace the whole
