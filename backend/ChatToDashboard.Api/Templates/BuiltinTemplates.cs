@@ -259,6 +259,13 @@ public static class BuiltinTemplates
             "مع تعريف كل حركة، صافي الدخل الجديد أسبوعيًا، خريطة احتفاظ حرارية حسب دفعة الاشتراك، مزيج الباقات " +
             "بالعملاء والإيراد، ومؤشرات القيمة الدائمة إلى تكلفة الاكتساب وفترة الاسترداد.",
             RenderKind: "saas"),
+        new BuiltinDashboardTemplate("project-studio", "a", "network", "استوديو المشاريع", false,
+            "حالة المشاريع تصفّي الجدول الزمني، مهام اليوم، جانت أفقي بخط «اليوم»، تواصل الفريق، وأعضاء الفريق.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لاستوديو المشاريع: بطاقات حالة المشاريع تصفّي الجدول الزمني، مهام اليوم القابلة " +
+            "للتحديد، جدول زمني (جانت) أفقي بخط «اليوم» الفعلي وتصفية حسب الحالة أو العضو، تواصل فريق برسائل " +
+            "نصية وصوتية، وقائمة أعضاء الفريق بعدد مشاريع كل عضو.",
+            RenderKind: "studio"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

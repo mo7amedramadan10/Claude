@@ -3016,6 +3016,33 @@ function interactiveSaasSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveStudioSkeletonHtml(d) {
+  return `<div class="dk ps" id="psRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'استوديو المشاريع')}</h1><small>حالة المشاريع ومهام اليوم والجدول الزمني وتواصل الفريق</small></div>
+        <span class="sp"></span>
+        <span class="dk-scope" id="psScope"></span>
+      </div>
+      <div class="ps-grid">
+        <div class="ps-main">
+          <div class="ps-top">
+            <section class="dk-card" style="--i:0"><header><h2>حالة المشاريع</h2><span class="sp"></span><div class="dk-seg sm" data-seg="view" role="group" aria-label="العرض"><button type="button" data-v="grid" aria-pressed="true">بطاقات</button><button type="button" data-v="list" aria-pressed="false">قائمة</button></div></header><div id="psStatus"></div></section>
+            <section class="dk-card" style="--i:1"><header><h2>مهام اليوم</h2><span class="sp"></span><span class="dk-chip" id="psTaskN"></span></header><ul class="ps-tasks" id="psTasks"></ul></section>
+          </div>
+          <section class="dk-card" style="--i:2"><header><h2>الجدول الزمني</h2><span class="sp"></span><div class="dk-seg sm" data-seg="zoom" role="group" aria-label="مقياس الزمن"><button type="button" data-v="1" aria-pressed="true">يومي</button><button type="button" data-v="0.55" aria-pressed="false">مضغوط</button></div></header><div class="ps-tl" id="psTl"></div></section>
+        </div>
+        <aside class="ps-side">
+          <section class="dk-card" style="--i:3"><header><h2>تواصل الفريق</h2><span class="sp"></span></header>
+            <div class="ps-chat" id="psChat" aria-live="polite"></div>
+            <form class="ps-send" id="psSend"><input name="m" placeholder="اكتب رسالة…" aria-label="رسالة" autocomplete="off"><button type="submit" class="dk-btn pri" aria-label="إرسال"><svg class="icon icon-sm flip" aria-hidden="true"><use href="#i-send"/></svg></button></form>
+          </section>
+          <section class="dk-card" style="--i:4"><header><h2>أعضاء الفريق</h2></header><ul class="ps-team" id="psTeam"></ul></section>
+        </aside>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط حالة أو عضوًا لتصفية الجدول الزمني، شغّل الرسالة الصوتية، وأرسل رسالة للفريق.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3104,6 +3131,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'saas' && window.JEEM_SAAS_MOUNT) {
     el.dash.innerHTML = interactiveSaasSkeletonHtml(d);
     window.JEEM_SAAS_MOUNT(el.dash.querySelector('#smRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'studio' && window.JEEM_STUDIO_MOUNT) {
+    el.dash.innerHTML = interactiveStudioSkeletonHtml(d);
+    window.JEEM_STUDIO_MOUNT(el.dash.querySelector('#psRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4107,7 +4137,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4203,6 +4233,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'teamtasks') return !!window.JEEM_TEAMTASKS_DEMO;
   if (d.renderKind === 'timetracking') return !!window.JEEM_TIMETRACKING_DEMO;
   if (d.renderKind === 'saas') return !!window.JEEM_SAAS_DEMO;
+  if (d.renderKind === 'studio') return !!window.JEEM_STUDIO_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4254,6 +4285,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'teamtasks') return openTeamTasksGalDemo(d);
     if (d.renderKind === 'timetracking') return openTimeTrackingGalDemo(d);
     if (d.renderKind === 'saas') return openSaasGalDemo(d);
+    if (d.renderKind === 'studio') return openStudioGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4808,6 +4840,40 @@ function openSaasGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_SAAS_MOUNT(el('gal-view-demo').querySelector('#smRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openStudioGalDemo(d) {
+  if (!window.JEEM_STUDIO_DEMO || !window.JEEM_STUDIO_MOUNT) return;
+  const demo = window.JEEM_STUDIO_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('layers')}لوحة تفاعلية — استوديو المشاريع</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveStudioSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_STUDIO_MOUNT(el('gal-view-demo').querySelector('#psRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }
