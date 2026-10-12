@@ -26,6 +26,14 @@ public class AnalyticsTools
 {
     public const int MaxRowsReturned = 500;
 
+    // A row-count cap alone doesn't bound a tool result's actual size: a wide SELECT * (many
+    // columns, some long free-text fields) can still serialize into hundreds of KB even at
+    // exactly MaxRowsReturned rows — observed live: 500 rows x 42 columns on a real uploaded
+    // file serialized to ~524,000 characters, alone pushing one request past the model's whole
+    // context window and failing the build outright (a hard 400, not just one noData widget).
+    // See ExecuteQueryAsync's own trimming loop for where this is enforced.
+    private const int MaxResultChars = 20_000;
+
     private static readonly Regex ForbiddenSqlKeywords = new(
         @"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|MERGE|EXEC|EXECUTE|GRANT|REVOKE|BACKUP|RESTORE|USE|KILL|SHUTDOWN|PRAGMA|ATTACH|DETACH|VACUUM|REINDEX|REPLACE)\b|(\bsp_\w+)|(\bxp_\w+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -275,7 +283,10 @@ public class AnalyticsTools
                 "query_data",
                 $"Runs a read-only SELECT query ({_db.DialectName} dialect) against the loaded data tables " +
                 $"and returns the rows as JSON. Only SELECT statements are allowed; results are capped at " +
-                $"{MaxRowsReturned} rows, so always use {rowCap} (or less). Reference tables as {_db.TableNamingHint(context.ProjectId)}.",
+                $"{MaxRowsReturned} rows, so always use {rowCap} (or less). A wide SELECT * can still be cut " +
+                $"further and truncated even under that row cap if the table has many/long columns — select " +
+                $"only the columns you actually need, and prefer SUM/COUNT/AVG/GROUP BY over pulling raw rows " +
+                $"whenever you just need a number. Reference tables as {_db.TableNamingHint(context.ProjectId)}.",
                 new JsonObject
                 {
                     ["type"] = "object",
@@ -1847,6 +1858,21 @@ public class AnalyticsTools
         }
 
         var warning = DetectQuotedIdentifierMistake(sql);
+
+        // Trim rows from the end until the serialized result fits a sane per-call budget —
+        // see MaxResultChars. A model that just hit this should narrow its own next query
+        // (name the columns it actually needs instead of SELECT *, or aggregate with SUM/
+        // COUNT/AVG/GROUP BY instead of pulling raw rows), so say so plainly rather than
+        // silently handing back a truncated-but-unexplained sample.
+        var fullRowCount = rows.Count;
+        while (rows.Count > 1 &&
+               JsonSerializer.Serialize(new { rowCount = rows.Count, rows }, ToolResultJsonOptions).Length > MaxResultChars)
+            rows.RemoveAt(rows.Count - 1);
+        if (rows.Count < fullRowCount)
+            warning = (warning is null ? "" : warning + " ") +
+                $"النتيجة قُصّت إلى {rows.Count} صف فقط من أصل {fullRowCount} لأن حجمها كان ضخمًا جدًا — " +
+                "حدد الأعمدة المطلوبة فعليًا بدل SELECT *، أو استخدم SUM/COUNT/AVG/GROUP BY لتلخيص البيانات بدل سحبها خام.";
+
         if (warning is not null)
             return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows, warning }, ToolResultJsonOptions), false);
 
