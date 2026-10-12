@@ -2880,6 +2880,30 @@ function interactiveWarehouseSkeletonHtml(d) {
       <div id="whDlg" hidden></div>
     </div>`;
 }
+// liquidity-pools.js's own markup (§4.17) — light by default (.lp-light), dark via the
+// theme-switch buttons (saved per browser in jeem.lp.theme, same as the prototype).
+function interactivePoolsSkeletonHtml(d) {
+  return `<div class="lp lp-light" id="lpRoot">
+      <div class="lp-hd"><h1>${esc(d.name || 'مجمّعات السيولة المركّزة')}</h1><div class="theme-sw" role="group" aria-label="الثيم"><button type="button" data-theme-set="light" aria-pressed="true">فاتح</button><button type="button" data-theme-set="dark" aria-pressed="false">داكن</button></div><div class="lp-seg" role="group" aria-label="الفترة"><button type="button" data-per="day" aria-pressed="true">يوم</button><button type="button" data-per="week" aria-pressed="false">أسبوع</button><button type="button" data-per="month" aria-pressed="false">شهر</button></div></div>
+      <div class="lp-top">
+        <div class="lp-stats">
+          <div class="lp-st" style="--i:0"><span class="ib"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span><div><b class="num" id="lpTvl">$0</b><small>إجمالي القيمة المقفلة</small></div></div>
+          <div class="lp-st" style="--i:1"><span class="ib"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></span><div><b class="num" id="lpCum">$0</b><small>الحجم التراكمي</small></div></div>
+          <div class="lp-st" style="--i:2"><span class="ib"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span><div><b class="num" id="lpVol">$0</b><small>حجم التداول</small></div></div>
+        </div>
+        <section class="lp-chart" id="lpChart"><span class="lb" id="lpHeadL">حجم التداول</span><b class="hv num" id="lpHead">$0</b><div id="lpBars" role="group" aria-label="حجم التداول عبر الزمن، الأحدث يسارًا"></div><div class="lp-tip" id="lpTip" hidden></div></section>
+      </div>
+      <div class="lp-tabs" role="tablist" aria-label="العرض"><button type="button" role="tab" data-tab="pool" aria-selected="true">المجمّعات</button><button type="button" role="tab" data-tab="pos" aria-selected="false">مراكزي</button><em><span class="num" id="lpCount">0</span> عنصر</em><span class="sp"></span>
+        <button type="button" class="btn btn-sm" data-create><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إنشاء مجمّع</button><button type="button" class="btn btn-sm btn-primary" data-addany><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة سيولة</button></div>
+      <div id="lpTools"><label class="lp-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">صفِّ حسب الأصل</span><input type="search" id="lpQ" placeholder="صفِّ حسب الأصل (مثل SUI)"></label><span class="sp"></span>
+        <label class="lp-chk"><input type="checkbox" id="lpAll"> عرض كل المجمّعات</label>
+        <label><span class="sr-only">نوع الحوافز</span><select id="lpInc"><option value="all">كل الحوافز</option><option value="yes">بمكافآت تعدين</option><option value="no">بدون مكافآت</option></select></label>
+        <label><span class="sr-only">التصنيف</span><select id="lpLab"><option value="all">كل التصنيفات</option><option>رائجة</option><option>مستقرة</option><option>جديدة</option></select></label>
+        <label><span class="sr-only">الترتيب</span><select id="lpSort"><option value="vol">ترتيب: الحجم</option><option value="liq">ترتيب: السيولة</option><option value="fees">ترتيب: الرسوم</option><option value="apr">ترتيب: العائد</option></select></label></div>
+      <div id="lpTable"></div>
+      <div id="lpDlg" hidden></div>
+    </div>`;
+}
 
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
@@ -2951,6 +2975,9 @@ async function mountInteractiveDashboard(d) {
     window.JEEM_WAREHOUSE_MOUNT(el.dash.querySelector('#whRoot'), body.data, {
       demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
     });
+  } else if (d.renderKind === 'pools' && window.JEEM_POOLS_MOUNT) {
+    el.dash.innerHTML = interactivePoolsSkeletonHtml(d);
+    window.JEEM_POOLS_MOUNT(el.dash.querySelector('#lpRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -3954,7 +3981,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4044,6 +4071,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'workflow') return !!window.JEEM_WORKFLOW;
   if (d.renderKind === 'marketplace') return !!window.JEEM_MARKET;
   if (d.renderKind === 'warehouse') return !!window.JEEM_WAREHOUSE_DEMO;
+  if (d.renderKind === 'pools') return !!window.JEEM_POOLS_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4089,6 +4117,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'workflow') return openWorkflowGalDemo(d);
     if (d.renderKind === 'marketplace') return openMarketplaceGalDemo(d);
     if (d.renderKind === 'warehouse') return openWarehouseGalDemo(d);
+    if (d.renderKind === 'pools') return openPoolsGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4429,6 +4458,42 @@ function openWarehouseGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_WAREHOUSE_MOUNT(el('gal-view-demo').querySelector('#whRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (مجمّعات السيولة المركّزة) ----------
+function openPoolsGalDemo(d) {
+  if (!window.JEEM_POOLS_DEMO || !window.JEEM_POOLS_MOUNT) return;
+  const demo = window.JEEM_POOLS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط وليست توصية استثمارية — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('chart')}لوحة تفاعلية — مجمّعات سيولة</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactivePoolsSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_POOLS_MOUNT(el('gal-view-demo').querySelector('#lpRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

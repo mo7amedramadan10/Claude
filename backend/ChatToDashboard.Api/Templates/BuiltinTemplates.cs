@@ -220,6 +220,12 @@ public static class BuiltinTemplates
             "لوحة تفاعلية لمتابعة فريق المستودع: الموظفون في المناوبة، المهام المنجزة، متوسط الكفاءة، " +
             "عدّ تنازلي لتغيير المناوبة، بطاقة لكل موظف بتقدّم مهامه وحالته، وسجل نشاط حي.",
             RenderKind: "warehouse"),
+        new BuiltinDashboardTemplate("liquidity-pools", "a", "network", "مجمّعات السيولة المركّزة", false,
+            "متابعة مجمّعات السيولة (أزواج أصول) وحجم تداولها، وإدارة مراكز المستخدم.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لمجمّعات السيولة المركّزة: إجمالي القيمة المقفلة، الحجم التراكمي، " +
+            "أعمدة حجم التداول حسب الفترة، جدول المجمّعات بنطاق السيولة المركّزة لكل مجمّع، وإدارة المراكز.",
+            RenderKind: "pools"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
