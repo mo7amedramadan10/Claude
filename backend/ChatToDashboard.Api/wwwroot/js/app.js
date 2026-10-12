@@ -2904,6 +2904,24 @@ function interactivePoolsSkeletonHtml(d) {
       <div id="lpDlg" hidden></div>
     </div>`;
 }
+// token-treasury.js's own markup (§4.18) — light by default (.tt-light), dark via the
+// theme-switch buttons (saved per browser in jeem.tt.theme, same as the prototype).
+function interactiveTreasurySkeletonHtml(d) {
+  return `<div class="tt tt-light" id="ttRoot">
+      <div class="tt-hd"><h1>${esc(d.name || 'خزينة الأصول الرقمية')}</h1><div class="theme-sw" role="group" aria-label="الثيم"><button type="button" data-theme-set="light" aria-pressed="true">فاتح</button><button type="button" data-theme-set="dark" aria-pressed="false">داكن</button></div></div>
+      <section class="tt-c tt-ops" style="--i:0"><header><h2>إجمالي الأصول التشغيلية</h2><label><span class="sr-only">العملة</span><select id="ttCur"><option value="USD">بالدولار</option><option value="SAR">بالريال</option></select></label></header>
+        <div class="tt-big"><span class="num" id="ttTot">0</span><small id="ttTotU">USD</small></div>
+        <div class="tt-sub"><span>توزيع أصول المراجحة · اضغط أصلًا لتمييزه</span><div id="ttAs"></div></div></section>
+      <section class="tt-c tt-rev" style="--i:1"><header><h2>الإيراد</h2><label><span class="sr-only">الفترة</span><select id="ttRevSel"><option value="w">أسبوعي</option><option value="m">شهري</option><option value="y">سنوي</option></select></label></header>
+        <div class="pv g"><small>الربح</small><b class="num" id="ttProfit">$0</b></div><div class="pv y"><small>العائد</small><b class="num" id="ttYield">0%</b></div></section>
+      <div class="tt-side" id="ttSide"></div>
+      <section class="tt-c tt-part" style="--i:2"><header><h2>نمو مشاركة المستخدمين</h2></header><div id="ttPart" role="group" aria-label="المستخدمون حسب الربع"></div></section>
+      <section class="tt-c tt-revc" style="--i:3"><header><h2>منحنى الإيراد</h2><div class="tt-seg" role="group" aria-label="الفترة"><button type="button" data-revp="w" aria-pressed="true">أسبوعي</button><button type="button" data-revp="m" aria-pressed="false">شهري</button><button type="button" data-revp="y" aria-pressed="false">سنوي</button></div></header><div class="tt-plot" id="ttRev"></div></section>
+      <section class="tt-c tt-sup" style="--i:4"><header><h2>المحروق مقابل المعروض المتداول</h2></header><div id="ttSup"></div></section>
+      <section class="tt-c tt-tvl" style="--i:5"><header><h2>تاريخ القيمة المقفلة</h2></header><div class="hv"><b class="num" id="ttTvlV">$0</b><small id="ttTvlD"></small></div><div class="tt-plot" id="ttTvl"></div></section>
+      <section class="tt-c tt-sim" style="--i:6"><header><h2>محاكاة الفائدة المركبة</h2></header><div class="tt-get"><span>ستحصل على</span><b class="num" id="ttGet">$0</b></div><div class="tt-split" id="ttSplit" role="img" aria-label="نسبة المودَع إلى الأرباح"></div><span id="ttSplitL"></span><div id="ttSim"></div></section>
+    </div>`;
+}
 
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
@@ -2978,6 +2996,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'pools' && window.JEEM_POOLS_MOUNT) {
     el.dash.innerHTML = interactivePoolsSkeletonHtml(d);
     window.JEEM_POOLS_MOUNT(el.dash.querySelector('#lpRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'treasury' && window.JEEM_TREASURY_MOUNT) {
+    el.dash.innerHTML = interactiveTreasurySkeletonHtml(d);
+    window.JEEM_TREASURY_MOUNT(el.dash.querySelector('#ttRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -3981,7 +4002,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4072,6 +4093,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'marketplace') return !!window.JEEM_MARKET;
   if (d.renderKind === 'warehouse') return !!window.JEEM_WAREHOUSE_DEMO;
   if (d.renderKind === 'pools') return !!window.JEEM_POOLS_DEMO;
+  if (d.renderKind === 'treasury') return !!window.JEEM_TREASURY_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4118,6 +4140,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'marketplace') return openMarketplaceGalDemo(d);
     if (d.renderKind === 'warehouse') return openWarehouseGalDemo(d);
     if (d.renderKind === 'pools') return openPoolsGalDemo(d);
+    if (d.renderKind === 'treasury') return openTreasuryGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4494,6 +4517,42 @@ function openPoolsGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_POOLS_MOUNT(el('gal-view-demo').querySelector('#lpRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (خزينة الأصول الرقمية) ----------
+function openTreasuryGalDemo(d) {
+  if (!window.JEEM_TREASURY_DEMO || !window.JEEM_TREASURY_MOUNT) return;
+  const demo = window.JEEM_TREASURY_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط وليست توصية استثمارية — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('wallet')}لوحة تفاعلية — خزينة أصول رقمية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveTreasurySkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_TREASURY_MOUNT(el('gal-view-demo').querySelector('#ttRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

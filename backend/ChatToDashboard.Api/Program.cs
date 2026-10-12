@@ -105,6 +105,9 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("liquidity-pools",
         new[] { "مجمّعات السيولة (pools)", "سلاسل حجم التداول (volume_series)", "مراكز المستخدم (positions)" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("token-treasury",
+        new[] { "أصول الخزينة (treasury_assets)", "الإيراد (revenue)", "إحصاءات الرمز (token_stats)", "المشاركة (participation)", "القيمة المقفلة (tvl_history)" }));
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an

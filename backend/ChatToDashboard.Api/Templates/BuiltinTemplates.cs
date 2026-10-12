@@ -226,6 +226,13 @@ public static class BuiltinTemplates
             "لوحة تفاعلية لمجمّعات السيولة المركّزة: إجمالي القيمة المقفلة، الحجم التراكمي، " +
             "أعمدة حجم التداول حسب الفترة، جدول المجمّعات بنطاق السيولة المركّزة لكل مجمّع، وإدارة المراكز.",
             RenderKind: "pools"),
+        new BuiltinDashboardTemplate("token-treasury", "a", "network", "خزينة الأصول الرقمية", false,
+            "إجمالي الأصول التشغيلية وتوزيعها، الإيراد والعائد، نمو المشاركة، منحنى الإيراد، المحروق مقابل المتداول، وتاريخ القيمة المقفلة.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لخزينة الأصول الرقمية: إجمالي الأصول التشغيلية بالعملتين، توزيع أصول " +
+            "المراجحة، الإيراد والعائد حسب الفترة، نمو مشاركة المستخدمين، منحنى الإيراد، المحروق " +
+            "مقابل المتداول، وتاريخ القيمة المقفلة، مع محاكي فائدة مركبة.",
+            RenderKind: "treasury"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
