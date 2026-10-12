@@ -144,7 +144,12 @@ public class InteractiveContractMatcher
             foreach (var rowEl in rowsEl.EnumerateArray())
             {
                 var row = new Dictionary<string, System.Text.Json.JsonElement>(StringComparer.OrdinalIgnoreCase);
-                foreach (var prop in rowEl.EnumerateObject()) row[prop.Name] = prop.Value;
+                // .Clone() is required: a JsonElement is only a view into its parent
+                // JsonDocument's buffer, which the `using` above disposes at the end of this
+                // method — an un-cloned element throws ObjectDisposedException the moment a
+                // caller reads it after that (observed live: every field came back as this
+                // method's caller tried to read it).
+                foreach (var prop in rowEl.EnumerateObject()) row[prop.Name] = prop.Value.Clone();
                 rows.Add(row);
             }
             return rows;

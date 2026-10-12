@@ -136,10 +136,20 @@ public class CrmPipelineDataProvider : IInteractiveDataProvider
         return InteractiveDataResult.Ready(new { stages, members, customers, newCustomersDaily, pipelineStats });
     }
 
+    /// <summary>Aliases each matched real column back to its logical key (SELECT real_col AS
+    /// "logicalKey", ...) so the row dictionaries QueryAsync parses are keyed by the names
+    /// Str/Num/Bool/DateStr below actually read — without this, the query still runs and
+    /// returns the right row count, but every field reads back null because the JSON keys are
+    /// the real column names, not the logical ones.</summary>
     private static string BuildSelect(MatchedInteractiveTable table, params string[] logicalCols)
     {
-        var realCols = logicalCols.Select(table.Column).Where(c => c is not null).Cast<string>().Distinct().ToList();
-        return realCols.Count == 0 ? $"SELECT * FROM {table.RealTable}" : $"SELECT {string.Join(", ", realCols)} FROM {table.RealTable}";
+        var pairs = logicalCols
+            .Select(key => (Key: key, Real: table.Column(key)))
+            .Where(p => p.Real is not null)
+            .ToList();
+        return pairs.Count == 0
+            ? $"SELECT * FROM {table.RealTable}"
+            : $"SELECT {string.Join(", ", pairs.Select(p => $"{p.Real} AS \"{p.Key}\""))} FROM {table.RealTable}";
     }
 
     private static string? Str(Dictionary<string, JsonElement> row, string col) =>
