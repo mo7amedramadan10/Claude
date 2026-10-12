@@ -2922,6 +2922,30 @@ function interactiveTreasurySkeletonHtml(d) {
       <section class="tt-c tt-sim" style="--i:6"><header><h2>محاكاة الفائدة المركبة</h2></header><div class="tt-get"><span>ستحصل على</span><b class="num" id="ttGet">$0</b></div><div class="tt-split" id="ttSplit" role="img" aria-label="نسبة المودَع إلى الأرباح"></div><span id="ttSplitL"></span><div id="ttSim"></div></section>
     </div>`;
 }
+// crm-pipeline.js's own markup (§4.19) — Kanban board, team filter, add-customer dialog.
+function interactiveCrmSkeletonHtml(d) {
+  return `<div class="cr" id="crRoot">
+      <div class="cr-band">
+        <div class="cr-bar">
+          <label class="cr-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن عميل</span><input type="search" id="crQ" placeholder="ابحث عن عميل…"></label>
+          <span class="sp"></span>
+          <label><span class="sr-only">تصفية</span><select id="crFlt"><option value="all">كل المواعيد</option><option value="late">المتأخرة</option><option value="none">بلا موعد</option></select></label>
+          <button type="button" class="cr-tb" data-me aria-pressed="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>عملائي</button>
+          <button type="button" class="btn btn-dark" data-add><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة عميل</button>
+        </div>
+        <div class="cr-kpis">
+          <div class="cr-k"><h3>عملاء جدد</h3><div id="crNew" role="group" aria-label="العملاء الجدد يوميًا"></div></div>
+          <div class="cr-k"><div id="crGauge"></div></div>
+          <div class="cr-n"><b class="num" id="crTasks">0</b><button type="button" class="lk" data-go="nego"><span>مهام<br>قيد التنفيذ</span><svg class="icon" aria-hidden="true"><use href="#i-chev-left"/></svg></button></div>
+          <div class="cr-n"><b class="num" id="crPre">$0</b><button type="button" class="lk" data-go="won"><span>دفعات مقدمة<br>من العملاء</span><svg class="icon" aria-hidden="true"><use href="#i-chev-left"/></svg></button></div>
+        </div>
+      </div>
+      <div class="cr-team"><span>الفريق:</span><div id="crMem" role="group" aria-label="تصفية حسب المسؤول"></div><span class="sp" style="flex:1"></span><span><span class="num" id="crCount">0</span> عميل ظاهر</span></div>
+      <div id="crBoard"></div>
+      <span class="cr-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>اسحب البطاقات بين المراحل (أو Shift + الأسهم)، اضغط بطاقة لتفاصيلها، واستخدم ⋮ للنقل أو التعيين أو الأرشفة.</span>
+      <div id="crDlg" hidden></div>
+    </div>`;
+}
 
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
@@ -2999,6 +3023,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'treasury' && window.JEEM_TREASURY_MOUNT) {
     el.dash.innerHTML = interactiveTreasurySkeletonHtml(d);
     window.JEEM_TREASURY_MOUNT(el.dash.querySelector('#ttRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'crm' && window.JEEM_CRM_MOUNT) {
+    el.dash.innerHTML = interactiveCrmSkeletonHtml(d);
+    window.JEEM_CRM_MOUNT(el.dash.querySelector('#crRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4002,7 +4029,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4094,6 +4121,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'warehouse') return !!window.JEEM_WAREHOUSE_DEMO;
   if (d.renderKind === 'pools') return !!window.JEEM_POOLS_DEMO;
   if (d.renderKind === 'treasury') return !!window.JEEM_TREASURY_DEMO;
+  if (d.renderKind === 'crm') return !!window.JEEM_CRM_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4141,6 +4169,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'warehouse') return openWarehouseGalDemo(d);
     if (d.renderKind === 'pools') return openPoolsGalDemo(d);
     if (d.renderKind === 'treasury') return openTreasuryGalDemo(d);
+    if (d.renderKind === 'crm') return openCrmGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4553,6 +4582,42 @@ function openTreasuryGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_TREASURY_MOUNT(el('gal-view-demo').querySelector('#ttRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (إدارة العملاء — مراحل البيع) ----------
+function openCrmGalDemo(d) {
+  if (!window.JEEM_CRM_DEMO || !window.JEEM_CRM_MOUNT) return;
+  const demo = window.JEEM_CRM_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('briefcase')}لوحة تفاعلية — مراحل بيع العملاء</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveCrmSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_CRM_MOUNT(el('gal-view-demo').querySelector('#crRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

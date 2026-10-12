@@ -233,6 +233,12 @@ public static class BuiltinTemplates
             "المراجحة، الإيراد والعائد حسب الفترة، نمو مشاركة المستخدمين، منحنى الإيراد، المحروق " +
             "مقابل المتداول، وتاريخ القيمة المقفلة، مع محاكي فائدة مركبة.",
             RenderKind: "treasury"),
+        new BuiltinDashboardTemplate("crm-pipeline", "a", "network", "إدارة العملاء — مراحل البيع", false,
+            "لوحة مراحل بيع قابلة للسحب: عملاء جدد يوميًا، معدل نجاح الصفقات، مهام قيد التنفيذ، ودفعات مقدّمة.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإدارة العملاء بمراحل بيع قابلة للسحب: عملاء جدد يوميًا، معدل نجاح الصفقات، " +
+            "مهام قيد التنفيذ، دفعات مقدّمة من العملاء، لوحة Kanban بمراحل البيع، وتصفية حسب الفريق والبحث والموعد.",
+            RenderKind: "crm"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
