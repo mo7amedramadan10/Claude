@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using ChatToDashboard.Api.Auth;
 using ChatToDashboard.Api.Claude;
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.History;
+using ChatToDashboard.Api.Live;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.OpenAi;
 using ChatToDashboard.Api.Repository;
@@ -70,6 +72,29 @@ builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaMatchingSe
 builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplatePromptService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Analyst.AnalystStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Graph.GraphStore>();
+builder.Services.AddSingleton<LiveChannelHub>();
+
+// Interactive (RenderKind) templates' real-data providers — see Interactive/
+// InteractiveDataModels.cs. Stubs for the 5 pre-existing network/workflow/marketplace
+// templates (their real per-project SQL mapping isn't part of this task's assigned scope,
+// §4.16-§4.24 — see StubInteractiveDataProvider's own doc comment); §4.16+ templates get
+// their own real IInteractiveDataProvider registered here as each is built.
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("policy-network",
+        new[] { "اللوائح والأنظمة", "الجهات والمنصات", "الشكاوى" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-network",
+        new[] { "طلبات الشراء", "الموردون", "أوامر الشراء" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("client-supplier-network",
+        new[] { "العملاء", "الموردون", "المشاريع المشتركة" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-workflow",
+        new[] { "أحداث مراحل الطلبات", "مدة الخدمة لكل مرحلة" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-marketplace",
+        new[] { "طلبات المنصة", "العملاء", "الموردون" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
 // internal server with a self-signed certificate, and is opt-in per system.
@@ -164,12 +189,39 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 // it still requires a session via the FallbackPolicy above.
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseWebSockets();
 
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// INTERACTIVE-HANDOFF.md §7's "hub /hubs/live" — see LiveChannelHub's own doc comment for
+// why this is a plain WebSocket endpoint instead of a SignalR hub. Channel convention:
+// "{projectId}:{key}" (the project id is always the first segment) — any authenticated
+// project member (or platform Admin) may subscribe; nobody else's channel is reachable
+// even by guessing a projectId, since the role check below runs before the socket upgrade
+// is accepted. FallbackPolicy (RequireAuthenticatedUser, configured above) already covers
+// "must be signed in" for this endpoint like every other one; the project-membership check
+// here is the additional, endpoint-specific layer.
+app.Map("/ws/live/{channel}", async (
+    HttpContext ctx, string channel, LiveChannelHub hub,
+    ChatToDashboard.Api.Projects.ProjectStore projects) =>
+{
+    if (!ctx.WebSockets.IsWebSocketRequest) { ctx.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
+    var projectId = channel.Split(':', 2)[0];
+    if (string.IsNullOrEmpty(projectId)) { ctx.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
+    var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return; }
+    if (!ctx.User.IsInRole(UserRoles.Admin))
+    {
+        var roles = await projects.ListRolesAsync(projectId, ctx.RequestAborted);
+        if (!roles.Any(r => r.UserId == userId)) { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return; }
+    }
+    var socket = await ctx.WebSockets.AcceptWebSocketAsync();
+    await hub.RunAsync(channel, socket, ctx.RequestAborted);
+});
 
 // The observability page lives on its own link, unrelated to the dashboard — admin only.
 app.MapGet("/usage", (IWebHostEnvironment env) =>

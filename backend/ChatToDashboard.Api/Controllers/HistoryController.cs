@@ -198,6 +198,47 @@ public class HistoryController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Creates an Active dashboard directly from an "interactive" (RenderKind) template —
+    /// INTERACTIVE-HANDOFF.md §1's "Use in project" action, kept entirely separate from the
+    /// normal chat/AI build pipeline since there are no ordinary widgets to generate: the
+    /// frontend instead mounts the template's own engine (network/workflow/marketplace, or
+    /// a §4.16+ one) against GET /api/projects/{projectId}/interactive/{templateId}/data.
+    /// Created Active immediately (never a Draft first) since an interactive dashboard's
+    /// whole point is being a live, shared, source-linked view from the start.
+    /// </summary>
+    [HttpPost("from-template")]
+    public async Task<IActionResult> CreateFromTemplate([FromBody] CreateFromTemplateRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.TemplateId)) return BadRequest(new { error = "templateId مطلوب." });
+        var template = ChatToDashboard.Api.Templates.BuiltinTemplates.Dashboards
+            .FirstOrDefault(d => d.Id == request.TemplateId);
+        if (template is null || string.IsNullOrWhiteSpace(template.RenderKind))
+            return BadRequest(new { error = "هذا النموذج ليس نموذجًا تفاعليًا." });
+
+        var entry = new DashboardHistoryEntry
+        {
+            UserId = UserId,
+            Question = $"📊 {template.Name}",
+            QueryDescription = template.Name,
+            Summary = template.Description,
+            WidgetsJson = "[]",
+            FiltersJson = "[]",
+            ActiveFiltersJson = "{}",
+            ProjectId = await CurrentProjectIdAsync(ct),
+            RenderKind = template.RenderKind,
+            TemplateId = template.Id,
+        };
+        var saved = await _store.SaveAsync(entry, ct);
+
+        var reason = await _access.CheckEligibilityAsync(UserId, saved.WidgetsJson, ct);
+        if (reason is not null) return BadRequest(new { error = reason });
+        await _store.ActivateAsync(saved.Id, UserId, ct);
+
+        var activated = await _store.GetByIdAsync(saved.Id, ct);
+        return Ok(await EnrichAsync(activated!, ct, "owner"));
+    }
+
     /// <summary>Promotes a Draft the caller owns to Active — they become its Owner, which
     /// requires them to hold valid permission on every source the dashboard's widgets
     /// depend on (same check as a fresh question).</summary>
@@ -425,7 +466,7 @@ public class HistoryController : ControllerBase
         {
             entry.Id, entry.UserId, entry.Question, entry.QueryDescription, entry.Summary,
             entry.WidgetsJson, entry.FiltersJson, entry.ActiveFiltersJson, entry.CreatedAt,
-            entry.IsActive, entry.OwnerId, ownerName,
+            entry.IsActive, entry.OwnerId, entry.ProjectId, entry.RenderKind, entry.TemplateId, ownerName,
             myRole = entry.IsActive ? myRole : "owner",
             disabled, disabledReason,
         };

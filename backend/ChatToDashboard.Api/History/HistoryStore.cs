@@ -68,6 +68,8 @@ public class HistoryStore
                      ("IsActive", "INTEGER", "BIT"),
                      ("OwnerId", "TEXT", "NVARCHAR(200)"),
                      ("ProjectId", "TEXT", "NVARCHAR(64)"),
+                     ("RenderKind", "TEXT", "NVARCHAR(64)"),
+                     ("TemplateId", "TEXT", "NVARCHAR(128)"),
                  })
         {
             try
@@ -120,9 +122,9 @@ public class HistoryStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"INSERT INTO {Table} (Id, UserId, Question, QueryDescription, Summary, WidgetsJson, " +
-            "FiltersJson, ActiveFiltersJson, CreatedAt, ProjectId) " +
+            "FiltersJson, ActiveFiltersJson, CreatedAt, ProjectId, RenderKind, TemplateId) " +
             "VALUES (@Id, @UserId, @Question, @QueryDescription, @Summary, @WidgetsJson, " +
-            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ProjectId)",
+            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ProjectId, @RenderKind, @TemplateId)",
             entry);
 
         // Retention: keep only the latest MaxPerUser rows for this user. Simplest inline
@@ -162,7 +164,7 @@ public class HistoryStore
         var rows = await connection.QueryAsync<DashboardHistoryEntry>(
             $"SELECT {top}t.Id, t.UserId, t.Question, t.QueryDescription, t.Summary, t.WidgetsJson, " +
             "COALESCE(t.FiltersJson, '[]') AS FiltersJson, COALESCE(t.ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
-            "COALESCE(t.IsActive, 0) AS IsActive, t.OwnerId, t.CreatedAt, t.ProjectId " +
+            "COALESCE(t.IsActive, 0) AS IsActive, t.OwnerId, t.CreatedAt, t.ProjectId, t.RenderKind, t.TemplateId " +
             $"FROM {Table} t WHERE ((COALESCE(t.IsActive, 0) = 0 AND t.UserId = @userId) " +
             $"OR (COALESCE(t.IsActive, 0) = 1 AND (t.OwnerId = @userId " +
             $"OR EXISTS (SELECT 1 FROM {RolesTable} r WHERE r.DashboardId = t.Id AND r.UserId = @userId)))) " +
@@ -181,7 +183,7 @@ public class HistoryStore
         return await connection.QuerySingleOrDefaultAsync<DashboardHistoryEntry>(
             "SELECT Id, UserId, Question, QueryDescription, Summary, WidgetsJson, " +
             "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
-            $"COALESCE(IsActive, 0) AS IsActive, OwnerId, CreatedAt FROM {Table} WHERE Id = @id",
+            $"COALESCE(IsActive, 0) AS IsActive, OwnerId, CreatedAt, ProjectId, RenderKind, TemplateId FROM {Table} WHERE Id = @id",
             new { id });
     }
 

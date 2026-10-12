@@ -580,7 +580,9 @@ function applyTheme(name) {
 // The model only ever controls widget content (type/title/data) — never layout or
 // style. Anything outside this whitelist renders as a table instead of risking a
 // broken grid or a crash on an unexpected type.
-const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table', 'progress-table', 'trend-matrix', 'status-bar', 'radial-gauge', 'linear-gauge'];
+const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table', 'progress-table', 'trend-matrix', 'status-bar', 'radial-gauge', 'linear-gauge',
+  // INTERACTIVE-HANDOFF.md §4.14/§5 additions — see their Card functions below.
+  'radar', 'semi', 'dco', 'iconrank', 'ribbon', 'people', 'feed', 'goal', 'stages', 'bullet'];
 // Defense in depth: regardless of what the system prompt asked the model to do, a
 // chart never renders more than this many points — the overflow is folded into one
 // summed "+N more" bucket instead of an unreadably dense chart.
@@ -2254,10 +2256,335 @@ function RadialGaugeCard(w) {
   return card;
 }
 
+// ---------- §4.14/§5 additions (INTERACTIVE-HANDOFF.md) ----------
+// Row shapes are documented server-side on DashboardSpec (InteractiveWidgetDataShapes) —
+// kept in sync here. `w.options` is the small per-type tweak bag described there; every
+// key is read defensively since it's always optional.
+
+// radar: one entity's profile across several same-scale axes, or 2-3 entities compared.
+// data: [{ axis, <series1>, <series2>, ... }] — one row per axis, one numeric column per series.
+function RadarCard(w) {
+  const card = widgetShell(w, 'radar');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const seriesNames = Object.keys(rows[0]).filter(k => k !== 'axis');
+  if (!seriesNames.length) return emptyBody(card);
+  const max = w.options && w.options.max != null ? num(w.options.max) : undefined;
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    chart: {
+      type: 'radar', height: '100%', width: '100%', fontFamily: THEME.fontFamily, background: 'transparent',
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: seriesNames.map(name => ({ name, data: rows.map(r => num(r[name])) })),
+    labels: rows.map(r => String(r.axis ?? '')),
+    colors: THEME.palette,
+    xaxis: { labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily } } },
+    yaxis: max != null ? { max, min: 0, show: false } : { min: 0, show: false },
+    stroke: { width: 2 },
+    fill: { opacity: 0.15 },
+    markers: { size: 3 },
+    legend: seriesNames.length > 1
+      ? { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily }
+      : { show: false },
+    tooltip: { y: { formatter: v => fmt(v) } },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// semi: one total split into 2-3 parts, shown as a half-donut with the total above it.
+// data: [{ label, value }] (2-3 rows).
+function SemiCard(w) {
+  const card = widgetShell(w, 'semi');
+  const rows = (Array.isArray(w.data) ? w.data : []).slice(0, 3);
+  if (!rows.length) return emptyBody(card);
+  const total = rows.reduce((s, r) => s + num(r.value), 0);
+  const tl = w.options && w.options.tl;
+  const caption = document.createElement('div');
+  caption.className = 'rg-caption';
+  caption.innerHTML = `<span class="num jr-countup">${esc(fmt(total))}</span>${tl ? ' ' + esc(tl) : ''}`;
+  card.appendChild(caption);
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    chart: {
+      type: 'donut', height: '100%', width: '100%', fontFamily: THEME.fontFamily, background: 'transparent',
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: rows.map(r => num(r.value)),
+    labels: rows.map(r => String(r.label ?? '')),
+    colors: THEME.palette,
+    plotOptions: { pie: { startAngle: -90, endAngle: 90, donut: { size: '70%', labels: { show: false } }, offsetY: 10 } },
+    dataLabels: { enabled: false },
+    legend: { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily },
+    tooltip: { y: { formatter: v => fmt(v) } },
+    stroke: { width: 1, colors: [THEME.surface] },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// dco: donut with each slice's name+percentage legible (3-5 parts whose names matter).
+// data: [{ label, value }] (3-5 rows) — percentages are Apex's own, always summing to 100%.
+function DcoCard(w) {
+  const card = widgetShell(w, 'dco');
+  const rows = (Array.isArray(w.data) ? w.data : []).slice(0, 5);
+  if (!rows.length) return emptyBody(card);
+  const total = rows.reduce((s, r) => s + num(r.value), 0);
+  const tl = w.options && w.options.tl;
+  const caption = document.createElement('div');
+  caption.className = 'rg-caption';
+  caption.innerHTML = `<span class="num jr-countup">${esc(fmt(total))}</span>${tl ? ' ' + esc(tl) : ''}`;
+  card.appendChild(caption);
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    chart: {
+      type: 'donut', height: '100%', width: '100%', fontFamily: THEME.fontFamily, background: 'transparent',
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: rows.map(r => num(r.value)),
+    labels: rows.map(r => String(r.label ?? '')),
+    colors: THEME.palette,
+    dataLabels: {
+      enabled: true, formatter: val => Math.round(val) + '٪',
+      style: { colors: ['#fff'], fontFamily: THEME.fontFamily },
+    },
+    legend: { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily },
+    plotOptions: { pie: { donut: { labels: { show: false } } } },
+    tooltip: { y: { formatter: v => fmt(v) } },
+    stroke: { width: 1, colors: [THEME.surface] },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// iconrank: ranking with a short symbol per row (countries, platforms, suppliers, ...).
+// data: [{ label, value }]; w.options.av[] supplies each row's own short symbol.
+function IconRankCard(w) {
+  const card = widgetShell(w, 'iconrank');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const sorted = [...rows].sort((a, b) => num(b.value) - num(a.value));
+  const max = Math.max(...sorted.map(r => num(r.value)), 1);
+  const av = Array.isArray(w.options && w.options.av) ? w.options.av : [];
+  const u = (w.options && w.options.u) || '';
+  const wrap = document.createElement('div');
+  wrap.className = 'iconrank-list';
+  wrap.innerHTML = sorted.map((r, i) => {
+    const v = num(r.value);
+    const pct = max > 0 ? Math.max(2, (v / max) * 100) : 0;
+    const sym = esc(av[i] || String(r.label ?? '').slice(0, 2));
+    return `<div class="iconrank-row">
+        <span class="iconrank-no">${i + 1}</span>
+        <span class="iconrank-sym" aria-hidden="true">${sym}</span>
+        <span class="iconrank-label">${esc(r.label ?? '—')}</span>
+        <div class="iconrank-track"><div class="iconrank-fill" style="width:${pct}%;background:${THEME.palette[i % THEME.palette.length]}"></div></div>
+        <span class="iconrank-value"><span class="num">${esc(fmt(v))}</span>${u ? esc(u) : ''}</span>
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// ribbon: stacked columns tracking each category's share across periods (≤6 categories).
+// data: [{ period, category, value }] long-format — pivoted here into one Apex series per category.
+function RibbonCard(w) {
+  const card = widgetShell(w, 'ribbon');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const periods = [...new Set(rows.map(r => String(r.period ?? '')))];
+  const categories = [...new Set(rows.map(r => String(r.category ?? '')))].slice(0, 6);
+  if (!periods.length || !categories.length) return emptyBody(card);
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    // Time reads right-to-left (oldest on the right) — chart.rtl mirrors the x-axis so the
+    // first-seen (query) period order ends up on the right without reversing the data.
+    chart: {
+      type: 'bar', stacked: true, height: '100%', width: '100%', fontFamily: THEME.fontFamily,
+      background: 'transparent', rtl: true,
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: categories.map(cat => ({
+      name: cat,
+      data: periods.map(p => {
+        const row = rows.find(r => String(r.period) === p && String(r.category) === cat);
+        return row ? num(row.value) : 0;
+      }),
+    })),
+    xaxis: { categories: periods, labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily } } },
+    yaxis: { labels: { formatter: fmt, style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily } } },
+    colors: THEME.palette,
+    plotOptions: { bar: { horizontal: false, borderRadius: 3 } },
+    legend: { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily },
+    tooltip: { y: { formatter: v => fmt(v) } },
+    dataLabels: { enabled: false },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// people: person/team cards ranked by value, top one starred, optional %-of-goal bar.
+// data: [{ name, value, goalPct?, role? }].
+function PeopleCard(w) {
+  const card = widgetShell(w, 'people');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const sorted = [...rows].sort((a, b) => num(b.value) - num(a.value));
+  const u = (w.options && w.options.u) || '';
+  const wrap = document.createElement('div');
+  wrap.className = 'people-grid';
+  wrap.innerHTML = sorted.map((p, i) => {
+    const goalPct = p.goalPct != null ? Math.max(0, Math.min(100, num(p.goalPct))) : null;
+    return `<div class="people-card${i === 0 ? ' is-top' : ''}" role="button" tabindex="0" data-person="${esc(p.name ?? '')}">
+        ${i === 0 ? '<span class="people-star" aria-hidden="true">★</span>' : ''}
+        <div class="people-name">${esc(p.name ?? '—')}</div>
+        ${p.role ? `<div class="people-role">${esc(p.role)}</div>` : ''}
+        <div class="people-value"><span class="num">${esc(fmt(num(p.value)))}</span>${u ? esc(u) : ''}</div>
+        ${goalPct != null ? `<div class="people-goal-track" role="img" aria-label="${Math.round(goalPct)}٪ من الهدف">
+            <div class="people-goal-fill" style="width:${goalPct}%"></div></div>` : ''}
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// feed: activity list with status — always icon + color + text, never color alone.
+// data: [{ title, desc?, value?, status: ok|pend|bad|info, time?, owner? }]; w.options.lab overrides labels.
+const FEED_STATUS_META = {
+  ok: { icon: '✓', cls: 'status-ok', label: 'منجز' },
+  pend: { icon: '⏱', cls: 'status-warn', label: 'قيد الانتظار' },
+  bad: { icon: '✕', cls: 'status-bad', label: 'متعثر' },
+  info: { icon: 'ℹ', cls: 'status-info', label: 'معلومة' },
+};
+function FeedCard(w) {
+  const card = widgetShell(w, 'feed');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const lab = (w.options && w.options.lab) || {};
+  const wrap = document.createElement('div');
+  wrap.className = 'feed-list';
+  wrap.innerHTML = rows.map(r => {
+    const meta = FEED_STATUS_META[r.status] || FEED_STATUS_META.info;
+    const label = lab[r.status] || meta.label;
+    return `<div class="feed-row">
+        <span class="feed-status ${meta.cls}" aria-hidden="true">${meta.icon}</span>
+        <div class="feed-body">
+          <div class="feed-title">${esc(r.title ?? '')}</div>
+          ${r.desc ? `<div class="feed-desc">${esc(r.desc)}</div>` : ''}
+          <div class="feed-meta">
+            <span class="feed-status-text">${esc(label)}</span>
+            ${r.owner ? `<span class="feed-owner">${esc(r.owner)}</span>` : ''}
+            ${r.time ? `<span class="feed-time">${esc(r.time)}</span>` : ''}
+          </div>
+        </div>
+        ${r.value != null ? `<div class="feed-value">${esc(String(r.value))}</div>` : ''}
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// goal: a sentence composed from data, toned by achievement — never a bare number alone.
+// data: single object { percent, remaining?, who?, days?, headline? }.
+function GoalCard(w) {
+  const card = widgetShell(w, 'goal');
+  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row || row.percent == null) return emptyBody(card);
+  const pct = num(row.percent);
+  const risk = w.options && w.options.risk != null ? num(w.options.risk) : 80;
+  let tone, verb;
+  if (pct >= 100) { tone = 'ok'; verb = 'تجاوز الهدف'; }
+  else if (pct >= risk) { tone = 'warn'; verb = 'يقترب من الهدف'; }
+  else if (pct >= 50) { tone = 'warn'; verb = 'على المسار، ويحتاج تسريعًا'; }
+  else { tone = 'bad'; verb = 'بعيد عن الهدف، ويحتاج تدخلًا'; }
+  const toneIcon = { ok: '✓', warn: '◆', bad: '✕' }[tone];
+  const sentence = [
+    row.headline ? esc(row.headline) : '',
+    row.who ? `<b>${esc(row.who)}</b>` : '',
+    `<span class="num jr-countup">${esc(fmt(pct))}</span>٪ ${esc(verb)}`,
+    row.remaining != null ? `(متبقٍ <span class="num">${esc(fmt(num(row.remaining)))}</span>)` : '',
+    row.days != null ? `خلال <span class="num">${esc(fmt(num(row.days)))}</span> يوم` : '',
+  ].filter(Boolean).join(' ');
+  const wrap = document.createElement('div');
+  wrap.className = `goal-body tone-${tone}`;
+  wrap.innerHTML = `<span class="goal-icon" aria-hidden="true">${toneIcon}</span><p class="goal-sentence">${sentence}</p>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// stages: multi-stage process tracker with sub-status chips, read right-to-left.
+// data: [{ stage, status: ok|warn|bad|pending, subStatus?, tone?: info|ok|warn|bad|dark|mute }].
+const STAGE_TONE_CLASS = { info: 'tone-info', ok: 'tone-ok', warn: 'tone-warn', bad: 'tone-bad', dark: 'tone-dark', mute: 'tone-mute' };
+const STAGE_STATUS_META = {
+  ok: { icon: '✓', cls: 'status-ok' },
+  warn: { icon: '◆', cls: 'status-warn' },
+  bad: { icon: '✕', cls: 'status-bad' },
+  pending: { icon: '⏱', cls: 'status-warn' },
+};
+function StagesCard(w) {
+  const card = widgetShell(w, 'stages');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const wrap = document.createElement('div');
+  wrap.className = 'stages-row';
+  // RTL: first stage renders on the right, arrow points toward the next (leftward) stage.
+  wrap.innerHTML = rows.map((r, i) => {
+    const statusMeta = STAGE_STATUS_META[r.status] || STAGE_STATUS_META.pending;
+    const toneCls = STAGE_TONE_CLASS[r.tone] || STAGE_TONE_CLASS.mute;
+    return `${i > 0 ? '<span class="stages-arrow" aria-hidden="true">←</span>' : ''}
+      <div class="stage-card">
+        <span class="stage-status ${statusMeta.cls}" aria-hidden="true">${statusMeta.icon}</span>
+        <div class="stage-name">${esc(r.stage ?? '')}</div>
+        ${r.subStatus ? `<span class="stage-chip ${toneCls}">${esc(r.subStatus)}</span>` : ''}
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// bullet: actual-vs-target per row — w.options.hi: true when higher is better (default:
+// lower is better, e.g. days-to-close); always icon + color, never color alone.
+function BulletCard(w) {
+  const card = widgetShell(w, 'bullet');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const hi = !!(w.options && w.options.hi);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap bullet-wrap';
+  wrap.innerHTML = `<table><tbody>${rows.map(r => {
+    const actual = num(r.actual), target = num(r.target);
+    const max = Math.max(actual, target, 1) * 1.15;
+    const pct = Math.max(0, Math.min(100, (actual / max) * 100));
+    const targetPct = Math.max(0, Math.min(100, (target / max) * 100));
+    const good = hi ? actual >= target : actual <= target;
+    const color = toneColor(good ? 'accent' : 'danger');
+    return `<tr><td>${esc(r.label ?? '—')}</td><td class="lg-cell">
+        <span class="bullet-icon ${good ? 'status-ok' : 'status-bad'}" aria-hidden="true">${good ? '✓' : '✕'}</span>
+        <div class="bullet-track">
+          <div class="bullet-fill" style="width:${pct}%;background:${color}"></div>
+          <span class="bullet-target" style="right:${100 - targetPct}%"></span>
+        </div>
+        <div class="lg-value"><span class="num">${esc(fmt(actual))}</span> / <span class="num">${esc(fmt(target))}</span></div>
+      </td></tr>`;
+  }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
 const WIDGET_COMPONENTS = {
   kpi: KpiCard, bar: BarChartCard, line: LineChartCard, pie: PieChartCard, table: TableCard,
   'progress-table': ProgressTableCard, 'trend-matrix': TrendMatrixCard, 'status-bar': StatusBarCard,
   'radial-gauge': RadialGaugeCard, 'linear-gauge': LinearGaugeCard,
+  radar: RadarCard, semi: SemiCard, dco: DcoCard, iconrank: IconRankCard, ribbon: RibbonCard,
+  people: PeopleCard, feed: FeedCard, goal: GoalCard, stages: StagesCard, bullet: BulletCard,
 };
 
 // ---------- comparison layout (not a 6th type — a display option any type can carry) ----------
@@ -2400,8 +2727,222 @@ function buildDashTabs(tabs, active) {
 }
 
 // ---------- dashboard rendering ----------
+// ---------- interactive (RenderKind) dashboards: real-data mount path ----------
+// Same engines/markup the gallery's own demo preview uses (openNetworkGalDemo/
+// openWorkflowGalDemo/openMarketplaceGalDemo above) — duplicated here rather than shared,
+// since the demo functions also own gallery-only chrome (the "تجريبي" banner, "رجوع
+// للمعاينة"/"استخدم هذا النموذج" buttons) this real-dashboard mount never shows. A §4.16+
+// engine registers its own skeleton + mount call in mountInteractiveDashboard below as it's
+// built; network/workflow/marketplace are wired now so this path already works end to end
+// once each gets a real (non-stub) data provider on the backend.
+function interactiveNetworkSkeletonHtml(d) {
+  return `<main class="canvas pg-canvas" id="pgRoot">
+      <section class="pg-head">
+        <div><div class="dg-title"><h1>${esc(d.name || '')}</h1></div><p>${esc(d.summary || '')}</p><span class="sr-only" id="pgScope"></span></div>
+        <div class="pg-law" role="group" aria-label="اختر النظام"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن الشبكة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم عن الشبكة…" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="إظهار أو إخفاء الأنواع"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث في الشبكة</span><input id="pgSearch" type="search" placeholder="ابحث…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="graph" aria-pressed="true">شبكة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage">
+            <svg id="pgSvg" role="group" aria-label="${esc(d.name || '')}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+            <div class="pg-zoom" role="group" aria-label="التكبير">
+              <button type="button" id="pgZoomIn" aria-label="تكبير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              <span id="pgZoomVal" class="num">100%</span>
+              <button type="button" id="pgZoomOut" aria-label="تصغير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-minus"/></svg></button>
+              <button type="button" id="pgFit" aria-label="ملاءمة الشبكة للشاشة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-expand"/></svg></button>
+            </div>
+            <p class="pg-hint">نقرتان على عقدة للنزول داخلها · اسحب الخلفية للتحريك · العجلة للتكبير</p>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">الفترة</span><input type="range" id="pgYear" step="1">
+              <span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="pgYearOut"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+}
+function interactiveWorkflowSkeletonHtml(d) {
+  return `<main class="canvas pg-canvas" id="wfRoot">
+      <section class="pg-head">
+        <div><div class="dg-title"><h1>${esc(d.name || '')}</h1></div><p>${esc(d.summary || '')}</p><span class="sr-only" id="pgScope"></span></div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن سير العمل</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم عن سير العمل…" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب الالتزام بالمدة"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن طلب أو مورد</span><input id="pgSearch" type="search" placeholder="ابحث برقم الطلب أو اسمه أو المورد…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="map" aria-pressed="true">خريطة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="wfSvg" role="group" aria-label="${esc(d.name || '')}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="wfDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+}
+function interactiveMarketplaceSkeletonHtml(d) {
+  return `<main class="canvas pg-canvas" id="mkRoot">
+      <section class="pg-head">
+        <div><div class="dg-title"><h1>${esc(d.name || '')}</h1></div><p>${esc(d.summary || '')}</p><span class="sr-only" id="pgScope"></span></div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن المنصة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم عن المنصة…" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب حالة الطلب"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن عميل أو مورد أو نوع</span><input id="pgSearch" type="search" placeholder="ابحث عن عميل أو مورد أو نوع طلب…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="flow" aria-pressed="true">تدفق</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="mkSvg" role="group" aria-label="${esc(d.name || '')}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="mkDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+}
+
+// §3's empty-state rule: a template with no linked source shows this instead of an error,
+// with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
+function interactiveEmptyStateHtml(d, missingSources) {
+  return `<div class="empty"><div>
+      <div class="big">${esc(d.name || 'لوحة تفاعلية')}</div>
+      <div>لم يتم ربط مصادر البيانات اللازمة لهذه اللوحة بعد${(missingSources || []).length ? ': ' + missingSources.map(esc).join('، ') : ''}.</div>
+      <button type="button" class="btn btn-primary" id="interactive-link-source-btn" style="margin-top:14px">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>ربط مصدر بيانات
+      </button>
+    </div></div>`;
+}
+
+// "استخدم هذا النموذج" for an interactive (RenderKind) template — creates the Active
+// dashboard directly (POST /api/history/from-template), skipping the AI chat build
+// pipeline entirely, then opens it so renderDashboard()'s branch above mounts its engine.
+async function useInteractiveTemplate(d) {
+  closeDashGallery();
+  setChatMode('dashboard');
+  showScreen('chat');
+  el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
+  let res, json;
+  try {
+    res = await fetch('/api/history/from-template', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ templateId: d.id }),
+    });
+    json = await res.json().catch(() => null);
+  } catch { res = null; json = null; }
+  if (!res || !res.ok || !json?.id) {
+    el.dash.innerHTML = `<div class="empty"><div>
+        <div class="big">تعذّر إنشاء اللوحة</div>
+        <div>${esc(json?.error || 'حدث خطأ غير متوقع — حاول مرة أخرى.')}</div>
+      </div></div>`;
+    return;
+  }
+  await loadHistory();
+  openHistoryEntry(json.id);
+}
+
+async function mountInteractiveDashboard(d) {
+  el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
+  if (!d.templateId) { el.dash.innerHTML = interactiveEmptyStateHtml(d, []); return; }
+
+  let body;
+  try {
+    const res = await fetch(`/api/interactive/${encodeURIComponent(d.templateId)}/data`);
+    body = res.ok ? await res.json() : null;
+  } catch { body = null; }
+
+  if (!body || !body.linked) {
+    el.dash.innerHTML = interactiveEmptyStateHtml(d, body?.missingSources || []);
+    el('interactive-link-source-btn')?.addEventListener('click', () => showScreen('sources'));
+    return;
+  }
+
+  if (d.renderKind === 'network' && window.JEEM_NET_MOUNT) {
+    el.dash.innerHTML = interactiveNetworkSkeletonHtml(d);
+    window.JEEM_DRILL_INIT?.();
+    window.JEEM_NET_MOUNT(body.data);
+  } else if (d.renderKind === 'workflow' && window.JEEM_WORKFLOW_MOUNT) {
+    el.dash.innerHTML = interactiveWorkflowSkeletonHtml(d);
+    window.JEEM_WORKFLOW_MOUNT(body.data);
+  } else if (d.renderKind === 'marketplace' && window.JEEM_MARKETPLACE_MOUNT) {
+    el.dash.innerHTML = interactiveMarketplaceSkeletonHtml(d);
+    window.JEEM_MARKETPLACE_MOUNT(body.data);
+  } else {
+    // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
+    el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
+  }
+}
+
 function renderDashboard() {
   const d = state.dashboard;
+  // An "interactive" (RenderKind) dashboard never goes through the ordinary widget-grid
+  // pipeline below — see mountInteractiveDashboard. None of the normal toolbar actions
+  // (edit/undo/redo/add-widget/share/publish) apply to it yet (Phase 3 gives it its own
+  // info-bar controls), so the toolbar simply stays hidden.
+  if (d && d.renderKind) {
+    chartInstances.forEach(c => c.destroy());
+    chartInstances = [];
+    pendingCharts = [];
+    el('dash-toolbar').classList.add('hidden');
+    mountInteractiveDashboard(d);
+    return;
+  }
   // Never editable in the public share view; a Viewer on an Active dashboard can look but
   // not refine it either — only the Owner/an Editor may (their own permission is what's
   // actually checked when they do, same as a fresh question — see DashboardAccessService).
@@ -2533,6 +3074,13 @@ function renderDashboard() {
         () => card.classList.remove('widget-enter', 'widget-mount'),
         { once: true },
       );
+      // JR.animate's count-up (see dash-render.js) reused here for the §4.14 widget types'
+      // own headline numbers (semi/dco total, goal percent) — same "only on a fresh reveal,
+      // never a filter/edit re-render" rule as animateKpiValue, and already reduced-motion
+      // safe internally (dash-render.js computes its own RM check once at load).
+      if (revealNow && window.JR && window.JR.countUp) {
+        card.querySelectorAll('.jr-countup').forEach(elx => window.JR.countUp(elx));
+      }
       grid.appendChild(card);
     });
     el.dash.appendChild(grid);
@@ -3501,6 +4049,7 @@ function openDashGalPreview(d) {
     el('gal-view-list').classList.remove('hidden');
   });
   el('gal-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
@@ -5835,6 +6384,9 @@ function openHistoryEntry(id) {
   state.dashboard = ensureWidgetMeta({
     name: entry.question, summary: entry.summary, widgets: parseWidgets(entry.widgetsJson),
     filters: parseFilters(entry.filtersJson),
+    // Set only for an "interactive" (RenderKind) dashboard — see mountInteractiveDashboard,
+    // called from renderDashboard() before any ordinary widget is touched.
+    renderKind: entry.renderKind || null, templateId: entry.templateId || null,
   });
   // A Draft shows its own saved-at time (the frozen snapshot's actual age) — overwritten
   // with "now" below by applyFilters() if this turns out to be an Active dashboard, since

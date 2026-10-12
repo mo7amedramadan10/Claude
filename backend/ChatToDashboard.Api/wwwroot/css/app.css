@@ -7,6 +7,11 @@
 :root{
   --bg:#0C0D0E; --surface:#1A1B1D; --plane:#2A2B2E52; --ink:#EDEFF1; --ink-2:#9A9CA0; --muted:#9A9CA0;
   --grid:#333436; --line:#333436; --accent:#3cb4e5; --accent-soft:#3cb4e522; --danger:#EF6461; --amber:#F2B84B;
+  /* Status color — reserved for within/complete states only (never used as a categorical
+     series color, per INTERACTIVE-HANDOFF.md §3): distinct from --accent (brand blue) so a
+     "good" status never reads as just another chart hue. Always paired with an icon/shape
+     too, never color alone. */
+  --ok:#2ECC8F;
   --radius:14px; --shadow:0 10px 26px rgba(0,0,0,.35); --skeleton-a:#19191b; --skeleton-b:#242527;
   --shadow-3d:0 26px 40px -18px rgba(0,0,0,.55),0 10px 18px -8px rgba(0,0,0,.4);
   --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
@@ -33,6 +38,7 @@
 :root[data-theme="light"]{
   --bg:#F6F6F7; --surface:#FFFFFF; --plane:#EFEFF0; --ink:#434345; --ink-2:#6B6D70; --muted:#6B6D70;
   --grid:#E3E4E6; --line:#E3E4E6; --accent:#007cbb; --accent-soft:#007cbb18; --danger:#D3402F; --amber:#B8730A;
+  --ok:#1E9E6A;
   --shadow:0 1px 2px rgba(16,21,31,.05), 0 6px 18px rgba(16,21,31,.07);
   --shadow-3d:0 24px 38px -18px rgba(16,21,31,.22),0 8px 14px -6px rgba(16,21,31,.14);
   --skeleton-a:#EFEFF0; --skeleton-b:#F8F8F9;
@@ -536,6 +542,84 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- radial-gauge ---------- */
 .rg-caption{text-align:center;color:var(--ink-2);font-size:12.5px;margin-top:-8px}
+
+/* ---------- §4.14/§5 additions (INTERACTIVE-HANDOFF.md) ---------- */
+.widget.radar,.widget.ribbon{grid-column:span 2}
+
+/* iconrank */
+.iconrank-list{display:flex;flex-direction:column;gap:9px}
+.iconrank-row{display:flex;align-items:center;gap:10px}
+.iconrank-no{font-family:var(--mono);font-size:11px;color:var(--ink-2);width:16px;text-align:center;flex-shrink:0}
+.iconrank-sym{width:22px;height:22px;border-radius:7px;background:var(--plane);display:flex;
+  align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.iconrank-label{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.iconrank-track{flex:1;height:8px;border-radius:999px;background:var(--plane);overflow:hidden}
+.iconrank-fill{height:100%;border-radius:999px}
+.iconrank-value{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);flex-shrink:0;min-width:48px;text-align:end}
+
+/* people */
+.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.people-card{position:relative;background:var(--plane);border-radius:10px;padding:12px;text-align:center;cursor:pointer}
+.people-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.people-star{position:absolute;inset-inline-start:8px;top:8px;color:var(--amber);font-size:13px}
+.people-name{font-size:13px;font-weight:600;margin-top:4px}
+.people-role{font-size:11px;color:var(--ink-2);margin-top:2px}
+.people-value{font-family:var(--mono);font-size:15px;margin-top:6px;color:var(--accent)}
+.people-goal-track{height:5px;border-radius:999px;background:var(--line);margin-top:8px;overflow:hidden}
+.people-goal-fill{height:100%;border-radius:999px;background:var(--ok)}
+
+/* feed */
+.feed-list{display:flex;flex-direction:column;gap:10px}
+.feed-row{display:flex;align-items:flex-start;gap:10px}
+.feed-status{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;flex-shrink:0;margin-top:1px}
+.feed-status.status-ok{background:color-mix(in srgb, var(--ok) 16%, transparent);color:var(--ok)}
+.feed-status.status-warn{background:color-mix(in srgb, var(--amber) 16%, transparent);color:var(--amber)}
+.feed-status.status-bad{background:color-mix(in srgb, var(--danger) 14%, transparent);color:var(--danger)}
+.feed-status.status-info{background:var(--accent-soft);color:var(--accent)}
+.feed-body{flex:1;min-width:0}
+.feed-title{font-size:13px;font-weight:600}
+.feed-desc{font-size:12px;color:var(--ink-2);margin-top:2px}
+.feed-meta{display:flex;gap:10px;font-size:11px;color:var(--ink-2);margin-top:4px;flex-wrap:wrap}
+.feed-value{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);flex-shrink:0}
+
+/* goal */
+.goal-body{display:flex;align-items:flex-start;gap:10px}
+.goal-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0}
+.goal-body.tone-ok .goal-icon{background:color-mix(in srgb, var(--ok) 16%, transparent);color:var(--ok)}
+.goal-body.tone-warn .goal-icon{background:color-mix(in srgb, var(--amber) 16%, transparent);color:var(--amber)}
+.goal-body.tone-bad .goal-icon{background:color-mix(in srgb, var(--danger) 14%, transparent);color:var(--danger)}
+.goal-sentence{font-size:13.5px;line-height:1.7;margin:0}
+
+/* stages */
+.stages-row{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.stage-card{background:var(--plane);border-radius:10px;padding:10px 14px;text-align:center;min-width:110px;
+  display:flex;flex-direction:column;align-items:center;gap:5px}
+.stage-status{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px}
+.stage-status.status-ok{background:color-mix(in srgb, var(--ok) 16%, transparent);color:var(--ok)}
+.stage-status.status-warn{background:color-mix(in srgb, var(--amber) 16%, transparent);color:var(--amber)}
+.stage-status.status-bad{background:color-mix(in srgb, var(--danger) 14%, transparent);color:var(--danger)}
+.stage-name{font-size:12.5px;font-weight:600}
+.stage-chip{font-size:10.5px;padding:3px 9px;border-radius:999px;font-family:var(--mono)}
+.stage-chip.tone-info{background:var(--accent-soft);color:var(--accent)}
+.stage-chip.tone-ok{background:color-mix(in srgb, var(--ok) 16%, transparent);color:var(--ok)}
+.stage-chip.tone-warn{background:color-mix(in srgb, var(--amber) 16%, transparent);color:var(--amber)}
+.stage-chip.tone-bad{background:color-mix(in srgb, var(--danger) 14%, transparent);color:var(--danger)}
+.stage-chip.tone-dark{background:var(--ink);color:var(--surface)}
+.stage-chip.tone-mute{background:var(--plane);color:var(--ink-2)}
+.stages-arrow{align-self:center;color:var(--ink-2);font-size:14px}
+@media (max-width:720px){.stages-row{flex-direction:column;align-items:stretch}.stages-arrow{transform:rotate(90deg)}}
+
+/* bullet */
+.bullet-wrap .lg-cell{gap:10px}
+.bullet-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:10px;flex-shrink:0}
+.bullet-icon.status-ok{background:color-mix(in srgb, var(--ok) 16%, transparent);color:var(--ok)}
+.bullet-icon.status-bad{background:color-mix(in srgb, var(--danger) 14%, transparent);color:var(--danger)}
+.bullet-track{flex:1;height:8px;border-radius:999px;background:var(--plane);position:relative}
+.bullet-fill{height:100%;border-radius:999px}
+.bullet-target{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink)}
 
 /* ---------- comparison layout (two widgets of the same type, side by side) ---------- */
 .comparison-wrap{background:transparent;border:0;box-shadow:none;padding:0}

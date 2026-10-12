@@ -18,7 +18,19 @@ public class DashboardSpec
             // linear-gauge sections — each has its own "data" shape, handled specially below
             // in Validate().
             "progress-table", "trend-matrix", "status-bar", "radial-gauge", "linear-gauge",
+            // INTERACTIVE-HANDOFF.md §4.14/§5 additions. "goal" is object-shaped like
+            // status-bar/radial-gauge (see ObjectShapedTypes below); the rest are row-array
+            // shaped like every other chart type, one array entry per axis/segment/person/
+            // event/stage — see each type's XML doc below for its exact row shape.
+            "radar", "semi", "dco", "iconrank", "ribbon", "people", "feed", "goal",
+            "stages", "bullet",
         };
+
+    /// <summary>Types whose <see cref="DashboardWidget.Data"/> is a single JSON object
+    /// (one computed total/summary), not a row array — mirrors the existing status-bar/
+    /// radial-gauge special case in <see cref="Validate"/>.</summary>
+    private static readonly HashSet<string> ObjectShapedTypes =
+        new(StringComparer.OrdinalIgnoreCase) { "status-bar", "radial-gauge", "goal" };
     private static readonly HashSet<string> AllowedFilterTypes =
         new(StringComparer.OrdinalIgnoreCase) { "single_select", "multi_select", "date_range", "numeric_range" };
 
@@ -97,7 +109,8 @@ public class DashboardSpec
                 if (w is null) { errors.Add($"widgets[{i}] is null."); continue; }
                 if (string.IsNullOrWhiteSpace(w.Type) || !AllowedWidgetTypes.Contains(w.Type))
                     errors.Add($"widgets[{i}].type must be one of: kpi, bar, line, pie, table, progress-table, " +
-                               $"trend-matrix, status-bar, radial-gauge, linear-gauge (got \"{w.Type}\").");
+                               "trend-matrix, status-bar, radial-gauge, linear-gauge, radar, semi, dco, " +
+                               $"iconrank, ribbon, people, feed, goal, stages, bullet (got \"{w.Type}\").");
                 if (string.IsNullOrWhiteSpace(w.Title))
                     errors.Add($"widgets[{i}].title is required.");
                 // A noData placeholder (see DashboardWidget.NoData) is a declared template
@@ -114,8 +127,7 @@ public class DashboardSpec
                     var hasComparison = w.Comparison is { ValueKind: JsonValueKind.Object };
                     if (!hasComparison)
                     {
-                        var expectsObject = string.Equals(w.Type, "status-bar", StringComparison.OrdinalIgnoreCase)
-                            || string.Equals(w.Type, "radial-gauge", StringComparison.OrdinalIgnoreCase);
+                        var expectsObject = ObjectShapedTypes.Contains(w.Type);
                         var expectedKind = expectsObject ? JsonValueKind.Object : JsonValueKind.Array;
                         if (w.Data.ValueKind != expectedKind)
                             errors.Add(expectedKind == JsonValueKind.Object
@@ -280,7 +292,49 @@ public class DashboardWidget
     /// widget's refusal-to-fabricate explanation elsewhere in the system prompt.</summary>
     [JsonPropertyName("missingReason")]
     public string? MissingReason { get; set; }
+
+    /// <summary>
+    /// Per-type rendering tweaks from INTERACTIVE-HANDOFF.md §5 — a small, type-specific JSON
+    /// object the frontend reads selectively (unknown keys are ignored), kept as a raw
+    /// passthrough bag like <see cref="Comparison"/> rather than one typed field per option
+    /// since the set varies by <see cref="Type"/>:
+    ///   kpi:      { "tg": number (target %), "tgv": number (target value), "risk": number }
+    ///   bar:      { "spot": "max" | "last" | number } — highlight one bar, rest gray
+    ///   line:     { "dash": [seriesIndex,...] } — render those series dashed (reference/target)
+    ///   bullet:   { "hi": bool (higher is better), "risk": number, "inv": bool }
+    ///   semi/dco: { "tl": string (total's own label) }
+    ///   radar:    { "max": number }
+    ///   iconrank: { "av": [string,...] (short symbol per row), "nopct": bool, "u": string }
+    ///   ribbon/people/feed: { "u": string (unit), "lab": {status: label} (feed only) }
+    /// Every field above is optional; absent means the frontend's own default.
+    /// </summary>
+    [JsonPropertyName("options")]
+    public JsonElement? Options { get; set; }
 }
+
+/// <summary>
+/// Row shapes expected in <see cref="DashboardWidget.Data"/> for each §4.14/§5 addition
+/// (array-shaped unless noted). Documented here rather than enforced strictly in <see
+/// cref="DashboardSpec.Validate"/>, matching how existing chart types (bar/line/pie) are
+/// only checked for "is this an array of objects" — the exact column names are the model's
+/// own responsibility, driven by TemplatePromptService's per-type prompt text.
+///   radar:    [{ "axis": string, "&lt;seriesName&gt;": number, ... }] — one row per axis,
+///             one numeric column per series (≤3 series).
+///   semi/dco: [{ "label": string, "value": number }] — 2-3 rows (semi) or 3-5 (dco).
+///   iconrank: [{ "label": string, "value": number }] — ranked descending by the frontend.
+///   ribbon:   [{ "period": string, "category": string, "value": number }] — long format;
+///             the frontend pivots period×category itself.
+///   people:   [{ "name": string, "value": number, "goalPct": number?, "role": string? }]
+///   feed:     [{ "title": string, "desc": string?, "value": string?, "status":
+///             "ok"|"pend"|"bad"|"info", "time": string?, "owner": string? }]
+///   goal:     single object (see DashboardSpec.ObjectShapedTypes): { "percent": number,
+///             "remaining": number?, "who": string?, "days": number?, "headline": string? }
+///   stages:   [{ "stage": string, "status": "ok"|"warn"|"bad"|"pending", "subStatus":
+///             string?, "tone": "info"|"ok"|"warn"|"bad"|"dark"|"mute" }] — ordered array,
+///             one row per process stage, read right-to-left on screen.
+///   bullet:   [{ "label": string, "actual": number, "target": number }]
+/// </summary>
+internal static class InteractiveWidgetDataShapes { }
 
 /// <summary>See <see cref="DashboardWidget.Query"/>.</summary>
 public class WidgetSqlQuery
