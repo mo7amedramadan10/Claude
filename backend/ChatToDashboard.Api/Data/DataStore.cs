@@ -448,6 +448,15 @@ public class DataStore
           - Reference a table exactly as it was listed to you (either {ProjectSchema(projectId)}.[TableName]
             or staging.[TableName]) — never assume one schema for every table.
           - Only SELECT statements are allowed. Any INSERT/UPDATE/DELETE/DDL is rejected.
-          - If a query fails, read the error message and correct your SQL.
+          - Every uploaded-file column is stored as nvarchar regardless of what it actually
+            holds, even a column that is numeric in almost every row. A plain CAST/CONVERT to a
+            numeric type fails the ENTIRE query the instant even one row holds a blank/non-
+            numeric value — "Error converting data type nvarchar to numeric" — even though every
+            other row would have cast fine. If you hit that exact error, retry immediately with
+            TRY_CAST(... AS DECIMAL) / TRY_CONVERT(DECIMAL, ...) instead of CAST/CONVERT: it
+            returns NULL for the one bad row instead of failing the whole statement, and
+            SUM/AVG/COUNT already ignore NULLs on their own. Never give up on a widget (noData)
+            over this specific error without trying TRY_CAST/TRY_CONVERT first.
+          - If a query fails for any other reason, read the error message and correct your SQL.
           """;
 }
