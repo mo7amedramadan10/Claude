@@ -252,6 +252,13 @@ public static class BuiltinTemplates
             "ملخص الوقت حسب المشروع، إحصاءات الوقت لكل وحدة زمنية، الإجمالي حسب الشخص، تفصيل المشاريع، وجدول إجازات شهري، " +
             "مع تصفية مترابطة بالمشروع أو الشخص.",
             RenderKind: "timetracking"),
+        new BuiltinDashboardTemplate("saas-metrics", "a", "network", "إيرادات الاشتراكات والاحتفاظ", false,
+            "شلال الدخل الشهري المتكرر، صافي الدخل الجديد أسبوعيًا، دفعات الاحتفاظ، مزيج الباقات، ومؤشرات القيمة الدائمة والاسترداد.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإيرادات الاشتراكات: شلال الدخل الشهري المتكرر (افتتاحي، جديد، توسّع، انكماش، إلغاء، ختامي) " +
+            "مع تعريف كل حركة، صافي الدخل الجديد أسبوعيًا، خريطة احتفاظ حرارية حسب دفعة الاشتراك، مزيج الباقات " +
+            "بالعملاء والإيراد، ومؤشرات القيمة الدائمة إلى تكلفة الاكتساب وفترة الاسترداد.",
+            RenderKind: "saas"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

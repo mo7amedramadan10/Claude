@@ -2997,6 +2997,25 @@ function interactiveTimeTrackingSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveSaasSkeletonHtml(d) {
+  return `<div class="dk sm" id="smRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'الإيرادات المتكررة والاحتفاظ')}</h1><small>هل ينمو الدخل الشهري لأننا نكسب، أم لأننا نسبق الإلغاء؟</small></div>
+        <span class="sp"></span>
+        <div class="dk-seg" data-seg="rng" role="group" aria-label="المدى"><button type="button" data-v="13" aria-pressed="true">آخر 13 أسبوعًا</button><button type="button" data-v="26" aria-pressed="false">آخر 26 أسبوعًا</button></div>
+      </div>
+      <div class="dk-kpis" id="smKpis"></div>
+      <div class="dk-grid">
+        <section class="dk-card" id="smWfC" style="--sp:7;--i:1"><header><h2>من أين جاء الدخل الشهري وإلى أين ذهب</h2><p>اضغط أي حركة لقراءة تعريفها</p></header><div id="smWf"></div><div class="sm-def" id="smDef" aria-live="polite"></div></section>
+        <section class="dk-card" id="smNetC" style="--sp:5;--i:2"><header><h2>صافي الدخل الجديد أسبوعيًا</h2><p>الأسبوع السالب مميز بالأحمر</p></header><div id="smNet"></div></section>
+        <section class="dk-card" id="smCohC" style="--sp:7;--i:3"><header><h2>الاحتفاظ حسب دفعة الاشتراك</h2><span class="sp"></span><div class="dk-seg sm" data-seg="coh" role="group" aria-label="نوع الاحتفاظ"><button type="button" data-v="logo" aria-pressed="true">الحسابات</button><button type="button" data-v="rev" aria-pressed="false">الإيراد</button></div><p>كل صف دفعة شهر الاشتراك · الأعمدة عمر الدفعة بالأشهر</p></header><div id="smCoh"></div></section>
+        <section class="dk-card" id="smPlanC" style="--sp:5;--i:4"><header><h2>مزيج الباقات: العملاء مقابل الإيراد</h2></header><div id="smPlan"></div><div class="dk-tbl" id="smPlanT"></div></section>
+        <section class="dk-card" style="--sp:12;--i:5"><header><h2>كيف تقرأ هذه اللوحة</h2><p>اضغط أي ملاحظة لإبراز الرسم الذي يثبتها</p></header><div class="sm-ins" id="smIns"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بدّل المدى، واضغط حركة في الشلال أو دفعة في جدول الاحتفاظ لقراءة التفاصيل.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3082,6 +3101,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'timetracking' && window.JEEM_TIMETRACKING_MOUNT) {
     el.dash.innerHTML = interactiveTimeTrackingSkeletonHtml(d);
     window.JEEM_TIMETRACKING_MOUNT(el.dash.querySelector('#tkRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'saas' && window.JEEM_SAAS_MOUNT) {
+    el.dash.innerHTML = interactiveSaasSkeletonHtml(d);
+    window.JEEM_SAAS_MOUNT(el.dash.querySelector('#smRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4085,7 +4107,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4180,6 +4202,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'crm') return !!window.JEEM_CRM_DEMO;
   if (d.renderKind === 'teamtasks') return !!window.JEEM_TEAMTASKS_DEMO;
   if (d.renderKind === 'timetracking') return !!window.JEEM_TIMETRACKING_DEMO;
+  if (d.renderKind === 'saas') return !!window.JEEM_SAAS_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4230,6 +4253,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'crm') return openCrmGalDemo(d);
     if (d.renderKind === 'teamtasks') return openTeamTasksGalDemo(d);
     if (d.renderKind === 'timetracking') return openTimeTrackingGalDemo(d);
+    if (d.renderKind === 'saas') return openSaasGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4750,6 +4774,40 @@ function openTimeTrackingGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_TIMETRACKING_MOUNT(el('gal-view-demo').querySelector('#tkRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openSaasGalDemo(d) {
+  if (!window.JEEM_SAAS_DEMO || !window.JEEM_SAAS_MOUNT) return;
+  const demo = window.JEEM_SAAS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('chart')}لوحة تفاعلية — إيرادات الاشتراكات والاحتفاظ</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveSaasSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_SAAS_MOUNT(el('gal-view-demo').querySelector('#smRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }
