@@ -95,9 +95,6 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-marketplace",
         new[] { "طلبات المنصة", "العملاء", "الموردون" }));
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
-    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("liquidity-pools",
-        new[] { "مجمّعات السيولة (pools)", "سلاسل حجم التداول (volume_series)", "مراكز المستخدم (positions)" }));
-builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("token-treasury",
         new[] { "أصول الخزينة (treasury_assets)", "الإيراد (revenue)", "إحصاءات الرمز (token_stats)", "المشاركة (participation)", "القيمة المقفلة (tvl_history)" }));
 // Real SQL matching (§4.16-4.21 Phase-1 templates) — see InteractiveContractMatcher.cs
@@ -109,6 +106,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.WarehouseTeamDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TeamTasksDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TimeTrackingDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.LiquidityPoolsDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
