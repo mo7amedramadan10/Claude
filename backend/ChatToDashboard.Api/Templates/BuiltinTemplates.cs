@@ -239,6 +239,12 @@ public static class BuiltinTemplates
             "لوحة تفاعلية لإدارة العملاء بمراحل بيع قابلة للسحب: عملاء جدد يوميًا، معدل نجاح الصفقات، " +
             "مهام قيد التنفيذ، دفعات مقدّمة من العملاء، لوحة Kanban بمراحل البيع، وتصفية حسب الفريق والبحث والموعد.",
             RenderKind: "crm"),
+        new BuiltinDashboardTemplate("team-tasks", "a", "network", "إدارة مهام الفريق", false,
+            "مؤقت المهمة الحالية، مهام واجتماعات اليوم، تقويم أسبوعي/يومي/شهري بأولويات ومسؤولين، نشاط الفريق، والتذكيرات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإدارة مهام الفريق: مؤقت للمهمة الحالية، مهام واجتماعات اليوم، تقويم أسبوعي بأولويات " +
+            "ومسؤولين ووقت حي، نشاط الفريق اليومي، توزيع الوقت على المشاريع، وتذكيرات.",
+            RenderKind: "teamtasks"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

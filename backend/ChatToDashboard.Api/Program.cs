@@ -111,6 +111,9 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("crm-pipeline",
         new[] { "العملاء (customers)", "مراحل البيع (stages)", "العملاء الجدد يوميًا (new_customers_daily)", "إحصاءات الصفقات (pipeline_stats)" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("team-tasks",
+        new[] { "المهام (tasks)", "سجلات الوقت (time_entries)", "عناصر التقويم (calendar_items)", "الاجتماعات (meetings)", "التذكيرات (reminders)", "النشاط اليومي (activity_daily)", "توزيع الوقت على المشاريع (project_time_share)" }));
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
