@@ -340,6 +340,30 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>See IIntegrationSetupAssistant.MatchSchemaContractAsync. Never throws — a
+    /// failed match just falls back to Matched=false, same as an unclear identity-transport
+    /// description would.</summary>
+    public async Task<InteractiveSchemaMatch> MatchSchemaContractAsync(
+        string contractDescription, string tableCatalog, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.InteractiveSchemaMatchSystemPrompt;
+        var userText = AnalyticsTools.InteractiveSchemaMatchUserMessage(contractDescription, tableCatalog);
+        var trace = _usage.Begin("Anthropic", _model, "🧩 مطابقة بيانات لوحة تفاعلية", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseInteractiveSchemaMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new InteractiveSchemaMatch(false, null, ex.Message);
+        }
+    }
+
     /// <summary>See IIntegrationSetupAssistant.RetargetSqlAsync. Never throws — a failed
     /// translation just means the widget publishes with no live query (PublishService), never
     /// a broken/guessed one.</summary>

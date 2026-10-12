@@ -781,6 +781,29 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>See ClaudeClient.MatchSchemaContractAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<InteractiveSchemaMatch> MatchSchemaContractAsync(
+        string contractDescription, string tableCatalog, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.InteractiveSchemaMatchSystemPrompt;
+        var userText = AnalyticsTools.InteractiveSchemaMatchUserMessage(contractDescription, tableCatalog);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🧩 مطابقة بيانات لوحة تفاعلية", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseInteractiveSchemaMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new InteractiveSchemaMatch(false, null, ex.Message);
+        }
+    }
+
     /// <summary>See ClaudeClient.RetargetSqlAsync / IIntegrationSetupAssistant. Never throws.</summary>
     public async Task<string?> RetargetSqlAsync(
         string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,

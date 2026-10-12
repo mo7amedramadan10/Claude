@@ -23,6 +23,24 @@ public record VisualIdentitySuggestion(string AccentColor, string SecondaryColor
 public record IdentityTransportMatch(bool Matched, string? Mechanism, string? ParameterName, string Summary);
 
 /// <summary>
+/// Result of matching one §4.16+ interactive template's logical data contract (several
+/// named "tables", each with named columns, described in plain Arabic) against a project's
+/// real uploaded/connected tables — see Interactive/InteractiveContractMatcher.cs for the
+/// contract shape and the caller that verifies every claimed match actually exists before
+/// trusting it (the model can hallucinate a plausible-sounding table/column name that isn't
+/// really there, same risk as any other LLM-written reference). <paramref name="Tables"/>
+/// keys are the contract's own logical table keys; a missing key or a table/column mapped to
+/// null means "not found in this project's data" — never guessed.
+/// </summary>
+public record InteractiveSchemaMatch(bool Matched, IReadOnlyDictionary<string, InteractiveTableMatch>? Tables, string? Error);
+
+/// <param name="RealTable">The real table name (exactly as it appears in the catalog text
+/// given to the model), or null if this logical table wasn't found.</param>
+/// <param name="Columns">Logical column key -> real column name, or null per-column if that
+/// specific column wasn't found (the table itself can still match without every column).</param>
+public record InteractiveTableMatch(string? RealTable, IReadOnlyDictionary<string, string?> Columns);
+
+/// <summary>
 /// Lightweight, tool-free text suggestions that support setting up an External Integration —
 /// same routing contract as <see cref="ITableNamingAssistant"/> (through LlmRouter's normal
 /// dashboard-building provider, never its own independent setting): these are one-off
@@ -65,6 +83,16 @@ public interface IIntegrationSetupAssistant
     Task<string?> RetargetSqlAsync(
         string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
         AppUser? requestingUser = null, CancellationToken ct = default);
+
+    /// <summary>Matches a §4.16+ interactive template's logical data contract against a
+    /// project's real tables — see Interactive/InteractiveContractMatcher.cs, the only
+    /// caller. Never guesses: <paramref name="contractDescription"/> and
+    /// <paramref name="tableCatalog"/> are both plain text the caller already built (the
+    /// desired shape, and the real available tables+columns respectively); the model only
+    /// picks real names it's given, never invents one — the caller independently re-verifies
+    /// every claimed match exists in the catalog before trusting it.</summary>
+    Task<InteractiveSchemaMatch> MatchSchemaContractAsync(
+        string contractDescription, string tableCatalog, AppUser? requestingUser = null, CancellationToken ct = default);
 }
 
 /// <summary>

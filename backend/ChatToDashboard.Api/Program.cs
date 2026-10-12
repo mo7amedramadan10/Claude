@@ -109,14 +109,18 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("token-treasury",
         new[] { "أصول الخزينة (treasury_assets)", "الإيراد (revenue)", "إحصاءات الرمز (token_stats)", "المشاركة (participation)", "القيمة المقفلة (tvl_history)" }));
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
-    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("crm-pipeline",
-        new[] { "العملاء (customers)", "مراحل البيع (stages)", "العملاء الجدد يوميًا (new_customers_daily)", "إحصاءات الصفقات (pipeline_stats)" }));
-builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("team-tasks",
         new[] { "المهام (tasks)", "سجلات الوقت (time_entries)", "عناصر التقويم (calendar_items)", "الاجتماعات (meetings)", "التذكيرات (reminders)", "النشاط اليومي (activity_daily)", "توزيع الوقت على المشاريع (project_time_share)" }));
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("time-tracking",
         new[] { "سجلات الوقت (time_entries)", "المشاريع (projects)", "الإجازات (leaves)", "الحضور (presence)" }));
+// crm-pipeline (§4.19): first of the 6 Phase-1 templates to get real SQL matching — see
+// Interactive/InteractiveContractMatcher.cs (LLM-assisted logical->real table/column
+// matching, re-verified against the project's own catalog before trusting it) and
+// Interactive/CrmPipelineDataProvider.cs. The other 5 stay stubs until this pattern is
+// verified live end-to-end, then get the same treatment.
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveContractMatcher>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CrmPipelineDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an

@@ -246,6 +246,25 @@ public class LlmRouter : IDashboardGenerator, ITableNamingAssistant, IIntegratio
         }
     }
 
+    /// <summary>See IIntegrationSetupAssistant.MatchSchemaContractAsync — same routing as
+    /// MatchIdentityTransportAsync above. Any failure falls back to Matched=false, never a
+    /// guessed mapping.</summary>
+    public async Task<InteractiveSchemaMatch> MatchSchemaContractAsync(
+        string contractDescription, string tableCatalog, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        try
+        {
+            return await ResolveIntegrationAssistant(ct)
+                is { } assistant
+                ? await assistant.MatchSchemaContractAsync(contractDescription, tableCatalog, requestingUser, ct)
+                : new InteractiveSchemaMatch(false, null, "تعذّر الوصول لمزوّد الذكاء الاصطناعي حاليًا.");
+        }
+        catch (Exception ex)
+        {
+            return new InteractiveSchemaMatch(false, null, ex.Message);
+        }
+    }
+
     private async Task<IIntegrationSetupAssistant?> ResolveIntegrationAssistant(CancellationToken ct)
     {
         var settings = await _settings.GetAsync(ct);

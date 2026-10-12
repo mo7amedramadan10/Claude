@@ -733,6 +733,80 @@ public class AnalyticsTools
     }
 
     /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.MatchSchemaContractAsync — §4.16+
+    /// interactive templates' real-data matching (see Interactive/InteractiveContractMatcher.cs).
+    /// The model's only job is picking REAL names it's given in the catalog, never inventing
+    /// one — the caller independently re-verifies every claimed table/column actually exists
+    /// before trusting it, so a hallucinated name just falls back to "not found" rather than
+    /// causing a broken query.
+    /// </summary>
+    public const string InteractiveSchemaMatchSystemPrompt =
+        "أنت تطابق بين (أ) شكل بيانات مطلوب للوحة تفاعلية — مجموعة \"جداول منطقية\" بأسمائها " +
+        "ووصفها وأعمدتها، و(ب) الجداول الحقيقية المتاحة فعليًا في مشروع المستخدم بأسمائها الدقيقة " +
+        "وأعمدتها. لكل جدول منطقي، اختر الجدول الحقيقي الأقرب معنى له من القائمة المتاحة (إن وُجد)، " +
+        "ولكل عمود منطقي فيه اختر العمود الحقيقي الأقرب معنى له من أعمدة ذلك الجدول. " +
+        "لا تخترع أبدًا اسم جدول أو عمود غير موجود حرفيًا في القائمة المتاحة — لو مفيش تطابق واضح " +
+        "لجدول أو عمود، استخدم null بدل تخمين اسم قريب. لا يشترط تطابق كل الأعمدة حتى لو الجدول " +
+        "نفسه اتطابق.\n\n" +
+        "رجّع JSON فقط بالشكل:\n" +
+        """{ "matched": true, "tables": { "<مفتاح الجدول المنطقي>": { "realTable": "الاسم الحقيقي أو null", "columns": { "<مفتاح العمود المنطقي>": "الاسم الحقيقي أو null" } } } }""" + "\n\n" +
+        "لو مفيش ولا جدول واحد من القائمة المطلوبة يقابله جدول حقيقي معقول، رجّع:\n" +
+        """{ "matched": false, "tables": {} }""" + "\n\n" +
+        "رجّع الـ JSON فقط، من غير أي نص أو شرح تاني.";
+
+    public static string InteractiveSchemaMatchUserMessage(string contractDescription, string tableCatalog) =>
+        $"""
+        شكل البيانات المطلوب (الجداول المنطقية):
+        {contractDescription}
+
+        الجداول الحقيقية المتاحة في هذا المشروع:
+        {tableCatalog}
+
+        طابق كل جدول منطقي بجدول حقيقي (إن وُجد) وكل عمود منطقي بعمود حقيقي (إن وُجد).
+        """;
+
+    /// <summary>Tolerant JSON parse for InteractiveSchemaMatchSystemPrompt's reply. Any parse
+    /// failure falls back to Matched=false, never a guessed/partial mapping — the caller
+    /// (InteractiveContractMatcher) still re-verifies every name that does come back exists in
+    /// the real catalog before using it, since this parse alone can't catch a hallucinated
+    /// name that happens to be well-formed JSON.</summary>
+    public static InteractiveSchemaMatch ParseInteractiveSchemaMatch(string text)
+    {
+        var unclear = new InteractiveSchemaMatch(false, null, "تعذّر تحليل استجابة المطابقة.");
+        var (candidate, _) = ExtractJsonCandidate(text);
+        if (candidate is null) return unclear;
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate);
+            var root = doc.RootElement;
+            var matched = root.TryGetProperty("matched", out var m) && m.ValueKind == JsonValueKind.True;
+            if (!matched) return new InteractiveSchemaMatch(false, null, null);
+            if (!root.TryGetProperty("tables", out var tablesEl) || tablesEl.ValueKind != JsonValueKind.Object)
+                return unclear;
+
+            var tables = new Dictionary<string, InteractiveTableMatch>();
+            foreach (var tableProp in tablesEl.EnumerateObject())
+            {
+                var tableEl = tableProp.Value;
+                string? realTable = tableEl.TryGetProperty("realTable", out var rt) && rt.ValueKind == JsonValueKind.String
+                    ? rt.GetString()?.Trim() : null;
+                var columns = new Dictionary<string, string?>();
+                if (tableEl.TryGetProperty("columns", out var colsEl) && colsEl.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var colProp in colsEl.EnumerateObject())
+                        columns[colProp.Name] = colProp.Value.ValueKind == JsonValueKind.String ? colProp.Value.GetString()?.Trim() : null;
+                }
+                tables[tableProp.Name] = new InteractiveTableMatch(string.IsNullOrWhiteSpace(realTable) ? null : realTable, columns);
+            }
+            return new InteractiveSchemaMatch(true, tables, null);
+        }
+        catch (JsonException)
+        {
+            return unclear;
+        }
+    }
+
+    /// <summary>
     /// System prompt for IIntegrationSetupAssistant.RetargetSqlAsync — External Integrations'
     /// "build the dashboard directly on the client's own tables" design: a Publish retargets
     /// each widget's query to the CLIENT's real schema (given once at integration setup, see
