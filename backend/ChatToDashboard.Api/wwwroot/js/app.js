@@ -2969,6 +2969,33 @@ function interactiveTeamTasksSkeletonHtml(d) {
       <span class="tm-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>شغّل أو أوقف المؤقت، بدّل المهمة من «مهام اليوم»، اضغط أي مهمة في التقويم لتفاصيلها، وخط «الآن» يتحرك حيًا.</span>
     </div>`;
 }
+// time-tracking.js's own markup (§4.21) — فاتح، ألوان المشاريع.
+function interactiveTimeTrackingSkeletonHtml(d) {
+  return `<div class="tk" id="tkRoot">
+      <div class="tk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'تتبع الوقت')}</h1><small>ساعات الفريق حسب المشروع والشخص والإجازات</small></div>
+        <div class="tk-seg" role="group" aria-label="الفترة"><button type="button" data-per="day" aria-pressed="false">يوم</button><button type="button" data-per="week" aria-pressed="false">أسبوع</button><button type="button" data-per="month" aria-pressed="true">شهر</button></div>
+        <div class="tk-nav"><button type="button" class="ib" data-nav="-1" aria-label="الشهر السابق"><svg class="icon icon-sm flip" aria-hidden="true"><use href="#i-chev-left"/></svg></button><b id="tkMonth" aria-live="polite"></b><button type="button" class="ib" data-nav="1" aria-label="الشهر التالي"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg></button></div>
+        <button type="button" class="tk-lnk" id="tkCur" hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>العودة للشهر الحالي</button>
+        <span class="sp"></span>
+        <span class="tk-scope"><span id="tkScope"></span><button type="button" id="tkClear" hidden aria-label="إلغاء التصفية"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg></button></span>
+        <button type="button" class="btn" data-export><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg>تصدير</button>
+      </div>
+      <div class="tk-body">
+        <div class="tk-kpis" id="tkKpis"></div>
+        <div class="tk-row">
+          <section class="tk-card" style="--i:1"><header><h2>ملخص الوقت المسجّل</h2></header><div class="tk-dn"><div id="tkDonut" class="tk-donut"></div><div id="tkLeg" class="tk-leg" role="group" aria-label="المشاريع"></div></div></section>
+          <section class="tk-card" style="--i:2"><header><h2>إحصاءات الوقت</h2><span class="sp"></span><small class="mut">ساعات/وحدة</small></header><div class="tk-chart"><div id="tkStatsY" class="ya"></div><div id="tkStats" class="cols"></div></div></section>
+        </div>
+        <section class="tk-card" style="--i:3"><header><h2>الإجمالي حسب الشخص</h2><span class="sp"></span><small class="mut">اضغط شخصًا لتصفية اللوحة</small></header><div id="tkPpl" class="tk-ppl"></div></section>
+        <div class="tk-row b">
+          <section class="tk-card" style="--i:4"><header><h2>تفصيل المشاريع</h2></header><div id="tkProj" class="tk-tbl"></div></section>
+          <section class="tk-card" style="--i:5"><header><h2>جدول الإجازات</h2></header><div id="tkLeave" class="tk-leave"></div></section>
+        </div>
+      </div>
+      <span class="tk-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>بدّل الفترة أو الشهر، واضغط مشروعًا أو شخصًا لتصفية كل الرسوم معًا.</span>
+    </div>`;
+}
 
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
@@ -3052,6 +3079,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'teamtasks' && window.JEEM_TEAMTASKS_MOUNT) {
     el.dash.innerHTML = interactiveTeamTasksSkeletonHtml(d);
     window.JEEM_TEAMTASKS_MOUNT(el.dash.querySelector('#tmRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'timetracking' && window.JEEM_TIMETRACKING_MOUNT) {
+    el.dash.innerHTML = interactiveTimeTrackingSkeletonHtml(d);
+    window.JEEM_TIMETRACKING_MOUNT(el.dash.querySelector('#tkRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4055,7 +4085,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4149,6 +4179,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'treasury') return !!window.JEEM_TREASURY_DEMO;
   if (d.renderKind === 'crm') return !!window.JEEM_CRM_DEMO;
   if (d.renderKind === 'teamtasks') return !!window.JEEM_TEAMTASKS_DEMO;
+  if (d.renderKind === 'timetracking') return !!window.JEEM_TIMETRACKING_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4198,6 +4229,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'treasury') return openTreasuryGalDemo(d);
     if (d.renderKind === 'crm') return openCrmGalDemo(d);
     if (d.renderKind === 'teamtasks') return openTeamTasksGalDemo(d);
+    if (d.renderKind === 'timetracking') return openTimeTrackingGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4682,6 +4714,42 @@ function openTeamTasksGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_TEAMTASKS_MOUNT(el('gal-view-demo').querySelector('#tmRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (تتبع الوقت للفرق) ----------
+function openTimeTrackingGalDemo(d) {
+  if (!window.JEEM_TIMETRACKING_DEMO || !window.JEEM_TIMETRACKING_MOUNT) return;
+  const demo = window.JEEM_TIMETRACKING_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('clock')}لوحة تفاعلية — تتبع الوقت للفرق</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveTimeTrackingSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_TIMETRACKING_MOUNT(el('gal-view-demo').querySelector('#tkRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

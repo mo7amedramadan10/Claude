@@ -245,6 +245,13 @@ public static class BuiltinTemplates
             "لوحة تفاعلية لإدارة مهام الفريق: مؤقت للمهمة الحالية، مهام واجتماعات اليوم، تقويم أسبوعي بأولويات " +
             "ومسؤولين ووقت حي، نشاط الفريق اليومي، توزيع الوقت على المشاريع، وتذكيرات.",
             RenderKind: "teamtasks"),
+        new BuiltinDashboardTemplate("time-tracking", "a", "network", "تتبع الوقت للفرق", false,
+            "الوقت المسجّل والنسبة القابلة للفوترة، ملخص الوقت حسب المشروع، إحصاءات الوقت، الإجمالي حسب الشخص، تفصيل المشاريع، وجدول الإجازات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لتتبع وقت الفريق: الوقت المسجّل والنسبة القابلة للفوترة والمشاريع النشطة والإجازات، " +
+            "ملخص الوقت حسب المشروع، إحصاءات الوقت لكل وحدة زمنية، الإجمالي حسب الشخص، تفصيل المشاريع، وجدول إجازات شهري، " +
+            "مع تصفية مترابطة بالمشروع أو الشخص.",
+            RenderKind: "timetracking"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
