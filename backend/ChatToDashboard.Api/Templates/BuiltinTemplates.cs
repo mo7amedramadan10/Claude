@@ -210,6 +210,16 @@ public static class BuiltinTemplates
             Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
             "ابنِ لي لوحة متابعة منصة مشتريات كاملة تتضمن: 1) إجمالي عدد الطلبات عبر المنصة كمؤشر رقمي، 2) عدد العملاء النشطين كمؤشر رقمي، 3) عدد الموردين النشطين كمؤشر رقمي، 4) عدد الطلبات المتأخرة الآن كمؤشر رقمي، 5) مصفوفة حرارية للطلبات المرساة بين كل عميل ومورد، 6) رسم أعمدة يقارن زمن التنفيذ الفعلي بالمدة المستهدفة لكل نوع طلب، 7) رسم أعمدة أفقي لنسبة التأخير لدى كل مورد، 8) جدول بالطلبات المتأخرة وتفاصيلها، 9) رسم دائري لتوزيع الطلبات حسب نوعها، 10) رسم خطي لعدد الطلبات المرساة شهريًا.",
             RenderKind: "marketplace"),
+        // أول قالب من المرحلة 1 من INTERACTIVE-HANDOFF.md §4.16 (محرك مخصص "warehouse"، ليس
+        // شبكة/سير عمل/Sankey). Widgets فاضية ونص الـ Prompt هنا للعرض فقط — "استخدم هذا
+        // النموذج" لأي RenderKind يمر الآن عبر POST /api/history/from-template (HistoryController)
+        // بدل ask()، فالمحرك الفعلي (warehouse-team.js) هو اللي بيرسم اللوحة من بيانات حقيقية.
+        new BuiltinDashboardTemplate("warehouse-team", "a", "network", "نظرة على فريق المستودع", false,
+            "متابعة نشاط موظفي المستودع وحالة المناوبات وتوزيع المهام لحظيًا، مع إجراءات إعادة إسناد وتعديل واستدعاء.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لمتابعة فريق المستودع: الموظفون في المناوبة، المهام المنجزة، متوسط الكفاءة، " +
+            "عدّ تنازلي لتغيير المناوبة، بطاقة لكل موظف بتقدّم مهامه وحالته، وسجل نشاط حي.",
+            RenderKind: "warehouse"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

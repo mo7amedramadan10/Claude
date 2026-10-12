@@ -2857,6 +2857,29 @@ function interactiveMarketplaceSkeletonHtml(d) {
       <div class="grid" id="pgGrid"></div>
     </main>`;
 }
+// warehouse-team.js's own markup (§4.16) — identical skeleton for the real mount path and
+// the gallery demo preview; JEEM_WAREHOUSE_MOUNT fills every id below from `data`.
+function interactiveWarehouseSkeletonHtml(d) {
+  return `<div class="wh" id="whRoot">
+      <div class="wh-hd"><div><h1>${esc(d.name || 'نظرة على فريق المستودع')}</h1><p>${esc(d.summary || 'متابعة نشاط الموظفين وحالة المناوبات وتوزيع المهام في المستودع لحظيًا')}</p></div><span class="sp"></span>
+        <button type="button" class="btn btn-primary" data-new><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة مهمة</button></div>
+      <div class="wh-top"><div id="whKpis" style="display:contents"></div>
+        <section class="wh-cd" id="whCd" role="timer" aria-live="off"><span class="h"><span>تغيير المناوبة القادم<br><b class="num" id="whMin">15</b> دقيقة</span><span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>عدّ تنازلي</span></span>
+          <div class="wh-digits"><b class="num" id="whH">00</b><i>:</i><b class="num" id="whM">00</b><i>:</i><b class="num" id="whS">00</b></div><small>تبدأ المناوبة التالية الساعة <span class="num" id="whAt"></span></small></section></div>
+      <div class="wh-tools"><div class="wh-roles" id="whRoles" role="group" aria-label="تصفية حسب الدور"></div>
+        <span class="sp"></span><label class="wh-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن موظف</span><input type="search" id="whQ" placeholder="ابحث بالاسم أو المنطقة"></label></div>
+      <div class="wh-body">
+        <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+          <section class="wh-sec"><h2><i class="st" aria-hidden="true"></i>فرق في المناوبة<span class="n num" id="whOnN">0</span><span class="sp"></span><button type="button" class="btn btn-sm" data-more>عرض الكل</button></h2><div class="wh-grid" id="whOn"></div></section>
+          <section class="wh-sec off"><h2><i class="st" aria-hidden="true"></i>فرق خارج المناوبة<span class="n num" id="whOffN">0</span></h2><div class="wh-grid" id="whOff"></div></section>
+        </div>
+        <aside class="wh-feed" aria-label="سجل النشاط"><header><h2><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>سجل النشاط</h2><span class="n num" id="whUnread">0</span><button type="button" class="wh-live" data-live aria-pressed="true"><i></i>مباشر</button></header>
+          <div class="tg"><label><input type="checkbox" id="whUnreadOnly"> غير المقروءة فقط</label><span class="sp"></span><button type="button" data-read>تعليم الكل كمقروء</button></div>
+          <ul id="whFeed" aria-live="polite"></ul></aside>
+      </div>
+      <div id="whDlg" hidden></div>
+    </div>`;
+}
 
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
@@ -2923,6 +2946,11 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'marketplace' && window.JEEM_MARKETPLACE_MOUNT) {
     el.dash.innerHTML = interactiveMarketplaceSkeletonHtml(d);
     window.JEEM_MARKETPLACE_MOUNT(body.data);
+  } else if (d.renderKind === 'warehouse' && window.JEEM_WAREHOUSE_MOUNT) {
+    el.dash.innerHTML = interactiveWarehouseSkeletonHtml(d);
+    window.JEEM_WAREHOUSE_MOUNT(el.dash.querySelector('#whRoot'), body.data, {
+      demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
+    });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -3926,7 +3954,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4015,6 +4043,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'network') return !!(window.JEEM_NETWORK_LIBRARY && window.JEEM_NETWORK_LIBRARY.some(x => x.id === d.id));
   if (d.renderKind === 'workflow') return !!window.JEEM_WORKFLOW;
   if (d.renderKind === 'marketplace') return !!window.JEEM_MARKET;
+  if (d.renderKind === 'warehouse') return !!window.JEEM_WAREHOUSE_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4059,6 +4088,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'network') return openNetworkGalDemo(d);
     if (d.renderKind === 'workflow') return openWorkflowGalDemo(d);
     if (d.renderKind === 'marketplace') return openMarketplaceGalDemo(d);
+    if (d.renderKind === 'warehouse') return openWarehouseGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4198,6 +4228,7 @@ function openNetworkGalDemo(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
+    if (d.renderKind) return useInteractiveTemplate(d);
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_DRILL_INIT?.();
@@ -4277,6 +4308,7 @@ function openWorkflowGalDemo(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
+    if (d.renderKind) return useInteractiveTemplate(d);
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_WORKFLOW_MOUNT(window.JEEM_WORKFLOW);
@@ -4355,9 +4387,48 @@ function openMarketplaceGalDemo(d) {
     closeDashGallery();
     startBlankDashboard();
     setChatMode('dashboard');
+    if (d.renderKind) return useInteractiveTemplate(d);
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_MARKETPLACE_MOUNT(window.JEEM_MARKET);
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (نظرة على فريق المستودع) ----------
+// نفس مكان العرض ونفس اتفاقية التحذير، لكن المحرك هنا warehouse-team.js (JEEM_WAREHOUSE_MOUNT)
+// ببيانات ثابتة من warehouse-team-demo.js — opts.demo:true يفعّل محاكاة الإكمال العشوائية.
+function openWarehouseGalDemo(d) {
+  if (!window.JEEM_WAREHOUSE_DEMO || !window.JEEM_WAREHOUSE_MOUNT) return;
+  const demo = window.JEEM_WAREHOUSE_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل اللوحة — ليست بيانات حقيقية من مشروعك. اضغط «استخدم
+      هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('layers')}لوحة تفاعلية — فريق المستودع</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveWarehouseSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_WAREHOUSE_MOUNT(el('gal-view-demo').querySelector('#whRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }
@@ -6386,7 +6457,7 @@ function openHistoryEntry(id) {
     filters: parseFilters(entry.filtersJson),
     // Set only for an "interactive" (RenderKind) dashboard — see mountInteractiveDashboard,
     // called from renderDashboard() before any ordinary widget is touched.
-    renderKind: entry.renderKind || null, templateId: entry.templateId || null,
+    renderKind: entry.renderKind || null, templateId: entry.templateId || null, projectId: entry.projectId || null,
   });
   // A Draft shows its own saved-at time (the frozen snapshot's actual age) — overwritten
   // with "now" below by applyFilters() if this turns out to be an Active dashboard, since

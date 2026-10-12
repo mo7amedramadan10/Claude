@@ -94,6 +94,14 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-marketplace",
         new[] { "طلبات المنصة", "العملاء", "الموردون" }));
+// warehouse-team (§4.16, Phase 1): engine/CSS/demo/catalog/mount are fully built and
+// verified — real SQL matching across its 3-table contract (staff/tasks/shifts) is
+// deliberately deferred pending a decision on a shared matching approach for all 6 Phase 1
+// templates at once (see conversation) rather than guessed per-template without real test
+// data to verify against. Stub for now, same honest "show the empty state" path.
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("warehouse-team",
+        new[] { "بيانات الموظفين (staff)", "المهام (tasks)", "المناوبات (shifts)" }));
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
