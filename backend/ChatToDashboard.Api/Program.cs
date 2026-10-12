@@ -94,14 +94,6 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-marketplace",
         new[] { "طلبات المنصة", "العملاء", "الموردون" }));
-// warehouse-team (§4.16, Phase 1): engine/CSS/demo/catalog/mount are fully built and
-// verified — real SQL matching across its 3-table contract (staff/tasks/shifts) is
-// deliberately deferred pending a decision on a shared matching approach for all 6 Phase 1
-// templates at once (see conversation) rather than guessed per-template without real test
-// data to verify against. Stub for now, same honest "show the empty state" path.
-builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
-    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("warehouse-team",
-        new[] { "بيانات الموظفين (staff)", "المهام (tasks)", "المناوبات (shifts)" }));
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("liquidity-pools",
         new[] { "مجمّعات السيولة (pools)", "سلاسل حجم التداول (volume_series)", "مراكز المستخدم (positions)" }));
@@ -114,13 +106,13 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
     new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("time-tracking",
         new[] { "سجلات الوقت (time_entries)", "المشاريع (projects)", "الإجازات (leaves)", "الحضور (presence)" }));
-// crm-pipeline (§4.19): first of the 6 Phase-1 templates to get real SQL matching — see
-// Interactive/InteractiveContractMatcher.cs (LLM-assisted logical->real table/column
-// matching, re-verified against the project's own catalog before trusting it) and
-// Interactive/CrmPipelineDataProvider.cs. The other 5 stay stubs until this pattern is
-// verified live end-to-end, then get the same treatment.
+// Real SQL matching (§4.16-4.21 Phase-1 templates) — see InteractiveContractMatcher.cs
+// (LLM-assisted logical->real table/column matching, re-verified against the project's own
+// catalog before trusting it). Converted one at a time, starting with the simplest data
+// shapes; the remaining stubs above get the same treatment next.
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveContractMatcher>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CrmPipelineDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.WarehouseTeamDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
