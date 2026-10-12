@@ -456,7 +456,13 @@ public class DataStore
             TRY_CAST(... AS DECIMAL) / TRY_CONVERT(DECIMAL, ...) instead of CAST/CONVERT: it
             returns NULL for the one bad row instead of failing the whole statement, and
             SUM/AVG/COUNT already ignore NULLs on their own. Never give up on a widget (noData)
-            over this specific error without trying TRY_CAST/TRY_CONVERT first.
+            over this specific error without trying TRY_CAST/TRY_CONVERT first. Once TRY_CAST
+            actually excluded one or more real rows from the result, that is a data-quality
+            problem in the user's own file, not a solved problem — run one more query (e.g.
+            WHERE TRY_CAST(col AS DECIMAL) IS NULL AND col IS NOT NULL AND col <> '') to find
+            exactly which rows and values were excluded, then report them on that widget's
+            "dataIssues" field (see BuildSystemPrompt's own section on it) so the user can go
+            fix their file — never silently absorb the exclusion into a quietly-smaller total.
           - If a query fails for any other reason, read the error message and correct your SQL.
           """;
 }

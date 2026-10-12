@@ -213,6 +213,22 @@ public class DashboardWidget
     public string? Source { get; set; }
 
     /// <summary>
+    /// Data-quality problems in the user's own source file that the model worked around to
+    /// still build this widget — e.g. a row whose value in some column couldn't convert to a
+    /// number, so it was excluded from an aggregate via TRY_CAST/TRY_CONVERT (see
+    /// DataStore.DialectPrompt's SQL Server rule) instead of failing the whole query. Each
+    /// entry is one short, specific Arabic sentence naming the real row (by whatever natural
+    /// identifier column exists — never a raw internal row number) and the actual invalid
+    /// value, plus what was done about it, so the user can go fix that row in their own file.
+    /// Always from a real verification query the model actually ran (e.g. a DISTINCT/WHERE
+    /// check for which rows a TRY_CAST nulled out) — never guessed. Null/empty is the normal
+    /// case (nothing needed working around); the frontend shows a distinct ⚠ marker only when
+    /// this is non-empty, separate from the ⓘ source popover.
+    /// </summary>
+    [JsonPropertyName("dataIssues")]
+    public List<string>? DataIssues { get; set; }
+
+    /// <summary>
     /// A statistically-computed forecast extending this widget's real historical <see
     /// cref="Data"/> — set by the model only via the forecast_data tool result (never invented),
     /// or attached client-side by the "🔮 توقّع الأشهر الجاية" button. Absent for an ordinary

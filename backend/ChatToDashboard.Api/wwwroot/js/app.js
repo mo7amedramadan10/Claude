@@ -695,10 +695,27 @@ function sourcePopover(w) {
 }
 function timeRangeLabel(v) { return (TIME_RANGE_OPTIONS.find(([k]) => k === v) || [v, v])[1]; }
 
+/**
+ * Real data-quality problems in the user's own source file that the model worked around
+ * (see DashboardWidget.DataIssues / DataStore.DialectPrompt's TRY_CAST rule) — e.g. a specific
+ * row excluded from an aggregate because one column's value wasn't numeric. Shown in its own
+ * amber-flagged popover (⚠), separate from the plain ⓘ provenance one, so it reads as "your
+ * file needs fixing" rather than just "here's how this number was computed".
+ */
+function issuePopover(w) {
+  const items = (w.dataIssues || []).map(issue => `<div class="issue-item">${esc(issue)}</div>`).join('');
+  return `<div class="issue-pop">
+    <span class="issue-pop-title">⚠ مشاكل في البيانات تم تجاوزها</span>
+    ${items}
+  </div>`;
+}
+
 function closePopovers() {
   document.querySelectorAll('.src-pop.open').forEach(p => p.classList.remove('open'));
   document.querySelectorAll('.src-btn.active').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.inquiry-src-btn.active').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.issue-pop.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.issue-btn.active').forEach(b => b.classList.remove('active'));
 }
 document.addEventListener('click', closePopovers);
 
@@ -756,6 +773,24 @@ function widgetShell(w, extraClass) {
       const open = pop.classList.contains('open');
       closePopovers();
       if (!open) { pop.classList.add('open'); srcBtn.classList.add('active'); }
+    });
+  }
+  if (Array.isArray(w.dataIssues) && w.dataIssues.length) {
+    const issueBtn = document.createElement('button');
+    issueBtn.type = 'button'; issueBtn.className = 'issue-btn'; issueBtn.textContent = '⚠';
+    issueBtn.setAttribute('aria-label', 'مشاكل في البيانات تم تجاوزها');
+    head.appendChild(issueBtn);
+
+    const issueWrap = document.createElement('div');
+    issueWrap.innerHTML = issuePopover(w);
+    card.appendChild(issueWrap.firstElementChild);
+
+    issueBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const pop = card.querySelector('.issue-pop');
+      const open = pop.classList.contains('open');
+      closePopovers();
+      if (!open) { pop.classList.add('open'); issueBtn.classList.add('active'); }
     });
   }
   // Forecasting is opt-in per widget, never automatic — only offered on a bar/line widget

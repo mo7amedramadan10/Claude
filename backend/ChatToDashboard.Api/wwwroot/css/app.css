@@ -441,6 +441,19 @@ form#form{display:flex;flex-direction:column;gap:8px;padding:14px;border-top:1px
 .src-btn{width:19px;height:19px;padding:0;border:1px solid var(--accent);border-radius:50%;
   background:var(--accent-soft);color:var(--accent);font-size:12px;line-height:1}
 .src-btn:hover,.src-btn.active{background:var(--accent);color:#06251C}
+/* Amber, not the accent — flags that the underlying source FILE has a real data-quality
+   problem the model worked around (see DashboardWidget.DataIssues), a different kind of
+   notice than the plain ⓘ provenance popover. */
+.issue-btn{width:19px;height:19px;padding:0;border:1px solid var(--amber);border-radius:50%;
+  background:color-mix(in srgb, var(--amber) 18%, transparent);color:var(--amber);font-size:11px;line-height:1}
+.issue-btn:hover,.issue-btn.active{background:var(--amber);color:#241a00}
+.issue-pop{display:none;position:absolute;inset-inline-end:14px;top:44px;z-index:20;width:min(330px,90%);
+  padding:12px;background:var(--surface);border:1px solid var(--amber);border-radius:12px;
+  box-shadow:var(--shadow);font-size:12.5px;line-height:1.7}
+.issue-pop.open{display:block}
+.issue-pop-title{display:block;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--amber);font-family:var(--mono)}
+.issue-item{color:var(--ink-2)}
+.issue-item+.issue-item{margin-top:9px;padding-top:9px;border-top:1px solid var(--grid)}
 /* Deliberately the amber token, not the accent — ties the button to the forecast series'
    own color in the chart (see forecastChartConfig()) so the whole feature reads as one thing. */
 .forecast-btn{padding:4px 10px;border:1px solid var(--amber);border-radius:999px;
