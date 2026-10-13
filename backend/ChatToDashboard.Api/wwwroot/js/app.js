@@ -3201,6 +3201,32 @@ function interactiveCommandSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveFinanceSkeletonHtml(d) {
+  return `<div class="dk fo" id="foRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1 id="foHi">صباح الخير</h1><small>نظرة سريعة على أداء أعمالك المالية</small></div>
+        <span class="sp"></span>
+        <label class="fo-sel">عملة التقرير<select id="foCur"><option value="SAR">ر.س</option><option value="USD">دولار</option></select></label>
+        <span class="fo-date" id="foDate"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"/></svg>تاريخ التقرير <b class="num">—</b></span>
+        <button type="button" class="dk-btn pri" data-export><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg>تصدير البيانات</button>
+      </div>
+      <div class="dk-grid">
+        <div class="fo-kp" style="--sp:3;--md:12" id="foKpis" role="group" aria-label="المؤشرات"></div>
+        <section class="dk-card" style="--sp:9;--i:1"><header><h2>رؤى التدفق النقدي</h2><span class="sp"></span><div class="dk-seg sm" data-seg="cf" role="group" aria-label="الفترة"><button type="button" data-v="d" aria-pressed="true">يومي</button><button type="button" data-v="w" aria-pressed="false">أسبوعي</button><button type="button" data-v="m" aria-pressed="false">شهري</button></div></header><div id="foCf"></div><div class="dk-leg fo-tg" id="foCfLeg" role="group" aria-label="إظهار السلاسل"></div></section>
+        <section class="dk-card" style="--sp:7;--i:2"><header><h2>متابعة الأرباح والخسائر</h2><span class="sp"></span><div class="dk-seg sm" data-seg="pl" role="group" aria-label="الفترة"><button type="button" data-v="m" aria-pressed="false">شهري</button><button type="button" data-v="w" aria-pressed="false">أسبوعي</button><button type="button" data-v="d" aria-pressed="false">يومي</button><button type="button" data-v="h" aria-pressed="true">بالساعة</button></div></header><div id="foPl"></div><div id="foPlLeg"></div></section>
+        <section class="dk-card" style="--sp:5;--i:3"><header><h2>المخزون حسب المنطقة</h2><span class="sp"></span><button type="button" class="dk-btn" id="foFocus" hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>فك التركيز</button></header><div id="foMap" class="fo-map"></div><div id="foMapInfo" class="fo-info" aria-live="polite"></div></section>
+        <section class="dk-card" style="--sp:12;--i:4"><header><h2>مدير العمليات الذكي</h2><span class="sp"></span><button type="button" class="dk-btn" data-print><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>طباعة</button></header>
+          <div class="fo-pm">
+            <div class="fo-list"><header><b>أتمتة مؤشرات الرؤى</b><button type="button" class="dk-lnk" data-add="ins" aria-label="إضافة">+</button></header><input type="search" placeholder="ابحث في البيانات المالية…" data-q="ins" aria-label="بحث"><ul id="foIns"></ul></div>
+            <div class="fo-flow" id="foFlow"></div>
+            <div class="fo-list"><header><b>أتمتة إدارة الاستثناءات</b><button type="button" class="dk-lnk" data-add="exc" aria-label="إضافة">+</button></header><input type="search" placeholder="ابحث في البيانات المالية…" data-q="exc" aria-label="بحث"><ul id="foExc"></ul></div>
+          </div>
+        </section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بيانات تجريبية · بدّل الفترة والعملة، أخفِ أو أظهر السلاسل من المفتاح، واضغط منطقة للتركيز عليها أو مرحلة في مخطط العمليات</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3318,6 +3344,11 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'command' && window.JEEM_COMMAND_MOUNT) {
     el.dash.innerHTML = interactiveCommandSkeletonHtml(d);
     window.JEEM_COMMAND_MOUNT(el.dash.querySelector('#scRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'finance' && window.JEEM_FINANCE_MOUNT) {
+    el.dash.innerHTML = interactiveFinanceSkeletonHtml(d);
+    window.JEEM_FINANCE_MOUNT(el.dash.querySelector('#foRoot'), body.data, {
+      demo: false, userName: state.currentUser?.displayName || state.currentUser?.username || '',
+    });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4321,7 +4352,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield', analysis: 'filter', command: 'server' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield', analysis: 'filter', command: 'server', finance: 'percent' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4426,6 +4457,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'risk') return !!window.JEEM_RISK_DEMO;
   if (d.renderKind === 'analysis') return !!window.JEEM_ANALYSIS_DEMO;
   if (d.renderKind === 'command') return !!window.JEEM_COMMAND_DEMO;
+  if (d.renderKind === 'finance') return !!window.JEEM_FINANCE_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4486,6 +4518,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'risk') return openRiskGalDemo(d);
     if (d.renderKind === 'analysis') return openAnalysisGalDemo(d);
     if (d.renderKind === 'command') return openCommandGalDemo(d);
+    if (d.renderKind === 'finance') return openFinanceGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -5346,6 +5379,40 @@ function openCommandGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_COMMAND_MOUNT(el('gal-view-demo').querySelector('#scRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openFinanceGalDemo(d) {
+  if (!window.JEEM_FINANCE_DEMO || !window.JEEM_FINANCE_MOUNT) return;
+  const demo = window.JEEM_FINANCE_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('percent')}لوحة تفاعلية — الإدارة المالية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveFinanceSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_FINANCE_MOUNT(el('gal-view-demo').querySelector('#foRoot'), demo, { demo: true, userName: state.currentUser?.displayName || state.currentUser?.username || '' });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }
