@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>مكتبة لوحات المتابعة · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="gallery">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar dg-side" aria-label="مكتبة اللوحات">
+    <div class="sb-brand">
+      <a href="index.html" aria-label="جيم"><img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم"><img class="mark" src="assets/img/logo-mark.svg" alt="جيم"></a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+    <label class="tpl-search dg-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث في اللوحات</span><input type="search" placeholder="ابحث في اللوحات…"></label>
+    <nav class="sb-scroll dg-nav" id="dgNav"></nav>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="index.html">جيم</a><span class="sep">/</span><a href="dashboard-gallery.html">مكتبة لوحات المتابعة</a><span class="sep">/</span><strong><span id="dgCrumb"></span></strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><a class="btn" href="platform-templates.html#dashboards"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg>إدارة النماذج</a><a class="btn btn-primary" id="dgUse" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>استخدم في مشروع</a></div>
+    </header>
+    <main class="canvas dg-canvas">
+      <section class="dg-head" id="dgHead"></section>
+      <div class="grid" id="dgGrid"></div>
+    </main>
+
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/dash-render.js"></script>
+<script src="assets/js/dash-library.js"></script>
+<script src="assets/js/kpi-library.js"></script>
+<script src="assets/js/catalog.js"></script>
+<script src="assets/js/dashboard-gallery.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

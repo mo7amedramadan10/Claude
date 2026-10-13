@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>المستخدمون · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="org-admin">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="org-projects.html" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link is-active" href="org-users.html" aria-current="page" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-settings.html" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="false"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link" href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link" href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link" href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link" href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="org-projects.html">شركة س</a><span class="sep">/</span><strong>المستخدمون</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg>تصدير</button><button class="btn btn-primary" type="button" data-open="invite"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>دعوة مستخدم</button></div>
+    </header>
+    <main class="page">
+      <section class="page-head">
+        <div><div class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>إدارة المنظمة</div><h1>المستخدمون</h1><p>كل حسابات شركة س في مكان واحد. الحساب واحد للمنظمة، وصلاحيته تتحدد لكل مشروع على حدة.</p></div>
+      </section>
+
+      <section class="org-hero cols-4">
+        <div style="background:var(--surface)"><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>إجمالي الحسابات</span><span class="stat-value num">37</span><span class="stat-foot">من 50 في خطتك</span></div>
+        <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>نشطون هذا الأسبوع</span><span class="stat-value num">29</span><span class="stat-foot"><span class="delta up">78%</span> من الحسابات</span></div>
+        <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>مسؤولو المنظمة</span><span class="stat-value num">3</span><span class="stat-foot">يديرون الحسابات والمشاريع</span></div>
+        <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"/></svg>دعوات معلّقة</span><span class="stat-value num">2</span><span class="stat-foot">تنتهي خلال 7 أيام</span></div>
+      </section>
+
+      <section class="card" style="overflow:hidden">
+        <div class="toolbar" style="padding:16px 20px">
+          <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" placeholder="ابحث بالاسم أو البريد"></label>
+          <label class="sr-only" for="u-proj">المشروع</label>
+          <select class="select" id="u-proj" style="height:40px"><option>كل المشاريع</option><option>منصة المبيعات</option><option>منصة الموارد البشرية</option><option>المشتريات والعقود</option><option>تجربة العملاء</option></select>
+          <div class="segmented" role="group" aria-label="الحالة"><button type="button" aria-pressed="true">الكل</button><button type="button" aria-pressed="false">نشط</button><button type="button" aria-pressed="false">معلّق</button><button type="button" aria-pressed="false">معطّل</button></div>
+        </div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th style="width:40px"><input class="chk" type="checkbox" data-check-all aria-label="تحديد الكل"></th><th>المستخدم</th><th>الدور في المنظمة</th><th>المشاريع</th><th>الحالة</th><th>آخر دخول</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+            <tbody>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد محمد رمضان"></td>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-blue)">م</span><div><strong>محمد رمضان</strong><span class="mono" style="text-align:right;display:block">mohamed@company-s.sa</span></div></div></td>
+                  <td><span class="badge badge-blue">مسؤول المنظمة</span></td>
+                  <td><div class="project-pills"><span class="proj-dot" style="background:var(--brand-blue)" title="مشروع">م</span><span class="proj-dot" style="background:var(--brand-teal)" title="مشروع">ب</span></div></td>
+                  <td><span class="status ok">نشط</span></td>
+                  <td class="muted">الآن</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button">إدارة المشاريع</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد سارة العتيبي"></td>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-teal)">س</span><div><strong>سارة العتيبي</strong><span class="mono" style="text-align:right;display:block">sara@company-s.sa</span></div></div></td>
+                  <td><span class="badge">عضو</span></td>
+                  <td><div class="project-pills"><span class="proj-dot" style="background:var(--brand-blue)" title="مشروع">م</span><span class="proj-dot" style="background:var(--brand-teal)" title="مشروع">ب</span></div></td>
+                  <td><span class="status ok">نشط</span></td>
+                  <td class="muted">قبل 5 دقائق</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button">إدارة المشاريع</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد نورة القحطاني"></td>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-purple)">ن</span><div><strong>نورة القحطاني</strong><span class="mono" style="text-align:right;display:block">noura@company-s.sa</span></div></div></td>
+                  <td><span class="badge">عضو</span></td>
+                  <td><div class="project-pills"><span class="proj-dot" style="background:var(--brand-blue)" title="مشروع">م</span><span class="proj-dot" style="background:#0E8FB8" title="مشروع">ت</span></div></td>
+                  <td><span class="status ok">نشط</span></td>
+                  <td class="muted">قبل ساعة</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button">إدارة المشاريع</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد عبدالله الشهري"></td>
+                  <td><div class="cell-user"><span class="avatar" style="background:#0E8FB8">ع</span><div><strong>عبدالله الشهري</strong><span class="mono" style="text-align:right;display:block">abdullah@company-s.sa</span></div></div></td>
+                  <td><span class="badge badge-blue">مسؤول المنظمة</span></td>
+                  <td><div class="project-pills"><span class="proj-dot" style="background:var(--brand-blue)" title="مشروع">م</span><span class="proj-dot" style="background:var(--brand-teal)" title="مشروع">ب</span><span class="proj-dot" style="background:var(--brand-purple)" title="مشروع">ع</span><span class="proj-dot" style="background:#0E8FB8" title="مشروع">ت</span></div></td>
+                  <td><span class="status ok">نشط</span></td>
+                  <td class="muted">أمس</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button">إدارة المشاريع</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد فهد المطيري"></td>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-gray)">ف</span><div><strong>فهد المطيري</strong><span class="mono" style="text-align:right;display:block">fahad@company-s.sa</span></div></div></td>
+                  <td><span class="badge">عضو</span></td>
+                  <td><div class="project-pills"><span class="proj-dot" style="background:var(--brand-purple)" title="مشروع">ع</span></div></td>
+                  <td><span class="status warn">دعوة معلّقة</span></td>
+                  <td class="muted">—</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button">إدارة المشاريع</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد ريم الحربي"></td>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-blue)">ر</span><div><strong>ريم الحربي</strong><span class="mono" style="text-align:right;display:block">reem@company-s.sa</span></div></div></td>
+                  <td><span class="badge">عضو</span></td>
+                  <td><div class="project-pills"><span class="proj-dot" style="background:var(--brand-blue)" title="مشروع">م</span></div></td>
+                  <td><span class="status ok">نشط</span></td>
+                  <td class="muted">قبل 4 أيام</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button">إدارة المشاريع</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد ماجد السبيعي"></td>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-teal)">ج</span><div><strong>ماجد السبيعي</strong><span class="mono" style="text-align:right;display:block">majed@company-s.sa</span></div></div></td>
+                  <td><span class="badge">عضو</span></td>
+                  <td><span class="muted" style="font-size:var(--fs-xs)">بدون مشاريع</span></td>
+                  <td><span class="status off">معطّل</span></td>
+                  <td class="muted">منذ شهرين</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button">إدارة المشاريع</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr></tbody>
+          </table>
+        </div>
+        <div class="table-foot"><span>عرض 7 من 37</span><div class="pager"><button type="button" aria-current="true">1</button><button type="button">2</button><button type="button">3</button><button type="button">4</button></div></div>
+      </section>
+    </main>
+
+    <dialog class="modal" id="invite" aria-labelledby="invite-t">
+      <form method="dialog">
+        <div class="modal-head">
+          <div><h2 id="invite-t">دعوة مستخدم</h2><p>ينشأ له حساب داخل شركة س، وتحدد مشاريعه من الآن.</p></div>
+          <button class="btn btn-ghost btn-icon btn-sm" type="button" data-action="close-modal" aria-label="إغلاق"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <div class="field"><label for="i-email">البريد الإلكتروني</label><input id="i-email" type="email" placeholder="name@company-s.sa" dir="ltr" style="text-align:right"></div>
+          <div class="field"><label>الدور في المنظمة</label><div class="segmented" role="group" aria-label="الدور"><button type="button" aria-pressed="true">عضو</button><button type="button" aria-pressed="false">مسؤول المنظمة</button></div></div>
+          <div class="field"><label>إضافته لمشاريع</label>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <label style="display:flex;align-items:center;gap:10px"><input class="chk" type="checkbox" checked><span class="proj-dot" style="background:var(--brand-blue);width:24px;height:24px;font-size:11px">م</span><span style="flex:1">منصة المبيعات</span><select class="select" aria-label="الدور"><option>مشاهد</option><option>محرر</option><option>مالك</option></select></label>
+              <label style="display:flex;align-items:center;gap:10px"><input class="chk" type="checkbox"><span class="proj-dot" style="background:var(--brand-teal);width:24px;height:24px;font-size:11px">ب</span><span style="flex:1">منصة الموارد البشرية</span><select class="select" aria-label="الدور"><option>مشاهد</option><option>محرر</option><option>مالك</option></select></label>
+              <label style="display:flex;align-items:center;gap:10px"><input class="chk" type="checkbox"><span class="proj-dot" style="background:var(--brand-purple);width:24px;height:24px;font-size:11px">ع</span><span style="flex:1">المشتريات والعقود</span><select class="select" aria-label="الدور"><option>مشاهد</option><option>محرر</option><option>مالك</option></select></label>
+            </div>
+          </div></div>
+        <div class="modal-foot">
+          <span class="note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"/></svg>الدعوة صالحة 7 أيام</span>
+          <button class="btn btn-ghost" type="button" data-action="close-modal">إلغاء</button>
+          <button class="btn btn-primary" type="submit">إرسال الدعوة</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

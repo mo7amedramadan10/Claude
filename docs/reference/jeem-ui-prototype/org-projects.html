@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>المشاريع · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="org">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link is-active" href="org-projects.html" aria-current="page" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-users.html" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-settings.html" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="false"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link" href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link" href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link" href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link" href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="org-projects.html">شركة س</a><span class="sep">/</span><strong>المشاريع</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions">
+        <button class="btn btn-ghost btn-icon" type="button" aria-label="الإشعارات"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg></button>
+        <button class="btn btn-primary" type="button" data-action="new-project" data-require="org-admin"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>مشروع جديد</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="page-head">
+        <div>
+          <div class="eyebrow"><span class="jbars"><i></i><i></i><i></i></span><span class="js-greet">مساء الخير يا محمد</span></div>
+          <h1>مشاريع شركة س</h1>
+          <p>كل مشروع مساحة عمل مستقلة لها مصادرها ولوحاتها وأعضاؤها. <span data-require="org-admin">ابدأ مشروعًا جديدًا في ثوانٍ.</span></p>
+        </div>
+      </section>
+
+      <section class="org-hero" aria-label="ملخص المنظمة">
+        <div>
+          <div class="env-title"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>بيئة المنظمة</div>
+          <div class="env-row"><span class="ok-ic"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div>قاعدة بيانات مستقلة <span>· جاهزة</span></div></div>
+          <div class="env-row"><span class="ok-ic"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div>آخر نسخة احتياطية <span>· قبل ساعتين</span></div></div>
+          <div class="env-row"><span class="ok-ic"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div>خطة الأعمال <span>· تتجدد 1 يناير 2027</span></div></div>
+        </div>
+        <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>المشاريع</span><span class="stat-value num js-proj-count">4</span><span class="stat-foot">مشاريع متاحة لك</span></div>
+        <div data-require="org-admin"><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>اللوحات</span><span class="stat-value num">64</span><span class="stat-foot"><span class="delta up">+12</span> هذا الشهر</span></div>
+        <div data-require="org-admin"><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>المصادر المتصلة</span><span class="stat-value num">11</span><span class="stat-foot">7 API · 3 ملفات · 1 Connector</span></div>
+        <div data-require="org-admin"><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>المستخدمون</span><span class="stat-value num">37</span><span class="stat-foot">29 نشطًا هذا الأسبوع</span></div>
+      </section>
+
+      <div class="toolbar">
+        <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث في المشاريع</span><input type="search" placeholder="ابحث في المشاريع"></label>
+        <div class="segmented" role="group" aria-label="تصفية">
+          <button type="button" aria-pressed="true">الكل</button>
+          <button type="button" aria-pressed="false">مشاريعي</button>
+          <button type="button" aria-pressed="false">المؤرشفة</button>
+        </div>
+        <span class="grow"></span>
+        <label class="sr-only" for="sort">الترتيب</label>
+        <select class="select" id="sort"><option>الأحدث نشاطًا</option><option>الاسم</option><option>عدد اللوحات</option></select>
+        <div class="segmented" role="group" aria-label="طريقة العرض">
+          <button type="button" aria-pressed="true" aria-label="شبكة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg></button>
+          <button type="button" aria-pressed="false" aria-label="قائمة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg></button>
+        </div>
+      </div>
+
+      <div class="projects-layout">
+        <div class="proj-grid">
+          <a class="proj-card" href="project-workspace.html" style="animation-delay:0.05s" data-project="sales">
+            <div class="top">
+              <span class="proj-ic" style="background:var(--brand-blue)"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span>
+              <div><h3>منصة المبيعات</h3><p class="desc">لوحات أداء المبيعات والمناطق والمنتجات للإدارة التنفيذية.</p></div>
+              <span class="badge badge-blue role js-role">مالك</span>
+            </div>
+            <div class="proj-metrics">
+              <div><b class="num">28</b><span>لوحات</span></div>
+              <div><b class="num">4</b><span>مصادر</span></div>
+              <div><b class="num">12</b><span>أعضاء</span></div>
+            </div>
+            <div class="proj-sources"><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg>ERP</span><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg>Excel</span></div>
+            <div class="proj-foot">
+              <span class="stack" aria-label="الأعضاء"><span class="avatar" style="background:var(--brand-blue)">م</span><span class="avatar" style="background:var(--brand-teal)">س</span><span class="avatar" style="background:var(--brand-purple)">ن</span><span class="avatar more"><span class="num">+9</span></span></span>
+              <span class="last"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"/></svg>قبل 5 دقائق</span>
+              <span class="activity-bars" title="الأسئلة خلال آخر 7 أيام" aria-hidden="true"><i style="height:36%"></i><i style="height:54%"></i><i style="height:40%"></i><i style="height:68%"></i><i style="height:81%"></i><i style="height:63%"></i><i style="height:100%"></i></span>
+            </div>
+          </a>
+          <a class="proj-card" href="#" style="animation-delay:0.1s" data-project="hr">
+            <div class="top">
+              <span class="proj-ic" style="background:var(--brand-teal)"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></span>
+              <div><h3>منصة الموارد البشرية</h3><p class="desc">مؤشرات التوظيف والدوران الوظيفي والحضور.</p></div>
+              <span class="badge badge-teal role js-role">محرر</span>
+            </div>
+            <div class="proj-metrics">
+              <div><b class="num">17</b><span>لوحات</span></div>
+              <div><b class="num">3</b><span>مصادر</span></div>
+              <div><b class="num">9</b><span>أعضاء</span></div>
+            </div>
+            <div class="proj-sources"><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg>نظام HR</span><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg>CSV</span></div>
+            <div class="proj-foot">
+              <span class="stack" aria-label="الأعضاء"><span class="avatar" style="background:var(--brand-blue)">م</span><span class="avatar" style="background:var(--brand-teal)">س</span><span class="avatar" style="background:var(--brand-purple)">ن</span><span class="avatar more"><span class="num">+6</span></span></span>
+              <span class="last"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"/></svg>قبل ساعة</span>
+              <span class="activity-bars" title="الأسئلة خلال آخر 7 أيام" aria-hidden="true"><i style="height:45%"></i><i style="height:63%"></i><i style="height:54%"></i><i style="height:81%"></i><i style="height:72%"></i><i style="height:100%"></i><i style="height:90%"></i></span>
+            </div>
+          </a>
+          <a class="proj-card" href="#" style="animation-delay:0.15s" data-project="proc">
+            <div class="top">
+              <span class="proj-ic" style="background:var(--brand-purple)"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg></span>
+              <div><h3>المشتريات والعقود</h3><p class="desc">متابعة أوامر الشراء والموردين ونسب الإنجاز في العقود.</p></div>
+              <span class="badge badge-purple role js-role">مشاهد</span>
+            </div>
+            <div class="proj-metrics">
+              <div><b class="num">11</b><span>لوحات</span></div>
+              <div><b class="num">2</b><span>مصادر</span></div>
+              <div><b class="num">8</b><span>أعضاء</span></div>
+            </div>
+            <div class="proj-sources"><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg>نظام المشتريات</span></div>
+            <div class="proj-foot">
+              <span class="stack" aria-label="الأعضاء"><span class="avatar" style="background:var(--brand-blue)">م</span><span class="avatar" style="background:var(--brand-teal)">س</span><span class="avatar" style="background:var(--brand-purple)">ن</span><span class="avatar more"><span class="num">+5</span></span></span>
+              <span class="last"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"/></svg>أمس</span>
+              <span class="activity-bars" title="الأسئلة خلال آخر 7 أيام" aria-hidden="true"><i style="height:50%"></i><i style="height:66%"></i><i style="height:33%"></i><i style="height:100%"></i><i style="height:83%"></i><i style="height:50%"></i><i style="height:66%"></i></span>
+            </div>
+          </a>
+          <a class="proj-card" href="#" style="animation-delay:0.2s" data-project="cx">
+            <div class="top">
+              <span class="proj-ic" style="background:#0E8FB8"><svg class="icon" aria-hidden="true"><use href="#i-headset"/></svg></span>
+              <div><h3>تجربة العملاء</h3><p class="desc">رضا العملاء وزمن الاستجابة للتذاكر والشكاوى.</p></div>
+              <span class="badge badge-blue role js-role">محرر</span>
+            </div>
+            <div class="proj-metrics">
+              <div><b class="num">8</b><span>لوحات</span></div>
+              <div><b class="num">2</b><span>مصادر</span></div>
+              <div><b class="num">6</b><span>أعضاء</span></div>
+            </div>
+            <div class="proj-sources"><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg>Connector مباشر</span></div>
+            <div class="proj-foot">
+              <span class="stack" aria-label="الأعضاء"><span class="avatar" style="background:var(--brand-blue)">م</span><span class="avatar" style="background:var(--brand-teal)">س</span><span class="avatar" style="background:var(--brand-purple)">ن</span><span class="avatar more"><span class="num">+3</span></span></span>
+              <span class="last"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-clock"/></svg>قبل 3 أيام</span>
+              <span class="activity-bars" title="الأسئلة خلال آخر 7 أيام" aria-hidden="true"><i style="height:40%"></i><i style="height:20%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:80%"></i><i style="height:60%"></i><i style="height:100%"></i></span>
+            </div>
+          </a>
+          <button class="new-card" type="button" data-action="new-project" data-require="org-admin" style="animation-delay:.25s">
+            <span class="plus"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-plus"/></svg></span>
+            <strong>مشروع جديد</strong>
+            <span>يُنشأ فورًا داخل بيئة شركة س، وتضيف له المصادر والأعضاء بعدها.</span>
+          </button>
+        </div>
+
+        <aside class="side-panel">
+          <section class="card panel">
+            <h2>آخر النشاطات <a href="#" style="font-size:var(--fs-xs);font-weight:500">عرض الكل</a></h2>
+            <ul class="feed"><li data-project="sales"><span class="f-ic" style="background:var(--blue-50);color:var(--brand-blue)"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span><div><b>سارة</b> أنشأت لوحة «أداء المبيعات 2026»<small>منصة المبيعات · قبل 5 دقائق</small></div></li><li data-project="hr"><span class="f-ic" style="background:var(--teal-50);color:#00706B"><svg class="icon" aria-hidden="true"><use href="#i-publish"/></svg></span><div><b>محمد</b> نشر لوحة «الحضور الشهري» لعميل خارجي<small>منصة الموارد البشرية · قبل ساعة</small></div></li><li data-project="proc"><span class="f-ic" style="background:var(--purple-50);color:var(--brand-purple)"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg></span><div>تم ربط مصدر <b>نظام المشتريات</b> عبر API<small>المشتريات والعقود · أمس</small></div></li><li data-project="cx"><span class="f-ic" style="background:var(--cyan-50);color:#0E7FA6"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></span><div><b>نورة</b> انضمت إلى «تجربة العملاء» كمحرر<small>تجربة العملاء · قبل 3 أيام</small></div></li></ul>
+          </section>
+          <section class="card panel" data-require="org-admin">
+            <h2>استهلاك الخطة</h2>
+            <div class="quota"><div class="row">الأسئلة هذا الشهر<span><span class="num">1,840 / 5,000</span></span></div><div class="track"><i style="width:37%"></i></div></div>
+            <div class="quota"><div class="row">المشاريع<span><span class="num">4 / 10</span></span></div><div class="track"><i style="width:40%"></i></div></div>
+            <div class="quota"><div class="row">مساحة الملفات<span><span class="num">3.2 / 20</span> GB</span></div><div class="track"><i style="width:16%"></i></div></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <dialog class="modal" id="new-project" aria-labelledby="np-title">
+      <form method="dialog">
+        <div class="modal-head">
+          <div><h2 id="np-title">مشروع جديد</h2><p>مساحة عمل مستقلة بمصادرها ولوحاتها وأعضائها.</p></div>
+          <button class="btn btn-ghost btn-icon btn-sm" type="button" data-action="close-modal" aria-label="إغلاق"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <div class="field"><label for="p-name">اسم المشروع</label><input id="p-name" required placeholder="مثال: منصة المالية"></div>
+          <div class="field"><label for="p-desc">الوصف <span style="color:var(--ink-3);font-weight:300">(اختياري)</span></label><textarea id="p-desc" placeholder="ما الذي سيتابعه هذا المشروع؟"></textarea></div>
+          <fieldset class="field" style="border:0;padding:0;margin:0">
+            <legend style="font-size:var(--fs-sm);font-weight:500;margin-bottom:6px">لون المشروع</legend>
+            <div class="swatches">
+              <label><input type="radio" name="color" value="var(--brand-blue)" checked><span style="background:var(--brand-blue)"></span><span class="sr-only">أزرق</span></label>
+              <label><input type="radio" name="color" value="var(--brand-teal)"><span style="background:var(--brand-teal)"></span><span class="sr-only">فيروزي</span></label>
+              <label><input type="radio" name="color" value="var(--brand-purple)"><span style="background:var(--brand-purple)"></span><span class="sr-only">بنفسجي</span></label>
+              <label><input type="radio" name="color" value="#0E8FB8"><span style="background:#0E8FB8"></span><span class="sr-only">سماوي غامق</span></label>
+              <label><input type="radio" name="color" value="var(--brand-gray)"><span style="background:var(--brand-gray)"></span><span class="sr-only">رمادي</span></label>
+            </div>
+          </fieldset>
+        </div>
+        <div class="modal-foot">
+          <span class="note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>يُنشأ داخل قاعدة بيانات شركة س فورًا</span>
+          <button class="btn btn-ghost" type="button" data-action="close-modal">إلغاء</button>
+          <button class="btn btn-primary" type="submit">إنشاء المشروع</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الملفات · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="project">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="org-projects.html" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-users.html" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-settings.html" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item is-open" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="true"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link" href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link" href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link" href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link is-active" href="project-files.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="org-projects.html">شركة س</a><span class="sep">/</span><a href="project-workspace.html">منصة المبيعات</a><span class="sep">/</span><strong>الملفات</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn btn-primary" type="button" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg>رفع ملفات</button></div>
+    </header>
+    <main class="page">
+      
+      <section class="page-head">
+        <div>
+          <div class="eyebrow"><span class="proj-dot" style="background:var(--brand-blue);width:22px;height:22px;font-size:11px;border-radius:7px">م</span>منصة المبيعات <span class="badge js-my-role"></span></div>
+          <h1>الملفات</h1>
+          <p>الملفات المرفوعة لهذا المشروع. ملفات Excel وCSV تتحول تلقائيًا لمصادر بيانات جاهزة للأسئلة.</p>
+        </div>
+        <div class="head-actions"></div>
+      </section>
+      <div class="alert viewer-note" data-show-roles="viewer"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="grow">أنت <b>مشاهد</b> في هذا المشروع: تقدر تستعرض المحتوى، لكن الإضافة والتعديل لأصحاب صلاحية أعلى.</span></div>
+      <nav class="tabs" aria-label="أقسام المشروع"><a href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg>المحادثة واللوحات</a><a href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>اللوحات المنشورة</a><a href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg>المحلل الذكي</a><a href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>المصادر</a><a href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>الصلاحيات</a><a href="project-files.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>الملفات</a></nav>
+
+      <label class="dropzone" data-require="project:editor">
+        <span class="big"><svg class="icon" aria-hidden="true"><use href="#i-publish"/></svg></span>
+        <div class="grow"><h3>اسحب الملفات هنا أو اخترها من جهازك</h3><p>Excel ‏(xlsx) وCSV حتى 50 MB لكل ملف. الصور وملفات PDF تُحفظ كمراجع.</p></div>
+        <span class="btn">اختيار ملفات</span>
+        <input type="file" multiple class="sr-only">
+      </label>
+
+      <div class="two-col">
+        <section class="card" style="overflow:hidden">
+          <div class="toolbar" style="padding:16px 20px">
+            <div class="section-title">كل الملفات <span class="badge">6</span></div>
+            <span class="grow"></span>
+            <div class="segmented" role="group" aria-label="تصفية"><button type="button" aria-pressed="true">الكل</button><button type="button" aria-pressed="false">مصادر بيانات</button><button type="button" aria-pressed="false">مراجع</button></div>
+          </div>
+          <div class="dtable-wrap">
+            <table class="dtable">
+              <thead><tr><th style="width:40px"><input class="chk" type="checkbox" data-check-all aria-label="تحديد الكل"></th><th>الملف</th><th>الحالة</th><th>الحجم</th><th>رفعه</th><th>التاريخ</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد المستهدفات-2026.xlsx"></td>
+                  <td><div class="cell-user"><span class="ftype xlsx">XLS</span><div><strong>المستهدفات-2026.xlsx</strong><span>3 أوراق · 1,284 صف</span></div></div></td>
+                  <td><span class="status ok">مستخدم كمصدر</span></td>
+                  <td><span class="num">2.1 MB</span></td>
+                  <td><div class="cell-user"><span class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--brand-blue)">س</span><span style="font-size:var(--fs-sm);color:var(--ink)">سارة العتيبي</span></div></td>
+                  <td class="muted">14 سبتمبر 2026</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تنزيل"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد العملاء.csv"></td>
+                  <td><div class="cell-user"><span class="ftype csv">CSV</span><div><strong>العملاء.csv</strong><span>قراءة الأعمدة…</span></div></div></td>
+                  <td><span class="status run">قيد المعالجة</span></td>
+                  <td><span class="num">8.4 MB</span></td>
+                  <td><div class="cell-user"><span class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--brand-teal)">م</span><span style="font-size:var(--fs-sm);color:var(--ink)">محمد رمضان</span></div></td>
+                  <td class="muted">قبل دقيقة</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تنزيل"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد أسعار-المنتجات-Q3.xlsx"></td>
+                  <td><div class="cell-user"><span class="ftype xlsx">XLS</span><div><strong>أسعار-المنتجات-Q3.xlsx</strong><span>1 ورقة · 412 صف</span></div></div></td>
+                  <td><span class="status ok">مستخدم كمصدر</span></td>
+                  <td><span class="num">640 KB</span></td>
+                  <td><div class="cell-user"><span class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--brand-purple)">ن</span><span style="font-size:var(--fs-sm);color:var(--ink)">نورة القحطاني</span></div></td>
+                  <td class="muted">2 سبتمبر 2026</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تنزيل"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد لوحة-قديمة-المبيعات.png"></td>
+                  <td><div class="cell-user"><span class="ftype img">IMG</span><div><strong>لوحة-قديمة-المبيعات.png</strong><span>صورة مرجعية لإعادة بناء لوحة</span></div></div></td>
+                  <td><span class="status off">مرفق محادثة</span></td>
+                  <td><span class="num">1.3 MB</span></td>
+                  <td><div class="cell-user"><span class="avatar" style="width:28px;height:28px;font-size:11px;background:#0E8FB8">س</span><span style="font-size:var(--fs-sm);color:var(--ink)">سارة العتيبي</span></div></td>
+                  <td class="muted">28 أغسطس 2026</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تنزيل"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد تقرير-الربع-الثاني.pdf"></td>
+                  <td><div class="cell-user"><span class="ftype pdf">PDF</span><div><strong>تقرير-الربع-الثاني.pdf</strong><span>24 صفحة</span></div></div></td>
+                  <td><span class="status off">مرجع فقط</span></td>
+                  <td><span class="num">4.7 MB</span></td>
+                  <td><div class="cell-user"><span class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--brand-gray)">ع</span><span style="font-size:var(--fs-sm);color:var(--ink)">عبدالله الشهري</span></div></td>
+                  <td class="muted">15 يوليو 2026</td>
+                  <td><div class="row-actions"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تنزيل"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><input class="chk" type="checkbox" aria-label="تحديد المرتجعات-2026.csv"></td>
+                  <td><div class="cell-user"><span class="ftype csv">CSV</span><div><strong>المرتجعات-2026.csv</strong><span>خطأ في السطر 1,042: عمود التاريخ</span></div></div></td>
+                  <td><span class="status danger">فشلت المعالجة</span></td>
+                  <td><span class="num">3.2 MB</span></td>
+                  <td><div class="cell-user"><span class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--brand-blue)">خ</span><span style="font-size:var(--fs-sm);color:var(--ink)">خالد الدوسري</span></div></td>
+                  <td class="muted">10 يوليو 2026</td>
+                  <td><div class="row-actions"><button class="btn btn-sm" type="button" data-require="project:editor">إعادة المحاولة</button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تنزيل"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="stack-v">
+          <section class="card panel">
+            <h2>المساحة المستخدمة</h2>
+            <div class="storage">
+              <div style="display:flex;align-items:baseline;gap:6px"><b class="num" style="font-size:28px">3.2</b><span class="muted">من 20 GB لكل المنظمة</span></div>
+              <div class="seg" role="img" aria-label="توزيع المساحة"><i style="width:9%;background:var(--chart-1)"></i><i style="width:4%;background:var(--chart-2)"></i><i style="width:3%;background:var(--chart-3)"></i></div>
+              <div class="legend"><span><i style="background:var(--chart-1)"></i>Excel · 1.8 GB</span><span><i style="background:var(--chart-2)"></i>CSV · 0.8 GB</span><span><i style="background:var(--chart-3)"></i>مراجع · 0.6 GB</span></div>
+            </div>
+          </section>
+          <div class="privacy-note"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><div>الملفات تُخزَّن داخل قاعدة بيانات شركة س المستقلة، ولا يراها إلا أعضاء هذا المشروع.</div></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

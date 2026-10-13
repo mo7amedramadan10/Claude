@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الصلاحيات · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="project">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="org-projects.html" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-users.html" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-settings.html" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item is-open" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="true"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link" href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link" href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link is-active" href="project-permissions.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link" href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="org-projects.html">شركة س</a><span class="sep">/</span><a href="project-workspace.html">منصة المبيعات</a><span class="sep">/</span><strong>الصلاحيات</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn btn-primary" type="button" data-open="add-member" data-require="project:owner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة عضو</button></div>
+    </header>
+    <main class="page">
+      
+      <section class="page-head">
+        <div>
+          <div class="eyebrow"><span class="proj-dot" style="background:var(--brand-blue);width:22px;height:22px;font-size:11px;border-radius:7px">م</span>منصة المبيعات <span class="badge js-my-role"></span></div>
+          <h1>الصلاحيات</h1>
+          <p>مين يقدر يشوف ويعدّل إيه داخل منصة المبيعات. الأعضاء غير المضافين هنا لا يرون المشروع إطلاقًا.</p>
+        </div>
+        <div class="head-actions"></div>
+      </section>
+      <div class="alert viewer-note" data-show-roles="viewer"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="grow">أنت <b>مشاهد</b> في هذا المشروع: تقدر تستعرض المحتوى، لكن الإضافة والتعديل لأصحاب صلاحية أعلى.</span></div>
+      <nav class="tabs" aria-label="أقسام المشروع"><a href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg>المحادثة واللوحات</a><a href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>اللوحات المنشورة</a><a href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg>المحلل الذكي</a><a href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>المصادر</a><a href="project-permissions.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>الصلاحيات</a><a href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>الملفات</a></nav>
+
+      <div class="two-col">
+        <div class="stack-v" style="gap:var(--sp-6)">
+          <section class="card" style="overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 20px">
+              <div><div class="section-title">أعضاء المشروع <span class="badge">12</span></div><div class="section-sub">الدور يحدد ماذا يفعل العضو، ونطاق البيانات يحدد أي صفوف يراها.</div></div>
+              <label class="search" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:var(--r-sm);border:1px solid var(--line);color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" placeholder="ابحث عن عضو" style="border:0;outline:none;background:transparent;font-size:var(--fs-sm)"></label>
+            </div>
+            <div class="dtable-wrap">
+              <table class="dtable">
+                <thead><tr><th>العضو</th><th>الدور</th><th>نطاق البيانات</th><th>آخر نشاط</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+                <tbody>
+                <tr>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-blue)">س</span><div><strong>سارة العتيبي</strong><span class="mono" style="text-align:right;display:block">sara@company-s.sa</span></div></div></td>
+                  <td><select class="select role-select" aria-label="الدور" data-require-enable="project:owner"><option selected>مالك</option><option>محرر</option><option>مشاهد</option></select></td>
+                  <td><span class="badge">كل البيانات</span></td>
+                  <td class="muted">قبل 5 دقائق</td>
+                  <td><div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="إزالة من المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-teal)">م</span><div><strong>محمد رمضان</strong><span class="mono" style="text-align:right;display:block">mohamed@company-s.sa</span></div></div></td>
+                  <td><select class="select role-select" aria-label="الدور" data-require-enable="project:owner"><option selected>مالك</option><option>محرر</option><option>مشاهد</option></select></td>
+                  <td><span class="badge">كل البيانات</span></td>
+                  <td class="muted">الآن</td>
+                  <td><div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="إزالة من المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-purple)">ن</span><div><strong>نورة القحطاني</strong><span class="mono" style="text-align:right;display:block">noura@company-s.sa</span></div></div></td>
+                  <td><select class="select role-select" aria-label="الدور" data-require-enable="project:owner"><option>مالك</option><option selected>محرر</option><option>مشاهد</option></select></td>
+                  <td><span class="badge">كل البيانات</span></td>
+                  <td class="muted">قبل ساعة</td>
+                  <td><div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="إزالة من المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="avatar" style="background:#0E8FB8">ع</span><div><strong>عبدالله الشهري</strong><span class="mono" style="text-align:right;display:block">abdullah@company-s.sa</span></div></div></td>
+                  <td><select class="select role-select" aria-label="الدور" data-require-enable="project:owner"><option>مالك</option><option selected>محرر</option><option>مشاهد</option></select></td>
+                  <td><span class="badge badge-purple">المنطقة = الشرقية</span></td>
+                  <td class="muted">أمس</td>
+                  <td><div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="إزالة من المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-gray)">خ</span><div><strong>خالد الدوسري</strong><span class="mono" style="text-align:right;display:block">khaled@company-s.sa</span></div></div></td>
+                  <td><select class="select role-select" aria-label="الدور" data-require-enable="project:owner"><option>مالك</option><option>محرر</option><option selected>مشاهد</option></select></td>
+                  <td><span class="badge badge-purple">المنطقة = الرياض</span></td>
+                  <td class="muted">قبل يومين</td>
+                  <td><div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="إزالة من المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="avatar" style="background:var(--brand-blue)">ر</span><div><strong>ريم الحربي</strong><span class="mono" style="text-align:right;display:block">reem@company-s.sa</span></div></div></td>
+                  <td><select class="select role-select" aria-label="الدور" data-require-enable="project:owner"><option>مالك</option><option>محرر</option><option selected>مشاهد</option></select></td>
+                  <td><span class="badge badge-purple">المنطقة = مكة المكرمة</span></td>
+                  <td class="muted">قبل 4 أيام</td>
+                  <td><div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="إزالة من المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div></td>
+                </tr></tbody>
+              </table>
+            </div>
+            <div class="table-foot"><span>عرض 6 من 12</span><div class="pager"><button type="button" aria-current="true">1</button><button type="button">2</button></div></div>
+          </section>
+
+          <section class="card panel">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+              <div><div class="section-title"><svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg>صلاحيات على مستوى البيانات</div><div class="section-sub">نفس اللوحة تظهر لكل عضو بالبيانات المسموح له بها فقط.</div></div>
+              <button class="btn btn-soft btn-sm" type="button" data-require="project:owner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>قاعدة جديدة</button>
+            </div>
+            <div class="rls">
+              <div class="rls-rule">
+                <div class="who"><span class="avatar" style="width:30px;height:30px;font-size:12px;background:#0E8FB8">ع</span>عبدالله الشهري</div>
+                <div class="expr"><span class="muted" style="font-size:var(--fs-xs)">يرى فقط الصفوف حيث</span><span class="tok col">المنطقة</span><span class="tok op">=</span><span class="tok val">الشرقية</span></div>
+                <div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تعديل القاعدة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="حذف القاعدة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div>
+              </div>
+              <div class="rls-rule">
+                <div class="who"><span class="avatar" style="width:30px;height:30px;font-size:12px;background:var(--brand-gray)">خ</span>خالد الدوسري</div>
+                <div class="expr"><span class="muted" style="font-size:var(--fs-xs)">يرى فقط الصفوف حيث</span><span class="tok col">المنطقة</span><span class="tok op">=</span><span class="tok val">الرياض</span></div>
+                <div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تعديل القاعدة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="حذف القاعدة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div>
+              </div>
+              <div class="rls-rule">
+                <div class="who"><span class="avatar" style="width:30px;height:30px;font-size:12px;background:var(--brand-blue)">ر</span>ريم الحربي</div>
+                <div class="expr"><span class="muted" style="font-size:var(--fs-xs)">يرى فقط الصفوف حيث</span><span class="tok col">المنطقة</span><span class="tok op">=</span><span class="tok val">مكة المكرمة</span><span class="tok op">و</span><span class="tok col">القطاع</span><span class="tok op">≠</span><span class="tok val">الحكومي</span></div>
+                <div class="row-actions" data-require="project:owner"><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="تعديل القاعدة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="حذف القاعدة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button></div>
+              </div></div>
+            <div class="preview-as" data-require="project:owner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg><span style="flex:1">جرّب كيف تظهر لوحة «أداء المبيعات 2026» لعضو معيّن قبل الحفظ.</span><button class="btn btn-sm" type="button">معاينة كـ…</button></div>
+          </section>
+        </div>
+
+        <aside class="stack-v">
+          <section class="card panel">
+            <h2>ماذا يستطيع كل دور؟</h2>
+            <table class="matrix">
+              <thead><tr><th>الصلاحية</th><th>مالك</th><th>محرر</th><th>مشاهد</th></tr></thead>
+              <tbody><tr><td>عرض اللوحات والسؤال عليها</td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td></tr><tr><td>بناء لوحات جديدة وتعديلها</td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="no" aria-label="غير مسموح"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></span></td></tr><tr><td>مشاركة اللوحات داخل المنظمة</td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="no" aria-label="غير مسموح"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></span></td></tr><tr><td>نشر اللوحات لعميل خارجي</td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="no" aria-label="غير مسموح"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></span></td><td><span class="no" aria-label="غير مسموح"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></span></td></tr><tr><td>إضافة المصادر ورفع الملفات</td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="no" aria-label="غير مسموح"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></span></td></tr><tr><td>إدارة الأعضاء والصلاحيات</td><td><span class="yes" aria-label="مسموح"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></td><td><span class="no" aria-label="غير مسموح"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></span></td><td><span class="no" aria-label="غير مسموح"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></span></td></tr></tbody>
+            </table>
+          </section>
+          <div class="privacy-note"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><div>الأدوار هنا على مستوى <b>المشروع</b>. مسؤول المنظمة يدير الحسابات من صفحة <a href="org-users.html">المستخدمون</a>، لكنه لا يرى بيانات المشروع إلا إذا أُضيف له.</div></div>
+        </aside>
+      </div>
+    </main>
+
+    <dialog class="modal" id="add-member" aria-labelledby="add-member-t">
+      <form method="dialog">
+        <div class="modal-head">
+          <div><h2 id="add-member-t">إضافة عضو للمشروع</h2><p>من حسابات شركة س الحالية.</p></div>
+          <button class="btn btn-ghost btn-icon btn-sm" type="button" data-action="close-modal" aria-label="إغلاق"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <div class="field"><label for="m-who">العضو</label><input id="m-who" placeholder="اكتب الاسم أو البريد الإلكتروني"></div>
+          <div class="field"><label for="m-role">الدور</label><select id="m-role" class="select" style="height:44px"><option>مشاهد</option><option>محرر</option><option>مالك</option></select></div>
+          <div class="field"><label>نطاق البيانات</label><div class="segmented" role="group" aria-label="نطاق البيانات"><button type="button" aria-pressed="true">كل البيانات</button><button type="button" aria-pressed="false">بيانات محددة</button></div></div></div>
+        <div class="modal-foot">
+          <span class="note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>سيصله إشعار بالبريد</span>
+          <button class="btn btn-ghost" type="button" data-action="close-modal">إلغاء</button>
+          <button class="btn btn-primary" type="submit">إضافة</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+/* تحليل مسار المبيعات (ca) — أزرق Power BI هادئ */
+.ca { --acc: #2F6690; --bg: #F3F6FA; }
+.ca .dk-fn .t i { background: linear-gradient(90deg, #2F6690, #3A7CA5); }
+.ca-map .bg { fill: #F7FAFC; } .ca-map .pt { cursor: pointer; }
+.ca-map .pt circle { fill: color-mix(in srgb, #2F6690 78%, transparent); stroke: #fff; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: dkPop .55s var(--ease) both; animation-delay: calc(var(--i) * 60ms); transition: opacity .25s; }
+.ca-map .pt:hover circle, .ca-map .pt.on circle { fill: #1E4E73; stroke: var(--tx); }
+.ca-map .pt.dim { opacity: .3; }
+.ca-map .cv { font-size: 11px; font-weight: 700; fill: #fff; text-anchor: middle; pointer-events: none; } .ca-map .cn { font-size: 11px; fill: var(--tx); text-anchor: middle; pointer-events: none; }
+#caValNote, #caFnNote { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; }
+.ca .dk-kpis { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.ca .dk-kpi { align-items: center; text-align: center; } .ca .dk-kpi b { color: #1E4E73; }
+.ca .dk-scope .dk-chip button { border: 0; background: none; padding: 0; display: grid; cursor: pointer; color: inherit; width: auto; height: auto; }
