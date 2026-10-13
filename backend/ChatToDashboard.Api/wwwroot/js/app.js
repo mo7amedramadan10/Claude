@@ -3149,6 +3149,21 @@ function interactiveLeadsSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveRiskSkeletonHtml(d) {
+  return `<div class="dk sr" id="srRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1 id="srTitle">نظرة تنفيذية على سلسلة الإمداد</h1><small>الأداء التشغيلي ومخاطر الموردين والمخزون</small></div>
+        <span class="sp"></span>
+        <div class="sr-tabs" role="tablist" aria-label="الصفحات"><button type="button" role="tab" data-pg="ov" aria-selected="true">نظرة عامة</button><button type="button" role="tab" data-pg="sup" aria-selected="false">الموردون</button><button type="button" role="tab" data-pg="inv" aria-selected="false">المخزون</button></div>
+        <label class="sr-sel" id="srRegW" hidden>منطقة المورد<select id="srReg"><option value="all">الكل</option></select></label>
+        <div class="dk-seg" data-seg="yr" role="group" aria-label="السنة"></div>
+        <button type="button" class="dk-btn" data-reset aria-label="إعادة ضبط"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg></button>
+      </div>
+      <div class="dk-body" id="srBody"></div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بدّل السنة لترى الخلاصة تتغير، واضغط منطقة في الجدول أو موردًا في المصفوفة لتصفية الرسوم.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3257,6 +3272,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'leads' && window.JEEM_LEADS_MOUNT) {
     el.dash.innerHTML = interactiveLeadsSkeletonHtml(d);
     window.JEEM_LEADS_MOUNT(el.dash.querySelector('#clRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'risk' && window.JEEM_RISK_MOUNT) {
+    el.dash.innerHTML = interactiveRiskSkeletonHtml(d);
+    window.JEEM_RISK_MOUNT(el.dash.querySelector('#srRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4260,7 +4278,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4362,6 +4380,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'construction') return !!window.JEEM_CONSTRUCTION_DEMO;
   if (d.renderKind === 'board') return !!window.JEEM_BOARD_DEMO;
   if (d.renderKind === 'leads') return !!window.JEEM_LEADS_DEMO;
+  if (d.renderKind === 'risk') return !!window.JEEM_RISK_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4419,6 +4438,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'construction') return openConstructionGalDemo(d);
     if (d.renderKind === 'board') return openBoardGalDemo(d);
     if (d.renderKind === 'leads') return openLeadsGalDemo(d);
+    if (d.renderKind === 'risk') return openRiskGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -5177,6 +5197,40 @@ function openLeadsGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_LEADS_MOUNT(el('gal-view-demo').querySelector('#clRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openRiskGalDemo(d) {
+  if (!window.JEEM_RISK_DEMO || !window.JEEM_RISK_MOUNT) return;
+  const demo = window.JEEM_RISK_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('shield')}لوحة تفاعلية — مخاطر الموردين</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveRiskSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_RISK_MOUNT(el('gal-view-demo').querySelector('#srRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

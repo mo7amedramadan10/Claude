@@ -301,6 +301,13 @@ public static class BuiltinTemplates
             "ملوّن وسلسلة اتجاه مصغّرة، صفوف طلبات واردة لكل مرحلة من خط السير بأسهم تمرير وقائمة خيارات لنقل " +
             "الطلب أو تمييزه، وخريطة حرارية لنشاط الفريق حسب الساعة واليوم.",
             RenderKind: "leads"),
+        new BuiltinDashboardTemplate("supplier-risk", "a", "network", "مخاطر الموردين", false,
+            "ثلاث صفحات: نظرة تنفيذية بمؤشرات وخلاصة تتغيّر بالسنة وجدول مخاطر إقليمي وشلال أثر الربح، مصفوفة أولوية الموردين، ومخاطر المخزون.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية بثلاث صفحات لمخاطر الموردين والتسليم: نظرة تنفيذية بمؤشرات وخلاصة تتغيّر فعليًا " +
+            "حسب أداء السنة المختارة، جدول مخاطر إقليمي وشلال أثر تغير الربح، مصفوفة أولوية مخاطر الموردين " +
+            "بأرباع وموثوقية تسليم شهرية مقابل مستهدف ومخاطر تخزين حسب الفئة، ومخاطر المخزون (نفاد وهدر وتغطية).",
+            RenderKind: "risk"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
