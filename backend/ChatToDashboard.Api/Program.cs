@@ -105,6 +105,18 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataPr
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TimeTrackingDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.LiquidityPoolsDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TokenTreasuryDataProvider>();
+// §4.22 (11-dashboard batch, dash-kit engines) — same matcher, one provider per dashboard.
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.SaasMetricsDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.ProjectStudioDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CampaignProjectDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TreasuryFundingDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.ConstructionCrmDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TaskBoardDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CrmLeadsDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.SupplierRiskDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CrmAnalysisDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.SupplyCommandDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.FinanceOpsDataProvider>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
