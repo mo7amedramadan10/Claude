@@ -1640,12 +1640,17 @@ form#form.composer.hidden { display: none; }
 .jr-tip { position: fixed; z-index: 120; pointer-events: none; display: flex; flex-direction: column; gap: 2px; max-width: 280px; padding: 8px 10px; border-radius: 8px; background: var(--brand-gray); color: #fff; font-size: 11px; box-shadow: var(--shadow-3); }
 .jr-tip span { opacity: .85; }
 @media (max-width: 1280px) {
+  /* §9 (لا تمرير أفقي على 390px): نفس قواعد الاستجابة في app.css بالنموذج الأولي — كانت
+     ناقصة هنا فبقيت عناصر span-4 بعرض 90px على الجوال وفاضت قيمها خارج اللوحة. */
+  #gal-view-demo .span-3 { grid-column: span 6; }
+  #gal-view-demo .span-4, #gal-view-demo .span-5, #gal-view-demo .span-7, #gal-view-demo .span-8 { grid-column: span 12; }
   #gal-view-demo .span-9, #gal-view-demo .span-10 { grid-column: span 12; }
   #gal-view-demo .span-2 { grid-column: span 6; }
   #gal-view-demo .jr-kpis { grid-template-columns: repeat(min(var(--n), 3), minmax(0, 1fr)); }
 }
 @media (max-width: 860px) {
   #gal-view-demo .jr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #gal-view-demo .span-3, #gal-view-demo .span-6 { grid-column: span 12; }
   #gal-view-demo .span-2 { grid-column: span 12; }
   #gal-view-demo .jr-cols { height: 160px; }
   #gal-view-demo .jr-plot { height: 140px; }
@@ -1813,6 +1818,8 @@ form#form.composer.hidden { display: none; }
 
 /* جسم اللوحة: الشبكة + اللوحة الجانبية */
 .pg-body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: stretch; }
+/* §9 (لا تمرير أفقي على 390px): قاعدة النموذج الأولي التي سقطت عند النقل — اللوحة الجانبية تحت الرسم على الشاشات الأضيق */
+@media (max-width: 1180px) { .pg-body { grid-template-columns: minmax(0, 1fr); } .pg-panel { max-height: none; } }
 .pg-graph { display: flex; flex-direction: column; padding: 0; overflow: hidden; min-width: 0; }
 .pg-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--line-2); }
 .pg-tools .spacer { flex: 1; }
@@ -2080,7 +2087,9 @@ form#form.composer.hidden { display: none; }
 .wf-journey li.end .dot { background: var(--ok); border-color: var(--ok); }
 .wf-journey .t { display: flex; flex-direction: column; min-width: 0; } .wf-journey .t b { font-size: var(--fs-sm); font-weight: 500; } .wf-journey .t b em { color: #6E62B0; font-size: 10.5px; } .wf-journey .t small { font-size: 10.5px; color: var(--ink-3); }
 .wf-bullets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.wf-bullets li { display: grid; grid-template-columns: 150px minmax(0, 1fr) 72px; align-items: center; gap: 10px; cursor: pointer; padding: 3px 4px; border-radius: 6px; }
+.wf-bullets li { display: grid; grid-template-columns: 150px minmax(0, 1fr) 72px; align-items: center; gap: 10px; padding: 3px 4px; border-radius: 6px; }
+/* المؤشر اليدوي فقط للصف المرتبط بمرحلة (يُضغط ويُركَّز بلوحة المفاتيح)؛ صفوف التلميح وحده لا */
+.wf-bullets li[data-stage-go] { cursor: pointer; } .wf-bullets li[data-stage-go]:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 1px; }
 .wf-bullets li:hover { background: var(--surface-2); }
 .wf-bullets .lbl { font-size: var(--fs-sm); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wf-bullets .trk { position: relative; height: 10px; border-radius: 5px; background: var(--line-2); }
@@ -3098,3 +3107,12 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
   #gal-view-demo .jr-sarr { flex-basis: 18px; transform: rotate(-90deg); }
 }
 @media (prefers-reduced-motion: reduce) { #gal-view-demo .jr-stage, #gal-view-demo .jr-stile { animation: none; } }
+
+/* §9 — تركيز لوحة المفاتيح على أعمدة الرسم وشرائح الحلقة في dash-kit (عناصر SVG قابلة للتصفية) */
+.dk-svg g.col[tabindex]:focus { outline: none; }
+.dk-svg g.col[tabindex]:focus-visible .hit { fill: color-mix(in srgb, var(--acc, #127DBD) 10%, transparent); stroke: var(--acc, #127DBD); stroke-width: 2; }
+.dk-donut .sg[tabindex]:focus { outline: none; }
+.dk-donut .sg[tabindex]:focus-visible { filter: drop-shadow(0 0 3px var(--acc, #127DBD)); stroke-width: 30; }
+.mk-rib[tabindex]:focus, .wf-flow[tabindex]:focus { outline: none; }
+.mk-rib[tabindex]:focus-visible { stroke: var(--brand-blue); stroke-width: 2; }
+.wf-flow[tabindex]:focus-visible .wf-fp { stroke: var(--brand-blue); stroke-width: 3; }

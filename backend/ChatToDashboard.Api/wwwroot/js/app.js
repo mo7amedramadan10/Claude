@@ -3313,7 +3313,54 @@ async function useInteractiveTemplate(d) {
   openHistoryEntry(json.id);
 }
 
+// ---------- §1.7/§9: المشاهد لا يرى أزرار التنفيذ في اللوحات التفاعلية ----------
+// قائمة واحدة مركزية بعناصر التنفيذ (إضافة، تعديل، حذف، نقل، إسناد، تشغيل مؤقت، إرسال...)
+// لكل محرك، محصورة بمعرّف جذره — بدل تعديل ترميز كل محرك على حدة. عرض فقط: الفلاتر
+// والتبويبات والنزول والتصدير تبقى متاحة للمشاهد (يرى ويتفاعل فقط).
+const INTERACTIVE_EXEC_HIDE = [
+  '#whRoot [data-new]', '#whRoot [data-adj]', '#whRoot [data-re]', '#whRoot [data-call]',
+  '#lpRoot [data-add]', '#lpRoot [data-addany]', '#lpRoot [data-claim]', '#lpRoot [data-rm]', '#lpRoot [data-create]',
+  '#crRoot [data-add]', '#crRoot [data-menu]', '#crRoot [data-mv]', '#crRoot [data-mine]', '#crRoot [data-arch]',
+  '#tmRoot [data-toggle]', '#tmRoot [data-act]', '#tmRoot [data-fav]', '#tmRoot [data-done]', '#tmRoot [data-meet]', '#tmRoot [data-manage]',
+  '#psRoot #psSend',
+  '#cpRoot [data-act="edit"]', '#cpRoot [data-act="add"]', '#cpRoot [data-act="archive"]', '#cpRoot #cpAdd', '#cpRoot label:has(#cpFile)',
+  '#ccRoot [data-done]', '#ccRoot [data-payout]',
+  '#tbRoot [data-new]', '#tbRoot [data-addpj]', '#tbRoot #tbNew',
+  '#clRoot [data-menu]', '#clRoot [data-move]', '#clRoot [data-pri]',
+  '#foRoot [data-add]', '#foRoot [data-del]',
+  '#wfRoot [data-pin]',
+];
+// عناصر تعرض حالة يجب أن تبقى مرئية لكنها تغيّرها عند الضغط — تُقفل بدل أن تُخفى.
+const INTERACTIVE_EXEC_LOCK = ['#tmRoot input[data-rem]', '#psRoot input[data-task]', '#cpRoot .cp-st'];
+// نقل البطاقات بلوحة المفاتيح (كانبان المهام: ← →، مراحل العملاء: Shift + ← →).
+const INTERACTIVE_EXEC_KEYMOVE = '#tbRoot .tb-card, #crRoot .cr-card';
+let interactiveViewerGuardReady = false;
+function applyInteractiveViewerGuard(isViewer) {
+  el.dash.classList.toggle('is-viewer', !!isViewer);
+  if (interactiveViewerGuardReady) return;
+  interactiveViewerGuardReady = true;
+  const style = document.createElement('style');
+  const scope = sel => sel.split(',').map(x => `#dash.is-viewer ${x.trim()}`).join(', ');
+  style.textContent = `${scope(INTERACTIVE_EXEC_HIDE.join(','))} { display: none !important; }\n` +
+    `${scope(INTERACTIVE_EXEC_LOCK.join(','))} { pointer-events: none; cursor: default; }`;
+  document.head.appendChild(style);
+  const viewer = () => el.dash.classList.contains('is-viewer');
+  const blocked = [...INTERACTIVE_EXEC_HIDE, ...INTERACTIVE_EXEC_LOCK].join(', ');
+  // طبقة دفاع ثانية خلف الإخفاء: أي ضغط أو إرسال يصل لعنصر تنفيذ يُلغى قبل معالج المحرك.
+  el.dash.addEventListener('click', e => { if (viewer() && e.target.closest?.(blocked)) { e.preventDefault(); e.stopPropagation(); } }, true);
+  el.dash.addEventListener('submit', e => { if (viewer()) { if (e.target.closest?.(blocked)) { e.preventDefault(); e.stopPropagation(); } } }, true);
+  el.dash.addEventListener('dragstart', e => { if (viewer()) { e.preventDefault(); e.stopPropagation(); } }, true);
+  el.dash.addEventListener('keydown', e => {
+    if (!viewer() || !e.target.closest) return;
+    const move = (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.closest(INTERACTIVE_EXEC_KEYMOVE);
+    const lock = (e.key === ' ' || e.key === 'Enter') && e.target.closest(INTERACTIVE_EXEC_LOCK.join(', '));
+    if (move || lock) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+}
+
 async function mountInteractiveDashboard(d) {
+  // دور المستخدم على اللوحة (وفي وضع التضمين من «اللوحات المنشورة» دائمًا «مشاهد»).
+  applyInteractiveViewerGuard(state.dashboardRole === 'viewer');
   el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
   if (!d.templateId) { el.dash.innerHTML = interactiveEmptyStateHtml(d, []); return; }
 

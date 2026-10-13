@@ -258,7 +258,7 @@
   function bullet(w) {
     const risk = w.risk || .8, inv = !!w.inv, hi = !!w.hi;
     return `<ul class="wf-bullets">${(w.it || []).map(([lab, v, tg, key]) => { const r = tg ? v / tg : 0, st = hi ? (r >= 1 ? 'ok' : r >= risk ? 'warn' : 'bad') : inv ? (r <= 1 ? 'ok' : 'bad') : (r >= 1 ? 'bad' : r >= risk ? 'warn' : 'ok');
-      return `<li${key ? ` data-stage-go="${esc(key)}"` : ''}${tip(lab, `الفعلي ${nf(v, 1)} · المستهدف ${nf(tg, 0)}`)}><span class="lbl">${esc(lab)}</span><span class="trk"><i class="st-${st}" style="width:${(Math.min(2, r) / 2 * 100).toFixed(1)}%"></i><b></b></span><span class="val num">${nf(v, 1)} <small>/ ${nf(tg, 0)}</small></span></li>`; }).join('')}</ul>`;
+      return `<li${key ? ` data-stage-go="${esc(key)}" tabindex="0" role="button" aria-label="${esc(lab)}: الفعلي ${nf(v, 1)} من ${nf(tg, 0)}"` : ''}${tip(lab, `الفعلي ${nf(v, 1)} · المستهدف ${nf(tg, 0)}`)}><span class="lbl">${esc(lab)}</span><span class="trk"><i class="st-${st}" style="width:${(Math.min(2, r) / 2 * 100).toFixed(1)}%"></i><b></b></span><span class="val num">${nf(v, 1)} <small>/ ${nf(tg, 0)}</small></span></li>`; }).join('')}</ul>`;
   }
 
   /* ================= أنواع جديدة (من مراجعة Consist وNexus) ================= */

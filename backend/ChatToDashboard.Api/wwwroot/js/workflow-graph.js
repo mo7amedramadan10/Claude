@@ -80,6 +80,9 @@
   };
   const F = W.flows.map(f => {
     const g = mk('g', { class: `wf-flow k-${f.kind}`, 'data-flow': f.a + '>' + f.b });
+    /* §9 (لوحة المفاتيح): المسار قابل للتحديد بالضغط، فيُركَّز ويعمل بـ Enter/Space (معالج role=button العام في dash-kit) */
+    const nm = id => (ST[id] || TERM[id] || {}).n || (ST[id] || TERM[id] || {}).name || id;
+    g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', `مسار ${nm(f.a)} ← ${nm(f.b)}`);
     const p = mk('path', { d: pathFor(f), class: 'wf-fp', 'marker-end': 'url(#wfArrow)' }), hit = mk('path', { d: pathFor(f), class: 'wf-fhit' });
     g.append(p, hit); gFlows.append(g);
     const len = p.getTotalLength(), mid = p.getPointAtLength(len / 2);
@@ -286,7 +289,7 @@
       const r = RQ[S.sel.id], a = at(r, S.t), segs = a.segs || [];
       const stTxt = a.phase === 'active' ? statusTag(a.st) : a.phase === 'end' ? `<span class="wf-st st-${a.end === 'done' ? (a.onTime ? 'ok' : 'bad') : 'bad'}">${ic(a.end === 'done' ? 'check' : 'x')}${a.end === 'done' ? (a.onTime ? 'اكتمل في الموعد' : 'اكتمل متأخرًا') : 'مرفوض أو ملغى'}</span>` : '';
       P.innerHTML = head(`${ic('file')}طلب شراء · ${r.code}`, r.n, `${CL[r.client].n} · ${sar(r.value)} ر.س · ${r.pri}${r.supplier ? ' · المورد: ' + SU[r.supplier].short : ''}`) +
-        `<div class="wf-rstat">${stTxt}<span class="num">عمر الطلب ${nf(a.phase === 'end' ? a.total : a.age || 0)} يومًا مقابل ${a.slaSum || 0} مستهدف</span></div>
+        `<div class="wf-rstat">${stTxt}<span>عمر الطلب <span class="num">${nf(a.phase === 'end' ? a.total : a.age || 0)}</span> يومًا مقابل <span class="num">${a.slaSum || 0}</span> مستهدف</span></div>
         <h3 class="pg-p-sec">مسار الطلب</h3><ol class="wf-journey">${segs.map((g, i) => { const cur = a.phase === 'active' && i === segs.length - 1, d = cur ? a.inDays : g.d, rep = segs.slice(0, i).some(x => x.s === g.s);
           return `<li class="${cur ? 'is-cur' : ''}"><span class="dot"></span><span class="t"><b>${ST[g.s].n}${rep ? ' <em>(إعادة)</em>' : ''}</b><small>${dayLabel(g.from)}${cur ? ' · الآن' : ''}</small></span>${bar(d, ST[g.s].sla)}<em class="num">${nf(d, 1)}/${ST[g.s].sla}</em></li>`; }).join('')}
           ${a.phase === 'end' ? `<li class="end"><span class="dot"></span><span class="t"><b>${a.end === 'done' ? 'مكتمل' : 'مرفوض أو ملغى'}</b><small>${dayLabel(a.finishedAt)}</small></span></li>` : ''}</ol>

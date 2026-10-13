@@ -109,6 +109,9 @@
       p.setAttribute('d', ribbon(l.x0, l.s0, l.x1, l.t0, l.w)); p.style.fill = tcol;
       const st = STK.map(k => [k, l.R.filter(x => x.st === k).length]).filter(x => x[1]);
       p.dataset.tip = `${shortOf(l.a)} ← ${shortOf(l.b)}|${pl(l.R.length, 'طلبات', 'طلبًا', 'طلب واحد', 'طلبان')} · ${st.map(([k, n]) => `${ST[k].n} ${n}`).join(' · ')}`;
+      /* §9 (لوحة المفاتيح): الشريط قابل للتحديد بالضغط، فيُركَّز ويعمل بـ Enter/Space (معالج role=button العام في dash-kit) */
+      p.setAttribute('tabindex', '0'); p.setAttribute('role', 'button');
+      p.setAttribute('aria-label', `${shortOf(l.a)} ← ${shortOf(l.b)}: ${pl(l.R.length, 'طلبات', 'طلبًا', 'طلب واحد', 'طلبان')}`);
       const n = f ? l.R.filter(f).length : 0;
       const h = el('hi:' + l.key, () => { const e = mk('path', { class: 'mk-hi' }); gHi.append(e); return e; });
       h.setAttribute('d', ribbon(l.x0, l.s0, l.x1, l.t0, n * LAY.k)); h.style.fill = tcol; h.style.opacity = n ? '' : 0;

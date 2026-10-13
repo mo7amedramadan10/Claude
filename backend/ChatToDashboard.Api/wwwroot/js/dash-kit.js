@@ -60,7 +60,10 @@
     let s = `<svg viewBox="0 0 ${W} ${H}" class="dk-svg" role="img" aria-label="${esc(o.aria || 'أعمدة')}">` + yAxis(W, H, top, bot, mn, mxv, v => esc(txt(v)), tk);
     labels.forEach((lb, i) => {
       const cx = xr(W, i, n), dim = sel != null && sel !== i ? ' dim' : '';
-      s += `<g class="col${dim}" data-${key}="${i}" style="--i:${i}">`;
+      /* §9 (لوحة المفاتيح): العمود قابل للتركيز ويعمل بـ Enter/Space (معالج role=button العام أدناه)
+         متى مُرّر key صراحة — أي أن المحرك يستخدمه للتصفية المتقاطعة، لا مجرد تلميح. */
+      const pick = 'key' in o ? ` tabindex="0" role="button" aria-label="${esc(lb)}: ${esc(series.map(se => se.vals[i] == null ? '' : `${se.name} ${txt(se.vals[i])}`).filter(Boolean).join('، '))}" aria-pressed="${sel === i}"` : '';
+      s += `<g class="col${dim}" data-${key}="${i}" style="--i:${i}"${pick}>`;
       s += `<rect class="hit" x="${cx - bw / 2}" y="${top}" width="${bw}" height="${bot - top}"/>`;
       if (ghost) s += `<rect class="gh" x="${cx - gw * series.length / 2 - 2}" y="${Y(ghost[i])}" width="${gw * series.length + 4}" height="${Y(0) - Y(ghost[i])}" rx="4"/>`;
       let acc = 0;
@@ -110,7 +113,7 @@
   /* حلقة: items=[{label,val,color,key}] */
   function donut(items, o = {}) {
     const R = o.r || 70, th = o.th || 22, L = 2 * Math.PI * R, tot = items.reduce((a, b) => a + b.val, 0) || 1; let acc = 0;
-    const segs = items.map((it, j) => { const len = it.val / tot * L, gap = items.length > 1 ? 3 : 0, s = `<circle cx="100" cy="100" r="${R}" class="sg${o.sel != null && o.sel !== it.key ? ' dim' : ''}" stroke="${it.color}" stroke-width="${th}" stroke-dasharray="${Math.max(0, len - gap).toFixed(1)} ${L}" stroke-dashoffset="${(-acc).toFixed(1)}" transform="rotate(-90 100 100)" data-${o.attr || 'k'}="${esc(it.key ?? j)}" style="--i:${j};--L:${L.toFixed(0)}" data-tip="${esc(it.label)}|${esc((o.tip ? o.tip(it) : txt(it.val)) + ' · ' + nf(it.val / tot * 100, 1) + '%')}"/>`; acc += len; return s; }).join('');
+    const segs = items.map((it, j) => { const len = it.val / tot * L, gap = items.length > 1 ? 3 : 0, s = `<circle cx="100" cy="100" r="${R}" class="sg${o.sel != null && o.sel !== it.key ? ' dim' : ''}"${o.attr ? ` tabindex="0" role="button" aria-label="${esc(it.label)}: ${esc(txt(it.val))}" aria-pressed="${o.sel === it.key}"` : ''} stroke="${it.color}" stroke-width="${th}" stroke-dasharray="${Math.max(0, len - gap).toFixed(1)} ${L}" stroke-dashoffset="${(-acc).toFixed(1)}" transform="rotate(-90 100 100)" data-${o.attr || 'k'}="${esc(it.key ?? j)}" style="--i:${j};--L:${L.toFixed(0)}" data-tip="${esc(it.label)}|${esc((o.tip ? o.tip(it) : txt(it.val)) + ' · ' + nf(it.val / tot * 100, 1) + '%')}"/>`; acc += len; return s; }).join('');
     return `<div class="dk-donut" style="--sz:${o.size || 180}px"><svg viewBox="0 0 200 200" role="img" aria-label="${esc(o.aria || 'حلقة')}"><circle cx="100" cy="100" r="${R}" class="tr" stroke-width="${th}"/>${segs}</svg><span class="c">${o.center || ''}</span></div>`;
   }
 
