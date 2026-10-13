@@ -3164,6 +3164,28 @@ function interactiveRiskSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveAnalysisSkeletonHtml(d) {
+  return `<div class="dk ca" id="caRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'تحليل مسار المبيعات')}</h1><small>العملاء المحتملون حتى الإغلاق · اضغط أي عنصر لتصفية كل اللوحة</small></div>
+        <span class="sp"></span>
+        <span class="dk-scope" id="caScope" aria-live="polite"></span>
+        <button type="button" class="dk-btn" id="caReset" hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>إلغاء كل التصفيات</button>
+      </div>
+      <div class="dk-kpis dk-count" id="caKpis"></div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:5;--i:1"><header><h2>قيمة الصفقات المغلقة</h2><span class="sp"></span><div class="dk-seg sm" data-seg="gran" role="group" aria-label="الدقة الزمنية"><button type="button" data-v="m" aria-pressed="true">شهري</button><button type="button" data-v="w" aria-pressed="false">أسبوعي</button></div><p id="caValNote"></p></header><div id="caVal"></div></section>
+        <section class="dk-card" style="--sp:7;--i:2"><header><h2>مسار حالات العملاء</h2><span class="sp"></span><div class="dk-seg sm" data-seg="fmt" role="group" aria-label="صيغة التسمية"><button type="button" data-v="first" aria-pressed="true">% من الأول</button><button type="button" data-v="prev" aria-pressed="false">% من السابق</button><button type="button" data-v="delta" aria-pressed="false">الفاقد عن السابق</button></div><p id="caFnNote"></p></header><div id="caFn"></div></section>
+        <section class="dk-card" style="--sp:5;--i:3"><header><h2>صفقات مغلقة مقابل عملاء فُقدوا</h2></header><div id="caChurn"></div><div id="caChurnLeg"></div></section>
+        <section class="dk-card" style="--sp:4;--i:4"><header><h2>الصفقات حسب حجم المنشأة</h2></header><div id="caSize"></div></section>
+        <section class="dk-card" style="--sp:3;--i:5;--md:12"><header><h2>الصفقات حسب القطاع</h2></header><div id="caInd"></div></section>
+        <section class="dk-card" style="--sp:5;--i:6"><header><h2>الصفقات حسب المدينة</h2><span class="sp"></span><small class="mut">حجم الدائرة = عدد الصفقات</small></header><div id="caMap"></div></section>
+        <section class="dk-card" style="--sp:7;--i:7"><header><h2>الصفقات حسب مندوب المبيعات</h2></header><div id="caAgents"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>كل ضغطة تضيف تصفية، والضغطة الثانية على نفس العنصر تلغيها.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3275,6 +3297,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'risk' && window.JEEM_RISK_MOUNT) {
     el.dash.innerHTML = interactiveRiskSkeletonHtml(d);
     window.JEEM_RISK_MOUNT(el.dash.querySelector('#srRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'analysis' && window.JEEM_ANALYSIS_MOUNT) {
+    el.dash.innerHTML = interactiveAnalysisSkeletonHtml(d);
+    window.JEEM_ANALYSIS_MOUNT(el.dash.querySelector('#caRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4278,7 +4303,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield', analysis: 'filter' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4381,6 +4406,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'board') return !!window.JEEM_BOARD_DEMO;
   if (d.renderKind === 'leads') return !!window.JEEM_LEADS_DEMO;
   if (d.renderKind === 'risk') return !!window.JEEM_RISK_DEMO;
+  if (d.renderKind === 'analysis') return !!window.JEEM_ANALYSIS_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4439,6 +4465,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'board') return openBoardGalDemo(d);
     if (d.renderKind === 'leads') return openLeadsGalDemo(d);
     if (d.renderKind === 'risk') return openRiskGalDemo(d);
+    if (d.renderKind === 'analysis') return openAnalysisGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -5231,6 +5258,40 @@ function openRiskGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_RISK_MOUNT(el('gal-view-demo').querySelector('#srRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openAnalysisGalDemo(d) {
+  if (!window.JEEM_ANALYSIS_DEMO || !window.JEEM_ANALYSIS_MOUNT) return;
+  const demo = window.JEEM_ANALYSIS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('filter')}لوحة تفاعلية — تحليل مسار المبيعات</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveAnalysisSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_ANALYSIS_MOUNT(el('gal-view-demo').querySelector('#caRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

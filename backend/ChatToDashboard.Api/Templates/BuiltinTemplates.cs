@@ -308,6 +308,13 @@ public static class BuiltinTemplates
             "حسب أداء السنة المختارة، جدول مخاطر إقليمي وشلال أثر تغير الربح، مصفوفة أولوية مخاطر الموردين " +
             "بأرباع وموثوقية تسليم شهرية مقابل مستهدف ومخاطر تخزين حسب الفئة، ومخاطر المخزون (نفاد وهدر وتغطية).",
             RenderKind: "risk"),
+        new BuiltinDashboardTemplate("crm-analysis", "a", "network", "تحليل مسار المبيعات", false,
+            "تصفية متقاطعة بنمط Power BI: كل عنصر يصفّي الباقي ويُبرز اختياره، قمع بثلاث صيغ تسمية، وخريطة صفقات بالمدن.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لتحليل مسار المبيعات بتصفية متقاطعة بنمط Power BI: كل شهر أو أسبوع أو قطاع أو " +
+            "مدينة أو حجم منشأة أو مندوب أو مرحلة يصفّي بقية اللوحة ويُبرز اختياره معًا، شرائح تصفية قابلة " +
+            "للإزالة، قمع حالات بثلاث صيغ تسمية، خريطة صفقات بفقاعات مدن، وتنبيه آلي عند هبوط آخر فترة عن المعدل.",
+            RenderKind: "analysis"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
