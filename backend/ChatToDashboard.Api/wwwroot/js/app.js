@@ -3186,6 +3186,21 @@ function interactiveAnalysisSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveCommandSkeletonHtml(d) {
+  return `<div class="dk sc2" id="scRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1 id="scTitle">${esc(d.name || 'مركز قيادة سلسلة الإمداد')}</h1><small id="scSub">موثوقية التسليم وأداء الإيراد وأنماط الطلب عبر كل القنوات</small></div>
+        <span class="sp"></span>
+        <div class="sc2-tabs" role="tablist" aria-label="الصفحات"><button type="button" role="tab" data-pg="cmd" aria-selected="true">مركز القيادة</button><button type="button" role="tab" data-pg="risk" aria-selected="false">رادار المخاطر</button><button type="button" role="tab" data-pg="profit" aria-selected="false">أثر الربحية</button></div>
+        <div class="dk-seg" data-seg="ord" role="group" aria-label="نوع الطلبات"><button type="button" data-v="reg" aria-pressed="true">طلبات اعتيادية</button><button type="button" data-v="promo" aria-pressed="false">طلبات ترويجية</button></div>
+        <button type="button" class="dk-btn" data-reset><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>إعادة ضبط</button>
+      </div>
+      <div class="dk-kpis" id="scKpis"></div>
+      <div class="dk-body" id="scBody"></div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بيانات تجريبية · اضغط عمودًا للنزول من السنة إلى الربع ثم الشهر، واضغط «تأخر» في الحلقة لتفصيله حسب الفئة</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3300,6 +3315,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'analysis' && window.JEEM_ANALYSIS_MOUNT) {
     el.dash.innerHTML = interactiveAnalysisSkeletonHtml(d);
     window.JEEM_ANALYSIS_MOUNT(el.dash.querySelector('#caRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'command' && window.JEEM_COMMAND_MOUNT) {
+    el.dash.innerHTML = interactiveCommandSkeletonHtml(d);
+    window.JEEM_COMMAND_MOUNT(el.dash.querySelector('#scRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4303,7 +4321,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield', analysis: 'filter' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield', analysis: 'filter', command: 'server' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4407,6 +4425,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'leads') return !!window.JEEM_LEADS_DEMO;
   if (d.renderKind === 'risk') return !!window.JEEM_RISK_DEMO;
   if (d.renderKind === 'analysis') return !!window.JEEM_ANALYSIS_DEMO;
+  if (d.renderKind === 'command') return !!window.JEEM_COMMAND_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4466,6 +4485,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'leads') return openLeadsGalDemo(d);
     if (d.renderKind === 'risk') return openRiskGalDemo(d);
     if (d.renderKind === 'analysis') return openAnalysisGalDemo(d);
+    if (d.renderKind === 'command') return openCommandGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -5292,6 +5312,40 @@ function openAnalysisGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_ANALYSIS_MOUNT(el('gal-view-demo').querySelector('#caRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openCommandGalDemo(d) {
+  if (!window.JEEM_COMMAND_DEMO || !window.JEEM_COMMAND_MOUNT) return;
+  const demo = window.JEEM_COMMAND_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('server')}لوحة تفاعلية — مركز قيادة سلسلة الإمداد</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveCommandSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_COMMAND_MOUNT(el('gal-view-demo').querySelector('#scRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }
