@@ -280,6 +280,13 @@ public static class BuiltinTemplates
             "استحقاقات شهري بأعمدة مجمّعة وخلفية سقف وتصفية حسب السنة، أسعار تمويل بالجملة بإخفاء سلاسل، " +
             "المركز النقدي، الأرصدة حسب البنك بحلقة تفاعلية، ونشاط اليوم مقابل أمس.",
             RenderKind: "funding"),
+        new BuiltinDashboardTemplate("construction-crm", "a", "network", "إدارة أعمال المقاولات", false,
+            "شريط طلبات مجزأ، عروض أسعار متدرجة بفقاعات قيم، مصفوفة نقاط للأعمال، مواعيد اليوم بتبويبات قيمية، ومدفوعات بتحويل فوري.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإدارة أعمال المقاولات: شريط طلبات مجزأ بفئات قابلة للإبراز، عروض أسعار متدرجة " +
+            "بفقاعات قيم، مصفوفة نقاط للأعمال حسب حالتها، مواعيد اليوم بتبويبات قيمية وبحث وإنهاء موعد، " +
+            "ومدفوعات بتحويل فوري وتتبع تحويلات الأسبوع مقابل مستهدف يومي.",
+            RenderKind: "construction"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

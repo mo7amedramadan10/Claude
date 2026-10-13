@@ -2773,3 +2773,45 @@ button.dk-kpi { cursor: pointer; transition: border-color .2s, box-shadow .2s; }
 .tf-bank .lg button i { width: 10px; height: 10px; border-radius: 50%; } .tf-bank .lg button b { margin-inline-start: auto; color: var(--mut); } .tf-bank .lg button:hover, .tf-bank .lg button[aria-pressed="true"] { background: var(--soft); } .tf-bank .lg button.dim { opacity: .4; }
 @media (max-width: 1100px) { .tf-tick { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .tf-tick { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tf-bank { grid-template-columns: minmax(0, 1fr); justify-items: center; } .tf-bank .lg { width: 100%; } }
+
+/* §4.22 — إدارة أعمال المقاولات (construction-crm، cc) — رمادي فاتح وبنفسجي/أخضر/برتقالي */
+/* إدارة المقاولات (cc) — رمادي فاتح وبنفسجي/أخضر/برتقالي */
+.cc { --acc: #6A4FD8; --bg: #EEF0F3; --rad: 20px; }
+.cc-rf { border: 1px solid var(--line); background: var(--card); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 14px; color: var(--mut); }
+.cc-rf.spin { animation: ccSpin .6s var(--ease); } @keyframes ccSpin { to { transform: rotate(-360deg); } }
+.cc-big { display: flex; align-items: baseline; gap: 8px; } .cc-big b { font-size: 34px; font-weight: 700; } .cc-big small { color: var(--mut); font-size: 12px; }
+.cc-seg { display: flex; gap: 4px; margin: 10px 0 12px; }
+.cc-seg button { border: 0; background: none; padding: 0; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font: inherit; transition: opacity .25s; transform-origin: right; animation: dkBarX .7s var(--ease) both; }
+.cc-seg i { height: 8px; border-radius: 99px; background: var(--c); display: block; } .cc-seg .num { font-size: 11px; color: var(--mut); text-align: start; } .cc-seg .dim { opacity: .3; }
+.cc-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cc-tiles button { border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font: inherit; color: var(--tx); transition: border-color .2s, opacity .25s, transform .2s; animation: rise .4s var(--ease) both; animation-delay: calc(var(--i) * 60ms); }
+.cc-tiles .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #fff; } .cc-tiles b { font-size: 22px; } .cc-tiles small { color: var(--mut); font-size: 11.5px; }
+.cc-tiles button.on { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 18%, transparent); } .cc-tiles button.dim { opacity: .45; } .cc-tiles button:hover { transform: translateY(-2px); }
+.cc-steps { position: relative; height: 150px; display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 4px; align-items: end; }
+.cc-steps .st { position: relative; height: 100%; border: 0; background: none; cursor: pointer; padding: 0; font: inherit; transition: opacity .25s; }
+.cc-steps .bar { position: absolute; bottom: 0; inset-inline: 0; height: 8px; border-radius: 99px; background: var(--c); transform-origin: right; animation: dkBarX .6s var(--ease) both; animation-delay: calc(var(--i) * 120ms); }
+.cc-steps .ln { position: absolute; bottom: 8px; inset-inline-start: 18px; width: 0; height: var(--h); border-inline-start: 2px dashed var(--c); transform-origin: bottom; animation: dkGrow .6s var(--ease) both; animation-delay: calc(200ms + var(--i) * 120ms); }
+.cc-steps .bub { position: absolute; bottom: calc(var(--h) + 8px); inset-inline-start: 4px; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px; white-space: nowrap; animation: dkPop .5s var(--ease) both; animation-delay: calc(400ms + var(--i) * 120ms); }
+.cc-steps .st.dim { opacity: .3; } .cc-steps .st.on .bub { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent); }
+.cc-steps .add { height: 70%; border: 1px solid var(--line); border-radius: 99px; display: grid; place-items: center; color: var(--mut); }
+.cc-tot { font-size: 12px; color: var(--mut); margin: 8px 0; } .cc-tot b { font-size: 16px; color: var(--tx); }
+.cc-chips { display: flex; gap: 6px; flex-wrap: wrap; } .cc-chips button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: var(--card); border-radius: 99px; padding: 3px 10px; font: inherit; font-size: 11.5px; cursor: pointer; color: var(--tx); } .cc-chips i { width: 7px; height: 7px; border-radius: 50%; }
+.cc-chips button[aria-pressed="true"] { border-color: var(--tx); font-weight: 600; }
+.cc-dots { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 6px; }
+.cc-dots .grp { border: 0; background: none; padding: 0 6px; display: flex; flex-direction: column; gap: 6px; text-align: start; cursor: pointer; font: inherit; color: var(--tx); border-inline-start: 2px solid transparent; }
+.cc-dots .grp.on { border-inline-start-color: var(--tx); } .cc-dots .lb b { font-size: 12px; color: var(--mut); } .cc-dots .grp.on .lb b { color: var(--tx); }
+.cc-dots .mx { display: grid; grid-template-columns: repeat(auto-fill, 9px); gap: 3px; min-height: 60px; align-content: start; }
+.cc-dots .mx i { width: 9px; height: 9px; border-radius: 50%; background: color-mix(in srgb, var(--c) 35%, #fff); animation: dkPop .3s var(--ease) both; animation-delay: calc(var(--k) * 8ms); transition: background .3s; }
+.cc-dots .grp.on .mx i { background: var(--c); } .cc-dots small { font-size: 11px; color: var(--mut); } .cc-dots .grp > b { font-size: 13px; }
+.cc-total { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 99px; padding: 6px 10px; font-size: 12.5px; margin-top: 8px; } .cc-total .sp { flex: 1; }
+.cc-total .ib { width: 26px; height: 26px; border-radius: 50%; background: #E8794A; color: #fff; display: grid; place-items: center; }
+.cc-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cc-tabs button { border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; font: inherit; color: var(--tx); }
+.cc-tabs button[aria-selected="true"] { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 7%, var(--card)); } .cc-tabs small { font-size: 11px; color: var(--mut); } .cc-tabs b { font-size: 17px; }
+.cc .who { display: flex; align-items: center; gap: 8px; } .cc .who > span:last-child { display: flex; flex-direction: column; } .cc .who small { color: var(--mut); font-size: 10.5px; }
+.cc input[type=search] { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 9px; padding: 5px 10px; background: var(--card); }
+.cc-bank select { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 9px; padding: 4px 8px; background: var(--card); }
+.cc-bal { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .cc-bal > div { border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+.cc-bal .ib { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); } .cc-bal small { color: var(--mut); font-size: 11px; } .cc-bal b { font-size: 18px; } .cc-bal .dk-btn { align-self: flex-start; padding: 4px 10px; font-size: 11.5px; } .cc-bal .dk-btn[disabled] { opacity: .45; cursor: not-allowed; }
+.cc-pb header { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 2px; } .cc-pb small { color: var(--mut); font-size: 11.5px; }
+@media (max-width: 700px) { .cc-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cc-bal { grid-template-columns: minmax(0, 1fr); } .cc-dots { grid-template-columns: minmax(0, 1fr); } }

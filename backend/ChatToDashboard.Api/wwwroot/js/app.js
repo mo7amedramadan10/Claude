@@ -3089,6 +3089,24 @@ function interactiveFundingSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveConstructionSkeletonHtml(d) {
+  return `<div class="dk cc" id="ccRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'إدارة أعمال المقاولات')}</h1><small>الطلبات وعروض الأسعار والأعمال والمواعيد والمدفوعات</small></div>
+        <span class="sp"></span>
+        <div class="dk-seg" data-seg="per" role="group" aria-label="الفترة"><button type="button" data-v="7" aria-pressed="true">آخر 7 أيام</button><button type="button" data-v="30" aria-pressed="false">آخر 30 يومًا</button></div>
+      </div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:4;--md:6;--i:0"><header><h2>الطلبات</h2><span class="sp"></span><button type="button" class="cc-rf" data-refresh="req" aria-label="تحديث">↻</button></header><div id="ccReq"></div></section>
+        <section class="dk-card" style="--sp:4;--md:6;--i:1"><header><h2>عروض الأسعار</h2><span class="sp"></span><button type="button" class="cc-rf" data-refresh="quo" aria-label="تحديث">↻</button></header><div id="ccQuo"></div></section>
+        <section class="dk-card" style="--sp:4;--md:12;--i:2"><header><h2>الأعمال</h2><span class="sp"></span><button type="button" class="cc-rf" data-refresh="job" aria-label="تحديث">↻</button></header><div id="ccJob"></div></section>
+        <section class="dk-card" style="--sp:7;--i:3"><header><h2>مواعيد اليوم</h2><span class="sp"></span><input type="search" id="ccQ" placeholder="ابحث عن عميل…" aria-label="بحث"></header><div class="cc-tabs" id="ccTabs" role="tablist" aria-label="حالة المواعيد"></div><div class="dk-tbl" id="ccApp"></div></section>
+        <section class="dk-card" style="--sp:5;--i:4"><header><h2>المدفوعات</h2><span class="sp"></span><label class="cc-bank"><select id="ccBank" aria-label="البنك"></select></label><small class="mut" id="ccLastUpd"></small></header><div id="ccPay"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط فئة لإبرازها، بدّل تبويب المواعيد، وحوّل الرصيد فورًا من المدفوعات.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3188,6 +3206,9 @@ async function mountInteractiveDashboard(d) {
     window.JEEM_FUNDING_MOUNT(el.dash.querySelector('#tfRoot'), body.data, {
       demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
     });
+  } else if (d.renderKind === 'construction' && window.JEEM_CONSTRUCTION_MOUNT) {
+    el.dash.innerHTML = interactiveConstructionSkeletonHtml(d);
+    window.JEEM_CONSTRUCTION_MOUNT(el.dash.querySelector('#ccRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4191,7 +4212,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4290,6 +4311,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'studio') return !!window.JEEM_STUDIO_DEMO;
   if (d.renderKind === 'campaign') return !!window.JEEM_CAMPAIGN_DEMO;
   if (d.renderKind === 'funding') return !!window.JEEM_FUNDING_DEMO;
+  if (d.renderKind === 'construction') return !!window.JEEM_CONSTRUCTION_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4344,6 +4366,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'studio') return openStudioGalDemo(d);
     if (d.renderKind === 'campaign') return openCampaignGalDemo(d);
     if (d.renderKind === 'funding') return openFundingGalDemo(d);
+    if (d.renderKind === 'construction') return openConstructionGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -5000,6 +5023,40 @@ function openFundingGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_FUNDING_MOUNT(el('gal-view-demo').querySelector('#tfRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openConstructionGalDemo(d) {
+  if (!window.JEEM_CONSTRUCTION_DEMO || !window.JEEM_CONSTRUCTION_MOUNT) return;
+  const demo = window.JEEM_CONSTRUCTION_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('briefcase')}لوحة تفاعلية — إدارة أعمال المقاولات</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveConstructionSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_CONSTRUCTION_MOUNT(el('gal-view-demo').querySelector('#ccRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }
