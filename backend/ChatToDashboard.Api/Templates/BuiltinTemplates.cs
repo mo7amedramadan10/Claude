@@ -334,7 +334,7 @@ public static class BuiltinTemplates
             "واستثناءات قابلة للبحث والحذف والإضافة ومخطط مسارات عمليات متحرك. تحويل العملة (ر.س/دولار) " +
             "وتصدير التقرير متاحان من الأعلى.",
             RenderKind: "finance"),
-    }.Concat(BuiltinDashboardsGenerated.Items).ToList();
+    }.Concat(BuiltinDashboardsGenerated.Items).Concat(BuiltinDashboardsOpportunities.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
     /// kpi-library.js's own KPI_MT_KEY/mtypes ordering. {{kpi_name}} is the only placeholder —

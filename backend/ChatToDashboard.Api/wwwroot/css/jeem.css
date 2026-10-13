@@ -3069,3 +3069,32 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .is-embed .dash-tabs button[aria-selected="true"]::after { content: ""; position: absolute; inset-inline: 8px; bottom: -1px; height: 2px; background: var(--brand-blue, #127DBD); border-radius: 2px; }
 .is-embed .dash-tabs::before { content: "صفحات اللوحة"; align-self: center; font-size: 11px; color: var(--ink-3, #767672); padding-inline-end: 8px; margin-inline-end: 4px; border-inline-end: 1px solid var(--line); }
 @media (max-width: 700px) { .is-embed .dash-tabs::before { display: none; } }
+
+/* ==========================================================
+   §4.24 — عنصر JR «stages» (مسار عملية متعدد المراحل) في معاينة المعرض
+   تخطيط مرن لأي عدد من المراحل (لا أعمدة ثابتة لأربع)، والأسهم باتجاه القراءة RTL،
+   وعلى الجوال تتكدس المراحل عموديًا. النبرة دائمًا لون + نص التسمية.
+   ========================================================== */
+#gal-view-demo .jr-stages { display: flex; align-items: stretch; gap: 6px; }
+#gal-view-demo .jr-stage { flex: 1 1 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2, #F7F9FB); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; animation: rise .45s var(--ease) both; animation-delay: calc(var(--i) * 90ms); }
+/* تحييد قاعدة header العامة في app.css (حد سفلي وحشوة وخلفية) داخل المرحلة */
+#gal-view-demo .jr-stage header { display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; min-height: 22px; padding: 0; margin: 0; border: 0; background: none; box-shadow: none; }
+#gal-view-demo .jr-stage header b { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); }
+#gal-view-demo .jr-stage header .tot { position: absolute; inset-inline-end: 0; font-size: 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; color: var(--ink-2); }
+#gal-view-demo .jr-stage .row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+#gal-view-demo .jr-stage .row.sub { margin-top: auto; }
+#gal-view-demo .jr-stile { border-radius: 10px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; min-height: 64px; animation: rise .4s var(--ease) both; animation-delay: calc(200ms + var(--i) * 50ms); }
+#gal-view-demo .jr-stile .lab { align-self: stretch; font-size: 11px; font-weight: 600; padding: 4px; color: #fff; background: var(--tc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#gal-view-demo .jr-stile b { font-size: 20px; font-weight: 700; color: var(--tc2, var(--tc)); padding: 4px 4px 0; }
+#gal-view-demo .jr-stile small { font-size: 11px; color: var(--ink-2); padding-bottom: 6px; }
+#gal-view-demo .jr-stile.big b { font-size: 26px; }
+#gal-view-demo .jr-stile.t-info { --tc: #1C77B9; } #gal-view-demo .jr-stile.t-ok { --tc: #12867D; }
+#gal-view-demo .jr-stile.t-warn { --tc: #C98A10; --tc2: #A06C05; } #gal-view-demo .jr-stile.t-bad { --tc: #C94040; }
+#gal-view-demo .jr-stile.t-dark { --tc: #3A3F47; --tc2: #3A3F47; } #gal-view-demo .jr-stile.t-mute { --tc: #8A93A2; --tc2: #5D6675; }
+#gal-view-demo .jr-sarr { flex: 0 0 22px; display: grid; place-items: center; color: #29A6DA; }
+#gal-view-demo .jr-sarr .icon { width: 22px; height: 22px; }
+@media (max-width: 700px) {
+  #gal-view-demo .jr-stages { flex-direction: column; }
+  #gal-view-demo .jr-sarr { flex-basis: 18px; transform: rotate(-90deg); }
+}
+@media (prefers-reduced-motion: reduce) { #gal-view-demo .jr-stage, #gal-view-demo .jr-stile { animation: none; } }

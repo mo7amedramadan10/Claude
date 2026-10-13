@@ -58,8 +58,13 @@
   كل لوحة (محادثة أو تفاعلية) تُعرض في iframe بوضع `?embed=1&pub=<id>&p=<n>`
   (`bootEmbedView` في app.js) يتبادل postMessage مع `wwwroot/js/project-published.js`.
   النشر من زر 📌 في «اللوحات النشطة» أو زر «نشر لوحة» في الشاشة.
-- ⬜ **Phase 4 (§4.24)**: نوع عنصر JR جديد `stages`، دعم `vals` على عمود
-  واحد في `bars`، أبعاد جديدة، نموذج جاهز `pl-opportunities-tracker`.
+- ✅ **Phase 4 (§4.24)**: `stages` + `vals` في `bars` + أبعاد متتبع الفرص في
+  `dash-render.js` (معاينة المعرض)، ومدخل `pl-opportunities-tracker` في
+  `dash-library.js`. عنصر `stages` الحقيقي في app.js (`StagesCard`) يقبل الآن الشكل
+  الطويل العددي `{stage,label,count,tone,value?,row?: main|sub|total}` مع بقاء
+  الشكل الأقدم يعمل، ومُعرَّف للذكاء الاصطناعي في `AnalyticsTools.cs`. النموذج
+  في الكتالوج مكتوب يدويًا في `Templates/BuiltinDashboardsOpportunities.cs`
+  (لا في الملف المولَّد).
 - ⬜ **مراجعة قبول نهائية** مقابل معايير §9 في السبيك.
 
 ## القرارات المعمارية المتّبعة (§4.16+)

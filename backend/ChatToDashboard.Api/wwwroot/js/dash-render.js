@@ -50,6 +50,16 @@
     AGEM: ['18–24', '25–34', '35–44', '45–54', '55+'],
     GEN: ['ذكور', 'إناث'],
     PROD: ['المنتج أ', 'المنتج ب', 'المنتج ج', 'المنتج د', 'المنتج هـ', 'المنتج و', 'المنتج ز', 'المنتج ح'],
+    /* أبعاد متتبع الفرص والعروض */
+    AMGR: ['غير مُسند', 'عبدالمجيد العمري', 'أحمد السلمي', 'ملك السحيم', 'شيخة النعيم', 'سعود العمري', 'عبدالرحمن المجيل', 'رغد الشهراني', 'ريما السعدان', 'سارة الحربي', 'عبدالمجيد المطيري', 'ريان الجميعي'],
+    OWNU: ['الشركة الأم', 'الوحدة التقنية', 'وحدة الاستشارات', 'وحدة الموارد البشرية', 'غير محدد'],
+    BLINE: ['حلول رأس المال البشري', 'حلول الاستشارات', 'الحلول التقنية', 'تجربة العميل الرقمية', 'حلول تطوير رأس المال البشري', 'عمليات تمكين رأس المال البشري', 'حلول التوظيف الدولية', 'حلول التوطين', 'حلول المشتريات'],
+    OPTYPE: ['طلب عروض (RFP)', 'اتفاقية إطارية', 'طلب عرض سعر (RFQ)', 'غير محدد'],
+    CLNT: ['هيئة وطنية للملكية الفكرية', 'جهة حكومية – الصحة', 'جهة حكومية – الصناعة', 'شركة تقنية وطنية', 'جهة حكومية – الحج والعمرة', 'شركة طيران وطنية', 'مؤسسة عامة للتدريب', 'برنامج الخدمات المشتركة', 'شركة تطوير عقاري', 'جهة حكومية – السياحة', 'مركز وطني للتخصيص', 'هيئة البيانات'],
+    SECTR: ['قطاع الإمداد', 'تنمية المجتمع', 'شريك أعمال تقني', 'قطاع الحلول السابق', 'الصحة', 'التوسع الحكومي'],
+    SUBCH: ['منصة اعتماد – دعوة خاصة', 'منصة اعتماد – منافسة عامة', 'البريد الإلكتروني', 'تسليم مباشر'],
+    QTR: ['الربع 4 2025', 'الربع 1 2026', 'الربع 2 2026', 'الربع 3 2026', 'الربع 4 2026'],
+    OPPN: ['بوابة ربط المشاريع بالمصانع المحلية', 'تعزيز كفاءة الأداء المؤسسي', 'منصة تمكين الكفاءات الوطنية', 'تطوير تجربة المستفيد الرقمية', 'برنامج التوطين في القطاع الخاص', 'حوكمة البيانات الوطنية', 'إدارة التوظيف الدولي', 'تحول المشتريات الرقمي'],
     AGENT: ['سارة العتيبي', 'محمد الحربي', 'نورة الشمري', 'يوسف الغامدي', 'ريم القحطاني', 'فهد الدوسري']
   };
   const dim = s => { if (Array.isArray(s)) return s; if (!s) return []; const [k, n] = String(s).split(':'); const a = D[k] || []; return n ? a.slice(0, +n) : a; };
@@ -100,7 +110,7 @@
   /* أعمدة رأسية (مفردة/مجمّعة/مكدّسة) */
   function colChart(w, r, mode) {
     const x = dim(w.x || 'M12'), names = mode === 'single' ? [w.ti] : (w.s || ['السابق', 'الحالي']).slice(0, 4);
-    const data = names.map((_, i) => x.map(() => (w.b || 100) * (.45 + r() * .7) * (mode === 'stack' ? 1 / (i + 1) : 1 - i * .08)));
+    const data = mode === 'single' && w.vals ? [x.map((_, j) => w.vals[j] ?? 0)] : names.map((_, i) => x.map(() => (w.b || 100) * (.45 + r() * .7) * (mode === 'stack' ? 1 / (i + 1) : 1 - i * .08)));  /* w.vals: قيم فعلية للأعمدة المفردة */
     const tot = x.map((_, j) => mode === 'stack' ? data.reduce((s, s2) => s + s2[j], 0) : Math.max(...data.map(d => d[j])));
     const max = Math.max(...tot) * 1.08, k = w.k, hiIdx = mode === 'single' ? (w.spot === 'last' ? tot.length - 1 : typeof w.spot === 'number' ? w.spot : tot.indexOf(Math.max(...tot))) : -1;
     const cols = (i) => mode === 'stack' ? C[i] : names.length === 2 && w.s ? [SOFT, C[0]][i] : C[i];
@@ -355,15 +365,28 @@
     return `<div class="jr-empty" data-kind="${k}"><div class="es-shape" aria-hidden="true">${shape}</div><div class="es-msg">${ic('database')}<b>لا توجد بيانات بعد</b><small>اربط مصدرًا أو اعرض ببيانات تجريبية</small></div></div>`;
   }
 
+  /* ================= مراحل عملية (stages) — من «Opportunities Tracker» =================
+     w.st = [{ n: 'اسم المرحلة', it: [[التسمية, العدد, النبرة?, القيمة؟]], sub: [[التسمية, العدد, النبرة, القيمة؟]] }]
+     النبرة: info | ok | warn | bad | dark | mute — اللون + نص التسمية دائمًا. الأسهم بين المراحل باتجاه القراءة (RTL).
+     القيم تتحرك مع الفلاتر بنسبة واحدة لكل المراحل حتى تبقى المجاميع متسقة. */
+  function stages(w, r) {
+    const f = .7 + r() * .5, sc = v => typeof v === 'number' ? Math.round(v * f) : v, k = w.k || 'sar';
+    const tile = ([lab, v, tone = 'info', val], i, big) => `<div class="jr-stile t-${tone}${big ? ' big' : ''}"${tip(lab, `${nf(sc(v))}${val != null ? ' · ' + fmt(val * f, k) + (UNIT[k] ? ' ' + UNIT[k] : '') : ''}`)} style="--i:${i}"><span class="lab">${esc(lab)}</span><b class="num">${nf(sc(v))}</b>${val != null ? `<small><span class="num">${fmt(val * f, k)}</span>${UNIT[k] ? ' ' + UNIT[k] : ''}</small>` : ''}</div>`;
+    return `<div class="jr-stages" style="--n:${(w.st || []).length}">${(w.st || []).map((s, i) => { const tot = s.tot != null ? s.tot : (s.it && s.it[0] ? s.it[0][1] : 0);
+      return `${i ? `<span class="jr-sarr" aria-hidden="true">${ic('chev-left', 'icon')}</span>` : ''}<section class="jr-stage" style="--i:${i}" aria-label="مرحلة ${esc(s.n)}"><header><b>${esc(s.n)}</b>${s.tot !== false ? `<span class="tot num">${nf(sc(tot))}</span>` : ''}</header>
+        <div class="row main">${(s.it || []).map((t, j) => tile(t, j, (s.it || []).length <= 2)).join('')}</div>${s.sub && s.sub.length ? `<div class="row sub">${s.sub.map((t, j) => tile(t, j + 3)).join('')}</div>` : ''}</section>`; }).join('')}</div>`;
+  }
+
+
   const R = {
     line: (w, r) => lineChart(w, r), area: (w, r) => lineChart(w, r, { area: true }), cum: (w, r) => lineChart(w, r, { area: true, cum: true }),
     bars: (w, r) => colChart(w, r, 'single'), grouped: (w, r) => colChart(w, r, 'group'), stacked: (w, r) => colChart(w, r, 'stack'),
     hbars: (w, r) => hbarChart(w, r), rank: (w, r) => hbarChart(w, r, { rank: true }), compare: compareChart, s100: stack100,
     donut, ring, gauges, funnel, heat, risk: riskMatrix, waterfall, div: diverging, scatter: (w, r) => scatter(w, r, false), bubble: (w, r) => scatter(w, r, true),
     table, cohort, insights, combo, note, bullet, radar, semi, iconrank: iconRank, ribbon,
-    dco: donutCo, people, feed, goal
+    dco: donutCo, people, feed, goal, stages
   };
-  const DEF = { line: 8, area: 8, cum: 6, combo: 8, bars: 6, grouped: 6, stacked: 6, hbars: 4, rank: 4, compare: 6, s100: 6, donut: 4, ring: 4, gauges: 12, funnel: 4, heat: 6, risk: 4, waterfall: 6, div: 6, scatter: 6, bubble: 6, table: 6, cohort: 6, insights: 6, note: 4, hero: 4, bullet: 6, radar: 6, semi: 4, iconrank: 4, ribbon: 8, dco: 4, people: 8, feed: 4, goal: 4 };
+  const DEF = { line: 8, area: 8, cum: 6, combo: 8, bars: 6, grouped: 6, stacked: 6, hbars: 4, rank: 4, compare: 6, s100: 6, donut: 4, ring: 4, gauges: 12, funnel: 4, heat: 6, risk: 4, waterfall: 6, div: 6, scatter: 6, bubble: 6, table: 6, cohort: 6, insights: 6, note: 4, hero: 4, bullet: 6, radar: 6, semi: 4, iconrank: 4, ribbon: 8, dco: 4, people: 8, feed: 4, goal: 4, stages: 12 };
   const SPANS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
   const snap = n => SPANS.reduce((a, b) => Math.abs(b - n) < Math.abs(a - n) ? b : a);
 
@@ -442,7 +465,7 @@
   document.addEventListener('scroll', () => tipEl && (tipEl.hidden = true), true);
 
   /* مصغّر: أنواع العناصر ← رموز المعرض */
-  const GLYPH_OF = { line: 'line', area: 'line', cum: 'line', combo: 'line', bars: 'cbars', grouped: 'cbars', stacked: 'cbars', waterfall: 'cbars', hbars: 'hbars', rank: 'hbars', compare: 'hbars', s100: 'hbars', div: 'hbars', donut: 'donut', ring: 'donut', gauges: 'donut', funnel: 'funnel', heat: 'heat', cohort: 'heat', risk: 'heat', scatter: 'heat', bubble: 'heat', table: 'table', insights: 'table', note: 'table', bullet: 'hbars', hero: 'kpi', kpi: 'kpi', kpiyoy: 'kpi', radar: 'donut', semi: 'donut', dco: 'donut', iconrank: 'hbars', ribbon: 'cbars', people: 'table', feed: 'table', goal: 'kpi' };
+  const GLYPH_OF = { line: 'line', area: 'line', cum: 'line', combo: 'line', bars: 'cbars', grouped: 'cbars', stacked: 'cbars', waterfall: 'cbars', hbars: 'hbars', rank: 'hbars', compare: 'hbars', s100: 'hbars', div: 'hbars', donut: 'donut', ring: 'donut', gauges: 'donut', funnel: 'funnel', heat: 'heat', cohort: 'heat', risk: 'heat', scatter: 'heat', bubble: 'heat', table: 'table', insights: 'table', note: 'table', bullet: 'hbars', hero: 'kpi', kpi: 'kpi', kpiyoy: 'kpi', radar: 'donut', semi: 'donut', dco: 'donut', iconrank: 'hbars', ribbon: 'cbars', people: 'table', feed: 'table', goal: 'kpi', stages: 'funnel' };
   const thumbItems = d => {
     const ws = d.p[0].w, ks = ws.filter(isK).slice(0, 4), cs = ws.filter(w => !isK(w));
     const out = ks.map(w => ({ type: 'kpi', span: 12 / ks.length, title: w.ti }));

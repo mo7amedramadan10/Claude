@@ -329,9 +329,12 @@ public class DashboardWidget
 ///             "ok"|"pend"|"bad"|"info", "time": string?, "owner": string? }]
 ///   goal:     single object (see DashboardSpec.ObjectShapedTypes): { "percent": number,
 ///             "remaining": number?, "who": string?, "days": number?, "headline": string? }
-///   stages:   [{ "stage": string, "status": "ok"|"warn"|"bad"|"pending", "subStatus":
-///             string?, "tone": "info"|"ok"|"warn"|"bad"|"dark"|"mute" }] — ordered array,
-///             one row per process stage, read right-to-left on screen.
+///   stages:   [{ "stage": string, "label": string, "count": number, "tone":
+///             "info"|"ok"|"warn"|"bad"|"dark"|"mute", "value": number?, "row":
+///             "main"|"sub"|"total"? }] — §4.24 long format, one row per tile, grouped by
+///             stage in first-seen order and read right-to-left on screen. The older shape
+///             (one row per stage: { "stage", "status": "ok"|"warn"|"bad"|"pending",
+///             "subStatus"?, "tone"? }, no "count") still renders as before.
 ///   bullet:   [{ "label": string, "actual": number, "target": number }]
 /// </summary>
 internal static class InteractiveWidgetDataShapes { }

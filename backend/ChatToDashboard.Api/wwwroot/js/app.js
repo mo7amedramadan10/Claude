@@ -2529,10 +2529,57 @@ const STAGE_STATUS_META = {
   bad: { icon: '✕', cls: 'status-bad' },
   pending: { icon: '⏱', cls: 'status-warn' },
 };
+// §4.24 — شكل الخانات العددية (مسار عملية متعدد المراحل كما في «متتبع الفرص والعروض»):
+// صف واحد لكل خانة بالشكل الطويل الذي يخرج مباشرة من استعلام SQL مُجمَّع:
+// [{ stage, label, count, tone?: info|ok|warn|bad|dark|mute, value?, row?: main|sub|total }]
+// تُجمَّع الصفوف حسب stage بترتيب أول ظهور؛ row:"total" يحدد إجمالي المرحلة (وإلا فعدد أول
+// خانة رئيسية)، و"sub" للحالات الفرعية (ملغاة، معلّقة، متأخرة...) في سطر أسفل المرحلة.
+// النبرة دائمًا لون + نص التسمية معًا، والأرقام داخل .num والوحدة خارجها.
+function stageGroupsFromRows(rows) {
+  const groups = [];
+  const byName = new Map();
+  for (const r of rows) {
+    const name = String(r.stage ?? '').trim() || '—';
+    let g = byName.get(name);
+    if (!g) { g = { name, total: null, main: [], sub: [] }; byName.set(name, g); groups.push(g); }
+    const kind = String(r.row || 'main').toLowerCase();
+    if (kind === 'total') { g.total = num(r.count); continue; }
+    const tile = {
+      label: String(r.label ?? ''), count: num(r.count),
+      tone: STAGE_TONE_CLASS[r.tone] ? r.tone : 'info',
+      value: r.value != null && r.value !== '' ? num(r.value) : null,
+    };
+    (kind === 'sub' ? g.sub : g.main).push(tile);
+  }
+  for (const g of groups) if (g.total == null) g.total = g.main.length ? g.main[0].count : null;
+  return groups;
+}
+function stagesTilesBody(w, rows) {
+  const u = (w.options && w.options.u) || '';
+  const groups = stageGroupsFromRows(rows);
+  const tile = (t, big) => `<div class="stile tone-${t.tone}${big ? ' big' : ''}" title="${esc(t.label)}: ${esc(fmt(t.count))}${t.value != null ? ` · ${esc(fmt(t.value))}${u ? ' ' + esc(u) : ''}` : ''}">
+      <span class="stile-lab">${esc(t.label)}</span><b class="num">${esc(fmt(t.count))}</b>${t.value != null ? `<small><span class="num">${esc(fmt(t.value))}</span>${u ? ' ' + esc(u) : ''}</small>` : ''}</div>`;
+  const wrap = document.createElement('div');
+  wrap.className = 'stages-flow';
+  // RTL: المرحلة الأولى يمينًا، والسهم يشير للمرحلة التالية (يسارًا).
+  wrap.innerHTML = groups.map((g, i) => `${i > 0 ? '<span class="stages-arrow" aria-hidden="true">←</span>' : ''}
+    <div class="stage-col" role="group" aria-label="مرحلة ${esc(g.name)}" style="flex-grow:${Math.max(1, g.main.length, g.sub.length)}">
+      <div class="stage-head"><b>${esc(g.name)}</b>${g.total != null ? `<span class="stage-tot num" title="إجمالي المرحلة">${esc(fmt(g.total))}</span>` : ''}</div>
+      ${g.main.length ? `<div class="stile-row">${g.main.map(t => tile(t, g.main.length <= 2)).join('')}</div>` : ''}
+      ${g.sub.length ? `<div class="stile-row sub">${g.sub.map(t => tile(t, false)).join('')}</div>` : ''}
+    </div>`).join('');
+  return wrap;
+}
+
 function StagesCard(w) {
   const card = widgetShell(w, 'stages');
   const rows = Array.isArray(w.data) ? w.data : [];
   if (!rows.length) return emptyBody(card);
+  // الشكل العددي (§4.24) متى حمل أي صف عددًا؛ وإلا الشكل الأقدم (مرحلة + حالة + شارة).
+  if (rows.some(r => r && r.count != null && r.count !== '')) {
+    card.appendChild(stagesTilesBody(w, rows));
+    return card;
+  }
   const wrap = document.createElement('div');
   wrap.className = 'stages-row';
   // RTL: first stage renders on the right, arrow points toward the next (leftward) stage.
