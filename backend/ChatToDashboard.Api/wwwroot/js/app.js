@@ -7358,6 +7358,10 @@ function renderActiveDashboardsList() {
       ? `<button class="icon-btn roles-btn" data-roles="${esc(h.id)}" title="إدارة الصلاحيات">⚙️</button>` : '';
     const delBtn = h.myRole === 'owner'
       ? `<button class="icon-btn del-active-btn" data-del="${esc(h.id)}" title="حذف">🗑️</button>` : '';
+    // §4.23: نشر اللوحة على شاشة «اللوحات المنشورة» في المشروع — للمالك والمحرر (والخادم
+    // يتحقق أيضًا من دور المستخدم في المشروع نفسه).
+    const pubProjBtn = canRename
+      ? `<button class="icon-btn pubproj-btn" data-pubproj="${esc(h.id)}" title="نشر على المشروع">📌</button>` : '';
     return `<div class="file-row${h.disabled ? ' stale' : ''}" data-id="${esc(h.id)}">
         <div class="fr-main">
           <div class="fr-thumb">${dashboardThumbnailSvg(widgets)}</div>
@@ -7374,7 +7378,7 @@ function renderActiveDashboardsList() {
         <div class="col-access">${roleBadge || '—'}</div>
         <div class="col-actions">
           <button class="icon-btn open-active-btn" data-open="${esc(h.id)}" title="فتح">↗️</button>
-          ${renameBtn}${rolesBtn}${delBtn}
+          ${pubProjBtn}${renameBtn}${rolesBtn}${delBtn}
         </div>
       </div>`;
   }).join('') : `<div class="repo-empty">لا يوجد لوحات نشطة بعد — فعّل لوحة من تبويب "السجل" لتظهر هنا.</div>`;
@@ -7387,6 +7391,8 @@ function renderActiveDashboardsList() {
     btn.addEventListener('click', () => openRolesModal(btn.dataset.roles)));
   el('active-list').querySelectorAll('.del-active-btn').forEach(btn =>
     btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.del)));
+  el('active-list').querySelectorAll('[data-pubproj]').forEach(btn =>
+    btn.addEventListener('click', () => window.JEEM_PUBLISHED?.openPublishModal(btn.dataset.pubproj)));
 }
 
 // Promotes a Draft to Active — the activating user becomes its Owner, which the backend
@@ -7611,13 +7617,13 @@ el('history-clear').addEventListener('click', async () => {
 // (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
 // integrations) and the platform-only "organizations" screen never show a project name,
 // since you're managing the organization/platform itself there, not a project within it.
-const PROJECT_SCOPED_SCREENS = new Set(['chat', 'analyst', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
 // Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
 // lookup here instead of reading the DOM, since the same data-screen value can be the
 // target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
 // "المستخدمون" under الإدارة).
 const SCREEN_LABELS = {
-  chat: 'المحادثة واللوحات', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
+  chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
   projects: 'المشاريع', settings: 'الإعدادات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
@@ -7646,8 +7652,11 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
+  // §4.23: مغادرة «اللوحات المنشورة» توقف وضع العرض وتزيل رابطها العميق؛ دخولها يحمّلها.
+  if (name !== 'published') window.JEEM_PUBLISHED?.leave();
   state.currentScreen = name;
   updateCrumbs(name);
+  if (name === 'published') window.JEEM_PUBLISHED?.load();
   if (name === 'analyst') { window.loadAnalystScreen?.(); loadSources().then(() => window.loadAnalystScreen?.()); }
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
@@ -10695,12 +10704,70 @@ async function deleteUser(id) {
   await loadUsers();
 }
 
+// ---------- §4.23: وضع التضمين (?embed=1&pub=<معرّف النشر>&p=<الصفحة>) ----------
+// لوحة منشورة واحدة داخل إطار شاشة «اللوحات المنشورة»: بلا قائمة ولا شريط علوي ولا
+// محادثة (قواعد .is-embed في jeem.css)، للقراءة فقط بدور «مشاهد». تُفتح بمسار الفتح العادي
+// نفسه (openHistoryEntry) فتعمل اللوحات المبنية من المحادثة والتفاعلية كما هي، وتتبادل مع
+// الصفحة الأم رسائل postMessage: الارتفاع { jeemEmbedH }، والصفحة الحالية وعدد الصفحات
+// { jeemPage, jeemPages }، وتستقبل { jeemSetPage } للانتقال لصفحة (وضع العرض والرابط العميق).
+async function bootEmbedView(pubId, startPage) {
+  document.documentElement.classList.add('is-embed');
+  const fail = msg => {
+    el.dash.innerHTML = `<div class="empty"><div><div class="big">تعذّر عرض اللوحة</div><div>${esc(msg)}</div></div></div>`;
+    postEmbedHeight();
+  };
+  const post = data => { if (window.parent !== window) window.parent.postMessage(data, location.origin); };
+  function postEmbedHeight() {
+    post({ jeemEmbedH: Math.ceil(Math.max(el('dash-pane')?.scrollHeight || 0, el.dash.scrollHeight)) });
+  }
+
+  const me = await fetch('/api/auth/me');
+  if (!me.ok) { fail('انتهت الجلسة — سجّل الدخول من جديد.'); return; }
+  state.currentUser = await me.json();
+
+  const res = await fetch(`/api/published-dashboards/${encodeURIComponent(pubId)}/entry`);
+  const entry = await res.json().catch(() => null);
+  if (!res.ok || !entry) { fail(entry?.error || 'اللوحة غير متاحة لك.'); return; }
+
+  // مزامنة الصفحة الداخلية مع الصفحة الأم: تُقرأ من تبويبات الصفحات بعد كل إعادة رسم.
+  let pendingPage = startPage > 0 ? startPage : 0, lastSent = '';
+  const pageTabs = () => [...el.dash.querySelectorAll('.dash-tabs button')];
+  const syncPage = () => {
+    const tabs = pageTabs();
+    if (pendingPage && tabs[pendingPage]) { const b = tabs[pendingPage]; pendingPage = 0; b.click(); return; }
+    const idx = Math.max(0, tabs.findIndex(b => b.getAttribute('aria-selected') === 'true'));
+    const key = `${idx}/${Math.max(1, tabs.length)}`;
+    if (key !== lastSent) { lastSent = key; post({ jeemPage: idx, jeemPages: Math.max(1, tabs.length) }); }
+    postEmbedHeight();
+  };
+  new MutationObserver(syncPage).observe(el.dash, { childList: true, subtree: true });
+  new ResizeObserver(postEmbedHeight).observe(el.dash);
+  addEventListener('message', e => {
+    if (e.origin !== location.origin || e.source !== window.parent) return;
+    const pg = e.data && e.data.jeemSetPage;
+    if (typeof pg !== 'number') return;
+    const b = pageTabs()[pg];
+    if (b && b.getAttribute('aria-selected') !== 'true') b.click();
+  });
+
+  state.history = [entry];
+  openHistoryEntry(entry.id);
+  syncPage();
+}
+
 (async function boot() {
-  const shareId = new URLSearchParams(location.search).get('share');
+  const params = new URLSearchParams(location.search);
+  const shareId = params.get('share');
   if (shareId) { await bootSharedView(shareId); return; }
+  if (params.get('embed') === '1' && params.get('pub')) {
+    await bootEmbedView(params.get('pub'), parseInt(params.get('p'), 10) || 0);
+    return;
+  }
 
   const res = await fetch('/api/auth/me');
   if (!res.ok) { await resolveOrgScopedLoginAsync(); return; }
   state.currentUser = await res.json();
   await startApp();
+  // §4.23: رابط عميق إلى لوحة منشورة (#d=<معرّف النشر>&p=<الصفحة>) يفتح شاشتها مباشرة.
+  if (/^#d=/.test(location.hash)) showScreen('published');
 })();

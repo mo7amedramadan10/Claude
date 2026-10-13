@@ -50,11 +50,14 @@
   task-board، crm-leads، supplier-risk، crm-analysis، supply-command،
   finance-ops) — كل واحدة فيها محرك JS + بيانات تجريبية للمعرض + موفّر
   بيانات حقيقي. كاملة.
-- ⬜ **Phase 3 (§4.23)**: صفحة مشروع جديدة "اللوحات المنشورة"
-  (`published_dashboards` table، تابات على مستويين، ربط عميق، سحب/ترتيب
-  بـ Ctrl+Arrow، وضع كشكي، تصفية حسب الجمهور Viewer). المرجع البصري:
-  `docs/reference/jeem-ui-prototype/project-published.html` +
-  `assets/js/project-published.js`.
+- ✅ **Phase 3 (§4.23)**: شاشة "اللوحات المنشورة" (`screen-published`).
+  جدول `PublishedDashboards` مستقل (`Projects/PublishedDashboardStore.cs`)
+  عن `PublishedDashboardSlots` الخاص بالتكاملات، و`/api/published-dashboards`
+  (`PublishedDashboardsController`). الجمهور مفردات ثابتة مربوطة بأدوار
+  المشروع (`all`/`editors`/`owners`)، والحساب بلا دور صريح يُعامل كمشاهد.
+  كل لوحة (محادثة أو تفاعلية) تُعرض في iframe بوضع `?embed=1&pub=<id>&p=<n>`
+  (`bootEmbedView` في app.js) يتبادل postMessage مع `wwwroot/js/project-published.js`.
+  النشر من زر 📌 في «اللوحات النشطة» أو زر «نشر لوحة» في الشاشة.
 - ⬜ **Phase 4 (§4.24)**: نوع عنصر JR جديد `stages`، دعم `vals` على عمود
   واحد في `bars`، أبعاد جديدة، نموذج جاهز `pl-opportunities-tracker`.
 - ⬜ **مراجعة قبول نهائية** مقابل معايير §9 في السبيك.

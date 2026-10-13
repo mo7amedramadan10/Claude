@@ -23,11 +23,13 @@ public class HistoryController : ControllerBase
     private readonly WidgetQueryService _widgets;
     private readonly ProjectStore _projects;
     private readonly PermissionsService _permissions;
+    private readonly PublishedDashboardStore _published;
 
     public HistoryController(
         HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets,
-        ProjectStore projects, PermissionsService permissions)
+        ProjectStore projects, PermissionsService permissions, PublishedDashboardStore published)
     {
+        _published = published;
         _store = store;
         _access = access;
         _users = users;
@@ -359,7 +361,10 @@ public class HistoryController : ControllerBase
         if (entry is null || !entry.IsActive) return NotFound(new { error = "غير موجود" });
 
         var role = await ResolveRoleAsync(entry, ct);
-        if (role is null && !IsAdmin) return NotFound(new { error = "غير موجود" });
+        // §4.23: عضو المشروع الذي يعرض اللوحة من «اللوحات المنشورة» قد لا يحمل دورًا على
+        // اللوحة نفسها — يكفيه أن يسمح له جمهور النشر بها (المشاهدة فقط، تحت صلاحية المالك).
+        if (role is null && !IsAdmin && !await CanViewAsPublishedAsync(entry, ct))
+            return NotFound(new { error = "غير موجود" });
 
         if (string.IsNullOrWhiteSpace(entry.OwnerId))
             return Conflict(new { disabled = true, reason = "هذه اللوحة ليس لها مالك — لا يمكن تحديثها." });
@@ -427,6 +432,18 @@ public class HistoryController : ControllerBase
     /// <summary>"owner" | "editor" | "viewer" | null for a Draft or an Active dashboard the
     /// caller has no standing on. Admins are never blocked but are not implicitly a role
     /// holder either (kept separate — see IsAdmin checks at each call site).</summary>
+    /// <summary>هل اللوحة منشورة على المشروع الحالي للمستخدم بجمهور يشمل دوره فيه؟ (§4.23)</summary>
+    private async Task<bool> CanViewAsPublishedAsync(DashboardHistoryEntry entry, CancellationToken ct)
+    {
+        var projectId = await CurrentProjectIdAsync(ct);
+        if (projectId is null) return false;
+        var rows = await _published.ListForDashboardAsync(entry.Id, ct);
+        var row = rows.FirstOrDefault(r => r.ProjectId == projectId);
+        if (row is null) return false;
+        var myRole = (await _projects.ListRolesAsync(projectId, ct)).FirstOrDefault(r => r.UserId == UserId)?.Role;
+        return PublishedDashboardRules.CanView(row.Audience, myRole, IsAdmin);
+    }
+
     private Task<string?> ResolveRoleAsync(DashboardHistoryEntry entry, CancellationToken ct) =>
         _store.ResolveRoleAsync(UserId, entry, ct);
 

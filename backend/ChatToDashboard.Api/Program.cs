@@ -43,6 +43,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddSingleton<UserStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Organizations.OrganizationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Projects.ProjectStore>();
+// §4.23 — اللوحات المنشورة داخل المشروع (جدول مستقل عن PublishedDashboardSlots الخاص بالتكاملات).
+builder.Services.AddSingleton<ChatToDashboard.Api.Projects.PublishedDashboardStore>();
 builder.Services.AddSingleton<PermissionsService>();
 builder.Services.Configure<LdapOptions>(builder.Configuration.GetSection(LdapOptions.SectionName));
 builder.Services.AddSingleton<LdapAuthenticator>();

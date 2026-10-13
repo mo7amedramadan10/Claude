@@ -125,6 +125,7 @@
           </a>
           <ul class="proj-sub">
             <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></button></li>
+            <li><button type="button" class="nav-link tab" data-screen="published"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span><span class="badge hidden" id="published-badge">0</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="analyst"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="sources"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></button></li>
             <li><button type="button" class="nav-link tab hidden" id="proj-permissions-link" data-screen="users"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></button></li>
@@ -343,6 +344,20 @@
   </section>
 
 </main>
+
+<!-- §4.23 — اللوحات المنشورة في المشروع: يملؤها js/project-published.js -->
+<div id="screen-published" class="screen">
+  <section class="pd-head">
+    <div>
+      <h1>اللوحات المنشورة</h1>
+      <p>كل لوحات المتابعة المنشورة على هذا المشروع في مكان واحد. تنقّل بينها بالتبويبات، ولكل لوحة صفحاتها الخاصة داخلها.</p>
+      <span class="role" id="pd-my-role"></span>
+    </div>
+    <button type="button" class="btn btn-primary hidden" id="pd-publish-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg>نشر لوحة</button>
+  </section>
+  <div class="pd-note hidden" id="pd-viewer-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg><span>أنت <b>مشاهد</b> في هذا المشروع: تستعرض اللوحات المنشورة فقط، والنشر وإعادة الترتيب للمالك والمحرر.</span></div>
+  <div id="pd-body"></div>
+</div>
 
 <div id="screen-analyst" class="screen">
   <div class="an" id="anRoot">
@@ -1045,6 +1060,35 @@
   </div>
 </div>
 
+<!-- §4.23 — نشر لوحة نشطة على شاشة «اللوحات المنشورة» في المشروع (مستقل عن النشر لتكامل خارجي) -->
+<div id="pubproj-modal" class="modal-overlay hidden">
+  <div class="modal rename-modal-box pubproj-modal-box" role="dialog" aria-modal="true" aria-labelledby="pubproj-title">
+    <h3 id="pubproj-title">نشر على المشروع</h3>
+    <form id="pubproj-form">
+      <input type="hidden" id="pubproj-id">
+      <label>اللوحة<select id="pubproj-dashboard" required></select></label>
+      <fieldset class="radio-row">
+        <legend>الجمهور — من يرى اللوحة في «اللوحات المنشورة»</legend>
+        <label><input type="radio" name="pubproj-aud" value="all" checked>كل أعضاء المشروع</label>
+        <label><input type="radio" name="pubproj-aud" value="editors">المالكون والمحررون</label>
+        <label><input type="radio" name="pubproj-aud" value="owners">مالكو المشروع</label>
+      </fieldset>
+      <fieldset class="radio-row">
+        <legend>نوع التحديث</legend>
+        <label><input type="radio" name="pubproj-mode" value="live" checked>بيانات حية</label>
+        <label><input type="radio" name="pubproj-mode" value="scheduled">تحديث مجدول</label>
+      </fieldset>
+      <label>تكرار التحديث (اختياري)<input id="pubproj-every" type="text" maxlength="100" placeholder="مثال: كل ساعة، يوميًا 6:00 ص"></label>
+      <p class="modal-note" id="pubproj-version-note"></p>
+      <div id="pubproj-error" class="roles-error hidden" role="alert"></div>
+      <div class="modal-actions">
+        <button type="button" id="pubproj-cancel">إلغاء</button>
+        <button type="submit" id="pubproj-save">نشر</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="publish-modal" class="modal-overlay hidden">
   <div class="modal rename-modal-box">
     <h3>نشر إلى تكامل خارجي</h3>
@@ -1201,6 +1245,7 @@
 <script src="js/finance-ops-demo.js"></script>
 <script src="js/finance-ops.js"></script>
 <script src="js/jeem-live.js"></script>
+<script src="js/project-published.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
