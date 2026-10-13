@@ -294,6 +294,13 @@ public static class BuiltinTemplates
             "بالسحب والإفلات أو النقل بالأسهم للوصولية، شرائح مشاريع تصفّي اللوحة، بحث وترتيب (الاستحقاق/الأولوية/التقدم) " +
             "وتصفية أولوية، شريط ملخص تقدم، وإنشاء مهمة جديدة فوري.",
             RenderKind: "board"),
+        new BuiltinDashboardTemplate("crm-leads", "a", "network", "العملاء المحتملون", false,
+            "فقاعات مصادر العملاء الجدد، مؤشرات بتغيّر وسلسلة اتجاه، صفوف طلبات واردة بأسهم تمرير لكل مرحلة، وخريطة نشاط الساعات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية للعملاء المحتملين: فقاعات مُعبّأة لمصادر العملاء الجدد تصفّي الطلبات، مؤشرات بتغيّر " +
+            "ملوّن وسلسلة اتجاه مصغّرة، صفوف طلبات واردة لكل مرحلة من خط السير بأسهم تمرير وقائمة خيارات لنقل " +
+            "الطلب أو تمييزه، وخريطة حرارية لنشاط الفريق حسب الساعة واليوم.",
+            RenderKind: "leads"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
