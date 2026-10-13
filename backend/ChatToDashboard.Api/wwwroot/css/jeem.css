@@ -2724,3 +2724,28 @@ button.dk-kpi { cursor: pointer; transition: border-color .2s, box-shadow .2s; }
 .ps-team button > span:nth-child(2) { display: flex; flex-direction: column; flex: 1; } .ps-team b { font-size: 12.5px; } .ps-team small { font-size: 11px; color: var(--mut); } .ps-team .mut { font-size: 11px; }
 @media (max-width: 1100px) { .ps-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) { .ps-top { grid-template-columns: minmax(0, 1fr); } }
+
+/* §4.22 — تفاصيل مشروع حملة (campaign-project، cp) — بنفسجي هادئ */
+/* تفاصيل مشروع حملة (cp) — بنفسجي هادئ */
+.cp { --acc: #5B4FC4; --bg: #F6F7FB; }
+.cp-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .cp-bar .sp { flex: 1; }
+.cp-bar > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .cp-bar small { color: var(--mut); font-size: 12px; flex-basis: 100%; } .cp-name { font-size: 16px; }
+.cp-bar .dk-btn[aria-pressed="true"] { background: var(--soft); }
+.cp .dk-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); } .cp .dk-kpi b { font-size: 21px; }
+.cp-sm { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; } .cp-sm small { font-size: 11.5px; color: var(--mut); }
+.cp-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cp-feed li { display: flex; gap: 10px; align-items: flex-start; animation: rise .35s var(--ease) both; animation-delay: calc(var(--i) * 50ms); }
+.cp-feed .fi { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); }
+.cp-feed li > span:last-child { display: flex; flex-direction: column; } .cp-feed b { font-size: 12.5px; font-weight: 600; } .cp-feed small { color: var(--mut); font-size: 11px; }
+.cp-st { border: 0; cursor: pointer; font: inherit; font-size: 11px; } .cp-st:hover { filter: brightness(.96); box-shadow: 0 0 0 2px var(--line); }
+.cp .dk-tbl td .dk-av { width: 22px; height: 22px; font-size: 10px; vertical-align: middle; }
+.cp-add { display: flex; gap: 6px; flex-wrap: wrap; } .cp-add input, .cp-add select { font: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; background: var(--card); } .cp-add input[name=t] { flex: 1; min-width: 160px; }
+.cp-addbtn { border: 1px dashed var(--line); background: none; border-radius: 10px; padding: 8px; font: inherit; font-size: 12.5px; color: var(--mut); cursor: pointer; } .cp-addbtn:hover { border-color: var(--acc); color: var(--acc); }
+.cp-files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cp-files li { display: flex; align-items: center; gap: 10px; animation: rise .35s var(--ease) both; animation-delay: calc(var(--i) * 40ms); } .cp-files li > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cp-files b { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; text-align: end; } .cp-files small { color: var(--mut); font-size: 11px; }
+.cp-files .ft { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-size: 9.5px; font-weight: 700; text-transform: uppercase; background: #EEEBFA; color: #5B4FA0; flex: none; }
+.cp-files .ft.pdf { background: #FCE8E8; color: #B03030; } .cp-files .ft.xlsx { background: #E4F5EC; color: #187A50; } .cp-files .ft.pptx { background: #FCEFE3; color: #A85A14; } .cp-files .ft.docx { background: #E6F1F9; color: #0F6AA2; }
+.cp-files button { border: 0; background: none; color: var(--mut); cursor: pointer; } .cp-files button:hover { color: var(--acc); }
+@media (max-width: 1100px) { .cp .dk-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .cp .dk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

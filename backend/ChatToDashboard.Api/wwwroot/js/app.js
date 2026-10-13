@@ -3043,6 +3043,32 @@ function interactiveStudioSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveCampaignSkeletonHtml(d) {
+  return `<div class="dk cp" id="cpRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'تفاصيل المشروع')}</h1><small>نظرة كاملة على الحملة وإدارتها</small></div>
+      </div>
+      <div class="cp-bar">
+        <div><b class="cp-name">حملة</b> <span class="dk-chip ok" id="cpStatus">نشطة</span><small>تاريخ الاستحقاق <span class="num" id="cpDue">—</span> · العائد على الإنفاق <b class="num" id="cpRoas">—</b></small></div>
+        <span class="sp"></span>
+        <button type="button" class="dk-btn" data-act="edit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg>تعديل الحملة</button>
+        <button type="button" class="dk-btn" data-act="add"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة مهمة</button>
+        <button type="button" class="dk-btn" data-act="report"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>إنشاء تقرير</button>
+        <button type="button" class="dk-btn" data-act="archive" aria-pressed="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span>أرشفة</span></button>
+      </div>
+      <div class="dk-kpis dk-count" id="cpKpis"></div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:8;--i:1"><header><h2>الأداء والتوقعات</h2><span class="sp"></span><div class="dk-seg sm" data-seg="rng" role="group" aria-label="المدى"><button type="button" data-v="15" aria-pressed="true">آخر 15 يومًا</button><button type="button" data-v="30" aria-pressed="false">آخر 30 يومًا</button></div><p>الإنفاق والتحويلات في رسمين متزامنين بمحور مشترك للزمن · المتقطع = توقع 7 أيام</p></header><div class="cp-sm"><div><small>الإنفاق اليومي (ر.س)</small><div id="cpSpend"></div></div><div><small>التحويلات اليومية</small><div id="cpConv"></div></div></div><div id="cpLeg"></div></section>
+        <section class="dk-card" style="--sp:4;--i:2"><header><h2>سجل النشاط</h2><p>آخر التغييرات والتحديثات</p></header><ul class="cp-feed" id="cpFeed" aria-live="polite"></ul></section>
+        <section class="dk-card" style="--sp:8;--i:3"><header><h2>مهام الحملة</h2><p>تقدم المهام ومواعيدها · اضغط الحالة لتغييرها</p></header><div class="dk-tbl" id="cpTasks"></div>
+          <form class="cp-add" id="cpAdd" hidden><input name="t" required placeholder="اسم المهمة" aria-label="اسم المهمة"><select name="a" aria-label="المسؤول"><option>سارة</option><option>علي</option><option>منى</option><option>خالد</option></select><input name="d" type="date" aria-label="تاريخ الاستحقاق"><button type="submit" class="dk-btn pri">إضافة</button><button type="button" class="dk-btn" data-act="cancel">إلغاء</button></form>
+          <button type="button" class="cp-addbtn" data-act="add">+ إضافة مهمة</button></section>
+        <section class="dk-card" style="--sp:4;--i:4"><header><h2>الملفات والمرفقات</h2><span class="sp"></span><label class="dk-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg>رفع<input type="file" id="cpFile" multiple hidden></label><p>مستندات وموارد الحملة</p></header><ul class="cp-files" id="cpFiles"></ul></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>مرّر على أحد الرسمين لتتزامن القراءة، غيّر حالة المهام، أضف مهمة أو ارفع ملفًا.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3134,6 +3160,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'studio' && window.JEEM_STUDIO_MOUNT) {
     el.dash.innerHTML = interactiveStudioSkeletonHtml(d);
     window.JEEM_STUDIO_MOUNT(el.dash.querySelector('#psRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'campaign' && window.JEEM_CAMPAIGN_MOUNT) {
+    el.dash.innerHTML = interactiveCampaignSkeletonHtml(d);
+    window.JEEM_CAMPAIGN_MOUNT(el.dash.querySelector('#cpRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4137,7 +4166,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4234,6 +4263,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'timetracking') return !!window.JEEM_TIMETRACKING_DEMO;
   if (d.renderKind === 'saas') return !!window.JEEM_SAAS_DEMO;
   if (d.renderKind === 'studio') return !!window.JEEM_STUDIO_DEMO;
+  if (d.renderKind === 'campaign') return !!window.JEEM_CAMPAIGN_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4286,6 +4316,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'timetracking') return openTimeTrackingGalDemo(d);
     if (d.renderKind === 'saas') return openSaasGalDemo(d);
     if (d.renderKind === 'studio') return openStudioGalDemo(d);
+    if (d.renderKind === 'campaign') return openCampaignGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4874,6 +4905,40 @@ function openStudioGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_STUDIO_MOUNT(el('gal-view-demo').querySelector('#psRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openCampaignGalDemo(d) {
+  if (!window.JEEM_CAMPAIGN_DEMO || !window.JEEM_CAMPAIGN_MOUNT) return;
+  const demo = window.JEEM_CAMPAIGN_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('target')}لوحة تفاعلية — تفاصيل مشروع حملة</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveCampaignSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_CAMPAIGN_MOUNT(el('gal-view-demo').querySelector('#cpRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

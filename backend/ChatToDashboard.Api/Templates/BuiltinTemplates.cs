@@ -266,6 +266,13 @@ public static class BuiltinTemplates
             "للتحديد، جدول زمني (جانت) أفقي بخط «اليوم» الفعلي وتصفية حسب الحالة أو العضو، تواصل فريق برسائل " +
             "نصية وصوتية، وقائمة أعضاء الفريق بعدد مشاريع كل عضو.",
             RenderKind: "studio"),
+        new BuiltinDashboardTemplate("campaign-project", "a", "network", "تفاصيل مشروع حملة", false,
+            "ميزانية الحملة والمنفق والتحويلات، الإنفاق والتحويلات اليومية مع توقع 7 أيام، سجل النشاط، مهام الحملة، والملفات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لتفاصيل مشروع حملة: مؤشرات الميزانية والمنفق والتحويلات، رسمان متزامنان للإنفاق " +
+            "والتحويلات اليومية بمحور زمن مشترك مع توقع 7 أيام متقطع، سجل نشاط حي، مهام الحملة بحالة قابلة " +
+            "للتغيير، وإدارة ملفات ومرفقات برفع حقيقي.",
+            RenderKind: "campaign"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
