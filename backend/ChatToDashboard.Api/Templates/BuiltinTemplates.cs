@@ -287,6 +287,13 @@ public static class BuiltinTemplates
             "بفقاعات قيم، مصفوفة نقاط للأعمال حسب حالتها، مواعيد اليوم بتبويبات قيمية وبحث وإنهاء موعد، " +
             "ومدفوعات بتحويل فوري وتتبع تحويلات الأسبوع مقابل مستهدف يومي.",
             RenderKind: "construction"),
+        new BuiltinDashboardTemplate("task-board", "a", "network", "لوحة مهام المشاريع", false,
+            "كانبان بالسحب والإفلات ونقل بالأسهم، شرائح مشاريع للتصفية، بحث وترتيب وتصفية أولوية، وإنشاء مهمة فوري.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لمهام المشاريع بنمط كانبان: أعمدة حالة (لم تبدأ/قيد التنفيذ/قيد المراجعة/مكتملة) " +
+            "بالسحب والإفلات أو النقل بالأسهم للوصولية، شرائح مشاريع تصفّي اللوحة، بحث وترتيب (الاستحقاق/الأولوية/التقدم) " +
+            "وتصفية أولوية، شريط ملخص تقدم، وإنشاء مهمة جديدة فوري.",
+            RenderKind: "board"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

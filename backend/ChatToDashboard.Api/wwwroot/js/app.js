@@ -3107,6 +3107,28 @@ function interactiveConstructionSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveBoardSkeletonHtml(d) {
+  return `<div class="dk tb" id="tbRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'لوحة مهام المشاريع')}</h1><small>اسحب المهمة بين الأعمدة، أو استخدم الأسهم على لوحة المفاتيح لنقلها</small></div>
+        <span class="sp"></span>
+        <span class="dk-avs" id="tbTeamAvs" aria-hidden="true"></span>
+      </div>
+      <div class="tb-projs" id="tbProjs" role="group" aria-label="المشاريع"></div>
+      <div class="tb-tools">
+        <b>تقرير المهام</b>
+        <input type="search" id="tbQ" placeholder="ابحث عن مهمة…" aria-label="بحث">
+        <label class="tb-sel">ترتيب<select id="tbSort"><option value="due">الاستحقاق</option><option value="pri">الأولوية</option><option value="prog">التقدم</option></select></label>
+        <div class="dk-seg sm" data-seg="pri" role="group" aria-label="تصفية الأولوية"><button type="button" data-v="all" aria-pressed="true">كل الأولويات</button><button type="button" data-v="high" aria-pressed="false">عالية</button><button type="button" data-v="med" aria-pressed="false">متوسطة</button><button type="button" data-v="low" aria-pressed="false">منخفضة</button></div>
+        <span class="sp"></span>
+        <button type="button" class="dk-btn pri" data-new><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إنشاء مهمة</button>
+      </div>
+      <div class="tb-sum" id="tbSum" aria-live="polite"></div>
+      <div class="tb-board" id="tbBoard"></div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>ركّز على بطاقة واضغط ← أو → لنقلها بين الأعمدة.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3209,6 +3231,9 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'construction' && window.JEEM_CONSTRUCTION_MOUNT) {
     el.dash.innerHTML = interactiveConstructionSkeletonHtml(d);
     window.JEEM_CONSTRUCTION_MOUNT(el.dash.querySelector('#ccRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'board' && window.JEEM_BOARD_MOUNT) {
+    el.dash.innerHTML = interactiveBoardSkeletonHtml(d);
+    window.JEEM_BOARD_MOUNT(el.dash.querySelector('#tbRoot'), body.data, { demo: false });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4212,7 +4237,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4312,6 +4337,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'campaign') return !!window.JEEM_CAMPAIGN_DEMO;
   if (d.renderKind === 'funding') return !!window.JEEM_FUNDING_DEMO;
   if (d.renderKind === 'construction') return !!window.JEEM_CONSTRUCTION_DEMO;
+  if (d.renderKind === 'board') return !!window.JEEM_BOARD_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4367,6 +4393,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'campaign') return openCampaignGalDemo(d);
     if (d.renderKind === 'funding') return openFundingGalDemo(d);
     if (d.renderKind === 'construction') return openConstructionGalDemo(d);
+    if (d.renderKind === 'board') return openBoardGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -5057,6 +5084,40 @@ function openConstructionGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_CONSTRUCTION_MOUNT(el('gal-view-demo').querySelector('#ccRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openBoardGalDemo(d) {
+  if (!window.JEEM_BOARD_DEMO || !window.JEEM_BOARD_MOUNT) return;
+  const demo = window.JEEM_BOARD_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('list')}لوحة تفاعلية — لوحة مهام المشاريع</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveBoardSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_BOARD_MOUNT(el('gal-view-demo').querySelector('#tbRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

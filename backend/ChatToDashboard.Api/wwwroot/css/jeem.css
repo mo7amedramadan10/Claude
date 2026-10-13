@@ -2815,3 +2815,34 @@ button.dk-kpi { cursor: pointer; transition: border-color .2s, box-shadow .2s; }
 .cc-bal .ib { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); } .cc-bal small { color: var(--mut); font-size: 11px; } .cc-bal b { font-size: 18px; } .cc-bal .dk-btn { align-self: flex-start; padding: 4px 10px; font-size: 11.5px; } .cc-bal .dk-btn[disabled] { opacity: .45; cursor: not-allowed; }
 .cc-pb header { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 2px; } .cc-pb small { color: var(--mut); font-size: 11.5px; }
 @media (max-width: 700px) { .cc-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cc-bal { grid-template-columns: minmax(0, 1fr); } .cc-dots { grid-template-columns: minmax(0, 1fr); } }
+
+/* §4.22 — لوحة مهام المشاريع (task-board، tb) — بنفسجي فاتح */
+/* لوحة مهام المشاريع (tb) — بنفسجي فاتح */
+.tb { --acc: #6A4FD8; --bg: #F5F6FA; }
+.tb .dk-btn.pri { background: #17171C; border-color: #17171C; }
+.tb-projs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tb-pj { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 6px 12px; font: inherit; font-size: 12.5px; cursor: pointer; color: var(--tx); transition: border-color .2s, box-shadow .2s; }
+.tb-pj i { width: 12px; height: 9px; border-radius: 2px; } .tb-pj .num { color: var(--mut); font-size: 11px; }
+.tb-pj[aria-pressed="true"] { border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 16%, transparent); } .tb-pj.add { border-style: dashed; color: var(--mut); }
+.tb-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .tb-tools .sp { flex: 1; } .tb-tools > b { font-size: 14px; margin-inline-end: 6px; }
+.tb-tools input { font: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; background: var(--card); min-width: 200px; }
+.tb-sel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mut); } .tb-sel select { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 9px; padding: 5px 8px; background: var(--card); color: var(--tx); }
+.tb-sum { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 12px; }
+.tb-sum .bar { display: flex; height: 10px; width: 220px; border-radius: 99px; overflow: hidden; gap: 2px; background: var(--soft); } .tb-sum .bar i { transition: flex .4s var(--ease); }
+.tb-sum .lg { display: inline-flex; align-items: center; gap: 5px; margin-inline-end: 10px; } .tb-sum .lg i { width: 8px; height: 8px; border-radius: 50%; }
+.tb-board { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+.tb-col { background: var(--soft); border: 1px solid var(--line); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 300px; transition: background .2s, border-color .2s; }
+.tb-col.over { background: color-mix(in srgb, var(--acc) 8%, var(--soft)); border-color: var(--acc); border-style: dashed; }
+.tb-col > header { display: flex; align-items: center; gap: 6px; font-size: 13px; } .tb-col > header i { width: 8px; height: 8px; border-radius: 50%; }
+.tb-list { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.tb-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; cursor: grab; font-size: 12px; animation: rise .35s var(--ease) both; animation-delay: calc(var(--i) * 40ms); transition: box-shadow .2s, transform .2s, opacity .2s; }
+.tb-card:hover { box-shadow: 0 6px 16px rgba(20,30,50,.08); } .tb-card:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.tb-card.dragging { opacity: .4; transform: rotate(-2deg); }
+.tb-card header { display: flex; justify-content: space-between; gap: 6px; } .tb-card .pd { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tb-card > b { font-size: 13px; } .tb-card > small { color: var(--mut); font-size: 11px; }
+.tb-card .dk-av { width: 22px; height: 22px; font-size: 9.5px; }
+.tb-card .pr { display: flex; align-items: center; gap: 8px; } .tb-card .pr .dk-prog { flex: 1; } .tb-card .pr .num { font-size: 11px; font-weight: 700; }
+.tb-card footer { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--line); padding-top: 6px; color: var(--mut); font-size: 11px; } .tb-card footer i { width: 10px; height: 8px; border-radius: 2px; }
+.tb-new { background: var(--card); border: 1px solid var(--acc); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; animation: rise .25s var(--ease) both; }
+.tb-new input, .tb-new select { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; } .tb-new span { display: flex; gap: 6px; }
+@media (max-width: 700px) { .tb-board { grid-template-columns: repeat(4, 78vw); scroll-snap-type: x mandatory; } .tb-col { scroll-snap-align: start; } .tb-tools input { min-width: 0; flex: 1; } }
