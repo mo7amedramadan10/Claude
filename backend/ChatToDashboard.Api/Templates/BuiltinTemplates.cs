@@ -273,6 +273,13 @@ public static class BuiltinTemplates
             "والتحويلات اليومية بمحور زمن مشترك مع توقع 7 أيام متقطع، سجل نشاط حي، مهام الحملة بحالة قابلة " +
             "للتغيير، وإدارة ملفات ومرفقات برفع حقيقي.",
             RenderKind: "campaign"),
+        new BuiltinDashboardTemplate("treasury-funding", "a", "network", "التمويل والسيولة النقدية", false,
+            "شريط أنظمة مدفوعات حي، جدول استحقاقات شهري بخلفية سقف، أسعار تمويل قابلة للإخفاء، المركز النقدي، والأرصدة حسب البنك.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية للتمويل والسيولة النقدية: شريط أنظمة مدفوعات يتحدث حيًا (قابل للإيقاف)، جدول " +
+            "استحقاقات شهري بأعمدة مجمّعة وخلفية سقف وتصفية حسب السنة، أسعار تمويل بالجملة بإخفاء سلاسل، " +
+            "المركز النقدي، الأرصدة حسب البنك بحلقة تفاعلية، ونشاط اليوم مقابل أمس.",
+            RenderKind: "funding"),
     }.Concat(BuiltinDashboardsGenerated.Items).ToList();
 
     /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching

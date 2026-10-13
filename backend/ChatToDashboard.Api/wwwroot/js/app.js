@@ -3069,6 +3069,26 @@ function interactiveCampaignSkeletonHtml(d) {
     </div>`;
 }
 
+function interactiveFundingSkeletonHtml(d) {
+  return `<div class="dk tf" id="tfRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'التمويل والسيولة النقدية')}</h1><small>جدول الاستحقاقات، تكلفة التمويل، المركز النقدي وحركة اليوم</small></div>
+        <span class="sp"></span>
+        <span class="tf-live" id="tfLive"><i></i>تحديث مباشر</span>
+        <button type="button" class="dk-btn" data-pause aria-pressed="false">إيقاف التحديث</button>
+      </div>
+      <div class="tf-tick" id="tfTick" role="list" aria-label="أنظمة المدفوعات"></div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:7;--i:1"><header><h2>جدول الاستحقاقات</h2><span class="sp"></span><div class="dk-seg sm" data-seg="yr" role="group" aria-label="السنة"></div></header><div class="tf-rates" id="tfRates"></div><div id="tfMat"></div><div id="tfMatLeg"></div></section>
+        <section class="dk-card" style="--sp:5;--i:2"><header><h2>أسعار التمويل بالجملة</h2><p>العائد السنوي % · اضغط عنصر المفتاح لإخفائه</p></header><div id="tfWh"></div><div class="dk-leg tf-tg" id="tfWhLeg" role="group" aria-label="السلاسل"></div></section>
+        <section class="dk-card" style="--sp:7;--i:3"><header><h2>المركز النقدي</h2></header><div class="tf-cash" id="tfCash"></div></section>
+        <section class="dk-card" style="--sp:5;--i:4"><header><h2>الأرصدة حسب البنك</h2><p>حسب الفترة المختارة</p></header><div class="tf-bank" id="tfBank"></div></section>
+        <section class="dk-card" style="--sp:12;--i:5"><header><h2>نشاط اليوم</h2><span class="sp"></span><small class="mut">الأعمدة = اليوم · الخلفية الرمادية = أمس في نفس الساعة</small></header><div id="tfIntra"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بطاقات الأنظمة تتحدث حيًا، واضغط شهرًا أو بنكًا لتفاصيله.</span>
+    </div>`;
+}
+
 // §3's empty-state rule: a template with no linked source shows this instead of an error,
 // with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
 function interactiveEmptyStateHtml(d, missingSources) {
@@ -3163,6 +3183,11 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'campaign' && window.JEEM_CAMPAIGN_MOUNT) {
     el.dash.innerHTML = interactiveCampaignSkeletonHtml(d);
     window.JEEM_CAMPAIGN_MOUNT(el.dash.querySelector('#cpRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'funding' && window.JEEM_FUNDING_MOUNT) {
+    el.dash.innerHTML = interactiveFundingSkeletonHtml(d);
+    window.JEEM_FUNDING_MOUNT(el.dash.querySelector('#tfRoot'), body.data, {
+      demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
+    });
   } else {
     // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
     el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
@@ -4166,7 +4191,7 @@ function dashGalArrange(d) {
   const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
   return kpis.concat(rest);
 }
-const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target' };
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
   return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
@@ -4264,6 +4289,7 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'saas') return !!window.JEEM_SAAS_DEMO;
   if (d.renderKind === 'studio') return !!window.JEEM_STUDIO_DEMO;
   if (d.renderKind === 'campaign') return !!window.JEEM_CAMPAIGN_DEMO;
+  if (d.renderKind === 'funding') return !!window.JEEM_FUNDING_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
 function openDashGalPreview(d) {
@@ -4317,6 +4343,7 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'saas') return openSaasGalDemo(d);
     if (d.renderKind === 'studio') return openStudioGalDemo(d);
     if (d.renderKind === 'campaign') return openCampaignGalDemo(d);
+    if (d.renderKind === 'funding') return openFundingGalDemo(d);
     return openDashGalDemo(d);
   });
   el('gal-view-list').classList.add('hidden');
@@ -4939,6 +4966,40 @@ function openCampaignGalDemo(d) {
     ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
   });
   window.JEEM_CAMPAIGN_MOUNT(el('gal-view-demo').querySelector('#cpRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openFundingGalDemo(d) {
+  if (!window.JEEM_FUNDING_DEMO || !window.JEEM_FUNDING_MOUNT) return;
+  const demo = window.JEEM_FUNDING_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('wallet')}لوحة تفاعلية — التمويل والسيولة النقدية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveFundingSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_FUNDING_MOUNT(el('gal-view-demo').querySelector('#tfRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }

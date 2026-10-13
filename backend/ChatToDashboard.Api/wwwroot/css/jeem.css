@@ -2749,3 +2749,27 @@ button.dk-kpi { cursor: pointer; transition: border-color .2s, box-shadow .2s; }
 .cp-files button { border: 0; background: none; color: var(--mut); cursor: pointer; } .cp-files button:hover { color: var(--acc); }
 @media (max-width: 1100px) { .cp .dk-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .cp .dk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* §4.22 — التمويل والسيولة النقدية (treasury-funding، tf) — أبيض مع كحلي وذهبي */
+/* التمويل والسيولة (tf) — أبيض مع كحلي وذهبي */
+.tf { --acc: #1F4E9C; --bg: #EEF4F8; }
+.tf-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ok); font-weight: 600; } .tf-live i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: tfPulse 1.4s ease-in-out infinite; }
+.tf-live.off { color: var(--mut); } .tf-live.off i { animation: none; } @keyframes tfPulse { 50% { opacity: .3; transform: scale(.7); } }
+.tf-tick { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.tf-tick .tc { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; animation: rise .4s var(--ease) both; animation-delay: calc(var(--i) * 50ms); }
+.tf-tick .tc small { font-size: 11.5px; color: var(--mut); } .tf-tick .tc b { font-size: 14px; }
+.tf-tick .tc.fl b { animation: tfFlash .8s ease; } @keyframes tfFlash { 30% { color: var(--acc); } }
+.tf-rates { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; } .tf-rates > div { display: flex; flex-direction: column; } .tf-rates small { font-size: 11.5px; color: var(--mut); } .tf-rates b { font-size: 26px; font-weight: 700; }
+.tf-rates .sel { margin-inline-start: auto; background: var(--soft); border-radius: 12px; padding: 6px 10px; animation: rise .3s var(--ease) both; } .tf-rates .sel b { font-size: 16px; }
+.tf-tg button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: var(--card); border-radius: 99px; padding: 3px 10px; font: inherit; font-size: 11.5px; color: var(--tx); cursor: pointer; } .tf-tg button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.tf-cash { display: flex; flex-direction: column; gap: 10px; }
+.tf-cash .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; animation: rise .4s var(--ease) both; animation-delay: calc(var(--i) * 70ms); }
+.tf-cash .row > span:first-child { display: flex; flex-direction: column; gap: 2px; } .tf-cash small { font-size: 11.5px; color: var(--mut); } .tf-cash b { font-size: 22px; }
+.tf-cash .mb { display: flex; align-items: flex-end; gap: 3px; height: 44px; width: 64px; } .tf-cash .mb i { flex: 1; border-radius: 3px 3px 1px 1px; transform-origin: bottom; animation: dkGrow .6s var(--ease) both; animation-delay: calc(var(--j) * 60ms); }
+.tf-bank { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; align-items: center; }
+.tf-bank .tot { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; } .tf-bank .tot b { font-size: 22px; } .tf-bank .tot small { color: var(--mut); font-size: 11.5px; }
+.tf-bank .lg { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.tf-bank .lg button { width: 100%; display: flex; align-items: center; gap: 8px; border: 0; background: none; font: inherit; font-size: 12px; padding: 4px 6px; border-radius: 8px; cursor: pointer; color: var(--tx); text-align: start; transition: opacity .25s, background .2s; }
+.tf-bank .lg button i { width: 10px; height: 10px; border-radius: 50%; } .tf-bank .lg button b { margin-inline-start: auto; color: var(--mut); } .tf-bank .lg button:hover, .tf-bank .lg button[aria-pressed="true"] { background: var(--soft); } .tf-bank .lg button.dim { opacity: .4; }
+@media (max-width: 1100px) { .tf-tick { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .tf-tick { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tf-bank { grid-template-columns: minmax(0, 1fr); justify-items: center; } .tf-bank .lg { width: 100%; } }
