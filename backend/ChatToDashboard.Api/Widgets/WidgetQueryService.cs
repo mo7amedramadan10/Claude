@@ -246,6 +246,88 @@ public class WidgetQueryService
     }
 
     /// <summary>
+    /// «التغيّر عن الفترة السابقة» لبطاقة مؤشر: يعيد تنفيذ استعلام المؤشر نفسه مرتين بنافذتين زمنيتين
+    /// متتاليتين (آخر 30 يومًا حتى أحدث تاريخ في الجدول، والـ30 يومًا التي قبلها) على عمود التاريخ الذي
+    /// يستخدمه الاستعلام (أو أول عمود تاريخ في الجدول)، مع الفلاتر النشطة إن وُجدت. بلا موديل. null
+    /// عندما لا يوجد عمود تاريخ، أو لا يرجع الاستعلام صفًا واحدًا برقم (مؤشر غير مجمَّع).
+    /// </summary>
+    public async Task<KpiDeltaResult?> ComputeKpiDeltaAsync(
+        string tableName, string sql, List<FilterCondition>? filters, SourceSelection selection, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(tableName) || string.IsNullOrWhiteSpace(sql) || AnalyticsTools.ValidateReadOnlySql(sql) is not null)
+            return null;
+        var table = await ResolveTableAsync(tableName, selection, ct);
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        if (AnalyticsTools.CheckSourcePermission(sql, context, schema) is not null) return null;
+
+        var dateCols = table.Columns.Where(IsDate).Select(c => c.Name).ToList();
+        if (dateCols.Count == 0) return null;
+        var column = SqlColumnRewriter.UsedColumns(sql, dateCols).FirstOrDefault() ?? dateCols[0];
+        var q = Quote(column);
+
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var maxRaw = await connection.ExecuteScalarAsync<object?>(new CommandDefinition(
+            $"SELECT MAX({q}) FROM {_db.QualifiedTable(table.Table)} WHERE {q} IS NOT NULL",
+            commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct));
+        if (!TryDate(maxRaw, out var max)) return null;
+
+        const int window = 30;
+        var end = max.Date.AddDays(1);
+        var curFrom = end.AddDays(-window);
+        var prevFrom = curFrom.AddDays(-window);
+
+        var current = await WindowValueAsync(connection, table, sql, q, filters, curFrom, end, ct);
+        var previous = await WindowValueAsync(connection, table, sql, q, filters, prevFrom, curFrom, ct);
+        if (current is null || previous is null) return null;
+        double? pct = previous.Value == 0 ? null : (current.Value - previous.Value) / Math.Abs(previous.Value) * 100;
+        return new KpiDeltaResult(column, window, curFrom.ToString("yyyy-MM-dd"), end.AddDays(-1).ToString("yyyy-MM-dd"),
+            current.Value, previous.Value, pct);
+    }
+
+    private async Task<double?> WindowValueAsync(System.Data.Common.DbConnection connection, TableSchema table, string sql, string quotedCol,
+        List<FilterCondition>? filters, DateTime from, DateTime toExclusive, CancellationToken ct)
+    {
+        var parameters = new DynamicParameters();
+        var (clauses, _) = BuildFilterClauses(table, filters ?? new List<FilterCondition>(), parameters);
+        // SQLite يخزّن تواريخ الملفات نصًا بصيغة ISO فتُقارن معجميًا؛ SQL Server بأنواع تاريخ حقيقية.
+        if (_db.Provider == DbProvider.Sqlite) { parameters.Add("@kdFrom", from.ToString("yyyy-MM-dd")); parameters.Add("@kdTo", toExclusive.ToString("yyyy-MM-dd")); }
+        else { parameters.Add("@kdFrom", from); parameters.Add("@kdTo", toExclusive); }
+        clauses.Add($"{quotedCol} >= @kdFrom AND {quotedCol} < @kdTo");
+        var windowed = SpliceWhereClause(sql, string.Join(" AND ", clauses));
+        if (AnalyticsTools.ValidateReadOnlySql(windowed) is not null) return null;
+        var rows = (await connection.QueryAsync(new CommandDefinition(windowed, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
+            .Take(2).Select(r => (IDictionary<string, object?>)r).ToList();
+        if (rows.Count != 1) return null;
+        foreach (var v in rows[0].Values)
+        {
+            switch (v)
+            {
+                case null: continue;
+                case double d: return d;
+                case float f: return f;
+                case decimal m: return (double)m;
+                case long l: return l;
+                case int i: return i;
+                case string s when double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var ps): return ps;
+            }
+        }
+        return 0; // صف واحد بلا رقم (مثلًا SUM على نافذة فارغة = NULL) يُعدّ صفرًا
+    }
+
+    private static bool TryDate(object? raw, out DateTime value)
+    {
+        value = default;
+        switch (raw)
+        {
+            case DateTime dt: value = dt; return true;
+            case DateTimeOffset dto: value = dto.DateTime; return true;
+            case string s when DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeLocal, out var p): value = p; return true;
+            default: return false;
+        }
+    }
+
+    /// <summary>
     /// Inserts <paramref name="condition"/> into <paramref name="sql"/> as an additional WHERE
     /// condition, respecting the statement's real structure — a keyword inside parentheses or
     /// a string literal (a subquery, a CTE, a quoted value) is never mistaken for a clause

@@ -3129,3 +3129,28 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #dash .widget.chart { min-height: 0; }
 /* تنبيه النسخة التجريبية من DevExtreme (بلا مفتاح) يبقى ظاهرًا لكن لا يعلو على القوائم */
 .dx-license { z-index: 1; }
+
+/* شبكة اللوحة بحسب عرض منطقة اللوحة لا الشاشة (container query): 4 أعمدة عند الاتساع (رسمان جنبًا
+   إلى جنب، 4 مؤشرات في صف)، وعمودان عند التوسط (رسمان جنبًا إلى جنب، كل رسم عمود واحد)، وعمود واحد
+   على الضيّق. المتصفحات بلا دعم container queries تبقى على الشبكة التلقائية السابقة. */
+#dash-pane { container-type: inline-size; container-name: dashpane; }
+@container dashpane (min-width: 1040px) {
+  #dash .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container dashpane (min-width: 640px) and (max-width: 1039.98px) {
+  #dash .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #dash .widget.chart, #dash .widget.table, #dash .widget[data-size="wide"] { grid-column: span 1; }
+  #dash .widget[data-size="large"], #dash .widget[data-size="full"], #dash .widget.table[data-size="full"] { grid-column: 1 / -1; }
+}
+@container dashpane (max-width: 639.98px) {
+  #dash .grid { grid-template-columns: minmax(0, 1fr); }
+  #dash .widget, #dash .widget[data-size] { grid-column: 1 / -1; }
+}
+/* التغيّر عن الفترة السابقة في بطاقة المؤشر */
+.kpi-delta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; justify-content: center; font-size: 12px; line-height: 1.5; }
+.kpi-delta.pending { min-height: 0; }
+.kpi-delta b { font-weight: 700; }
+.kpi-delta.up b { color: var(--ok); }
+.kpi-delta.down b { color: var(--danger); }
+.kpi-delta.flat b { color: var(--ink-3); }
+.kpi-delta small { color: var(--ink-3); font-size: 11px; }

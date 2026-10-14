@@ -120,6 +120,16 @@ public class SqlFilterRequest
     [JsonPropertyName("filters")] public List<FilterCondition>? Filters { get; set; }
 }
 
+/// <summary>نتيجة «التغيّر عن الفترة السابقة» لمؤشر (انظر WidgetQueryService.ComputeKpiDeltaAsync).</summary>
+public sealed record KpiDeltaResult(
+    [property: JsonPropertyName("column")] string Column,
+    [property: JsonPropertyName("windowDays")] int WindowDays,
+    [property: JsonPropertyName("currentFrom")] string CurrentFrom,
+    [property: JsonPropertyName("currentTo")] string CurrentTo,
+    [property: JsonPropertyName("current")] double Current,
+    [property: JsonPropertyName("previous")] double Previous,
+    [property: JsonPropertyName("deltaPct")] double? DeltaPct);
+
 public class SqlFilterResult
 {
     [JsonPropertyName("data")] public object Data { get; set; } = new List<object>();

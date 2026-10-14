@@ -1678,7 +1678,59 @@ function KpiCard(w) {
     body.appendChild(label);
   }
   card.appendChild(body);
+  // «التغيّر عن الفترة السابقة»: يُملأ لاحقًا من /api/widgets/kpi-delta (loadKpiDeltas) لمؤشر له
+  // استعلام محفوظ على جدول فيه عمود تاريخ — ويُزال الحامل إن لم يتوفر ذلك.
+  if (w.query?.sql && w.query.table && !state.shareId) {
+    const delta = document.createElement('div');
+    delta.className = 'kpi-delta pending';
+    card.appendChild(delta);
+  }
   return card;
+}
+
+// ---------- التغيّر عن الفترة السابقة لبطاقات المؤشرات ----------
+// بلا موديل: الخادم يعيد تنفيذ استعلام المؤشر نفسه على آخر 30 يومًا وعلى الـ30 التي قبلها (بحسب
+// أحدث تاريخ في الجدول وعمود التاريخ الذي يستخدمه الاستعلام) مع الفلاتر النشطة. مخزّن مؤقتًا
+// بمفتاح (الجدول + الاستعلام + الفلاتر) فلا يُعاد حسابه عند كل إعادة رسم.
+const kpiDeltaCache = new Map();
+function loadKpiDeltas() {
+  if (state.shareId) return;
+  const activeByTable = {};
+  getActiveFilters().forEach(({ def, values }) => {
+    if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
+    (activeByTable[normalizeTableKey(def.table)] ||= []).push({ field: def.field, values });
+  });
+  const sources = { systems: [...state.onSystems], files: [...state.onFiles] };
+  el.dash.querySelectorAll('.widget.kpi .kpi-delta').forEach(async slot => {
+    const card = slot.closest('.widget');
+    const w = findWidget(card?.dataset.widgetId);
+    if (!w?.query?.sql || !w.query.table || w.query.integrationId) { slot.remove(); return; }
+    const filters = activeByTable[normalizeTableKey(w.query.table)] || [];
+    const key = `${w.query.table}|${w.query.sql}|${JSON.stringify(filters)}`;
+    let d = kpiDeltaCache.get(key);
+    if (d === undefined) {
+      try {
+        const res = await fetch('/api/widgets/kpi-delta', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sources, table: w.query.table, sql: w.query.sql, filters }),
+        });
+        d = res.ok ? (await res.json()).delta : null;
+      } catch { d = null; }
+      kpiDeltaCache.set(key, d ?? null);
+    }
+    if (slot.isConnected) renderKpiDelta(slot, d);
+  });
+}
+function renderKpiDelta(slot, d) {
+  if (!d || d.deltaPct == null || !isFinite(d.deltaPct)) { slot.remove(); return; }
+  const pct = d.deltaPct;
+  const up = pct > 0.05, down = pct < -0.05;
+  // أيقونة + نص دائمًا، واللون تعزيز فقط (قاعدة «لا لون وحده»).
+  const glyph = up ? '▲' : down ? '▼' : '◆';
+  slot.className = 'kpi-delta ' + (up ? 'up' : down ? 'down' : 'flat');
+  slot.innerHTML = `<b>${glyph} ${Math.abs(pct).toLocaleString('en-US', { maximumFractionDigits: 1 })}٪</b>`
+    + `<small>آخر ${d.windowDays.toLocaleString('en-US')} يومًا مقابل التي قبلها (${esc(fmt(d.current))} مقابل ${esc(fmt(d.previous))})</small>`;
+  slot.title = `النافذة الحالية ${d.currentFrom} إلى ${d.currentTo} بحسب العمود ${d.column}`;
 }
 
 function TableCard(w) {
@@ -3560,6 +3612,7 @@ function renderDashboard() {
       chartInstances.push(handle);
     });
     pendingCharts = [];
+    loadKpiDeltas();
   }
 }
 
