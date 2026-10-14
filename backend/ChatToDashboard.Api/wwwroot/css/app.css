@@ -1244,3 +1244,23 @@ tr:last-child td{border-bottom:0}
 .stile.tone-bad{--tc:#C94040}.stile.tone-dark{--tc:#3A3F47}.stile.tone-mute{--tc:#5D6675}
 :root:not([data-theme="light"]) .stile.tone-dark{--tc:#8C939E}
 @media (max-width:720px){.stages-flow{flex-direction:column}.stages-flow .stages-arrow{transform:rotate(-90deg);align-self:center}}
+
+/* طبقة المعنى (ب): نافذة معاني الأعمدة وشارة الجدوى في المعرض */
+.sem-modal-box{max-width:620px}
+.sem-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:min(60vh,460px);overflow-y:auto}
+.sem-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,2fr);gap:6px 12px;align-items:center;padding:8px 10px;border:1px solid var(--grid);border-radius:10px;background:#fff}
+.sem-col{display:flex;flex-direction:column;min-width:0}
+.sem-col b{font-size:13px;overflow-wrap:anywhere}
+.sem-col small{font-size:11px;color:var(--muted)}
+.sem-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.sem-pick select{flex:1;min-width:150px;padding:6px 8px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px;background:#fff}
+.sem-note,.sem-map{grid-column:1 / -1;font-size:11.5px;color:var(--muted)}
+.sem-map{display:flex;flex-wrap:wrap;gap:6px}
+.sem-map span{padding:2px 8px;border-radius:8px;background:rgba(0,0,0,.04)}
+.sem-status{font-size:12.5px;padding:7px 10px;border-radius:8px;margin-bottom:10px;background:rgba(0,0,0,.04)}
+.sem-status.ok{background:rgba(46,160,105,.12);color:#1f7a4d}
+.sem-status.bad{background:rgba(214,69,69,.12);color:#b23b3b}
+@media (max-width:520px){.sem-row{grid-template-columns:1fr}}
+.gal-feas{white-space:nowrap}
+.pv-feas{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.pv-feas small{font-size:12px;color:var(--muted);line-height:1.6}

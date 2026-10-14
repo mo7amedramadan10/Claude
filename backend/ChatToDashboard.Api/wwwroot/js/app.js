@@ -4460,6 +4460,34 @@ function dashGalThumb(d) {
 // النهائي من مكتبة النماذج اللي مسؤول المنصة بيعدّلها، عشان المستخدم مايقدرش يغيّر الوصف
 // المُرسل للموديل من عنده. انظر loadTemplateCatalog() وask() (التمبلت ريف).
 let DASH_GALLERY = []; // fetched from /api/templates/catalog — see loadTemplateCatalog()
+// طبقة المعنى (ب): جدوى كل نموذج ببيانات المشروع من /api/templates/feasibility —
+// {templateId → {total, buildable|null, topMissing}}. null = لم تُحمَّل بعد (تُبطَل عند تغيّر
+// الملفات أو المعاني). buildable null = لم يُحلَّل أي جدول بعد فلا تُعرض شارة.
+let dashGalFeasibility = null;
+async function loadDashGalFeasibility() {
+  if (dashGalFeasibility) return dashGalFeasibility;
+  try {
+    const res = await fetch('/api/templates/feasibility');
+    if (!res.ok) return null;
+    const data = await res.json();
+    dashGalFeasibility = Object.fromEntries((data.items || []).map(i => [i.templateId, i]));
+  } catch { dashGalFeasibility = null; }
+  return dashGalFeasibility;
+}
+function dashGalFeasOf(d) {
+  if (d.renderKind || !dashGalFeasibility) return null;
+  const f = dashGalFeasibility[d.id];
+  return f && f.buildable !== null && f.buildable !== undefined ? f : null;
+}
+// «12 من 28 قابلة للبناء ببياناتك» — أيقونة+نص مع اللون (لا لون وحده).
+function dashGalFeasBadge(d) {
+  const f = dashGalFeasOf(d);
+  if (!f) return '';
+  const ratio = f.total ? f.buildable / f.total : 0;
+  const tone = ratio >= 0.8 ? 'badge-ok' : ratio >= 0.4 ? 'badge-warn' : 'badge-danger';
+  const glyph = ratio >= 0.8 ? '✓' : ratio >= 0.4 ? '◐' : '!';
+  return `<span class="badge ${tone} gal-feas" title="عدد العناصر التي تكفيها معاني أعمدتك الحالية">${glyph} ${f.buildable.toLocaleString('en-US')} من ${f.total.toLocaleString('en-US')} ببياناتك</span>`;
+}
 // الفئات الأصلية الثمانية + الفئات اللي جابتها الـ55 لوحة + الأربعة الجديدة من لوحات
 // Databox الـ157 (marketing/ads/social/dev — انظر IMPLEMENTATION.md "لوحات معرض Databox").
 // BuiltinDashboardsGenerated.cs على السيرفر بيستخدم نفس المفاتيح دي بالظبط، فلازم تفضل
@@ -4487,6 +4515,7 @@ function openDashGallery() {
   el('gal-search-input').value = '';
   renderDashGalCats();
   renderDashGalGrid();
+  if (!dashGalFeasibility) loadDashGalFeasibility().then(f => { if (f && !el('dash-gallery-modal').classList.contains('hidden')) renderDashGalGrid(); });
   el('gal-view-list').classList.remove('hidden');
   el('gal-view-preview').classList.add('hidden');
   el('dash-gallery-modal').classList.remove('hidden');
@@ -4520,6 +4549,7 @@ function renderDashGalGrid() {
         <span class="dc-meta">
           <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>${d.widgets.length.toLocaleString('en-US')} عنصر</span>
           <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${d.sources.length ? esc(d.sources.join('، ')) : 'حسب مصادر مشروعك المتاحة'}</span>
+          ${dashGalFeasBadge(d)}
         </span>
       </span>
     </button>`).join('');
@@ -4554,6 +4584,15 @@ function dashGalDemoAvailable(d) {
   if (d.renderKind === 'finance') return !!window.JEEM_FINANCE_DEMO;
   return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
 }
+// في المعاينة: الشارة + أكثر المفاهيم نقصًا مع إرشاد المستخدم إلى «المصادر» لتأكيد معنى عمود.
+function dashGalFeasHint(d) {
+  const f = dashGalFeasOf(d);
+  if (!f) return '';
+  const missing = (f.topMissing || []).filter(Boolean);
+  return `<div class="pv-feas">${dashGalFeasBadge(d)}${missing.length
+    ? `<small>ينقص بياناتك: ${esc(missing.join('، '))}. أضف عمودًا له أو أكّد معنى عمود موجود من «المصادر» ← 🏷️ معاني الأعمدة.</small>`
+    : `<small>كل عناصر هذا النموذج لها ما يلزمها في بياناتك.</small>`}</div>`;
+}
 function openDashGalPreview(d) {
   el('gal-view-preview').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-back-btn">
@@ -4566,6 +4605,7 @@ function openDashGalPreview(d) {
         <div class="pv-src">${d.sources.length
           ? d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')
           : `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>حسب مصادر مشروعك المتاحة</span>`}</div>
+        ${dashGalFeasHint(d)}
         ${d.renderKind ? '' : `
         <h4>عناصر اللوحة (${d.widgets.length.toLocaleString('en-US')})</h4>
         <ol class="pv-list">${d.widgets.map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>${esc(w.title)}</li>`).join('')}</ol>`}
@@ -6590,6 +6630,7 @@ el('file-all').addEventListener('change', e => {
 async function loadFiles() {
   const res = await fetch('/api/repository/files');
   state.files = await res.json();
+  dashGalFeasibility = null; // تغيّر الملفات يغيّر جدوى النماذج
   const knownSourceFileIds = new Set(state.sourceFiles.map(f => f.id));
   if (!state.sourceFiles.length || state.files.some(f => !knownSourceFileIds.has(f.id)))
     await loadSources();
@@ -6711,6 +6752,7 @@ function renderRepo() {
           <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
           ${permBtn}
           <button class="icon-btn rel-btn" data-id="${esc(f.id)}" title="الملفات المرتبطة">🔗</button>
+          ${f.kind === 'pdf' ? '' : `<button class="icon-btn sem-btn" data-id="${esc(f.id)}" title="معاني الأعمدة">🏷️</button>`}
           ${delBtn}
         </div>
       </div>`;
@@ -6721,6 +6763,7 @@ function renderRepo() {
   el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.perm-btn').forEach(btn => btn.addEventListener('click', () => openFilePermModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.rel-btn').forEach(btn => btn.addEventListener('click', () => openFileRelModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.sem-btn').forEach(btn => btn.addEventListener('click', () => openFileSemModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => deleteFile(btn.dataset.id, btn.dataset.name)));
 
   renderPending();
@@ -7107,6 +7150,112 @@ el('file-rel-add-btn').addEventListener('click', async () => {
 });
 el('file-rel-modal-close').addEventListener('click', () => el('file-rel-modal').classList.add('hidden'));
 el('file-rel-modal').addEventListener('click', e => { if (e.target.id === 'file-rel-modal') el('file-rel-modal').classList.add('hidden'); });
+
+// ---------- طبقة المعنى (ب): مراجعة معاني الأعمدة من «المصادر» ----------
+// كل صف = عمود من الجدول مع مفهومه (من القاموس الثابت)، وثقة التحليل ومصدره
+// (rule = تخمين من الاسم، ai = الموديل، user = مؤكّد منك). اختيار مفهوم يُحفظ فورًا
+// عبر PUT ويُسجَّل كتأكيد مستخدم فلا يستبدله التحليل الآلي لاحقًا.
+const SEM_SOURCE_LABEL = { rule: 'تخمين من الاسم', ai: 'تحليل آلي', user: 'مؤكّد منك' };
+const SEM_ROLE_LABEL = { measure: 'مقياس', dimension: 'بُعد', time: 'زمن', identifier: 'معرّف', text: 'نص', flag: 'علَم' };
+let semModalConcepts = [];
+
+async function openFileSemModal(fileId) {
+  const f = state.files.find(x => x.id === fileId);
+  if (!f) return;
+  el('file-sem-modal-id').value = fileId;
+  el('file-sem-list').innerHTML = '<div class="owner-line"><span class="spinner"></span> جارٍ التحميل…</div>';
+  semStatus('');
+  el('file-sem-modal').classList.remove('hidden');
+  await loadFileSemantics(fileId);
+}
+
+async function loadFileSemantics(fileId) {
+  const res = await fetch(`/api/repository/files/${fileId}/semantics`);
+  if (!res.ok) {
+    el('file-sem-list').innerHTML = `<div class="owner-line">${res.status === 404 ? 'تعذّر العثور على هذا الملف — يبدو أنه حُذف أو تحدّث.' : 'تعذّر تحميل معاني الأعمدة.'}</div>`;
+    return;
+  }
+  const data = await res.json();
+  semModalConcepts = data.concepts || [];
+  renderFileSemantics(data.columns || []);
+}
+
+function semStatus(text, tone) {
+  const box = el('file-sem-status');
+  box.textContent = text;
+  box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden');
+}
+
+function semConceptOptions(selected) {
+  const byRole = {};
+  semModalConcepts.forEach(c => { (byRole[c.role] ||= []).push(c); });
+  const groups = Object.entries(byRole).map(([role, list]) =>
+    `<optgroup label="${esc(SEM_ROLE_LABEL[role] || role)}">${list.map(c =>
+      `<option value="${esc(c.id)}"${c.id === selected ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</optgroup>`).join('');
+  return `<option value=""${selected ? '' : ' selected'}>— بلا مفهوم (عمود مساعد) —</option>${groups}`;
+}
+
+function renderFileSemantics(columns) {
+  if (!columns.length) {
+    el('file-sem-list').innerHTML = '<div class="owner-line">لم يُحلَّل هذا الجدول بعد. اضغط «إعادة التحليل الآلي» أو انتظر قليلًا بعد الرفع.</div>';
+    return;
+  }
+  el('file-sem-list').innerHTML = columns.map(c => {
+    let valueMap = '';
+    if (c.valueMapJson) {
+      try {
+        const map = JSON.parse(c.valueMapJson);
+        const pairs = Object.entries(map);
+        if (pairs.length) valueMap = `<div class="sem-map">${pairs.map(([k, v]) => `<span>${esc(k)} ← ${esc(v)}</span>`).join('')}</div>`;
+      } catch { /* خريطة قيم غير صالحة — تُتجاهل */ }
+    }
+    const conf = Math.round((c.confidence || 0) * 100);
+    const tone = c.source === 'user' ? 'badge-ok' : conf >= 80 ? 'badge-teal' : conf >= 40 ? 'badge-warn' : 'badge-danger';
+    return `<div class="sem-row" data-column="${esc(c.columnName)}">
+        <div class="sem-col">
+          <b>${esc(c.columnName)}</b>
+          <small>${esc(SEM_ROLE_LABEL[c.role] || c.role || '')}${c.unit ? ` · ${esc(c.unit)}` : ''}</small>
+        </div>
+        <div class="sem-pick">
+          <select class="sem-select" aria-label="مفهوم العمود ${esc(c.columnName)}">${semConceptOptions(c.concept)}</select>
+          <span class="badge ${tone}">${c.source === 'user' ? '✅ مؤكّد منك' : `${esc(SEM_SOURCE_LABEL[c.source] || c.source)} · ${conf.toLocaleString('en-US')}٪`}</span>
+        </div>
+        ${c.note ? `<div class="sem-note">${esc(c.note)}</div>` : ''}
+        ${valueMap}
+      </div>`;
+  }).join('');
+
+  el('file-sem-list').querySelectorAll('.sem-select').forEach(sel => sel.addEventListener('change', async () => {
+    const fileId = el('file-sem-modal-id').value;
+    const column = sel.closest('.sem-row').dataset.column;
+    const concept = sel.value || null;
+    sel.disabled = true;
+    const res = await fetch(`/api/repository/files/${fileId}/semantics/${encodeURIComponent(column)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ concept }),
+    });
+    sel.disabled = false;
+    if (!res.ok) { semStatus('تعذّر حفظ المعنى.', 'bad'); return; }
+    semStatus(`تم حفظ معنى «${column}».`, 'ok');
+    dashGalFeasibility = null;
+    await loadFileSemantics(fileId);
+  }));
+}
+
+el('file-sem-analyze-btn').addEventListener('click', async () => {
+  const fileId = el('file-sem-modal-id').value;
+  const btn = el('file-sem-analyze-btn');
+  btn.disabled = true; semStatus('جارٍ التحليل الآلي… (ثوانٍ قليلة)', '');
+  try {
+    const res = await fetch(`/api/repository/files/${fileId}/semantics/analyze`, { method: 'POST' });
+    if (!res.ok) { semStatus('تعذّر إعادة التحليل.', 'bad'); return; }
+    semStatus('اكتمل التحليل. تأكيداتك السابقة بقيت كما هي.', 'ok');
+    dashGalFeasibility = null;
+    await loadFileSemantics(fileId);
+  } finally { btn.disabled = false; }
+});
+el('file-sem-modal-close').addEventListener('click', () => el('file-sem-modal').classList.add('hidden'));
+el('file-sem-modal').addEventListener('click', e => { if (e.target.id === 'file-sem-modal') el('file-sem-modal').classList.add('hidden'); });
 
 // ---------- history ----------
 // Fire-and-forget: saving history must never block or break the dashboard that
