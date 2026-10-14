@@ -13,7 +13,8 @@ public class StagedBuildTests
     [InlineData("hbars", "bar")]
     [InlineData("donut", "pie")]
     [InlineData("area", "line")]
-    [InlineData("funnel", "table")]
+    [InlineData("funnel", "funnel")] // صار نوعًا حقيقيًا (DevExtreme)
+    [InlineData("bubble", "scatter")]
     [InlineData("hero", "kpi")]
     [InlineData(null, "table")]
     [InlineData("غير معروف", "table")]
