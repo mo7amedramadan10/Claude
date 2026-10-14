@@ -81,6 +81,15 @@ public static class WidgetShapeCatalog
         ["bullet"] = """
             data: [{"label": "...", "actual": <رقم>, "target": <رقم>}]. options اختياري: {"hi": true} عندما يكون الأعلى أفضل.
             """,
+        ["funnel"] = """
+            data: [{"label": "اسم المرحلة", "value": <عدد أو قيمة>}] — مرتّبة من أوسع مرحلة إلى أضيقها، ٣ إلى ٨ مراحل. الواجهة تحسب نسب التحويل.
+            """,
+        ["treemap"] = """
+            data: [{"label": "اسم العنصر", "value": <رقم موجب>, "group": "اسم المجموعة الأعلى، اختياري"}] — ٢٠ صفًا كحد أقصى؛ مساحة كل مستطيل بنسبة قيمته.
+            """,
+        ["scatter"] = """
+            data: [{"label": "اسم النقطة", "x": <رقم>, "y": <رقم>, "group": "تصنيف اختياري"}] مع "xKey"/"yKey" كأسماء المحورين بالعربية. ٣٠ نقطة كحد أقصى.
+            """,
     };
 
     /// <summary>الأنواع التي يكون <c>data</c> فيها كائنًا واحدًا لا مصفوفة (نفس قائمة DashboardSpec).</summary>
@@ -104,7 +113,8 @@ public static class WidgetShapeCatalog
             "cbars" or "grouped" or "stacked" or "waterfall" or "hbars" or "rank" or "compare" or "s100" or "div" => "bar",
             "area" or "cum" or "combo" => "line",
             "donut" or "ring" or "gauges" => "pie",
-            "funnel" or "heat" or "cohort" or "risk" or "scatter" or "bubble" or "insights" or "note" => "table",
+            "bubble" => "scatter",
+            "heat" or "cohort" or "risk" or "insights" or "note" => "table",
             "hero" or "kpiyoy" => "kpi",
             _ => "table",
         };

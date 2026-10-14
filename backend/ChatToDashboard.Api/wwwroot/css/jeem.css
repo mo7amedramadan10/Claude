@@ -3154,3 +3154,16 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .kpi-delta.down b { color: var(--danger); }
 .kpi-delta.flat b { color: var(--ink-3); }
 .kpi-delta small { color: var(--ink-3); font-size: 11px; }
+.kpi-spark { width: 96px; height: 34px; flex: none; align-self: center; }
+@media (max-width: 420px) { .kpi-spark { display: none; } }
+
+/* الطباعة (تصدير PDF): يغلب قواعد container query أعلاه لأنها بنفس الخصوصية وهذا الملف آخر المحمَّلة */
+@media print {
+  html dx-license, html .dx-license, .widget-menu-btn, .kpi-spark, aside.sidebar, .topbar, .crumbs { display: none !important; visibility: hidden !important; height: 0 !important; }
+  .app, .main, #screen-chat { display: block !important; width: 100% !important; margin: 0 !important; }
+  #dash-pane { container-type: normal; }
+  #dash .grid { grid-template-columns: repeat(2, 1fr) !important; }
+  #dash .widget.chart, #dash .widget.table, #dash .widget[data-size="wide"], #dash .widget[data-size="large"], #dash .widget[data-size="full"] { grid-column: span 1 !important; }
+  #dash .grid > .widget:nth-child(3n) { grid-column: 1 / -1 !important; break-after: page; }
+  #dash .widget .chart-holder { height: 240px; }
+}

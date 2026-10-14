@@ -945,7 +945,12 @@ tr:last-child td{border-bottom:0}
 
 /* Printing (تصدير PDF): only the dashboard content, nothing else. */
 @media print{
-  header, #chat-rail, #dash-toolbar, .src-pop, #sources-panel, #shared-banner{display:none !important}
+  header, #chat-rail, #dash-toolbar, .src-pop, #sources-panel, #shared-banner, .dx-license, .widget-menu-btn, .kpi-spark{display:none !important}
+  /* شبكة الطباعة تغلب قواعد container query الخاصة بالشاشة (نفس الخصوصية #dash .grid). */
+  #dash .grid{grid-template-columns:repeat(2,1fr)}
+  #dash .widget.chart,#dash .widget.table,#dash .widget[data-size="wide"],#dash .widget[data-size="large"],#dash .widget[data-size="full"]{grid-column:span 1}
+  #dash .grid>.widget:nth-child(3n){grid-column:1/-1}
+  #dash .widget .chart-holder{height:240px}
   /* Force a light, ink-friendly printout regardless of the app's on-screen dark theme.
      Scoped to .screen.active, not bare .screen: the base (non-print) rule is
      .screen{display:none}/.screen.active{display:flex} — an unscoped .screen selector here

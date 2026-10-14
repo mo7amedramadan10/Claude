@@ -281,8 +281,15 @@ public class WidgetQueryService
         var previous = await WindowValueAsync(connection, table, sql, q, filters, prevFrom, curFrom, ct);
         if (current is null || previous is null) return null;
         double? pct = previous.Value == 0 ? null : (current.Value - previous.Value) / Math.Abs(previous.Value) * 100;
+        // الخط المصغّر: ٨ أسابيع متتالية تنتهي بأحدث تاريخ (نافذة فارغة = ٠).
+        var series = new List<double>();
+        for (var k = 7; k >= 0; k--)
+        {
+            var wTo = end.AddDays(-7 * k);
+            series.Add(await WindowValueAsync(connection, table, sql, q, filters, wTo.AddDays(-7), wTo, ct) ?? 0);
+        }
         return new KpiDeltaResult(column, window, curFrom.ToString("yyyy-MM-dd"), end.AddDays(-1).ToString("yyyy-MM-dd"),
-            current.Value, previous.Value, pct);
+            current.Value, previous.Value, pct, series);
     }
 
     private async Task<double?> WindowValueAsync(System.Data.Common.DbConnection connection, TableSchema table, string sql, string quotedCol,

@@ -5,10 +5,11 @@ import PieChart from 'devextreme/viz/pie_chart';
 import Funnel from 'devextreme/viz/funnel';
 import Bullet from 'devextreme/viz/bullet';
 import Sparkline from 'devextreme/viz/sparkline';
+import TreeMap from 'devextreme/viz/tree_map';
 import { exportFromMarkup, getMarkup } from 'devextreme/viz/export';
 import { registerTheme, currentTheme, refreshTheme } from 'devextreme/viz/themes';
 import { registerPalette } from 'devextreme/viz/palette';
 import * as localization from 'devextreme/localization';
 window.DevExpress = Object.assign(window.DevExpress || {}, {
-  config, viz: { dxChart: Chart, dxPieChart: PieChart, dxFunnel: Funnel, dxBullet: Bullet, dxSparkline: Sparkline,
+  config, viz: { dxChart: Chart, dxPieChart: PieChart, dxFunnel: Funnel, dxBullet: Bullet, dxSparkline: Sparkline, dxTreeMap: TreeMap,
     exportFromMarkup, getMarkup, registerTheme, currentTheme, refreshTheme, registerPalette }, localization });

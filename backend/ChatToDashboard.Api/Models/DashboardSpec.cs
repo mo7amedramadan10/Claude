@@ -24,6 +24,8 @@ public class DashboardSpec
             // event/stage — see each type's XML doc below for its exact row shape.
             "radar", "semi", "dco", "iconrank", "ribbon", "people", "feed", "goal",
             "stages", "bullet",
+            // رسوم DevExtreme (jeem-dx.js): قمع تحويل، خريطة شجرية للحصص الهرمية، مبعثر لعلاقة مقياسين.
+            "funnel", "treemap", "scatter",
         };
 
     /// <summary>Types whose <see cref="DashboardWidget.Data"/> is a single JSON object
@@ -116,7 +118,7 @@ public class DashboardSpec
                 if (string.IsNullOrWhiteSpace(w.Type) || !AllowedWidgetTypes.Contains(w.Type))
                     errors.Add($"widgets[{i}].type must be one of: kpi, bar, line, pie, table, progress-table, " +
                                "trend-matrix, status-bar, radial-gauge, linear-gauge, radar, semi, dco, " +
-                               $"iconrank, ribbon, people, feed, goal, stages, bullet (got \"{w.Type}\").");
+                               $"iconrank, ribbon, people, feed, goal, stages, bullet, funnel, treemap, scatter (got \"{w.Type}\").");
                 if (string.IsNullOrWhiteSpace(w.Title))
                     errors.Add($"widgets[{i}].title is required.");
                 // A noData placeholder (see DashboardWidget.NoData) is a declared template

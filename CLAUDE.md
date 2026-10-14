@@ -221,6 +221,25 @@
   `kpiDeltaCache` بمفتاح الجدول+الاستعلام+الفلاتر. تحقق حي: 4 مؤشرات في «أداء المبيعات» (▲25٪، ▲7.9٪،
   ◆0٪×2) ورسمان في صف واحد عند عرض لوحة 920px.
 
+- **الدفعة الثانية (كل اللازم)**:
+  - **أنواع جديدة**: `funnel` (قمع تحويل بنسب من الأولى)، `treemap` (حصص هرمية، `group` اختياري)،
+    `scatter` (مقياسان لكل نقطة، `xKey`/`yKey` أسماء محورين). مُعرَّفة في `DashboardSpec.AllowedWidgetTypes`،
+    `WidgetShapeCatalog`، وثائق الذكاء الاصطناعي في `AnalyticsTools.BuildSystemPrompt`، وفي app.js
+    (`WIDGET_TYPES`، `FunnelCard/TreemapCard/ScatterCard`، قائمة «نوع الرسم»). الحزمة أُعيد بناؤها مع
+    `tree_map` (~944KB). `NormalizeType`: `bubble→scatter`، و`funnel/scatter` كما هما.
+  - **خط مصغّر في المؤشر**: `KpiDeltaResult.series` = ٨ نوافذ أسبوعية تنتهي بأحدث تاريخ؛ `renderKpiDelta`
+    يرسمه بـ `dxSparkline` في `.kpi-spark` بلون اتجاه التغيّر (مخفي على ≤420px وفي الطباعة).
+  - **الثيم من رموز التصميم**: `tokenTheme(fallback, holder)` في jeem-dx.js يقرأ `--chart-1..4`، `--line`،
+    `--ink`، `--ink-3`، `--surface`، `--font` من **حاوية الرسم** (الرموز مقيّدة بـ `.jeem-scope` لا `:root`)
+    فتتبع الرسوم الصفحة دائمًا. كائن `THEMES.dark` في app.js لا يقابله أي CSS (لا يوجد وضع داكن فعلي في
+    الهوية الجديدة) — كان يقلب الرسوم داكنة على بطاقات فاتحة.
+  - **الطباعة** (ذيل jeem.css، `@media print`): إخفاء `aside.sidebar`/`.topbar`/زر ⋮/الخط المصغّر، شبكة
+    عمودين تغلب container query، والرسوم SVG تُطبع كما هي (مُتحقَّق بـ `page.pdf`). **شريط النسخة
+    التجريبية `<dx-license>` لا يُخفى** (أنماط مضمّنة مفروضة) ويزول فقط بتركيب المفتاح.
+  - غير منفَّذ عمدًا: معاينة المعرض تبقى SVG خفيفًا (`dash-render.js`) لأداء 200+ بطاقة؛ تحديث البيانات
+    في مكانها بحركة (الرسوم تُبنى من جديد عند الفلترة كما كان)؛ وحذف `lib/apexcharts.min.js`
+    و`applyLollipopStyle` و`jeem-charts.js` (بلا استخدام) متروك لقرار المستخدم.
+
 ## القرارات المعمارية المتّبعة (§4.16+)
 
 ### محرك اللوحة التفاعلية (frontend)

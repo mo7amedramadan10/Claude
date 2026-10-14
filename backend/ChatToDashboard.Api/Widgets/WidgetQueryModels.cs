@@ -128,7 +128,9 @@ public sealed record KpiDeltaResult(
     [property: JsonPropertyName("currentTo")] string CurrentTo,
     [property: JsonPropertyName("current")] double Current,
     [property: JsonPropertyName("previous")] double Previous,
-    [property: JsonPropertyName("deltaPct")] double? DeltaPct);
+    [property: JsonPropertyName("deltaPct")] double? DeltaPct,
+    /// <summary>٨ نوافذ أسبوعية متتالية تنتهي بأحدث تاريخ — للخط المصغّر في بطاقة المؤشر.</summary>
+    [property: JsonPropertyName("series")] IReadOnlyList<double> Series);
 
 public class SqlFilterResult
 {

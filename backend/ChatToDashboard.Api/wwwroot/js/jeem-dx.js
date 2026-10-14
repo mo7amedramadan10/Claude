@@ -233,14 +233,111 @@
     return wrap(new DX.viz.dxPieChart(holder, options), holder);
   }
 
+  // ---------- قمع تحويل ----------
+  function funnel(holder, spec, opts) {
+    const t = opts.theme;
+    const first = spec.values[0] || 1;
+    const data = spec.labels.map((l, i) => ({ arg: String(l ?? ''), val: spec.values[i] }));
+    const options = {
+      ...common(t, opts), ...size(holder),
+      rtlEnabled: isRtl(),
+      dataSource: data, argumentField: 'arg', valueField: 'val',
+      algorithm: 'dynamicSlope', inverted: false, neckWidth: 0.28, neckHeight: 0,
+      item: { border: { visible: true, width: 2, color: t.surface }, hoverStyle: { hatching: { direction: 'none' } } },
+      label: {
+        visible: true, position: 'outside', horizontalAlignment: isRtl() ? 'left' : 'right',
+        font: font(t, 11, 600), backgroundColor: 'none', connector: { visible: true, color: t.gridColor, width: 1 },
+        customizeText: e => `${e.item.argument} ${opts.fmt(e.value)} (${Math.round((e.value / first) * 100)}٪)`,
+      },
+      legend: { visible: false },
+      tooltip: { ...common(t, opts).tooltip, customizeTooltip: info => ({ text: `${info.item.argument}: ${opts.fmt(info.value)} — ${Math.round((info.value / first) * 100)}٪ من الأولى` }) },
+      onItemClick: spec.onPointClick ? e => spec.onPointClick(data.findIndex(d => d.arg === e.item.argument), e.item.argument) : undefined,
+    };
+    return wrap(new DX.viz.dxFunnel(holder, options), holder);
+  }
+
+  // ---------- خريطة شجرية (حصص هرمية) ----------
+  function treemap(holder, spec, opts) {
+    const t = opts.theme;
+    const grouped = spec.rows.some(r => r.group);
+    const items = grouped
+      ? Object.values(spec.rows.reduce((acc, r) => { (acc[r.group || 'أخرى'] ||= { name: r.group || 'أخرى', items: [] }).items.push({ name: r.label, value: r.value }); return acc; }, {}))
+      : spec.rows.map(r => ({ name: r.label, value: r.value }));
+    const options = {
+      ...common(t, opts), ...size(holder),
+      rtlEnabled: isRtl(),
+      dataSource: items, valueField: 'value', labelField: 'name', childrenField: 'items',
+      colorizer: { type: 'discrete', palette: t.palette, colorizeGroups: grouped },
+      tile: { border: { width: 2, color: t.surface }, label: { visible: true, font: { ...font(t, 11, 600), color: '#fff' }, wordWrap: 'normal', textOverflow: 'ellipsis' } },
+      group: { border: { width: 2, color: t.surface }, color: t.gridColor, label: { visible: true, font: font(t, 11, 700) }, headerHeight: 22, padding: 3 },
+      tooltip: { ...common(t, opts).tooltip, customizeTooltip: info => ({ text: `${info.node.label()}: ${opts.fmt(info.value)}` }) },
+      onClick: spec.onPointClick ? e => { if (e.node && e.node.isLeaf()) spec.onPointClick(spec.rows.findIndex(r => r.label === e.node.label()), e.node.label()); } : undefined,
+    };
+    return wrap(new DX.viz.dxTreeMap(holder, options), holder);
+  }
+
+  // ---------- مبعثر (مقياسان لكل عنصر) ----------
+  function scatter(holder, spec, opts) {
+    const t = opts.theme;
+    const groups = [...new Set(spec.rows.map(r => r.group || ''))];
+    const data = spec.rows.map(r => ({ x: r.x, y: r.y, name: r.label, g: r.group || '' }));
+    const options = {
+      ...common(t, opts), ...axes(t, opts, false), ...size(holder),
+      dataSource: data,
+      commonSeriesSettings: { type: 'scatter', argumentField: 'x', valueField: 'y', point: { size: 10, border: { visible: true, width: 1, color: t.surface } } },
+      seriesTemplate: { nameField: 'g', customizeSeries: g => ({ name: g || spec.title, color: t.palette[Math.max(0, groups.indexOf(g)) % t.palette.length] }) },
+      argumentAxis: { grid: { visible: true, color: t.gridColor }, label: { font: font(t, 11), customizeText: e => opts.fmt(e.value) }, title: { text: spec.xTitle || '', font: font(t, 11) } },
+      valueAxis: { grid: { visible: true, color: t.gridColor }, label: { customizeText: e => opts.fmt(e.value) }, title: { text: spec.yTitle || '', font: font(t, 11) } },
+      legend: { visible: groups.length > 1 && groups.some(Boolean), verticalAlignment: 'bottom', horizontalAlignment: 'center', font: font(t, 11), itemTextPosition: isRtl() ? 'left' : 'right' },
+      tooltip: { ...common(t, opts).tooltip, customizeTooltip: info => ({ text: `${info.point.data.name}: ${spec.xTitle || 'x'} ${opts.fmt(info.argument)} · ${spec.yTitle || 'y'} ${opts.fmt(info.value)}` }) },
+      onPointClick: spec.onPointClick ? e => spec.onPointClick(data.indexOf(e.target.data), e.target.data.name) : undefined,
+    };
+    return wrap(new DX.viz.dxChart(holder, options), holder);
+  }
+
+  // ---------- خط مصغّر لبطاقة المؤشر ----------
+  function sparkline(holder, spec, opts) {
+    const t = opts.theme;
+    const options = {
+      rtlEnabled: isRtl(), ...size(holder),
+      dataSource: spec.values.map((v, i) => ({ i, v })), argumentField: 'i', valueField: 'v',
+      type: 'area', lineColor: spec.color || t.accent, lineWidth: 2, showMinMax: false, showFirstLast: true,
+      firstLastColor: spec.color || t.accent, pointSize: 4, pointSymbol: 'circle',
+      tooltip: { enabled: false }, margin: { top: 3, bottom: 3, left: 3, right: 3 },
+    };
+    return wrap(new DX.viz.dxSparkline(holder, options), holder);
+  }
+
+  // ثيم الرسم من رموز التصميم الحية (tokens.css) لا من كائن THEME في app.js: الصفحة لها مظهر واحد
+  // تحدده رموز CSS، وكائن THEME يحمل لوحة «داكنة» قديمة لا يقابلها أي CSS، فكانت الرسوم تنقلب داكنة
+  // على بطاقات فاتحة عند الضغط على زر المظهر. القيم الممرَّرة تبقى احتياطًا عند غياب أي رمز.
+  // تُقرأ من حاوية الرسم نفسها لا من <html>: رموز الهوية مقيّدة بـ .jeem-scope (انظر tokens.css).
+  function tokenTheme(fallback, el) {
+    let css; try { css = getComputedStyle(el || document.documentElement); } catch { return fallback; }
+    const v = (name, alt) => { const x = css.getPropertyValue(name).trim(); return x || alt; };
+    const palette = [v('--chart-1', ''), v('--chart-2', ''), v('--chart-3', ''), v('--chart-4', ''), v('--brand-mint', '')].filter(Boolean);
+    return {
+      ...fallback,
+      palette: palette.length >= 3 ? palette : fallback.palette,
+      accent: v('--brand-blue', fallback.accent), danger: v('--danger', fallback.danger), amber: v('--warn', fallback.amber),
+      gridColor: v('--line', fallback.gridColor), tickColor: v('--ink-3', fallback.tickColor), ink: v('--ink', fallback.ink),
+      surface: v('--surface', fallback.surface), fontFamily: v('--font', fallback.fontFamily),
+    };
+  }
+
   function mount(holder, spec, opts) {
     if (!ready()) throw new Error('DevExtreme viz غير محمّل');
+    opts = { ...opts, theme: tokenTheme(opts.theme || {}, holder) };
     switch (spec.kind) {
       case 'bar': case 'line': return xy(holder, spec, opts);
       case 'multi': return multi(holder, spec, opts);
       case 'forecast': return forecast(holder, spec, opts);
       case 'pie': return pie(holder, spec, opts);
       case 'radial': return radial(holder, spec, opts);
+      case 'funnel': return funnel(holder, spec, opts);
+      case 'treemap': return treemap(holder, spec, opts);
+      case 'scatter': return scatter(holder, spec, opts);
+      case 'sparkline': return sparkline(holder, spec, opts);
       default: throw new Error('نوع رسم غير معروف: ' + spec.kind);
     }
   }
