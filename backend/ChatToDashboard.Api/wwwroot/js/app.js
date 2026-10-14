@@ -1752,162 +1752,11 @@ function applyLollipopStyle(svg, values, colors) {
 // explicit `undefined` value for those keys (throws inside its own constructor), so a
 // donut's config must omit them entirely instead.
 function chartConfig(type, labels, values, title, centerLabel) {
-  const isLine = type === 'line';
-  const isDonut = type === 'pie'; // rendered as a donut, same choice the old Chart.js config made
-  // A plain stroked line, no fill under the curve — matching the visual-system guide's basic
-  // line-chart example (ring markers + a value label at every point instead). The two-series
-  // "mountain" look from that same guide page is the areaFill extension on the *multi*-series
-  // line (buildMultiSeriesChart), not this single-series path.
-  const apexType = isDonut ? 'donut' : type;
-  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const base = {
-    chart: {
-      type: apexType, height: '100%', width: '100%',
-      fontFamily: THEME.fontFamily, foreColor: THEME.tickColor,
-      background: 'transparent', toolbar: { show: false },
-      // A brief, gently-staggered entrance instead of an instant snap-in. Capped low (and
-      // never re-triggered by data updates — widgets are destroyed and rebuilt wholesale on
-      // every change, never live-updated) so a dashboard with several widgets still feels
-      // responsive rather than sluggish.
-      animations: {
-        enabled: true, easing: 'easeout', speed: 450,
-        animateGradually: { enabled: true, delay: 60 },
-        dynamicAnimation: { enabled: false },
-      },
-      // A soft shadow under the marks themselves — enabledOnSeries scopes it to the bars/
-      // line/donut slices so it doesn't also fall on the gridlines or axes.
-      dropShadow: { enabled: true, enabledOnSeries: [0], top: 3, left: 0, blur: 4, opacity: dark ? .35 : .14 },
-    },
-    dataLabels: { enabled: false },
-    // Raw values can be long floats (e.g. an AVG() result) — fmt() (already used for KPI
-    // values) rounds/abbreviates them ("42.0K") so axis ticks and tooltips stay short instead
-    // of overflowing the card with fifteen decimal places.
-    tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: fmt } },
-    colors: isLine ? [THEME.accent] : THEME.palette,
-    // A gentle tonal gradient — lighter toward one end of the same hue, not a second color —
-    // for a sense of depth without turning the categorical palette into a magnitude ramp.
-    // Only ever visible on bar (a plain "line" chart type never paints a fill regardless of
-    // this config, single-series or not).
-    fill: {
-      type: 'gradient',
-      gradient: { shade: 'light', type: 'vertical', shadeIntensity: .35, opacityFrom: 1, opacityTo: .85 },
-    },
-  };
-  if (isDonut) {
-    return {
-      ...base,
-      series: values,
-      labels,
-      // A side legend with each entry's own share prefixed on it ("51% Lorem ipsum") instead
-      // of a bare category name — the guide's donut-with-legend variant. `position: 'right'`
-      // matches the reference literally rather than mirroring for RTL (ApexCharts' own
-      // legend layout isn't RTL-aware, so 'left' would just move it, not truly mirror it).
-      legend: {
-        show: true, position: 'right', horizontalAlign: 'center',
-        labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily,
-        formatter: (seriesName, opts) => {
-          const val = opts.w.globals.series[opts.seriesIndex];
-          const total = opts.w.globals.seriesTotals.reduce((a, b) => a + b, 0) || 1;
-          return `${Math.round((val / total) * 100)}% ${seriesName}`;
-        },
-      },
-      // Each slice's own share, printed right on the ring — the guide's other donut variant
-      // (51%/45%/4% labelled in place rather than only in a legend). `val` here is already
-      // the slice's percentage for a pie/donut series (ApexCharts' own convention), not the
-      // raw value, so no separate percentage math is needed the way the legend above does.
-      dataLabels: {
-        enabled: true,
-        formatter: val => Math.round(val) + '%',
-        style: { fontSize: '11px', fontWeight: 700, fontFamily: THEME.fontFamily, colors: ['#fff'] },
-        dropShadow: { enabled: true, top: 1, left: 1, blur: 1.5, opacity: .45 },
-      },
-      // The center label: a big bold number with a small muted caption under it — the
-      // grand total by default (showAlways), captioned with deriveUnitLabel(title) (what the
-      // number counts, e.g. "مشروع"/"خطر" — not the generic "الإجمالي"); a slice's own value
-      // + category name while hovering it. Colored and formatted to match a KPI card's own
-      // number exactly (THEME.accent, fmt()'s K/M-abbreviated form) rather than a distinct
-      // full-precision/neutral-color treatment, so the same figure reads consistently
-      // wherever it appears on a dashboard. The caption keeps the muted tickColor used for
-      // everything else secondary in the UI. Font sizes and vertical offsets (ApexCharts
-      // draws the caption *above* the number by default — flipped here to match the
-      // requested look) are set per-widget in the pendingCharts render loop below,
-      // proportional to the donut's actual rendered size, not a fixed px.
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '72%',
-            labels: {
-              show: true,
-              name: {
-                show: true, fontFamily: THEME.fontFamily, fontWeight: 400,
-                color: THEME.tickColor,
-              },
-              value: {
-                show: true, fontFamily: THEME.fontFamily, fontWeight: 700,
-                color: THEME.accent,
-                formatter: v => fmt(v),
-              },
-              total: {
-                show: true, showAlways: true, label: centerLabel || deriveUnitLabel(title),
-                fontFamily: THEME.fontFamily, fontWeight: 400,
-                color: THEME.tickColor,
-                formatter: w => fmt(w.globals.seriesTotals.reduce((a, b) => a + b, 0)),
-              },
-            },
-          },
-        },
-      },
-    };
-  }
+  // مواصفة محايدة عن المكتبة — JEEM_DX.mount (jeem-dx.js) هو الذي يترجمها لخيارات DevExtreme.
+  // الدائري يُرسم حلقةً بتسمية في المنتصف (الإجمالي + deriveUnitLabel) كما كان.
   return {
-    ...base,
-    series: [{ name: title, data: values }],
-    xaxis: {
-      categories: labels,
-      labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
-      axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
-    },
-    yaxis: { labels: { style: { colors: THEME.tickColor }, formatter: fmt } },
-    // Extra headroom above the plot for bar charts only — otherwise the lollipop value
-    // badge on the tallest bar (drawn above the bar's own top edge, see applyLollipopStyle)
-    // gets clipped by the SVG's own viewBox with nothing reserved for it.
-    // Extra headroom for line too — the per-point value labels (dataLabels below) sit right
-    // above their marker, same clipping risk the bar badge has.
-    grid: { borderColor: THEME.gridColor, strokeDashArray: 0, padding: isLine || apexType === 'bar' ? { top: 24 } : {} },
-    stroke: isLine ? { curve: 'smooth', width: 3 } : { width: 0 },
-    // A plain single-series line's marker at each point cycles through the brand palette —
-    // "hollow ring" style (fillColor is the card's own surface color, so it reads as an
-    // outlined circle rather than a solid dot) plus a value label above every point, matching
-    // the visual-system guide's basic line-chart example. The connecting stroke itself stays
-    // one consistent color (colors: [THEME.accent] above) rather than also shifting per
-    // segment — cycling the *line's* own color would clash with how color is used to mean
-    // "this series" everywhere else in the app (multi-series/bar/pie all key legend meaning
-    // off of color), where here it would just be decorative and could read as unintentional.
-    markers: isLine ? {
-      size: 6, strokeWidth: 2, hover: { sizeOffset: 2 },
-      discrete: values.map((_, i) => ({
-        seriesIndex: 0, dataPointIndex: i,
-        fillColor: THEME.surface, strokeColor: THEME.palette[i % THEME.palette.length], size: 6,
-      })),
-    } : {},
-    dataLabels: isLine ? {
-      enabled: true, formatter: fmt, offsetY: -14,
-      style: { fontSize: '11px', fontWeight: 700, fontFamily: THEME.fontFamily, colors: [THEME.ink] },
-      background: { enabled: false },
-    } : { enabled: false },
-    // "Lollipop" bars — narrow pill-shaped columns, one brand color per category
-    // (distributed:true) instead of one color for the whole series — matching the visual-
-    // system guide's basic bar-chart example. The wider rounded background "track" behind
-    // each bar and the circular value badge at its top are NOT an ApexCharts option (its own
-    // backgroundBarColors draws a track the SAME width as the column, not a visibly wider
-    // one) — both are drawn as plain SVG after render instead, see applyLollipopStyle below;
-    // plotOptions.bar.distributed here is exactly what that render step keys off of to know
-    // this is the single-series chart it should decorate, vs. a grouped/stacked multi-series
-    // bar built by buildMultiSeriesChart, which never sets it.
-    plotOptions: apexType === 'bar'
-      ? { bar: { borderRadius: 9, borderRadiusApplication: 'around', columnWidth: '30%', distributed: true } }
-      : {},
-    legend: { show: false },
+    kind: type === 'pie' ? 'pie' : type, labels, values, title,
+    centerLabel: type === 'pie' ? (centerLabel || deriveUnitLabel(title)) : undefined,
   };
 }
 
@@ -1962,16 +1811,13 @@ function attachCrossFilterClick(options, holder, w, labels) {
   const target = resolveCrossFilterField(w);
   if (!target || !Array.isArray(labels) || !labels.length) return;
   holder.classList.add('chart-clickable');
-  options.chart.events = {
-    ...(options.chart.events || {}),
-    dataPointSelection: (event, chartContext, config) => {
-      const idx = config?.dataPointIndex;
-      if (idx == null || idx < 0 || idx >= labels.length) return;
-      // The chip names the *field* being filtered (e.g. "Region: North"), not the widget's
-      // own title (typically the metric, e.g. "Revenue") — "Revenue: North" would misread
-      // as filtering by a revenue value rather than by the category actually clicked.
-      toggleCrossFilter(target.table, target.field, labels[idx], target.field);
-    },
+  // JEEM_DX يستدعيها عند النقر على عمود/نقطة/شريحة بفهرس النقطة في labels نفسها التي بُني بها الرسم.
+  options.onPointClick = idx => {
+    if (idx == null || idx < 0 || idx >= labels.length) return;
+    // The chip names the *field* being filtered (e.g. "Region: North"), not the widget's
+    // own title (typically the metric, e.g. "Revenue") — "Revenue: North" would misread
+    // as filtering by a revenue value rather than by the category actually clicked.
+    toggleCrossFilter(target.table, target.field, labels[idx], target.field);
   };
 }
 
@@ -1995,67 +1841,25 @@ function mountChart(card, type, labels, values, title, truncated, centerLabel, w
 // visual separation the forecasting feature requires, regardless of whether the base widget
 // is a bar or a line chart.
 function forecastChartConfig(type, labels, values, forecast, title) {
-  const isLine = type === 'line';
-  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
   const histLen = values.length;
   const fLen = forecast.values.length;
   const categories = labels.concat(forecast.labels);
-
   // Padded with nulls over the forecast span so it doesn't extend past the real data.
   const historicalData = values.concat(new Array(fLen).fill(null));
   // Each of forecast/upper/lower starts at the last historical point (so its dashed line
   // visually continues from the real data rather than floating disconnected), null before that.
   const bridge = new Array(Math.max(0, histLen - 1)).fill(null).concat([values[histLen - 1]]);
-  const forecastData = bridge.concat(forecast.values);
-  const upperData = bridge.concat(forecast.upper);
-  const lowerData = bridge.concat(forecast.lower);
-
   // The y-axis is scaled to the *real* points (historical + forecast), not the confidence
-  // bounds — a short/noisy series can produce a bound so wide (correctly — that's the point of
-  // flagging low confidence) that letting it drive the axis squashes the actual trend into an
-  // unreadable sliver. The bound lines simply run off the top/bottom of the chart when they
-  // exceed this range, which itself reads as "very uncertain" rather than hiding that fact.
+  // bounds — a short/noisy series can produce a bound so wide that letting it drive the axis
+  // squashes the actual trend into an unreadable sliver.
   const realPoints = values.concat(forecast.values);
   const dataMin = Math.min(...realPoints), dataMax = Math.max(...realPoints);
   const padding = Math.max((dataMax - dataMin) * 0.3, Math.abs(dataMax) * 0.1, 1);
-
-  // A shaded band would be the more standard way to show this, but ApexCharts' rangeArea
-  // series type (verified against this exact vendored version) simply doesn't render when
-  // mixed into a combo chart with a bar/line — it silently produces an empty series, tested
-  // both against a bar-based and a line-based combo. Two dashed bound lines, fainter/thinner
-  // than the forecast line itself, convey the same thing (a range, not a single confident
-  // number, visibly wider with sparse history) without relying on a combination this chart
-  // library doesn't actually support yet.
-  const forecastColor = THEME.palette[1]; // amber — deliberately not the historical series' color
   return {
-    __isForecast: true, // opts this chart out of the 3D bar-extrusion pass (see renderDashboard)
-    chart: {
-      type: isLine ? 'line' : 'bar', height: '100%', width: '100%',
-      fontFamily: THEME.fontFamily, foreColor: THEME.tickColor, background: 'transparent',
-      toolbar: { show: false },
-      animations: { enabled: true, easing: 'easeout', speed: 450, animateGradually: { enabled: true, delay: 60 } },
-    },
-    series: [
-      { name: title, type: isLine ? 'line' : 'bar', data: historicalData },
-      { name: 'الحد الأعلى للتوقع', type: 'line', data: upperData },
-      { name: 'الحد الأدنى للتوقع', type: 'line', data: lowerData },
-      { name: 'متوقّع', type: 'line', data: forecastData },
-    ],
-    colors: [THEME.palette[0], forecastColor, forecastColor, forecastColor],
-    fill: { opacity: [1, 1, 1, 1] },
-    stroke: { curve: 'smooth', width: [isLine ? 2 : 0, 1.5, 1.5, 3], dashArray: [0, 3, 3, 6] },
-    markers: { size: 0 },
-    plotOptions: isLine ? {} : { bar: { borderRadius: 8, columnWidth: '55%' } },
-    dataLabels: { enabled: false },
-    xaxis: {
-      categories,
-      labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
-      axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
-    },
-    yaxis: { min: dataMin - padding, max: dataMax + padding, labels: { style: { colors: THEME.tickColor }, formatter: fmt } },
-    grid: { borderColor: THEME.gridColor, strokeDashArray: 0 },
-    legend: { show: true, labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
-    tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: fmt } },
+    kind: 'forecast', type, title, categories,
+    historical: historicalData, forecast: bridge.concat(forecast.values),
+    upper: bridge.concat(forecast.upper), lower: bridge.concat(forecast.lower),
+    visualRange: [dataMin - padding, dataMax + padding],
   };
 }
 
@@ -2121,7 +1925,6 @@ function buildMultiSeriesChart(card, w, type) {
   const seriesKeys = w.series.map(s => s.key);
   const { rows: capped, truncated } = capMultiSeriesRows(rows, xKey, seriesKeys);
   const categories = capped.map(r => r[xKey]);
-  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
   const isLine = type === 'line';
   const stacked = !isLine && !!w.stacked;
   // areaFill (see AnalyticsTools.cs) — overlapping translucent gradient fills under each
@@ -2139,40 +1942,7 @@ function buildMultiSeriesChart(card, w, type) {
     card.appendChild(note);
   }
 
-  const options = {
-    chart: {
-      type: areaFill ? 'area' : (isLine ? 'line' : 'bar'), height: '100%', width: '100%', stacked,
-      fontFamily: THEME.fontFamily, foreColor: THEME.tickColor, background: 'transparent',
-      toolbar: { show: false },
-      animations: { enabled: true, easing: 'easeout', speed: 450, animateGradually: { enabled: true, delay: 60 } },
-    },
-    series: apexSeries,
-    colors: THEME.palette.slice(0, apexSeries.length),
-    // areaFill's overlapping mountains get cluttered fast with a value label on every
-    // point of every series — same reason the single-series area chart never has them.
-    dataLabels: areaFill ? { enabled: false } : {
-      enabled: true, formatter: fmt,
-      style: { fontSize: '10px', fontFamily: THEME.fontFamily, colors: [THEME.ink] },
-      background: { enabled: false },
-      offsetY: isLine ? -8 : 0,
-    },
-    stroke: isLine ? { curve: 'smooth', width: 2 } : { width: 0 },
-    markers: areaFill ? { size: 0 } : (isLine ? { size: 4 } : {}),
-    plotOptions: isLine ? {} : { bar: { borderRadius: 4, columnWidth: stacked ? '55%' : '70%' } },
-    // Same gradient recipe as the single-series area chart in chartConfig() — a soft fade
-    // toward transparent rather than a flat translucent fill, so overlapping series still
-    // read as layered "mountains" instead of one another's fills flattening into mud.
-    ...(areaFill ? { fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: .5, opacityTo: .05 } } } : {}),
-    xaxis: {
-      categories,
-      labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily, fontSize: '11px' } },
-      axisBorder: { color: THEME.gridColor }, axisTicks: { color: THEME.gridColor },
-    },
-    yaxis: { labels: { style: { colors: THEME.tickColor }, formatter: fmt } },
-    grid: { borderColor: THEME.gridColor, strokeDashArray: 0 },
-    legend: { show: true, position: 'bottom', labels: { colors: THEME.tickColor }, fontFamily: THEME.fontFamily },
-    tooltip: { theme: dark ? 'dark' : 'light', y: { formatter: fmt } },
-  };
+  const options = { kind: 'multi', type, categories, series: apexSeries, stacked, areaFill };
   pendingCharts.push({ card, holder, options, labels: categories, widget: w });
   return card;
 }
@@ -2391,29 +2161,7 @@ function LinearGaugeCard(w) {
 // trend-matrix's trend arrow.
 function radialGaugeConfig(value, max, tone) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
-  return {
-    chart: {
-      type: 'radialBar', height: '100%', width: '100%', fontFamily: THEME.fontFamily,
-      background: 'transparent',
-      animations: { enabled: true, easing: 'easeout', speed: 450 },
-    },
-    series: [pct],
-    colors: [toneColor(tone || 'accent')],
-    plotOptions: {
-      radialBar: {
-        hollow: { size: '62%' },
-        track: { background: THEME.gridColor, strokeWidth: '100%' },
-        dataLabels: {
-          name: { show: false },
-          value: {
-            show: true, fontSize: '28px', fontWeight: 700, fontFamily: THEME.fontFamily,
-            color: THEME.ink, offsetY: 10, formatter: () => Math.round(pct) + '٪',
-          },
-        },
-      },
-    },
-    stroke: { lineCap: 'round' },
-  };
+  return { kind: 'radial', pct, color: toneColor(tone || 'accent') };
 }
 function RadialGaugeCard(w) {
   const card = widgetShell(w, 'radial-gauge');
@@ -3794,85 +3542,22 @@ function renderDashboard() {
     // Only now is every widget's chart-holder actually laid out with real dimensions —
     // instantiate the charts queued by mountChart() and keep each render's promise so
     // the PPTX export can await it before capturing the SVG (see widgetToPptxInput).
-    pendingCharts.forEach(({ card, holder, options, labels: pointLabels, widget }) => {
-      // chart.height:'100%' (set in chartConfig()/forecastChartConfig()) doesn't reliably
-      // resolve for a mixed-series chart (a forecast's bar/line + rangeArea combo) — it falls
-      // back near ApexCharts' own ~350px default regardless of the container, overflowing
-      // .chart-holder and colliding with whatever sits below it. Passing the container's own
-      // real measured height works for every chart shape, so it replaces '100%' universally.
-      options.chart.height = holder.clientHeight;
-      // The donut's center number + caption sizes, proportional to its actual rendered size
-      // (not a fixed px) — right at holder.clientHeight/Width's real, laid-out values, the
-      // same reason chart.height is set here rather than in chartConfig(). Ring thickness
-      // (plotOptions.pie.donut.size) is untouched; only the center text scales.
-      //
-      // ApexCharts styles these two lines from two *different* config blocks even though
-      // both render inside the same "total" state: the big number's font comes from
-      // `labels.value` (yes, even for the idle grand-total figure, not just a hovered
-      // slice's own value), while `labels.total`'s own fontSize/color style only the
-      // caption underneath it (deriveUnitLabel(title)) — confirmed by inspecting the
-      // actual rendered <text> elements, since it isn't obvious from the option names alone.
-      if (options.chart.type === 'donut') {
-        const box = Math.min(holder.clientWidth, holder.clientHeight);
-        const numSize = Math.round(Math.max(18, Math.min(38, box * 0.16)));
-        const capSize = Math.round(Math.max(10, numSize * 0.4));
-        const labels = options.plotOptions.pie.donut.labels;
-        labels.value.fontSize = numSize + 'px';
-        // offsetY nudges each line away from ApexCharts' own default (already vertically
-        // stacked, overlapping) position — *not* a shared center both are measured from, so
-        // this can't be derived from font-size alone; multipliers below were tuned against
-        // the real rendered <text> boxes (measured via getBoundingClientRect in a live
-        // browser) until the number and caption cleared each other with a small gap, rather
-        // than guessed from the font sizes' ratio.
-        labels.value.offsetY = -Math.round(capSize * 1.15) - 3;
-        labels.total.fontSize = capSize + 'px';
-        labels.total.offsetY = Math.round(numSize * 0.55) + 3;
-        labels.name.fontSize = capSize + 'px';
-        labels.name.offsetY = Math.round(numSize * 0.55) + 3;
+    pendingCharts.forEach(({ card, holder, options: spec, labels: pointLabels, widget }) => {
+      // Forecast charts never reach here with a `widget` — their categories mix real history
+      // with future periods, so clicking one wouldn't correspond to an actual row to filter by.
+      if (widget) attachCrossFilterClick(spec, holder, widget, pointLabels);
+      let handle;
+      try { handle = JEEM_DX.mount(holder, spec, { theme: THEME, fmt }); }
+      catch (err) {
+        console.error('تعذّر رسم العنصر', spec.kind, err);
+        holder.innerHTML = '<div class="chart-note">تعذّر رسم هذا العنصر.</div>';
+        return;
       }
-      // Lollipop decoration only for the single-series bar chart built by chartConfig() (see
-      // its plotOptions.bar.distributed:true — buildMultiSeriesChart never sets that) —
-      // drawn once the entrance animation actually finishes; measuring bar geometry any
-      // earlier (mid-animation) would decorate a not-yet-full-height bar.
-      const isLollipopBar = options.chart.type === 'bar' && !options.__isForecast
-        && !!options.plotOptions?.bar?.distributed;
-      if (isLollipopBar) {
-        const colors = options.colors;
-        const values = options.series[0].data;
-        // Stashed on the card (alongside __apexChart/__apexHolder below) so PPTX export can
-        // re-decorate the captured SVG defensively without needing to reverse-engineer
-        // ApexCharts' own internal color/series state — see widgetToPptxInput.
-        card.__lollipopValues = values;
-        card.__lollipopColors = colors;
-        options.chart = {
-          ...options.chart,
-          events: { animationEnd: () => applyLollipopStyle(holder.querySelector('svg'), values, colors) },
-        };
-      }
-      // Forecast charts (options.__isForecast) never reach here with a `widget` — their
-      // categories mix real history with future, not-yet-real forecast periods, so
-      // clicking one wouldn't correspond to an actual row to filter by.
-      if (widget) attachCrossFilterClick(options, holder, widget, pointLabels);
-      const chart = new ApexCharts(holder, options);
-      card.__apexChart = chart;
+      // الأسماء التاريخية (__apex*) أُبقيت لأن تصدير PPTX يقرأها — المقبض الآن من JEEM_DX.
+      card.__apexChart = handle;
       card.__apexHolder = holder;
-      card.__apexRendered = chart.render();
-      chartInstances.push(chart);
-      if (isLollipopBar) {
-        // Safety net: on the specific chart a cross-filter click just came from, ApexCharts'
-        // own post-click bookkeeping can race with this destroy-and-recreate cycle and
-        // "animationEnd" above simply never fires — leaving that one widget's bars
-        // undecorated. Re-check shortly after the entrance animation should be done and
-        // draw then if the event-driven path above didn't already (the class-presence check
-        // keeps this a no-op in the normal case).
-        const colors = options.colors;
-        const values = options.series[0].data;
-        const animMs = (options.chart.animations?.speed || 450) + (options.chart.animations?.animateGradually?.delay || 0);
-        setTimeout(() => {
-          const svg = holder.querySelector('svg');
-          if (svg && !svg.querySelector('.bar-lollipop-badge')) applyLollipopStyle(svg, values, colors);
-        }, animMs + 200);
-      }
+      card.__apexRendered = handle.rendered;
+      chartInstances.push(handle);
     });
     pendingCharts = [];
   }
@@ -4409,13 +4094,9 @@ async function widgetToPptxInput(w, card) {
     // instant this runs — snap it to its finished state first, or the export can capture a
     // bar not yet at full height or a line not yet fully drawn. `animate: false` on this
     // particular update redraws immediately rather than transitioning.
-    await chart.updateOptions({ chart: { animations: { enabled: false } } }, false, false, false);
+    if (chart.freeze) await chart.freeze(); // DevExtreme: يثبّت الرسم في حالته النهائية بلا حركة
     const svg = holder.querySelector('svg');
     if (!svg) return base;
-    // Re-applied defensively (it's idempotent) rather than relying solely on the
-    // animationEnd hook in renderDashboard() — exporting fast enough to beat that event
-    // would otherwise capture a lollipop bar with no track/badge yet.
-    if (card.__lollipopColors) applyLollipopStyle(svg, card.__lollipopValues, card.__lollipopColors);
     return { ...base, image: await svgElementToPngDataUrl(svg) };
   }
   catch { return base; }

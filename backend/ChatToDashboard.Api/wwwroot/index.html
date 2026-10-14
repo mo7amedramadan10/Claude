@@ -1217,7 +1217,10 @@
 <!-- Vendored locally (wwwroot/lib/) rather than a CDN — the app is meant to work with
      no internet access at all. See README for how it's fetched/updated. Pinned to 5.0.0,
      the last MIT-licensed release (5.1+ requires a paid license above $2M/yr revenue). -->
-<script src="lib/apexcharts.min.js"></script>
+<!-- رسوم لوحات المحادثة: DevExtreme (viz فقط) عبر طبقة jeem-dx.js — الترخيص يُحقن من /api/ui-config.js -->
+<script src="/api/ui-config.js"></script>
+<script src="lib/devextreme/dx.viz.jeem.js"></script>
+<script src="js/jeem-dx.js"></script>
 <script src="js/kpi-library.js"></script>
 <!-- محرّك عرض معرض الأمثلة التوضيحية فقط (dashGalDemo* في app.js) — بيانات دي تجريبية
      وثابتة لكل لوحة، ومفيش أي اتصال لها بمسار بناء اللوحات الحقيقي (ask()/templateRef)،

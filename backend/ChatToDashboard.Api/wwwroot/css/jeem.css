@@ -3116,3 +3116,16 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .mk-rib[tabindex]:focus, .wf-flow[tabindex]:focus { outline: none; }
 .mk-rib[tabindex]:focus-visible { stroke: var(--brand-blue); stroke-width: 2; }
 .wf-flow[tabindex]:focus-visible .wf-fp { stroke: var(--brand-blue); stroke-width: 3; }
+
+/* ---------- لوحات المحادثة: تخطيط أكثر كثافة مع رسوم DevExtreme (jeem-dx.js) ---------- */
+.dash-title h1 { font-size: var(--fs-xl); font-weight: 600; line-height: 1.75; color: var(--ink-2); }
+#dash .grid { gap: 12px; }
+#dash .widget { padding: 14px 16px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); gap: 8px; }
+#dash .widget.kpi { min-height: 108px; }
+#dash .kpi .value { font-size: 26px; }
+#dash .kpi-label { font-size: 12.5px; }
+#dash .widget .chart-holder { height: 250px; min-height: 250px; position: relative; }
+#dash .widget .chart-holder.chart-holder-forecast { height: 290px; }
+#dash .widget.chart { min-height: 0; }
+/* تنبيه النسخة التجريبية من DevExtreme (بلا مفتاح) يبقى ظاهرًا لكن لا يعلو على القوائم */
+.dx-license { z-index: 1; }
