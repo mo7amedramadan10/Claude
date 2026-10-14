@@ -72,6 +72,10 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplateStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaAliasStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaMatchingService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplatePromptService>();
+// البناء المرحلي لقوالب اللوحات (ملف تعريف البيانات + تخطيط + نداء لكل عنصر + تجميع).
+builder.Services.AddSingleton<ChatToDashboard.Api.Build.DataProfileService>();
+builder.Services.AddSingleton(sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
+builder.Services.AddSingleton<ChatToDashboard.Api.Build.StagedTemplateBuilder>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Analyst.AnalystStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Graph.GraphStore>();
 builder.Services.AddSingleton<LiveChannelHub>();

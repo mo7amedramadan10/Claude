@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Build;
 using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
@@ -21,12 +22,19 @@ public class ChatController : ControllerBase
     private readonly HistoryStore _history;
     private readonly TemplatePromptService _templatePrompts;
     private readonly SchemaMatchingService _schemaMatching;
+    private readonly StagedTemplateBuilder _staged;
+    private readonly bool _stagedTemplates;
     private readonly ILogger<ChatController> _logger;
 
     public ChatController(
         IDashboardGenerator generator, PermissionsService permissions, HistoryStore history,
-        TemplatePromptService templatePrompts, SchemaMatchingService schemaMatching, ILogger<ChatController> logger)
+        TemplatePromptService templatePrompts, SchemaMatchingService schemaMatching, StagedTemplateBuilder staged,
+        IConfiguration configuration, ILogger<ChatController> logger)
     {
+        _staged = staged;
+        // "Build:TemplateMode": "staged" (الافتراضي) يبني قوالب اللوحات بالمسار المرحلي (انظر
+        // StagedTemplateBuilder)؛ "legacy" يعيد حلقة الأدوات الواحدة القديمة للمقارنة.
+        _stagedTemplates = !string.Equals(configuration["Build:TemplateMode"], "legacy", StringComparison.OrdinalIgnoreCase);
         _generator = generator;
         _permissions = permissions;
         _history = history;
@@ -56,7 +64,30 @@ public class ChatController : ControllerBase
         // in this branch, only as a display label the frontend already showed in the bubble.
         string prompt;
         IReadOnlyList<BuiltinDashboardWidgetSpec>? requiredWidgets = null;
-        if (request.Template is not null)
+        DashboardSpec? stagedDashboard = null;
+        if (request.Template is not null && _stagedTemplates && request.Template.Kind == TemplateKinds.Dashboard
+            && request.CurrentDashboard is null)
+        {
+            // البناء المرحلي: لبناء قالب من الصفر فقط (لا متابعة على لوحة معروضة — تلك تبقى على
+            // المسار القديم الذي يفهم «العناصر الحالية»). null يعني المزوّد الحالي لا يدعمه.
+            var (inputs, error) = await _templatePrompts.ResolveForStagedAsync(request.Template, user, effectiveSources, ct);
+            if (inputs is null) return BadRequest(new ChatResponse { Error = error ?? "تعذّر تحميل هذا النموذج." });
+            requiredWidgets = inputs.Widgets;
+            try
+            {
+                stagedDashboard = await _staged.BuildAsync(new StagedBuildRequest(
+                    inputs.Name, inputs.Body, inputs.Widgets, inputs.GeneralRules, inputs.Hints, inputs.Context, request.Lang, user), ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "فشل البناء المرحلي لقالب {Key}", request.Template.Key);
+                return StatusCode(500, new ChatResponse { Error = "تعذّر بناء اللوحة: " + ex.Message });
+            }
+        }
+        if (stagedDashboard is not null)
+            prompt = request.Message.Trim();
+        else if (request.Template is not null)
         {
             var (resolved, error, templateWidgets) = await _templatePrompts.ResolveAsync(request.Template, user, effectiveSources, ct);
             if (resolved is null) return BadRequest(new ChatResponse { Error = error ?? "تعذّر تحميل هذا النموذج." });
@@ -70,7 +101,7 @@ public class ChatController : ControllerBase
 
         try
         {
-            var dashboard = await _generator.GenerateDashboardAsync(
+            var dashboard = stagedDashboard ?? await _generator.GenerateDashboardAsync(
                 prompt, request.CurrentDashboard, effectiveSources, request.Image, user, request.Lang, ct: ct);
 
             // Defense in depth alongside TemplatePromptService's own required-widgets

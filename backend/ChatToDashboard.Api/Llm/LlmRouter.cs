@@ -135,6 +135,21 @@ public class LlmRouter : IDashboardGenerator, ITableNamingAssistant, IIntegratio
         }
     }
 
+    /// <summary>مزوّد البناء المرحلي للقوالب (انظر Build/StagedTemplateBuilder) حسب نفس إعداد
+    /// المزوّد الذي يبني اللوحات العادية. null عندما لا يدعمه المزوّد الحالي (Ollama) فيعود
+    /// المتحكم إلى المسار القديم بدل أن يفشل.</summary>
+    public async Task<IStagedLlm?> ResolveStagedAsync(CancellationToken ct = default)
+    {
+        var settings = await _settings.GetAsync(ct);
+        var provider = settings.Provider is { Length: > 0 } ? settings.Provider : _defaultProvider;
+        return provider switch
+        {
+            OpenAI => _services.GetRequiredService<OpenAiClient>(),
+            Ollama => null,
+            _ => _services.GetRequiredService<ClaudeClient>(),
+        };
+    }
+
     private IDashboardGenerator ResolveProvider(string provider) => provider switch
     {
         OpenAI => _services.GetRequiredService<OpenAiClient>(),

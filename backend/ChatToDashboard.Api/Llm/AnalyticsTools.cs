@@ -601,6 +601,23 @@ public class AnalyticsTools
     /// validation only (VisualIdentityService does the real contrast check); a missing/invalid
     /// field fails the whole parse rather than silently defaulting, since a partially-invented
     /// token set is worse than falling back to manual entry.</summary>
+    /// <summary>مفسّر الرد في البناء المرحلي (انظر IStagedLlm): يكفي أن يكون كائن JSON واحدًا صالحًا؛
+    /// التحقق من شكله مسؤولية StagedTemplateBuilder لأن كل مرحلة لها مخططها.</summary>
+    public static (StagedResult? Result, string? Error) TryParseStagedJson(string text)
+    {
+        var (candidate, extractError) = ExtractJsonCandidate(text);
+        if (candidate is null) return (null, extractError);
+        try
+        {
+            var node = JsonNode.Parse(candidate);
+            return node is JsonObject obj ? (new StagedResult(candidate, obj), null) : (null, "الرد ليس كائن JSON.");
+        }
+        catch (JsonException ex)
+        {
+            return (null, ex.Message);
+        }
+    }
+
     public static (VisualIdentitySuggestion? Suggestion, string? Error) TryParseVisualIdentity(string text)
     {
         var (candidate, extractError) = ExtractJsonCandidate(text);

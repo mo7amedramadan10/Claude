@@ -14,7 +14,7 @@ namespace ChatToDashboard.Api.Claude;
 /// Claude asks for list_files / query_data / search_documents, we execute the tool
 /// and send back tool_result blocks, until Claude returns the final dashboard JSON.
 /// </summary>
-public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
     IIntegrationSetupAssistant, IVisualIdentityImageExtractor
 {
     private const int MaxToolIterations = 15;
@@ -459,17 +459,21 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// </summary>
     private async Task<T> RunLoopAsync<T>(
         JsonArray messages, string systemPrompt, JsonArray? tools, AnalyticsTools.SourceContext context,
-        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct)
+        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct,
+        // البناء المرحلي (RunStagedAsync) يمرّر سقفًا أصغر ودورات إجبار أقل؛ القيم الافتراضية
+        // تُبقي كل المسارات القديمة كما هي حرفيًا.
+        int maxIterations = MaxToolIterations, int forceFinalAnswerAt = ForceFinalAnswerAtIteration,
+        int forceToolRounds = 2)
         where T : class
     {
         var jsonRepairAttempts = 0;
         var forcedFinalAnswerNoticeSent = false;
         try
         {
-            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            for (var iteration = 0; iteration < maxIterations; iteration++)
             {
                 ct.ThrowIfCancellationRequested();
-                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= ForceFinalAnswerAtIteration;
+                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= forceFinalAnswerAt;
                 if (forceFinalAnswer && tools is { Count: > 0 } && !forcedFinalAnswerNoticeSent)
                 {
                     forcedFinalAnswerNoticeSent = true;
@@ -489,7 +493,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 // and never actually check the real schema against the widgets it was asked
                 // for. Forcing round two as well makes it pick another tool again (normally
                 // query_data) before it's allowed to free-answer.
-                var forceToolUse = iteration <= 1 && !forceFinalAnswer;
+                var forceToolUse = iteration < forceToolRounds && !forceFinalAnswer;
                 var response = await CallMessagesApiAsync(
                     messages, systemPrompt, forceFinalAnswer ? null : tools, forceToolUse, trace, ct);
 
@@ -576,7 +580,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             }
 
             throw new InvalidOperationException(
-                $"Tool-use loop did not converge within {MaxToolIterations} iterations.");
+                $"Tool-use loop did not converge within {maxIterations} iterations.");
         }
         catch (Exception ex)
         {
@@ -601,6 +605,32 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     private static string DescribeSources(AnalyticsTools.SourceContext context) =>
         $"أنظمة: {(context.EnabledSystems.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledSystems))} | " +
         $"ملفات: {(context.EnabledFiles.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledFiles))}";
+
+    public string ProviderName => "Anthropic";
+
+    /// <summary>انظر <see cref="IStagedLlm"/>: نداء صغير بتعليماته الخاصة وسقف دوراته الخاص، يعيد
+    /// استخدام نفس حلقة الأدوات والتخزين المؤقت للبادئة والتسجيل في سجل الاستهلاك.</summary>
+    public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
+    {
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = call.UserMessage } };
+        JsonArray? tools = null;
+        if (call.Tools is { Count: > 0 })
+        {
+            tools = new JsonArray();
+            foreach (var tool in call.Tools)
+                tools.Add(new JsonObject
+                {
+                    ["name"] = tool.Name, ["description"] = tool.Description, ["input_schema"] = tool.InputSchema.DeepClone(),
+                });
+        }
+        var trace = _usage.Begin("Anthropic", _model, call.Label, DescribeSources(call.Context), call.RequestingUser);
+        trace.SetSystemPrompt(call.SystemPrompt);
+        var maxIterations = Math.Max(2, call.MaxIterations);
+        return await RunLoopAsync(
+            messages, call.SystemPrompt, tools, call.Context, trace, AnalyticsTools.TryParseStagedJson, "staged", ct,
+            maxIterations: maxIterations + 2, forceFinalAnswerAt: maxIterations,
+            forceToolRounds: call.ForceFirstToolCall ? 1 : 0);
+    }
 
     private JsonArray BuildToolsJson(AnalyticsTools.SourceContext context)
     {

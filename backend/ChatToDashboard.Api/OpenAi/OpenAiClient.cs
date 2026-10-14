@@ -15,7 +15,7 @@ namespace ChatToDashboard.Api.OpenAi;
 /// we execute each call and append a "tool" message, until it returns the dashboard JSON.
 /// </summary>
 public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
-    IIntegrationSetupAssistant, IVisualIdentityImageExtractor
+    IIntegrationSetupAssistant, IVisualIdentityImageExtractor, IStagedLlm
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -441,17 +441,21 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// </summary>
     private async Task<T> RunLoopAsync<T>(
         string model, JsonArray messages, JsonArray? tools, AnalyticsTools.SourceContext context,
-        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct)
+        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct,
+        // البناء المرحلي (RunStagedAsync) يمرّر سقفًا أصغر ودورات إجبار أقل ووضع JSON؛ القيم
+        // الافتراضية تُبقي كل المسارات القديمة كما هي حرفيًا.
+        int maxIterations = MaxToolIterations, int forceFinalAnswerAt = ForceFinalAnswerAtIteration,
+        int forceToolRounds = 2, bool jsonObjectMode = false)
         where T : class
     {
         var jsonRepairAttempts = 0;
         var forcedFinalAnswerNoticeSent = false;
         try
         {
-            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            for (var iteration = 0; iteration < maxIterations; iteration++)
             {
                 ct.ThrowIfCancellationRequested();
-                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= ForceFinalAnswerAtIteration;
+                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= forceFinalAnswerAt;
                 if (forceFinalAnswer && tools is { Count: > 0 } && !forcedFinalAnswerNoticeSent)
                 {
                     forcedFinalAnswerNoticeSent = true;
@@ -477,9 +481,9 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 // (almost always query_data) before it's allowed to free-answer — then every
                 // iteration from here stays "auto" so it can still stop once it actually has
                 // what it needs, same as before.
-                var forceToolUse = iteration <= 1 && !forceFinalAnswer;
+                var forceToolUse = iteration < forceToolRounds && !forceFinalAnswer;
                 var response = await CallChatCompletionsAsync(
-                    model, messages, forceFinalAnswer ? null : tools, forceToolUse, trace, ct);
+                    model, messages, forceFinalAnswer ? null : tools, forceToolUse, trace, ct, jsonObjectMode);
 
                 var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                     ?? throw new InvalidOperationException("OpenAI API response had no choices.");
@@ -563,13 +567,48 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             }
 
             throw new InvalidOperationException(
-                $"Tool-calling loop did not converge within {MaxToolIterations} iterations.");
+                $"Tool-calling loop did not converge within {maxIterations} iterations.");
         }
         catch (Exception ex)
         {
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             throw;
         }
+    }
+
+    public string ProviderName => "OpenAI";
+
+    /// <summary>انظر <see cref="IStagedLlm"/>: نداء صغير بتعليماته الخاصة وسقف دوراته الخاص، يعيد
+    /// استخدام نفس حلقة الأدوات والتسجيل في سجل الاستهلاك.</summary>
+    public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
+    {
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = call.SystemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = call.UserMessage },
+        };
+        JsonArray? tools = null;
+        if (call.Tools is { Count: > 0 })
+        {
+            tools = new JsonArray();
+            foreach (var tool in call.Tools)
+                tools.Add(new JsonObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JsonObject
+                    {
+                        ["name"] = tool.Name, ["description"] = tool.Description, ["parameters"] = tool.InputSchema.DeepClone(),
+                    },
+                });
+        }
+        var trace = _usage.Begin("OpenAI", model, call.Label, DescribeSources(call.Context), call.RequestingUser);
+        trace.SetSystemPrompt(call.SystemPrompt);
+        var maxIterations = Math.Max(2, call.MaxIterations);
+        return await RunLoopAsync(
+            model, messages, tools, call.Context, trace, AnalyticsTools.TryParseStagedJson, "staged", ct,
+            maxIterations: maxIterations + 2, forceFinalAnswerAt: maxIterations,
+            forceToolRounds: call.ForceFirstToolCall ? 1 : 0, jsonObjectMode: true);
     }
 
     /// <summary>A short, readable note of which sources were on for this question.</summary>
@@ -606,13 +645,18 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     }
 
     private async Task<JsonObject> CallChatCompletionsAsync(
-        string model, JsonArray messages, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct)
+        string model, JsonArray messages, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct,
+        bool jsonObjectMode = false)
     {
         var body = new JsonObject
         {
             ["model"] = model,
             ["messages"] = messages.DeepClone(),
         };
+        // وضع JSON: الواجهة البرمجية تضمن أن الرد النهائي كائن JSON صالح (لا أسوار markdown ولا نص
+        // خارجه)، فتختفي أغلب دورات «ردك لم يكن JSON صالحًا». يعمل مع الأدوات أيضًا.
+        if (jsonObjectMode)
+            body["response_format"] = new JsonObject { ["type"] = "json_object" };
         // OpenAI rejects an empty "tools" array outright (400: minimum length 1) — omit the
         // field entirely rather than send "[]" when forcing a tools-less final answer.
         if (tools is { Count: > 0 })

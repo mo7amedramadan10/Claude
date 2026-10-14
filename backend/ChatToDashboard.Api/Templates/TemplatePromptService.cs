@@ -196,6 +196,34 @@ public class TemplatePromptService
         return (prompt, null);
     }
 
+    /// <summary>مدخلات البناء المرحلي لقالب لوحة (انظر Build/StagedTemplateBuilder): نص القالب نفسه بعد
+    /// استبدال المتغيرات بلا كتلة «العناصر المطلوبة» (المرحلي يعرض العناصر بطريقته)، وقائمة
+    /// العناصر، والقواعد العامة، وتطابقات مكتبة الحقول — أو رسالة خطأ بنفس أسباب رفض ResolveAsync.</summary>
+    public async Task<(StagedTemplateInputs? Inputs, string? Error)> ResolveForStagedAsync(
+        TemplateRef templateRef, AppUser user, SourceSelection effectiveSources, CancellationToken ct = default)
+    {
+        if (templateRef.Kind != TemplateKinds.Dashboard) return (null, "البناء المرحلي لقوالب اللوحات فقط.");
+        var sourceContext = await _analytics.DescribeSourcesAsync(effectiveSources, ct);
+        var resolved = await ResolveDashboardAsync(templateRef.Key, ct);
+        if (resolved.Error is not null) return (null, resolved.Error);
+
+        var vars = await BuildCommonVariablesAsync(user, sourceContext, ct);
+        var body = Substitute(resolved.Prompt!, vars);
+        var rules = await _templates.GetAsync(TemplateKinds.Rules, "general", ct);
+        var generalRules = string.IsNullOrWhiteSpace(rules?.PromptText) ? null : Substitute(rules.PromptText, vars);
+        var widgets = resolved.Widgets ?? new List<BuiltinDashboardWidgetSpec>();
+
+        IReadOnlyDictionary<string, SchemaMatchingService.MatchedWidget> hints =
+            new Dictionary<string, SchemaMatchingService.MatchedWidget>();
+        var internalTables = await _analytics.GetVisibleTablesAsync(sourceContext, ct);
+        if (widgets.Count > 0 && (sourceContext.EnabledIntegrations.Count > 0 || internalTables.Count > 0))
+            hints = await _schemaMatching.MatchAsync(widgets, sourceContext.EnabledIntegrations, internalTables, ct);
+
+        var over = await _templates.GetAsync(TemplateKinds.Dashboard, templateRef.Key, ct);
+        var name = over?.Title is { Length: > 0 } n ? n : BuiltinTemplates.FindDashboard(templateRef.Key)?.Name ?? templateRef.Key;
+        return (new StagedTemplateInputs(name, body, widgets, generalRules, hints, sourceContext), null);
+    }
+
     private async Task<(string? Prompt, string? Error, IReadOnlyList<BuiltinDashboardWidgetSpec>? Widgets)> ResolveDashboardAsync(
         string key, CancellationToken ct)
     {
@@ -341,3 +369,12 @@ public class TemplatePromptService
             .Where(name => !KnownVariables.TryGetValue(name, out var kinds) || !kinds.Contains(kind))
             .ToList();
 }
+
+/// <summary>ناتج <see cref="TemplatePromptService.ResolveForStagedAsync"/>.</summary>
+public sealed record StagedTemplateInputs(
+    string Name,
+    string Body,
+    IReadOnlyList<BuiltinDashboardWidgetSpec> Widgets,
+    string? GeneralRules,
+    IReadOnlyDictionary<string, SchemaMatchingService.MatchedWidget> Hints,
+    AnalyticsTools.SourceContext Context);
