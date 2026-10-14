@@ -81,6 +81,7 @@ public class HistoryController : ControllerBase
                 ? "{}"
                 : request.ActiveFilters.GetRawText(),
             ProjectId = await CurrentProjectIdAsync(ct),
+            TemplateId = string.IsNullOrWhiteSpace(request.TemplateId) ? null : request.TemplateId.Trim(),
         };
 
         var saved = await _store.SaveAsync(entry, ct);

@@ -124,6 +124,11 @@ public class SaveHistoryRequest
 
     [JsonPropertyName("activeFilters")]
     public JsonElement ActiveFilters { get; set; }
+
+    /// <summary>مفتاح القالب الذي بُنيت منه لوحة المحادثة (DashboardSpec.TemplateKey) — يُحفظ في
+    /// TemplateId ليبقى «إعادة بناء العنصر» ممكنًا بعد إعادة فتح اللوحة من السجل.</summary>
+    [JsonPropertyName("templateId")]
+    public string? TemplateId { get; set; }
 }
 
 /// <summary>Body of POST /api/history/from-template — creating an Active dashboard

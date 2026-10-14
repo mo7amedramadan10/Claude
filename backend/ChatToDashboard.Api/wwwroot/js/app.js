@@ -1023,9 +1023,10 @@ function renderWidgetCols() {
 
   // ج) إعادة بناء عنصر القالب بعد التصحيح
   if (w.noData) {
-    parts.push(state.dashboard?.templateKey
-      ? `<div class="pv-actions"><button type="button" class="btn btn-primary btn-sm" id="wc-rebuild">🔁 إعادة بناء هذا العنصر الآن</button><span class="muted" style="font-size:var(--fs-xs)">يُبنى من بيانات مشروعك بعد التصحيحات أعلاه (نداء واحد للموديل).</span></div>`
-      : '<div class="owner-line">بعد التصحيح استخدم «اطلب من جيم» على العنصر لإعادة بنائه.</div>');
+    const unmet = data.requirements.filter(r => r.hard && !r.satisfied).length;
+    parts.push(`<div class="pv-actions"><button type="button" class="btn btn-primary btn-sm" id="wc-rebuild">🔁 إعادة بناء هذا العنصر الآن</button><span class="muted" style="font-size:var(--fs-xs)">${unmet
+      ? `حدّد أولًا عمودًا لكل مفهوم ضروري ناقص (${unmet.toLocaleString('en-US')}) ثم يُعاد البناء تلقائيًا.`
+      : 'يُبنى من بيانات مشروعك بعد التصحيحات أعلاه (نداء واحد للموديل).'}</span></div>`);
   }
   el('widget-cols-body').innerHTML = parts.join('') || '<div class="owner-line">لا شيء لتصحيحه في هذا العنصر.</div>';
 
@@ -1041,6 +1042,9 @@ function renderWidgetCols() {
     widgetColsStatus(`تم اعتماد «${column}» كـ «${sel.closest('.sem-row').querySelector('b').textContent}».`, 'ok');
     dashGalFeasibility = null;
     await loadWidgetCols();
+    // عنصر فارغ واكتملت مفاهيمه الضرورية: أعد بناءه فورًا بدل انتظار ضغطة أخرى.
+    const d = widgetColsState.data;
+    if (widgetColsState.widget.noData && d && !d.requirements.some(r => r.hard && !r.satisfied)) await rebuildWidgetFromTemplate();
   }));
 }
 
@@ -1098,7 +1102,7 @@ async function rebuildWidgetFromTemplate() {
     const res = await fetch('/api/widgets/columns/rebuild', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
-        templateKey: state.dashboard.templateKey, title: w.title, lang: state.lang }),
+        templateKey: state.dashboard?.templateKey || null, title: w.title, type: w.type || 'kpi', lang: state.lang }),
     });
     const payload = await res.json().catch(() => null);
     if (!res.ok || !payload?.widget) { widgetColsStatus(payload?.error || 'تعذّر إعادة البناء.', 'bad'); return; }
@@ -1107,7 +1111,7 @@ async function rebuildWidgetFromTemplate() {
     const target = findWidget(w.id) || w;
     if (built.noData) {
       target.missingReason = built.missingReason;
-      widgetColsStatus(`ما زال غير ممكن: ${built.missingReason}`, 'bad');
+      widgetColsStatus(`ما زال غير ممكن — ${built.missingReason} جرّب عمودًا آخر أعلاه أو «اطلب من جيم» على العنصر.`, 'bad');
     } else {
       Object.assign(target, { type: built.type, data: built.data, xKey: built.xKey, yKey: built.yKey, source: built.source,
         query: built.query || null, options: built.options, series: built.series, stacked: built.stacked, areaFill: built.areaFill, centerLabel: built.centerLabel });
@@ -7481,6 +7485,7 @@ function saveToHistory(question, dashboard) {
       question, summary: dashboard.summary,
       queryDescription: dashboard.summary, widgets: dashboard.widgets,
       filters: dashboard.filters || [], activeFilters: state.activeFilters || {},
+      templateId: dashboard.renderKind ? null : (dashboard.templateKey || null),
     }),
   }).then(res => res.ok ? res.json() : null).then(saved => {
     // Captured so a later editor edit updates this same row instead of creating a new one.
@@ -7903,6 +7908,8 @@ function openHistoryEntry(id) {
     // Set only for an "interactive" (RenderKind) dashboard — see mountInteractiveDashboard,
     // called from renderDashboard() before any ordinary widget is touched.
     renderKind: entry.renderKind || null, templateId: entry.templateId || null, projectId: entry.projectId || null,
+    // لوحة محادثة بُنيت من قالب: مفتاحه محفوظ في templateId ليبقى «إعادة بناء العنصر» ممكنًا.
+    templateKey: entry.renderKind ? null : (entry.templateId || null),
   });
   // A Draft shows its own saved-at time (the frozen snapshot's actual age) — overwritten
   // with "now" below by applyFilters() if this turns out to be an Active dashboard, since
