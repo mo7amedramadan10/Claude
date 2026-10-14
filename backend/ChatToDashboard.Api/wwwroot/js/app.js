@@ -1763,54 +1763,6 @@ function TableCard(w) {
   return card;
 }
 
-// Draws the "lollipop" bar decoration: a full-height, pill-shaped, muted background track
-// behind each bar (wider than the bar itself — ApexCharts' own backgroundBarColors only
-// draws a track the SAME width as the column, so this is plain SVG instead) plus a colored
-// circular value badge at the top of the actual filled bar. Purely decorative — the bar's
-// real geometry/data/hit area are untouched.
-function applyLollipopStyle(svg, values, colors) {
-  if (!svg) return;
-  svg.querySelectorAll('.bar-lollipop-track,.bar-lollipop-badge').forEach(el => el.remove());
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const grid = svg.querySelector('.apexcharts-grid');
-  if (!grid) return;
-  const gridTop = grid.getBBox().y;
-  const badgeR = 14;
-  svg.querySelectorAll('.apexcharts-bar-area').forEach((bar, i) => {
-    const b = bar.getBBox();
-    if (b.width <= 0) return;
-    const cx = b.x + b.width / 2;
-    const baseline = b.y + b.height; // the shared zero-line, same for every bar
-    const trackW = b.width * 2.1;
-    const trackH = Math.max(baseline - gridTop, 1);
-    const track = document.createElementNS(svgNS, 'rect');
-    track.setAttribute('class', 'bar-lollipop-track');
-    track.setAttribute('x', (cx - trackW / 2).toFixed(1));
-    track.setAttribute('y', gridTop.toFixed(1));
-    track.setAttribute('width', trackW.toFixed(1));
-    track.setAttribute('height', trackH.toFixed(1));
-    track.setAttribute('rx', (trackW / 2).toFixed(1));
-    track.setAttribute('fill', THEME.gridColor);
-    bar.insertAdjacentElement('beforebegin', track);
-
-    const color = colors[i % colors.length];
-    const badge = document.createElementNS(svgNS, 'g');
-    badge.setAttribute('class', 'bar-lollipop-badge');
-    const circle = document.createElementNS(svgNS, 'circle');
-    circle.setAttribute('cx', cx.toFixed(1)); circle.setAttribute('cy', b.y.toFixed(1)); circle.setAttribute('r', badgeR);
-    circle.setAttribute('fill', color);
-    const text = document.createElementNS(svgNS, 'text');
-    text.setAttribute('x', cx.toFixed(1)); text.setAttribute('y', (b.y + 1).toFixed(1));
-    text.setAttribute('text-anchor', 'middle'); text.setAttribute('dominant-baseline', 'central');
-    text.setAttribute('fill', '#fff');
-    text.setAttribute('font-size', '10.5'); text.setAttribute('font-weight', '700');
-    text.setAttribute('font-family', THEME.fontFamily);
-    text.textContent = fmt(values[i]);
-    badge.appendChild(circle); badge.appendChild(text);
-    bar.insertAdjacentElement('afterend', badge);
-  });
-}
-
 // One shared config builder — the only place a chart's colors/fonts are set — passed
 // to ApexCharts verbatim so its own defaults never leak through. Donut and xy (bar/line)
 // options are built as two separate object literals rather than one with ternaries that
@@ -4081,11 +4033,6 @@ function svgElementToPngDataUrl(svgEl, scale = 2) {
     clone.setAttribute('width', rect.width);
     clone.setAttribute('height', rect.height);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    // Hover-only elements ApexCharts normally keeps invisible via its own stylesheet
-    // (opacity: 0 until you hover) — that stylesheet isn't available to a standalone image
-    // decode, so left in, the crosshair rect renders as a solid tinted band.
-    clone.querySelectorAll('.apexcharts-xcrosshairs, .apexcharts-ycrosshairs, .apexcharts-tooltip')
-      .forEach(el => el.remove());
     const xml = new XMLSerializer().serializeToString(clone);
     const img = new Image();
     img.onload = () => {

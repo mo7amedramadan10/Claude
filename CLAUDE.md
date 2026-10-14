@@ -188,8 +188,8 @@
   باقي الأنواع (kpi، table، progress-table، stages، bullet…) HTML/SVG مخصص كما كانت.
 - **الحزمة**: `wwwroot/lib/devextreme/dx.viz.jeem.js` مبنية بـ esbuild من `devextreme@26.1.5`
   (مكوّنات viz فقط، ~920KB بدل dx.all.js 4.7MB) — وصفة البناء في `lib/devextreme/build/`
-  والشرح في `lib/devextreme/README.md`. وسم `lib/apexcharts.min.js` أُزيل من index.html
-  (الملف نفسه باقٍ ولم يُحذف).
+  والشرح في `lib/devextreme/README.md`. ملفات ApexCharts القديمة (`lib/apexcharts.min.js`،
+  `vendor/apexcharts.min.js`، `js/jeem-charts.js`) ودالة `applyLollipopStyle` **حُذفت** بطلب المستخدم.
 - **الترخيص**: لكل مطوّر. المفتاح من `DevExtreme:LicenseKey` (user-secrets / `DevExtreme__LicenseKey`)
   يحقنه `Controllers/UiConfigController.cs` عبر `GET /api/ui-config.js` → `window.JEEM_UI_CONFIG`
   قبل تحميل الحزمة؛ `jeem-dx.js` يستدعي `DevExpress.config({licenseKey})`. بلا مفتاح: نسخة
@@ -200,7 +200,6 @@
   التي تعيد مقبضًا `{instance, rendered, svg(), freeze(), destroy()}`. الأسماء `card.__apexChart/
   __apexHolder/__apexRendered` أُبقيت لأن تصدير PPTX يقرأها (`widgetToPptxInput` يستدعي `freeze()`
   ثم يلتقط SVG). `attachCrossFilterClick` يضبط `spec.onPointClick(idx)` للتصفية المتقاطعة.
-  `applyLollipopStyle` لم تعد تُستدعى (أُبقيت دون حذف).
 - **القرارات البصرية**: أعمدة الفئات أفقية (`rotated`) مع قيمة عند طرف كل شريط، والسلاسل الزمنية
   (`looksTemporal`) رأسية؛ الخط spline بعلامات مفرغة؛ الدائري حلقة بإجمالي + تسمية في المنتصف
   (`centerTemplate`) وشرح جانبي بالنسب؛ المكدّس تسميات داخلية بيضاء؛ التنبؤ خط متقطع بحدّي ثقة منقّطين؛
@@ -237,8 +236,7 @@
     عمودين تغلب container query، والرسوم SVG تُطبع كما هي (مُتحقَّق بـ `page.pdf`). **شريط النسخة
     التجريبية `<dx-license>` لا يُخفى** (أنماط مضمّنة مفروضة) ويزول فقط بتركيب المفتاح.
   - غير منفَّذ عمدًا: معاينة المعرض تبقى SVG خفيفًا (`dash-render.js`) لأداء 200+ بطاقة؛ تحديث البيانات
-    في مكانها بحركة (الرسوم تُبنى من جديد عند الفلترة كما كان)؛ وحذف `lib/apexcharts.min.js`
-    و`applyLollipopStyle` و`jeem-charts.js` (بلا استخدام) متروك لقرار المستخدم.
+    في مكانها بحركة (الرسوم تُبنى من جديد عند الفلترة كما كان).
 
 ## القرارات المعمارية المتّبعة (§4.16+)
 
