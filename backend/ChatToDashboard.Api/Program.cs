@@ -76,6 +76,9 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplatePromptServic
 builder.Services.AddSingleton<ChatToDashboard.Api.Build.DataProfileService>();
 builder.Services.AddSingleton(sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
 builder.Services.AddSingleton<ChatToDashboard.Api.Build.StagedTemplateBuilder>();
+// طبقة المعنى: فهم أعمدة كل ملف مرفوع مرة واحدة وربطها بقاموس مفاهيم ثابت.
+builder.Services.AddSingleton<ChatToDashboard.Api.Semantics.ColumnSemanticsStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Semantics.ColumnSemanticsService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Analyst.AnalystStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Graph.GraphStore>();
 builder.Services.AddSingleton<LiveChannelHub>();

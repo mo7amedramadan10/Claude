@@ -14,11 +14,17 @@ public class RepositoryController : ControllerBase
     private readonly UploadParser _parser;
     private readonly PermissionsService _permissions;
     private readonly UserStore _users;
+    private readonly ChatToDashboard.Api.Semantics.ColumnSemanticsService _semantics;
+    private readonly ChatToDashboard.Api.Semantics.ColumnSemanticsStore _semanticsStore;
     private readonly ILogger<RepositoryController> _logger;
 
     public RepositoryController(
-        RepositoryStore store, UploadParser parser, PermissionsService permissions, UserStore users, ILogger<RepositoryController> logger)
+        RepositoryStore store, UploadParser parser, PermissionsService permissions, UserStore users,
+        ChatToDashboard.Api.Semantics.ColumnSemanticsService semantics, ChatToDashboard.Api.Semantics.ColumnSemanticsStore semanticsStore,
+        ILogger<RepositoryController> logger)
     {
+        _semantics = semantics;
+        _semanticsStore = semanticsStore;
         _store = store;
         _parser = parser;
         _permissions = permissions;
@@ -144,6 +150,8 @@ public class RepositoryController : ControllerBase
             var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
             var saved = await _store.SaveAsync(
                 parsed, request.DisplayName, request.Description, request.Category, user.Id, selection.ProjectId, ct);
+            // طبقة المعنى: فهم أعمدة الجدول مرة واحدة في الخلفية — لا يؤخّر الحفظ ولا يُفشله.
+            _semantics.AnalyzeInBackground(saved.ProjectId, saved.TableName);
             return Ok(saved);
         }
         catch (Exception ex)
@@ -174,6 +182,8 @@ public class RepositoryController : ControllerBase
         try
         {
             var updated = await _store.UpdateDataAsync(id, parsed, ct);
+        // طبقة المعنى: بيانات جديدة قد تغيّر معاني الأعمدة — تحليل في الخلفية.
+        _semantics.AnalyzeInBackground(updated?.ProjectId, updated?.TableName);
             return updated is null ? NotFound(new { error = "الملف غير موجود." }) : Ok(updated);
         }
         catch (Exception ex)
@@ -191,6 +201,56 @@ public class RepositoryController : ControllerBase
     /// least as sensitive as a query result. Merely seeing the file listed in "مستودع
     /// الملفات" does not itself grant this, same as it doesn't grant querying it.
     /// </summary>
+    // ---------- طبقة المعنى (Semantics/): معاني أعمدة ملف مرفوع ----------
+
+    /// <summary>معاني أعمدة جدول الملف كما خُزّنت (آلية أو مؤكدة من المستخدم) مع القاموس للمراجعة.</summary>
+    [HttpGet("files/{id}/semantics")]
+    public async Task<IActionResult> GetSemantics(string id, CancellationToken ct)
+    {
+        var (file, error) = await FindAccessibleFileAsync(id, ct);
+        if (file is null) return error!;
+        if (string.IsNullOrWhiteSpace(file.TableName)) return Ok(new { columns = Array.Empty<object>(), concepts = ChatToDashboard.Api.Semantics.ConceptCatalog.Concepts });
+        var rows = await _semanticsStore.ListForTableAsync(file.ProjectId ?? "", file.TableName, ct);
+        return Ok(new { tableName = file.TableName, columns = rows, concepts = ChatToDashboard.Api.Semantics.ConceptCatalog.Concepts });
+    }
+
+    /// <summary>إعادة تحليل معاني الأعمدة الآن (متزامن) — بعد تغيّر البيانات أو عند الشك في النتيجة.</summary>
+    [HttpPost("files/{id}/semantics/analyze")]
+    public async Task<IActionResult> AnalyzeSemantics(string id, CancellationToken ct)
+    {
+        var (file, error) = await FindAccessibleFileAsync(id, ct);
+        if (file is null) return error!;
+        if (string.IsNullOrWhiteSpace(file.TableName) || string.IsNullOrWhiteSpace(file.ProjectId))
+            return BadRequest(new { error = "هذا الملف ليس له جدول بيانات." });
+        var rows = await _semantics.AnalyzeTableAsync(file.ProjectId, file.TableName, ct);
+        return Ok(new { tableName = file.TableName, columns = rows });
+    }
+
+    /// <summary>تأكيد أو تصحيح معنى عمود من المستخدم — يفوز على أي تحليل آلي لاحق.</summary>
+    [HttpPut("files/{id}/semantics/{column}")]
+    public async Task<IActionResult> SetSemantic(string id, string column, [FromBody] ChatToDashboard.Api.Semantics.SetColumnSemanticRequest request, CancellationToken ct)
+    {
+        var (file, error) = await FindAccessibleFileAsync(id, ct);
+        if (file is null) return error!;
+        if (string.IsNullOrWhiteSpace(file.TableName) || string.IsNullOrWhiteSpace(file.ProjectId))
+            return BadRequest(new { error = "هذا الملف ليس له جدول بيانات." });
+        if (request.Concept is not null && !ChatToDashboard.Api.Semantics.ConceptCatalog.IsKnown(request.Concept))
+            return BadRequest(new { error = "المفهوم غير معروف في القاموس." });
+        var role = request.Role ?? ChatToDashboard.Api.Semantics.ConceptCatalog.Find(request.Concept)?.Role ?? ChatToDashboard.Api.Semantics.ConceptRoles.Text;
+        var valueMap = request.ValueMap is { Count: > 0 } ? System.Text.Json.JsonSerializer.Serialize(request.ValueMap) : null;
+        await _semanticsStore.SetByUserAsync(file.ProjectId, file.TableName, column, request.Concept, role, request.Unit, valueMap, ct);
+        return NoContent();
+    }
+
+    private async Task<(RepositoryFile? File, IActionResult? Error)> FindAccessibleFileAsync(string id, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return (null, Unauthorized());
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        var file = (await _store.ListAsync(selection.ProjectId, ct)).FirstOrDefault(f => f.Id == id);
+        return file is null ? (null, NotFound(new { error = "الملف غير موجود." })) : (file, null);
+    }
+
     [HttpGet("files/{id}/download")]
     public async Task<IActionResult> Download(string id, CancellationToken ct)
     {
@@ -350,7 +410,11 @@ public class RepositoryController : ControllerBase
         if (user.Role != UserRoles.Admin && !string.Equals(createdByUserId, user.Id, StringComparison.OrdinalIgnoreCase))
             return Forbid();
 
+        // طبقة المعنى: صفوف أعمدة هذا الجدول تُحذف معه حتى لا تُلحق بجدول لاحق يحمل الاسم نفسه.
+        var doomed = (await _store.ListAsync(selection.ProjectId, ct)).FirstOrDefault(f => f.Id == id);
         await _store.DeleteAsync(id, ct);
+        if (doomed is { TableName.Length: > 0, ProjectId.Length: > 0 })
+            await _semanticsStore.DeleteForTableAsync(doomed.ProjectId, doomed.TableName, ct);
         return NoContent();
     }
 }

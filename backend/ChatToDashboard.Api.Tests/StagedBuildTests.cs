@@ -88,3 +88,39 @@ public class StagedBuildTests
         Assert.DoesNotContain("series", plain);
     }
 }
+
+/// <summary>التخمين الحتمي لطبقة المعنى من أسماء الأعمدة (Semantics/ConceptCatalog).</summary>
+public class ConceptCatalogTests
+{
+    [Theory]
+    [InlineData("Revenue", "revenue", 0.8)]
+    [InlineData("الإيراد", "revenue", 0.8)]
+    [InlineData("OrderDate", "order_date", 0.8)]
+    [InlineData("order_date", "order_date", 0.8)]
+    [InlineData("Status", "deal_status", 0.8)]
+    [InlineData("SalesRep", "owner", 0.8)]
+    [InlineData("Total_Revenue_SAR", "revenue", 0.5)]
+    [InlineData("مدير الحساب", "owner", 0.8)]
+    public void GuessFromName_MapsCommonNames(string column, string concept, double confidence)
+    {
+        var guess = ChatToDashboard.Api.Semantics.ConceptCatalog.GuessFromName(column);
+        Assert.NotNull(guess);
+        Assert.Equal(concept, guess!.Value.Concept.Id);
+        Assert.Equal(confidence, guess.Value.Confidence);
+    }
+
+    [Theory]
+    [InlineData("xyz123")]
+    [InlineData("")]
+    public void GuessFromName_ReturnsNullWhenNothingMatches(string column) =>
+        Assert.Null(ChatToDashboard.Api.Semantics.ConceptCatalog.GuessFromName(column));
+
+    [Fact]
+    public void Catalog_IdsAreUniqueAndKnown()
+    {
+        var ids = ChatToDashboard.Api.Semantics.ConceptCatalog.Concepts.Select(c => c.Id).ToList();
+        Assert.Equal(ids.Count, ids.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.True(ChatToDashboard.Api.Semantics.ConceptCatalog.IsKnown("DEAL_STATUS"));
+        Assert.False(ChatToDashboard.Api.Semantics.ConceptCatalog.IsKnown("made_up"));
+    }
+}

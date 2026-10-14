@@ -6,6 +6,7 @@ using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.SchemaLibrary;
+using ChatToDashboard.Api.Semantics;
 using ChatToDashboard.Api.Templates;
 using ChatToDashboard.Api.Users;
 using Dapper;
@@ -48,13 +49,15 @@ public class StagedTemplateBuilder
     private readonly DataProfileService _profiles;
     private readonly AnalyticsTools _tools;
     private readonly DataStore _db;
+    private readonly ColumnSemanticsService _semantics;
     private readonly int _parallelism;
     private readonly ILogger<StagedTemplateBuilder> _logger;
 
     public StagedTemplateBuilder(
         LlmRouter router, DataProfileService profiles, AnalyticsTools tools, DataStore db,
-        IConfiguration configuration, ILogger<StagedTemplateBuilder> logger)
+        ColumnSemanticsService semantics, IConfiguration configuration, ILogger<StagedTemplateBuilder> logger)
     {
+        _semantics = semantics;
         _router = router;
         _profiles = profiles;
         _tools = tools;
@@ -78,7 +81,10 @@ public class StagedTemplateBuilder
             var text = $"لا توجد مصادر بيانات مفعّلة لبناء لوحة «{request.TemplateName}» — ارفع ملفًا أو فعّل نظامًا من «المصادر» ثم أعد البناء.";
             return new DashboardSpec { Summary = text, Narration = text, Widgets = empty };
         }
-        var plan = await PlanAsync(llm, request, profile, ct);
+        // طبقة المعنى: ملاحظات المفاهيم المؤكدة/المرجّحة لكل عمود تُلحق بملف التعريف في كل نداء.
+        var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
+        var profileText = profile.ToPromptText(semantics: semantics);
+        var plan = await PlanAsync(llm, request, profileText, ct);
 
         var results = new DashboardWidget[request.Widgets.Count];
         using var gate = new SemaphoreSlim(_parallelism);
@@ -91,7 +97,7 @@ public class StagedTemplateBuilder
                 return;
             }
             await gate.WaitAsync(ct);
-            try { results[i] = await BuildWidgetAsync(llm, request, profile, plan, spec, planned, ct); }
+            try { results[i] = await BuildWidgetAsync(llm, request, profile, profileText, plan, spec, planned, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
@@ -114,7 +120,7 @@ public class StagedTemplateBuilder
     private sealed record PlannedFilter(string Label, string Field, string Table, string Type);
     private sealed record BuildPlan(string SharedContext, IReadOnlyDictionary<string, PlannedWidget> Widgets, IReadOnlyList<PlannedFilter> Filters);
 
-    private async Task<BuildPlan> PlanAsync(IStagedLlm llm, StagedBuildRequest request, DataProfile profile, CancellationToken ct)
+    private async Task<BuildPlan> PlanAsync(IStagedLlm llm, StagedBuildRequest request, string profileText, CancellationToken ct)
     {
         var system = new StringBuilder()
             .AppendLine(LanguageLine(request.Lang))
@@ -133,7 +139,7 @@ public class StagedTemplateBuilder
             .AppendLine(_db.DialectPrompt(request.Context.ProjectId))
             .AppendLine()
             .AppendLine("# ملف تعريف البيانات المتاحة")
-            .AppendLine(profile.Tables.Count == 0 ? "(لا توجد جداول متاحة)" : profile.ToPromptText())
+            .AppendLine(profileText)
             .ToString();
 
         var user = new StringBuilder()
@@ -194,7 +200,7 @@ public class StagedTemplateBuilder
     // ---------- ٢) عنصر واحد ----------
 
     private async Task<DashboardWidget> BuildWidgetAsync(
-        IStagedLlm llm, StagedBuildRequest request, DataProfile profile, BuildPlan plan,
+        IStagedLlm llm, StagedBuildRequest request, DataProfile profile, string profileText, BuildPlan plan,
         BuiltinDashboardWidgetSpec spec, PlannedWidget planned, CancellationToken ct)
     {
         var type = WidgetShapeCatalog.IsKnown(planned.Type) ? planned.Type!.ToLowerInvariant() : WidgetShapeCatalog.NormalizeType(spec.Type);
@@ -217,7 +223,7 @@ public class StagedTemplateBuilder
             .AppendLine(_db.DialectPrompt(request.Context.ProjectId))
             .AppendLine()
             .AppendLine("# ملف تعريف البيانات المتاحة")
-            .AppendLine(profile.ToPromptText())
+            .AppendLine(profileText)
             .AppendLine()
             .AppendLine("# السياق المشترك للوحة")
             .AppendLine(string.IsNullOrWhiteSpace(plan.SharedContext) ? "(لا يوجد)" : plan.SharedContext)

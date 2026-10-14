@@ -36,7 +36,7 @@ public sealed record DataProfile(IReadOnlyList<ProfiledTable> Tables)
         Tables.FirstOrDefault(t => string.Equals(t.Table, table, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>النص الذي يُرسل للموديل: مكثّف ومرتّب، لا JSON، بحد أقصى للطول حتى لا يبتلع السياق.</summary>
-    public string ToPromptText(int maxChars = 14000)
+    public string ToPromptText(int maxChars = 14000, IReadOnlyDictionary<(string Table, string Column), string>? semantics = null)
     {
         var sb = new StringBuilder();
         foreach (var t in Tables)
@@ -47,6 +47,9 @@ public sealed record DataProfile(IReadOnlyList<ProfiledTable> Tables)
             foreach (var c in t.Columns)
             {
                 sb.Append("- ").Append(c.Name).Append(" [").Append(c.Kind).Append(']');
+                // طبقة المعنى (Semantics/): المفهوم المؤكَّد أو المرجّح لهذا العمود وخريطة قيمه.
+                if (semantics is not null && semantics.TryGetValue((t.Table, c.Name), out var meaning))
+                    sb.Append(" المعنى: ").Append(meaning).Append(" —");
                 if (c.Kind == "text")
                 {
                     if (c.TopValues is { Count: > 0 })
@@ -134,11 +137,20 @@ public class DataProfileService
         return profile;
     }
 
-    private static string? SourceOf(string table, AnalyticsTools.SourceContext context) =>
-        context.TableFiles.TryGetValue(table, out var f) ? f
+    private static string? SourceOf(string table, AnalyticsTools.SourceContext? context) =>
+        context is null ? null
+        : context.TableFiles.TryGetValue(table, out var f) ? f
         : context.TableSystems.TryGetValue(table, out var s) ? s : null;
 
-    private async Task<ProfiledTable> ProfileTableAsync(TableSchema schema, AnalyticsTools.SourceContext context, CancellationToken ct)
+    /// <summary>ملف تعريف جدول واحد بالاسم (لتحليل المعاني بعد الرفع) — null إن لم يوجد. بلا تخزين مؤقت.</summary>
+    public async Task<ProfiledTable?> ProfileOneAsync(string tableName, string? projectId, CancellationToken ct = default)
+    {
+        var schema = (await _tools.GetSchemaAsync(projectId, ct))
+            .FirstOrDefault(t => string.Equals(t.Table, tableName, StringComparison.OrdinalIgnoreCase));
+        return schema is null ? null : await ProfileTableAsync(schema, null, ct);
+    }
+
+    private async Task<ProfiledTable> ProfileTableAsync(TableSchema schema, AnalyticsTools.SourceContext? context, CancellationToken ct)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         var table = _db.QualifiedTable(schema.Table);
