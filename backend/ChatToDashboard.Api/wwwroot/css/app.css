@@ -1264,3 +1264,7 @@ tr:last-child td{border-bottom:0}
 .gal-feas{white-space:nowrap}
 .pv-feas{display:flex;flex-direction:column;gap:6px;margin:10px 0}
 .pv-feas small{font-size:12px;color:var(--muted);line-height:1.6}
+.msg-link{background:none;border:0;padding:0;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer}
+.wc-learn{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:6px 2px}
+#widget-cols-body .pv-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+#widget-cols-body .roles-section-title{margin-top:6px}

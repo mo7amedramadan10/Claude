@@ -932,6 +932,7 @@ function renderWidgetMenuDefault(menu, w) {
     <button data-act="type">🔀 تغيير نوع الرسم</button>
     <button data-act="size">↔️ تغيير الحجم</button>
     ${canEditData ? '<button data-act="period">📅 تغيير الفترة</button>' : ''}
+    ${(w.query?.sql || w.noData) ? '<button data-act="columns">🧩 تصحيح الأعمدة</button>' : ''}
     <button data-act="duplicate">📋 نسخ</button>
     <button data-act="delete" class="danger">🗑️ حذف</button>
   `;
@@ -943,7 +944,184 @@ function renderWidgetMenuDefault(menu, w) {
   };
   const periodBtn = menu.querySelector('[data-act="period"]');
   if (periodBtn) periodBtn.onclick = () => { closeAllWidgetMenus(); openPeriodEditor(w); };
+  const colsBtn = menu.querySelector('[data-act="columns"]');
+  if (colsBtn) colsBtn.onclick = () => { closeAllWidgetMenus(); openWidgetColsModal(w); };
 }
+
+// ---------- طبقة المعنى: «تصحيح الأعمدة» لعنصر واحد ----------
+// يكشف الأعمدة الحقيقية التي يعتمد عليها استعلام العنصر ويتيح استبدال كل منها بعمود آخر من
+// الجدول نفسه (إعادة تنفيذ بلا موديل عبر /api/widgets/columns/remap)، ويعرض المفاهيم التي
+// يحتاجها العنصر وحالتها في بيانات المشروع مع اختيار عمود لمفهوم ناقص (تأكيد معنى عبر PUT
+// semantics) ثم إعادة بناء العنصر وحده من قالبه (/api/widgets/columns/rebuild).
+const WIDGET_COLS_KIND = { number: 'رقم', date: 'تاريخ', text: 'نص' };
+let widgetColsState = null;
+
+function widgetColsStatus(text, tone) {
+  const box = el('widget-cols-status');
+  box.textContent = text;
+  box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden');
+}
+
+async function openWidgetColsModal(w) {
+  widgetColsState = { widget: w, data: null };
+  el('widget-cols-sub').textContent = `العنصر: «${w.title}»`;
+  el('widget-cols-body').innerHTML = '<div class="owner-line"><span class="spinner"></span> جارٍ فحص الأعمدة…</div>';
+  widgetColsStatus('');
+  el('widget-cols-modal').classList.remove('hidden');
+  await loadWidgetCols();
+}
+
+async function loadWidgetCols() {
+  const w = widgetColsState.widget;
+  const res = await fetch('/api/widgets/columns/inspect', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+      table: w.query?.table || null, sql: w.query?.sql || null, title: w.title }),
+  });
+  if (!res.ok) { el('widget-cols-body').innerHTML = '<div class="owner-line">تعذّر فحص أعمدة هذا العنصر.</div>'; return; }
+  widgetColsState.data = await res.json();
+  renderWidgetCols();
+}
+
+function widgetColsColumnOptions(table, selected, preferKind) {
+  const cols = [...table.columns].sort((a, b) => (a.kind === preferKind ? 0 : 1) - (b.kind === preferKind ? 0 : 1));
+  return cols.map(c => `<option value="${esc(c.name)}"${c.name === selected ? ' selected' : ''}>${esc(c.name)}${c.conceptLabel ? ` — ${esc(c.conceptLabel)}` : ''} (${WIDGET_COLS_KIND[c.kind] || c.kind})</option>`).join('');
+}
+
+function renderWidgetCols() {
+  const { widget: w, data } = widgetColsState;
+  const table = data.tables.find(t => t.table === data.table);
+  const parts = [];
+
+  // أ) الأعمدة المستخدمة في الاستعلام ← بدائل من الجدول نفسه
+  if (table && data.used.length) {
+    const byName = Object.fromEntries(table.columns.map(c => [c.name, c]));
+    parts.push(`<div class="roles-section-title">الأعمدة التي يعتمد عليها هذا الرسم <span class="muted">(الجدول: ${esc(table.fileName || table.table)})</span></div>
+      ${data.used.map(name => { const c = byName[name] || { kind: 'text' }; return `<div class="sem-row" data-from="${esc(name)}">
+        <div class="sem-col"><b>${esc(name)}</b><small>${esc(c.conceptLabel || WIDGET_COLS_KIND[c.kind] || '')}</small></div>
+        <div class="sem-pick"><select class="wc-to" aria-label="بديل العمود ${esc(name)}">${widgetColsColumnOptions(table, name, c.kind)}</select></div>
+      </div>`; }).join('')}
+      <label class="wc-learn"><input type="checkbox" id="wc-learn" checked> اعتبر العمود البديل يحمل معنى العمود الأصلي (يُحفظ لمرات قادمة)</label>
+      <div class="pv-actions"><button type="button" class="btn btn-primary btn-sm" id="wc-apply">تطبيق وإعادة تنفيذ الاستعلام</button></div>`);
+  } else if (w.query?.sql) {
+    parts.push('<div class="owner-line">لم يُتعرَّف على أعمدة هذا الاستعلام في الجدول — استخدم «اطلب من جيم» لإعادة بنائه.</div>');
+  }
+
+  // ب) المفاهيم التي يحتاجها العنصر وحالتها
+  if (data.requirements.length) {
+    const allTablesOptions = (placeholder) => `<option value="">${esc(placeholder)}</option>` + data.tables.map(t =>
+      `<optgroup label="${esc(t.fileName || t.table)}">${t.columns.map(c =>
+        `<option value="${esc(t.table)}::${esc(c.name)}">${esc(c.name)} (${WIDGET_COLS_KIND[c.kind] || c.kind})${c.conceptLabel ? ` — حاليًا: ${esc(c.conceptLabel)}` : ''}</option>`).join('')}</optgroup>`).join('');
+    parts.push(`<div class="roles-section-title">المفاهيم التي يحتاجها هذا العنصر</div>
+      ${data.requirements.map((r, i) => `<div class="sem-row" data-req="${i}">
+        <div class="sem-col"><b>${esc(r.label)}</b><small>${r.hard ? 'ضروري' : 'مساعد'} · ${esc(r.conceptLabels.join(' أو '))}</small></div>
+        <div class="sem-pick">${r.satisfied
+          ? `<span class="badge badge-ok">✓ ${esc(r.matches.map(m => m.column).slice(0, 2).join('، '))}</span>`
+          : '<span class="badge badge-danger">! غير موجود</span>'}<select class="wc-concept" data-concept="${esc(r.concepts[0])}" aria-label="عمود يحمل معنى ${esc(r.label)}">${allTablesOptions(r.satisfied ? '— تغيير العمود —' : '— اختر عمودًا من بياناتك —')}</select></div>
+      </div>`).join('')}`);
+  }
+
+  // ج) إعادة بناء عنصر القالب بعد التصحيح
+  if (w.noData) {
+    parts.push(state.dashboard?.templateKey
+      ? `<div class="pv-actions"><button type="button" class="btn btn-primary btn-sm" id="wc-rebuild">🔁 إعادة بناء هذا العنصر الآن</button><span class="muted" style="font-size:var(--fs-xs)">يُبنى من بيانات مشروعك بعد التصحيحات أعلاه (نداء واحد للموديل).</span></div>`
+      : '<div class="owner-line">بعد التصحيح استخدم «اطلب من جيم» على العنصر لإعادة بنائه.</div>');
+  }
+  el('widget-cols-body').innerHTML = parts.join('') || '<div class="owner-line">لا شيء لتصحيحه في هذا العنصر.</div>';
+
+  el('wc-apply')?.addEventListener('click', applyWidgetColsRemap);
+  el('wc-rebuild')?.addEventListener('click', rebuildWidgetFromTemplate);
+  el('widget-cols-body').querySelectorAll('.wc-concept').forEach(sel => sel.addEventListener('change', async () => {
+    if (!sel.value) return;
+    const [tableName, column] = sel.value.split('::');
+    sel.disabled = true;
+    const ok = await setSemanticForTableColumn(tableName, column, sel.dataset.concept);
+    sel.disabled = false;
+    if (!ok) { widgetColsStatus('تعذّر حفظ معنى العمود.', 'bad'); return; }
+    widgetColsStatus(`تم اعتماد «${column}» كـ «${sel.closest('.sem-row').querySelector('b').textContent}».`, 'ok');
+    dashGalFeasibility = null;
+    await loadWidgetCols();
+  }));
+}
+
+// تأكيد معنى عمود من أي شاشة: يحتاج معرّف ملف المستودع الذي جدوله tableName.
+async function setSemanticForTableColumn(tableName, column, concept) {
+  if (!state.files.length) {
+    try { state.files = await (await fetch('/api/repository/files')).json(); } catch { return false; }
+  }
+  const f = state.files.find(x => x.tableName === tableName);
+  if (!f) return false;
+  const res = await fetch(`/api/repository/files/${f.id}/semantics/${encodeURIComponent(column)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept }),
+  });
+  return res.ok;
+}
+
+async function applyWidgetColsRemap() {
+  const { widget: w, data } = widgetColsState;
+  const mapping = {};
+  el('widget-cols-body').querySelectorAll('.sem-row[data-from]').forEach(row => {
+    const to = row.querySelector('.wc-to').value;
+    if (to && to !== row.dataset.from) mapping[row.dataset.from] = to;
+  });
+  if (!Object.keys(mapping).length) { widgetColsStatus('لم تغيّر أي عمود بعد.', ''); return; }
+  const btn = el('wc-apply'); btn.disabled = true; widgetColsStatus('جارٍ إعادة تنفيذ الاستعلام…', '');
+  try {
+    const res = await fetch('/api/widgets/columns/remap', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        table: data.table, sql: w.query.sql, mapping, learn: !!el('wc-learn')?.checked }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) { widgetColsStatus(payload?.error || 'تعذّر تطبيق التصحيح.', 'bad'); return; }
+    pushUndo();
+    const target = findWidget(w.id) || w;
+    target.data = payload.data;
+    target.query = { ...(target.query || {}), table: payload.table, sql: payload.sql };
+    if (payload.source) target.source = payload.source;
+    const renamed = payload.renamedKeys || {};
+    if (target.xKey && renamed[target.xKey]) target.xKey = renamed[target.xKey];
+    if (target.yKey && renamed[target.yKey]) target.yKey = renamed[target.yKey];
+    delete target.noData; delete target.missingReason;
+    renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+    dashGalFeasibility = null;
+    widgetColsStatus('تم التصحيح وأُعيد تنفيذ الاستعلام على الأعمدة الجديدة.', 'ok');
+    widgetColsState.widget = target;
+    await loadWidgetCols();
+  } finally { btn.disabled = false; }
+}
+
+async function rebuildWidgetFromTemplate() {
+  const w = widgetColsState.widget;
+  const btn = el('wc-rebuild'); btn.disabled = true; widgetColsStatus('جارٍ إعادة بناء العنصر من بياناتك… (ثوانٍ)', '');
+  try {
+    const res = await fetch('/api/widgets/columns/rebuild', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        templateKey: state.dashboard.templateKey, title: w.title, lang: state.lang }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.widget) { widgetColsStatus(payload?.error || 'تعذّر إعادة البناء.', 'bad'); return; }
+    const built = payload.widget;
+    pushUndo();
+    const target = findWidget(w.id) || w;
+    if (built.noData) {
+      target.missingReason = built.missingReason;
+      widgetColsStatus(`ما زال غير ممكن: ${built.missingReason}`, 'bad');
+    } else {
+      Object.assign(target, { type: built.type, data: built.data, xKey: built.xKey, yKey: built.yKey, source: built.source,
+        query: built.query || null, options: built.options, series: built.series, stacked: built.stacked, areaFill: built.areaFill, centerLabel: built.centerLabel });
+      delete target.noData; delete target.missingReason;
+      widgetColsStatus('تم بناء العنصر من بياناتك.', 'ok');
+    }
+    renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+    widgetColsState.widget = target;
+    await loadWidgetCols();
+  } finally { btn.disabled = false; }
+}
+
+el('widget-cols-close').addEventListener('click', () => el('widget-cols-modal').classList.add('hidden'));
+el('widget-cols-modal').addEventListener('click', e => { if (e.target.id === 'widget-cols-modal') el('widget-cols-modal').classList.add('hidden'); });
 
 function renderWidgetMenuSize(menu, w) {
   const current = (w.layout && w.layout.size) || (w.type === 'kpi' ? 'small' : 'wide');
@@ -4273,6 +4451,36 @@ async function exportPptx() {
 el('btn-export-pptx').addEventListener('click', exportPptx);
 
 // ---------- chat ----------
+// طبقة المعنى: بعد بناء قالب، رسالة واحدة تلخّص العناصر التي حُسمت حتميًا لغياب مفاهيم
+// («يحتاج «X»…» من StagedTemplateBuilder) مع المفاهيم الناقصة ورابط يفتح نافذة معاني
+// الأعمدة للجدول الذي اعتمدت عليه اللوحة. لا رسالة عندما لا يوجد ما ينقص.
+function pushMissingConceptsMessage(dashboard) {
+  const gated = (dashboard.widgets || []).filter(w => w.noData && /^يحتاج «/.test(w.missingReason || ''));
+  if (!gated.length) return;
+  const counts = {};
+  // المفاهيم قبل «وهو غير موجود» فقط — لا «المصادر» من ذيل الجملة.
+  gated.forEach(w => ((w.missingReason.split(' وهو غير موجود')[0]).match(/«([^»]+)»/g) || []).forEach(m => {
+    const c = m.slice(1, -1); counts[c] = (counts[c] || 0) + 1;
+  }));
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([c]) => c);
+  const table = (dashboard.widgets || []).find(w => w.query?.table)?.query.table || '';
+  const n = gated.length.toLocaleString('en-US');
+  const html = `⚠️ ${n} ${gated.length === 1 ? 'عنصر يحتاج مفهومًا غير موجود' : 'عناصر تحتاج مفاهيم غير موجودة'} في بياناتك${top.length ? ` (${esc(top.join('، '))}${Object.keys(counts).length > 4 ? '…' : ''})` : ''}. `
+    + `لو عندك عمود يحمل هذا المعنى باسم مختلف، أكّده من <button type="button" class="link-btn msg-link" data-act="open-sem" data-table="${esc(table)}">🏷️ معاني الأعمدة</button> ثم أعد البناء، أو استخدم «تصحيح الأعمدة» من قائمة العنصر ⋮.`;
+  state.messages.push({ role: 'bot', text: html.replace(/<[^>]+>/g, ''), html });
+}
+
+// يفتح نافذة معاني الأعمدة للملف الذي جدوله tableName (أو أول ملف جدولي عند عدم التحديد).
+async function openSemModalForTable(tableName) {
+  if (!state.files.length) {
+    try { state.files = await (await fetch('/api/repository/files')).json(); } catch { state.files = []; }
+  }
+  const f = state.files.find(x => x.tableName && x.tableName === tableName)
+    || state.files.find(x => x.kind !== 'pdf' && x.tableName);
+  if (!f) { alert('لا يوجد ملف جدولي في المستودع — ارفع ملفًا من «المصادر» أولًا.'); return; }
+  openFileSemModal(f.id);
+}
+
 function renderMessages() {
   const items = state.messages.map((m, i) => {
     const cls = m.role === 'user' ? 'user' : (m.error ? 'err' : 'bot');
@@ -4280,7 +4488,8 @@ function renderMessages() {
     // own turn, and never at all in a browser with no speechSynthesis to act on it.
     const speak = (cls === 'bot' && ttsSupported())
       ? `<button type="button" class="msg-speak-btn" data-idx="${i}" title="قراءة بصوت عالٍ">🔊</button>` : '';
-    return `<div class="msg ${cls}">${esc(m.text)}${speak}</div>`;
+    // m.html: محتوى نبنيه نحن (لا من الموديل) — رسالة ملخص المفاهيم الناقصة برابط نافذة المعاني.
+    return `<div class="msg ${cls}">${m.html || esc(m.text)}${speak}</div>`;
   }).join('');
   const typing = state.loading
     ? `<div class="msg bot dots"><span></span><span></span><span></span></div>` : '';
@@ -4292,6 +4501,8 @@ function renderMessages() {
   renderSuggestions();
 }
 el('messages').addEventListener('click', e => {
+  const semLink = e.target.closest('[data-act="open-sem"]');
+  if (semLink) { openSemModalForTable(semLink.dataset.table); return; }
   const speakBtn = e.target.closest('.msg-speak-btn');
   if (!speakBtn) return;
   const msg = state.messages[Number(speakBtn.dataset.idx)];
@@ -5793,6 +6004,7 @@ async function ask(question, displayText, templateRef) {
       const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
       const narration = payload.dashboard.narration || payload.dashboard.summary;
       state.messages.push({ role: 'bot', text: narration, speechWidgets });
+      if (!isContinuation && templateRef) pushMissingConceptsMessage(payload.dashboard);
       saveToHistory(question, payload.dashboard);
       if (state.autoRead) speakText(narration, speechWidgets);
       // The user's already-applied filter selections carried over too (above) — re-apply

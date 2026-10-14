@@ -59,6 +59,12 @@ public class DashboardSpec
     [JsonPropertyName("filters")]
     public List<DashboardFilter> Filters { get; set; } = new();
 
+    /// <summary>مفتاح القالب الذي بُنيت منه اللوحة (عند البناء من قالب فقط) — يتيح إعادة بناء
+    /// عنصر واحد لاحقًا من «تصحيح الأعمدة» (WidgetColumnsController.Rebuild).</summary>
+    [JsonPropertyName("templateKey")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TemplateKey { get; set; }
+
     /// <summary>
     /// Drops any filter entry that fails its own structural requirements (missing field/
     /// table, an unrecognized type, or a select type with no real queried options) instead

@@ -103,6 +103,8 @@ public class ChatController : ControllerBase
         {
             var dashboard = stagedDashboard ?? await _generator.GenerateDashboardAsync(
                 prompt, request.CurrentDashboard, effectiveSources, request.Image, user, request.Lang, ct: ct);
+            if (request.Template is { Kind: TemplateKinds.Dashboard } && request.CurrentDashboard is null)
+                dashboard.TemplateKey = request.Template.Key; // لإعادة بناء عنصر واحد من «تصحيح الأعمدة»
 
             // Defense in depth alongside TemplatePromptService's own required-widgets
             // instruction block: the model is told every declared template widget must appear

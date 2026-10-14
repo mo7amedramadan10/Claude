@@ -98,7 +98,7 @@ public class StagedTemplateBuilder
 
         var plan = candidates.Count == 0
             ? new BuildPlan("", new Dictionary<string, PlannedWidget>(StringComparer.OrdinalIgnoreCase), Array.Empty<PlannedFilter>())
-            : await PlanAsync(llm, request with { Widgets = candidates }, profileText, availableText, ct);
+            : await PlanAsync(llm, request with { Widgets = candidates.Select(c => WithConceptHints(c, available)).ToList() }, profileText, availableText, ct);
 
         var results = new DashboardWidget[request.Widgets.Count];
         using var gate = new SemaphoreSlim(_parallelism);
@@ -131,6 +131,42 @@ public class StagedTemplateBuilder
         var filters = await VerifyFiltersAsync(plan.Filters, profile, ct);
         var (summary, narration) = await AssembleAsync(llm, request, widgets, ct);
         return new DashboardSpec { Summary = summary, Narration = narration, Widgets = widgets, Filters = filters };
+    }
+
+    /// <summary>إعادة بناء عنصر واحد من القالب (زر «تصحيح الأعمدة» بعد تأكيد المعاني): نفس
+    /// المسار — جدوى حتمية ثم تخطيط ثم بناء — لهذا العنصر وحده. null عندما لا يدعم المزوّد
+    /// المسار المرحلي أو العنوان ليس في القالب.</summary>
+    public async Task<DashboardWidget?> BuildOneAsync(StagedBuildRequest request, string title, CancellationToken ct = default)
+    {
+        var spec = request.Widgets.FirstOrDefault(w => string.Equals(w.Title, title, StringComparison.OrdinalIgnoreCase));
+        if (spec is null) return null;
+        var llm = await _router.ResolveStagedAsync(ct);
+        if (llm is null) return null;
+
+        var profile = await _profiles.BuildAsync(request.Context, ct);
+        if (profile.Tables.Count == 0)
+            return NoDataWidget(spec, "لا توجد مصادر بيانات مفعّلة في المشروع — ارفع ملفًا أو فعّل نظامًا من «المصادر».");
+        var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
+        var profileText = profile.ToPromptText(semantics: semantics);
+
+        var feasibility = await _feasibility.EvaluateAsync(request.Context.ProjectId, new[] { spec }, ct);
+        if (feasibility.TryGetValue(spec.Title, out var fz) && !fz.Feasible)
+            return NoDataWidget(spec, $"يحتاج «{string.Join("» و«", fz.Missing)}» وهو غير موجود في بياناتك — أضف عمودًا له أو أكّد معنى عمود موجود من «المصادر».");
+        var available = await _feasibility.AvailableConceptsAsync(request.Context.ProjectId, ct);
+        var availableText = available.Count == 0 ? null : string.Join("، ", available.Select(kv =>
+            $"{ConceptCatalog.Find(kv.Key)?.Label ?? kv.Key} ({kv.Key}) ← {string.Join("/", kv.Value.Select(c => c.Column).Distinct().Take(3))}"));
+
+        var plan = await PlanAsync(llm, request with { Widgets = new[] { WithConceptHints(spec, available) } }, profileText, availableText, ct);
+        var planned = plan.Widgets.TryGetValue(spec.Title, out var p) ? p : null;
+        if (planned is null || !planned.Feasible)
+            return NoDataWidget(spec, planned?.Reason ?? "لا يوجد في المصادر المتاحة جدول أو عمود يطابق هذا العنصر.");
+        try { return await BuildWidgetAsync(llm, request, profile, profileText, plan, spec, planned, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "فشل إعادة بناء العنصر «{Title}»", spec.Title);
+            return NoDataWidget(spec, "تعذّر بناء هذا العنصر من البيانات المتاحة — جرّب تحديد مصدر له يدويًا.");
+        }
     }
 
     // ---------- ١) التخطيط ----------
@@ -395,6 +431,25 @@ public class StagedTemplateBuilder
     }
 
     // ---------- مساعدات ----------
+
+    /// <summary>يلحق بوصف العنصر الأعمدة الحقيقية التي تحمل المفاهيم التي يحتاجها (من طبقة المعنى)،
+    /// ليستخدمها المخطِّط بدل البحث عنها بالاسم: «القطاع ← Category (sales)».</summary>
+    private static BuiltinDashboardWidgetSpec WithConceptHints(
+        BuiltinDashboardWidgetSpec spec, IReadOnlyDictionary<string, List<(string Table, string Column)>> available)
+    {
+        if (available.Count == 0) return spec;
+        var hints = new List<string>();
+        foreach (var r in WidgetRequirementResolver.Resolve(spec))
+        {
+            var hit = r.AnyOf.FirstOrDefault(available.ContainsKey);
+            if (hit is null) continue;
+            var cols = available[hit].Take(2).Select(c => $"{c.Column} (جدول {c.Table})");
+            hints.Add($"{r.Label} ← {string.Join(" أو ", cols)}");
+        }
+        if (hints.Count == 0) return spec;
+        var line = "الأعمدة المؤكدة لمفاهيم هذا العنصر: " + string.Join("؛ ", hints) + ".";
+        return spec with { Prompt = string.IsNullOrWhiteSpace(spec.Prompt) ? line : spec.Prompt + " " + line };
+    }
 
     private static DashboardWidget NoDataWidget(BuiltinDashboardWidgetSpec spec, string reason) => new()
     {

@@ -173,3 +173,33 @@ public class WidgetRequirementTests
         Assert.Contains(reqs, r => r.AnyOf.Contains("region") && !r.Hard);
     }
 }
+
+public class SqlColumnRewriterTests
+{
+    private static string Q(string n) => $"\"{n}\"";
+
+    [Fact]
+    public void Rewrite_ReplacesBareAndQuotedIdentifiers_NotAliasesOrLiterals()
+    {
+        var sql = "SELECT Region, SUM(Revenue) AS Revenue FROM sales WHERE Status = 'Revenue' AND \"Revenue\" > 0 GROUP BY Region";
+        var map = new Dictionary<string, string> { ["Revenue"] = "Sales", ["Region"] = "City Name" };
+        var result = ChatToDashboard.Api.Widgets.SqlColumnRewriter.Rewrite(sql, map, Q);
+        Assert.Equal("SELECT \"City Name\", SUM(Sales) AS Revenue FROM sales WHERE Status = 'Revenue' AND \"Sales\" > 0 GROUP BY \"City Name\"", result);
+    }
+
+    [Fact]
+    public void Rewrite_DoesNotTouchFunctionNamesOrPartialWords()
+    {
+        var sql = "SELECT DATE(OrderDate) AS d, Revenue2, Revenue FROM t";
+        var map = new Dictionary<string, string> { ["Date"] = "X", ["Revenue"] = "Y" };
+        Assert.Equal("SELECT DATE(OrderDate) AS d, Revenue2, Y FROM t", ChatToDashboard.Api.Widgets.SqlColumnRewriter.Rewrite(sql, map, Q));
+    }
+
+    [Fact]
+    public void UsedColumns_FindsOnlyReferencedColumns_IgnoringLiterals()
+    {
+        var sql = "SELECT Region, SUM(Revenue) AS v FROM sales WHERE Status = 'Product'";
+        var used = ChatToDashboard.Api.Widgets.SqlColumnRewriter.UsedColumns(sql, new[] { "Region", "Revenue", "Product", "Status", "Quantity" });
+        Assert.Equal(new[] { "Region", "Revenue", "Status" }, used);
+    }
+}
