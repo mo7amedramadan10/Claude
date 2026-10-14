@@ -55,8 +55,29 @@ public class BulkKpiCategoryRequest
 public class TemplatesController : ControllerBase
 {
     private readonly TemplateStore _templates;
+    private readonly ChatToDashboard.Api.Semantics.WidgetFeasibilityService _feasibility;
+    private readonly ChatToDashboard.Api.Users.PermissionsService _permissions;
 
-    public TemplatesController(TemplateStore templates) => _templates = templates;
+    public TemplatesController(
+        TemplateStore templates, ChatToDashboard.Api.Semantics.WidgetFeasibilityService feasibility,
+        ChatToDashboard.Api.Users.PermissionsService permissions)
+    {
+        _templates = templates;
+        _feasibility = feasibility;
+        _permissions = permissions;
+    }
+
+    /// <summary>جدوى كل قالب لوحة لمشروع المستخدم الحالي، حتميًا من معاني أعمدته (طبقة المعنى):
+    /// عدد العناصر القابلة للبناء وأكثر المفاهيم نقصًا. <c>buildable</c> null قبل تحليل أي جدول.</summary>
+    [HttpGet("feasibility")]
+    public async Task<IActionResult> Feasibility(CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        var items = await _feasibility.ForCatalogAsync(selection.ProjectId, ct);
+        return Ok(new { projectId = selection.ProjectId, items = items.Select(i => new { templateId = i.TemplateId, total = i.Total, buildable = i.Buildable, topMissing = i.TopMissing }) });
+    }
 
     // ---------- Public (any signed-in user): display data only, never PromptText ----------
 

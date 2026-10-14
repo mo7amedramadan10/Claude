@@ -50,14 +50,17 @@ public class StagedTemplateBuilder
     private readonly AnalyticsTools _tools;
     private readonly DataStore _db;
     private readonly ColumnSemanticsService _semantics;
+    private readonly WidgetFeasibilityService _feasibility;
     private readonly int _parallelism;
     private readonly ILogger<StagedTemplateBuilder> _logger;
 
     public StagedTemplateBuilder(
         LlmRouter router, DataProfileService profiles, AnalyticsTools tools, DataStore db,
-        ColumnSemanticsService semantics, IConfiguration configuration, ILogger<StagedTemplateBuilder> logger)
+        ColumnSemanticsService semantics, WidgetFeasibilityService feasibility, IConfiguration configuration,
+        ILogger<StagedTemplateBuilder> logger)
     {
         _semantics = semantics;
+        _feasibility = feasibility;
         _router = router;
         _profiles = profiles;
         _tools = tools;
@@ -84,12 +87,28 @@ public class StagedTemplateBuilder
         // طبقة المعنى: ملاحظات المفاهيم المؤكدة/المرجّحة لكل عمود تُلحق بملف التعريف في كل نداء.
         var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
         var profileText = profile.ToPromptText(semantics: semantics);
-        var plan = await PlanAsync(llm, request, profileText, ct);
+
+        // الجدوى الحتمية (المرحلة ج من طبقة المعنى): عنصر يحتاج مفهومًا صلبًا غير موجود في
+        // بيانات المشروع لا يُرسل للموديل أصلًا — سببه معروف قبل أي توكن.
+        var feasibility = await _feasibility.EvaluateAsync(request.Context.ProjectId, request.Widgets, ct);
+        var available = await _feasibility.AvailableConceptsAsync(request.Context.ProjectId, ct);
+        var candidates = request.Widgets.Where(w => !feasibility.TryGetValue(w.Title, out var f) || f.Feasible).ToList();
+        var availableText = available.Count == 0 ? null : string.Join("، ", available.Select(kv =>
+            $"{ConceptCatalog.Find(kv.Key)?.Label ?? kv.Key} ({kv.Key}) ← {string.Join("/", kv.Value.Select(c => c.Column).Distinct().Take(3))}"));
+
+        var plan = candidates.Count == 0
+            ? new BuildPlan("", new Dictionary<string, PlannedWidget>(StringComparer.OrdinalIgnoreCase), Array.Empty<PlannedFilter>())
+            : await PlanAsync(llm, request with { Widgets = candidates }, profileText, availableText, ct);
 
         var results = new DashboardWidget[request.Widgets.Count];
         using var gate = new SemaphoreSlim(_parallelism);
         var tasks = request.Widgets.Select(async (spec, i) =>
         {
+            if (feasibility.TryGetValue(spec.Title, out var fz) && !fz.Feasible)
+            {
+                results[i] = NoDataWidget(spec, $"يحتاج «{string.Join("» و«", fz.Missing)}» وهو غير موجود في بياناتك — أضف عمودًا له أو أكّد معنى عمود موجود من «المصادر».");
+                return;
+            }
             var planned = plan.Widgets.TryGetValue(spec.Title, out var p) ? p : null;
             if (planned is null || !planned.Feasible)
             {
@@ -120,7 +139,7 @@ public class StagedTemplateBuilder
     private sealed record PlannedFilter(string Label, string Field, string Table, string Type);
     private sealed record BuildPlan(string SharedContext, IReadOnlyDictionary<string, PlannedWidget> Widgets, IReadOnlyList<PlannedFilter> Filters);
 
-    private async Task<BuildPlan> PlanAsync(IStagedLlm llm, StagedBuildRequest request, string profileText, CancellationToken ct)
+    private async Task<BuildPlan> PlanAsync(IStagedLlm llm, StagedBuildRequest request, string profileText, string? availableText, CancellationToken ct)
     {
         var system = new StringBuilder()
             .AppendLine(LanguageLine(request.Lang))
@@ -140,6 +159,7 @@ public class StagedTemplateBuilder
             .AppendLine()
             .AppendLine("# ملف تعريف البيانات المتاحة")
             .AppendLine(profileText)
+            .AppendLine(availableText is null ? "" : $"\n# المفاهيم المتاحة في هذه البيانات (مؤكدة أو مرجّحة)\n{availableText}")
             .ToString();
 
         var user = new StringBuilder()

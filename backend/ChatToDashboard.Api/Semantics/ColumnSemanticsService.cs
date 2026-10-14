@@ -22,12 +22,14 @@ public class ColumnSemanticsService
     private readonly DataProfileService _profiles;
     private readonly AnalyticsTools _tools;
     private readonly LlmRouter _router;
+    private readonly ConceptPriorStore _priors;
     private readonly ILogger<ColumnSemanticsService> _logger;
 
     public ColumnSemanticsService(
         ColumnSemanticsStore store, DataProfileService profiles, AnalyticsTools tools, LlmRouter router,
-        ILogger<ColumnSemanticsService> logger)
+        ConceptPriorStore priors, ILogger<ColumnSemanticsService> logger)
     {
+        _priors = priors;
         _store = store;
         _profiles = profiles;
         _tools = tools;
@@ -53,17 +55,22 @@ public class ColumnSemanticsService
         var profile = await _profiles.ProfileOneAsync(tableName, projectId, ct);
         if (profile is null) throw new InvalidOperationException($"الجدول {tableName} غير موجود.");
 
-        var rows = profile.Columns.Select(c =>
+        var rows = new List<ColumnSemantic>();
+        foreach (var c in profile.Columns)
         {
+            // التعلّم العابر للعملاء أولًا (اسم مُوحَّد سبق تأكيده)، ثم المرادفات.
+            var prior = await _priors.LookupAsync(c.Name, ct);
             var guess = ConceptCatalog.GuessFromName(c.Name);
-            return new ColumnSemantic
+            var concept = prior?.Concept ?? guess?.Concept.Id;
+            var confidence = prior?.Confidence ?? guess?.Confidence ?? 0.2;
+            rows.Add(new ColumnSemantic
             {
                 ProjectId = projectId, TableName = tableName, ColumnName = c.Name,
-                Concept = guess?.Concept.Id, Role = guess?.Concept.Role ?? RoleFromKind(c.Kind),
-                Confidence = guess?.Confidence ?? 0.2, Source = SemanticSources.Rule,
-                Note = guess is null ? null : "تخمين من اسم العمود.",
-            };
-        }).ToList();
+                Concept = concept, Role = ConceptCatalog.Find(concept)?.Role ?? RoleFromKind(c.Kind),
+                Confidence = confidence, Source = SemanticSources.Rule,
+                Note = prior is not null ? "اسم سبق ربطه بهذا المفهوم في ملفات أخرى." : guess is null ? null : "تخمين من اسم العمود.",
+            });
+        }
 
         try
         {
@@ -77,7 +84,18 @@ public class ColumnSemanticsService
         }
 
         await _store.UpsertAnalyzedAsync(rows, ct);
+        // نتيجة موديل واثقة تُسجَّل كسابقة (الاسم المُوحَّد فقط، لا بيانات).
+        foreach (var r in rows.Where(r => r.Source == SemanticSources.Ai && r.Concept is not null && r.Confidence >= 0.9))
+            await _priors.RecordAsync(r.ColumnName, r.Concept!, byUser: false, ct);
         return await _store.ListForTableAsync(projectId, tableName, ct);
+    }
+
+    /// <summary>تأكيد المستخدم يُحفظ للمشروع ويُسجَّل سابقةً أقوى من أي نتيجة موديل.</summary>
+    public async Task SetByUserAsync(string projectId, string tableName, string columnName, string? concept, string role,
+        string? unit, string? valueMapJson, CancellationToken ct = default)
+    {
+        await _store.SetByUserAsync(projectId, tableName, columnName, concept, role, unit, valueMapJson, ct);
+        if (concept is not null) await _priors.RecordAsync(columnName, concept, byUser: true, ct);
     }
 
     private async Task RefineWithModelAsync(IStagedLlm llm, string projectId, ProfiledTable profile, List<ColumnSemantic> rows, CancellationToken ct)

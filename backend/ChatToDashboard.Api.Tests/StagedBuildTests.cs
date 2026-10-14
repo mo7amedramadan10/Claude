@@ -124,3 +124,52 @@ public class ConceptCatalogTests
         Assert.False(ChatToDashboard.Api.Semantics.ConceptCatalog.IsKnown("made_up"));
     }
 }
+
+/// <summary>الجدوى الحتمية لعناصر القوالب من عناوينها (Semantics/WidgetRequirements).</summary>
+public class WidgetRequirementTests
+{
+    private static readonly IReadOnlySet<string> SalesFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "order_date", "region", "product", "category", "quantity", "unit_price", "revenue", "deal_status", "owner" };
+
+    [Theory]
+    [InlineData("قيمة الأنبوب", true)]
+    [InlineData("نسبة الفوز", true)]
+    [InlineData("الإيراد حسب المنطقة", true)]
+    [InlineData("المبيعات شهريًا", true)]
+    [InlineData("الأنبوب المرجّح", false)]
+    [InlineData("تحقيق الحصة", false)]
+    [InlineData("الخسارة حسب السبب", false)]
+    [InlineData("الصفقات حسب المرحلة", true)] // حالة الصفقة تصلح بديلًا للمرحلة
+    [InlineData("أعمار الأنبوب", false)]
+    [InlineData("حسب مصدر العميل", false)]
+    public void Evaluate_AgainstPlainSalesFile(string title, bool feasible)
+    {
+        var reqs = ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Resolve(title);
+        var f = ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Evaluate(reqs, SalesFile);
+        Assert.Equal(feasible, f.Feasible);
+        if (!feasible) Assert.NotEmpty(f.Missing);
+    }
+
+    [Fact]
+    public void Evaluate_UnknownWhenNothingAnalyzedYet()
+    {
+        var reqs = ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Resolve("الأنبوب المرجّح");
+        Assert.True(ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Evaluate(reqs, new HashSet<string>()).Feasible);
+    }
+
+    [Fact]
+    public void Resolve_SoftRequirementsNeverReject()
+    {
+        var reqs = ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Resolve("الإيراد حسب المنتج");
+        Assert.All(reqs, r => Assert.False(r.Hard));
+        var f = ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Evaluate(reqs, new HashSet<string> { "quantity" });
+        Assert.True(f.Feasible);
+    }
+
+    [Fact]
+    public void Resolve_UsesDraftGroupColumnAsSoftHint()
+    {
+        var reqs = ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Resolve("حسب", null, "SELECT Region, SUM(Amount) AS value FROM staging_sales GROUP BY Region");
+        Assert.Contains(reqs, r => r.AnyOf.Contains("region") && !r.Hard);
+    }
+}

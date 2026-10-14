@@ -238,7 +238,7 @@ public class RepositoryController : ControllerBase
             return BadRequest(new { error = "المفهوم غير معروف في القاموس." });
         var role = request.Role ?? ChatToDashboard.Api.Semantics.ConceptCatalog.Find(request.Concept)?.Role ?? ChatToDashboard.Api.Semantics.ConceptRoles.Text;
         var valueMap = request.ValueMap is { Count: > 0 } ? System.Text.Json.JsonSerializer.Serialize(request.ValueMap) : null;
-        await _semanticsStore.SetByUserAsync(file.ProjectId, file.TableName, column, request.Concept, role, request.Unit, valueMap, ct);
+        await _semantics.SetByUserAsync(file.ProjectId, file.TableName, column, request.Concept, role, request.Unit, valueMap, ct);
         return NoContent();
     }
 
