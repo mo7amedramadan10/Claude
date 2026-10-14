@@ -69,4 +69,22 @@ public class StagedBuildTests
         Assert.Contains("اختُصر ملف التعريف", text);
         Assert.True(text.Length < 4000);
     }
+
+    [Fact]
+    public void DashboardWidget_KeepsMultiSeriesExtensionsThroughRoundTrip()
+    {
+        const string json = """{"type":"bar","title":"مخطط مقابل فعلي","data":[{"q":"Q1","plan":1,"actual":2}],"xKey":"q","series":[{"key":"plan","label":"الخطة"},{"key":"actual","label":"الفعلي"}],"stacked":true,"areaFill":false,"centerLabel":"مشروع","source":"أ. ب."}""";
+        var w = System.Text.Json.JsonSerializer.Deserialize<ChatToDashboard.Api.Models.DashboardWidget>(json)!;
+        var back = System.Text.Json.JsonSerializer.Serialize(w);
+        Assert.Equal(2, w.Series!.Count);
+        // System.Text.Json يهرّب العربية افتراضيًا، فنتحقق بإعادة القراءة لا بمطابقة النص.
+        var again = System.Text.Json.JsonSerializer.Deserialize<ChatToDashboard.Api.Models.DashboardWidget>(back)!;
+        Assert.Equal("الخطة", again.Series![0].Label);
+        Assert.Equal("plan", again.Series[0].Key);
+        Assert.True(again.Stacked);
+        Assert.False(again.AreaFill);
+        Assert.Equal("مشروع", again.CenterLabel);
+        var plain = System.Text.Json.JsonSerializer.Serialize(new ChatToDashboard.Api.Models.DashboardWidget { Type = "kpi", Title = "x", Data = System.Text.Json.JsonDocument.Parse("[]").RootElement });
+        Assert.DoesNotContain("series", plain);
+    }
 }

@@ -160,6 +160,9 @@ public class ChatController : ControllerBase
                             Title = req.Title,
                             Page = req.Page,
                             NoData = true,
+                            // JsonElement غير المعرَّف يُسقط تسلسل الرد كله (500) — كان يحدث فعلًا كلما
+                            // أسقط الموديل عنصرًا مطلوبًا؛ مصفوفة فارغة صريحة كما في TryParseDashboard.
+                            Data = System.Text.Json.JsonDocument.Parse("[]").RootElement,
                             MissingReason = "لم يتم تضمين هذا العنصر في رد النموذج — جرّب تحديد مصدر بيانات له يدويًا.",
                         });
                     }

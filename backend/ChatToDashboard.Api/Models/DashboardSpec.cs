@@ -310,6 +310,33 @@ public class DashboardWidget
     /// </summary>
     [JsonPropertyName("options")]
     public JsonElement? Options { get; set; }
+
+    /// <summary>توسعات bar/line/pie التي يطلبها BuildSystemPrompt من الموديل وتقرؤها الواجهة
+    /// (buildMultiSeriesChart وتسمية مركز الدائرة): عدة سلاسل على نفس الرسم، وتكديسها،
+    /// وتعبئة المساحة تحت الخطوط، ونص مركز الدائرة. كانت تضيع عند إعادة التسلسل لأنها لم تكن
+    /// خصائص هنا — الآن تُحفظ كما هي (null = غائبة، لا تُكتب في JSON).</summary>
+    [JsonPropertyName("series")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<WidgetSeries>? Series { get; set; }
+
+    [JsonPropertyName("stacked")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Stacked { get; set; }
+
+    [JsonPropertyName("areaFill")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? AreaFill { get; set; }
+
+    [JsonPropertyName("centerLabel")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CenterLabel { get; set; }
+}
+
+/// <summary>سلسلة واحدة في رسم متعدد السلاسل: مفتاح الحقل الرقمي في كل صف من data، وتسميته.</summary>
+public class WidgetSeries
+{
+    [JsonPropertyName("key")] public string Key { get; set; } = string.Empty;
+    [JsonPropertyName("label")] public string? Label { get; set; }
 }
 
 /// <summary>

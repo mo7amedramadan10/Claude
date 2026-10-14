@@ -11,7 +11,7 @@ public static class WidgetShapeCatalog
     private static readonly IReadOnlyDictionary<string, string> Shapes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["kpi"] = """
-            data: [{"label": "وصف قصير", "value": <رقم>}] — عنصر واحد فقط. القيمة رقم JSON لا نص.
+            data: [{"label": "<تسمية المقياس بالعربية، مثل: إجمالي الإيراد>", "value": <رقم>}] — عنصر واحد فقط. القيمة رقم JSON لا نص. لا تنسخ النص بين <> حرفيًا.
             options اختياري: {"tg": <نسبة المستهدف ٪>, "tgv": <قيمة المستهدف>} عندما يوجد مستهدف حقيقي في البيانات.
             """,
         ["bar"] = """
@@ -43,7 +43,7 @@ public static class WidgetShapeCatalog
             data: كائن واحد (لا مصفوفة): {"total": <رقم>, "label": "وصف الإجمالي", "statuses": [{"label": "...", "count": <رقم>, "severity": "severe" | "warning" | "ontrack"}]}
             """,
         ["radial-gauge"] = """
-            data: كائن واحد (لا مصفوفة): {"value": <الفعلي>, "max": <السقف، افتراضه ١٠٠>, "label": "وصف قصير", "tone": "accent" | "danger" | "amber"}
+            data: كائن واحد (لا مصفوفة): {"value": <الفعلي>, "max": <السقف، افتراضه ١٠٠>, "label": "<ما يمثّله الرقم، مثل: نسبة الإنجاز>", "tone": "accent" | "danger" | "amber"}
             لا تحسب النسبة بنفسك؛ مرّر الأرقام الخام.
             """,
         ["linear-gauge"] = """
