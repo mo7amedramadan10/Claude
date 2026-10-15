@@ -26,7 +26,7 @@ public sealed record StagedCall(
 /// <summary>نتيجة نداء مرحلي: نص الرد الخام وكائن JSON المفسَّر منه.</summary>
 public sealed record StagedResult(string Text, JsonObject Json);
 
-/// <summary>ينفّذه كل مزوّد يدعم البناء المرحلي (OpenAI وAnthropic). Ollama لا يدعمه بعد.</summary>
+/// <summary>ينفّذه كل مزوّد: OpenAI وAnthropic وOllama (الأخير بمحاكاة إجبار الأداة لغياب tool_choice).</summary>
 public interface IStagedLlm
 {
     string ProviderName { get; }

@@ -27,7 +27,7 @@ namespace ChatToDashboard.Api.Ollama;
 ///   (see UsageTrace.RecordTurn, which already falls back to the response's top level).
 /// - "stream" is NOT omittable — Ollama defaults to streaming, so every request pins it false.
 /// </summary>
-public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+public class OllamaClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
     IIntegrationSetupAssistant, IVisualIdentityImageExtractor
 {
     private const int MaxToolIterations = 15;
@@ -981,17 +981,22 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// </summary>
     private async Task<T> RunLoopAsync<T>(
         string model, JsonArray messages, JsonArray? tools, AnalyticsTools.SourceContext context,
-        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct)
+        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct,
+        // البناء المرحلي (RunStagedAsync) يمرّر سقفًا أصغر وإجبار أداة في الدورة الأولى ووضع JSON؛
+        // القيم الافتراضية تُبقي كل المسارات القديمة كما هي حرفيًا.
+        int maxIterations = MaxToolIterations, int forceFinalAnswerAt = ForceFinalAnswerAtIteration,
+        int forceToolRounds = 0, bool jsonMode = false)
         where T : class
     {
         var jsonRepairAttempts = 0;
         var forcedFinalAnswerNoticeSent = false;
+        var toolNudges = 0;
         try
         {
-            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            for (var iteration = 0; iteration < maxIterations; iteration++)
             {
                 ct.ThrowIfCancellationRequested();
-                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= ForceFinalAnswerAtIteration;
+                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= forceFinalAnswerAt;
                 if (forceFinalAnswer && tools is { Count: > 0 } && !forcedFinalAnswerNoticeSent)
                 {
                     forcedFinalAnswerNoticeSent = true;
@@ -1004,7 +1009,10 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
-                var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+                // وضع JSON الأصلي في Ollama (format: json) يُطلب فقط في دورة بلا أدوات: مع الأدوات يمنع
+                // بعض الموديلات من نداء الأداة أصلًا.
+                var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct,
+                    jsonMode: jsonMode && forceFinalAnswer);
 
                 var message = response["message"]?.AsObject()
                     ?? throw new InvalidOperationException("Ollama gateway response had no 'message'.");
@@ -1014,6 +1022,18 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 messages.Add(message.DeepClone());
 
                 var toolCalls = message["tool_calls"]?.AsArray();
+                // لا tool_choice في Ollama: إجبار نداء الأداة في الدورات الأولى يُحاكى بتذكير قصير عندما
+                // يردّ الموديل بنص بدل نداء (رسمة لا تُبنى بلا استعلام فعلي).
+                if (toolCalls is not { Count: > 0 } && !forceFinalAnswer && toolNudges < forceToolRounds)
+                {
+                    toolNudges++;
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] = "لا تجب الآن. نادِ أداة query_data أولًا بالاستعلام المقترح ثم ابنِ الرد من نتيجتها الفعلية.",
+                    });
+                    continue;
+                }
                 if (toolCalls is { Count: > 0 })
                 {
                     foreach (var call in toolCalls)
@@ -1057,7 +1077,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                     continue;
                 }
 
-                var text = message["content"]?.GetValue<string>() ?? string.Empty;
+                var text = StripThinking(message["content"]?.GetValue<string>() ?? string.Empty);
                 var (parsed, parseError) = tryParse(text);
                 if (parsed is not null)
                 {
@@ -1082,7 +1102,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             }
 
             throw new InvalidOperationException(
-                $"Tool-calling loop did not converge within {MaxToolIterations} iterations.");
+                $"Tool-calling loop did not converge within {maxIterations} iterations.");
         }
         catch (Exception ex)
         {
@@ -1091,8 +1111,51 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>موديلات التفكير (qwen3) قد تُدرج كتلة &lt;think&gt;…&lt;/think&gt; قبل الرد؛ تُحذف قبل تفسير JSON.</summary>
+    private static string StripThinking(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(text, @"<think>[\s\S]*?</think>", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+
+    // ---------- البناء المرحلي للقوالب (IStagedLlm) ----------
+
+    public string ProviderName => "Ollama";
+
+    /// <summary>نداء مرحلي واحد على بوابة Ollama: نفس حلقة الأدوات بسقف صغير، إجبار الأداة في
+    /// الدورة الأولى يُحاكى بتذكير (لا tool_choice)، ووضع JSON الأصلي (format: json) في دورة الرد
+    /// النهائي، وحذف كتلة التفكير من موديلات qwen3 قبل التفسير.</summary>
+    public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
+    {
+        var settings = await _settings.GetAsync(ct);
+        var model = settings.OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = call.SystemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = call.UserMessage },
+        };
+        JsonArray? tools = null;
+        if (call.Tools is { Count: > 0 })
+        {
+            tools = new JsonArray();
+            foreach (var tool in call.Tools)
+                tools.Add(new JsonObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JsonObject
+                    {
+                        ["name"] = tool.Name, ["description"] = tool.Description, ["parameters"] = tool.InputSchema.DeepClone(),
+                    },
+                });
+        }
+        var trace = _usage.Begin("Ollama", model, call.Label, DescribeSources(call.Context), call.RequestingUser);
+        trace.SetSystemPrompt(call.SystemPrompt);
+        var maxIterations = Math.Max(2, call.MaxIterations);
+        return await RunLoopAsync(
+            model, messages, tools, call.Context, trace, AnalyticsTools.TryParseStagedJson, "staged", ct,
+            maxIterations: maxIterations + 2, forceFinalAnswerAt: maxIterations,
+            forceToolRounds: call.ForceFirstToolCall ? 1 : 0, jsonMode: true);
+    }
+
     private async Task<JsonObject> CallChatAsync(
-        string model, JsonArray messages, JsonArray? tools, UsageTrace trace, CancellationToken ct)
+        string model, JsonArray messages, JsonArray? tools, UsageTrace trace, CancellationToken ct, bool jsonMode = false)
     {
         var body = new JsonObject
         {
@@ -1100,6 +1163,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             ["messages"] = messages.DeepClone(),
             ["stream"] = false, // Ollama streams by default; the tool-loop needs one complete reply.
         };
+        if (jsonMode) body["format"] = "json";
         // Omit "tools" entirely (rather than send "[]") when forcing a tools-less final
         // answer — matches the other clients and avoids relying on how this gateway treats
         // an empty array specifically.

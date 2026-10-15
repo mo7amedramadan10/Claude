@@ -145,7 +145,7 @@ public class LlmRouter : IDashboardGenerator, ITableNamingAssistant, IIntegratio
         return provider switch
         {
             OpenAI => _services.GetRequiredService<OpenAiClient>(),
-            Ollama => null,
+            Ollama => _services.GetRequiredService<ChatToDashboard.Api.Ollama.OllamaClient>(),
             _ => _services.GetRequiredService<ClaudeClient>(),
         };
     }
