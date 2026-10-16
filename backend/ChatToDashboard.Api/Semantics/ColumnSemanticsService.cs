@@ -41,11 +41,54 @@ public class ColumnSemanticsService
     public void AnalyzeInBackground(string? projectId, string? tableName)
     {
         if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrWhiteSpace(tableName)) return;
-        _ = Task.Run(async () =>
+        _ = RunAnalysisAsync(projectId, tableName);
+    }
+
+    /// <summary>الجداول قيد التحليل الآن (مفتاح المشروع|الجدول) — تمنع تشغيل التحليل نفسه مرتين من الرفع
+    /// وقائمة المعاني وبناء اللوحة في وقت واحد.</summary>
+    private readonly HashSet<string> _inFlight = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>حد التوازي لنداءات الموديل في التحليل الخلفي على مستوى التطبيق.</summary>
+    private readonly SemaphoreSlim _gate = new(3);
+
+    /// <summary>يشغّل تحليل جدول واحد في مهمة خلفية مع منع التكرار وحد التوازي، ويعيد مهمته
+    /// (أو null إن كان الجدول نفسه قيد التحليل بالفعل).</summary>
+    private Task? RunAnalysisAsync(string projectId, string tableName)
+    {
+        var key = projectId + "|" + tableName;
+        lock (_inFlight) { if (!_inFlight.Add(key)) return null; }
+        return Task.Run(async () =>
         {
+            await _gate.WaitAsync();
             try { await AnalyzeTableAsync(projectId, tableName, CancellationToken.None); }
             catch (Exception ex) { _logger.LogWarning(ex, "فشل تحليل معاني الجدول {Table}", tableName); }
+            finally { _gate.Release(); lock (_inFlight) { _inFlight.Remove(key); } }
         });
+    }
+
+    /// <summary>الجداول التي لم يُنتج لها الموديل أو المستخدم أي صف بعد (لم تُحلَّل، أو تخمينات أسماء فقط
+    /// لأن نداء الموديل فشل) — تشمل جداول الأنظمة الخارجية التي لا تمر بمسار الرفع.</summary>
+    public async Task<IReadOnlyList<string>> UnanalyzedTablesAsync(string? projectId, IEnumerable<string> tables, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(projectId)) return Array.Empty<string>();
+        var analyzed = (await _store.ListForProjectAsync(projectId, ct))
+            .Where(r => r.Source is SemanticSources.Ai or SemanticSources.User)
+            .Select(r => r.TableName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return tables.Where(t => !analyzed.Contains(t)).ToList();
+    }
+
+    /// <summary>يضمن تحليل كل الجداول المعطاة قبل بناء لوحة: يشغّل التحليل لغير المحلَّلة (بتوازٍ محدود)
+    /// وينتظر حتى <paramref name="budget"/>؛ ما لا يكتمل في المهلة يستمر في الخلفية ويُفيد البناء التالي.
+    /// جدول قيد التحليل بالفعل (من رفع أو نداء سابق) لا يُعاد تشغيله. يعيد عدد ما اكتمل داخل المهلة.</summary>
+    public async Task<int> EnsureAnalyzedAsync(string? projectId, IEnumerable<string> tables, TimeSpan budget, CancellationToken ct = default)
+    {
+        var pending = await UnanalyzedTablesAsync(projectId, tables, ct);
+        if (pending.Count == 0) return 0;
+        var tasks = pending.Select(t => RunAnalysisAsync(projectId!, t)).Where(t => t is not null).Select(t => t!).ToList();
+        if (tasks.Count == 0) return 0;
+        var all = Task.WhenAll(tasks);
+        var finished = await Task.WhenAny(all, Task.Delay(budget, ct)) == all;
+        if (!finished && budget > TimeSpan.Zero) _logger.LogInformation("تحليل المعاني لم يكتمل خلال المهلة لـ{Count} جدول — يستمر في الخلفية", tasks.Count);
+        return tasks.Count(t => t.IsCompleted);
     }
 
     /// <summary>يحلّل الجدول ويحفظ النتيجة، ويعيد الصفوف المحفوظة. القاعدة الحتمية وحدها عندما

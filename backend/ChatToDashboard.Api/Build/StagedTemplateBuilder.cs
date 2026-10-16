@@ -84,7 +84,9 @@ public class StagedTemplateBuilder
             var text = $"لا توجد مصادر بيانات مفعّلة لبناء لوحة «{request.TemplateName}» — ارفع ملفًا أو فعّل نظامًا من «المصادر» ثم أعد البناء.";
             return new DashboardSpec { Summary = text, Narration = text, Widgets = empty };
         }
-        // طبقة المعنى: ملاحظات المفاهيم المؤكدة/المرجّحة لكل عمود تُلحق بملف التعريف في كل نداء.
+        // طبقة المعنى: أي جدول لم يُحلَّل بعد (ملف قديم، جدول نظام خارجي، أو فشل نداء سابق) يُحلَّل الآن
+        // قبل الجدوى والتخطيط — بمهلة حتى لا يعلّق البناء — ثم تُلحق المعاني بملف التعريف في كل نداء.
+        await _semantics.EnsureAnalyzedAsync(request.Context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(45), ct);
         var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
         var profileText = profile.ToPromptText(semantics: semantics);
 
@@ -146,6 +148,7 @@ public class StagedTemplateBuilder
         var profile = await _profiles.BuildAsync(request.Context, ct);
         if (profile.Tables.Count == 0)
             return NoDataWidget(spec, "لا توجد مصادر بيانات مفعّلة في المشروع — ارفع ملفًا أو فعّل نظامًا من «المصادر».");
+        await _semantics.EnsureAnalyzedAsync(request.Context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(30), ct);
         var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
         var profileText = profile.ToPromptText(semantics: semantics);
 

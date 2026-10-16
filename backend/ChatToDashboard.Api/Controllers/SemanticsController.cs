@@ -44,6 +44,12 @@ public class SemanticsController : ControllerBase
         var byKey = rows.ToDictionary(r => (r.TableName.ToLowerInvariant(), r.ColumnName.ToLowerInvariant()), r => r);
         var files = (await _files.ListAsync(selection.ProjectId, ct)).Where(f => !string.IsNullOrWhiteSpace(f.TableName))
             .ToDictionary(f => f.TableName!, f => f, StringComparer.OrdinalIgnoreCase);
+        // جدول بلا تحليل من الموديل (ملف قديم، جدول نظام خارجي، أو نداء سابق فشل) يبدأ تحليله الآن في
+        // الخلفية ويظهر «قيد التحليل» — فلا يحتاج المستخدم إلى زر لكل جدول.
+        var pending = await _semantics.UnanalyzedTablesAsync(projectId, profile.Tables.Select(t => t.Table), ct);
+        if (pending.Count > 0)
+            _ = _semantics.EnsureAnalyzedAsync(projectId, pending, TimeSpan.Zero, CancellationToken.None);
+        var pendingSet = pending.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var tables = profile.Tables.Select(t =>
         {
@@ -67,7 +73,7 @@ public class SemanticsController : ControllerBase
                 fileId = file?.Id, fileName = file?.DisplayName ?? context.TableFiles.GetValueOrDefault(t.Table) ?? t.SourceName,
                 rowCount = t.RowCount,
                 // «محلَّل» = فيه صف من الموديل أو المستخدم؛ «تخمين فقط» = أسماء فقط؛ «لم يُحلَّل» = لا صفوف.
-                analysis = tableRows.Count == 0 ? "none" : tableRows.Any(r => r.Source is SemanticSources.Ai or SemanticSources.User) ? "analyzed" : "rule",
+                analysis = tableRows.Any(r => r.Source is SemanticSources.Ai or SemanticSources.User) ? "analyzed" : pendingSet.Contains(t.Table) ? "pending" : tableRows.Count == 0 ? "none" : "rule",
                 columns,
             };
         }).ToList();

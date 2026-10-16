@@ -17,11 +17,13 @@ public class SourcesController : ControllerBase
     private readonly SystemApiLoader _systems;
     private readonly PermissionsService _permissions;
     private readonly IntegrationStore _integrations;
+    private readonly ChatToDashboard.Api.Semantics.ColumnSemanticsService _semantics;
 
     public SourcesController(
         IOptions<SourceOptions> options, RepositoryStore store, SystemApiLoader systems,
-        PermissionsService permissions, IntegrationStore integrations)
+        PermissionsService permissions, IntegrationStore integrations, ChatToDashboard.Api.Semantics.ColumnSemanticsService semantics)
     {
+        _semantics = semantics;
         _options = options.Value;
         _store = store;
         _systems = systems;
@@ -40,6 +42,13 @@ public class SourcesController : ControllerBase
             return BadRequest(new { error = $"\"{system.Name}\" غير مربوط بـ endpoint، فمفيش بيانات تُجلب." });
 
         var result = await _systems.LoadOneAsync(id, ct);
+        if (result?.Error is null)
+        {
+            // بيانات النظام تغيّرت: أعد تحليل معاني أعمدته للمشروع الحالي في الخلفية (جدول النظام لا يمر بمسار الرفع).
+            var user = await _permissions.GetCurrentUserAsync(User, ct);
+            var selection = user is null ? null : await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+            _semantics.AnalyzeInBackground(selection?.ProjectId, _systems.TableFor(system));
+        }
         return result?.Error is null
             ? Ok(new { system = system.Name, records = result?.Records ?? 0 })
             : StatusCode(502, new { system = system.Name, error = result.Error });

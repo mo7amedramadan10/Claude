@@ -6468,6 +6468,7 @@ async function loadSourcesPage() {
   catch { state.sourceSemantics = null; }
   if (state.sourceSemantics) semModalConcepts = state.sourceSemantics.concepts || [];
   renderSourcesPage();
+  semScheduleRefresh(state.sourceSemantics?.tables || [], () => { if (document.getElementById('screen-sources').classList.contains('active')) loadSourcesPage(); });
 }
 const sourcesSemOpen = new Set(); // الملفات المفتوحة معانيها (تبقى مفتوحة عبر إعادة الرسم)
 
@@ -9887,7 +9888,13 @@ function tpladmRender() {
 // ---------- جدول معاني الأعمدة المشترك (صفحة «مصادر المشروع» + تبويب الإدارة) ----------
 // t = جدول من /api/semantics بأعمدته. تغيير المعنى يُحفظ فورًا عبر PUT /api/semantics/{table}/{column}
 // ويُحدّث الكائن محليًا، فكل شاشة تعرض نفس البيانات بلا إعادة تحميل.
-const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], rule: ['badge-warn', '◐ تخمين من الأسماء فقط'], none: ['badge-danger', '! لم يُحلَّل'] };
+const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], pending: ['badge-blue', '⏳ قيد التحليل الآلي'], rule: ['badge-warn', '◐ تخمين من الأسماء فقط'], none: ['badge-danger', '! لم يُحلَّل'] };
+// جداول «قيد التحليل» (بدأه الخادم تلقائيًا عند فتح الصفحة): إعادة تحميل واحدة بعد ثوانٍ لإظهار النتيجة.
+function semScheduleRefresh(tables, reload) {
+  if (!tables.some(t => t.analysis === 'pending')) return;
+  clearTimeout(semScheduleRefresh._t);
+  semScheduleRefresh._t = setTimeout(reload, 8000);
+}
 function semColumnRowHtml(t, c) {
   const conf = Math.round((c.confidence || 0) * 100);
   const tone = c.source === 'user' ? 'badge-ok' : !c.source ? '' : conf >= 80 ? 'badge-teal' : conf >= 40 ? 'badge-warn' : 'badge-danger';
@@ -9942,6 +9949,7 @@ async function tpladmSemanticsPane() {
     await tpladmLoadSemantics();
     if (TPLADM.kind !== 'semantics') return;
     tpladmTabs();
+    semScheduleRefresh(TPLADM.semantics.tables, () => { if (TPLADM.kind === 'semantics') { TPLADM.semantics = null; tpladmSemanticsPane(); } });
   }
   const f = TPLADM.filt.semantics;
   const data = TPLADM.semantics;
