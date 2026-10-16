@@ -114,7 +114,12 @@ public class WidgetFeasibilityService
     {
         var map = new Dictionary<string, List<(string, string)>>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(projectId)) return map;
-        foreach (var s in await _semantics.ListForProjectAsync(projectId, ct))
+        var rows = await _semantics.ListForProjectAsync(projectId, ct);
+        // الجدوى الحتمية تحتاج معرفة موثوقة بالأعمدة: لو لم يُنتج الموديل أو المستخدم أي صف (فشل نداء
+        // التحليل أو لم يكتمل بعد) فالمخزَّن تخمينات من الأسماء فقط — نعيد «مجهولًا» (خريطة فارغة) حتى
+        // لا يُرفض عنصر حتميًا لأن عمود الحالة اسمه غير مألوف، ويُترك القرار للمخطِّط.
+        if (!rows.Any(r => r.Source is SemanticSources.Ai or SemanticSources.User)) return map;
+        foreach (var s in rows)
         {
             if (s.Concept is null || s.Confidence < MinConfidence || !ConceptCatalog.IsKnown(s.Concept)) continue;
             if (!map.TryGetValue(s.Concept, out var list)) map[s.Concept] = list = new();
