@@ -6502,6 +6502,7 @@ function renderSourcesPage() {
         <button type="button" class="btn btn-sm${open ? ' btn-soft' : ''}" data-sem-toggle="${esc(f.id)}" aria-expanded="${open}">🏷️ ${open ? 'إخفاء معاني الأعمدة' : 'معاني الأعمدة'}</button>
         <button type="button" class="btn btn-sm btn-ghost" data-sem-analyze="${esc(t.table)}" data-file="${esc(f.id)}">${tplIc('spark')}إعادة التحليل الآلي</button>
       </div>
+      ${semErrorHtml(t)}
       <div class="src-sem${open ? '' : ' hidden'}" data-sem-panel="${esc(f.id)}">
         <p class="muted src-sem-help">ما فهمه جيم من كل عمود — النماذج تُبنى على هذه المعاني لا على أسماء الأعمدة. صحّح أي معنى من القائمة ويُحفظ فورًا ويفوز على أي تحليل آلي لاحق.</p>
         <div class="sem-status hidden" data-sem-status="${esc(f.id)}"></div>
@@ -6535,9 +6536,9 @@ function renderSourcesPage() {
   grid.querySelectorAll('[data-sem-analyze]').forEach(btn => btn.addEventListener('click', async () => {
     const id = btn.dataset.file; btn.disabled = true; sourcesSemOpen.add(id);
     try {
-      if (!await semReanalyze(btn.dataset.semAnalyze, statusFor(id))) return;
+      const r = await semReanalyze(btn.dataset.semAnalyze, statusFor(id)); if (!r) return;
       await loadSourcesPage();
-      statusFor(id)('اكتمل التحليل. تأكيداتك السابقة بقيت كما هي.', 'ok');
+      statusFor(id)(r.error ? `تعذّر التحليل الآلي: ${r.error}` : 'اكتمل التحليل. تأكيداتك السابقة بقيت كما هي.', r.error ? 'bad' : 'ok');
     } finally { btn.disabled = false; }
   }));
 
@@ -9888,8 +9889,13 @@ function tpladmRender() {
 // ---------- جدول معاني الأعمدة المشترك (صفحة «مصادر المشروع» + تبويب الإدارة) ----------
 // t = جدول من /api/semantics بأعمدته. تغيير المعنى يُحفظ فورًا عبر PUT /api/semantics/{table}/{column}
 // ويُحدّث الكائن محليًا، فكل شاشة تعرض نفس البيانات بلا إعادة تحميل.
-const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], pending: ['badge-blue', '⏳ قيد التحليل الآلي'], rule: ['badge-warn', '◐ تخمين من الأسماء فقط'], none: ['badge-danger', '! لم يُحلَّل'] };
+const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], pending: ['badge-blue', '⏳ قيد التحليل الآلي'], failed: ['badge-danger', '! فشل التحليل الآلي'], rule: ['badge-warn', '◐ تخمين من الأسماء فقط'], none: ['badge-danger', '! لم يُحلَّل'] };
 // جداول «قيد التحليل» (بدأه الخادم تلقائيًا عند فتح الصفحة): إعادة تحميل واحدة بعد ثوانٍ لإظهار النتيجة.
+// سبب فشل التحليل الآلي (من `analysisError` في رد /api/semantics) مع إرشاد: يُعرض تحت شارة الحالة.
+function semErrorHtml(t) {
+  if (!t.analysisError) return '';
+  return `<div class="sem-error" role="alert">⚠️ تعذّر التحليل الآلي: <span dir="auto">${esc(t.analysisError)}</span> — تحقق من إعدادات الموديل في «الإعدادات» ثم اضغط «إعادة التحليل الآلي».</div>`;
+}
 function semScheduleRefresh(tables, reload) {
   if (!tables.some(t => t.analysis === 'pending')) return;
   clearTimeout(semScheduleRefresh._t);
@@ -9934,9 +9940,11 @@ function bindSemTable(container, tables, onStatus) {
 async function semReanalyze(table, onStatus) {
   onStatus(`جارٍ تحليل ${table}… (ثوانٍ)`, '');
   const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/analyze`, { method: 'POST' });
-  if (!res.ok) { onStatus('تعذّر إعادة التحليل — راجع صفحة «الاستهلاك» لسبب فشل نداء الموديل.', 'bad'); return false; }
+  if (!res.ok) { onStatus('تعذّر إعادة التحليل — راجع صفحة «الاستهلاك» لسبب فشل نداء الموديل.', 'bad'); return null; }
   dashGalFeasibility = null;
-  return true;
+  const r = await res.json().catch(() => ({}));
+  // الطلب نجح لكن نداء الموديل قد يفشل: يعيد السبب (أو null) ليعرضه المنادي بعد إعادة الرسم.
+  return { error: r.analysisError || null };
 }
 async function tpladmLoadSemantics() {
   const r = await fetch('/api/semantics');
@@ -9973,6 +9981,7 @@ async function tpladmSemanticsPane() {
         <span class="badge ${tone}">${label}</span>
         <button type="button" class="btn btn-sm btn-soft" data-analyze="${esc(t.table)}">${tplIc('spark')}إعادة التحليل الآلي</button>
       </div>
+      ${semErrorHtml(t)}
       <div style="margin-top:8px">${semTableHtml(t)}</div>
     </article>`;
   };
@@ -10003,10 +10012,10 @@ function tpladmBindSemanticsPane() {
   el('tpladm-pane').querySelectorAll('[data-analyze]').forEach(btn => btn.addEventListener('click', async () => {
     const table = btn.dataset.analyze; btn.disabled = true;
     try {
-      if (!await semReanalyze(table, tpladmSemStatus)) return;
+      const r = await semReanalyze(table, tpladmSemStatus); if (!r) return;
       TPLADM.semantics = null;
       await tpladmSemanticsPane();
-      tpladmSemStatus(`اكتمل تحليل ${table}. تأكيداتك السابقة بقيت كما هي.`, 'ok');
+      tpladmSemStatus(r.error ? `تعذّر التحليل الآلي لـ${table}: ${r.error}` : `اكتمل تحليل ${table}. تأكيداتك السابقة بقيت كما هي.`, r.error ? 'bad' : 'ok');
     } finally { btn.disabled = false; }
   }));
 }

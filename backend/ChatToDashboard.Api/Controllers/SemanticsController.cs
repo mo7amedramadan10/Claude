@@ -49,10 +49,11 @@ public class SemanticsController : ControllerBase
         var pending = await _semantics.UnanalyzedTablesAsync(projectId, profile.Tables.Select(t => t.Table), ct);
         if (pending.Count > 0)
             _ = _semantics.EnsureAnalyzedAsync(projectId, pending, TimeSpan.Zero, CancellationToken.None);
-        var pendingSet = pending.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var pendingSet = pending.Where(t => _semantics.GetFailure(projectId, t) is null).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var tables = profile.Tables.Select(t =>
         {
+            var failure = _semantics.GetFailure(projectId, t.Table);
             var columns = t.Columns.Select(c =>
             {
                 byKey.TryGetValue((t.Table.ToLowerInvariant(), c.Name.ToLowerInvariant()), out var s);
@@ -73,7 +74,10 @@ public class SemanticsController : ControllerBase
                 fileId = file?.Id, fileName = file?.DisplayName ?? context.TableFiles.GetValueOrDefault(t.Table) ?? t.SourceName,
                 rowCount = t.RowCount,
                 // «محلَّل» = فيه صف من الموديل أو المستخدم؛ «تخمين فقط» = أسماء فقط؛ «لم يُحلَّل» = لا صفوف.
-                analysis = tableRows.Any(r => r.Source is SemanticSources.Ai or SemanticSources.User) ? "analyzed" : pendingSet.Contains(t.Table) ? "pending" : tableRows.Count == 0 ? "none" : "rule",
+                analysis = tableRows.Any(r => r.Source is SemanticSources.Ai or SemanticSources.User) ? "analyzed"
+                    : failure is not null ? "failed" : pendingSet.Contains(t.Table) ? "pending" : tableRows.Count == 0 ? "none" : "rule",
+                // سبب آخر فشل لنداء الموديل (إن وُجد) ليُعرض للمستخدم مع إرشاد لإعادة المحاولة.
+                analysisError = failure?.Message, analysisFailedAt = failure?.At,
                 columns,
             };
         }).ToList();
@@ -108,7 +112,9 @@ public class SemanticsController : ControllerBase
         var (context, profiled) = await ResolveTableAsync(user, table, ct);
         if (profiled is null) return NotFound(new { error = "الجدول غير موجود في مصادر المشروع." });
         var rows = await _semantics.AnalyzeTableAsync(context.ProjectId!, profiled.Table, ct);
-        return Ok(new { table = profiled.Table, analyzed = rows.Count });
+        // نجاح الطلب لا يعني نجاح الموديل: عند فشله تُحفظ تخمينات الأسماء فقط ويُعاد السبب للعرض.
+        var failure = _semantics.GetFailure(context.ProjectId, profiled.Table);
+        return Ok(new { table = profiled.Table, analyzed = rows.Count, analysisError = failure?.Message });
     }
 
     private async Task<(AnalyticsTools.SourceContext Context, ProfiledTable? Table)> ResolveTableAsync(AppUser user, string table, CancellationToken ct)

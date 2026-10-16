@@ -40,7 +40,11 @@ public class ColumnSemanticsService
     /// <summary>يشغّل التحليل بلا انتظار (بعد الرفع) ويسجّل أي فشل بدل أن يُسقط الطلب.</summary>
     public void AnalyzeInBackground(string? projectId, string? tableName)
     {
-        if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrWhiteSpace(tableName)) return;
+        if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrWhiteSpace(tableName))
+        {
+            _logger.LogWarning("لم يُشغَّل تحليل المعاني للجدول {Table}: لا مشروع محدد", tableName);
+            return;
+        }
         _ = RunAnalysisAsync(projectId, tableName);
     }
 
@@ -49,6 +53,31 @@ public class ColumnSemanticsService
     private readonly HashSet<string> _inFlight = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>حد التوازي لنداءات الموديل في التحليل الخلفي على مستوى التطبيق.</summary>
     private readonly SemaphoreSlim _gate = new(3);
+
+    /// <summary>آخر فشل لنداء الموديل لكل جدول (المشروع|الجدول ← الوقت والسبب) — يُعرض للمستخدم بدل
+    /// أن يبدو الجدول «غير محلَّل» بلا تفسير، ويمنع إعادة المحاولة التلقائية قبل <see cref="RetryAfter"/>.</summary>
+    private readonly Dictionary<string, (DateTime At, string Message)> _failures = new(StringComparer.OrdinalIgnoreCase);
+    public static readonly TimeSpan RetryAfter = TimeSpan.FromMinutes(10);
+
+    public record AnalysisFailure(DateTime At, string Message);
+
+    /// <summary>سبب آخر فشل للتحليل الآلي لهذا الجدول، أو null إن لم يفشل (أو نجح بعده).</summary>
+    public AnalysisFailure? GetFailure(string? projectId, string tableName)
+    {
+        lock (_failures) return _failures.TryGetValue(projectId + "|" + tableName, out var f) ? new AnalysisFailure(f.At, f.Message) : null;
+    }
+
+    private void SetFailure(string projectId, string tableName, string? message)
+    {
+        var key = projectId + "|" + tableName;
+        lock (_failures) { if (message is null) _failures.Remove(key); else _failures[key] = (DateTime.UtcNow, message); }
+    }
+
+    private bool RecentlyFailed(string? projectId, string tableName)
+    {
+        var f = GetFailure(projectId, tableName);
+        return f is not null && DateTime.UtcNow - f.At < RetryAfter;
+    }
 
     /// <summary>يشغّل تحليل جدول واحد في مهمة خلفية مع منع التكرار وحد التوازي، ويعيد مهمته
     /// (أو null إن كان الجدول نفسه قيد التحليل بالفعل).</summary>
@@ -81,7 +110,7 @@ public class ColumnSemanticsService
     /// جدول قيد التحليل بالفعل (من رفع أو نداء سابق) لا يُعاد تشغيله. يعيد عدد ما اكتمل داخل المهلة.</summary>
     public async Task<int> EnsureAnalyzedAsync(string? projectId, IEnumerable<string> tables, TimeSpan budget, CancellationToken ct = default)
     {
-        var pending = await UnanalyzedTablesAsync(projectId, tables, ct);
+        var pending = (await UnanalyzedTablesAsync(projectId, tables, ct)).Where(t => !RecentlyFailed(projectId, t)).ToList();
         if (pending.Count == 0) return 0;
         var tasks = pending.Select(t => RunAnalysisAsync(projectId!, t)).Where(t => t is not null).Select(t => t!).ToList();
         if (tasks.Count == 0) return 0;
@@ -119,12 +148,19 @@ public class ColumnSemanticsService
         try
         {
             var llm = await _router.ResolveStagedAsync(ct);
-            if (llm is not null) await RefineWithModelAsync(llm, projectId, profile, rows, ct);
+            if (llm is null) SetFailure(projectId, tableName, "لا يوجد مزوّد ذكاء اصطناعي مضبوط.");
+            else
+            {
+                await RefineWithModelAsync(llm, projectId, profile, rows, ct);
+                SetFailure(projectId, tableName, rows.Any(r => r.Source == SemanticSources.Ai) ? null
+                    : "رد الموديل لم يحتوِ على أعمدة الجدول (لم يُفهم الرد).");
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "تعذّر تحليل معاني {Table} بالموديل — اعتُمد التخمين الحتمي", tableName);
+            SetFailure(projectId, tableName, Describe(ex));
         }
 
         await _store.UpsertAnalyzedAsync(rows, ct);
@@ -185,6 +221,14 @@ public class ColumnSemanticsService
             row.Note = Str(o, "note");
             row.Source = SemanticSources.Ai;
         }
+    }
+
+    /// <summary>وصف قصير لخطأ نداء الموديل يصلح للعرض (أعمق استثناء داخلي، بلا تتبّع).</summary>
+    private static string Describe(Exception ex)
+    {
+        while (ex.InnerException is not null) ex = ex.InnerException;
+        var msg = ex.Message.Trim();
+        return msg.Length > 240 ? msg[..240] + "…" : msg;
     }
 
     /// <summary>ملاحظات المعنى لكل عمود في المشروع، لتُلحَق بملف تعريف البيانات في نداءات البناء:
