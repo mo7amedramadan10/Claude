@@ -9749,6 +9749,7 @@ const TPLADM_KINDS = {
   dashboard: { tab: 'نماذج اللوحات', one: 'نموذج لوحة', add: 'نموذج لوحة جديد', icon: 'dashboard', where: 'يظهر في معرض «لوحة جديدة»، وينشئ لوحة كاملة بعناصره.' },
   kpi: { tab: 'مكتبة المؤشرات', one: 'مؤشر', icon: 'target', where: 'يظهر في «النماذج ← مكتبة المؤشرات» داخل المحادثة.' },
   schema: { tab: 'مكتبة الحقول والجداول', icon: 'database', where: 'الأسماء المرشّحة لكل جدول/عمود يستخدمه أي مؤشر أو نموذج لوحة — تُستخدم وقت بناء لوحة فعلية على مصدر متصل لمطابقة البنية الحقيقية بدل تخمين الموديل من الصفر.' },
+  semantics: { tab: 'معاني الأعمدة', icon: 'spark', where: 'طبقة المعنى: كل جدول في مشروعك الحالي وأعمدته وما فهمه جيم من كل عمود (إيراد، حالة صفقة، مندوب…). النماذج تُبنى على هذه المعاني لا على أسماء الأعمدة — صحّح أي معنى هنا ويُحفظ تأكيدك فوق أي تحليل آلي لاحق.' },
   rules: { tab: 'القواعد العامة', icon: 'shield' },
 };
 const TPLADM_STATUS = { published: ['منشور', 'ok'], draft: ['مسودة', 'warn'], stopped: ['موقوف', 'off'] };
@@ -9767,10 +9768,12 @@ const tpladmBlankWidgets = () => [
 
 const TPLADM = {
   kind: 'widget', widgets: [], dashboards: [], kpiOverrides: {}, kpiMtypes: [], kpiCatOff: new Set(), schemaRows: [],
+  semantics: null, // يُحمَّل عند فتح تبويب «معاني الأعمدة» فقط (ملف تعريف كل الجداول)
   filt: {
     widget: { q: '', s: '', c: '' }, dashboard: { q: '', s: '', c: '' },
     kpi: { v: 'cats', q: '', s: '', c: '', m: '', p: 0, cq: '', cs: '' },
     schema: { q: '' },
+    semantics: { q: '', only: '' },
   },
 };
 let TPLADM_RULES_CACHE = '';
@@ -9816,7 +9819,8 @@ function tpladmStats() {
 }
 
 function tpladmTabs() {
-  const n = { widget: TPLADM.widgets.length, dashboard: TPLADM.dashboards.length, kpi: KPI_LIB ? KPI_LIB.rows.length : 0, schema: TPLADM.schemaRows.length };
+  const n = { widget: TPLADM.widgets.length, dashboard: TPLADM.dashboards.length, kpi: KPI_LIB ? KPI_LIB.rows.length : 0, schema: TPLADM.schemaRows.length,
+    semantics: TPLADM.semantics ? TPLADM.semantics.tables.reduce((s, t) => s + t.columns.length, 0) : null };
   el('tpladm-tabs').innerHTML = Object.entries(TPLADM_KINDS).map(([k, v]) =>
     `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === TPLADM.kind}">${tplIc(v.icon)}${v.tab}${n[k] != null ? ` <span class="tab-n num">${n[k].toLocaleString('en-US')}</span>` : ''}</button>`).join('');
   el('tpladm-tabs').querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { TPLADM.kind = b.dataset.kind; tpladmRender(); }));
@@ -9830,7 +9834,112 @@ function tpladmRender() {
   else if (TPLADM.kind === 'dashboard') tpladmListPane('dashboard');
   else if (TPLADM.kind === 'kpi') tpladmKpiPane();
   else if (TPLADM.kind === 'schema') tpladmSchemaPane();
+  else if (TPLADM.kind === 'semantics') tpladmSemanticsPane();
   else tpladmRulesPane();
+}
+
+// ---------- تبويب «معاني الأعمدة»: إدارة طبقة المعنى مجمّعةً لكل جداول المشروع ----------
+const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], rule: ['badge-warn', '◐ تخمين من الأسماء فقط'], none: ['badge-danger', '! لم يُحلَّل'] };
+async function tpladmLoadSemantics() {
+  const r = await fetch('/api/semantics');
+  TPLADM.semantics = r.ok ? await r.json() : { tables: [], concepts: [] };
+  semModalConcepts = TPLADM.semantics.concepts || [];
+}
+async function tpladmSemanticsPane() {
+  if (!TPLADM.semantics) {
+    el('tpladm-pane').innerHTML = '<div class="lib-empty"><span class="spinner"></span> جارٍ تحميل جداول المشروع…</div>';
+    await tpladmLoadSemantics();
+    if (TPLADM.kind !== 'semantics') return;
+    tpladmTabs();
+  }
+  const f = TPLADM.filt.semantics;
+  const data = TPLADM.semantics;
+  const qs = kpiNorm((f.q || '').trim());
+  const tables = data.tables.filter(t => {
+    if (f.only === 'missing' && t.analysis === 'analyzed') return false;
+    if (f.only === 'unknown' && !t.columns.some(c => !c.concept)) return false;
+    if (!qs) return true;
+    return kpiNorm(t.table + ' ' + (t.fileName || '') + ' ' + t.columns.map(c => c.name + ' ' + (c.conceptLabel || '')).join(' ')).includes(qs);
+  });
+  const totalCols = data.tables.reduce((s, t) => s + t.columns.length, 0);
+  const unknownCols = data.tables.reduce((s, t) => s + t.columns.filter(c => !c.concept).length, 0);
+  const userCols = data.tables.reduce((s, t) => s + t.columns.filter(c => c.source === 'user').length, 0);
+
+  const colRow = (t, c) => {
+    const conf = Math.round((c.confidence || 0) * 100);
+    const tone = c.source === 'user' ? 'badge-ok' : !c.source ? '' : conf >= 80 ? 'badge-teal' : conf >= 40 ? 'badge-warn' : 'badge-danger';
+    const src = c.source === 'user' ? '✅ مؤكّد منك' : c.source ? `${SEM_SOURCE_LABEL[c.source] || c.source} · ${conf.toLocaleString('en-US')}٪` : '—';
+    let map = '';
+    if (c.valueMapJson) { try { const m = Object.entries(JSON.parse(c.valueMapJson)); if (m.length) map = m.slice(0, 4).map(([k, v]) => `${k}←${v}`).join('، '); } catch { /* تجاهل */ } }
+    return `<tr data-table="${esc(t.table)}" data-column="${esc(c.name)}">
+      <td><b dir="auto">${esc(c.name)}</b><br><small class="muted">${esc(WIDGET_COLS_KIND[c.kind] || c.kind)}${c.sample?.length ? ` · ${esc(c.sample.join('، ')).slice(0, 60)}` : ''}</small></td>
+      <td><select class="sem-select" aria-label="مفهوم العمود ${esc(c.name)}">${semConceptOptions(c.concept)}</select></td>
+      <td><span class="badge ${tone}">${esc(src)}</span></td>
+      <td><small class="muted">${esc(c.note || '')}${map ? `<br>${esc(map)}` : ''}</small></td>
+    </tr>`;
+  };
+  const tableCard = t => {
+    const [tone, label] = SEM_ANALYSIS_LABEL[t.analysis] || SEM_ANALYSIS_LABEL.none;
+    const unknown = t.columns.filter(c => !c.concept).length;
+    return `<article class="cat-card sem-table-card" data-table="${esc(t.table)}">
+      <div class="cc-top">
+        <div class="cc-name"><b>${esc(t.fileName || t.table)}</b><small dir="ltr">${esc(t.table)} · ${t.rowCount.toLocaleString('en-US')} صف · ${t.columns.length.toLocaleString('en-US')} عمود${unknown ? ` · ${unknown.toLocaleString('en-US')} بلا معنى` : ''}</small></div>
+        <span class="badge ${tone}">${label}</span>
+        <button type="button" class="btn btn-sm btn-soft" data-analyze="${esc(t.table)}">${tplIc('spark')}إعادة التحليل الآلي</button>
+      </div>
+      <table class="dtable sem-dtable" style="margin-top:8px">
+        <thead><tr><th>العمود</th><th>المعنى</th><th>المصدر والثقة</th><th>ملاحظة / خريطة القيم</th></tr></thead>
+        <tbody>${t.columns.map(c => colRow(t, c)).join('')}</tbody>
+      </table>
+    </article>`;
+  };
+
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.semantics.where)}</p>
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث</span><input type="search" id="tpladm-sem-q" value="${esc(f.q)}" placeholder="ابحث باسم الجدول أو العمود أو المعنى"></label>
+      ${tpladmSegmented(f.only, [['', 'كل الجداول'], ['missing', 'غير محلَّلة'], ['unknown', 'فيها أعمدة بلا معنى']], 'sem-only')}
+      <span class="muted"><span class="num">${data.tables.length.toLocaleString('en-US')}</span> جدول · <span class="num">${totalCols.toLocaleString('en-US')}</span> عمود · <span class="num">${unknownCols.toLocaleString('en-US')}</span> بلا معنى · <span class="num">${userCols.toLocaleString('en-US')}</span> مؤكّد منك</span>
+      <button type="button" class="btn btn-sm" id="tpladm-sem-reload">${tplIc('history')}تحديث</button>
+    </div>
+    <div id="tpladm-sem-status" class="sem-status hidden"></div>
+    <div class="cat-grid sem-grid">${tables.length ? tables.map(tableCard).join('') : `<div class="lib-empty">${data.tables.length ? 'لا توجد نتائج.' : 'لا توجد جداول في المشروع الحالي — ارفع ملفًا من «المصادر» أولًا.'}</div>`}</div>`;
+  tpladmBindSemanticsPane();
+}
+function tpladmSemStatus(text, tone) {
+  const box = el('tpladm-sem-status'); if (!box) return;
+  box.textContent = text; box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden');
+}
+function tpladmBindSemanticsPane() {
+  const f = TPLADM.filt.semantics;
+  let t;
+  el('tpladm-sem-q').addEventListener('input', e => { f.q = e.target.value; clearTimeout(t); t = setTimeout(() => tpladmSemanticsPane(), 150); });
+  el('tpladm-pane').querySelectorAll('[data-sem-only]').forEach(b => b.addEventListener('click', () => { f.only = b.dataset.semOnly; tpladmSemanticsPane(); }));
+  el('tpladm-sem-reload').addEventListener('click', async () => { TPLADM.semantics = null; dashGalFeasibility = null; await tpladmSemanticsPane(); });
+  el('tpladm-pane').querySelectorAll('.sem-select').forEach(sel => sel.addEventListener('change', async () => {
+    const row = sel.closest('tr'); const table = row.dataset.table, column = row.dataset.column;
+    sel.disabled = true;
+    const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/${encodeURIComponent(column)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept: sel.value || null }),
+    });
+    sel.disabled = false;
+    if (!res.ok) { tpladmSemStatus('تعذّر حفظ المعنى.', 'bad'); return; }
+    const tbl = TPLADM.semantics.tables.find(x => x.table === table); const col = tbl?.columns.find(x => x.name === column);
+    if (col) { const c = semModalConcepts.find(x => x.id === sel.value); col.concept = sel.value || null; col.conceptLabel = c?.label || null; col.source = 'user'; col.confidence = 1; if (tbl.analysis !== 'analyzed') tbl.analysis = 'analyzed'; }
+    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge badge-ok">✅ مؤكّد منك</span>';
+    dashGalFeasibility = null;
+    tpladmSemStatus(`تم حفظ معنى «${column}» في ${table}.`, 'ok');
+  }));
+  el('tpladm-pane').querySelectorAll('[data-analyze]').forEach(btn => btn.addEventListener('click', async () => {
+    const table = btn.dataset.analyze; btn.disabled = true; tpladmSemStatus(`جارٍ تحليل ${table}… (ثوانٍ)`, '');
+    try {
+      const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/analyze`, { method: 'POST' });
+      if (!res.ok) { tpladmSemStatus('تعذّر إعادة التحليل — راجع صفحة «الاستهلاك» لسبب فشل نداء الموديل.', 'bad'); return; }
+      TPLADM.semantics = null; dashGalFeasibility = null;
+      await tpladmSemanticsPane();
+      tpladmSemStatus(`اكتمل تحليل ${table}. تأكيداتك السابقة بقيت كما هي.`, 'ok');
+    } finally { btn.disabled = false; }
+  }));
 }
 el('tpladm-new-btn').addEventListener('click', () => {
   if (TPLADM.kind === 'widget') tpladmOpenEditor('widget', null, true);

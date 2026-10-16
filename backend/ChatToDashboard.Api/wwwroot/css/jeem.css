@@ -3167,3 +3167,9 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
   #dash .grid > .widget:nth-child(3n) { grid-column: 1 / -1 !important; break-after: page; }
   #dash .widget .chart-holder { height: 240px; }
 }
+/* تبويب «معاني الأعمدة» في مكتبة النماذج */
+.sem-grid { grid-template-columns: 1fr; }
+.sem-table-card .cc-top { flex-wrap: wrap; gap: 8px; }
+.sem-dtable td:nth-child(2) { min-width: 220px; }
+.sem-dtable .sem-select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; background: var(--surface); }
+.sem-dtable td { vertical-align: top; }
