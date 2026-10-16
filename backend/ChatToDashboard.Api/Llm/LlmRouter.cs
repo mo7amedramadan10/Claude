@@ -138,6 +138,26 @@ public class LlmRouter : IDashboardGenerator, ITableNamingAssistant, IIntegratio
     /// <summary>مزوّد البناء المرحلي للقوالب (انظر Build/StagedTemplateBuilder) حسب نفس إعداد
     /// المزوّد الذي يبني اللوحات العادية. يدعمه المزوّدون الثلاثة (OpenAI وAnthropic وOllama)؛
     /// null محجوز لمزوّد مستقبلي بلا دعم، وعندها يعود المتحكم إلى المسار القديم بدل أن يفشل.</summary>
+    /// <summary>مزوّد تحليل معاني الأعمدة (طبقة المعنى) بحسب إعداده المستقل في «الإعدادات»: null/فارغ
+    /// = نفس مزوّد اللوحات (بلا موديل مخصص)؛ "none" = معطَّل فيعود null؛ وإلا المزوّد المختار مع موديله
+    /// الفرعي الخاص الذي يُمرَّر كـ <see cref="StagedCall.ModelOverride"/>.</summary>
+    public async Task<(IStagedLlm Llm, string? Model)?> ResolveSemanticsStagedAsync(CancellationToken ct = default)
+    {
+        var (provider, ollamaModel, openAiModel) = await _settings.GetSemanticsAsync(ct);
+        if (string.Equals(provider, LlmSettingsStore.SemanticsDisabled, StringComparison.OrdinalIgnoreCase)) return null;
+        if (string.IsNullOrWhiteSpace(provider))
+        {
+            var shared = await ResolveStagedAsync(ct);
+            return shared is null ? null : (shared, null);
+        }
+        return provider switch
+        {
+            OpenAI => (_services.GetRequiredService<OpenAiClient>(), openAiModel is { Length: > 0 } ? openAiModel : null),
+            Ollama => (_services.GetRequiredService<ChatToDashboard.Api.Ollama.OllamaClient>(), ollamaModel is { Length: > 0 } ? ollamaModel : null),
+            _ => (_services.GetRequiredService<ClaudeClient>(), null),
+        };
+    }
+
     public async Task<IStagedLlm?> ResolveStagedAsync(CancellationToken ct = default)
     {
         var settings = await _settings.GetAsync(ct);

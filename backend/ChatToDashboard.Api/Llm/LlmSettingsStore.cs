@@ -141,6 +141,10 @@ public class LlmSettingsStore
                      ("VisualIdentityReaderOllamaModel", "TEXT", "NVARCHAR(200)"),
                      ("VisualIdentityReaderOpenAiModel", "TEXT", "NVARCHAR(200)"),
                      ("VisualIdentitySupportsImage", "INTEGER", "BIT"),
+                     // موديل تحليل معاني الأعمدة (طبقة المعنى): null = نفس موديل اللوحات، "none" = معطَّل.
+                     ("SemanticsProvider", "TEXT", "NVARCHAR(50)"),
+                     ("SemanticsOllamaModel", "TEXT", "NVARCHAR(200)"),
+                     ("SemanticsOpenAiModel", "TEXT", "NVARCHAR(200)"),
                  })
         {
             try
@@ -370,6 +374,53 @@ public class LlmSettingsStore
         public string? ImageReaderProvider { get; set; }
         public string? ImageReaderOllamaModel { get; set; }
         public string? ImageReaderOpenAiModel { get; set; }
+    }
+
+    /// <summary>المزوّد المعطَّل صراحةً لتحليل معاني الأعمدة (بخلاف null = يتبع موديل اللوحات).</summary>
+    public const string SemanticsDisabled = "none";
+
+    /// <summary>إعداد موديل تحليل معاني الأعمدة: Provider null/فارغ = نفس موديل اللوحات؛ "none" = معطَّل؛
+    /// وإلا مزوّد مستقل بموديله الفرعي الخاص (مستقل عن OllamaModel/OpenAiModel أعلاه).</summary>
+    public async Task<(string? Provider, string? OllamaModel, string? OpenAiModel)> GetSemanticsAsync(CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var row = await connection.QuerySingleOrDefaultAsync<SemanticsRow>(
+            $"SELECT SemanticsProvider, SemanticsOllamaModel, SemanticsOpenAiModel FROM {Table} WHERE Id = 1");
+        return (row?.SemanticsProvider, row?.SemanticsOllamaModel, row?.SemanticsOpenAiModel);
+    }
+
+    /// <summary>يحفظ مزوّد تحليل المعاني (null/"" = يتبع موديل اللوحات، "none" = معطَّل) وموديله الفرعي؛ null للموديل يبقي المحفوظ.</summary>
+    public async Task SetSemanticsAsync(string? provider, string? ollamaModel, string? openAiModel, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var sql = _db.Provider == DbProvider.Sqlite
+            ? $"""
+               INSERT INTO {Table} (Id, SemanticsProvider, SemanticsOllamaModel, SemanticsOpenAiModel)
+               VALUES (1, @provider, @ollamaModel, @openAiModel)
+               ON CONFLICT(Id) DO UPDATE SET
+                 SemanticsProvider = @provider,
+                 SemanticsOllamaModel = COALESCE(@ollamaModel, SemanticsOllamaModel),
+                 SemanticsOpenAiModel = COALESCE(@openAiModel, SemanticsOpenAiModel)
+               """
+            : $"""
+               MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
+               WHEN MATCHED THEN UPDATE SET
+                 SemanticsProvider = @provider,
+                 SemanticsOllamaModel = COALESCE(@ollamaModel, t.SemanticsOllamaModel),
+                 SemanticsOpenAiModel = COALESCE(@openAiModel, t.SemanticsOpenAiModel)
+               WHEN NOT MATCHED THEN INSERT (Id, SemanticsProvider, SemanticsOllamaModel, SemanticsOpenAiModel)
+                 VALUES (1, @provider, @ollamaModel, @openAiModel);
+               """;
+        await connection.ExecuteAsync(sql, new { provider = string.IsNullOrWhiteSpace(provider) ? null : provider, ollamaModel, openAiModel });
+    }
+
+    private class SemanticsRow
+    {
+        public string? SemanticsProvider { get; set; }
+        public string? SemanticsOllamaModel { get; set; }
+        public string? SemanticsOpenAiModel { get; set; }
     }
 
     private class VisualIdentityRow

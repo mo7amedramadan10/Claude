@@ -42,7 +42,7 @@ public class OllamaClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
     private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
-    private readonly string _apiKey;
+    private readonly LlmCredentialStore _credentials;
     private readonly string _defaultModel;
     private readonly LlmSettingsStore _settings;
     private readonly AnalyticsTools _tools;
@@ -52,19 +52,16 @@ public class OllamaClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
     public OllamaClient(
         HttpClient http,
         IConfiguration configuration,
+        LlmCredentialStore credentials,
         LlmSettingsStore settings,
         AnalyticsTools tools,
         UsageTracker usage,
         ILogger<OllamaClient> logger)
     {
         _http = http;
-        // Trimmed: a stray space or newline pasted with the token makes the gateway reject it.
-        _apiKey = configuration["Ollama:ApiKey"]?.Trim() is { Length: > 0 } key
-            ? key
-            : throw new InvalidOperationException(
-                "Ollama API token is not configured. " +
-                "Set it with: dotnet user-secrets set \"Ollama:ApiKey\" \"<token>\" " +
-                "(create one under \"My API Tokens\" in the gateway's own UI).");
+        // المفتاح والعنوان يُقرآن عند كل نداء من LlmCredentialStore (قاعدة البيانات ثم الإعدادات) — لا في
+        // المنشئ — ليعمل تغييرهما من صفحة «مفاتيح الموديلات» فورًا بلا إعادة تشغيل.
+        _credentials = credentials;
         _defaultModel = configuration["Ollama:Model"] ?? "qwen3:14b";
         _settings = settings;
         _tools = tools;
@@ -1125,7 +1122,8 @@ public class OllamaClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
     public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
     {
         var settings = await _settings.GetAsync(ct);
-        var model = settings.OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var model = call.ModelOverride is { Length: > 0 } ? call.ModelOverride
+            : settings.OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = call.SystemPrompt },
@@ -1172,11 +1170,13 @@ public class OllamaClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "chat")
+        var apiKey = await _credentials.RequireApiKeyAsync(LlmRouter.Ollama, ct);
+        var baseUri = await _credentials.BaseUriAsync(LlmRouter.Ollama, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "chat"))
         {
             Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+        request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
         using var response = await _http.SendAsync(request, ct);
         var responseText = await response.Content.ReadAsStringAsync(ct);

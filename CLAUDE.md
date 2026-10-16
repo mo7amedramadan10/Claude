@@ -215,6 +215,26 @@
     تلقائيًا. تحقق حي: إعادة فتح من السجل تحتفظ بالمفتاح، وتحديد عمود لعنصر «دورة البيع»
     أعاد بناءه تلقائيًا في 4.5 ثانية.
 
+## إعدادات الموديلات: موديل تحليل المعاني المستقل + صفحة «مفاتيح الموديلات»
+
+- **نموذج تحليل معاني الأعمدة** (قسم في «الإعدادات»): `LlmSettingsStore.GetSemanticsAsync/SetSemanticsAsync`
+  (أعمدة `SemanticsProvider/SemanticsOllamaModel/SemanticsOpenAiModel`)، `PUT /api/llm-settings/semantics-analyzer`.
+  null = نفس موديل اللوحات، `"none"` = معطَّل (تخمين الأسماء فقط، ويظهر كسبب فشل على البطاقة)، وإلا مزوّد
+  مستقل بموديله. `LlmRouter.ResolveSemanticsStagedAsync` يعيد `(IStagedLlm, model?)` و`StagedCall.ModelOverride`
+  (حقل اختياري جديد) يمرّر الموديل للنداء الواحد في المزوّدين الثلاثة (Claude عبر `RunLoopAsync(model:)`).
+- **صفحة «مفاتيح الموديلات»** (`screen-llm-keys`، في قائمة الإدارة بعد «الإعدادات»): `Llm/LlmCredentialStore.cs`
+  جدول `LlmCredentials(Provider, ApiKey, BaseUrl, UpdatedAt)` — المفتاح مشفّر بـ Data Protection (مجلد
+  `dp-keys/` بجوار التطبيق، في .gitignore؛ فقدانه يجعل المفاتيح المحفوظة «لا تُقرأ» ويُطلب إعادة إدخالها).
+  القاعدة تغلب الإعدادات (`OpenAI:ApiKey`…) حقلًا بحقل، والافتراضي للعناوين في `DefaultBaseUrl`.
+  **المزوّدون الثلاثة لم يعودوا يقرؤون المفتاح في المنشئ** بل عند كل نداء (`RequireApiKeyAsync` برسالة تشير
+  إلى الصفحة، و`BaseUriAsync` يبني عنوانًا مطلقًا فيغلب `BaseAddress`). API:
+  `GET /api/llm-settings/credentials` (المصدر db/config/none/unreadable + آخر 4 أحرف فقط)،
+  `PUT/DELETE …/credentials/{provider}`، `POST …/credentials/{provider}/test` (قائمة الموديلات بالمفتاح
+  الفعلي). `providers[].configured` وقائمة موديلات Ollama تعتمدان على المخزن لا على الإعدادات.
+  **المفتاح لا يُرجَع للواجهة أبدًا ولا يُكتب في المستودع.** تحقق حي بلا أي مفتاح في الإعدادات: حفظ
+  مفتاح خطأ → اختبار 401 واضح؛ المفتاح الصحيح → «متصل — 141 موديل»؛ عنوان غير صالح → 400 برسالة؛
+  رفع ملف → نداء `[معاني]` على gpt-4o (موديل المعاني) واقتراح الاسم على gpt-4.1 (موديل اللوحات).
+
 ## رسوم لوحات المحادثة: DevExtreme بدل ApexCharts (`wwwroot/js/jeem-dx.js`)
 
 - **النطاق**: لوحات المحادثة فقط (bar/line/pie/multi-series/forecast/radial-gauge). اللوحات

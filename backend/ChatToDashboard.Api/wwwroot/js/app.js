@@ -7889,7 +7889,7 @@ const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'sources
 const SCREEN_LABELS = {
   chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
-  projects: 'المشاريع', settings: 'الإعدادات', integrations: 'التكاملات الخارجية',
+  projects: 'المشاريع', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
@@ -7928,6 +7928,7 @@ function showScreen(name) {
   if (name === 'sharelinks') loadShareList();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
+  if (name === 'llm-keys') loadLlmKeysPage();
   if (name === 'integrations') loadIntegrations();
   if (name === 'projects') loadProjects();
   if (name === 'organizations') loadOrganizations();
@@ -7941,6 +7942,11 @@ function showScreen(name) {
 }
 document.querySelectorAll('[data-screen]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.screen)));
+// روابط داخل محتوى مُولَّد (مثل صندوق فشل التحليل الآلي) تنتقل لشاشة إدارية.
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-goto-screen]'); if (!a) return;
+  e.preventDefault(); showScreen(a.dataset.gotoScreen);
+});
 
 // ---------- طي القائمة الجانبية (يُحفظ لكل مستخدم في المتصفح) ----------
 const appShell = el('app-shell');
@@ -8591,6 +8597,12 @@ const IMAGE_READER_MODEL_PICKERS = {
 // independent choice, LlmSettingsStore.VisualIdentityReaderProvider, read/written through
 // PUT /api/llm-settings/visual-identity-reader. Unlike the two pickers above, this one also
 // carries an explicit, never-inferred "supports image input" checkbox (activeVisualIdentitySupportsImage).
+// موديل تحليل معاني الأعمدة (طبقة المعنى) — اختيار مستقل: LlmSettingsStore.SemanticsProvider عبر
+// PUT /api/llm-settings/semantics-analyzer. '' = نفس موديل اللوحات، 'none' = معطَّل.
+const SEMANTICS_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-semantics-ollama-row', selectId: 'settings-semantics-ollama-select', noteId: 'settings-semantics-ollama-note', activeKey: 'activeSemanticsOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-semantics-openai-row', selectId: 'settings-semantics-openai-select', noteId: 'settings-semantics-openai-note', activeKey: 'activeSemanticsOpenAiModel', bodyKey: 'openAiModel' },
+};
 const VIS_ID_MODEL_PICKERS = {
   Ollama: { endpoint: 'ollama-models', rowId: 'settings-vis-id-ollama-row', selectId: 'settings-vis-id-ollama-select', noteId: 'settings-vis-id-ollama-note', activeKey: 'activeVisualIdentityOllamaModel', bodyKey: 'ollamaModel' },
   OpenAI: { endpoint: 'openai-models', rowId: 'settings-vis-id-openai-row', selectId: 'settings-vis-id-openai-select', noteId: 'settings-vis-id-openai-note', activeKey: 'activeVisualIdentityOpenAiModel', bodyKey: 'openAiModel' },
@@ -8611,6 +8623,7 @@ async function loadSettingsPage() {
     renderSettingsDocReaderProviders();
     renderSettingsImageReaderProviders();
     renderSettingsVisIdProviders();
+    renderSettingsSemanticsProviders();
   } catch {
     el('settings-current').textContent = 'تعذّر تحميل إعدادات الموديل.';
     el('settings-providers').innerHTML = '';
@@ -8814,6 +8827,133 @@ function toggleSettingsModelRow(provider) { toggleModelRow(SETTINGS_MODEL_PICKER
 function toggleDocReaderModelRow(provider) { toggleModelRow(DOC_READER_MODEL_PICKERS, provider); }
 function toggleImageReaderModelRow(provider) { toggleModelRow(IMAGE_READER_MODEL_PICKERS, provider); }
 function toggleVisIdModelRow(provider) { toggleModelRow(VIS_ID_MODEL_PICKERS, provider); }
+function toggleSemanticsModelRow(provider) { toggleModelRow(SEMANTICS_MODEL_PICKERS, provider); }
+
+// ---------- نموذج تحليل معاني الأعمدة (إعداد مستقل) ----------
+function renderSettingsSemanticsProviders() {
+  const s = state.llmSettings;
+  const current = s.activeSemanticsProvider || '';
+  const options = [
+    { id: '', label: 'نفس الموديل الحالي', configured: true },
+    ...s.providers,
+    { id: 'none', label: 'معطّل — تخمين من أسماء الأعمدة فقط', configured: true },
+  ];
+  el('settings-semantics-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-semantics-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id && p.id !== 'none' ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : ''}
+    </label>`).join('');
+  el('settings-semantics-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleSemanticsModelRow(inp.value)));
+  toggleSemanticsModelRow(current);
+}
+
+el('settings-semantics-save').addEventListener('click', async () => {
+  const provider = el('settings-semantics-providers').querySelector('input:checked')?.value ?? '';
+  const picker = SEMANTICS_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+  const btn = el('settings-semantics-save');
+  btn.disabled = true;
+  el('settings-semantics-error').classList.add('hidden');
+  el('settings-semantics-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/semantics-analyzer', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الحفظ (${res.status})`); }
+    state.llmSettings.activeSemanticsProvider = provider || null;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsSemanticsProviders();
+    el('settings-semantics-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-semantics-error').textContent = err.message;
+    el('settings-semantics-error').classList.remove('hidden');
+  } finally { btn.disabled = false; }
+});
+el('link-to-llm-keys').addEventListener('click', e => { e.preventDefault(); showScreen('llm-keys'); });
+
+// ---------- صفحة «مفاتيح الموديلات» (GET/PUT/DELETE /api/llm-settings/credentials) ----------
+const KEY_SOURCE_LABEL = {
+  db: ['badge-ok', '✓ محفوظ من هذه الصفحة'], config: ['badge-blue', '◆ من إعدادات الخادم'],
+  none: ['badge-danger', '! غير مُعد'], unreadable: ['badge-danger', '! محفوظ لكن لا يُقرأ — أعد إدخاله'],
+};
+const BASE_SOURCE_LABEL = { db: 'من هذه الصفحة', config: 'من إعدادات الخادم', default: 'الافتراضي' };
+async function loadLlmKeysPage() {
+  const grid = el('llm-keys-grid');
+  try {
+    const res = await fetch('/api/llm-settings/credentials');
+    if (!res.ok) throw new Error(`(${res.status})`);
+    const data = await res.json();
+    grid.innerHTML = data.providers.map(p => {
+      const [tone, label] = KEY_SOURCE_LABEL[p.keySource] || KEY_SOURCE_LABEL.none;
+      return `<article class="settings-section llm-key-card" data-provider="${esc(p.provider)}">
+        <div class="llm-key-head"><h3>${esc(p.label)}</h3><span class="badge ${tone}">${label}</span></div>
+        <label class="llm-key-field">مفتاح الوصول (API key)
+          <input type="password" autocomplete="new-password" dir="ltr" data-key placeholder="${p.hasKey ? `محفوظ (${esc(p.keyHint || '…')}) — اكتب مفتاحًا جديدًا لاستبداله` : 'الصق المفتاح هنا'}">
+        </label>
+        <label class="llm-key-field">عنوان البوابة (Base URL)
+          <input type="url" dir="ltr" data-base value="${esc(p.baseUrlSource === 'db' ? (p.baseUrl || '') : '')}" placeholder="${esc(p.baseUrl || p.defaultBaseUrl)}">
+          <small class="muted">الحالي: <span dir="ltr">${esc(p.baseUrl || p.defaultBaseUrl)}</span> (${BASE_SOURCE_LABEL[p.baseUrlSource] || ''}) — اتركه فارغًا للإبقاء على الافتراضي.</small>
+        </label>
+        <div class="model-switch-actions llm-key-actions">
+          <span class="llm-key-status" data-status aria-live="polite"></span>
+          <button type="button" class="btn btn-sm btn-ghost" data-clear ${p.keySource === 'db' || p.baseUrlSource === 'db' ? '' : 'disabled'}>مسح المحفوظ هنا</button>
+          <button type="button" class="btn btn-sm btn-soft" data-test ${p.hasKey ? '' : 'disabled'}>اختبار الاتصال</button>
+          <button type="button" class="btn btn-sm" data-save>حفظ</button>
+        </div>
+      </article>`;
+    }).join('');
+    bindLlmKeysPage();
+  } catch (err) {
+    grid.innerHTML = `<div class="lib-empty">تعذّر تحميل مفاتيح الموديلات ${esc(err.message || '')}</div>`;
+  }
+}
+function bindLlmKeysPage() {
+  el('llm-keys-grid').querySelectorAll('.llm-key-card').forEach(card => {
+    const provider = card.dataset.provider;
+    const status = (text, tone) => { const s = card.querySelector('[data-status]'); s.textContent = text; s.className = `llm-key-status ${tone || ''}`; };
+    const busy = on => card.querySelectorAll('button').forEach(b => { b.disabled = on; });
+    card.querySelector('[data-save]').addEventListener('click', async () => {
+      const apiKey = card.querySelector('[data-key]').value;
+      const baseUrl = card.querySelector('[data-base]').value.trim();
+      busy(true); status('جارٍ الحفظ…');
+      try {
+        const res = await fetch(`/api/llm-settings/credentials/${encodeURIComponent(provider)}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey: apiKey.length ? apiKey : null, baseUrl: baseUrl || null }),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الحفظ (${res.status})`); }
+        state.llmSettings = null; state.settingsModelChoices = {};
+        await loadLlmKeysPage();
+        const fresh = el('llm-keys-grid').querySelector(`.llm-key-card[data-provider="${provider}"] [data-status]`);
+        if (fresh) { fresh.textContent = 'تم الحفظ — يسري على أول نداء جديد.'; fresh.className = 'llm-key-status ok'; }
+      } catch (err) { status(err.message, 'bad'); busy(false); }
+    });
+    card.querySelector('[data-test]').addEventListener('click', async () => {
+      busy(true); status('جارٍ اختبار الاتصال…');
+      try {
+        const res = await fetch(`/api/llm-settings/credentials/${encodeURIComponent(provider)}/test`, { method: 'POST' });
+        const r = await res.json();
+        status(`${r.ok ? '✓' : '✗'} ${r.message}${r.ms != null ? ` (${(r.ms / 1000).toFixed(1)} ث)` : ''}`, r.ok ? 'ok' : 'bad');
+      } catch (err) { status(`تعذّر الاختبار: ${err.message}`, 'bad'); }
+      finally { busy(false); card.querySelector('[data-clear]').disabled = false; }
+    });
+    card.querySelector('[data-clear]').addEventListener('click', async () => {
+      if (!confirm('مسح المفتاح والعنوان المحفوظين من هذه الصفحة لهذا المزوّد؟ سيعود إلى إعدادات الخادم إن وُجدت.')) return;
+      busy(true);
+      try {
+        const res = await fetch(`/api/llm-settings/credentials/${encodeURIComponent(provider)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`(${res.status})`);
+        state.llmSettings = null; state.settingsModelChoices = {};
+        await loadLlmKeysPage();
+      } catch (err) { status(`تعذّر المسح ${err.message}`, 'bad'); busy(false); }
+    });
+  });
+}
 
 function toggleModelRow(pickers, provider) {
   for (const [id, picker] of Object.entries(pickers)) {
@@ -9894,7 +10034,7 @@ const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], pending
 // سبب فشل التحليل الآلي (من `analysisError` في رد /api/semantics) مع إرشاد: يُعرض تحت شارة الحالة.
 function semErrorHtml(t) {
   if (!t.analysisError) return '';
-  return `<div class="sem-error" role="alert">⚠️ تعذّر التحليل الآلي: <span dir="auto">${esc(t.analysisError)}</span> — تحقق من إعدادات الموديل في «الإعدادات» ثم اضغط «إعادة التحليل الآلي».</div>`;
+  return `<div class="sem-error" role="alert">⚠️ تعذّر التحليل الآلي: <span dir="auto">${esc(t.analysisError)}</span> — راجع <a href="#" data-goto-screen="llm-keys">«مفاتيح الموديلات»</a> أو <a href="#" data-goto-screen="settings">نموذج تحليل معاني الأعمدة في «الإعدادات»</a> ثم اضغط «إعادة التحليل الآلي».</div>`;
 }
 function semScheduleRefresh(tables, reload) {
   if (!tables.some(t => t.analysis === 'pending')) return;

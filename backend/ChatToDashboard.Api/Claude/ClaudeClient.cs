@@ -29,7 +29,7 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
     private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
-    private readonly string _apiKey;
+    private readonly ChatToDashboard.Api.Llm.LlmCredentialStore _credentials;
     private readonly string _model;
     private readonly int _maxTokens;
     private readonly AnalyticsTools _tools;
@@ -39,17 +39,15 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
     public ClaudeClient(
         HttpClient http,
         IConfiguration configuration,
+        ChatToDashboard.Api.Llm.LlmCredentialStore credentials,
         AnalyticsTools tools,
         UsageTracker usage,
         ILogger<ClaudeClient> logger)
     {
         _http = http;
-        // Trimmed: a stray space or newline pasted with the key makes the API reject it as invalid.
-        _apiKey = configuration["Anthropic:ApiKey"]?.Trim() is { Length: > 0 } key
-            ? key
-            : throw new InvalidOperationException(
-                "Anthropic API key is not configured. " +
-                "Set it with: dotnet user-secrets set \"Anthropic:ApiKey\" \"<key>\"");
+        // المفتاح والعنوان يُقرآن عند كل نداء من LlmCredentialStore (قاعدة البيانات ثم الإعدادات) — لا في
+        // المنشئ — ليعمل تغييرهما من صفحة «مفاتيح الموديلات» فورًا بلا إعادة تشغيل.
+        _credentials = credentials;
         _model = configuration["Anthropic:Model"] ?? "claude-sonnet-5";
         _maxTokens = configuration.GetValue("Anthropic:MaxTokens", 16000);
         _tools = tools;
@@ -463,7 +461,7 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
         // البناء المرحلي (RunStagedAsync) يمرّر سقفًا أصغر ودورات إجبار أقل؛ القيم الافتراضية
         // تُبقي كل المسارات القديمة كما هي حرفيًا.
         int maxIterations = MaxToolIterations, int forceFinalAnswerAt = ForceFinalAnswerAtIteration,
-        int forceToolRounds = 2)
+        int forceToolRounds = 2, string? model = null)
         where T : class
     {
         var jsonRepairAttempts = 0;
@@ -495,7 +493,7 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
                 // query_data) before it's allowed to free-answer.
                 var forceToolUse = iteration < forceToolRounds && !forceFinalAnswer;
                 var response = await CallMessagesApiAsync(
-                    messages, systemPrompt, forceFinalAnswer ? null : tools, forceToolUse, trace, ct);
+                    messages, systemPrompt, forceFinalAnswer ? null : tools, forceToolUse, trace, ct, model);
 
                 var stopReason = response["stop_reason"]?.GetValue<string>();
                 var content = response["content"]?.AsArray()
@@ -623,13 +621,14 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
                     ["name"] = tool.Name, ["description"] = tool.Description, ["input_schema"] = tool.InputSchema.DeepClone(),
                 });
         }
-        var trace = _usage.Begin("Anthropic", _model, call.Label, DescribeSources(call.Context), call.RequestingUser);
+        var model = call.ModelOverride is { Length: > 0 } ? call.ModelOverride : _model;
+        var trace = _usage.Begin("Anthropic", model, call.Label, DescribeSources(call.Context), call.RequestingUser);
         trace.SetSystemPrompt(call.SystemPrompt);
         var maxIterations = Math.Max(2, call.MaxIterations);
         return await RunLoopAsync(
             messages, call.SystemPrompt, tools, call.Context, trace, AnalyticsTools.TryParseStagedJson, "staged", ct,
             maxIterations: maxIterations + 2, forceFinalAnswerAt: maxIterations,
-            forceToolRounds: call.ForceFirstToolCall ? 1 : 0);
+            forceToolRounds: call.ForceFirstToolCall ? 1 : 0, model: model);
     }
 
     private JsonArray BuildToolsJson(AnalyticsTools.SourceContext context)
@@ -648,7 +647,8 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
     }
 
     private async Task<JsonObject> CallMessagesApiAsync(
-        JsonArray messages, string systemPrompt, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct)
+        JsonArray messages, string systemPrompt, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct,
+        string? model = null)
     {
         // Prompt caching: one breakpoint after the stable prefix (tools + system), and one
         // on the last message so each tool-loop iteration reuses the growing conversation
@@ -657,7 +657,7 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
         // cost, since it only happens on the last few iterations of an already-degenerate loop.
         var body = new JsonObject
         {
-            ["model"] = _model,
+            ["model"] = model ?? _model,
             ["max_tokens"] = _maxTokens,
             ["system"] = new JsonArray
             {
@@ -683,11 +683,13 @@ public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtrac
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/messages")
+        var apiKey = await _credentials.RequireApiKeyAsync(ChatToDashboard.Api.Llm.LlmRouter.Anthropic, ct);
+        var baseUri = await _credentials.BaseUriAsync(ChatToDashboard.Api.Llm.LlmRouter.Anthropic, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "v1/messages"))
         {
             Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Add("x-api-key", _apiKey);
+        request.Headers.Add("x-api-key", apiKey);
         request.Headers.Add("anthropic-version", "2023-06-01");
 
         using var response = await _http.SendAsync(request, ct);

@@ -139,6 +139,7 @@
         <ul class="nav">
           <li><button type="button" class="nav-link tab" id="tab-users" data-screen="users"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span></button></li>
           <li><button type="button" class="nav-link tab" id="tab-settings" data-screen="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات</span></button></li>
+          <li><button type="button" class="nav-link tab" id="tab-llm-keys" data-screen="llm-keys"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">مفاتيح الموديلات</span></button></li>
           <li><button type="button" class="nav-link tab" id="tab-integrations" data-screen="integrations"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">التكاملات الخارجية</span></button></li>
           <li><a class="nav-link" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">الاستهلاك</span></a></li>
         </ul>
@@ -936,7 +937,35 @@
     </div>
 
     <div class="settings-section">
+      <h3>نموذج تحليل معاني الأعمدة</h3>
+      <p class="model-switch-note">يُستخدم مرة واحدة لكل جدول بعد رفع ملف أو تحديث نظام خارجي ليفهم معنى كل عمود
+        من قيمه (إيراد، حالة صفقة، عميل…) — وعلى هذه المعاني تعتمد جدوى عناصر القوالب. إعداد مستقل
+        عن «الموديل المستخدم حاليًا»: لو تركته «نفس الموديل الحالي» يتبع موديل اللوحات، ولو اخترت
+        «معطّل» يُكتفى بتخمين الأسماء فقط. لا يُعاد التحليل تلقائيًا لجدول سبق تحليله.</p>
+      <div id="settings-semantics-providers" class="model-switch-providers"></div>
+      <div id="settings-semantics-ollama-row" class="model-switch-ollama-row hidden">
+        <label>الموديل الداخلي (Ollama)
+          <select id="settings-semantics-ollama-select"></select>
+        </label>
+        <div id="settings-semantics-ollama-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-semantics-openai-row" class="model-switch-ollama-row hidden">
+        <label>موديل OpenAI
+          <select id="settings-semantics-openai-select"></select>
+        </label>
+        <div id="settings-semantics-openai-note" class="model-switch-note"></div>
+      </div>
+      <div id="settings-semantics-error" class="model-switch-note bad hidden"></div>
+      <div class="model-switch-actions">
+        <span id="settings-semantics-save-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+        <button type="button" id="settings-semantics-save">حفظ</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>معلومات عن الموديلات المتاحة</h3>
+      <p class="model-switch-note">مفاتيح الوصول وعناوين البوابات لكل مزوّد تُدار من صفحة
+        <a href="#" id="link-to-llm-keys">«مفاتيح الموديلات»</a> في قائمة الإدارة.</p>
       <div class="settings-info-grid">
         <div class="settings-info-card" data-provider="Anthropic">
           <div class="settings-info-head">
@@ -961,6 +990,22 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="screen-llm-keys" class="screen">
+  <div class="settings-wrap">
+    <div class="settings-banner">
+      <span class="settings-banner-icon">🔑</span>
+      <div>
+        <div class="settings-banner-title">مفاتيح الوصول لمزوّدي الذكاء الاصطناعي</div>
+        <div class="settings-banner-text">المفتاح وعنوان البوابة لكل مزوّد يُحفظان هنا مشفّرين في قاعدة البيانات
+          ويسريان فورًا على أول نداء بعد الحفظ بلا إعادة تشغيل. ما يُحفظ هنا يغلب الإعدادات على الخادم
+          (appsettings / user-secrets / متغيرات البيئة) التي تبقى بديلًا لأي حقل لم يُحفظ. المفتاح لا يُعرض
+          بعد حفظه — تظهر آخر 4 أحرف فقط.</div>
+      </div>
+    </div>
+    <div id="llm-keys-grid" class="llm-keys-grid"><div class="lib-empty"><span class="spinner"></span> جارٍ التحميل…</div></div>
   </div>
 </div>
 

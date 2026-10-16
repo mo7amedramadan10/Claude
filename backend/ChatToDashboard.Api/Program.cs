@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using ChatToDashboard.Api.Auth;
@@ -147,6 +148,12 @@ builder.Services.AddHttpClient(SystemApiClients.Insecure)
 // key isn't configured only breaks if it's the one currently selected, not at startup.
 var llmProvider = builder.Configuration["Llm:Provider"] ?? "Anthropic";
 builder.Services.AddSingleton<ChatToDashboard.Api.Llm.LlmSettingsStore>();
+// مفاتيح المزوّدين من صفحة «مفاتيح الموديلات»: تُحفظ مشفّرة بـ Data Protection؛ مجلد المفاتيح بجوار
+// التطبيق (لا في ملف المستخدم) حتى تبقى قابلة للقراءة بعد إعادة التشغيل أو التشغيل كخدمة.
+builder.Services.AddDataProtection()
+    .SetApplicationName("ChatToDashboard")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "dp-keys")));
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.LlmCredentialStore>();
 builder.Services.AddHttpClient<ClaudeClient>(client =>
 {
     client.BaseAddress = new Uri("https://api.anthropic.com/");

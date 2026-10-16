@@ -19,3 +19,6 @@ appsettings.Development.json
 .vscode/
 .idea/
 *.user
+
+# مفاتيح Data Protection (تشفير مفاتيح الموديلات المحفوظة من الصفحة)
+dp-keys/

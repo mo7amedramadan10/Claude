@@ -29,7 +29,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
-    private readonly string _apiKey;
+    private readonly ChatToDashboard.Api.Llm.LlmCredentialStore _credentials;
     private readonly string _defaultModel;
     private readonly ChatToDashboard.Api.Llm.LlmSettingsStore _settings;
     private readonly AnalyticsTools _tools;
@@ -39,18 +39,16 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     public OpenAiClient(
         HttpClient http,
         IConfiguration configuration,
+        ChatToDashboard.Api.Llm.LlmCredentialStore credentials,
         ChatToDashboard.Api.Llm.LlmSettingsStore settings,
         AnalyticsTools tools,
         UsageTracker usage,
         ILogger<OpenAiClient> logger)
     {
         _http = http;
-        // Trimmed: a stray space or newline pasted with the key makes the API reject it as invalid.
-        _apiKey = configuration["OpenAI:ApiKey"]?.Trim() is { Length: > 0 } key
-            ? key
-            : throw new InvalidOperationException(
-                "OpenAI API key is not configured. " +
-                "Set it with: dotnet user-secrets set \"OpenAI:ApiKey\" \"<key>\"");
+        // المفتاح والعنوان يُقرآن عند كل نداء من LlmCredentialStore (قاعدة البيانات ثم الإعدادات) — لا في
+        // المنشئ — ليعمل تغييرهما من صفحة «مفاتيح الموديلات» فورًا بلا إعادة تشغيل.
+        _credentials = credentials;
         _defaultModel = configuration["OpenAI:Model"] ?? "gpt-4o";
         _settings = settings;
         _tools = tools;
@@ -582,7 +580,8 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// استخدام نفس حلقة الأدوات والتسجيل في سجل الاستهلاك.</summary>
     public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
     {
-        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var model = call.ModelOverride is { Length: > 0 } ? call.ModelOverride
+            : (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = call.SystemPrompt },
@@ -678,11 +677,13 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions")
+        var apiKey = await _credentials.RequireApiKeyAsync(ChatToDashboard.Api.Llm.LlmRouter.OpenAI, ct);
+        var baseUri = await _credentials.BaseUriAsync(ChatToDashboard.Api.Llm.LlmRouter.OpenAI, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "v1/chat/completions"))
         {
             Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+        request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
         using var response = await _http.SendAsync(request, ct);
         var responseText = await response.Content.ReadAsStringAsync(ct);

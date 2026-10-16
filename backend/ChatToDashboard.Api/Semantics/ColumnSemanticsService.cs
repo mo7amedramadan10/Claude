@@ -147,11 +147,11 @@ public class ColumnSemanticsService
 
         try
         {
-            var llm = await _router.ResolveStagedAsync(ct);
-            if (llm is null) SetFailure(projectId, tableName, "لا يوجد مزوّد ذكاء اصطناعي مضبوط.");
+            var resolved = await _router.ResolveSemanticsStagedAsync(ct);
+            if (resolved is null) SetFailure(projectId, tableName, "التحليل الآلي معطَّل من «الإعدادات» (نموذج تحليل معاني الأعمدة) — اختر موديلًا له ثم أعد التحليل.");
             else
             {
-                await RefineWithModelAsync(llm, projectId, profile, rows, ct);
+                await RefineWithModelAsync(resolved.Value.Llm, projectId, profile, rows, ct, resolved.Value.Model);
                 SetFailure(projectId, tableName, rows.Any(r => r.Source == SemanticSources.Ai) ? null
                     : "رد الموديل لم يحتوِ على أعمدة الجدول (لم يُفهم الرد).");
             }
@@ -178,7 +178,7 @@ public class ColumnSemanticsService
         if (concept is not null) await _priors.RecordAsync(columnName, concept, byUser: true, ct);
     }
 
-    private async Task RefineWithModelAsync(IStagedLlm llm, string projectId, ProfiledTable profile, List<ColumnSemantic> rows, CancellationToken ct)
+    private async Task RefineWithModelAsync(IStagedLlm llm, string projectId, ProfiledTable profile, List<ColumnSemantic> rows, CancellationToken ct, string? modelOverride = null)
     {
         var system = """
             أنت محلل بيانات تربط أعمدة جدول مرفوع بمفاهيم تحليلية من قاموس ثابت. لكل عمود اختر المفهوم
@@ -200,7 +200,7 @@ public class ColumnSemanticsService
 
         var selection = new SourceSelection { SystemsUnset = true, FilesUnset = true, ProjectId = projectId, IsAdmin = true };
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var call = new StagedCall($"[معاني] {profile.SourceName ?? profile.Table}", system, user, null, context, 2, false, null);
+        var call = new StagedCall($"[معاني] {profile.SourceName ?? profile.Table}", system, user, null, context, 2, false, null, modelOverride);
         var result = await llm.RunStagedAsync(call, ct);
 
         var byName = rows.ToDictionary(r => r.ColumnName, StringComparer.OrdinalIgnoreCase);

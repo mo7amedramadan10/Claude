@@ -3182,3 +3182,15 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 
 /* طبقة المعنى — سبب فشل التحليل الآلي تحت شارة الحالة (بطاقة الملف وتبويب الإدارة) */
 .jeem-scope .sem-error { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--danger-50); color: var(--ink); font-size: var(--fs-sm); line-height: 1.6; border-inline-start: 3px solid var(--danger); }
+
+/* صفحة «مفاتيح الموديلات» — بطاقة لكل مزوّد: مفتاح (لا يُعرض بعد حفظه) وعنوان بوابة واختبار اتصال */
+.jeem-scope .llm-keys-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.jeem-scope .llm-key-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.jeem-scope .llm-key-head h3 { margin: 0; }
+.jeem-scope .llm-key-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: var(--fs-sm); color: var(--ink-2); }
+.jeem-scope .llm-key-field input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.jeem-scope .llm-key-field small { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.jeem-scope .llm-key-actions { flex-wrap: wrap; gap: 8px; }
+.jeem-scope .llm-key-status { flex: 1 1 100%; font-size: var(--fs-sm); min-height: 1.4em; overflow-wrap: anywhere; }
+.jeem-scope .llm-key-status.ok { color: var(--ok); }
+.jeem-scope .llm-key-status.bad { color: var(--danger); }

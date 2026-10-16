@@ -21,7 +21,9 @@ public sealed record StagedCall(
     int MaxIterations,
     /// <summary>هل يُجبر الموديل على نداء أداة في الدورة الأولى؟ (رسمة لا تُبنى بلا استعلام).</summary>
     bool ForceFirstToolCall,
-    AppUser? RequestingUser);
+    AppUser? RequestingUser,
+    /// <summary>موديل محدد لهذا النداء بدل الموديل المحفوظ في الإعدادات (مثل موديل تحليل معاني الأعمدة)، أو null.</summary>
+    string? ModelOverride = null);
 
 /// <summary>نتيجة نداء مرحلي: نص الرد الخام وكائن JSON المفسَّر منه.</summary>
 public sealed record StagedResult(string Text, JsonObject Json);
