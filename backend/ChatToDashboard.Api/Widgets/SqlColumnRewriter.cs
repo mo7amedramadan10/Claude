@@ -38,15 +38,23 @@ public static class SqlColumnRewriter
         return sb.ToString();
     }
 
+    // مرور واحد بنمط يجمع كل الأعمدة المطلوب استبدالها: الاستبدال التسلسلي كان يجعل التبادل
+    // {A→B, B→A} أو السلسلة {A→B, B→C} يعيد كتابة ناتج الاستبدال السابق.
     private static string RewriteCode(string code, IReadOnlyDictionary<string, string> mapping, Func<string, string> quote)
     {
-        foreach (var (from, to) in mapping)
+        var active = mapping.Where(kv => !string.Equals(kv.Key, kv.Value, StringComparison.Ordinal))
+            .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
+        if (active.Count == 0) return code;
+        var names = string.Join("|", active.Keys.OrderByDescending(k => k.Length).Select(Regex.Escape));
+        var pattern = new Regex(
+            $@"(?<!\bAS\s+)(?:""(?<q>{names})""|\[(?<q>{names})\]|`(?<q>{names})`|(?<bare>(?<![\w\u0600-\u06FF""\[`])(?:{names})(?![\w\u0600-\u06FF""\]`])(?!\s*\()))",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return pattern.Replace(code, m =>
         {
-            if (string.Equals(from, to, StringComparison.Ordinal)) continue;
-            code = IdentifierPattern(from).Replace(code, m =>
-                m.Groups["bare"].Success && IsSimple(to) ? to : quote(to));
-        }
-        return code;
+            var name = m.Groups["bare"].Success ? m.Groups["bare"].Value : m.Groups["q"].Value;
+            var to = active[name];
+            return m.Groups["bare"].Success && IsSimple(to) ? to : quote(to);
+        });
     }
 
     private static IEnumerable<string> SplitOutsideLiterals(string sql)

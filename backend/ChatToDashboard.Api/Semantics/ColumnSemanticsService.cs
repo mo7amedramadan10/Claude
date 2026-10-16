@@ -56,10 +56,11 @@ public class ColumnSemanticsService
         if (profile is null) throw new InvalidOperationException($"الجدول {tableName} غير موجود.");
 
         var rows = new List<ColumnSemantic>();
+        var priors = await _priors.LookupManyAsync(profile.Columns.Select(c => c.Name), ct);
         foreach (var c in profile.Columns)
         {
             // التعلّم العابر للعملاء أولًا (اسم مُوحَّد سبق تأكيده)، ثم المرادفات.
-            var prior = await _priors.LookupAsync(c.Name, ct);
+            (string Concept, double Confidence)? prior = priors.TryGetValue(c.Name, out var p) ? p : null;
             var guess = ConceptCatalog.GuessFromName(c.Name);
             var concept = prior?.Concept ?? guess?.Concept.Id;
             var confidence = prior?.Confidence ?? guess?.Confidence ?? 0.2;

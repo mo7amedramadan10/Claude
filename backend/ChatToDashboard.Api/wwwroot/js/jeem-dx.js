@@ -21,7 +21,8 @@
   const ANIM_MS = 450;
 
   // تاريخ/فترة؟ (شهر، ربع، سنة، تاريخ ISO) — الاتجاه الزمني يبقى أعمدة رأسية، والفئات أفقية.
-  const TEMPORAL = /^\d{4}([-/]\d{1,2}){0,2}$|^\d{1,2}[-/]\d{4}$|^(q|ر)\s?[1-4]|يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|^\d{4}\s*[-–]\s*\d{1,2}$|أسبوع|week/i;
+  // أسماء الشهور ككلمات كاملة فقط (Marketing ≠ mar، ومايو داخل كلمة أخرى لا تُحسب).
+  const TEMPORAL = /^\d{4}([-/]\d{1,2}){0,2}$|^\d{1,2}[-/]\d{4}$|^(q|ر)\s?[1-4]|(^|\s)(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر|أسبوع)(\s|$)|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|week|wk)\b|^\d{4}\s*[-–]\s*\d{1,2}$/i;
   function looksTemporal(labels) {
     const sample = labels.slice(0, 6).map(l => String(l ?? '').trim());
     return sample.length > 0 && sample.filter(s => TEMPORAL.test(s)).length >= Math.ceil(sample.length * 0.6);
@@ -301,8 +302,9 @@
     const options = {
       rtlEnabled: isRtl(), ...size(holder),
       dataSource: spec.values.map((v, i) => ({ i, v })), argumentField: 'i', valueField: 'v',
-      type: 'area', lineColor: spec.color || t.accent, lineWidth: 2, showMinMax: false, showFirstLast: true,
-      firstLastColor: spec.color || t.accent, pointSize: 4, pointSymbol: 'circle',
+      // لون الحالة المحجوز نفسه الذي يحمله نص ▲/▼ (أخضر/أحمر/رمادي) — لا لون من لوحة السلاسل.
+      type: 'area', lineColor: spec.tone === 'up' ? t.ok : spec.tone === 'down' ? t.danger : spec.tone === 'flat' ? t.tickColor : (spec.color || t.accent), lineWidth: 2, showMinMax: false, showFirstLast: true,
+      firstLastColor: spec.tone === 'up' ? t.ok : spec.tone === 'down' ? t.danger : spec.tone === 'flat' ? t.tickColor : (spec.color || t.accent), pointSize: 4, pointSymbol: 'circle',
       tooltip: { enabled: false }, margin: { top: 3, bottom: 3, left: 3, right: 3 },
     };
     return wrap(new DX.viz.dxSparkline(holder, options), holder);
@@ -320,6 +322,7 @@
       ...fallback,
       palette: palette.length >= 3 ? palette : fallback.palette,
       accent: v('--brand-blue', fallback.accent), danger: v('--danger', fallback.danger), amber: v('--warn', fallback.amber),
+      ok: v('--ok', fallback.ok || '#1A8F5E'),
       gridColor: v('--line', fallback.gridColor), tickColor: v('--ink-3', fallback.tickColor), ink: v('--ink', fallback.ink),
       surface: v('--surface', fallback.surface), fontFamily: v('--font', fallback.fontFamily),
     };

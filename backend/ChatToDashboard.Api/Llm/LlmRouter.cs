@@ -136,8 +136,8 @@ public class LlmRouter : IDashboardGenerator, ITableNamingAssistant, IIntegratio
     }
 
     /// <summary>مزوّد البناء المرحلي للقوالب (انظر Build/StagedTemplateBuilder) حسب نفس إعداد
-    /// المزوّد الذي يبني اللوحات العادية. null عندما لا يدعمه المزوّد الحالي (Ollama) فيعود
-    /// المتحكم إلى المسار القديم بدل أن يفشل.</summary>
+    /// المزوّد الذي يبني اللوحات العادية. يدعمه المزوّدون الثلاثة (OpenAI وAnthropic وOllama)؛
+    /// null محجوز لمزوّد مستقبلي بلا دعم، وعندها يعود المتحكم إلى المسار القديم بدل أن يفشل.</summary>
     public async Task<IStagedLlm?> ResolveStagedAsync(CancellationToken ct = default)
     {
         var settings = await _settings.GetAsync(ct);

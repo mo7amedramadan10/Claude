@@ -12,8 +12,19 @@ namespace ChatToDashboard.Api.Semantics;
 public class ConceptPriorStore
 {
     private readonly DataStore _db;
+    private readonly SemaphoreSlim _schemaGate = new(1, 1);
+    private volatile bool _schemaReady;
 
     public ConceptPriorStore(DataStore db) => _db = db;
+
+    /// <summary>ينشئ الجدول مرة واحدة لكل عملية (لا DDL في كل بحث).</summary>
+    private async Task EnsureSchemaOnceAsync(CancellationToken ct)
+    {
+        if (_schemaReady) return;
+        await _schemaGate.WaitAsync(ct);
+        try { if (!_schemaReady) { await EnsureSchemaAsync(ct); _schemaReady = true; } }
+        finally { _schemaGate.Release(); }
+    }
 
     private string Table => _db.Provider == DbProvider.Sqlite ? "\"ConceptPriors\"" : "[staging].[ConceptPriors]";
 
@@ -42,16 +53,48 @@ public class ConceptPriorStore
     {
         var name = ConceptCatalog.Normalize(columnName);
         if (name.Length == 0 || !ConceptCatalog.IsKnown(concept)) return;
-        await EnsureSchemaAsync(ct);
+        await EnsureSchemaOnceAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var now = DateTime.UtcNow;
-        var updated = await connection.ExecuteAsync(
-            $"UPDATE {Table} SET Hits = Hits + @h, UserHits = UserHits + @u, UpdatedAt = @now WHERE NormalizedName = @name AND Concept = @concept",
-            new { h = byUser ? 0 : 1, u = byUser ? 1 : 0, now, name, concept });
-        if (updated == 0)
+        var args = new { h = byUser ? 0 : 1, u = byUser ? 1 : 0, now, name, concept };
+        var update = $"UPDATE {Table} SET Hits = Hits + @h, UserHits = UserHits + @u, UpdatedAt = @now WHERE NormalizedName = @name AND Concept = @concept";
+        if (await connection.ExecuteAsync(update, args) > 0) return;
+        try
+        {
             await connection.ExecuteAsync(
-                $"INSERT INTO {Table} (NormalizedName, Concept, Hits, UserHits, UpdatedAt) VALUES (@name, @concept, @h, @u, @now)",
-                new { name, concept, h = byUser ? 0 : 1, u = byUser ? 1 : 0, now });
+                $"INSERT INTO {Table} (NormalizedName, Concept, Hits, UserHits, UpdatedAt) VALUES (@name, @concept, @h, @u, @now)", args);
+        }
+        catch (Exception)
+        {
+            // سباق: كاتب آخر أدرج المفتاح نفسه بين التحديث والإدراج — نعيد التحديث بدل الفشل.
+            await connection.ExecuteAsync(update, args);
+        }
+    }
+
+    /// <summary>بحث جماعي لأعمدة جدول كامل في استعلام واحد (بدل N استعلامات).</summary>
+    public async Task<IReadOnlyDictionary<string, (string Concept, double Confidence)>> LookupManyAsync(IEnumerable<string> columnNames, CancellationToken ct = default)
+    {
+        var result = new Dictionary<string, (string, double)>(StringComparer.OrdinalIgnoreCase);
+        var byNormalized = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var c in columnNames)
+        {
+            var n = ConceptCatalog.Normalize(c);
+            if (n.Length == 0) continue;
+            (byNormalized.TryGetValue(n, out var l) ? l : byNormalized[n] = new()).Add(c);
+        }
+        if (byNormalized.Count == 0) return result;
+        await EnsureSchemaOnceAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<(string NormalizedName, string Concept, int Hits, int UserHits)>(
+            $"SELECT NormalizedName, Concept, Hits, UserHits FROM {Table} WHERE NormalizedName IN @names", new { names = byNormalized.Keys.ToArray() });
+        foreach (var g in rows.GroupBy(r => r.NormalizedName))
+        {
+            var best = g.OrderByDescending(r => r.UserHits * 10 + r.Hits).First();
+            (string, double)? hit = best.UserHits >= 1 ? (best.Concept, 0.9) : best.Hits >= 3 ? (best.Concept, 0.85) : null;
+            if (hit is null) continue;
+            foreach (var original in byNormalized[g.Key]) result[original] = hit.Value;
+        }
+        return result;
     }
 
     /// <summary>أقوى مفهوم سابق لاسم عمود: تأكيد مستخدم واحد يكفي، وإلا ثلاث نتائج موديل متفقة.
@@ -60,7 +103,7 @@ public class ConceptPriorStore
     {
         var name = ConceptCatalog.Normalize(columnName);
         if (name.Length == 0) return null;
-        await EnsureSchemaAsync(ct);
+        await EnsureSchemaOnceAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = (await connection.QueryAsync<(string Concept, int Hits, int UserHits)>(
             $"SELECT Concept, Hits, UserHits FROM {Table} WHERE NormalizedName = @name", new { name })).ToList();

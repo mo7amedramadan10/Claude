@@ -577,6 +577,9 @@ public class WidgetQueryService
 
     private static int Cap(int? requested, int fallback) => requested is > 0 and <= 100 ? requested.Value : fallback;
 
+    /// <summary>اقتباس معرّف بحسب المزوّد — للمسارات التي تبني SQL خارج هذه الخدمة (تصحيح الأعمدة).</summary>
+    public string QuoteIdentifier(string identifier) => Quote(identifier);
+
     private string Quote(string identifier) => _db.Provider == DbProvider.Sqlite
         ? $"\"{identifier.Replace("\"", "\"\"")}\""
         : $"[{identifier.Replace("]", "]]")}]";

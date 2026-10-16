@@ -59,16 +59,14 @@ public class WidgetColumnsController : ControllerBase
     private readonly StagedTemplateBuilder _staged;
     private readonly TemplatePromptService _templatePrompts;
     private readonly DataStore _db;
-    private readonly IDashboardGenerator _generator;
     private readonly ILogger<WidgetColumnsController> _logger;
 
     public WidgetColumnsController(
         PermissionsService permissions, AnalyticsTools tools, DataProfileService profiles,
         ColumnSemanticsStore semanticsStore, ColumnSemanticsService semantics, WidgetQueryService queries,
         StagedTemplateBuilder staged, TemplatePromptService templatePrompts, DataStore db,
-        IDashboardGenerator generator, ILogger<WidgetColumnsController> logger)
+        ILogger<WidgetColumnsController> logger)
     {
-        _generator = generator;
         _permissions = permissions; _tools = tools; _profiles = profiles; _semanticsStore = semanticsStore;
         _semantics = semantics; _queries = queries; _staged = staged; _templatePrompts = templatePrompts;
         _db = db; _logger = logger;
@@ -151,10 +149,7 @@ public class WidgetColumnsController : ControllerBase
         }
         if (mapping.Count == 0) return BadRequest(new { error = "لم يتغيّر أي عمود." });
 
-        var quote = _db.Provider == DbProvider.Sqlite
-            ? (Func<string, string>)(n => $"\"{n.Replace("\"", "\"\"")}\"")
-            : n => $"[{n.Replace("]", "]]")}]";
-        var sql = SqlColumnRewriter.Rewrite(request.Sql, mapping, quote);
+        var sql = SqlColumnRewriter.Rewrite(request.Sql, mapping, _queries.QuoteIdentifier);
         try
         {
             var result = await _queries.ExecuteSqlFilterAsync(table.Table, sql, null, selection, ct);
@@ -191,21 +186,6 @@ public class WidgetColumnsController : ControllerBase
         }
     }
 
-    private async Task<Models.DashboardWidget> RebuildLegacyAsync(WidgetRebuildRequest request, SourceSelection selection, AppUser user, CancellationToken ct)
-    {
-        var question = $"ابنِ عنصرًا واحدًا فقط بعنوان «{request.Title}» من نوع {request.Type ?? "kpi"}" +
-            (string.IsNullOrWhiteSpace(request.Prompt) ? "" : $" ({request.Prompt})") +
-            " من بيانات المشروع المتاحة. لا تضف أي عنصر آخر، واحتفظ بالعنوان حرفيًا. إن لم تكفِ البيانات فأعد العنصر بـ noData وسبب واضح.";
-        var spec = await _generator.GenerateDashboardAsync(question, null, selection, null, user, request.Lang, ct: ct);
-        var widget = spec.Widgets.FirstOrDefault(w => string.Equals(w.Title, request.Title, StringComparison.OrdinalIgnoreCase))
-            ?? spec.Widgets.FirstOrDefault(w => !w.NoData) ?? spec.Widgets.FirstOrDefault()
-            ?? new Models.DashboardWidget { Type = request.Type ?? "kpi", Title = request.Title, NoData = true,
-                MissingReason = "لم يُرجع الموديل عنصرًا.", Data = System.Text.Json.JsonDocument.Parse("[]").RootElement };
-        widget.Title = request.Title;
-        if (widget.Data.ValueKind == System.Text.Json.JsonValueKind.Undefined) widget.Data = System.Text.Json.JsonDocument.Parse("[]").RootElement;
-        return widget;
-    }
-
     /// <summary>يعيد بناء عنصر واحد (من قالبه إن عُرف، وإلا من عنوانه) بعد تصحيح المعاني.</summary>
     [HttpPost("rebuild")]
     public async Task<IActionResult> Rebuild([FromBody] WidgetRebuildRequest request, CancellationToken ct)
@@ -234,8 +214,7 @@ public class WidgetColumnsController : ControllerBase
                     new Dictionary<string, SchemaLibrary.SchemaMatchingService.MatchedWidget>(), context, request.Lang, user);
             }
             var widget = await _staged.BuildOneAsync(staged, request.Title, ct);
-            // ٣) مزوّد بلا مسار مرحلي (Ollama): المسار القديم بسؤال يطلب هذا العنصر وحده.
-            widget ??= await RebuildLegacyAsync(request, selection, user, ct);
+            if (widget is null) return BadRequest(new { error = "المزوّد الحالي لا يدعم البناء المرحلي لعنصر واحد." });
             return Ok(new { widget });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }

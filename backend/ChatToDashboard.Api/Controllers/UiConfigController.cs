@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
@@ -15,6 +16,9 @@ public class UiConfigController : ControllerBase
 
     public UiConfigController(IConfiguration configuration) => _configuration = configuration;
 
+    // الصفحة تحمّل هذا السكربت قبل تسجيل الدخول (index.html يُفتح مجهولًا ثم يسجّل المستخدم داخله بلا
+    // إعادة تحميل)، فلا يخضع لسياسة المصادقة العامة — ولا يحمل شيئًا سريًا.
+    [AllowAnonymous]
     [HttpGet]
     [ResponseCache(NoStore = true)]
     public IActionResult Get()

@@ -1019,7 +1019,8 @@ function renderWidgetCols() {
         <div class="sem-col"><b>${esc(r.label)}</b><small>${r.hard ? 'ضروري' : 'مساعد'} · ${esc(r.conceptLabels.join(' أو '))}</small></div>
         <div class="sem-pick">${r.satisfied
           ? `<span class="badge badge-ok">✓ ${esc(r.matches.map(m => m.column).slice(0, 2).join('، '))}</span>`
-          : '<span class="badge badge-danger">! غير موجود</span>'}<select class="wc-concept" data-concept="${esc(r.concepts[0])}" aria-label="عمود يحمل معنى ${esc(r.label)}">${allTablesOptions(r.satisfied ? '— تغيير العمود —' : '— اختر عمودًا من بياناتك —')}</select></div>
+          : '<span class="badge badge-danger">! غير موجود</span>'}${r.concepts.length > 1
+            ? `<select class="wc-concept-pick" aria-label="أي معنى بالضبط لـ${esc(r.label)}">${r.concepts.map((c, k) => `<option value="${esc(c)}">${esc(r.conceptLabels[k] || c)}</option>`).join('')}</select>` : ''}<select class="wc-concept" data-concept="${esc(r.concepts[0])}" aria-label="عمود يحمل معنى ${esc(r.label)}">${allTablesOptions(r.satisfied ? '— تغيير العمود —' : '— اختر عمودًا من بياناتك —')}</select></div>
       </div>`).join('')}`);
   }
 
@@ -1037,8 +1038,11 @@ function renderWidgetCols() {
   el('widget-cols-body').querySelectorAll('.wc-concept').forEach(sel => sel.addEventListener('change', async () => {
     if (!sel.value) return;
     const [tableName, column] = sel.value.split('::');
+    // عند تعدد المفاهيم الممكنة للمتطلب (مثلًا «عمود زمني»: تاريخ الطلب/الإنشاء/الإغلاق) يُؤخذ ما اختاره
+    // المستخدم صراحةً لا أولها، لأن التأكيد يُحفظ كمعنى نهائي ويُسجَّل سابقةً عابرة للعملاء.
+    const concept = sel.closest('.sem-row').querySelector('.wc-concept-pick')?.value || sel.dataset.concept;
     sel.disabled = true;
-    const ok = await setSemanticForTableColumn(tableName, column, sel.dataset.concept);
+    const ok = await setSemanticForTableColumn(tableName, column, concept);
     sel.disabled = false;
     if (!ok) { widgetColsStatus('تعذّر حفظ معنى العمود.', 'bad'); return; }
     widgetColsStatus(`تم اعتماد «${column}» كـ «${sel.closest('.sem-row').querySelector('b').textContent}».`, 'ok');
@@ -1733,8 +1737,8 @@ function renderKpiDelta(slot, d) {
     spark.className = 'kpi-spark';
     spark.setAttribute('aria-label', 'اتجاه آخر ٨ أسابيع');
     card.querySelector('.kpi-body')?.appendChild(spark);
-    const tone = d.deltaPct > 0.05 ? THEME.palette[2] : d.deltaPct < -0.05 ? THEME.danger : THEME.tickColor;
-    try { chartInstances.push(JEEM_DX.mount(spark, { kind: 'sparkline', values: d.series, color: tone }, { theme: THEME, fmt })); }
+    const tone = d.deltaPct > 0.05 ? 'up' : d.deltaPct < -0.05 ? 'down' : 'flat';
+    try { chartInstances.push(JEEM_DX.mount(spark, { kind: 'sparkline', values: d.series, tone }, { theme: THEME, fmt })); }
     catch { spark.remove(); }
   }
   const pct = d.deltaPct;
@@ -5728,6 +5732,9 @@ async function ask(question, displayText, templateRef) {
         // user already had selected. Keep every existing filter (by id) as-is, and only
         // append a genuinely new one the model proposed for this turn (e.g. for a widget
         // it just added) — never let a repeated id overwrite the one already on screen.
+        // مفتاح القالب لا يعود من المتابعة (المسار القديم لا يعرفه) فيُحتفظ به من اللوحة الحالية
+        // ليبقى «إعادة بناء العنصر» من سياق القالب وتُحفظ القيمة في السجل.
+        if (!payload.dashboard.templateKey && state.dashboard?.templateKey) payload.dashboard.templateKey = state.dashboard.templateKey;
         const oldFilters = state.dashboard?.filters || [];
         const oldIds = new Set(oldFilters.map(f => f.id).filter(Boolean));
         const newFilters = (payload.dashboard.filters || []).filter(f => !f.id || !oldIds.has(f.id));
@@ -6593,6 +6600,7 @@ async function loadFiles() {
   const res = await fetch('/api/repository/files');
   state.files = await res.json();
   dashGalFeasibility = null; // تغيّر الملفات يغيّر جدوى النماذج
+  kpiDeltaCache.clear(); // وبيانات المؤشرات قد تكون تغيّرت (تحديث ملف)
   const knownSourceFileIds = new Set(state.sourceFiles.map(f => f.id));
   if (!state.sourceFiles.length || state.files.some(f => !knownSourceFileIds.has(f.id)))
     await loadSources();

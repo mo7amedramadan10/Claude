@@ -69,7 +69,7 @@ public class StagedTemplateBuilder
         _logger = logger;
     }
 
-    /// <summary>null عندما لا يدعم المزوّد الحالي البناء المرحلي — فيعود المتحكم للمسار القديم.</summary>
+    /// <summary>null فقط عندما لا يتوفر عميل مرحلي (نظريًا — كل المزوّدين الثلاثة يدعمونه الآن) فيعود المتحكم للمسار القديم.</summary>
     public async Task<DashboardSpec?> BuildAsync(StagedBuildRequest request, CancellationToken ct = default)
     {
         var llm = await _router.ResolveStagedAsync(ct);
@@ -90,8 +90,8 @@ public class StagedTemplateBuilder
 
         // الجدوى الحتمية (المرحلة ج من طبقة المعنى): عنصر يحتاج مفهومًا صلبًا غير موجود في
         // بيانات المشروع لا يُرسل للموديل أصلًا — سببه معروف قبل أي توكن.
-        var feasibility = await _feasibility.EvaluateAsync(request.Context.ProjectId, request.Widgets, ct);
         var available = await _feasibility.AvailableConceptsAsync(request.Context.ProjectId, ct);
+        var feasibility = WidgetFeasibilityService.Evaluate(available, request.Widgets);
         var candidates = request.Widgets.Where(w => !feasibility.TryGetValue(w.Title, out var f) || f.Feasible).ToList();
         var availableText = available.Count == 0 ? null : string.Join("، ", available.Select(kv =>
             $"{ConceptCatalog.Find(kv.Key)?.Label ?? kv.Key} ({kv.Key}) ← {string.Join("/", kv.Value.Select(c => c.Column).Distinct().Take(3))}"));
@@ -149,10 +149,10 @@ public class StagedTemplateBuilder
         var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
         var profileText = profile.ToPromptText(semantics: semantics);
 
-        var feasibility = await _feasibility.EvaluateAsync(request.Context.ProjectId, new[] { spec }, ct);
+        var available = await _feasibility.AvailableConceptsAsync(request.Context.ProjectId, ct);
+        var feasibility = WidgetFeasibilityService.Evaluate(available, new[] { spec });
         if (feasibility.TryGetValue(spec.Title, out var fz) && !fz.Feasible)
             return NoDataWidget(spec, $"يحتاج «{string.Join("» و«", fz.Missing)}» وهو غير موجود في بياناتك — أضف عمودًا له أو أكّد معنى عمود موجود من «المصادر».");
-        var available = await _feasibility.AvailableConceptsAsync(request.Context.ProjectId, ct);
         var availableText = available.Count == 0 ? null : string.Join("، ", available.Select(kv =>
             $"{ConceptCatalog.Find(kv.Key)?.Label ?? kv.Key} ({kv.Key}) ← {string.Join("/", kv.Value.Select(c => c.Column).Distinct().Take(3))}"));
 
@@ -434,7 +434,7 @@ public class StagedTemplateBuilder
 
     /// <summary>يلحق بوصف العنصر الأعمدة الحقيقية التي تحمل المفاهيم التي يحتاجها (من طبقة المعنى)،
     /// ليستخدمها المخطِّط بدل البحث عنها بالاسم: «القطاع ← Category (sales)».</summary>
-    private static BuiltinDashboardWidgetSpec WithConceptHints(
+    internal static BuiltinDashboardWidgetSpec WithConceptHints(
         BuiltinDashboardWidgetSpec spec, IReadOnlyDictionary<string, List<(string Table, string Column)>> available)
     {
         if (available.Count == 0) return spec;

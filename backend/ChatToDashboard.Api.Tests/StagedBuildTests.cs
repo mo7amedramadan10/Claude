@@ -204,3 +204,59 @@ public class SqlColumnRewriterTests
         Assert.Equal(new[] { "Region", "Revenue", "Status" }, used);
     }
 }
+
+public class ReviewRegressionTests
+{
+    private static string Q(string n) => $"\"{n}\"";
+
+    [Fact]
+    public void Rewrite_SwapAndChain_DoNotCollapse()
+    {
+        var sql = "SELECT Region, SUM(Revenue) AS v, SUM(Quantity) AS q FROM t GROUP BY Region";
+        var swap = new Dictionary<string, string> { ["Revenue"] = "Quantity", ["Quantity"] = "Revenue" };
+        Assert.Equal("SELECT Region, SUM(Quantity) AS v, SUM(Revenue) AS q FROM t GROUP BY Region",
+            ChatToDashboard.Api.Widgets.SqlColumnRewriter.Rewrite(sql, swap, Q));
+        var chain = new Dictionary<string, string> { ["Revenue"] = "Sales", ["Sales"] = "Qty" };
+        Assert.Equal("SELECT Region, SUM(Sales) AS v, SUM(Quantity) AS q FROM t GROUP BY Region",
+            ChatToDashboard.Api.Widgets.SqlColumnRewriter.Rewrite("SELECT Region, SUM(Revenue) AS v, SUM(Quantity) AS q FROM t GROUP BY Region", chain, Q));
+    }
+
+    [Theory]
+    [InlineData("تقسيم الإيراد حسب المنطقة", "department", false)]
+    [InlineData("الإيراد حسب القسم", "department", true)]
+    [InlineData("Prep time per order", "owner", false)]
+    [InlineData("Recycle rate", "close_date", false)]
+    [InlineData("Sales cycle length", "close_date", true)]
+    [InlineData("Marketing spend by item", "cost", true)]
+    public void TitleRules_UseWordBoundaries(string title, string concept, bool expected)
+    {
+        var reqs = ChatToDashboard.Api.Semantics.WidgetRequirementResolver.Resolve(title);
+        Assert.Equal(expected, reqs.Any(r => r.Hard && r.AnyOf.Contains(concept)));
+    }
+
+    [Fact]
+    public void WithConceptHints_AppendsConfirmedColumnsToPrompt()
+    {
+        var spec = new ChatToDashboard.Api.Templates.BuiltinDashboardWidgetSpec("bar", "الإيراد حسب القطاع", "وصف");
+        var available = new Dictionary<string, List<(string Table, string Column)>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["category"] = new() { ("sales", "Category") }, ["revenue"] = new() { ("sales", "Revenue") },
+        };
+        var hinted = ChatToDashboard.Api.Build.StagedTemplateBuilder.WithConceptHints(spec, available);
+        Assert.Contains("القطاع/الشريحة ← Category (جدول sales)", hinted.Prompt);
+        Assert.Contains("الإيراد ← Revenue (جدول sales)", hinted.Prompt);
+        Assert.StartsWith("وصف ", hinted.Prompt);
+        Assert.Same(spec, ChatToDashboard.Api.Build.StagedTemplateBuilder.WithConceptHints(spec, new Dictionary<string, List<(string, string)>>()));
+    }
+
+    [Fact]
+    public void Evaluate_StaticOverload_MatchesAsyncSemantics()
+    {
+        var widgets = new[] { new ChatToDashboard.Api.Templates.BuiltinDashboardWidgetSpec("kpi", "تحقيق الحصة") };
+        var none = ChatToDashboard.Api.Semantics.WidgetFeasibilityService.Evaluate(new Dictionary<string, List<(string, string)>>(), widgets);
+        Assert.True(none["تحقيق الحصة"].Feasible); // لا معانٍ = مجهول = لا رفض
+        var some = ChatToDashboard.Api.Semantics.WidgetFeasibilityService.Evaluate(
+            new Dictionary<string, List<(string, string)>>(StringComparer.OrdinalIgnoreCase) { ["revenue"] = new() { ("t", "Revenue") } }, widgets);
+        Assert.False(some["تحقيق الحصة"].Feasible);
+    }
+}
