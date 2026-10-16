@@ -6462,8 +6462,14 @@ function renderSources() {
 // (زي حالة اتصال Connector أو نسب مزامنة) مش موجودة أصلًا في النظام.
 async function loadSourcesPage() {
   await loadSources(); // يحدّث state.systems/state.sourceFiles ويعيد رسم اللوحة المنسدلة كمان
+  // معاني الأعمدة لكل ملف (طبقة المعنى) — تُعرض وتُصحَّح من نفس الصفحة، فمالك المشروع لا يحتاج
+  // صفحة الإدارة ليعرف ماذا فهم جيم من أعمدته.
+  try { const r = await fetch('/api/semantics'); state.sourceSemantics = r.ok ? await r.json() : null; }
+  catch { state.sourceSemantics = null; }
+  if (state.sourceSemantics) semModalConcepts = state.sourceSemantics.concepts || [];
   renderSourcesPage();
 }
+const sourcesSemOpen = new Set(); // الملفات المفتوحة معانيها (تبقى مفتوحة عبر إعادة الرسم)
 
 function renderSourcesPage() {
   const sysCards = state.systems.map(s => {
@@ -6480,19 +6486,59 @@ function renderSourcesPage() {
     </article>`;
   }).join('');
 
-  const fileCards = state.sourceFiles.map(f => `
-    <article class="card src-card">
+  const semTables = state.sourceSemantics?.tables || [];
+  const fileCards = state.sourceFiles.map(f => {
+    const t = semTables.find(x => x.fileId === f.id);
+    let semFoot = '';
+    if (t) {
+      const [tone, label] = SEM_ANALYSIS_LABEL[t.analysis] || SEM_ANALYSIS_LABEL.none;
+      const unknown = t.columns.filter(c => !c.concept).length;
+      const open = sourcesSemOpen.has(f.id);
+      semFoot = `
+      <div class="foot src-sem-foot">
+        <span class="badge ${tone}">${label}</span>
+        <span class="muted"><span class="num">${t.columns.length.toLocaleString('en-US')}</span> عمود${unknown ? ` · <span class="num">${unknown.toLocaleString('en-US')}</span> بلا معنى` : ''}</span>
+        <button type="button" class="btn btn-sm${open ? ' btn-soft' : ''}" data-sem-toggle="${esc(f.id)}" aria-expanded="${open}">🏷️ ${open ? 'إخفاء معاني الأعمدة' : 'معاني الأعمدة'}</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-sem-analyze="${esc(t.table)}" data-file="${esc(f.id)}">${tplIc('spark')}إعادة التحليل الآلي</button>
+      </div>
+      <div class="src-sem${open ? '' : ' hidden'}" data-sem-panel="${esc(f.id)}">
+        <p class="muted src-sem-help">ما فهمه جيم من كل عمود — النماذج تُبنى على هذه المعاني لا على أسماء الأعمدة. صحّح أي معنى من القائمة ويُحفظ فورًا ويفوز على أي تحليل آلي لاحق.</p>
+        <div class="sem-status hidden" data-sem-status="${esc(f.id)}"></div>
+        ${semTableHtml(t)}
+      </div>`;
+    }
+    return `
+    <article class="card src-card${t ? ' has-sem' : ''}">
       <div class="top">
         <span class="src-ic"><svg class="icon" aria-hidden="true"><use href="#i-sheet"/></svg></span>
         <div><h3>${esc(f.name)}</h3><span class="type">ملف · ${esc(f.category)}</span></div>
         <span class="status ok">جاهز</span>
-      </div>
-    </article>`).join('');
+      </div>${semFoot}
+    </article>`;
+  }).join('');
 
   const empty = (!state.systems.length && !state.sourceFiles.length)
     ? '<div class="nested-empty">لا يوجد مصادر بعد — من المحادثة يمكنك إرفاق ملف، أو من «التكاملات الخارجية» ربط نظام.</div>' : '';
 
   el('sources-page-grid').innerHTML = sysCards + fileCards + empty;
+
+  // معاني الأعمدة: فتح/إغلاق، تصحيح من القائمة، إعادة تحليل
+  const grid = el('sources-page-grid');
+  grid.querySelectorAll('[data-sem-toggle]').forEach(btn => btn.addEventListener('click', () => {
+    const id = btn.dataset.semToggle;
+    sourcesSemOpen.has(id) ? sourcesSemOpen.delete(id) : sourcesSemOpen.add(id);
+    renderSourcesPage();
+  }));
+  const statusFor = id => (text, tone) => { const box = grid.querySelector(`[data-sem-status="${CSS.escape(id)}"]`); if (!box) return; box.textContent = text; box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden'); };
+  grid.querySelectorAll('[data-sem-panel]').forEach(panel => bindSemTable(panel, semTables, statusFor(panel.dataset.semPanel)));
+  grid.querySelectorAll('[data-sem-analyze]').forEach(btn => btn.addEventListener('click', async () => {
+    const id = btn.dataset.file; btn.disabled = true; sourcesSemOpen.add(id);
+    try {
+      if (!await semReanalyze(btn.dataset.semAnalyze, statusFor(id))) return;
+      await loadSourcesPage();
+      statusFor(id)('اكتمل التحليل. تأكيداتك السابقة بقيت كما هي.', 'ok');
+    } finally { btn.disabled = false; }
+  }));
 
   el('sources-page-grid').querySelectorAll('[data-refresh-source]').forEach(btn =>
     btn.addEventListener('click', async () => {
@@ -9838,8 +9884,53 @@ function tpladmRender() {
   else tpladmRulesPane();
 }
 
-// ---------- تبويب «معاني الأعمدة»: إدارة طبقة المعنى مجمّعةً لكل جداول المشروع ----------
+// ---------- جدول معاني الأعمدة المشترك (صفحة «مصادر المشروع» + تبويب الإدارة) ----------
+// t = جدول من /api/semantics بأعمدته. تغيير المعنى يُحفظ فورًا عبر PUT /api/semantics/{table}/{column}
+// ويُحدّث الكائن محليًا، فكل شاشة تعرض نفس البيانات بلا إعادة تحميل.
 const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], rule: ['badge-warn', '◐ تخمين من الأسماء فقط'], none: ['badge-danger', '! لم يُحلَّل'] };
+function semColumnRowHtml(t, c) {
+  const conf = Math.round((c.confidence || 0) * 100);
+  const tone = c.source === 'user' ? 'badge-ok' : !c.source ? '' : conf >= 80 ? 'badge-teal' : conf >= 40 ? 'badge-warn' : 'badge-danger';
+  const src = c.source === 'user' ? '✅ مؤكّد منك' : c.source ? `${SEM_SOURCE_LABEL[c.source] || c.source} · ${conf.toLocaleString('en-US')}٪` : '—';
+  let map = '';
+  if (c.valueMapJson) { try { const m = Object.entries(JSON.parse(c.valueMapJson)); if (m.length) map = m.slice(0, 4).map(([k, v]) => `${k}←${v}`).join('، '); } catch { /* تجاهل */ } }
+  return `<tr data-table="${esc(t.table)}" data-column="${esc(c.name)}">
+    <td><b dir="auto">${esc(c.name)}</b><br><small class="muted">${esc(WIDGET_COLS_KIND[c.kind] || c.kind)}${c.sample?.length ? ` · ${esc(c.sample.join('، ')).slice(0, 60)}` : ''}</small></td>
+    <td><select class="sem-select" aria-label="مفهوم العمود ${esc(c.name)}">${semConceptOptions(c.concept)}</select></td>
+    <td><span class="badge ${tone}">${esc(src)}</span></td>
+    <td><small class="muted">${esc(c.note || '')}${map ? `<br>${esc(map)}` : ''}</small></td>
+  </tr>`;
+}
+function semTableHtml(t) {
+  return `<table class="dtable sem-dtable">
+    <thead><tr><th>العمود</th><th>المعنى</th><th>المصدر والثقة</th><th>ملاحظة / خريطة القيم</th></tr></thead>
+    <tbody>${t.columns.map(c => semColumnRowHtml(t, c)).join('')}</tbody>
+  </table>`;
+}
+// يربط قوائم المعنى داخل حاوية: الحفظ ثم تحديث الكائن t والشارة. onStatus(text, tone) للرسائل.
+function bindSemTable(container, tables, onStatus) {
+  container.querySelectorAll('.sem-select').forEach(sel => sel.addEventListener('change', async () => {
+    const row = sel.closest('tr'); const table = row.dataset.table, column = row.dataset.column;
+    sel.disabled = true;
+    const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/${encodeURIComponent(column)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept: sel.value || null }),
+    });
+    sel.disabled = false;
+    if (!res.ok) { onStatus('تعذّر حفظ المعنى.', 'bad'); return; }
+    const tbl = tables.find(x => x.table === table); const col = tbl?.columns.find(x => x.name === column);
+    if (col) { const c = semModalConcepts.find(x => x.id === sel.value); col.concept = sel.value || null; col.conceptLabel = c?.label || null; col.source = 'user'; col.confidence = 1; if (tbl.analysis !== 'analyzed') tbl.analysis = 'analyzed'; }
+    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge badge-ok">✅ مؤكّد منك</span>';
+    dashGalFeasibility = null;
+    onStatus(`تم حفظ معنى «${column}».`, 'ok');
+  }));
+}
+async function semReanalyze(table, onStatus) {
+  onStatus(`جارٍ تحليل ${table}… (ثوانٍ)`, '');
+  const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/analyze`, { method: 'POST' });
+  if (!res.ok) { onStatus('تعذّر إعادة التحليل — راجع صفحة «الاستهلاك» لسبب فشل نداء الموديل.', 'bad'); return false; }
+  dashGalFeasibility = null;
+  return true;
+}
 async function tpladmLoadSemantics() {
   const r = await fetch('/api/semantics');
   TPLADM.semantics = r.ok ? await r.json() : { tables: [], concepts: [] };
@@ -9865,19 +9956,6 @@ async function tpladmSemanticsPane() {
   const unknownCols = data.tables.reduce((s, t) => s + t.columns.filter(c => !c.concept).length, 0);
   const userCols = data.tables.reduce((s, t) => s + t.columns.filter(c => c.source === 'user').length, 0);
 
-  const colRow = (t, c) => {
-    const conf = Math.round((c.confidence || 0) * 100);
-    const tone = c.source === 'user' ? 'badge-ok' : !c.source ? '' : conf >= 80 ? 'badge-teal' : conf >= 40 ? 'badge-warn' : 'badge-danger';
-    const src = c.source === 'user' ? '✅ مؤكّد منك' : c.source ? `${SEM_SOURCE_LABEL[c.source] || c.source} · ${conf.toLocaleString('en-US')}٪` : '—';
-    let map = '';
-    if (c.valueMapJson) { try { const m = Object.entries(JSON.parse(c.valueMapJson)); if (m.length) map = m.slice(0, 4).map(([k, v]) => `${k}←${v}`).join('، '); } catch { /* تجاهل */ } }
-    return `<tr data-table="${esc(t.table)}" data-column="${esc(c.name)}">
-      <td><b dir="auto">${esc(c.name)}</b><br><small class="muted">${esc(WIDGET_COLS_KIND[c.kind] || c.kind)}${c.sample?.length ? ` · ${esc(c.sample.join('، ')).slice(0, 60)}` : ''}</small></td>
-      <td><select class="sem-select" aria-label="مفهوم العمود ${esc(c.name)}">${semConceptOptions(c.concept)}</select></td>
-      <td><span class="badge ${tone}">${esc(src)}</span></td>
-      <td><small class="muted">${esc(c.note || '')}${map ? `<br>${esc(map)}` : ''}</small></td>
-    </tr>`;
-  };
   const tableCard = t => {
     const [tone, label] = SEM_ANALYSIS_LABEL[t.analysis] || SEM_ANALYSIS_LABEL.none;
     const unknown = t.columns.filter(c => !c.concept).length;
@@ -9887,10 +9965,7 @@ async function tpladmSemanticsPane() {
         <span class="badge ${tone}">${label}</span>
         <button type="button" class="btn btn-sm btn-soft" data-analyze="${esc(t.table)}">${tplIc('spark')}إعادة التحليل الآلي</button>
       </div>
-      <table class="dtable sem-dtable" style="margin-top:8px">
-        <thead><tr><th>العمود</th><th>المعنى</th><th>المصدر والثقة</th><th>ملاحظة / خريطة القيم</th></tr></thead>
-        <tbody>${t.columns.map(c => colRow(t, c)).join('')}</tbody>
-      </table>
+      <div style="margin-top:8px">${semTableHtml(t)}</div>
     </article>`;
   };
 
@@ -9916,26 +9991,12 @@ function tpladmBindSemanticsPane() {
   el('tpladm-sem-q').addEventListener('input', e => { f.q = e.target.value; clearTimeout(t); t = setTimeout(() => tpladmSemanticsPane(), 150); });
   el('tpladm-pane').querySelectorAll('[data-sem-only]').forEach(b => b.addEventListener('click', () => { f.only = b.dataset.semOnly; tpladmSemanticsPane(); }));
   el('tpladm-sem-reload').addEventListener('click', async () => { TPLADM.semantics = null; dashGalFeasibility = null; await tpladmSemanticsPane(); });
-  el('tpladm-pane').querySelectorAll('.sem-select').forEach(sel => sel.addEventListener('change', async () => {
-    const row = sel.closest('tr'); const table = row.dataset.table, column = row.dataset.column;
-    sel.disabled = true;
-    const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/${encodeURIComponent(column)}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept: sel.value || null }),
-    });
-    sel.disabled = false;
-    if (!res.ok) { tpladmSemStatus('تعذّر حفظ المعنى.', 'bad'); return; }
-    const tbl = TPLADM.semantics.tables.find(x => x.table === table); const col = tbl?.columns.find(x => x.name === column);
-    if (col) { const c = semModalConcepts.find(x => x.id === sel.value); col.concept = sel.value || null; col.conceptLabel = c?.label || null; col.source = 'user'; col.confidence = 1; if (tbl.analysis !== 'analyzed') tbl.analysis = 'analyzed'; }
-    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge badge-ok">✅ مؤكّد منك</span>';
-    dashGalFeasibility = null;
-    tpladmSemStatus(`تم حفظ معنى «${column}» في ${table}.`, 'ok');
-  }));
+  bindSemTable(el('tpladm-pane'), TPLADM.semantics.tables, tpladmSemStatus);
   el('tpladm-pane').querySelectorAll('[data-analyze]').forEach(btn => btn.addEventListener('click', async () => {
-    const table = btn.dataset.analyze; btn.disabled = true; tpladmSemStatus(`جارٍ تحليل ${table}… (ثوانٍ)`, '');
+    const table = btn.dataset.analyze; btn.disabled = true;
     try {
-      const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/analyze`, { method: 'POST' });
-      if (!res.ok) { tpladmSemStatus('تعذّر إعادة التحليل — راجع صفحة «الاستهلاك» لسبب فشل نداء الموديل.', 'bad'); return; }
-      TPLADM.semantics = null; dashGalFeasibility = null;
+      if (!await semReanalyze(table, tpladmSemStatus)) return;
+      TPLADM.semantics = null;
       await tpladmSemanticsPane();
       tpladmSemStatus(`اكتمل تحليل ${table}. تأكيداتك السابقة بقيت كما هي.`, 'ok');
     } finally { btn.disabled = false; }

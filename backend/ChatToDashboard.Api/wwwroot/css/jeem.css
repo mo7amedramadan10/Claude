@@ -3173,3 +3173,9 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .sem-dtable td:nth-child(2) { min-width: 220px; }
 .sem-dtable .sem-select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; background: var(--surface); }
 .sem-dtable td { vertical-align: top; }
+/* معاني الأعمدة داخل بطاقة الملف في «مصادر المشروع» */
+.src-card.has-sem { grid-column: 1 / -1; }
+.src-sem-foot { align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.src-sem-foot .muted { font-size: var(--fs-xs); }
+.src-sem { border-top: 1px solid var(--line-2); padding-top: 12px; }
+.src-sem-help { font-size: var(--fs-xs); margin: 0 0 10px; line-height: 1.7; }
