@@ -788,7 +788,21 @@
 </div>
 
 <div id="screen-sharelinks" class="screen">
+  <!-- العروض التقديمية (صفحات HTML مرفوعة) على مستوى المنظمة — رابط عام /p/{id} في iframe معزول -->
   <div class="repo-bar">
+    <span class="count" id="presentations-count">العروض التقديمية</span>
+    <button class="new-btn" id="btn-new-presentation">+ رفع عرض HTML</button>
+  </div>
+  <div class="file-list-head">
+    <div class="col-main">العرض</div>
+    <div class="col-updated">الرفع / الانتهاء</div>
+    <div class="col-usage">المشاهدات</div>
+    <div class="col-access">الحالة</div>
+    <div class="col-actions"></div>
+  </div>
+  <div class="file-list" id="presentations-list"></div>
+
+  <div class="repo-bar" style="margin-top:22px">
     <span class="count" id="sharelinks-count"></span>
   </div>
   <div class="file-list-head">
@@ -1040,6 +1054,38 @@
 </div>
 
 <datalist id="cat-suggestions"></datalist>
+
+<div id="presentation-modal" class="modal-overlay hidden">
+  <div class="modal share-modal-box">
+    <h3 id="presentation-modal-title">رفع عرض تقديمي</h3>
+    <p class="modal-note">صفحة HTML واحدة (مثل عرض أعددته بأداة خارجية). أي شخص معه الرابط يفتحها بدون
+      تسجيل دخول، وتُعرض داخل إطار معزول لا يصل إلى بيانات النظام. الحد 15 ميغابايت.</p>
+    <label class="share-expiry-label">العنوان</label>
+    <input type="text" id="presentation-title" placeholder="مثال: عرض نتائج الربع الثالث" />
+    <label class="share-expiry-label">ملف HTML</label>
+    <input type="file" id="presentation-file" accept=".html,.htm,text/html" />
+    <div id="presentation-expiry-wrap">
+      <label class="share-expiry-label">انتهاء الرابط</label>
+      <select id="presentation-expiry">
+        <option value="">بدون انتهاء</option>
+        <option value="168">بعد 7 أيام</option>
+        <option value="720">بعد 30 يومًا</option>
+        <option value="2160">بعد 90 يومًا</option>
+      </select>
+    </div>
+    <div id="presentation-error" class="model-switch-note bad hidden"></div>
+    <div class="modal-actions">
+      <button type="button" id="presentation-cancel">إلغاء</button>
+      <button type="button" id="presentation-confirm" class="primary">⬆️ رفع وإنشاء الرابط</button>
+    </div>
+    <div id="presentation-link-box" class="hidden">
+      <div class="modal-row">
+        <input type="text" id="presentation-link" readonly />
+        <button type="button" id="presentation-copy">نسخ</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="share-modal" class="modal-overlay hidden">
   <div class="modal share-modal-box">

@@ -7925,7 +7925,7 @@ function showScreen(name) {
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
-  if (name === 'sharelinks') loadShareList();
+  if (name === 'sharelinks') { loadShareList(); loadPresentations(); }
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
   if (name === 'llm-keys') loadLlmKeysPage();
@@ -8446,6 +8446,115 @@ async function loadShareList() {
     list.innerHTML = `<div class="repo-empty">تعذّر تحميل الروابط.</div>`;
   }
 }
+
+// ---------- العروض التقديمية (HTML مرفوع) — على مستوى المنظمة، رابط عام /p/{id} ----------
+// نفس شاشة «روابط المشاركة»: قائمة أعلى قائمة الروابط، ورفع من نافذة presentation-modal.
+// الرفع أو استبدال الملف عبر multipart إلى /api/presentations (أو PUT …/{id}/file).
+const PRES = { replaceId: null };
+async function loadPresentations() {
+  const list = el('presentations-list');
+  list.innerHTML = `<div class="repo-empty">جارٍ التحميل…</div>`;
+  try {
+    const res = await fetch('/api/presentations');
+    const items = res.ok ? await res.json() : [];
+    el('presentations-count').textContent = items.length ? `${items.length} عرض تقديمي` : 'لا توجد عروض تقديمية بعد';
+    if (!items.length) {
+      list.innerHTML = `<div class="repo-empty">ارفع صفحة HTML من زر «رفع عرض HTML» ليحصل على رابط عام تشاركه مع أي شخص.</div>`;
+      return;
+    }
+    list.innerHTML = items.map(p => {
+      const status = shareStatus(p);
+      const expiryText = p.expiresAt ? new Date(p.expiresAt + (p.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG') : 'بدون انتهاء';
+      const live = status.cls === 'live';
+      const manage = p.canManage;
+      return `<div class="file-row${live ? '' : ' stale'}" data-id="${esc(p.id)}">
+          <div class="fr-main">
+            <div class="fr-icon">📊</div>
+            <div class="fr-text">
+              <div class="fr-line1"><span class="fr-name">${esc(p.title)}</span></div>
+              <div class="fr-line2">${esc(p.fileName)} · ${(p.sizeBytes / 1024).toLocaleString('en-US', { maximumFractionDigits: 0 })} KB · ${esc(p.createdByName || '')}</div>
+            </div>
+          </div>
+          <div class="col-updated"><b>${relTime(p.createdAt)}</b>ينتهي: ${expiryText}</div>
+          <div class="col-usage"><div class="num">${p.viewCount || 0}</div><div class="lbl">👁 مشاهدة</div></div>
+          <div class="col-access"><span class="share-status-tag ${status.cls}">${status.label}</span></div>
+          <div class="col-actions">
+            ${live ? `<a class="icon-btn" href="/p/${esc(p.id)}" target="_blank" rel="noopener" title="فتح العرض">↗</a>
+            <button class="icon-btn" data-pres-copy="${esc(p.id)}" title="نسخ الرابط">🔗</button>` : ''}
+            ${manage ? `<button class="icon-btn" data-pres-replace="${esc(p.id)}" title="استبدال الملف بنسخة أحدث على نفس الرابط">⬆️</button>` : ''}
+            ${manage && live ? `<button class="icon-btn revoke-share-btn" data-pres-revoke="${esc(p.id)}" title="إلغاء الرابط">🚫</button>` : ''}
+            ${manage && !live ? `<button class="icon-btn" data-pres-reactivate="${esc(p.id)}" title="إعادة تفعيل الرابط بلا انتهاء">🔄</button>` : ''}
+            ${manage ? `<button class="icon-btn del-share-btn" data-pres-del="${esc(p.id)}" title="حذف">🗑️</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-pres-copy]').forEach(btn => btn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(`${location.origin}/p/${btn.dataset.presCopy}`); } catch {}
+      const original = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = original; }, 1200);
+    }));
+    list.querySelectorAll('[data-pres-revoke]').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presRevoke)}/revoke`, { method: 'POST' });
+      await loadPresentations();
+    }));
+    list.querySelectorAll('[data-pres-reactivate]').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presReactivate)}/expiry`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresAt: null }),
+      });
+      await loadPresentations();
+    }));
+    list.querySelectorAll('[data-pres-del]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('حذف هذا العرض نهائيًا؟ الرابط سيتوقف فورًا.')) return;
+      await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presDel)}`, { method: 'DELETE' });
+      await loadPresentations();
+    }));
+    list.querySelectorAll('[data-pres-replace]').forEach(btn => btn.addEventListener('click', () => openPresentationModal(btn.dataset.presReplace)));
+  } catch {
+    list.innerHTML = `<div class="repo-empty">تعذّر تحميل العروض.</div>`;
+  }
+}
+function openPresentationModal(replaceId = null) {
+  PRES.replaceId = replaceId;
+  el('presentation-modal-title').textContent = replaceId ? 'استبدال ملف العرض' : 'رفع عرض تقديمي';
+  el('presentation-title').value = ''; el('presentation-file').value = '';
+  el('presentation-title').placeholder = replaceId ? 'اتركه فارغًا للإبقاء على العنوان الحالي' : 'مثال: عرض نتائج الربع الثالث';
+  el('presentation-expiry-wrap').classList.toggle('hidden', !!replaceId);
+  el('presentation-error').classList.add('hidden');
+  el('presentation-link-box').classList.add('hidden');
+  el('presentation-confirm').disabled = false;
+  el('presentation-confirm').textContent = replaceId ? '⬆️ استبدال الملف' : '⬆️ رفع وإنشاء الرابط';
+  el('presentation-modal').classList.remove('hidden');
+}
+el('btn-new-presentation').addEventListener('click', () => openPresentationModal());
+el('presentation-cancel').addEventListener('click', () => el('presentation-modal').classList.add('hidden'));
+el('presentation-modal').addEventListener('click', e => { if (e.target === el('presentation-modal')) el('presentation-modal').classList.add('hidden'); });
+el('presentation-confirm').addEventListener('click', async () => {
+  const file = el('presentation-file').files[0];
+  const errBox = el('presentation-error'); errBox.classList.add('hidden');
+  if (!file) { errBox.textContent = 'اختر ملف HTML أولًا.'; errBox.classList.remove('hidden'); return; }
+  const fd = new FormData();
+  fd.append('file', file);
+  if (el('presentation-title').value.trim()) fd.append('title', el('presentation-title').value.trim());
+  const hours = el('presentation-expiry').value;
+  if (!PRES.replaceId && hours) fd.append('expiresAt', new Date(Date.now() + Number(hours) * 3600 * 1000).toISOString());
+  const btn = el('presentation-confirm'); btn.disabled = true;
+  try {
+    const res = PRES.replaceId
+      ? await fetch(`/api/presentations/${encodeURIComponent(PRES.replaceId)}/file`, { method: 'PUT', body: fd })
+      : await fetch('/api/presentations', { method: 'POST', body: fd });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الرفع (${res.status})`); }
+    const id = PRES.replaceId || (await res.json()).id;
+    el('presentation-link').value = `${location.origin}/p/${id}`;
+    el('presentation-link-box').classList.remove('hidden');
+    btn.textContent = '✓ تم';
+    await loadPresentations();
+  } catch (err) {
+    errBox.textContent = err.message; errBox.classList.remove('hidden'); btn.disabled = false;
+  }
+});
+el('presentation-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(el('presentation-link').value); } catch {}
+  el('presentation-copy').textContent = '✓ نُسخ'; setTimeout(() => { el('presentation-copy').textContent = 'نسخ'; }, 1200);
+});
 
 // A URL like /?share=<id> opens a read-only public view: no login, no chat, no sources —
 // just the published dashboard, fetched straight from the share endpoint and rendered

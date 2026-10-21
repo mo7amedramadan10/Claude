@@ -235,6 +235,22 @@
   مفتاح خطأ → اختبار 401 واضح؛ المفتاح الصحيح → «متصل — 141 موديل»؛ عنوان غير صالح → 400 برسالة؛
   رفع ملف → نداء `[معاني]` على gpt-4o (موديل المعاني) واقتراح الاسم على gpt-4.1 (موديل اللوحات).
 
+## العروض التقديمية (صفحات HTML مرفوعة برابط عام)
+
+- `Presentations/` (`Presentation`، `PresentationStore` جدول `Presentations` بالمحتوى كاملًا في القاعدة) +
+  `Controllers/PresentationsController.cs` (`/api/presentations`): رفع ملف `.html` واحد (≤15MB، multipart) بعنوان
+  وانتهاء اختياري، قائمة **على مستوى المنظمة** (كل مستخدمي المنظمة يرونها؛ الإلغاء/الاستبدال/الحذف لصاحبه أو
+  المسؤول — `canManage`)، `PUT {id}/file` استبدال بنسخة أحدث على نفس الرابط، `PUT {id}/expiry` (إعادة تفعيل)،
+  `POST {id}/revoke`، `DELETE`. المسارات العامة بلا دخول: `GET {id}/meta` (410 مع السبب عند الإلغاء/الانتهاء)
+  و`GET {id}/content` (يزيد المشاهدات).
+- **العزل**: الرابط العام `/p/{id}` (في Program.cs) يخدم `wwwroot/presentation.html` — شريط عنوان + iframe
+  بسمة `sandbox` **بلا `allow-same-origin`** (أصل معتم: لا كوكي ولا API بصلاحيات المشاهد)، ومسار المحتوى يرسل
+  `Content-Security-Policy: sandbox …` + `nosniff` + `no-referrer` + `no-store` احتياطًا لمن يفتحه مباشرة.
+  تحقق حي: صفحة مرفوعة تحاول `document.cookie` و`fetch('/api/…')` من داخل الإطار → `cookie-err | api-blocked`
+  حتى مع مشاهد مسجَّل دخوله.
+- الواجهة: قسم «العروض التقديمية» أعلى شاشة «روابط المشاركة» (`loadPresentations`، نافذة `presentation-modal`
+  للرفع والاستبدال، نسخ الرابط `/p/{id}`، فتح، إلغاء/إعادة تفعيل/حذف). بلا تمرير أفقي على 390px للقائمة وللعارض.
+
 ## رسوم لوحات المحادثة: DevExtreme بدل ApexCharts (`wwwroot/js/jeem-dx.js`)
 
 - **النطاق**: لوحات المحادثة فقط (bar/line/pie/multi-series/forecast/radial-gauge). اللوحات

@@ -66,6 +66,7 @@ builder.Services.AddSingleton<AnalyticsTools>();
 builder.Services.AddSingleton<HistoryStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.History.DashboardAccessService>();
 builder.Services.AddSingleton<ShareStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.ConversationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.InquiryAccessService>();
@@ -268,6 +269,11 @@ app.Map("/ws/live/{channel}", async (
 app.MapGet("/usage", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "usage.html"), "text/html"))
     .RequireAuthorization(policy => policy.RequireRole(UserRoles.Admin));
+
+// صفحة مشاهدة عرض تقديمي عام (انظر PresentationsController): بلا تسجيل دخول، وتضع المحتوى في iframe معزول.
+app.MapGet("/p/{id}", (IWebHostEnvironment env) =>
+    Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
+    .AllowAnonymous();
 
 // /o/{slug} (and anything else with no matching static file or API route) still serves the
 // same single-page app — app.js reads the slug from location.pathname itself (see

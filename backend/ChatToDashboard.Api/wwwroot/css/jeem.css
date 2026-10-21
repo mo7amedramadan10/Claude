@@ -3194,3 +3194,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .llm-key-status { flex: 1 1 100%; font-size: var(--fs-sm); min-height: 1.4em; overflow-wrap: anywhere; }
 .jeem-scope .llm-key-status.ok { color: var(--ok); }
 .jeem-scope .llm-key-status.bad { color: var(--danger); }
+
+/* العروض التقديمية — رابط «فتح» بنفس شكل أزرار الأيقونات في صف القائمة */
+.jeem-scope a.icon-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
+.jeem-scope #presentation-modal input[type="text"], .jeem-scope #presentation-modal input[type="file"] { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
