@@ -113,6 +113,7 @@
       <div class="sb-label"><span>المنظمة</span></div>
       <ul class="nav">
         <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span></button></li>
+        <li><button type="button" class="nav-link tab" data-screen="presentations"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">العروض التقديمية</span><span class="badge hidden" id="presentations-badge">0</span></button></li>
       </ul>
 
       <div class="sb-label"><span>المشروع الحالي</span></div>
@@ -787,8 +788,16 @@
   </div>
 </div>
 
-<div id="screen-sharelinks" class="screen">
-  <!-- العروض التقديمية (صفحات HTML مرفوعة) على مستوى المنظمة — رابط عام /p/{id} في iframe معزول -->
+<!-- العروض التقديمية (صفحات HTML مرفوعة) على مستوى المنظمة — رابط عام /p/{id} في iframe معزول -->
+<div id="screen-presentations" class="screen">
+  <div class="settings-banner" style="margin-bottom:14px">
+    <span class="settings-banner-icon">📊</span>
+    <div>
+      <div class="settings-banner-title">عروض HTML برابط عام يفتحه أي شخص بلا تسجيل دخول</div>
+      <div class="settings-banner-text">ارفع صفحة HTML (مثل عرض أعددته مع Claude) وشارك رابطها مع مديرك أو أي شخص. العروض على
+        مستوى المنظمة: الجميع يراها هنا، وصاحب العرض أو المسؤول يستبدلها أو يلغيها. ولنشر العروض من Claude Desktop مباشرة اضغط «ربط Claude».</div>
+    </div>
+  </div>
   <div class="repo-bar">
     <span class="count" id="presentations-count">العروض التقديمية</span>
     <button type="button" class="btn btn-sm btn-soft" id="btn-claude-link" style="margin-inline-start:auto">🔑 ربط Claude</button>
@@ -802,8 +811,10 @@
     <div class="col-actions"></div>
   </div>
   <div class="file-list" id="presentations-list"></div>
+</div>
 
-  <div class="repo-bar" style="margin-top:22px">
+<div id="screen-sharelinks" class="screen">
+  <div class="repo-bar">
     <span class="count" id="sharelinks-count"></span>
   </div>
   <div class="file-list-head">

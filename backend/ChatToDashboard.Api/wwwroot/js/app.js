@@ -7889,7 +7889,7 @@ const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'sources
 const SCREEN_LABELS = {
   chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
-  projects: 'المشاريع', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
+  projects: 'المشاريع', presentations: 'العروض التقديمية', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
@@ -7925,7 +7925,8 @@ function showScreen(name) {
   if (name === 'repo') loadFiles();
   if (name === 'history' && !state.historyLoaded) loadHistory();
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
-  if (name === 'sharelinks') { loadShareList(); loadPresentations(); }
+  if (name === 'sharelinks') loadShareList();
+  if (name === 'presentations') loadPresentations();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
   if (name === 'llm-keys') loadLlmKeysPage();
@@ -8458,6 +8459,7 @@ async function loadPresentations() {
     const res = await fetch('/api/presentations');
     const items = res.ok ? await res.json() : [];
     el('presentations-count').textContent = items.length ? `${items.length} عرض تقديمي` : 'لا توجد عروض تقديمية بعد';
+    el('presentations-badge').textContent = items.length; el('presentations-badge').classList.toggle('hidden', !items.length);
     if (!items.length) {
       list.innerHTML = `<div class="repo-empty">ارفع صفحة HTML من زر «رفع عرض HTML» ليحصل على رابط عام تشاركه مع أي شخص.</div>`;
       return;
