@@ -196,6 +196,14 @@
 .app.is-collapsed .sb-label::after { content: ""; width: 20px; height: 1px; background: var(--line); }
 .app.is-collapsed .isolation { justify-content: center; padding: 12px 0; }
 .app.is-collapsed .user-card { justify-content: center; }
+/* شارة «مالك المنصّة» في الوضع المطوي: أيقونة التاج فقط وسط العمود بدل كتلة داكنة طويلة بهوامش العرض الكامل */
+.app.is-collapsed .platform-badge { justify-content: center; padding: 6px; margin: 0 8px 8px; }
+.app.is-collapsed .platform-badge .org-meta { display: none; }
+.app.is-collapsed .sb-scroll { scrollbar-width: thin; }
+/* ذيل القائمة في الوضع المطوي: زر القراءة أيقونة فقط، وأزرار بطاقة المستخدم تحت بعضها بدل أن تتجاوز العرض */
+.app.is-collapsed #auto-read-toggle { padding: 6px; justify-content: center; }
+.app.is-collapsed .user-card { flex-direction: column; gap: 6px; padding: 6px 0; }
+#auto-read-toggle { display: flex; align-items: center; gap: 8px; }
 
 /* ---------- الشريط العلوي ---------- */
 .topbar {

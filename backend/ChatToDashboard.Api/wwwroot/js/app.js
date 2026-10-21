@@ -4339,7 +4339,9 @@ try { state.autoRead = localStorage.getItem('chatToDashboardAutoRead') === '1'; 
 function syncAutoReadButton() {
   const btn = el('auto-read-toggle');
   btn.classList.toggle('active', state.autoRead);
-  btn.textContent = state.autoRead ? '🔊 قراءة تلقائية' : '🔇 قراءة تلقائية';
+  // أيقونة + نص في عنصرين حتى يُخفى النص في الوضع المطوي للقائمة الجانبية (.app.is-collapsed .nav-text).
+  btn.innerHTML = `<span class="ar-ic" aria-hidden="true">${state.autoRead ? '🔊' : '🔇'}</span><span class="nav-text">قراءة تلقائية</span>`;
+  btn.title = state.autoRead ? 'إيقاف القراءة الصوتية التلقائية' : 'تشغيل القراءة الصوتية التلقائية لردود المساعد';
 }
 if (ttsSupported()) {
   el('auto-read-toggle').classList.remove('hidden');
