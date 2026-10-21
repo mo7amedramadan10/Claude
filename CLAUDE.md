@@ -251,6 +251,28 @@
 - الواجهة: قسم «العروض التقديمية» أعلى شاشة «روابط المشاركة» (`loadPresentations`، نافذة `presentation-modal`
   للرفع والاستبدال، نسخ الرابط `/p/{id}`، فتح، إلغاء/إعادة تفعيل/حذف). بلا تمرير أفقي على 390px للقائمة وللعارض.
 
+## ربط Claude Desktop: مفاتيح الوصول الشخصية + جسر MCP (`tools/jeem-mcp/`)
+
+- **مفاتيح الوصول** (`Users/ApiTokenStore.cs`، جدول `ApiTokens`): `jeem_<48 hex>`، يُخزَّن SHA-256 فقط + بادئة 12 حرفًا
+  للعرض؛ يُعرض كاملًا مرة واحدة من `POST /api/tokens`. `GET /api/tokens` قائمة، `DELETE {id}` إلغاء،
+  `GET /api/tokens/whoami` للتحقق (يعمل بالكوكي أو بالمفتاح). الإنشاء والإلغاء مرفوضان (403) لطلب مصادَق بمفتاح
+  حتى لا يولّد مفتاح مسرَّب مفاتيح أخرى.
+- **المصادقة** (`Users/ApiTokenAuthenticationHandler.cs`): المخطط الافتراضي صار سياسة `CookieOrApiToken` في Program.cs
+  تحوّل الطلب إلى مخطط `ApiToken` عند ترويسة `Authorization: Bearer jeem_…` وإلا إلى الكوكي. المعالج يبني **نفس
+  مطالبات** دخول الكوكي (+ `AuthVia=ApiToken`) فكل المتحكمات تعمل بلا تغيير وبصلاحيات صاحب المفتاح. الدخول/الخروج
+  ما زالا يسمّيان مخطط الكوكي صراحة.
+- **الواجهة**: زر «🔑 ربط Claude» في شاشة «روابط المشاركة» يفتح `api-token-modal`: إنشاء باسم، عرض المفتاح مرة واحدة مع
+  مقطع `claude_desktop_config.json` جاهز (`apiTokenSnippet`: عنوان المنصة الحالي + المفتاح)، قائمة بالبادئات وآخر
+  استخدام، إلغاء.
+- **الجسر** `tools/jeem-mcp/index.js` (Node ≥20، `@modelcontextprotocol/sdk` عبر stdio؛ `node_modules/` في .gitignore):
+  أدوات `publish_presentation(title, html, expiresInDays?)` → multipart إلى `/api/presentations` ويعيد `/p/{id}`،
+  `replace_presentation`، `list_presentations`، `revoke_presentation`، `whoami`. البيئة `JEEM_URL` + `JEEM_TOKEN`.
+  القيد: المنصة داخلية فلا Custom Connector من claude.ai؛ الجسر يعمل من **Claude Desktop فقط** على جهاز داخل الشبكة
+  (التركيب في `tools/jeem-mcp/README.md`). لو أُتيح نطاق عام لاحقًا تتحول الأدوات نفسها إلى خادم MCP بعيد.
+- تحقق حي: إنشاء مفتاح → whoami بالـBearer 200 بلا كوكي، إنشاء مفتاح بمفتاح 403، مفتاح مُلغى/خاطئ 401؛ عميل MCP
+  stdio حقيقي ضد الجسر: نشر → رابط عام 200، استبدال يغيّر المحتوى على نفس الرابط، قائمة، إلغاء → 410، HTML أقصر
+  من الحد يُرفض من المخطط؛ النافذة بلا أخطاء JS وبلا تمرير أفقي على 390px.
+
 ## رسوم لوحات المحادثة: DevExtreme بدل ApexCharts (`wwwroot/js/jeem-dx.js`)
 
 - **النطاق**: لوحات المحادثة فقط (bar/line/pie/multi-series/forecast/radial-gauge). اللوحات

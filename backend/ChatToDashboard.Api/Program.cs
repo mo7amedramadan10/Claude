@@ -24,7 +24,19 @@ builder.Services.AddControllers();
 // individual actions opt out with [AllowAnonymous] (login itself, and the public
 // GET /api/share/{id} view link). API calls get a 401 instead of a login-page redirect,
 // since this is a JSON API consumed by the SPA's own fetch calls, not a browser nav.
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+// مفاتيح الوصول الشخصية (Users/ApiTokenAuthenticationHandler): طلب يحمل «Bearer jeem_…» يُصادَق بالمفتاح
+// بدل الكوكي — لربط Claude Desktop وأي أداة خارجية — عبر سياسة تختار المخطط بحسب الترويسة.
+const string SmartScheme = "CookieOrApiToken";
+builder.Services.AddSingleton<ApiTokenStore>();
+builder.Services.AddAuthentication(SmartScheme)
+    .AddPolicyScheme(SmartScheme, "Cookie or API token", options =>
+    {
+        options.ForwardDefault = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.ForwardDefaultSelector = context => ApiTokenAuthenticationHandler.HasToken(context.Request)
+            ? ApiTokenAuthenticationHandler.Scheme
+            : CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiTokenAuthenticationHandler>(ApiTokenAuthenticationHandler.Scheme, null)
     .AddCookie(options =>
     {
         options.Cookie.Name = "ctd_auth";

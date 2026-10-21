@@ -8556,6 +8556,59 @@ el('presentation-copy').addEventListener('click', async () => {
   el('presentation-copy').textContent = '✓ نُسخ'; setTimeout(() => { el('presentation-copy').textContent = 'نسخ'; }, 1200);
 });
 
+// ---------- ربط Claude: مفاتيح الوصول الشخصية (/api/tokens) ----------
+// المفتاح الكامل يأتي مرة واحدة من POST ويُعرض مع مقطع إعداد Claude Desktop جاهز؛ القائمة بادئات فقط.
+async function loadApiTokens() {
+  const list = el('api-token-list');
+  try {
+    const res = await fetch('/api/tokens');
+    const items = res.ok ? await res.json() : [];
+    if (!items.length) { list.innerHTML = '<div class="muted">لا توجد مفاتيح بعد.</div>'; return; }
+    list.innerHTML = items.map(t => `<div class="api-token-row${t.revokedAt ? ' stale' : ''}">
+        <span class="api-token-row-name">${esc(t.name)}</span>
+        <code dir="ltr">${esc(t.prefix)}…</code>
+        <span class="muted">${t.revokedAt ? 'مُلغى' : t.lastUsedAt ? `آخر استخدام ${relTime(t.lastUsedAt)}` : 'لم يُستخدم بعد'}</span>
+        ${t.revokedAt ? '' : `<button type="button" class="icon-btn" data-token-revoke="${esc(t.id)}" title="إلغاء المفتاح">🚫</button>`}
+      </div>`).join('');
+    list.querySelectorAll('[data-token-revoke]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('إلغاء هذا المفتاح؟ أي ربط يستخدمه سيتوقف فورًا.')) return;
+      await fetch(`/api/tokens/${encodeURIComponent(btn.dataset.tokenRevoke)}`, { method: 'DELETE' });
+      await loadApiTokens();
+    }));
+  } catch { list.innerHTML = '<div class="muted">تعذّر تحميل المفاتيح.</div>'; }
+}
+function apiTokenSnippet(token) {
+  return JSON.stringify({ mcpServers: { jeem: { command: 'node', args: ['C:\\jeem-mcp\\index.js'], env: { JEEM_URL: location.origin, JEEM_TOKEN: token } } } }, null, 2);
+}
+el('btn-claude-link').addEventListener('click', async () => {
+  el('api-token-new').classList.add('hidden'); el('api-token-error').classList.add('hidden'); el('api-token-name').value = '';
+  el('api-token-modal').classList.remove('hidden');
+  await loadApiTokens();
+});
+el('api-token-close').addEventListener('click', () => el('api-token-modal').classList.add('hidden'));
+el('api-token-modal').addEventListener('click', e => { if (e.target === el('api-token-modal')) el('api-token-modal').classList.add('hidden'); });
+el('api-token-create').addEventListener('click', async () => {
+  const btn = el('api-token-create'); btn.disabled = true; el('api-token-error').classList.add('hidden');
+  try {
+    const res = await fetch('/api/tokens', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: el('api-token-name').value.trim() || 'Claude Desktop' }) });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الإنشاء (${res.status})`); }
+    const r = await res.json();
+    el('api-token-value').value = r.token;
+    el('api-token-snippet').textContent = apiTokenSnippet(r.token);
+    el('api-token-new').classList.remove('hidden');
+    await loadApiTokens();
+  } catch (err) { el('api-token-error').textContent = err.message; el('api-token-error').classList.remove('hidden'); }
+  finally { btn.disabled = false; }
+});
+el('api-token-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(el('api-token-value').value); } catch {}
+  el('api-token-copy').textContent = '✓ نُسخ'; setTimeout(() => { el('api-token-copy').textContent = 'نسخ'; }, 1200);
+});
+el('api-token-copy-snippet').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(el('api-token-snippet').textContent); } catch {}
+  el('api-token-copy-snippet').textContent = '✓ نُسخ'; setTimeout(() => { el('api-token-copy-snippet').textContent = 'نسخ المقطع'; }, 1200);
+});
+
 // A URL like /?share=<id> opens a read-only public view: no login, no chat, no sources —
 // just the published dashboard, fetched straight from the share endpoint and rendered
 // through the same renderDashboard() as everything else.

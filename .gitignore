@@ -22,3 +22,4 @@ appsettings.Development.json
 
 # مفاتيح Data Protection (تشفير مفاتيح الموديلات المحفوظة من الصفحة)
 dp-keys/
+node_modules/

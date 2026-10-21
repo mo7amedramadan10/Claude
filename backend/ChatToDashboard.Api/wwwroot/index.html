@@ -791,7 +791,8 @@
   <!-- العروض التقديمية (صفحات HTML مرفوعة) على مستوى المنظمة — رابط عام /p/{id} في iframe معزول -->
   <div class="repo-bar">
     <span class="count" id="presentations-count">العروض التقديمية</span>
-    <button class="new-btn" id="btn-new-presentation">+ رفع عرض HTML</button>
+    <button type="button" class="btn btn-sm btn-soft" id="btn-claude-link" style="margin-inline-start:auto">🔑 ربط Claude</button>
+    <button class="new-btn" id="btn-new-presentation" style="margin-inline-start:0">+ رفع عرض HTML</button>
   </div>
   <div class="file-list-head">
     <div class="col-main">العرض</div>
@@ -1054,6 +1055,37 @@
 </div>
 
 <datalist id="cat-suggestions"></datalist>
+
+<div id="api-token-modal" class="modal-overlay hidden">
+  <div class="modal share-modal-box api-token-box">
+    <h3>ربط Claude بالمنصة</h3>
+    <p class="modal-note">مفتاح وصول شخصي يسمح لتطبيق Claude Desktop (عبر جسر <code>jeem-mcp</code> على جهازك
+      داخل شبكة الشركة) بنشر العروض التقديمية هنا مباشرة. المفتاح يرث صلاحيات حسابك، ويُعرض مرة واحدة فقط،
+      ويمكنك إلغاؤه من هنا في أي وقت.</p>
+    <div class="modal-row">
+      <input type="text" id="api-token-name" placeholder="اسم المفتاح (مثال: Claude Desktop — جهاز العمل)" />
+      <button type="button" id="api-token-create" class="primary">إنشاء مفتاح</button>
+    </div>
+    <div id="api-token-error" class="model-switch-note bad hidden"></div>
+    <div id="api-token-new" class="api-token-new hidden">
+      <div class="api-token-warn">⚠️ انسخ المفتاح الآن — لن يظهر مرة أخرى.</div>
+      <div class="modal-row"><input type="text" id="api-token-value" readonly dir="ltr" /><button type="button" id="api-token-copy">نسخ</button></div>
+      <details class="api-token-setup">
+        <summary>إعداد Claude Desktop (مقطع جاهز)</summary>
+        <ol class="api-token-steps">
+          <li>انسخ مجلد <code>tools/jeem-mcp</code> إلى جهازك وشغّل فيه <code>npm install</code> (يحتاج Node.js 20+).</li>
+          <li>افتح <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code> · macOS: <code>~/Library/Application Support/Claude</code>) وأضف المقطع التالي بعد تعديل مسار الملف:</li>
+        </ol>
+        <pre id="api-token-snippet" dir="ltr"></pre>
+        <button type="button" id="api-token-copy-snippet" class="btn btn-sm btn-soft">نسخ المقطع</button>
+        <p class="modal-note">ثم أعد تشغيل Claude Desktop وجرّب: «اعمل عرضًا عن … وانشره على جيم».</p>
+      </details>
+    </div>
+    <div class="api-token-list-head">المفاتيح الحالية</div>
+    <div id="api-token-list" class="api-token-list"></div>
+    <div class="modal-actions"><button type="button" id="api-token-close">إغلاق</button></div>
+  </div>
+</div>
 
 <div id="presentation-modal" class="modal-overlay hidden">
   <div class="modal share-modal-box">

@@ -3198,3 +3198,17 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* العروض التقديمية — رابط «فتح» بنفس شكل أزرار الأيقونات في صف القائمة */
 .jeem-scope a.icon-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
 .jeem-scope #presentation-modal input[type="text"], .jeem-scope #presentation-modal input[type="file"] { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+
+/* ربط Claude — نافذة مفاتيح الوصول الشخصية */
+.jeem-scope .api-token-box { width: min(620px, 100%); }
+.jeem-scope .api-token-warn { margin: 10px 0 6px; padding: 8px 10px; border-radius: 8px; background: var(--warn-50, #fff7e6); border-inline-start: 3px solid var(--warn, #d97706); font-size: var(--fs-sm); }
+.jeem-scope .api-token-setup { margin-top: 10px; font-size: var(--fs-sm); }
+.jeem-scope .api-token-setup summary { cursor: pointer; font-weight: 600; }
+.jeem-scope .api-token-steps { padding-inline-start: 20px; line-height: 1.7; }
+.jeem-scope #api-token-snippet { background: var(--plane, #f5f6f8); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px; overflow: auto; max-height: 220px; text-align: left; }
+.jeem-scope .api-token-list-head { margin-top: 14px; font-weight: 600; font-size: var(--fs-sm); }
+.jeem-scope .api-token-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; max-height: 200px; overflow: auto; }
+.jeem-scope .api-token-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: var(--fs-sm); }
+.jeem-scope .api-token-row.stale { opacity: .6; }
+.jeem-scope .api-token-row-name { font-weight: 600; }
+.jeem-scope .api-token-row .icon-btn { margin-inline-start: auto; }
