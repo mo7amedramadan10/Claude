@@ -38,11 +38,15 @@
           referrerpolicy="no-referrer"></iframe>
 <script>
 (async () => {
-  const id = location.pathname.split('/').filter(Boolean).pop();
+  // /p/{id} أو /p/{org}/{slug} — يُترجَم إلى مسار الواجهة المناسب
+  const parts = location.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent);
+  const apiBase = parts.length >= 2
+    ? `/api/presentations/by/${encodeURIComponent(parts[0])}/${encodeURIComponent(parts[1])}`
+    : `/api/presentations/${encodeURIComponent(parts[0] || '')}`;
   const $ = s => document.getElementById(s);
   const show = (big, sub) => { $('msg').classList.remove('hidden'); $('msg-big').textContent = big; $('msg-sub').textContent = sub || ''; $('title').textContent = big; };
   try {
-    const res = await fetch(`/api/presentations/${encodeURIComponent(id)}/meta`);
+    const res = await fetch(`${apiBase}/meta`);
     if (res.status === 410) {
       const p = await res.json().catch(() => ({}));
       document.title = 'رابط غير نشط — عرض تقديمي';
@@ -53,7 +57,7 @@
     document.title = `${meta.title} — عرض تقديمي`;
     $('title').textContent = meta.title;
     if (meta.createdByName) $('by').textContent = `من ${meta.createdByName}`;
-    const src = `/api/presentations/${encodeURIComponent(id)}/content`;
+    const src = `${apiBase}/content`;
     $('open').href = src; $('open').classList.remove('hidden');
     $('frame').src = src; $('frame').classList.remove('hidden');
   } catch { show('تعذّر تحميل العرض.'); }

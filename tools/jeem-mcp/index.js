@@ -22,13 +22,13 @@ async function api(path, { method = 'GET', body, form } = {}) {
   const text = await res.text();
   let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   if (!res.ok) {
-    const msg = (data && data.error) || (typeof data === 'string' ? data.slice(0, 300) : '') || res.statusText;
+    const msg = ((data && data.error) || (typeof data === 'string' ? data.slice(0, 300) : '') || res.statusText) + (data && data.suggestion ? ` (اقتراح: ${data.suggestion})` : '');
     throw new Error(res.status === 401 ? 'مفتاح الوصول غير صالح أو مُلغى — أنشئ مفتاحًا جديدًا من «ربط Claude» في المنصة.' : `${res.status}: ${msg}`);
   }
   return data;
 }
 
-const publicUrl = id => `${BASE}/p/${id}`;
+const publicUrl = p => `${BASE}${p.url || `/p/${p.id}`}`;
 const text = value => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] });
 const fail = err => ({ isError: true, content: [{ type: 'text', text: `تعذّر تنفيذ الطلب: ${err.message}` }] });
 
@@ -40,16 +40,18 @@ server.registerTool('publish_presentation', {
   inputSchema: {
     title: z.string().min(1).max(300).describe('عنوان العرض كما يظهر في القائمة وشريط صفحة العرض'),
     html: z.string().min(20).describe('مستند HTML كامل ومكتفٍ بذاته'),
+    slug: z.string().min(2).max(80).optional().describe('اسم الرابط (حروف/أرقام/شرطات) فريد داخل المنظمة، مثل q3-results؛ يُشتق من العنوان إن تُرك'),
     expiresInDays: z.number().int().positive().max(3650).optional().describe('انتهاء الرابط بعد كذا يومًا (اتركه فارغًا لرابط دائم)'),
   },
-}, async ({ title, html, expiresInDays }) => {
+}, async ({ title, html, slug, expiresInDays }) => {
   try {
     const form = new FormData();
     form.append('file', new Blob([html], { type: 'text/html' }), `${title.replace(/[\\/:*?"<>|]+/g, '-')}.html`);
     form.append('title', title);
+    if (slug) form.append('slug', slug);
     if (expiresInDays) form.append('expiresAt', new Date(Date.now() + expiresInDays * 86400000).toISOString());
     const r = await api('/api/presentations', { method: 'POST', form });
-    return text({ id: r.id, title: r.title, url: publicUrl(r.id), note: 'شارك الرابط مع أي شخص؛ يفتح بلا تسجيل دخول. لاستبدال المحتوى لاحقًا على نفس الرابط استخدم replace_presentation بهذا المعرّف.' });
+    return text({ id: r.id, title: r.title, slug: r.slug, url: publicUrl(r), note: 'شارك الرابط مع أي شخص؛ يفتح بلا تسجيل دخول. لاستبدال المحتوى لاحقًا على نفس الرابط استخدم replace_presentation بهذا المعرّف.' });
   } catch (e) { return fail(e); }
 });
 
@@ -67,7 +69,8 @@ server.registerTool('replace_presentation', {
     form.append('file', new Blob([html], { type: 'text/html' }), 'presentation.html');
     if (title) form.append('title', title);
     await api(`/api/presentations/${encodeURIComponent(id)}/file`, { method: 'PUT', form });
-    return text({ id, url: publicUrl(id), updated: true });
+    const items = await api('/api/presentations'); const p = (items.items || []).find(x => x.id === id);
+    return text({ id, url: p ? publicUrl(p) : publicUrl({ id }), updated: true });
   } catch (e) { return fail(e); }
 });
 
@@ -77,9 +80,9 @@ server.registerTool('list_presentations', {
   inputSchema: {},
 }, async () => {
   try {
-    const items = await api('/api/presentations');
+    const items = (await api('/api/presentations')).items || [];
     return text(items.map(p => ({
-      id: p.id, title: p.title, url: publicUrl(p.id), active: p.isActive, views: p.viewCount,
+      id: p.id, title: p.title, slug: p.slug, url: publicUrl(p), active: p.isActive, views: p.viewCount,
       createdBy: p.createdByName, createdAt: p.createdAt, expiresAt: p.expiresAt, canManage: p.canManage,
     })));
   } catch (e) { return fail(e); }

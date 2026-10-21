@@ -243,6 +243,13 @@
   المسؤول — `canManage`)، `PUT {id}/file` استبدال بنسخة أحدث على نفس الرابط، `PUT {id}/expiry` (إعادة تفعيل)،
   `POST {id}/revoke`، `DELETE`. المسارات العامة بلا دخول: `GET {id}/meta` (410 مع السبب عند الإلغاء/الانتهاء)
   و`GET {id}/content` (يزيد المشاهدات).
+- **رابط مقروء** `/p/{اسم-المنظمة}/{اسم-العرض}`: عمود `Slug` (فريد داخل المنظمة، يُفرض في الكود عبر `SlugTakenAsync`؛
+  `PresentationSlug.Normalize`: حروف بأي لغة وأرقام وشرطات، صغيرة، 2–80 حرفًا) يُشتق من العنوان إن لم يُدخله المستخدم،
+  والتعارض يعيد 409 مع `suggestion` (`q3-results-2`) تملؤه الواجهة تلقائيًا. `GET slug-available` للتحقق الحي أثناء
+  الكتابة، `PUT {id}/slug` لإعادة التسمية (الرابط القديم بالاسم يتوقف، والرابط بالمعرّف يبقى). المسارات العامة بالاسم:
+  `GET by/{org}/{slug}/meta|content` ومسار الصفحة `/p/{org}/{slug}` في Program.cs؛ `presentation.html` يميّز بين
+  مقطع واحد (معرّف) ومقطعين. الروابط تُعاد بلا ترميز (`PublicPath`) ليبقى العربي مقروءًا عند النسخ؛ القائمة تعيد
+  `{orgSlug, items[].url}`. أداة `publish_presentation` في الجسر تقبل `slug` اختياريًا.
 - **العزل**: الرابط العام `/p/{id}` (في Program.cs) يخدم `wwwroot/presentation.html` — شريط عنوان + iframe
   بسمة `sandbox` **بلا `allow-same-origin`** (أصل معتم: لا كوكي ولا API بصلاحيات المشاهد)، ومسار المحتوى يرسل
   `Content-Security-Policy: sandbox …` + `nosniff` + `no-referrer` + `no-store` احتياطًا لمن يفتحه مباشرة.

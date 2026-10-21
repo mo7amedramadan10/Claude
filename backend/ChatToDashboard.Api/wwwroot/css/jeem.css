@@ -3212,3 +3212,6 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .api-token-row.stale { opacity: .6; }
 .jeem-scope .api-token-row-name { font-weight: 600; }
 .jeem-scope .api-token-row .icon-btn { margin-inline-start: auto; }
+.jeem-scope .pres-slug-preview { min-height: 1.4em; overflow-wrap: anywhere; text-align: left; }
+.jeem-scope .pres-slug-preview.ok { color: var(--ok); }
+.jeem-scope .pres-slug-preview.bad { color: var(--danger); }

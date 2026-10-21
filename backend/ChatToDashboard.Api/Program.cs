@@ -286,6 +286,10 @@ app.MapGet("/usage", (IWebHostEnvironment env) =>
 app.MapGet("/p/{id}", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
     .AllowAnonymous();
+// الرابط المقروء: /p/{اسم-المنظمة}/{اسم-العرض} (فريد داخل المنظمة) — نفس صفحة المشاهدة.
+app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
+    Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
+    .AllowAnonymous();
 
 // /o/{slug} (and anything else with no matching static file or API route) still serves the
 // same single-page app — app.js reads the slug from location.pathname itself (see

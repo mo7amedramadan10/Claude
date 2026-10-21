@@ -1,4 +1,5 @@
 using System.Text;
+using ChatToDashboard.Api.Organizations;
 using ChatToDashboard.Api.Presentations;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -23,11 +24,38 @@ public class PresentationsController : ControllerBase
 
     private readonly PresentationStore _store;
     private readonly PermissionsService _permissions;
+    private readonly OrganizationStore _organizations;
 
-    public PresentationsController(PresentationStore store, PermissionsService permissions)
+    public PresentationsController(PresentationStore store, PermissionsService permissions, OrganizationStore organizations)
     {
         _store = store;
         _permissions = permissions;
+        _organizations = organizations;
+    }
+
+    private async Task<string?> OrgSlugAsync(string? organizationId, CancellationToken ct) =>
+        organizationId is null ? null : (await _organizations.FindByIdAsync(organizationId, ct))?.Slug;
+
+    private object Shape(Presentation p, AppUser user, string? orgSlug) => new
+    {
+        p.Id, p.Title, p.Slug, p.FileName, p.SizeBytes, p.CreatedByUserId, p.CreatedByName, p.CreatedAt, p.UpdatedAt, p.ExpiresAt, p.RevokedAt,
+        p.ViewCount, p.IsActive, canManage = CanManage(user, p), url = p.PublicPath(orgSlug),
+    };
+
+    /// <summary>اسم الرابط النهائي: المُدخل أو المشتق من العنوان، مع 409 إن كان مستخدمًا داخل المنظمة (ومقترح بديل).</summary>
+    private async Task<(string? Slug, IActionResult? Fail)> ResolveSlugAsync(string? organizationId, string? requested, string title, string? exceptId, CancellationToken ct)
+    {
+        var slug = PresentationSlug.Normalize(string.IsNullOrWhiteSpace(requested) ? title : requested);
+        if (slug.Length < 2) slug = "presentation";
+        if (!PresentationSlug.IsValid(slug))
+            return (null, BadRequest(new { error = "اسم الرابط يجب أن يكون حروفًا أو أرقامًا أو شرطات فقط (2–80 حرفًا)." }));
+        if (await _store.SlugTakenAsync(organizationId, slug, exceptId, ct))
+        {
+            var suggestion = slug; var n = 1;
+            while (await _store.SlugTakenAsync(organizationId, suggestion, exceptId, ct)) suggestion = $"{slug}-{++n}";
+            return (null, Conflict(new { error = $"اسم الرابط «{slug}» مستخدم في منظمتك — جرّب «{suggestion}».", suggestion }));
+        }
+        return (slug, null);
     }
 
     [HttpGet]
@@ -36,27 +64,82 @@ public class PresentationsController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var list = await _store.ListAsync(user.OrganizationId, ct);
-        return Ok(list.Select(p => new { p.Id, p.Title, p.FileName, p.SizeBytes, p.CreatedByUserId, p.CreatedByName, p.CreatedAt, p.UpdatedAt, p.ExpiresAt, p.RevokedAt, p.ViewCount, p.IsActive, canManage = CanManage(user, p) }));
+        var orgSlug = await OrgSlugAsync(user.OrganizationId, ct);
+        return Ok(new { orgSlug, items = list.Select(p => Shape(p, user, orgSlug)) });
+    }
+
+    /// <summary>هل اسم الرابط متاح داخل منظمة المستخدم؟ (للتحقق الحي أثناء الكتابة) — يعيد الاسم بعد التطبيع.</summary>
+    [HttpGet("slug-available")]
+    public async Task<IActionResult> SlugAvailable([FromQuery] string? slug, [FromQuery] string? exceptId, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var normalized = PresentationSlug.Normalize(slug);
+        if (!PresentationSlug.IsValid(normalized)) return Ok(new { slug = normalized, available = false, reason = "حروف وأرقام وشرطات فقط، من حرفين إلى 80." });
+        var taken = await _store.SlugTakenAsync(user.OrganizationId, normalized, exceptId, ct);
+        return Ok(new { slug = normalized, available = !taken, reason = taken ? "مستخدم في منظمتك." : null, orgSlug = await OrgSlugAsync(user.OrganizationId, ct) });
     }
 
     /// <summary>رفع عرض جديد: ملف .html/.htm واحد + عنوان + تاريخ انتهاء اختياري.</summary>
     [HttpPost]
     [RequestSizeLimit(MaxBytes + 1024 * 1024)]
-    public async Task<IActionResult> Create([FromForm] IFormFile? file, [FromForm] string? title, [FromForm] DateTime? expiresAt, CancellationToken ct)
+    public async Task<IActionResult> Create([FromForm] IFormFile? file, [FromForm] string? title, [FromForm] string? slug, [FromForm] DateTime? expiresAt, CancellationToken ct)
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var (html, error) = await ReadHtmlAsync(file, ct);
         if (error is not null) return BadRequest(new { error });
+        var finalTitle = string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(file!.FileName) : title.Trim();
+        var (finalSlug, fail) = await ResolveSlugAsync(user.OrganizationId, slug, finalTitle, null, ct);
+        if (fail is not null) return fail;
         var presentation = new Presentation
         {
             OrganizationId = user.OrganizationId, CreatedByUserId = user.Id, CreatedByName = user.DisplayName ?? user.Username,
-            Title = string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(file!.FileName) : title.Trim(),
+            Title = finalTitle, Slug = finalSlug,
             FileName = Path.GetFileName(file!.FileName), Html = html!, SizeBytes = Encoding.UTF8.GetByteCount(html!),
             ExpiresAt = expiresAt?.ToUniversalTime(),
         };
         await _store.SaveAsync(presentation, ct);
-        return Ok(new { presentation.Id, presentation.Title, url = $"/p/{presentation.Id}" });
+        var orgSlug = await OrgSlugAsync(user.OrganizationId, ct);
+        return Ok(new { presentation.Id, presentation.Title, presentation.Slug, orgSlug, url = presentation.PublicPath(orgSlug) });
+    }
+
+    public class SlugRequest { public string? Slug { get; set; } }
+
+    /// <summary>إعادة تسمية اسم الرابط (الرابط القديم بالاسم يتوقف؛ الرابط بالمعرّف يبقى).</summary>
+    [HttpPut("{id}/slug")]
+    public async Task<IActionResult> SetSlug(string id, [FromBody] SlugRequest request, CancellationToken ct)
+    {
+        var (user, p, fail) = await ManagedAsync(id, ct);
+        if (fail is not null) return fail;
+        var (slug, slugFail) = await ResolveSlugAsync(p!.OrganizationId, request.Slug, p.Title, id, ct);
+        if (slugFail is not null) return slugFail;
+        await _store.SetSlugAsync(id, slug!, ct);
+        var orgSlug = await OrgSlugAsync(user!.OrganizationId, ct);
+        return Ok(new { id, slug, url = $"/p/{orgSlug}/{slug}" });
+    }
+
+    /// <summary>العرض بالاسم داخل المنظمة (`/p/{org}/{slug}`) — بلا تسجيل دخول.</summary>
+    [HttpGet("by/{org}/{slug}/meta")]
+    [AllowAnonymous]
+    public async Task<IActionResult> MetaBySlug(string org, string slug, CancellationToken ct)
+    {
+        var p = await FindBySlugAsync(org, slug, ct);
+        return p is null ? NotFound(new { error = "الرابط غير موجود أو تم حذفه." }) : await Meta(p.Id, ct);
+    }
+
+    [HttpGet("by/{org}/{slug}/content")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ContentBySlug(string org, string slug, CancellationToken ct)
+    {
+        var p = await FindBySlugAsync(org, slug, ct);
+        return p is null ? NotFound() : await Content(p.Id, ct);
+    }
+
+    private async Task<Presentation?> FindBySlugAsync(string org, string slug, CancellationToken ct)
+    {
+        var organization = await _organizations.FindBySlugAsync(org, ct);
+        return organization is null ? null : await _store.GetBySlugAsync(organization.Id, slug, ct);
     }
 
     /// <summary>استبدال المحتوى بنسخة أحدث على نفس الرابط (صاحبه أو المسؤول).</summary>

@@ -8451,13 +8451,40 @@ async function loadShareList() {
 // ---------- العروض التقديمية (HTML مرفوع) — على مستوى المنظمة، رابط عام /p/{id} ----------
 // نفس شاشة «روابط المشاركة»: قائمة أعلى قائمة الروابط، ورفع من نافذة presentation-modal.
 // الرفع أو استبدال الملف عبر multipart إلى /api/presentations (أو PUT …/{id}/file).
-const PRES = { replaceId: null };
+const PRES = { replaceId: null, orgSlug: '', slugTouched: false, slugTimer: null };
+// تطبيع اسم الرابط في المتصفح مطابق لـ PresentationSlug.Normalize في الخادم (للمعاينة فقط؛ الخادم يحسم).
+function presSlugify(v) {
+  return (v || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '');
+}
+function presPublicUrl(p) { return `${location.origin}${p.url || `/p/${p.id}`}`; }
+async function presCheckSlug() {
+  const raw = el('presentation-slug').value || el('presentation-title').value;
+  const slug = presSlugify(raw); const box = el('presentation-slug-preview');
+  if (!slug) { box.textContent = ''; box.className = 'model-switch-note pres-slug-preview'; return; }
+  try {
+    const r = await (await fetch(`/api/presentations/slug-available?slug=${encodeURIComponent(slug)}`)).json();
+    if (r.orgSlug) PRES.orgSlug = r.orgSlug;
+    const url = `${location.origin}/p/${PRES.orgSlug}/${r.slug}`;
+    box.innerHTML = r.available ? `✓ ${esc(url)}` : `✗ ${esc(url)} — ${esc(r.reason || 'غير متاح')}`;
+    box.className = `model-switch-note pres-slug-preview ${r.available ? 'ok' : 'bad'}`;
+  } catch { box.textContent = ''; }
+}
+el('presentation-title').addEventListener('input', () => {
+  if (!PRES.slugTouched) el('presentation-slug').value = presSlugify(el('presentation-title').value);
+  clearTimeout(PRES.slugTimer); PRES.slugTimer = setTimeout(presCheckSlug, 350);
+});
+el('presentation-slug').addEventListener('input', () => {
+  PRES.slugTouched = el('presentation-slug').value.length > 0;
+  clearTimeout(PRES.slugTimer); PRES.slugTimer = setTimeout(presCheckSlug, 350);
+});
 async function loadPresentations() {
   const list = el('presentations-list');
   list.innerHTML = `<div class="repo-empty">جارٍ التحميل…</div>`;
   try {
     const res = await fetch('/api/presentations');
-    const items = res.ok ? await res.json() : [];
+    const data = res.ok ? await res.json() : { items: [] };
+    const items = data.items || [];
+    PRES.orgSlug = data.orgSlug || PRES.orgSlug;
     el('presentations-count').textContent = items.length ? `${items.length} عرض تقديمي` : 'لا توجد عروض تقديمية بعد';
     el('presentations-badge').textContent = items.length; el('presentations-badge').classList.toggle('hidden', !items.length);
     if (!items.length) {
@@ -8474,15 +8501,16 @@ async function loadPresentations() {
             <div class="fr-icon">📊</div>
             <div class="fr-text">
               <div class="fr-line1"><span class="fr-name">${esc(p.title)}</span></div>
-              <div class="fr-line2">${esc(p.fileName)} · ${(p.sizeBytes / 1024).toLocaleString('en-US', { maximumFractionDigits: 0 })} KB · ${esc(p.createdByName || '')}</div>
+              <div class="fr-line2"><span dir="ltr">${esc(presPublicUrl(p).replace(/^https?:\/\//, ''))}</span> · ${(p.sizeBytes / 1024).toLocaleString('en-US', { maximumFractionDigits: 0 })} KB · ${esc(p.createdByName || '')}</div>
             </div>
           </div>
           <div class="col-updated"><b>${relTime(p.createdAt)}</b>ينتهي: ${expiryText}</div>
           <div class="col-usage"><div class="num">${p.viewCount || 0}</div><div class="lbl">👁 مشاهدة</div></div>
           <div class="col-access"><span class="share-status-tag ${status.cls}">${status.label}</span></div>
           <div class="col-actions">
-            ${live ? `<a class="icon-btn" href="/p/${esc(p.id)}" target="_blank" rel="noopener" title="فتح العرض">↗</a>
-            <button class="icon-btn" data-pres-copy="${esc(p.id)}" title="نسخ الرابط">🔗</button>` : ''}
+            ${live ? `<a class="icon-btn" href="${esc(p.url || `/p/${p.id}`)}" target="_blank" rel="noopener" title="فتح العرض">↗</a>
+            <button class="icon-btn" data-pres-copy="${esc(p.id)}" data-url="${esc(presPublicUrl(p))}" title="نسخ الرابط">🔗</button>` : ''}
+            ${manage ? `<button class="icon-btn" data-pres-rename="${esc(p.id)}" data-slug="${esc(p.slug || '')}" title="تغيير اسم الرابط">✏️</button>` : ''}
             ${manage ? `<button class="icon-btn" data-pres-replace="${esc(p.id)}" title="استبدال الملف بنسخة أحدث على نفس الرابط">⬆️</button>` : ''}
             ${manage && live ? `<button class="icon-btn revoke-share-btn" data-pres-revoke="${esc(p.id)}" title="إلغاء الرابط">🚫</button>` : ''}
             ${manage && !live ? `<button class="icon-btn" data-pres-reactivate="${esc(p.id)}" title="إعادة تفعيل الرابط بلا انتهاء">🔄</button>` : ''}
@@ -8491,7 +8519,7 @@ async function loadPresentations() {
         </div>`;
     }).join('');
     list.querySelectorAll('[data-pres-copy]').forEach(btn => btn.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(`${location.origin}/p/${btn.dataset.presCopy}`); } catch {}
+      try { await navigator.clipboard.writeText(btn.dataset.url); } catch {}
       const original = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = original; }, 1200);
     }));
     list.querySelectorAll('[data-pres-revoke]').forEach(btn => btn.addEventListener('click', async () => {
@@ -8510,14 +8538,27 @@ async function loadPresentations() {
       await loadPresentations();
     }));
     list.querySelectorAll('[data-pres-replace]').forEach(btn => btn.addEventListener('click', () => openPresentationModal(btn.dataset.presReplace)));
+    list.querySelectorAll('[data-pres-rename]').forEach(btn => btn.addEventListener('click', async () => {
+      const slug = prompt('اسم الرابط الجديد (حروف وأرقام وشرطات، فريد داخل منظمتك):', btn.dataset.slug);
+      if (slug === null) return;
+      const res = await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presRename)}/slug`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug }),
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || `تعذّر التغيير (${res.status})`); return; }
+      await loadPresentations();
+    }));
   } catch {
     list.innerHTML = `<div class="repo-empty">تعذّر تحميل العروض.</div>`;
   }
 }
 function openPresentationModal(replaceId = null) {
   PRES.replaceId = replaceId;
+  const row = replaceId ? document.querySelector(`#presentations-list [data-pres-copy="${replaceId}"]`) : null;
+  el('presentation-link').value = row ? row.dataset.url : '';
   el('presentation-modal-title').textContent = replaceId ? 'استبدال ملف العرض' : 'رفع عرض تقديمي';
   el('presentation-title').value = ''; el('presentation-file').value = '';
+  el('presentation-slug').value = ''; el('presentation-slug-preview').textContent = ''; PRES.slugTouched = false;
+  el('presentation-slug-wrap').classList.toggle('hidden', !!replaceId);
   el('presentation-title').placeholder = replaceId ? 'اتركه فارغًا للإبقاء على العنوان الحالي' : 'مثال: عرض نتائج الربع الثالث';
   el('presentation-expiry-wrap').classList.toggle('hidden', !!replaceId);
   el('presentation-error').classList.add('hidden');
@@ -8536,6 +8577,7 @@ el('presentation-confirm').addEventListener('click', async () => {
   const fd = new FormData();
   fd.append('file', file);
   if (el('presentation-title').value.trim()) fd.append('title', el('presentation-title').value.trim());
+  if (!PRES.replaceId && el('presentation-slug').value.trim()) fd.append('slug', el('presentation-slug').value.trim());
   const hours = el('presentation-expiry').value;
   if (!PRES.replaceId && hours) fd.append('expiresAt', new Date(Date.now() + Number(hours) * 3600 * 1000).toISOString());
   const btn = el('presentation-confirm'); btn.disabled = true;
@@ -8543,9 +8585,13 @@ el('presentation-confirm').addEventListener('click', async () => {
     const res = PRES.replaceId
       ? await fetch(`/api/presentations/${encodeURIComponent(PRES.replaceId)}/file`, { method: 'PUT', body: fd })
       : await fetch('/api/presentations', { method: 'POST', body: fd });
-    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الرفع (${res.status})`); }
-    const id = PRES.replaceId || (await res.json()).id;
-    el('presentation-link').value = `${location.origin}/p/${id}`;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (err.suggestion) { el('presentation-slug').value = err.suggestion; PRES.slugTouched = true; presCheckSlug(); }
+      throw new Error(err.error || `فشل الرفع (${res.status})`);
+    }
+    const created = PRES.replaceId ? null : await res.json();
+    el('presentation-link').value = created ? `${location.origin}${created.url}` : (el('presentation-link').value || `${location.origin}/p/${PRES.replaceId}`);
     el('presentation-link-box').classList.remove('hidden');
     btn.textContent = '✓ تم';
     await loadPresentations();

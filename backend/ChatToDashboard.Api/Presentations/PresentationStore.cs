@@ -16,7 +16,7 @@ public class PresentationStore
     private string Table => _db.Provider == DbProvider.Sqlite ? "\"Presentations\"" : "[staging].[Presentations]";
 
     private const string Columns =
-        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount";
+        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -34,19 +34,57 @@ public class PresentationStore
             ? $"""
                CREATE TABLE IF NOT EXISTS {Table} (
                  "Id" TEXT PRIMARY KEY, "OrganizationId" TEXT, "CreatedByUserId" TEXT NOT NULL, "CreatedByName" TEXT,
-                 "Title" TEXT NOT NULL, "FileName" TEXT NOT NULL, "Html" TEXT NOT NULL, "SizeBytes" INTEGER NOT NULL,
+                 "Title" TEXT NOT NULL, "Slug" TEXT, "FileName" TEXT NOT NULL, "Html" TEXT NOT NULL, "SizeBytes" INTEGER NOT NULL,
                  "CreatedAt" TEXT NOT NULL, "UpdatedAt" TEXT NOT NULL, "ExpiresAt" TEXT, "RevokedAt" TEXT, "ViewCount" INTEGER NOT NULL DEFAULT 0)
                """
             : $"""
                IF OBJECT_ID('staging.Presentations') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(32) PRIMARY KEY, [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL, [CreatedByName] NVARCHAR(200),
-                 [Title] NVARCHAR(300) NOT NULL, [FileName] NVARCHAR(300) NOT NULL, [Html] NVARCHAR(MAX) NOT NULL, [SizeBytes] BIGINT NOT NULL,
+                 [Title] NVARCHAR(300) NOT NULL, [Slug] NVARCHAR(100), [FileName] NVARCHAR(300) NOT NULL, [Html] NVARCHAR(MAX) NOT NULL, [SizeBytes] BIGINT NOT NULL,
                  [CreatedAt] DATETIME2 NOT NULL, [UpdatedAt] DATETIME2 NOT NULL, [ExpiresAt] DATETIME2, [RevokedAt] DATETIME2, [ViewCount] INT NOT NULL DEFAULT 0)
                """;
-        await using var command = connection.CreateCommand();
-        command.CommandText = text;
-        await command.ExecuteNonQueryAsync(ct);
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = text;
+            await command.ExecuteNonQueryAsync(ct);
+        }
+        // ترحيل: عمود الاسم في الرابط (Slug) لجداول أُنشئت قبل وجوده — فريد داخل المنظمة (يُفرض في الكود).
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"Slug\" TEXT"
+                : $"ALTER TABLE {Table} ADD [Slug] NVARCHAR(100)";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
+    }
+
+    /// <summary>هل الاسم مستخدم داخل المنظمة (باستثناء عرض معيّن عند إعادة التسمية)؟</summary>
+    public async Task<bool> SlugTakenAsync(string? organizationId, string slug, string? exceptId = null, CancellationToken ct = default)
+    {
+        await EnsureSchemaOnceAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var sql = organizationId is null
+            ? $"SELECT COUNT(*) FROM {Table} WHERE OrganizationId IS NULL AND LOWER(Slug) = LOWER(@slug) AND (@exceptId IS NULL OR Id <> @exceptId)"
+            : $"SELECT COUNT(*) FROM {Table} WHERE OrganizationId = @organizationId AND LOWER(Slug) = LOWER(@slug) AND (@exceptId IS NULL OR Id <> @exceptId)";
+        return await connection.ExecuteScalarAsync<int>(sql, new { organizationId, slug, exceptId }) > 0;
+    }
+
+    public async Task<Presentation?> GetBySlugAsync(string organizationId, string slug, CancellationToken ct = default)
+    {
+        await EnsureSchemaOnceAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Presentation>(
+            $"SELECT {Columns} FROM {Table} WHERE OrganizationId = @organizationId AND LOWER(Slug) = LOWER(@slug)", new { organizationId, slug });
+    }
+
+    public async Task SetSlugAsync(string id, string slug, CancellationToken ct = default)
+    {
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {Table} SET Slug = @slug, UpdatedAt = @now WHERE Id = @id", new { id, slug, now = DateTime.UtcNow });
     }
 
     public async Task<Presentation> SaveAsync(Presentation p, CancellationToken ct = default)
@@ -57,8 +95,8 @@ public class PresentationStore
         p.ViewCount = 0;
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
-            $"INSERT INTO {Table} (Id, OrganizationId, CreatedByUserId, CreatedByName, Title, FileName, Html, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, ViewCount) " +
-            "VALUES (@Id, @OrganizationId, @CreatedByUserId, @CreatedByName, @Title, @FileName, @Html, @SizeBytes, @CreatedAt, @UpdatedAt, @ExpiresAt, @RevokedAt, 0)", p);
+            $"INSERT INTO {Table} (Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, Html, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, ViewCount) " +
+            "VALUES (@Id, @OrganizationId, @CreatedByUserId, @CreatedByName, @Title, @Slug, @FileName, @Html, @SizeBytes, @CreatedAt, @UpdatedAt, @ExpiresAt, @RevokedAt, 0)", p);
         return p;
     }
 

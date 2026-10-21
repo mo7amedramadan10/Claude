@@ -14,6 +14,9 @@ public class Presentation
     [JsonPropertyName("createdByUserId")] public string CreatedByUserId { get; set; } = "";
     [JsonPropertyName("createdByName")] public string? CreatedByName { get; set; }
     [JsonPropertyName("title")] public string Title { get; set; } = "";
+    /// <summary>الاسم في الرابط (`/p/{org}/{slug}`) — فريد داخل المنظمة كاسم المستودع في GitHub؛ null للعروض
+    /// القديمة التي تبقى على `/p/{id}`.</summary>
+    [JsonPropertyName("slug")] public string? Slug { get; set; }
     [JsonPropertyName("fileName")] public string FileName { get; set; } = "";
     /// <summary>محتوى الصفحة كاملًا — لا يُرجَع في القوائم، فقط في مسار المحتوى العام.</summary>
     [JsonIgnore] public string Html { get; set; } = "";
@@ -25,5 +28,27 @@ public class Presentation
     [JsonPropertyName("revokedAt")] public DateTime? RevokedAt { get; set; }
     [JsonPropertyName("viewCount")] public int ViewCount { get; set; }
 
+    /// <summary>المسار العام النسبي: بالاسم إن وُجد وإلا بالمعرّف.</summary>
+    public string PublicPath(string? orgSlug) =>
+        // الاسمان حروف وأرقام وشرطات فقط، فيُتركان بلا ترميز ليبقى الرابط العربي مقروءًا عند نسخه.
+        Slug is { Length: > 0 } && orgSlug is { Length: > 0 } ? $"/p/{orgSlug}/{Slug}" : $"/p/{Id}";
+
     [JsonPropertyName("isActive")] public bool IsActive => RevokedAt is null && (ExpiresAt is null || ExpiresAt > DateTime.UtcNow);
+}
+
+/// <summary>تطبيع اسم الرابط: حروف (بأي لغة) وأرقام وشرطات فقط، صغيرة، بلا شرطات متكررة، حتى 80 حرفًا.</summary>
+public static class PresentationSlug
+{
+    public const int MaxLength = 80;
+
+    public static string Normalize(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return "";
+        var cleaned = new string(input.Trim().ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
+        while (cleaned.Contains("--")) cleaned = cleaned.Replace("--", "-");
+        cleaned = cleaned.Trim('-');
+        return cleaned.Length > MaxLength ? cleaned[..MaxLength].Trim('-') : cleaned;
+    }
+
+    public static bool IsValid(string slug) => slug.Length is >= 2 and <= MaxLength && slug == Normalize(slug);
 }
