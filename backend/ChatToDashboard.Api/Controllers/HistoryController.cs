@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using ChatToDashboard.Api.History;
+using ChatToDashboard.Api.Projects;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Users;
 using ChatToDashboard.Api.Widgets;
@@ -20,17 +21,38 @@ public class HistoryController : ControllerBase
     private readonly DashboardAccessService _access;
     private readonly UserStore _users;
     private readonly WidgetQueryService _widgets;
+    private readonly ProjectStore _projects;
+    private readonly PermissionsService _permissions;
+    private readonly PublishedDashboardStore _published;
 
-    public HistoryController(HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets)
+    public HistoryController(
+        HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets,
+        ProjectStore projects, PermissionsService permissions, PublishedDashboardStore published)
     {
+        _published = published;
         _store = store;
         _access = access;
         _users = users;
         _widgets = widgets;
+        _projects = projects;
+        _permissions = permissions;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(Users.UserRoles.Admin);
+
+    /// <summary>The caller's currently selected project. An Admin always gets the
+    /// organization's first (default) project — still the only one actually wired into a
+    /// multi-project org's live workspace (see ProjectStore.FirstForOrganizationAsync's own
+    /// remarks). A plain "User" account instead gets the first project ProjectRoles actually
+    /// names them on, if any — so a user scoped to one project genuinely only ever sees that
+    /// project's history, even in an org that holds several. Falls back to the same
+    /// first-for-org default when they hold no project role at all (the common case before
+    /// that table existed), so no pre-existing account's behavior changes. Null only for an
+    /// account with no organization at all, which disables project filtering rather than
+    /// hiding everything.</summary>
+    private Task<string?> CurrentProjectIdAsync(CancellationToken ct) =>
+        _projects.ResolveCurrentProjectIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
 
     /// <summary>Saves a generated dashboard. Called right after the chat flow renders one.
     /// Always creates a Draft — promoting to Active is a separate, explicit step.</summary>
@@ -58,6 +80,8 @@ public class HistoryController : ControllerBase
             ActiveFiltersJson = request.ActiveFilters.ValueKind == System.Text.Json.JsonValueKind.Undefined
                 ? "{}"
                 : request.ActiveFilters.GetRawText(),
+            ProjectId = await CurrentProjectIdAsync(ct),
+            TemplateId = string.IsNullOrWhiteSpace(request.TemplateId) ? null : request.TemplateId.Trim(),
         };
 
         var saved = await _store.SaveAsync(entry, ct);
@@ -70,7 +94,8 @@ public class HistoryController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
-        var entries = await _store.ListAsync(UserId, ct: ct);
+        var projectId = await CurrentProjectIdAsync(ct);
+        var entries = await _store.ListAsync(UserId, projectId: projectId, ct: ct);
         var roles = await _store.GetMyRolesAsync(UserId, entries.Select(e => e.Id).ToList(), ct);
         var results = new List<object>();
         foreach (var entry in entries)
@@ -174,6 +199,47 @@ public class HistoryController : ControllerBase
     {
         await _store.ClearAsync(UserId, ct);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Creates an Active dashboard directly from an "interactive" (RenderKind) template —
+    /// INTERACTIVE-HANDOFF.md §1's "Use in project" action, kept entirely separate from the
+    /// normal chat/AI build pipeline since there are no ordinary widgets to generate: the
+    /// frontend instead mounts the template's own engine (network/workflow/marketplace, or
+    /// a §4.16+ one) against GET /api/projects/{projectId}/interactive/{templateId}/data.
+    /// Created Active immediately (never a Draft first) since an interactive dashboard's
+    /// whole point is being a live, shared, source-linked view from the start.
+    /// </summary>
+    [HttpPost("from-template")]
+    public async Task<IActionResult> CreateFromTemplate([FromBody] CreateFromTemplateRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.TemplateId)) return BadRequest(new { error = "templateId مطلوب." });
+        var template = ChatToDashboard.Api.Templates.BuiltinTemplates.Dashboards
+            .FirstOrDefault(d => d.Id == request.TemplateId);
+        if (template is null || string.IsNullOrWhiteSpace(template.RenderKind))
+            return BadRequest(new { error = "هذا النموذج ليس نموذجًا تفاعليًا." });
+
+        var entry = new DashboardHistoryEntry
+        {
+            UserId = UserId,
+            Question = $"📊 {template.Name}",
+            QueryDescription = template.Name,
+            Summary = template.Description,
+            WidgetsJson = "[]",
+            FiltersJson = "[]",
+            ActiveFiltersJson = "{}",
+            ProjectId = await CurrentProjectIdAsync(ct),
+            RenderKind = template.RenderKind,
+            TemplateId = template.Id,
+        };
+        var saved = await _store.SaveAsync(entry, ct);
+
+        var reason = await _access.CheckEligibilityAsync(UserId, saved.WidgetsJson, ct);
+        if (reason is not null) return BadRequest(new { error = reason });
+        await _store.ActivateAsync(saved.Id, UserId, ct);
+
+        var activated = await _store.GetByIdAsync(saved.Id, ct);
+        return Ok(await EnrichAsync(activated!, ct, "owner"));
     }
 
     /// <summary>Promotes a Draft the caller owns to Active — they become its Owner, which
@@ -296,7 +362,10 @@ public class HistoryController : ControllerBase
         if (entry is null || !entry.IsActive) return NotFound(new { error = "غير موجود" });
 
         var role = await ResolveRoleAsync(entry, ct);
-        if (role is null && !IsAdmin) return NotFound(new { error = "غير موجود" });
+        // §4.23: عضو المشروع الذي يعرض اللوحة من «اللوحات المنشورة» قد لا يحمل دورًا على
+        // اللوحة نفسها — يكفيه أن يسمح له جمهور النشر بها (المشاهدة فقط، تحت صلاحية المالك).
+        if (role is null && !IsAdmin && !await CanViewAsPublishedAsync(entry, ct))
+            return NotFound(new { error = "غير موجود" });
 
         if (string.IsNullOrWhiteSpace(entry.OwnerId))
             return Conflict(new { disabled = true, reason = "هذه اللوحة ليس لها مالك — لا يمكن تحديثها." });
@@ -314,7 +383,7 @@ public class HistoryController : ControllerBase
                          "قم بنقل الملكية إلى شخص يملك صلاحية الوصول.",
             });
 
-        var selection = PermissionsService.GetEffectiveSelection(owner, SourceSelection.AllEnabled());
+        var selection = await _permissions.GetEffectiveSelectionAsync(owner, SourceSelection.AllEnabled(), ct);
 
         JsonElement widget;
         try
@@ -364,6 +433,18 @@ public class HistoryController : ControllerBase
     /// <summary>"owner" | "editor" | "viewer" | null for a Draft or an Active dashboard the
     /// caller has no standing on. Admins are never blocked but are not implicitly a role
     /// holder either (kept separate — see IsAdmin checks at each call site).</summary>
+    /// <summary>هل اللوحة منشورة على المشروع الحالي للمستخدم بجمهور يشمل دوره فيه؟ (§4.23)</summary>
+    private async Task<bool> CanViewAsPublishedAsync(DashboardHistoryEntry entry, CancellationToken ct)
+    {
+        var projectId = await CurrentProjectIdAsync(ct);
+        if (projectId is null) return false;
+        var rows = await _published.ListForDashboardAsync(entry.Id, ct);
+        var row = rows.FirstOrDefault(r => r.ProjectId == projectId);
+        if (row is null) return false;
+        var myRole = (await _projects.ListRolesAsync(projectId, ct)).FirstOrDefault(r => r.UserId == UserId)?.Role;
+        return PublishedDashboardRules.CanView(row.Audience, myRole, IsAdmin);
+    }
+
     private Task<string?> ResolveRoleAsync(DashboardHistoryEntry entry, CancellationToken ct) =>
         _store.ResolveRoleAsync(UserId, entry, ct);
 
@@ -403,7 +484,7 @@ public class HistoryController : ControllerBase
         {
             entry.Id, entry.UserId, entry.Question, entry.QueryDescription, entry.Summary,
             entry.WidgetsJson, entry.FiltersJson, entry.ActiveFiltersJson, entry.CreatedAt,
-            entry.IsActive, entry.OwnerId, ownerName,
+            entry.IsActive, entry.OwnerId, entry.ProjectId, entry.RenderKind, entry.TemplateId, ownerName,
             myRole = entry.IsActive ? myRole : "owner",
             disabled, disabledReason,
         };

@@ -58,8 +58,8 @@ public class DataFolderLoader
             {
                 var table = LoadFileIntoDataTable(file);
                 var tableName = SanitizeTableName(Path.GetFileNameWithoutExtension(file));
-                await _db.RecreateAndLoadAsync(connection, tableName, table, ct);
-                var displayName = _db.DisplayTable(tableName);
+                await _db.RecreateAndLoadAsync(connection, null, tableName, table, ct);
+                var displayName = _db.DisplayTable(null, tableName);
                 results.Add(new LoadedTable(displayName, Path.GetFileName(file), table.Rows.Count));
                 _logger.LogInformation("Loaded {File} into {Table} ({Rows} rows)",
                     Path.GetFileName(file), displayName, table.Rows.Count);
@@ -72,8 +72,8 @@ public class DataFolderLoader
         return results;
     }
 
-    public Task<IReadOnlyList<TableSchema>> GetSchemaAsync(CancellationToken ct = default) =>
-        _db.GetSchemaAsync(ct);
+    public Task<IReadOnlyList<TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default) =>
+        _db.GetSchemaAsync(projectId, ct);
 
     public static string SanitizeTableName(string name)
     {

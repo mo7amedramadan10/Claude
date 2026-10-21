@@ -1,0 +1,355 @@
+using System.Linq;
+
+namespace ChatToDashboard.Api.Templates;
+
+public record BuiltinWidgetTemplate(string Id, string Category, string Icon, string Title, string Description, string Prompt);
+
+/// <summary>One of a dashboard template's sub-widgets. <paramref name="Prompt"/> is optional
+/// extra instruction text for this one widget specifically — appended to its title when the
+/// {{widgets}} variable is expanded (see TemplatePromptService.ResolveDashboardAsync).
+/// <paramref name="Page"/> is the reference design's own tab/page name for a multi-page
+/// template (null for a single-page one) — ChatController.Post reconciles the model's response
+/// against this list by literal title match and stamps each resulting DashboardWidget.Page from
+/// here, so the real tab bar never depends on the model echoing a page field itself.
+/// <paramref name="Table"/>/<paramref name="Sql"/> are a draft, auto-generated "expected" SELECT
+/// statement for this widget — an assumed table/column shape, not a real query ever executed as
+/// written — shown and editable in "مكتبة النماذج" admin so a platform-owner can correct it. Also
+/// this widget's "concept" for the field/table alias library (see ChatToDashboard.Api.SchemaLibrary):
+/// TemplatePromptService.ResolveAsync tries to resolve Table and the columns implied by Sql against
+/// every currently-enabled integration's real schema before the model ever sees the build request —
+/// a match becomes a strong prompt hint, never a requirement; the model still falls back to reading
+/// the real schema itself exactly as before when nothing matches.</summary>
+public record BuiltinDashboardWidgetSpec(
+    string Type, string Title, string? Prompt = null, string? Page = null,
+    string? Table = null, string? Sql = null);
+
+/// <summary><paramref name="DataboxRef"/> names the original https://databox.com/dashboard-examples
+/// template(s) this one is design-inspired by (comma-joined when several tool variants were
+/// merged into one, e.g. "SaaS Marketing Dashboard (CMO)") — null for every dashboard not
+/// sourced that way. Admin-only (see TemplatesController.AdminList/ToAdminItem): never reaches
+/// the public catalog or the AI prompt. Internal tracking only, not a claim of copied content —
+/// see IMPLEMENTATION.md's "لوحات معرض Databox" section for the legal note this mirrors.</summary>
+/// <paramref name="RenderKind"/> — null (the default) for every ordinary widget-grid dashboard
+/// template. Three other values mark a template whose "لوحة" isn't a widget grid at all but one
+/// of the "لوحات تفاعلية" live engines: "network" for the force-directed network engine (see
+/// wwwroot/js/network-graph.js + graph-drill.js), "workflow" for the SLA/workflow-map engine
+/// (wwwroot/js/workflow-graph.js), and "marketplace" for the Sankey-style flow engine
+/// (wwwroot/js/marketplace-graph.js). The public catalog passes this straight through so the
+/// frontend gallery knows which engine to mount for the thumbnail/demo preview instead of
+/// JR.mount (see app.js's dash-gallery code). "استخدم هذا النموذج" still goes through the same
+/// ask()-driven AI build as every other template (TemplatePromptService.ResolveDashboardAsync
+/// reads this entry's own Prompt exactly like any other) — the model currently has no way to
+/// emit a real network/workflow/marketplace shape from it, so it comes back as an ordinary
+/// widget-grid dashboard about the same topic, same as it would for any dashboard idea the model
+/// doesn't have a specialized widget type for. Widgets is empty for every non-null-RenderKind
+/// template — it has no 10-slot widget grid of its own to speak of.
+public record BuiltinDashboardTemplate(
+    string Id, string Layout, string Category, string Name, bool Popular, string Description,
+    string[] Sources, BuiltinDashboardWidgetSpec[] Widgets, string Prompt, string? DataboxRef = null,
+    string? RenderKind = null);
+
+/// <summary>The 8 chat-widget templates, 8 dashboard templates and 6 KPI measure-type prompts
+/// that shipped baked into wwwroot/js/app.js before the "مكتبة النماذج" admin screen — ported
+/// here verbatim so they remain each item's built-in default (what a platform-owner's "رجوع
+/// للنص الأصلي" reverts to, and what a never-touched item resolves to) once the frontend stopped
+/// carrying the prompt text itself (see TemplatePromptService, ChatController.Post).</summary>
+public static class BuiltinTemplates
+{
+    public static readonly IReadOnlyList<BuiltinWidgetTemplate> Widgets = new[]
+    {
+        new BuiltinWidgetTemplate("kpi-target-region", "kpi", "spark", "تحقيق المستهدف بالمناطق",
+            "نسبة الوفاء بالمستهدف لكل منطقة، مع أعلى وأقل منطقة أداءً.",
+            "أضف مؤشرًا يوضح نسبة تحقيق المستهدف موزّعة حسب المناطق، مع إبراز أعلى وأقل منطقة أداءً."),
+        new BuiltinWidgetTemplate("kpi-trend", "kpi", "up", "مؤشر رقمي مع اتجاه",
+            "أهم رقم عندك، مع نسبة تغيّره عن الفترة السابقة.",
+            "أضف مؤشرًا رقميًا لأهم قيمة في بياناتي، مع نسبة التغيّر مقارنة بالفترة السابقة."),
+        new BuiltinWidgetTemplate("chart-growth", "chart", "chart", "نمو العملاء الجدد",
+            "رسم خطي لعدد العملاء الجدد شهريًا خلال آخر سنة.",
+            "أضف رسمًا بيانيًا خطيًا يوضح نمو عدد العملاء الجدد شهريًا خلال آخر 12 شهرًا."),
+        new BuiltinWidgetTemplate("chart-yoy", "chart", "calendar", "مقارنة سنوية",
+            "أهم مؤشر عندك مقارنًا شهريًا بنفس الفترة من السنة السابقة.",
+            "أضف رسمًا بيانيًا يقارن أهم مؤشر في بياناتي بين هذه السنة والسنة السابقة شهريًا."),
+        new BuiltinWidgetTemplate("chart-funnel", "chart", "filter", "مراحل الصفقات",
+            "توزيع الصفقات أو الطلبات على مراحلها كقمع.",
+            "أضف رسم قمع (funnel) يوضح توزيع الصفقات أو الطلبات على مراحلها المختلفة."),
+        new BuiltinWidgetTemplate("chart-channels", "chart", "share", "توزيع قنوات البيع",
+            "رسم دائري لحصة كل قناة أو مصدر من إجمالي المبيعات.",
+            "أضف رسمًا دائريًا (donut) يوضح توزيع المبيعات أو الطلبات حسب القناة أو المصدر."),
+        new BuiltinWidgetTemplate("table-top", "table", "list", "أعلى العناصر أداءً",
+            "جدول لأعلى 10 عناصر (منتجات/عملاء/فروع) مع قيمها ونموها.",
+            "أضف جدولًا يعرض أعلى 10 عناصر (منتجات أو عملاء أو فروع حسب بياناتي) أداءً، مع قيمها ونسبة نموها."),
+        new BuiltinWidgetTemplate("table-status", "table", "grid", "ملخص الحالة",
+            "جدول يلخّص توزيع السجلات حسب حالتها، بالعدد والنسبة.",
+            "أضف جدولًا يلخّص توزيع السجلات حسب حالتها (مثل: مكتمل، قيد التنفيذ، ملغى)، مع العدد والنسبة لكل حالة."),
+    };
+
+    public static readonly IReadOnlyList<BuiltinDashboardTemplate> Dashboards = new[]
+    {
+        new BuiltinDashboardTemplate("sales-exec", "a", "sales", "أداء المبيعات التنفيذي", true,
+            "نظرة شاملة للإدارة العليا على المبيعات والمستهدفات والمناطق.",
+            new[] { "ERP المبيعات", "المستهدفات" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "إجمالي المبيعات", Table: "staging_sales", Sql: "SELECT SUM(Amount) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("kpi", "عدد الطلبات", Table: "staging_sales", Sql: "SELECT COUNT(*) AS value FROM staging_sales"),
+                new BuiltinDashboardWidgetSpec("kpi", "متوسط قيمة الطلب", Table: "staging_sales", Sql: "SELECT SUM(Amount) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("kpi", "نسبة تحقيق المستهدف", Table: "staging_sales", Sql: "SELECT AVG(RateAttainmentTarget) AS value FROM staging_sales"),
+                new BuiltinDashboardWidgetSpec("line", "المبيعات الشهرية", Table: "staging_sales", Sql: "SELECT SUM(Amount) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("donut", "التوزيع حسب القطاع", Table: "staging_sales", Sql: "SELECT Sector, SUM(Distribution) AS value FROM staging_sales GROUP BY Sector"),
+                new BuiltinDashboardWidgetSpec("hbars", "المبيعات حسب المنطقة", Table: "staging_sales", Sql: "SELECT Region, SUM(Amount) AS value FROM staging_sales GROUP BY Region"), new BuiltinDashboardWidgetSpec("cbars", "مقارنة ربع سنوية", Table: "staging_sales", Sql: "SELECT SUM(ComparisonQuarterly) AS value FROM staging_sales"),
+                new BuiltinDashboardWidgetSpec("table", "أعلى المنتجات", Table: "staging_sales", Sql: "SELECT COUNT(*) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("funnel", "مراحل الصفقات", Table: "staging_sales", Sql: "SELECT SUM(StagesDeals) AS value FROM staging_sales"),
+            },
+            "ابنِ لي لوحة أداء مبيعات تنفيذية كاملة تتضمن: 1) إجمالي المبيعات كمؤشر رقمي مع نسبة النمو عن الفترة السابقة، 2) عدد الطلبات كمؤشر رقمي، 3) متوسط قيمة الطلب كمؤشر رقمي، 4) نسبة تحقيق المستهدف كمؤشر رقمي، 5) رسم خطي للمبيعات الشهرية خلال آخر 12 شهرًا، 6) رسم دائري لتوزيع المبيعات حسب القطاع، 7) رسم أعمدة أفقي للمبيعات حسب المنطقة، 8) رسم أعمدة يقارن المبيعات ربعيًا بين هذا العام والعام السابق، 9) جدول لأعلى 10 منتجات مبيعًا، 10) رسم قمع لمراحل الصفقات من عرض السعر حتى الإغلاق."),
+        new BuiltinDashboardTemplate("pmo", "b", "projects", "متابعة المشاريع والمبادرات", true,
+            "حالة المشاريع ونسب الإنجاز والميزانيات والمخاطر لمكتب إدارة المشاريع.",
+            new[] { "نظام المشاريع", "الميزانية" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "المشاريع النشطة", Table: "staging_projects", Sql: "SELECT SUM(ProjectsActive) AS value FROM staging_projects"), new BuiltinDashboardWidgetSpec("kpi", "متوسط الإنجاز", Table: "staging_projects", Sql: "SELECT SUM(AverageCompletion) AS value FROM staging_projects"),
+                new BuiltinDashboardWidgetSpec("kpi", "مشاريع متأخرة", Table: "staging_projects", Sql: "SELECT SUM(ProjectsOverdue) AS value FROM staging_projects"), new BuiltinDashboardWidgetSpec("kpi", "الصرف من الميزانية", Table: "staging_budget", Sql: "SELECT SUM(ActualAmount) AS value FROM staging_budget"),
+                new BuiltinDashboardWidgetSpec("line", "نسبة الإنجاز التراكمية", Table: "staging_projects", Sql: "SELECT AVG(RateCompletionCumulative) AS value FROM staging_projects"), new BuiltinDashboardWidgetSpec("donut", "المشاريع حسب الحالة", Table: "staging_projects", Sql: "SELECT Status, SUM(Projects) AS value FROM staging_projects GROUP BY Status"),
+                new BuiltinDashboardWidgetSpec("hbars", "الإنجاز حسب القطاع", Table: "staging_projects", Sql: "SELECT Sector, SUM(Completion) AS value FROM staging_projects GROUP BY Sector"), new BuiltinDashboardWidgetSpec("cbars", "الميزانية: المخطط مقابل الفعلي", Table: "staging_budget", Sql: "SELECT Actual, SUM(ActualAmount) AS value FROM staging_budget GROUP BY Actual"),
+                new BuiltinDashboardWidgetSpec("table", "المشاريع الأعلى مخاطرة", Table: "staging_projects", Sql: "SELECT COUNT(*) AS value FROM staging_projects"), new BuiltinDashboardWidgetSpec("funnel", "مراحل المبادرات", Table: "staging_project_management", Sql: "SELECT SUM(Stages) AS value FROM staging_project_management"),
+            },
+            "ابنِ لي لوحة متابعة مشاريع ومبادرات كاملة تتضمن: 1) عدد المشاريع النشطة كمؤشر رقمي، 2) متوسط نسبة الإنجاز كمؤشر رقمي، 3) عدد المشاريع المتأخرة كمؤشر رقمي، 4) نسبة الصرف من الميزانية كمؤشر رقمي، 5) رسم خطي لنسبة الإنجاز التراكمية شهريًا، 6) رسم دائري لتوزيع المشاريع حسب حالتها (في المسار/تحت المراقبة/متأخر)، 7) رسم أعمدة أفقي لمتوسط الإنجاز حسب القطاع أو الإدارة، 8) رسم أعمدة يقارن الميزانية المخططة بالفعلية لكل ربع، 9) جدول لأعلى المشاريع مخاطرة من حيث التأخير، 10) رسم قمع لمراحل المبادرات من الفكرة حتى الإغلاق."),
+        new BuiltinDashboardTemplate("hr", "c", "hr", "الموارد البشرية والقوى العاملة", false,
+            "التوظيف والدوران الوظيفي والحضور والتوطين في لوحة واحدة.",
+            new[] { "نظام الموارد البشرية", "الحضور" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "إجمالي الموظفين", Table: "staging_hr", Sql: "SELECT COUNT(*) AS value FROM staging_hr"), new BuiltinDashboardWidgetSpec("kpi", "نسبة التوطين", Table: "staging_human_resources", Sql: "SELECT AVG(Rate) AS value FROM staging_human_resources"),
+                new BuiltinDashboardWidgetSpec("kpi", "معدل الدوران", Table: "staging_hr", Sql: "SELECT AVG(RateTurnover) AS value FROM staging_hr"), new BuiltinDashboardWidgetSpec("kpi", "نسبة الحضور", Table: "staging_hr", Sql: "SELECT AVG(RateAttendance) AS value FROM staging_hr"),
+                new BuiltinDashboardWidgetSpec("line", "عدد الموظفين شهريًا", Table: "staging_hr", Sql: "SELECT COUNT(*) AS value FROM staging_hr"), new BuiltinDashboardWidgetSpec("donut", "التوزيع حسب الفئة", Table: "staging_human_resources", Sql: "SELECT Category, SUM(Distribution) AS value FROM staging_human_resources GROUP BY Category"),
+                new BuiltinDashboardWidgetSpec("hbars", "الموظفون حسب الإدارة", Table: "staging_hr", Sql: "SELECT Department, SUM(Employees) AS value FROM staging_hr GROUP BY Department"), new BuiltinDashboardWidgetSpec("cbars", "التعيينات مقابل الاستقالات", Table: "staging_hr", Sql: "SELECT Value, SUM(Hires) AS value FROM staging_hr GROUP BY Value"),
+                new BuiltinDashboardWidgetSpec("table", "وظائف شاغرة طويلة", Table: "staging_human_resources", Sql: "SELECT SUM(Value) AS value FROM staging_human_resources"), new BuiltinDashboardWidgetSpec("heat", "الغياب حسب اليوم", Table: "staging_hr", Sql: "SELECT Today, SUM(Absence) AS value FROM staging_hr GROUP BY Today"),
+            },
+            "ابنِ لي لوحة موارد بشرية وقوى عاملة كاملة تتضمن: 1) إجمالي عدد الموظفين كمؤشر رقمي، 2) نسبة التوطين كمؤشر رقمي، 3) معدل الدوران الوظيفي كمؤشر رقمي، 4) نسبة الحضور كمؤشر رقمي، 5) رسم خطي لعدد الموظفين شهريًا (صافي بعد التعيين والاستقالات)، 6) رسم دائري لتوزيع الموظفين حسب الفئة الوظيفية، 7) رسم أعمدة أفقي لعدد الموظفين حسب الإدارة، 8) رسم أعمدة يقارن عدد التعيينات بالاستقالات لكل ربع، 9) جدول بالوظائف الشاغرة لأكثر من 60 يومًا، 10) خريطة حرارية للغياب حسب أيام الأسبوع."),
+        new BuiltinDashboardTemplate("finance", "d", "finance", "المالية والميزانية", false,
+            "الإيرادات والمصروفات والتدفق النقدي والانحراف عن الميزانية.",
+            new[] { "النظام المالي", "الميزانية" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "الإيرادات", Table: "staging_revenue", Sql: "SELECT SUM(RevenueAmount) AS value FROM staging_revenue"), new BuiltinDashboardWidgetSpec("kpi", "المصروفات", Table: "staging_expenses", Sql: "SELECT SUM(ExpenseAmount) AS value FROM staging_expenses"),
+                new BuiltinDashboardWidgetSpec("kpi", "صافي الربح", Table: "staging_finance", Sql: "SELECT SUM(NetProfit) AS value FROM staging_finance"), new BuiltinDashboardWidgetSpec("kpi", "الانحراف عن الميزانية", Table: "staging_budget", Sql: "SELECT SUM(ActualAmount) AS value FROM staging_budget"),
+                new BuiltinDashboardWidgetSpec("line", "التدفق النقدي الشهري", Table: "staging_finance", Sql: "SELECT SUM(FlowCashMonthly) AS value FROM staging_finance"), new BuiltinDashboardWidgetSpec("donut", "المصروفات حسب البند", Table: "staging_expenses", Sql: "SELECT Value, SUM(ExpenseAmount) AS value FROM staging_expenses GROUP BY Value"),
+                new BuiltinDashboardWidgetSpec("hbars", "الإيرادات حسب النشاط", Table: "staging_revenue", Sql: "SELECT Activity, SUM(RevenueAmount) AS value FROM staging_revenue GROUP BY Activity"), new BuiltinDashboardWidgetSpec("cbars", "الميزانية مقابل الفعلي", Table: "staging_budget", Sql: "SELECT Actual, SUM(ActualAmount) AS value FROM staging_budget GROUP BY Actual"),
+                new BuiltinDashboardWidgetSpec("table", "أكبر المستحقات", Table: "staging_finance", Sql: "SELECT SUM(Largest) AS value FROM staging_finance"), new BuiltinDashboardWidgetSpec("funnel", "دورة التحصيل", Table: "staging_finance", Sql: "SELECT SUM(CycleCollection) AS value FROM staging_finance"),
+            },
+            "ابنِ لي لوحة مالية وميزانية كاملة تتضمن: 1) إجمالي الإيرادات كمؤشر رقمي مع نسبة النمو، 2) إجمالي المصروفات كمؤشر رقمي، 3) صافي الربح كمؤشر رقمي، 4) نسبة الانحراف عن الميزانية كمؤشر رقمي، 5) رسم خطي للتدفق النقدي الشهري، 6) رسم دائري لتوزيع المصروفات حسب البند، 7) رسم أعمدة أفقي للإيرادات حسب النشاط أو الخط التجاري، 8) رسم أعمدة يقارن الميزانية المخططة بالمصروفات الفعلية ربعيًا، 9) جدول لأكبر المستحقات المتأخرة السداد، 10) رسم قمع لدورة التحصيل من الفاتورة حتى التحصيل."),
+        new BuiltinDashboardTemplate("procurement", "c", "procurement", "المشتريات والموردين", false,
+            "أوامر الشراء وأداء الموردين ودورة الاعتماد والتوفير المحقق.",
+            new[] { "نظام المشتريات" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "أوامر الشراء", Table: "staging_procurement", Sql: "SELECT SUM(Amount) AS value FROM staging_procurement"), new BuiltinDashboardWidgetSpec("kpi", "قيمة المشتريات", Table: "staging_procurement", Sql: "SELECT SUM(Amount) AS value FROM staging_procurement"),
+                new BuiltinDashboardWidgetSpec("kpi", "متوسط مدة الاعتماد", Table: "staging_procurement", Sql: "SELECT AVG(AverageDuration) AS value FROM staging_procurement"), new BuiltinDashboardWidgetSpec("kpi", "التوفير المحقق", Table: "staging_procurement", Sql: "SELECT SUM(Savings) AS value FROM staging_procurement"),
+                new BuiltinDashboardWidgetSpec("line", "قيمة المشتريات الشهرية", Table: "staging_procurement", Sql: "SELECT SUM(Amount) AS value FROM staging_procurement"), new BuiltinDashboardWidgetSpec("donut", "المشتريات حسب الفئة", Table: "staging_procurement", Sql: "SELECT Category, SUM(Amount) AS value FROM staging_procurement GROUP BY Category"),
+                new BuiltinDashboardWidgetSpec("hbars", "أعلى الموردين", Table: "staging_procurement", Sql: "SELECT COUNT(*) AS value FROM staging_procurement"), new BuiltinDashboardWidgetSpec("cbars", "التسليم في الموعد", Table: "staging_procurement", Sql: "SELECT SUM(DeliveryIn) AS value FROM staging_procurement"),
+                new BuiltinDashboardWidgetSpec("table", "تقييم الموردين", Table: "staging_procurement", Sql: "SELECT AVG(Amount) AS value FROM staging_procurement"), new BuiltinDashboardWidgetSpec("funnel", "دورة الشراء", Table: "staging_procurement", Sql: "SELECT SUM(Amount) AS value FROM staging_procurement"),
+            },
+            "ابنِ لي لوحة مشتريات وموردين كاملة تتضمن: 1) عدد أوامر الشراء كمؤشر رقمي، 2) إجمالي قيمة المشتريات كمؤشر رقمي، 3) متوسط مدة دورة الاعتماد كمؤشر رقمي، 4) قيمة التوفير المحقق كمؤشر رقمي، 5) رسم خطي لقيمة المشتريات الشهرية، 6) رسم دائري لتوزيع المشتريات حسب الفئة، 7) رسم أعمدة أفقي لأعلى الموردين من حيث قيمة التعاملات، 8) رسم أعمدة يقارن عدد الأوامر المسلّمة في الموعد بالمتأخرة لكل ربع، 9) جدول لتقييم الموردين من حيث الجودة والالتزام، 10) رسم قمع لدورة الشراء من طلب الشراء حتى الاستلام."),
+        new BuiltinDashboardTemplate("cx", "b", "cx", "تجربة العملاء والشكاوى", false,
+            "رضا العملاء وزمن الاستجابة والشكاوى حسب القناة والسبب.",
+            new[] { "نظام التذاكر", "الاستبيانات" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "رضا العملاء", Table: "staging_customer_service", Sql: "SELECT AVG(SatisfactionCustomers) AS value FROM staging_customer_service"), new BuiltinDashboardWidgetSpec("kpi", "التذاكر المفتوحة", Table: "staging_customer_service", Sql: "SELECT SUM(TicketsOpen) AS value FROM staging_customer_service"),
+                new BuiltinDashboardWidgetSpec("kpi", "زمن أول رد", Table: "staging_customer_service", Sql: "SELECT AVG(TimeFirst) AS value FROM staging_customer_service"), new BuiltinDashboardWidgetSpec("kpi", "مؤشر التوصية NPS", Table: "staging_customer_service", Sql: "SELECT AVG(IndexNPS) AS value FROM staging_customer_service"),
+                new BuiltinDashboardWidgetSpec("line", "التذاكر الواردة", Table: "staging_customer_service", Sql: "SELECT SUM(Tickets) AS value FROM staging_customer_service"), new BuiltinDashboardWidgetSpec("donut", "التذاكر حسب القناة", Table: "staging_customer_service", Sql: "SELECT Channel, SUM(Tickets) AS value FROM staging_customer_service GROUP BY Channel"),
+                new BuiltinDashboardWidgetSpec("hbars", "أسباب الشكاوى", Table: "staging_customer_service", Sql: "SELECT SUM(Reasons) AS value FROM staging_customer_service"), new BuiltinDashboardWidgetSpec("cbars", "الالتزام بمستوى الخدمة", Table: "staging_customer_service", Sql: "SELECT AVG(ComplianceService) AS value FROM staging_customer_service"),
+                new BuiltinDashboardWidgetSpec("table", "أداء الفرق", Table: "staging_customer_service", Sql: "SELECT SUM(Performance) AS value FROM staging_customer_service"), new BuiltinDashboardWidgetSpec("heat", "أوقات الذروة", Table: "staging_customer_service", Sql: "SELECT SUM(Value) AS value FROM staging_customer_service"),
+            },
+            "ابنِ لي لوحة تجربة عملاء وشكاوى كاملة تتضمن: 1) نسبة رضا العملاء كمؤشر رقمي، 2) عدد التذاكر المفتوحة كمؤشر رقمي، 3) متوسط زمن أول رد كمؤشر رقمي، 4) مؤشر التوصية NPS كمؤشر رقمي، 5) رسم خطي لعدد التذاكر الواردة شهريًا، 6) رسم دائري لتوزيع التذاكر حسب القناة، 7) رسم أعمدة أفقي لأسباب الشكاوى الأكثر تكرارًا، 8) رسم أعمدة يقارن الالتزام المستهدف بمستوى الخدمة بالفعلي لكل ربع، 9) جدول بأداء فرق الدعم (تذاكر محلولة ونسبة الرضا)، 10) خريطة حرارية لأوقات ذروة التذاكر حسب اليوم والساعة."),
+        new BuiltinDashboardTemplate("ops", "d", "ops", "العمليات والتشغيل", false,
+            "الإنتاجية وجاهزية الأصول وأوامر العمل والصيانة.",
+            new[] { "نظام التشغيل", "الصيانة" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "أوامر العمل المنجزة", Table: "staging_operations", Sql: "SELECT SUM(OrdersWork) AS value FROM staging_operations"), new BuiltinDashboardWidgetSpec("kpi", "جاهزية الأصول", Table: "staging_operations", Sql: "SELECT SUM(Value) AS value FROM staging_operations"),
+                new BuiltinDashboardWidgetSpec("kpi", "أعطال حرجة", Table: "staging_operations", Sql: "SELECT SUM(Value) AS value FROM staging_operations"), new BuiltinDashboardWidgetSpec("kpi", "تكلفة الصيانة", Table: "staging_operations", Sql: "SELECT SUM(CostMaintenance) AS value FROM staging_operations"),
+                new BuiltinDashboardWidgetSpec("line", "الإنتاجية اليومية", Table: "staging_operations", Sql: "SELECT SUM(Daily) AS value FROM staging_operations"), new BuiltinDashboardWidgetSpec("donut", "أوامر العمل حسب النوع", Table: "staging_operations", Sql: "SELECT Type, SUM(OrdersWork) AS value FROM staging_operations GROUP BY Type"),
+                new BuiltinDashboardWidgetSpec("hbars", "الأعطال حسب الموقع", Table: "staging_operations", Sql: "SELECT Site, SUM(Value) AS value FROM staging_operations GROUP BY Site"), new BuiltinDashboardWidgetSpec("cbars", "المخطط مقابل المنفذ", Table: "staging_operations", Sql: "SELECT Value, SUM(Planned) AS value FROM staging_operations GROUP BY Value"),
+                new BuiltinDashboardWidgetSpec("table", "الأصول الأكثر توقفًا", Table: "staging_operations", Sql: "SELECT SUM(Value) AS value FROM staging_operations"), new BuiltinDashboardWidgetSpec("heat", "الأعطال حسب الوردية", Table: "staging_operations", Sql: "SELECT Shift, SUM(Value) AS value FROM staging_operations GROUP BY Shift"),
+            },
+            "ابنِ لي لوحة عمليات وتشغيل كاملة تتضمن: 1) عدد أوامر العمل المنجزة كمؤشر رقمي، 2) نسبة جاهزية الأصول كمؤشر رقمي، 3) عدد الأعطال الحرجة كمؤشر رقمي، 4) تكلفة الصيانة كمؤشر رقمي، 5) رسم خطي للإنتاجية اليومية، 6) رسم دائري لتوزيع أوامر العمل حسب النوع (وقائية/تصحيحية/طارئة)، 7) رسم أعمدة أفقي للأعطال حسب الموقع، 8) رسم أعمدة يقارن أوامر الصيانة الوقائية المخططة بالمنفذة لكل ربع، 9) جدول بالأصول الأكثر توقفًا من حيث ساعات التوقف، 10) خريطة حرارية للأعطال حسب الوردية."),
+        new BuiltinDashboardTemplate("marketing", "b", "sales", "التسويق والحملات", false,
+            "أداء الحملات والعملاء المحتملين وتكلفة الاستحواذ والعائد.",
+            new[] { "CRM", "منصات الإعلان" },
+            new[] {
+                new BuiltinDashboardWidgetSpec("kpi", "العملاء المحتملون", Table: "staging_sales", Sql: "SELECT SUM(Customers) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("kpi", "معدل التحويل", Table: "staging_sales", Sql: "SELECT AVG(RateConversion) AS value FROM staging_sales"),
+                new BuiltinDashboardWidgetSpec("kpi", "تكلفة الاستحواذ", Table: "staging_sales", Sql: "SELECT SUM(Cost) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("kpi", "العائد على الإنفاق", Table: "staging_expenses", Sql: "SELECT SUM(ExpenseAmount) AS value FROM staging_expenses"),
+                new BuiltinDashboardWidgetSpec("line", "العملاء المحتملون شهريًا", Table: "staging_sales", Sql: "SELECT SUM(CustomersMonthly) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("donut", "المصادر", Table: "staging_sales", Sql: "SELECT SUM(Value) AS value FROM staging_sales"),
+                new BuiltinDashboardWidgetSpec("hbars", "أفضل الحملات", Table: "staging_sales", Sql: "SELECT SUM(Value) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("cbars", "الإنفاق مقابل الإيراد", Table: "staging_revenue", Sql: "SELECT Revenue, SUM(RevenueAmount) AS value FROM staging_revenue GROUP BY Revenue"),
+                new BuiltinDashboardWidgetSpec("table", "أداء القنوات", Table: "staging_sales", Sql: "SELECT SUM(PerformanceChannels) AS value FROM staging_sales"), new BuiltinDashboardWidgetSpec("funnel", "رحلة العميل", Table: "staging_sales", Sql: "SELECT SUM(Value) AS value FROM staging_sales"),
+            },
+            "ابنِ لي لوحة تسويق وحملات كاملة تتضمن: 1) عدد العملاء المحتملين كمؤشر رقمي، 2) معدل التحويل كمؤشر رقمي، 3) تكلفة اكتساب العميل كمؤشر رقمي، 4) العائد على الإنفاق التسويقي كمؤشر رقمي، 5) رسم خطي لعدد العملاء المحتملين شهريًا، 6) رسم دائري لتوزيع العملاء المحتملين حسب المصدر، 7) رسم أعمدة أفقي لأفضل الحملات من حيث العائد، 8) رسم أعمدة يقارن الإنفاق التسويقي بالإيراد الناتج لكل ربع، 9) جدول بأداء القنوات التسويقية (عدد العملاء ونسبة التحويل)، 10) رسم قمع لرحلة العميل من الزيارة حتى الشراء."),
+        // أول "لوحة تفاعلية" (RenderKind "network") — انظر تعليق BuiltinDashboardTemplate. Widgets
+        // فاضية عمدًا (لا توجد شبكة 10 عناصر ثابتة هنا). "استخدم هذا النموذج" يبني عبر ask() بنفس
+        // مسار أي لوحة أخرى — الموديل لسه ملوش شكل "شبكة" يتعامل معاه، فالنص هنا مكتوب بصيغة
+        // لوحة مؤشرات/رسوم عادية (نفس أسلوب باقي اللوحات فوق) حتى يخرج بناء متماسك بدل تعليمات
+        // شبكية (النزول داخل عقدة... إلخ) محاولاً تنفيذها بمحرك مش موجود عنده.
+        new BuiltinDashboardTemplate("policy-network", "a", "network", "شبكة الأنظمة واللوائح", false,
+            "كل نظام كشبكة حية: اللوائح التي تفصّله، والجهات المُلزمة به، والمنصات التي يُنفَّذ عبرها، والشكاوى التي تنشأ عنه.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي لوحة متابعة أنظمة ولوائح كاملة تتضمن: 1) عدد الأنظمة واللوائح النشطة كمؤشر رقمي، 2) عدد الجهات المُلزمة بها كمؤشر رقمي، 3) عدد الشكاوى المرتبطة خلال آخر 12 شهرًا كمؤشر رقمي، 4) متوسط نسبة امتثال الجهات كمؤشر رقمي، 5) رسم خطي للشكاوى الشهرية، 6) رسم دائري لتوزيع الشكاوى حسب حالتها، 7) رسم أعمدة أفقي للشكاوى حسب الجهة، 8) رسم أعمدة يقارن نسبة الامتثال المستهدفة بالفعلية لكل ربع، 9) جدول بأعلى الأنظمة واللوائح من حيث عدد الشكاوى المرتبطة، 10) رسم قمع لمراحل معالجة الشكوى من التسجيل حتى الإغلاق.",
+            RenderKind: "network"),
+        // ثاني "لوحة تفاعلية" — نفس ملاحظات الأولى فوق (Widgets فاضية، والنص بصيغة لوحة عادية
+        // لأن ask() يمر بنفس مسار أي قالب آخر).
+        new BuiltinDashboardTemplate("procurement-network", "a", "network", "شبكة العملاء وطلبات الشراء", false,
+            "طلبات الشراء من كل عميل: فئتها، الموردون المتنافسون عليها، أمر الشراء الصادر، والتعثرات التي تعطّلها.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي لوحة متابعة طلبات شراء كاملة تتضمن: 1) عدد الطلبات المفتوحة كمؤشر رقمي، 2) القيمة الإجمالية للطلبات المفتوحة كمؤشر رقمي، 3) عدد الطلبات المتعثرة كمؤشر رقمي، 4) متوسط الالتزام بمدة الخدمة كمؤشر رقمي، 5) رسم قمع لمراحل الطلب من التقديم حتى التسليم، 6) رسم خطي للطلبات الجديدة شهريًا، 7) رسم أعمدة أفقي لقيمة الطلبات حسب الفئة، 8) رسم خطي يقارن الالتزام بمدة الخدمة بالمستهدف شهريًا، 9) جدول بأقدم الطلبات المفتوحة عمرًا وحالتها، 10) رسم دائري لتوزيع الطلبات حسب العميل.",
+            RenderKind: "network"),
+        new BuiltinDashboardTemplate("client-supplier-network", "a", "network", "شبكة العملاء والموردين", false,
+            "العلاقات بين العملاء والموردين عبر منصة المشتريات: المشاريع التي تجمعهم، وأين يتركز التأخير.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي لوحة متابعة علاقات عملاء وموردين كاملة تتضمن: 1) عدد العملاء كمؤشر رقمي، 2) عدد الموردين كمؤشر رقمي، 3) عدد المشاريع المشتركة بين عملاء وموردين كمؤشر رقمي، 4) عدد الطلبات المتأخرة حاليًا كمؤشر رقمي، 5) مصفوفة حرارية للطلبات المرساة بين كل عميل ومورد، 6) رسم أعمدة أفقي للطلبات المرساة حسب حالتها، 7) جدول بأكبر المشاريع مرتبة بعدد الطلبات، 8) رسم دائري لتوزيع الموردين حسب نوع الخدمة، 9) رسم خطي لنسبة الالتزام بالمواعيد شهريًا، 10) جدول بالموردين الأكثر تأخيرًا وعدد العملاء المتأثرين.",
+            RenderKind: "network"),
+        // "لوحة تفاعلية" بمحرك مختلف (RenderKind "workflow" — خريطة مراحل/SLA متحركة، ليست
+        // شبكة عقد). نفس الملاحظات: Widgets فاضية، والنص بصيغة لوحة عادية لأن ask() يمر بنفس
+        // مسار أي قالب آخر ولا يعرف شكل "خريطة سير عمل".
+        new BuiltinDashboardTemplate("procurement-workflow", "a", "network", "سير عمل المشتريات ومدة الخدمة", false,
+            "كل طلب شراء نقطة تتحرك بين مراحل سير العمل، ولونها وشكلها يوضحان التزامها بمدة المرحلة. العملاء مدخل الخريطة، والموردون مرتبطون بمرحلة التوريد.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي لوحة متابعة سير عمل المشتريات ومدة الخدمة كاملة تتضمن: 1) عدد الطلبات قيد التنفيذ كمؤشر رقمي، 2) عدد الطلبات المتجاوزة لمدة الخدمة الآن كمؤشر رقمي، 3) نسبة الطلبات المكتملة في الموعد كمؤشر رقمي، 4) متوسط زمن الدورة الكامل بالأيام كمؤشر رقمي، 5) رسم أعمدة يقارن الوقت الفعلي بمدة الخدمة المستهدفة لكل مرحلة، 6) رسم أعمدة أفقي لالتزام الموردين بمدة التوريد، 7) رسم أعمدة أفقي للطلبات المتجاوزة للمدة حسب العميل، 8) جدول بأقدم الطلبات المتجاوزة للمدة وحالتها، 9) رسم خطي لعدد الطلبات المستلمة شهريًا، 10) رسم قمع لمراحل الطلب من الاستلام حتى الإغلاق.",
+            RenderKind: "workflow"),
+        // "لوحة تفاعلية" بمحرك ثالث (RenderKind "marketplace" — تدفق Sankey من العملاء عبر
+        // المنصة إلى الموردين). نفس الملاحظات أعلاه بخصوص Widgets وask().
+        new BuiltinDashboardTemplate("procurement-marketplace", "a", "network", "منصة المشتريات: العملاء والموردون", false,
+            "العملاء يطلبون، والمنصة تجمع الطلبات وتطرحها، والموردون يلبّونها. عرض كل شريط = عدد الطلبات، ولونه = نوع الطلب، وحالة كل طلب داخل البطاقات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "ابنِ لي لوحة متابعة منصة مشتريات كاملة تتضمن: 1) إجمالي عدد الطلبات عبر المنصة كمؤشر رقمي، 2) عدد العملاء النشطين كمؤشر رقمي، 3) عدد الموردين النشطين كمؤشر رقمي، 4) عدد الطلبات المتأخرة الآن كمؤشر رقمي، 5) مصفوفة حرارية للطلبات المرساة بين كل عميل ومورد، 6) رسم أعمدة يقارن زمن التنفيذ الفعلي بالمدة المستهدفة لكل نوع طلب، 7) رسم أعمدة أفقي لنسبة التأخير لدى كل مورد، 8) جدول بالطلبات المتأخرة وتفاصيلها، 9) رسم دائري لتوزيع الطلبات حسب نوعها، 10) رسم خطي لعدد الطلبات المرساة شهريًا.",
+            RenderKind: "marketplace"),
+        // أول قالب من المرحلة 1 من INTERACTIVE-HANDOFF.md §4.16 (محرك مخصص "warehouse"، ليس
+        // شبكة/سير عمل/Sankey). Widgets فاضية ونص الـ Prompt هنا للعرض فقط — "استخدم هذا
+        // النموذج" لأي RenderKind يمر الآن عبر POST /api/history/from-template (HistoryController)
+        // بدل ask()، فالمحرك الفعلي (warehouse-team.js) هو اللي بيرسم اللوحة من بيانات حقيقية.
+        new BuiltinDashboardTemplate("warehouse-team", "a", "network", "نظرة على فريق المستودع", false,
+            "متابعة نشاط موظفي المستودع وحالة المناوبات وتوزيع المهام لحظيًا، مع إجراءات إعادة إسناد وتعديل واستدعاء.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لمتابعة فريق المستودع: الموظفون في المناوبة، المهام المنجزة، متوسط الكفاءة، " +
+            "عدّ تنازلي لتغيير المناوبة، بطاقة لكل موظف بتقدّم مهامه وحالته، وسجل نشاط حي.",
+            RenderKind: "warehouse"),
+        new BuiltinDashboardTemplate("liquidity-pools", "a", "network", "مجمّعات السيولة المركّزة", false,
+            "متابعة مجمّعات السيولة (أزواج أصول) وحجم تداولها، وإدارة مراكز المستخدم.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لمجمّعات السيولة المركّزة: إجمالي القيمة المقفلة، الحجم التراكمي، " +
+            "أعمدة حجم التداول حسب الفترة، جدول المجمّعات بنطاق السيولة المركّزة لكل مجمّع، وإدارة المراكز.",
+            RenderKind: "pools"),
+        new BuiltinDashboardTemplate("token-treasury", "a", "network", "خزينة الأصول الرقمية", false,
+            "إجمالي الأصول التشغيلية وتوزيعها، الإيراد والعائد، نمو المشاركة، منحنى الإيراد، المحروق مقابل المتداول، وتاريخ القيمة المقفلة.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لخزينة الأصول الرقمية: إجمالي الأصول التشغيلية بالعملتين، توزيع أصول " +
+            "المراجحة، الإيراد والعائد حسب الفترة، نمو مشاركة المستخدمين، منحنى الإيراد، المحروق " +
+            "مقابل المتداول، وتاريخ القيمة المقفلة، مع محاكي فائدة مركبة.",
+            RenderKind: "treasury"),
+        new BuiltinDashboardTemplate("crm-pipeline", "a", "network", "إدارة العملاء — مراحل البيع", false,
+            "لوحة مراحل بيع قابلة للسحب: عملاء جدد يوميًا، معدل نجاح الصفقات، مهام قيد التنفيذ، ودفعات مقدّمة.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإدارة العملاء بمراحل بيع قابلة للسحب: عملاء جدد يوميًا، معدل نجاح الصفقات، " +
+            "مهام قيد التنفيذ، دفعات مقدّمة من العملاء، لوحة Kanban بمراحل البيع، وتصفية حسب الفريق والبحث والموعد.",
+            RenderKind: "crm"),
+        new BuiltinDashboardTemplate("team-tasks", "a", "network", "إدارة مهام الفريق", false,
+            "مؤقت المهمة الحالية، مهام واجتماعات اليوم، تقويم أسبوعي/يومي/شهري بأولويات ومسؤولين، نشاط الفريق، والتذكيرات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإدارة مهام الفريق: مؤقت للمهمة الحالية، مهام واجتماعات اليوم، تقويم أسبوعي بأولويات " +
+            "ومسؤولين ووقت حي، نشاط الفريق اليومي، توزيع الوقت على المشاريع، وتذكيرات.",
+            RenderKind: "teamtasks"),
+        new BuiltinDashboardTemplate("time-tracking", "a", "network", "تتبع الوقت للفرق", false,
+            "الوقت المسجّل والنسبة القابلة للفوترة، ملخص الوقت حسب المشروع، إحصاءات الوقت، الإجمالي حسب الشخص، تفصيل المشاريع، وجدول الإجازات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لتتبع وقت الفريق: الوقت المسجّل والنسبة القابلة للفوترة والمشاريع النشطة والإجازات، " +
+            "ملخص الوقت حسب المشروع، إحصاءات الوقت لكل وحدة زمنية، الإجمالي حسب الشخص، تفصيل المشاريع، وجدول إجازات شهري، " +
+            "مع تصفية مترابطة بالمشروع أو الشخص.",
+            RenderKind: "timetracking"),
+        new BuiltinDashboardTemplate("saas-metrics", "a", "network", "إيرادات الاشتراكات والاحتفاظ", false,
+            "شلال الدخل الشهري المتكرر، صافي الدخل الجديد أسبوعيًا، دفعات الاحتفاظ، مزيج الباقات، ومؤشرات القيمة الدائمة والاسترداد.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإيرادات الاشتراكات: شلال الدخل الشهري المتكرر (افتتاحي، جديد، توسّع، انكماش، إلغاء، ختامي) " +
+            "مع تعريف كل حركة، صافي الدخل الجديد أسبوعيًا، خريطة احتفاظ حرارية حسب دفعة الاشتراك، مزيج الباقات " +
+            "بالعملاء والإيراد، ومؤشرات القيمة الدائمة إلى تكلفة الاكتساب وفترة الاسترداد.",
+            RenderKind: "saas"),
+        new BuiltinDashboardTemplate("project-studio", "a", "network", "استوديو المشاريع", false,
+            "حالة المشاريع تصفّي الجدول الزمني، مهام اليوم، جانت أفقي بخط «اليوم»، تواصل الفريق، وأعضاء الفريق.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لاستوديو المشاريع: بطاقات حالة المشاريع تصفّي الجدول الزمني، مهام اليوم القابلة " +
+            "للتحديد، جدول زمني (جانت) أفقي بخط «اليوم» الفعلي وتصفية حسب الحالة أو العضو، تواصل فريق برسائل " +
+            "نصية وصوتية، وقائمة أعضاء الفريق بعدد مشاريع كل عضو.",
+            RenderKind: "studio"),
+        new BuiltinDashboardTemplate("campaign-project", "a", "network", "تفاصيل مشروع حملة", false,
+            "ميزانية الحملة والمنفق والتحويلات، الإنفاق والتحويلات اليومية مع توقع 7 أيام، سجل النشاط، مهام الحملة، والملفات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لتفاصيل مشروع حملة: مؤشرات الميزانية والمنفق والتحويلات، رسمان متزامنان للإنفاق " +
+            "والتحويلات اليومية بمحور زمن مشترك مع توقع 7 أيام متقطع، سجل نشاط حي، مهام الحملة بحالة قابلة " +
+            "للتغيير، وإدارة ملفات ومرفقات برفع حقيقي.",
+            RenderKind: "campaign"),
+        new BuiltinDashboardTemplate("treasury-funding", "a", "network", "التمويل والسيولة النقدية", false,
+            "شريط أنظمة مدفوعات حي، جدول استحقاقات شهري بخلفية سقف، أسعار تمويل قابلة للإخفاء، المركز النقدي، والأرصدة حسب البنك.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية للتمويل والسيولة النقدية: شريط أنظمة مدفوعات يتحدث حيًا (قابل للإيقاف)، جدول " +
+            "استحقاقات شهري بأعمدة مجمّعة وخلفية سقف وتصفية حسب السنة، أسعار تمويل بالجملة بإخفاء سلاسل، " +
+            "المركز النقدي، الأرصدة حسب البنك بحلقة تفاعلية، ونشاط اليوم مقابل أمس.",
+            RenderKind: "funding"),
+        new BuiltinDashboardTemplate("construction-crm", "a", "network", "إدارة أعمال المقاولات", false,
+            "شريط طلبات مجزأ، عروض أسعار متدرجة بفقاعات قيم، مصفوفة نقاط للأعمال، مواعيد اليوم بتبويبات قيمية، ومدفوعات بتحويل فوري.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لإدارة أعمال المقاولات: شريط طلبات مجزأ بفئات قابلة للإبراز، عروض أسعار متدرجة " +
+            "بفقاعات قيم، مصفوفة نقاط للأعمال حسب حالتها، مواعيد اليوم بتبويبات قيمية وبحث وإنهاء موعد، " +
+            "ومدفوعات بتحويل فوري وتتبع تحويلات الأسبوع مقابل مستهدف يومي.",
+            RenderKind: "construction"),
+        new BuiltinDashboardTemplate("task-board", "a", "network", "لوحة مهام المشاريع", false,
+            "كانبان بالسحب والإفلات ونقل بالأسهم، شرائح مشاريع للتصفية، بحث وترتيب وتصفية أولوية، وإنشاء مهمة فوري.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لمهام المشاريع بنمط كانبان: أعمدة حالة (لم تبدأ/قيد التنفيذ/قيد المراجعة/مكتملة) " +
+            "بالسحب والإفلات أو النقل بالأسهم للوصولية، شرائح مشاريع تصفّي اللوحة، بحث وترتيب (الاستحقاق/الأولوية/التقدم) " +
+            "وتصفية أولوية، شريط ملخص تقدم، وإنشاء مهمة جديدة فوري.",
+            RenderKind: "board"),
+        new BuiltinDashboardTemplate("crm-leads", "a", "network", "العملاء المحتملون", false,
+            "فقاعات مصادر العملاء الجدد، مؤشرات بتغيّر وسلسلة اتجاه، صفوف طلبات واردة بأسهم تمرير لكل مرحلة، وخريطة نشاط الساعات.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية للعملاء المحتملين: فقاعات مُعبّأة لمصادر العملاء الجدد تصفّي الطلبات، مؤشرات بتغيّر " +
+            "ملوّن وسلسلة اتجاه مصغّرة، صفوف طلبات واردة لكل مرحلة من خط السير بأسهم تمرير وقائمة خيارات لنقل " +
+            "الطلب أو تمييزه، وخريطة حرارية لنشاط الفريق حسب الساعة واليوم.",
+            RenderKind: "leads"),
+        new BuiltinDashboardTemplate("supplier-risk", "a", "network", "مخاطر الموردين", false,
+            "ثلاث صفحات: نظرة تنفيذية بمؤشرات وخلاصة تتغيّر بالسنة وجدول مخاطر إقليمي وشلال أثر الربح، مصفوفة أولوية الموردين، ومخاطر المخزون.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية بثلاث صفحات لمخاطر الموردين والتسليم: نظرة تنفيذية بمؤشرات وخلاصة تتغيّر فعليًا " +
+            "حسب أداء السنة المختارة، جدول مخاطر إقليمي وشلال أثر تغير الربح، مصفوفة أولوية مخاطر الموردين " +
+            "بأرباع وموثوقية تسليم شهرية مقابل مستهدف ومخاطر تخزين حسب الفئة، ومخاطر المخزون (نفاد وهدر وتغطية).",
+            RenderKind: "risk"),
+        new BuiltinDashboardTemplate("crm-analysis", "a", "network", "تحليل مسار المبيعات", false,
+            "تصفية متقاطعة بنمط Power BI: كل عنصر يصفّي الباقي ويُبرز اختياره، قمع بثلاث صيغ تسمية، وخريطة صفقات بالمدن.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية لتحليل مسار المبيعات بتصفية متقاطعة بنمط Power BI: كل شهر أو أسبوع أو قطاع أو " +
+            "مدينة أو حجم منشأة أو مندوب أو مرحلة يصفّي بقية اللوحة ويُبرز اختياره معًا، شرائح تصفية قابلة " +
+            "للإزالة، قمع حالات بثلاث صيغ تسمية، خريطة صفقات بفقاعات مدن، وتنبيه آلي عند هبوط آخر فترة عن المعدل.",
+            RenderKind: "analysis"),
+        new BuiltinDashboardTemplate("supply-command", "a", "network", "مركز قيادة سلسلة الإمداد", false,
+            "ثلاث صفحات: اتجاه مؤشرات بنزول هرمي من السنة للربع للشهر، حلقة OTIF بتفصيل حسب الفئة، رادار مخاطر، وأثر ربحية بشلال تكاليف.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية بثلاث صفحات لقيادة سلسلة الإمداد: مركز قيادة بمؤشرات رئيسية واتجاه قابل للنزول " +
+            "الهرمي من السنة إلى الربع إلى الشهر، وحلقة موثوقية تسليم (OTIF) تُفصَّل حسب الفئة بضغطة، وإيراد " +
+            "ومجمل ربح حسب القناة، وOTIF حسب أولوية العميل والمستودع؛ رادار مخاطر بإيراد معرّض حسب بُعد " +
+            "مُختار (قناة/مستودع/فئة/مورد) ومصفوفة خسائر قناة × فئة؛ وأثر ربحية بشلال من الإيراد الإجمالي " +
+            "حتى الأثر الصافي ومقارنة هامش التسليم في الوقت بالمتأخر. كل مؤشر مُفصَّل حسب نوع الطلب (اعتيادي/ترويجي).",
+            RenderKind: "command"),
+        new BuiltinDashboardTemplate("finance-ops", "a", "network", "الإدارة المالية", false,
+            "تدفق نقدي متباعد (داخل/خارج/صافي)، متابعة أرباح وخسائر بخط تقاطع بأربع دقّات زمنية، خريطة مخزون بالمناطق، ومخطط عمليات مؤتمت.",
+            Array.Empty<string>(), Array.Empty<BuiltinDashboardWidgetSpec>(),
+            "لوحة تفاعلية للإدارة المالية: مؤشرات إيراد ومصروفات وصافي ربح قابلة للضغط لإبراز سلسلتها في " +
+            "متابعة الأرباح والخسائر، تدفق نقدي متباعد (داخل فوق الخط/خارج تحته) بثلاث دقّات (يومي/أسبوعي/" +
+            "شهري) مع مفتاح لإخفاء أي سلسلة والرصيد الجاري، متابعة أرباح وخسائر بخط بأربع دقّات زمنية حتى " +
+            "بالساعة، خريطة مخزون تفاعلية بالمناطق بالتركيز عند الضغط، ومدير عمليات ذكي بقوائم رؤى " +
+            "واستثناءات قابلة للبحث والحذف والإضافة ومخطط مسارات عمليات متحرك. تحويل العملة (ر.س/دولار) " +
+            "وتصدير التقرير متاحان من الأعلى.",
+            RenderKind: "finance"),
+    }.Concat(BuiltinDashboardsGenerated.Items).Concat(BuiltinDashboardsOpportunities.Items).ToList();
+
+    /// <summary>Index = measure-type (0 pct, 1 time, 2 money, 3 score, 4 count, 5 other), matching
+    /// kpi-library.js's own KPI_MT_KEY/mtypes ordering. {{kpi_name}} is the only placeholder —
+    /// substituted server-side from the (non-sensitive, display-only) name the client names the
+    /// row by, never trusted as instruction text itself.</summary>
+    public static readonly IReadOnlyList<string> KpiMeasureTypePrompts = new[]
+    {
+        "أضف مؤشرًا بعنوان \"{{kpi_name}}\" كنسبة مئوية من بياناتي، مع شريط تقدّم يوضح مدى تحقيق المستهدف إن وُجد مستهدف في المصدر.",
+        "أضف مؤشرًا بعنوان \"{{kpi_name}}\" بوحدة زمنية (أيام أو ساعات حسب بياناتي)، مع اتجاهه مقارنة بالفترة السابقة — علمًا أن القيمة الأقل تُعتبر أفضل هنا.",
+        "أضف مؤشرًا ماليًا بعنوان \"{{kpi_name}}\"، مع نسبة التغيّر مقارنة بالفترة السابقة.",
+        "أضف مؤشرًا بعنوان \"{{kpi_name}}\" كدرجة تقييم من 5، بناءً على بياناتي.",
+        "أضف مؤشرًا بعنوان \"{{kpi_name}}\" يوضح العدد موزّعًا على آخر 6 أشهر كرسم أعمدة.",
+        "أضف مؤشرًا يوضح \"{{kpi_name}}\" من بياناتي.",
+    };
+
+    public static BuiltinWidgetTemplate? FindWidget(string id) => Widgets.FirstOrDefault(w => w.Id == id);
+    public static BuiltinDashboardTemplate? FindDashboard(string id) => Dashboards.FirstOrDefault(d => d.Id == id);
+}

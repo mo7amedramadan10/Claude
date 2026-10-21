@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>عرض تقديمي</title>
+<link rel="stylesheet" href="/css/tokens.css">
+<style>
+  /* صفحة مشاهدة عرض تقديمي عام (/p/{id}): شريط عنوان صغير + iframe معزول يملأ الباقي.
+     المحتوى المرفوع يعمل داخل sandbox بلا allow-same-origin فلا يصل إلى كوكي النظام ولا واجهاته. */
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; flex-direction: column; background: #f4f5f7; color: #1f2430; font-family: "Tanseek", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #fff; border-bottom: 1px solid #e3e6ea; min-height: 44px; }
+  .bar .logo { display: inline-flex; align-items: center; flex-shrink: 0; padding-inline-end: 12px; border-inline-end: 1px solid #e3e6ea; }
+  .bar .logo img { height: 28px; width: auto; display: block; }
+  .bar h1 { margin: 0; font-size: 16px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar .by { font-size: 12.5px; color: #6b7280; white-space: nowrap; }
+  .bar a { font-size: 12.5px; color: #1f5fbf; text-decoration: none; white-space: nowrap; }
+  .bar a:hover { text-decoration: underline; }
+  .brand { font-size: 12px; color: #9aa3ad; white-space: nowrap; }
+  iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+  .msg { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+  .msg .big { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .msg .sub { color: #6b7280; }
+  .hidden { display: none !important; }
+  .brand b { color: #1f5fbf; font-weight: 700; }
+  @media (max-width: 480px) { .bar .by, .brand { display: none; } .bar .logo img { height: 24px; } }
+</style>
+</head>
+<body>
+  <header class="bar">
+    <a class="logo" href="/" title="جيم — منصة اللوحات والعروض" aria-label="جيم"><img src="/img/logo-lockup.svg" alt="جيم"></a>
+    <h1 id="title">جارٍ التحميل…</h1>
+    <span class="by" id="by"></span>
+    <a id="open" href="#" target="_blank" rel="noopener" class="hidden">فتح في نافذة كاملة ↗</a>
+    <span class="brand">عرض مشارك عبر <b>جيم</b></span>
+  </header>
+  <div class="msg hidden" id="msg"><div><div class="big" id="msg-big"></div><div class="sub" id="msg-sub"></div></div></div>
+  <iframe id="frame" class="hidden" title="محتوى العرض"
+          sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads allow-popups-to-escape-sandbox"
+          referrerpolicy="no-referrer"></iframe>
+<script>
+(async () => {
+  // /p/{id} أو /p/{org}/{slug} — يُترجَم إلى مسار الواجهة المناسب
+  const parts = location.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent);
+  const apiBase = parts.length >= 2
+    ? `/api/presentations/by/${encodeURIComponent(parts[0])}/${encodeURIComponent(parts[1])}`
+    : `/api/presentations/${encodeURIComponent(parts[0] || '')}`;
+  const $ = s => document.getElementById(s);
+  const show = (big, sub) => { $('msg').classList.remove('hidden'); $('msg-big').textContent = big; $('msg-sub').textContent = sub || ''; $('title').textContent = big; };
+  try {
+    const res = await fetch(`${apiBase}/meta`);
+    if (res.status === 410) {
+      const p = await res.json().catch(() => ({}));
+      document.title = 'رابط غير نشط — عرض تقديمي';
+      return show(`⚠️ ${p.reason || 'هذا الرابط لم يعد نشطًا.'}`, `تواصل مع ${p.creatorName || 'صاحب الرابط'} للحصول على رابط جديد.`);
+    }
+    if (!res.ok) return show('الرابط غير موجود أو تم حذفه.');
+    const meta = await res.json();
+    document.title = `${meta.title} — عرض تقديمي`;
+    $('title').textContent = meta.title;
+    if (meta.createdByName) $('by').textContent = `من ${meta.createdByName}`;
+    const src = `${apiBase}/content`;
+    $('open').href = src; $('open').classList.remove('hidden');
+    $('frame').src = src; $('frame').classList.remove('hidden');
+  } catch { show('تعذّر تحميل العرض.'); }
+})();
+</script>
+</body>
+</html>

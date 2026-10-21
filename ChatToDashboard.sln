@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{7429
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatToDashboard.Api", "backend\ChatToDashboard.Api\ChatToDashboard.Api.csproj", "{BC50C72B-8D95-4B07-A7DD-32120BBFDE0E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatToDashboard.Api.Tests", "backend\ChatToDashboard.Api.Tests\ChatToDashboard.Api.Tests.csproj", "{AACACE49-E2E9-49B3-A3BD-043DD8E4C8E3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,8 +22,13 @@ Global
 		{BC50C72B-8D95-4B07-A7DD-32120BBFDE0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC50C72B-8D95-4B07-A7DD-32120BBFDE0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC50C72B-8D95-4B07-A7DD-32120BBFDE0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AACACE49-E2E9-49B3-A3BD-043DD8E4C8E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AACACE49-E2E9-49B3-A3BD-043DD8E4C8E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AACACE49-E2E9-49B3-A3BD-043DD8E4C8E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AACACE49-E2E9-49B3-A3BD-043DD8E4C8E3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BC50C72B-8D95-4B07-A7DD-32120BBFDE0E} = {7429D1A7-1E9E-43AC-8DCA-D994F003157E}
+		{AACACE49-E2E9-49B3-A3BD-043DD8E4C8E3} = {7429D1A7-1E9E-43AC-8DCA-D994F003157E}
 	EndGlobalSection
 EndGlobal

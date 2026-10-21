@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الإعدادات والاشتراك · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="org-admin">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="org-projects.html" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-users.html" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link is-active" href="org-settings.html" aria-current="page" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="false"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link" href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link" href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link" href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link" href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="org-projects.html">شركة س</a><span class="sep">/</span><strong>الإعدادات والاشتراك</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn btn-primary" type="button">حفظ التغييرات</button></div>
+    </header>
+    <main class="page page-narrow">
+      <section class="page-head"><div><div class="eyebrow"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg>إدارة المنظمة</div><h1>الإعدادات والاشتراك</h1><p>بيانات شركة س، الخطة والاستهلاك، الأمان، وهوية اللوحات المنشورة.</p></div></section>
+      <div class="settings">
+        <nav class="settings-nav" aria-label="أقسام الإعدادات">
+          <a href="#profile" aria-current="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-briefcase"/></svg>الملف التعريفي</a>
+          <a href="#plan"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chart"/></svg>الخطة والاستهلاك</a>
+          <a href="#security"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>الأمان والدخول</a>
+          <a href="#brand"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"/></svg>هوية اللوحات المنشورة</a>
+          <a href="#ai"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg>نموذج الذكاء الاصطناعي</a>
+        </nav>
+        <div class="stack-v" style="gap:var(--sp-5)">
+          <section class="card set-card" id="profile">
+            <div class="section-title">الملف التعريفي</div>
+            <div class="set-row"><div class="lbl"><strong>اسم المنظمة</strong><span>يظهر للأعضاء في كل الشاشات</span></div><div class="inline-field"><input value="شركة س" aria-label="اسم المنظمة"></div></div>
+            <div class="set-row"><div class="lbl"><strong>رمز المنظمة</strong><span>يُستخدم عند تسجيل الدخول — لا يمكن تغييره</span></div><div class="inline-field"><input value="company-s" disabled dir="ltr" style="text-align:right;background:var(--surface-2)" aria-label="رمز المنظمة"><button class="btn btn-ghost btn-icon" type="button" aria-label="نسخ"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-link"/></svg></button></div></div>
+            <div class="set-row"><div class="lbl"><strong>الشعار</strong><span>PNG أو SVG مربع</span></div><div style="display:flex;align-items:center;gap:14px"><span class="org-avatar" style="width:56px;height:56px;font-size:24px;border-radius:16px">س</span><button class="btn btn-sm" type="button">رفع شعار</button></div></div>
+          </section>
+
+          <section class="card set-card" id="plan">
+            <div class="section-title">الخطة والاستهلاك</div>
+            <div class="plan-card"><span class="pi"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg></span><div><strong>خطة الأعمال</strong><div class="muted" style="font-size:var(--fs-sm)">تتجدد في 1 يناير 2027 · حتى 10 مشاريع و50 مستخدمًا</div></div><button class="btn" type="button">تغيير الخطة</button></div>
+            <div class="three-col">
+              <div class="quota"><div class="row">الأسئلة هذا الشهر<span class="num">1,840 / 5,000</span></div><div class="track"><i style="width:37%"></i></div></div>
+              <div class="quota"><div class="row">المستخدمون<span class="num">37 / 50</span></div><div class="track"><i style="width:74%"></i></div></div>
+              <div class="quota"><div class="row">مساحة الملفات<span><span class="num">3.2 / 20</span> GB</span></div><div class="track"><i style="width:16%"></i></div></div>
+            </div>
+          </section>
+
+          <section class="card set-card" id="security">
+            <div class="section-title">الأمان والدخول</div>
+            <div class="set-row"><div class="lbl"><strong>الدخول الموحّد (SSO)</strong><span>Microsoft Entra ID أو أي مزود SAML</span></div><div style="display:flex;align-items:center;gap:12px"><label class="switch"><input type="checkbox" checked aria-label="تفعيل الدخول الموحد"><span></span></label><span class="badge badge-ok">متصل بـ Entra ID</span></div></div>
+            <div class="set-row"><div class="lbl"><strong>التحقق بخطوتين</strong><span>إلزامي لكل الحسابات</span></div><label class="switch"><input type="checkbox" checked aria-label="التحقق بخطوتين"><span></span></label></div>
+            <div class="set-row"><div class="lbl"><strong>النطاقات المسموح بها</strong><span>فقط هذه النطاقات تستطيع الانضمام</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="src-tag mono">company-s.sa</span><span class="src-tag mono">company-s.com</span><button class="btn btn-ghost btn-sm" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة</button></div></div>
+          </section>
+
+          <section class="card set-card" id="brand">
+            <div class="section-title">هوية اللوحات المنشورة</div>
+            <p class="muted" style="font-size:var(--fs-sm);margin-top:-8px">الألوان والخط اللي تظهر بيها اللوحات لما تتنشر لعملاء خارجيين.</p>
+            <div class="set-row"><div class="lbl"><strong>الألوان</strong><span>اللون الأساسي ولون التمييز</span></div><div class="color-row"><span class="sw" style="background:#127DBD"></span><span class="mono">#127DBD</span><span class="sw" style="background:#28B6E6;margin-inline-start:16px"></span><span class="mono">#28B6E6</span></div></div>
+            <div class="set-row"><div class="lbl"><strong>استخراج من ملف الهوية</strong><span>ارفع PDF الهوية أو الشعار وجيم يقترح الألوان والخط</span></div><button class="btn btn-soft btn-sm" type="button" style="justify-self:start"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg>استخراج تلقائي</button></div>
+          </section>
+
+          <section class="card set-card" id="ai">
+            <div class="section-title">نموذج الذكاء الاصطناعي</div>
+            <div class="set-row"><div class="lbl"><strong>النموذج الأساسي</strong><span>يُستخدم لفهم الأسئلة وكتابة الاستعلامات</span></div><select class="select" style="height:42px;justify-self:start;min-width:260px" aria-label="النموذج"><option>النموذج الداخلي للمنظمة</option><option>نموذج المنصة الافتراضي</option></select></div>
+            <div class="set-row"><div class="lbl"><strong>السرد الصوتي</strong><span>قراءة ملخص اللوحة بصوت عربي</span></div><label class="switch"><input type="checkbox" checked aria-label="السرد الصوتي"><span></span></label></div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -14,7 +14,8 @@ namespace ChatToDashboard.Api.Claude;
 /// Claude asks for list_files / query_data / search_documents, we execute the tool
 /// and send back tool_result blocks, until Claude returns the final dashboard JSON.
 /// </summary>
-public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
+public class ClaudeClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+    IIntegrationSetupAssistant, IVisualIdentityImageExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -28,7 +29,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
-    private readonly string _apiKey;
+    private readonly ChatToDashboard.Api.Llm.LlmCredentialStore _credentials;
     private readonly string _model;
     private readonly int _maxTokens;
     private readonly AnalyticsTools _tools;
@@ -38,17 +39,15 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     public ClaudeClient(
         HttpClient http,
         IConfiguration configuration,
+        ChatToDashboard.Api.Llm.LlmCredentialStore credentials,
         AnalyticsTools tools,
         UsageTracker usage,
         ILogger<ClaudeClient> logger)
     {
         _http = http;
-        // Trimmed: a stray space or newline pasted with the key makes the API reject it as invalid.
-        _apiKey = configuration["Anthropic:ApiKey"]?.Trim() is { Length: > 0 } key
-            ? key
-            : throw new InvalidOperationException(
-                "Anthropic API key is not configured. " +
-                "Set it with: dotnet user-secrets set \"Anthropic:ApiKey\" \"<key>\"");
+        // المفتاح والعنوان يُقرآن عند كل نداء من LlmCredentialStore (قاعدة البيانات ثم الإعدادات) — لا في
+        // المنشئ — ليعمل تغييرهما من صفحة «مفاتيح الموديلات» فورًا بلا إعادة تشغيل.
+        _credentials = credentials;
         _model = configuration["Anthropic:Model"] ?? "claude-sonnet-5";
         _maxTokens = configuration.GetValue("Anthropic:MaxTokens", 16000);
         _tools = tools;
@@ -66,82 +65,127 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         string? modelOverride = null,
         CancellationToken ct = default)
     {
-        // Anthropic has just the one configured model (Anthropic:Model) — no per-request
-        // sub-model choice the way Ollama/OpenAI have (LlmSettingsStore.OllamaModel/
-        // OpenAiModel), and every current Claude model already supports vision, so there is
-        // nothing for LlmRouter's image-provider routing to actually override here; see
-        // IDashboardGenerator.GenerateDashboardAsync's remarks on modelOverride.
-        _ = modelOverride;
-
-        // The dashboard currently on screen (when this is a continuation, not a fresh start —
-        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn,
-        // so there is no separate multi-turn history to replay; a fresh request starts with
-        // exactly this one turn.
-        var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
-        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
-
-        // A reference image, if attached, rides along on this question's turn only.
-        if (TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
+        UsageTrace? trace = null;
+        try
         {
-            var last = messages[^1]!.AsObject();
-            var text = last["content"]!.GetValue<string>();
-            last["content"] = new JsonArray(
-                new JsonObject
-                {
-                    ["type"] = "image",
-                    ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
-                },
-                new JsonObject { ["type"] = "text", ["text"] = text });
+            // Anthropic has just the one configured model (Anthropic:Model) — no per-request
+            // sub-model choice the way Ollama/OpenAI have (LlmSettingsStore.OllamaModel/
+            // OpenAiModel), and every current Claude model already supports vision, so there is
+            // nothing for LlmRouter's image-provider routing to actually override here; see
+            // IDashboardGenerator.GenerateDashboardAsync's remarks on modelOverride.
+            _ = modelOverride;
+
+            // The dashboard currently on screen (when this is a continuation, not a fresh start —
+            // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn,
+            // so there is no separate multi-turn history to replay; a fresh request starts with
+            // exactly this one turn.
+            var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
+            var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+
+            // A reference image, if attached, rides along on this question's turn only.
+            if (TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
+            {
+                var last = messages[^1]!.AsObject();
+                var text = last["content"]!.GetValue<string>();
+                last["content"] = new JsonArray(
+                    new JsonObject
+                    {
+                        ["type"] = "image",
+                        ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
+                    },
+                    new JsonObject { ["type"] = "text", ["text"] = text });
+            }
+
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var tools = BuildToolsJson(context);
+
+            trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                messages, systemPrompt, tools, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
         }
-
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var tools = BuildToolsJson(context);
-
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            messages, systemPrompt, tools, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Anthropic", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
-        CancellationToken ct = default)
+        string question, IReadOnlyList<ConversationTurn>? recentTurns = null, string? priorSummary = null,
+        IReadOnlyList<InquiryBlock>? ledger = null, SourceSelection? sources = null, AppUser? requestingUser = null,
+        string? lang = null, CancellationToken ct = default)
     {
-        // Inquiries is never continuation-aware — isolated from whatever dashboard is on
-        // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
-        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = question } };
+        UsageTrace? trace = null;
+        try
+        {
+            // Prior turns/summary/ledger are framed as part of this single user turn — same
+            // "continuation as one composed message" pattern GenerateDashboardAsync's own
+            // currentDashboard uses, not a real multi-message array (see
+            // AnalyticsTools.ComposeInquiryUserMessage).
+            var userText = AnalyticsTools.ComposeInquiryUserMessage(
+                question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
+            var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
-        var tools = BuildToolsJson(context);
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
+            var tools = BuildToolsJson(context);
 
-        var trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            messages, systemPrompt, tools, context, trace,
-            AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            trace = _usage.Begin("Anthropic", _model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            var response = await RunLoopAsync(
+                messages, systemPrompt, tools, context, trace,
+                AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            AnalyticsTools.ApplyExaminedSources(response, trace, context);
+            return response;
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Anthropic", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        InquiryBlock block, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
         AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
-        // already fetched, so no tools are offered at all (tools: null below), guaranteeing
-        // no new query_data/list_files call can happen here.
-        var userText = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard);
-        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+        UsageTrace? trace = null;
+        try
+        {
+            // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+            // already fetched, so no tools are offered at all (tools: null below), guaranteeing
+            // no new query_data/list_files call can happen here.
+            var userText = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard);
+            var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
 
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
 
-        var trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            messages, systemPrompt, null, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+            trace = _usage.Begin("Anthropic", _model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                messages, systemPrompt, null, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Anthropic", "🔄 تحويل استفسار إلى لوحة: " + block.Text, requestingUser, ex);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a minimal failed row for an exception thrown before a trace existed at
+    /// all — DescribeSourcesAsync, BuildSystemPrompt, etc. — so the request doesn't vanish
+    /// from the Usage page entirely. Mirrors LlmRouter.ResolveOrRecordFailureAsync's identical
+    /// fix for provider-resolution failures, extended to cover every step before RunLoopAsync's
+    /// own try/catch takes over logging.</summary>
+    private async Task RecordPreTraceFailureAsync(string provider, string question, AppUser? requestingUser, Exception ex)
+    {
+        var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+        await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
     }
 
     /// <summary>
@@ -173,7 +217,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
             var responseContent = response["content"]?.AsArray()
                 ?? throw new InvalidOperationException("Anthropic API response had no content array.");
             var text = string.Concat(responseContent
@@ -209,7 +253,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallMessagesApiAsync(messages, systemPrompt, null, trace, ct);
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
             var responseContent = response["content"]?.AsArray()
                 ?? throw new InvalidOperationException("Anthropic API response had no content array.");
             var text = string.Concat(responseContent
@@ -225,6 +269,184 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>See IIntegrationSetupAssistant.SuggestVisualIdentityAsync — same tool-free,
+    /// text-in/JSON-out shape as SuggestTableNameAsync above. Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> SuggestVisualIdentityAsync(
+        string? description, string? seedColor, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentitySystemPrompt;
+        var userText = AnalyticsTools.VisualIdentityUserMessage(description, seedColor);
+        var trace = _usage.Begin("Anthropic", _model, "🎨 اقتراح هوية بصرية لتكامل خارجي", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant.SuggestFontFromPdfTextAsync. Never throws.</summary>
+    public async Task<string?> SuggestFontFromPdfTextAsync(
+        string extractedPdfText, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.FontExtractionSystemPrompt;
+        var userText = AnalyticsTools.FontExtractionUserMessage(extractedPdfText);
+        var trace = _usage.Begin("Anthropic", _model, "🔤 استخراج اسم خط من PDF", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            await trace.CompleteAsync(true, text, null, ct);
+            return string.Equals(text, "NONE", StringComparison.OrdinalIgnoreCase) || text.Length == 0 ? null : text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant.MatchIdentityTransportAsync — Part C. Never
+    /// throws; any failure falls back to IdentityTransportMatch.Matched = false, same as an
+    /// unclear description would, so the analyst is always asked to clarify rather than seeing
+    /// an error.</summary>
+    public async Task<IdentityTransportMatch> MatchIdentityTransportAsync(
+        string description, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.IdentityTransportSystemPrompt;
+        var userText = AnalyticsTools.IdentityTransportUserMessage(description);
+        var trace = _usage.Begin("Anthropic", _model, "🔑 مطابقة آلية تعريف المستخدم", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseIdentityTransportMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new IdentityTransportMatch(false, null, null, "تعذّر تحليل الوصف — حاول تاني أو أدخل الآلية يدويًا.");
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant.MatchSchemaContractAsync. Never throws — a
+    /// failed match just falls back to Matched=false, same as an unclear identity-transport
+    /// description would.</summary>
+    public async Task<InteractiveSchemaMatch> MatchSchemaContractAsync(
+        string contractDescription, string tableCatalog, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.InteractiveSchemaMatchSystemPrompt;
+        var userText = AnalyticsTools.InteractiveSchemaMatchUserMessage(contractDescription, tableCatalog);
+        var trace = _usage.Begin("Anthropic", _model, "🧩 مطابقة بيانات لوحة تفاعلية", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseInteractiveSchemaMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new InteractiveSchemaMatch(false, null, ex.Message);
+        }
+    }
+
+    /// <summary>See IIntegrationSetupAssistant.RetargetSqlAsync. Never throws — a failed
+    /// translation just means the widget publishes with no live query (PublishService), never
+    /// a broken/guessed one.</summary>
+    public async Task<string?> RetargetSqlAsync(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.RetargetSqlSystemPrompt;
+        var userText = AnalyticsTools.RetargetSqlUserMessage(widgetTitle, originalSql, clientDbProvider, clientSchemaDescription);
+        var trace = _usage.Begin("Anthropic", _model, $"🔁 إعادة توجيه استعلام: {widgetTitle}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(systemPrompt, userText, trace, ct);
+            var sql = AnalyticsTools.ParseRetargetedSql(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return sql;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See IVisualIdentityImageExtractor — a single image, tool-free turn, same JSON
+    /// contract as SuggestVisualIdentityAsync above (VisualIdentitySystemPrompt vs.
+    /// VisualIdentityImageSystemPrompt only differ in describing text vs. an image as input).
+    /// Never throws. Callers must already have verified LlmSettingsStore's
+    /// VisualIdentitySupportsImage flag before reaching here (see VisualIdentityImageRouter) —
+    /// this method sends whatever image it is given unconditionally.</summary>
+    public async Task<VisualIdentitySuggestion?> ExtractVisualIdentityFromImageAsync(
+        string imageDataUrl, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentityImageSystemPrompt;
+        if (!TryParseDataUrl(imageDataUrl, out var mediaType, out var base64Data))
+            return null;
+
+        var content = new JsonArray
+        {
+            new JsonObject
+            {
+                ["type"] = "image",
+                ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = mediaType, ["data"] = base64Data },
+            },
+            new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.VisualIdentityImageInstruction },
+        };
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = content } };
+
+        var trace = _usage.Begin("Anthropic", _model, "🎨 استخراج هوية بصرية من صورة", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
+            var responseContent = response["content"]?.AsArray()
+                ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+            var text = string.Concat(responseContent
+                .Where(b => b?["type"]?.GetValue<string>() == "text")
+                .Select(b => b!["text"]!.GetValue<string>())).Trim();
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>Shared by the three tool-free text-only helpers above — calls the API with one
+    /// plain user turn and returns the concatenated, trimmed text content. Throws on any
+    /// failure (including an empty response array) — each caller wraps this in its own
+    /// try/catch since each needs its own fallback value.</summary>
+    private async Task<string> CallSingleTextTurnAsync(string systemPrompt, string userText, UsageTrace trace, CancellationToken ct)
+    {
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = userText } };
+        var response = await CallMessagesApiAsync(messages, systemPrompt, null, false, trace, ct);
+        var responseContent = response["content"]?.AsArray()
+            ?? throw new InvalidOperationException("Anthropic API response had no content array.");
+        return string.Concat(responseContent
+            .Where(b => b?["type"]?.GetValue<string>() == "text")
+            .Select(b => b!["text"]!.GetValue<string>())).Trim();
+    }
+
     /// <summary>
     /// The tool-use loop shared by every mode above: call the API, execute any requested
     /// tool and loop, or parse+validate the final text via <paramref name="tryParse"/> —
@@ -235,17 +457,21 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// </summary>
     private async Task<T> RunLoopAsync<T>(
         JsonArray messages, string systemPrompt, JsonArray? tools, AnalyticsTools.SourceContext context,
-        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct)
+        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct,
+        // البناء المرحلي (RunStagedAsync) يمرّر سقفًا أصغر ودورات إجبار أقل؛ القيم الافتراضية
+        // تُبقي كل المسارات القديمة كما هي حرفيًا.
+        int maxIterations = MaxToolIterations, int forceFinalAnswerAt = ForceFinalAnswerAtIteration,
+        int forceToolRounds = 2, string? model = null)
         where T : class
     {
         var jsonRepairAttempts = 0;
         var forcedFinalAnswerNoticeSent = false;
         try
         {
-            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            for (var iteration = 0; iteration < maxIterations; iteration++)
             {
                 ct.ThrowIfCancellationRequested();
-                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= ForceFinalAnswerAtIteration;
+                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= forceFinalAnswerAt;
                 if (forceFinalAnswer && tools is { Count: > 0 } && !forcedFinalAnswerNoticeSent)
                 {
                     forcedFinalAnswerNoticeSent = true;
@@ -258,8 +484,16 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
+                // Force the first two calls of every loop to make a tool call when tools are
+                // offered — see the matching comment in OpenAiClient.RunLoopAsync for why:
+                // forcing only the first call stopped a model from declining a build outright
+                // with zero tool calls, but still let it stop dead after a single list_files
+                // and never actually check the real schema against the widgets it was asked
+                // for. Forcing round two as well makes it pick another tool again (normally
+                // query_data) before it's allowed to free-answer.
+                var forceToolUse = iteration < forceToolRounds && !forceFinalAnswer;
                 var response = await CallMessagesApiAsync(
-                    messages, systemPrompt, forceFinalAnswer ? null : tools, trace, ct);
+                    messages, systemPrompt, forceFinalAnswer ? null : tools, forceToolUse, trace, ct, model);
 
                 var stopReason = response["stop_reason"]?.GetValue<string>();
                 var content = response["content"]?.AsArray()
@@ -344,7 +578,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             }
 
             throw new InvalidOperationException(
-                $"Tool-use loop did not converge within {MaxToolIterations} iterations.");
+                $"Tool-use loop did not converge within {maxIterations} iterations.");
         }
         catch (Exception ex)
         {
@@ -370,6 +604,33 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         $"أنظمة: {(context.EnabledSystems.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledSystems))} | " +
         $"ملفات: {(context.EnabledFiles.Count == 0 ? "(لا يوجد)" : string.Join("، ", context.EnabledFiles))}";
 
+    public string ProviderName => "Anthropic";
+
+    /// <summary>انظر <see cref="IStagedLlm"/>: نداء صغير بتعليماته الخاصة وسقف دوراته الخاص، يعيد
+    /// استخدام نفس حلقة الأدوات والتخزين المؤقت للبادئة والتسجيل في سجل الاستهلاك.</summary>
+    public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
+    {
+        var messages = new JsonArray { new JsonObject { ["role"] = "user", ["content"] = call.UserMessage } };
+        JsonArray? tools = null;
+        if (call.Tools is { Count: > 0 })
+        {
+            tools = new JsonArray();
+            foreach (var tool in call.Tools)
+                tools.Add(new JsonObject
+                {
+                    ["name"] = tool.Name, ["description"] = tool.Description, ["input_schema"] = tool.InputSchema.DeepClone(),
+                });
+        }
+        var model = call.ModelOverride is { Length: > 0 } ? call.ModelOverride : _model;
+        var trace = _usage.Begin("Anthropic", model, call.Label, DescribeSources(call.Context), call.RequestingUser);
+        trace.SetSystemPrompt(call.SystemPrompt);
+        var maxIterations = Math.Max(2, call.MaxIterations);
+        return await RunLoopAsync(
+            messages, call.SystemPrompt, tools, call.Context, trace, AnalyticsTools.TryParseStagedJson, "staged", ct,
+            maxIterations: maxIterations + 2, forceFinalAnswerAt: maxIterations,
+            forceToolRounds: call.ForceFirstToolCall ? 1 : 0, model: model);
+    }
+
     private JsonArray BuildToolsJson(AnalyticsTools.SourceContext context)
     {
         var tools = new JsonArray();
@@ -386,7 +647,8 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     }
 
     private async Task<JsonObject> CallMessagesApiAsync(
-        JsonArray messages, string systemPrompt, JsonArray? tools, UsageTrace trace, CancellationToken ct)
+        JsonArray messages, string systemPrompt, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct,
+        string? model = null)
     {
         // Prompt caching: one breakpoint after the stable prefix (tools + system), and one
         // on the last message so each tool-loop iteration reuses the growing conversation
@@ -395,7 +657,7 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         // cost, since it only happens on the last few iterations of an already-degenerate loop.
         var body = new JsonObject
         {
-            ["model"] = _model,
+            ["model"] = model ?? _model,
             ["max_tokens"] = _maxTokens,
             ["system"] = new JsonArray
             {
@@ -409,16 +671,25 @@ public class ClaudeClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             ["messages"] = messages.DeepClone(),
         };
         if (tools is { Count: > 0 })
+        {
             body["tools"] = tools.DeepClone();
+            // "any" (not a specific tool name): the model still picks which tool fits — almost
+            // always list_files, per its own step-0/step-1 instructions — this only rules out
+            // answering with zero tool calls at all on this one call.
+            if (forceToolUse)
+                body["tool_choice"] = new JsonObject { ["type"] = "any" };
+        }
         MarkLastMessageCacheable(body["messages"]!.AsArray());
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/messages")
+        var apiKey = await _credentials.RequireApiKeyAsync(ChatToDashboard.Api.Llm.LlmRouter.Anthropic, ct);
+        var baseUri = await _credentials.BaseUriAsync(ChatToDashboard.Api.Llm.LlmRouter.Anthropic, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "v1/messages"))
         {
             Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Add("x-api-key", _apiKey);
+        request.Headers.Add("x-api-key", apiKey);
         request.Headers.Add("anthropic-version", "2023-06-01");
 
         using var response = await _http.SendAsync(request, ct);

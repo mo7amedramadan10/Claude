@@ -39,6 +39,39 @@ public class UpdateImageReaderRequest
     public string? OpenAiModel { get; set; }
 }
 
+public class UpdateVisualIdentityReaderRequest
+{
+    /// <summary>One of LlmRouter's known provider ids, or null/"" to disable — the External
+    /// Integrations visual-identity image extraction (a logo/brand image with no accompanying
+    /// text) refuses outright rather than falling back to any other provider.</summary>
+    public string? Provider { get; set; }
+
+    /// <summary>The visual-identity reader's OWN sub-model choice — independent of every other
+    /// model field on this controller. Only the field matching Provider is meaningful.</summary>
+    public string? OllamaModel { get; set; }
+    public string? OpenAiModel { get; set; }
+
+    /// <summary>Explicit, admin-set — never inferred from the provider/model name. Must be
+    /// true for the image-extraction action to run at all (see VisualIdentityImageRouter).</summary>
+    public bool SupportsImage { get; set; }
+}
+
+public class UpdateSemanticsAnalyzerRequest
+{
+    /// <summary>null/"" = نفس موديل اللوحات؛ "none" = معطَّل؛ وإلا أحد مزوّدي LlmRouter.</summary>
+    public string? Provider { get; set; }
+    public string? OllamaModel { get; set; }
+    public string? OpenAiModel { get; set; }
+}
+
+public class UpdateCredentialRequest
+{
+    /// <summary>null = لا تغيير على المفتاح؛ "" = مسح المحفوظ (يعود للإعدادات إن وُجدت).</summary>
+    public string? ApiKey { get; set; }
+    /// <summary>null/"" = مسح العنوان المحفوظ (يعود للإعدادات ثم الافتراضي).</summary>
+    public string? BaseUrl { get; set; }
+}
+
 /// <summary>
 /// Which LLM answers questions, and which model for the providers that support picking one
 /// (Ollama, OpenAI) — admin-only, changeable from the dashboard without a restart. See
@@ -59,12 +92,14 @@ public class LlmSettingsController : ControllerBase
         { "qwen3:14b", "qwen3:32b", "qwen3:30b-a3b-instruct-2507-q4_K_M", "gemma4:31b", "qwen3-vl:32b" };
 
     private readonly LlmSettingsStore _settings;
+    private readonly LlmCredentialStore _credentials;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
 
-    public LlmSettingsController(LlmSettingsStore settings, IConfiguration configuration, IHttpClientFactory httpClientFactory)
+    public LlmSettingsController(LlmSettingsStore settings, LlmCredentialStore credentials, IConfiguration configuration, IHttpClientFactory httpClientFactory)
     {
         _settings = settings;
+        _credentials = credentials;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
     }
@@ -96,8 +131,29 @@ public class LlmSettingsController : ControllerBase
         var activeImageReaderOpenAiModel = saved.ImageReaderOpenAiModel is { Length: > 0 }
             ? saved.ImageReaderOpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
 
+        // Same "disabled means genuinely disabled, no fallback" contract as the document
+        // reader — see UpdateVisualIdentityReaderRequest's remarks.
+        var visualIdentity = await _settings.GetVisualIdentityReaderAsync(ct);
+        var activeVisualIdentityProvider = visualIdentity.Provider is { Length: > 0 } ? visualIdentity.Provider : null;
+        var activeVisualIdentityOllamaModel = visualIdentity.OllamaModel is { Length: > 0 }
+            ? visualIdentity.OllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeVisualIdentityOpenAiModel = visualIdentity.OpenAiModel is { Length: > 0 }
+            ? visualIdentity.OpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
+        var activeVisualIdentitySupportsImage = visualIdentity.SupportsImage;
+
+        // موديل تحليل معاني الأعمدة: null = نفس موديل اللوحات، "none" = معطَّل، وإلا مزوّد مستقل.
+        var semantics = await _settings.GetSemanticsAsync(ct);
+        var activeSemanticsProvider = semantics.Provider is { Length: > 0 } ? semantics.Provider : null;
+        var activeSemanticsOllamaModel = semantics.OllamaModel is { Length: > 0 }
+            ? semantics.OllamaModel : (_configuration["Ollama:Model"] ?? "qwen3:14b");
+        var activeSemanticsOpenAiModel = semantics.OpenAiModel is { Length: > 0 }
+            ? semantics.OpenAiModel : (_configuration["OpenAI:Model"] ?? "gpt-4o");
+
         return Ok(new
         {
+            activeSemanticsProvider,
+            activeSemanticsOllamaModel,
+            activeSemanticsOpenAiModel,
             activeProvider,
             activeOllamaModel,
             activeOpenAiModel,
@@ -107,11 +163,15 @@ public class LlmSettingsController : ControllerBase
             activeImageReaderProvider,
             activeImageReaderOllamaModel,
             activeImageReaderOpenAiModel,
+            activeVisualIdentityProvider,
+            activeVisualIdentityOllamaModel,
+            activeVisualIdentityOpenAiModel,
+            activeVisualIdentitySupportsImage,
             providers = new[]
             {
-                new { id = LlmRouter.Anthropic, label = "Claude (Anthropic)", configured = IsConfigured("Anthropic:ApiKey") },
-                new { id = LlmRouter.OpenAI, label = "GPT (OpenAI)", configured = IsConfigured("OpenAI:ApiKey") },
-                new { id = LlmRouter.Ollama, label = "الموديل الداخلي (Ollama)", configured = IsConfigured("Ollama:ApiKey") },
+                new { id = LlmRouter.Anthropic, label = "Claude (Anthropic)", configured = await IsConfiguredAsync(LlmRouter.Anthropic, ct) },
+                new { id = LlmRouter.OpenAI, label = "GPT (OpenAI)", configured = await IsConfiguredAsync(LlmRouter.OpenAI, ct) },
+                new { id = LlmRouter.Ollama, label = "الموديل الداخلي (Ollama)", configured = await IsConfiguredAsync(LlmRouter.Ollama, ct) },
             },
         });
     }
@@ -124,16 +184,16 @@ public class LlmSettingsController : ControllerBase
     [HttpGet("ollama-models")]
     public async Task<IActionResult> OllamaModels(CancellationToken ct)
     {
-        var apiKey = _configuration["Ollama:ApiKey"]?.Trim();
-        var baseUrl = _configuration["Ollama:BaseUrl"] ?? "http://172.17.242.1:8081/api/v1/";
+        var credential = await _credentials.GetAsync(LlmRouter.Ollama, ct);
+        var apiKey = credential.ApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))
-            return Ok(new { models = FallbackOllamaModels, live = false, note = "لم يتم إعداد Ollama:ApiKey — القائمة أدناه غير محدّثة." });
+            return Ok(new { models = FallbackOllamaModels, live = false, note = "لم يُضبط مفتاح الموديل الداخلي بعد — أدخله من «مفاتيح الموديلات». القائمة أدناه غير محدّثة." });
 
         try
         {
             var client = _httpClientFactory.CreateClient();
             client.Timeout = TimeSpan.FromSeconds(8);
-            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(new Uri(baseUrl), "models"));
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(await _credentials.BaseUriAsync(LlmRouter.Ollama, ct), "models"));
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
             using var response = await client.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode) throw new HttpRequestException($"status {(int)response.StatusCode}");
@@ -203,7 +263,131 @@ public class LlmSettingsController : ControllerBase
         return NoContent();
     }
 
-    private bool IsConfigured(string key) => _configuration[key]?.Trim() is { Length: > 0 };
+    /// <summary>Which model (if any) reads a logo/brand image with no accompanying text for
+    /// External Integrations' visual-identity extraction — independent of every other setting
+    /// on this controller. SupportsImage is stored exactly as sent, never inferred.</summary>
+    [HttpPut("visual-identity-reader")]
+    public async Task<IActionResult> UpdateVisualIdentityReader([FromBody] UpdateVisualIdentityReaderRequest request, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(request.Provider) &&
+            !LlmRouter.KnownProviders.Contains(request.Provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+
+        await _settings.SetVisualIdentityReaderAsync(
+            request.Provider, request.OllamaModel, request.OpenAiModel, request.SupportsImage, ct);
+        return NoContent();
+    }
+
+    /// <summary>موديل تحليل معاني الأعمدة (طبقة المعنى) — مستقل عن كل ما سبق. null/"" = نفس موديل
+    /// اللوحات، "none" = معطَّل (تبقى تخمينات الأسماء فقط).</summary>
+    [HttpPut("semantics-analyzer")]
+    public async Task<IActionResult> UpdateSemanticsAnalyzer([FromBody] UpdateSemanticsAnalyzerRequest request, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(request.Provider) &&
+            !string.Equals(request.Provider, LlmSettingsStore.SemanticsDisabled, StringComparison.OrdinalIgnoreCase) &&
+            !LlmRouter.KnownProviders.Contains(request.Provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+
+        await _settings.SetSemanticsAsync(request.Provider, request.OllamaModel, request.OpenAiModel, ct);
+        return NoContent();
+    }
+
+    // ---------- مفاتيح الموديلات (صفحة مستقلة) ----------
+
+    /// <summary>حالة مفتاح وعنوان كل مزوّد بلا كشف المفتاح (آخر 4 أحرف فقط) ومصدر كل حقل:
+    /// db (من الصفحة) / config (appsettings أو user-secrets أو البيئة) / none / unreadable.</summary>
+    [HttpGet("credentials")]
+    public async Task<IActionResult> Credentials(CancellationToken ct)
+    {
+        var list = new List<object>();
+        foreach (var provider in LlmRouter.KnownProviders)
+        {
+            var c = await _credentials.GetAsync(provider, ct);
+            list.Add(new
+            {
+                provider,
+                label = ProviderLabel(provider),
+                hasKey = c.ApiKey is { Length: > 0 },
+                keyHint = LlmCredentialStore.Hint(c.ApiKey),
+                keySource = c.KeySource,
+                baseUrl = c.BaseUrl,
+                baseUrlSource = c.BaseUrlSource,
+                defaultBaseUrl = LlmCredentialStore.DefaultBaseUrl(provider),
+                updatedAt = c.UpdatedAt,
+            });
+        }
+        return Ok(new { providers = list });
+    }
+
+    /// <summary>يحفظ مفتاح المزوّد و/أو عنوانه في قاعدة البيانات (مشفّرًا) ويسري فورًا على النداء التالي.</summary>
+    [HttpPut("credentials/{provider}")]
+    public async Task<IActionResult> SetCredential(string provider, [FromBody] UpdateCredentialRequest request, CancellationToken ct)
+    {
+        if (!LlmRouter.KnownProviders.Contains(provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+        try { await _credentials.SetAsync(provider, request.ApiKey, request.BaseUrl, ct); }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        return NoContent();
+    }
+
+    /// <summary>يحذف ما حُفظ من الصفحة فيعود المزوّد إلى الإعدادات (إن وُجدت) أو «غير مُعد».</summary>
+    [HttpDelete("credentials/{provider}")]
+    public async Task<IActionResult> ClearCredential(string provider, CancellationToken ct)
+    {
+        if (!LlmRouter.KnownProviders.Contains(provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+        await _credentials.ClearAsync(provider, ct);
+        return NoContent();
+    }
+
+    /// <summary>اختبار اتصال خفيف بالمفتاح والعنوان الفعليين (قائمة الموديلات) — يعيد ok أو سبب الفشل بلا رمي.</summary>
+    [HttpPost("credentials/{provider}/test")]
+    public async Task<IActionResult> TestCredential(string provider, CancellationToken ct)
+    {
+        if (!LlmRouter.KnownProviders.Contains(provider, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "مزوّد غير معروف." });
+        provider = LlmRouter.KnownProviders.First(p => string.Equals(p, provider, StringComparison.OrdinalIgnoreCase));
+        var c = await _credentials.GetAsync(provider, ct);
+        if (c.ApiKey is not { Length: > 0 })
+            return Ok(new { ok = false, message = "لا يوجد مفتاح مضبوط لهذا المزوّد." });
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(12);
+            var baseUri = await _credentials.BaseUriAsync(provider, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(baseUri, provider == LlmRouter.Ollama ? "models" : "v1/models"));
+            if (provider == LlmRouter.Anthropic)
+            {
+                request.Headers.Add("x-api-key", c.ApiKey);
+                request.Headers.Add("anthropic-version", "2023-06-01");
+            }
+            else request.Headers.Add("Authorization", $"Bearer {c.ApiKey}");
+            using var response = await client.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+                return Ok(new { ok = false, message = $"الخادم ردّ بالحالة {(int)response.StatusCode}: {Trim(body)}", ms = clock.ElapsedMilliseconds });
+            var names = ExtractModelNames(body, "models", "data", "name", "id");
+            if (names.Count == 0) names = ExtractModelNames(body, "models", "data", "id", "model");
+            return Ok(new { ok = true, message = names.Count > 0 ? $"متصل — {names.Count} موديل متاح" : "متصل", models = names.Take(30), ms = clock.ElapsedMilliseconds });
+        }
+        catch (Exception ex)
+        {
+            var inner = ex; while (inner.InnerException is not null) inner = inner.InnerException;
+            return Ok(new { ok = false, message = Trim(inner.Message), ms = clock.ElapsedMilliseconds });
+        }
+    }
+
+    private static string Trim(string text) => text.Length > 300 ? text[..300] + "…" : text;
+
+    private static string ProviderLabel(string provider) => provider switch
+    {
+        LlmRouter.OpenAI => "GPT (OpenAI)",
+        LlmRouter.Ollama => "الموديل الداخلي (Ollama)",
+        _ => "Claude (Anthropic)",
+    };
+
+    private async Task<bool> IsConfiguredAsync(string provider, CancellationToken ct) => (await _credentials.GetAsync(provider, ct)).ApiKey is { Length: > 0 };
 
     /// <summary>
     /// Parsed leniently since these third-party response shapes weren't confirmed against a

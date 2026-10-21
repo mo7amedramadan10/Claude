@@ -32,6 +32,28 @@ public class DashboardHistoryEntry
     public string ActiveFiltersJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>The project this dashboard was saved under (the org's single wired-up
+    /// workspace today — see ProjectStore.FirstForOrganizationAsync). Null on every row
+    /// saved before this column existed; HistoryStore.ListAsync treats a null the same as a
+    /// match so old dashboards don't disappear from "سجل اللوحات" once project-filtering
+    /// is added, rather than running a one-off backfill.</summary>
+    public string? ProjectId { get; set; }
+
+    /// <summary>Set only for a dashboard created from an "interactive" template (see
+    /// BuiltinDashboardTemplate.RenderKind) — the engine key ("network", "workflow",
+    /// "marketplace", or a §4.16+ one) the frontend mounts instead of the normal widget
+    /// grid. Null for every ordinary chat-built dashboard; <see cref="WidgetsJson"/> is
+    /// simply unused ("[]") on a row that has this set, since the engine renders itself
+    /// from GET /api/projects/{projectId}/interactive/{renderKind}/data instead.</summary>
+    public string? RenderKind { get; set; }
+
+    /// <summary>The originating BuiltinDashboardTemplate.Id — only meaningful alongside
+    /// <see cref="RenderKind"/>. Several templates can share one RenderKind/engine (e.g.
+    /// policy-network and procurement-network are both "network" but need different real
+    /// data), so this is what the frontend actually calls GET /api/interactive/{templateId}/
+    /// data with; RenderKind only decides which JS mount function to use.</summary>
+    public string? TemplateId { get; set; }
+
     /// <summary>Draft (false, default) — a frozen snapshot, unchanged behavior. Active (true)
     /// — the user explicitly promoted it: it gets an Owner/roles and re-executes its widgets
     /// live on every open instead of showing the frozen <see cref="WidgetsJson"/>.</summary>
@@ -102,6 +124,20 @@ public class SaveHistoryRequest
 
     [JsonPropertyName("activeFilters")]
     public JsonElement ActiveFilters { get; set; }
+
+    /// <summary>مفتاح القالب الذي بُنيت منه لوحة المحادثة (DashboardSpec.TemplateKey) — يُحفظ في
+    /// TemplateId ليبقى «إعادة بناء العنصر» ممكنًا بعد إعادة فتح اللوحة من السجل.</summary>
+    [JsonPropertyName("templateId")]
+    public string? TemplateId { get; set; }
+}
+
+/// <summary>Body of POST /api/history/from-template — creating an Active dashboard
+/// directly from an "interactive" (RenderKind) template, bypassing the AI chat build
+/// pipeline entirely since there are no ordinary widgets to generate.</summary>
+public class CreateFromTemplateRequest
+{
+    [JsonPropertyName("templateId")]
+    public string TemplateId { get; set; } = "";
 }
 
 /// <summary>Body of PUT /api/history/{id}/rename — renames the title/description only,

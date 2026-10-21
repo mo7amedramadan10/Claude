@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>مكتبة النماذج · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="platform">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="قائمة المنصّة">
+    <div class="sb-brand">
+      <a href="platform-organizations.html" aria-label="جيم — المنصّة"><img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم"><img class="mark" src="assets/img/logo-mark.svg" alt="جيم"></a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+    <div class="platform-badge"><span class="org-avatar">ث</span><span class="org-meta"><strong>إدارة المنصّة</strong><span>شركة ثقة · Super Admin</span></span></div>
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنصّة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="platform-organizations.html" title="المنظمات"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المنظمات</span><span class="badge">24</span></a></li><li><a class="nav-link is-active" href="platform-templates.html" aria-current="page" title="مكتبة النماذج"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">مكتبة النماذج</span></a></li><li><a class="nav-link" href="#" title="الخطط والأسعار"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span class="nav-text">الخطط والأسعار</span></a></li><li><a class="nav-link" href="#" title="سجل التجهيز"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg><span class="nav-text">سجل التجهيز</span><span class="badge badge-danger">1</span></a></li><li><a class="nav-link" href="#" title="فريق المنصة"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">فريق المنصة</span></a></li><li><a class="nav-link" href="#" title="إعدادات المنصة"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">إعدادات المنصة</span></a></li></ul>
+    </nav>
+    <div class="sb-foot">
+      <div class="isolation" style="background:var(--surface-2);color:var(--ink-2)"><span class="pulse"></span><span class="txt">كل الخدمات تعمل · 99.98%</span></div>
+      <button class="user-card" type="button" aria-label="الحساب"><span class="avatar" style="background:var(--brand-gray)">أ</span><span class="meta"><strong>أحمد الزهراني</strong><span>مسؤول المنصّة</span></span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="platform-organizations.html">المنصّة</a><span class="sep">/</span><strong>مكتبة النماذج</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn btn-primary" type="button" data-tpl-new><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg><span>عنصر جديد</span></button></div>
+    </header>
+    <main class="page">
+      <section class="page-head"><div><div class="eyebrow"><span class="jbars"><i></i><i></i><i></i></span>إدارة المنصّة</div><h1>مكتبة النماذج</h1><p>كل النماذج التي يراها المستخدمون في المحادثة ومعرض «لوحة جديدة»، مع الوصف الذي يُرسل لجيم عند اختيار كل نموذج. أي تعديل هنا يُطبّق على كل المنظمات.</p></div></section>
+      <section class="org-hero cols-4" id="tplStats" aria-label="ملخص المكتبة"></section>
+      <section class="card lib" id="tplLib">
+        <div class="tabs" id="tplTabs" role="tablist" aria-label="أنواع النماذج"></div>
+        <div id="tplPane"></div>
+      </section>
+    </main>
+    <dialog class="modal tpl-editor" id="tplEditor"></dialog>
+
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/kpi-library.js"></script>
+<script src="assets/js/dash-render.js"></script>
+<script src="assets/js/dash-library.js"></script>
+<script src="assets/js/catalog.js"></script>
+<script src="assets/js/platform-templates.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

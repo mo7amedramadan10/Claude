@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>المصادر · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="project">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="org-projects.html" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-users.html" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-settings.html" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item is-open" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="true"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link" href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link is-active" href="project-sources.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link" href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link" href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="org-projects.html">شركة س</a><span class="sep">/</span><a href="project-workspace.html">منصة المبيعات</a><span class="sep">/</span><strong>المصادر</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn btn-primary" type="button" data-open="add-source" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة مصدر</button></div>
+    </header>
+    <main class="page">
+      
+      <section class="page-head">
+        <div>
+          <div class="eyebrow"><span class="proj-dot" style="background:var(--brand-blue);width:22px;height:22px;font-size:11px;border-radius:7px">م</span>منصة المبيعات <span class="badge js-my-role"></span></div>
+          <h1>مصادر البيانات</h1>
+          <p>البيانات اللي جيم يقدر يقرأ منها في هذا المشروع. كل سؤال بيستخدم المصادر المفعّلة فقط.</p>
+        </div>
+        <div class="head-actions"></div>
+      </section>
+      <div class="alert viewer-note" data-show-roles="viewer"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="grow">أنت <b>مشاهد</b> في هذا المشروع: تقدر تستعرض المحتوى، لكن الإضافة والتعديل لأصحاب صلاحية أعلى.</span></div>
+      <nav class="tabs" aria-label="أقسام المشروع"><a href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg>المحادثة واللوحات</a><a href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>اللوحات المنشورة</a><a href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg>المحلل الذكي</a><a href="project-sources.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>المصادر</a><a href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>الصلاحيات</a><a href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>الملفات</a></nav>
+
+      <section class="connector-hero">
+        <div class="stack-v" style="gap:10px">
+          <div class="section-title"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>الربط المباشر (Connector)<span class="badge badge-ok">نشط</span></div>
+          <p class="muted" style="font-size:var(--fs-sm);line-height:1.8;max-width:620px">خدمة اتصال آمنة مثبتة على خوادم شركة س، تقرأ من قاعدة بياناتها مباشرة. البيانات تفضل عندكم، واللوحات بتقرأ أرقام محدّثة لحظيًا من غير نسخ.</p>
+          <dl class="kv" style="margin-top:4px"><dt>نوع القاعدة</dt><dd>SQL Server 2022</dd><dt>آخر نبضة</dt><dd>قبل 12 ثانية · زمن الاستجابة 84ms</dd><dt>الإصدار</dt><dd class="mono" style="text-align:right">connector v2.4.1</dd></dl>
+        </div>
+        <div class="connector-flow" aria-hidden="true">
+          <div class="node"><span class="b"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg></span>قاعدة بياناتكم</div>
+          <span class="line"></span>
+          <div class="node"><span class="b"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span>Connector</div>
+          <span class="line"></span>
+          <div class="node"><span class="b" style="background:var(--cyan-50)"><img src="assets/img/logo-mark.svg" alt="" style="height:26px"></span>جيم</div>
+        </div>
+      </section>
+
+      <div class="toolbar">
+        <div class="section-title">كل المصادر <span class="badge">4</span></div>
+        <span class="grow"></span>
+        <div class="segmented" role="group" aria-label="تصفية حسب النوع">
+          <button type="button" aria-pressed="true">الكل</button><button type="button" aria-pressed="false">أنظمة API</button><button type="button" aria-pressed="false">ملفات</button>
+        </div>
+      </div>
+      <div class="src-grid">
+          <article class="card src-card" style="animation-delay:0.00s">
+            <div class="top">
+              <span class="src-ic" style="background:var(--blue-50);color:var(--brand-blue)"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg></span>
+              <div><h3>ERP المبيعات</h3><span class="type">نظام داخلي · REST API</span></div>
+              <span class="status ok">متصل</span>
+            </div>
+            <dl class="kv"><dt>آخر مزامنة</dt><dd>قبل 3 دقائق</dd><dt>التحديث</dt><dd>لحظي</dd><dt>الجداول</dt><dd>6 جداول · 1.2 مليون صف</dd></dl>
+            
+            <div class="tables-list"><span class="src-tag mono">sales_orders</span><span class="src-tag mono">order_lines</span><span class="src-tag mono">customers</span><span class="src-tag mono">branches</span><span class="src-tag mono">+2</span></div>
+            <div class="foot" data-require="project:editor"><button class="btn btn-sm" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>مزامنة الآن</button><button class="btn btn-sm btn-ghost" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg>الإعدادات</button><span style="flex:1"></span><button class="btn btn-sm btn-ghost btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div>
+          </article>
+          <article class="card src-card" style="animation-delay:0.05s">
+            <div class="top">
+              <span class="src-ic" style="background:var(--ok-50);color:var(--ok)"><svg class="icon" aria-hidden="true"><use href="#i-sheet"/></svg></span>
+              <div><h3>المستهدفات-2026.xlsx</h3><span class="type">ملف مرفوع · Excel</span></div>
+              <span class="status ok">جاهز</span>
+            </div>
+            <dl class="kv"><dt>رُفع</dt><dd>14 سبتمبر 2026 · سارة</dd><dt>الأوراق</dt><dd>3 أوراق · 1,284 صف</dd><dt>التحديث</dt><dd>يدوي عند رفع نسخة جديدة</dd></dl>
+            
+            <div class="tables-list"><span class="src-tag mono">المستهدف_الشهري</span><span class="src-tag mono">المناطق</span><span class="src-tag mono">المنتجات</span></div>
+            <div class="foot" data-require="project:editor"><button class="btn btn-sm" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>مزامنة الآن</button><button class="btn btn-sm btn-ghost" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg>الإعدادات</button><span style="flex:1"></span><button class="btn btn-sm btn-ghost btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div>
+          </article>
+          <article class="card src-card" style="animation-delay:0.10s">
+            <div class="top">
+              <span class="src-ic" style="background:var(--purple-50);color:var(--brand-purple)"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg></span>
+              <div><h3>نظام المشتريات</h3><span class="type">نظام داخلي · REST API</span></div>
+              <span class="status warn">تحتاج مراجعة</span>
+            </div>
+            <dl class="kv"><dt>آخر مزامنة</dt><dd>أمس 11:20 م</dd><dt>المشكلة</dt><dd>انتهت صلاحية مفتاح الـ API</dd><dt>الجداول</dt><dd>4 جداول</dd></dl>
+            
+            <div class="tables-list"><span class="src-tag mono">purchase_orders</span><span class="src-tag mono">suppliers</span><span class="src-tag mono">+2</span></div>
+            <div class="foot" data-require="project:editor"><button class="btn btn-sm btn-primary" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-link"/></svg>تحديث المفتاح</button><button class="btn btn-sm btn-ghost" type="button">التفاصيل</button></div>
+          </article>
+          <article class="card src-card" style="animation-delay:0.15s">
+            <div class="top">
+              <span class="src-ic" style="background:var(--teal-50);color:#00706B"><svg class="icon" aria-hidden="true"><use href="#i-sheet"/></svg></span>
+              <div><h3>العملاء.csv</h3><span class="type">ملف مرفوع · CSV</span></div>
+              <span class="status run">قيد المعالجة</span>
+            </div>
+            <dl class="kv"><dt>رُفع</dt><dd>قبل دقيقة · محمد</dd><dt>التقدم</dt><dd>68% · قراءة الأعمدة</dd><dt>الحجم</dt><dd>8.4 MB</dd></dl>
+            <div class="mini-progress" style="width:100%"><i style="width:68%"></i></div>
+            
+            <div class="foot" data-require="project:editor"><button class="btn btn-sm" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>مزامنة الآن</button><button class="btn btn-sm btn-ghost" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg>الإعدادات</button><span style="flex:1"></span><button class="btn btn-sm btn-ghost btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div>
+          </article></div>
+    </main>
+
+    <dialog class="modal" id="add-source" aria-labelledby="add-source-t">
+      <form method="dialog">
+        <div class="modal-head">
+          <div><h2 id="add-source-t">إضافة مصدر</h2><p>اختر طريقة ربط البيانات بالمشروع.</p></div>
+          <button class="btn btn-ghost btn-icon btn-sm" type="button" data-action="close-modal" aria-label="إغلاق"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <div class="add-types" style="grid-template-columns:1fr">
+            <button class="type-card" type="button"><span class="src-ic" style="background:var(--blue-50);color:var(--brand-blue)"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg></span><strong>نظام داخلي عبر API</strong><span>ERP، مشتريات، موارد بشرية… أدخل عنوان الـ API ومفتاح الوصول.</span></button>
+            <button class="type-card" type="button"><span class="src-ic" style="background:var(--ok-50);color:var(--ok)"><svg class="icon" aria-hidden="true"><use href="#i-sheet"/></svg></span><strong>رفع ملف</strong><span>Excel أو CSV. يصبح مصدرًا جاهزًا خلال ثوانٍ.</span></button>
+            <button class="type-card" type="button"><span class="src-ic" style="background:var(--cyan-50);color:#0E7FA6"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg></span><strong>ربط مباشر بقاعدة البيانات</strong><span>تثبيت Connector آمن على خوادمكم. بيانات حية بدون نسخ.</span></button>
+          </div></div>
+        <div class="modal-foot">
+          <span class="note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>بيانات المصدر لا تغادر بيئة شركة س</span>
+          <button class="btn btn-ghost" type="button" data-action="close-modal">إلغاء</button>
+          <button class="btn btn-primary" type="submit">متابعة</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

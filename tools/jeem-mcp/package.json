@@ -1,0 +1,14 @@
+{
+  "name": "jeem-mcp",
+  "version": "1.0.0",
+  "description": "جسر MCP محلي يربط Claude Desktop بمنصة جيم (نشر العروض التقديمية HTML برابط عام)",
+  "type": "module",
+  "bin": { "jeem-mcp": "index.js" },
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^3.23.8"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

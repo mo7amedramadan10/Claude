@@ -49,7 +49,7 @@ public class WidgetsController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
         return Ok(await _service.GetAvailableFieldsAsync(effective, ct));
     }
 
@@ -58,7 +58,7 @@ public class WidgetsController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, body.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, body.Sources, ct);
         try
         {
             return Ok(await _service.ExecuteAsync(body.Query, effective, ct));
@@ -121,7 +121,7 @@ public class WidgetsController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
         try
         {
             return Ok(await _service.ExecuteSqlFilterAsync(request.Table, request.Sql, request.Filters, effective, ct));
@@ -132,13 +132,28 @@ public class WidgetsController : ControllerBase
         }
     }
 
+    /// <summary>بطاقة المؤشر: التغيّر بين آخر 30 يومًا والـ30 السابقة بإعادة تنفيذ استعلام المؤشر على نافذتين.</summary>
+    [HttpPost("kpi-delta")]
+    public async Task<IActionResult> KpiDelta([FromBody] SqlFilterRequest request, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
+        try
+        {
+            return Ok(new { delta = await _service.ComputeKpiDeltaAsync(request.Table, request.Sql, request.Filters, effective, ct) });
+        }
+        catch (WidgetQueryValidationException) { return Ok(new { delta = (KpiDeltaResult?)null }); }
+        catch (Exception) { return Ok(new { delta = (KpiDeltaResult?)null }); }
+    }
+
     /// <summary>Real DISTINCT values for one column — the only legitimate filter-option source.</summary>
     [HttpPost("filter-values")]
     public async Task<IActionResult> FilterValues([FromBody] FilterValuesRequest request, CancellationToken ct)
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var effective = PermissionsService.GetEffectiveSelection(user, request.Sources);
+        var effective = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
         try
         {
             return Ok(await _service.GetFilterValuesAsync(request.Table, request.Field, effective, ct));

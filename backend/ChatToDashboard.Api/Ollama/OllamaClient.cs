@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
+using ChatToDashboard.Api.Analyst;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Sources;
@@ -26,7 +27,8 @@ namespace ChatToDashboard.Api.Ollama;
 ///   (see UsageTrace.RecordTurn, which already falls back to the response's top level).
 /// - "stream" is NOT omittable — Ollama defaults to streaming, so every request pins it false.
 /// </summary>
-public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
+public class OllamaClient : IStagedLlm, IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+    IIntegrationSetupAssistant, IVisualIdentityImageExtractor
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -40,7 +42,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
-    private readonly string _apiKey;
+    private readonly LlmCredentialStore _credentials;
     private readonly string _defaultModel;
     private readonly LlmSettingsStore _settings;
     private readonly AnalyticsTools _tools;
@@ -50,19 +52,16 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     public OllamaClient(
         HttpClient http,
         IConfiguration configuration,
+        LlmCredentialStore credentials,
         LlmSettingsStore settings,
         AnalyticsTools tools,
         UsageTracker usage,
         ILogger<OllamaClient> logger)
     {
         _http = http;
-        // Trimmed: a stray space or newline pasted with the token makes the gateway reject it.
-        _apiKey = configuration["Ollama:ApiKey"]?.Trim() is { Length: > 0 } key
-            ? key
-            : throw new InvalidOperationException(
-                "Ollama API token is not configured. " +
-                "Set it with: dotnet user-secrets set \"Ollama:ApiKey\" \"<token>\" " +
-                "(create one under \"My API Tokens\" in the gateway's own UI).");
+        // المفتاح والعنوان يُقرآن عند كل نداء من LlmCredentialStore (قاعدة البيانات ثم الإعدادات) — لا في
+        // المنشئ — ليعمل تغييرهما من صفحة «مفاتيح الموديلات» فورًا بلا إعادة تشغيل.
+        _credentials = credentials;
         _defaultModel = configuration["Ollama:Model"] ?? "qwen3:14b";
         _settings = settings;
         _tools = tools;
@@ -80,40 +79,43 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         string? modelOverride = null,
         CancellationToken ct = default)
     {
-        // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
-        // ImageReaderOllamaModel) wins over the normal dashboard-building sub-model choice —
-        // see IDashboardGenerator.GenerateDashboardAsync's remarks.
-        var model = modelOverride is { Length: > 0 }
-            ? modelOverride
-            : (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
-        {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-        };
-
-        // The dashboard currently on screen (when this is a continuation, not a fresh start —
-        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
-        // there is no separate multi-turn history to replay.
-        var userMessage = new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) };
-        // Sent through unconditionally rather than refused here on the client's own
-        // assumption — same as ExtractDocumentTextAsync's page images, and CompressForGateway
-        // keeps it under the gateway's request-size limit the same way those already do.
-        // Whichever model is actually selected decides for itself whether it can use it: seen
-        // live, the gateway doesn't silently ignore an image a model can't handle — it rejects
-        // the whole request with 400 "Multimodal data provided, but model does not support
-        // multimodal requests", which the catch below turns into a plain-language message
-        // instead of the raw gateway JSON reaching the user.
-        var hasImage = TryExtractBase64(imageDataUrl, out var imageBase64);
-        if (hasImage) userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
-        messages.Add(userMessage);
-
-        var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
+        UsageTrace? trace = null;
+        var hasImage = false;
+        var model = _defaultModel;
         try
         {
+            // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
+            // ImageReaderOllamaModel) wins over the normal dashboard-building sub-model choice —
+            // see IDashboardGenerator.GenerateDashboardAsync's remarks.
+            model = modelOverride is { Length: > 0 }
+                ? modelOverride
+                : (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            };
+
+            // The dashboard currently on screen (when this is a continuation, not a fresh start —
+            // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
+            // there is no separate multi-turn history to replay.
+            var userMessage = new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeUserMessage(question, currentDashboard) };
+            // Sent through unconditionally rather than refused here on the client's own
+            // assumption — same as ExtractDocumentTextAsync's page images, and CompressForGateway
+            // keeps it under the gateway's request-size limit the same way those already do.
+            // Whichever model is actually selected decides for itself whether it can use it: seen
+            // live, the gateway doesn't silently ignore an image a model can't handle — it rejects
+            // the whole request with 400 "Multimodal data provided, but model does not support
+            // multimodal requests", which the catch below turns into a plain-language message
+            // instead of the raw gateway JSON reaching the user.
+            hasImage = TryExtractBase64(imageDataUrl, out var imageBase64);
+            if (hasImage) userMessage["images"] = new JsonArray { CompressForGateway(imageBase64) };
+            messages.Add(userMessage);
+
+            var tools = BuildToolsJson(context);
+            trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
             return await RunLoopAsync(
                 model, messages, tools, context, trace,
                 AnalyticsTools.TryParseDashboard, "dashboard", ct);
@@ -124,52 +126,426 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 $"الموديل الداخلي الحالي ({model}) لا يدعم تحليل الصور. بدّل مؤقتًا إلى Claude أو GPT من إعدادات الموديل لهذا الطلب، أو اختر موديلاً داخليًا آخر يدعم الصور إن وُجد.",
                 ex);
         }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Ollama", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
-        CancellationToken ct = default)
+        string question, IReadOnlyList<ConversationTurn>? recentTurns = null, string? priorSummary = null,
+        IReadOnlyList<InquiryBlock>? ledger = null, SourceSelection? sources = null, AppUser? requestingUser = null,
+        string? lang = null, CancellationToken ct = default)
     {
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
-        // Inquiries is never continuation-aware — isolated from whatever dashboard is on
-        // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
+        UsageTrace? trace = null;
+        try
+        {
+            var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
+            // Prior turns/summary/ledger are framed as part of this single user turn — same
+            // "continuation as one composed message" pattern GenerateDashboardAsync's own
+            // currentDashboard uses (see AnalyticsTools.ComposeInquiryUserMessage).
+            var userText = AnalyticsTools.ComposeInquiryUserMessage(
+                question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = userText },
+            };
+
+            var tools = BuildToolsJson(context);
+            trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            var response = await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            AnalyticsTools.ApplyExaminedSources(response, trace, context);
+            return response;
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Ollama", question, requestingUser, ex);
+            throw;
+        }
+    }
+
+    public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
+        InquiryBlock block, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
+    {
+        UsageTrace? trace = null;
+        try
+        {
+            // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+            // already fetched, so no tools are offered at all (tools: null below), guaranteeing
+            // no new query_data/list_files call can happen here.
+            var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard) },
+            };
+
+            trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                model, messages, null, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("Ollama", "🔄 تحويل استفسار إلى لوحة: " + block.Text, requestingUser, ex);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a minimal failed row for an exception thrown before a trace existed at
+    /// all — DescribeSourcesAsync, settings lookup, BuildSystemPrompt, etc. — so the request
+    /// doesn't vanish from the Usage page entirely. Mirrors
+    /// LlmRouter.ResolveOrRecordFailureAsync's identical fix for provider-resolution failures,
+    /// extended to cover every step before RunLoopAsync's own try/catch takes over logging.</summary>
+    private async Task RecordPreTraceFailureAsync(string provider, string question, AppUser? requestingUser, Exception ex)
+    {
+        var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+        await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// "المحلل الذكي" — see Analyst.AnalystPrompts/Analyst.AnalystLoopTypes for the contract this
+    /// drives. Always Ollama/Qwen, never routed through LlmRouter's provider selection (see the
+    /// spec's own "الستاك الحالي" section) — called directly by AnalystController, not through
+    /// IDashboardGenerator, so this and its two new stage-emitting steps below live here without
+    /// touching Chat/Inquiry's own RunLoopAsync&lt;T&gt; at all.
+    ///
+    /// Two real SSE stages happen inside this one call (see AnalystStageCallback): "understand"
+    /// (the classification turn) and, for an org_data question only, "query" (the tool loop
+    /// itself — list_files/query_data/query_client_data, reusing AnalyticsTools.BuildTools/
+    /// ExecuteToolAsync verbatim, same permission/internal-table gating Chat and Inquiry already
+    /// get for free). "sources"/"verify"/"compose" are the caller's own job (AnalystController) —
+    /// they're either pure server-side work (resolving SourceSelection) or persistence, neither
+    /// of which this class has any business doing.
+    /// </summary>
+    public async Task<AnalystLoopResult> GenerateAnalystAsync(
+        string question, SourceSelection? sources, AppUser? requestingUser, AnalystStageCallback onStage, CancellationToken ct = default)
+    {
+        await onStage(AnalystStages.Understand, AnalystStageStates.Running);
+
+        string model;
+        AnalyticsTools.SourceContext context;
+        UsageTrace trace;
+        try
+        {
+            model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+            context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
+        }
+        catch (Exception ex)
+        {
+            // DescribeSourcesAsync/settings lookup failing here left nothing logged at all —
+            // no trace exists yet to complete (see RecordPreTraceFailureAsync).
+            await onStage(AnalystStages.Understand, AnalystStageStates.Failed);
+            await RecordPreTraceFailureAsync("Ollama", question, requestingUser, ex);
+            return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+        }
+
+        AnalystKnowledgeScope scope;
+        try
+        {
+            var classifyMessages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = AnalystPrompts.ClassifySystemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = AnalystPrompts.ClassifyUserMessage(question) },
+            };
+            var classifyResponse = await CallChatAsync(model, classifyMessages, null, trace, ct);
+            var classifyText = classifyResponse["message"]?["content"]?.GetValue<string>() ?? "";
+            scope = AnalystPrompts.ParseClassification(classifyText);
+        }
+        catch (Exception ex)
+        {
+            await onStage(AnalystStages.Understand, AnalystStageStates.Failed);
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+        }
+        await onStage(AnalystStages.Understand, AnalystStageStates.Done);
+
+        if (scope == AnalystKnowledgeScope.OutOfScope)
+        {
+            await trace.CompleteAsync(true, "out_of_scope", null, ct);
+            return new AnalystLoopResult(AnalystLoopOutcome.OutOfScope, null, EmptyCapturedQueries, null);
+        }
+
+        if (scope == AnalystKnowledgeScope.General)
+        {
+            await onStage(AnalystStages.Query, AnalystStageStates.Running);
+            try
+            {
+                var generalMessages = new JsonArray
+                {
+                    new JsonObject { ["role"] = "system", ["content"] = AnalystPrompts.GeneralKnowledgeSystemPrompt },
+                    new JsonObject { ["role"] = "user", ["content"] = question },
+                };
+                trace.SetSystemPrompt(AnalystPrompts.GeneralKnowledgeSystemPrompt);
+                var response = await CallChatAsync(model, generalMessages, null, trace, ct);
+                var text = response["message"]?["content"]?.GetValue<string>() ?? "";
+                var (parsed, error) = AnalystPrompts.TryParseAnalystResult(text);
+                if (parsed is null)
+                {
+                    await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+                    await trace.CompleteAsync(false, text, error, ct);
+                    return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, error);
+                }
+                await onStage(AnalystStages.Query, AnalystStageStates.Done);
+                await trace.CompleteAsync(true, text, null, ct);
+                return new AnalystLoopResult(AnalystLoopOutcome.General, parsed, EmptyCapturedQueries, null);
+            }
+            catch (Exception ex)
+            {
+                await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+                await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+                return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+            }
+        }
+
+        // org_data — the real tool loop.
+        var systemPrompt = AnalystPrompts.BuildAnalystSystemPrompt(context);
+        trace.SetSystemPrompt(systemPrompt);
         var messages = new JsonArray
         {
             new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
             new JsonObject { ["role"] = "user", ["content"] = question },
         };
-
         var tools = BuildToolsJson(context);
-        var trace = _usage.Begin("Ollama", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseInquiry, "inquiry", ct);
+
+        await onStage(AnalystStages.Query, AnalystStageStates.Running);
+        try
+        {
+            var (result, capturedQueries) = await RunAnalystToolLoopAsync(model, messages, tools, context, trace, ct);
+            if (result is null)
+            {
+                await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+                return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, capturedQueries, "تعذّر الحصول على رد صالح من الموديل.");
+            }
+            await onStage(AnalystStages.Query, AnalystStageStates.Done);
+            return new AnalystLoopResult(AnalystLoopOutcome.OrgData, result, capturedQueries, null);
+        }
+        catch (Exception ex)
+        {
+            await onStage(AnalystStages.Query, AnalystStageStates.Failed);
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new AnalystLoopResult(AnalystLoopOutcome.Failed, null, EmptyCapturedQueries, ex.Message);
+        }
     }
 
-    public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
-        AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
-    {
-        // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
-        // already fetched, so no tools are offered at all (tools: null below), guaranteeing
-        // no new query_data/list_files call can happen here.
-        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
-        {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard) },
-        };
+    private static readonly IReadOnlyDictionary<string, AnalystCapturedQuery> EmptyCapturedQueries =
+        new Dictionary<string, AnalystCapturedQuery>();
 
-        var trace = _usage.Begin("Ollama", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, null, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+    /// <summary>Same tool-calling mechanics as <see cref="RunLoopAsync{T}"/> (call, execute any
+    /// requested tool, loop; retries on an invalid final answer) but specialized for the Analyst
+    /// contract: every successful query_data/query_client_data call is captured under a
+    /// sequential id ("q1", "q2", ...) — see AnalystCapturedQuery — so the final answer's
+    /// result_query_id can point back at real, already-fetched rows instead of the model ever
+    /// restating them. A separate method rather than a generic-T branch inside RunLoopAsync
+    /// itself, specifically so Chat/Inquiry's own loop is untouched by this.
+    ///
+    /// The same retry budget also covers <see cref="ValidateAnswerTemplate"/> (Phase 3's number
+    /// guard): an answer that parses as valid JSON but writes a literal number, or references a
+    /// placeholder key that doesn't resolve against its own captured query, gets a corrective
+    /// message and another attempt — same as invalid JSON. They differ only once the budget is
+    /// exhausted: invalid JSON (no parsed object at all) is a hard failure (null), but a guard
+    /// violation on an otherwise-valid parsed answer is returned anyway — see the exhaustion
+    /// branch below for why (spec section 6: unverified, not absent).</summary>
+    private async Task<(AnalystModelResult? Result, IReadOnlyDictionary<string, AnalystCapturedQuery> Captured)> RunAnalystToolLoopAsync(
+        string model, JsonArray messages, JsonArray tools, AnalyticsTools.SourceContext context, UsageTrace trace, CancellationToken ct)
+    {
+        var captured = new Dictionary<string, AnalystCapturedQuery>();
+        var queryCounter = 0;
+        var jsonRepairAttempts = 0;
+        var forcedFinalAnswerNoticeSent = false;
+
+        try
+        {
+            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var forceFinalAnswer = iteration >= ForceFinalAnswerAtIteration;
+                if (forceFinalAnswer && !forcedFinalAnswerNoticeSent)
+                {
+                    forcedFinalAnswerNoticeSent = true;
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] =
+                            "لقد استدعيت عددًا كافيًا من الأدوات بالفعل. لا تنادِ أي أداة أخرى — " +
+                            "استخدم فقط النتائج التي جمعتها حتى الآن، وأجب فورًا بكائن JSON النهائي " +
+                            "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
+                    });
+                }
+                var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+                var message = response["message"]?.AsObject()
+                    ?? throw new InvalidOperationException("Ollama gateway response had no 'message'.");
+                messages.Add(message.DeepClone());
+
+                var toolCalls = message["tool_calls"]?.AsArray();
+                if (toolCalls is { Count: > 0 })
+                {
+                    foreach (var call in toolCalls)
+                    {
+                        var function = call?["function"]?.AsObject();
+                        if (function is null) continue;
+                        var toolName = function["name"]?.GetValue<string>() ?? "";
+                        var argumentsNode = function["arguments"];
+                        JsonObject arguments = argumentsNode switch
+                        {
+                            JsonObject obj => obj,
+                            JsonValue val when val.TryGetValue<string>(out var raw) && !string.IsNullOrWhiteSpace(raw)
+                                => TryParseArguments(raw),
+                            _ => new JsonObject(),
+                        };
+
+                        var toolClock = System.Diagnostics.Stopwatch.StartNew();
+                        var (result, isError) = await _tools.ExecuteToolAsync(toolName, arguments, context, ct);
+                        trace.RecordToolCall(toolName, arguments.ToJsonString(), result, isError, toolClock.ElapsedMilliseconds);
+
+                        if (!isError && (toolName == "query_data" || toolName == "query_client_data"))
+                        {
+                            queryCounter++;
+                            var id = $"q{queryCounter}";
+                            if (TryExtractRows(result, out var columns, out var rows))
+                                captured[id] = new AnalystCapturedQuery(arguments["sql"]?.GetValue<string>() ?? "", columns, rows);
+                            // The model addresses its own captured queries by id in the final
+                            // JSON, so it has to know what each one is called — appended to the
+                            // tool result text itself rather than a separate message, keeping
+                            // the id right next to the data it labels.
+                            result = $"[query id: {id}] {result}";
+                        }
+                        messages.Add(ToolResultMessage(toolName, result, isError));
+                    }
+                    continue;
+                }
+
+                var text = message["content"]?.GetValue<string>() ?? string.Empty;
+                var (parsed, parseError) = AnalystPrompts.TryParseAnalystResult(text);
+                if (parsed is not null)
+                {
+                    parseError = ValidateAnswerTemplate(parsed, captured);
+                    if (parseError is null)
+                    {
+                        await trace.CompleteAsync(true, text, null, ct);
+                        return (parsed, captured);
+                    }
+                }
+
+                jsonRepairAttempts++;
+                _logger.LogWarning("Analyst answer rejected (attempt {Attempt}): {Error}", jsonRepairAttempts, parseError);
+                if (jsonRepairAttempts >= MaxJsonRepairAttempts)
+                {
+                    // Spec section 6: a number-guard violation that never clears after a retry is
+                    // NOT a hard failure — the result still gets created and shown, just
+                    // permanently flagged unverified ("أرقام غير مرتبطة بالبيانات"). Only a
+                    // genuine JSON-parse failure (parsed is null — no usable template to even try
+                    // composing from) hard-fails the turn. Returning `parsed` here rather than
+                    // null is what makes that distinction: AnalystVerification's C4 independently
+                    // re-runs the exact same guard against this same answer_template and marks
+                    // the result unverified for it — no separate "why" needs threading through.
+                    await trace.CompleteAsync(parsed is not null, text, parseError, ct);
+                    return (parsed, captured);
+                }
+                messages.Add(new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] =
+                        $"ردّك السابق مرفوض. السبب: {parseError}\n" +
+                        "رُد تاني بكائن JSON واحد بس مطابق للمخطط المطلوب، من غير أي نص أو markdown حواليه، " +
+                        "وبدون أي رقم مكتوب حرفيًا في answer_template — كل رقم لازم يكون {{مفتاح}} من القائمة المتاحة.",
+                });
+            }
+
+            await trace.CompleteAsync(false, null, $"Tool-calling loop did not converge within {MaxToolIterations} iterations.", CancellationToken.None);
+            return (null, captured);
+        }
+        catch (Exception)
+        {
+            // Caller (GenerateAnalystAsync) owns trace.CompleteAsync for the failure path here —
+            // it already wraps this call in its own try/catch with the stage-failed callback.
+            throw;
+        }
+    }
+
+    /// <summary>Phase 3's number guard (spec section 6) — null means the answer_template is
+    /// accepted as-is; non-null is a rejection reason fed back to the model verbatim. Two checks:
+    /// (1) no digit anywhere outside a recognized {{...}} token (AnalystPlaceholders.HasStrayDigits
+    /// — the model is told never to type a literal number, this is what actually enforces it);
+    /// (2) when the answer names a result_query_id we actually captured, every placeholder key in
+    /// the template must resolve against that query's own columns/rows — run the real Render call
+    /// here so a typo'd column or an out-of-range topN/bottomN is caught before the user ever sees
+    /// a broken literal "{{...}}" in the composed answer, not just logged after the fact. A
+    /// result_query_id we didn't capture, or none at all (the "couldn't find data for this"
+    /// sentence case), skips check 2 — AnalystController's own fallback handles that path.</summary>
+    private static string? ValidateAnswerTemplate(AnalystModelResult parsed, IReadOnlyDictionary<string, AnalystCapturedQuery> captured)
+    {
+        if (AnalystPlaceholders.HasStrayDigits(parsed.AnswerTemplate))
+            return "answer_template فيه رقم مكتوب حرفيًا خارج أي {{مفتاح}}.";
+
+        if (!string.IsNullOrWhiteSpace(parsed.ResultQueryId) && captured.TryGetValue(parsed.ResultQueryId, out var query))
+        {
+            var render = AnalystPlaceholders.Render(parsed.AnswerTemplate, query.Columns, query.Rows, parsed.PrimaryMeasure);
+            if (render.MissingKeys.Count > 0)
+                return $"answer_template فيه مفاتيح مش موجودة في نتيجة {parsed.ResultQueryId}: {string.Join("، ", render.MissingKeys)}.";
+        }
+
+        return null;
+    }
+
+    /// <summary>Parses a query_data/query_client_data tool result's own {"rowCount":N,"rows":[...]}
+    /// shape (see AnalyticsTools.ExecuteQueryAsync/ClientQueryService.RunQueryAsync) back into a
+    /// captured query's columns/rows. False on anything else (an error string, an unexpected
+    /// shape) — the query is then simply not captured, same "degrade, don't crash" rule as
+    /// every other best-effort parse in this feature. Internal (not private) so
+    /// AnalystVerification's C1 and AnalystController's reverify can parse an audit_sql/
+    /// ExecutedSql result the exact same way, rather than a second JSON-shape parser existing
+    /// anywhere in this feature.</summary>
+    internal static bool TryExtractRows(string resultJson, out IReadOnlyList<string> columns, out IReadOnlyList<Dictionary<string, object?>> rows)
+    {
+        columns = Array.Empty<string>();
+        rows = Array.Empty<Dictionary<string, object?>>();
+        try
+        {
+            using var doc = JsonDocument.Parse(resultJson);
+            if (!doc.RootElement.TryGetProperty("rows", out var rowsEl) || rowsEl.ValueKind != JsonValueKind.Array)
+                return false;
+
+            var parsedRows = new List<Dictionary<string, object?>>();
+            var columnSet = new List<string>();
+            foreach (var rowEl in rowsEl.EnumerateArray())
+            {
+                var row = new Dictionary<string, object?>();
+                foreach (var prop in rowEl.EnumerateObject())
+                {
+                    if (!columnSet.Contains(prop.Name)) columnSet.Add(prop.Name);
+                    row[prop.Name] = prop.Value.ValueKind switch
+                    {
+                        JsonValueKind.Number => prop.Value.TryGetInt64(out var l) ? l : prop.Value.GetDouble(),
+                        JsonValueKind.String => prop.Value.GetString(),
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        JsonValueKind.Null => null,
+                        _ => prop.Value.GetRawText(),
+                    };
+                }
+                parsedRows.Add(row);
+            }
+            columns = columnSet;
+            rows = parsedRows;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     // Long side of a page image sent to the internal gateway, after re-encoding to JPEG below.
@@ -334,6 +710,174 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>See ClaudeClient.SuggestVisualIdentityAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> SuggestVisualIdentityAsync(
+        string? description, string? seedColor, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentitySystemPrompt;
+        var userText = AnalyticsTools.VisualIdentityUserMessage(description, seedColor);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🎨 اقتراح هوية بصرية لتكامل خارجي", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.SuggestFontFromPdfTextAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<string?> SuggestFontFromPdfTextAsync(
+        string extractedPdfText, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.FontExtractionSystemPrompt;
+        var userText = AnalyticsTools.FontExtractionUserMessage(extractedPdfText);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🔤 استخراج اسم خط من PDF", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            await trace.CompleteAsync(true, text, null, ct);
+            return string.Equals(text, "NONE", StringComparison.OrdinalIgnoreCase) || text.Length == 0 ? null : text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.MatchIdentityTransportAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<IdentityTransportMatch> MatchIdentityTransportAsync(
+        string description, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.IdentityTransportSystemPrompt;
+        var userText = AnalyticsTools.IdentityTransportUserMessage(description);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🔑 مطابقة آلية تعريف المستخدم", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseIdentityTransportMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new IdentityTransportMatch(false, null, null, "تعذّر تحليل الوصف — حاول تاني أو أدخل الآلية يدويًا.");
+        }
+    }
+
+    /// <summary>See ClaudeClient.MatchSchemaContractAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<InteractiveSchemaMatch> MatchSchemaContractAsync(
+        string contractDescription, string tableCatalog, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.InteractiveSchemaMatchSystemPrompt;
+        var userText = AnalyticsTools.InteractiveSchemaMatchUserMessage(contractDescription, tableCatalog);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🧩 مطابقة بيانات لوحة تفاعلية", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseInteractiveSchemaMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new InteractiveSchemaMatch(false, null, ex.Message);
+        }
+    }
+
+    /// <summary>See ClaudeClient.RetargetSqlAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<string?> RetargetSqlAsync(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.RetargetSqlSystemPrompt;
+        var userText = AnalyticsTools.RetargetSqlUserMessage(widgetTitle, originalSql, clientDbProvider, clientSchemaDescription);
+        var model = (await _settings.GetAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, $"🔁 إعادة توجيه استعلام: {widgetTitle}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var sql = AnalyticsTools.ParseRetargetedSql(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return sql;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See IVisualIdentityImageExtractor — its own sub-model choice
+    /// (VisualIdentityReaderOllamaModel), independent of every other model field. A single
+    /// image, sent the same "images" field way ExtractDocumentTextAsync's per-page loop does.
+    /// Callers must already have verified VisualIdentitySupportsImage before reaching here (see
+    /// VisualIdentityImageRouter). Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> ExtractVisualIdentityFromImageAsync(
+        string imageDataUrl, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentityImageSystemPrompt;
+        if (!TryExtractBase64(imageDataUrl, out var base64Data))
+            return null;
+
+        var model = (await _settings.GetVisualIdentityReaderAsync(ct)).OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("Ollama", model, "🎨 استخراج هوية بصرية من صورة", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject
+                {
+                    ["role"] = "user",
+                    ["content"] = AnalyticsTools.VisualIdentityImageInstruction,
+                    ["images"] = new JsonArray { CompressForGateway(base64Data) },
+                },
+            };
+            var response = await CallChatAsync(model, messages, null, trace, ct);
+            var text = (response["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>Shared by the three tool-free text-only helpers above — see
+    /// ClaudeClient.CallSingleTextTurnAsync.</summary>
+    private async Task<string> CallSingleTextTurnAsync(string model, string systemPrompt, string userText, UsageTrace trace, CancellationToken ct)
+    {
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = userText },
+        };
+        var response = await CallChatAsync(model, messages, null, trace, ct);
+        return (response["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+    }
+
     /// <summary>Pulls the base64 payload out of a "data:&lt;mime&gt;;base64,&lt;data&gt;" URL —
     /// Ollama's "images" field wants the raw base64 only, no data: prefix.</summary>
     private static bool TryExtractBase64(string? dataUrl, out string base64Data)
@@ -434,17 +978,22 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// </summary>
     private async Task<T> RunLoopAsync<T>(
         string model, JsonArray messages, JsonArray? tools, AnalyticsTools.SourceContext context,
-        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct)
+        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct,
+        // البناء المرحلي (RunStagedAsync) يمرّر سقفًا أصغر وإجبار أداة في الدورة الأولى ووضع JSON؛
+        // القيم الافتراضية تُبقي كل المسارات القديمة كما هي حرفيًا.
+        int maxIterations = MaxToolIterations, int forceFinalAnswerAt = ForceFinalAnswerAtIteration,
+        int forceToolRounds = 0, bool jsonMode = false)
         where T : class
     {
         var jsonRepairAttempts = 0;
         var forcedFinalAnswerNoticeSent = false;
+        var toolNudges = 0;
         try
         {
-            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            for (var iteration = 0; iteration < maxIterations; iteration++)
             {
                 ct.ThrowIfCancellationRequested();
-                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= ForceFinalAnswerAtIteration;
+                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= forceFinalAnswerAt;
                 if (forceFinalAnswer && tools is { Count: > 0 } && !forcedFinalAnswerNoticeSent)
                 {
                     forcedFinalAnswerNoticeSent = true;
@@ -457,7 +1006,10 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
-                var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+                // وضع JSON الأصلي في Ollama (format: json) يُطلب فقط في دورة بلا أدوات: مع الأدوات يمنع
+                // بعض الموديلات من نداء الأداة أصلًا.
+                var response = await CallChatAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct,
+                    jsonMode: jsonMode && forceFinalAnswer);
 
                 var message = response["message"]?.AsObject()
                     ?? throw new InvalidOperationException("Ollama gateway response had no 'message'.");
@@ -467,6 +1019,18 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                 messages.Add(message.DeepClone());
 
                 var toolCalls = message["tool_calls"]?.AsArray();
+                // لا tool_choice في Ollama: إجبار نداء الأداة في الدورات الأولى يُحاكى بتذكير قصير عندما
+                // يردّ الموديل بنص بدل نداء (رسمة لا تُبنى بلا استعلام فعلي).
+                if (toolCalls is not { Count: > 0 } && !forceFinalAnswer && toolNudges < forceToolRounds)
+                {
+                    toolNudges++;
+                    messages.Add(new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] = "لا تجب الآن. نادِ أداة query_data أولًا بالاستعلام المقترح ثم ابنِ الرد من نتيجتها الفعلية.",
+                    });
+                    continue;
+                }
                 if (toolCalls is { Count: > 0 })
                 {
                     foreach (var call in toolCalls)
@@ -510,7 +1074,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                     continue;
                 }
 
-                var text = message["content"]?.GetValue<string>() ?? string.Empty;
+                var text = StripThinking(message["content"]?.GetValue<string>() ?? string.Empty);
                 var (parsed, parseError) = tryParse(text);
                 if (parsed is not null)
                 {
@@ -535,7 +1099,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             }
 
             throw new InvalidOperationException(
-                $"Tool-calling loop did not converge within {MaxToolIterations} iterations.");
+                $"Tool-calling loop did not converge within {maxIterations} iterations.");
         }
         catch (Exception ex)
         {
@@ -544,8 +1108,52 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>موديلات التفكير (qwen3) قد تُدرج كتلة &lt;think&gt;…&lt;/think&gt; قبل الرد؛ تُحذف قبل تفسير JSON.</summary>
+    private static string StripThinking(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(text, @"<think>[\s\S]*?</think>", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+
+    // ---------- البناء المرحلي للقوالب (IStagedLlm) ----------
+
+    public string ProviderName => "Ollama";
+
+    /// <summary>نداء مرحلي واحد على بوابة Ollama: نفس حلقة الأدوات بسقف صغير، إجبار الأداة في
+    /// الدورة الأولى يُحاكى بتذكير (لا tool_choice)، ووضع JSON الأصلي (format: json) في دورة الرد
+    /// النهائي، وحذف كتلة التفكير من موديلات qwen3 قبل التفسير.</summary>
+    public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
+    {
+        var settings = await _settings.GetAsync(ct);
+        var model = call.ModelOverride is { Length: > 0 } ? call.ModelOverride
+            : settings.OllamaModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = call.SystemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = call.UserMessage },
+        };
+        JsonArray? tools = null;
+        if (call.Tools is { Count: > 0 })
+        {
+            tools = new JsonArray();
+            foreach (var tool in call.Tools)
+                tools.Add(new JsonObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JsonObject
+                    {
+                        ["name"] = tool.Name, ["description"] = tool.Description, ["parameters"] = tool.InputSchema.DeepClone(),
+                    },
+                });
+        }
+        var trace = _usage.Begin("Ollama", model, call.Label, DescribeSources(call.Context), call.RequestingUser);
+        trace.SetSystemPrompt(call.SystemPrompt);
+        var maxIterations = Math.Max(2, call.MaxIterations);
+        return await RunLoopAsync(
+            model, messages, tools, call.Context, trace, AnalyticsTools.TryParseStagedJson, "staged", ct,
+            maxIterations: maxIterations + 2, forceFinalAnswerAt: maxIterations,
+            forceToolRounds: call.ForceFirstToolCall ? 1 : 0, jsonMode: true);
+    }
+
     private async Task<JsonObject> CallChatAsync(
-        string model, JsonArray messages, JsonArray? tools, UsageTrace trace, CancellationToken ct)
+        string model, JsonArray messages, JsonArray? tools, UsageTrace trace, CancellationToken ct, bool jsonMode = false)
     {
         var body = new JsonObject
         {
@@ -553,6 +1161,7 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             ["messages"] = messages.DeepClone(),
             ["stream"] = false, // Ollama streams by default; the tool-loop needs one complete reply.
         };
+        if (jsonMode) body["format"] = "json";
         // Omit "tools" entirely (rather than send "[]") when forcing a tools-less final
         // answer — matches the other clients and avoids relying on how this gateway treats
         // an empty array specifically.
@@ -561,11 +1170,13 @@ public class OllamaClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "chat")
+        var apiKey = await _credentials.RequireApiKeyAsync(LlmRouter.Ollama, ct);
+        var baseUri = await _credentials.BaseUriAsync(LlmRouter.Ollama, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "chat"))
         {
             Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+        request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
         using var response = await _http.SendAsync(request, ct);
         var responseText = await response.Content.ReadAsStringAsync(ct);

@@ -1,12 +1,22 @@
 using System.Text.Json.Serialization;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Templates;
 
 namespace ChatToDashboard.Api.Models;
 
 public class ChatRequest
 {
+    /// <summary>Ignored by ChatController.Post when <see cref="Template"/> is set — that
+    /// path resolves the real prompt server-side instead (see TemplatePromptService), so this
+    /// field can carry just a display label and never the instruction text itself.</summary>
     [JsonPropertyName("message")]
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>Set only for a template-originated question (a chat-widget/dashboard-gallery/
+    /// KPI-library "add" click) — see TemplateRef's remarks on why the browser sends this
+    /// instead of the prompt text the template itself resolves to.</summary>
+    [JsonPropertyName("template")]
+    public TemplateRef? Template { get; set; }
 
     /// <summary>
     /// The dashboard currently shown to the user — its last summary and full widgets array

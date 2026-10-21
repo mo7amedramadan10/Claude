@@ -10,6 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- So ChatToDashboard.Api.Tests can unit-test internal-but-pure helpers (e.g.
+         AnalystVerification.ReconciliationPasses/IsFresh) directly, without widening them to
+         public API just for test visibility. -->
+    <InternalsVisibleTo Include="ChatToDashboard.Api.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
     <PackageReference Include="Dapper" Version="2.1.66" />
@@ -18,7 +25,27 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.30" />
     <PackageReference Include="Novell.Directory.Ldap.NETStandard" Version="4.0.0" />
     <PackageReference Include="PDFtoImage" Version="5.4.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
+  </ItemGroup>
+
+  <!-- The connector deliverable (Part D's third artifact) is a real standalone project the
+       client builds/deploys themselves (../IntegrationConnector) — never referenced or built as
+       part of this solution. Its source files are embedded here only so ConnectorPackager can
+       zip them up at download time regardless of how this app is deployed. -->
+  <ItemGroup>
+    <EmbeddedResource Include="../IntegrationConnector/Program.cs" LogicalName="connector.Program.cs" />
+    <EmbeddedResource Include="../IntegrationConnector/IntegrationConnector.csproj" LogicalName="connector.IntegrationConnector.csproj" />
+    <EmbeddedResource Include="../IntegrationConnector/README.md" LogicalName="connector.README.md" />
+    <EmbeddedResource Include="../IntegrationConnector/appsettings.json" LogicalName="connector.appsettings.json" />
+  </ItemGroup>
+
+  <!-- Chart.js, vendored (npm chart.js@4.4.4, dist/chart.umd.js) so viewer.html carries it
+       inline instead of pulling it from a public CDN at view-time — see
+       IntegrationDeliverables.BuildViewerHtml. A client's network may allow nothing but its own
+       domains, exactly the environment this whole connector architecture is meant to work in. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Integrations/vendor/chart.umd.js" LogicalName="vendor.chart.umd.js" />
   </ItemGroup>
 
 </Project>

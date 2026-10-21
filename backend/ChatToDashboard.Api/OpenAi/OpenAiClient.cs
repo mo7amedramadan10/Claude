@@ -14,7 +14,8 @@ namespace ChatToDashboard.Api.OpenAi;
 /// loop as the Claude client: the model requests list_files / query_data / search_documents,
 /// we execute each call and append a "tool" message, until it returns the dashboard JSON.
 /// </summary>
-public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant
+public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableNamingAssistant,
+    IIntegrationSetupAssistant, IVisualIdentityImageExtractor, IStagedLlm
 {
     private const int MaxToolIterations = 15;
     private const int MaxJsonRepairAttempts = 3;
@@ -28,7 +29,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     private const int ForceFinalAnswerAtIteration = MaxToolIterations - MaxJsonRepairAttempts - 1;
 
     private readonly HttpClient _http;
-    private readonly string _apiKey;
+    private readonly ChatToDashboard.Api.Llm.LlmCredentialStore _credentials;
     private readonly string _defaultModel;
     private readonly ChatToDashboard.Api.Llm.LlmSettingsStore _settings;
     private readonly AnalyticsTools _tools;
@@ -38,18 +39,16 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     public OpenAiClient(
         HttpClient http,
         IConfiguration configuration,
+        ChatToDashboard.Api.Llm.LlmCredentialStore credentials,
         ChatToDashboard.Api.Llm.LlmSettingsStore settings,
         AnalyticsTools tools,
         UsageTracker usage,
         ILogger<OpenAiClient> logger)
     {
         _http = http;
-        // Trimmed: a stray space or newline pasted with the key makes the API reject it as invalid.
-        _apiKey = configuration["OpenAI:ApiKey"]?.Trim() is { Length: > 0 } key
-            ? key
-            : throw new InvalidOperationException(
-                "OpenAI API key is not configured. " +
-                "Set it with: dotnet user-secrets set \"OpenAI:ApiKey\" \"<key>\"");
+        // المفتاح والعنوان يُقرآن عند كل نداء من LlmCredentialStore (قاعدة البيانات ثم الإعدادات) — لا في
+        // المنشئ — ليعمل تغييرهما من صفحة «مفاتيح الموديلات» فورًا بلا إعادة تشغيل.
+        _credentials = credentials;
         _defaultModel = configuration["OpenAI:Model"] ?? "gpt-4o";
         _settings = settings;
         _tools = tools;
@@ -67,82 +66,126 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         string? modelOverride = null,
         CancellationToken ct = default)
     {
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-        };
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            };
 
-        // The dashboard currently on screen (when this is a continuation, not a fresh start —
-        // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
-        // there is no separate multi-turn history to replay.
-        var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
-        JsonNode userContent = string.IsNullOrWhiteSpace(imageDataUrl)
-            ? userText
-            : new JsonArray(
-                new JsonObject { ["type"] = "text", ["text"] = userText },
-                new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } });
-        messages.Add(new JsonObject { ["role"] = "user", ["content"] = userContent });
+            // The dashboard currently on screen (when this is a continuation, not a fresh start —
+            // see AnalyticsTools.ComposeUserMessage) is framed as part of this single user turn;
+            // there is no separate multi-turn history to replay.
+            var userText = AnalyticsTools.ComposeUserMessage(question, currentDashboard);
+            JsonNode userContent = string.IsNullOrWhiteSpace(imageDataUrl)
+                ? userText
+                : new JsonArray(
+                    new JsonObject { ["type"] = "text", ["text"] = userText },
+                    new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } });
+            messages.Add(new JsonObject { ["role"] = "user", ["content"] = userContent });
 
-        var tools = BuildToolsJson(context);
-        // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
-        // ImageReaderOpenAiModel) wins over the normal dashboard-building sub-model choice —
-        // see IDashboardGenerator.GenerateDashboardAsync's remarks.
-        var model = modelOverride is { Length: > 0 }
-            ? modelOverride
-            : (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+            var tools = BuildToolsJson(context);
+            // modelOverride (LlmRouter routing an image request to LlmSettingsStore's own
+            // ImageReaderOpenAiModel) wins over the normal dashboard-building sub-model choice —
+            // see IDashboardGenerator.GenerateDashboardAsync's remarks.
+            var model = modelOverride is { Length: > 0 }
+                ? modelOverride
+                : (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+            trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("OpenAI", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<InquiryResponse> GenerateInquiryAsync(
-        string question, SourceSelection? sources = null, AppUser? requestingUser = null, string? lang = null,
-        CancellationToken ct = default)
+        string question, IReadOnlyList<ConversationTurn>? recentTurns = null, string? priorSummary = null,
+        IReadOnlyList<InquiryBlock>? ledger = null, SourceSelection? sources = null, AppUser? requestingUser = null,
+        string? lang = null, CancellationToken ct = default)
     {
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
-        // Inquiries is never continuation-aware — isolated from whatever dashboard is on
-        // screen (see the sub-tab isolation rule) — so this is always a single fresh turn.
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = question },
-        };
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildInquirySystemPrompt(context, lang);
+            // Prior turns/summary/ledger are framed as part of this single user turn — same
+            // "continuation as one composed message" pattern GenerateDashboardAsync's own
+            // currentDashboard uses (see AnalyticsTools.ComposeInquiryUserMessage).
+            var userText = AnalyticsTools.ComposeInquiryUserMessage(
+                question, recentTurns ?? Array.Empty<ConversationTurn>(), priorSummary, ledger ?? Array.Empty<InquiryBlock>());
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = userText },
+            };
 
-        var tools = BuildToolsJson(context);
-        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, tools, context, trace,
-            AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            var tools = BuildToolsJson(context);
+            var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+            trace = _usage.Begin("OpenAI", model, question, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            var response = await RunLoopAsync(
+                model, messages, tools, context, trace,
+                AnalyticsTools.TryParseInquiry, "inquiry", ct);
+            AnalyticsTools.ApplyExaminedSources(response, trace, context);
+            return response;
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("OpenAI", question, requestingUser, ex);
+            throw;
+        }
     }
 
     public async Task<DashboardSpec> GenerateDashboardFromInquiryAsync(
-        InquiryResponse inquiry, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
+        InquiryBlock block, DashboardStateInput? currentDashboard = null, SourceSelection? sources = null,
         AppUser? requestingUser = null, string? lang = null, CancellationToken ct = default)
     {
-        // "➕ أضف إلى لوحة المتابعة": a pure restructuring call — the data is already real and
-        // already fetched, so no tools are offered at all (tools: null below), guaranteeing
-        // no new query_data/list_files call can happen here.
-        var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
-        var systemPrompt = _tools.BuildSystemPrompt(context, lang);
-        var messages = new JsonArray
+        UsageTrace? trace = null;
+        try
         {
-            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-            new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(inquiry, currentDashboard) },
-        };
+            // "🔄 حوّله لداشبورد": a pure restructuring call — the data is already real and
+            // already fetched, so no tools are offered at all (tools: null below), guaranteeing
+            // no new query_data/list_files call can happen here.
+            var context = await _tools.DescribeSourcesAsync(sources ?? SourceSelection.AllEnabled(), ct);
+            var systemPrompt = _tools.BuildSystemPrompt(context, lang);
+            var messages = new JsonArray
+            {
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = AnalyticsTools.ComposeConversionUserMessage(block, currentDashboard) },
+            };
 
-        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
-        var trace = _usage.Begin("OpenAI", model, "🔄 تحويل استفسار إلى لوحة: " + inquiry.Answer, DescribeSources(context), requestingUser);
-        trace.SetSystemPrompt(systemPrompt);
-        return await RunLoopAsync(
-            model, messages, null, context, trace,
-            AnalyticsTools.TryParseDashboard, "dashboard", ct);
+            var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+            trace = _usage.Begin("OpenAI", model, "🔄 تحويل استفسار إلى لوحة: " + block.Text, DescribeSources(context), requestingUser);
+            trace.SetSystemPrompt(systemPrompt);
+            return await RunLoopAsync(
+                model, messages, null, context, trace,
+                AnalyticsTools.TryParseDashboard, "dashboard", ct);
+        }
+        catch (Exception ex) when (trace is null)
+        {
+            await RecordPreTraceFailureAsync("OpenAI", "🔄 تحويل استفسار إلى لوحة: " + block.Text, requestingUser, ex);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a minimal failed row for an exception thrown before a trace existed at
+    /// all — DescribeSourcesAsync, settings lookup, BuildSystemPrompt, etc. — so the request
+    /// doesn't vanish from the Usage page entirely. Mirrors
+    /// LlmRouter.ResolveOrRecordFailureAsync's identical fix for provider-resolution failures,
+    /// extended to cover every step before RunLoopAsync's own try/catch takes over logging.</summary>
+    private async Task RecordPreTraceFailureAsync(string provider, string question, AppUser? requestingUser, Exception ex)
+    {
+        var trace = _usage.Begin(provider, "(unresolved)", question, "", requestingUser);
+        await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
     }
 
     /// <summary>See ClaudeClient.ExtractDocumentTextAsync — same contract, OpenAI's own
@@ -170,7 +213,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+            var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
             var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
             var text = choice["message"]?["content"]?.GetValue<string>() ?? string.Empty;
@@ -203,7 +246,7 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         trace.SetSystemPrompt(systemPrompt);
         try
         {
-            var response = await CallChatCompletionsAsync(model, messages, null, trace, ct);
+            var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
             var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("OpenAI API response had no choices.");
             var text = (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
@@ -217,6 +260,175 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
         }
     }
 
+    /// <summary>See ClaudeClient.SuggestVisualIdentityAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> SuggestVisualIdentityAsync(
+        string? description, string? seedColor, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentitySystemPrompt;
+        var userText = AnalyticsTools.VisualIdentityUserMessage(description, seedColor);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🎨 اقتراح هوية بصرية لتكامل خارجي", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.SuggestFontFromPdfTextAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<string?> SuggestFontFromPdfTextAsync(
+        string extractedPdfText, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.FontExtractionSystemPrompt;
+        var userText = AnalyticsTools.FontExtractionUserMessage(extractedPdfText);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🔤 استخراج اسم خط من PDF", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            await trace.CompleteAsync(true, text, null, ct);
+            return string.Equals(text, "NONE", StringComparison.OrdinalIgnoreCase) || text.Length == 0 ? null : text;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See ClaudeClient.MatchIdentityTransportAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<IdentityTransportMatch> MatchIdentityTransportAsync(
+        string description, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.IdentityTransportSystemPrompt;
+        var userText = AnalyticsTools.IdentityTransportUserMessage(description);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🔑 مطابقة آلية تعريف المستخدم", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseIdentityTransportMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new IdentityTransportMatch(false, null, null, "تعذّر تحليل الوصف — حاول تاني أو أدخل الآلية يدويًا.");
+        }
+    }
+
+    /// <summary>See ClaudeClient.MatchSchemaContractAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<InteractiveSchemaMatch> MatchSchemaContractAsync(
+        string contractDescription, string tableCatalog, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.InteractiveSchemaMatchSystemPrompt;
+        var userText = AnalyticsTools.InteractiveSchemaMatchUserMessage(contractDescription, tableCatalog);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🧩 مطابقة بيانات لوحة تفاعلية", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var match = AnalyticsTools.ParseInteractiveSchemaMatch(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return match;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return new InteractiveSchemaMatch(false, null, ex.Message);
+        }
+    }
+
+    /// <summary>See ClaudeClient.RetargetSqlAsync / IIntegrationSetupAssistant. Never throws.</summary>
+    public async Task<string?> RetargetSqlAsync(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription,
+        AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.RetargetSqlSystemPrompt;
+        var userText = AnalyticsTools.RetargetSqlUserMessage(widgetTitle, originalSql, clientDbProvider, clientSchemaDescription);
+        var model = (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, $"🔁 إعادة توجيه استعلام: {widgetTitle}", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var text = await CallSingleTextTurnAsync(model, systemPrompt, userText, trace, ct);
+            var sql = AnalyticsTools.ParseRetargetedSql(text);
+            await trace.CompleteAsync(true, text, null, ct);
+            return sql;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>See IVisualIdentityImageExtractor — its own sub-model choice
+    /// (VisualIdentityReaderOpenAiModel), independent of every other model field. Callers must
+    /// already have verified VisualIdentitySupportsImage before reaching here (see
+    /// VisualIdentityImageRouter). Never throws.</summary>
+    public async Task<VisualIdentitySuggestion?> ExtractVisualIdentityFromImageAsync(
+        string imageDataUrl, AppUser? requestingUser = null, CancellationToken ct = default)
+    {
+        var systemPrompt = AnalyticsTools.VisualIdentityImageSystemPrompt;
+        var content = new JsonArray
+        {
+            new JsonObject { ["type"] = "text", ["text"] = AnalyticsTools.VisualIdentityImageInstruction },
+            new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = imageDataUrl } },
+        };
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = content },
+        };
+
+        var model = (await _settings.GetVisualIdentityReaderAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var trace = _usage.Begin("OpenAI", model, "🎨 استخراج هوية بصرية من صورة", "", requestingUser);
+        trace.SetSystemPrompt(systemPrompt);
+        try
+        {
+            var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
+            var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
+                ?? throw new InvalidOperationException("OpenAI API response had no choices.");
+            var text = (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+            var (suggestion, error) = AnalyticsTools.TryParseVisualIdentity(text);
+            await trace.CompleteAsync(suggestion is not null, text, error, ct);
+            return suggestion;
+        }
+        catch (Exception ex)
+        {
+            await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>Shared by the three tool-free text-only helpers above — see
+    /// ClaudeClient.CallSingleTextTurnAsync.</summary>
+    private async Task<string> CallSingleTextTurnAsync(string model, string systemPrompt, string userText, UsageTrace trace, CancellationToken ct)
+    {
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = userText },
+        };
+        var response = await CallChatCompletionsAsync(model, messages, null, false, trace, ct);
+        var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
+            ?? throw new InvalidOperationException("OpenAI API response had no choices.");
+        return (choice["message"]?["content"]?.GetValue<string>() ?? string.Empty).Trim();
+    }
+
     /// <summary>
     /// The tool-calling loop shared by every mode above: call the API, execute any requested
     /// tool and loop, or parse+validate the final text via <paramref name="tryParse"/> —
@@ -227,17 +439,21 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     /// </summary>
     private async Task<T> RunLoopAsync<T>(
         string model, JsonArray messages, JsonArray? tools, AnalyticsTools.SourceContext context,
-        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct)
+        UsageTrace trace, Func<string, (T? Result, string? Error)> tryParse, string kindLabel, CancellationToken ct,
+        // البناء المرحلي (RunStagedAsync) يمرّر سقفًا أصغر ودورات إجبار أقل ووضع JSON؛ القيم
+        // الافتراضية تُبقي كل المسارات القديمة كما هي حرفيًا.
+        int maxIterations = MaxToolIterations, int forceFinalAnswerAt = ForceFinalAnswerAtIteration,
+        int forceToolRounds = 2, bool jsonObjectMode = false)
         where T : class
     {
         var jsonRepairAttempts = 0;
         var forcedFinalAnswerNoticeSent = false;
         try
         {
-            for (var iteration = 0; iteration < MaxToolIterations; iteration++)
+            for (var iteration = 0; iteration < maxIterations; iteration++)
             {
                 ct.ThrowIfCancellationRequested();
-                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= ForceFinalAnswerAtIteration;
+                var forceFinalAnswer = tools is not { Count: > 0 } || iteration >= forceFinalAnswerAt;
                 if (forceFinalAnswer && tools is { Count: > 0 } && !forcedFinalAnswerNoticeSent)
                 {
                     forcedFinalAnswerNoticeSent = true;
@@ -250,7 +466,22 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
                             "مطابقًا للمخطط المطلوب، من غير أي نداء أدوات إضافي.",
                     });
                 }
-                var response = await CallChatCompletionsAsync(model, messages, forceFinalAnswer ? null : tools, trace, ct);
+                // Force the first two calls of every loop to make a tool call when tools are
+                // offered. Forcing only iteration 0 (the original fix) stopped a model from
+                // declining a build outright with zero tool calls at all (observed live:
+                // "not authorized", without ever calling list_files) — but left a second,
+                // equally real failure open: a model that calls list_files once, sees the
+                // real schema, and then just answers "stop" without ever calling query_data
+                // to actually check it against the widgets it was asked for (observed live:
+                // a whole dashboard of real, matching columns returned 100% noData because
+                // the model never got past round one). Forcing round two as well means that
+                // right after list_files, the model is made to pick another tool again
+                // (almost always query_data) before it's allowed to free-answer — then every
+                // iteration from here stays "auto" so it can still stop once it actually has
+                // what it needs, same as before.
+                var forceToolUse = iteration < forceToolRounds && !forceFinalAnswer;
+                var response = await CallChatCompletionsAsync(
+                    model, messages, forceFinalAnswer ? null : tools, forceToolUse, trace, ct, jsonObjectMode);
 
                 var choice = response["choices"]?.AsArray().FirstOrDefault()?.AsObject()
                     ?? throw new InvalidOperationException("OpenAI API response had no choices.");
@@ -334,13 +565,49 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
             }
 
             throw new InvalidOperationException(
-                $"Tool-calling loop did not converge within {MaxToolIterations} iterations.");
+                $"Tool-calling loop did not converge within {maxIterations} iterations.");
         }
         catch (Exception ex)
         {
             await trace.CompleteAsync(false, null, ex.Message, CancellationToken.None);
             throw;
         }
+    }
+
+    public string ProviderName => "OpenAI";
+
+    /// <summary>انظر <see cref="IStagedLlm"/>: نداء صغير بتعليماته الخاصة وسقف دوراته الخاص، يعيد
+    /// استخدام نفس حلقة الأدوات والتسجيل في سجل الاستهلاك.</summary>
+    public async Task<StagedResult> RunStagedAsync(StagedCall call, CancellationToken ct = default)
+    {
+        var model = call.ModelOverride is { Length: > 0 } ? call.ModelOverride
+            : (await _settings.GetAsync(ct)).OpenAiModel is { Length: > 0 } saved ? saved : _defaultModel;
+        var messages = new JsonArray
+        {
+            new JsonObject { ["role"] = "system", ["content"] = call.SystemPrompt },
+            new JsonObject { ["role"] = "user", ["content"] = call.UserMessage },
+        };
+        JsonArray? tools = null;
+        if (call.Tools is { Count: > 0 })
+        {
+            tools = new JsonArray();
+            foreach (var tool in call.Tools)
+                tools.Add(new JsonObject
+                {
+                    ["type"] = "function",
+                    ["function"] = new JsonObject
+                    {
+                        ["name"] = tool.Name, ["description"] = tool.Description, ["parameters"] = tool.InputSchema.DeepClone(),
+                    },
+                });
+        }
+        var trace = _usage.Begin("OpenAI", model, call.Label, DescribeSources(call.Context), call.RequestingUser);
+        trace.SetSystemPrompt(call.SystemPrompt);
+        var maxIterations = Math.Max(2, call.MaxIterations);
+        return await RunLoopAsync(
+            model, messages, tools, call.Context, trace, AnalyticsTools.TryParseStagedJson, "staged", ct,
+            maxIterations: maxIterations + 2, forceFinalAnswerAt: maxIterations,
+            forceToolRounds: call.ForceFirstToolCall ? 1 : 0, jsonObjectMode: true);
     }
 
     /// <summary>A short, readable note of which sources were on for this question.</summary>
@@ -377,17 +644,29 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
     }
 
     private async Task<JsonObject> CallChatCompletionsAsync(
-        string model, JsonArray messages, JsonArray? tools, UsageTrace trace, CancellationToken ct)
+        string model, JsonArray messages, JsonArray? tools, bool forceToolUse, UsageTrace trace, CancellationToken ct,
+        bool jsonObjectMode = false)
     {
         var body = new JsonObject
         {
             ["model"] = model,
             ["messages"] = messages.DeepClone(),
         };
+        // وضع JSON: الواجهة البرمجية تضمن أن الرد النهائي كائن JSON صالح (لا أسوار markdown ولا نص
+        // خارجه)، فتختفي أغلب دورات «ردك لم يكن JSON صالحًا». يعمل مع الأدوات أيضًا.
+        if (jsonObjectMode)
+            body["response_format"] = new JsonObject { ["type"] = "json_object" };
         // OpenAI rejects an empty "tools" array outright (400: minimum length 1) — omit the
         // field entirely rather than send "[]" when forcing a tools-less final answer.
         if (tools is { Count: > 0 })
+        {
             body["tools"] = tools.DeepClone();
+            // "required" (not a specific tool name): the model still picks which tool fits —
+            // almost always list_files, per its own step-0/step-1 instructions — this only
+            // rules out answering with zero tool calls at all on this one call.
+            if (forceToolUse)
+                body["tool_choice"] = "required";
+        }
         // Reasoning models (the gpt-5.x family) default to a reasoning_effort that refuses to
         // mix with function tools on this endpoint ("Function tools with reasoning_effort are
         // not supported ... set reasoning_effort to 'none'"). Every call here uses tools, so
@@ -398,11 +677,13 @@ public class OpenAiClient : IDashboardGenerator, IDocumentTextExtractor, ITableN
 
         var requestBody = body.ToJsonString();
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions")
+        var apiKey = await _credentials.RequireApiKeyAsync(ChatToDashboard.Api.Llm.LlmRouter.OpenAI, ct);
+        var baseUri = await _credentials.BaseUriAsync(ChatToDashboard.Api.Llm.LlmRouter.OpenAI, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "v1/chat/completions"))
         {
             Content = new StringContent(requestBody, Encoding.UTF8, "application/json"),
         };
-        request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+        request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
         using var response = await _http.SendAsync(request, ct);
         var responseText = await response.Content.ReadAsStringAsync(ct);

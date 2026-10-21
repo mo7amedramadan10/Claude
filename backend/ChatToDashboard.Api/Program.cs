@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.DataProtection;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using ChatToDashboard.Api.Auth;
 using ChatToDashboard.Api.Claude;
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.History;
+using ChatToDashboard.Api.Live;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.OpenAi;
 using ChatToDashboard.Api.Repository;
@@ -21,7 +24,19 @@ builder.Services.AddControllers();
 // individual actions opt out with [AllowAnonymous] (login itself, and the public
 // GET /api/share/{id} view link). API calls get a 401 instead of a login-page redirect,
 // since this is a JSON API consumed by the SPA's own fetch calls, not a browser nav.
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+// مفاتيح الوصول الشخصية (Users/ApiTokenAuthenticationHandler): طلب يحمل «Bearer jeem_…» يُصادَق بالمفتاح
+// بدل الكوكي — لربط Claude Desktop وأي أداة خارجية — عبر سياسة تختار المخطط بحسب الترويسة.
+const string SmartScheme = "CookieOrApiToken";
+builder.Services.AddSingleton<ApiTokenStore>();
+builder.Services.AddAuthentication(SmartScheme)
+    .AddPolicyScheme(SmartScheme, "Cookie or API token", options =>
+    {
+        options.ForwardDefault = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.ForwardDefaultSelector = context => ApiTokenAuthenticationHandler.HasToken(context.Request)
+            ? ApiTokenAuthenticationHandler.Scheme
+            : CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiTokenAuthenticationHandler>(ApiTokenAuthenticationHandler.Scheme, null)
     .AddCookie(options =>
     {
         options.Cookie.Name = "ctd_auth";
@@ -31,9 +46,18 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Events.OnRedirectToAccessDenied = context => { context.Response.StatusCode = 403; return Task.CompletedTask; };
     });
 builder.Services.AddAuthorization(options =>
-    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+    // Platform-level endpoints (Controllers/OrganizationsController) — every organization,
+    // not just the caller's own. A claim rather than a Role value: see AppUser.IsPlatformOwner.
+    options.AddPolicy("PlatformOwner", policy => policy.RequireClaim("IsPlatformOwner", "true"));
+});
 
 builder.Services.AddSingleton<UserStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Organizations.OrganizationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Projects.ProjectStore>();
+// §4.23 — اللوحات المنشورة داخل المشروع (جدول مستقل عن PublishedDashboardSlots الخاص بالتكاملات).
+builder.Services.AddSingleton<ChatToDashboard.Api.Projects.PublishedDashboardStore>();
 builder.Services.AddSingleton<PermissionsService>();
 builder.Services.Configure<LdapOptions>(builder.Configuration.GetSection(LdapOptions.SectionName));
 builder.Services.AddSingleton<LdapAuthenticator>();
@@ -54,7 +78,71 @@ builder.Services.AddSingleton<AnalyticsTools>();
 builder.Services.AddSingleton<HistoryStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.History.DashboardAccessService>();
 builder.Services.AddSingleton<ShareStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.ConversationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.InquiryAccessService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplateStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaAliasStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.SchemaLibrary.SchemaMatchingService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Templates.TemplatePromptService>();
+// البناء المرحلي لقوالب اللوحات (ملف تعريف البيانات + تخطيط + نداء لكل عنصر + تجميع).
+builder.Services.AddSingleton<ChatToDashboard.Api.Build.DataProfileService>();
+builder.Services.AddSingleton(sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
+builder.Services.AddSingleton<ChatToDashboard.Api.Build.StagedTemplateBuilder>();
+// طبقة المعنى: فهم أعمدة كل ملف مرفوع مرة واحدة وربطها بقاموس مفاهيم ثابت.
+builder.Services.AddSingleton<ChatToDashboard.Api.Semantics.ColumnSemanticsStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Semantics.ColumnSemanticsService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Semantics.ConceptPriorStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Semantics.WidgetFeasibilityService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Analyst.AnalystStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Graph.GraphStore>();
+builder.Services.AddSingleton<LiveChannelHub>();
+
+// Interactive (RenderKind) templates' real-data providers — see Interactive/
+// InteractiveDataModels.cs. Stubs for the 5 pre-existing network/workflow/marketplace
+// templates (their real per-project SQL mapping isn't part of this task's assigned scope,
+// §4.16-§4.24 — see StubInteractiveDataProvider's own doc comment); §4.16+ templates get
+// their own real IInteractiveDataProvider registered here as each is built.
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("policy-network",
+        new[] { "اللوائح والأنظمة", "الجهات والمنصات", "الشكاوى" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-network",
+        new[] { "طلبات الشراء", "الموردون", "أوامر الشراء" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("client-supplier-network",
+        new[] { "العملاء", "الموردون", "المشاريع المشتركة" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-workflow",
+        new[] { "أحداث مراحل الطلبات", "مدة الخدمة لكل مرحلة" }));
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider>(
+    new ChatToDashboard.Api.Interactive.StubInteractiveDataProvider("procurement-marketplace",
+        new[] { "طلبات المنصة", "العملاء", "الموردون" }));
+// Real SQL matching (§4.16-4.21 Phase-1 templates) — see InteractiveContractMatcher.cs
+// (LLM-assisted logical->real table/column matching, re-verified against the project's own
+// catalog before trusting it). Converted one at a time, starting with the simplest data
+// shapes; the remaining stubs above get the same treatment next.
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveContractMatcher>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CrmPipelineDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.WarehouseTeamDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TeamTasksDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TimeTrackingDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.LiquidityPoolsDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TokenTreasuryDataProvider>();
+// §4.22 (11-dashboard batch, dash-kit engines) — same matcher, one provider per dashboard.
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.SaasMetricsDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.ProjectStudioDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CampaignProjectDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TreasuryFundingDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.ConstructionCrmDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.TaskBoardDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CrmLeadsDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.SupplierRiskDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.CrmAnalysisDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.SupplyCommandDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.IInteractiveDataProvider, ChatToDashboard.Api.Interactive.FinanceOpsDataProvider>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Interactive.InteractiveDataRegistry>();
 
 // Named clients for the back-office endpoints. The "insecure" one exists only for an
 // internal server with a self-signed certificate, and is opt-in per system.
@@ -73,6 +161,12 @@ builder.Services.AddHttpClient(SystemApiClients.Insecure)
 // key isn't configured only breaks if it's the one currently selected, not at startup.
 var llmProvider = builder.Configuration["Llm:Provider"] ?? "Anthropic";
 builder.Services.AddSingleton<ChatToDashboard.Api.Llm.LlmSettingsStore>();
+// مفاتيح المزوّدين من صفحة «مفاتيح الموديلات»: تُحفظ مشفّرة بـ Data Protection؛ مجلد المفاتيح بجوار
+// التطبيق (لا في ملف المستخدم) حتى تبقى قابلة للقراءة بعد إعادة التشغيل أو التشغيل كخدمة.
+builder.Services.AddDataProtection()
+    .SetApplicationName("ChatToDashboard")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "dp-keys")));
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.LlmCredentialStore>();
 builder.Services.AddHttpClient<ClaudeClient>(client =>
 {
     client.BaseAddress = new Uri("https://api.anthropic.com/");
@@ -103,7 +197,25 @@ builder.Services.AddSingleton<IDashboardGenerator, ChatToDashboard.Api.Llm.LlmRo
 // interfaces share the exact same instance instead of quietly constructing two.
 builder.Services.AddSingleton<ChatToDashboard.Api.Llm.ITableNamingAssistant>(
     sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
+// Same LlmRouter singleton again, for External Integrations' visual-identity/identity-
+// transport text suggestions (see IIntegrationSetupAssistant's remarks on why this shares
+// LlmRouter's normal provider resolution instead of its own independent setting).
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IIntegrationSetupAssistant>(
+    sp => (ChatToDashboard.Api.Llm.LlmRouter)sp.GetRequiredService<IDashboardGenerator>());
 builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IDocumentReaderRouter, ChatToDashboard.Api.Llm.DocumentReaderRouter>();
+// Registered as its own concrete type (not just its interface) because VisualIdentityService
+// also needs DescribeAsync — its own method, not part of IVisualIdentityImageExtractor — to
+// tell "nothing configured" apart from "configured but not image-capable" for its refusal
+// message; same one-singleton-two-registrations shape as LlmRouter/IDashboardGenerator above.
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.VisualIdentityImageRouter>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Llm.IVisualIdentityImageExtractor>(
+    sp => sp.GetRequiredService<ChatToDashboard.Api.Llm.VisualIdentityImageRouter>());
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.VisualIdentityService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.ClientSchemaDiscoveryService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.ClientQueryService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.PublishService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationDeliverables>();
 
 var app = builder.Build();
 
@@ -131,6 +243,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 // it still requires a session via the FallbackPolicy above.
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseWebSockets();
 
 app.UseRouting();
 app.UseAuthentication();
@@ -138,10 +251,54 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// INTERACTIVE-HANDOFF.md §7's "hub /hubs/live" — see LiveChannelHub's own doc comment for
+// why this is a plain WebSocket endpoint instead of a SignalR hub. Channel convention:
+// "{projectId}:{key}" (the project id is always the first segment) — any authenticated
+// project member (or platform Admin) may subscribe; nobody else's channel is reachable
+// even by guessing a projectId, since the role check below runs before the socket upgrade
+// is accepted. FallbackPolicy (RequireAuthenticatedUser, configured above) already covers
+// "must be signed in" for this endpoint like every other one; the project-membership check
+// here is the additional, endpoint-specific layer.
+app.Map("/ws/live/{channel}", async (
+    HttpContext ctx, string channel, LiveChannelHub hub,
+    ChatToDashboard.Api.Projects.ProjectStore projects) =>
+{
+    if (!ctx.WebSockets.IsWebSocketRequest) { ctx.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
+    var projectId = channel.Split(':', 2)[0];
+    if (string.IsNullOrEmpty(projectId)) { ctx.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
+    var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return; }
+    if (!ctx.User.IsInRole(UserRoles.Admin))
+    {
+        var roles = await projects.ListRolesAsync(projectId, ctx.RequestAborted);
+        if (!roles.Any(r => r.UserId == userId)) { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return; }
+    }
+    var socket = await ctx.WebSockets.AcceptWebSocketAsync();
+    await hub.RunAsync(channel, socket, ctx.RequestAborted);
+});
+
 // The observability page lives on its own link, unrelated to the dashboard — admin only.
 app.MapGet("/usage", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "usage.html"), "text/html"))
     .RequireAuthorization(policy => policy.RequireRole(UserRoles.Admin));
+
+// صفحة مشاهدة عرض تقديمي عام (انظر PresentationsController): بلا تسجيل دخول، وتضع المحتوى في iframe معزول.
+app.MapGet("/p/{id}", (IWebHostEnvironment env) =>
+    Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
+    .AllowAnonymous();
+// الرابط المقروء: /p/{اسم-المنظمة}/{اسم-العرض} (فريد داخل المنظمة) — نفس صفحة المشاهدة.
+app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
+    Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
+    .AllowAnonymous();
+
+// /o/{slug} (and anything else with no matching static file or API route) still serves the
+// same single-page app — app.js reads the slug from location.pathname itself (see
+// resolveOrgScopedLoginAsync) to show the right organization's login screen. Only ever
+// reached for a GET that matched nothing above, so it never shadows a real API route.
+// AllowAnonymous is required here — every endpoint requires a signed-in user by default
+// (FallbackPolicy above), which would otherwise 401 this before the signed-out visitor it's
+// actually for ever sees the login screen.
+app.MapFallbackToFile("index.html").AllowAnonymous();
 
 // Initial load: scan the data folder and (re)create the staging tables so the
 // shared SQL Server copy reflects the current files. Failures are logged but do
@@ -161,6 +318,81 @@ using (var scope = app.Services.CreateScope())
     // the admin account, just below) fails with "Cannot open database" and no account ever
     // gets created — a silent lockout, since there's no self-signup to fall back on.
     await dataStore.EnsureDatabaseExistsAsync(logger);
+
+    // SaaS hierarchy (Platform → Organization → Project — see Organizations/Projects): every
+    // install needs at least a default organization and project for its existing/first users
+    // and data to belong to. Created once, here, before the admin-seeding step below so a
+    // brand-new install's seed admin can be attached to it directly.
+    ChatToDashboard.Api.Organizations.Organization? defaultOrg = null;
+    try
+    {
+        var orgStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Organizations.OrganizationStore>();
+        var projectStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Projects.ProjectStore>();
+        defaultOrg = await orgStore.FirstAsync();
+        if (defaultOrg is null)
+        {
+            defaultOrg = await orgStore.CreateAsync("المنظمة الافتراضية");
+            await projectStore.CreateAsync(defaultOrg.Id, "المشروع الرئيسي");
+            logger.LogInformation("Created the default organization + project.");
+        }
+
+        // Attach any account that predates this feature (including a fresh seed-admin
+        // scenario can't hit this — CountAsync below is still 0 then) to the default org.
+        var userStoreForBackfill = scope.ServiceProvider.GetRequiredService<UserStore>();
+        await userStoreForBackfill.BackfillMissingOrganizationAsync(defaultOrg.Id);
+
+        // Files and external integrations predate project-level isolation entirely — every
+        // one of them, on any pre-existing install, implicitly belonged to "the" single
+        // workspace that existed before organizations/projects did, which is exactly the
+        // default organization's own default project. Without this, a brand-new organization
+        // would see every pre-existing file/integration too (ProjectId NULL never matches a
+        // real project id) — the leak this whole ProjectId column exists to close.
+        var defaultProject = await projectStore.FirstForOrganizationAsync(defaultOrg.Id);
+        if (defaultProject is not null)
+        {
+            var repositoryStoreForBackfill = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Repository.RepositoryStore>();
+            await repositoryStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
+            var integrationStoreForBackfill = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Integrations.IntegrationStore>();
+            await integrationStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
+
+            // Now that every repository file has a real ProjectId (just backfilled above, or
+            // already had one), move each one's uploaded-data table out of the shared SQL
+            // Server schema into its own project's schema — see RepositoryStore.MigrateExisting-
+            // TablesToProjectSchemasAsync's own doc comment. No-op on SQLite, and idempotent
+            // (re-checked by OBJECT_ID, not a flag) so it's cheap to run on every startup.
+            await repositoryStoreForBackfill.MigrateExistingTablesToProjectSchemasAsync();
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to ensure the default organization/project exist.");
+    }
+
+    // Field/table alias library (see ChatToDashboard.Api.SchemaLibrary) — seeded once, the
+    // first time this table is ever empty, by mining kpi-library.js's own draft "expected
+    // SELECT" for the (table, value-column, group-column) concepts it already implies. A no-op
+    // on every later startup (SeedIfEmptyAsync checks first) — never re-runs against a library
+    // an admin has already started curating, and never blocks startup if it fails.
+    try
+    {
+        var aliasStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.SchemaLibrary.SchemaAliasStore>();
+        if (!await aliasStore.HasAnyAsync())
+        {
+            var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            var kpiLibraryPath = Path.Combine(env.WebRootPath, "js", "kpi-library.js");
+            if (File.Exists(kpiLibraryPath))
+            {
+                var content = await File.ReadAllTextAsync(kpiLibraryPath);
+                var seedRows = ChatToDashboard.Api.SchemaLibrary.SchemaAliasSeedGenerator.BuildFromKpiLibraryJs(content);
+                await aliasStore.SeedIfEmptyAsync(seedRows);
+                logger.LogInformation("Seeded the field/table alias library: {Count} candidate names.", seedRows.Count);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to seed the field/table alias library.");
+    }
 
     // Accounts are admin-provisioned only (no self-signup) — so the very first admin has
     // to come from somewhere. If no account exists yet at all, create one: from
@@ -187,6 +419,10 @@ using (var scope = app.Services.CreateScope())
                 IsActive = true,
                 AllowAllSystems = true,
                 AllowAllFiles = true,
+                // The very first account is, by definition, us — the platform owner — until
+                // real customer organizations exist (see AppUser.IsPlatformOwner).
+                OrganizationId = defaultOrg?.Id,
+                IsPlatformOwner = true,
             });
 
             if (generated)
@@ -204,6 +440,74 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex, "Failed to ensure an initial admin account exists.");
+    }
+
+    // Demo accounts showing the two non-platform-owner permission shapes this app supports:
+    // an org Admin (Role=Admin — sees/manages everything in their own organization, same as
+    // any org admin) and a plain "User" account scoped to exactly one project via
+    // ProjectRoles (see ProjectsController.List / HistoryController.CurrentProjectIdAsync —
+    // a project, unlike a dashboard, has no single natural owner, so this is a named role
+    // row rather than an OwnerId column). Looked up by name/username first so a restart
+    // never recreates or duplicates them; the role assignment is re-applied every time
+    // regardless, so it self-heals if ever removed by hand.
+    try
+    {
+        var orgStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Organizations.OrganizationStore>();
+        var projectStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Projects.ProjectStore>();
+        var userStore = scope.ServiceProvider.GetRequiredService<UserStore>();
+
+        var demoOrg = (await orgStore.ListAsync()).FirstOrDefault(o => o.Name == "شركة النموذج التجريبي")
+            ?? await orgStore.CreateAsync("شركة النموذج التجريبي");
+        var demoProject = (await projectStore.ListByOrganizationAsync(demoOrg.Id)).FirstOrDefault(p => p.Name == "المشروع الأول")
+            ?? await projectStore.CreateAsync(demoOrg.Id, "المشروع الأول");
+
+        if (await userStore.FindByUsernameAsync("org.admin") is null)
+        {
+            var pw = RandomNumberGenerator.GetHexString(12);
+            await userStore.CreateAsync(new AppUser
+            {
+                Username = "org.admin",
+                DisplayName = $"مسؤول {demoOrg.Name}",
+                Role = UserRoles.Admin,
+                AuthMethod = AuthMethods.Local,
+                PasswordHash = PasswordHasher.Hash(pw),
+                IsActive = true,
+                AllowAllSystems = true,
+                AllowAllFiles = true,
+                OrganizationId = demoOrg.Id,
+                IsPlatformOwner = false,
+            });
+            logger.LogWarning(
+                "Seeded an org-admin demo account for {Org}. Username: {Username} | Password: {Password}",
+                demoOrg.Name, "org.admin", pw);
+        }
+
+        var projectUser = await userStore.FindByUsernameAsync("project.owner");
+        if (projectUser is null)
+        {
+            var pw = RandomNumberGenerator.GetHexString(12);
+            projectUser = await userStore.CreateAsync(new AppUser
+            {
+                Username = "project.owner",
+                DisplayName = $"مسؤول {demoProject.Name}",
+                Role = UserRoles.User,
+                AuthMethod = AuthMethods.Local,
+                PasswordHash = PasswordHasher.Hash(pw),
+                IsActive = true,
+                AllowAllSystems = true,
+                AllowAllFiles = true,
+                OrganizationId = demoOrg.Id,
+                IsPlatformOwner = false,
+            });
+            logger.LogWarning(
+                "Seeded a project-owner demo account for {Project}. Username: {Username} | Password: {Password}",
+                demoProject.Name, "project.owner", pw);
+        }
+        await projectStore.SetRoleAsync(demoProject.Id, projectUser.Id, ChatToDashboard.Api.Projects.ProjectRoles.Owner);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to seed the demo organization/project/users.");
     }
 
     try

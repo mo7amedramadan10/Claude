@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>المحادثة واللوحات · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="project">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="org-projects.html" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-users.html" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-settings.html" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item is-open" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="true"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link is-active" href="project-workspace.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link" href="project-published.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link" href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link" href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link" href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل">
+        <a href="org-projects.html">شركة س</a><span class="sep">/</span>
+        <a href="project-workspace.html">منصة المبيعات</a><span class="sep">/</span>
+        <strong>المحادثة واللوحات</strong>
+      </nav>
+      <span class="spacer"></span>
+      <div class="actions">
+        <button class="btn btn-ghost hide-sm" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>سجل اللوحات <span class="badge">12</span></button>
+        <button class="btn btn-soft" type="button" data-open-gallery data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>لوحة جديدة</button>
+        <button class="btn hide-sm" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg>تصدير</button>
+        <button class="btn" type="button" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-share"/></svg>مشاركة</button>
+        <button class="btn btn-primary" type="button" data-require="project:owner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg>نشر</button>
+        <button class="btn btn-soft btn-icon chat-fab" type="button" data-chat="open" aria-label="فتح المحادثة"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg></button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <main class="canvas" id="dashboard">
+        <section class="dash-head">
+          <div class="dash-title">
+            <h1>أداء المبيعات 2026 حتى الربع الثالث</h1>
+            <div class="dash-meta">
+              <span class="live">بيانات حية من نظام ERP</span><span class="dot-sep"></span>
+              <span>أُنشئت من سؤالك قبل دقيقتين</span><span class="dot-sep"></span>
+              <span>آخر تحديث <span class="num">10:42</span> ص</span>
+            </div>
+          </div>
+          <button class="narrate" type="button" aria-pressed="false" data-text="حققت المبيعات حتى نهاية سبتمبر خمسين فاصل ستة مليون ريال، أي سبعة وتسعين بالمئة من المستهدف. وتجاوزت المبيعات المستهدف لأول مرة في سبتمبر.">
+            <span class="lbl">استمع للملخص</span>
+            <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="play"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-play"/></svg></span>
+          </button>
+        </section>
+
+        <div class="alert viewer-note" data-show-roles="viewer"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="grow">أنت <b>مشاهد</b> في هذا المشروع: تقدر تستعرض اللوحات وتسأل عنها، لكن بناء اللوحات وتعديلها ونشرها لأصحاب صلاحية أعلى.</span></div>
+
+        <div class="filters" role="toolbar" aria-label="فلاتر اللوحة">
+          <div class="segmented" role="group" aria-label="الفترة">
+            <button type="button" aria-pressed="false">شهري</button>
+            <button type="button" aria-pressed="true">ربع سنوي</button>
+            <button type="button" aria-pressed="false">سنوي</button>
+          </div>
+          <label class="sr-only" for="f-region">المنطقة</label>
+          <select class="select" id="f-region"><option>كل المناطق</option><option>الرياض</option><option>مكة المكرمة</option><option>الشرقية</option></select>
+          <button class="chip is-on" type="button" aria-pressed="true">التجزئة</button>
+          <button class="chip is-on" type="button" aria-pressed="true">الصناعي</button>
+          <button class="chip is-on" type="button" aria-pressed="true">الحكومي</button>
+          <button class="chip is-on" type="button" aria-pressed="true">الضيافة</button>
+          <span class="grow"></span>
+          <button class="btn btn-ghost btn-sm" type="button" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة عنصر</button>
+        </div>
+
+        <section class="insight" aria-label="الخلاصة">
+          <span class="ico"><img src="assets/img/logo-mark.svg" alt=""></span>
+          <div>
+            <h3>الخلاصة</h3>
+            <p>حققت المبيعات <mark>97% من المستهدف</mark> حتى نهاية سبتمبر، وتجاوزت المستهدف لأول مرة هذا العام في سبتمبر. المنطقة <mark>الشرقية</mark> هي الأسرع نموًا (+18%)، بينما انخفض متوسط قيمة الطلب 1.8% رغم زيادة عدد الطلبات.</p>
+          </div>
+        </section>
+
+        <div class="grid">
+          
+        <article class="widget kpi span-3" style="animation-delay:0.05s">
+          <div class="w-head"><span class="label">إجمالي المبيعات</span><div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></div>
+          <div class="value"><span class="num">50.6</span><small>مليون ر.س</small></div>
+          <div class="cmp"><span class="delta up"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-up"/></svg><span class="num">12.4%</span></span> مقارنة بنفس الفترة من 2025</div>
+          <div class="spark" id="sp-sales"></div>
+          <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>نظام ERP · جدول <code>sales_orders</code><strong style="margin-top:8px">طريقة الحساب</strong>مجموع <code>net_amount</code> للطلبات المكتملة من يناير حتى سبتمبر 2026</div>
+        </article>
+          
+        <article class="widget kpi span-3" style="animation-delay:0.1s">
+          <div class="w-head"><span class="label">عدد الطلبات</span><div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></div>
+          <div class="value"><span class="num">13,420</span><small>طلب</small></div>
+          <div class="cmp"><span class="delta up"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-up"/></svg><span class="num">6.1%</span></span> مقارنة بنفس الفترة من 2025</div>
+          <div class="spark" id="sp-orders"></div>
+          <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>نظام ERP · جدول <code>sales_orders</code><strong style="margin-top:8px">طريقة الحساب</strong>عدد الطلبات المكتملة (بدون الملغاة والمرتجعة)</div>
+        </article>
+          
+        <article class="widget kpi span-3" style="animation-delay:0.15s">
+          <div class="w-head"><span class="label">متوسط قيمة الطلب</span><div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></div>
+          <div class="value"><span class="num">3,770</span><small>ر.س</small></div>
+          <div class="cmp"><span class="delta down"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-down"/></svg><span class="num">1.8%</span></span> مقارنة بنفس الفترة من 2025</div>
+          <div class="spark" id="sp-aov"></div>
+          <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>محسوب من العنصرين السابقين<strong style="margin-top:8px">طريقة الحساب</strong>إجمالي المبيعات ÷ عدد الطلبات</div>
+        </article>
+          <article class="widget kpi span-3" style="animation-delay:.2s">
+            <div class="w-head"><span class="label">تحقيق المستهدف</span><div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></div>
+            <div class="value"><span class="num">97%</span><small>من 52.2 مليون</small></div>
+            <div class="cmp"><span class="delta up"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-up"/></svg><span class="num">4 نقاط</span></span> عن الربع الثاني</div>
+            <div class="bar-track" role="img" aria-label="97 بالمئة من المستهدف"><span style="width:97%"></span></div>
+            <div class="target-row"><span>المتبقي: <span class="num">1.6</span> مليون</span><span>المستهدف السنوي <span class="num">74</span>م</span></div>
+            <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>ملف مرفوع · <code>المستهدفات-2026.xlsx</code><strong style="margin-top:8px">طريقة الحساب</strong>المبيعات الفعلية ÷ مجموع المستهدف الشهري حتى سبتمبر</div>
+          </article>
+
+          <article class="widget span-8" style="animation-delay:.25s">
+            <div class="w-head">
+              <div><h3>المبيعات الشهرية مقابل المستهدف</h3><p>بالمليون ريال · يناير – سبتمبر 2026</p></div>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div class="legend"><span><i style="background:var(--chart-1)"></i>المبيعات الفعلية</span><span><i class="dash"></i>المستهدف</span></div>
+                <div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div>
+              </div>
+            </div>
+            <div class="chart" id="ch-trend"></div>
+            <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>نظام ERP + <code>المستهدفات-2026.xlsx</code><strong style="margin-top:8px">طريقة الحساب</strong>مجموع المبيعات لكل شهر، مقابل المستهدف الشهري من الملف</div>
+          </article>
+
+          <article class="widget span-4" style="animation-delay:.3s">
+            <div class="w-head"><div><h3>التوزيع حسب القطاع</h3><p>نسبة كل قطاع من الإجمالي</p></div><div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></div>
+            <div class="donut-wrap">
+              <div class="chart" id="ch-sector" style="min-height:210px"></div>
+              <ul class="donut-list">
+                <li><i style="background:var(--chart-1)"></i><span>التجزئة</span><b class="num">21.3م</b><span class="num">42%</span></li>
+                <li><i style="background:var(--chart-2)"></i><span>الصناعي</span><b class="num">14.2م</b><span class="num">28%</span></li>
+                <li><i style="background:var(--chart-3)"></i><span>الحكومي</span><b class="num">10.1م</b><span class="num">20%</span></li>
+                <li><i style="background:var(--chart-4)"></i><span>الضيافة</span><b class="num">5.0م</b><span class="num">10%</span></li>
+              </ul>
+            </div>
+            <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>نظام ERP · جدول <code>customers</code> مربوط بـ <code>sales_orders</code><strong style="margin-top:8px">طريقة الحساب</strong>مجموع المبيعات مجمّعة حسب حقل قطاع العميل</div>
+          </article>
+
+          <article class="widget span-5" style="animation-delay:.35s">
+            <div class="w-head"><div><h3>المبيعات حسب المنطقة</h3><p>بالمليون ريال</p></div><div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></div>
+            <ul class="hbars" aria-label="المبيعات حسب المنطقة"><li title="الرياض: 17.2 مليون ر.س"><span class="lbl">الرياض</span><span class="trk"><span class="fill" style="width:100.0%;animation-delay:0.40s"></span></span><span class="val num">17.2م</span></li><li title="مكة المكرمة: 11.8 مليون ر.س"><span class="lbl">مكة المكرمة</span><span class="trk"><span class="fill" style="width:68.6%;animation-delay:0.46s"></span></span><span class="val num">11.8م</span></li><li title="الشرقية: 10.4 مليون ر.س"><span class="lbl">الشرقية</span><span class="trk"><span class="fill" style="width:60.5%;animation-delay:0.52s"></span></span><span class="val num">10.4م</span></li><li title="المدينة المنورة: 4.9 مليون ر.س"><span class="lbl">المدينة المنورة</span><span class="trk"><span class="fill" style="width:28.5%;animation-delay:0.58s"></span></span><span class="val num">4.9م</span></li><li title="القصيم: 3.6 مليون ر.س"><span class="lbl">القصيم</span><span class="trk"><span class="fill" style="width:20.9%;animation-delay:0.64s"></span></span><span class="val num">3.6م</span></li><li title="عسير: 2.7 مليون ر.س"><span class="lbl">عسير</span><span class="trk"><span class="fill" style="width:15.7%;animation-delay:0.70s"></span></span><span class="val num">2.7م</span></li></ul>
+            <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>نظام ERP · جدول <code>branches</code><strong style="margin-top:8px">طريقة الحساب</strong>مجموع المبيعات مجمّعة حسب منطقة الفرع</div>
+          </article>
+
+          <article class="widget span-7" style="animation-delay:.4s">
+            <div class="w-head"><div><h3>أعلى المنتجات مبيعًا</h3><p>حتى سبتمبر 2026</p></div><div class="w-tools"><button type="button" data-action="source" aria-label="مصدر البيانات وطريقة الحساب" aria-expanded="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg></button><button type="button" aria-label="تعديل العنصر" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></div>
+            <table class="table">
+              <thead><tr><th style="width:44px">#</th><th>المنتج</th><th>المبيعات</th><th>النمو</th></tr></thead>
+              <tbody><tr><td><span class="rank top">1</span></td><td>أنظمة التكييف المركزي</td><td><div style="display:flex;align-items:center;gap:10px"><div class="minibar"><span style="width:92%"></span></div><span class="num">6.84م</span></div></td><td><span class="badge badge-ok"><span class="num">+14%</span></span></td></tr><tr><td><span class="rank top">2</span></td><td>معدات التعبئة والتغليف</td><td><div style="display:flex;align-items:center;gap:10px"><div class="minibar"><span style="width:69%"></span></div><span class="num">5.12م</span></div></td><td><span class="badge badge-ok"><span class="num">+9%</span></span></td></tr><tr><td><span class="rank top">3</span></td><td>مستلزمات المكاتب</td><td><div style="display:flex;align-items:center;gap:10px"><div class="minibar"><span style="width:59%"></span></div><span class="num">4.37م</span></div></td><td><span class="badge badge-danger"><span class="num">-3%</span></span></td></tr><tr><td><span class="rank">4</span></td><td>حلول الإضاءة الذكية</td><td><div style="display:flex;align-items:center;gap:10px"><div class="minibar"><span style="width:53%"></span></div><span class="num">3.95م</span></div></td><td><span class="badge badge-ok"><span class="num">+22%</span></span></td></tr><tr><td><span class="rank">5</span></td><td>قطع الغيار الصناعية</td><td><div style="display:flex;align-items:center;gap:10px"><div class="minibar"><span style="width:46%"></span></div><span class="num">3.41م</span></div></td><td><span class="badge badge-ok"><span class="num">+5%</span></span></td></tr></tbody>
+            </table>
+            <div class="w-src" role="dialog" aria-label="مصدر البيانات"><strong>المصدر</strong>نظام ERP · جدول <code>order_lines</code><strong style="margin-top:8px">طريقة الحساب</strong>مجموع قيمة البنود لكل منتج، مرتبة تنازليًا (أعلى 5)</div>
+          </article>
+        </div>
+      </main>
+
+      <div class="dock" data-state="open">
+      <button class="chat-pill" type="button" data-chat="open" aria-label="فتح المحادثة">
+        <span class="ai-ava"><img src="assets/img/logo-mark.svg" alt=""></span>اسأل جيم عن بياناتك<span class="dot" aria-hidden="true"></span><kbd>/</kbd>
+      </button>
+      <aside class="chat" aria-label="المحادثة مع جيم">
+        <div class="chat-head">
+          <span class="ai-ava"><img src="assets/img/logo-mark.svg" alt=""></span>
+          <div class="grow"><h2>اسأل جيم</h2><p>يبني ويعدّل اللوحة من سؤالك</p></div>
+          <div class="head-tools">
+            <button class="btn btn-ghost btn-sm" type="button" data-require="project:editor" data-mode-only="build" data-open-gallery><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>لوحة جديدة</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-chat="hidden" aria-label="إخفاء المحادثة" title="إخفاء المحادثة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+          </div>
+        </div>
+
+        <div class="chat-modes" role="tablist" aria-label="نوع المحادثة">
+          <button role="tab" type="button" id="tab-build" aria-selected="true" aria-controls="thread-build" data-mode="build" data-hint="يبني ويعدّل اللوحة الحالية من طلبك" data-require-enable="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><b>بناء اللوحة</b></button>
+          <button role="tab" type="button" id="tab-ask" aria-selected="false" aria-controls="thread-ask" data-mode="ask" data-hint="إجابة سريعة عن بياناتك بدون تعديل اللوحة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><b>استفسارات</b></button>
+          <button role="tab" type="button" id="tab-templates" aria-selected="false" aria-controls="thread-templates" data-mode="templates" data-hint="عناصر جاهزة تُضاف للوحة الحالية بضغطة" data-require-enable="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg><b>النماذج</b></button>
+        </div>
+        <p class="mode-hint" aria-live="polite">يبني ويعدّل اللوحة الحالية من طلبك</p>
+
+        <div class="thread" id="thread-build" role="tabpanel" aria-labelledby="tab-build" aria-live="polite">
+          <span class="day">اليوم</span>
+
+          <div class="msg msg-user">
+            <div class="bubble">اعمل لي لوحة توضح أداء المبيعات هذه السنة مقارنة بالمستهدف، وقسّمها حسب المنطقة والقطاع</div>
+            <span class="msg-time"><span class="num">10:40</span> ص</span>
+          </div>
+
+          <div class="msg msg-ai">
+            <div class="ai-row">
+              <span class="mini"><img src="assets/img/logo-mark.svg" alt=""></span>
+              <div class="ai-body">
+                <ol class="steps" aria-label="خطوات التنفيذ">
+                  <li><span class="st"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div>فهمت السؤال<small>أداء المبيعات · مقارنة بالمستهدف · حسب المنطقة والقطاع</small></div></li>
+                  <li><span class="st"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div>حددت المصادر
+                    <div class="src-tags"><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg>ERP المبيعات</span><span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-sheet"/></svg>المستهدفات-2026.xlsx</span></div></div></li>
+                  <li><span class="st"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div>كتبت 6 استعلامات<small>تم التحقق من النتائج · <span class="num">1.4</span> ثانية</small></div></li>
+                  <li><span class="st"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div>اخترت 8 عناصر عرض<small>4 مؤشرات · 3 رسوم بيانية · جدول</small></div></li>
+                </ol>
+                <p>جهّزت اللوحة. أبرز ملاحظة: المبيعات <b>تجاوزت المستهدف لأول مرة في سبتمبر</b>، والمنطقة الشرقية هي الأسرع نموًا هذا العام.</p>
+                <a class="ai-card" href="#dashboard">
+                  <span class="thumb"><span class="jbars"><i></i><i></i><i></i></span></span>
+                  <span class="grow"><strong>أداء المبيعات 2026</strong><span>8 عناصر · محفوظة في سجل اللوحات</span></span>
+                  <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg>
+                </a>
+                <div class="followups">
+                  <button class="chip" type="button">ركّز على القطاع الصناعي فقط</button>
+                  <button class="chip" type="button">قارن بالربع الثاني</button>
+                  <button class="chip" type="button">أضف توقع الربع الرابع</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="msg msg-user">
+            <div class="bubble">ليه متوسط قيمة الطلب نازل رغم إن عدد الطلبات زاد؟</div>
+            <span class="msg-time"><span class="num">10:43</span> ص</span>
+          </div>
+
+          <div class="msg msg-ai">
+            <div class="ai-row">
+              <span class="mini"><img src="assets/img/logo-mark.svg" alt=""></span>
+              <div class="ai-body">
+                <div class="thinking"><span class="jbars is-live"><i></i><i></i><i></i></span>جيم يحلّل الطلبات حسب الفئة السعرية…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="thread" id="thread-ask" role="tabpanel" aria-labelledby="tab-ask" aria-live="polite" hidden>
+          <div class="mode-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>الإجابات هنا مبنية على نفس مصادر المشروع، ولا تغيّر اللوحة. لو عجبتك إجابة، تقدر تضيفها للوحة.</div>
+          <span class="day">اليوم</span>
+
+          <div class="msg msg-user">
+            <div class="bubble">كم طلب اتلغى في سبتمبر؟</div>
+            <span class="msg-time"><span class="num">11:02</span> ص</span>
+          </div>
+          <div class="msg msg-ai">
+            <div class="ai-row">
+              <span class="mini"><img src="assets/img/logo-mark.svg" alt=""></span>
+              <div class="ai-body">
+                <div class="answer-card">
+                  <span class="lbl">الطلبات الملغاة · سبتمبر 2026</span>
+                  <div class="big"><span class="num">214</span><small>طلب</small><span class="delta down"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-up"/></svg><span class="num">+18%</span></span></div>
+                  <span class="cmp">1.3% من إجمالي طلبات الشهر · أغسطس: <span class="num">181</span></span>
+                </div>
+                <p>أغلب الإلغاءات (<b>62%</b>) كانت في المنطقة الشرقية، وسببها المسجّل «تأخر التوريد».</p>
+                <div class="answer-foot">
+                  <span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg>ERP المبيعات · sales_orders</span>
+                  <button class="btn btn-soft btn-sm" type="button" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>أضف للوحة</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="msg msg-user">
+            <div class="bubble">مين أعلى 3 فروع في الرياض؟</div>
+            <span class="msg-time"><span class="num">11:04</span> ص</span>
+          </div>
+          <div class="msg msg-ai">
+            <div class="ai-row">
+              <span class="mini"><img src="assets/img/logo-mark.svg" alt=""></span>
+              <div class="ai-body">
+                <ol class="answer-list">
+                  <li><span class="rank top">1</span>فرع العليا<b class="num">4.8م</b></li>
+                  <li><span class="rank top">2</span>فرع الملقا<b class="num">3.9م</b></li>
+                  <li><span class="rank top">3</span>فرع السويدي<b class="num">2.6م</b></li>
+                </ol>
+                <p>الثلاثة فروع دي مع بعض بتمثّل <b>66%</b> من مبيعات الرياض هذا العام.</p>
+                <div class="answer-foot">
+                  <span class="src-tag"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg>ERP المبيعات · branches</span>
+                  <button class="btn btn-soft btn-sm" type="button" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>أضف للوحة</button>
+                </div>
+                <div class="followups">
+                  <button class="chip" type="button">قارنهم بنفس الفترة من 2025</button>
+                  <button class="chip" type="button">إيه أقل فرع أداءً؟</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="thread tpl-panel" id="thread-templates" role="tabpanel" aria-labelledby="tab-templates" hidden></div>
+
+        <form class="composer" id="ask">
+          <div class="sources-row" role="group" aria-label="المصادر المستخدمة في الإجابة">
+            <span class="lbl">المصادر:</span>
+            <button class="src-toggle" type="button" aria-pressed="true"><span class="tick"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>ERP المبيعات</button>
+            <button class="src-toggle" type="button" aria-pressed="true"><span class="tick"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>المستهدفات-2026</button>
+            <button class="src-toggle" type="button" aria-pressed="false"><span class="tick"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>نظام المشتريات</button>
+            <button class="src-toggle" type="button" aria-pressed="false"><span class="tick"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>العملاء.csv</button>
+          </div>
+          <div class="input-box">
+            <label class="sr-only" for="q">اسأل عن بياناتك</label>
+            <textarea id="q" rows="2" placeholder="اطلب تعديل على اللوحة… مثال: أضف مقارنة الرياض بجدة شهريًا" data-ph-build="اطلب تعديل على اللوحة… مثال: أضف مقارنة الرياض بجدة شهريًا" data-ph-ask="اسأل أي سؤال عن بياناتك… مثال: كم طلب اتلغى أمس؟"></textarea>
+            <div class="input-tools">
+              <button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="إرفاق صورة لوحة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-image"/></svg></button>
+              <button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="سؤال صوتي"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-mic"/></svg></button>
+              <span class="grow"></span>
+              <span class="hint">Enter للإرسال · / للتركيز</span>
+              <button class="send" type="submit" aria-label="إرسال"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg></button>
+            </div>
+          </div>
+        </form>
+      </aside>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/vendor/apexcharts.min.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/kpi-library.js"></script>
+<script src="assets/js/dash-render.js"></script>
+<script src="assets/js/dash-library.js"></script>
+<script src="assets/js/catalog.js"></script>
+<script src="assets/js/templates.js"></script>
+<script src="assets/js/dashboards.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

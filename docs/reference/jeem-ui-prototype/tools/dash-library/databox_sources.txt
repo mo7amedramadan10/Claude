@@ -1,0 +1,191 @@
+mkt|semrush-keyword-analytics-kpis-dashboard-template|Semrush SEO Keyword Performance
+mkt|saas-marketing-dashboard|SaaS Marketing Dashboard (CMO)
+mkt|instagram-business-post-performance|Instagram Business Post Performance
+mkt|facebook-pages-facebook-ads-engagement-summary|Facebook Pages & Facebook Ads: Engagement Summary
+mkt|google-ads-performance-max-overview-dashboard-template|Google Ads (Performance Max) Overview
+mkt|accuranker-domain-overview-dashboard|AccuRanker Domain Overview
+mkt|social-media-awareness-engagement|Social Media (Awareness & Engagement)
+mkt|facebook-x-twitter-performance-overview|Facebook & X (Twitter) Performance Overview
+ecom|shopify-facebook-google-analytics-4-online-sales-dashboard-template|Shopify, Facebook & GA4 Online Sales
+mkt|vimeo-ott-traffic-overview-dashboard-template|Vimeo OTT: Traffic Overview
+sup|drift-campaigns-conversations|Drift Chat & Email Conversations
+mkt|value-journey-canvas-dashboard|Value Journey Canvas
+sup|drift-conversations-insights|Drift Contacts & Conversations
+mkt|hubspot-blogging-performance|HubSpot (Blogging performance)
+sales|outreach-prospect-overview|Outreach Prospects Overview
+mkt|outreach-delivery-overview|Outreach Email Delivery Overview
+mkt|adobe-analtyics-store-overview|Adobe Analytics Overview
+mkt|marketo-email-marketing-dashboard|Marketo Email Marketing
+mkt|hubspot-marketing-ga4-attract-performance-dashboard-template|HubSpot Marketing + GA4 ATTRACT Performance
+mkt|google-ads-monthly-performance|Google AdWords Monthly Performance
+mkt|sendgrid-global-stats|SendGrid Email Overview
+mkt|moz-basics-dashboard|MOZ Ranking Overview
+mkt|hubspot-marketing-google-analytics-traffic-generation|HubSpot Marketing + GA: Traffic Generation
+ecom|bigcommerce-paid-ads-performance-google-ads-facebook-ads-dashboard-template|BigCommerce Paid Ads Performance
+mkt|marketo-activity-dashboard|Marketo Account Activity
+mkt|ahrefs-seo-enterprise-overview-dashboard-template|Ahrefs SEO Enterprise Overview
+mkt|ahrefs-website-audit-dashboard|Ahrefs Website Audit Overview
+dev|mixpanel-event-tracking|Mixpanel Events Dashboard
+mkt|google-organic-search-performance|Google Search Performance
+mkt|hubspot-marketing-lead-generation|HubSpot Marketing: Lead Generation
+mkt|monthly-marketing-performance-hubspot-ga4-dashboard-template|Monthly Marketing Performance
+mkt|marketing-overview-hubspot-google-analytic-4|Marketing Overview (HubSpot & GA4)
+mkt|vimeo-basics-dashboard|Vimeo Views & Likes
+ecom|e-commerce-customers-overview-woocommerce-ga4|E-commerce Customers Overview (WooCommerce + GA4)
+saas|saas-customer-acquisition-ga4-chartmogul-dashboard-template|SaaS Customer Acquisition
+mkt|fb-ad-campaign-ecommerce|Facebook Ads Campaign for Ecommerce
+mkt|ppc-performance-overview-dashboard|PPC Performance Overview
+mkt|hubspot-google-analytics-4-website-performance-dashboard-template|HubSpot + GA4: Website Performance
+mkt|website-audit-overview-dashboard-template|Website Audit Overview
+sales|pipedrive-crm-deals-performance|Pipedrive CRM Deals Performance
+mkt|email-traffic-overview-dashboard-templat|Email Traffic Overview
+mkt|tiktok-ads-account-overview|TikTok Ads Account Overview
+mkt|best-website-leads-conversion-track-lead-sources-rates|Website Leads Conversion
+sales|hubspot-full-funnel-analysis|HubSpot Full Funnel Analysis
+mkt|improve-google-search-position|Google Search Position Overview
+mkt|stackadapt-advertiser-overview-template|StackAdapt Advertiser Overview
+mkt|competitive-health-template|Google Ads: Competitive Health
+mkt|semrush-ga4-keywords-organic-search-traffic-dashboard-template-2|Semrush & GA4 Keywords & Organic Traffic (2)
+saas|saas-acquisition-funnel-ga4-mixpanel-stripe|SaaS Acquisition Funnel (Stripe)
+mkt|microsoft-advertising-overview-dashboard|Microsoft Advertising Overview
+sales|marketing-sales-overview|Marketing & Sales Deals Overview
+mkt|social-media-instagram-overview|Instagram Account Overview
+mkt|tiktok-ads-engagement-overview|TikTok Ads Engagement Overview
+sales|pardot-opportunities-prospects-overview-dashboard-template|Pardot Opportunities & Prospects
+mkt|semrush-position-tracking|Semrush Position Tracking
+mkt|hubspot-leads-source|HubSpot Marketing Lead Source
+ecom|google-analytics-4-e-commerce-overview|GA4 Ecommerce Overview
+mkt|google-adwords-campaign-performance|Google Ads Campaign Performance
+mkt|klaviyo-email-performance|Klaviyo Email Performance
+mkt|twitter-ads-account-overview-dashboard|X (Twitter) Ads Account Overview
+mkt|linkedin-ads-campaign-performance|LinkedIn Ads Campaign Performance
+sales|cooper-overview-dashboard|Copper Overview
+saas|saas-acquisition-funnel-ga4-mixpanel-profitwell|SaaS Acquisition Funnel (Profitwell)
+mkt|google-ads-performance-max-campaign-overview-dashboard-template|Google Ads PMax Campaign Overview
+mkt|semrush-ga4-keywords-organic-search-traffic-dashboard-template|Semrush & GA4 Keywords & Organic Traffic
+mkt|website-awareness-overview-dashboard-template|Website Awareness Overview
+mkt|google-admob-performance-overview|Google AdMob Performance
+mkt|linkedin-ads-performance-overview-dashboard-template|LinkedIn Ads Performance Overview
+dev|amplitude-project-overview-dashboard-template|Amplitude Project Overview
+mkt|callrail-source-keyword-performance|CallRail Source & Keyword Performance
+mkt|google-search-console-queries-page-overview|Google Search Console Performance
+mkt|social-networks-growth-engagement|Social Networks (Growth & Engagement)
+mkt|twitter|X (Twitter) Account Overview
+mkt|stackadapt-campaign-overview|StackAdapt Campaign Overview
+mkt|facebook-ads-account-overview|Facebook Ads Conversions Overview
+mkt|google-analytics-4-kpi-dashboard|GA4 KPI Dashboard
+mkt|google-analytics-acquisition-snapshot|GA4 Acquisition Snapshot
+ecom|e-commerce-audience-customers-overview-shopify-ga4-dashboard-template|E-commerce Audience & Customers (Shopify + GA4)
+mkt|google-analytics-4-engagement-overview-dashboard-template|Website Engagement Overview
+sales|hubspot-crm-deals-performance-dashboard-template|HubSpot CRM Deals Performance
+mkt|linkedin-ads-overview-dashboard|LinkedIn Ads Account Overview
+mkt|google-adsense-account-overview|Google AdSense Account Overview
+mkt|semrush-ga4-keyword-mission-control|Semrush & GA4 Keyword Mission Control
+mkt|hubspot-google-ads-top-funnel-dashboard|HubSpot + Google Ads Top of Funnel
+mkt|semrush-site-audit|Semrush Site Audit
+mkt|adwords-ppc-performance|Google Ads PPC Performance
+mkt|activecampaign-overview-dashboard|ActiveCampaign Account Overview
+mkt|google-my-business-insights|Google Business Profile Performance
+mkt|hubspot-email-campaigns-dashboard|HubSpot Email Campaigns
+mkt|keyword-to-pageview-dashboard-template|Keyword & Views GA4 & GSC
+mkt|facebook-ads|Facebook Ads Performance Overview
+mkt|youtube-watch-time-dashboard|YouTube Video Watch Time Analysis
+mkt|linkedin-demographics-overview|LinkedIn Page Demographics
+mkt|google-analytics-4-acquisition-overview-dashboard-template|Website Acquisition Overview
+mkt|google-ads|Google Ads Performance Overview
+mkt|youtube-channel-performance-dashboard|YouTube Channel Performance
+mkt|google-analytics-4-website-traffic-dashboard-template|GA4 Website Traffic
+mkt|instagram-business-account-overview|Instagram Business Profile Overview
+mkt|pinterest-ads-performance-overview-dashboard-template|Pinterest Ads Performance Overview
+mkt|google-ads-ga4-performance-report|Google Ads & GA4 Performance Report
+mkt|campaign-monitor-account-overview|Campaign Monitor Account Overview
+mkt|facebook-ads-campaign-analysis-dashboard|Facebook Ads Campaign Drill-down
+mkt|google-organic-seo-dashboard-template|Google Organic SEO Dashboard
+mkt|instagram-business-audience-overview|Instagram Business Audience Overview
+mkt|semrush-keywords-audits|Semrush Keywords & Audits
+mkt|eventbrite-event-analytics-dashboard|Eventbrite Event Analytics
+mkt|blog-performance-tracking-dashboard|HubSpot Blog Performance Tracking
+mkt|facebook-ads-purchase-leads-breakdown|Facebook Ads Purchase & Leads Breakdown
+mkt|mailchimp|Mailchimp Campaign Performance
+mkt|wistia-top-marketing-videos|Wistia Performance Overview
+ecom|e-commerce-ads-performance-google-ads-facebook-ads-shopify-dashboard-template|E-commerce Ads Performance
+mkt|google-analytics-4-monetisation-overview-dashboard-template|Website Monetisation Overview
+mkt|track-ai-search-engine-traffic-with-this-dashboard-template|AI (Gen Search) Traffic Overview
+mkt|youtube-multiple-channels-dashboard|YouTube Multiple Channels
+mkt|hubspot-mktg-funnel-became-stage-metrics|HubSpot Marketing Conversion Pipeline
+mkt|facebook-ads-google-adwords-databoard|Facebook Ads & Google Ads
+mkt|facebook-page-insights|Facebook Page Insights
+mkt|facebook-ads-google-ads-ga4-dashboard|Facebook Ads, Google Ads & GA4
+mkt|linkedin-page-engagement|LinkedIn Company Pages Overview
+mkt|hubspot-marketing|HubSpot Marketing Performance
+sales|hubspot-sales-activity|HubSpot CRM Sales Rep Activity
+sales|intrix-crm-prodaja|Intrix CRM (sales)
+fin|e-commerce-financial-dashboard-woocommerce-xero-dashboard-template|E-commerce Financial (WooCommerce + Xero)
+fin|e-commerce-financial-dashboard-woocommerce-quickbooks-dashboard-template|E-commerce Financial (WooCommerce + QuickBooks)
+sales|monthly-reporting-introductory-slide|Reporting Intro Slide
+fin|e-commerce-financial-dashboard-shopify-xero-dashboard-template|E-commerce Financial (Shopify + Xero)
+ecom|infusionsoft-orders-overview-dashboard-template|Infusionsoft Orders & Product Overview
+ecom|e-commerce-sales-performance-woocommerce-dashboard-template|E-commerce Sales Performance - WooCommerce
+sales|sharpspring-sales-performance|SharpSpring Sales Performance
+sales|hubspot-crm-sales-analytics-overview|HubSpot CRM Sales Analytics Overview
+sales|salesforce-leads-databoard|Salesforce Leads Overview
+sales|pipeline-performance|Pipeline Performance
+sales|pipedrive-crm-account-overview-2|Pipedrive CRM Account Overview
+sales|hubspot-crm-deals-performance|HubSpot CRM Deals KPIs
+fin|quickbooks-hubspot-crm-financial-performance|QuickBooks + HubSpot CRM Financial Performance
+fin|e-commerce-financial-dashboard-shopify-quickbooks-dashboard-template|E-commerce Financial (Shopify + QuickBooks)
+sales|intrix-crm-uporabniki|Intrix CRM (users)
+sales|hubspot-crm-overview-performance-dashboard-template|HubSpot CRM Overview Performance
+ecom|e-commerce-sales-performance-bigcommerce-dashboard-template|E-commerce Sales Performance - BigCommerce
+ecom|e-commerce-sales-performance-shopify-dashboard-template|E-commerce Sales Performance - Shopify
+saas|stripe-mrr-subscription-overview|Stripe MRR & Subscriptions Overview
+fin|e-commerce-financial-dashboard-bigcommerce-quickbooks-dashboard-template|E-commerce Financial (BigCommerce + QuickBooks)
+sales|pipedrive-crm-activities-effort|Pipedrive CRM Activities Effort
+saas|saas-sales-cso-dashboard|SaaS Sales Dashboard (CSO)
+sales|callrail-overview-dashboard|CallRail Overview
+sales|hubspot-crm-sales-performance|HubSpot CRM Sales Performance
+sup|intercom-account-overview|Intercom Account Overview
+sup|helpscout-docs-report|HelpScout Docs Report
+sup|customer-success-overview|Customer Success Dashboard
+sup|hubspot-service-tickets-overview-dashboard-template|HubSpot Service Tickets Overview
+sup|freshdesk-tickets-overview-dashboard-template-2|Freshdesk Tickets Overview
+sup|helpscout-customer-support-dashboard|HelpScout for Customer Support
+sup|intercom-customer-support-overview|Intercom Customer Support Performance
+sup|surveymonkey-account-overview-dashboard-template|SurveyMonkey Account Overview
+ecom|shopify|Shopify Sales Performance
+ecom|woocommerce-shop-overview-dashboard|WooCommerce Shop Overview
+pm|harvest-time-report|Harvest Time Project & Team Report
+dev|jira-software-dashboard|Jira Account Overview
+fin|quickbooks-financials-overview|QuickBooks Financials Overview
+fin|xero-cash-flow-overview-dashboard-template|Xero Cash Flow Overview
+fin|xero-balance-sheet-overview-dashboard-template|Xero Balance Sheet Overview
+saas|profitwell-saas-revenue-breakdown-for-leadership|SaaS Key Revenue Metrics - Profitwell
+saas|profitwell-saas-mrr-drilldown-for-weekly-monitoring|SaaS MRR Growth - Profitwell
+saas|profitwell-revenue-trends-dashboard|ProfitWell Revenue and Customer Overview
+fin|quickbooks-income-expenses-cash-overview|QuickBooks Income & Expenses Cash Overview
+fin|quickbooks-cash-flow-overview-dashboard-template|QuickBooks Cash Flow Overview
+fin|freshbooks-cash-overview-dashboard|FreshBooks Cash Overview
+saas|stripe-saas-key-revenue-metrics-for-decision-makers|SaaS Key Revenue Metrics - Stripe
+saas|stripe-saas-mrr-growth-dashboard-template|Stripe SaaS MRR Growth
+fin|quickbooks-profit-loss-pl|QuickBooks Profit & Loss
+fin|xero-profit-loss-pl-dashboard-template|Xero Profit & Loss
+saas|stripe-mrr-churn|Stripe MRR & Churn Overview
+saas|chartmogul-saas-key-revenue-metrics-for-leadership|SaaS Key Revenue Metrics - ChartMogul
+saas|profitwell-churn-overview-dashboard|SaaS Churn Overview - Profitwell
+fin|quickbooks-balance-sheet-overview-dashboard-template|QuickBooks Balance Sheet Overview
+fin|xero-financials-overview|Xero Financials Overview
+fin|xero|Xero Account Balance Overview
+fin|paypal-account-overview|PayPal Account Overview
+saas|chartmogul-saas-mrr-drilldown-weekly-monitoring|SaaS MRR Growth - ChartMogul
+dev|appfigures-ad-campaign-performance-dashboard-template|Appfigures Ad Campaign Performance
+dev|bitbucket-overview|Bitbucket Overview
+dev|appfigures-sales-performance-dashboard-template|Appfigures Sales Performance
+dev|appfigures-subscriptions-overview-dashboard-template|Appfigures Subscriptions Overview
+dev|github-overview|GitHub Overview
+dev|play-store-metrics|Google Play Store Metrics
+saas|saas-leadership-dashboard-profitwell-quickbooks|SaaS Financial (Profitwell + QuickBooks + HubSpot)
+saas|saas-leadership-dashboard-stripe-quickbooks-hubspot|SaaS Financial (Stripe + QuickBooks + HubSpot)
+saas|chartmogul-account-overview-dashboard|ChartMogul Account Overview
+saas|chartmogul-quickbooks-saas-leadership-dashboard|SaaS Financial (ChartMogul + QuickBooks + HubSpot)
+saas|saas-leadership-dashboard-stripe-xero-hubspot-crm|SaaS Financial (Stripe + Xero + HubSpot)
+saas|chartmogul-revenue-and-customer-churn-dashboard-template|ChartMogul Revenue and Customer Churn
