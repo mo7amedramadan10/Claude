@@ -427,3 +427,16 @@ naming policy تلقائية في السيريلايزر.
   معروفة لو قاعدة البيانات محليًا فعلًا اتولدت قبل كده)، افتح معرض
   النماذج → التصنيف المناسب → زر المعاينة التجريبية، وتأكد من الشكل
   وعدم وجود أخطاء جافاسكربت.
+
+## المستودعان: GitHub (`origin`) و Azure DevOps (`azure`) من مجلد واحد
+
+- هذا المجلد وحده يكفي. `origin` = GitHub (فرع العمل `claude/chat-to-dashboard-app-at0up6`)، و`azure` = Azure DevOps
+  (`THQ_MVPs/AI_Dashboard`). المجلد القديم `chat-to-dashboard-Azure/` لم يعد مطلوبًا للمزامنة.
+- التاريخان رُبطا مرة واحدة بدمج `-s ours --allow-unrelated-histories azure/develop` (الشجرة بقيت شجرة GitHub)،
+  فصار `develop` على Azure سلفًا لفرعنا وكل دفع بعده fast-forward بلا force. قبل الربط أُعيدت إصلاحات Azure الخاصة
+  (ترحيل الأعمدة الناقصة backfill في 13 مخزنًا، نسخ `IntegrationConnector/` في Dockerfile، و`azure-pipelines.yml`) إلى الفرع.
+- `remote.azure.push` مضبوط على `claude/chat-to-dashboard-app-at0up6:feature/newSaaS`، فالدورة:
+  `git pull origin claude/chat-to-dashboard-app-at0up6` ثم `git push origin` ثم `git push azure`، وبعدها PR من
+  `feature/newSaaS` إلى `develop` على Azure (الـ pipeline يعمل على `develop`).
+- `frontend/node_modules` كان متتبَّعًا بالخطأ على Azure (5265 ملفًا، سبب بطء النسخ القديم) ويُحذف من هناك مع أول PR؛ وهو في
+  `.gitignore` أصلًا. أي إصلاح خاص بالنشر يُكتب هنا ويُدفع للاثنين حتى لا يتباعد المستودعان ثانية.
