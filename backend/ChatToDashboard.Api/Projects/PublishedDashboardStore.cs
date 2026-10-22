@@ -45,6 +45,36 @@ public class PublishedDashboardStore
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
+
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE هنا (نفس استثناء
+        // OrganizationStore) — SQLite لا يقبله في ALTER TABLE ADD COLUMN، والتكرار محسوم
+        // بالفعل في PublishAsync (SELECT قبل أي INSERT).
+        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "ProjectId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "DashboardId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Version", "INTEGER", "INT", ct);
+        await AddColumnIfMissingAsync(connection, "PublishedBy", "TEXT", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "PublishedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "Audience", "TEXT", "NVARCHAR(20)", ct);
+        await AddColumnIfMissingAsync(connection, "RefreshMode", "TEXT", "NVARCHAR(20)", ct);
+        await AddColumnIfMissingAsync(connection, "RefreshEvery", "TEXT", "NVARCHAR(100)", ct);
+        await AddColumnIfMissingAsync(connection, "SortOrder", "INTEGER", "INT", ct);
+        await AddColumnIfMissingAsync(connection, "Kind", "TEXT", "NVARCHAR(20)", ct);
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
     /// <summary>كل اللوحات المنشورة على المشروع بترتيب التبويبات (بلا تصفية جمهور — هذه

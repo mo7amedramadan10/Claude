@@ -37,11 +37,14 @@ public class ProjectStore
             await command.ExecuteNonQueryAsync(ct);
         }
 
-        // ترحيل: عمودا المنظمة والاسم في الرابط لجداول Projects أُنشئت قبل وجودهما (أثناء
-        // التطوير التكراري على نفس قاعدة البيانات المشتركة، قبل أن يصير المشروع مُقسَّمًا
-        // بالمنظمة) — نفس نمط AddColumnIfMissingAsync في PresentationStore.
+        // ترحيل: لا عمود هنا مضمون الوجود بافتراض — جدول Projects المشترك هذا ظهر عمليًا
+        // بشكل مختلف تمامًا عن هذا الكود (حتى Id/Name/CreatedAt غابا في الإنتاج رغم كونهما
+        // من صلب التعريف الأول)، فكل عمود يُضاف دفاعيًا كعمود عادي (بلا PRIMARY KEY).
+        await AddColumnIfMissingAsync(connection, "Id", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, "OrganizationId", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Name", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
         await AddColumnIfMissingAsync(connection, "Slug", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlite: "TEXT", sqlServer: "DATETIME2", ct);
 
         // Owner/Editor/Viewer roles on a project — mirrors DashboardRoles' shape (see its
         // own remarks), except Owner lives here too since a Project has no OwnerId column.

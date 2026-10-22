@@ -73,6 +73,36 @@ public class ColumnSemanticsStore
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
+
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE هنا (نفس استثناء
+        // OrganizationStore) — SQLite لا يقبله في ALTER TABLE ADD COLUMN.
+        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "ProjectId", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "TableName", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "ColumnName", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Concept", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Role", "TEXT NOT NULL DEFAULT 'text'", "NVARCHAR(20) NOT NULL DEFAULT 'text'", ct);
+        await AddColumnIfMissingAsync(connection, "Unit", "TEXT", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, "ValueMapJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "Confidence", "REAL NOT NULL DEFAULT 0", "FLOAT NOT NULL DEFAULT 0", ct);
+        await AddColumnIfMissingAsync(connection, "Source", "TEXT NOT NULL DEFAULT 'rule'", "NVARCHAR(10) NOT NULL DEFAULT 'rule'", ct);
+        await AddColumnIfMissingAsync(connection, "Note", "TEXT", "NVARCHAR(500)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT NOT NULL DEFAULT ''", "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
     public async Task<IReadOnlyList<ColumnSemantic>> ListForTableAsync(string projectId, string tableName, CancellationToken ct = default)

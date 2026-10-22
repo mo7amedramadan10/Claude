@@ -98,6 +98,67 @@ public class AnalystStore
             command.CommandText = text;
             await command.ExecuteNonQueryAsync(ct);
         }
+
+        // ترحيل: أي عمود من الأربعة جداول أعلاه مفقود من جدول أُنشئ قبل وجوده (قاعدة بيانات
+        // مشتركة استُخدمت أثناء التطوير التكراري على هذا الملف) — بلا تأثير إن كان الجدول
+        // جديدًا أصلًا (ADD COLUMN على عمود موجود يُلتقط ويُتجاهل، نفس نمط ProjectStore).
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "Id", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "ProjectId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "OwnerUserId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "Title", "TEXT", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "IsSaved", "INTEGER", "BIT", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "RollingSummary", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "FindingsLedgerJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "CreatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "UpdatedAt", "TEXT", "DATETIME2", ct);
+
+        await AddColumnIfMissingAsync(connection, MessagesTable, "Id", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, MessagesTable, "ConversationId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, MessagesTable, "Role", "TEXT", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, MessagesTable, "Text", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, MessagesTable, "TemplateText", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, MessagesTable, "ResultId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, MessagesTable, "KnowledgeScope", "TEXT", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, MessagesTable, "CreatedAt", "TEXT", "DATETIME2", ct);
+
+        await AddColumnIfMissingAsync(connection, ResultsTable, "Id", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "ConversationId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "ProjectId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "Title", "TEXT", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "ResultType", "TEXT", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "ColumnsJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "RowsJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "KeyColumn", "TEXT", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "PrimaryMeasure", "TEXT", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "ExecutedSql", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "AuditSql", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "VerificationJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "DataVersion", "INTEGER", "INT", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "IsTruncated", "INTEGER", "BIT", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "CreatedAt", "TEXT", "DATETIME2", ct);
+
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "Id", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "ResultId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "SourceId", "TEXT", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "SourceDisplayName", "TEXT", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "SourceKind", "TEXT", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "TablesJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "SourceLastUpdatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, ResultSourcesTable, "IsStale", "INTEGER", "BIT", ct);
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string table, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {table} ADD [{column}] {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
     // ---- Conversations ----

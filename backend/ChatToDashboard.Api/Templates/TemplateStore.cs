@@ -49,6 +49,44 @@ public class TemplateStore
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
+
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // بلا تأثير إن كان الجدول جديدًا أصلًا. عمود Key يُضاف بالاسم المهرّب (KeyCol) لأنه
+        // محجوز في SQL Server — نفس سبب وجود KeyCol أصلًا.
+        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Kind", "TEXT", "NVARCHAR(32)", ct);
+        await AddColumnIfMissingAsync(connection, KeyCol, "TEXT", "NVARCHAR(100)", ct);
+        await AddColumnIfMissingAsync(connection, "IsCustom", "INTEGER", "BIT", ct);
+        await AddColumnIfMissingAsync(connection, "Status", "TEXT", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, "Title", "TEXT", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, "Description", "TEXT", "NVARCHAR(1000)", ct);
+        await AddColumnIfMissingAsync(connection, "Icon", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Category", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "SourcesJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "WidgetsJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "PromptText", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "Version", "INTEGER", "INT", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedByUserId", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedByName", "TEXT", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", "TEXT", "DATETIME2", ct);
+    }
+
+    /// <summary><paramref name="column"/> is either a bare name (quoted here the normal way) or
+    /// already-escaped (like <see cref="KeyCol"/>, for the one column whose name is reserved in
+    /// SQL Server) — detected by whether it already starts with a quote/bracket.</summary>
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN {(column.StartsWith('"') ? column : $"\"{column}\"")} {sqlite}"
+                : $"ALTER TABLE {Table} ADD {(column.StartsWith('[') ? column : $"[{column}]")} {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
     private static string RowId(string kind, string key) => $"{kind}:{key}";
