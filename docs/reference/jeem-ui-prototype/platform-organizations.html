@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>المنظمات · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="platform">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="قائمة المنصّة">
+    <div class="sb-brand">
+      <a href="platform-organizations.html" aria-label="جيم — المنصّة"><img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم"><img class="mark" src="assets/img/logo-mark.svg" alt="جيم"></a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+    <div class="platform-badge"><span class="org-avatar">ث</span><span class="org-meta"><strong>إدارة المنصّة</strong><span>شركة ثقة · Super Admin</span></span></div>
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنصّة</span></div>
+      <ul class="nav"><li><a class="nav-link is-active" href="platform-organizations.html" aria-current="page" title="المنظمات"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المنظمات</span><span class="badge">24</span></a></li><li><a class="nav-link" href="platform-templates.html" title="مكتبة النماذج"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">مكتبة النماذج</span></a></li><li><a class="nav-link" href="#" title="الخطط والأسعار"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span class="nav-text">الخطط والأسعار</span></a></li><li><a class="nav-link" href="#" title="سجل التجهيز"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg><span class="nav-text">سجل التجهيز</span><span class="badge badge-danger">1</span></a></li><li><a class="nav-link" href="#" title="فريق المنصة"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">فريق المنصة</span></a></li><li><a class="nav-link" href="#" title="إعدادات المنصة"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">إعدادات المنصة</span></a></li></ul>
+    </nav>
+    <div class="sb-foot">
+      <div class="isolation" style="background:var(--surface-2);color:var(--ink-2)"><span class="pulse"></span><span class="txt">كل الخدمات تعمل · 99.98%</span></div>
+      <button class="user-card" type="button" aria-label="الحساب"><span class="avatar" style="background:var(--brand-gray)">أ</span><span class="meta"><strong>أحمد الزهراني</strong><span>مسؤول المنصّة</span></span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="platform-organizations.html">المنصّة</a><span class="sep">/</span><strong>المنظمات</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn btn-primary" type="button" data-open="new-org"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>منظمة جديدة</button></div>
+    </header>
+    <main class="page">
+      <section class="page-head"><div><div class="eyebrow"><span class="jbars"><i></i><i></i><i></i></span>إدارة المنصّة</div><h1>المنظمات المشتركة</h1><p>كل منظمة لها قاعدة بيانات مستقلة. من هنا تدير وجودها وخطتها وحالة تجهيزها، بدون أي اطلاع على بياناتها.</p></div></section>
+
+      <div class="alert danger"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="grow"><b>شركة الرواد للتقنية:</b> فشل إنشاء قاعدة البيانات اليوم 08:40 ص (انتهت مهلة الاتصال بخادم القواعد).</span><a class="btn btn-sm" href="platform-organization-details.html">عرض السجل</a></div>
+
+      <section class="org-hero cols-4">
+        <div style="background:var(--surface)"><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>منظمات نشطة</span><span class="stat-value num">21</span><span class="stat-foot">من 24 مسجلة</span></div>
+        <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-server"/></svg>قيد التجهيز</span><span class="stat-value num">1</span><span class="stat-foot">متوسط التجهيز 3 دقائق</span></div>
+        <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>إجمالي المستخدمين</span><span class="stat-value num">1,482</span><span class="stat-foot"><span class="delta up">+96</span> هذا الشهر</span></div>
+        <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg>أسئلة هذا الشهر</span><span class="stat-value num">48.2K</span><span class="stat-foot">عبر كل المنظمات</span></div>
+      </section>
+
+      <section class="card" style="overflow:hidden">
+        <div class="toolbar" style="padding:16px 20px">
+          <label class="search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث</span><input type="search" placeholder="ابحث بالاسم أو الرمز"></label>
+          <div class="segmented" role="group" aria-label="الحالة"><button type="button" aria-pressed="true">الكل</button><button type="button" aria-pressed="false">جاهزة</button><button type="button" aria-pressed="false">قيد التجهيز</button><button type="button" aria-pressed="false">بها مشكلة</button><button type="button" aria-pressed="false">معطّلة</button></div>
+        </div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>المنظمة</th><th>حالة التجهيز</th><th>الخطة</th><th>المشاريع</th><th>المستخدمون</th><th>تاريخ الإنشاء</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+            <tbody>
+                <tr>
+                  <td><div class="cell-user"><span class="org-avatar" style="background:var(--brand-gray);width:36px;height:36px;font-size:15px">س</span><div><strong>شركة س</strong><span class="mono" style="text-align:right;display:block">company-s</span></div></div></td>
+                  <td><div style="display:flex;flex-direction:column;gap:2px"><span class="status ok">جاهزة</span></div></td>
+                  <td><span class="badge">الأعمال</span></td>
+                  <td><span class="num">4</span></td>
+                  <td><span class="num">37</span></td>
+                  <td class="muted">12 مارس 2026</td>
+                  <td><div class="row-actions"><a class="btn btn-ghost btn-sm" href="platform-organization-details.html">التفاصيل</a><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="org-avatar" style="background:var(--brand-blue);width:36px;height:36px;font-size:15px">ن</span><div><strong>مجموعة النخبة القابضة</strong><span class="mono" style="text-align:right;display:block">nokhba</span></div></div></td>
+                  <td><div style="display:flex;flex-direction:column;gap:2px"><span class="status ok">جاهزة</span></div></td>
+                  <td><span class="badge">المؤسسات</span></td>
+                  <td><span class="num">9</span></td>
+                  <td><span class="num">214</span></td>
+                  <td class="muted">3 يناير 2026</td>
+                  <td><div class="row-actions"><a class="btn btn-ghost btn-sm" href="platform-organization-details.html">التفاصيل</a><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="org-avatar" style="background:var(--brand-teal);width:36px;height:36px;font-size:15px">ه</span><div><strong>هيئة تطوير المدن</strong><span class="mono" style="text-align:right;display:block">cdev</span></div></div></td>
+                  <td><div style="display:flex;flex-direction:column;gap:2px"><span class="status run">قيد التجهيز</span><div class="mini-progress" style="margin-top:6px"><i style="width:55%"></i></div><span class="muted" style="font-size:11px">تشغيل الـ migrations · 26 من 48</span></div></td>
+                  <td><span class="badge">المؤسسات</span></td>
+                  <td><span class="num">0</span></td>
+                  <td><span class="num">1</span></td>
+                  <td class="muted">اليوم 09:14 ص</td>
+                  <td><div class="row-actions"><a class="btn btn-ghost btn-sm" href="platform-organization-details.html">التفاصيل</a><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="org-avatar" style="background:var(--brand-purple);width:36px;height:36px;font-size:15px">ر</span><div><strong>شركة الرواد للتقنية</strong><span class="mono" style="text-align:right;display:block">rowad-tech</span></div></div></td>
+                  <td><div style="display:flex;flex-direction:column;gap:2px"><span class="status danger">فشل التجهيز</span><span style="font-size:11px;color:var(--danger)">تعذّر إنشاء قاعدة البيانات</span></div></td>
+                  <td><span class="badge">الأعمال</span></td>
+                  <td><span class="num">0</span></td>
+                  <td><span class="num">0</span></td>
+                  <td class="muted">اليوم 08:40 ص</td>
+                  <td><div class="row-actions"><button class="btn btn-sm" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>إعادة المحاولة</button><a class="btn btn-ghost btn-sm" href="platform-organization-details.html">التفاصيل</a><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="org-avatar" style="background:#0E8FB8;width:36px;height:36px;font-size:15px">ش</span><div><strong>مستشفيات الشفاء</strong><span class="mono" style="text-align:right;display:block">shifa</span></div></div></td>
+                  <td><div style="display:flex;flex-direction:column;gap:2px"><span class="status ok">جاهزة</span></div></td>
+                  <td><span class="badge">الأعمال</span></td>
+                  <td><span class="num">3</span></td>
+                  <td><span class="num">58</span></td>
+                  <td class="muted">22 فبراير 2026</td>
+                  <td><div class="row-actions"><a class="btn btn-ghost btn-sm" href="platform-organization-details.html">التفاصيل</a><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-user"><span class="org-avatar" style="background:var(--brand-gray);width:36px;height:36px;font-size:15px">خ</span><div><strong>مصنع الخليج للبلاستيك</strong><span class="mono" style="text-align:right;display:block">gulf-plastic</span></div></div></td>
+                  <td><div style="display:flex;flex-direction:column;gap:2px"><span class="status off">معطّلة</span></div></td>
+                  <td><span class="badge">الأساسية</span></td>
+                  <td><span class="num">1</span></td>
+                  <td><span class="num">6</span></td>
+                  <td class="muted">9 نوفمبر 2025</td>
+                  <td><div class="row-actions"><a class="btn btn-ghost btn-sm" href="platform-organization-details.html">التفاصيل</a><button class="btn btn-ghost btn-sm btn-icon" type="button" aria-label="المزيد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button></div></td>
+                </tr></tbody>
+          </table>
+        </div>
+        <div class="table-foot"><span>عرض 6 من 24</span><div class="pager"><button type="button" aria-current="true">1</button><button type="button">2</button><button type="button">3</button><button type="button">4</button></div></div>
+      </section>
+    </main>
+
+    <dialog class="modal" id="new-org" aria-labelledby="new-org-t">
+      <form method="dialog">
+        <div class="modal-head">
+          <div><h2 id="new-org-t">منظمة جديدة</h2><p>سيتم إنشاء قاعدة بيانات مستقلة وتجهيزها تلقائيًا.</p></div>
+          <button class="btn btn-ghost btn-icon btn-sm" type="button" data-action="close-modal" aria-label="إغلاق"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <div class="field"><label for="o-name">اسم المنظمة</label><input id="o-name" placeholder="مثال: شركة س"></div>
+          <div class="field"><label for="o-slug">رمز المنظمة</label><input id="o-slug" placeholder="company-s" dir="ltr" style="text-align:right"><span class="muted" style="font-size:var(--fs-xs)">يستخدمه الأعضاء عند تسجيل الدخول، ولا يمكن تغييره لاحقًا.</span></div>
+          <div class="field"><label for="o-plan">الخطة</label><select id="o-plan" class="select" style="height:44px"><option>الأساسية</option><option selected>الأعمال</option><option>المؤسسات</option></select></div>
+          <div class="field"><label for="o-admin">بريد أول مسؤول للمنظمة</label><input id="o-admin" type="email" placeholder="admin@company.sa" dir="ltr" style="text-align:right"></div></div>
+        <div class="modal-foot">
+          <span class="note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-server"/></svg>قاعدة بيانات + migrations + حساب المسؤول</span>
+          <button class="btn btn-ghost" type="button" data-action="close-modal">إلغاء</button>
+          <button class="btn btn-primary" type="submit">إنشاء وتجهيز</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

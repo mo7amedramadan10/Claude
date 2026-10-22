@@ -1,0 +1,11528 @@
+const el = id => document.getElementById(id);
+// Mirrors the <html lang> the head script already set (before this script even loads) —
+// read once here rather than re-touched, since switching it is a page reload (see
+// lang-toggle's click handler), never an in-place state change.
+// ---------- English translation layer ----------
+// A dictionary-driven, whole-DOM post-processing pass rather than hundreds of individual
+// call-site rewrites — the app is ~6000 lines of Arabic-native JS/HTML with no single
+// render entry point all of it flows through. Every render function keeps emitting Arabic
+// exactly as it always has; this only swaps what's already in the DOM, text node by text
+// node and a few key attributes, whenever the page is in English mode. Matched by
+// substring within each text node (not requiring an exact whole-node match), so labels
+// built with interpolation ("٣ عناصر", "تصدير PDF") still get their static Arabic parts
+// translated even though the whole string isn't itself a dictionary key. I18N_ENTRIES is
+// sorted longest-first so a more specific phrase is tried before any shorter phrase it
+// happens to contain (e.g. "مصدر البيانات" before a bare "البيانات" would ever match).
+const I18N_EN = {
+  // ---- brand / login / shared banner ----
+  'المحادثة إلى لوحة معلومات': 'Chat to Dashboard',
+  'اسم المستخدم': 'Username', 'كلمة المرور': 'Password', 'تسجيل الدخول': 'Sign In',
+  '📤 عرض مشاركة —': '📤 Shared view —', 'افتح التطبيق الكامل ←': 'Open the full app ←',
+  // ---- top nav ----
+  'المحادثة': 'Chat', 'مستودع الملفات': 'File Repository', 'السجل': 'History',
+  'اللوحات النشطة': 'Active Dashboards', 'روابط المشاركة': 'Share Links',
+  'المستخدمون': 'Users', 'الإعدادات': 'Settings',
+  'ما أُرسل للموديل وكم استهلك': 'What was sent to the model and how much it used',
+  'الاستهلاك ↗': 'Usage ↗',
+  'كل المصادر مفعّلة': 'All sources enabled',
+  'الأنظمة — تحديد الكل': 'Systems — select all',
+  'مستودع الملفات — تحديد الكل': 'File repository — select all',
+  'تصغير لوحة المحادثة': 'Shrink chat panel', 'تكبير لوحة المحادثة': 'Grow chat panel',
+  'إخفاء لوحة المحادثة': 'Hide chat panel',
+  'تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد': "Toggle automatic voice read-aloud for the assistant's replies",
+  '🔇 قراءة تلقائية': '🔇 Auto read', 'دليل استخدام النظام': 'System usage guide',
+  'تبديل المظهر': 'Toggle appearance', 'خروج': 'Log out',
+  // ---- chat panel ----
+  'بناء اللوحة': 'Build Dashboard', 'الاستفسارات': 'Inquiries',
+  '📁 لا يوجد ملفات في المستودع': '📁 No files in the repository', 'إدارة الملفات ←': 'Manage files ←',
+  'الصورة المرفقة': 'Attached image', 'إزالة الصورة': 'Remove image',
+  'إرفاق صورة داشبورد لإعادة بنائه ببياناتك': 'Attach a dashboard screenshot to rebuild it with your data',
+  'يفرّغ اللوحة المعروضة الآن فورًا؛ سؤالك الجاي هيبني لوحة جديدة تمامًا من الصفر':
+    'Instantly clears the dashboard on screen — your next question builds a brand-new one from scratch',
+  '🆕 ابدأ لوحة جديدة': '🆕 Start new dashboard',
+  'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…': 'Ask about your data, or attach a dashboard screenshot to rebuild it…',
+  'اسأل بصوتك': 'Ask by voice', 'إرسال': 'Send',
+  // ---- dashboard toolbar ----
+  'عرض': 'View', 'تحرير': 'Edit',
+  'يعيد تنفيذ استعلام كل عنصر من البيانات الحية، مع الحفاظ على أي فلتر مطبّق حاليًا':
+    "Re-runs every widget's query against live data, keeping any filter currently applied",
+  '🔄 تحديث': '🔄 Refresh', 'تراجع': 'Undo', 'إعادة': 'Redo',
+  'حوّل هذه اللوحة إلى لوحة نشطة — تصبح قابلة للمشاركة وللمنح صلاحيات تعديل/عرض لأشخاص آخرين':
+    'Turn this dashboard into an Active one — shareable, with edit/view access grantable to others',
+  '✅ تفعيل اللوحة': '✅ Activate dashboard', '🔗 مشاركة': '🔗 Share',
+  '🖨️ تصدير PDF': '🖨️ Export PDF', '📊 تصدير PowerPoint': '📊 Export PowerPoint',
+  // ---- repository ----
+  'رفع ملفات جديدة': 'Upload new files', 'الأكثر استخدامًا': 'Most used',
+  'الأحدث تحديثًا': 'Recently updated', 'الاسم': 'Name',
+  'الملف': 'File', 'آخر تحديث': 'Last updated', 'الاستخدام': 'Usage', 'الصلاحيات': 'Permissions',
+  'اختر ملفًا واحدًا أو أكثر (Excel أو CSV أو PDF)، اكتب بيانات كل ملف، ثم اضغط\n      "حفظ في المستودع" لكل ملف على حدة لإضافته للمستودع.':
+    'Choose one or more files (Excel, CSV, or PDF), fill in each file\'s details, then click\n      "Save to repository" for each one to add it.',
+  'اختر ملفات': 'Choose files', 'إغلاق': 'Close', 'تفاصيل الملف': 'File Details',
+  'اسم العرض': 'Display name', 'الوصف': 'Description', 'التصنيف': 'Category',
+  '🗑️ حذف الملف': '🗑️ Delete file', 'إلغاء': 'Cancel', 'حفظ': 'Save',
+  'صلاحيات الملف': 'File Permissions',
+  'هذا الملف مقيّد تلقائيًا لمنشئه ولا يمكن إزالة هذا القيد — يمكنك فقط\n      منح صلاحية استخدامه لمستخدمين آخرين بالإضافة إليه.':
+    "This file is automatically restricted to its creator, and that can't be removed — you can only\n      additionally grant other users access to it.",
+  'المالك (منشئ الملف):': 'Owner (file creator):',
+  'مستخدمون لديهم صلاحية إضافية': 'Users with additional access',
+  'إضافة مستخدم': 'Add user', 'ابحث باسم المستخدم أو الاسم…': 'Search by username or name…',
+  'الملفات المرتبطة': 'Related Files',
+  'اربط هذا الملف بملف آخر يشترك معه في عمود، ليظهر الربط كإشارة عند تحليل البيانات.':
+    'Link this file to another that shares a column with it, so the link shows as a hint during data analysis.',
+  'إضافة ربط': 'Add link', 'اسم العمود المشترك': 'Shared column name', 'ربط': 'Link',
+  // ---- history / active / share links ----
+  'مسح الكل': 'Clear all', 'اللوحة': 'Dashboard', 'آخر حفظ': 'Last saved', 'العناصر': 'Widgets',
+  'الدور': 'Role', 'ⓘ ما معنى المالك والصلاحيات؟': 'ⓘ What do owner and permissions mean?',
+  'الأدوار على اللوحة النشطة': 'Roles on an Active Dashboard',
+  'تُسنَد لكل لوحة نشطة صلاحياتٌ لشخص واحد أو أكثر، وفق واحدٍ من ثلاثة أدوار، يحدّد كلٌّ منها من يملك حق التعديل عليها ومن يقتصر دوره على الاطّلاع فحسب.':
+    'Every Active dashboard grants access to one or more people under one of three roles, each determining who can edit it and who can only view it.',
+  'مالك': 'Owner',
+  'هو الشخص الذي أنشأ اللوحة. تُستخرج بيانات اللوحة دائمًا وفق صلاحية وصول <b>المالك</b> إلى الأنظمة والمصادر المعتمَدة عليها؛ فإذا فقد المالك صلاحيته على أحد مصادر البيانات، تتعطّل اللوحة تلقائيًا لجميع من يطّلعون عليها، دون استثناء.':
+    "The person who created the dashboard. Its data is always pulled under the <b>Owner's</b> own access to the systems/sources it depends on — if the Owner loses access to one of those sources, the dashboard breaks automatically for everyone viewing it, with no exception.",
+  'ينفرد المالك بالصلاحيات التالية:': 'Only the Owner has the following abilities:',
+  'حذف اللوحة نهائيًا.': 'Permanently delete the dashboard.',
+  'إضافة المحرِّرين والمشاهدين أو إزالتهم، وتحديد دور كل منهم.': "Add or remove Editors and Viewers, and set each one's role.",
+  'نقل الملكية إلى شخص آخر، بشرط أن يمتلك هذا الشخص صلاحية وصول سارية على البيانات ذاتها.':
+    'Transfer ownership to someone else, provided they already have valid access to the same data.',
+  'تغيير مصادر البيانات المعتمَدة في اللوحة — إضافة مصدر جديد إليها أو استبدال أحد مصادرها الحالية.':
+    "Change the dashboard's data sources — add a new one or replace an existing one.",
+  'وتشمل صلاحياته، بطبيعة الحال، جميع صلاحيات المحرِّر الموضّحة أدناه.': "Naturally, this also includes every Editor ability described below.",
+  'محرر': 'Editor', 'صلاحية التعديل': 'Edit access',
+  'يمكنه فتح اللوحة وتعديل محتواها؛ كإضافة عناصر أو حذفها، أو تغيير نوع الرسم البياني، أو استخدام عوامل التصفية، ضمن نطاق مصادر البيانات المعتمَدة أصلًا في اللوحة، وتُحفَظ أي تعديلات تلقائيًا. لا يملك المحرِّر صلاحية حذف اللوحة، ولا إدارة من له حق الوصول إليها، ولا نقل ملكيتها.':
+    'Can open the dashboard and edit its content — adding or removing widgets, changing a chart type, or using filters — within the data sources already set on the dashboard; edits save automatically. An Editor cannot delete the dashboard, manage who has access to it, or transfer its ownership.',
+  'مشاهد': 'Viewer', 'صلاحية العرض': 'View access',
+  'يقتصر دوره على فتح اللوحة والاطّلاع على بياناتها ورسومها البيانية، دون أي إمكانية للتعديل — لكنه يظل يرى بيانات حيّة لا مجمَّدة: يمكنه الضغط على زر «🔄 تحديث» في أي وقت لإعادة تنفيذ استعلامات اللوحة وجلب أحدث البيانات المتاحة، تمامًا كما يفعل المالك أو المحرِّر.':
+    'Can only open the dashboard and view its data and charts, with no ability to edit — but the data they see is still live, not frozen: they can click "🔄 Refresh" at any time to re-run the dashboard\'s queries and pull the latest available data, exactly like the Owner or an Editor can.',
+  'ما الفرق بين المشاهد على اللوحة النشطة ورابط المشاركة؟': "What's the difference between a Viewer on an Active Dashboard and a share link?",
+  'المشاهد على لوحة نشطة يرى نفس اللوحة الحيّة التي يراها المالك والمحرِّرون، ويمكنه الضغط على «🔄 تحديث» في أي وقت للحصول على أحدث البيانات المتوفرة فعليًا.':
+    'A Viewer on an Active dashboard sees the exact same live dashboard the Owner and Editors do, and can click "🔄 Refresh" at any time to get the latest data actually available.',
+  'أما <b>رابط المشاركة</b> فهو لقطة ثابتة (Snapshot) من اللوحة في لحظة إنشاء الرابط فقط — لا يحتوي على زر تحديث، ولا يعكس أي تغيير يطرأ على البيانات لاحقًا، حتى لو تغيّرت الأرقام الفعلية في الأنظمة المصدر بعد ذلك. فرابط المشاركة يناسب مشاركة نتيجة لحظة زمنية محددة (كتقرير شهري ثابت)، بينما صلاحية المشاهد على اللوحة النشطة تناسب من يحتاج متابعة البيانات باستمرار وهي محدَّثة.':
+    'A <b>share link</b>, on the other hand, is a frozen snapshot of the dashboard at the moment the link was created — it has no refresh button and never reflects any later change to the data, even if the real numbers in the source systems change afterward. A share link suits sharing a fixed point-in-time result (like a static monthly report), while Viewer access on an Active dashboard suits someone who needs to keep following the data as it updates.',
+  'من يملك صلاحية تغيير مصدر البيانات؟': "Who can change the dashboard's data source?",
+  'المالك وحده يملك هذه الصلاحية؛ أما المحرِّر فيمكنه التعديل على العرض والتحليل ضمن المصادر القائمة فقط، دون أن يتمكّن من إقحام مصدر بيانات جديد على اللوحة.':
+    'Only the Owner has this ability; an Editor can only adjust the view/analysis within the existing sources, without being able to introduce a new data source into the dashboard.',
+  'السبب في ذلك مرتبط مباشرةً بالمبدأ الذي تقوم عليه اللوحة النشطة: بما أن تنفيذ الاستعلام يتم دائمًا وفق صلاحية المالك، فإن أي إضافة لمصدر بيانات جديد تستلزم بالضرورة أن يمتلك المالك نفسه صلاحية وصول سارية عليه. لو سُمح للمحرِّر بإضافة مصدر لا يملك المالك صلاحية عليه، لتعطّلت اللوحة فورًا لجميع المستخدمين — وهو ما يتعارض مع الغرض من التعديل أصلًا. لذلك، فإن أي تغييرٍ يمسّ نطاق مصادر البيانات يبقى قرارًا يخصّ المالك حصرًا، تمامًا كصلاحيات إدارة الوصول ونقل الملكية.':
+    "This ties directly to the principle an Active dashboard runs on: since queries always execute under the Owner's own access, adding any new data source necessarily requires the Owner to already have valid access to it. If an Editor could add a source the Owner has no access to, the dashboard would break instantly for every user — defeating the whole point of the edit. So any change touching the dashboard's data-source scope stays the Owner's decision alone, just like managing access and transferring ownership.",
+  'الرابط': 'Link', 'الإنشاء / الانتهاء': 'Created / Expires', 'المشاهدات': 'Views', 'الحالة': 'Status',
+  '+ مستخدم جديد': '+ New user', 'طريقة الدخول': 'Sign-in method',
+  // ---- settings ----
+  'إعداد على مستوى النظام بالكامل': 'A System-Wide Setting',
+  'الموديل المختار هنا هو نفسه اللي بيجاوب على أسئلة كل المستخدمين في النظام — مش إعداد شخصي لكل مستخدم على حدة، وأي تغيير يسري فورًا على أول سؤال جديد بعد الحفظ.':
+    "The model chosen here is the same one that answers every user's questions across the system — not a per-user personal setting — and any change takes effect immediately on the next new question after saving.",
+  'الموديل المستخدم حاليًا': 'Currently Active Model', 'جارٍ التحميل…': 'Loading…',
+  'تغيير الموديل': 'Change Model', 'الموديل الداخلي (Ollama)': 'Internal Model (Ollama)',
+  'موديل OpenAI': 'OpenAI Model', '✓ تم الحفظ': '✓ Saved', 'حفظ التغييرات': 'Save Changes',
+  'نموذج قراءة المستندات (PDF)': 'Document Reader Model (PDF)',
+  'يُستخدم وقت رفع أي ملف PDF جديد ليقرأ صفحاته كصور — بما فيها\n        صفحة ممسوحة ضوئيًا أو جدول/رسم بياني مضمّن — بدل الاكتفاء باستخراج النص الرقمي فقط.\n        إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لكل غرض.\n        لو فشلت القراءة بالذكاء الاصطناعي لأي سبب، يرجع النظام تلقائيًا للاستخراج النصي العادي\n        بدل ما يفشل الرفع بالكامل.':
+    'Used when a new PDF is uploaded, to read its pages as images — including\n        a scanned page or an embedded table/chart — instead of only extracting the digital text layer.\n        A setting fully independent from "Currently Active Model" above: you can choose a different model for each purpose.\n        If AI reading fails for any reason, the system automatically falls back to plain text extraction\n        instead of failing the whole upload.',
+  'نموذج تحليل الصور': 'Image Analysis Model',
+  'يُستخدم لما ترفق صورة داشبورد أو مخطط لإعادة بنائه ببياناتك —\n        إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لتحليل\n        الصور. لو تركته «نفس الموديل الحالي»، ستُرسل الصورة لنفس الموديل المختار فوق كالمعتاد؛\n        بعض الموديلات الداخلية لا تدعم تحليل الصور فترجع خطأً واضحاً بدل تجاهل الصورة بصمت.':
+    'Used when you attach a dashboard screenshot or mockup to rebuild it with your data —\n        a setting fully independent from "Currently Active Model" above: you can choose a different model for image\n        analysis. Leave it on "Same as current model" and the image is sent to the same model chosen above as usual;\n        some internal models do not support image analysis and will return a clear error instead of silently ignoring the image.',
+  'نفس الموديل الحالي': 'Same as current model',
+  '⚠️ بعض الموديلات الداخلية لا تدعم تحليل الصور': '⚠️ Some internal models do not support image analysis',
+  'معلومات عن الموديلات المتاحة': 'About the Available Models',
+  'مناسب للتحليل الدقيق والأسئلة المركّبة اللي تحتاج فهم وربط بين أكثر من مصدر بيانات في نفس الوقت.':
+    'Well-suited to precise analysis and complex questions that need understanding and connecting more than one data source at once.',
+  'بديل سريع وقوي، مع إمكانية اختيار موديل محدد من قائمة الموديلات المتاحة في الإعدادات.':
+    'A fast, capable alternative, with the option to pick a specific model from the list available in settings.',
+  'يعمل على خوادم المؤسسة نفسها دون إرسال أي بيانات لجهة خارجية — الخيار الأنسب للبيانات الحساسة، مع إمكانية اختيار حجم الموديل.':
+    "Runs on the organization's own servers without sending any data to a third party — the best choice for sensitive data, with a choice of model size.",
+  // ---- share / roles / rename / wizard / user modals ----
+  'مشاركة اللوحة': 'Share Dashboard',
+  'أي شخص معه الرابط يقدر يفتح نسخة ثابتة (لحظة إنشاء الرابط) من اللوحة — بدون تسجيل دخول. النسخة لا تتحدث لاحقًا.':
+    'Anyone with the link can open a fixed snapshot (as of when the link was created) of the dashboard — no sign-in needed. The snapshot never updates afterward.',
+  'انتهاء الرابط': 'Link Expiry', 'بعد 24 ساعة': 'After 24 hours', 'بعد 7 أيام': 'After 7 days',
+  'بعد 30 يومًا': 'After 30 days', 'بعد 60 يومًا': 'After 60 days', 'بعد 90 يومًا': 'After 90 days',
+  'تاريخ محدد…': 'Specific date…', '🔗 إنشاء الرابط': '🔗 Create Link', 'نسخ': 'Copy',
+  'لإدارة روابط المشاركة السابقة (الإلغاء، متابعة عدد المشاهدات) —': 'To manage previous share links (revoke, track view counts) —',
+  'روابط المشاركة ←': 'Share Links ←', 'إدارة صلاحيات اللوحة': 'Manage Dashboard Permissions',
+  'المالك:': 'Owner:', 'نقل الملكية': 'Transfer Ownership',
+  'المالك الجديد لازم يكون بالفعل عنده صلاحية وصول للبيانات اللي تعتمد عليها هذه اللوحة.':
+    'The new Owner must already have access to the data this dashboard depends on.',
+  'محررون ومشاهدون': 'Editors and Viewers', 'تعديل الاسم والوصف': 'Edit Name and Description',
+  'إضافة عنصر': 'Add Widget', '→ رجوع': '→ Back', 'التالي': 'Next',
+  'مستخدم جديد': 'New User', 'الاسم المعروض': 'Display Name',
+  'محلي (اسم مستخدم وكلمة مرور)': 'Local (username & password)',
+  'مستخدم عادي': 'Regular User', 'مسؤول': 'Admin', 'الحساب نشط': 'Account active',
+  'الوصول لكل الأنظمة': 'Access to all systems',
+  'صلاحيات الملفات بتتحدد من مستودع الملفات نفسه (زر 🔒 على كل ملف)، مش من هنا.':
+    'File permissions are set from the file repository itself (the 🔒 button on each file), not from here.',
+
+  // ---- dynamic: shared small words / connectors ----
+  'الكل': 'All', 'أخرى': 'Other', 'الإجمالي': 'Total', 'عام': 'General',
+  '٪': '%', '، ': ', ', ' من ': ' of ',
+
+  // ---- dynamic: theme / lang toggle titles set from JS ----
+  'التبديل للوضع الداكن': 'Switch to dark mode', 'التبديل للوضع الفاتح': 'Switch to light mode',
+
+  // ---- dynamic: widget source popover ----
+  'المؤشر': 'Metric', 'مجمّع حسب': 'Grouped by', 'الفترة': 'Period',
+  'مصدر البيانات': 'Data Source', 'طريقة الحساب': 'Calculation Method',
+  'غير متأثر بالفلتر': 'Not affected by filters',
+  'هذا العنصر مش مبني على استعلام قابل لإعادة التنفيذ، فمش بيتفلتر تلقائيًا.':
+    "This widget isn't built on a re-runnable query, so it isn't filtered automatically.",
+
+  // ---- dynamic: forecast ----
+  '✕ إخفاء التوقع': '✕ Hide Forecast', '🔮 توقّع الأشهر الجاية': '🔮 Forecast Upcoming Months',
+  'جارٍ التوقع…': 'Forecasting…', 'تعذّر التوقع': "Couldn't generate the forecast",
+  'تعذّر حساب التوقع: ': "Couldn't calculate the forecast: ",
+  'الحد الأعلى للتوقع': 'Forecast Upper Bound', 'الحد الأدنى للتوقع': 'Forecast Lower Bound',
+  'متوقّع': 'Forecast', 'انحدار خطي مع تعديل موسمي': 'Linear regression with seasonal adjustment',
+  'انحدار خطي': 'Linear regression', '🔮 توقّع إحصائي (': '🔮 Statistical Forecast (',
+  'نقطة إضافية مجمّعة ضمن الرسم': 'additional point(s) grouped into the chart',
+
+  // ---- dynamic: widget menu (⋮) ----
+  'خيارات العنصر': 'Widget Options', '🔀 تغيير نوع الرسم': '🔀 Change Chart Type',
+  '↔️ تغيير الحجم': '↔️ Change Size', '📅 تغيير الفترة': '📅 Change Period',
+  '📋 نسخ': '📋 Duplicate', '🗑️ حذف': '🗑️ Delete', 'حذف هذا العنصر؟': 'Delete this widget?',
+  'صغير': 'Small', 'عريض (عمودين)': 'Wide (2 columns)', 'واسع (3 أعمدة)': 'Extra Wide (3 columns)',
+  'عرض كامل': 'Full Width', 'الحجم': 'Size', 'نوع الرسم': 'Chart Type',
+  '📊 أعمدة': '📊 Bar', '📈 خط': '📈 Line', '🥧 دائري': '🥧 Pie', '📋 جدول': '📋 Table',
+  '🔢 مؤشر': '🔢 KPI', '📶 جدول تقدم': '📶 Progress Table', '📉 مصفوفة اتجاهات': '📉 Trend Matrix',
+  '🚦 شريط حالة': '🚦 Status Bar', '🎯 مؤشر دائري': '🎯 Radial Gauge', '🎚️ مؤشر شريطي': '🎚️ Linear Gauge',
+  'جارٍ الحفظ…': 'Saving…', 'تعذّر الحفظ: ': "Couldn't save: ", 'تعذّر الحفظ': "Couldn't save",
+  'فشل الحفظ': 'Save failed', 'لوحة معلومات': 'Dashboard',
+
+  // ---- dynamic: add-widget wizard ----
+  'مقارنة': 'Comparison', 'اتجاه عبر الزمن': 'Trend Over Time', 'مؤشر رئيسي': 'Key Metric',
+  'توزيع': 'Distribution', 'جدول': 'Table',
+  'هذا الشهر': 'This Month', 'الشهر الماضي': 'Last Month', 'آخر 3 أشهر': 'Last 3 Months',
+  'آخر 6 أشهر': 'Last 6 Months', 'هذا العام': 'This Year', 'كل البيانات': 'All Data', 'مخصص': 'Custom',
+  'ماذا تريد أن تضيف؟': 'What would you like to add?', 'جارٍ التحميل…': 'Loading…',
+  'لا تتوفر بيانات كافية لإنشاء هذا العنصر.<br>': "There isn't enough data to create this widget.<br>",
+  'فعّل مصدرًا من قائمة «المصادر» أعلى الصفحة أو ارفع ملفًا في مستودع الملفات.':
+    'Enable a source from the "Sources" menu above, or upload a file to the file repository.',
+  'من أي مصدر بيانات؟': 'Which data source?', 'توزيع حسب ماذا؟': 'Distribution by what?',
+  'مقارنة ماذا؟': 'Compare what?', 'ماذا تريد قياسه؟': 'What would you like to measure?',
+  'الفترة؟': 'Which period?', 'حدد الفترة': 'Select the Period',
+  'من': 'From', 'إلى': 'To',
+  'التجميع؟': 'Group by?', 'يوميًا': 'Daily', 'أسبوعيًا': 'Weekly', 'شهريًا': 'Monthly',
+  'اختر الأعمدة': 'Select Columns', 'تحديث الفترة': 'Update Period', 'إضافة العنصر': 'Add Widget',
+  'جارٍ تجهيز المعاينة…': 'Preparing preview…', '💾 تحديث': '💾 Update', '➕ إضافة': '➕ Add',
+  'تعذّر التنفيذ': "Couldn't run the query", 'تعذّر تنفيذ الاستعلام.': "Couldn't run the query.",
+  'لا يوجد بيانات': 'No data available',
+
+  // ---- dynamic: comparison / progress-table / trend-matrix / status-bar widgets ----
+  'التقدّم': 'Progress', 'الاتجاه': 'Trend', 'الفترة الأولى': 'First Period',
+  'الفترة الثانية': 'Second Period', 'البند': 'Item', 'القيمة': 'Value', 'التفاصيل': 'Details',
+  'العدد': 'Count',
+
+  // ---- dynamic: export ----
+  'جارٍ التصدير…': 'Exporting…', 'فشل التصدير': 'Export failed',
+  'تعذّر تصدير العرض التقديمي: ': "Couldn't export the presentation: ",
+
+  // ---- dynamic: dashboard toolbar / filters / sources summary ----
+  'جارٍ التحديث…': 'Refreshing…',
+  'هذه اللوحة معطّلة حاليًا.': 'This dashboard is currently disabled.',
+  '🗄️ مصادر البيانات:': '🗄️ Data Sources:',
+  '✕ مسح كل الفلاتر': '✕ Clear All Filters', 'اضغط لإزالة هذا الفلتر': 'Click to remove this filter',
+  'نشطة': 'Active', '⚙️ إدارة الصلاحيات': '⚙️ Manage Permissions',
+
+  // ---- dynamic: chat panel ----
+  'قراءة بصوت عالٍ': 'Read aloud',
+  'اسأل سؤالاً عن بياناتك وسيبني لك المساعد لوحة معلومات.':
+    'Ask a question about your data and the assistant will build you a dashboard.',
+  'جرّب: «ما إجمالي الإيرادات حسب المنطقة؟»': 'Try: "What is total revenue by region?"',
+  'اسأل سؤالاً عن بياناتك': 'Ask a question about your data',
+  'مثال: «قارن الإيرادات بين المناطق» أو «أعطني تقريراً شاملاً»':
+    'Example: "Compare revenue by region" or "Give me a comprehensive report"',
+  '🔊 قراءة تلقائية': '🔊 Auto Read',
+  'محتاج إذن استخدام الميكروفون من المتصفح.': 'Microphone permission is needed from the browser.',
+  'مفيش ميكروفون متاح.': 'No microphone available.',
+  'تعذّر التعرف على الصوت: ': "Couldn't recognize speech: ",
+  'خليه شهري': 'Make it monthly', 'اعرض آخر 3 شهور بس': 'Show only the last 3 months',
+  'غيّر الرسم لخط بياني': 'Change the chart to a line chart',
+  'أضف رسم توزيع (Pie)': 'Add a distribution chart (Pie)', 'أضف جدول تفصيلي': 'Add a detailed table',
+  'اعمل تقرير شامل بدل كده': 'Make a comprehensive report instead',
+  'تعذّر تنفيذ الطلب': "Couldn't process the request",
+  'تعذّر الوصول إلى الخادم: ': "Couldn't reach the server: ",
+  'اسأل استفسارًا سريعًا عن بياناتك — إجابة نصية مباشرة، من غير بناء لوحة…':
+    'Ask a quick question about your data — a direct text answer, without building a dashboard…',
+  'ⓘ المصدر': 'ⓘ Source', '➕ أضف إلى لوحة المتابعة': '➕ Add to Follow-up Dashboard',
+  'اسأل استفسارًا وسيجاوبك المساعد بإجابة نصية مباشرة، من غير بناء لوحة.':
+    'Ask a question and the assistant will reply with a direct text answer, without building a dashboard.',
+  'جرّب: «كام إجمالي الإيرادات الشهر ده؟»': 'Try: "What is total revenue this month?"',
+  'تعذّر إضافة الإجابة إلى اللوحة': "Couldn't add the answer to the dashboard",
+
+  // ---- dynamic: sources dropdown / repository ----
+  'غير مربوط بعد': 'Not connected yet', '⟳ جلب': '⟳ Fetch',
+  'لا يوجد ملفات بعد — ارفع ملفات أولاً': 'No files yet — upload files first',
+  'تعذّر الجلب: ': "Couldn't fetch: ", 'لم يتم الجلب بعد — اضغط «جلب»': 'Not fetched yet — click "Fetch"',
+  ' سجل · آخر جلب ': ' records · last fetched ', '⟳ جارٍ الجلب…': '⟳ Fetching…',
+  'جارٍ الجلب من النظام…': 'Fetching from the system…', 'فشل الجلب': 'Fetch failed',
+  'لا يوجد مصادر': 'No sources', 'لا يوجد مصدر مفعّل': 'No source enabled',
+  'مصادر مفعّلة': 'sources enabled', 'صفحة': 'page(s)', 'صف': 'row(s)', 'عمود': 'column(s)',
+  'اليوم': 'Today', 'أمس': 'Yesterday', 'ملفك': 'Your file', 'لديك صلاحية': 'You have access',
+  '🔒 مقيّد': '🔒 Restricted', 'صلاحيات الملف': 'File Permissions',
+  'تحديث البيانات': 'Update Data', 'التفاصيل': 'Details', 'الملفات المرتبطة': 'Related Files',
+  'تنزيل الملف': 'Download File',
+  'لا يوجد ملفات في هذا التصنيف': 'No files in this category',
+  'لا يوجد ملفات ': 'No files ', 'في هذا التصنيف': 'in this category', 'في المستودع بعد': 'in the repository yet',
+  '. ارفع ملفاً من الأعلى.': '. Upload a file from above.',
+  'في المستودع بعد. ارفع ملفاً من الأعلى.': 'in the repository yet. Upload a file from above.',
+  'اسم العرض (إجباري)': 'Display name (required)', 'وصف مختصر': 'Short description',
+  'التصنيف (مثلاً: المالية)': 'Category (e.g. Finance)', 'حفظ في المستودع': 'Save to Repository',
+  'اسم العرض إجباري.': 'Display name is required.', 'جارٍ الحفظ: ': 'Saving: ',
+  'جارٍ رفع ': 'Uploading ', ' ملف وتحليل محتواه…': ' file(s) and analyzing content…',
+  'جارٍ قراءة "': 'Reading "', '" بالموديل الداخلي — صفحة ': '" with the internal model — page ',
+  ' من ': ' of ', 'تعذّر الرفع': 'Upload failed', 'تعذّر قراءة الملف.': "Couldn't read the file.",
+  'فشل التحديث': 'Update failed', 'تعذّر تحديث بيانات الملف: ': "Couldn't update the file's data: ",
+  'حذف "': 'Delete "', '" من المستودع؟ لا يمكن التراجع عن هذا.': '" from the repository? This cannot be undone.',
+  'ليس لديك صلاحية حذف هذا الملف — الحذف مقصور على من رفعه أو على المسؤول.':
+    "You don't have permission to delete this file — only the uploader or an admin can delete it.",
+  'تعذّر حذف الملف': "Couldn't delete the file", 'تعذّر حفظ التفاصيل.': "Couldn't save the details.",
+  'لا نتائج.': 'No results.', 'إزالة': 'Remove',
+  'لا يوجد مستخدمون إضافيون بعد.': 'No additional users yet.',
+  'تعذّر حفظ الصلاحيات.': "Couldn't save the permissions.",
+  'تعذّر العثور على هذا الملف — يبدو أنه حُذف أو تحدّث. أعد فتح صلاحياته من قائمة الملفات.':
+    "Couldn't find this file — it may have been deleted or updated. Reopen its permissions from the file list.",
+  'تعذّر تحميل صلاحيات الملف الحالية.': "Couldn't load the file's current permissions.",
+  'لا يوجد ملفات أخرى': 'No other files',
+  'العمود المشترك: ': 'Shared column: ', 'إزالة الربط': 'Remove Link',
+  'لا يوجد ملفات مرتبطة بعد.': 'No related files yet.',
+  'اختر ملفًا واكتب اسم العمود المشترك.': 'Choose a file and enter the shared column name.',
+  'تعذّر إضافة الربط.': "Couldn't add the link.",
+
+  // ---- dynamic: history / active dashboards / share links ----
+  ' لوحة محفوظة': ' saved dashboard(s)', 'لا يوجد لوحات محفوظة بعد': 'No saved dashboards yet',
+  'مسودة': 'Draft', '⚠️ معطّلة': '⚠️ Disabled', 'المالك: ': 'Owner: ',
+  'تفعيل': 'Activate', 'عنصر': 'widget(s)', 'فتح': 'Open',
+  'لا يوجد لوحات محفوظة بعد — أي سؤال تسأله يُحفظ هنا تلقائياً.': 'No saved dashboards yet — every question you ask is saved here automatically.',
+  ' لوحة نشطة': ' active dashboard(s)', 'لا يوجد لوحات نشطة بعد': 'No active dashboards yet',
+  '⚠ معطّلة': '⚠ Disabled', 'تعديل الاسم والوصف': 'Edit Name and Description',
+  'إدارة الصلاحيات': 'Manage Permissions',
+  'لا يوجد لوحات نشطة بعد — فعّل لوحة من تبويب "السجل" لتظهر هنا.':
+    'No active dashboards yet — activate a dashboard from the "History" tab for it to appear here.',
+  'تعذّر تفعيل اللوحة.': "Couldn't activate the dashboard.", 'تعذّر الوصول إلى الخادم.': "Couldn't reach the server.",
+  'حذف هذه اللوحة من السجل؟': 'Delete this dashboard from history?',
+  'تعذّر تحميل الصلاحيات.': "Couldn't load the permissions.",
+  'لا يوجد محررون أو مشاهدون بعد.': 'No editors or viewers yet.',
+  'تعذّر إضافة الدور.': "Couldn't add the role.",
+  'نقل ملكية اللوحة إلى ': 'Transfer dashboard ownership to ', '؟': '?',
+  'تعذّر نقل الملكية.': "Couldn't transfer ownership.",
+  'الاسم مطلوب.': 'Name is required.', 'مسح كل السجل؟ لا يمكن التراجع عن هذا.': 'Clear all history? This cannot be undone.',
+  'إظهار لوحة المحادثة': 'Show Chat Panel',
+  'الملف يجب أن يكون صورة.': 'The file must be an image.',
+  'حجم الصورة كبير جداً (الحد الأقصى 15MB).': 'The image is too large (15MB maximum).',
+  'تعذّر قراءة الصورة.': "Couldn't read the image.",
+  'يجب تفعيل اللوحة أولاً قبل مشاركتها.': 'The dashboard must be activated before sharing it.',
+  'فعّل اللوحة أولاً قبل مشاركتها — زر «✅ تفعيل اللوحة» بجانبه.':
+    'Activate the dashboard first before sharing it — see the "✅ Activate Dashboard" button next to it.',
+  'جارٍ الإنشاء…': 'Creating…', 'فشل إنشاء الرابط': 'Failed to create the link',
+  'تعذّر إنشاء رابط المشاركة: ': "Couldn't create the share link: ", 'تم النسخ ✓': 'Copied ✓',
+  'أُلغي': 'Revoked', 'منتهي': 'Expired', 'نشط': 'Live',
+  'جارٍ التحميل…': 'Loading…',
+  ' رابط مشاركة': ' share link(s)', 'لا يوجد روابط مشاركة بعد': 'No share links yet',
+  'لا يوجد روابط مشاركة بعد — أنشئ رابطًا من زر "🔗 مشاركة" على أي لوحة.':
+    'No share links yet — create one from the "🔗 Share" button on any dashboard.',
+  'بدون انتهاء': 'Never expires', 'إلغاء الرابط': 'Revoke Link', 'نسخ الرابط': 'Copy Link',
+  'ينتهي: ': 'Expires: ', 'مشاهدة': 'view(s)', 'حذف رابط المشاركة هذا؟': 'Delete this share link?',
+  'تعذّر تحميل الروابط.': "Couldn't load the links.",
+  'رابط غير نشط': 'Inactive Link', 'رابط غير نشط — لوحة مشاركة': 'Inactive Link — Shared Dashboard',
+  'هذا الرابط لم يعد نشطًا.': 'This link is no longer active.',
+  'تواصل مع ': 'Contact ', ' للحصول على رابط جديد.': ' to get a new link.', 'صاحب الرابط': 'the link owner',
+  'الرابط غير موجود أو تم حذفه.': "The link doesn't exist or was deleted.",
+  'تعذّر التحميل': "Couldn't load", ' — لوحة مشاركة': ' — Shared Dashboard',
+
+  // ---- dynamic: settings ----
+  'مسؤول': 'Admin', 'مستخدم': 'User', 'الموديل الداخلي (Ollama)': 'Internal Model (Ollama)',
+  'تعذّر تحميل إعدادات الموديل.': "Couldn't load the model settings.",
+  'معطّل (استخراج نص عادي فقط)': 'Disabled (plain text extraction only)',
+  '⚠️ قد لا يدعم الصور — لو فشل بيرجع تلقائيًا لقراءة PdfPig العادية':
+    '⚠️ May not support images — falls back automatically to regular PdfPig reading on failure',
+  'مُعد': 'Configured', 'غير مُعد': 'Not Configured', 'فشل الحفظ': 'Save failed',
+  'تعذّر تحميل قائمة الموديلات.': "Couldn't load the model list.",
+  'مُعد على الخادم': 'Configured on the server', 'غير مُعد على الخادم': 'Not configured on the server',
+  'تعذّر تسجيل الدخول.': "Couldn't sign in.",
+
+  // ---- dynamic: onboarding tour ----
+  '👋 مرحبًا بك': '👋 Welcome',
+  'جولة موجزة تتناول أهم صفحات النظام. يمكنك تخطّيها الآن، وإعادة تشغيلها في أي وقت لاحقًا من الزر ❓ أعلى الصفحة.':
+    'A short tour of the system\'s main pages. You can skip it now and replay it any time later from the ❓ button at the top of the page.',
+  '💬 المحادثة': '💬 Chat',
+  'الصفحة الرئيسية: اكتب سؤالك بلغة عربية طبيعية عن بياناتك، ويقوم النظام ببناء لوحة معلومات تفاعلية فورًا.':
+    'The main page: type your question about your data in natural language, and the system builds an interactive dashboard instantly.',
+  '🧭 بناء اللوحة / الاستفسارات': '🧭 Build Dashboard / Inquiries',
+  '«بناء اللوحة» يحوّل سؤالك إلى عناصر رسومية وجداول. أما «الاستفسارات» فيقدّم إجابة نصية سريعة دون بناء لوحة — مناسب للأسئلة المباشرة.':
+    '"Build Dashboard" turns your question into charts and tables. "Inquiries" gives a quick text answer without building a dashboard — suited to direct questions.',
+  '📁 مصادر البيانات': '📁 Data Sources',
+  'من هنا يمكن التحكم في الأنظمة أو الملفات المفعّلة وقت السؤال، واقتصار البحث على مصدر معيّن عند الحاجة.':
+    'From here you can control which systems or files are enabled when asking a question, and restrict the search to a specific source when needed.',
+  '📎 مستودع الملفات': '📎 File Repository',
+  'من هذه الصفحة تُرفع ملفات Excel أو CSV أو PDF، لتُستخدم كمصدر بيانات يمكن الاستفسار عنه أسوة بأي نظام متصل.':
+    'From this page you upload Excel, CSV, or PDF files, to be used as a data source you can query just like any connected system.',
+  '🕘 السجل': '🕘 History',
+  'يضم جميع اللوحات التي سبق إنشاؤها، ويتيح العودة إلى أي منها لمتابعة العمل عليها أو تعديلها.':
+    'Holds every dashboard you have created, letting you return to any of them to continue working on it or edit it.',
+  '✅ اللوحات النشطة': '✅ Active Dashboards',
+  'لوحات مفعّلة يمكن مشاركتها مع فريق العمل بأدوار مختلفة (مالك/محرر/مشاهد)، وتظل بياناتها تتحدّث تلقائيًا من المصدر الحي.':
+    'Activated dashboards that can be shared with your team under different roles (Owner/Editor/Viewer), and whose data keeps updating automatically from the live source.',
+  '🔗 روابط المشاركة': '🔗 Share Links',
+  'روابط ثابتة لمشاركة نسخة لحظية من لوحة مع أي شخص، دون الحاجة إلى تسجيل الدخول.':
+    'Fixed links for sharing a snapshot of a dashboard with anyone, without needing to sign in.',
+  '👥 المستخدمون': '👥 Users',
+  'إدارة حسابات المستخدمين وأدوارهم والأنظمة المسموح لهم بالوصول إليها.':
+    'Manage user accounts, their roles, and the systems they are allowed to access.',
+  '⚙️ الإعدادات': '⚙️ Settings',
+  'التحكم في نموذج الذكاء الاصطناعي المستخدم لبناء اللوحات، وفي نموذج قراءة ملفات PDF بشكل مستقل عنه.':
+    'Control the AI model used to build dashboards, and the PDF-reading model independently of it.',
+  '📊 الاستهلاك': '📊 Usage',
+  'سجل تفصيلي لكل سؤال أُرسل إلى النموذج: عدد التوكنز المستخدمة، التكلفة التقديرية، والمستخدم الذي طرح السؤال.':
+    'A detailed log of every question sent to the model: tokens used, estimated cost, and the user who asked it.',
+  '❓ هل تحتاج إلى الدليل مرة أخرى؟': '❓ Need the guide again?',
+  'اضغط هذا الزر في أي وقت لإعادة عرض هذا الدليل من البداية.':
+    'Click this button any time to replay this guide from the start.',
+  'السابق': 'Previous', 'إنهاء': 'Finish', 'تخطّي الدليل': 'Skip Guide',
+
+  // ---- dynamic: users screen ----
+  ' مستخدم': ' user(s)', 'محلي': 'Local', 'نظام': 'system(s)', 'كل الأنظمة': 'All Systems',
+  'الأنظمة': 'Systems', 'حذف': 'Delete',
+  'نشط': 'Active', 'معطّل': 'Disabled', 'تعديل': 'Edit',
+  'لا يوجد عناصر بعد': 'No items yet',
+  'مستخدم جديد': 'New User', '(اتركها فاضية لعدم التغيير)': "(leave blank to keep it unchanged)",
+  'فشل الحفظ': 'Save failed',
+};
+const I18N_ENTRIES = Object.entries(I18N_EN).sort((a, b) => b[0].length - a[0].length);
+
+const ARABIC_CHARS_RE = /[؀-ۿ]/;
+
+function translateText(text) {
+  let result = text;
+  for (const [ar, en] of I18N_ENTRIES) {
+    if (result.indexOf(ar) !== -1) result = result.split(ar).join(en);
+  }
+  // A short dictionary entry (e.g. a single word) can substring-match inside a longer
+  // Arabic sentence that isn't itself in the dictionary yet, leaving a garbled mix of
+  // English and Arabic. Only accept the translation once no Arabic script remains —
+  // otherwise keep the original text untranslated rather than show broken output.
+  if (ARABIC_CHARS_RE.test(result)) return text;
+  return result;
+}
+
+const I18N_ATTRS = ['placeholder', 'title', 'aria-label'];
+
+function translateNode(node) {
+  if (!node) return;
+  if (node.nodeType === Node.TEXT_NODE) {
+    const t = translateText(node.textContent);
+    if (t !== node.textContent) node.textContent = t;
+    return;
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return;
+  if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') return;
+  I18N_ATTRS.forEach(attr => {
+    const v = node.getAttribute && node.getAttribute(attr);
+    if (v) {
+      const t = translateText(v);
+      if (t !== v) node.setAttribute(attr, t);
+    }
+  });
+  node.childNodes.forEach(translateNode);
+}
+
+// English mode: translate whatever the server already sent in the initial HTML first (nav
+// labels, static modal markup — everything before any JS has rendered a single thing), then
+// keep translating everything the app renders afterward. Every screen (chat, dashboard,
+// repository, wizard, popovers…) builds fresh Arabic DOM straight from JS on its own
+// schedule, so a live observer catches all of it without needing a hook added to each one
+// individually.
+if (document.documentElement.getAttribute('lang') === 'en') {
+  document.addEventListener('DOMContentLoaded', () => translateNode(document.body));
+  new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      if (m.type === 'characterData') { translateNode(m.target); return; }
+      if (m.type === 'attributes') {
+        const v = m.target.getAttribute && m.target.getAttribute(m.attributeName);
+        if (v) {
+          const t = translateText(v);
+          if (t !== v) m.target.setAttribute(m.attributeName, t);
+        }
+        return;
+      }
+      m.addedNodes.forEach(translateNode);
+    });
+  }).observe(document.documentElement, {
+    childList: true, subtree: true, characterData: true,
+    attributes: true, attributeFilter: I18N_ATTRS,
+  });
+  // alert()/confirm() are native browser dialogs, not DOM nodes — the observer above can
+  // never reach their text, so their message is translated here instead.
+  const nativeAlert = window.alert.bind(window);
+  window.alert = (msg) => nativeAlert(translateText(String(msg)));
+  const nativeConfirm = window.confirm.bind(window);
+  window.confirm = (msg) => nativeConfirm(translateText(String(msg)));
+}
+
+const state = {
+  lang: document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'ar',
+  messages: [], dashboard: null, loading: false,
+  // "الاستفسارات" sub-tab: fully isolated from the dashboard-building chat above — its own
+  // message log, never touches state.dashboard/currentHistoryId unless the user explicitly
+  // clicks "➕ أضف إلى لوحة المتابعة" on one answer (see convertInquiryToDashboard).
+  chatMode: 'dashboard',
+  // الاستفسارات: state.inquiryTurns is the currently-open saved conversation's own turns
+  // ({role, text, blocks, createdAt} — see Models/ConversationModels.cs), never a bare
+  // {role,text} pair the way state.messages is — inquiryConversationId is null until the
+  // first ask() in a brand-new conversation gets back its generated id.
+  inquiryTurns: [], inquiryConversationId: null,
+  inquiryConversations: [], inquiryConversationsLoaded: false,
+  // "النماذج" sub-tab: a static catalog (see TEMPLATES below), filtered client-side only —
+  // picking one just calls ask() with its prompt, exactly like typing that request by hand.
+  templateCategory: 'all', templateSearch: '',
+  systems: [], sourceFiles: [], tableLabels: {}, // available, from /api/sources
+  onSystems: new Set(), onFiles: new Set(), // enabled
+  files: [], pending: [], filter: 'الكل',
+  history: [], historyLoaded: false,
+  attachedImage: null, attachedImageName: '',
+  currentUser: null, users: [],
+  editMode: false, editHistory: { past: [], future: [] },
+  currentHistoryId: null, wizard: null,
+  // Which page/tab is showing for a multi-page template dashboard (see renderDashboard's
+  // getDashboardPages/buildDashTabs) — never reset explicitly when a new dashboard loads; it
+  // self-corrects every render instead (falls back to the first tab whenever it isn't one of
+  // the current dashboard's own page names), so every "a fresh dashboard just landed" call
+  // site doesn't also need to remember to clear it.
+  activeDashTab: null,
+  activeFilters: {}, // filterId -> selected values (or [from,to] for range types)
+  filterRefreshWarning: null, // set by applyFilters() when a widget fetch still fails after its retry
+  filtersLoading: false, // true while applyFilters() has a request in flight — see updateFiltersLoadingUI()
+  // Ad-hoc filter definitions created by clicking a chart's data point (see
+  // toggleCrossFilter) for a table+field the dashboard has no declared DashboardFilter
+  // for — same shape as one, just never sent to/persisted from the backend's own filters
+  // list. Keyed by the same id used in activeFilters, so getActiveFilters()/applyFilters()
+  // handle both kinds identically without knowing which is which.
+  crossFilterDefs: {},
+  // Set only while the open dashboard is an Active one (see openHistoryEntry): gates
+  // edit/wizard controls for a Viewer and drives the disabled-state banner.
+  dashboardIsActive: false, dashboardRole: null, dashboardDisabled: false, dashboardDisabledReason: '',
+  // When the widgets currently on screen last actually got their data — set on a fresh
+  // chat answer, on applyFilters() (filter change or "🔄 تحديث"), or to a Draft history
+  // entry's own CreatedAt when reopened (an Active one then overwrites it via the
+  // applyFilters() call openHistoryEntry triggers). Drives the "آخر تحديث" line in the
+  // dashboard header — null (no line shown) rather than guessed when truly unknown (e.g.
+  // a public share view, which never calls any of the above).
+  lastRefreshedAt: null,
+  // The signed-in user's own organization/current-project names (loadCurrentProjectNav)
+  // and the currently-open screen's name — together drive the topbar breadcrumb
+  // (updateCrumbs). Both names start null until that fetch resolves.
+  orgName: null, projectName: null, currentScreen: 'chat',
+};
+
+// Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
+// it) and a layout.size (small/wide/full) driving its grid span — neither exists in the
+// model's JSON contract, so they're assigned here the moment a dashboard enters state,
+// never sent back to /api/chat.
+function ensureWidgetMeta(dashboard) {
+  (dashboard?.widgets || []).forEach(w => {
+    if (!w.id) w.id = 'w' + Math.random().toString(36).slice(2, 10);
+    if (!w.layout) w.layout = { size: w.type === 'kpi' ? 'small' : (w.type === 'table' ? 'full' : 'wide') };
+  });
+  return dashboard;
+}
+
+// Every API call rides on the auth cookie automatically (same-origin fetch). If the
+// session ever stops being valid mid-use — expired, or an admin deactivated the account —
+// any 401 sends the whole page back to the login screen rather than failing silently in
+// place, without needing every individual fetch() call site to check for it.
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await nativeFetch(...args);
+  const url = String(args[0]);
+  if (res.status === 401 && !url.startsWith('/api/auth/') && !url.startsWith('/api/share/')) location.reload();
+  return res;
+};
+
+// ---------- design tokens ----------
+// The single source every chart pulls its colors/fonts from — a JS mirror of the CSS
+// custom properties in :root above. No chart component sets a color or font ad hoc;
+// they all go through THEME so every chart, on every dashboard, looks like one system.
+// Light and dark — same chart palette in both (a category means the same color either
+// way), only the grid/tick/accent colors change, mirroring the CSS :root tokens above.
+// ApexCharts never inherits the page's own font — every chart config has to be told it
+// explicitly (see THEME.fontFamily below). This used to name a font ("Tanseek Modern Pro
+// Arabic") with no matching @font-face anywhere, so every chart silently fell back to the
+// browser default instead of the identity's actual Tanseek font (see tokens.css's --font).
+const CHART_FONT_FAMILY = '"Tanseek", "Microsoft Sans Serif", Tahoma, sans-serif';
+const THEMES = {
+  dark: {
+    palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
+    accent: '#3cb4e5', danger: '#EF6461', amber: '#F2B84B',
+    gridColor: '#333436', tickColor: '#9A9CA0', ink: '#EDEFF1', surface: '#1A1B1D',
+    fontFamily: CHART_FONT_FAMILY,
+  },
+  light: {
+    palette: ['#3cb4e5', '#4d4184', '#00bbb4', '#007cbb', '#9dd3c9'],
+    accent: '#007cbb', danger: '#D3402F', amber: '#B8730A',
+    gridColor: '#E3E4E6', tickColor: '#6B6D70', ink: '#434345', surface: '#FFFFFF',
+    fontFamily: CHART_FONT_FAMILY,
+  },
+};
+// Reassigned by applyTheme() below — every chart component reads THEME.x at render
+// time, so switching this and rebuilding the dashboard is enough to re-theme charts
+// too (an already-rendered chart's SVG colors are static once drawn; CSS alone can't
+// recolor them — ApexCharts has no global defaults object, so THEME is read fresh by
+// chartConfig() on every rebuild instead).
+let THEME = THEMES[document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'];
+
+function applyTheme(name) {
+  name = name === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', name);
+  THEME = THEMES[name];
+  try { localStorage.setItem('chatToDashboardTheme', name); } catch {}
+  const btn = el('theme-toggle');
+  btn.textContent = name === 'light' ? '🌙' : '☀️';
+  btn.title = name === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
+  // Existing charts were painted with the old theme's colors baked into their SVG —
+  // rebuild the dashboard so anything already on screen reflects the new theme too.
+  if (state.dashboard) renderDashboard();
+}
+
+// The model only ever controls widget content (type/title/data) — never layout or
+// style. Anything outside this whitelist renders as a table instead of risking a
+// broken grid or a crash on an unexpected type.
+const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table', 'progress-table', 'trend-matrix', 'status-bar', 'radial-gauge', 'linear-gauge',
+  // INTERACTIVE-HANDOFF.md §4.14/§5 additions — see their Card functions below.
+  'radar', 'semi', 'dco', 'iconrank', 'ribbon', 'people', 'feed', 'goal', 'stages', 'bullet',
+  // رسوم DevExtreme الإضافية (jeem-dx.js): قمع، خريطة شجرية، مبعثر.
+  'funnel', 'treemap', 'scatter'];
+// Defense in depth: regardless of what the system prompt asked the model to do, a
+// chart never renders more than this many points — the overflow is folded into one
+// summed "+N more" bucket instead of an unreadably dense chart.
+const MAX_CHART_POINTS = 15;
+
+// ---------- helpers ----------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+function fmt(v) {
+  if (typeof v !== 'number' || !isFinite(v)) return String(v ?? '—');
+  const a = Math.abs(v);
+  if (a >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+  if (a >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (a >= 1e4) return (v / 1e3).toFixed(1) + 'K';
+  return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+const num = v => typeof v === 'number' ? v : (parseFloat(v) || 0);
+
+// Counts a KPI up from 0 to its real value over ~700ms instead of just printing it — only
+// called for a freshly (re)generated dashboard's reveal (see revealNow), never on a filter
+// or edit re-render, where the number must just be correct immediately with no animation.
+function animateKpiValue(target, value) {
+  const start = performance.now();
+  const duration = 700;
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    target.textContent = fmt(value * eased);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// A donut's idle center caption names what the number actually is — "مشروع" for a count of
+// projects, "خطر" for a count of risks — instead of the generic "الإجمالي", which said
+// nothing about the number itself. There's no structured "what this counts" field in the
+// widget schema (chat-authored widgets carry only a title + raw SQL), so this is pulled
+// from the widget's own title: strip a leading aggregate word ("عدد المخاطر" -> "المخاطر")
+// and a trailing "by ..." clause ("توزيع المشاريع حسب الحالة" -> "المشاريع"), then singularize
+// the remaining noun via a small curated dictionary of common business-Arabic plurals —
+// genuine Arabic morphology (broken plurals especially) has no reliable general rule, so
+// unlisted nouns are shown as extracted rather than risk a wrong guess.
+const PLURAL_TO_SINGULAR = {
+  'مشاريع': 'مشروع', 'مخاطر': 'خطر', 'عقود': 'عقد', 'طلبات': 'طلب', 'طلبيات': 'طلبية',
+  'فواتير': 'فاتورة', 'عملاء': 'عميل', 'زبائن': 'زبون', 'موردين': 'مورد', 'موردون': 'مورد',
+  'موظفين': 'موظف', 'موظفون': 'موظف', 'مستخدمين': 'مستخدم', 'مستخدمون': 'مستخدم',
+  'منتجات': 'منتج', 'أصناف': 'صنف', 'حسابات': 'حساب', 'تقارير': 'تقرير', 'ملفات': 'ملف',
+  'مستندات': 'مستند', 'وثائق': 'وثيقة', 'شركات': 'شركة', 'فروع': 'فرع', 'وحدات': 'وحدة',
+  'أقسام': 'قسم', 'حالات': 'حالة', 'مهام': 'مهمة', 'إيرادات': 'إيراد', 'مصروفات': 'مصروف',
+  'نفقات': 'نفقة', 'أصول': 'أصل', 'شكاوى': 'شكوى', 'حوادث': 'حادث', 'مخالفات': 'مخالفة',
+  'تراخيص': 'ترخيص', 'عقارات': 'عقار', 'فرص': 'فرصة', 'صفقات': 'صفقة', 'اجتماعات': 'اجتماع',
+  'تذاكر': 'تذكرة', 'شحنات': 'شحنة', 'قضايا': 'قضية', 'مطالبات': 'مطالبة', 'مخازن': 'مخزن',
+  'عمليات': 'عملية', 'معاملات': 'معاملة', 'حملات': 'حملة', 'مبادرات': 'مبادرة', 'مهارات': 'مهارة',
+  'دورات': 'دورة', 'إجازات': 'إجازة', 'مبيعات': 'مبيعات',
+};
+function deriveUnitLabel(title) {
+  if (!title) return 'الإجمالي';
+  let t = title
+    .replace(/^(توزيع|نسبة|عدد|إجمالي|مجموع|تحليل|ملخص|أعداد|نسب)\s+/u, '')
+    .replace(/\s+(موزعة\s+)?(حسب|بحسب|لكل|بين|عبر|على\s+حسب).*$/u, '')
+    .trim();
+  const bare = t.replace(/^ال/u, '');
+  return PLURAL_TO_SINGULAR[bare] || PLURAL_TO_SINGULAR[t] || bare || 'الإجمالي';
+}
+
+function keysFor(w) {
+  const rows = Array.isArray(w.data) ? w.data : [];
+  const first = rows[0] || {};
+  const ks = Object.keys(first);
+  const xKey = w.xKey || ks.find(k => typeof first[k] !== 'number') || ks[0];
+  const yKey = w.yKey || ks.find(k => k !== xKey && typeof first[k] === 'number') || ks[1];
+  return { rows, xKey, yKey };
+}
+
+function capRows(rows, xKey, yKey) {
+  if (rows.length <= MAX_CHART_POINTS) return { rows, truncated: 0 };
+  const kept = rows.slice(0, MAX_CHART_POINTS - 1);
+  const rest = rows.slice(MAX_CHART_POINTS - 1);
+  const bucket = {};
+  bucket[xKey] = `+${rest.length} أخرى`;
+  bucket[yKey] = rest.reduce((s, r) => s + num(r[yKey]), 0);
+  return { rows: [...kept, bucket], truncated: rest.length };
+}
+
+/**
+ * Widget sources are authored as two sentences: "<where it came from>. <how it was calculated>."
+ * Split on the first ". " so each half gets its own labelled block in the ⓘ popover.
+ */
+function sourcePopover(w) {
+  const source = w.source || '';
+  const at = source.indexOf('. ');
+  const from = at > -1 ? source.slice(0, at + 1) : source;
+  const method = at > -1 ? source.slice(at + 2) : '';
+  // Widgets built through the "+ إضافة عنصر" wizard carry their real structured query
+  // (metric/aggregation/dimension/period) — shown verbatim here, never authored by the
+  // model. A chat-generated widget's own `query` (see AnalyticsTools.cs's "حقل query"
+  // section) is only ever {table, sql} — set purely so dashboard filters/cross-filtering
+  // can re-run it, never carrying metric/dimension — so gate on q.metric specifically
+  // (not merely q being present) or this block renders with a "المؤشر" label and nothing
+  // under it for every chat-built widget.
+  const q = w.query;
+  const queryBlock = q?.metric ? `
+    <div class="src-block"><span class="src-lbl">المؤشر</span>${esc(q.metric || '')}${q.aggregation ? ` (${esc(q.aggregation.toUpperCase())})` : ''}</div>
+    ${q.dimension ? `<div class="src-block"><span class="src-lbl">مجمّع حسب</span>${esc(q.dimension)}</div>` : ''}
+    ${q.dateColumn && q.timeRange && q.timeRange !== 'all' ? `<div class="src-block"><span class="src-lbl">الفترة</span>${esc(timeRangeLabel(q.timeRange))}</div>` : ''}
+  ` : '';
+  return `<div class="src-pop">
+    <div class="src-block"><span class="src-lbl">مصدر البيانات</span>${esc(from)}</div>
+    ${method ? `<div class="src-block"><span class="src-lbl">طريقة الحساب</span>${esc(method)}</div>` : ''}
+    ${queryBlock}
+  </div>`;
+}
+function timeRangeLabel(v) { return (TIME_RANGE_OPTIONS.find(([k]) => k === v) || [v, v])[1]; }
+
+/**
+ * Real data-quality problems in the user's own source file that the model worked around
+ * (see DashboardWidget.DataIssues / DataStore.DialectPrompt's TRY_CAST rule) — e.g. a specific
+ * row excluded from an aggregate because one column's value wasn't numeric. Shown in its own
+ * amber-flagged popover (⚠), separate from the plain ⓘ provenance one, so it reads as "your
+ * file needs fixing" rather than just "here's how this number was computed".
+ */
+function issuePopover(w) {
+  const items = (w.dataIssues || []).map(issue => `<div class="issue-item">${esc(issue)}</div>`).join('');
+  return `<div class="issue-pop">
+    <span class="issue-pop-title">⚠ مشاكل في البيانات تم تجاوزها</span>
+    ${items}
+  </div>`;
+}
+
+function closePopovers() {
+  document.querySelectorAll('.src-pop.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.src-btn.active').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.inquiry-src-btn.active').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.issue-pop.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.issue-btn.active').forEach(b => b.classList.remove('active'));
+}
+document.addEventListener('click', closePopovers);
+
+// ---------- widget components ----------
+// Every widget renders through exactly one of these five, chosen by validated `type`
+// alone — never by its data volume or title length. Chart components share one
+// mountChart() so the ApexCharts options object (palette, grid/tick color, font) is
+// built in exactly one place.
+let chartInstances = [];
+// ApexCharts measures its container's real width/height at construction time, so a
+// chart created before its widget card is attached to the document renders at 0x0.
+// buildWidget() runs for every widget *before* the grid holding them is appended to
+// #dash, so mountChart() only queues {card, holder, options} here; renderDashboard()
+// instantiates them right after the grid is actually in the DOM.
+let pendingCharts = [];
+
+// ---------- dashboard reveal animation ----------
+// Set right before a genuinely new/regenerated dashboard is rendered for the first time
+// (see ask() in the chat section) — never touched by a filter re-run, an edit, undo/redo,
+// or reopening a saved dashboard from السجل, so those all keep rendering instantly as
+// before. renderDashboard() consumes it into revealNow for that one render only; KpiCard
+// reads revealNow (still module-scope, set synchronously before widgets are built) to
+// decide whether to count up instead of just printing the number.
+let revealDashboardOnNextRender = false;
+let revealNow = false;
+function prefersReducedMotion() {
+  try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
+}
+
+function widgetShell(w, extraClass) {
+  const card = document.createElement('div');
+  card.className = 'widget' + (extraClass ? ' ' + extraClass : '');
+  card.dataset.size = (w.layout && w.layout.size) || (extraClass === 'kpi' ? 'small' : 'wide');
+  if (w.id) card.dataset.widgetId = w.id;
+
+  const head = document.createElement('div');
+  head.className = 'widget-head';
+  const title = document.createElement('h3');
+  title.textContent = w.title || '';
+  head.appendChild(title);
+
+  if (w.source) {
+    const srcBtn = document.createElement('button');
+    srcBtn.type = 'button'; srcBtn.className = 'src-btn'; srcBtn.textContent = 'ⓘ';
+    srcBtn.setAttribute('aria-label', 'مصدر البيانات');
+    head.appendChild(srcBtn);
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = sourcePopover(w);
+    card.appendChild(wrap.firstElementChild);
+
+    srcBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const pop = card.querySelector('.src-pop');
+      const open = pop.classList.contains('open');
+      closePopovers();
+      if (!open) { pop.classList.add('open'); srcBtn.classList.add('active'); }
+    });
+  }
+  if (Array.isArray(w.dataIssues) && w.dataIssues.length) {
+    const issueBtn = document.createElement('button');
+    issueBtn.type = 'button'; issueBtn.className = 'issue-btn'; issueBtn.textContent = '⚠';
+    issueBtn.setAttribute('aria-label', 'مشاكل في البيانات تم تجاوزها');
+    head.appendChild(issueBtn);
+
+    const issueWrap = document.createElement('div');
+    issueWrap.innerHTML = issuePopover(w);
+    card.appendChild(issueWrap.firstElementChild);
+
+    issueBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const pop = card.querySelector('.issue-pop');
+      const open = pop.classList.contains('open');
+      closePopovers();
+      if (!open) { pop.classList.add('open'); issueBtn.classList.add('active'); }
+    });
+  }
+  // Forecasting is opt-in per widget, never automatic — only offered on a bar/line widget
+  // with enough historical points for a regression to mean anything.
+  if ((w.type === 'bar' || w.type === 'line') && Array.isArray(w.data) && w.data.length >= 3) {
+    head.appendChild(buildForecastButton(w));
+  }
+  card.appendChild(head);
+
+  if (getActiveFilterTables().size && (!w.query || w.query.integrationId || !getActiveFilterTables().has(w.query.table))) {
+    const badge = document.createElement('span');
+    badge.className = 'widget-unaffected';
+    badge.textContent = 'غير متأثر بالفلتر';
+    badge.title = 'هذا العنصر مش مبني على استعلام قابل لإعادة التنفيذ، فمش بيتفلتر تلقائيًا.';
+    card.appendChild(badge);
+  }
+
+  if (state.editMode && w.id) {
+    const { btn: menuBtn, menu } = widgetMenu(w);
+    head.appendChild(menuBtn);
+    card.appendChild(menu);
+    enableWidgetDragDrop(card, w);
+  }
+  return card;
+}
+
+// ---------- forecasting ----------
+// A real statistical forecast (POST /api/widgets/forecast — ordinary least-squares linear
+// regression server-side, see ForecastService.cs), never an LLM guess: this button works on
+// whatever data the chart already has client-side, so it's identical for a wizard-built widget
+// and a chat-authored one. Strictly opt-in per widget — nothing here ever fires on its own.
+function buildForecastButton(w) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'forecast-btn';
+  const setLabel = () => { btn.textContent = w.forecast ? '✕ إخفاء التوقع' : '🔮 توقّع الأشهر الجاية'; };
+  setLabel();
+  btn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (w.forecast) {
+      delete w.forecast;
+      renderDashboard(); scheduleAutosave();
+      return;
+    }
+    const { rows, xKey, yKey } = keysFor(w);
+    const values = rows.map(r => num(r[yKey]));
+    btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ التوقع…';
+    try {
+      const res = await fetch('/api/widgets/forecast', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labels: rows.map(r => String(r[xKey])), values, periods: 3 }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `تعذّر التوقع (${res.status})`);
+      }
+      w.forecast = await res.json();
+      renderDashboard(); scheduleAutosave();
+    } catch (err) {
+      alert('تعذّر حساب التوقع: ' + err.message);
+      btn.disabled = false; btn.textContent = original;
+    }
+  });
+  return btn;
+}
+
+// ---------- widget editor: menu, drag/drop, undo/redo ----------
+function closeAllWidgetMenus() {
+  document.querySelectorAll('.widget-menu.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closeAllWidgetMenus);
+
+// Anchors a widget-menu to its ⋮ button so it always stays fully on screen, recomputed every
+// time the menu opens or its content is swapped (default/size/type — each a different
+// height). CSS alone (a fixed top:44px below the button) put the type submenu's 10 buttons
+// wherever the widget happened to sit on the page, with no way to bring the clipped tail
+// back into view once a short-viewport user hit it — this instead flips the menu to open
+// upward when there isn't room below, and clamps both axes to the viewport.
+//
+// Positions stay in `menu.offsetParent` (the widget card)'s own coordinate space, not the
+// viewport's — position:fixed would seem simpler, but .widget carries an entrance animation
+// (`animation:rise`, see its keyframes) whose `transform` makes it the CSS containing block
+// for any position:fixed descendant even after the animation ends (a fixed-position element
+// then positions relative to that transformed ancestor, not the real viewport, silently
+// breaking any viewport-relative math). Computing the desired viewport position and then
+// converting it into an offset from the card's own rect sidesteps that entirely.
+function positionWidgetMenu(btn, menu) {
+  const margin = 8;
+  const parent = menu.offsetParent || btn.closest('.widget') || document.body;
+  const parentRect = parent.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  let top = btnRect.bottom + 4;
+  if (top + menuRect.height > window.innerHeight - margin) {
+    top = Math.max(margin, btnRect.top - menuRect.height - 4);
+  }
+  // Neither the "below" nor the "flipped up" placement can help once the anchor button
+  // itself is barely on screen (near the very top or bottom edge) — this final clamp keeps
+  // the menu fully visible regardless, even if that means it no longer hugs the button.
+  top = Math.min(Math.max(top, margin), window.innerHeight - menuRect.height - margin);
+  const isRtl = document.documentElement.getAttribute('dir') !== 'ltr';
+  let left = isRtl ? btnRect.right - menuRect.width : btnRect.left;
+  left = Math.min(Math.max(left, margin), window.innerWidth - menuRect.width - margin);
+  menu.style.position = 'absolute';
+  menu.style.insetInlineEnd = 'auto';
+  menu.style.top = (top - parentRect.top) + 'px';
+  menu.style.left = (left - parentRect.left) + 'px';
+}
+
+function widgetMenu(w) {
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'widget-menu-btn'; btn.textContent = '⋮';
+  btn.title = 'خيارات العنصر';
+  const menu = document.createElement('div');
+  menu.className = 'widget-menu';
+  renderWidgetMenuDefault(menu, w);
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = menu.classList.contains('open');
+    closeAllWidgetMenus();
+    if (!open) {
+      renderWidgetMenuDefault(menu, w);
+      menu.classList.add('open');
+      positionWidgetMenu(btn, menu);
+    }
+  });
+  menu.__anchorBtn = btn;
+  menu.addEventListener('click', e => e.stopPropagation());
+  return { btn, menu };
+}
+
+function renderWidgetMenuDefault(menu, w) {
+  const canEditData = !!w.query; // only wizard-created widgets carry a re-runnable query
+  menu.classList.remove('type-grid'); // only the 10-option "نوع الرسم" list uses the grid layout
+  menu.innerHTML = `
+    <button data-act="type">🔀 تغيير نوع الرسم</button>
+    <button data-act="size">↔️ تغيير الحجم</button>
+    ${canEditData ? '<button data-act="period">📅 تغيير الفترة</button>' : ''}
+    ${(w.query?.sql || w.noData) ? '<button data-act="columns">🧩 تصحيح الأعمدة</button>' : ''}
+    <button data-act="duplicate">📋 نسخ</button>
+    <button data-act="delete" class="danger">🗑️ حذف</button>
+  `;
+  menu.querySelector('[data-act="type"]').onclick = () => renderWidgetMenuType(menu, w);
+  menu.querySelector('[data-act="size"]').onclick = () => renderWidgetMenuSize(menu, w);
+  menu.querySelector('[data-act="duplicate"]').onclick = () => { duplicateWidget(w.id); closeAllWidgetMenus(); };
+  menu.querySelector('[data-act="delete"]').onclick = () => {
+    if (confirm('حذف هذا العنصر؟')) { deleteWidget(w.id); closeAllWidgetMenus(); }
+  };
+  const periodBtn = menu.querySelector('[data-act="period"]');
+  if (periodBtn) periodBtn.onclick = () => { closeAllWidgetMenus(); openPeriodEditor(w); };
+  const colsBtn = menu.querySelector('[data-act="columns"]');
+  if (colsBtn) colsBtn.onclick = () => { closeAllWidgetMenus(); openWidgetColsModal(w); };
+}
+
+// ---------- طبقة المعنى: «تصحيح الأعمدة» لعنصر واحد ----------
+// يكشف الأعمدة الحقيقية التي يعتمد عليها استعلام العنصر ويتيح استبدال كل منها بعمود آخر من
+// الجدول نفسه (إعادة تنفيذ بلا موديل عبر /api/widgets/columns/remap)، ويعرض المفاهيم التي
+// يحتاجها العنصر وحالتها في بيانات المشروع مع اختيار عمود لمفهوم ناقص (تأكيد معنى عبر PUT
+// semantics) ثم إعادة بناء العنصر وحده من قالبه (/api/widgets/columns/rebuild).
+const WIDGET_COLS_KIND = { number: 'رقم', date: 'تاريخ', text: 'نص' };
+let widgetColsState = null;
+
+function widgetColsStatus(text, tone) {
+  const box = el('widget-cols-status');
+  box.textContent = text;
+  box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden');
+}
+
+async function openWidgetColsModal(w) {
+  widgetColsState = { widget: w, data: null };
+  el('widget-cols-sub').textContent = `العنصر: «${w.title}»`;
+  el('widget-cols-body').innerHTML = '<div class="owner-line"><span class="spinner"></span> جارٍ فحص الأعمدة…</div>';
+  widgetColsStatus('');
+  el('widget-cols-modal').classList.remove('hidden');
+  await loadWidgetCols();
+}
+
+async function loadWidgetCols() {
+  const w = widgetColsState.widget;
+  const res = await fetch('/api/widgets/columns/inspect', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+      table: w.query?.table || null, sql: w.query?.sql || null, title: w.title }),
+  });
+  if (!res.ok) { el('widget-cols-body').innerHTML = '<div class="owner-line">تعذّر فحص أعمدة هذا العنصر.</div>'; return; }
+  widgetColsState.data = await res.json();
+  renderWidgetCols();
+}
+
+function widgetColsColumnOptions(table, selected, preferKind) {
+  const cols = [...table.columns].sort((a, b) => (a.kind === preferKind ? 0 : 1) - (b.kind === preferKind ? 0 : 1));
+  return cols.map(c => `<option value="${esc(c.name)}"${c.name === selected ? ' selected' : ''}>${esc(c.name)}${c.conceptLabel ? ` — ${esc(c.conceptLabel)}` : ''} (${WIDGET_COLS_KIND[c.kind] || c.kind})</option>`).join('');
+}
+
+function renderWidgetCols() {
+  const { widget: w, data } = widgetColsState;
+  const table = data.tables.find(t => t.table === data.table);
+  const parts = [];
+
+  // أ) الأعمدة المستخدمة في الاستعلام ← بدائل من الجدول نفسه
+  if (table && data.used.length) {
+    const byName = Object.fromEntries(table.columns.map(c => [c.name, c]));
+    parts.push(`<div class="roles-section-title">الأعمدة التي يعتمد عليها هذا الرسم <span class="muted">(الجدول: ${esc(table.fileName || table.table)})</span></div>
+      ${data.used.map(name => { const c = byName[name] || { kind: 'text' }; return `<div class="sem-row" data-from="${esc(name)}">
+        <div class="sem-col"><b>${esc(name)}</b><small>${esc(c.conceptLabel || WIDGET_COLS_KIND[c.kind] || '')}</small></div>
+        <div class="sem-pick"><select class="wc-to" aria-label="بديل العمود ${esc(name)}">${widgetColsColumnOptions(table, name, c.kind)}</select></div>
+      </div>`; }).join('')}
+      <label class="wc-learn"><input type="checkbox" id="wc-learn" checked> اعتبر العمود البديل يحمل معنى العمود الأصلي (يُحفظ لمرات قادمة)</label>
+      <div class="pv-actions"><button type="button" class="btn btn-primary btn-sm" id="wc-apply">تطبيق وإعادة تنفيذ الاستعلام</button></div>`);
+  } else if (w.query?.sql) {
+    parts.push('<div class="owner-line">لم يُتعرَّف على أعمدة هذا الاستعلام في الجدول — استخدم «اطلب من جيم» لإعادة بنائه.</div>');
+  }
+
+  // ب) المفاهيم التي يحتاجها العنصر وحالتها
+  if (data.requirements.length) {
+    const allTablesOptions = (placeholder) => `<option value="">${esc(placeholder)}</option>` + data.tables.map(t =>
+      `<optgroup label="${esc(t.fileName || t.table)}">${t.columns.map(c =>
+        `<option value="${esc(t.table)}::${esc(c.name)}">${esc(c.name)} (${WIDGET_COLS_KIND[c.kind] || c.kind})${c.conceptLabel ? ` — حاليًا: ${esc(c.conceptLabel)}` : ''}</option>`).join('')}</optgroup>`).join('');
+    parts.push(`<div class="roles-section-title">المفاهيم التي يحتاجها هذا العنصر</div>
+      ${data.requirements.map((r, i) => `<div class="sem-row" data-req="${i}">
+        <div class="sem-col"><b>${esc(r.label)}</b><small>${r.hard ? 'ضروري' : 'مساعد'} · ${esc(r.conceptLabels.join(' أو '))}</small></div>
+        <div class="sem-pick">${r.satisfied
+          ? `<span class="badge badge-ok">✓ ${esc(r.matches.map(m => m.column).slice(0, 2).join('، '))}</span>`
+          : '<span class="badge badge-danger">! غير موجود</span>'}${r.concepts.length > 1
+            ? `<select class="wc-concept-pick" aria-label="أي معنى بالضبط لـ${esc(r.label)}">${r.concepts.map((c, k) => `<option value="${esc(c)}">${esc(r.conceptLabels[k] || c)}</option>`).join('')}</select>` : ''}<select class="wc-concept" data-concept="${esc(r.concepts[0])}" aria-label="عمود يحمل معنى ${esc(r.label)}">${allTablesOptions(r.satisfied ? '— تغيير العمود —' : '— اختر عمودًا من بياناتك —')}</select></div>
+      </div>`).join('')}`);
+  }
+
+  // ج) إعادة بناء عنصر القالب بعد التصحيح
+  if (w.noData) {
+    const unmet = data.requirements.filter(r => r.hard && !r.satisfied).length;
+    parts.push(`<div class="pv-actions"><button type="button" class="btn btn-primary btn-sm" id="wc-rebuild">🔁 إعادة بناء هذا العنصر الآن</button><span class="muted" style="font-size:var(--fs-xs)">${unmet
+      ? `حدّد أولًا عمودًا لكل مفهوم ضروري ناقص (${unmet.toLocaleString('en-US')}) ثم يُعاد البناء تلقائيًا.`
+      : 'يُبنى من بيانات مشروعك بعد التصحيحات أعلاه (نداء واحد للموديل).'}</span></div>`);
+  }
+  el('widget-cols-body').innerHTML = parts.join('') || '<div class="owner-line">لا شيء لتصحيحه في هذا العنصر.</div>';
+
+  el('wc-apply')?.addEventListener('click', applyWidgetColsRemap);
+  el('wc-rebuild')?.addEventListener('click', rebuildWidgetFromTemplate);
+  el('widget-cols-body').querySelectorAll('.wc-concept').forEach(sel => sel.addEventListener('change', async () => {
+    if (!sel.value) return;
+    const [tableName, column] = sel.value.split('::');
+    // عند تعدد المفاهيم الممكنة للمتطلب (مثلًا «عمود زمني»: تاريخ الطلب/الإنشاء/الإغلاق) يُؤخذ ما اختاره
+    // المستخدم صراحةً لا أولها، لأن التأكيد يُحفظ كمعنى نهائي ويُسجَّل سابقةً عابرة للعملاء.
+    const concept = sel.closest('.sem-row').querySelector('.wc-concept-pick')?.value || sel.dataset.concept;
+    sel.disabled = true;
+    const ok = await setSemanticForTableColumn(tableName, column, concept);
+    sel.disabled = false;
+    if (!ok) { widgetColsStatus('تعذّر حفظ معنى العمود.', 'bad'); return; }
+    widgetColsStatus(`تم اعتماد «${column}» كـ «${sel.closest('.sem-row').querySelector('b').textContent}».`, 'ok');
+    dashGalFeasibility = null;
+    await loadWidgetCols();
+    // عنصر فارغ واكتملت مفاهيمه الضرورية: أعد بناءه فورًا بدل انتظار ضغطة أخرى.
+    const d = widgetColsState.data;
+    if (widgetColsState.widget.noData && d && !d.requirements.some(r => r.hard && !r.satisfied)) await rebuildWidgetFromTemplate();
+  }));
+}
+
+// تأكيد معنى عمود من أي شاشة: يحتاج معرّف ملف المستودع الذي جدوله tableName.
+async function setSemanticForTableColumn(tableName, column, concept) {
+  if (!state.files.length) {
+    try { state.files = await (await fetch('/api/repository/files')).json(); } catch { return false; }
+  }
+  const f = state.files.find(x => x.tableName === tableName);
+  if (!f) return false;
+  const res = await fetch(`/api/repository/files/${f.id}/semantics/${encodeURIComponent(column)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept }),
+  });
+  return res.ok;
+}
+
+async function applyWidgetColsRemap() {
+  const { widget: w, data } = widgetColsState;
+  const mapping = {};
+  el('widget-cols-body').querySelectorAll('.sem-row[data-from]').forEach(row => {
+    const to = row.querySelector('.wc-to').value;
+    if (to && to !== row.dataset.from) mapping[row.dataset.from] = to;
+  });
+  if (!Object.keys(mapping).length) { widgetColsStatus('لم تغيّر أي عمود بعد.', ''); return; }
+  const btn = el('wc-apply'); btn.disabled = true; widgetColsStatus('جارٍ إعادة تنفيذ الاستعلام…', '');
+  try {
+    const res = await fetch('/api/widgets/columns/remap', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        table: data.table, sql: w.query.sql, mapping, learn: !!el('wc-learn')?.checked }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) { widgetColsStatus(payload?.error || 'تعذّر تطبيق التصحيح.', 'bad'); return; }
+    pushUndo();
+    const target = findWidget(w.id) || w;
+    target.data = payload.data;
+    target.query = { ...(target.query || {}), table: payload.table, sql: payload.sql };
+    if (payload.source) target.source = payload.source;
+    const renamed = payload.renamedKeys || {};
+    if (target.xKey && renamed[target.xKey]) target.xKey = renamed[target.xKey];
+    if (target.yKey && renamed[target.yKey]) target.yKey = renamed[target.yKey];
+    delete target.noData; delete target.missingReason;
+    renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+    dashGalFeasibility = null;
+    widgetColsStatus('تم التصحيح وأُعيد تنفيذ الاستعلام على الأعمدة الجديدة.', 'ok');
+    widgetColsState.widget = target;
+    await loadWidgetCols();
+  } finally { btn.disabled = false; }
+}
+
+async function rebuildWidgetFromTemplate() {
+  const w = widgetColsState.widget;
+  const btn = el('wc-rebuild'); btn.disabled = true; widgetColsStatus('جارٍ إعادة بناء العنصر من بياناتك… (ثوانٍ)', '');
+  try {
+    const res = await fetch('/api/widgets/columns/rebuild', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        templateKey: state.dashboard?.templateKey || null, title: w.title, type: w.type || 'kpi', lang: state.lang }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.widget) { widgetColsStatus(payload?.error || 'تعذّر إعادة البناء.', 'bad'); return; }
+    const built = payload.widget;
+    pushUndo();
+    const target = findWidget(w.id) || w;
+    if (built.noData) {
+      target.missingReason = built.missingReason;
+      widgetColsStatus(`ما زال غير ممكن — ${built.missingReason} جرّب عمودًا آخر أعلاه أو «اطلب من جيم» على العنصر.`, 'bad');
+    } else {
+      Object.assign(target, { type: built.type, data: built.data, xKey: built.xKey, yKey: built.yKey, source: built.source,
+        query: built.query || null, options: built.options, series: built.series, stacked: built.stacked, areaFill: built.areaFill, centerLabel: built.centerLabel });
+      delete target.noData; delete target.missingReason;
+      widgetColsStatus('تم بناء العنصر من بياناتك.', 'ok');
+    }
+    renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+    widgetColsState.widget = target;
+    await loadWidgetCols();
+  } finally { btn.disabled = false; }
+}
+
+el('widget-cols-close').addEventListener('click', () => el('widget-cols-modal').classList.add('hidden'));
+el('widget-cols-modal').addEventListener('click', e => { if (e.target.id === 'widget-cols-modal') el('widget-cols-modal').classList.add('hidden'); });
+
+function renderWidgetMenuSize(menu, w) {
+  const current = (w.layout && w.layout.size) || (w.type === 'kpi' ? 'small' : 'wide');
+  const opts = [['small', 'صغير'], ['wide', 'عريض (عمودين)'], ['large', 'واسع (3 أعمدة)'], ['full', 'عرض كامل']];
+  menu.classList.remove('type-grid');
+  menu.innerHTML = `<div class="menu-label">الحجم</div>` +
+    opts.map(([v, l]) => `<button data-size="${v}"${v === current ? ' class="current"' : ''}>${l}</button>`).join('');
+  menu.querySelectorAll('[data-size]').forEach(b =>
+    b.onclick = () => { setWidgetSize(w.id, b.dataset.size); closeAllWidgetMenus(); });
+  if (menu.__anchorBtn) positionWidgetMenu(menu.__anchorBtn, menu);
+}
+
+function renderWidgetMenuType(menu, w) {
+  // bar/line/pie/table/kpi all read the same generic {rows, xKey, yKey}-style data (see
+  // keysFor()), so switching among them just reinterprets the same rows. The three newer
+  // types below have their own bespoke data shape (progress-table's target/current pairs,
+  // trend-matrix's per-period series, status-bar's total+breakdown) that a widget built as
+  // one of the five above won't carry — switching into one of these from an incompatible
+  // widget shows that type's own empty state (like an unrelated data mismatch already
+  // would) rather than breaking, but it won't reshape the data to fit automatically.
+  const types = [
+    ['bar', '📊 أعمدة'], ['line', '📈 خط'], ['pie', '🥧 دائري'], ['table', '📋 جدول'], ['kpi', '🔢 مؤشر'],
+    ['progress-table', '📶 جدول تقدم'], ['trend-matrix', '📉 مصفوفة اتجاهات'], ['status-bar', '🚦 شريط حالة'],
+    ['radial-gauge', '🎯 مؤشر دائري'], ['linear-gauge', '🎚️ مؤشر شريطي'],
+    ['funnel', '🔻 قمع'], ['treemap', '🧱 خريطة شجرية'], ['scatter', '⚬ مبعثر'],
+  ];
+  menu.classList.add('type-grid');
+  menu.innerHTML = `<div class="menu-label">نوع الرسم</div>` +
+    types.map(([v, l]) => `<button data-type="${v}"${v === w.type ? ' class="current"' : ''}>${l}</button>`).join('');
+  menu.querySelectorAll('[data-type]').forEach(b =>
+    b.onclick = () => { setWidgetType(w.id, b.dataset.type); closeAllWidgetMenus(); });
+  if (menu.__anchorBtn) positionWidgetMenu(menu.__anchorBtn, menu);
+}
+
+function enableWidgetDragDrop(card, w) {
+  card.classList.add('editable');
+  card.draggable = true;
+  card.addEventListener('dragstart', e => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', w.id);
+    card.classList.add('dragging');
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('drag-over'); });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    const fromId = e.dataTransfer.getData('text/plain');
+    if (fromId && fromId !== w.id) reorderWidget(fromId, w.id);
+  });
+}
+
+function findWidget(id) { return (state.dashboard?.widgets || []).find(w => w.id === id); }
+
+function snapshotDashboard() {
+  return JSON.parse(JSON.stringify({ summary: state.dashboard.summary, widgets: state.dashboard.widgets }));
+}
+function updateUndoRedoButtons() {
+  el('btn-undo').disabled = !state.editHistory.past.length;
+  el('btn-redo').disabled = !state.editHistory.future.length;
+}
+function pushUndo() {
+  if (!state.dashboard) return;
+  state.editHistory.past.push(snapshotDashboard());
+  if (state.editHistory.past.length > 50) state.editHistory.past.shift();
+  state.editHistory.future = [];
+}
+function applySnapshot(snap) {
+  state.dashboard.summary = snap.summary;
+  state.dashboard.widgets = snap.widgets;
+  renderDashboard();
+  scheduleAutosave();
+}
+function undo() {
+  if (!state.editHistory.past.length) return;
+  state.editHistory.future.push(snapshotDashboard());
+  applySnapshot(state.editHistory.past.pop());
+  updateUndoRedoButtons();
+}
+function redo() {
+  if (!state.editHistory.future.length) return;
+  state.editHistory.past.push(snapshotDashboard());
+  applySnapshot(state.editHistory.future.pop());
+  updateUndoRedoButtons();
+}
+el('btn-undo').addEventListener('click', undo);
+el('btn-redo').addEventListener('click', redo);
+
+function deleteWidget(id) {
+  pushUndo();
+  state.dashboard.widgets = state.dashboard.widgets.filter(w => w.id !== id);
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function duplicateWidget(id) {
+  const idx = state.dashboard.widgets.findIndex(w => w.id === id);
+  if (idx === -1) return;
+  pushUndo();
+  const copy = JSON.parse(JSON.stringify(state.dashboard.widgets[idx]));
+  copy.id = 'w' + Math.random().toString(36).slice(2, 10);
+  state.dashboard.widgets.splice(idx + 1, 0, copy);
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function setWidgetSize(id, size) {
+  const w = findWidget(id);
+  if (!w) return;
+  pushUndo();
+  w.layout = { ...(w.layout || {}), size };
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function setWidgetType(id, type) {
+  const w = findWidget(id);
+  if (!w || w.type === type) return;
+  pushUndo();
+  w.type = type;
+  if (w.query) w.query = { ...w.query, chartType: type };
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+function reorderWidget(fromId, toId) {
+  const widgets = state.dashboard.widgets;
+  const fromIdx = widgets.findIndex(w => w.id === fromId);
+  const toIdx = widgets.findIndex(w => w.id === toId);
+  if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+  pushUndo();
+  const [moved] = widgets.splice(fromIdx, 1);
+  widgets.splice(toIdx, 0, moved);
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+
+el('edit-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('.edit-toggle-btn');
+  if (!btn) return;
+  state.editMode = btn.dataset.mode === 'edit';
+  el('edit-toggle').querySelectorAll('.edit-toggle-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === (state.editMode ? 'edit' : 'view')));
+  renderDashboard();
+});
+
+
+// ---------- autosave: updates the same history row instead of creating a new one per edit ----------
+let autosaveTimer = null;
+function scheduleAutosave() {
+  // A Viewer never edits — their applyFilters()-driven live refresh (see openHistoryEntry)
+  // must not try to persist anything back, or it'd just fail against Update()'s role check.
+  if (!state.currentUser || !state.dashboard?.widgets?.length || state.dashboardRole === 'viewer') return;
+  el('autosave-status').textContent = 'جارٍ الحفظ…';
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(doAutosave, 900);
+}
+async function doAutosave() {
+  const d = state.dashboard;
+  if (!d) return;
+  try {
+    if (state.currentHistoryId) {
+      const res = await fetch('/api/history/' + state.currentHistoryId, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary: d.summary, widgets: d.widgets,
+          filters: d.filters || [], activeFilters: state.activeFilters || {},
+        }),
+      });
+      if (res.ok) { el('autosave-status').textContent = '✓ تم الحفظ'; return; }
+      // A rejected edit (e.g. an Editor's widget introducing a data source the dashboard
+      // didn't already use — see HistoryController.Update) is a real validation failure,
+      // not a transient error: surface the server's own reason instead of a generic
+      // "تعذّر الحفظ" every subsequent keystroke would otherwise repeat silently.
+      if (res.status === 400) {
+        const payload = await res.json().catch(() => null);
+        el('autosave-status').textContent = 'تعذّر الحفظ';
+        if (payload?.error) alert(payload.error);
+        return;
+      }
+      if (res.status !== 404) throw new Error();
+      state.currentHistoryId = null; // entry was deleted elsewhere — fall through and recreate
+      state.dashboardIsActive = false; state.dashboardRole = null;
+      state.dashboardDisabled = false; state.dashboardDisabledReason = '';
+    }
+    const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
+    const res = await fetch('/api/history', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: lastQuestion, summary: d.summary, queryDescription: d.summary, widgets: d.widgets,
+        filters: d.filters || [], activeFilters: state.activeFilters || {},
+      }),
+    });
+    if (!res.ok) throw new Error();
+    const saved = await res.json();
+    state.currentHistoryId = saved.id;
+    state.historyLoaded = false;
+    el('autosave-status').textContent = '✓ تم الحفظ';
+  } catch {
+    el('autosave-status').textContent = 'تعذّر الحفظ';
+  }
+}
+
+// ---------- add-widget wizard ----------
+// A business-friendly, step-by-step alternative to writing a prompt: the user never sees
+// a chart-type name or a column-type distinction — just "what to compare" and "what to
+// measure" — and every step's options come from the real, permission-filtered schema
+// (see /api/widgets/fields), never a hardcoded list. The final step runs the structured
+// query through /api/widgets/query — the same deterministic, GPT-free path used for
+// "change the period" on an existing widget (openPeriodEditor below).
+const WIZARD_KINDS = [
+  { kind: 'comparison', icon: '📊', label: 'مقارنة', chartType: 'bar' },
+  { kind: 'trend', icon: '📈', label: 'اتجاه عبر الزمن', chartType: 'line' },
+  { kind: 'kpi', icon: '🔢', label: 'مؤشر رئيسي', chartType: 'kpi' },
+  { kind: 'distribution', icon: '🥧', label: 'توزيع', chartType: 'pie' },
+  { kind: 'table', icon: '📋', label: 'جدول', chartType: 'table' },
+];
+const TIME_RANGE_OPTIONS = [
+  ['this_month', 'هذا الشهر'], ['last_month', 'الشهر الماضي'], ['last_3_months', 'آخر 3 أشهر'],
+  ['last_6_months', 'آخر 6 أشهر'], ['this_year', 'هذا العام'], ['all', 'كل البيانات'], ['custom', 'مخصص'],
+];
+
+function openWizard() {
+  state.wizard = { mode: 'add', step: 'kind', stack: [], kind: null, table: null,
+    dimension: null, metric: null, dateColumn: null, timeRange: 'all', granularity: 'month',
+    columns: [], columnsTouched: false, sort: 'desc', fields: null, gen: 0 };
+  el('wizard-next').classList.add('hidden');
+  el('wizard-modal').classList.remove('hidden');
+  renderWizardStep();
+}
+
+// Reopens the wizard scoped to just the period of an already-placed, wizard-created widget
+// — the "تغيير الفترة" item in its ⋮ menu. Only offered when the widget carries a `query`
+// (see renderWidgetMenuDefault): chat-generated widgets have no structured query to re-run.
+function openPeriodEditor(w) {
+  state.wizard = { mode: 'edit-period', targetId: w.id, step: 'period', stack: [],
+    timeRange: w.query.timeRange || 'all', baseQuery: w.query, gen: 0 };
+  el('wizard-next').classList.add('hidden');
+  el('wizard-modal').classList.remove('hidden');
+  renderWizardStep();
+}
+
+// "اختر مصدر يدويًا" on a noData placeholder (see NoDataPlaceholderCard) — same structured
+// table/metric/aggregation wizard "+ إضافة عنصر" uses, just targeting an existing widget by
+// id instead of appending a new one (see confirmWizardResult's 'fill-placeholder' branch).
+// Starts at the normal 'kind' step like a fresh add: the wizard only knows kpi/bar/line/pie/
+// table shapes, not the template's own suggested type (one of the newer progress-table/
+// trend-matrix/... types a template widget may have asked for), so the user picks whichever
+// of the wizard's supported shapes fits the real data they choose.
+function openFillPlaceholderWizard(w) {
+  state.wizard = { mode: 'fill-placeholder', targetId: w.id, step: 'kind', stack: [], kind: null, table: null,
+    dimension: null, metric: null, dateColumn: null, timeRange: 'all', granularity: 'month',
+    columns: [], columnsTouched: false, sort: 'desc', fields: null, gen: 0 };
+  el('wizard-next').classList.add('hidden');
+  el('wizard-modal').classList.remove('hidden');
+  renderWizardStep();
+}
+
+// "اطلب من جيم" on a noData placeholder — pre-fills the normal chat box with a targeted
+// follow-up naming the widget, exactly like gal-start-ai's "اطلب من جيم" quick-start does for
+// a blank dashboard, and leaves it to the user to add detail (an alternate source name) before
+// pressing إرسال themselves. Sent through the exact same ask()/continuation path as any typed
+// question — the system prompt's own "عنصر... noData" rule (see AnalyticsTools.cs) is what
+// actually tells the model to retry building just this one widget instead of leaving it as is.
+function askForPlaceholderWidget(w) {
+  el('q').value = `جرّب تبني عنصر «${w.title}» من مصدر بيانات تاني — `;
+  el('q').focus();
+  el('q').scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function closeWizard() { el('wizard-modal').classList.add('hidden'); state.wizard = null; }
+el('wizard-close').addEventListener('click', closeWizard);
+el('wizard-modal').addEventListener('click', e => { if (e.target.id === 'wizard-modal') closeWizard(); });
+
+function wizardBack() {
+  const w = state.wizard;
+  if (!w.stack.length) { closeWizard(); return; }
+  w.step = w.stack.pop();
+  renderWizardStep();
+}
+el('wizard-back').addEventListener('click', wizardBack);
+
+// User-driven transition: remembers where we came from so wizardBack() can return to it.
+function advance(next) {
+  const w = state.wizard;
+  w.stack.push(w.step);
+  w.step = next;
+  renderWizardStep();
+}
+// Programmatic transition (e.g. an async fetch's result) — not a click, so nothing to undo back to.
+function replaceStep(next) { state.wizard.step = next; renderWizardStep(); }
+
+async function loadWizardFields() {
+  const w = state.wizard;
+  try {
+    const res = await fetch('/api/widgets/fields', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] } }),
+    });
+    const data = await res.json();
+    let tables = data.tables || [];
+    tables = w.kind === 'table' ? tables.filter(t => t.allColumns.length) : tables.filter(t => t.metrics.length);
+    if (w.kind === 'comparison' || w.kind === 'distribution') tables = tables.filter(t => t.dimensions.length);
+    if (w.kind === 'trend') tables = tables.filter(t => t.dateColumns.length > 0);
+    w.fields = tables;
+    if (!tables.length) { replaceStep('no-data'); return; }
+    if (tables.length === 1) { w.table = tables[0]; replaceStep(afterTableStep()); return; }
+    replaceStep('table');
+  } catch {
+    replaceStep('no-data');
+  }
+}
+
+function afterTableStep() {
+  const w = state.wizard;
+  if (w.kind === 'comparison' || w.kind === 'distribution') return 'dimension';
+  if (w.kind === 'table') return 'columns';
+  return 'metric'; // trend | kpi
+}
+
+function afterMetricStep() {
+  const w = state.wizard;
+  w.dateColumn = w.table.dateColumns.length ? w.table.dateColumns[0] : null;
+  return (w.kind === 'trend' || w.dateColumn) ? 'period' : 'preview';
+}
+
+function buildWizardQuery(w) {
+  if (w.mode === 'edit-period')
+    return { ...w.baseQuery, timeRange: w.timeRange, customFrom: w.customFrom || null, customTo: w.customTo || null };
+
+  const kindMeta = WIZARD_KINDS.find(k => k.kind === w.kind);
+  return {
+    table: w.table.table,
+    metric: w.metric || (w.table.metrics[0] || ''),
+    aggregation: 'sum',
+    dimension: (w.kind === 'comparison' || w.kind === 'distribution') ? w.dimension : null,
+    dateColumn: w.dateColumn || null,
+    timeRange: w.dateColumn ? (w.timeRange || 'all') : 'all',
+    customFrom: w.customFrom || null,
+    customTo: w.customTo || null,
+    timeGranularity: w.kind === 'trend' ? (w.granularity || 'month') : null,
+    chartType: kindMeta.chartType,
+    columns: w.kind === 'table' ? w.columns : null,
+    topN: null,
+    sort: 'desc',
+  };
+}
+
+function confirmWizardResult() {
+  const w = state.wizard;
+  if (!w.result) return;
+  pushUndo();
+  if (w.mode === 'edit-period') {
+    const target = findWidget(w.targetId);
+    if (target) {
+      target.type = w.result.type; target.data = w.result.data;
+      target.xKey = w.result.xKey; target.yKey = w.result.yKey;
+      target.source = w.result.source; target.query = w.result.query;
+    }
+  } else if (w.mode === 'fill-placeholder') {
+    // Fills a noData template widget in place (see NoDataPlaceholderCard/
+    // openFillPlaceholderWizard) — keeps its id/position/original title (the template's own
+    // declared wording, not whatever generic title the wizard's preview came up with) so the
+    // dashboard keeps the exact shape the user picked, just with this one slot now real.
+    const target = findWidget(w.targetId);
+    if (target) {
+      target.type = w.result.type; target.data = w.result.data;
+      target.xKey = w.result.xKey; target.yKey = w.result.yKey;
+      target.source = w.result.source; target.query = w.result.query;
+      delete target.noData; delete target.missingReason;
+    }
+  } else {
+    const widget = {
+      id: 'w' + Math.random().toString(36).slice(2, 10),
+      type: w.result.type, title: w.result.title, data: w.result.data,
+      xKey: w.result.xKey, yKey: w.result.yKey, source: w.result.source, query: w.result.query,
+      layout: { size: w.result.type === 'kpi' ? 'small' : (w.result.type === 'table' ? 'full' : 'wide') },
+    };
+    if (!state.dashboard) state.dashboard = { summary: 'لوحة معلومات', widgets: [] };
+    state.dashboard.widgets.push(widget);
+  }
+  closeWizard();
+  renderDashboard();
+  scheduleAutosave();
+  updateUndoRedoButtons();
+}
+
+async function renderWizardStep() {
+  const w = state.wizard;
+  if (!w) return;
+  const body = el('wizard-body');
+  el('wizard-back').classList.toggle('hidden', !w.stack.length);
+  el('wizard-next').classList.add('hidden');
+
+  if (w.step === 'kind') {
+    el('wizard-title').textContent = 'ماذا تريد أن تضيف؟';
+    body.innerHTML = `<div class="wizard-grid">${WIZARD_KINDS.map(k =>
+      `<button class="wizard-option" data-kind="${k.kind}"><span class="wizard-icon">${k.icon}</span><span>${esc(k.label)}</span></button>`).join('')}</div>`;
+    body.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => {
+      w.kind = b.dataset.kind;
+      advance('loading');
+      loadWizardFields();
+    });
+    return;
+  }
+
+  if (w.step === 'loading') {
+    el('wizard-title').textContent = 'إضافة عنصر';
+    body.innerHTML = `<div class="wizard-loading">جارٍ التحميل…</div>`;
+    return;
+  }
+
+  if (w.step === 'no-data') {
+    el('wizard-title').textContent = 'إضافة عنصر';
+    body.innerHTML = `<div class="wizard-empty">لا تتوفر بيانات كافية لإنشاء هذا العنصر.<br>
+      فعّل مصدرًا من قائمة «المصادر» أعلى الصفحة أو ارفع ملفًا في مستودع الملفات.</div>`;
+    return;
+  }
+
+  if (w.step === 'table') {
+    el('wizard-title').textContent = 'من أي مصدر بيانات؟';
+    body.innerHTML = `<div class="wizard-list">${w.fields.map(f =>
+      `<button class="wizard-option wide" data-table="${esc(f.table)}">${esc(f.system || f.file || f.table)}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-table]').forEach(b => b.onclick = () => {
+      w.table = w.fields.find(f => f.table === b.dataset.table);
+      advance(afterTableStep());
+    });
+    return;
+  }
+
+  if (w.step === 'dimension') {
+    el('wizard-title').textContent = w.kind === 'distribution' ? 'توزيع حسب ماذا؟' : 'مقارنة ماذا؟';
+    body.innerHTML = `<div class="wizard-list">${w.table.dimensions.map(d =>
+      `<button class="wizard-option wide" data-dim="${esc(d)}">${esc(d)}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-dim]').forEach(b => b.onclick = () => { w.dimension = b.dataset.dim; advance('metric'); });
+    return;
+  }
+
+  if (w.step === 'metric') {
+    el('wizard-title').textContent = 'ماذا تريد قياسه؟';
+    body.innerHTML = `<div class="wizard-list">${w.table.metrics.map(m =>
+      `<button class="wizard-option wide" data-metric="${esc(m)}">${esc(m)}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-metric]').forEach(b => b.onclick = () => { w.metric = b.dataset.metric; advance(afterMetricStep()); });
+    return;
+  }
+
+  if (w.step === 'period') {
+    el('wizard-title').textContent = 'الفترة؟';
+    body.innerHTML = `<div class="wizard-list">${TIME_RANGE_OPTIONS.map(([v, l]) =>
+      `<button class="wizard-option wide${v === w.timeRange ? ' current' : ''}" data-range="${v}">${l}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-range]').forEach(b => b.onclick = () => {
+      w.timeRange = b.dataset.range;
+      if (w.timeRange === 'custom') { advance('custom-range'); return; }
+      advance(w.mode === 'edit-period' ? 'preview' : (w.kind === 'trend' ? 'granularity' : 'preview'));
+    });
+    return;
+  }
+
+  if (w.step === 'custom-range') {
+    el('wizard-title').textContent = 'حدد الفترة';
+    body.innerHTML = `
+      <label class="wizard-field">من<input type="date" id="wiz-from" value="${esc(w.customFrom || '')}"></label>
+      <label class="wizard-field">إلى<input type="date" id="wiz-to" value="${esc(w.customTo || '')}"></label>`;
+    el('wizard-next').classList.remove('hidden');
+    el('wizard-next').disabled = false;
+    el('wizard-next').textContent = 'التالي';
+    el('wizard-next').onclick = () => {
+      const from = el('wiz-from').value, to = el('wiz-to').value;
+      if (!from || !to) return;
+      w.customFrom = from; w.customTo = to;
+      advance(w.mode === 'edit-period' ? 'preview' : (w.kind === 'trend' ? 'granularity' : 'preview'));
+    };
+    return;
+  }
+
+  if (w.step === 'granularity') {
+    el('wizard-title').textContent = 'التجميع؟';
+    const opts = [['day', 'يوميًا'], ['week', 'أسبوعيًا'], ['month', 'شهريًا']];
+    body.innerHTML = `<div class="wizard-list">${opts.map(([v, l]) =>
+      `<button class="wizard-option wide${v === (w.granularity || 'month') ? ' current' : ''}" data-gran="${v}">${l}</button>`).join('')}</div>`;
+    body.querySelectorAll('[data-gran]').forEach(b => b.onclick = () => { w.granularity = b.dataset.gran; advance('preview'); });
+    return;
+  }
+
+  if (w.step === 'columns') {
+    el('wizard-title').textContent = 'اختر الأعمدة';
+    body.innerHTML = `<div class="wizard-checklist">${w.table.allColumns.map((c, i) =>
+      `<label><input type="checkbox" value="${esc(c)}" ${w.columnsTouched ? (w.columns.includes(c) ? 'checked' : '') : (i < 8 ? 'checked' : '')}> ${esc(c)}</label>`).join('')}</div>`;
+    el('wizard-next').classList.remove('hidden');
+    el('wizard-next').disabled = false;
+    el('wizard-next').textContent = 'التالي';
+    el('wizard-next').onclick = () => {
+      w.columns = [...body.querySelectorAll('input:checked')].map(i => i.value);
+      w.columnsTouched = true;
+      if (!w.columns.length) return;
+      advance('preview');
+    };
+    return;
+  }
+
+  if (w.step === 'preview') {
+    const isEdit = w.mode === 'edit-period';
+    el('wizard-title').textContent = isEdit ? 'تحديث الفترة' : 'إضافة العنصر';
+    body.innerHTML = `<div class="wizard-loading">جارٍ تجهيز المعاينة…</div>`;
+    el('wizard-next').classList.remove('hidden');
+    el('wizard-next').disabled = true;
+    el('wizard-next').textContent = isEdit ? '💾 تحديث' : '➕ إضافة';
+
+    const myGen = ++w.gen;
+    try {
+      const query = buildWizardQuery(w);
+      const res = await fetch('/api/widgets/query', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] }, query }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (state.wizard !== w || w.gen !== myGen) return; // navigated away while loading
+      if (!res.ok || !payload) throw new Error(payload?.error || `تعذّر التنفيذ (${res.status})`);
+      w.result = payload;
+      body.innerHTML = `<div class="wizard-preview-card">
+        <div class="wizard-preview-title">${esc(payload.title)}</div>
+        <div class="wizard-preview-meta">${esc(payload.source)}</div>
+      </div>`;
+      el('wizard-next').disabled = false;
+      el('wizard-next').onclick = confirmWizardResult;
+    } catch (err) {
+      if (state.wizard !== w || w.gen !== myGen) return;
+      body.innerHTML = `<div class="wizard-empty">${esc(err.message || 'تعذّر تنفيذ الاستعلام.')}</div>`;
+      el('wizard-next').disabled = true;
+    }
+    return;
+  }
+}
+
+
+function emptyBody(card) {
+  const p = document.createElement('p');
+  p.style.color = 'var(--muted)';
+  p.textContent = 'لا يوجد بيانات';
+  card.appendChild(p);
+  return card;
+}
+
+function KpiCard(w) {
+  const card = widgetShell(w, 'kpi');
+  const e = Array.isArray(w.data) ? w.data[0] : null;
+  const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
+  const body = document.createElement('div');
+  body.className = 'kpi-body';
+  const val = document.createElement('div');
+  val.className = 'value';
+  if (revealNow && typeof v === 'number' && isFinite(v)) animateKpiValue(val, v);
+  else val.textContent = fmt(v);
+  body.appendChild(val);
+  if (e?.label) {
+    const label = document.createElement('div');
+    label.className = 'kpi-label';
+    label.textContent = e.label;
+    body.appendChild(label);
+  }
+  card.appendChild(body);
+  // «التغيّر عن الفترة السابقة»: يُملأ لاحقًا من /api/widgets/kpi-delta (loadKpiDeltas) لمؤشر له
+  // استعلام محفوظ على جدول فيه عمود تاريخ — ويُزال الحامل إن لم يتوفر ذلك.
+  if (w.query?.sql && w.query.table && !state.shareId) {
+    const delta = document.createElement('div');
+    delta.className = 'kpi-delta pending';
+    card.appendChild(delta);
+  }
+  return card;
+}
+
+// ---------- التغيّر عن الفترة السابقة لبطاقات المؤشرات ----------
+// بلا موديل: الخادم يعيد تنفيذ استعلام المؤشر نفسه على آخر 30 يومًا وعلى الـ30 التي قبلها (بحسب
+// أحدث تاريخ في الجدول وعمود التاريخ الذي يستخدمه الاستعلام) مع الفلاتر النشطة. مخزّن مؤقتًا
+// بمفتاح (الجدول + الاستعلام + الفلاتر) فلا يُعاد حسابه عند كل إعادة رسم.
+const kpiDeltaCache = new Map();
+function loadKpiDeltas() {
+  if (state.shareId) return;
+  const activeByTable = {};
+  getActiveFilters().forEach(({ def, values }) => {
+    if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
+    (activeByTable[normalizeTableKey(def.table)] ||= []).push({ field: def.field, values });
+  });
+  const sources = { systems: [...state.onSystems], files: [...state.onFiles] };
+  el.dash.querySelectorAll('.widget.kpi .kpi-delta').forEach(async slot => {
+    const card = slot.closest('.widget');
+    const w = findWidget(card?.dataset.widgetId);
+    if (!w?.query?.sql || !w.query.table || w.query.integrationId) { slot.remove(); return; }
+    const filters = activeByTable[normalizeTableKey(w.query.table)] || [];
+    const key = `${w.query.table}|${w.query.sql}|${JSON.stringify(filters)}`;
+    let d = kpiDeltaCache.get(key);
+    if (d === undefined) {
+      try {
+        const res = await fetch('/api/widgets/kpi-delta', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sources, table: w.query.table, sql: w.query.sql, filters }),
+        });
+        d = res.ok ? (await res.json()).delta : null;
+      } catch { d = null; }
+      kpiDeltaCache.set(key, d ?? null);
+    }
+    if (slot.isConnected) renderKpiDelta(slot, d);
+  });
+}
+function renderKpiDelta(slot, d) {
+  if (!d || d.deltaPct == null || !isFinite(d.deltaPct)) { slot.remove(); return; }
+  // خط مصغّر لآخر ٨ أسابيع بجانب الرقم (يُرسم بـ DevExtreme Sparkline لو توفرت).
+  const card = slot.closest('.widget');
+  if (Array.isArray(d.series) && d.series.length >= 3 && d.series.some(v => v) && card && !card.querySelector('.kpi-spark') && window.JEEM_DX?.ready()) {
+    const spark = document.createElement('div');
+    spark.className = 'kpi-spark';
+    spark.setAttribute('aria-label', 'اتجاه آخر ٨ أسابيع');
+    card.querySelector('.kpi-body')?.appendChild(spark);
+    const tone = d.deltaPct > 0.05 ? 'up' : d.deltaPct < -0.05 ? 'down' : 'flat';
+    try { chartInstances.push(JEEM_DX.mount(spark, { kind: 'sparkline', values: d.series, tone }, { theme: THEME, fmt })); }
+    catch { spark.remove(); }
+  }
+  const pct = d.deltaPct;
+  const up = pct > 0.05, down = pct < -0.05;
+  // أيقونة + نص دائمًا، واللون تعزيز فقط (قاعدة «لا لون وحده»).
+  const glyph = up ? '▲' : down ? '▼' : '◆';
+  slot.className = 'kpi-delta ' + (up ? 'up' : down ? 'down' : 'flat');
+  slot.innerHTML = `<b>${glyph} ${Math.abs(pct).toLocaleString('en-US', { maximumFractionDigits: 1 })}٪</b>`
+    + `<small>آخر ${d.windowDays.toLocaleString('en-US')} يومًا مقابل التي قبلها (${esc(fmt(d.current))} مقابل ${esc(fmt(d.previous))})</small>`;
+  slot.title = `النافذة الحالية ${d.currentFrom} إلى ${d.currentTo} بحسب العمود ${d.column}`;
+}
+
+function TableCard(w) {
+  const card = widgetShell(w, 'table');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const cols = Object.keys(rows[0]);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${cols.map(c => {
+      const v = r[c], n = typeof v === 'number';
+      return `<td class="${n ? 'cell-num' : ''}">${n ? `<span class="num">${esc(fmt(v))}</span>` : esc(v ?? '—')}</td>`;
+    }).join('')}</tr>`).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// One shared config builder — the only place a chart's colors/fonts are set — passed
+// to ApexCharts verbatim so its own defaults never leak through. Donut and xy (bar/line)
+// options are built as two separate object literals rather than one with ternaries that
+// null out xaxis/yaxis/grid for a donut — ApexCharts' internal option merge chokes on an
+// explicit `undefined` value for those keys (throws inside its own constructor), so a
+// donut's config must omit them entirely instead.
+function chartConfig(type, labels, values, title, centerLabel) {
+  // مواصفة محايدة عن المكتبة — JEEM_DX.mount (jeem-dx.js) هو الذي يترجمها لخيارات DevExtreme.
+  // الدائري يُرسم حلقةً بتسمية في المنتصف (الإجمالي + deriveUnitLabel) كما كان.
+  return {
+    kind: type === 'pie' ? 'pie' : type, labels, values, title,
+    centerLabel: type === 'pie' ? (centerLabel || deriveUnitLabel(title)) : undefined,
+  };
+}
+
+// ---------- click-a-chart-to-filter (Power BI-style cross-filtering) ----------
+// Clicking a bar/line point or a pie slice filters the WHOLE dashboard by that category,
+// through the exact same machinery a declared dashboard filter already uses
+// (state.activeFilters/applyFilters) — see getActiveFilters(). An ad-hoc filter definition
+// is created on the fly (state.crossFilterDefs) when no declared DashboardFilter already
+// covers that table+field, so the filter bar shows a small chip for it either way.
+//
+// Only ever wired up when a real table+column can be resolved for the widget — a wizard
+// widget's structured query.dimension, or a chat-authored one's xKey (set for bar/line,
+// but NOT for pie: the system prompt has the model shape pie data as fixed {label,value}
+// keys, discarding the real column name, so a chat-authored pie widget simply isn't
+// clickable — same "not filterable" outcome buildWidget() already shows via
+// "غير متأثر بالفلتر" for a widget with no query lineage at all).
+function resolveCrossFilterField(w) {
+  const table = w.query?.table;
+  const field = w.query?.dimension || w.xKey;
+  return (table && field) ? { table, field } : null;
+}
+
+function crossFilterId(table, field) { return 'xfilter:' + table + '::' + field; }
+
+// The "+N أخرى" overflow bucket (see capRows/capMultiSeriesRows) isn't a real value to
+// filter by — it's several rows folded together, so clicking it is a no-op.
+function isOverflowBucketLabel(label) { return typeof label === 'string' && /^\+\d+ .+أخرى$/.test(label); }
+
+function toggleCrossFilter(table, field, value, label) {
+  if (state.shareId || isOverflowBucketLabel(value)) return; // a frozen share has nothing to re-run
+  const id = crossFilterId(table, field);
+  const current = state.activeFilters[id] || [];
+  pushUndo();
+  if (current.length === 1 && current[0] === value) {
+    // Clicking the same point again clears it — the same toggle Power BI's own
+    // cross-filter selection uses instead of a separate "clear" click.
+    delete state.activeFilters[id];
+    delete state.crossFilterDefs[id];
+  } else {
+    state.crossFilterDefs[id] = { id, label, field, table, type: 'single_select', options: [] };
+    state.activeFilters[id] = [String(value)];
+  }
+  applyFilters();
+}
+
+// Wires a chart's own ApexCharts "dataPointSelection" event (fired on a bar/point/slice
+// click) into toggleCrossFilter, mapping the clicked index back to that category's real
+// value via the exact `labels` array the chart itself was built from. Mutates `options`
+// in place — call before `new ApexCharts(holder, options)`.
+function attachCrossFilterClick(options, holder, w, labels) {
+  if (state.shareId) return;
+  const target = resolveCrossFilterField(w);
+  if (!target || !Array.isArray(labels) || !labels.length) return;
+  holder.classList.add('chart-clickable');
+  // JEEM_DX يستدعيها عند النقر على عمود/نقطة/شريحة بفهرس النقطة في labels نفسها التي بُني بها الرسم.
+  options.onPointClick = idx => {
+    if (idx == null || idx < 0 || idx >= labels.length) return;
+    // The chip names the *field* being filtered (e.g. "Region: North"), not the widget's
+    // own title (typically the metric, e.g. "Revenue") — "Revenue: North" would misread
+    // as filtering by a revenue value rather than by the category actually clicked.
+    toggleCrossFilter(target.table, target.field, labels[idx], target.field);
+  };
+}
+
+function mountChart(card, type, labels, values, title, truncated, centerLabel, w) {
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  if (truncated > 0) {
+    const note = document.createElement('div');
+    note.className = 'chart-note';
+    note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
+    card.appendChild(note);
+  }
+  pendingCharts.push({ card, holder, options: chartConfig(type, labels, values, title, centerLabel), labels, widget: w });
+}
+
+// Builds a mixed-series ApexCharts config for a bar/line widget extended with a forecast.
+// The real historical marks render exactly as chartConfig() would; the forecast is ALWAYS a
+// dashed line in a distinct color (never the historical series' own color, never solid) with
+// a shaded confidence-interval band behind it and a "متوقّع" legend entry — the mandatory
+// visual separation the forecasting feature requires, regardless of whether the base widget
+// is a bar or a line chart.
+function forecastChartConfig(type, labels, values, forecast, title) {
+  const histLen = values.length;
+  const fLen = forecast.values.length;
+  const categories = labels.concat(forecast.labels);
+  // Padded with nulls over the forecast span so it doesn't extend past the real data.
+  const historicalData = values.concat(new Array(fLen).fill(null));
+  // Each of forecast/upper/lower starts at the last historical point (so its dashed line
+  // visually continues from the real data rather than floating disconnected), null before that.
+  const bridge = new Array(Math.max(0, histLen - 1)).fill(null).concat([values[histLen - 1]]);
+  // The y-axis is scaled to the *real* points (historical + forecast), not the confidence
+  // bounds — a short/noisy series can produce a bound so wide that letting it drive the axis
+  // squashes the actual trend into an unreadable sliver.
+  const realPoints = values.concat(forecast.values);
+  const dataMin = Math.min(...realPoints), dataMax = Math.max(...realPoints);
+  const padding = Math.max((dataMax - dataMin) * 0.3, Math.abs(dataMax) * 0.1, 1);
+  return {
+    kind: 'forecast', type, title, categories,
+    historical: historicalData, forecast: bridge.concat(forecast.values),
+    upper: bridge.concat(forecast.upper), lower: bridge.concat(forecast.lower),
+    visualRange: [dataMin - padding, dataMax + padding],
+  };
+}
+
+function mountForecastChart(card, type, labels, values, forecast, title, truncated) {
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder chart-holder-forecast';
+  card.appendChild(holder);
+  if (truncated > 0) {
+    const note = document.createElement('div');
+    note.className = 'chart-note';
+    note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
+    card.appendChild(note);
+  }
+  const methodLabel = forecast.method === 'linear_regression_seasonal' ? 'انحدار خطي مع تعديل موسمي' : 'انحدار خطي';
+  const noteEl = document.createElement('div');
+  noteEl.className = 'forecast-note';
+  noteEl.textContent = `🔮 توقّع إحصائي (${methodLabel}${typeof forecast.r2 === 'number' ? `، R²=${forecast.r2}` : ''})` +
+    (forecast.note ? ` — ${forecast.note}` : '');
+  card.appendChild(noteEl);
+  pendingCharts.push({ card, holder, options: forecastChartConfig(type, labels, values, forecast, title) });
+}
+
+function buildXyChart(w, type) {
+  const card = widgetShell(w, 'chart');
+  // Extension (multi-series bar/line): w.series is [{key, label}] naming which data-row
+  // fields to plot as separate series sharing one xKey category axis — a different shape
+  // from the single-series xKey/yKey path below, so it's handled by its own function
+  // rather than threading extra branches through the existing one.
+  if (Array.isArray(w.series) && w.series.length) return buildMultiSeriesChart(card, w, type);
+  const { rows: allRows, xKey, yKey } = keysFor(w);
+  if (!allRows.length) return emptyBody(card);
+  const { rows, truncated } = capRows(allRows, xKey, yKey);
+  const labels = rows.map(r => r[xKey]);
+  const values = rows.map(r => num(r[yKey]));
+  if (w.forecast) mountForecastChart(card, type, labels, values, w.forecast, w.title, truncated);
+  else mountChart(card, type, labels, values, w.title, truncated, undefined, w);
+  return card;
+}
+const BarChartCard = w => buildXyChart(w, 'bar');
+const LineChartCard = w => buildXyChart(w, 'line');
+
+// Caps a multi-series row set the same way capRows() does for a single series — folding
+// the overflow into one "+N أخرى" bucket, just summed across every series field at once.
+function capMultiSeriesRows(rows, xKey, seriesKeys) {
+  if (rows.length <= MAX_CHART_POINTS) return { rows, truncated: 0 };
+  const kept = rows.slice(0, MAX_CHART_POINTS - 1);
+  const rest = rows.slice(MAX_CHART_POINTS - 1);
+  const bucket = { [xKey]: `+${rest.length} أخرى` };
+  seriesKeys.forEach(k => { bucket[k] = rest.reduce((s, r) => s + num(r[k]), 0); });
+  return { rows: [...kept, bucket], truncated: rest.length };
+}
+
+// Multi-series bar (grouped or stacked, per w.stacked) / line — a shared axis with one
+// series per w.series entry. Colors always come from THEME.palette by series index, never
+// a model-supplied value, for the same reason every other chart in the app does this: one
+// consistent palette across the whole dashboard, no risk of a clashing/invented color.
+// Data labels are always on (unlike the single-series path) since these charts get
+// exported to PDF/PPTX, where hover-only tooltips don't exist.
+function buildMultiSeriesChart(card, w, type) {
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const xKey = w.xKey || Object.keys(rows[0]).find(k => typeof rows[0][k] !== 'number') || Object.keys(rows[0])[0];
+  const seriesKeys = w.series.map(s => s.key);
+  const { rows: capped, truncated } = capMultiSeriesRows(rows, xKey, seriesKeys);
+  const categories = capped.map(r => r[xKey]);
+  const isLine = type === 'line';
+  const stacked = !isLine && !!w.stacked;
+  // areaFill (see AnalyticsTools.cs) — overlapping translucent gradient fills under each
+  // series ("mountain" style) instead of plain crossing lines. line-only; bar ignores it.
+  const areaFill = isLine && !!w.areaFill;
+  const apexSeries = w.series.map(s => ({ name: s.label || s.key, data: capped.map(r => num(r[s.key])) }));
+
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  if (truncated > 0) {
+    const note = document.createElement('div');
+    note.className = 'chart-note';
+    note.textContent = `+${truncated} نقطة إضافية مجمّعة ضمن الرسم`;
+    card.appendChild(note);
+  }
+
+  const options = { kind: 'multi', type, categories, series: apexSeries, stacked, areaFill };
+  pendingCharts.push({ card, holder, options, labels: categories, widget: w });
+  return card;
+}
+
+function PieChartCard(w) {
+  const card = widgetShell(w, 'chart');
+  const allRows = (Array.isArray(w.data) ? w.data : []).map(r => ({
+    label: r.label ?? Object.values(r).find(v => typeof v === 'string') ?? '—',
+    value: num(r.value ?? Object.values(r).find(v => typeof v === 'number')),
+  })).filter(r => r.value > 0);
+  if (!allRows.length) return emptyBody(card);
+  const { rows, truncated } = capRows(allRows, 'label', 'value');
+  mountChart(card, 'pie', rows.map(r => r.label), rows.map(r => r.value), w.title, truncated, w.centerLabel, w);
+  return card;
+}
+
+// A segment's `color` is one of a small fixed vocabulary — never an arbitrary hex the model
+// invents — mapped to the exact same tokens every other severity/status indicator in the
+// app already uses. "muted" (the default for an unrecognized/absent value) renders as a
+// translucent neutral fill, the rest as solid theme colors.
+function toneColor(tone) {
+  if (tone === 'accent') return THEME.accent;
+  if (tone === 'danger') return THEME.danger;
+  if (tone === 'amber') return THEME.amber;
+  return 'color-mix(in srgb, ' + THEME.tickColor + ' 35%, transparent)';
+}
+
+// ---------- reshaping generic data for the 5 bespoke widget types ----------
+// progress-table/trend-matrix/status-bar/radial-gauge/linear-gauge each have their own data
+// shape a widget built as bar/line/pie/table/kpi won't carry — switching the type of such a
+// widget via "🔀 تغيير نوع الرسم" used to just show that type's own empty state (reported
+// live as effectively a dead end: the card goes blank, and since w.data itself was never
+// touched by setWidgetType, switching back "should" have worked too — but a user hitting a
+// blank card with no visible explanation reasonably reads that as broken, not as "pick a
+// different type"). Each Card below now tries its own native shape first and, if w.data
+// doesn't look like it, derives a genuinely meaningful equivalent from the SAME generic
+// {rows, xKey, yKey} every bar/line/pie/table/kpi widget already carries (see keysFor) —
+// never mutating w.data itself, so switching to any other type afterward — including back
+// to the original — always still works from the same untouched source.
+function reshapeGenericForBespokeType(type, w) {
+  const { rows, xKey, yKey } = keysFor(w);
+  if (!rows.length) return null;
+  const values = rows.map(r => num(r[yKey]));
+  const total = values.reduce((s, v) => s + v, 0);
+  switch (type) {
+    case 'status-bar':
+      // Every row becomes one status badge, "ontrack" by default — a generic {label,value}
+      // row carries no severity of its own to map to severe/warning/ontrack.
+      return {
+        label: w.title || '',
+        total,
+        statuses: rows.map((r, i) => ({ label: String(r[xKey] ?? ''), count: values[i], severity: 'ontrack' })),
+      };
+    case 'radial-gauge': {
+      // The single largest row as the ring's value, against the sum of every row as its max
+      // — "this category's share of the total", e.g. the biggest region's % of all revenue.
+      let maxIdx = 0;
+      values.forEach((v, i) => { if (v > values[maxIdx]) maxIdx = i; });
+      return { value: values[maxIdx] || 0, max: total || values[maxIdx] || 1, label: String(rows[maxIdx][xKey] ?? '') };
+    }
+    case 'linear-gauge': {
+      // Every row as its own bar, all sharing the largest row's value as their common max —
+      // directly analogous to the bar chart this data would otherwise be, just as gauges.
+      const max = Math.max(...values, 1);
+      return rows.map((r, i) => ({ label: String(r[xKey] ?? ''), value: values[i], max, tone: 'accent' }));
+    }
+    case 'progress-table':
+      // Every row as its own single-segment progress bar, scaled against the largest row's
+      // value — there's no second number in generic {label,value} data to pair as a real
+      // target, so this is "how this row compares to the top one", not a spent/target ratio.
+      return rows.map((r, i) => ({
+        label: String(r[xKey] ?? ''), total: Math.max(...values, 1),
+        segments: [{ label: String(r[xKey] ?? ''), value: values[i], color: 'accent' }],
+      }));
+    case 'trend-matrix':
+      // The whole widget becomes one metric row, with every generic row as one of its
+      // periods — turns exactly the same data a line/bar chart would plot into a single-row
+      // trend view (sparkline + delta) instead.
+      return [{ metric: w.title || yKey || '', periods: rows.map((r, i) => ({ label: String(r[xKey] ?? ''), value: values[i] })) }];
+    default:
+      return null;
+  }
+}
+
+// ---------- new widget type: progress-table ----------
+// Each row's bar is scaled to that row's own `total` (its segments' values need not sum to
+// it — e.g. "spent" vs. a target — so the bar can visibly under- or over-fill).
+function ProgressTableCard(w) {
+  const card = widgetShell(w, 'progress-table');
+  let rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.some(r => r && (Array.isArray(r.segments) || typeof r.total === 'number')))
+    rows = reshapeGenericForBespokeType('progress-table', w) || rows;
+  if (!rows.length) return emptyBody(card);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><thead><tr><th>${esc(w.labelHeader || '')}</th><th>${esc(w.progressHeader || 'التقدّم')}</th></tr></thead>
+    <tbody>${rows.map(r => {
+      const total = num(r.total);
+      const segs = Array.isArray(r.segments) ? r.segments : [];
+      const segsHtml = segs.map(s => {
+        const value = num(s.value);
+        const pct = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0;
+        const tone = s.color || 'muted';
+        return `<div class="prog-seg${tone === 'muted' ? ' tone-muted' : ''}" style="width:${pct}%;background:${toneColor(tone)}"
+          title="${esc(s.label || '')}: ${esc(fmt(value))}">${pct >= 8 ? esc(fmt(value)) : ''}</div>`;
+      }).join('');
+      return `<tr><td>${esc(r.label ?? '—')}</td><td class="prog-cell">
+          <div class="prog-track">${segsHtml}</div>
+          <div class="prog-total">${esc(fmt(total))}</div>
+        </td></tr>`;
+    }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- new widget type: trend-matrix ----------
+// Trend direction/delta/sparkline are all computed here from the row's own period values —
+// never model-specified — comparing strictly the last two points, per the design spec.
+function TrendMatrixCard(w) {
+  const card = widgetShell(w, 'trend-matrix');
+  let rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.some(r => r && Array.isArray(r.periods)))
+    rows = reshapeGenericForBespokeType('trend-matrix', w) || rows;
+  if (!rows.length) return emptyBody(card);
+  const periodLabels = (rows[0].periods || []).map(p => p.label);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><thead><tr>
+      <th>${esc(w.metricHeader || 'المؤشر')}</th>
+      ${periodLabels.map(l => `<th>${esc(l)}</th>`).join('')}
+      <th>${esc(w.trendHeader || 'الاتجاه')}</th>
+    </tr></thead>
+    <tbody>${rows.map(r => {
+      const periods = Array.isArray(r.periods) ? r.periods : [];
+      const values = periods.map(p => num(p.value));
+      const cells = periods.map(p => `<td class="cell-num"><span class="num">${esc(fmt(num(p.value)))}</span></td>`).join('');
+      const last = values[values.length - 1], prev = values[values.length - 2];
+      const dir = (last === undefined || prev === undefined) ? 'flat' : last > prev ? 'up' : last < prev ? 'down' : 'flat';
+      const delta = (last !== undefined && prev !== undefined) ? last - prev : null;
+      const deltaText = delta === null ? '—' : (delta >= 0 ? '+' : '') + fmt(delta);
+      const min = Math.min(...values, 0), max = Math.max(...values, 1);
+      const spark = values.map(v => {
+        const h = max > min ? Math.round(4 + ((v - min) / (max - min)) * 12) : 8;
+        return `<span class="spark-bar" style="height:${h}px"></span>`;
+      }).join('');
+      return `<tr><td>${esc(r.metric ?? '—')}</td>${cells}
+          <td><div class="trend-cell">
+            <span class="trend-dot ${dir}"></span><span class="trend-delta">${deltaText}</span>
+            <span class="sparkline">${spark}</span>
+          </div></td></tr>`;
+    }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- new widget type: status-bar ----------
+// One total+label+breakdown per widget instance (per the schema) — the model sends several
+// of these as separate widgets if it wants more than one breakdown on a dashboard.
+function StatusBarCard(w) {
+  const card = widgetShell(w, 'status-bar');
+  let row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row || !(Array.isArray(row.statuses) || typeof row.total === 'number'))
+    row = reshapeGenericForBespokeType('status-bar', w) || row;
+  if (!row) return emptyBody(card);
+  const statuses = Array.isArray(row.statuses) ? row.statuses : [];
+  const wrap = document.createElement('div');
+  wrap.className = 'status-bar-row';
+  const sevClass = s => (s === 'severe' || s === 'warning' || s === 'ontrack') ? s : 'ontrack';
+  const sevIcon = { severe: '🔴', warning: '🟡', ontrack: '🟢' };
+  wrap.innerHTML = `
+    <div class="status-bar-num">${esc(fmt(num(row.total)))}</div>
+    <div>
+      ${row.label ? `<div class="status-bar-label">${esc(row.label)}</div>` : ''}
+      <div class="status-badges">
+        ${statuses.map(s => `<span class="status-badge ${sevClass(s.severity)}">
+            ${sevIcon[sevClass(s.severity)]} ${esc(s.label)}: ${esc(fmt(num(s.count)))}</span>`).join('')}
+      </div>
+    </div>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- new widget type: linear-gauge ----------
+// One continuous track + a round handle marker per row — deliberately NOT progress-table's
+// several discrete colored segments in one track: this is a single value/max measure per
+// row (e.g. each team's own % of its own target), not a composition breakdown.
+function LinearGaugeCard(w) {
+  const card = widgetShell(w, 'linear-gauge');
+  let rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.some(r => r && typeof r.value === 'number'))
+    rows = reshapeGenericForBespokeType('linear-gauge', w) || rows;
+  if (!rows.length) return emptyBody(card);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `<table><tbody>${rows.map(r => {
+    const value = num(r.value);
+    const max = r.max != null ? num(r.max) : 100;
+    const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+    const color = toneColor(r.tone || 'accent');
+    const valueLabel = (r.max == null) ? `${fmt(value)}٪` : `${fmt(value)} / ${fmt(max)}`;
+    return `<tr><td>${esc(r.label ?? '—')}</td><td class="lg-cell">
+        <div class="lg-track"><div class="lg-fill" style="width:${pct}%;background:${color}">
+          <span class="lg-handle" style="border-color:${color}"></span>
+        </div></div>
+        <div class="lg-value">${esc(valueLabel)}</div>
+      </td></tr>`;
+  }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- new widget type: radial-gauge ----------
+// A single value/max ring — data is one object (like status-bar), never an array. The
+// percentage, the arc, and the center number are always computed/drawn here — the model
+// only ever supplies the raw value/max/label, same "never model-supplied" rule as
+// trend-matrix's trend arrow.
+function radialGaugeConfig(value, max, tone) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+  return { kind: 'radial', pct, color: toneColor(tone || 'accent') };
+}
+function RadialGaugeCard(w) {
+  const card = widgetShell(w, 'radial-gauge');
+  let row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row || row.value == null) row = reshapeGenericForBespokeType('radial-gauge', w) || row;
+  if (!row || row.value == null) return emptyBody(card);
+  const value = num(row.value);
+  const max = row.max != null ? num(row.max) : 100;
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  if (row.label) {
+    const caption = document.createElement('div');
+    caption.className = 'rg-caption';
+    caption.textContent = row.label;
+    card.appendChild(caption);
+  }
+  // Never cross-filterable (see attachCrossFilterClick's own guard on `widget` being
+  // present in pendingCharts) — a single aggregate measure has no per-category dimension
+  // to filter the rest of the dashboard by, the same reason a forecast chart isn't either.
+  pendingCharts.push({ card, holder, options: radialGaugeConfig(value, max, row.tone) });
+  return card;
+}
+
+// ---------- §4.14/§5 additions (INTERACTIVE-HANDOFF.md) ----------
+// Row shapes are documented server-side on DashboardSpec (InteractiveWidgetDataShapes) —
+// kept in sync here. `w.options` is the small per-type tweak bag described there; every
+// key is read defensively since it's always optional.
+
+// radar: one entity's profile across several same-scale axes, or 2-3 entities compared.
+// data: [{ axis, <series1>, <series2>, ... }] — one row per axis, one numeric column per series.
+function RadarCard(w) {
+  const card = widgetShell(w, 'radar');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const seriesNames = Object.keys(rows[0]).filter(k => k !== 'axis');
+  if (!seriesNames.length) return emptyBody(card);
+  const max = w.options && w.options.max != null ? num(w.options.max) : undefined;
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    chart: {
+      type: 'radar', height: '100%', width: '100%', fontFamily: THEME.fontFamily, background: 'transparent',
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: seriesNames.map(name => ({ name, data: rows.map(r => num(r[name])) })),
+    labels: rows.map(r => String(r.axis ?? '')),
+    colors: THEME.palette,
+    xaxis: { labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily } } },
+    yaxis: max != null ? { max, min: 0, show: false } : { min: 0, show: false },
+    stroke: { width: 2 },
+    fill: { opacity: 0.15 },
+    markers: { size: 3 },
+    legend: seriesNames.length > 1
+      ? { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily }
+      : { show: false },
+    tooltip: { y: { formatter: v => fmt(v) } },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// semi: one total split into 2-3 parts, shown as a half-donut with the total above it.
+// data: [{ label, value }] (2-3 rows).
+function SemiCard(w) {
+  const card = widgetShell(w, 'semi');
+  const rows = (Array.isArray(w.data) ? w.data : []).slice(0, 3);
+  if (!rows.length) return emptyBody(card);
+  const total = rows.reduce((s, r) => s + num(r.value), 0);
+  const tl = w.options && w.options.tl;
+  const caption = document.createElement('div');
+  caption.className = 'rg-caption';
+  caption.innerHTML = `<span class="num jr-countup">${esc(fmt(total))}</span>${tl ? ' ' + esc(tl) : ''}`;
+  card.appendChild(caption);
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    chart: {
+      type: 'donut', height: '100%', width: '100%', fontFamily: THEME.fontFamily, background: 'transparent',
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: rows.map(r => num(r.value)),
+    labels: rows.map(r => String(r.label ?? '')),
+    colors: THEME.palette,
+    plotOptions: { pie: { startAngle: -90, endAngle: 90, donut: { size: '70%', labels: { show: false } }, offsetY: 10 } },
+    dataLabels: { enabled: false },
+    legend: { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily },
+    tooltip: { y: { formatter: v => fmt(v) } },
+    stroke: { width: 1, colors: [THEME.surface] },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// dco: donut with each slice's name+percentage legible (3-5 parts whose names matter).
+// data: [{ label, value }] (3-5 rows) — percentages are Apex's own, always summing to 100%.
+function DcoCard(w) {
+  const card = widgetShell(w, 'dco');
+  const rows = (Array.isArray(w.data) ? w.data : []).slice(0, 5);
+  if (!rows.length) return emptyBody(card);
+  const total = rows.reduce((s, r) => s + num(r.value), 0);
+  const tl = w.options && w.options.tl;
+  const caption = document.createElement('div');
+  caption.className = 'rg-caption';
+  caption.innerHTML = `<span class="num jr-countup">${esc(fmt(total))}</span>${tl ? ' ' + esc(tl) : ''}`;
+  card.appendChild(caption);
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    chart: {
+      type: 'donut', height: '100%', width: '100%', fontFamily: THEME.fontFamily, background: 'transparent',
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: rows.map(r => num(r.value)),
+    labels: rows.map(r => String(r.label ?? '')),
+    colors: THEME.palette,
+    dataLabels: {
+      enabled: true, formatter: val => Math.round(val) + '٪',
+      style: { colors: ['#fff'], fontFamily: THEME.fontFamily },
+    },
+    legend: { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily },
+    plotOptions: { pie: { donut: { labels: { show: false } } } },
+    tooltip: { y: { formatter: v => fmt(v) } },
+    stroke: { width: 1, colors: [THEME.surface] },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// iconrank: ranking with a short symbol per row (countries, platforms, suppliers, ...).
+// data: [{ label, value }]; w.options.av[] supplies each row's own short symbol.
+function IconRankCard(w) {
+  const card = widgetShell(w, 'iconrank');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const sorted = [...rows].sort((a, b) => num(b.value) - num(a.value));
+  const max = Math.max(...sorted.map(r => num(r.value)), 1);
+  const av = Array.isArray(w.options && w.options.av) ? w.options.av : [];
+  const u = (w.options && w.options.u) || '';
+  const wrap = document.createElement('div');
+  wrap.className = 'iconrank-list';
+  wrap.innerHTML = sorted.map((r, i) => {
+    const v = num(r.value);
+    const pct = max > 0 ? Math.max(2, (v / max) * 100) : 0;
+    const sym = esc(av[i] || String(r.label ?? '').slice(0, 2));
+    return `<div class="iconrank-row">
+        <span class="iconrank-no">${i + 1}</span>
+        <span class="iconrank-sym" aria-hidden="true">${sym}</span>
+        <span class="iconrank-label">${esc(r.label ?? '—')}</span>
+        <div class="iconrank-track"><div class="iconrank-fill" style="width:${pct}%;background:${THEME.palette[i % THEME.palette.length]}"></div></div>
+        <span class="iconrank-value"><span class="num">${esc(fmt(v))}</span>${u ? esc(u) : ''}</span>
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// ribbon: stacked columns tracking each category's share across periods (≤6 categories).
+// data: [{ period, category, value }] long-format — pivoted here into one Apex series per category.
+function RibbonCard(w) {
+  const card = widgetShell(w, 'ribbon');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const periods = [...new Set(rows.map(r => String(r.period ?? '')))];
+  const categories = [...new Set(rows.map(r => String(r.category ?? '')))].slice(0, 6);
+  if (!periods.length || !categories.length) return emptyBody(card);
+  const holder = document.createElement('div');
+  holder.className = 'chart-holder';
+  card.appendChild(holder);
+  const options = {
+    // Time reads right-to-left (oldest on the right) — chart.rtl mirrors the x-axis so the
+    // first-seen (query) period order ends up on the right without reversing the data.
+    chart: {
+      type: 'bar', stacked: true, height: '100%', width: '100%', fontFamily: THEME.fontFamily,
+      background: 'transparent', rtl: true,
+      animations: { enabled: !prefersReducedMotion(), easing: 'easeout', speed: 450 },
+    },
+    series: categories.map(cat => ({
+      name: cat,
+      data: periods.map(p => {
+        const row = rows.find(r => String(r.period) === p && String(r.category) === cat);
+        return row ? num(row.value) : 0;
+      }),
+    })),
+    xaxis: { categories: periods, labels: { style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily } } },
+    yaxis: { labels: { formatter: fmt, style: { colors: THEME.tickColor, fontFamily: THEME.fontFamily } } },
+    colors: THEME.palette,
+    plotOptions: { bar: { horizontal: false, borderRadius: 3 } },
+    legend: { position: 'bottom', labels: { colors: THEME.ink }, fontFamily: THEME.fontFamily },
+    tooltip: { y: { formatter: v => fmt(v) } },
+    dataLabels: { enabled: false },
+  };
+  pendingCharts.push({ card, holder, options });
+  return card;
+}
+
+// people: person/team cards ranked by value, top one starred, optional %-of-goal bar.
+// data: [{ name, value, goalPct?, role? }].
+function PeopleCard(w) {
+  const card = widgetShell(w, 'people');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const sorted = [...rows].sort((a, b) => num(b.value) - num(a.value));
+  const u = (w.options && w.options.u) || '';
+  const wrap = document.createElement('div');
+  wrap.className = 'people-grid';
+  wrap.innerHTML = sorted.map((p, i) => {
+    const goalPct = p.goalPct != null ? Math.max(0, Math.min(100, num(p.goalPct))) : null;
+    return `<div class="people-card${i === 0 ? ' is-top' : ''}" role="button" tabindex="0" data-person="${esc(p.name ?? '')}">
+        ${i === 0 ? '<span class="people-star" aria-hidden="true">★</span>' : ''}
+        <div class="people-name">${esc(p.name ?? '—')}</div>
+        ${p.role ? `<div class="people-role">${esc(p.role)}</div>` : ''}
+        <div class="people-value"><span class="num">${esc(fmt(num(p.value)))}</span>${u ? esc(u) : ''}</div>
+        ${goalPct != null ? `<div class="people-goal-track" role="img" aria-label="${Math.round(goalPct)}٪ من الهدف">
+            <div class="people-goal-fill" style="width:${goalPct}%"></div></div>` : ''}
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// feed: activity list with status — always icon + color + text, never color alone.
+// data: [{ title, desc?, value?, status: ok|pend|bad|info, time?, owner? }]; w.options.lab overrides labels.
+const FEED_STATUS_META = {
+  ok: { icon: '✓', cls: 'status-ok', label: 'منجز' },
+  pend: { icon: '⏱', cls: 'status-warn', label: 'قيد الانتظار' },
+  bad: { icon: '✕', cls: 'status-bad', label: 'متعثر' },
+  info: { icon: 'ℹ', cls: 'status-info', label: 'معلومة' },
+};
+function FeedCard(w) {
+  const card = widgetShell(w, 'feed');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const lab = (w.options && w.options.lab) || {};
+  const wrap = document.createElement('div');
+  wrap.className = 'feed-list';
+  wrap.innerHTML = rows.map(r => {
+    const meta = FEED_STATUS_META[r.status] || FEED_STATUS_META.info;
+    const label = lab[r.status] || meta.label;
+    return `<div class="feed-row">
+        <span class="feed-status ${meta.cls}" aria-hidden="true">${meta.icon}</span>
+        <div class="feed-body">
+          <div class="feed-title">${esc(r.title ?? '')}</div>
+          ${r.desc ? `<div class="feed-desc">${esc(r.desc)}</div>` : ''}
+          <div class="feed-meta">
+            <span class="feed-status-text">${esc(label)}</span>
+            ${r.owner ? `<span class="feed-owner">${esc(r.owner)}</span>` : ''}
+            ${r.time ? `<span class="feed-time">${esc(r.time)}</span>` : ''}
+          </div>
+        </div>
+        ${r.value != null ? `<div class="feed-value">${esc(String(r.value))}</div>` : ''}
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// goal: a sentence composed from data, toned by achievement — never a bare number alone.
+// data: single object { percent, remaining?, who?, days?, headline? }.
+function GoalCard(w) {
+  const card = widgetShell(w, 'goal');
+  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  if (!row || row.percent == null) return emptyBody(card);
+  const pct = num(row.percent);
+  const risk = w.options && w.options.risk != null ? num(w.options.risk) : 80;
+  let tone, verb;
+  if (pct >= 100) { tone = 'ok'; verb = 'تجاوز الهدف'; }
+  else if (pct >= risk) { tone = 'warn'; verb = 'يقترب من الهدف'; }
+  else if (pct >= 50) { tone = 'warn'; verb = 'على المسار، ويحتاج تسريعًا'; }
+  else { tone = 'bad'; verb = 'بعيد عن الهدف، ويحتاج تدخلًا'; }
+  const toneIcon = { ok: '✓', warn: '◆', bad: '✕' }[tone];
+  const sentence = [
+    row.headline ? esc(row.headline) : '',
+    row.who ? `<b>${esc(row.who)}</b>` : '',
+    `<span class="num jr-countup">${esc(fmt(pct))}</span>٪ ${esc(verb)}`,
+    row.remaining != null ? `(متبقٍ <span class="num">${esc(fmt(num(row.remaining)))}</span>)` : '',
+    row.days != null ? `خلال <span class="num">${esc(fmt(num(row.days)))}</span> يوم` : '',
+  ].filter(Boolean).join(' ');
+  const wrap = document.createElement('div');
+  wrap.className = `goal-body tone-${tone}`;
+  wrap.innerHTML = `<span class="goal-icon" aria-hidden="true">${toneIcon}</span><p class="goal-sentence">${sentence}</p>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// stages: multi-stage process tracker with sub-status chips, read right-to-left.
+// data: [{ stage, status: ok|warn|bad|pending, subStatus?, tone?: info|ok|warn|bad|dark|mute }].
+const STAGE_TONE_CLASS = { info: 'tone-info', ok: 'tone-ok', warn: 'tone-warn', bad: 'tone-bad', dark: 'tone-dark', mute: 'tone-mute' };
+const STAGE_STATUS_META = {
+  ok: { icon: '✓', cls: 'status-ok' },
+  warn: { icon: '◆', cls: 'status-warn' },
+  bad: { icon: '✕', cls: 'status-bad' },
+  pending: { icon: '⏱', cls: 'status-warn' },
+};
+// §4.24 — شكل الخانات العددية (مسار عملية متعدد المراحل كما في «متتبع الفرص والعروض»):
+// صف واحد لكل خانة بالشكل الطويل الذي يخرج مباشرة من استعلام SQL مُجمَّع:
+// [{ stage, label, count, tone?: info|ok|warn|bad|dark|mute, value?, row?: main|sub|total }]
+// تُجمَّع الصفوف حسب stage بترتيب أول ظهور؛ row:"total" يحدد إجمالي المرحلة (وإلا فعدد أول
+// خانة رئيسية)، و"sub" للحالات الفرعية (ملغاة، معلّقة، متأخرة...) في سطر أسفل المرحلة.
+// النبرة دائمًا لون + نص التسمية معًا، والأرقام داخل .num والوحدة خارجها.
+function stageGroupsFromRows(rows) {
+  const groups = [];
+  const byName = new Map();
+  for (const r of rows) {
+    const name = String(r.stage ?? '').trim() || '—';
+    let g = byName.get(name);
+    if (!g) { g = { name, total: null, main: [], sub: [] }; byName.set(name, g); groups.push(g); }
+    const kind = String(r.row || 'main').toLowerCase();
+    if (kind === 'total') { g.total = num(r.count); continue; }
+    const tile = {
+      label: String(r.label ?? ''), count: num(r.count),
+      tone: STAGE_TONE_CLASS[r.tone] ? r.tone : 'info',
+      value: r.value != null && r.value !== '' ? num(r.value) : null,
+    };
+    (kind === 'sub' ? g.sub : g.main).push(tile);
+  }
+  for (const g of groups) if (g.total == null) g.total = g.main.length ? g.main[0].count : null;
+  return groups;
+}
+function stagesTilesBody(w, rows) {
+  const u = (w.options && w.options.u) || '';
+  const groups = stageGroupsFromRows(rows);
+  const tile = (t, big) => `<div class="stile tone-${t.tone}${big ? ' big' : ''}" title="${esc(t.label)}: ${esc(fmt(t.count))}${t.value != null ? ` · ${esc(fmt(t.value))}${u ? ' ' + esc(u) : ''}` : ''}">
+      <span class="stile-lab">${esc(t.label)}</span><b class="num">${esc(fmt(t.count))}</b>${t.value != null ? `<small><span class="num">${esc(fmt(t.value))}</span>${u ? ' ' + esc(u) : ''}</small>` : ''}</div>`;
+  const wrap = document.createElement('div');
+  wrap.className = 'stages-flow';
+  // RTL: المرحلة الأولى يمينًا، والسهم يشير للمرحلة التالية (يسارًا).
+  wrap.innerHTML = groups.map((g, i) => `${i > 0 ? '<span class="stages-arrow" aria-hidden="true">←</span>' : ''}
+    <div class="stage-col" role="group" aria-label="مرحلة ${esc(g.name)}" style="flex-grow:${Math.max(1, g.main.length, g.sub.length)}">
+      <div class="stage-head"><b>${esc(g.name)}</b>${g.total != null ? `<span class="stage-tot num" title="إجمالي المرحلة">${esc(fmt(g.total))}</span>` : ''}</div>
+      ${g.main.length ? `<div class="stile-row">${g.main.map(t => tile(t, g.main.length <= 2)).join('')}</div>` : ''}
+      ${g.sub.length ? `<div class="stile-row sub">${g.sub.map(t => tile(t, false)).join('')}</div>` : ''}
+    </div>`).join('');
+  return wrap;
+}
+
+function StagesCard(w) {
+  const card = widgetShell(w, 'stages');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  // الشكل العددي (§4.24) متى حمل أي صف عددًا؛ وإلا الشكل الأقدم (مرحلة + حالة + شارة).
+  if (rows.some(r => r && r.count != null && r.count !== '')) {
+    card.appendChild(stagesTilesBody(w, rows));
+    return card;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'stages-row';
+  // RTL: first stage renders on the right, arrow points toward the next (leftward) stage.
+  wrap.innerHTML = rows.map((r, i) => {
+    const statusMeta = STAGE_STATUS_META[r.status] || STAGE_STATUS_META.pending;
+    const toneCls = STAGE_TONE_CLASS[r.tone] || STAGE_TONE_CLASS.mute;
+    return `${i > 0 ? '<span class="stages-arrow" aria-hidden="true">←</span>' : ''}
+      <div class="stage-card">
+        <span class="stage-status ${statusMeta.cls}" aria-hidden="true">${statusMeta.icon}</span>
+        <div class="stage-name">${esc(r.stage ?? '')}</div>
+        ${r.subStatus ? `<span class="stage-chip ${toneCls}">${esc(r.subStatus)}</span>` : ''}
+      </div>`;
+  }).join('');
+  card.appendChild(wrap);
+  return card;
+}
+
+// bullet: actual-vs-target per row — w.options.hi: true when higher is better (default:
+// lower is better, e.g. days-to-close); always icon + color, never color alone.
+function BulletCard(w) {
+  const card = widgetShell(w, 'bullet');
+  const rows = Array.isArray(w.data) ? w.data : [];
+  if (!rows.length) return emptyBody(card);
+  const hi = !!(w.options && w.options.hi);
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap bullet-wrap';
+  wrap.innerHTML = `<table><tbody>${rows.map(r => {
+    const actual = num(r.actual), target = num(r.target);
+    const max = Math.max(actual, target, 1) * 1.15;
+    const pct = Math.max(0, Math.min(100, (actual / max) * 100));
+    const targetPct = Math.max(0, Math.min(100, (target / max) * 100));
+    const good = hi ? actual >= target : actual <= target;
+    const color = toneColor(good ? 'accent' : 'danger');
+    return `<tr><td>${esc(r.label ?? '—')}</td><td class="lg-cell">
+        <span class="bullet-icon ${good ? 'status-ok' : 'status-bad'}" aria-hidden="true">${good ? '✓' : '✕'}</span>
+        <div class="bullet-track">
+          <div class="bullet-fill" style="width:${pct}%;background:${color}"></div>
+          <span class="bullet-target" style="right:${100 - targetPct}%"></span>
+        </div>
+        <div class="lg-value"><span class="num">${esc(fmt(actual))}</span> / <span class="num">${esc(fmt(target))}</span></div>
+      </td></tr>`;
+  }).join('')}</tbody></table>`;
+  card.appendChild(wrap);
+  return card;
+}
+
+// ---------- رسوم DevExtreme الإضافية: قمع / خريطة شجرية / مبعثر ----------
+// كلها تقبل شكلها الأصلي (انظر WidgetShapeCatalog) أو تشتق ما يلزم من الشكل العام {rows,xKey,yKey}
+// كما تفعل الأنواع المخصصة الأخرى، فتغيير النوع من قائمة ⋮ لا يترك بطاقة فارغة.
+function FunnelCard(w) {
+  const card = widgetShell(w, 'chart');
+  let rows = (Array.isArray(w.data) ? w.data : []).map(r => ({ label: r.label, value: num(r.value) }));
+  if (!rows.length || rows.some(r => r.label == null)) {
+    const { rows: g, xKey, yKey } = keysFor(w);
+    rows = g.map(r => ({ label: String(r[xKey] ?? ''), value: num(r[yKey]) }));
+  }
+  rows = rows.filter(r => r.value > 0).slice(0, 8);
+  if (!rows.length) return emptyBody(card);
+  const holder = document.createElement('div'); holder.className = 'chart-holder'; card.appendChild(holder);
+  pendingCharts.push({ card, holder, options: { kind: 'funnel', labels: rows.map(r => r.label), values: rows.map(r => r.value), title: w.title }, labels: rows.map(r => r.label), widget: w });
+  return card;
+}
+function TreemapCard(w) {
+  const card = widgetShell(w, 'chart');
+  let rows = (Array.isArray(w.data) ? w.data : []).map(r => ({ label: r.label, value: num(r.value), group: r.group }));
+  if (!rows.length || rows.some(r => r.label == null)) {
+    const { rows: g, xKey, yKey } = keysFor(w);
+    rows = g.map(r => ({ label: String(r[xKey] ?? ''), value: num(r[yKey]) }));
+  }
+  rows = rows.filter(r => r.value > 0).slice(0, 20);
+  if (!rows.length) return emptyBody(card);
+  const holder = document.createElement('div'); holder.className = 'chart-holder'; card.appendChild(holder);
+  pendingCharts.push({ card, holder, options: { kind: 'treemap', rows, title: w.title }, labels: rows.map(r => r.label), widget: w });
+  return card;
+}
+function ScatterCard(w) {
+  const card = widgetShell(w, 'chart');
+  let rows = (Array.isArray(w.data) ? w.data : []).filter(r => r && r.x != null && r.y != null)
+    .map(r => ({ label: String(r.label ?? ''), x: num(r.x), y: num(r.y), group: r.group }));
+  if (!rows.length) {
+    // الشكل العام: أول حقلين رقميين كمحورين، وأول حقل نصي كاسم النقطة.
+    const g = Array.isArray(w.data) ? w.data : [];
+    const keys = g.length ? Object.keys(g[0]) : [];
+    const nums = keys.filter(k => typeof g[0][k] === 'number');
+    const txt = keys.find(k => typeof g[0][k] === 'string');
+    if (nums.length >= 2) rows = g.map(r => ({ label: String(txt ? r[txt] : ''), x: num(r[nums[0]]), y: num(r[nums[1]]) }));
+  }
+  rows = rows.slice(0, 30);
+  if (!rows.length) return emptyBody(card);
+  const holder = document.createElement('div'); holder.className = 'chart-holder'; card.appendChild(holder);
+  pendingCharts.push({ card, holder, options: { kind: 'scatter', rows, title: w.title, xTitle: w.xKey || '', yTitle: w.yKey || '' } });
+  return card;
+}
+
+const WIDGET_COMPONENTS = {
+  kpi: KpiCard, bar: BarChartCard, line: LineChartCard, pie: PieChartCard, table: TableCard,
+  funnel: FunnelCard, treemap: TreemapCard, scatter: ScatterCard,
+  'progress-table': ProgressTableCard, 'trend-matrix': TrendMatrixCard, 'status-bar': StatusBarCard,
+  'radial-gauge': RadialGaugeCard, 'linear-gauge': LinearGaugeCard,
+  radar: RadarCard, semi: SemiCard, dco: DcoCard, iconrank: IconRankCard, ribbon: RibbonCard,
+  people: PeopleCard, feed: FeedCard, goal: GoalCard, stages: StagesCard, bullet: BulletCard,
+};
+
+// ---------- comparison layout (not a 6th type — a display option any type can carry) ----------
+// { comparison: { left: {...partial widget}, right: {...partial widget} } } on an otherwise
+// normal widget — reuses whichever component `type` already is for both halves (each a
+// fully real, independent widget with its own title/source/etc.), just laid out side by
+// side with a connecting arrow instead of stacked in the grid like every other widget.
+function ComparisonCard(raw) {
+  const type = (raw.type || '').toLowerCase();
+  if (!WIDGET_TYPES.includes(type)) {
+    console.warn('Unknown comparison type — rendering its left side as a table instead:', raw);
+    return TableCard({ ...raw.comparison.left, type: 'table' });
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'widget comparison-wrap';
+  wrap.dataset.size = (raw.layout && raw.layout.size) || 'full';
+  if (raw.id) wrap.dataset.widgetId = raw.id;
+
+  // Same drag/resize/delete affordances every other top-level widget gets in edit mode —
+  // the comparison as a whole is one entry in state.dashboard.widgets, so the existing
+  // generic helpers (widgetMenu, enableWidgetDragDrop, delete/duplicate/setWidgetSize) all
+  // work on it unchanged; it just never had a head to host the menu button before.
+  if (raw.title || (state.editMode && raw.id)) {
+    const head = document.createElement('div');
+    head.className = 'widget-head';
+    const h = document.createElement('h3');
+    h.className = 'comparison-title';
+    h.textContent = raw.title || '';
+    head.appendChild(h);
+    wrap.appendChild(head);
+    if (state.editMode && raw.id) {
+      const { btn: menuBtn, menu } = widgetMenu(raw);
+      head.appendChild(menuBtn);
+      wrap.appendChild(menu);
+    }
+  }
+  const row = document.createElement('div');
+  row.className = 'compare-row';
+  // Each side is built through the exact same buildWidget() -> WIDGET_COMPONENTS path as
+  // any other widget, just with its own id/layout stripped — it's a nested, non-editable
+  // mini-widget, not an independent grid item the drag/resize/delete menu should touch.
+  const buildSide = def => buildWidget({
+    ...def, type, id: undefined, layout: { size: 'wide' },
+    // A pie's own hollow center is where its side's caption reads best (matching the
+    // reference mockup) — defaults to this side's title, e.g. "الربع الأول", unless the
+    // side already specifies its own centerLabel.
+    ...(type === 'pie' && !def.centerLabel ? { centerLabel: def.title } : {}),
+  });
+  row.appendChild(buildSide(raw.comparison.left || {}));
+  const arrow = document.createElement('div');
+  arrow.className = 'compare-arrow';
+  arrow.textContent = '⟷';
+  row.appendChild(arrow);
+  row.appendChild(buildSide(raw.comparison.right || {}));
+  wrap.appendChild(row);
+  if (state.editMode && raw.id) enableWidgetDragDrop(wrap, raw);
+  return wrap;
+}
+
+// ---------- noData placeholder (template widget with no matching data source yet) ----------
+// Never fakes data — shows the widget's real intended title with an explicit, honest "no
+// matching source" state instead, plus the two ways to fill it in (see openFillPlaceholderWizard/
+// askForPlaceholderWidget). Deliberately its own minimal shell rather than widgetShell(): no
+// source ⓘ (there is no source yet), no forecast button (no data to forecast from), no
+// "غير متأثر بالفلتر" badge (not meaningfully "unaffected" — it has nothing at all yet).
+function NoDataPlaceholderCard(w) {
+  const card = document.createElement('div');
+  card.className = 'widget widget-nodata';
+  card.dataset.size = (w.layout && w.layout.size) || 'wide';
+  if (w.id) card.dataset.widgetId = w.id;
+
+  const head = document.createElement('div');
+  head.className = 'widget-head';
+  const title = document.createElement('h3');
+  title.textContent = w.title || '';
+  head.appendChild(title);
+  const editable = !!state.currentUser && state.dashboardRole !== 'viewer';
+  if (state.editMode && w.id) {
+    const { btn: menuBtn, menu } = widgetMenu(w);
+    head.appendChild(menuBtn);
+    card.appendChild(menu);
+    enableWidgetDragDrop(card, w);
+  }
+  card.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'nodata-body';
+  body.innerHTML = `
+    <svg class="icon icon-lg nodata-icon" aria-hidden="true"><use href="#i-database"/></svg>
+    <p class="nodata-reason">${esc(w.missingReason || 'لم يتم العثور على مصدر بيانات مطابق لهذا العنصر.')}</p>
+    ${editable ? `<div class="nodata-actions">
+      <button type="button" class="btn btn-soft btn-sm" data-act="manual">اختر مصدر يدويًا</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-act="ask">اطلب من جيم</button>
+    </div>` : ''}`;
+  card.appendChild(body);
+  if (editable) {
+    body.querySelector('[data-act="manual"]').addEventListener('click', () => openFillPlaceholderWizard(w));
+    body.querySelector('[data-act="ask"]').addEventListener('click', () => askForPlaceholderWidget(w));
+  }
+  return card;
+}
+
+function buildWidget(raw) {
+  if (raw.noData) return NoDataPlaceholderCard(raw);
+  if (raw.comparison && typeof raw.comparison === 'object') return ComparisonCard(raw);
+  const type = (raw.type || '').toLowerCase();
+  if (!WIDGET_TYPES.includes(type)) {
+    console.warn('Unknown widget type — rendering as a table instead:', raw.type, raw);
+    return TableCard({ ...raw, type: 'table' });
+  }
+  return WIDGET_COMPONENTS[type](raw);
+}
+
+// ---------- dashboard page/tab bar ----------
+// Distinct w.page values in first-seen order — the template's own declared page order (see
+// BuiltinDashboardsGenerated/ChatController's reconciliation), since widgets are reconciled
+// into state.dashboard.widgets in that same order.
+function getDashboardPages(widgets) {
+  const pages = [];
+  for (const w of widgets) if (w.page && !pages.includes(w.page)) pages.push(w.page);
+  return pages;
+}
+
+function buildDashTabs(tabs, active) {
+  const nav = document.createElement('nav');
+  nav.className = 'tabs dash-tabs';
+  tabs.forEach(name => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = name;
+    btn.setAttribute('aria-selected', String(name === active));
+    btn.addEventListener('click', () => {
+      if (state.activeDashTab === name) return;
+      state.activeDashTab = name;
+      renderDashboard();
+    });
+    nav.appendChild(btn);
+  });
+  return nav;
+}
+
+// ---------- dashboard rendering ----------
+// ---------- interactive (RenderKind) dashboards: real-data mount path ----------
+// Same engines/markup the gallery's own demo preview uses (openNetworkGalDemo/
+// openWorkflowGalDemo/openMarketplaceGalDemo above) — duplicated here rather than shared,
+// since the demo functions also own gallery-only chrome (the "تجريبي" banner, "رجوع
+// للمعاينة"/"استخدم هذا النموذج" buttons) this real-dashboard mount never shows. A §4.16+
+// engine registers its own skeleton + mount call in mountInteractiveDashboard below as it's
+// built; network/workflow/marketplace are wired now so this path already works end to end
+// once each gets a real (non-stub) data provider on the backend.
+function interactiveNetworkSkeletonHtml(d) {
+  return `<main class="canvas pg-canvas" id="pgRoot">
+      <section class="pg-head">
+        <div><div class="dg-title"><h1>${esc(d.name || '')}</h1></div><p>${esc(d.summary || '')}</p><span class="sr-only" id="pgScope"></span></div>
+        <div class="pg-law" role="group" aria-label="اختر النظام"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن الشبكة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم عن الشبكة…" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="إظهار أو إخفاء الأنواع"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث في الشبكة</span><input id="pgSearch" type="search" placeholder="ابحث…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="graph" aria-pressed="true">شبكة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage">
+            <svg id="pgSvg" role="group" aria-label="${esc(d.name || '')}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+            <div class="pg-zoom" role="group" aria-label="التكبير">
+              <button type="button" id="pgZoomIn" aria-label="تكبير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              <span id="pgZoomVal" class="num">100%</span>
+              <button type="button" id="pgZoomOut" aria-label="تصغير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-minus"/></svg></button>
+              <button type="button" id="pgFit" aria-label="ملاءمة الشبكة للشاشة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-expand"/></svg></button>
+            </div>
+            <p class="pg-hint">نقرتان على عقدة للنزول داخلها · اسحب الخلفية للتحريك · العجلة للتكبير</p>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">الفترة</span><input type="range" id="pgYear" step="1">
+              <span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="pgYearOut"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+}
+function interactiveWorkflowSkeletonHtml(d) {
+  return `<main class="canvas pg-canvas" id="wfRoot">
+      <section class="pg-head">
+        <div><div class="dg-title"><h1>${esc(d.name || '')}</h1></div><p>${esc(d.summary || '')}</p><span class="sr-only" id="pgScope"></span></div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن سير العمل</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم عن سير العمل…" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب الالتزام بالمدة"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن طلب أو مورد</span><input id="pgSearch" type="search" placeholder="ابحث برقم الطلب أو اسمه أو المورد…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="map" aria-pressed="true">خريطة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="wfSvg" role="group" aria-label="${esc(d.name || '')}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="wfDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+}
+function interactiveMarketplaceSkeletonHtml(d) {
+  return `<main class="canvas pg-canvas" id="mkRoot">
+      <section class="pg-head">
+        <div><div class="dg-title"><h1>${esc(d.name || '')}</h1></div><p>${esc(d.summary || '')}</p><span class="sr-only" id="pgScope"></span></div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن المنصة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم عن المنصة…" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب حالة الطلب"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن عميل أو مورد أو نوع</span><input id="pgSearch" type="search" placeholder="ابحث عن عميل أو مورد أو نوع طلب…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="flow" aria-pressed="true">تدفق</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="mkSvg" role="group" aria-label="${esc(d.name || '')}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="mkDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+}
+// warehouse-team.js's own markup (§4.16) — identical skeleton for the real mount path and
+// the gallery demo preview; JEEM_WAREHOUSE_MOUNT fills every id below from `data`.
+function interactiveWarehouseSkeletonHtml(d) {
+  return `<div class="wh" id="whRoot">
+      <div class="wh-hd"><div><h1>${esc(d.name || 'نظرة على فريق المستودع')}</h1><p>${esc(d.summary || 'متابعة نشاط الموظفين وحالة المناوبات وتوزيع المهام في المستودع لحظيًا')}</p></div><span class="sp"></span>
+        <button type="button" class="btn btn-primary" data-new><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة مهمة</button></div>
+      <div class="wh-top"><div id="whKpis" style="display:contents"></div>
+        <section class="wh-cd" id="whCd" role="timer" aria-live="off"><span class="h"><span>تغيير المناوبة القادم<br><b class="num" id="whMin">15</b> دقيقة</span><span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>عدّ تنازلي</span></span>
+          <div class="wh-digits"><b class="num" id="whH">00</b><i>:</i><b class="num" id="whM">00</b><i>:</i><b class="num" id="whS">00</b></div><small>تبدأ المناوبة التالية الساعة <span class="num" id="whAt"></span></small></section></div>
+      <div class="wh-tools"><div class="wh-roles" id="whRoles" role="group" aria-label="تصفية حسب الدور"></div>
+        <span class="sp"></span><label class="wh-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن موظف</span><input type="search" id="whQ" placeholder="ابحث بالاسم أو المنطقة"></label></div>
+      <div class="wh-body">
+        <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+          <section class="wh-sec"><h2><i class="st" aria-hidden="true"></i>فرق في المناوبة<span class="n num" id="whOnN">0</span><span class="sp"></span><button type="button" class="btn btn-sm" data-more>عرض الكل</button></h2><div class="wh-grid" id="whOn"></div></section>
+          <section class="wh-sec off"><h2><i class="st" aria-hidden="true"></i>فرق خارج المناوبة<span class="n num" id="whOffN">0</span></h2><div class="wh-grid" id="whOff"></div></section>
+        </div>
+        <aside class="wh-feed" aria-label="سجل النشاط"><header><h2><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>سجل النشاط</h2><span class="n num" id="whUnread">0</span><button type="button" class="wh-live" data-live aria-pressed="true"><i></i>مباشر</button></header>
+          <div class="tg"><label><input type="checkbox" id="whUnreadOnly"> غير المقروءة فقط</label><span class="sp"></span><button type="button" data-read>تعليم الكل كمقروء</button></div>
+          <ul id="whFeed" aria-live="polite"></ul></aside>
+      </div>
+      <div id="whDlg" hidden></div>
+    </div>`;
+}
+// liquidity-pools.js's own markup (§4.17) — light by default (.lp-light), dark via the
+// theme-switch buttons (saved per browser in jeem.lp.theme, same as the prototype).
+function interactivePoolsSkeletonHtml(d) {
+  return `<div class="lp lp-light" id="lpRoot">
+      <div class="lp-hd"><h1>${esc(d.name || 'مجمّعات السيولة المركّزة')}</h1><div class="theme-sw" role="group" aria-label="الثيم"><button type="button" data-theme-set="light" aria-pressed="true">فاتح</button><button type="button" data-theme-set="dark" aria-pressed="false">داكن</button></div><div class="lp-seg" role="group" aria-label="الفترة"><button type="button" data-per="day" aria-pressed="true">يوم</button><button type="button" data-per="week" aria-pressed="false">أسبوع</button><button type="button" data-per="month" aria-pressed="false">شهر</button></div></div>
+      <div class="lp-top">
+        <div class="lp-stats">
+          <div class="lp-st" style="--i:0"><span class="ib"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span><div><b class="num" id="lpTvl">$0</b><small>إجمالي القيمة المقفلة</small></div></div>
+          <div class="lp-st" style="--i:1"><span class="ib"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></span><div><b class="num" id="lpCum">$0</b><small>الحجم التراكمي</small></div></div>
+          <div class="lp-st" style="--i:2"><span class="ib"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span><div><b class="num" id="lpVol">$0</b><small>حجم التداول</small></div></div>
+        </div>
+        <section class="lp-chart" id="lpChart"><span class="lb" id="lpHeadL">حجم التداول</span><b class="hv num" id="lpHead">$0</b><div id="lpBars" role="group" aria-label="حجم التداول عبر الزمن، الأحدث يسارًا"></div><div class="lp-tip" id="lpTip" hidden></div></section>
+      </div>
+      <div class="lp-tabs" role="tablist" aria-label="العرض"><button type="button" role="tab" data-tab="pool" aria-selected="true">المجمّعات</button><button type="button" role="tab" data-tab="pos" aria-selected="false">مراكزي</button><em><span class="num" id="lpCount">0</span> عنصر</em><span class="sp"></span>
+        <button type="button" class="btn btn-sm" data-create><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إنشاء مجمّع</button><button type="button" class="btn btn-sm btn-primary" data-addany><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة سيولة</button></div>
+      <div id="lpTools"><label class="lp-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">صفِّ حسب الأصل</span><input type="search" id="lpQ" placeholder="صفِّ حسب الأصل (مثل SUI)"></label><span class="sp"></span>
+        <label class="lp-chk"><input type="checkbox" id="lpAll"> عرض كل المجمّعات</label>
+        <label><span class="sr-only">نوع الحوافز</span><select id="lpInc"><option value="all">كل الحوافز</option><option value="yes">بمكافآت تعدين</option><option value="no">بدون مكافآت</option></select></label>
+        <label><span class="sr-only">التصنيف</span><select id="lpLab"><option value="all">كل التصنيفات</option><option>رائجة</option><option>مستقرة</option><option>جديدة</option></select></label>
+        <label><span class="sr-only">الترتيب</span><select id="lpSort"><option value="vol">ترتيب: الحجم</option><option value="liq">ترتيب: السيولة</option><option value="fees">ترتيب: الرسوم</option><option value="apr">ترتيب: العائد</option></select></label></div>
+      <div id="lpTable"></div>
+      <div id="lpDlg" hidden></div>
+    </div>`;
+}
+// token-treasury.js's own markup (§4.18) — light by default (.tt-light), dark via the
+// theme-switch buttons (saved per browser in jeem.tt.theme, same as the prototype).
+function interactiveTreasurySkeletonHtml(d) {
+  return `<div class="tt tt-light" id="ttRoot">
+      <div class="tt-hd"><h1>${esc(d.name || 'خزينة الأصول الرقمية')}</h1><div class="theme-sw" role="group" aria-label="الثيم"><button type="button" data-theme-set="light" aria-pressed="true">فاتح</button><button type="button" data-theme-set="dark" aria-pressed="false">داكن</button></div></div>
+      <section class="tt-c tt-ops" style="--i:0"><header><h2>إجمالي الأصول التشغيلية</h2><label><span class="sr-only">العملة</span><select id="ttCur"><option value="USD">بالدولار</option><option value="SAR">بالريال</option></select></label></header>
+        <div class="tt-big"><span class="num" id="ttTot">0</span><small id="ttTotU">USD</small></div>
+        <div class="tt-sub"><span>توزيع أصول المراجحة · اضغط أصلًا لتمييزه</span><div id="ttAs"></div></div></section>
+      <section class="tt-c tt-rev" style="--i:1"><header><h2>الإيراد</h2><label><span class="sr-only">الفترة</span><select id="ttRevSel"><option value="w">أسبوعي</option><option value="m">شهري</option><option value="y">سنوي</option></select></label></header>
+        <div class="pv g"><small>الربح</small><b class="num" id="ttProfit">$0</b></div><div class="pv y"><small>العائد</small><b class="num" id="ttYield">0%</b></div></section>
+      <div class="tt-side" id="ttSide"></div>
+      <section class="tt-c tt-part" style="--i:2"><header><h2>نمو مشاركة المستخدمين</h2></header><div id="ttPart" role="group" aria-label="المستخدمون حسب الربع"></div></section>
+      <section class="tt-c tt-revc" style="--i:3"><header><h2>منحنى الإيراد</h2><div class="tt-seg" role="group" aria-label="الفترة"><button type="button" data-revp="w" aria-pressed="true">أسبوعي</button><button type="button" data-revp="m" aria-pressed="false">شهري</button><button type="button" data-revp="y" aria-pressed="false">سنوي</button></div></header><div class="tt-plot" id="ttRev"></div></section>
+      <section class="tt-c tt-sup" style="--i:4"><header><h2>المحروق مقابل المعروض المتداول</h2></header><div id="ttSup"></div></section>
+      <section class="tt-c tt-tvl" style="--i:5"><header><h2>تاريخ القيمة المقفلة</h2></header><div class="hv"><b class="num" id="ttTvlV">$0</b><small id="ttTvlD"></small></div><div class="tt-plot" id="ttTvl"></div></section>
+      <section class="tt-c tt-sim" style="--i:6"><header><h2>محاكاة الفائدة المركبة</h2></header><div class="tt-get"><span>ستحصل على</span><b class="num" id="ttGet">$0</b></div><div class="tt-split" id="ttSplit" role="img" aria-label="نسبة المودَع إلى الأرباح"></div><span id="ttSplitL"></span><div id="ttSim"></div></section>
+    </div>`;
+}
+// crm-pipeline.js's own markup (§4.19) — Kanban board, team filter, add-customer dialog.
+function interactiveCrmSkeletonHtml(d) {
+  return `<div class="cr" id="crRoot">
+      <div class="cr-band">
+        <div class="cr-bar">
+          <label class="cr-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن عميل</span><input type="search" id="crQ" placeholder="ابحث عن عميل…"></label>
+          <span class="sp"></span>
+          <label><span class="sr-only">تصفية</span><select id="crFlt"><option value="all">كل المواعيد</option><option value="late">المتأخرة</option><option value="none">بلا موعد</option></select></label>
+          <button type="button" class="cr-tb" data-me aria-pressed="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>عملائي</button>
+          <button type="button" class="btn btn-dark" data-add><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة عميل</button>
+        </div>
+        <div class="cr-kpis">
+          <div class="cr-k"><h3>عملاء جدد</h3><div id="crNew" role="group" aria-label="العملاء الجدد يوميًا"></div></div>
+          <div class="cr-k"><div id="crGauge"></div></div>
+          <div class="cr-n"><b class="num" id="crTasks">0</b><button type="button" class="lk" data-go="nego"><span>مهام<br>قيد التنفيذ</span><svg class="icon" aria-hidden="true"><use href="#i-chev-left"/></svg></button></div>
+          <div class="cr-n"><b class="num" id="crPre">$0</b><button type="button" class="lk" data-go="won"><span>دفعات مقدمة<br>من العملاء</span><svg class="icon" aria-hidden="true"><use href="#i-chev-left"/></svg></button></div>
+        </div>
+      </div>
+      <div class="cr-team"><span>الفريق:</span><div id="crMem" role="group" aria-label="تصفية حسب المسؤول"></div><span class="sp" style="flex:1"></span><span><span class="num" id="crCount">0</span> عميل ظاهر</span></div>
+      <div id="crBoard"></div>
+      <span class="cr-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>اسحب البطاقات بين المراحل (أو Shift + الأسهم)، اضغط بطاقة لتفاصيلها، واستخدم ⋮ للنقل أو التعيين أو الأرشفة.</span>
+      <div id="crDlg" hidden></div>
+    </div>`;
+}
+// team-tasks.js's own markup (§4.20) — فاتح افتراضيًا + داكن بمفتاح tm-dark؛ تاريخ الترويسة
+// واليوم الحالي والوقت الحي كلها حقيقية (تُحسب في المحرك نفسه، مش نص ثابت هنا).
+function interactiveTeamTasksSkeletonHtml(d) {
+  return `<div class="tm" id="tmRoot">
+      <div class="tm-main">
+        <div class="tm-hd"><h1>${esc(d.name || 'لوحة الفريق')}</h1><span class="clk"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span id="tmDate"></span> · <b class="num" id="tmClock"></b></span><div class="theme-sw" role="group" aria-label="الثيم"><button type="button" data-theme-set="light" aria-pressed="true">فاتح</button><button type="button" data-theme-set="dark" aria-pressed="false">داكن</button></div></div>
+        <div class="tm-top">
+          <section class="tm-card" style="--i:0" aria-label="المهمة الحالية"><div id="tmTimer"></div></section>
+          <section class="tm-card" style="--i:1"><header><h2>مهام اليوم</h2><span class="n num" id="tmTaskN">0</span><span class="sp"></span><button type="button" class="tm-lnk" data-manage>إدارة<svg class="icon" aria-hidden="true"><use href="#i-chev-left"/></svg></button></header><ul id="tmTasks"></ul></section>
+          <section class="tm-card" style="--i:2"><header><h2>اجتماعات اليوم</h2><span class="n num" id="tmMeetN">0</span><span class="sp"></span><button type="button" class="tm-lnk" data-manage>عرض الكل<svg class="icon" aria-hidden="true"><use href="#i-chev-left"/></svg></button></header><div id="tmMeet"></div></section>
+        </div>
+        <div class="tm-calbar"><h2>المهام</h2><label><span class="sr-only">الأولوية</span><select id="tmPri"><option value="all">كل الأولويات</option><option value="high">عالية</option><option value="med">متوسطة</option><option value="low">منخفضة</option><option value="done">منجزة</option></select></label>
+          <div class="tm-seg" role="group" aria-label="العرض"><button type="button" data-view="today" aria-pressed="false">اليوم</button><button type="button" data-view="week" aria-pressed="true">الأسبوع</button><button type="button" data-view="month" aria-pressed="false">الشهر</button></div></div>
+        <div class="tm-calwrap"><div id="tmCal" class="tm-cal"></div><div id="tmEv" hidden role="dialog" aria-label="تفاصيل المهمة"></div></div>
+      </div>
+      <aside class="tm-aside">
+        <section class="tm-card" style="--i:3"><header><h2>النشاط</h2><span class="sp"></span></header><div class="tm-actv"><b class="num" id="tmActV">0%</b></div><div id="tmAct" role="group" aria-label="النشاط اليومي"></div></section>
+        <section class="tm-card" style="--i:4"><header><h2>المشاريع المنجز عليها</h2></header><div id="tmProj"></div></section>
+        <section class="tm-card" style="--i:5"><header><h2>التذكيرات</h2><span class="sp"></span><button type="button" class="tm-lnk" data-manage>إدارة<svg class="icon" aria-hidden="true"><use href="#i-chev-left"/></svg></button></header><ul id="tmRem"></ul></section>
+      </aside>
+      <span class="tm-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>شغّل أو أوقف المؤقت، بدّل المهمة من «مهام اليوم»، اضغط أي مهمة في التقويم لتفاصيلها، وخط «الآن» يتحرك حيًا.</span>
+    </div>`;
+}
+// time-tracking.js's own markup (§4.21) — فاتح، ألوان المشاريع.
+function interactiveTimeTrackingSkeletonHtml(d) {
+  return `<div class="tk" id="tkRoot">
+      <div class="tk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'تتبع الوقت')}</h1><small>ساعات الفريق حسب المشروع والشخص والإجازات</small></div>
+        <div class="tk-seg" role="group" aria-label="الفترة"><button type="button" data-per="day" aria-pressed="false">يوم</button><button type="button" data-per="week" aria-pressed="false">أسبوع</button><button type="button" data-per="month" aria-pressed="true">شهر</button></div>
+        <div class="tk-nav"><button type="button" class="ib" data-nav="-1" aria-label="الشهر السابق"><svg class="icon icon-sm flip" aria-hidden="true"><use href="#i-chev-left"/></svg></button><b id="tkMonth" aria-live="polite"></b><button type="button" class="ib" data-nav="1" aria-label="الشهر التالي"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg></button></div>
+        <button type="button" class="tk-lnk" id="tkCur" hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>العودة للشهر الحالي</button>
+        <span class="sp"></span>
+        <span class="tk-scope"><span id="tkScope"></span><button type="button" id="tkClear" hidden aria-label="إلغاء التصفية"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg></button></span>
+        <button type="button" class="btn" data-export><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg>تصدير</button>
+      </div>
+      <div class="tk-body">
+        <div class="tk-kpis" id="tkKpis"></div>
+        <div class="tk-row">
+          <section class="tk-card" style="--i:1"><header><h2>ملخص الوقت المسجّل</h2></header><div class="tk-dn"><div id="tkDonut" class="tk-donut"></div><div id="tkLeg" class="tk-leg" role="group" aria-label="المشاريع"></div></div></section>
+          <section class="tk-card" style="--i:2"><header><h2>إحصاءات الوقت</h2><span class="sp"></span><small class="mut">ساعات/وحدة</small></header><div class="tk-chart"><div id="tkStatsY" class="ya"></div><div id="tkStats" class="cols"></div></div></section>
+        </div>
+        <section class="tk-card" style="--i:3"><header><h2>الإجمالي حسب الشخص</h2><span class="sp"></span><small class="mut">اضغط شخصًا لتصفية اللوحة</small></header><div id="tkPpl" class="tk-ppl"></div></section>
+        <div class="tk-row b">
+          <section class="tk-card" style="--i:4"><header><h2>تفصيل المشاريع</h2></header><div id="tkProj" class="tk-tbl"></div></section>
+          <section class="tk-card" style="--i:5"><header><h2>جدول الإجازات</h2></header><div id="tkLeave" class="tk-leave"></div></section>
+        </div>
+      </div>
+      <span class="tk-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>بدّل الفترة أو الشهر، واضغط مشروعًا أو شخصًا لتصفية كل الرسوم معًا.</span>
+    </div>`;
+}
+
+function interactiveSaasSkeletonHtml(d) {
+  return `<div class="dk sm" id="smRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'الإيرادات المتكررة والاحتفاظ')}</h1><small>هل ينمو الدخل الشهري لأننا نكسب، أم لأننا نسبق الإلغاء؟</small></div>
+        <span class="sp"></span>
+        <div class="dk-seg" data-seg="rng" role="group" aria-label="المدى"><button type="button" data-v="13" aria-pressed="true">آخر 13 أسبوعًا</button><button type="button" data-v="26" aria-pressed="false">آخر 26 أسبوعًا</button></div>
+      </div>
+      <div class="dk-kpis" id="smKpis"></div>
+      <div class="dk-grid">
+        <section class="dk-card" id="smWfC" style="--sp:7;--i:1"><header><h2>من أين جاء الدخل الشهري وإلى أين ذهب</h2><p>اضغط أي حركة لقراءة تعريفها</p></header><div id="smWf"></div><div class="sm-def" id="smDef" aria-live="polite"></div></section>
+        <section class="dk-card" id="smNetC" style="--sp:5;--i:2"><header><h2>صافي الدخل الجديد أسبوعيًا</h2><p>الأسبوع السالب مميز بالأحمر</p></header><div id="smNet"></div></section>
+        <section class="dk-card" id="smCohC" style="--sp:7;--i:3"><header><h2>الاحتفاظ حسب دفعة الاشتراك</h2><span class="sp"></span><div class="dk-seg sm" data-seg="coh" role="group" aria-label="نوع الاحتفاظ"><button type="button" data-v="logo" aria-pressed="true">الحسابات</button><button type="button" data-v="rev" aria-pressed="false">الإيراد</button></div><p>كل صف دفعة شهر الاشتراك · الأعمدة عمر الدفعة بالأشهر</p></header><div id="smCoh"></div></section>
+        <section class="dk-card" id="smPlanC" style="--sp:5;--i:4"><header><h2>مزيج الباقات: العملاء مقابل الإيراد</h2></header><div id="smPlan"></div><div class="dk-tbl" id="smPlanT"></div></section>
+        <section class="dk-card" style="--sp:12;--i:5"><header><h2>كيف تقرأ هذه اللوحة</h2><p>اضغط أي ملاحظة لإبراز الرسم الذي يثبتها</p></header><div class="sm-ins" id="smIns"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بدّل المدى، واضغط حركة في الشلال أو دفعة في جدول الاحتفاظ لقراءة التفاصيل.</span>
+    </div>`;
+}
+
+function interactiveStudioSkeletonHtml(d) {
+  return `<div class="dk ps" id="psRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'استوديو المشاريع')}</h1><small>حالة المشاريع ومهام اليوم والجدول الزمني وتواصل الفريق</small></div>
+        <span class="sp"></span>
+        <span class="dk-scope" id="psScope"></span>
+      </div>
+      <div class="ps-grid">
+        <div class="ps-main">
+          <div class="ps-top">
+            <section class="dk-card" style="--i:0"><header><h2>حالة المشاريع</h2><span class="sp"></span><div class="dk-seg sm" data-seg="view" role="group" aria-label="العرض"><button type="button" data-v="grid" aria-pressed="true">بطاقات</button><button type="button" data-v="list" aria-pressed="false">قائمة</button></div></header><div id="psStatus"></div></section>
+            <section class="dk-card" style="--i:1"><header><h2>مهام اليوم</h2><span class="sp"></span><span class="dk-chip" id="psTaskN"></span></header><ul class="ps-tasks" id="psTasks"></ul></section>
+          </div>
+          <section class="dk-card" style="--i:2"><header><h2>الجدول الزمني</h2><span class="sp"></span><div class="dk-seg sm" data-seg="zoom" role="group" aria-label="مقياس الزمن"><button type="button" data-v="1" aria-pressed="true">يومي</button><button type="button" data-v="0.55" aria-pressed="false">مضغوط</button></div></header><div class="ps-tl" id="psTl"></div></section>
+        </div>
+        <aside class="ps-side">
+          <section class="dk-card" style="--i:3"><header><h2>تواصل الفريق</h2><span class="sp"></span></header>
+            <div class="ps-chat" id="psChat" aria-live="polite"></div>
+            <form class="ps-send" id="psSend"><input name="m" placeholder="اكتب رسالة…" aria-label="رسالة" autocomplete="off"><button type="submit" class="dk-btn pri" aria-label="إرسال"><svg class="icon icon-sm flip" aria-hidden="true"><use href="#i-send"/></svg></button></form>
+          </section>
+          <section class="dk-card" style="--i:4"><header><h2>أعضاء الفريق</h2></header><ul class="ps-team" id="psTeam"></ul></section>
+        </aside>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط حالة أو عضوًا لتصفية الجدول الزمني، شغّل الرسالة الصوتية، وأرسل رسالة للفريق.</span>
+    </div>`;
+}
+
+function interactiveCampaignSkeletonHtml(d) {
+  return `<div class="dk cp" id="cpRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'تفاصيل المشروع')}</h1><small>نظرة كاملة على الحملة وإدارتها</small></div>
+      </div>
+      <div class="cp-bar">
+        <div><b class="cp-name">حملة</b> <span class="dk-chip ok" id="cpStatus">نشطة</span><small>تاريخ الاستحقاق <span class="num" id="cpDue">—</span> · العائد على الإنفاق <b class="num" id="cpRoas">—</b></small></div>
+        <span class="sp"></span>
+        <button type="button" class="dk-btn" data-act="edit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg>تعديل الحملة</button>
+        <button type="button" class="dk-btn" data-act="add"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة مهمة</button>
+        <button type="button" class="dk-btn" data-act="report"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>إنشاء تقرير</button>
+        <button type="button" class="dk-btn" data-act="archive" aria-pressed="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg><span>أرشفة</span></button>
+      </div>
+      <div class="dk-kpis dk-count" id="cpKpis"></div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:8;--i:1"><header><h2>الأداء والتوقعات</h2><span class="sp"></span><div class="dk-seg sm" data-seg="rng" role="group" aria-label="المدى"><button type="button" data-v="15" aria-pressed="true">آخر 15 يومًا</button><button type="button" data-v="30" aria-pressed="false">آخر 30 يومًا</button></div><p>الإنفاق والتحويلات في رسمين متزامنين بمحور مشترك للزمن · المتقطع = توقع 7 أيام</p></header><div class="cp-sm"><div><small>الإنفاق اليومي (ر.س)</small><div id="cpSpend"></div></div><div><small>التحويلات اليومية</small><div id="cpConv"></div></div></div><div id="cpLeg"></div></section>
+        <section class="dk-card" style="--sp:4;--i:2"><header><h2>سجل النشاط</h2><p>آخر التغييرات والتحديثات</p></header><ul class="cp-feed" id="cpFeed" aria-live="polite"></ul></section>
+        <section class="dk-card" style="--sp:8;--i:3"><header><h2>مهام الحملة</h2><p>تقدم المهام ومواعيدها · اضغط الحالة لتغييرها</p></header><div class="dk-tbl" id="cpTasks"></div>
+          <form class="cp-add" id="cpAdd" hidden><input name="t" required placeholder="اسم المهمة" aria-label="اسم المهمة"><select name="a" aria-label="المسؤول"><option>سارة</option><option>علي</option><option>منى</option><option>خالد</option></select><input name="d" type="date" aria-label="تاريخ الاستحقاق"><button type="submit" class="dk-btn pri">إضافة</button><button type="button" class="dk-btn" data-act="cancel">إلغاء</button></form>
+          <button type="button" class="cp-addbtn" data-act="add">+ إضافة مهمة</button></section>
+        <section class="dk-card" style="--sp:4;--i:4"><header><h2>الملفات والمرفقات</h2><span class="sp"></span><label class="dk-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg>رفع<input type="file" id="cpFile" multiple hidden></label><p>مستندات وموارد الحملة</p></header><ul class="cp-files" id="cpFiles"></ul></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>مرّر على أحد الرسمين لتتزامن القراءة، غيّر حالة المهام، أضف مهمة أو ارفع ملفًا.</span>
+    </div>`;
+}
+
+function interactiveFundingSkeletonHtml(d) {
+  return `<div class="dk tf" id="tfRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'التمويل والسيولة النقدية')}</h1><small>جدول الاستحقاقات، تكلفة التمويل، المركز النقدي وحركة اليوم</small></div>
+        <span class="sp"></span>
+        <span class="tf-live" id="tfLive"><i></i>تحديث مباشر</span>
+        <button type="button" class="dk-btn" data-pause aria-pressed="false">إيقاف التحديث</button>
+      </div>
+      <div class="tf-tick" id="tfTick" role="list" aria-label="أنظمة المدفوعات"></div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:7;--i:1"><header><h2>جدول الاستحقاقات</h2><span class="sp"></span><div class="dk-seg sm" data-seg="yr" role="group" aria-label="السنة"></div></header><div class="tf-rates" id="tfRates"></div><div id="tfMat"></div><div id="tfMatLeg"></div></section>
+        <section class="dk-card" style="--sp:5;--i:2"><header><h2>أسعار التمويل بالجملة</h2><p>العائد السنوي % · اضغط عنصر المفتاح لإخفائه</p></header><div id="tfWh"></div><div class="dk-leg tf-tg" id="tfWhLeg" role="group" aria-label="السلاسل"></div></section>
+        <section class="dk-card" style="--sp:7;--i:3"><header><h2>المركز النقدي</h2></header><div class="tf-cash" id="tfCash"></div></section>
+        <section class="dk-card" style="--sp:5;--i:4"><header><h2>الأرصدة حسب البنك</h2><p>حسب الفترة المختارة</p></header><div class="tf-bank" id="tfBank"></div></section>
+        <section class="dk-card" style="--sp:12;--i:5"><header><h2>نشاط اليوم</h2><span class="sp"></span><small class="mut">الأعمدة = اليوم · الخلفية الرمادية = أمس في نفس الساعة</small></header><div id="tfIntra"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بطاقات الأنظمة تتحدث حيًا، واضغط شهرًا أو بنكًا لتفاصيله.</span>
+    </div>`;
+}
+
+function interactiveConstructionSkeletonHtml(d) {
+  return `<div class="dk cc" id="ccRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'إدارة أعمال المقاولات')}</h1><small>الطلبات وعروض الأسعار والأعمال والمواعيد والمدفوعات</small></div>
+        <span class="sp"></span>
+        <div class="dk-seg" data-seg="per" role="group" aria-label="الفترة"><button type="button" data-v="7" aria-pressed="true">آخر 7 أيام</button><button type="button" data-v="30" aria-pressed="false">آخر 30 يومًا</button></div>
+      </div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:4;--md:6;--i:0"><header><h2>الطلبات</h2><span class="sp"></span><button type="button" class="cc-rf" data-refresh="req" aria-label="تحديث">↻</button></header><div id="ccReq"></div></section>
+        <section class="dk-card" style="--sp:4;--md:6;--i:1"><header><h2>عروض الأسعار</h2><span class="sp"></span><button type="button" class="cc-rf" data-refresh="quo" aria-label="تحديث">↻</button></header><div id="ccQuo"></div></section>
+        <section class="dk-card" style="--sp:4;--md:12;--i:2"><header><h2>الأعمال</h2><span class="sp"></span><button type="button" class="cc-rf" data-refresh="job" aria-label="تحديث">↻</button></header><div id="ccJob"></div></section>
+        <section class="dk-card" style="--sp:7;--i:3"><header><h2>مواعيد اليوم</h2><span class="sp"></span><input type="search" id="ccQ" placeholder="ابحث عن عميل…" aria-label="بحث"></header><div class="cc-tabs" id="ccTabs" role="tablist" aria-label="حالة المواعيد"></div><div class="dk-tbl" id="ccApp"></div></section>
+        <section class="dk-card" style="--sp:5;--i:4"><header><h2>المدفوعات</h2><span class="sp"></span><label class="cc-bank"><select id="ccBank" aria-label="البنك"></select></label><small class="mut" id="ccLastUpd"></small></header><div id="ccPay"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط فئة لإبرازها، بدّل تبويب المواعيد، وحوّل الرصيد فورًا من المدفوعات.</span>
+    </div>`;
+}
+
+function interactiveBoardSkeletonHtml(d) {
+  return `<div class="dk tb" id="tbRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'لوحة مهام المشاريع')}</h1><small>اسحب المهمة بين الأعمدة، أو استخدم الأسهم على لوحة المفاتيح لنقلها</small></div>
+        <span class="sp"></span>
+        <span class="dk-avs" id="tbTeamAvs" aria-hidden="true"></span>
+      </div>
+      <div class="tb-projs" id="tbProjs" role="group" aria-label="المشاريع"></div>
+      <div class="tb-tools">
+        <b>تقرير المهام</b>
+        <input type="search" id="tbQ" placeholder="ابحث عن مهمة…" aria-label="بحث">
+        <label class="tb-sel">ترتيب<select id="tbSort"><option value="due">الاستحقاق</option><option value="pri">الأولوية</option><option value="prog">التقدم</option></select></label>
+        <div class="dk-seg sm" data-seg="pri" role="group" aria-label="تصفية الأولوية"><button type="button" data-v="all" aria-pressed="true">كل الأولويات</button><button type="button" data-v="high" aria-pressed="false">عالية</button><button type="button" data-v="med" aria-pressed="false">متوسطة</button><button type="button" data-v="low" aria-pressed="false">منخفضة</button></div>
+        <span class="sp"></span>
+        <button type="button" class="dk-btn pri" data-new><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إنشاء مهمة</button>
+      </div>
+      <div class="tb-sum" id="tbSum" aria-live="polite"></div>
+      <div class="tb-board" id="tbBoard"></div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>ركّز على بطاقة واضغط ← أو → لنقلها بين الأعمدة.</span>
+    </div>`;
+}
+
+function interactiveLeadsSkeletonHtml(d) {
+  return `<div class="dk cl" id="clRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'العملاء المحتملون')}</h1><small>مصادر العملاء الجدد والطلبات الواردة ونشاط الفريق</small></div>
+        <span class="sp"></span>
+        <div class="dk-seg" data-seg="per" role="group" aria-label="الفترة"></div>
+        <span class="dk-scope" id="clScope"></span>
+      </div>
+      <div class="dk-grid">
+        <section class="dk-card cl-pack" style="--sp:5;--i:0"><header><h2>العملاء الجدد حسب المصدر</h2><span class="sp"></span><label class="cl-zoom"><span class="sr-only">التكبير</span><select id="clZoom"><option value="0.9">90%</option><option value="1" selected>100%</option><option value="1.15">115%</option></select></label></header><div id="clPack"></div></section>
+        <div class="cl-right" style="--sp:7">
+          <div class="dk-kpis" id="clKpis"></div>
+          <section class="dk-card" style="--i:2"><header><h2>الطلبات الواردة</h2><span class="sp"></span><div class="dk-seg sm" data-seg="tag" role="group" aria-label="تصفية الوسم"><button type="button" data-v="all" aria-pressed="true">الكل</button><button type="button" data-v="new" aria-pressed="false">عميل جديد</button><button type="button" data-v="pri" aria-pressed="false">أولوية</button><button type="button" data-v="ret" aria-pressed="false">عائد</button></div></header><div id="clReq"></div></section>
+        </div>
+        <section class="dk-card" style="--sp:12;--i:3"><header><h2>نشاط الفريق</h2><span class="sp"></span><small class="mut">عدد التفاعلات لكل ساعة · الأيام من اليمين (الأقدم) لليسار (الأحدث)</small></header><div id="clAct"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>اضغط فقاعة مصدر لتصفية الطلبات، وانقل أي طلب للمرحلة التالية من قائمته.</span>
+    </div>`;
+}
+
+function interactiveRiskSkeletonHtml(d) {
+  return `<div class="dk sr" id="srRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1 id="srTitle">نظرة تنفيذية على سلسلة الإمداد</h1><small>الأداء التشغيلي ومخاطر الموردين والمخزون</small></div>
+        <span class="sp"></span>
+        <div class="sr-tabs" role="tablist" aria-label="الصفحات"><button type="button" role="tab" data-pg="ov" aria-selected="true">نظرة عامة</button><button type="button" role="tab" data-pg="sup" aria-selected="false">الموردون</button><button type="button" role="tab" data-pg="inv" aria-selected="false">المخزون</button></div>
+        <label class="sr-sel" id="srRegW" hidden>منطقة المورد<select id="srReg"><option value="all">الكل</option></select></label>
+        <div class="dk-seg" data-seg="yr" role="group" aria-label="السنة"></div>
+        <button type="button" class="dk-btn" data-reset aria-label="إعادة ضبط"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg></button>
+      </div>
+      <div class="dk-body" id="srBody"></div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بدّل السنة لترى الخلاصة تتغير، واضغط منطقة في الجدول أو موردًا في المصفوفة لتصفية الرسوم.</span>
+    </div>`;
+}
+
+function interactiveAnalysisSkeletonHtml(d) {
+  return `<div class="dk ca" id="caRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1>${esc(d.name || 'تحليل مسار المبيعات')}</h1><small>العملاء المحتملون حتى الإغلاق · اضغط أي عنصر لتصفية كل اللوحة</small></div>
+        <span class="sp"></span>
+        <span class="dk-scope" id="caScope" aria-live="polite"></span>
+        <button type="button" class="dk-btn" id="caReset" hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>إلغاء كل التصفيات</button>
+      </div>
+      <div class="dk-kpis dk-count" id="caKpis"></div>
+      <div class="dk-grid">
+        <section class="dk-card" style="--sp:5;--i:1"><header><h2>قيمة الصفقات المغلقة</h2><span class="sp"></span><div class="dk-seg sm" data-seg="gran" role="group" aria-label="الدقة الزمنية"><button type="button" data-v="m" aria-pressed="true">شهري</button><button type="button" data-v="w" aria-pressed="false">أسبوعي</button></div><p id="caValNote"></p></header><div id="caVal"></div></section>
+        <section class="dk-card" style="--sp:7;--i:2"><header><h2>مسار حالات العملاء</h2><span class="sp"></span><div class="dk-seg sm" data-seg="fmt" role="group" aria-label="صيغة التسمية"><button type="button" data-v="first" aria-pressed="true">% من الأول</button><button type="button" data-v="prev" aria-pressed="false">% من السابق</button><button type="button" data-v="delta" aria-pressed="false">الفاقد عن السابق</button></div><p id="caFnNote"></p></header><div id="caFn"></div></section>
+        <section class="dk-card" style="--sp:5;--i:3"><header><h2>صفقات مغلقة مقابل عملاء فُقدوا</h2></header><div id="caChurn"></div><div id="caChurnLeg"></div></section>
+        <section class="dk-card" style="--sp:4;--i:4"><header><h2>الصفقات حسب حجم المنشأة</h2></header><div id="caSize"></div></section>
+        <section class="dk-card" style="--sp:3;--i:5;--md:12"><header><h2>الصفقات حسب القطاع</h2></header><div id="caInd"></div></section>
+        <section class="dk-card" style="--sp:5;--i:6"><header><h2>الصفقات حسب المدينة</h2><span class="sp"></span><small class="mut">حجم الدائرة = عدد الصفقات</small></header><div id="caMap"></div></section>
+        <section class="dk-card" style="--sp:7;--i:7"><header><h2>الصفقات حسب مندوب المبيعات</h2></header><div id="caAgents"></div></section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>كل ضغطة تضيف تصفية، والضغطة الثانية على نفس العنصر تلغيها.</span>
+    </div>`;
+}
+
+function interactiveCommandSkeletonHtml(d) {
+  return `<div class="dk sc2" id="scRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1 id="scTitle">${esc(d.name || 'مركز قيادة سلسلة الإمداد')}</h1><small id="scSub">موثوقية التسليم وأداء الإيراد وأنماط الطلب عبر كل القنوات</small></div>
+        <span class="sp"></span>
+        <div class="sc2-tabs" role="tablist" aria-label="الصفحات"><button type="button" role="tab" data-pg="cmd" aria-selected="true">مركز القيادة</button><button type="button" role="tab" data-pg="risk" aria-selected="false">رادار المخاطر</button><button type="button" role="tab" data-pg="profit" aria-selected="false">أثر الربحية</button></div>
+        <div class="dk-seg" data-seg="ord" role="group" aria-label="نوع الطلبات"><button type="button" data-v="reg" aria-pressed="true">طلبات اعتيادية</button><button type="button" data-v="promo" aria-pressed="false">طلبات ترويجية</button></div>
+        <button type="button" class="dk-btn" data-reset><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>إعادة ضبط</button>
+      </div>
+      <div class="dk-kpis" id="scKpis"></div>
+      <div class="dk-body" id="scBody"></div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بيانات تجريبية · اضغط عمودًا للنزول من السنة إلى الربع ثم الشهر، واضغط «تأخر» في الحلقة لتفصيله حسب الفئة</span>
+    </div>`;
+}
+
+function interactiveFinanceSkeletonHtml(d) {
+  return `<div class="dk fo" id="foRoot">
+      <div class="dk-hd">
+        <div class="ttl"><h1 id="foHi">صباح الخير</h1><small>نظرة سريعة على أداء أعمالك المالية</small></div>
+        <span class="sp"></span>
+        <label class="fo-sel">عملة التقرير<select id="foCur"><option value="SAR">ر.س</option><option value="USD">دولار</option></select></label>
+        <span class="fo-date" id="foDate"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-calendar"/></svg>تاريخ التقرير <b class="num">—</b></span>
+        <button type="button" class="dk-btn pri" data-export><svg class="icon icon-sm" aria-hidden="true"><use href="#i-download"/></svg>تصدير البيانات</button>
+      </div>
+      <div class="dk-grid">
+        <div class="fo-kp" style="--sp:3;--md:12" id="foKpis" role="group" aria-label="المؤشرات"></div>
+        <section class="dk-card" style="--sp:9;--i:1"><header><h2>رؤى التدفق النقدي</h2><span class="sp"></span><div class="dk-seg sm" data-seg="cf" role="group" aria-label="الفترة"><button type="button" data-v="d" aria-pressed="true">يومي</button><button type="button" data-v="w" aria-pressed="false">أسبوعي</button><button type="button" data-v="m" aria-pressed="false">شهري</button></div></header><div id="foCf"></div><div class="dk-leg fo-tg" id="foCfLeg" role="group" aria-label="إظهار السلاسل"></div></section>
+        <section class="dk-card" style="--sp:7;--i:2"><header><h2>متابعة الأرباح والخسائر</h2><span class="sp"></span><div class="dk-seg sm" data-seg="pl" role="group" aria-label="الفترة"><button type="button" data-v="m" aria-pressed="false">شهري</button><button type="button" data-v="w" aria-pressed="false">أسبوعي</button><button type="button" data-v="d" aria-pressed="false">يومي</button><button type="button" data-v="h" aria-pressed="true">بالساعة</button></div></header><div id="foPl"></div><div id="foPlLeg"></div></section>
+        <section class="dk-card" style="--sp:5;--i:3"><header><h2>المخزون حسب المنطقة</h2><span class="sp"></span><button type="button" class="dk-btn" id="foFocus" hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>فك التركيز</button></header><div id="foMap" class="fo-map"></div><div id="foMapInfo" class="fo-info" aria-live="polite"></div></section>
+        <section class="dk-card" style="--sp:12;--i:4"><header><h2>مدير العمليات الذكي</h2><span class="sp"></span><button type="button" class="dk-btn" data-print><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>طباعة</button></header>
+          <div class="fo-pm">
+            <div class="fo-list"><header><b>أتمتة مؤشرات الرؤى</b><button type="button" class="dk-lnk" data-add="ins" aria-label="إضافة">+</button></header><input type="search" placeholder="ابحث في البيانات المالية…" data-q="ins" aria-label="بحث"><ul id="foIns"></ul></div>
+            <div class="fo-flow" id="foFlow"></div>
+            <div class="fo-list"><header><b>أتمتة إدارة الاستثناءات</b><button type="button" class="dk-lnk" data-add="exc" aria-label="إضافة">+</button></header><input type="search" placeholder="ابحث في البيانات المالية…" data-q="exc" aria-label="بحث"><ul id="foExc"></ul></div>
+          </div>
+        </section>
+      </div>
+      <span class="dk-note"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>بيانات تجريبية · بدّل الفترة والعملة، أخفِ أو أظهر السلاسل من المفتاح، واضغط منطقة للتركيز عليها أو مرحلة في مخطط العمليات</span>
+    </div>`;
+}
+
+// §3's empty-state rule: a template with no linked source shows this instead of an error,
+// with a direct path to link one — never fabricated/demo numbers outside the gallery preview.
+function interactiveEmptyStateHtml(d, missingSources) {
+  return `<div class="empty"><div>
+      <div class="big">${esc(d.name || 'لوحة تفاعلية')}</div>
+      <div>لم يتم ربط مصادر البيانات اللازمة لهذه اللوحة بعد${(missingSources || []).length ? ': ' + missingSources.map(esc).join('، ') : ''}.</div>
+      <button type="button" class="btn btn-primary" id="interactive-link-source-btn" style="margin-top:14px">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>ربط مصدر بيانات
+      </button>
+    </div></div>`;
+}
+
+// "استخدم هذا النموذج" for an interactive (RenderKind) template — creates the Active
+// dashboard directly (POST /api/history/from-template), skipping the AI chat build
+// pipeline entirely, then opens it so renderDashboard()'s branch above mounts its engine.
+async function useInteractiveTemplate(d) {
+  closeDashGallery();
+  setChatMode('dashboard');
+  showScreen('chat');
+  el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
+  let res, json;
+  try {
+    res = await fetch('/api/history/from-template', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ templateId: d.id }),
+    });
+    json = await res.json().catch(() => null);
+  } catch { res = null; json = null; }
+  if (!res || !res.ok || !json?.id) {
+    el.dash.innerHTML = `<div class="empty"><div>
+        <div class="big">تعذّر إنشاء اللوحة</div>
+        <div>${esc(json?.error || 'حدث خطأ غير متوقع — حاول مرة أخرى.')}</div>
+      </div></div>`;
+    return;
+  }
+  await loadHistory();
+  openHistoryEntry(json.id);
+}
+
+// ---------- §1.7/§9: المشاهد لا يرى أزرار التنفيذ في اللوحات التفاعلية ----------
+// قائمة واحدة مركزية بعناصر التنفيذ (إضافة، تعديل، حذف، نقل، إسناد، تشغيل مؤقت، إرسال...)
+// لكل محرك، محصورة بمعرّف جذره — بدل تعديل ترميز كل محرك على حدة. عرض فقط: الفلاتر
+// والتبويبات والنزول والتصدير تبقى متاحة للمشاهد (يرى ويتفاعل فقط).
+const INTERACTIVE_EXEC_HIDE = [
+  '#whRoot [data-new]', '#whRoot [data-adj]', '#whRoot [data-re]', '#whRoot [data-call]',
+  '#lpRoot [data-add]', '#lpRoot [data-addany]', '#lpRoot [data-claim]', '#lpRoot [data-rm]', '#lpRoot [data-create]',
+  '#crRoot [data-add]', '#crRoot [data-menu]', '#crRoot [data-mv]', '#crRoot [data-mine]', '#crRoot [data-arch]',
+  '#tmRoot [data-toggle]', '#tmRoot [data-act]', '#tmRoot [data-fav]', '#tmRoot [data-done]', '#tmRoot [data-meet]', '#tmRoot [data-manage]',
+  '#psRoot #psSend',
+  '#cpRoot [data-act="edit"]', '#cpRoot [data-act="add"]', '#cpRoot [data-act="archive"]', '#cpRoot #cpAdd', '#cpRoot label:has(#cpFile)',
+  '#ccRoot [data-done]', '#ccRoot [data-payout]',
+  '#tbRoot [data-new]', '#tbRoot [data-addpj]', '#tbRoot #tbNew',
+  '#clRoot [data-menu]', '#clRoot [data-move]', '#clRoot [data-pri]',
+  '#foRoot [data-add]', '#foRoot [data-del]',
+  '#wfRoot [data-pin]',
+];
+// عناصر تعرض حالة يجب أن تبقى مرئية لكنها تغيّرها عند الضغط — تُقفل بدل أن تُخفى.
+const INTERACTIVE_EXEC_LOCK = ['#tmRoot input[data-rem]', '#psRoot input[data-task]', '#cpRoot .cp-st'];
+// نقل البطاقات بلوحة المفاتيح (كانبان المهام: ← →، مراحل العملاء: Shift + ← →).
+const INTERACTIVE_EXEC_KEYMOVE = '#tbRoot .tb-card, #crRoot .cr-card';
+let interactiveViewerGuardReady = false;
+function applyInteractiveViewerGuard(isViewer) {
+  el.dash.classList.toggle('is-viewer', !!isViewer);
+  if (interactiveViewerGuardReady) return;
+  interactiveViewerGuardReady = true;
+  const style = document.createElement('style');
+  const scope = sel => sel.split(',').map(x => `#dash.is-viewer ${x.trim()}`).join(', ');
+  style.textContent = `${scope(INTERACTIVE_EXEC_HIDE.join(','))} { display: none !important; }\n` +
+    `${scope(INTERACTIVE_EXEC_LOCK.join(','))} { pointer-events: none; cursor: default; }`;
+  document.head.appendChild(style);
+  const viewer = () => el.dash.classList.contains('is-viewer');
+  const blocked = [...INTERACTIVE_EXEC_HIDE, ...INTERACTIVE_EXEC_LOCK].join(', ');
+  // طبقة دفاع ثانية خلف الإخفاء: أي ضغط أو إرسال يصل لعنصر تنفيذ يُلغى قبل معالج المحرك.
+  el.dash.addEventListener('click', e => { if (viewer() && e.target.closest?.(blocked)) { e.preventDefault(); e.stopPropagation(); } }, true);
+  el.dash.addEventListener('submit', e => { if (viewer()) { if (e.target.closest?.(blocked)) { e.preventDefault(); e.stopPropagation(); } } }, true);
+  el.dash.addEventListener('dragstart', e => { if (viewer()) { e.preventDefault(); e.stopPropagation(); } }, true);
+  el.dash.addEventListener('keydown', e => {
+    if (!viewer() || !e.target.closest) return;
+    const move = (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.closest(INTERACTIVE_EXEC_KEYMOVE);
+    const lock = (e.key === ' ' || e.key === 'Enter') && e.target.closest(INTERACTIVE_EXEC_LOCK.join(', '));
+    if (move || lock) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+}
+
+async function mountInteractiveDashboard(d) {
+  // دور المستخدم على اللوحة (وفي وضع التضمين من «اللوحات المنشورة» دائمًا «مشاهد»).
+  applyInteractiveViewerGuard(state.dashboardRole === 'viewer');
+  el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
+  if (!d.templateId) { el.dash.innerHTML = interactiveEmptyStateHtml(d, []); return; }
+
+  let body;
+  try {
+    const res = await fetch(`/api/interactive/${encodeURIComponent(d.templateId)}/data`);
+    body = res.ok ? await res.json() : null;
+  } catch { body = null; }
+
+  if (!body || !body.linked) {
+    el.dash.innerHTML = interactiveEmptyStateHtml(d, body?.missingSources || []);
+    el('interactive-link-source-btn')?.addEventListener('click', () => showScreen('sources'));
+    return;
+  }
+
+  if (d.renderKind === 'network' && window.JEEM_NET_MOUNT) {
+    el.dash.innerHTML = interactiveNetworkSkeletonHtml(d);
+    window.JEEM_DRILL_INIT?.();
+    window.JEEM_NET_MOUNT(body.data);
+  } else if (d.renderKind === 'workflow' && window.JEEM_WORKFLOW_MOUNT) {
+    el.dash.innerHTML = interactiveWorkflowSkeletonHtml(d);
+    window.JEEM_WORKFLOW_MOUNT(body.data);
+  } else if (d.renderKind === 'marketplace' && window.JEEM_MARKETPLACE_MOUNT) {
+    el.dash.innerHTML = interactiveMarketplaceSkeletonHtml(d);
+    window.JEEM_MARKETPLACE_MOUNT(body.data);
+  } else if (d.renderKind === 'warehouse' && window.JEEM_WAREHOUSE_MOUNT) {
+    el.dash.innerHTML = interactiveWarehouseSkeletonHtml(d);
+    window.JEEM_WAREHOUSE_MOUNT(el.dash.querySelector('#whRoot'), body.data, {
+      demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
+    });
+  } else if (d.renderKind === 'pools' && window.JEEM_POOLS_MOUNT) {
+    el.dash.innerHTML = interactivePoolsSkeletonHtml(d);
+    window.JEEM_POOLS_MOUNT(el.dash.querySelector('#lpRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'treasury' && window.JEEM_TREASURY_MOUNT) {
+    el.dash.innerHTML = interactiveTreasurySkeletonHtml(d);
+    window.JEEM_TREASURY_MOUNT(el.dash.querySelector('#ttRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'crm' && window.JEEM_CRM_MOUNT) {
+    el.dash.innerHTML = interactiveCrmSkeletonHtml(d);
+    window.JEEM_CRM_MOUNT(el.dash.querySelector('#crRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'teamtasks' && window.JEEM_TEAMTASKS_MOUNT) {
+    el.dash.innerHTML = interactiveTeamTasksSkeletonHtml(d);
+    window.JEEM_TEAMTASKS_MOUNT(el.dash.querySelector('#tmRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'timetracking' && window.JEEM_TIMETRACKING_MOUNT) {
+    el.dash.innerHTML = interactiveTimeTrackingSkeletonHtml(d);
+    window.JEEM_TIMETRACKING_MOUNT(el.dash.querySelector('#tkRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'saas' && window.JEEM_SAAS_MOUNT) {
+    el.dash.innerHTML = interactiveSaasSkeletonHtml(d);
+    window.JEEM_SAAS_MOUNT(el.dash.querySelector('#smRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'studio' && window.JEEM_STUDIO_MOUNT) {
+    el.dash.innerHTML = interactiveStudioSkeletonHtml(d);
+    window.JEEM_STUDIO_MOUNT(el.dash.querySelector('#psRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'campaign' && window.JEEM_CAMPAIGN_MOUNT) {
+    el.dash.innerHTML = interactiveCampaignSkeletonHtml(d);
+    window.JEEM_CAMPAIGN_MOUNT(el.dash.querySelector('#cpRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'funding' && window.JEEM_FUNDING_MOUNT) {
+    el.dash.innerHTML = interactiveFundingSkeletonHtml(d);
+    window.JEEM_FUNDING_MOUNT(el.dash.querySelector('#tfRoot'), body.data, {
+      demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
+    });
+  } else if (d.renderKind === 'construction' && window.JEEM_CONSTRUCTION_MOUNT) {
+    el.dash.innerHTML = interactiveConstructionSkeletonHtml(d);
+    window.JEEM_CONSTRUCTION_MOUNT(el.dash.querySelector('#ccRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'board' && window.JEEM_BOARD_MOUNT) {
+    el.dash.innerHTML = interactiveBoardSkeletonHtml(d);
+    window.JEEM_BOARD_MOUNT(el.dash.querySelector('#tbRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'leads' && window.JEEM_LEADS_MOUNT) {
+    el.dash.innerHTML = interactiveLeadsSkeletonHtml(d);
+    window.JEEM_LEADS_MOUNT(el.dash.querySelector('#clRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'risk' && window.JEEM_RISK_MOUNT) {
+    el.dash.innerHTML = interactiveRiskSkeletonHtml(d);
+    window.JEEM_RISK_MOUNT(el.dash.querySelector('#srRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'analysis' && window.JEEM_ANALYSIS_MOUNT) {
+    el.dash.innerHTML = interactiveAnalysisSkeletonHtml(d);
+    window.JEEM_ANALYSIS_MOUNT(el.dash.querySelector('#caRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'command' && window.JEEM_COMMAND_MOUNT) {
+    el.dash.innerHTML = interactiveCommandSkeletonHtml(d);
+    window.JEEM_COMMAND_MOUNT(el.dash.querySelector('#scRoot'), body.data, { demo: false });
+  } else if (d.renderKind === 'finance' && window.JEEM_FINANCE_MOUNT) {
+    el.dash.innerHTML = interactiveFinanceSkeletonHtml(d);
+    window.JEEM_FINANCE_MOUNT(el.dash.querySelector('#foRoot'), body.data, {
+      demo: false, userName: state.currentUser?.displayName || state.currentUser?.username || '',
+    });
+  } else {
+    // A §4.16+ engine registers its own branch (skeleton + mount call) here as it's built.
+    el.dash.innerHTML = interactiveEmptyStateHtml(d, []);
+  }
+}
+
+function renderDashboard() {
+  const d = state.dashboard;
+  // An "interactive" (RenderKind) dashboard never goes through the ordinary widget-grid
+  // pipeline below — see mountInteractiveDashboard. None of the normal toolbar actions
+  // (edit/undo/redo/add-widget/share/publish) apply to it yet (Phase 3 gives it its own
+  // info-bar controls), so the toolbar simply stays hidden.
+  if (d && d.renderKind) {
+    chartInstances.forEach(c => c.destroy());
+    chartInstances = [];
+    pendingCharts = [];
+    el('dash-toolbar').classList.add('hidden');
+    mountInteractiveDashboard(d);
+    return;
+  }
+  // Never editable in the public share view; a Viewer on an Active dashboard can look but
+  // not refine it either — only the Owner/an Editor may (their own permission is what's
+  // actually checked when they do, same as a fresh question — see DashboardAccessService).
+  const editable = !!state.currentUser && state.dashboardRole !== 'viewer';
+  el('dash-toolbar').classList.toggle('hidden', !d || !(d.widgets || []).length);
+  el('edit-toggle').classList.toggle('hidden', !editable);
+  el('autosave-status').classList.toggle('hidden', !editable);
+  el('btn-undo').classList.toggle('hidden', !editable);
+  el('btn-redo').classList.toggle('hidden', !editable);
+  // A share is a frozen snapshot (Part 3) — there is nothing for "🔄 تحديث" to re-fetch.
+  el('btn-refresh').classList.toggle('hidden', !!state.shareId);
+  // Same gating the old bottom-of-grid "+ إضافة عنصر" button had (editable AND already in
+  // تحرير mode) — only relocated into the toolbar, not a behavior change.
+  el('btn-add-widget').classList.toggle('hidden', !(editable && state.editMode));
+  // "إدارة الصلاحيات" — Owner-only, same condition the old dash-meta button had.
+  el('btn-manage-roles').classList.toggle('hidden', !(state.dashboardIsActive && state.dashboardRole === 'owner'));
+  // A Draft has no Owner and can't be shared (see btn-share below) — offer to activate it
+  // right here instead of sending the user to "السجل" to do it. Once Active, this hides and
+  // مشاركة unlocks.
+  const canActivate = editable && !state.shareId && !!state.currentHistoryId && !state.dashboardIsActive;
+  el('btn-activate').classList.toggle('hidden', !canActivate);
+  // Sharing publishes a frozen snapshot independent of the Active-dashboard Owner/Editor/
+  // Viewer model (Part 3) — but a Draft has no Owner and no one else can even see it, so a
+  // share link made from one would be an orphaned, unmanageable copy of someone's private
+  // work-in-progress. Require activation first (also enforced server-side, see
+  // ShareController.Create).
+  el('btn-share').disabled = !state.dashboardIsActive;
+  el('btn-share').title = state.dashboardIsActive ? '' : 'فعّل اللوحة أولاً قبل مشاركتها — زر «✅ تفعيل اللوحة» بجانبه.';
+  // النشر إلى تكامل خارجي يحتاج لوحة مفعّلة (Active) بنفس شرط المشاركة أعلاه — لا معنى لنشر
+  // Draft أو نسخة مشاركة مجمّدة. مخفي تمامًا (مش معطّل فقط) لغير المسؤولين — انظر renderIntegrationsAvailability.
+  el('btn-publish').classList.toggle('hidden', !state.currentUser || state.currentUser.role !== 'Admin');
+  el('btn-publish').disabled = !state.dashboardIsActive;
+  el('btn-publish').title = state.dashboardIsActive ? 'نشر هذه اللوحة إلى نظام عميل خارجي' : 'فعّل اللوحة أولاً قبل نشرها.';
+  if (!editable) state.editMode = false;
+  updateUndoRedoButtons();
+
+  chartInstances.forEach(c => c.destroy());
+  chartInstances = [];
+  pendingCharts = [];
+
+  if (!d) {
+    el.dash.innerHTML = state.loading
+      ? `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`
+      : `<div class="empty"><div>
+           <div class="big">اسأل سؤالاً عن بياناتك</div>
+           <div>مثال: «قارن الإيرادات بين المناطق» أو «أعطني تقريراً شاملاً»</div>
+         </div></div>`;
+    return;
+  }
+
+  // A dashboard opened from السجل/اللوحات النشطة carries its own name (the title assigned
+  // when it was saved or last renamed) — show that at the top instead of the summary text,
+  // matching what "اللوحات النشطة" itself lists it as. A brand-new, not-yet-saved chat
+  // dashboard has no name yet, so it keeps showing its summary as before.
+  const updatedText = formatUpdatedAt(state.lastRefreshedAt);
+  const sourceLabels = computeDashboardSources(d.widgets);
+  const sourceText = sourceLabels.length ? `مصادر البيانات: ${sourceLabels.join('، ')}` : '';
+  // حالة اللوحة (نشطة/الدور) جنب تاريخ آخر تحديث في نفس سطر .dash-meta، بدل صف منفصل
+  // تحتها — زر "إدارة الصلاحيات" نفسه انتقل لشريط الأدوات (جنب تحديث/تراجع/إعادة).
+  const metaBits = [
+    sourceText && `<span>${esc(sourceText)}</span>`,
+    updatedText && `<span>${esc(updatedText)}</span>`,
+    state.dashboardIsActive && dashboardStatusBadgesHtml(),
+  ].filter(Boolean);
+  const metaHtml = metaBits.join('<span class="dot-sep"></span>');
+  el.dash.innerHTML = `<section class="dash-head">
+      <div class="dash-title">
+        <h1>${esc(d.name || d.summary)}</h1>
+        ${metaHtml ? `<div class="dash-meta">${metaHtml}</div>` : ''}
+      </div>
+    </section>${dashboardDisabledBannerHtml()}`;
+
+  // A multi-page template build (see BuiltinDashboardsGenerated/ChatController's
+  // reconciliation) tags each widget with the page/tab it belongs to — a free-form chat
+  // dashboard and the original 8 hand-written templates never set .page at all, so this stays
+  // a no-op for them and the grid below renders every widget exactly as before.
+  const allWidgets = d.widgets || [];
+  const pages = getDashboardPages(allWidgets);
+  let widgets = allWidgets;
+  if (pages.length > 1) {
+    const hasOther = allWidgets.some(w => !w.page);
+    const tabs = hasOther ? [...pages, 'عناصر أخرى'] : pages;
+    if (!tabs.includes(state.activeDashTab)) state.activeDashTab = tabs[0];
+    el.dash.appendChild(buildDashTabs(tabs, state.activeDashTab));
+    widgets = hasOther && state.activeDashTab === 'عناصر أخرى'
+      ? allWidgets.filter(w => !w.page)
+      : allWidgets.filter(w => w.page === state.activeDashTab);
+  }
+
+  // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
+  // selection was active when it was published), never interactive.
+  if (state.shareId) {
+    if (d.filters?.length) el.dash.appendChild(buildFilterBarReadOnly(d.filters));
+  } else if (d.filters?.length || Object.keys(state.crossFilterDefs || {}).length) {
+    el.dash.appendChild(buildFilterBar(d.filters || []));
+  }
+
+  // One-shot: true only for the render right after ask() lands a freshly (re)generated
+  // dashboard, never for a filter/edit/undo re-render of the same widgets — see
+  // revealDashboardOnNextRender's own comment above.
+  revealNow = revealDashboardOnNextRender && !prefersReducedMotion();
+  revealDashboardOnNextRender = false;
+
+  if (widgets.length) {
+    const grid = document.createElement('div');
+    grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
+    widgets.forEach((w, i) => {
+      const card = buildWidget(w);
+      // Every freshly mounted card gets a quick settle-in fade (widget-mount, see its own
+      // comment in app.css) — not just a freshly revealed dashboard's bigger staggered one
+      // (widget-enter). Both are added here as removable classes rather than being baked
+      // into the bare .widget rule, and BOTH get stripped the moment their own animation
+      // actually finishes: a CSS animation's fill-mode:both end state reports a real (if
+      // visually identity) transform — never the literal "none" keyword, even when the
+      // keyframe never touches transform at all — and any non-"none" transform permanently
+      // makes that card its own CSS stacking context. Left in place, that silently traps the
+      // card's own popovers/menus (⋮, ⓘ) under whichever sibling card happens to come later
+      // in the DOM — this is what the user's screenshots showed. Stripping the class once
+      // the animation is actually done removes that leftover transform and restores normal
+      // stacking, for every card on every render — not only a freshly revealed dashboard's.
+      card.classList.add(revealNow ? 'widget-enter' : 'widget-mount');
+      if (revealNow) {
+        // Capped so a dashboard with many widgets doesn't leave the last ones waiting
+        // seconds to appear — beyond ~8 cards they all start together instead.
+        card.style.animationDelay = `${Math.min(i, 8) * 55}ms`;
+      }
+      card.addEventListener(
+        'animationend',
+        () => card.classList.remove('widget-enter', 'widget-mount'),
+        { once: true },
+      );
+      // JR.animate's count-up (see dash-render.js) reused here for the §4.14 widget types'
+      // own headline numbers (semi/dco total, goal percent) — same "only on a fresh reveal,
+      // never a filter/edit re-render" rule as animateKpiValue, and already reduced-motion
+      // safe internally (dash-render.js computes its own RM check once at load).
+      if (revealNow && window.JR && window.JR.countUp) {
+        card.querySelectorAll('.jr-countup').forEach(elx => window.JR.countUp(elx));
+      }
+      grid.appendChild(card);
+    });
+    el.dash.appendChild(grid);
+    // Scoped strictly to the loop above — cleared immediately after so a widget built
+    // outside a render pass (e.g. a comparison's own buildWidget() call is fine, it runs
+    // inside this same loop; anything built later never should be) never counts up.
+    revealNow = false;
+
+    // Only now is every widget's chart-holder actually laid out with real dimensions —
+    // instantiate the charts queued by mountChart() and keep each render's promise so
+    // the PPTX export can await it before capturing the SVG (see widgetToPptxInput).
+    pendingCharts.forEach(({ card, holder, options: spec, labels: pointLabels, widget }) => {
+      // Forecast charts never reach here with a `widget` — their categories mix real history
+      // with future periods, so clicking one wouldn't correspond to an actual row to filter by.
+      if (widget) attachCrossFilterClick(spec, holder, widget, pointLabels);
+      let handle;
+      try { handle = JEEM_DX.mount(holder, spec, { theme: THEME, fmt }); }
+      catch (err) {
+        console.error('تعذّر رسم العنصر', spec.kind, err);
+        holder.innerHTML = '<div class="chart-note">تعذّر رسم هذا العنصر.</div>';
+        return;
+      }
+      // الأسماء التاريخية (__apex*) أُبقيت لأن تصدير PPTX يقرأها — المقبض الآن من JEEM_DX.
+      card.__apexChart = handle;
+      card.__apexHolder = holder;
+      card.__apexRendered = handle.rendered;
+      chartInstances.push(handle);
+    });
+    pendingCharts = [];
+    loadKpiDeltas();
+  }
+}
+
+// ---------- dashboard filters ----------
+// Filters come from the model (see the "الفلاتر" section of the system prompt) as
+// {id,label,field,table,type,options}. Applying one deterministically re-runs
+// /api/widgets/query for every widget whose structured `query.table` matches the
+// filter's table (wizard-created widgets) — never the LLM. A chat-authored widget
+// carries no structured query, so a dashboard filter cannot reach it; rather than
+// silently ignore it, buildWidget() marks it "غير متأثر بالفلتر" (see widgetShell).
+function getActiveFilters() {
+  // Declared filters (from the model/wizard) plus any ad-hoc ones created by clicking a
+  // chart's data point (see toggleCrossFilter) — same {id,label,field,table,...} shape,
+  // so applyFilters()'s per-table grouping below handles both without distinguishing them.
+  const filters = [...(state.dashboard?.filters || []), ...Object.values(state.crossFilterDefs || {})];
+  return filters
+    .map(f => ({ def: f, values: state.activeFilters[f.id] || [] }))
+    .filter(x => x.values.some(v => v !== '' && v != null));
+}
+function getActiveFilterTables() {
+  return new Set(getActiveFilters().map(x => x.def.table).filter(Boolean));
+}
+
+function buildFilterBar(filters) {
+  const bar = document.createElement('div');
+  bar.id = 'filter-bar'; bar.className = 'filters';
+  filters.forEach(f => bar.appendChild(buildFilterControl(f)));
+  // Ad-hoc cross-filters only ever show up here once they're actually active — there's no
+  // "options" list to browse ahead of time the way a declared filter's dropdown has, so an
+  // idle one has nothing worth rendering; clicking a different data point replaces it.
+  Object.values(state.crossFilterDefs || {})
+    .filter(f => (state.activeFilters[f.id] || []).length)
+    .forEach(f => bar.appendChild(buildCrossFilterChip(f)));
+  if (getActiveFilters().length) {
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button'; clearBtn.className = 'filter-clear-btn'; clearBtn.textContent = '✕ مسح كل الفلاتر';
+    clearBtn.addEventListener('click', clearAllFilters);
+    bar.appendChild(clearBtn);
+  }
+  // Set by applyFilters() when one or more widgets couldn't be re-fetched even after its
+  // own retry (e.g. a transient DB lock) — previously this failed completely silently,
+  // leaving a widget stuck on stale/empty data with nothing on screen explaining why.
+  if (state.filterRefreshWarning) {
+    const warn = document.createElement('span');
+    warn.className = 'filter-refresh-warning';
+    warn.textContent = state.filterRefreshWarning;
+    const retryBtn = document.createElement('button');
+    retryBtn.type = 'button'; retryBtn.className = 'filter-refresh-retry'; retryBtn.textContent = '🔄 إعادة المحاولة';
+    retryBtn.addEventListener('click', () => { state.filterRefreshWarning = null; applyFilters(); });
+    warn.appendChild(retryBtn);
+    bar.appendChild(warn);
+  }
+  return bar;
+}
+
+// A chart-click cross-filter's own chip — unlike buildSelectFilterControl there's no
+// dropdown (only ever one known value: whatever was clicked), just a pill naming the
+// field/value that clears itself on click, same interaction as Power BI's cross-filter
+// icon on a selected visual.
+function buildCrossFilterChip(f) {
+  const values = state.activeFilters[f.id] || [];
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'xfilter-chip';
+  btn.title = 'اضغط لإزالة هذا الفلتر';
+  btn.innerHTML = `${esc(f.label)}: ${esc(values.filter(Boolean).join('، '))} <span class="xfilter-x">✕</span>`;
+  btn.addEventListener('click', () => {
+    pushUndo();
+    delete state.activeFilters[f.id];
+    delete state.crossFilterDefs[f.id];
+    applyFilters();
+  });
+  return btn;
+}
+
+// A share's filter bar (Part 3) shows which selection was active when the snapshot was
+// published — plain badges, no click handlers; nothing behind them can be re-run.
+function buildFilterBarReadOnly(filters) {
+  const bar = document.createElement('div');
+  bar.id = 'filter-bar'; bar.className = 'filters';
+  filters.forEach(f => {
+    const values = state.activeFilters[f.id];
+    const text = Array.isArray(values) && values.length
+      ? `${f.label}: ${values.filter(Boolean).join('، ') || 'الكل'}`
+      : `${f.label}: الكل`;
+    const badge = document.createElement('span');
+    badge.className = 'filter-badge-static';
+    badge.textContent = text;
+    bar.appendChild(badge);
+  });
+  return bar;
+}
+
+function buildFilterControl(f) {
+  return (f.type === 'date_range' || f.type === 'numeric_range') ? buildRangeFilterControl(f) : buildSelectFilterControl(f);
+}
+
+// Always-visible row of option chips under the filter's label (matching the reference
+// design), instead of a collapsed dropdown button — every value is on screen at once, picked
+// by clicking its own chip directly.
+function buildSelectFilterControl(f) {
+  const wrap = document.createElement('div');
+  wrap.className = 'filter-ctl';
+  const selected = state.activeFilters[f.id] || [];
+  const isMulti = f.type === 'multi_select';
+
+  const label = document.createElement('span');
+  label.className = 'filter-ctl-label';
+  label.textContent = f.label;
+  wrap.appendChild(label);
+
+  const row = document.createElement('div');
+  row.className = 'filter-chip-row';
+
+  // single_select only: an explicit "الكل" chip clears the selection — multi_select has no
+  // equivalent "all" state, same as the old radio-list version only showed it for single_select.
+  if (!isMulti) {
+    const allChip = document.createElement('button');
+    allChip.type = 'button';
+    allChip.className = 'chip' + (selected.length ? '' : ' is-on');
+    allChip.textContent = 'الكل';
+    allChip.addEventListener('click', () => setFilterValue(f.id, []));
+    row.appendChild(allChip);
+  }
+
+  (f.options || []).forEach(o => {
+    const isOn = selected.includes(o.value);
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (isOn ? ' is-on' : '');
+    chip.textContent = o.label;
+    chip.addEventListener('click', () => {
+      if (isMulti) {
+        setFilterValue(f.id, isOn ? selected.filter(v => v !== o.value) : [...selected, o.value]);
+      } else {
+        setFilterValue(f.id, isOn ? [] : [o.value]);
+      }
+    });
+    row.appendChild(chip);
+  });
+
+  wrap.appendChild(row);
+  return wrap;
+}
+
+function buildRangeFilterControl(f) {
+  const wrap = document.createElement('div');
+  wrap.className = 'filter-range';
+  const [from = '', to = ''] = state.activeFilters[f.id] || [];
+  const inputType = f.type === 'date_range' ? 'date' : 'number';
+  wrap.innerHTML = `<span>${esc(f.label)}</span>
+    <input type="${inputType}" data-role="from" value="${esc(from)}">
+    <span>—</span>
+    <input type="${inputType}" data-role="to" value="${esc(to)}">`;
+  const apply = () => {
+    const fromVal = wrap.querySelector('[data-role="from"]').value;
+    const toVal = wrap.querySelector('[data-role="to"]').value;
+    setFilterValue(f.id, (fromVal || toVal) ? [fromVal, toVal] : []);
+  };
+  wrap.querySelectorAll('input').forEach(inp => inp.addEventListener('change', apply));
+  return wrap;
+}
+
+function setFilterValue(filterId, values) {
+  pushUndo();
+  state.activeFilters[filterId] = values;
+  applyFilters();
+}
+
+function clearAllFilters() {
+  pushUndo();
+  state.activeFilters = {}; state.crossFilterDefs = {};
+  applyFilters();
+}
+
+// Equality/IN filters only (date_range/numeric_range aren't supported by the deterministic
+// backend yet — see WidgetQueryService — so they narrow the visible selection but don't
+// re-query; this is a known v1 limitation, not a silent bug).
+//
+// Two calls can overlap: nothing here awaits or cancels a previous still-in-flight call
+// before starting a new one, and every UI entry point (a filter dropdown, "✕ مسح كل
+// الفلاتر", a cross-filter chart click, "🔄 تحديث") just calls applyFilters() directly. A
+// user picking one filter value then quickly clearing it — or clicking two chart points in
+// a row — starts a second call while the first's per-widget fetches are still in flight,
+// and network timing gives no guarantee the *older* call's responses land first. Without a
+// guard, an older call's slower response can land after the newer one and overwrite its
+// correct (or correctly-cleared) w.data with stale filtered/empty data — a real, deterministic
+// bug distinct from any transient fetch failure, and one that would survive a DB-side fix
+// since nothing there was actually broken. applyFiltersSeq/mySeq below makes only the most
+// recently *started* call allowed to write w.data or trigger the final render; a superseded
+// call's in-flight responses are simply dropped once they arrive.
+// A declared filter's `table` and a widget's own `query.table` are both free-form strings —
+// a chat-authored dashboard's filter tool call and its widgets' own query tool calls are
+// separate model outputs, so nothing guarantees they spell the same table identically. The
+// backend's own ResolveTableAsync already matches table names case-insensitively (SQL
+// Server's schema-qualified "staging.Sales" is a live example of a name the model can easily
+// write inconsistently — with or without the schema prefix, in any case), but activeByTable's
+// lookup below is a plain JS object key: an exact-string requirement that a filter and its
+// widget disagree on gives a filter that silently matches nothing — no error, the request
+// still succeeds, it's just sent with an empty filter list — which reads as "the filter does
+// nothing at all". Comparing on this normalized form instead closes that gap.
+function normalizeTableKey(t) {
+  return String(t || '').trim().toLowerCase()
+    .replace(/["[\]]/g, '')     // SQL Server bracket / quoted identifiers
+    .replace(/^dbo\./, '')      // SQL Server's default schema is effectively invisible
+    .replace(/^staging[._]/, ''); // this app's own schema prefix — see DataStore.DisplayTable
+}
+
+let applyFiltersSeq = 0;
+async function applyFilters() {
+  // A share is a frozen snapshot (Part 3) — nothing in it is ever re-run. Its filter
+  // controls are read-only (buildFilterBarReadOnly) and it has no refresh button, so this
+  // shouldn't normally be reachable in share view at all; the guard is defense in depth.
+  if (state.shareId) return;
+  const mySeq = ++applyFiltersSeq;
+  state.filtersLoading = true;
+  updateFiltersLoadingUI();
+  const activeByTable = {};
+  getActiveFilters().forEach(({ def, values }) => {
+    if (!def.table || def.type === 'date_range' || def.type === 'numeric_range') return;
+    (activeByTable[normalizeTableKey(def.table)] ||= []).push({ field: def.field, values });
+  });
+
+  if (state.currentUser) el('autosave-status')?.classList.remove('hidden');
+  const status = el('autosave-status');
+  if (status) status.textContent = 'جارٍ التحديث…';
+  // Re-checked fresh on every call (a since-fixed dashboard should stop showing the
+  // banner) — only a 409 from the Active-dashboard refresh branch below sets it again.
+  if (state.dashboardIsActive) { state.dashboardDisabled = false; state.dashboardDisabledReason = ''; }
+
+  const sources = { systems: [...state.onSystems], files: [...state.onFiles] };
+  const widgets = state.dashboard?.widgets || [];
+  // Each attempt below can transiently fail (e.g. the SQLite file taking a concurrent write
+  // from another request while this filter's burst of per-widget reads lands) without being
+  // this widget's fault — a single retry after a short pause clears the vast majority of
+  // those instead of leaving the widget stuck on stale/empty data with no way to recover
+  // short of a full page reload. `failed` tracks whatever doesn't clear even after the
+  // retry, so the user gets an honest status instead of the previous silent no-op.
+  let failed = 0;
+  await Promise.all(widgets.map(async (w, index) => {
+    if (!w.query || !w.query.table || w.query.integrationId) return;
+    const filters = activeByTable[normalizeTableKey(w.query.table)] || [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 400));
+      try {
+        // An Active dashboard (Part 2) always re-executes live, under the Owner's own
+        // permission, on every open/filter/refresh — same "index-only, never client-supplied
+        // sql/table" endpoint shape as the share-scoped one above, just Owner- instead of
+        // sharer-scoped and auth-required instead of anonymous.
+        if (state.dashboardIsActive && state.currentHistoryId) {
+          const res = await fetch(`/api/history/${encodeURIComponent(state.currentHistoryId)}/widgets/${index}/refresh`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filters }),
+          });
+          // A newer applyFilters() call has started since this fetch went out — its own
+          // responses (for whatever filter selection is now actually active) are what should
+          // win, so this now-stale one is dropped rather than overwriting w.data out of order.
+          if (mySeq !== applyFiltersSeq) return;
+          if (res.status === 409) {
+            const payload = await res.json().catch(() => null);
+            if (mySeq !== applyFiltersSeq) return;
+            state.dashboardDisabled = true;
+            state.dashboardDisabledReason = payload?.reason || 'هذه اللوحة معطّلة حاليًا.';
+            break;
+          }
+          if (!res.ok) { if (attempt === 1) failed++; continue; }
+          const payload = await res.json();
+          if (mySeq !== applyFiltersSeq) return;
+          w.data = payload.data;
+          if ('xKey' in payload) w.xKey = payload.xKey;
+          if ('yKey' in payload) w.yKey = payload.yKey;
+          if ('source' in payload) w.source = payload.source;
+          break;
+        }
+        // Two shapes share the same "query" field depending on how the widget was built:
+        // the wizard's fully-structured query (metric/aggregation/dimension/...), rebuilt
+        // from scratch server-side — vs. a chat-authored widget's own stored SQL (just
+        // {table, sql}), re-run with the filter spliced into that exact query instead.
+        if (w.query.sql) {
+          const res = await fetch('/api/widgets/sql-filter', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sources, table: w.query.table, sql: w.query.sql, filters }),
+          });
+          if (mySeq !== applyFiltersSeq) return;
+          if (!res.ok) { if (attempt === 1) failed++; continue; }
+          const payload = await res.json();
+          if (mySeq !== applyFiltersSeq) return;
+          w.data = payload.data;
+          break;
+        }
+        const res = await fetch('/api/widgets/query', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sources, query: { ...w.query, filters } }),
+        });
+        if (mySeq !== applyFiltersSeq) return;
+        if (!res.ok) { if (attempt === 1) failed++; continue; }
+        const payload = await res.json();
+        if (mySeq !== applyFiltersSeq) return;
+        w.data = payload.data; w.xKey = payload.xKey; w.yKey = payload.yKey; w.source = payload.source;
+        w.query = payload.query;
+        break;
+      } catch {
+        // leave the widget's previous data in place unless every attempt fails
+        if (attempt === 1) failed++;
+      }
+    }
+  }));
+
+  // A newer call already started (and owns rendering its own, more current result, including
+  // clearing the loading state once *it* finishes) — this one's "failed" count and render
+  // would only relitigate an outdated filter selection.
+  if (mySeq !== applyFiltersSeq) return;
+
+  state.filterRefreshWarning = failed > 0
+    ? (failed === 1 ? '⚠ تعذّر تحديث رسم واحد.' : `⚠ تعذّر تحديث ${failed} رسومات.`)
+    : null;
+  state.filtersLoading = false;
+  state.lastRefreshedAt = new Date();
+  updateFiltersLoadingUI();
+  renderDashboard();
+  scheduleAutosave();
+  updateUndoRedoButtons();
+}
+
+// Toggles the dashboard's loading overlay/dim without touching #dash's own contents — a
+// full renderDashboard() mid-flight would tear down and rebuild every widget (and its
+// ApexCharts instance) before the new data even arrives, which is wasted work and a visible
+// flicker; this only needs to add/remove a class and flip one element's visibility.
+function updateFiltersLoadingUI() {
+  el('dash-pane')?.classList.toggle('filters-loading', !!state.filtersLoading);
+  el('dash-loading')?.classList.toggle('open', !!state.filtersLoading);
+}
+
+// "🔄 تحديث": re-fetches every widget that carries query lineage straight from the live
+// database — applyFilters() already does exactly this (it re-runs each such widget's query
+// with whichever filter is currently active, even an empty one), so refreshing is just
+// calling it again on demand instead of only after a filter change. A widget with no query
+// lineage at all (e.g. combined from several tool calls, or a forecast) can't be refreshed
+// this way and simply keeps its existing data, same as it already does for filtering.
+el('btn-refresh').addEventListener('click', async () => {
+  const btn = el('btn-refresh');
+  btn.disabled = true;
+  try { await applyFilters(); }
+  finally { btn.disabled = false; }
+});
+
+el('btn-add-widget').addEventListener('click', openWizard);
+
+// ---------- data sources (shown in the dash-head's .dash-meta line, next to آخر تحديث) ----------
+// Every widget built from a single query_data call carries query.table (see AnalyticsTools'
+// system prompt) — the same structured lineage the dashboard-filter/refresh features already
+// rely on. A widget with none (built from several aggregated calls, list_files/
+// search_documents alone, or a forecast) simply isn't counted, same limitation those
+// features already have and surface as "غير متأثر بالفلتر".
+function computeDashboardSources(widgets) {
+  const tables = new Set();
+  const collect = w => {
+    if (w.comparison) { collect(w.comparison.left || {}); collect(w.comparison.right || {}); return; }
+    if (w.query?.table) tables.add(w.query.table);
+  };
+  (widgets || []).forEach(collect);
+  return [...tables]
+    .map(t => state.tableLabels[t] || t)
+    .sort((a, b) => a.localeCompare(b, 'ar'));
+}
+// ---------- Part 2: Active-dashboard status badges (state + role) ----------
+// "⚙️ إدارة الصلاحيات" itself lives in the toolbar now (#btn-manage-roles, next to
+// تحديث/تراجع/إعادة) — see its own hidden-toggle + click handler below.
+const ROLE_LABELS = { owner: 'مالك', editor: 'محرر', viewer: 'مشاهد' };
+function dashboardStatusBadgesHtml() {
+  const roleBadge = state.dashboardRole
+    ? `<span class="role-badge${state.dashboardRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[state.dashboardRole] || state.dashboardRole}</span>`
+    : '';
+  return `<span class="state-badge active">نشطة</span>${roleBadge}`;
+}
+function dashboardDisabledBannerHtml() {
+  return state.dashboardDisabled
+    ? `<div class="dashboard-disabled-banner">⚠️ ${esc(state.dashboardDisabledReason || 'هذه اللوحة معطّلة حاليًا.')}</div>`
+    : '';
+}
+el('btn-manage-roles').addEventListener('click', () => openRolesModal(state.currentHistoryId));
+
+// ---------- export (PDF / PowerPoint) ----------
+// PDF: the browser's own print-to-PDF, steered by the @media print rules above —
+// no server round trip, and it prints exactly what's on screen.
+el('btn-export-pdf').addEventListener('click', () => window.print());
+// ملاحظة: شريط النسخة التجريبية من DevExtreme (<dx-license>) يحمي نفسه بأنماط مضمّنة مفروضة ولا
+// يُخفى بالـ CSS ولا بأسلوب مضمّن — يختفي نهائيًا بتركيب مفتاح الترخيص (DevExtreme:LicenseKey).
+
+// PowerPoint: KPI values and tables travel as plain data so they land as native,
+// still-editable PowerPoint shapes; bar/line/pie charts are rendered as inline SVG by
+// ApexCharts. Its own dataURI() export API sounded like the obvious way to turn that into
+// a PNG, but it silently ignores the 3D view's extruded-bar polygons (mountChart() adds
+// those as extra <polygon> elements next to the real bar path) — dataURI() apparently
+// rebuilds the image from ApexCharts' own internal series model rather than serializing the
+// live SVG DOM. Serializing that SVG element ourselves (clone -> XML string -> Image ->
+// canvas) is a few more lines but captures the chart exactly as it looks on screen,
+// extrusion included. The result is transparent wherever the chart is, so it's composited
+// onto white first — the PPTX slide is white either way.
+function svgElementToPngDataUrl(svgEl, scale = 2) {
+  return new Promise((resolve, reject) => {
+    const rect = svgEl.getBoundingClientRect();
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute('width', rect.width);
+    clone.setAttribute('height', rect.height);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const xml = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(rect.width * scale));
+      canvas.height = Math.max(1, Math.round(rect.height * scale));
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('chart SVG image decode failed'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+  });
+}
+
+// progress-table / trend-matrix / status-bar / linear-gauge have no native PPTX shape of
+// their own — the backend builder only knows kpi / table / image. Rather than teaching it
+// four more bespoke layouts (or a native side-by-side layout for comparison), every one of
+// them is flattened into the same {columns, rows} table shape it already renders as an
+// editable PowerPoint table; a comparison widget is flattened into a two-column-by-side
+// table regardless of the type being compared. Best-effort but faithful to the real
+// numbers — never blank. radial-gauge needs none of this: it's ApexCharts-based (a
+// radialBar chart, see RadialGaugeCard), so it already falls through to the generic
+// chart-capture path below like bar/line/pie do.
+function comparisonToPptxInput(base, w) {
+  const left = w.comparison.left || {};
+  const right = w.comparison.right || {};
+  const leftRows = Array.isArray(left.data) ? left.data : [];
+  const rightRows = Array.isArray(right.data) ? right.data : [];
+  const labels = [];
+  leftRows.forEach(r => { if (r?.label != null && !labels.includes(r.label)) labels.push(r.label); });
+  rightRows.forEach(r => { if (r?.label != null && !labels.includes(r.label)) labels.push(r.label); });
+  if (labels.length) {
+    const findVal = (rows, label) => rows.find(r => r.label === label)?.value;
+    return {
+      ...base, type: 'table',
+      columns: ['البند', left.title || 'الفترة الأولى', right.title || 'الفترة الثانية'],
+      rows: labels.map(l => [String(l), fmt(findVal(leftRows, l)), fmt(findVal(rightRows, l))]),
+    };
+  }
+  const valOf = rows => { const e = rows[0]; return e?.value ?? Object.values(e || {}).find(x => typeof x === 'number'); };
+  return {
+    ...base, type: 'table',
+    columns: ['الفترة', 'القيمة'],
+    rows: [
+      [left.title || 'الفترة الأولى', fmt(valOf(leftRows))],
+      [right.title || 'الفترة الثانية', fmt(valOf(rightRows))],
+    ],
+  };
+}
+
+async function widgetToPptxInput(w, card) {
+  const base = { type: (w.type || '').toLowerCase(), title: w.title || '', source: w.source || '' };
+  if (w.comparison && typeof w.comparison === 'object') return comparisonToPptxInput(base, w);
+  if (base.type === 'kpi') {
+    const e = Array.isArray(w.data) ? w.data[0] : null;
+    const v = e?.value ?? Object.values(e || {}).find(x => typeof x === 'number');
+    return { ...base, value: fmt(v), label: e?.label ?? '' };
+  }
+  if (base.type === 'table') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    const cols = rows.length ? Object.keys(rows[0]) : [];
+    return { ...base, columns: cols, rows: rows.map(r => cols.map(c => String(r[c] ?? ''))) };
+  }
+  if (base.type === 'progress-table') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    return {
+      ...base, type: 'table',
+      columns: ['البند', 'التفاصيل', 'الإجمالي'],
+      rows: rows.map(r => [
+        String(r.label ?? ''),
+        Array.isArray(r.segments) ? r.segments.map(s => `${s.label ?? ''}: ${fmt(s.value)}`).join(' · ') : '',
+        fmt(r.total),
+      ]),
+    };
+  }
+  if (base.type === 'trend-matrix') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    const periodLabels = (Array.isArray(rows[0]?.periods) ? rows[0].periods : []).map(p => p.label ?? '');
+    return {
+      ...base, type: 'table',
+      columns: ['المؤشر', ...periodLabels, 'الاتجاه'],
+      rows: rows.map(r => {
+        const periods = Array.isArray(r.periods) ? r.periods : [];
+        const last = periods[periods.length - 1]?.value;
+        const prev = periods[periods.length - 2]?.value;
+        const arrow = (typeof last === 'number' && typeof prev === 'number')
+          ? (last > prev ? '↑' : last < prev ? '↓' : '→') : '→';
+        return [String(r.metric ?? ''), ...periods.map(p => fmt(p.value)), arrow];
+      }),
+    };
+  }
+  if (base.type === 'status-bar') {
+    const data = w.data || {};
+    const statuses = Array.isArray(data.statuses) ? data.statuses : [];
+    return {
+      ...base, type: 'table',
+      columns: ['البند', 'العدد'],
+      rows: [
+        [data.label || 'الإجمالي', fmt(data.total)],
+        ...statuses.map(s => [String(s.label ?? ''), fmt(s.count)]),
+      ],
+    };
+  }
+  if (base.type === 'linear-gauge') {
+    const rows = Array.isArray(w.data) ? w.data : [];
+    return {
+      ...base, type: 'table',
+      columns: ['البند', 'القيمة'],
+      rows: rows.map(r => [String(r.label ?? ''), r.max != null ? `${fmt(r.value)} / ${fmt(r.max)}` : `${fmt(r.value)}٪`]),
+    };
+  }
+  // radial-gauge has no branch here — it's ApexCharts-based (radialBar, see
+  // RadialGaugeCard/radialGaugeConfig) and falls through to the generic chart-capture path
+  // below exactly like bar/line/pie do, no bespoke flattening needed.
+  const chart = card?.__apexChart;
+  const holder = card?.__apexHolder;
+  if (!chart || !holder) return base;
+  try {
+    await card.__apexRendered; // wait for the initial paint before capturing its SVG
+    // The entrance animation (chartConfig()'s chart.animations) may still be mid-flight the
+    // instant this runs — snap it to its finished state first, or the export can capture a
+    // bar not yet at full height or a line not yet fully drawn. `animate: false` on this
+    // particular update redraws immediately rather than transitioning.
+    if (chart.freeze) await chart.freeze(); // DevExtreme: يثبّت الرسم في حالته النهائية بلا حركة
+    const svg = holder.querySelector('svg');
+    if (!svg) return base;
+    return { ...base, image: await svgElementToPngDataUrl(svg) };
+  }
+  catch { return base; }
+}
+
+async function exportPptx() {
+  const d = state.dashboard;
+  if (!d?.widgets?.length) return;
+  const btn = el('btn-export-pptx');
+  // .btn-label بس (مش الزرار كله) — عشان الأيقونة ما تتمسحش لما النص يترجع زي ما كان
+  // (btn.textContent= كان بيشيل أي عنصر SVG جوه الزرار نهائيًا).
+  const label = btn.querySelector('.btn-label');
+  const original = label.textContent;
+  btn.disabled = true; label.textContent = 'جارٍ التصدير…';
+  try {
+    const cards = [...document.querySelectorAll('#dash .grid > .widget')];
+    const widgets = await Promise.all(d.widgets.map((w, i) => widgetToPptxInput(w, cards[i])));
+    const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text;
+
+    const res = await fetch('/api/export/pptx', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: lastQuestion || 'لوحة معلومات', summary: d.summary, widgets }),
+    });
+    if (!res.ok) throw new Error(`فشل التصدير (${res.status})`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'dashboard.pptx';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('تعذّر تصدير العرض التقديمي: ' + err.message);
+  } finally {
+    btn.disabled = false; label.textContent = original;
+  }
+}
+el('btn-export-pptx').addEventListener('click', exportPptx);
+
+// ---------- chat ----------
+// طبقة المعنى: بعد بناء قالب، رسالة واحدة تلخّص العناصر التي حُسمت حتميًا لغياب مفاهيم
+// («يحتاج «X»…» من StagedTemplateBuilder) مع المفاهيم الناقصة ورابط يفتح نافذة معاني
+// الأعمدة للجدول الذي اعتمدت عليه اللوحة. لا رسالة عندما لا يوجد ما ينقص.
+function pushMissingConceptsMessage(dashboard) {
+  const gated = (dashboard.widgets || []).filter(w => w.noData && /^يحتاج «/.test(w.missingReason || ''));
+  if (!gated.length) return;
+  const counts = {};
+  // المفاهيم قبل «وهو غير موجود» فقط — لا «المصادر» من ذيل الجملة.
+  gated.forEach(w => ((w.missingReason.split(' وهو غير موجود')[0]).match(/«([^»]+)»/g) || []).forEach(m => {
+    const c = m.slice(1, -1); counts[c] = (counts[c] || 0) + 1;
+  }));
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([c]) => c);
+  const table = (dashboard.widgets || []).find(w => w.query?.table)?.query.table || '';
+  const n = gated.length.toLocaleString('en-US');
+  const html = `⚠️ ${n} ${gated.length === 1 ? 'عنصر يحتاج مفهومًا غير موجود' : 'عناصر تحتاج مفاهيم غير موجودة'} في بياناتك${top.length ? ` (${esc(top.join('، '))}${Object.keys(counts).length > 4 ? '…' : ''})` : ''}. `
+    + `لو عندك عمود يحمل هذا المعنى باسم مختلف، أكّده من <button type="button" class="link-btn msg-link" data-act="open-sem" data-table="${esc(table)}">🏷️ معاني الأعمدة</button> ثم أعد البناء، أو استخدم «تصحيح الأعمدة» من قائمة العنصر ⋮.`;
+  state.messages.push({ role: 'bot', text: html.replace(/<[^>]+>/g, ''), html });
+}
+
+// يفتح نافذة معاني الأعمدة للملف الذي جدوله tableName (أو أول ملف جدولي عند عدم التحديد).
+async function openSemModalForTable(tableName) {
+  if (!state.files.length) {
+    try { state.files = await (await fetch('/api/repository/files')).json(); } catch { state.files = []; }
+  }
+  const f = state.files.find(x => x.tableName && x.tableName === tableName)
+    || state.files.find(x => x.kind !== 'pdf' && x.tableName);
+  if (!f) { alert('لا يوجد ملف جدولي في المستودع — ارفع ملفًا من «المصادر» أولًا.'); return; }
+  openFileSemModal(f.id);
+}
+
+function renderMessages() {
+  const items = state.messages.map((m, i) => {
+    const cls = m.role === 'user' ? 'user' : (m.error ? 'err' : 'bot');
+    // Only a real bot answer gets a speaker button — never an error message or the user's
+    // own turn, and never at all in a browser with no speechSynthesis to act on it.
+    const speak = (cls === 'bot' && ttsSupported())
+      ? `<button type="button" class="msg-speak-btn" data-idx="${i}" title="قراءة بصوت عالٍ">🔊</button>` : '';
+    // m.html: محتوى نبنيه نحن (لا من الموديل) — رسالة ملخص المفاهيم الناقصة برابط نافذة المعاني.
+    return `<div class="msg ${cls}">${m.html || esc(m.text)}${speak}</div>`;
+  }).join('');
+  const typing = state.loading
+    ? `<div class="msg bot dots"><span></span><span></span><span></span></div>` : '';
+  const hint = state.messages.length === 0 && !state.loading
+    ? `<div class="hint">اسأل سؤالاً عن بياناتك وسيبني لك المساعد لوحة معلومات.
+         <span class="ex">جرّب: «ما إجمالي الإيرادات حسب المنطقة؟»</span></div>` : '';
+  el.messages.innerHTML = hint + items + typing;
+  el.messages.scrollTop = el.messages.scrollHeight;
+  renderSuggestions();
+}
+el('messages').addEventListener('click', e => {
+  const semLink = e.target.closest('[data-act="open-sem"]');
+  if (semLink) { openSemModalForTable(semLink.dataset.table); return; }
+  const speakBtn = e.target.closest('.msg-speak-btn');
+  if (!speakBtn) return;
+  const msg = state.messages[Number(speakBtn.dataset.idx)];
+  speakText(msg?.text || '', msg?.speechWidgets);
+});
+
+// ---------- voice: text-to-speech (the model talks back) ----------
+// Reads only the short plain-language summary a response already carries — never the charts
+// or tables themselves, which have no meaningful spoken form. Two independent triggers: the
+// 🔊 button on any individual bot message (always available), and an opt-in "قراءة تلقائية"
+// toggle that speaks every *new* answer the moment it arrives — off by default, since an
+// unannounced voice reading a business number aloud is the wrong call in a shared office.
+const ttsSupported = () => 'speechSynthesis' in window;
+
+// Splits the summary into rough sentences (Arabic/Latin stops or newlines), keeping each
+// piece's start offset in the original string so a `boundary` event's charIndex can be
+// mapped back to "which sentence is being read right now".
+function splitSentences(text) {
+  const sentences = [];
+  const re = /[^.!؟\n]+[.!؟\n]*/g;
+  let m;
+  while ((m = re.exec(text))) sentences.push({ start: m.index, text: m[0] });
+  return sentences;
+}
+
+function clearTtsHighlight() {
+  document.querySelectorAll('.widget.tts-highlight').forEach(c => c.classList.remove('tts-highlight'));
+}
+
+// Best-effort only: a sentence "names" a widget when the widget's own title appears in it
+// verbatim, which holds whenever the model's summary talks about a widget by name (the
+// common case) and simply highlights nothing when it doesn't — never a hard requirement.
+function widgetForSentence(sentence, widgets) {
+  if (!widgets?.length) return null;
+  const candidates = widgets.filter(w => w.title && w.title.trim().length >= 3 && sentence.includes(w.title));
+  if (!candidates.length) return null;
+  // Prefer the most specific (longest) title match when more than one widget's name appears.
+  return candidates.reduce((a, b) => (b.title.length > a.title.length ? b : a));
+}
+
+// `widgets` is optional: [{id, title}, ...] for the dashboard this text describes, used only
+// to drive the read-along highlight below — speech itself works identically without it.
+function speakText(text, widgets) {
+  if (!ttsSupported() || !text) return;
+  window.speechSynthesis.cancel(); // never overlap two utterances
+  clearTtsHighlight();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'ar-SA';
+  const arabicVoice = window.speechSynthesis.getVoices().find(v => (v.lang || '').toLowerCase().startsWith('ar'));
+  if (arabicVoice) utter.voice = arabicVoice;
+
+  if (widgets?.length) {
+    const sentences = splitSentences(text);
+    let lastId = null;
+    // Not every engine fires word-level boundary events (support is inconsistent across
+    // browsers); when it doesn't, the highlight simply never appears — speech is unaffected.
+    utter.onboundary = e => {
+      if (e.name && e.name !== 'word' && e.name !== 'sentence') return;
+      const sentence = sentences.findLast ? sentences.findLast(s => s.start <= e.charIndex) : [...sentences].reverse().find(s => s.start <= e.charIndex);
+      const match = sentence ? widgetForSentence(sentence.text, widgets) : null;
+      if (match?.id === lastId) return;
+      clearTtsHighlight();
+      if (match) {
+        const card = document.querySelector(`.widget[data-widget-id="${match.id}"]`);
+        card?.classList.add('tts-highlight');
+        lastId = match.id;
+      } else {
+        lastId = null;
+      }
+    };
+    utter.onend = clearTtsHighlight;
+    utter.onerror = clearTtsHighlight;
+  }
+
+  window.speechSynthesis.speak(utter);
+}
+
+try { state.autoRead = localStorage.getItem('chatToDashboardAutoRead') === '1'; } catch { state.autoRead = false; }
+
+function syncAutoReadButton() {
+  const btn = el('auto-read-toggle');
+  btn.classList.toggle('active', state.autoRead);
+  // أيقونة + نص في عنصرين حتى يُخفى النص في الوضع المطوي للقائمة الجانبية (.app.is-collapsed .nav-text).
+  btn.innerHTML = `<span class="ar-ic" aria-hidden="true">${state.autoRead ? '🔊' : '🔇'}</span><span class="nav-text">قراءة تلقائية</span>`;
+  btn.title = state.autoRead ? 'إيقاف القراءة الصوتية التلقائية' : 'تشغيل القراءة الصوتية التلقائية لردود المساعد';
+}
+if (ttsSupported()) {
+  el('auto-read-toggle').classList.remove('hidden');
+  syncAutoReadButton();
+  el('auto-read-toggle').addEventListener('click', () => {
+    state.autoRead = !state.autoRead;
+    try { localStorage.setItem('chatToDashboardAutoRead', state.autoRead ? '1' : '0'); } catch {}
+    syncAutoReadButton();
+    if (!state.autoRead) window.speechSynthesis.cancel();
+  });
+}
+
+// ---------- continuation: "🆕 لوحة جديدة" ----------
+// Empties the dashboard AND the chat transcript immediately — a real "start over", not just
+// a flag for the next question. Since ask() only sends the current dashboard as continuation
+// context when one actually exists (state.dashboard?.widgets?.length), an empty dashboard
+// already means the next question is answered from scratch — no separate "armed" state
+// needed.
+function startBlankDashboard() {
+  state.dashboard = null;
+  state.editHistory = { past: [], future: [] };
+  state.currentHistoryId = null;
+  state.activeFilters = {}; state.crossFilterDefs = {}; state.filterRefreshWarning = null;
+  state.messages = [];
+  state.dashboardIsActive = false; state.dashboardRole = null;
+  state.dashboardDisabled = false; state.dashboardDisabledReason = '';
+  if (ttsSupported()) window.speechSynthesis.cancel(); // don't keep reading a wiped-out message
+  renderDashboard();
+  renderMessages();
+}
+// "لوحة جديدة" now opens the template gallery (below) instead of clearing immediately —
+// the actual reset only happens once the user picks something inside it (a template, "لوحة
+// فارغة", or "اطلب من جيم"), so an accidental click no longer destroys the current dashboard.
+el('new-dashboard-btn').addEventListener('click', openDashGallery);
+
+// ---------- معرض نماذج اللوحات الكاملة ("لوحة جديدة") ----------
+// بوب أب زي شاشة البداية في PowerPoint: تختار نموذج لوحة كامل (10 عناصر: 4 مؤشرات + 6
+// رسوم) فتشوف معاينة لعناصره العشرة، أو تبدأ بلوحة فارغة، أو تطلب من جيم مباشرة.
+// اختيار نموذج بيستدعي نفس ask() اللي أي سؤال مكتوب يدويًا بيعدي عليه — الوصف المفصّل
+// لعناصر النموذج هو نص السؤال نفسه، فجيم بيبني العناصر الحقيقية من مصادر المشروع
+// الفعلية. المصغّرات (GLYPH) أشكال تجريدية بترمز لنوع كل عنصر بس — مفيش رقم أو بيانات
+// وهمية متعروضة في أي مكان من المعرض، ولا قبل ولا بعد الاختيار.
+const DASH_GAL_GLYPH = {
+  kpi: '<svg viewBox="0 0 40 20"><rect x="4" y="5" width="16" height="5" rx="1.5" fill="var(--chart-1)"/><rect x="4" y="13" width="26" height="2.5" rx="1.2" fill="#D3DAE1"/></svg>',
+  line: '<svg viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="2,26 14,20 26,22 38,14 50,15 62,8 78,4" fill="none" stroke="var(--chart-1)" stroke-width="2.4" vector-effect="non-scaling-stroke"/></svg>',
+  donut: '<svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="9" fill="none" stroke="var(--chart-1)" stroke-width="5" stroke-dasharray="26 60" transform="rotate(-90 15 15)"/><circle cx="15" cy="15" r="9" fill="none" stroke="var(--chart-2)" stroke-width="5" stroke-dasharray="17 60" stroke-dashoffset="-27" transform="rotate(-90 15 15)"/><circle cx="15" cy="15" r="9" fill="none" stroke="var(--chart-3)" stroke-width="5" stroke-dasharray="12 60" stroke-dashoffset="-45" transform="rotate(-90 15 15)"/></svg>',
+  hbars: '<svg viewBox="0 0 40 24">' + [30, 22, 16, 10].map((w, i) => `<rect x="${38 - w}" y="${2 + i * 6}" width="${w}" height="4" rx="1.2" fill="var(--chart-1)"/>`).join('') + '</svg>',
+  cbars: '<svg viewBox="0 0 40 24">' + [10, 14, 18].map((h, i) => `<rect x="${5 + i * 12}" y="${22 - h}" width="4" height="${h}" rx="1" fill="#BFD9EC"/><rect x="${10 + i * 12}" y="${20 - h}" width="4" height="${h + 2}" rx="1" fill="var(--chart-1)"/>`).join('') + '</svg>',
+  table: '<svg viewBox="0 0 40 24"><rect x="2" y="2" width="36" height="4" rx="1" fill="#D3DAE1"/>' + [0, 1, 2].map(i => `<rect x="2" y="${9 + i * 5}" width="${18 - i * 3}" height="2.5" rx="1" fill="var(--chart-1)"/><rect x="28" y="${9 + i * 5}" width="10" height="2.5" rx="1" fill="#D3DAE1"/>`).join('') + '</svg>',
+  funnel: '<svg viewBox="0 0 40 24">' + [34, 26, 18, 10].map((w, i) => `<rect x="${(40 - w) / 2}" y="${2 + i * 5.5}" width="${w}" height="4" rx="1" fill="${i === 3 ? 'var(--chart-4)' : 'var(--chart-1)'}"/>`).join('') + '</svg>',
+  heat: '<svg viewBox="0 0 40 24">' + Array.from({ length: 18 }, (_, i) => `<rect x="${3 + (i % 6) * 6}" y="${3 + Math.floor(i / 6) * 6.5}" width="5" height="5.5" rx="1" fill="var(--chart-1)" opacity="${[.25, .5, .8, 1, .4, .65][(i * 5) % 6]}"/>`).join('') + '</svg>',
+};
+// توزيع الـ6 رسوم على شبكة 12 عمود — 4 تراتيب مختلفة عشان المصغّرات متبقاش كلها متطابقة.
+const DASH_GAL_LAYOUTS = {
+  a: { order: [0, 1, 2, 3, 4, 5], spans: [8, 4, 6, 6, 7, 5] },
+  b: { order: [3, 1, 0, 2, 5, 4], spans: [7, 5, 8, 4, 5, 7] },
+  c: { order: [1, 0, 4, 5, 2, 3], spans: [4, 8, 7, 5, 6, 6] },
+  d: { order: [2, 3, 0, 5, 1, 4], spans: [6, 6, 8, 4, 5, 7] },
+};
+// `d.widgets` is exactly 10 items for the original 8 hand-built templates, but the 55 ported
+// real-data dashboards (see BuiltinDashboardsGenerated.cs) range from 8 to 40 flattened items —
+// L.order indexes 6 "chart" slots that may not all exist there, so this only renders the ones
+// that do instead of spreading `undefined` into the thumbnail (which rendered a literal
+// "t-undefined"/"undefined" glyph for any dashboard with fewer than 10 widgets total).
+function dashGalArrange(d) {
+  const L = DASH_GAL_LAYOUTS[d.layout || 'a'];
+  const kpis = d.widgets.slice(0, 4).map(w => ({ ...w, span: 3 }));
+  const charts = d.widgets.slice(4);
+  const rest = L.order.map((o, i) => charts[o] ? { ...charts[o], span: L.spans[i] } : null).filter(Boolean);
+  return kpis.concat(rest);
+}
+const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield', analysis: 'filter', command: 'server', finance: 'percent' };
+function dashGalThumb(d) {
+  if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
+  return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
+    `<i class="s${w.span} t-${w.type}">${DASH_GAL_GLYPH[w.type]}</i>`).join('')}</span>`;
+}
+
+// كل نموذج = 4 مؤشرات + 6 رسوم (10 عناصر). `widgets[].title` بس هو اللي بيتعرض في
+// المعرض والمعاينة (مفيش value/delta — دول مش بيانات حقيقية فمش هنعرضهم كأنهم كذلك).
+// النص الكامل اللي بيتبعت لـ ask() فعليًا لما تضغط "استخدم هذا النموذج" ماعاد بيترسل من هنا
+// أصلًا — المتصفح بيبعت id النموذج بس، وجيم (TemplatePromptService) هو اللي بيجمّع النص
+// النهائي من مكتبة النماذج اللي مسؤول المنصة بيعدّلها، عشان المستخدم مايقدرش يغيّر الوصف
+// المُرسل للموديل من عنده. انظر loadTemplateCatalog() وask() (التمبلت ريف).
+let DASH_GALLERY = []; // fetched from /api/templates/catalog — see loadTemplateCatalog()
+// طبقة المعنى (ب): جدوى كل نموذج ببيانات المشروع من /api/templates/feasibility —
+// {templateId → {total, buildable|null, topMissing}}. null = لم تُحمَّل بعد (تُبطَل عند تغيّر
+// الملفات أو المعاني). buildable null = لم يُحلَّل أي جدول بعد فلا تُعرض شارة.
+let dashGalFeasibility = null;
+async function loadDashGalFeasibility() {
+  if (dashGalFeasibility) return dashGalFeasibility;
+  try {
+    const res = await fetch('/api/templates/feasibility');
+    if (!res.ok) return null;
+    const data = await res.json();
+    dashGalFeasibility = Object.fromEntries((data.items || []).map(i => [i.templateId, i]));
+  } catch { dashGalFeasibility = null; }
+  return dashGalFeasibility;
+}
+function dashGalFeasOf(d) {
+  if (d.renderKind || !dashGalFeasibility) return null;
+  const f = dashGalFeasibility[d.id];
+  return f && f.buildable !== null && f.buildable !== undefined ? f : null;
+}
+// «12 من 28 قابلة للبناء ببياناتك» — أيقونة+نص مع اللون (لا لون وحده).
+function dashGalFeasBadge(d) {
+  const f = dashGalFeasOf(d);
+  if (!f) return '';
+  const ratio = f.total ? f.buildable / f.total : 0;
+  const tone = ratio >= 0.8 ? 'badge-ok' : ratio >= 0.4 ? 'badge-warn' : 'badge-danger';
+  const glyph = ratio >= 0.8 ? '✓' : ratio >= 0.4 ? '◐' : '!';
+  return `<span class="badge ${tone} gal-feas" title="عدد العناصر التي تكفيها معاني أعمدتك الحالية">${glyph} ${f.buildable.toLocaleString('en-US')} من ${f.total.toLocaleString('en-US')} ببياناتك</span>`;
+}
+// الفئات الأصلية الثمانية + الفئات اللي جابتها الـ55 لوحة + الأربعة الجديدة من لوحات
+// Databox الـ157 (marketing/ads/social/dev — انظر IMPLEMENTATION.md "لوحات معرض Databox").
+// BuiltinDashboardsGenerated.cs على السيرفر بيستخدم نفس المفاتيح دي بالظبط، فلازم تفضل
+// متطابقة هنا وهناك. اسم "sales"/"cx" اتغيّر ليعكس إن "المبيعات والتسويق"/"تجربة العملاء"
+// بقى لهم تصنيفات تسويقية منفصلة دلوقتي (marketing/ads/social).
+const DASH_GAL_CATS = [
+  ['all', 'كل النماذج', 'grid'], ['sales', 'المبيعات وإدارة العملاء', 'chart'], ['projects', 'المشاريع', 'layers'],
+  ['finance', 'المالية', 'sheet'], ['hr', 'الموارد البشرية', 'users'], ['procurement', 'المشتريات', 'briefcase'],
+  ['cx', 'خدمة العملاء ونجاحهم', 'headset'], ['ops', 'العمليات', 'settings'],
+  ['retail', 'التجزئة والتجارة الإلكترونية', 'cart'], ['banking', 'البنوك والتأمين', 'wallet'],
+  ['supply', 'سلاسل الإمداد', 'server'], ['hse', 'السلامة', 'shield'], ['saas', 'الاشتراكات', 'layers'],
+  ['health', 'الصحة', 'headset'], ['hospitality', 'الضيافة والسفر', 'star'], ['gov', 'القطاع الحكومي', 'briefcase'],
+  ['other', 'أخرى', 'more'],
+  ['marketing', 'التسويق الرقمي', 'target'], ['ads', 'الإعلانات المدفوعة', 'send'],
+  ['social', 'التواصل الاجتماعي والمحتوى', 'chat'], ['dev', 'التطوير والتطبيقات', 'grid'],
+  // لوحات تفاعلية (renderKind "network") — شبكات حية بدل شبكة ويدجتس عادية، انظر
+  // BuiltinDashboardTemplate's وremarks وdashGalThumb/openDashGalPreview/openNetworkGalDemo أدناه.
+  ['network', 'لوحات تفاعلية', 'share'],
+];
+
+let dashGalCat = 'all', dashGalQuery = '';
+
+function openDashGallery() {
+  dashGalCat = 'all'; dashGalQuery = '';
+  el('gal-search-input').value = '';
+  renderDashGalCats();
+  renderDashGalGrid();
+  if (!dashGalFeasibility) loadDashGalFeasibility().then(f => { if (f && !el('dash-gallery-modal').classList.contains('hidden')) renderDashGalGrid(); });
+  el('gal-view-list').classList.remove('hidden');
+  el('gal-view-preview').classList.add('hidden');
+  el('dash-gallery-modal').classList.remove('hidden');
+}
+function closeDashGallery() { el('dash-gallery-modal').classList.add('hidden'); }
+
+function renderDashGalCats() {
+  el('gal-cats').innerHTML = DASH_GAL_CATS.map(([k, name, icon]) => {
+    const count = k === 'all' ? DASH_GALLERY.length : DASH_GALLERY.filter(d => d.cat === k).length;
+    return `<button type="button" data-cat="${k}" aria-pressed="${k === dashGalCat}">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}</span><em>${count}</em>
+      </button>`;
+  }).join('');
+  el('gal-cats').querySelectorAll('[data-cat]').forEach(btn => btn.addEventListener('click', () => {
+    dashGalCat = btn.dataset.cat;
+    renderDashGalCats();
+    renderDashGalGrid();
+  }));
+}
+function renderDashGalGrid() {
+  const q = dashGalQuery.toLowerCase();
+  const items = DASH_GALLERY.filter(d =>
+    (dashGalCat === 'all' || d.cat === dashGalCat) &&
+    (!q || (d.name + d.desc + d.sources.join()).toLowerCase().includes(q)));
+  el('gal-grid').innerHTML = items.map(d => `
+    <button type="button" class="dash-card" data-dash="${esc(d.id)}">
+      ${dashGalThumb(d)}
+      <span class="dc-body">
+        <b>${esc(d.name)}${d.popular ? ' <span class="badge badge-blue">الأكثر استخدامًا</span>' : ''}</b>
+        <small>${esc(d.desc)}</small>
+        <span class="dc-meta">
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>${d.widgets.length.toLocaleString('en-US')} عنصر</span>
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${d.sources.length ? esc(d.sources.join('، ')) : 'حسب مصادر مشروعك المتاحة'}</span>
+          ${dashGalFeasBadge(d)}
+        </span>
+      </span>
+    </button>`).join('');
+  el('gal-empty').classList.toggle('hidden', items.length > 0);
+  el('gal-grid').querySelectorAll('[data-dash]').forEach(card =>
+    card.addEventListener('click', () => openDashGalPreview(DASH_GALLERY.find(d => d.id === card.dataset.dash))));
+}
+el('gal-search-input').addEventListener('input', e => { dashGalQuery = e.target.value.trim(); renderDashGalGrid(); });
+el('gal-close').addEventListener('click', closeDashGallery);
+el('dash-gallery-modal').addEventListener('click', e => { if (e.target.id === 'dash-gallery-modal') closeDashGallery(); });
+
+function dashGalDemoAvailable(d) {
+  if (d.renderKind === 'network') return !!(window.JEEM_NETWORK_LIBRARY && window.JEEM_NETWORK_LIBRARY.some(x => x.id === d.id));
+  if (d.renderKind === 'workflow') return !!window.JEEM_WORKFLOW;
+  if (d.renderKind === 'marketplace') return !!window.JEEM_MARKET;
+  if (d.renderKind === 'warehouse') return !!window.JEEM_WAREHOUSE_DEMO;
+  if (d.renderKind === 'pools') return !!window.JEEM_POOLS_DEMO;
+  if (d.renderKind === 'treasury') return !!window.JEEM_TREASURY_DEMO;
+  if (d.renderKind === 'crm') return !!window.JEEM_CRM_DEMO;
+  if (d.renderKind === 'teamtasks') return !!window.JEEM_TEAMTASKS_DEMO;
+  if (d.renderKind === 'timetracking') return !!window.JEEM_TIMETRACKING_DEMO;
+  if (d.renderKind === 'saas') return !!window.JEEM_SAAS_DEMO;
+  if (d.renderKind === 'studio') return !!window.JEEM_STUDIO_DEMO;
+  if (d.renderKind === 'campaign') return !!window.JEEM_CAMPAIGN_DEMO;
+  if (d.renderKind === 'funding') return !!window.JEEM_FUNDING_DEMO;
+  if (d.renderKind === 'construction') return !!window.JEEM_CONSTRUCTION_DEMO;
+  if (d.renderKind === 'board') return !!window.JEEM_BOARD_DEMO;
+  if (d.renderKind === 'leads') return !!window.JEEM_LEADS_DEMO;
+  if (d.renderKind === 'risk') return !!window.JEEM_RISK_DEMO;
+  if (d.renderKind === 'analysis') return !!window.JEEM_ANALYSIS_DEMO;
+  if (d.renderKind === 'command') return !!window.JEEM_COMMAND_DEMO;
+  if (d.renderKind === 'finance') return !!window.JEEM_FINANCE_DEMO;
+  return !!(window.JEEM_DASH_LIBRARY && window.JEEM_DASH_LIBRARY.some(x => x.id === d.id));
+}
+// في المعاينة: الشارة + أكثر المفاهيم نقصًا مع إرشاد المستخدم إلى «المصادر» لتأكيد معنى عمود.
+function dashGalFeasHint(d) {
+  const f = dashGalFeasOf(d);
+  if (!f) return '';
+  const missing = (f.topMissing || []).filter(Boolean);
+  return `<div class="pv-feas">${dashGalFeasBadge(d)}${missing.length
+    ? `<small>ينقص بياناتك: ${esc(missing.join('، '))}. أضف عمودًا له أو أكّد معنى عمود موجود من «المصادر» ← 🏷️ معاني الأعمدة.</small>`
+    : `<small>كل عناصر هذا النموذج لها ما يلزمها في بياناتك.</small>`}</div>`;
+}
+function openDashGalPreview(d) {
+  el('gal-view-preview').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>كل النماذج</span>
+    </button>
+    <div class="pv-grid">
+      <div class="pv-thumb">${dashGalThumb(d)}</div>
+      <div class="pv-info">
+        <h3>${esc(d.name)}</h3><p>${esc(d.desc)}</p>
+        <div class="pv-src">${d.sources.length
+          ? d.sources.map(s => `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${esc(s)}</span>`).join('')
+          : `<span class="src-tag"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>حسب مصادر مشروعك المتاحة</span>`}</div>
+        ${dashGalFeasHint(d)}
+        ${d.renderKind ? '' : `
+        <h4>عناصر اللوحة (${d.widgets.length.toLocaleString('en-US')})</h4>
+        <ol class="pv-list">${d.widgets.map(w => `<li><span class="pv-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>${esc(w.title)}</li>`).join('')}</ol>`}
+        <div class="pv-actions">
+          <button type="button" class="btn btn-primary" id="gal-use-btn">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+          </button>
+          ${dashGalDemoAvailable(d) ? `
+          <button type="button" class="btn btn-soft" id="gal-demo-btn">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية بأرقام توضيحية
+          </button>` : ''}
+          <span class="muted" style="font-size:var(--fs-xs)">تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.</span>
+        </div>
+      </div>
+    </div>`;
+  el('gal-back-btn').addEventListener('click', () => {
+    el('gal-view-preview').classList.add('hidden');
+    el('gal-view-list').classList.remove('hidden');
+  });
+  el('gal-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  el('gal-demo-btn')?.addEventListener('click', () => {
+    if (d.renderKind === 'network') return openNetworkGalDemo(d);
+    if (d.renderKind === 'workflow') return openWorkflowGalDemo(d);
+    if (d.renderKind === 'marketplace') return openMarketplaceGalDemo(d);
+    if (d.renderKind === 'warehouse') return openWarehouseGalDemo(d);
+    if (d.renderKind === 'pools') return openPoolsGalDemo(d);
+    if (d.renderKind === 'treasury') return openTreasuryGalDemo(d);
+    if (d.renderKind === 'crm') return openCrmGalDemo(d);
+    if (d.renderKind === 'teamtasks') return openTeamTasksGalDemo(d);
+    if (d.renderKind === 'timetracking') return openTimeTrackingGalDemo(d);
+    if (d.renderKind === 'saas') return openSaasGalDemo(d);
+    if (d.renderKind === 'studio') return openStudioGalDemo(d);
+    if (d.renderKind === 'campaign') return openCampaignGalDemo(d);
+    if (d.renderKind === 'funding') return openFundingGalDemo(d);
+    if (d.renderKind === 'construction') return openConstructionGalDemo(d);
+    if (d.renderKind === 'board') return openBoardGalDemo(d);
+    if (d.renderKind === 'leads') return openLeadsGalDemo(d);
+    if (d.renderKind === 'risk') return openRiskGalDemo(d);
+    if (d.renderKind === 'analysis') return openAnalysisGalDemo(d);
+    if (d.renderKind === 'command') return openCommandGalDemo(d);
+    if (d.renderKind === 'finance') return openFinanceGalDemo(d);
+    return openDashGalDemo(d);
+  });
+  el('gal-view-list').classList.add('hidden');
+  el('gal-view-preview').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية (معرض الأمثلة) ----------
+// هنا، وهنا فقط، في الـAI تعرض بيانات/أرقام مش حقيقية — عشان تعطي المستخدم فكرة بصرية
+// كاملة عن شكل اللوحة النهائي (صفحات، فلاتر، 28 نوع رسم) قبل ما يبنيها فعليًا. المحرك
+// (dash-render.js → window.JR) ومكتبة البيانات (dash-library.js → window.JEEM_DASH_LIBRARY)
+// منفصلين تمامًا عن مسار البناء الحقيقي: الأرقام هنا ثابتة/عشوائية مشتقة من اسم اللوحة
+// نفسها (نفس القيمة كل مرة، تتغيّر فقط بشكل بصري لما تغيّر فلتر لمحاكاة التفاعل) ومكتوب
+// عليها تحذير صريح في كل مكان. زرار "استخدم هذا النموذج" هنا هو نفسه المسؤول عن الانتقال
+// لمسار البناء الحقيقي (ask() + templateRef) — نفس الزرار بتاع المعاينة البسيطة بالظبط.
+function openDashGalDemo(d) {
+  const entry = (window.JEEM_DASH_LIBRARY || []).find(x => x.id === d.id);
+  if (!entry || !window.JR) return;
+  const nPages = entry.p.length, nWidgets = entry.p.reduce((s, p) => s + p.w.length, 0);
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل اللوحة — ليست بيانات حقيقية من مشروعك، وتتغيّر بشكل
+      شكلي عند تغيير الفلاتر لمحاكاة التفاعل. لبناء اللوحة الفعلية ببيانات مشروعك الحقيقية،
+      اضغط «استخدم هذا النموذج».
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(entry.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">
+          ${ic2('layers')}${nPages.toLocaleString('en-US')} ${nPages > 1 ? 'صفحات' : 'صفحة'} ·
+          ${ic2('dashboard')}${nWidgets.toLocaleString('en-US')} عنصرًا ·
+          ${entry.sources.map(s => esc(s)).join('، ')}
+        </span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <div class="jr-bar" id="gal-demo-bar"></div>
+    <div class="grid" id="gal-demo-grid"></div>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JR.mount(entry, el('gal-demo-grid'), { bar: el('gal-demo-bar') });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function ic2(n) { return `<svg class="icon icon-sm" aria-hidden="true"><use href="#i-${n}"/></svg>`; }
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (شبكة) ----------
+// نفس مكان العرض (#gal-view-demo) ونفس اتفاقية التحذير اللي فوق، لكن المحرك هنا شبكي
+// (network-graph.js + graph-drill.js) مش JR.mount — انظر BuiltinDashboardTemplate's remarks.
+function openNetworkGalDemo(d) {
+  const entry = (window.JEEM_NETWORK_LIBRARY || []).find(x => x.id === d.id);
+  if (!entry || !window.JEEM_NET_MOUNT) return;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل الشبكة — ليست بيانات حقيقية من مشروعك. اضغط «استخدم هذا
+      النموذج» لبناء لوحة ببيانات مشروعك الفعلية عبر جيم.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('share')}لوحة تفاعلية — شبكة حية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <main class="canvas pg-canvas" id="pgRoot">
+      <section class="pg-head">
+        <div>
+          <div class="dg-title"><h1>${esc(d.name)}</h1></div>
+          <p>${esc(d.desc)}</p>
+          <span class="sr-only" id="pgScope"></span>
+        </div>
+        <div class="pg-law" role="group" aria-label="اختر النظام"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن الشبكة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم… مثال: أين تتركز الشكاوى في نظام المنافسات؟" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="إظهار أو إخفاء الأنواع"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث في الشبكة</span><input id="pgSearch" type="search" placeholder="ابحث عن نظام أو جهة…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="graph" aria-pressed="true">شبكة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage">
+            <svg id="pgSvg" role="group" aria-label="${esc(d.name)}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+            <div class="pg-zoom" role="group" aria-label="التكبير">
+              <button type="button" id="pgZoomIn" aria-label="تكبير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              <span id="pgZoomVal" class="num">100%</span>
+              <button type="button" id="pgZoomOut" aria-label="تصغير"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-minus"/></svg></button>
+              <button type="button" id="pgFit" aria-label="ملاءمة الشبكة للشاشة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-expand"/></svg></button>
+            </div>
+            <p class="pg-hint">نقرتان على عقدة للنزول داخلها · اسحب الخلفية للتحريك · العجلة للتكبير</p>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">الفترة</span><input type="range" id="pgYear" step="1">
+              <span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="pgYearOut"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_DRILL_INIT?.();
+  window.JEEM_NET_MOUNT(entry);
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (سير عمل/SLA) ----------
+// نفس مكان العرض ونفس اتفاقية التحذير، لكن المحرك هنا خريطة مراحل متحركة (workflow-graph.js)
+// مش شبكة عقد ومش JR.mount — يستخدم window.JEEM_WORKFLOW مباشرة (نموذج واحد فقط حاليًا).
+function openWorkflowGalDemo(d) {
+  if (!window.JEEM_WORKFLOW || !window.JEEM_WORKFLOW_MOUNT) return;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل سير العمل — ليست بيانات حقيقية من مشروعك. اضغط «استخدم
+      هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية عبر جيم.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('layers')}لوحة تفاعلية — خريطة سير عمل</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <main class="canvas pg-canvas" id="wfRoot">
+      <section class="pg-head">
+        <div>
+          <div class="dg-title"><h1>${esc(d.name)}</h1></div>
+          <p>${esc(d.desc)}</p>
+          <span class="sr-only" id="pgScope"></span>
+        </div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن سير العمل</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم… مثال: أين عنق الزجاجة في سير العمل؟" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب الالتزام بالمدة"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن طلب أو مورد</span><input id="pgSearch" type="search" placeholder="ابحث برقم الطلب أو اسمه أو المورد…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="map" aria-pressed="true">خريطة</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="wfSvg" role="group" aria-label="${esc(d.name)}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="wfDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_WORKFLOW_MOUNT(window.JEEM_WORKFLOW);
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (منصة/Sankey) ----------
+// نفس مكان العرض ونفس اتفاقية التحذير، لكن المحرك هنا تدفق Sankey (marketplace-graph.js) —
+// يستخدم window.JEEM_MARKET المُحمَّل سلفًا لشبكة العملاء والموردين (Phase 3).
+function openMarketplaceGalDemo(d) {
+  if (!window.JEEM_MARKET || !window.JEEM_MARKETPLACE_MOUNT) return;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل تدفق الطلبات — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية عبر جيم.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('users')}لوحة تفاعلية — تدفق المنصة</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    <main class="canvas pg-canvas" id="mkRoot">
+      <section class="pg-head">
+        <div>
+          <div class="dg-title"><h1>${esc(d.name)}</h1></div>
+          <p>${esc(d.desc)}</p>
+          <span class="sr-only" id="pgScope"></span>
+        </div>
+        <div class="pg-law" role="group" aria-label="اختر العميل"></div>
+      </section>
+      <div class="grid pg-kpis" id="pgKpis"></div>
+      <form class="pg-ask" id="pgAsk" role="search">
+        <span class="pg-ask-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+        <label class="sr-only" for="pgAskIn">اسأل جيم عن المنصة</label>
+        <input id="pgAskIn" type="text" placeholder="اسأل جيم… مثال: أين تتركز الطلبات المتأخرة؟" autocomplete="off">
+        <button class="btn btn-primary btn-sm" type="submit"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>اسأل</button>
+        <div class="pg-ask-chips" id="pgAskChips"></div>
+      </form>
+      <div class="pg-answer" id="pgAnswer" role="status" hidden><span class="pg-ans-ic"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span><p class="pg-ans-txt"></p><button type="button" class="btn btn-ghost btn-sm" id="pgAnsClear"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>مسح التنوير</button></div>
+      <div class="pg-body">
+        <article class="widget pg-graph">
+          <div class="pg-tools">
+            <div class="pg-types" id="pgTypes" role="group" aria-label="تصفية حسب حالة الطلب"></div>
+            <span class="spacer"></span>
+            <div class="pg-search"><label class="tpl-search"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">ابحث عن عميل أو مورد أو نوع</span><input id="pgSearch" type="search" placeholder="ابحث عن عميل أو مورد أو نوع طلب…" autocomplete="off"></label><ul class="pg-sug" id="pgSug" hidden></ul></div>
+            <div class="seg pg-view" role="group" aria-label="طريقة العرض"><button type="button" data-view="flow" aria-pressed="true">تدفق</button><button type="button" data-view="table" aria-pressed="false">جدول</button></div>
+          </div>
+          <div class="pg-stage wf-stage" style="height:auto">
+            <svg id="mkSvg" role="group" aria-label="${esc(d.name)}"></svg>
+            <div class="pg-table" id="pgTable" hidden></div>
+          </div>
+          <div class="pg-time">
+            <button type="button" class="btn btn-icon btn-sm" id="pgPlay"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+            <label class="pg-range"><span class="sr-only">اليوم</span><input type="range" id="pgYear" step="1"><span class="pg-ticks" aria-hidden="true"></span></label>
+            <span class="pg-year">حتى <b class="num" id="mkDay"></b></span>
+          </div>
+        </article>
+        <aside class="widget pg-panel" id="pgPanel" aria-live="polite"></aside>
+      </div>
+      <div class="grid" id="pgGrid"></div>
+    </main>`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    closeDashGallery();
+    startBlankDashboard();
+    setChatMode('dashboard');
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_MARKETPLACE_MOUNT(window.JEEM_MARKET);
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (نظرة على فريق المستودع) ----------
+// نفس مكان العرض ونفس اتفاقية التحذير، لكن المحرك هنا warehouse-team.js (JEEM_WAREHOUSE_MOUNT)
+// ببيانات ثابتة من warehouse-team-demo.js — opts.demo:true يفعّل محاكاة الإكمال العشوائية.
+function openWarehouseGalDemo(d) {
+  if (!window.JEEM_WAREHOUSE_DEMO || !window.JEEM_WAREHOUSE_MOUNT) return;
+  const demo = window.JEEM_WAREHOUSE_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل اللوحة — ليست بيانات حقيقية من مشروعك. اضغط «استخدم
+      هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('layers')}لوحة تفاعلية — فريق المستودع</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveWarehouseSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_WAREHOUSE_MOUNT(el('gal-view-demo').querySelector('#whRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (مجمّعات السيولة المركّزة) ----------
+function openPoolsGalDemo(d) {
+  if (!window.JEEM_POOLS_DEMO || !window.JEEM_POOLS_MOUNT) return;
+  const demo = window.JEEM_POOLS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط وليست توصية استثمارية — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('chart')}لوحة تفاعلية — مجمّعات سيولة</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactivePoolsSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_POOLS_MOUNT(el('gal-view-demo').querySelector('#lpRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (خزينة الأصول الرقمية) ----------
+function openTreasuryGalDemo(d) {
+  if (!window.JEEM_TREASURY_DEMO || !window.JEEM_TREASURY_MOUNT) return;
+  const demo = window.JEEM_TREASURY_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط وليست توصية استثمارية — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('wallet')}لوحة تفاعلية — خزينة أصول رقمية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveTreasurySkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_TREASURY_MOUNT(el('gal-view-demo').querySelector('#ttRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (إدارة العملاء — مراحل البيع) ----------
+function openCrmGalDemo(d) {
+  if (!window.JEEM_CRM_DEMO || !window.JEEM_CRM_MOUNT) return;
+  const demo = window.JEEM_CRM_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('briefcase')}لوحة تفاعلية — مراحل بيع العملاء</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveCrmSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_CRM_MOUNT(el('gal-view-demo').querySelector('#crRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (إدارة مهام الفريق) ----------
+function openTeamTasksGalDemo(d) {
+  if (!window.JEEM_TEAMTASKS_DEMO || !window.JEEM_TEAMTASKS_MOUNT) return;
+  const demo = window.JEEM_TEAMTASKS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('calendar')}لوحة تفاعلية — إدارة مهام الفريق</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveTeamTasksSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_TEAMTASKS_MOUNT(el('gal-view-demo').querySelector('#tmRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+// ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (تتبع الوقت للفرق) ----------
+function openTimeTrackingGalDemo(d) {
+  if (!window.JEEM_TIMETRACKING_DEMO || !window.JEEM_TIMETRACKING_MOUNT) return;
+  const demo = window.JEEM_TIMETRACKING_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('clock')}لوحة تفاعلية — تتبع الوقت للفرق</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveTimeTrackingSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_TIMETRACKING_MOUNT(el('gal-view-demo').querySelector('#tkRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openSaasGalDemo(d) {
+  if (!window.JEEM_SAAS_DEMO || !window.JEEM_SAAS_MOUNT) return;
+  const demo = window.JEEM_SAAS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('chart')}لوحة تفاعلية — إيرادات الاشتراكات والاحتفاظ</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveSaasSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_SAAS_MOUNT(el('gal-view-demo').querySelector('#smRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openStudioGalDemo(d) {
+  if (!window.JEEM_STUDIO_DEMO || !window.JEEM_STUDIO_MOUNT) return;
+  const demo = window.JEEM_STUDIO_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('layers')}لوحة تفاعلية — استوديو المشاريع</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveStudioSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_STUDIO_MOUNT(el('gal-view-demo').querySelector('#psRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openCampaignGalDemo(d) {
+  if (!window.JEEM_CAMPAIGN_DEMO || !window.JEEM_CAMPAIGN_MOUNT) return;
+  const demo = window.JEEM_CAMPAIGN_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('target')}لوحة تفاعلية — تفاصيل مشروع حملة</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveCampaignSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_CAMPAIGN_MOUNT(el('gal-view-demo').querySelector('#cpRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openFundingGalDemo(d) {
+  if (!window.JEEM_FUNDING_DEMO || !window.JEEM_FUNDING_MOUNT) return;
+  const demo = window.JEEM_FUNDING_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('wallet')}لوحة تفاعلية — التمويل والسيولة النقدية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveFundingSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_FUNDING_MOUNT(el('gal-view-demo').querySelector('#tfRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openConstructionGalDemo(d) {
+  if (!window.JEEM_CONSTRUCTION_DEMO || !window.JEEM_CONSTRUCTION_MOUNT) return;
+  const demo = window.JEEM_CONSTRUCTION_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('briefcase')}لوحة تفاعلية — إدارة أعمال المقاولات</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveConstructionSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_CONSTRUCTION_MOUNT(el('gal-view-demo').querySelector('#ccRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openBoardGalDemo(d) {
+  if (!window.JEEM_BOARD_DEMO || !window.JEEM_BOARD_MOUNT) return;
+  const demo = window.JEEM_BOARD_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('list')}لوحة تفاعلية — لوحة مهام المشاريع</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveBoardSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_BOARD_MOUNT(el('gal-view-demo').querySelector('#tbRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openLeadsGalDemo(d) {
+  if (!window.JEEM_LEADS_DEMO || !window.JEEM_LEADS_MOUNT) return;
+  const demo = window.JEEM_LEADS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('users')}لوحة تفاعلية — العملاء المحتملون</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveLeadsSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_LEADS_MOUNT(el('gal-view-demo').querySelector('#clRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openRiskGalDemo(d) {
+  if (!window.JEEM_RISK_DEMO || !window.JEEM_RISK_MOUNT) return;
+  const demo = window.JEEM_RISK_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('shield')}لوحة تفاعلية — مخاطر الموردين</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveRiskSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_RISK_MOUNT(el('gal-view-demo').querySelector('#srRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openAnalysisGalDemo(d) {
+  if (!window.JEEM_ANALYSIS_DEMO || !window.JEEM_ANALYSIS_MOUNT) return;
+  const demo = window.JEEM_ANALYSIS_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('filter')}لوحة تفاعلية — تحليل مسار المبيعات</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveAnalysisSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_ANALYSIS_MOUNT(el('gal-view-demo').querySelector('#caRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openCommandGalDemo(d) {
+  if (!window.JEEM_COMMAND_DEMO || !window.JEEM_COMMAND_MOUNT) return;
+  const demo = window.JEEM_COMMAND_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('server')}لوحة تفاعلية — مركز قيادة سلسلة الإمداد</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveCommandSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_COMMAND_MOUNT(el('gal-view-demo').querySelector('#scRoot'), demo, { demo: true });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+function openFinanceGalDemo(d) {
+  if (!window.JEEM_FINANCE_DEMO || !window.JEEM_FINANCE_MOUNT) return;
+  const demo = window.JEEM_FINANCE_DEMO;
+  el('gal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
+    </button>
+    <div class="gal-demo-banner">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية للعرض فقط — ليست بيانات حقيقية من مشروعك. اضغط
+      «استخدم هذا النموذج» لبناء لوحة ببيانات مشروعك الفعلية.
+    </div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title">
+        <h3>${esc(d.name)}</h3>
+        <span class="muted" style="font-size:var(--fs-xs)">${ic2('percent')}لوحة تفاعلية — الإدارة المالية</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="gal-demo-use-btn">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج
+      </button>
+    </div>
+    ${interactiveFinanceSkeletonHtml(d)}`;
+  el('gal-demo-back-btn').addEventListener('click', () => {
+    el('gal-view-demo').classList.add('hidden');
+    el('gal-view-preview').classList.remove('hidden');
+  });
+  el('gal-demo-use-btn').addEventListener('click', () => {
+    if (d.renderKind) return useInteractiveTemplate(d);
+    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+  });
+  window.JEEM_FINANCE_MOUNT(el('gal-view-demo').querySelector('#foRoot'), demo, { demo: true, userName: state.currentUser?.displayName || state.currentUser?.username || '' });
+  el('gal-view-preview').classList.add('hidden');
+  el('gal-view-demo').classList.remove('hidden');
+}
+
+el('gal-start-blank').addEventListener('click', () => {
+  closeDashGallery();
+  startBlankDashboard();
+});
+el('gal-start-ai').addEventListener('click', () => {
+  closeDashGallery();
+  startBlankDashboard();
+  setChatMode('dashboard');
+  el('q').value = 'اعمل لي لوحة جديدة توضح ';
+  el('q').focus();
+});
+
+// ---------- voice: speech-to-text (the user talks to the model) ----------
+// A mic button that transcribes into the same #q box any typed question already goes
+// through — voice is just an alternate way to fill that box, never a separate path, so every
+// existing rule (sources, filters, the tool loop) applies unchanged. Deliberately never
+// auto-sends: Arabic recognition can mishear a dialect word, a technical term, or an exact
+// entity name, so the transcript stays editable until the user presses "إرسال" themselves.
+//
+// continuous:true, not false: with continuous:false the browser itself decides when a
+// pause in speech means "done talking" and stops listening on its own — reported live as
+// the mic cutting off mid-sentence before the user finished. continuous:true keeps the
+// session open across pauses; only the user's own second click on مايك (stopListening,
+// below) — or leaving the page/an actual error — ends it, matching "keep listening until I
+// press it again."
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognitionCtor) {
+  el('mic-btn').classList.remove('hidden');
+  let recognition = null;
+  let listening = false;
+
+  function stopListening() {
+    listening = false;
+    el('mic-btn').classList.remove('listening');
+    try { recognition?.stop(); } catch {}
+  }
+
+  el('mic-btn').addEventListener('click', () => {
+    if (listening) { stopListening(); return; }
+    recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'ar-SA';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    listening = true;
+    el('mic-btn').classList.add('listening');
+
+    // Text already confirmed by an earlier session, if the engine ends the session on its
+    // own — some browsers still do this after a long-enough silence even with
+    // continuous:true — and the 'end' handler below transparently restarts it. Each restart
+    // is technically a fresh session whose own ev.results starts over from empty, so without
+    // this, restarting would wipe out everything already said instead of just continuing it.
+    let baseTranscript = '';
+
+    recognition.addEventListener('result', ev => {
+      let transcript = '';
+      for (let i = 0; i < ev.results.length; i++) transcript += ev.results[i][0].transcript;
+      el('q').value = baseTranscript + transcript;
+    });
+    recognition.addEventListener('error', ev => {
+      // no-speech fires routinely in continuous mode during an ordinary pause between
+      // sentences — it is not the user stopping, so (unlike before) don't tear the session
+      // down for it; let it keep listening exactly as continuous:true promises.
+      if (ev.error === 'no-speech') return;
+      stopListening();
+      if (ev.error === 'aborted') return;
+      const messages = {
+        'not-allowed': 'محتاج إذن استخدام الميكروفون من المتصفح.',
+        'audio-capture': 'مفيش ميكروفون متاح.',
+      };
+      alert(messages[ev.error] || 'تعذّر التعرف على الصوت: ' + ev.error);
+    });
+    recognition.addEventListener('end', () => {
+      if (!listening) return; // the user's own click (or a real error) already stopped it
+      baseTranscript = el('q').value;
+      try { recognition.start(); } catch { stopListening(); }
+    });
+    try { recognition.start(); } catch { stopListening(); }
+  });
+}
+
+// ---------- follow-up suggestions ----------
+// A handful of ready-to-click follow-up prompts ("خليه شهري"، "أضف جدول تفصيلي"...) —
+// computed purely from the dashboard that's actually on screen right now (chart types,
+// x-axis fields, widget count), never from a fixed list. Clicking one just calls ask()
+// with that text, so it goes through the exact same follow-up handling (and the true-
+// current-state context fix above) as anything the user types by hand.
+function looksTimeBased(w) {
+  const key = (w.xKey || '').toLowerCase();
+  if (/date|month|week|year|شهر|تاريخ|سنة|أسبوع|period/i.test(key)) return true;
+  const rows = Array.isArray(w.data) ? w.data : [];
+  const v = w.xKey ? rows[0]?.[w.xKey] : undefined;
+  return typeof v === 'string' && /^\d{4}-\d{2}(-\d{2})?$/.test(v);
+}
+
+function computeSuggestions(d) {
+  if (!d?.widgets?.length) return [];
+  const widgets = d.widgets;
+  const types = new Set(widgets.map(w => (w.type || '').toLowerCase()));
+  const hasTimeChart = widgets.some(w => ['bar', 'line'].includes((w.type || '').toLowerCase()) && looksTimeBased(w));
+
+  const chips = [];
+  if (hasTimeChart) { chips.push('خليه شهري'); chips.push('اعرض آخر 3 شهور بس'); }
+  if (types.has('bar') && !types.has('line')) chips.push('غيّر الرسم لخط بياني');
+  if (!types.has('pie') && widgets.length <= 6) chips.push('أضف رسم توزيع (Pie)');
+  if (!types.has('table')) chips.push('أضف جدول تفصيلي');
+  if (widgets.length <= 3) chips.push('اعمل تقرير شامل بدل كده');
+  return chips.slice(0, 4);
+}
+
+function renderSuggestions() {
+  const existing = document.getElementById('suggest-row');
+  if (existing) existing.remove();
+  if (state.loading || !state.dashboard?.widgets?.length) return;
+
+  const chips = computeSuggestions(state.dashboard);
+  if (!chips.length) return;
+
+  const row = document.createElement('div');
+  row.id = 'suggest-row';
+  row.className = 'suggest-row';
+  row.innerHTML = chips.map(c => `<button type="button" class="suggest-chip">${esc(c)}</button>`).join('');
+  row.querySelectorAll('.suggest-chip').forEach(btn =>
+    btn.addEventListener('click', () => { if (!state.loading) ask(btn.textContent); }));
+  el.messages.after(row);
+}
+
+// Whether/how the new question continues the dashboard on screen is decided here, explicitly
+// and structurally — never guessed from the question's wording (see AnalyticsTools.
+// ComposeUserMessage on the backend, which frames this as the model's only continuation
+// signal). Default: continue, sending the full current summary+widgets (source fields and
+// all) so a follow-up like "اعرضلي بس القطاع الرقمي" can refine what's already there. Once "🆕
+// ابدأ لوحة جديدة" empties state.dashboard, there is nothing to send and the next question
+// starts from scratch automatically.
+// `displayText`, when given, is what actually shows in the chat bubble — `question` itself
+// still goes to the backend unchanged. Only the dashboard-gallery's "استخدم هذا النموذج"
+// needs this: its prompt is a single dense sentence enumerating all 10 widgets ("1) ... 2)
+// ... 10)."), fine for the model to read but unreadable crammed into a chat bubble as if the
+// user had typed it — every other caller (a typed question, a single-widget template's short
+// one-line prompt) leaves displayText unset and behaves exactly as before.
+// `templateRef`, when given (a chat-widget/dashboard-gallery/KPI-library "إضافة" click), is
+// {kind, key, ...} — see Templates.TemplateRef on the backend. `question` is then ONLY the
+// display label (never sent as the AI prompt): the server resolves the real instruction from
+// its own templates library by templateRef alone, so nothing the browser sends can change what
+// the model is actually asked for a given template (see ChatController.Post).
+async function ask(question, displayText, templateRef) {
+  const currentDashboard = state.dashboard?.widgets?.length
+    ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
+    : null;
+  const isContinuation = !!currentDashboard;
+  const image = state.attachedImage;
+
+  const shown = displayText ?? question;
+  state.messages.push({ role: 'user', text: image ? `📎 ${state.attachedImageName}\n${shown}` : shown });
+  state.attachedImage = null; state.attachedImageName = ''; renderAttachedImage();
+  state.loading = true;
+  renderMessages(); renderDashboard(); el.send.disabled = true;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: question, template: templateRef, currentDashboard, image,
+        // Only when actually continuing an Active dashboard (never a Draft) — lets the
+        // server re-apply the same "Editors can't introduce a new data source" rule the
+        // autosave/wizard path already enforces, since a chat continuation would otherwise
+        // silently fork into a disconnected Draft that never goes through that check at all.
+        historyId: isContinuation && state.dashboardIsActive ? state.currentHistoryId : null,
+        sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        lang: state.lang,
+      }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.dashboard) {
+      state.messages.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
+    } else {
+      if (isContinuation) {
+        // The system prompt tells the model to always copy forward every existing widget
+        // it isn't explicitly editing/deleting (see AnalyticsTools' "متابعة" instructions),
+        // but that's still just an instruction — a smaller/local model (seen with Ollama)
+        // can silently drop widgets from its JSON output while its own summary claims it
+        // kept everything. Widgets have no stable id the model echoes back (unlike filters
+        // below), so match by title instead: any existing widget whose title doesn't
+        // survive into the new response is presumed dropped by mistake and restored,
+        // unless the question itself looks like an explicit deletion request.
+        const oldWidgets = state.dashboard?.widgets || [];
+        const newWidgets = payload.dashboard.widgets || [];
+        const deletionRequested = /احذف|امسح|شيل|إزال|ألغِ|ألغي|تخلص/.test(question);
+        if (!deletionRequested && oldWidgets.length && newWidgets.length < oldWidgets.length) {
+          const newTitles = new Set(newWidgets.map(w => w.title));
+          const missing = oldWidgets.filter(w => !newTitles.has(w.title));
+          payload.dashboard.widgets = [...missing, ...newWidgets];
+        }
+
+        // A multi-page template's .page tag (see getDashboardPages/ChatController's own
+        // reconciliation) is stamped server-side only on the ORIGINAL template build — a
+        // continuation turn is plain chat, so the model is never told to set or echo it at
+        // all. An untouched widget the model just copies forward verbatim (the full current
+        // JSON was handed to it as context) naturally keeps its .page along with everything
+        // else, but a widget it actually REBUILDS this turn — e.g. "جرّب تبني عنصر «X» من
+        // مصدر بيانات تاني" filling in a noData placeholder — is authored fresh against the
+        // widget-schema instructions, which never mention .page, so that one specific widget
+        // loses it and falls into the catch-all "عناصر أخرى" tab instead of staying on its
+        // own page. Restore it from the old widget of the same title whenever dropped.
+        const oldPageByTitle = new Map();
+        for (const w of oldWidgets) if (w.page) oldPageByTitle.set(w.title, w.page);
+        for (const w of payload.dashboard.widgets) {
+          if (!w.page && oldPageByTitle.has(w.title)) w.page = oldPageByTitle.get(w.title);
+        }
+
+        // The model isn't told what filters already exist (only summary+widgets travel as
+        // continuation context — see ComposeUserMessage), so it has no way to deliberately
+        // keep them; left alone, every continuation turn would silently replace the whole
+        // filters array with whatever it freshly decided this time, dropping the ones the
+        // user already had selected. Keep every existing filter (by id) as-is, and only
+        // append a genuinely new one the model proposed for this turn (e.g. for a widget
+        // it just added) — never let a repeated id overwrite the one already on screen.
+        // مفتاح القالب لا يعود من المتابعة (المسار القديم لا يعرفه) فيُحتفظ به من اللوحة الحالية
+        // ليبقى «إعادة بناء العنصر» من سياق القالب وتُحفظ القيمة في السجل.
+        if (!payload.dashboard.templateKey && state.dashboard?.templateKey) payload.dashboard.templateKey = state.dashboard.templateKey;
+        const oldFilters = state.dashboard?.filters || [];
+        const oldIds = new Set(oldFilters.map(f => f.id).filter(Boolean));
+        const newFilters = (payload.dashboard.filters || []).filter(f => !f.id || !oldIds.has(f.id));
+        payload.dashboard.filters = [...oldFilters, ...newFilters];
+      } else {
+        state.activeFilters = {}; state.crossFilterDefs = {}; state.filterRefreshWarning = null;
+      }
+      state.dashboard = ensureWidgetMeta(payload.dashboard);
+      state.lastRefreshedAt = new Date();
+      state.editHistory = { past: [], future: [] };
+      state.currentHistoryId = null;
+      // A brand-new answer, never a filter/edit re-render — the next renderDashboard()
+      // call plays the entrance animation (see revealDashboardOnNextRender's own comment).
+      revealDashboardOnNextRender = true;
+      // A chat answer always lands as a fresh Draft (per Part 2: "any question's result
+      // goes to History as a frozen snapshot") — even when it continues an Active
+      // dashboard, so the Active one's own state no longer describes what's on screen now.
+      state.dashboardIsActive = false; state.dashboardRole = null;
+      state.dashboardDisabled = false; state.dashboardDisabledReason = '';
+      // narration is the rich, read-aloud-friendly walkthrough (see AnalyticsTools'
+      // "الشرح السردي" system-prompt section) — distinct from the short summary (used
+      // elsewhere: continuation context, history list) and from each widget's technical
+      // source. It's what the chat bubble shows and what 🔊/auto-read speaks.
+      const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
+      const narration = payload.dashboard.narration || payload.dashboard.summary;
+      state.messages.push({ role: 'bot', text: narration, speechWidgets });
+      if (!isContinuation && templateRef) pushMissingConceptsMessage(payload.dashboard);
+      saveToHistory(question, payload.dashboard);
+      if (state.autoRead) speakText(narration, speechWidgets);
+      // The user's already-applied filter selections carried over too (above) — re-apply
+      // them now so a widget the continuation just added or changed reflects them
+      // immediately, instead of showing unfiltered data until the next filter click.
+      if (isContinuation && getActiveFilters().length) await applyFilters();
+    }
+  } catch (err) {
+    state.messages.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
+  } finally {
+    state.loading = false; el.send.disabled = false;
+    renderMessages(); renderDashboard();
+  }
+}
+
+// ---------- النماذج (Templates): a catalog of ready-made widget requests ----------
+// Display data only (id/cat/icon/title/desc) — fetched from /api/templates/catalog, see
+// loadTemplateCatalog(). The actual prompt text is never sent to the browser: clicking "إضافة"
+// calls ask() with a templateRef (just this item's id), and the server resolves the real
+// instruction from its own templates library (see TemplatePromptService) — the same library
+// the platform-owner edits, and the same reason it's done this way: so nobody can tamper with
+// what gets sent to the model by editing the request from the browser.
+let TEMPLATES = []; // fetched from /api/templates/catalog — see loadTemplateCatalog()
+const TEMPLATE_CAT_COLOR = { kpi: 'blue', chart: 'teal', table: 'purple' };
+
+function renderTemplatesPanel() {
+  el('tpl-count-widgets').textContent = TEMPLATES.length;
+  const q = state.templateSearch.trim().toLowerCase();
+  const items = TEMPLATES.filter(t =>
+    (state.templateCategory === 'all' || t.cat === state.templateCategory) &&
+    (!q || t.title.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q)));
+  el('tpl-grid').innerHTML = items.length ? items.map(t => `
+    <article class="tpl-card">
+      <div class="tpl-thumb tpl-thumb-${TEMPLATE_CAT_COLOR[t.cat]}"><svg class="icon" aria-hidden="true"><use href="#i-${t.icon}"/></svg></div>
+      <h4>${esc(t.title)}</h4>
+      <p>${esc(t.desc)}</p>
+      <button type="button" class="tpl-add-btn" data-tpl="${esc(t.id)}" ${state.loading ? 'disabled' : ''}>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>إضافة
+      </button>
+    </article>`).join('') : `<p class="tpl-empty">لا توجد نماذج مطابقة.</p>`;
+}
+el('tpl-search-input').addEventListener('input', e => { state.templateSearch = e.target.value; renderTemplatesPanel(); });
+el('tpl-cats').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.templateCategory = btn.dataset.cat;
+  el('tpl-cats').querySelectorAll('.chip').forEach(c => c.classList.toggle('is-on', c === btn));
+  renderTemplatesPanel();
+});
+el('tpl-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.tpl-add-btn');
+  if (!btn || state.loading) return;
+  const tpl = TEMPLATES.find(t => t.id === btn.dataset.tpl);
+  if (!tpl) return;
+  setChatMode('dashboard');
+  ask(`✨ ${tpl.title}`, undefined, { kind: 'widget', key: tpl.id });
+});
+
+// ---------- مكتبة المؤشرات (تبويب فرعي داخل «النماذج») ----------
+// معاينة window.JEEM_KPI_LIBRARY (kpi-library.js — 1,899 مؤشرًا من Spider Strategies زائد
+// عناصر لوحات المتابعة الجاهزة الـ63 نفسها، مضافة كمؤشرات فردية قابلة للإضافة لأي لوحة تانية
+// (تصنيف "نماذج اللوحات" وما بعده في cats) — مصدر بيانات Spider Strategies موصوف في
+// IMPLEMENTATION.md لنسخة jeem-ui المرجعية. النسخة المرجعية كانت بتضيف
+// للوحة عنصرًا بقيم عشوائية ثابتة (seeded) — بما يخالف مبدأ الصدق المتّبع في كل الأماكن التانية
+// هنا (نماذج اللوحات الكاملة، النماذج الجاهزة فوق): مفيش رقم وهمي يتعرض كأنه حقيقي أبدًا.
+// فبدل ما نولّد قيمة وهمية، الضغط على مؤشر بيبني جملة طلب طبيعية حسب نوع القياس وبيبعتها
+// لنفس مسار ask() اللي أي سؤال بيتبع — فجيم بيبني العنصر فعليًا من مصادر المشروع الحقيقية
+// (أو يقول إنه مالقاش مصدر مناسب)، بالظبط زي TEMPLATES فوق.
+// قرار متعمّد: اقتراح IMPLEMENTATION.md ببناء جدول KpiDefinitions + API بحث من السيرفر
+// غير لازم هنا — المكتبة كتالوج ثابت (177 كيلوبايت، فلترة فورية في المتصفح)، بالظبط زي
+// TEMPLATES/DASH_GALLERY فوق، فمفيش داعي لتعقيد إضافي على مستوى الباك إند.
+const KPI_LIB = window.JEEM_KPI_LIBRARY || null;
+const KPI_MT_ICON = ['percent', 'clock', 'wallet', 'star', 'hash', 'target'];
+const KPI_MT_KEY = ['pct', 'time', 'money', 'score', 'count', 'other'];
+const KPI_PAGE_SIZE = 40;
+
+// جملة الطلب نفسها (ونوع القياس المختار) ماعادت بتتولّد هنا — الضغط على مؤشر بيبعت templateRef
+// {kind:'kpi', key: index, kpiName, ...} بس، وجيم (TemplatePromptService) هو اللي بيجمّع النص
+// الفعلي من مكتبة النماذج اللي مسؤول المنصة بيتحكّم فيها، بنفس مبدأ TEMPLATES/DASH_GALLERY فوق.
+// `KPI_ROW_OVERRIDES` (من catalog endpoint) بيقول أي صفوف اتوقفت فتُستثنى من النتائج هنا.
+let KPI_ROW_OVERRIDES = {};
+// `KPI_CAT_OFF` بيقول أي تصنيفات كاملة أوقفها مسؤول المنصة — تصنيف موقوف بيخفي كل مؤشراته
+// فورًا (مهما كانت حالة كل مؤشر فرديًا)، وبيختفي من قائمة التصنيفات تمامًا. انظر
+// TemplateKinds.KpiCategory على السيرفر.
+let KPI_CAT_OFF = new Set();
+
+// توحيد أشكال الألف والتاء المربوطة والياء — نفس تطبيع البحث في النسخة المرجعية، عشان
+// البحث عن «الاداء» يلاقي «الأداء».
+const kpiNorm = x => x.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ً-ْـ]/g, '');
+
+let kpiLibInitialized = false;
+function initKpiLibrary() {
+  if (kpiLibInitialized || !KPI_LIB) return;
+  kpiLibInitialized = true;
+  const view = el('tpl-view-kpis');
+  // تصنيف موقوف (من مسؤول المنصة) بيختفي من قائمة التصنيفات هنا تمامًا — مؤشراته أصلًا
+  // مستبعدة من نتائج البحث في run() تحت، فمفيش داعي يظهر كخيار فلتر بيرجع صفر نتائج.
+  const deps = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c, i]) => c[2] === 0 && !KPI_CAT_OFF.has(i));
+  const inds = KPI_LIB.cats.map((c, i) => [c, i]).filter(([c, i]) => c[2] === 1 && !KPI_CAT_OFF.has(i));
+  const opt = ([c, i]) => `<option value="${i}">${esc(c[0])}</option>`;
+  const visibleCatCount = KPI_LIB.cats.length - KPI_CAT_OFF.size;
+  view.innerHTML = `
+    <label class="tpl-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <input type="search" id="kpi-search-input" placeholder="ابحث بالعربي أو English… مثل: رضا، churn">
+    </label>
+    <div class="kpi-filters">
+      <select id="kpi-cat-select" class="select">
+        <option value="">كل التصنيفات (${visibleCatCount})</option>
+        <optgroup label="الأقسام الوظيفية">${deps.map(opt).join('')}</optgroup>
+        <optgroup label="القطاعات">${inds.map(opt).join('')}</optgroup>
+      </select>
+    </div>
+    <div class="tpl-cats" id="kpi-mt-chips" role="group" aria-label="نوع القياس">
+      <button type="button" class="chip is-on" data-mt="">الكل</button>
+      ${KPI_LIB.mtypes.map((m, i) => `<button type="button" class="chip" data-mt="${i}">${esc(m)}</button>`).join('')}
+    </div>
+    <p class="kpi-count" id="kpi-count" aria-live="polite"></p>
+    <ul class="kpi-list" id="kpi-list" role="list"></ul>
+    <button type="button" class="btn btn-ghost btn-sm kpi-more" id="kpi-more" hidden></button>
+    <p class="kpi-credit">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      المصدر: مكتبة <a href="https://www.spiderstrategies.com/kpi/" target="_blank" rel="noopener">Spider Strategies</a> ·
+      التصنيف العربي ونوع القياس من جيم، والعنصر يُبنى فعليًا من مصادر مشروعك عند الإضافة.
+    </p>`;
+
+  const idx = KPI_LIB.rows.map(r => kpiNorm(r[2] + ' ' + r[3] + ' ' + KPI_LIB.cats[r[0]][0] + ' ' + KPI_LIB.cats[r[0]][1]));
+  const list = el('kpi-list'), more = el('kpi-more'), count = el('kpi-count');
+  let fq = '', fc = '', fm = '', hits = [], shown = 0;
+
+  const item = i => {
+    const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]];
+    return `<li><button type="button" class="kpi-item" data-k="${i}" ${state.loading ? 'disabled' : ''} aria-label="إضافة مؤشر ${esc(r[2])} للوحة">
+      <span class="kpi-ic mt-${KPI_MT_KEY[r[4]]}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${KPI_MT_ICON[r[4]]}"/></svg></span>
+      <span class="kpi-txt"><b>${esc(r[2])}</b><small dir="ltr">${esc(r[3])}</small>
+        <em><span>${esc(c[0])}</span><span class="mt mt-${KPI_MT_KEY[r[4]]}">${esc(KPI_LIB.mtypes[r[4]])}</span></em></span>
+      <span class="kpi-plus"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></span></button></li>`;
+  };
+  const page = () => {
+    const next = hits.slice(shown, shown + KPI_PAGE_SIZE);
+    list.insertAdjacentHTML('beforeend', next.map(item).join(''));
+    shown += next.length;
+    const left = hits.length - shown;
+    more.hidden = left <= 0;
+    more.textContent = `عرض المزيد (${left.toLocaleString('en-US')} متبقٍ)`;
+  };
+  const run = () => {
+    const qs = kpiNorm(fq.trim()).split(/\s+/).filter(Boolean);
+    hits = [];
+    KPI_LIB.rows.forEach((r, i) => {
+      if (KPI_ROW_OVERRIDES[i] === 'stopped') return;
+      if (KPI_CAT_OFF.has(r[0])) return;
+      if (fc !== '' && r[0] !== +fc) return;
+      if (fm !== '' && r[4] !== +fm) return;
+      if (qs.length && !qs.every(w => idx[i].includes(w))) return;
+      hits.push(i);
+    });
+    list.innerHTML = ''; shown = 0;
+    count.innerHTML = hits.length
+      ? `<b class="num">${hits.length.toLocaleString('en-US')}</b> مؤشر${fc !== '' ? ` في «${esc(KPI_LIB.cats[+fc][0])}»` : ''}`
+      : `لا توجد نتائج — جرّب كلمة أخرى، أو اطلب من جيم مباشرة في تبويب «بناء اللوحة».`;
+    page();
+  };
+  let t;
+  el('kpi-search-input').addEventListener('input', e => { fq = e.target.value; clearTimeout(t); t = setTimeout(run, 120); });
+  el('kpi-cat-select').addEventListener('change', e => { fc = e.target.value; run(); });
+  el('kpi-mt-chips').addEventListener('click', e => {
+    const btn = e.target.closest('[data-mt]');
+    if (!btn) return;
+    fm = btn.dataset.mt;
+    el('kpi-mt-chips').querySelectorAll('.chip').forEach(c => c.classList.toggle('is-on', c === btn));
+    run();
+  });
+  more.addEventListener('click', page);
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('.kpi-item');
+    if (!btn || state.loading) return;
+    const i = +btn.dataset.k;
+    const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]];
+    const [defTable, defSql] = r[5] || ['', ''];
+    setChatMode('dashboard');
+    ask(`📊 ${r[2]}`, undefined, {
+      kind: 'kpi', key: String(i),
+      kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiCategoryIndex: r[0],
+      kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]],
+      kpiTable: defTable, kpiSql: defSql,
+    });
+  });
+  run();
+}
+
+el('tpl-views').addEventListener('click', e => {
+  const btn = e.target.closest('[data-view]');
+  if (!btn) return;
+  const v = btn.dataset.view;
+  el('tpl-views').querySelectorAll('[data-view]').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  el('tpl-view-widgets').classList.toggle('hidden', v !== 'widgets');
+  el('tpl-view-kpis').classList.toggle('hidden', v !== 'kpis');
+  if (v === 'kpis') initKpiLibrary();
+});
+if (KPI_LIB) {
+  el('tpl-count-kpis').textContent = KPI_LIB.rows.length.toLocaleString('en-US');
+} else {
+  el('tpl-views').querySelector('[data-view="kpis"]')?.classList.add('hidden');
+}
+
+// ---------- الاستفسارات (Inquiries): a conversational, saved-history sibling of ask() above ----------
+// Two small sub-tabs inside the same side chat panel — never a top-level screen, and the
+// dashboard area (#dash-pane) is never hidden or cleared by switching between them. Isolated
+// from state.dashboard/state.messages entirely: an Inquiries question can never affect the
+// dashboard currently on screen — only "🔄 حوّله لداشبورد" below ever bridges the two, and only
+// on explicit click. Every conversation is saved server-side as it goes (see
+// Inquiry/ConversationStore.cs) — state.inquiryTurns mirrors whichever one is currently open.
+function setChatMode(mode) {
+  state.chatMode = mode;
+  document.querySelectorAll('.chat-mode-tab').forEach(t => {
+    const selected = t.dataset.mode === mode;
+    t.classList.toggle('active', selected);
+    t.setAttribute('aria-selected', String(selected));
+  });
+  el('messages').classList.toggle('hidden', mode !== 'dashboard');
+  el('inquiry-messages').classList.toggle('hidden', mode !== 'inquiry');
+  el('templates-panel').classList.toggle('hidden', mode !== 'templates');
+  el('inquiry-new-btn').classList.toggle('hidden', mode !== 'inquiry');
+  el('inquiry-conv-btn').classList.toggle('hidden', mode !== 'inquiry');
+  // Attaching a dashboard screenshot and "ابدأ لوحة جديدة" only make sense for بناء اللوحة.
+  el('dash-image-attach-label').classList.toggle('hidden', mode !== 'dashboard');
+  el('new-dashboard-btn').classList.toggle('hidden', mode !== 'dashboard');
+  // النماذج is click-to-add (see renderTemplatesPanel) — no free-text question to type there.
+  el('form').classList.toggle('hidden', mode === 'templates');
+  el('q').placeholder = mode === 'inquiry'
+    ? 'اسأل استفسارًا عن بياناتك، أو تابع نقاشًا سابقًا — إجابة نصية مباشرة، من غير بناء لوحة…'
+    : 'اسأل عن بياناتك، أو أرفق صورة داشبورد لإعادة بنائه…';
+  // نفس نص وصف التبويبات في chat-mode-tabs — يبقى متّسق بدل جملة "بناء اللوحة" الثابتة.
+  el('chat-head-desc').textContent =
+    mode === 'inquiry' ? 'إجابة سريعة بدون تعديل اللوحة'
+    : mode === 'templates' ? 'عناصر جاهزة تُضاف للوحة الحالية بضغطة'
+    : 'يبني ويعدّل اللوحة من سؤالك';
+  // Composer is a single rounded pill in both modes now, with a circular icon-only send button.
+  el('send').innerHTML = '<svg class="icon icon-sm" aria-hidden="true"><use href="#i-send"/></svg>';
+  el('send').setAttribute('aria-label', 'إرسال');
+  if (mode === 'inquiry') {
+    renderInquiryMessages();
+    if (!state.inquiryConversationsLoaded) loadInquiryConversations();
+  } else if (mode === 'templates') {
+    renderTemplatesPanel();
+  } else renderMessages();
+}
+document.querySelectorAll('.chat-mode-tab').forEach(tab =>
+  tab.addEventListener('click', () => { if (!state.loading) setChatMode(tab.dataset.mode); }));
+
+// Turns a block's plain-text answer into real <p>/<ol>/<ul> markup instead of one run-in
+// paragraph — a "1) ... 2) ..." or "- ..." line sequence in the model's text becomes an actual
+// list, everything else stays a paragraph. Always escapes first; never trusts model text as HTML.
+function renderInquiryBlockText(text) {
+  const lines = String(text || '').split('\n');
+  const numbered = /^\s*\d+[.)]\s+(.*)$/;
+  const bulleted = /^\s*[-•]\s+(.*)$/;
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (numbered.test(lines[i]) || bulleted.test(lines[i])) {
+      const isNumbered = numbered.test(lines[i]);
+      const re = isNumbered ? numbered : bulleted;
+      const items = [];
+      while (i < lines.length && re.test(lines[i])) {
+        items.push(`<li>${esc(lines[i].match(re)[1].trim())}</li>`);
+        i++;
+      }
+      out.push(`<${isNumbered ? 'ol' : 'ul'}>${items.join('')}</${isNumbered ? 'ol' : 'ul'}>`);
+    } else {
+      const para = [];
+      while (i < lines.length && !numbered.test(lines[i]) && !bulleted.test(lines[i])) {
+        para.push(lines[i]); i++;
+      }
+      const joined = para.join('\n').trim();
+      if (joined) out.push(`<p>${esc(joined)}</p>`);
+    }
+  }
+  return out.join('');
+}
+
+// Tracks which block (if any) currently shows the inline "add to / replace the displayed
+// dashboard?" card — see convertInquiryToDashboard below. null when no card is showing.
+let pendingInquiryConvert = null;
+
+function inquiryBlockHtml(block, turnIndex, blockIndex) {
+  if (block.masked) {
+    return `<div class="inquiry-block masked">
+        <div class="inquiry-block-head"><span class="inquiry-block-label">🔒 من بيانات الجهة</span></div>
+        <p class="inquiry-block-text">${esc(block.text)}</p>
+        <p class="inquiry-block-subtext">لا يمكن عرضه أو تحويله إلى لوحة.</p>
+      </div>`;
+  }
+  const isData = block.kind === 'data';
+  if (!isData) {
+    return `<div class="inquiry-block knowledge">
+        <div class="inquiry-block-head">
+          <span class="inquiry-block-label">💡 من خارج البيانات</span>
+          <span class="inquiry-block-hint">معرفة عامة، لا تعتمد على بيانات الجهة</span>
+        </div>
+        <div class="inquiry-block-text">${renderInquiryBlockText(block.text)}</div>
+      </div>`;
+  }
+  const dateHtml = block.extractedAt
+    ? `<span class="inquiry-block-date">بيانات بتاريخ ${new Date(block.extractedAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}</span>`
+    : '';
+  const examinedHtml = block.examined && block.examined.length
+    ? `<div class="inquiry-examined"><span class="inquiry-examined-label">تم فحص:</span>
+        ${block.examined.map(s => `<span class="inquiry-chip">${esc(s)}</span>`).join('')}
+      </div>` : '';
+  const pending = pendingInquiryConvert;
+  const isPending = pending && pending.turnIndex === turnIndex && pending.blockIndex === blockIndex;
+  const promptHtml = isPending ? `
+      <div class="inquiry-convert-prompt">
+        <p>توجد لوحة معروضة الآن. كيف تريد إضافة هذه النتيجة؟</p>
+        <div class="inquiry-convert-prompt-actions">
+          <button type="button" class="icp-add" data-turn="${turnIndex}" data-block="${blockIndex}">إضافة إلى اللوحة</button>
+          <button type="button" class="icp-replace" data-turn="${turnIndex}" data-block="${blockIndex}">استبدال اللوحة</button>
+          <button type="button" class="icp-cancel">إلغاء</button>
+        </div>
+      </div>` : '';
+  return `<div class="inquiry-block data">
+      <div class="inquiry-block-head">
+        <span class="inquiry-block-label">🗄️ من بيانات الجهة</span>
+        ${dateHtml}
+      </div>
+      <div class="inquiry-block-text">${renderInquiryBlockText(block.text)}</div>
+      ${examinedHtml}
+      <div class="inquiry-block-footer">
+        <button type="button" class="inquiry-convert-btn" data-turn="${turnIndex}" data-block="${blockIndex}">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>أضف للوحة
+        </button>
+        <button type="button" class="inquiry-src-btn">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>
+          <span class="inquiry-src-btn-text">المصدر</span>
+        </button>
+        ${sourcePopover({ source: block.source })}
+      </div>
+      ${promptHtml}
+    </div>`;
+}
+
+function renderInquiryMessages() {
+  const lastBotIndex = (() => {
+    for (let i = state.inquiryTurns.length - 1; i >= 0; i--) {
+      if (state.inquiryTurns[i].role !== 'user') return i;
+    }
+    return -1;
+  })();
+  const items = state.inquiryTurns.map((t, ti) => {
+    if (t.role === 'user') return `<div class="msg user">${esc(t.text)}</div>`;
+    if (t.error) return `<div class="msg err">${esc(t.text)}</div>`;
+    // Follow-up chips only ever sit under the LATEST reply — asking one re-sends it as the
+    // next question (see askInquiry below); the array is only ever populated server-side
+    // when Inquiry:SuggestFollowUps is on (see AnalyticsTools.BuildInquirySystemPrompt).
+    const followUps = ti === lastBotIndex && t.followUps && t.followUps.length
+      ? `<div class="inquiry-followups">
+          ${t.followUps.map(f => `<button type="button" class="inquiry-followup-chip">${esc(f)}</button>`).join('')}
+        </div>` : '';
+    return `<div class="msg bot inquiry-answer">
+        ${(t.blocks || []).map((b, bi) => inquiryBlockHtml(b, ti, bi)).join('')}
+        ${followUps}
+      </div>`;
+  }).join('');
+  const typing = state.loading && state.chatMode === 'inquiry'
+    ? `<div class="msg bot dots"><span></span><span></span><span></span></div>` : '';
+  const hint = state.inquiryTurns.length === 0 && !(state.loading && state.chatMode === 'inquiry')
+    ? `<div class="hint">اسأل استفسارًا وسيجاوبك المساعد بإجابة نصية مباشرة، من غير بناء لوحة — يقدر يتذكر
+         الأسئلة اللي قبله في نفس المحادثة، وتقدر ترجع لها لاحقًا من «📂 المحادثات».
+         <span class="ex">جرّب: «كام إجمالي الإيرادات الشهر ده؟»</span></div>` : '';
+  const box = el('inquiry-messages');
+  box.innerHTML = hint + items + typing;
+  box.scrollTop = box.scrollHeight;
+}
+el('inquiry-messages').addEventListener('click', e => {
+  const srcBtn = e.target.closest('.inquiry-src-btn');
+  if (srcBtn) {
+    e.stopPropagation();
+    const pop = srcBtn.closest('.inquiry-block').querySelector('.src-pop');
+    const open = pop.classList.contains('open');
+    closePopovers();
+    if (!open) { pop.classList.add('open'); srcBtn.classList.add('active'); }
+    return;
+  }
+  const convertBtn = e.target.closest('.inquiry-convert-btn');
+  if (convertBtn) { convertInquiryToDashboard(Number(convertBtn.dataset.turn), Number(convertBtn.dataset.block)); return; }
+  const addBtn = e.target.closest('.icp-add');
+  if (addBtn) { pendingInquiryConvert = null; runInquiryConvert(Number(addBtn.dataset.turn), Number(addBtn.dataset.block), true); return; }
+  const replaceBtn = e.target.closest('.icp-replace');
+  if (replaceBtn) { pendingInquiryConvert = null; runInquiryConvert(Number(replaceBtn.dataset.turn), Number(replaceBtn.dataset.block), false); return; }
+  const cancelBtn = e.target.closest('.icp-cancel');
+  if (cancelBtn) { pendingInquiryConvert = null; renderInquiryMessages(); return; }
+  const chip = e.target.closest('.inquiry-followup-chip');
+  if (chip) { if (!state.loading) askInquiry(chip.textContent); }
+});
+
+async function askInquiry(question) {
+  const userTurn = { role: 'user', text: question, createdAt: new Date().toISOString() };
+  state.inquiryTurns.push(userTurn);
+  state.loading = true;
+  renderInquiryMessages(); el.send.disabled = true;
+
+  try {
+    const res = await fetch('/api/inquiry', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversationId: state.inquiryConversationId,
+        message: question,
+        // Same on/off source toggle the dashboard-building chat uses — the exact same
+        // tool-use flow and gating, just a different final response shape.
+        sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        lang: state.lang,
+      }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.turn) {
+      state.inquiryTurns.push({ role: 'bot', text: payload?.error || `تعذّر تنفيذ الطلب (${res.status})`, error: true });
+    } else {
+      state.inquiryTurns.push(payload.turn);
+      const isNew = !state.inquiryConversationId;
+      state.inquiryConversationId = payload.conversationId;
+      // Patch the sidebar list in place instead of a round trip: a new conversation is
+      // inserted at the top, an existing one is bumped there with a fresh timestamp — same
+      // "most recently touched first" order the server's own ORDER BY UpdatedAt gives.
+      if (isNew && payload.title) {
+        state.inquiryConversations.unshift({ id: payload.conversationId, title: payload.title, updatedAt: new Date().toISOString() });
+      } else {
+        const entry = state.inquiryConversations.find(c => c.id === payload.conversationId);
+        if (entry) {
+          entry.updatedAt = new Date().toISOString();
+          state.inquiryConversations = [entry, ...state.inquiryConversations.filter(c => c !== entry)];
+        }
+      }
+    }
+  } catch (err) {
+    state.inquiryTurns.push({ role: 'bot', text: 'تعذّر الوصول إلى الخادم: ' + err.message, error: true });
+  } finally {
+    state.loading = false; el.send.disabled = false;
+    renderInquiryMessages();
+  }
+}
+
+// ---------- saved conversations (📂 المحادثات) ----------
+async function loadInquiryConversations() {
+  try {
+    const res = await fetch('/api/inquiry/conversations');
+    state.inquiryConversations = res.ok ? await res.json() : [];
+  } catch { state.inquiryConversations = []; }
+  state.inquiryConversationsLoaded = true;
+  renderInquiryConvPanel();
+}
+
+function renderInquiryConvPanel() {
+  const panel = el('inquiry-conv-panel');
+  if (!state.inquiryConversations.length) {
+    panel.innerHTML = `<div class="inquiry-conv-empty">لا توجد محادثات محفوظة بعد.</div>`;
+    return;
+  }
+  panel.innerHTML = state.inquiryConversations.map(c => `
+    <div class="inquiry-conv-item ${c.id === state.inquiryConversationId ? 'active' : ''}" data-id="${esc(c.id)}">
+      <span class="inquiry-conv-title">${esc(c.title)}</span>
+      <span class="inquiry-conv-date">${relTime(c.updatedAt)}</span>
+      <button type="button" class="inquiry-conv-del" data-id="${esc(c.id)}" title="حذف" aria-label="حذف المحادثة">✕</button>
+    </div>`).join('');
+}
+// #inquiry-conv-panel now carries the shared .dropdown-panel class (see the تصدير/نشر
+// dropdowns above), so the generic closeAllDropdowns() — already bound on every document
+// click — closes it too; no bespoke outside-click listener needed here anymore.
+el('inquiry-conv-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const panel = el('inquiry-conv-panel');
+  const wasOpen = !panel.classList.contains('hidden');
+  closeAllDropdowns();
+  if (wasOpen) return;
+  renderInquiryConvPanel();
+  panel.classList.remove('hidden');
+});
+el('inquiry-conv-panel').addEventListener('click', e => e.stopPropagation());
+
+el('inquiry-conv-panel').addEventListener('click', async e => {
+  const delBtn = e.target.closest('.inquiry-conv-del');
+  if (delBtn) {
+    const id = delBtn.dataset.id;
+    if (!confirm('حذف هذه المحادثة؟')) return;
+    await fetch('/api/inquiry/conversations/' + id, { method: 'DELETE' });
+    state.inquiryConversations = state.inquiryConversations.filter(c => c.id !== id);
+    if (state.inquiryConversationId === id) startNewInquiryConversation();
+    renderInquiryConvPanel();
+    return;
+  }
+  const item = e.target.closest('.inquiry-conv-item');
+  if (item) openInquiryConversation(item.dataset.id);
+});
+
+el('inquiry-new-btn').addEventListener('click', startNewInquiryConversation);
+function startNewInquiryConversation() {
+  state.inquiryConversationId = null;
+  state.inquiryTurns = [];
+  renderInquiryMessages();
+  el('inquiry-conv-panel').classList.add('hidden');
+}
+
+async function openInquiryConversation(id) {
+  if (state.loading) return;
+  state.loading = true; renderInquiryMessages();
+  try {
+    const res = await fetch('/api/inquiry/conversations/' + id);
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload) { alert('تعذّر فتح هذه المحادثة.'); return; }
+    state.inquiryConversationId = payload.id;
+    state.inquiryTurns = payload.turns || [];
+  } catch (err) {
+    alert('تعذّر الوصول إلى الخادم: ' + err.message);
+  } finally {
+    state.loading = false;
+    renderInquiryMessages();
+    el('inquiry-conv-panel').classList.add('hidden');
+  }
+}
+
+// "حوّله لداشبورد": never re-runs the question through the tool-calling loop — the data
+// this one block already produced is handed to a single, tool-free call that only reshapes
+// it into widgets (see GenerateDashboardFromInquiryAsync). If a dashboard is already on
+// screen, shows an inline "add or replace?" card right under the block (pendingInquiryConvert,
+// rendered by inquiryBlockHtml — its icp-add/icp-replace/icp-cancel clicks are handled in the
+// inquiry-messages delegated listener above); if nothing is on screen yet, builds a fresh one
+// directly — same as choosing "استبدال" would.
+async function convertInquiryToDashboard(turnIndex, blockIndex) {
+  if (state.loading) return;
+  const block = state.inquiryTurns[turnIndex]?.blocks?.[blockIndex];
+  if (!block) return;
+  if (state.dashboard?.widgets?.length) {
+    pendingInquiryConvert = { turnIndex, blockIndex };
+    renderInquiryMessages();
+    return;
+  }
+  await runInquiryConvert(turnIndex, blockIndex, false);
+}
+
+async function runInquiryConvert(turnIndex, blockIndex, addToExisting) {
+  const block = state.inquiryTurns[turnIndex]?.blocks?.[blockIndex];
+  if (!block) return;
+  // Same "continue the dashboard on screen" contract as ask()'s own continuation — only sent
+  // when the user explicitly chose "إضافة"; "استبدال" (or nothing on screen yet) sends none,
+  // which the backend treats identically to a brand-new dashboard (see ConvertInquiryBlockRequest).
+  const currentDashboard = addToExisting && state.dashboard?.widgets?.length
+    ? { summary: state.dashboard.summary, widgets: state.dashboard.widgets }
+    : null;
+  const isContinuation = !!currentDashboard;
+  state.loading = true;
+  renderInquiryMessages();
+
+  try {
+    const res = await fetch('/api/inquiry/convert', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversationId: state.inquiryConversationId, turnIndex, blockIndex, currentDashboard,
+        sources: { systems: [...state.onSystems], files: [...state.onFiles] },
+        lang: state.lang,
+      }),
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.dashboard) {
+      alert(payload?.error || `تعذّر تحويل هذا الجزء إلى لوحة (${res.status})`);
+      return;
+    }
+
+    if (isContinuation) {
+      // Same safety net ask() applies on its own continuation path: a smaller/local model
+      // can silently drop an existing widget despite the system prompt's copy-forward
+      // instruction. Match by title (widgets have no stable id the model echoes back) and
+      // restore anything missing, then carry forward existing filters the same way.
+      const oldWidgets = state.dashboard?.widgets || [];
+      const newWidgets = payload.dashboard.widgets || [];
+      if (oldWidgets.length && newWidgets.length < oldWidgets.length) {
+        const newTitles = new Set(newWidgets.map(w => w.title));
+        const missing = oldWidgets.filter(w => !newTitles.has(w.title));
+        payload.dashboard.widgets = [...missing, ...newWidgets];
+      }
+
+      const oldFilters = state.dashboard?.filters || [];
+      const oldIds = new Set(oldFilters.map(f => f.id).filter(Boolean));
+      const newFilters = (payload.dashboard.filters || []).filter(f => !f.id || !oldIds.has(f.id));
+      payload.dashboard.filters = [...oldFilters, ...newFilters];
+    } else {
+      state.activeFilters = {}; state.crossFilterDefs = {}; state.filterRefreshWarning = null;
+    }
+    state.dashboard = ensureWidgetMeta(payload.dashboard);
+    state.lastRefreshedAt = new Date();
+    state.editHistory = { past: [], future: [] };
+    state.currentHistoryId = null;
+    state.dashboardIsActive = false; state.dashboardRole = null;
+    state.dashboardDisabled = false; state.dashboardDisabledReason = '';
+
+    const speechWidgets = payload.dashboard.widgets.map(w => ({ id: w.id, title: w.title }));
+    const narration = payload.dashboard.narration || payload.dashboard.summary;
+    state.messages.push({ role: 'bot', text: narration, speechWidgets });
+    saveToHistory(block.text, payload.dashboard);
+    if (state.autoRead) speakText(narration, speechWidgets);
+    if (isContinuation && getActiveFilters().length) await applyFilters();
+    setChatMode('dashboard');
+  } catch (err) {
+    alert('تعذّر الوصول إلى الخادم: ' + err.message);
+  } finally {
+    state.loading = false;
+    renderInquiryMessages(); renderMessages(); renderDashboard();
+  }
+}
+
+// ---------- النماذج: catalog (display data only — see TemplatePromptService's remarks on
+// why the prompt text itself never travels over this endpoint) ----------
+async function loadTemplateCatalog() {
+  try {
+    const res = await fetch('/api/templates/catalog');
+    if (!res.ok) return;
+    const data = await res.json();
+    TEMPLATES = data.widgets || [];
+    DASH_GALLERY = data.dashboards || [];
+    KPI_ROW_OVERRIDES = data.kpiOverrides || {};
+    KPI_CAT_OFF = new Set(data.kpiDisabledCategories || []);
+    if (KPI_LIB) {
+      const visible = KPI_LIB.rows.reduce((n, r, i) =>
+        n + (KPI_ROW_OVERRIDES[i] === 'stopped' || KPI_CAT_OFF.has(r[0]) ? 0 : 1), 0);
+      el('tpl-count-kpis').textContent = visible.toLocaleString('en-US');
+    }
+  } catch { /* keeps whatever was already loaded (empty on first failure) */ }
+  if (!el('templates-panel').classList.contains('hidden')) renderTemplatesPanel();
+  if (!el('dash-gallery-modal').classList.contains('hidden')) renderDashGalGrid();
+}
+
+// ---------- sources ----------
+async function loadSources() {
+  const res = await fetch('/api/sources');
+  const data = await res.json();
+  const knownSystems = new Set(state.systems.map(s => s.id));
+  const knownFiles = new Set(state.sourceFiles.map(f => f.id));
+
+  // An external integration is offered as just another toggleable "system" — same shape
+  // ({id, name, connected}), same onSystems set, same "systems" list sent back with every
+  // chat request (see SourceSelection.AllowsSystem, reused verbatim for integration ids).
+  state.systems = [...(data.systems || []), ...(data.integrations || [])];
+  state.sourceFiles = data.files || [];
+  state.tableLabels = data.tableLabels || {};
+
+  // Newly appearing sources start enabled; the user's explicit choices are preserved.
+  state.systems.forEach(s => { if (!knownSystems.has(s.id)) state.onSystems.add(s.id); });
+  state.sourceFiles.forEach(f => { if (!knownFiles.has(f.id)) state.onFiles.add(f.id); });
+  const currentFileIds = new Set(state.sourceFiles.map(f => f.id));
+  [...state.onFiles].forEach(id => { if (!currentFileIds.has(id)) state.onFiles.delete(id); });
+
+  renderSources();
+}
+
+function renderSources() {
+  el('system-toggles').innerHTML = state.systems.map(s => `
+    <label class="source-item">
+      <input type="checkbox" class="sys-cb" data-id="${esc(s.id)}" ${state.onSystems.has(s.id) ? 'checked' : ''}>
+      <span class="grow">${esc(s.name)}</span>
+      ${s.kind === 'integration' ? '<span class="note">🔗 تكامل خارجي</span>' : (s.connected ? '' : '<span class="note">غير مربوط بعد</span>')}
+      ${s.refreshable ? `<button type="button" class="refresh-btn" data-refresh="${esc(s.id)}">⟳ جلب</button>` : ''}
+    </label>
+    ${s.refreshable ? `<div class="sys-status${s.error ? ' bad' : ''}" data-status="${esc(s.id)}"${s.error ? ` title="${esc(s.error)}"` : ''}>${systemStatusText(s)}</div>` : ''}`).join('');
+
+  // Each repository file is its own independent source, at the same level as a system —
+  // not grouped by category (a small category hint still shown alongside the name, purely
+  // informational, since it's a real descriptive attribute of the file).
+  el('file-toggles').innerHTML = state.sourceFiles.length
+    ? state.sourceFiles.map(f => `
+        <label class="source-item">
+          <input type="checkbox" class="file-cb" data-id="${esc(f.id)}" ${state.onFiles.has(f.id) ? 'checked' : ''}>
+          <span class="grow">${esc(f.name)}</span>
+          <span class="note">${esc(f.category)}</span>
+        </label>`).join('')
+    : '<div class="nested-empty">لا يوجد ملفات بعد — ارفع ملفات أولاً</div>';
+
+  el('system-toggles').querySelectorAll('[data-refresh]').forEach(btn =>
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); refreshSystem(btn); }));
+
+  el('system-toggles').querySelectorAll('.sys-cb').forEach(cb => cb.addEventListener('change', () => {
+    cb.checked ? state.onSystems.add(cb.dataset.id) : state.onSystems.delete(cb.dataset.id);
+    syncSourceHeaders();
+  }));
+  el('file-toggles').querySelectorAll('.file-cb').forEach(cb => cb.addEventListener('change', () => {
+    cb.checked ? state.onFiles.add(cb.dataset.id) : state.onFiles.delete(cb.dataset.id);
+    syncSourceHeaders();
+  }));
+  syncSourceHeaders();
+}
+
+// ---------- صفحة "المصادر" (الصفحة الثانية من الأربع تحت اسم المشروع) ----------
+// نفس state.systems/state.sourceFiles اللي لوحة المصادر المنسدلة في الشات بتستخدمها —
+// عرض مختلف (صفحة كاملة بدل Dropdown) لنفس البيانات الحقيقية، مفيش بيانات وهمية
+// (زي حالة اتصال Connector أو نسب مزامنة) مش موجودة أصلًا في النظام.
+async function loadSourcesPage() {
+  await loadSources(); // يحدّث state.systems/state.sourceFiles ويعيد رسم اللوحة المنسدلة كمان
+  // معاني الأعمدة لكل ملف (طبقة المعنى) — تُعرض وتُصحَّح من نفس الصفحة، فمالك المشروع لا يحتاج
+  // صفحة الإدارة ليعرف ماذا فهم جيم من أعمدته.
+  try { const r = await fetch('/api/semantics'); state.sourceSemantics = r.ok ? await r.json() : null; }
+  catch { state.sourceSemantics = null; }
+  if (state.sourceSemantics) semModalConcepts = state.sourceSemantics.concepts || [];
+  renderSourcesPage();
+  semScheduleRefresh(state.sourceSemantics?.tables || [], () => { if (document.getElementById('screen-sources').classList.contains('active')) loadSourcesPage(); });
+}
+const sourcesSemOpen = new Set(); // الملفات المفتوحة معانيها (تبقى مفتوحة عبر إعادة الرسم)
+
+function renderSourcesPage() {
+  const sysCards = state.systems.map(s => {
+    const statusClass = s.error ? 'danger' : (s.connected || s.kind === 'integration' ? 'ok' : 'off');
+    const statusText = s.error ? 'به مشكلة' : (s.kind === 'integration' ? 'تكامل خارجي' : (s.connected ? 'متصل' : 'غير مربوط بعد'));
+    return `
+    <article class="card src-card">
+      <div class="top">
+        <span class="src-ic"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg></span>
+        <div><h3>${esc(s.name)}</h3><span class="type">${s.kind === 'integration' ? 'تكامل خارجي' : 'نظام داخلي'}</span></div>
+        <span class="status ${statusClass}">${statusText}</span>
+      </div>
+      ${s.refreshable ? `<div class="foot"><button type="button" class="btn btn-sm" data-refresh-source="${esc(s.id)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>تحديث الآن</button></div>` : ''}
+    </article>`;
+  }).join('');
+
+  const semTables = state.sourceSemantics?.tables || [];
+  const fileCards = state.sourceFiles.map(f => {
+    const t = semTables.find(x => x.fileId === f.id);
+    let semFoot = '';
+    if (t) {
+      const [tone, label] = SEM_ANALYSIS_LABEL[t.analysis] || SEM_ANALYSIS_LABEL.none;
+      const unknown = t.columns.filter(c => !c.concept).length;
+      const open = sourcesSemOpen.has(f.id);
+      semFoot = `
+      <div class="foot src-sem-foot">
+        <span class="badge ${tone}">${label}</span>
+        <span class="muted"><span class="num">${t.columns.length.toLocaleString('en-US')}</span> عمود${unknown ? ` · <span class="num">${unknown.toLocaleString('en-US')}</span> بلا معنى` : ''}</span>
+        <button type="button" class="btn btn-sm${open ? ' btn-soft' : ''}" data-sem-toggle="${esc(f.id)}" aria-expanded="${open}">🏷️ ${open ? 'إخفاء معاني الأعمدة' : 'معاني الأعمدة'}</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-sem-analyze="${esc(t.table)}" data-file="${esc(f.id)}">${tplIc('spark')}إعادة التحليل الآلي</button>
+      </div>
+      ${semErrorHtml(t)}
+      <div class="src-sem${open ? '' : ' hidden'}" data-sem-panel="${esc(f.id)}">
+        <p class="muted src-sem-help">ما فهمه جيم من كل عمود — النماذج تُبنى على هذه المعاني لا على أسماء الأعمدة. صحّح أي معنى من القائمة ويُحفظ فورًا ويفوز على أي تحليل آلي لاحق.</p>
+        <div class="sem-status hidden" data-sem-status="${esc(f.id)}"></div>
+        ${semTableHtml(t)}
+      </div>`;
+    }
+    return `
+    <article class="card src-card${t ? ' has-sem' : ''}">
+      <div class="top">
+        <span class="src-ic"><svg class="icon" aria-hidden="true"><use href="#i-sheet"/></svg></span>
+        <div><h3>${esc(f.name)}</h3><span class="type">ملف · ${esc(f.category)}</span></div>
+        <span class="status ok">جاهز</span>
+      </div>${semFoot}
+    </article>`;
+  }).join('');
+
+  const empty = (!state.systems.length && !state.sourceFiles.length)
+    ? '<div class="nested-empty">لا يوجد مصادر بعد — من المحادثة يمكنك إرفاق ملف، أو من «التكاملات الخارجية» ربط نظام.</div>' : '';
+
+  el('sources-page-grid').innerHTML = sysCards + fileCards + empty;
+
+  // معاني الأعمدة: فتح/إغلاق، تصحيح من القائمة، إعادة تحليل
+  const grid = el('sources-page-grid');
+  grid.querySelectorAll('[data-sem-toggle]').forEach(btn => btn.addEventListener('click', () => {
+    const id = btn.dataset.semToggle;
+    sourcesSemOpen.has(id) ? sourcesSemOpen.delete(id) : sourcesSemOpen.add(id);
+    renderSourcesPage();
+  }));
+  const statusFor = id => (text, tone) => { const box = grid.querySelector(`[data-sem-status="${CSS.escape(id)}"]`); if (!box) return; box.textContent = text; box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden'); };
+  grid.querySelectorAll('[data-sem-panel]').forEach(panel => bindSemTable(panel, semTables, statusFor(panel.dataset.semPanel)));
+  grid.querySelectorAll('[data-sem-analyze]').forEach(btn => btn.addEventListener('click', async () => {
+    const id = btn.dataset.file; btn.disabled = true; sourcesSemOpen.add(id);
+    try {
+      const r = await semReanalyze(btn.dataset.semAnalyze, statusFor(id)); if (!r) return;
+      await loadSourcesPage();
+      statusFor(id)(r.error ? `تعذّر التحليل الآلي: ${r.error}` : 'اكتمل التحليل. تأكيداتك السابقة بقيت كما هي.', r.error ? 'bad' : 'ok');
+    } finally { btn.disabled = false; }
+  }));
+
+  el('sources-page-grid').querySelectorAll('[data-refresh-source]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.refreshSource;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/sources/${encodeURIComponent(id)}/refresh`, { method: 'POST' });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(payload.error || `فشل الجلب (${res.status})`);
+        }
+        await loadSources();
+      } catch (err) {
+        alert('تعذّر التحديث: ' + err.message);
+      } finally {
+        renderSourcesPage();
+      }
+    }));
+}
+
+function systemStatusText(s) {
+  // The raw fetch error (often a .NET exception message, in English) goes in the row's
+  // title tooltip instead of inline — dumping it into the list directly mixed English
+  // technical text into the Arabic RTL flow and made the row balloon to several lines.
+  if (s.error) return 'تعذّر الجلب من النظام — مرّر المؤشر لعرض السبب';
+  if (!s.lastRefreshed) return 'لم يتم الجلب بعد — اضغط «جلب»';
+  const when = new Date(s.lastRefreshed + (s.lastRefreshed.endsWith('Z') ? '' : 'Z'));
+  return `${s.records.toLocaleString('en-US')} سجل · آخر جلب ${when.toLocaleTimeString('ar-EG')}`;
+}
+
+async function refreshSystem(btn) {
+  const id = btn.dataset.refresh;
+  const status = el('system-toggles').querySelector(`[data-status="${CSS.escape(id)}"]`);
+  btn.disabled = true; btn.textContent = '⟳ جارٍ الجلب…';
+  if (status) { status.className = 'sys-status'; status.textContent = 'جارٍ الجلب من النظام…'; }
+  try {
+    const res = await fetch(`/api/sources/${encodeURIComponent(id)}/refresh`, { method: 'POST' });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.error || `فشل الجلب (${res.status})`);
+    await loadSources();
+  } catch (err) {
+    if (status) {
+      status.className = 'sys-status bad';
+      status.textContent = 'تعذّر الجلب من النظام — مرّر المؤشر لعرض السبب';
+      status.title = err.message;
+    }
+    btn.disabled = false; btn.textContent = '⟳ جلب';
+  }
+}
+
+function syncSourceHeaders() {
+  el('sys-all').checked = state.systems.length > 0 && state.onSystems.size === state.systems.length;
+  el('file-all').checked = state.sourceFiles.length > 0 && state.onFiles.size === state.sourceFiles.length;
+  const total = state.systems.length + state.sourceFiles.length;
+  const on = state.onSystems.size + state.onFiles.size;
+  const label =
+    total === 0 ? 'لا يوجد مصادر'
+    : on === 0 ? 'لا يوجد مصدر مفعّل'
+    : on === total ? `كل المصادر مفعّلة (${total})`
+    : `${on} من ${total} مصادر مفعّلة`;
+  el('sources-label').textContent = label;
+  el('sources-btn').title = `المصادر: ${label}`;
+  el('sources-btn').setAttribute('aria-label', `المصادر: ${label}`);
+}
+
+el('sources-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  el('sources-panel').classList.toggle('hidden');
+});
+el('sources-panel').addEventListener('click', e => e.stopPropagation());
+document.addEventListener('click', () => el('sources-panel').classList.add('hidden'));
+
+// ---------- قوائم تصدير / نشر منسدلة (شريط اللوحة) ----------
+const closeAllDropdowns = () => {
+  document.querySelectorAll('.dropdown-panel').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.dropdown.is-open').forEach(d => d.classList.remove('is-open'));
+};
+[['export-menu', 'export-menu-btn', 'export-menu-panel'], ['publish-menu', 'publish-menu-btn', 'publish-menu-panel']].forEach(([wrapId, btnId, panelId]) => {
+  const wrap = el(wrapId), btn = el(btnId), panel = el(panelId);
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const willOpen = panel.classList.contains('hidden');
+    closeAllDropdowns();
+    panel.classList.toggle('hidden', !willOpen);
+    wrap.classList.toggle('is-open', willOpen);
+  });
+  panel.addEventListener('click', e => {
+    e.stopPropagation();
+    if (e.target.closest('.dropdown-item')) closeAllDropdowns();
+  });
+});
+document.addEventListener('click', closeAllDropdowns);
+
+el('sys-all').addEventListener('change', e => {
+  state.onSystems = e.target.checked ? new Set(state.systems.map(s => s.id)) : new Set();
+  renderSources();
+});
+el('file-all').addEventListener('change', e => {
+  state.onFiles = e.target.checked ? new Set(state.sourceFiles.map(f => f.id)) : new Set();
+  renderSources();
+});
+
+// ---------- file repository ----------
+async function loadFiles() {
+  const res = await fetch('/api/repository/files');
+  state.files = await res.json();
+  dashGalFeasibility = null; // تغيّر الملفات يغيّر جدوى النماذج
+  kpiDeltaCache.clear(); // وبيانات المؤشرات قد تكون تغيّرت (تحديث ملف)
+  const knownSourceFileIds = new Set(state.sourceFiles.map(f => f.id));
+  if (!state.sourceFiles.length || state.files.some(f => !knownSourceFileIds.has(f.id)))
+    await loadSources();
+  // Only an Admin can manage per-file permissions (same authority level as managing user
+  // accounts) and only an Admin's browser is even allowed to call GET /api/users — load it
+  // here (not eagerly for everyone) so the row's access column can show real initials for
+  // whoever configured this file's permission list.
+  if (state.currentUser?.role === 'Admin' && !state.users.length) await loadUsers();
+  renderRepo();
+}
+
+function repoCategories() {
+  return [...new Set(state.files.map(f => f.category || 'عام'))];
+}
+
+// "قبل 3 أيام" / "اليوم" / "منذ 5 أشهر" — the same relative-time granularity the design
+// mockup uses for "آخر تحديث" and the "لم يُستخدم منذ..." staleness hint.
+function relTime(dateStr) {
+  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (state.lang === 'en') {
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    const months = Math.floor(diffDays / 30);
+    return months <= 1 ? 'A month ago' : `${months} months ago`;
+  }
+  if (diffDays <= 0) return 'اليوم';
+  if (diffDays === 1) return 'أمس';
+  if (diffDays < 30) return `قبل ${diffDays} يوم`;
+  const months = Math.floor(diffDays / 30);
+  return months <= 1 ? 'قبل شهر' : `منذ ${months} أشهر`;
+}
+
+// "آخر تحديث 10:42 ص" for a dashboard still updated today, else the date too — shown in
+// the dashboard header from state.lastRefreshedAt (see its own comment for what sets it).
+function formatUpdatedAt(date) {
+  if (!date) return '';
+  const time = date.toLocaleTimeString(state.lang === 'en' ? 'en-US' : 'ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const sameDay = date.toDateString() === new Date().toDateString();
+  const label = state.lang === 'en' ? 'Last updated' : 'آخر تحديث';
+  return sameDay ? `${label} ${time}` : `${label} ${date.toLocaleDateString(state.lang === 'en' ? 'en-US' : 'ar-EG')} ${time}`;
+}
+
+function userInitials(userId) {
+  const u = state.users.find(u => u.id === userId);
+  return u ? (u.displayName || u.username).trim().slice(0, 2) : '؟';
+}
+
+function renderRepo() {
+  el('repo-badge').textContent = state.files.length;
+
+  const cats = ['الكل', ...repoCategories()];
+  if (!cats.includes(state.filter)) state.filter = 'الكل';
+  el('filters').innerHTML = cats.map(c =>
+    `<button class="chip-old${c === state.filter ? ' active' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+  el('filters').querySelectorAll('.chip-old').forEach(chip => chip.addEventListener('click', () => {
+    state.filter = chip.dataset.cat; renderRepo();
+  }));
+
+  el('cat-suggestions').innerHTML = repoCategories().map(c => `<option value="${esc(c)}">`).join('');
+
+  let visible = state.filter === 'الكل'
+    ? [...state.files] : state.files.filter(f => (f.category || 'عام') === state.filter);
+
+  const sort = el('repo-sort').value = state.repoSort || 'usage';
+  visible.sort(sort === 'name' ? (a, b) => a.displayName.localeCompare(b.displayName, 'ar')
+    : sort === 'updated' ? (a, b) => new Date(b.lastUpdatedAt) - new Date(a.lastUpdatedAt)
+    : (a, b) => b.usageCount - a.usageCount);
+
+  const STALE_DAYS = 90;
+  el('repo-list').innerHTML = visible.length ? visible.map(f => {
+    const icon = f.kind === 'pdf' ? '📄' : '📊';
+    const staleDays = f.lastUsedAt ? Math.floor((Date.now() - new Date(f.lastUsedAt).getTime()) / 86400000) : null;
+    const isStale = staleDays !== null && staleDays > STALE_DAYS;
+    const staleBadge = isStale ? `<span class="badge-stale">⚠ ${relTime(f.lastUsedAt)}</span>` : '';
+    const meta = f.kind === 'pdf' ? `${f.pageCount} صفحة` : `${f.rowCount} صف · ${f.columnCount} عمود`;
+    const relLinks = f.relationships.length
+      ? `<div class="fr-links">${f.relationships.map(r => `<span class="link-chip">🔗 ${esc(r.relatedFileName)}</span>`).join('')}</div>`
+      : '';
+    // Every file is automatically restricted to its creator now (see
+    // AnalyticsTools.DescribeSourcesAsync) — never "public" — so this column always shows
+    // something. An Admin sees the real avatar stack (creator + granted); anyone else just
+    // sees whether *they themselves* currently have access, never other people's identities.
+    const isAdmin = state.currentUser?.role === 'Admin';
+    const isCreator = !!state.currentUser && f.createdByUserId === state.currentUser.id;
+    const iHaveAccess = isAdmin || isCreator || (state.currentUser && f.permittedUserIds.includes(state.currentUser.id));
+    const access = isAdmin
+      ? `<div class="avatar-stack">
+          <div class="avatar owner" title="${esc(f.createdByUserId ? userInitials(f.createdByUserId) : '')}">${esc(userInitials(f.createdByUserId))}</div>
+          ${f.permittedUserIds.slice(0, 2).map(id => `<div class="avatar" title="${esc(userInitials(id))}">${esc(userInitials(id))}</div>`).join('')}
+          ${f.permittedUserIds.length > 2 ? `<div class="avatar">+${f.permittedUserIds.length - 2}</div>` : ''}
+        </div>`
+      : (iHaveAccess ? `<span class="access-locked ok">✅ ${isCreator ? 'ملفك' : 'لديك صلاحية'}</span>` : `<span class="access-locked">🔒 مقيّد</span>`);
+    const canManage = isAdmin || isCreator;
+    const permBtn = canManage
+      ? `<button class="icon-btn perm-btn" data-id="${esc(f.id)}" title="صلاحيات الملف">🔒</button>` : '';
+    const delBtn = canManage
+      ? `<button class="icon-btn del-btn" data-id="${esc(f.id)}" data-name="${esc(f.displayName)}" title="حذف الملف">🗑️</button>` : '';
+
+    return `<div class="file-row${isStale ? ' stale' : ''}" data-id="${esc(f.id)}">
+        <div class="fr-main">
+          <div class="fr-icon">${icon}</div>
+          <div class="fr-text">
+            <div class="fr-line1">
+              <span class="fr-name">${esc(f.displayName)}</span>
+              <span class="cat-badge">${esc(f.category || 'عام')}</span>
+              ${staleBadge}
+            </div>
+            <div class="fr-line2">${esc(f.description || meta)}${f.description ? ` <span class="sep">·</span> ${meta} <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>` : ` <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>`}</div>
+            ${relLinks}
+          </div>
+        </div>
+        <div class="col-updated"><b>${relTime(f.lastUpdatedAt)}</b>${new Date(f.lastUpdatedAt).toLocaleDateString('ar-EG')}</div>
+        <div class="col-usage"><div class="num">${f.usageCount}</div><div class="lbl">لوحة</div></div>
+        <div class="col-access">${access}</div>
+        <div class="col-actions">
+          <a class="icon-btn dl" href="/api/repository/files/${esc(f.id)}/download" title="تنزيل الملف">⬇️</a>
+          <button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>
+          <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
+          ${permBtn}
+          <button class="icon-btn rel-btn" data-id="${esc(f.id)}" title="الملفات المرتبطة">🔗</button>
+          ${f.kind === 'pdf' ? '' : `<button class="icon-btn sem-btn" data-id="${esc(f.id)}" title="معاني الأعمدة">🏷️</button>`}
+          ${delBtn}
+        </div>
+      </div>`;
+  }).join('')
+    : `<div class="repo-empty">لا يوجد ملفات ${state.filter !== 'الكل' ? 'في هذا التصنيف' : 'في المستودع بعد'}. ارفع ملفاً من الأعلى.</div>`;
+
+  el('repo-list').querySelectorAll('.upd').forEach(btn => btn.addEventListener('click', () => openUpdateFilePicker(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.perm-btn').forEach(btn => btn.addEventListener('click', () => openFilePermModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.rel-btn').forEach(btn => btn.addEventListener('click', () => openFileRelModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.sem-btn').forEach(btn => btn.addEventListener('click', () => openFileSemModal(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => deleteFile(btn.dataset.id, btn.dataset.name)));
+
+  renderPending();
+}
+
+el('repo-sort').addEventListener('change', () => { state.repoSort = el('repo-sort').value; renderRepo(); });
+
+function renderPending() {
+  // p.loading is the transient placeholder pushed the moment files are picked, before the
+  // server has actually finished uploading+parsing them (see the file-input change handler
+  // below) — no inputs, no save button at all during this state, so there's nothing to click
+  // before the real PendingUpload (with a real token) replaces it.
+  el('pending').innerHTML = state.pending.map((p, i) => p.loading
+    ? `<div class="pending-card loading">
+         <span class="spinner"></span><span class="name">${esc(p.name)}</span>
+       </div>`
+    : p.error
+    ? `<div class="pending-card bad">
+         <span>⚠️</span><span class="name">${esc(p.name)} — ${esc(p.error)}</span>
+         <button class="cancel" data-idx="${i}">×</button>
+       </div>`
+    : `<div class="pending-card">
+         <span>${p.kind === 'pdf' ? '📄' : '📊'}</span>
+         <span class="name">${esc(p.name)} — ${p.kind === 'pdf' ? `${p.pageCount} صفحة` : `${p.rowCount} صف`}</span>
+         <input placeholder="اسم العرض (إجباري)" value="${esc(p.name.replace(/\.[^.]+$/, ''))}" data-idx="${i}" data-field="displayName">
+         <input placeholder="وصف مختصر" data-idx="${i}" data-field="description">
+         <input list="cat-suggestions" placeholder="التصنيف (مثلاً: المالية)" value="عام" data-idx="${i}" data-field="category">
+         <button class="save" data-idx="${i}">حفظ في المستودع</button>
+         <button class="cancel" data-idx="${i}">×</button>
+       </div>`).join('');
+
+  el('pending').querySelectorAll('.save').forEach(btn => btn.addEventListener('click', async () => {
+    const i = +btn.dataset.idx;
+    const field = f => el('pending').querySelector(`input[data-idx="${i}"][data-field="${f}"]`)?.value || '';
+    const displayName = field('displayName').trim();
+    if (!displayName) { alert('اسم العرض إجباري.'); return; }
+    const category = (field('category') || 'عام').trim() || 'عام';
+    const description = field('description').trim();
+    btn.disabled = true; btn.textContent = 'جارٍ الحفظ…';
+    const res = await fetch('/api/repository/files', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: state.pending[i].token, displayName, description, category }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('تعذّر الحفظ: ' + (err.error || res.status));
+      btn.disabled = false; btn.textContent = 'حفظ في المستودع';
+      return;
+    }
+    state.pending.splice(i, 1);
+    await loadFiles(); await loadSources();
+  }));
+
+  el('pending').querySelectorAll('.cancel').forEach(btn => btn.addEventListener('click', async () => {
+    const i = +btn.dataset.idx;
+    const token = state.pending[i].token;
+    if (token) await fetch('/api/repository/pending/' + token, { method: 'DELETE' });
+    state.pending.splice(i, 1);
+    renderPending();
+  }));
+}
+
+// ---------- upload modal: the popup the repository page's upload button opens — file
+// picking, per-file metadata, and the save-to-repository step all happen inside it, instead
+// of inline on the page. Unsaved pending cards (state.pending) are left as-is on close, so
+// reopening the modal shows them again ready to finish, exactly like before this was a modal. ----------
+function openUploadModal() { el('upload-modal').classList.remove('hidden'); }
+function closeUploadModal() { el('upload-modal').classList.add('hidden'); }
+el('btn-open-upload-modal').addEventListener('click', openUploadModal);
+el('upload-modal-close').addEventListener('click', closeUploadModal);
+el('upload-modal').addEventListener('click', e => { if (e.target.id === 'upload-modal') closeUploadModal(); });
+
+// A fresh, unguessable id per upload attempt, purely to correlate this browser tab's polling
+// with UploadProgressTracker's server-side entry (see RepositoryController.UploadProgress) —
+// not an auth token, never sent anywhere but this one upload.
+function makeProgressToken() {
+  return 'up_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+}
+
+// Polls the upload-progress endpoint every 1.2s while `body` (the upload POST) is still in
+// flight, calling onUpdate(progress) whenever the server has something new to report — a
+// second connection reading state the first is updating, not background processing: the
+// polling stops the moment the POST settles, same as the request it's watching.
+function pollUploadProgress(token, onUpdate) {
+  return setInterval(async () => {
+    try {
+      const res = await fetch('/api/repository/upload-progress/' + token);
+      if (res.status === 200) onUpdate(await res.json());
+    } catch { /* a missed poll just means the next one tries again in 1.2s */ }
+  }, 1200);
+}
+
+el('file-input').addEventListener('change', async e => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  const form = new FormData();
+  files.forEach(f => form.append('files', f));
+  const progressToken = makeProgressToken();
+  form.append('progressToken', progressToken);
+  e.target.value = '';
+
+  const pendingCard = { name: `جارٍ رفع ${files.length} ملف وتحليل محتواه…`, loading: true };
+  state.pending.push(pendingCard);
+  renderPending();
+
+  const poll = pollUploadProgress(progressToken, p => {
+    pendingCard.name = `جارٍ قراءة "${p.fileName}" بالموديل الداخلي — صفحة ${p.pagesRead} من ${p.totalPages}…`;
+    renderPending();
+  });
+  try {
+    const res = await fetch('/api/repository/upload', { method: 'POST', body: form });
+    const parsed = await res.json();
+    state.pending.pop();
+    state.pending.push(...parsed);
+  } catch (err) {
+    state.pending.pop();
+    state.pending.push({ name: 'تعذّر الرفع', error: err.message });
+  } finally {
+    clearInterval(poll);
+  }
+  renderPending();
+});
+
+// ---------- "Update this file": re-upload data into an existing file's identity ----------
+// Display name/category/relationships/permissions are preserved server-side (see
+// RepositoryStore.UpdateDataAsync) — this flow only ever needs the new file itself.
+let updateTargetFileId = null;
+function openUpdateFilePicker(fileId) {
+  updateTargetFileId = fileId;
+  el('file-update-input').click();
+}
+el('file-update-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !updateTargetFileId) return;
+  const targetId = updateTargetFileId;
+  const row = el('repo-list').querySelector(`.file-row[data-id="${targetId}"] .upd`);
+  if (row) { row.disabled = true; row.textContent = '⏳'; }
+  const progressToken = makeProgressToken();
+  const poll = pollUploadProgress(progressToken, p => {
+    if (row) row.textContent = `⏳ ${p.pagesRead}/${p.totalPages}`;
+  });
+  try {
+    const form = new FormData();
+    form.append('files', file);
+    form.append('progressToken', progressToken);
+    const uploadRes = await fetch('/api/repository/upload', { method: 'POST', body: form });
+    const [parsed] = await uploadRes.json();
+    if (!parsed || parsed.error) throw new Error(parsed?.error || 'تعذّر قراءة الملف.');
+
+    const updateRes = await fetch(`/api/repository/files/${targetId}/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: parsed.token }),
+    });
+    if (!updateRes.ok) {
+      const err = await updateRes.json().catch(() => ({}));
+      throw new Error(err.error || `فشل التحديث (${updateRes.status})`);
+    }
+    await loadFiles(); await loadSources();
+  } catch (err) {
+    alert('تعذّر تحديث بيانات الملف: ' + err.message);
+    if (row) { row.disabled = false; row.textContent = '🔄'; }
+  } finally {
+    clearInterval(poll);
+    updateTargetFileId = null;
+  }
+});
+
+// ---------- file detail modal: meta only (permissions/relationships have their own
+// dedicated modals — see openFilePermModal/openFileRelModal below) ----------
+function openFileModal(fileId) {
+  const f = state.files.find(f => f.id === fileId);
+  if (!f) return;
+  el('file-modal-id').value = f.id;
+  el('file-modal-title').textContent = f.displayName;
+  el('file-display-name').value = f.displayName;
+  el('file-description').value = f.description;
+  el('file-category').value = f.category;
+  el('file-form-error').classList.add('hidden');
+  el('file-modal').classList.remove('hidden');
+}
+
+// Shared by the row's own 🗑️ button and the "✏️ التفاصيل" modal's delete button below —
+// same confirm + DELETE + refresh, so there's one place this logic lives. The backend only
+// allows the file's creator or an Admin to actually delete it (same gate as its permissions);
+// a 403 here means someone merely granted access to the file tried anyway.
+async function deleteFile(fileId, displayName) {
+  if (!confirm(`حذف "${displayName}" من المستودع؟ لا يمكن التراجع عن هذا.`)) return;
+  const res = await fetch('/api/repository/files/' + fileId, { method: 'DELETE' });
+  if (!res.ok) {
+    alert(res.status === 403
+      ? 'ليس لديك صلاحية حذف هذا الملف — الحذف مقصور على من رفعه أو على المسؤول.'
+      : `تعذّر حذف الملف (${res.status}).`);
+    return;
+  }
+  el('file-modal').classList.add('hidden');
+  await loadFiles(); await loadSources();
+}
+
+el('file-modal-cancel').addEventListener('click', () => el('file-modal').classList.add('hidden'));
+el('file-modal-delete').addEventListener('click', () => {
+  const fileId = el('file-modal-id').value;
+  const f = state.files.find(x => x.id === fileId);
+  if (f) deleteFile(f.id, f.displayName);
+});
+el('file-modal').addEventListener('click', e => { if (e.target.id === 'file-modal') el('file-modal').classList.add('hidden'); });
+
+el('file-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fileId = el('file-modal-id').value;
+  const displayName = el('file-display-name').value.trim();
+  if (!displayName) return;
+  const description = el('file-description').value.trim();
+  const category = el('file-category').value.trim() || 'عام';
+  const errBox = el('file-form-error'); errBox.classList.add('hidden');
+  const saveBtn = el('file-modal-save'); saveBtn.disabled = true;
+
+  try {
+    const metaRes = await fetch(`/api/repository/files/${fileId}/meta`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName, description, category }),
+    });
+    if (!metaRes.ok) throw new Error((await metaRes.json().catch(() => ({}))).error || 'تعذّر حفظ التفاصيل.');
+    el('file-modal').classList.add('hidden');
+    await loadFiles(); await loadSources();
+  } catch (err) {
+    errBox.textContent = err.message; errBox.classList.remove('hidden');
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+// ---------- searchable user picker ----------
+// Shared by the file-permissions modal and the dashboard-roles modal's "add role" and
+// "transfer owner" pickers: GET /api/users (a full listing) is Admin-only, so a non-Admin
+// caller has no way to enumerate everyone — only search a few matches at a time via the
+// narrow /api/users/search endpoint (UserLookupController).
+//
+// Selection fires on mousedown, not click, with preventDefault() on it — this keeps the
+// text input focused (a mousedown on another element would otherwise blur it first) and
+// guarantees the pick registers before this same click can bubble to any outside-click
+// handler that hides the suggestion box, rather than racing it.
+function initUserSearchPicker(input, box, onPick) {
+  let timer = null;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) { box.classList.add('hidden'); return; }
+    timer = setTimeout(async () => {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+      const results = res.ok ? await res.json() : [];
+      box.innerHTML = results.length
+        ? results.map(u => `<div class="user-search-item" data-pick="${esc(u.id)}">
+            <span>${esc(u.displayName)}</span><span class="uname">@${esc(u.username)}</span>
+          </div>`).join('')
+        : '<div class="user-search-empty">لا نتائج.</div>';
+      box.classList.remove('hidden');
+      box.querySelectorAll('[data-pick]').forEach(item => {
+        item.addEventListener('mousedown', e => {
+          e.preventDefault();
+          const picked = results.find(u => u.id === item.dataset.pick);
+          box.classList.add('hidden');
+          if (picked) onPick(picked);
+        });
+      });
+    }, 250);
+  });
+}
+document.addEventListener('click', e => {
+  document.querySelectorAll('.user-search-box').forEach(wrap => {
+    if (!wrap.contains(e.target)) wrap.querySelector('.user-search-suggestions')?.classList.add('hidden');
+  });
+});
+
+// ---------- file permissions modal ----------
+// Every file is automatically restricted to its creator (see AnalyticsTools.
+// DescribeSourcesAsync) — this can't be turned off, only added to.
+function openFilePermModal(fileId) {
+  el('file-perm-modal-id').value = fileId;
+  el('file-perm-search').value = '';
+  el('file-perm-suggestions').classList.add('hidden');
+  el('file-perm-error').classList.add('hidden');
+  el('file-perm-modal').classList.remove('hidden');
+  reloadFilePermModal();
+}
+
+async function reloadFilePermModal() {
+  const fileId = el('file-perm-modal-id').value;
+  const res = await fetch(`/api/repository/files/${fileId}/permissions`);
+  if (!res.ok) { el('file-perm-creator-name').textContent = '—'; return; }
+  const data = await res.json();
+  el('file-perm-creator-name').textContent = data.creatorName || data.creatorId || '—';
+  el('file-perm-list').innerHTML = data.granted.length
+    ? data.granted.map(g => `<div class="role-row">
+        <span class="name">${esc(g.displayName)}</span>
+        <button type="button" class="remove-role-btn" data-remove="${esc(g.userId)}">إزالة</button>
+      </div>`).join('')
+    : '<div class="owner-line">لا يوجد مستخدمون إضافيون بعد.</div>';
+  el('file-perm-list').querySelectorAll('[data-remove]').forEach(btn =>
+    btn.addEventListener('click', () => setFilePermGranted(data.granted.filter(g => g.userId !== btn.dataset.remove).map(g => g.userId))));
+}
+
+async function setFilePermGranted(userIds) {
+  const fileId = el('file-perm-modal-id').value;
+  const errBox = el('file-perm-error'); errBox.classList.add('hidden');
+  const res = await fetch(`/api/repository/files/${fileId}/permissions`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userIds }),
+  });
+  if (!res.ok) { errBox.textContent = 'تعذّر حفظ الصلاحيات.'; errBox.classList.remove('hidden'); return; }
+  await reloadFilePermModal();
+  await loadFiles();
+}
+
+initUserSearchPicker(el('file-perm-search'), el('file-perm-suggestions'), async picked => {
+  el('file-perm-error').classList.add('hidden');
+  const fileId = el('file-perm-modal-id').value;
+  const res = await fetch(`/api/repository/files/${fileId}/permissions`);
+  if (!res.ok) {
+    // A 404 here means the file itself is gone (deleted, or replaced by a data update that
+    // gave it a new id) while this modal was still open with the old id — silently crashing
+    // on it (the previous behavior: the suggestion box just closes with no explanation) left
+    // no way to tell. Refresh the list so the stale row disappears too.
+    el('file-perm-error').textContent = res.status === 404
+      ? 'تعذّر العثور على هذا الملف — يبدو أنه حُذف أو تحدّث. أعد فتح صلاحياته من قائمة الملفات.'
+      : 'تعذّر تحميل صلاحيات الملف الحالية.';
+    el('file-perm-error').classList.remove('hidden');
+    if (res.status === 404) await loadFiles();
+    return;
+  }
+  const current = await res.json();
+  const ids = current.granted.map(g => g.userId);
+  if (!ids.includes(picked.id)) ids.push(picked.id);
+  el('file-perm-search').value = '';
+  await setFilePermGranted(ids);
+});
+el('file-perm-modal-close').addEventListener('click', () => el('file-perm-modal').classList.add('hidden'));
+el('file-perm-modal').addEventListener('click', e => { if (e.target.id === 'file-perm-modal') el('file-perm-modal').classList.add('hidden'); });
+
+// ---------- file relationships modal ----------
+function openFileRelModal(fileId) {
+  const f = state.files.find(x => x.id === fileId);
+  if (!f) return;
+  el('file-rel-modal-id').value = fileId;
+  renderFileRelationships(f);
+  const targets = state.files.filter(other => other.id !== f.id);
+  el('file-rel-target').innerHTML = targets.length
+    ? targets.map(t => `<option value="${esc(t.id)}">${esc(t.displayName)}</option>`).join('')
+    : '<option value="">لا يوجد ملفات أخرى</option>';
+  el('file-rel-column').value = '';
+  el('file-rel-modal').classList.remove('hidden');
+}
+
+function renderFileRelationships(f) {
+  el('file-rel-list').innerHTML = f.relationships.length
+    ? f.relationships.map(r => `<div class="role-row">
+        <span class="name">🔗 ${esc(r.relatedFileName)} — العمود المشترك: <b>${esc(r.sharedColumn)}</b></span>
+        <button type="button" class="remove-role-btn rel-del" data-rel="${esc(r.id)}" title="إزالة الربط">إزالة</button>
+      </div>`).join('')
+    : '<div class="owner-line">لا يوجد ملفات مرتبطة بعد.</div>';
+
+  el('file-rel-list').querySelectorAll('.rel-del').forEach(btn => btn.addEventListener('click', async () => {
+    const fileId = el('file-rel-modal-id').value;
+    await fetch(`/api/repository/files/${fileId}/relationships/${btn.dataset.rel}`, { method: 'DELETE' });
+    await loadFiles();
+    const refreshed = state.files.find(x => x.id === fileId);
+    if (refreshed) renderFileRelationships(refreshed);
+  }));
+}
+
+el('file-rel-add-btn').addEventListener('click', async () => {
+  const fileId = el('file-rel-modal-id').value;
+  const relatedFileId = el('file-rel-target').value;
+  const sharedColumn = el('file-rel-column').value.trim();
+  if (!relatedFileId || !sharedColumn) { alert('اختر ملفًا واكتب اسم العمود المشترك.'); return; }
+  const res = await fetch(`/api/repository/files/${fileId}/relationships`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ relatedFileId, sharedColumn }),
+  });
+  if (!res.ok) { alert('تعذّر إضافة الربط.'); return; }
+  el('file-rel-column').value = '';
+  await loadFiles();
+  const refreshed = state.files.find(x => x.id === fileId);
+  if (refreshed) renderFileRelationships(refreshed);
+});
+el('file-rel-modal-close').addEventListener('click', () => el('file-rel-modal').classList.add('hidden'));
+el('file-rel-modal').addEventListener('click', e => { if (e.target.id === 'file-rel-modal') el('file-rel-modal').classList.add('hidden'); });
+
+// ---------- طبقة المعنى (ب): مراجعة معاني الأعمدة من «المصادر» ----------
+// كل صف = عمود من الجدول مع مفهومه (من القاموس الثابت)، وثقة التحليل ومصدره
+// (rule = تخمين من الاسم، ai = الموديل، user = مؤكّد منك). اختيار مفهوم يُحفظ فورًا
+// عبر PUT ويُسجَّل كتأكيد مستخدم فلا يستبدله التحليل الآلي لاحقًا.
+const SEM_SOURCE_LABEL = { rule: 'تخمين من الاسم', ai: 'تحليل آلي', user: 'مؤكّد منك' };
+const SEM_ROLE_LABEL = { measure: 'مقياس', dimension: 'بُعد', time: 'زمن', identifier: 'معرّف', text: 'نص', flag: 'علَم' };
+let semModalConcepts = [];
+
+async function openFileSemModal(fileId) {
+  const f = state.files.find(x => x.id === fileId);
+  if (!f) return;
+  el('file-sem-modal-id').value = fileId;
+  el('file-sem-list').innerHTML = '<div class="owner-line"><span class="spinner"></span> جارٍ التحميل…</div>';
+  semStatus('');
+  el('file-sem-modal').classList.remove('hidden');
+  await loadFileSemantics(fileId);
+}
+
+async function loadFileSemantics(fileId) {
+  const res = await fetch(`/api/repository/files/${fileId}/semantics`);
+  if (!res.ok) {
+    el('file-sem-list').innerHTML = `<div class="owner-line">${res.status === 404 ? 'تعذّر العثور على هذا الملف — يبدو أنه حُذف أو تحدّث.' : 'تعذّر تحميل معاني الأعمدة.'}</div>`;
+    return;
+  }
+  const data = await res.json();
+  semModalConcepts = data.concepts || [];
+  renderFileSemantics(data.columns || []);
+}
+
+function semStatus(text, tone) {
+  const box = el('file-sem-status');
+  box.textContent = text;
+  box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden');
+}
+
+function semConceptOptions(selected) {
+  const byRole = {};
+  semModalConcepts.forEach(c => { (byRole[c.role] ||= []).push(c); });
+  const groups = Object.entries(byRole).map(([role, list]) =>
+    `<optgroup label="${esc(SEM_ROLE_LABEL[role] || role)}">${list.map(c =>
+      `<option value="${esc(c.id)}"${c.id === selected ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</optgroup>`).join('');
+  return `<option value=""${selected ? '' : ' selected'}>— بلا مفهوم (عمود مساعد) —</option>${groups}`;
+}
+
+function renderFileSemantics(columns) {
+  if (!columns.length) {
+    el('file-sem-list').innerHTML = '<div class="owner-line">لم يُحلَّل هذا الجدول بعد. اضغط «إعادة التحليل الآلي» أو انتظر قليلًا بعد الرفع.</div>';
+    return;
+  }
+  el('file-sem-list').innerHTML = columns.map(c => {
+    let valueMap = '';
+    if (c.valueMapJson) {
+      try {
+        const map = JSON.parse(c.valueMapJson);
+        const pairs = Object.entries(map);
+        if (pairs.length) valueMap = `<div class="sem-map">${pairs.map(([k, v]) => `<span>${esc(k)} ← ${esc(v)}</span>`).join('')}</div>`;
+      } catch { /* خريطة قيم غير صالحة — تُتجاهل */ }
+    }
+    const conf = Math.round((c.confidence || 0) * 100);
+    const tone = c.source === 'user' ? 'badge-ok' : conf >= 80 ? 'badge-teal' : conf >= 40 ? 'badge-warn' : 'badge-danger';
+    return `<div class="sem-row" data-column="${esc(c.columnName)}">
+        <div class="sem-col">
+          <b>${esc(c.columnName)}</b>
+          <small>${esc(SEM_ROLE_LABEL[c.role] || c.role || '')}${c.unit ? ` · ${esc(c.unit)}` : ''}</small>
+        </div>
+        <div class="sem-pick">
+          <select class="sem-select" aria-label="مفهوم العمود ${esc(c.columnName)}">${semConceptOptions(c.concept)}</select>
+          <span class="badge ${tone}">${c.source === 'user' ? '✅ مؤكّد منك' : `${esc(SEM_SOURCE_LABEL[c.source] || c.source)} · ${conf.toLocaleString('en-US')}٪`}</span>
+        </div>
+        ${c.note ? `<div class="sem-note">${esc(c.note)}</div>` : ''}
+        ${valueMap}
+      </div>`;
+  }).join('');
+
+  el('file-sem-list').querySelectorAll('.sem-select').forEach(sel => sel.addEventListener('change', async () => {
+    const fileId = el('file-sem-modal-id').value;
+    const column = sel.closest('.sem-row').dataset.column;
+    const concept = sel.value || null;
+    sel.disabled = true;
+    const res = await fetch(`/api/repository/files/${fileId}/semantics/${encodeURIComponent(column)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ concept }),
+    });
+    sel.disabled = false;
+    if (!res.ok) { semStatus('تعذّر حفظ المعنى.', 'bad'); return; }
+    semStatus(`تم حفظ معنى «${column}».`, 'ok');
+    dashGalFeasibility = null;
+    await loadFileSemantics(fileId);
+  }));
+}
+
+el('file-sem-analyze-btn').addEventListener('click', async () => {
+  const fileId = el('file-sem-modal-id').value;
+  const btn = el('file-sem-analyze-btn');
+  btn.disabled = true; semStatus('جارٍ التحليل الآلي… (ثوانٍ قليلة)', '');
+  try {
+    const res = await fetch(`/api/repository/files/${fileId}/semantics/analyze`, { method: 'POST' });
+    if (!res.ok) { semStatus('تعذّر إعادة التحليل.', 'bad'); return; }
+    semStatus('اكتمل التحليل. تأكيداتك السابقة بقيت كما هي.', 'ok');
+    dashGalFeasibility = null;
+    await loadFileSemantics(fileId);
+  } finally { btn.disabled = false; }
+});
+el('file-sem-modal-close').addEventListener('click', () => el('file-sem-modal').classList.add('hidden'));
+el('file-sem-modal').addEventListener('click', e => { if (e.target.id === 'file-sem-modal') el('file-sem-modal').classList.add('hidden'); });
+
+// ---------- history ----------
+// Fire-and-forget: saving history must never block or break the dashboard that
+// already rendered. Only questions that produced at least one widget are saved.
+function saveToHistory(question, dashboard) {
+  if (!dashboard?.widgets?.length) { state.currentHistoryId = null; return; }
+  fetch('/api/history', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      question, summary: dashboard.summary,
+      queryDescription: dashboard.summary, widgets: dashboard.widgets,
+      filters: dashboard.filters || [], activeFilters: state.activeFilters || {},
+      templateId: dashboard.renderKind ? null : (dashboard.templateKey || null),
+    }),
+  }).then(res => res.ok ? res.json() : null).then(saved => {
+    // Captured so a later editor edit updates this same row instead of creating a new one.
+    state.currentHistoryId = saved?.id || null;
+    state.historyLoaded = false;
+  }).catch(() => {});
+}
+
+async function loadHistory() {
+  const res = await fetch('/api/history');
+  state.history = res.ok ? await res.json() : [];
+  state.historyLoaded = true;
+  renderHistory();
+}
+
+function renderHistory() {
+  el('history-badge').textContent = state.history.length;
+  el('history-count').textContent = state.history.length
+    ? `${state.history.length} لوحة محفوظة`
+    : 'لا يوجد لوحات محفوظة بعد';
+
+  el('history-grid').innerHTML = state.history.length ? state.history.map(h => {
+    const widgets = parseWidgets(h.widgetsJson);
+    const when = new Date(h.createdAt + (h.createdAt.endsWith('Z') ? '' : 'Z'));
+    const stateBadge = h.isActive
+      ? `<span class="state-badge active">نشطة</span>`
+      : `<span class="state-badge draft">مسودة</span>`;
+    const roleBadge = h.isActive && h.myRole
+      ? `<span class="role-badge${h.myRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[h.myRole] || h.myRole}</span>` : '';
+    const disabledBadge = h.disabled ? `<span class="state-badge disabled-badge" title="${esc(h.disabledReason || '')}">⚠️ معطّلة</span>` : '';
+    const ownerLine = h.isActive && h.ownerName ? `<div class="owner-line">المالك: ${esc(h.ownerName)}</div>` : '';
+    // Only a Draft's own creator ever sees it (server already filters the list), so
+    // "تفعيل" is always safe to show for one; deletion on an Active dashboard is
+    // Owner/Admin-only server-side — hide it for an Editor/Viewer rather than let them
+    // hit a 404.
+    const activateBtn = !h.isActive ? `<button class="activate-btn" data-activate="${esc(h.id)}">تفعيل</button>` : '';
+    const canDelete = !h.isActive || h.myRole === 'owner';
+    const delBtn = canDelete ? `<button class="del-btn" data-del="${esc(h.id)}">حذف</button>` : '';
+    // Roles/ownership management for an Active dashboard now lives on its own dedicated
+    // page ("اللوحات النشطة") rather than duplicated here — see renderActiveDashboardsList().
+    return `<div class="hist-card">
+        <div class="badges">${stateBadge}${roleBadge}${disabledBadge}</div>
+        <div class="q">${esc(h.question)}</div>
+        <div class="summary">${esc(h.summary)}</div>
+        ${ownerLine}
+        <div class="meta">${when.toLocaleString('ar-EG')} · ${widgets.length} عنصر</div>
+        <div class="actions">
+          <button class="open-btn" data-open="${esc(h.id)}">فتح</button>
+          ${activateBtn}${delBtn}
+        </div>
+      </div>`;
+  }).join('') : `<div class="hist-empty">لا يوجد لوحات محفوظة بعد — أي سؤال تسأله يُحفظ هنا تلقائياً.</div>`;
+
+  el('history-grid').querySelectorAll('[data-open]').forEach(btn =>
+    btn.addEventListener('click', () => openHistoryEntry(btn.dataset.open)));
+  el('history-grid').querySelectorAll('[data-del]').forEach(btn =>
+    btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.del)));
+  el('history-grid').querySelectorAll('[data-activate]').forEach(btn =>
+    btn.addEventListener('click', () => activateHistoryEntry(btn.dataset.activate)));
+
+  renderActiveDashboardsList();
+}
+
+// ---------- Active dashboards: mini SVG preview thumbnails ----------
+// A fast, purely data-driven "poster" of a saved dashboard's widgets — not a literal
+// screenshot, since that would mean spinning up a real ApexCharts instance for every
+// widget of every active dashboard just to rasterize them, which doesn't scale to a list.
+// Colors are the same small semantic vocabulary used everywhere else in this app (CSS
+// custom properties, referenced live via style="fill:var(--x)"), so unlike the real
+// ApexCharts-based charts (which bake static SVG colors and need a rebuild) this
+// thumbnail re-themes itself automatically on the light/dark toggle — no extra code needed.
+const THUMB_W = 240, THUMB_H = 128, THUMB_COLS = 4, THUMB_PAD = 6, THUMB_GAP = 5, THUMB_MAX_ROWS = 3;
+const THUMB_TONES = ['var(--accent)', 'var(--amber)', 'var(--danger)'];
+
+function thumbSpan(w) {
+  if (w.comparison) return THUMB_COLS;
+  const size = w.layout && w.layout.size;
+  if (size === 'small') return 1;
+  if (size === 'large') return 3;
+  if (size === 'full') return THUMB_COLS;
+  if (size === 'wide') return 2;
+  return (w.type || '').toLowerCase() === 'kpi' ? 1 : 2;
+}
+
+function packThumbnailRows(widgets) {
+  const rows = [];
+  let current = [], currentSpan = 0;
+  for (const w of widgets) {
+    if (rows.length >= THUMB_MAX_ROWS) break;
+    const span = thumbSpan(w);
+    if (currentSpan && currentSpan + span > THUMB_COLS) {
+      rows.push(current);
+      if (rows.length >= THUMB_MAX_ROWS) { current = null; break; }
+      current = []; currentSpan = 0;
+    }
+    current.push(w); currentSpan += span;
+  }
+  if (current && current.length) rows.push(current);
+  return rows;
+}
+
+function dashboardThumbnailSvg(widgets) {
+  if (!Array.isArray(widgets) || !widgets.length) {
+    return `<svg viewBox="0 0 ${THUMB_W} ${THUMB_H}" aria-hidden="true"><rect width="100%" height="100%" style="fill:var(--plane)"/></svg>`;
+  }
+  const rows = packThumbnailRows(widgets);
+  const shown = rows.reduce((n, r) => n + r.length, 0);
+  const overflow = widgets.length - shown;
+  const rowH = (THUMB_H - THUMB_PAD * 2 - THUMB_GAP * (rows.length - 1)) / rows.length;
+  const colW = (THUMB_W - THUMB_PAD * 2 - THUMB_GAP * (THUMB_COLS - 1)) / THUMB_COLS;
+  let y = THUMB_PAD, cells = '';
+  rows.forEach(row => {
+    let x = THUMB_PAD;
+    const rowSpan = row.reduce((s, w) => s + thumbSpan(w), 0);
+    const scale = THUMB_COLS / Math.max(rowSpan, 1);
+    row.forEach(w => {
+      const span = thumbSpan(w) * scale;
+      const cw = span * colW + (span - 1) * THUMB_GAP;
+      cells += thumbCell(w, x, y, cw, rowH);
+      x += cw + THUMB_GAP;
+    });
+    y += rowH + THUMB_GAP;
+  });
+  const overflowChip = overflow > 0 ? `
+    <rect x="${THUMB_W - 28}" y="4" width="24" height="13" rx="6.5" style="fill:var(--surface);stroke:var(--grid)"/>
+    <text x="${THUMB_W - 16}" y="13.5" text-anchor="middle" style="fill:var(--muted);font-size:8px">+${overflow}</text>` : '';
+  return `<svg viewBox="0 0 ${THUMB_W} ${THUMB_H}" aria-hidden="true">
+    <rect width="100%" height="100%" style="fill:var(--plane)"/>${cells}${overflowChip}
+  </svg>`;
+}
+
+function thumbCell(w, x, y, cw, ch) {
+  const type = w.comparison ? 'comparison' : (w.type || '').toLowerCase();
+  const bg = `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" rx="4" style="fill:var(--surface);stroke:var(--grid)"/>`;
+  const pad = 4;
+  const ix = x + pad, iy = y + pad, iw = Math.max(cw - pad * 2, 1), ih = Math.max(ch - pad * 2, 1);
+  let inner;
+  switch (type) {
+    case 'kpi': inner = thumbKpi(w, x, y, cw, ch); break;
+    case 'pie': inner = thumbDonut(w, x + cw / 2, y + ch / 2, Math.min(iw, ih) / 2); break;
+    case 'bar': inner = thumbBars(w, ix, iy, iw, ih); break;
+    case 'line': inner = thumbLine(w, ix, iy, iw, ih); break;
+    case 'progress-table': inner = thumbProgressRows(ix, iy, iw, ih); break;
+    case 'trend-matrix': inner = thumbTrendRows(ix, iy, iw, ih); break;
+    case 'status-bar': inner = thumbChips(ix, iy, iw, ih); break;
+    case 'radial-gauge': inner = thumbRadialGauge(w, x + cw / 2, y + ch / 2, Math.min(iw, ih) / 2); break;
+    case 'linear-gauge': inner = thumbLinearGaugeRows(ix, iy, iw, ih); break;
+    case 'comparison': inner = thumbComparisonBox(ix, iy, iw, ih); break;
+    default: inner = thumbTableRows(ix, iy, iw, ih); break; // table and anything unrecognized
+  }
+  return bg + inner;
+}
+
+function thumbKpi(w, x, y, cw, ch) {
+  const e = Array.isArray(w.data) ? w.data[0] : null;
+  const v = e?.value ?? Object.values(e || {}).find(n => typeof n === 'number');
+  const size = Math.min(ch * 0.32, cw * 0.22, 15);
+  return `<text x="${(x + cw / 2).toFixed(1)}" y="${(y + ch / 2 + size * 0.35).toFixed(1)}" text-anchor="middle"
+    style="fill:var(--accent);font-size:${size.toFixed(1)}px;font-weight:700">${esc(fmt(v))}</text>`;
+}
+
+function thumbSeriesValues(w) {
+  if (Array.isArray(w.series) && w.series.length && Array.isArray(w.data)) {
+    const keys = w.series.map(s => s.key);
+    return w.data.map(r => keys.map(k => num(r[k])));
+  }
+  if (Array.isArray(w.data)) {
+    return w.data.map(r => [num(r.value ?? Object.values(r).find(v => typeof v === 'number'))]);
+  }
+  return [];
+}
+
+function thumbBars(w, x, y, iw, ih) {
+  const rows = thumbSeriesValues(w).slice(0, 5);
+  if (!rows.length) return '';
+  const seriesCount = rows[0].length;
+  const groupW = iw / rows.length;
+  const barW = Math.max((groupW - 3) / seriesCount - 1, 1.5);
+  const max = Math.max(1, ...rows.flat());
+  let out = '';
+  rows.forEach((vals, i) => {
+    vals.forEach((v, s) => {
+      const h = Math.max((v / max) * ih, 1.5);
+      const bx = x + i * groupW + s * (barW + 1);
+      out += `<rect x="${bx.toFixed(1)}" y="${(y + ih - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1" style="fill:${THUMB_TONES[s % THUMB_TONES.length]}"/>`;
+    });
+  });
+  return out;
+}
+
+function thumbLine(w, x, y, iw, ih) {
+  const rows = thumbSeriesValues(w);
+  if (!rows.length) return '';
+  const seriesCount = rows[0].length;
+  let out = '';
+  for (let s = 0; s < seriesCount; s++) {
+    const vals = rows.map(r => r[s] ?? 0);
+    const max = Math.max(1, ...vals);
+    const pts = vals.map((v, i) => {
+      const px = x + (vals.length > 1 ? (i / (vals.length - 1)) * iw : iw / 2);
+      const py = y + ih - (v / max) * ih;
+      return `${px.toFixed(1)},${py.toFixed(1)}`;
+    }).join(' ');
+    out += `<polyline points="${pts}" fill="none" style="stroke:${THUMB_TONES[s % THUMB_TONES.length]}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  return out;
+}
+
+function thumbDonut(w, cx, cy, r) {
+  const rows = Array.isArray(w.data) ? w.data.slice(0, 3) : [];
+  const total = rows.reduce((s, row) => s + num(row.value), 0) || 1;
+  const rIn = r * 0.55;
+  let angle = -90, out = '';
+  rows.forEach((row, i) => {
+    const sweep = (num(row.value) / total) * 360;
+    out += thumbArcPath(cx, cy, rIn, r, angle, angle + sweep, THUMB_TONES[i % THUMB_TONES.length]);
+    angle += sweep;
+  });
+  return out || `<circle cx="${cx}" cy="${cy}" r="${r}" style="fill:none;stroke:var(--grid)"/>`;
+}
+
+function thumbArcPath(cx, cy, rIn, rOut, a0, a1, color) {
+  const large = (a1 - a0) % 360 > 180 ? 1 : 0;
+  const p = (r, a) => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)];
+  const [x0, y0] = p(rOut, a0), [x1, y1] = p(rOut, a1), [x2, y2] = p(rIn, a1), [x3, y3] = p(rIn, a0);
+  return `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${rOut.toFixed(1)},${rOut.toFixed(1)} 0 ${large} 1 ${x1.toFixed(1)},${y1.toFixed(1)}
+    L${x2.toFixed(1)},${y2.toFixed(1)} A${rIn.toFixed(1)},${rIn.toFixed(1)} 0 ${large} 0 ${x3.toFixed(1)},${y3.toFixed(1)} Z" style="fill:${color}"/>`;
+}
+
+function thumbTableRows(x, y, iw, ih) {
+  const rows = 3, rh = ih / rows;
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2;
+    out += `<line x1="${x.toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw * (i === 0 ? 1 : 0.7)).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--grid)" stroke-width="3"/>`;
+  }
+  return out;
+}
+
+function thumbProgressRows(x, y, iw, ih) {
+  const rows = 2, rh = ih / rows;
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2 - 1.5;
+    const split = 0.4 + i * 0.25;
+    out += `<rect x="${x.toFixed(1)}" y="${yy.toFixed(1)}" width="${(iw * split).toFixed(1)}" height="3" rx="1.5" style="fill:var(--accent)"/>`;
+    out += `<rect x="${(x + iw * split).toFixed(1)}" y="${yy.toFixed(1)}" width="${(iw * (1 - split)).toFixed(1)}" height="3" rx="1.5" style="fill:var(--grid)"/>`;
+  }
+  return out;
+}
+
+function thumbTrendRows(x, y, iw, ih) {
+  const rows = 3, rh = ih / rows;
+  const tones = ['var(--accent)', 'var(--danger)', 'var(--muted)'];
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2;
+    out += `<circle cx="${(x + 3).toFixed(1)}" cy="${yy.toFixed(1)}" r="2" style="fill:${tones[i % tones.length]}"/>`;
+    out += `<line x1="${(x + 9).toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw * 0.7).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--grid)" stroke-width="2.5"/>`;
+  }
+  return out;
+}
+
+function thumbRadialGauge(w, cx, cy, r) {
+  const row = Array.isArray(w.data) ? w.data[0] : w.data;
+  const value = num(row?.value), max = row?.max != null ? num(row.max) : 100;
+  // Capped just under a full turn — thumbArcPath's large-arc-flag math degenerates at
+  // exactly 360° (start and end point coincide, drawing nothing); a value at or over max
+  // still reads as "nearly full" rather than vanishing.
+  const pct = max > 0 ? Math.max(0, Math.min(0.999, value / max)) : 0;
+  const rIn = r * 0.6;
+  const track = `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${((r + rIn) / 2).toFixed(1)}" style="fill:none;stroke:var(--grid)" stroke-width="${(r - rIn).toFixed(1)}"/>`;
+  const arc = pct > 0 ? thumbArcPath(cx, cy, rIn, r, -90, -90 + pct * 360, 'var(--accent)') : '';
+  return track + arc;
+}
+
+function thumbLinearGaugeRows(x, y, iw, ih) {
+  const rows = 3, rh = ih / rows;
+  let out = '';
+  for (let i = 0; i < rows; i++) {
+    const yy = y + i * rh + rh / 2;
+    const pct = 0.35 + i * 0.22;
+    out += `<line x1="${x.toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--grid)" stroke-width="3" stroke-linecap="round"/>`;
+    out += `<line x1="${x.toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(x + iw * pct).toFixed(1)}" y2="${yy.toFixed(1)}" style="stroke:var(--accent)" stroke-width="3" stroke-linecap="round"/>`;
+    out += `<circle cx="${(x + iw * pct).toFixed(1)}" cy="${yy.toFixed(1)}" r="2.5" style="fill:var(--surface);stroke:var(--accent)" stroke-width="1.5"/>`;
+  }
+  return out;
+}
+
+function thumbChips(x, y, iw, ih) {
+  const tones = ['var(--danger)', 'var(--amber)', 'var(--accent)'];
+  const chipW = (iw - 8) / 3;
+  let out = `<text x="${x.toFixed(1)}" y="${(y + ih * 0.45).toFixed(1)}" style="fill:var(--ink);font-size:${Math.min(ih * 0.4, 14).toFixed(1)}px;font-weight:700">••</text>`;
+  tones.forEach((c, i) => {
+    const cx = x + i * (chipW + 4);
+    out += `<rect x="${cx.toFixed(1)}" y="${(y + ih - 8).toFixed(1)}" width="${chipW.toFixed(1)}" height="6" rx="3" style="fill:${c}"/>`;
+  });
+  return out;
+}
+
+function thumbComparisonBox(x, y, iw, ih) {
+  const halfW = (iw - 10) / 2;
+  return `
+    <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${halfW.toFixed(1)}" height="${ih.toFixed(1)}" rx="3" style="fill:var(--plane);stroke:var(--grid)"/>
+    <rect x="${(x + halfW + 10).toFixed(1)}" y="${y.toFixed(1)}" width="${halfW.toFixed(1)}" height="${ih.toFixed(1)}" rx="3" style="fill:var(--plane);stroke:var(--grid)"/>
+    <text x="${(x + iw / 2).toFixed(1)}" y="${(y + ih / 2 + 3).toFixed(1)}" text-anchor="middle" style="fill:var(--muted);font-size:10px">⟷</text>`;
+}
+
+// ---------- Active dashboards: own dedicated page (list row with a thumbnail per row) ----------
+// Sourced from the same state.history the "السجل" tab already loaded (the List endpoint
+// already returns Active dashboards the caller owns or holds a role on, alongside their
+// own Drafts) — just filtered down to isActive here, no separate fetch.
+function renderActiveDashboardsList() {
+  const actives = state.history.filter(h => h.isActive);
+  el('active-badge').textContent = actives.length;
+  el('active-count').textContent = actives.length
+    ? `${actives.length} لوحة نشطة` : 'لا يوجد لوحات نشطة بعد';
+
+  el('active-list').innerHTML = actives.length ? actives.map(h => {
+    const widgets = parseWidgets(h.widgetsJson);
+    const when = new Date(h.createdAt + (h.createdAt.endsWith('Z') ? '' : 'Z'));
+    const roleBadge = h.myRole ? `<span class="role-badge${h.myRole === 'viewer' ? ' role-viewer' : ''}">${ROLE_LABELS[h.myRole] || h.myRole}</span>` : '';
+    const disabledBadge = h.disabled ? `<span class="badge-stale" title="${esc(h.disabledReason || '')}">⚠ معطّلة</span>` : '';
+    const ownerLine = h.ownerName ? `المالك: ${esc(h.ownerName)}` : '';
+    const isAdmin = state.currentUser?.role === 'Admin';
+    const canRename = h.myRole === 'owner' || h.myRole === 'editor' || isAdmin;
+    const renameBtn = canRename
+      ? `<button class="icon-btn rename-active-btn" data-rename="${esc(h.id)}" title="تعديل الاسم والوصف">✏️</button>` : '';
+    const rolesBtn = h.myRole === 'owner'
+      ? `<button class="icon-btn roles-btn" data-roles="${esc(h.id)}" title="إدارة الصلاحيات">⚙️</button>` : '';
+    const delBtn = h.myRole === 'owner'
+      ? `<button class="icon-btn del-active-btn" data-del="${esc(h.id)}" title="حذف">🗑️</button>` : '';
+    // §4.23: نشر اللوحة على شاشة «اللوحات المنشورة» في المشروع — للمالك والمحرر (والخادم
+    // يتحقق أيضًا من دور المستخدم في المشروع نفسه).
+    const pubProjBtn = canRename
+      ? `<button class="icon-btn pubproj-btn" data-pubproj="${esc(h.id)}" title="نشر على المشروع">📌</button>` : '';
+    return `<div class="file-row${h.disabled ? ' stale' : ''}" data-id="${esc(h.id)}">
+        <div class="fr-main">
+          <div class="fr-thumb">${dashboardThumbnailSvg(widgets)}</div>
+          <div class="fr-text">
+            <div class="fr-line1">
+              <span class="fr-name">${esc(h.question)}</span>
+              ${disabledBadge}
+            </div>
+            <div class="fr-line2">${esc(h.summary)}${ownerLine ? ` <span class="sep">·</span> ${ownerLine}` : ''}</div>
+          </div>
+        </div>
+        <div class="col-updated"><b>${relTime(h.createdAt)}</b>${when.toLocaleDateString('ar-EG')}</div>
+        <div class="col-usage"><div class="num">${widgets.length}</div><div class="lbl">عنصر</div></div>
+        <div class="col-access">${roleBadge || '—'}</div>
+        <div class="col-actions">
+          <button class="icon-btn open-active-btn" data-open="${esc(h.id)}" title="فتح">↗️</button>
+          ${pubProjBtn}${renameBtn}${rolesBtn}${delBtn}
+        </div>
+      </div>`;
+  }).join('') : `<div class="repo-empty">لا يوجد لوحات نشطة بعد — فعّل لوحة من تبويب "السجل" لتظهر هنا.</div>`;
+
+  el('active-list').querySelectorAll('[data-open]').forEach(btn =>
+    btn.addEventListener('click', () => openHistoryEntry(btn.dataset.open)));
+  el('active-list').querySelectorAll('[data-rename]').forEach(btn =>
+    btn.addEventListener('click', () => openRenameModal(btn.dataset.rename)));
+  el('active-list').querySelectorAll('[data-roles]').forEach(btn =>
+    btn.addEventListener('click', () => openRolesModal(btn.dataset.roles)));
+  el('active-list').querySelectorAll('.del-active-btn').forEach(btn =>
+    btn.addEventListener('click', () => deleteHistoryEntry(btn.dataset.del)));
+  el('active-list').querySelectorAll('[data-pubproj]').forEach(btn =>
+    btn.addEventListener('click', () => window.JEEM_PUBLISHED?.openPublishModal(btn.dataset.pubproj)));
+}
+
+// Promotes a Draft to Active — the activating user becomes its Owner, which the backend
+// rejects if they don't already hold valid permission on every source the dashboard's
+// widgets depend on (DashboardAccessService — the exact same gate a fresh question goes
+// through).
+async function activateHistoryEntry(id) {
+  try {
+    const res = await fetch(`/api/history/${encodeURIComponent(id)}/activate`, { method: 'POST' });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) { alert(payload?.error || 'تعذّر تفعيل اللوحة.'); return; }
+    const idx = state.history.findIndex(h => h.id === id);
+    if (idx !== -1) state.history[idx] = payload; else state.history.unshift(payload);
+    renderHistory();
+    // If this is the dashboard currently on screen (e.g. activated via the toolbar's
+    // ✅ تفعيل اللوحة button, not just from السجل), reflect its new Active state there too
+    // — unlocks مشاركة and hides the activate button — rather than requiring a reopen.
+    if (state.currentHistoryId === id) {
+      state.dashboardIsActive = true;
+      state.dashboardRole = payload.myRole || 'owner';
+      state.dashboardDisabled = !!payload.disabled;
+      state.dashboardDisabledReason = payload.disabledReason || '';
+      renderDashboard();
+    }
+  } catch {
+    alert('تعذّر الوصول إلى الخادم.');
+  }
+}
+el('btn-activate').addEventListener('click', () => {
+  if (state.currentHistoryId) activateHistoryEntry(state.currentHistoryId);
+});
+
+function parseWidgets(json) {
+  try { const w = JSON.parse(json); return Array.isArray(w) ? w : []; } catch { return []; }
+}
+
+function parseFilters(json) {
+  try { const f = JSON.parse(json); return Array.isArray(f) ? f : []; } catch { return []; }
+}
+function parseActiveFilters(json) {
+  try { const f = JSON.parse(json); return f && typeof f === 'object' && !Array.isArray(f) ? f : {}; } catch { return {}; }
+}
+
+// Reopens a saved dashboard entirely client-side — no call to the chat/AI endpoint. Filters
+// and the selection that was active when it was saved come back too (see saveToHistory/
+// doAutosave), so the dashboard looks exactly as it did rather than losing its filter UI.
+function openHistoryEntry(id) {
+  const entry = state.history.find(h => h.id === id);
+  if (!entry) return;
+  state.dashboard = ensureWidgetMeta({
+    name: entry.question, summary: entry.summary, widgets: parseWidgets(entry.widgetsJson),
+    filters: parseFilters(entry.filtersJson),
+    // Set only for an "interactive" (RenderKind) dashboard — see mountInteractiveDashboard,
+    // called from renderDashboard() before any ordinary widget is touched.
+    renderKind: entry.renderKind || null, templateId: entry.templateId || null, projectId: entry.projectId || null,
+    // لوحة محادثة بُنيت من قالب: مفتاحه محفوظ في templateId ليبقى «إعادة بناء العنصر» ممكنًا.
+    templateKey: entry.renderKind ? null : (entry.templateId || null),
+  });
+  // A Draft shows its own saved-at time (the frozen snapshot's actual age) — overwritten
+  // with "now" below by applyFilters() if this turns out to be an Active dashboard, since
+  // that call re-executes every widget live.
+  state.lastRefreshedAt = entry.createdAt ? new Date(entry.createdAt + (entry.createdAt.endsWith('Z') ? '' : 'Z')) : null;
+  state.editHistory = { past: [], future: [] };
+  state.currentHistoryId = entry.id; // further edits autosave onto this same saved entry
+  state.activeFilters = parseActiveFilters(entry.activeFiltersJson);
+  // Part 2: an Active dashboard is never frozen — see the state.dashboardIsActive branch
+  // in applyFilters(), triggered right below, which re-executes every widget live under
+  // the Owner's own permission (re-validated fresh, not the List call's snapshot).
+  state.dashboardIsActive = !!entry.isActive;
+  state.dashboardRole = entry.isActive ? (entry.myRole || null) : null;
+  state.dashboardDisabled = !!entry.disabled;
+  state.dashboardDisabledReason = entry.disabledReason || '';
+  state.messages.push({ role: 'user', text: entry.queryDescription || entry.question });
+  state.messages.push({
+    role: 'bot', text: entry.summary,
+    speechWidgets: state.dashboard.widgets.map(w => ({ id: w.id, title: w.title })),
+  });
+  showScreen('chat');
+  renderMessages(); renderDashboard();
+  if (state.dashboardIsActive && !state.dashboardDisabled) applyFilters();
+}
+
+async function deleteHistoryEntry(id) {
+  if (!confirm('حذف هذه اللوحة من السجل؟')) return;
+  await fetch('/api/history/' + id, { method: 'DELETE' });
+  state.history = state.history.filter(h => h.id !== id);
+  renderHistory();
+}
+
+// ---------- Part 2: roles modal (Owner transfer + Editor/Viewer management) ----------
+// Both pickers below use the same searchable user picker as the file-permissions modal
+// (initUserSearchPicker) — type a few letters of a name or username, click a result to act
+// immediately, rather than typing an exact username into a plain text field.
+function rolesModalError(message) {
+  const box = el('roles-error');
+  box.textContent = message || '';
+  box.classList.toggle('hidden', !message);
+}
+
+async function openRolesModal(id) {
+  rolesModalError('');
+  el('roles-modal-id').value = id;
+  el('roles-owner-name').textContent = '…';
+  el('roles-list').innerHTML = '';
+  el('transfer-owner-search').value = '';
+  el('role-add-search').value = '';
+  el('transfer-owner-suggestions').classList.add('hidden');
+  el('role-add-suggestions').classList.add('hidden');
+  el('roles-modal').classList.remove('hidden');
+  await reloadRolesModal();
+}
+
+async function reloadRolesModal() {
+  const id = el('roles-modal-id').value;
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/roles`);
+  if (!res.ok) { rolesModalError('تعذّر تحميل الصلاحيات.'); return; }
+  const data = await res.json();
+  el('roles-owner-name').textContent = data.ownerName || data.ownerId || '—';
+  el('roles-list').innerHTML = data.roles.length ? data.roles.map(r => `
+      <div class="role-row">
+        <span class="name">${esc(r.displayName)} — ${ROLE_LABELS[r.role] || r.role}</span>
+        <button type="button" class="remove-role-btn" data-remove="${esc(r.userId)}">إزالة</button>
+      </div>`).join('') : `<div class="owner-line">لا يوجد محررون أو مشاهدون بعد.</div>`;
+  el('roles-list').querySelectorAll('[data-remove]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      await fetch(`/api/history/${encodeURIComponent(id)}/roles/${encodeURIComponent(btn.dataset.remove)}`, { method: 'DELETE' });
+      await reloadRolesModal();
+    }));
+}
+
+initUserSearchPicker(el('role-add-search'), el('role-add-suggestions'), async picked => {
+  rolesModalError('');
+  const id = el('roles-modal-id').value;
+  const role = el('role-add-select').value;
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/roles/${encodeURIComponent(picked.id)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }),
+  });
+  if (!res.ok) { const p = await res.json().catch(() => null); rolesModalError(p?.error || 'تعذّر إضافة الدور.'); return; }
+  el('role-add-search').value = '';
+  await reloadRolesModal();
+});
+
+initUserSearchPicker(el('transfer-owner-search'), el('transfer-owner-suggestions'), async picked => {
+  rolesModalError('');
+  const id = el('roles-modal-id').value;
+  if (!confirm(`نقل ملكية اللوحة إلى ${picked.displayName || picked.username}؟`)) return;
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/transfer-owner`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newOwnerId: picked.id }),
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) { rolesModalError(payload?.error || 'تعذّر نقل الملكية.'); return; }
+  // The caller may no longer be the Owner after a successful transfer — reflect that in
+  // the open dashboard (if this is the one on screen) and the History list right away.
+  const idx = state.history.findIndex(h => h.id === id);
+  if (idx !== -1) state.history[idx] = payload;
+  if (state.currentHistoryId === id) {
+    state.dashboardRole = payload.myRole || null;
+    state.dashboardDisabled = !!payload.disabled;
+    state.dashboardDisabledReason = payload.disabledReason || '';
+    renderDashboard();
+  }
+  el('transfer-owner-search').value = '';
+  await reloadRolesModal();
+  renderHistory();
+});
+
+el('roles-modal-close').addEventListener('click', () => el('roles-modal').classList.add('hidden'));
+
+// ---------- rename (active dashboard title/description) ----------
+function renameModalError(message) {
+  const box = el('rename-error');
+  box.textContent = message || '';
+  box.classList.toggle('hidden', !message);
+}
+
+function openRenameModal(id) {
+  const entry = state.history.find(h => h.id === id);
+  if (!entry) return;
+  renameModalError('');
+  el('rename-modal-id').value = id;
+  el('rename-name').value = entry.question || '';
+  el('rename-desc').value = entry.summary || '';
+  el('rename-modal').classList.remove('hidden');
+  el('rename-name').focus();
+}
+
+el('rename-cancel').addEventListener('click', () => el('rename-modal').classList.add('hidden'));
+
+el('rename-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  renameModalError('');
+  const id = el('rename-modal-id').value;
+  const question = el('rename-name').value.trim();
+  const summary = el('rename-desc').value.trim();
+  if (!question) { renameModalError('الاسم مطلوب.'); return; }
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}/rename`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, summary }),
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) { renameModalError(payload?.error || 'تعذّر الحفظ.'); return; }
+  const idx = state.history.findIndex(h => h.id === id);
+  if (idx !== -1) state.history[idx] = payload;
+  if (state.currentHistoryId === id) {
+    state.dashboard.name = payload.question;
+    state.dashboard.summary = payload.summary;
+    renderDashboard();
+  }
+  el('rename-modal').classList.add('hidden');
+  renderHistory();
+});
+
+el('active-roles-info-btn').addEventListener('click', () => el('role-info-modal').classList.remove('hidden'));
+el('role-info-close').addEventListener('click', () => el('role-info-modal').classList.add('hidden'));
+
+el('history-clear').addEventListener('click', async () => {
+  if (!state.history.length || !confirm('مسح كل السجل؟ لا يمكن التراجع عن هذا.')) return;
+  await fetch('/api/history', { method: 'DELETE' });
+  state.history = [];
+  renderHistory();
+});
+
+// ---------- screens ----------
+// The breadcrumb's middle segments: only these screens sit "inside" the current project
+// (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
+// integrations) and the platform-only "organizations" screen never show a project name,
+// since you're managing the organization/platform itself there, not a project within it.
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+// Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
+// lookup here instead of reading the DOM, since the same data-screen value can be the
+// target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
+// "المستخدمون" under الإدارة).
+const SCREEN_LABELS = {
+  chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
+  history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
+  projects: 'المشاريع', presentations: 'العروض التقديمية', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
+  organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
+};
+// Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
+// organizations screen) > المشروع الحالي (project-scoped screens only) > الصفحة الحالية.
+// state.orgName/projectName come from loadCurrentProjectNav()'s /api/projects response —
+// re-run here (not just at startup) so the breadcrumb stays correct even before that fetch
+// first resolves, and every time it resolves or the screen changes.
+function updateCrumbs(name) {
+  const crumbs = el('crumbs');
+  if (!crumbs) return;
+  const parts = ['جيم'];
+  if (name === 'organizations' || name === 'templates-admin') parts.push('المنصّة');
+  else if (state.orgName) parts.push(state.orgName);
+  if (PROJECT_SCOPED_SCREENS.has(name) && state.projectName) parts.push(state.projectName);
+  const label = SCREEN_LABELS[name];
+  if (label) parts.push(label);
+  crumbs.innerHTML = parts.map((p, i) => {
+    const seg = i === parts.length - 1 ? `<strong>${esc(p)}</strong>` : `<span>${esc(p)}</span>`;
+    return i === 0 ? seg : `<span class="sep">/</span>${seg}`;
+  }).join('');
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
+  el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
+  // §4.23: مغادرة «اللوحات المنشورة» توقف وضع العرض وتزيل رابطها العميق؛ دخولها يحمّلها.
+  if (name !== 'published') window.JEEM_PUBLISHED?.leave();
+  state.currentScreen = name;
+  updateCrumbs(name);
+  if (name === 'published') window.JEEM_PUBLISHED?.load();
+  if (name === 'analyst') { window.loadAnalystScreen?.(); loadSources().then(() => window.loadAnalystScreen?.()); }
+  if (name === 'repo') loadFiles();
+  if (name === 'history' && !state.historyLoaded) loadHistory();
+  if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
+  if (name === 'sharelinks') loadShareList();
+  if (name === 'presentations') loadPresentations();
+  if (name === 'users') loadUsers();
+  if (name === 'settings') loadSettingsPage();
+  if (name === 'llm-keys') loadLlmKeysPage();
+  if (name === 'integrations') loadIntegrations();
+  if (name === 'projects') loadProjects();
+  if (name === 'organizations') loadOrganizations();
+  if (name === 'templates-admin') loadTemplatesAdmin();
+  if (name === 'sources') loadSourcesPage();
+  // Coming back to المحادثة re-fetches the sources list — state.systems is otherwise only
+  // ever loaded once at startApp(), so an integration newly set up (or newly schema-
+  // discovered) in التكاملات الخارجية never appeared in the sources popover until a full
+  // page reload, even though its own detail screen already showed it ready.
+  if (name === 'chat') loadSources();
+}
+document.querySelectorAll('[data-screen]').forEach(b =>
+  b.addEventListener('click', () => showScreen(b.dataset.screen)));
+// روابط داخل محتوى مُولَّد (مثل صندوق فشل التحليل الآلي) تنتقل لشاشة إدارية.
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-goto-screen]'); if (!a) return;
+  e.preventDefault(); showScreen(a.dataset.gotoScreen);
+});
+
+// ---------- طي القائمة الجانبية (يُحفظ لكل مستخدم في المتصفح) ----------
+const appShell = el('app-shell');
+if (localStorage.getItem('jeem.sidebar') === 'collapsed') appShell.classList.add('is-collapsed');
+const sbCollapseBtn = el('sb-collapse-btn');
+sbCollapseBtn.addEventListener('click', () => {
+  appShell.classList.toggle('is-collapsed');
+  const collapsed = appShell.classList.contains('is-collapsed');
+  sbCollapseBtn.setAttribute('aria-expanded', String(!collapsed));
+  try { localStorage.setItem('jeem.sidebar', collapsed ? 'collapsed' : 'open'); } catch (e) { /* تجاهل */ }
+  window.dispatchEvent(new Event('resize')); // لإعادة رسم الرسوم البيانية المفتوحة
+});
+
+// ---------- القائمة على الجوال (sidebar drawer + scrim) ----------
+const scrimEl = document.querySelector('.scrim');
+const closeMobileNav = () => { appShell.classList.remove('nav-open'); scrimEl?.classList.remove('is-on'); };
+el('topbar-menu-btn').addEventListener('click', () => { appShell.classList.add('nav-open'); scrimEl?.classList.add('is-on'); });
+scrimEl?.addEventListener('click', closeMobileNav);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileNav(); });
+document.querySelectorAll('.sidebar [data-screen]').forEach(b => b.addEventListener('click', closeMobileNav));
+
+// ---------- اسم المشروع في القائمة الجانبية (طيّ/فتح شجرة صفحاته الأربع) ----------
+el('current-project-link').addEventListener('click', e => {
+  e.preventDefault();
+  const item = el('current-project-item');
+  const open = item.classList.toggle('is-open');
+  el('current-project-link').setAttribute('aria-expanded', String(open));
+});
+
+// المشروع الحي الوحيد فعليًا اليوم هو أول مشروع بالمنظمة (نفس التعريف المستخدم في
+// renderProjects لصفحة "المشاريع") — اسمه وحرفه الأول هما اللي بيظهروا هنا.
+async function loadCurrentProjectNav() {
+  try {
+    const res = await fetch('/api/projects');
+    if (!res.ok) return;
+    const data = await res.json();
+    state.orgName = data.organization?.name || null;
+    const project = data.projects?.[0];
+    if (project) {
+      state.projectName = project.name;
+      el('current-project-name').textContent = project.name;
+      el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
+    }
+    updateCrumbs(state.currentScreen);
+  } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
+}
+
+// ---------- chat panel open/closed ----------
+// Two states only (per the design reference, not the old shrink/grow/hide rail-size
+// control): open — #chat-rail shows as usual, with its own إخفاء button (#chat-hide-btn,
+// top-right of the chat header) — or closed — #chat-rail disappears entirely (#dash-pane's
+// own flex:1 fills the freed width) and a round #chat-fab button appears among the topbar
+// actions to bring it back. Persisted the same way (localStorage) as before.
+function loadChatHiddenPref() {
+  try { return localStorage.getItem('chatToDashboardRailHidden') === '1'; } catch { return false; }
+}
+let chatHidden = loadChatHiddenPref();
+
+function applyChatVisibility() {
+  el('chat-rail').classList.toggle('rail-hidden', chatHidden);
+  el('chat-fab').classList.toggle('hidden', !chatHidden);
+  try { localStorage.setItem('chatToDashboardRailHidden', chatHidden ? '1' : '0'); } catch {}
+}
+applyChatVisibility();
+
+el('chat-hide-btn').addEventListener('click', () => { chatHidden = true; applyChatVisibility(); });
+el('chat-fab').addEventListener('click', () => { chatHidden = false; applyChatVisibility(); });
+
+// ---------- boot ----------
+el.dash = el('dash'); el.messages = el('messages'); el.send = el('send');
+
+el('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = el('q').value.trim();
+  if (state.chatMode === 'inquiry') {
+    if (state.loading || !q) return;
+    el('q').value = '';
+    askInquiry(q);
+    return;
+  }
+  if (state.loading || (!q && !state.attachedImage)) return;
+  el('q').value = '';
+  ask(q || 'أعد إنشاء الداشبورد كما في الصورة المرفقة، بنفس أنواع الرسومات والعناصر، مستخدمًا بياناتي الفعلية.');
+});
+
+// ---------- image-to-dashboard attachment ----------
+function renderAttachedImage() {
+  const has = !!state.attachedImage;
+  el('attached-image').classList.toggle('hidden', !has);
+  if (has) {
+    el('attached-image-preview').src = state.attachedImage;
+    el('attached-image-name').textContent = state.attachedImageName;
+  }
+}
+
+// Downscales to a sensible max dimension before sending — keeps the request small and
+// fast regardless of how big the original screenshot/photo is.
+async function fileToResizedDataUrl(file, maxDim = 1600, quality = 0.85) {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('image decode failed'));
+      image.src = objectUrl;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+el('dash-image-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { alert('الملف يجب أن يكون صورة.'); return; }
+  if (file.size > 15 * 1024 * 1024) { alert('حجم الصورة كبير جداً (الحد الأقصى 15MB).'); return; }
+  try {
+    state.attachedImage = await fileToResizedDataUrl(file);
+    state.attachedImageName = file.name;
+    renderAttachedImage();
+  } catch {
+    alert('تعذّر قراءة الصورة.');
+  }
+});
+
+el('attached-image-remove').addEventListener('click', () => {
+  state.attachedImage = null; state.attachedImageName = '';
+  renderAttachedImage();
+});
+
+// ---------- share (Part 3: creator-set expiry, manual revocation, view count) ----------
+// Opens the modal in "compose" mode (pick an expiry, then confirm) rather than creating
+// immediately — the expiry has to be chosen before the link exists. The modal also always
+// shows the creator's past links (loadShareList) so revoke/view-count management lives in
+// the same place as creating a new one.
+function openShareModal() {
+  const d = state.dashboard;
+  if (!d?.widgets?.length) return;
+  // The button is disabled for a Draft (see renderDashboard), but guard here too in case
+  // this is ever reached another way — a Draft has no Owner, so a link made from it would
+  // be an unmanageable orphan (also enforced server-side, see ShareController.Create).
+  if (!state.dashboardIsActive) { alert('يجب تفعيل اللوحة أولاً قبل مشاركتها.'); return; }
+  el('share-compose').classList.remove('hidden');
+  el('share-link-box').classList.add('hidden');
+  el('share-expiry').value = '24';
+  el('share-expiry-date').classList.add('hidden');
+  el('share-modal').classList.remove('hidden');
+}
+el('btn-share').addEventListener('click', openShareModal);
+
+// ---------- نشر إلى تكامل خارجي (External Integrations Part A) ----------
+// A separate, explicit action from saving/editing — see PublishService's own remarks. Only
+// ever available for an Active dashboard (same gating as المشاركة above).
+async function openPublishModal() {
+  if (!state.dashboardIsActive || !state.currentHistoryId) { alert('يجب تفعيل اللوحة أولاً قبل نشرها.'); return; }
+  el('publish-error').classList.add('hidden');
+  el('publish-success').classList.add('hidden');
+  el('publish-slot-choice').classList.add('hidden');
+  resetPublishColumnConfirm();
+  const select = el('publish-integration-select');
+  select.innerHTML = '<option>جارٍ التحميل…</option>';
+  el('publish-modal').classList.remove('hidden');
+  try {
+    const res = await fetch('/api/integrations');
+    const integrations = res.ok ? await res.json() : [];
+    state.publishIntegrations = integrations;
+    if (!integrations.length) {
+      select.innerHTML = '<option value="">لا توجد تكاملات — أنشئ واحدًا من شاشة «التكاملات الخارجية»</option>';
+      return;
+    }
+    select.innerHTML = integrations.map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('');
+    await Promise.all([checkExistingSlot(), loadPublishDataFilters()]);
+  } catch {
+    select.innerHTML = '<option value="">تعذّر تحميل قائمة التكاملات</option>';
+  }
+}
+el('btn-publish').addEventListener('click', openPublishModal);
+
+async function checkExistingSlot() {
+  const integrationId = el('publish-integration-select').value;
+  if (!integrationId) { el('publish-slot-choice').classList.add('hidden'); return; }
+  try {
+    const res = await fetch(`/api/integrations/${integrationId}/existing-slot?localHistoryId=${encodeURIComponent(state.currentHistoryId)}`);
+    const data = await res.json();
+    if (data.exists) {
+      el('publish-existing-title').textContent = data.title;
+      el('publish-slot-choice').dataset.slotId = data.slotId;
+      el('publish-slot-choice').classList.remove('hidden');
+      el('publish-modal').querySelector('input[name="publish-mode"][value="update"]').checked = true;
+    } else {
+      el('publish-slot-choice').classList.add('hidden');
+    }
+  } catch { el('publish-slot-choice').classList.add('hidden'); }
+}
+
+// ---------- فلترة بيانات حسب المستخدم (Part E, data-level extension) ----------
+// Only ever shown when the selected integration's connector has auto-detected the client's own
+// fixed-shape permissions table — see ClientSchemaDiscoveryService. Marks are saved immediately
+// on every change (PUT, full-replace) rather than only at publish time, so they survive a
+// cancelled modal and are already there the next time this dashboard is published.
+async function loadPublishDataFilters() {
+  resetPublishColumnConfirm();
+  const box = el('publish-data-filters');
+  const integrationId = el('publish-integration-select').value;
+  const integ = (state.publishIntegrations || []).find(i => i.id === integrationId);
+  const widgets = state.dashboard?.widgets || [];
+  if (!integ?.dataPermissionsAvailable || !widgets.length) { box.classList.add('hidden'); return; }
+
+  try {
+    const [keysRes, marksRes] = await Promise.all([
+      fetch(`/api/integrations/${integrationId}/data-permission-keys`),
+      fetch(`/api/integrations/${integrationId}/dashboards/${encodeURIComponent(state.currentHistoryId)}/widget-filters`),
+    ]);
+    const keys = keysRes.ok ? await keysRes.json() : [];
+    const marks = marksRes.ok ? await marksRes.json() : [];
+    if (!keys.length) { box.classList.add('hidden'); return; }
+
+    box.classList.remove('hidden');
+    const list = el('publish-data-filters-list');
+    list.innerHTML = widgets.map((w, i) => {
+      const mark = marks.find(m => m.widgetIndex === i);
+      return `
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--grid)">
+          <label class="chk-row" style="flex:1"><input type="checkbox" class="pdf-toggle" data-index="${i}" ${mark ? 'checked' : ''}>
+            ${esc(w.title || ('عنصر ' + (i + 1)))}</label>
+          <select class="pdf-key" data-index="${i}" ${mark ? '' : 'disabled'} style="max-width:160px">
+            ${keys.map(k => `<option value="${esc(k)}" ${mark && mark.filterKey === k ? 'selected' : ''}>${esc(k)}</option>`).join('')}
+          </select>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.pdf-toggle').forEach(cb => cb.addEventListener('change', () => {
+      list.querySelector(`.pdf-key[data-index="${cb.dataset.index}"]`).disabled = !cb.checked;
+      savePublishDataFilterMarks(integrationId);
+    }));
+    list.querySelectorAll('.pdf-key').forEach(sel => sel.addEventListener('change', () => savePublishDataFilterMarks(integrationId)));
+  } catch { box.classList.add('hidden'); }
+}
+
+async function savePublishDataFilterMarks(integrationId) {
+  const list = el('publish-data-filters-list');
+  const filters = [...list.querySelectorAll('.pdf-toggle')].filter(cb => cb.checked).map(cb => ({
+    widgetIndex: Number(cb.dataset.index),
+    filterKey: list.querySelector(`.pdf-key[data-index="${cb.dataset.index}"]`).value,
+  }));
+  try {
+    await fetch(`/api/integrations/${integrationId}/dashboards/${encodeURIComponent(state.currentHistoryId)}/widget-filters`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters }),
+    });
+  } catch { /* best-effort — a save that fails here just means the mark isn't remembered next time */ }
+}
+
+el('publish-integration-select').addEventListener('change', () => {
+  checkExistingSlot();
+  loadPublishDataFilters();
+});
+
+function resetPublishColumnConfirm() {
+  state.publishPending = null;
+  el('publish-column-confirm').classList.add('hidden');
+  el('publish-column-confirm-list').innerHTML = '';
+  el('publish-submit').classList.remove('hidden');
+  el('publish-confirm-columns').classList.add('hidden');
+}
+
+el('publish-cancel').addEventListener('click', () => el('publish-modal').classList.add('hidden'));
+el('publish-modal').addEventListener('click', e => { if (e.target.id === 'publish-modal') el('publish-modal').classList.add('hidden'); });
+
+async function runPublishConfirm(integrationId, previewId, slotId, columnChoices) {
+  const res = await fetch(`/api/integrations/${integrationId}/publish/confirm`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ previewId, slotId, columnChoices }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { el('publish-error').textContent = data.error || `فشل النشر (${res.status})`; el('publish-error').classList.remove('hidden'); return; }
+  el('publish-success').classList.remove('hidden');
+  setTimeout(() => el('publish-modal').classList.add('hidden'), 1200);
+}
+
+el('publish-submit').addEventListener('click', async () => {
+  const integrationId = el('publish-integration-select').value;
+  if (!integrationId) return;
+  const useExisting = !el('publish-slot-choice').classList.contains('hidden') &&
+    el('publish-modal').querySelector('input[name="publish-mode"]:checked')?.value === 'update';
+  const slotId = useExisting ? el('publish-slot-choice').dataset.slotId : undefined;
+
+  const btn = el('publish-submit');
+  // /publish/prepare does a live round-trip to the client's own connector (schema
+  // re-discovery, possibly an LLM retargeting call per widget) — easily a few seconds, and
+  // with nothing but a quietly-disabled button to show for it this read as "nothing
+  // happens" when clicked. The disabled state alone isn't enough; say so explicitly.
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'جارٍ التجهيز…';
+  el('publish-error').classList.add('hidden');
+  try {
+    const prepRes = await fetch(`/api/integrations/${integrationId}/publish/prepare`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dashboardId: state.currentHistoryId }),
+    });
+    const prep = await prepRes.json().catch(() => ({}));
+    if (!prepRes.ok) {
+      el('publish-error').textContent = prep.error || `تعذّر تجهيز النشر (${prepRes.status})`;
+      el('publish-error').classList.remove('hidden');
+      return;
+    }
+
+    // Only widgets whose retargeted query actually has real output columns need a confirmed
+    // choice — one whose translation produced nothing (see PrepareAsync) is simply skipped, it
+    // ships no data regardless of any filtering intent.
+    const needsColumn = (prep.widgetsNeedingColumn || []).filter(w => w.columns && w.columns.length);
+    if (needsColumn.length) {
+      el('publish-column-confirm-list').innerHTML = needsColumn.map(w => `
+        <div style="padding:6px 0;border-bottom:1px solid var(--grid)">
+          <div class="model-switch-note" style="font-weight:700;color:var(--ink);margin-bottom:4px">${esc(w.title)} — فلترة حسب "${esc(w.filterKey)}"</div>
+          <select class="pcc-column" data-index="${w.index}">
+            ${w.columns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          </select>
+        </div>`).join('');
+      state.publishPending = { integrationId, previewId: prep.previewId, slotId };
+      el('publish-column-confirm').classList.remove('hidden');
+      btn.classList.add('hidden');
+      el('publish-confirm-columns').classList.remove('hidden');
+      return;
+    }
+
+    await runPublishConfirm(integrationId, prep.previewId, slotId, []);
+  } catch (err) {
+    el('publish-error').textContent = 'تعذّر الوصول إلى الخادم: ' + err.message;
+    el('publish-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+});
+
+el('publish-confirm-columns').addEventListener('click', async () => {
+  const pending = state.publishPending;
+  if (!pending) return;
+  const btn = el('publish-confirm-columns');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'جارٍ النشر…';
+  el('publish-error').classList.add('hidden');
+  const columnChoices = [...document.querySelectorAll('.pcc-column')].map(sel => ({
+    widgetIndex: Number(sel.dataset.index), column: sel.value,
+  }));
+  try {
+    await runPublishConfirm(pending.integrationId, pending.previewId, pending.slotId, columnChoices);
+  } catch (err) {
+    el('publish-error').textContent = 'تعذّر الوصول إلى الخادم: ' + err.message;
+    el('publish-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+});
+
+el('share-goto-list').addEventListener('click', () => {
+  el('share-modal').classList.add('hidden');
+  showScreen('sharelinks');
+});
+
+el('share-expiry').addEventListener('change', () => {
+  el('share-expiry-date').classList.toggle('hidden', el('share-expiry').value !== 'custom');
+});
+
+// Resolves whatever the creator picked (a duration preset or a specific date) to one
+// absolute ISO instant — the server only ever sees "expiresAt" (see ShareModels.cs).
+function resolveShareExpiresAt() {
+  const choice = el('share-expiry').value;
+  if (!choice) return null;
+  if (choice === 'custom') {
+    const dateVal = el('share-expiry-date').value;
+    return dateVal ? new Date(dateVal + 'T23:59:59').toISOString() : null;
+  }
+  return new Date(Date.now() + Number(choice) * 3600 * 1000).toISOString();
+}
+
+el('share-create-confirm').addEventListener('click', async () => {
+  const d = state.dashboard;
+  if (!d?.widgets?.length) return;
+  const btn = el('share-create-confirm');
+  btn.disabled = true; const original = btn.textContent; btn.textContent = 'جارٍ الإنشاء…';
+  try {
+    const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة معلومات';
+    const res = await fetch('/api/share', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: lastQuestion, summary: d.summary, widgets: d.widgets,
+        filters: d.filters || [], activeFilters: state.activeFilters || {},
+        expiresAt: resolveShareExpiresAt(), historyId: state.currentHistoryId,
+      }),
+    });
+    if (!res.ok) { const p = await res.json().catch(() => null); throw new Error(p?.error || `فشل إنشاء الرابط (${res.status})`); }
+    const saved = await res.json();
+    el('share-link').value = `${location.origin}/?share=${saved.id}`;
+    el('share-compose').classList.add('hidden');
+    el('share-link-box').classList.remove('hidden');
+    el('share-link').select();
+    await loadShareList();
+  } catch (err) {
+    alert('تعذّر إنشاء رابط المشاركة: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = original;
+  }
+});
+
+el('share-close').addEventListener('click', () => el('share-modal').classList.add('hidden'));
+el('share-modal').addEventListener('click', e => { if (e.target.id === 'share-modal') el('share-modal').classList.add('hidden'); });
+el('share-copy').addEventListener('click', async () => {
+  const btn = el('share-copy'); const original = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(el('share-link').value);
+  } catch {
+    el('share-link').select();
+    document.execCommand('copy');
+  }
+  btn.textContent = 'تم النسخ ✓';
+  setTimeout(() => { btn.textContent = original; }, 1500);
+});
+
+function shareStatus(s) {
+  if (s.revokedAt) return { label: 'أُلغي', cls: 'inactive' };
+  if (s.expiresAt && new Date(s.expiresAt + (s.expiresAt.endsWith('Z') ? '' : 'Z')) < new Date()) return { label: 'منتهي', cls: 'inactive' };
+  return { label: 'نشط', cls: 'live' };
+}
+
+// ---------- share links: own dedicated page (list view, same shape as the file repository's
+// and the Active-dashboards page) ----------
+async function loadShareList() {
+  const list = el('sharelinks-list');
+  list.innerHTML = `<div class="repo-empty">جارٍ التحميل…</div>`;
+  try {
+    const res = await fetch('/api/share');
+    const shares = res.ok ? await res.json() : [];
+    el('sharelinks-badge').textContent = shares.length;
+    el('sharelinks-count').textContent = shares.length ? `${shares.length} رابط مشاركة` : 'لا يوجد روابط مشاركة بعد';
+    if (!shares.length) {
+      list.innerHTML = `<div class="repo-empty">لا يوجد روابط مشاركة بعد — أنشئ رابطًا من زر "🔗 مشاركة" على أي لوحة.</div>`;
+      return;
+    }
+    list.innerHTML = shares.map(s => {
+      const status = shareStatus(s);
+      const when = new Date(s.createdAt + (s.createdAt.endsWith('Z') ? '' : 'Z'));
+      const expiryText = s.expiresAt
+        ? new Date(s.expiresAt + (s.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG')
+        : 'بدون انتهاء';
+      const revokeBtn = status.cls === 'live'
+        ? `<button class="icon-btn revoke-share-btn" data-revoke="${esc(s.id)}" title="إلغاء الرابط">🚫</button>` : '';
+      const copyBtn = status.cls === 'live'
+        ? `<button class="icon-btn copy-share-btn" data-copy="${esc(s.id)}" title="نسخ الرابط">🔗</button>` : '';
+      return `<div class="file-row${status.cls === 'inactive' ? ' stale' : ''}" data-id="${esc(s.id)}">
+          <div class="fr-main">
+            <div class="fr-icon">🔗</div>
+            <div class="fr-text">
+              <div class="fr-line1">
+                <span class="fr-name">${esc(s.question)}</span>
+              </div>
+              <div class="fr-line2">${esc(s.summary || '')}</div>
+            </div>
+          </div>
+          <div class="col-updated"><b>${relTime(s.createdAt)}</b>ينتهي: ${expiryText}</div>
+          <div class="col-usage"><div class="num">${s.viewCount || 0}</div><div class="lbl">👁 مشاهدة</div></div>
+          <div class="col-access"><span class="share-status-tag ${status.cls}">${status.label}</span></div>
+          <div class="col-actions">
+            ${copyBtn}${revokeBtn}
+            <button class="icon-btn del-share-btn" data-del="${esc(s.id)}" title="حذف">🗑️</button>
+          </div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-revoke]').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch(`/api/share/${encodeURIComponent(btn.dataset.revoke)}/revoke`, { method: 'POST' });
+      await loadShareList();
+    }));
+    list.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', async () => {
+      const link = `${location.origin}/?share=${btn.dataset.copy}`;
+      try { await navigator.clipboard.writeText(link); } catch {}
+      const original = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = original; }, 1200);
+    }));
+    list.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('حذف رابط المشاركة هذا؟')) return;
+      await fetch(`/api/share/${encodeURIComponent(btn.dataset.del)}`, { method: 'DELETE' });
+      await loadShareList();
+    }));
+  } catch {
+    list.innerHTML = `<div class="repo-empty">تعذّر تحميل الروابط.</div>`;
+  }
+}
+
+// ---------- العروض التقديمية (HTML مرفوع) — على مستوى المنظمة، رابط عام /p/{id} ----------
+// نفس شاشة «روابط المشاركة»: قائمة أعلى قائمة الروابط، ورفع من نافذة presentation-modal.
+// الرفع أو استبدال الملف عبر multipart إلى /api/presentations (أو PUT …/{id}/file).
+const PRES = { replaceId: null, orgSlug: '', slugTouched: false, slugTimer: null };
+// تطبيع اسم الرابط في المتصفح مطابق لـ PresentationSlug.Normalize في الخادم (للمعاينة فقط؛ الخادم يحسم).
+function presSlugify(v) {
+  return (v || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '');
+}
+function presPublicUrl(p) { return `${location.origin}${p.url || `/p/${p.id}`}`; }
+async function presCheckSlug() {
+  const raw = el('presentation-slug').value || el('presentation-title').value;
+  const slug = presSlugify(raw); const box = el('presentation-slug-preview');
+  if (!slug) { box.textContent = ''; box.className = 'model-switch-note pres-slug-preview'; return; }
+  try {
+    const r = await (await fetch(`/api/presentations/slug-available?slug=${encodeURIComponent(slug)}`)).json();
+    if (r.orgSlug) PRES.orgSlug = r.orgSlug;
+    const url = `${location.origin}/p/${PRES.orgSlug}/${r.slug}`;
+    box.innerHTML = r.available ? `✓ ${esc(url)}` : `✗ ${esc(url)} — ${esc(r.reason || 'غير متاح')}`;
+    box.className = `model-switch-note pres-slug-preview ${r.available ? 'ok' : 'bad'}`;
+  } catch { box.textContent = ''; }
+}
+el('presentation-title').addEventListener('input', () => {
+  if (!PRES.slugTouched) el('presentation-slug').value = presSlugify(el('presentation-title').value);
+  clearTimeout(PRES.slugTimer); PRES.slugTimer = setTimeout(presCheckSlug, 350);
+});
+el('presentation-slug').addEventListener('input', () => {
+  PRES.slugTouched = el('presentation-slug').value.length > 0;
+  clearTimeout(PRES.slugTimer); PRES.slugTimer = setTimeout(presCheckSlug, 350);
+});
+async function loadPresentations() {
+  const list = el('presentations-list');
+  list.innerHTML = `<div class="repo-empty">جارٍ التحميل…</div>`;
+  try {
+    const res = await fetch('/api/presentations');
+    const data = res.ok ? await res.json() : { items: [] };
+    const items = data.items || [];
+    PRES.orgSlug = data.orgSlug || PRES.orgSlug;
+    el('presentations-count').textContent = items.length ? `${items.length} عرض تقديمي` : 'لا توجد عروض تقديمية بعد';
+    el('presentations-badge').textContent = items.length; el('presentations-badge').classList.toggle('hidden', !items.length);
+    if (!items.length) {
+      list.innerHTML = `<div class="repo-empty">ارفع صفحة HTML من زر «رفع عرض HTML» ليحصل على رابط عام تشاركه مع أي شخص.</div>`;
+      return;
+    }
+    list.innerHTML = items.map(p => {
+      const status = shareStatus(p);
+      const expiryText = p.expiresAt ? new Date(p.expiresAt + (p.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG') : 'بدون انتهاء';
+      const live = status.cls === 'live';
+      const manage = p.canManage;
+      return `<div class="file-row${live ? '' : ' stale'}" data-id="${esc(p.id)}">
+          <div class="fr-main">
+            <div class="fr-icon">📊</div>
+            <div class="fr-text">
+              <div class="fr-line1"><span class="fr-name">${esc(p.title)}</span></div>
+              <div class="fr-line2"><span dir="ltr">${esc(presPublicUrl(p).replace(/^https?:\/\//, ''))}</span> · ${(p.sizeBytes / 1024).toLocaleString('en-US', { maximumFractionDigits: 0 })} KB · ${esc(p.createdByName || '')}</div>
+            </div>
+          </div>
+          <div class="col-updated"><b>${relTime(p.createdAt)}</b>ينتهي: ${expiryText}</div>
+          <div class="col-usage"><div class="num">${p.viewCount || 0}</div><div class="lbl">👁 مشاهدة</div></div>
+          <div class="col-access"><span class="share-status-tag ${status.cls}">${status.label}</span></div>
+          <div class="col-actions">
+            ${live ? `<a class="icon-btn" href="${esc(p.url || `/p/${p.id}`)}" target="_blank" rel="noopener" title="فتح العرض">↗</a>
+            <button class="icon-btn" data-pres-copy="${esc(p.id)}" data-url="${esc(presPublicUrl(p))}" title="نسخ الرابط">🔗</button>` : ''}
+            ${manage ? `<button class="icon-btn" data-pres-rename="${esc(p.id)}" data-slug="${esc(p.slug || '')}" title="تغيير اسم الرابط">✏️</button>` : ''}
+            ${manage ? `<button class="icon-btn" data-pres-replace="${esc(p.id)}" title="استبدال الملف بنسخة أحدث على نفس الرابط">⬆️</button>` : ''}
+            ${manage && live ? `<button class="icon-btn revoke-share-btn" data-pres-revoke="${esc(p.id)}" title="إلغاء الرابط">🚫</button>` : ''}
+            ${manage && !live ? `<button class="icon-btn" data-pres-reactivate="${esc(p.id)}" title="إعادة تفعيل الرابط بلا انتهاء">🔄</button>` : ''}
+            ${manage ? `<button class="icon-btn del-share-btn" data-pres-del="${esc(p.id)}" title="حذف">🗑️</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-pres-copy]').forEach(btn => btn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(btn.dataset.url); } catch {}
+      const original = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = original; }, 1200);
+    }));
+    list.querySelectorAll('[data-pres-revoke]').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presRevoke)}/revoke`, { method: 'POST' });
+      await loadPresentations();
+    }));
+    list.querySelectorAll('[data-pres-reactivate]').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presReactivate)}/expiry`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresAt: null }),
+      });
+      await loadPresentations();
+    }));
+    list.querySelectorAll('[data-pres-del]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('حذف هذا العرض نهائيًا؟ الرابط سيتوقف فورًا.')) return;
+      await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presDel)}`, { method: 'DELETE' });
+      await loadPresentations();
+    }));
+    list.querySelectorAll('[data-pres-replace]').forEach(btn => btn.addEventListener('click', () => openPresentationModal(btn.dataset.presReplace)));
+    list.querySelectorAll('[data-pres-rename]').forEach(btn => btn.addEventListener('click', async () => {
+      const slug = prompt('اسم الرابط الجديد (حروف وأرقام وشرطات، فريد داخل منظمتك):', btn.dataset.slug);
+      if (slug === null) return;
+      const res = await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presRename)}/slug`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug }),
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || `تعذّر التغيير (${res.status})`); return; }
+      await loadPresentations();
+    }));
+  } catch {
+    list.innerHTML = `<div class="repo-empty">تعذّر تحميل العروض.</div>`;
+  }
+}
+function openPresentationModal(replaceId = null) {
+  PRES.replaceId = replaceId;
+  const row = replaceId ? document.querySelector(`#presentations-list [data-pres-copy="${replaceId}"]`) : null;
+  el('presentation-link').value = row ? row.dataset.url : '';
+  el('presentation-modal-title').textContent = replaceId ? 'استبدال ملف العرض' : 'رفع عرض تقديمي';
+  el('presentation-title').value = ''; el('presentation-file').value = '';
+  el('presentation-slug').value = ''; el('presentation-slug-preview').textContent = ''; PRES.slugTouched = false;
+  el('presentation-slug-wrap').classList.toggle('hidden', !!replaceId);
+  el('presentation-title').placeholder = replaceId ? 'اتركه فارغًا للإبقاء على العنوان الحالي' : 'مثال: عرض نتائج الربع الثالث';
+  el('presentation-expiry-wrap').classList.toggle('hidden', !!replaceId);
+  el('presentation-error').classList.add('hidden');
+  el('presentation-link-box').classList.add('hidden');
+  el('presentation-confirm').disabled = false;
+  el('presentation-confirm').textContent = replaceId ? '⬆️ استبدال الملف' : '⬆️ رفع وإنشاء الرابط';
+  el('presentation-modal').classList.remove('hidden');
+}
+el('btn-new-presentation').addEventListener('click', () => openPresentationModal());
+el('presentation-cancel').addEventListener('click', () => el('presentation-modal').classList.add('hidden'));
+el('presentation-modal').addEventListener('click', e => { if (e.target === el('presentation-modal')) el('presentation-modal').classList.add('hidden'); });
+el('presentation-confirm').addEventListener('click', async () => {
+  const file = el('presentation-file').files[0];
+  const errBox = el('presentation-error'); errBox.classList.add('hidden');
+  if (!file) { errBox.textContent = 'اختر ملف HTML أولًا.'; errBox.classList.remove('hidden'); return; }
+  const fd = new FormData();
+  fd.append('file', file);
+  if (el('presentation-title').value.trim()) fd.append('title', el('presentation-title').value.trim());
+  if (!PRES.replaceId && el('presentation-slug').value.trim()) fd.append('slug', el('presentation-slug').value.trim());
+  const hours = el('presentation-expiry').value;
+  if (!PRES.replaceId && hours) fd.append('expiresAt', new Date(Date.now() + Number(hours) * 3600 * 1000).toISOString());
+  const btn = el('presentation-confirm'); btn.disabled = true;
+  try {
+    const res = PRES.replaceId
+      ? await fetch(`/api/presentations/${encodeURIComponent(PRES.replaceId)}/file`, { method: 'PUT', body: fd })
+      : await fetch('/api/presentations', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (err.suggestion) { el('presentation-slug').value = err.suggestion; PRES.slugTouched = true; presCheckSlug(); }
+      throw new Error(err.error || `فشل الرفع (${res.status})`);
+    }
+    const created = PRES.replaceId ? null : await res.json();
+    el('presentation-link').value = created ? `${location.origin}${created.url}` : (el('presentation-link').value || `${location.origin}/p/${PRES.replaceId}`);
+    el('presentation-link-box').classList.remove('hidden');
+    btn.textContent = '✓ تم';
+    await loadPresentations();
+  } catch (err) {
+    errBox.textContent = err.message; errBox.classList.remove('hidden'); btn.disabled = false;
+  }
+});
+el('presentation-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(el('presentation-link').value); } catch {}
+  el('presentation-copy').textContent = '✓ نُسخ'; setTimeout(() => { el('presentation-copy').textContent = 'نسخ'; }, 1200);
+});
+
+// ---------- ربط Claude: مفاتيح الوصول الشخصية (/api/tokens) ----------
+// المفتاح الكامل يأتي مرة واحدة من POST ويُعرض مع مقطع إعداد Claude Desktop جاهز؛ القائمة بادئات فقط.
+async function loadApiTokens() {
+  const list = el('api-token-list');
+  try {
+    const res = await fetch('/api/tokens');
+    const items = res.ok ? await res.json() : [];
+    if (!items.length) { list.innerHTML = '<div class="muted">لا توجد مفاتيح بعد.</div>'; return; }
+    list.innerHTML = items.map(t => `<div class="api-token-row${t.revokedAt ? ' stale' : ''}">
+        <span class="api-token-row-name">${esc(t.name)}</span>
+        <code dir="ltr">${esc(t.prefix)}…</code>
+        <span class="muted">${t.revokedAt ? 'مُلغى' : t.lastUsedAt ? `آخر استخدام ${relTime(t.lastUsedAt)}` : 'لم يُستخدم بعد'}</span>
+        ${t.revokedAt ? '' : `<button type="button" class="icon-btn" data-token-revoke="${esc(t.id)}" title="إلغاء المفتاح">🚫</button>`}
+      </div>`).join('');
+    list.querySelectorAll('[data-token-revoke]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('إلغاء هذا المفتاح؟ أي ربط يستخدمه سيتوقف فورًا.')) return;
+      await fetch(`/api/tokens/${encodeURIComponent(btn.dataset.tokenRevoke)}`, { method: 'DELETE' });
+      await loadApiTokens();
+    }));
+  } catch { list.innerHTML = '<div class="muted">تعذّر تحميل المفاتيح.</div>'; }
+}
+function apiTokenSnippet(token) {
+  return JSON.stringify({ mcpServers: { jeem: { command: 'node', args: ['C:\\jeem-mcp\\index.js'], env: { JEEM_URL: location.origin, JEEM_TOKEN: token } } } }, null, 2);
+}
+el('btn-claude-link').addEventListener('click', async () => {
+  el('api-token-new').classList.add('hidden'); el('api-token-error').classList.add('hidden'); el('api-token-name').value = '';
+  el('api-token-modal').classList.remove('hidden');
+  await loadApiTokens();
+});
+el('api-token-close').addEventListener('click', () => el('api-token-modal').classList.add('hidden'));
+el('api-token-modal').addEventListener('click', e => { if (e.target === el('api-token-modal')) el('api-token-modal').classList.add('hidden'); });
+el('api-token-create').addEventListener('click', async () => {
+  const btn = el('api-token-create'); btn.disabled = true; el('api-token-error').classList.add('hidden');
+  try {
+    const res = await fetch('/api/tokens', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: el('api-token-name').value.trim() || 'Claude Desktop' }) });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الإنشاء (${res.status})`); }
+    const r = await res.json();
+    el('api-token-value').value = r.token;
+    el('api-token-snippet').textContent = apiTokenSnippet(r.token);
+    el('api-token-new').classList.remove('hidden');
+    await loadApiTokens();
+  } catch (err) { el('api-token-error').textContent = err.message; el('api-token-error').classList.remove('hidden'); }
+  finally { btn.disabled = false; }
+});
+el('api-token-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(el('api-token-value').value); } catch {}
+  el('api-token-copy').textContent = '✓ نُسخ'; setTimeout(() => { el('api-token-copy').textContent = 'نسخ'; }, 1200);
+});
+el('api-token-copy-snippet').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(el('api-token-snippet').textContent); } catch {}
+  el('api-token-copy-snippet').textContent = '✓ نُسخ'; setTimeout(() => { el('api-token-copy-snippet').textContent = 'نسخ المقطع'; }, 1200);
+});
+
+// A URL like /?share=<id> opens a read-only public view: no login, no chat, no sources —
+// just the published dashboard, fetched straight from the share endpoint and rendered
+// through the same renderDashboard() as everything else.
+async function bootSharedView(shareId) {
+  // A share is a frozen snapshot (Part 3) — state.shareId only marks "we're in the public
+  // share view" (banner, read-only filter display); it no longer routes any live query.
+  state.shareId = shareId;
+  el('shared-banner').classList.remove('hidden');
+  document.querySelector('header').style.display = 'none';
+  el('chat-rail').style.display = 'none';
+  try {
+    const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
+    if (res.status === 410) {
+      const payload = await res.json().catch(() => null);
+      el('shared-banner-q').textContent = 'رابط غير نشط';
+      document.title = 'رابط غير نشط — لوحة مشاركة';
+      // A clear, dedicated message — not the normal empty/loading dashboard placeholder —
+      // per the design doc: shows a clear message, not a generic error page.
+      el.dash.innerHTML = `<div class="empty"><div>
+          <div class="big">⚠️ ${esc(payload?.reason || 'هذا الرابط لم يعد نشطًا.')}</div>
+          <div>تواصل مع ${esc(payload?.creatorName || 'صاحب الرابط')} للحصول على رابط جديد.</div>
+        </div></div>`;
+      return;
+    }
+    if (!res.ok) throw new Error(res.status === 404 ? 'الرابط غير موجود أو تم حذفه.' : `تعذّر التحميل (${res.status})`);
+    const shared = await res.json();
+    el('shared-banner-q').textContent = shared.question;
+    document.title = `${shared.question} — لوحة مشاركة`;
+    state.dashboard = {
+      summary: shared.summary,
+      widgets: JSON.parse(shared.widgetsJson || '[]'),
+      filters: JSON.parse(shared.filtersJson || '[]'),
+    };
+    state.activeFilters = JSON.parse(shared.activeFiltersJson || '{}');
+  } catch (err) {
+    el('shared-banner-q').textContent = err.message;
+  }
+  renderDashboard();
+}
+
+// ---------- auth ----------
+// Every organization — including the default one — is only reached through its own
+// /o/{slug} link (see AuthController.Login/OrganizationBySlug): usernames are unique per
+// organization now, not system-wide, so login has to know which organization's "admin" (say)
+// is meant before it can even look the username up. state.loginOrgSlug carries that slug from
+// the moment it's resolved (from the URL, or typed into the org picker) through to the actual
+// login POST below.
+function showOrgPicker(message) {
+  el('org-picker-screen').classList.remove('hidden');
+  el('login-screen').classList.add('hidden');
+  el('org-picker-error').classList.toggle('hidden', !message);
+  if (message) el('org-picker-error').textContent = message;
+}
+function showLoginScreen(message) {
+  el('login-screen').classList.remove('hidden');
+  el('org-picker-screen').classList.add('hidden');
+  if (message) {
+    el('login-error').textContent = message;
+    el('login-error').classList.remove('hidden');
+  }
+}
+function hideLoginScreen() {
+  el('login-screen').classList.add('hidden');
+  el('org-picker-screen').classList.add('hidden');
+}
+
+// Mirrors OrganizationStore.Slugify server-side (lowercase, keep letters/digits — Arabic
+// included — everything else becomes '-', collapse/trim dashes) so a name typed into the org
+// picker resolves to the same slug the organization was actually created with.
+function slugifyOrgName(name) {
+  let cleaned = Array.from(name.trim().toLowerCase())
+    .map(c => /[\p{L}\p{N}]/u.test(c) ? c : '-').join('');
+  cleaned = cleaned.replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
+  return cleaned || 'org';
+}
+
+// Resolves which organization this browser is signed out in front of — from the /o/{slug}
+// path if the URL already carries one (a real login link), otherwise shows the org picker so
+// the user can type their organization's name and get redirected to its own link.
+async function resolveOrgScopedLoginAsync() {
+  const match = location.pathname.match(/^\/o\/([^/]+)\/?$/);
+  if (!match) { showOrgPicker(); return; }
+  const slug = decodeURIComponent(match[1]);
+  try {
+    const res = await fetch(`/api/auth/org/${encodeURIComponent(slug)}`);
+    if (!res.ok) { showOrgPicker('تعذّر العثور على هذه المنظمة — تأكد من الرابط، أو اكتب اسم منظمتك.'); return; }
+    const org = await res.json();
+    state.loginOrgSlug = org.slug;
+    el('login-org-name').textContent = org.name;
+    el('login-org-banner').classList.remove('hidden');
+    showLoginScreen();
+  } catch {
+    showOrgPicker('تعذّر الاتصال بالخادم — حاول مرة أخرى.');
+  }
+}
+
+el('org-picker-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = el('org-picker-input').value.trim();
+  if (!name) return;
+  location.href = `/o/${encodeURIComponent(slugifyOrgName(name))}`;
+});
+el('login-org-change').addEventListener('click', () => { location.href = '/'; });
+
+function renderCurrentUser() {
+  const u = state.currentUser;
+  if (!u) return;
+  el('current-user-name').textContent = `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
+  // The four admin-only screens all share this one condition — toggled on their shared
+  // wrapper (see #admin-menu) rather than each item individually now that they live
+  // behind one dropdown instead of four flat tabs.
+  el('admin-menu').classList.toggle('hidden', u.role !== 'Admin');
+  // "الصلاحيات" تحت المشروع الحالي رابط تاني لنفس شاشة المستخدمين الحقيقية (الأدوار +
+  // صلاحيات الأنظمة/الملفات لكل مستخدم) — نفس شرط ظهور #admin-menu بالظبط.
+  el('proj-permissions-link').classList.toggle('hidden', u.role !== 'Admin');
+  // Platform owner (us) sees every organization, not just their own — see
+  // AppUser.IsPlatformOwner and OrganizationsController.
+  el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
+  el('platform-badge').classList.toggle('hidden', !u.isPlatformOwner);
+}
+
+// ---------- settings page (admin only) — the system-wide AI model/provider, via
+// GET/PUT /api/llm-settings; the switch takes effect on LlmRouter's very next call (see
+// backend). This is the only place in the app that can change it — there is no per-user
+// choice and no shortcut elsewhere, so every user's questions run on whatever is set here.
+const PROVIDER_LABELS = { Anthropic: 'Claude (Anthropic)', OpenAI: 'GPT (OpenAI)', Ollama: 'الموديل الداخلي (Ollama)' };
+state.llmSettings = null;
+const SETTINGS_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-ollama-row', selectId: 'settings-ollama-select', noteId: 'settings-ollama-note', activeKey: 'activeOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-openai-row', selectId: 'settings-openai-select', noteId: 'settings-openai-note', activeKey: 'activeOpenAiModel', bodyKey: 'openAiModel' },
+};
+// Same two providers, same live model-list endpoints — but the document reader has its OWN
+// sub-model choice (activeDocumentReader{Ollama,OpenAi}Model), independent of the dashboard
+// picker above, so a different rowId/selectId/activeKey per provider, read/written through
+// PUT /api/llm-settings/document-reader rather than the main settings-save handler below.
+const DOC_READER_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-doc-reader-ollama-row', selectId: 'settings-doc-reader-ollama-select', noteId: 'settings-doc-reader-ollama-note', activeKey: 'activeDocumentReaderOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-doc-reader-openai-row', selectId: 'settings-doc-reader-openai-select', noteId: 'settings-doc-reader-openai-note', activeKey: 'activeDocumentReaderOpenAiModel', bodyKey: 'openAiModel' },
+};
+// Same shape again for the image-analysis picker (which model handles a request that
+// attaches a reference image) — its own independent choice, LlmSettingsStore.
+// ImageReaderProvider, read/written through PUT /api/llm-settings/image-reader.
+const IMAGE_READER_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-image-reader-ollama-row', selectId: 'settings-image-reader-ollama-select', noteId: 'settings-image-reader-ollama-note', activeKey: 'activeImageReaderOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-image-reader-openai-row', selectId: 'settings-image-reader-openai-select', noteId: 'settings-image-reader-openai-note', activeKey: 'activeImageReaderOpenAiModel', bodyKey: 'openAiModel' },
+};
+// Same shape again for External Integrations' visual-identity extraction picker — its own
+// independent choice, LlmSettingsStore.VisualIdentityReaderProvider, read/written through
+// PUT /api/llm-settings/visual-identity-reader. Unlike the two pickers above, this one also
+// carries an explicit, never-inferred "supports image input" checkbox (activeVisualIdentitySupportsImage).
+// موديل تحليل معاني الأعمدة (طبقة المعنى) — اختيار مستقل: LlmSettingsStore.SemanticsProvider عبر
+// PUT /api/llm-settings/semantics-analyzer. '' = نفس موديل اللوحات، 'none' = معطَّل.
+const SEMANTICS_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-semantics-ollama-row', selectId: 'settings-semantics-ollama-select', noteId: 'settings-semantics-ollama-note', activeKey: 'activeSemanticsOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-semantics-openai-row', selectId: 'settings-semantics-openai-select', noteId: 'settings-semantics-openai-note', activeKey: 'activeSemanticsOpenAiModel', bodyKey: 'openAiModel' },
+};
+const VIS_ID_MODEL_PICKERS = {
+  Ollama: { endpoint: 'ollama-models', rowId: 'settings-vis-id-ollama-row', selectId: 'settings-vis-id-ollama-select', noteId: 'settings-vis-id-ollama-note', activeKey: 'activeVisualIdentityOllamaModel', bodyKey: 'ollamaModel' },
+  OpenAI: { endpoint: 'openai-models', rowId: 'settings-vis-id-openai-row', selectId: 'settings-vis-id-openai-select', noteId: 'settings-vis-id-openai-note', activeKey: 'activeVisualIdentityOpenAiModel', bodyKey: 'openAiModel' },
+};
+// Keyed by provider id, shared between both picker maps above — it's the same live list of
+// models either way (what exists), just used to pre-select a different activeKey per picker.
+state.settingsModelChoices = {};
+
+async function loadSettingsPage() {
+  el('settings-current').textContent = 'جارٍ التحميل…';
+  try {
+    const res = await fetch('/api/llm-settings');
+    if (!res.ok) throw new Error();
+    state.llmSettings = await res.json();
+    renderSettingsCurrent();
+    renderSettingsProviders();
+    renderSettingsInfoBadges();
+    renderSettingsDocReaderProviders();
+    renderSettingsImageReaderProviders();
+    renderSettingsVisIdProviders();
+    renderSettingsSemanticsProviders();
+  } catch {
+    el('settings-current').textContent = 'تعذّر تحميل إعدادات الموديل.';
+    el('settings-providers').innerHTML = '';
+  }
+}
+
+// "معطّل" (id: '') plus the same three providers the dashboard-building model uses — a
+// completely independent choice (LlmSettingsStore.DocumentReaderProvider), read/written
+// through its own PUT /api/llm-settings/document-reader rather than the main settings-save
+// handler below.
+function renderSettingsDocReaderProviders() {
+  const s = state.llmSettings;
+  const current = s.activeDocumentReaderProvider || '';
+  const options = [
+    { id: '', label: 'معطّل (استخراج نص عادي فقط)', configured: true },
+    ...s.providers,
+  ];
+  el('settings-doc-reader-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-doc-reader-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id === 'Ollama'
+        ? '<span class="badge">⚠️ قد لا يدعم الصور — لو فشل بيرجع تلقائيًا لقراءة PdfPig العادية</span>'
+        : (p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : '')}
+    </label>`).join('');
+  el('settings-doc-reader-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleDocReaderModelRow(inp.value)));
+  toggleDocReaderModelRow(current);
+}
+
+el('settings-doc-reader-save').addEventListener('click', async () => {
+  const provider = el('settings-doc-reader-providers').querySelector('input:checked')?.value ?? '';
+  const picker = DOC_READER_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-doc-reader-save');
+  btn.disabled = true;
+  el('settings-doc-reader-error').classList.add('hidden');
+  el('settings-doc-reader-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/document-reader', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeDocumentReaderProvider = provider || null;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsDocReaderProviders();
+    el('settings-doc-reader-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-doc-reader-error').textContent = err.message;
+    el('settings-doc-reader-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// "نفس الموديل الحالي" (id: '') plus the same three providers — unlike the document reader's
+// own "معطّل" option, an empty choice here doesn't disable anything: a request that attaches
+// an image still has to go through some model, so empty just means "use the dashboard-
+// building provider above" (see LlmRouter.GenerateDashboardAsync). Independent choice,
+// LlmSettingsStore.ImageReaderProvider, via its own PUT /api/llm-settings/image-reader.
+function renderSettingsImageReaderProviders() {
+  const s = state.llmSettings;
+  const current = s.activeImageReaderProvider || '';
+  const options = [
+    { id: '', label: 'نفس الموديل الحالي', configured: true },
+    ...s.providers,
+  ];
+  el('settings-image-reader-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-image-reader-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id === 'Ollama'
+        ? '<span class="badge">⚠️ بعض الموديلات الداخلية لا تدعم تحليل الصور</span>'
+        : (p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : '')}
+    </label>`).join('');
+  el('settings-image-reader-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleImageReaderModelRow(inp.value)));
+  toggleImageReaderModelRow(current);
+}
+
+el('settings-image-reader-save').addEventListener('click', async () => {
+  const provider = el('settings-image-reader-providers').querySelector('input:checked')?.value ?? '';
+  const picker = IMAGE_READER_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-image-reader-save');
+  btn.disabled = true;
+  el('settings-image-reader-error').classList.add('hidden');
+  el('settings-image-reader-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/image-reader', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeImageReaderProvider = provider || null;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsImageReaderProviders();
+    el('settings-image-reader-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-image-reader-error').textContent = err.message;
+    el('settings-image-reader-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// "معطّل" (id: '') plus the same three providers — same "genuinely disabled, no fallback"
+// contract as the document reader (never "use the dashboard-building provider"): sending a
+// logo image to a provider nobody explicitly vetted for image input would defeat the whole
+// point of the supports-image checkbox below.
+function renderSettingsVisIdProviders() {
+  const s = state.llmSettings;
+  const current = s.activeVisualIdentityProvider || '';
+  const options = [
+    { id: '', label: 'معطّل (استخراج الشعار بالصور غير متاح)', configured: true },
+    ...s.providers,
+  ];
+  el('settings-vis-id-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-vis-id-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : ''}
+    </label>`).join('');
+  el('settings-vis-id-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleVisIdModelRow(inp.value)));
+  toggleVisIdModelRow(current);
+  el('settings-vis-id-supports-image').checked = !!s.activeVisualIdentitySupportsImage;
+}
+
+el('settings-vis-id-save').addEventListener('click', async () => {
+  const provider = el('settings-vis-id-providers').querySelector('input:checked')?.value ?? '';
+  const picker = VIS_ID_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null, supportsImage: el('settings-vis-id-supports-image').checked };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-vis-id-save');
+  btn.disabled = true;
+  el('settings-vis-id-error').classList.add('hidden');
+  el('settings-vis-id-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/visual-identity-reader', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeVisualIdentityProvider = provider || null;
+    state.llmSettings.activeVisualIdentitySupportsImage = body.supportsImage;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsVisIdProviders();
+    el('settings-vis-id-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-vis-id-error').textContent = err.message;
+    el('settings-vis-id-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function renderSettingsCurrent() {
+  const s = state.llmSettings;
+  const modelName = s.activeProvider === 'Ollama' ? s.activeOllamaModel : s.activeProvider === 'OpenAI' ? s.activeOpenAiModel : '';
+  el('settings-current').innerHTML = `<span class="settings-current-badge">${esc(PROVIDER_LABELS[s.activeProvider] || s.activeProvider)}</span>` +
+    (modelName ? `<span class="settings-current-model">${esc(modelName)}</span>` : '');
+}
+
+function renderSettingsProviders() {
+  const s = state.llmSettings;
+  el('settings-providers').innerHTML = s.providers.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-provider" value="${esc(p.id)}"
+        ${p.id === s.activeProvider ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      <span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>
+    </label>`).join('');
+  el('settings-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleSettingsModelRow(inp.value)));
+  toggleSettingsModelRow(s.activeProvider);
+}
+
+function toggleSettingsModelRow(provider) { toggleModelRow(SETTINGS_MODEL_PICKERS, provider); }
+function toggleDocReaderModelRow(provider) { toggleModelRow(DOC_READER_MODEL_PICKERS, provider); }
+function toggleImageReaderModelRow(provider) { toggleModelRow(IMAGE_READER_MODEL_PICKERS, provider); }
+function toggleVisIdModelRow(provider) { toggleModelRow(VIS_ID_MODEL_PICKERS, provider); }
+function toggleSemanticsModelRow(provider) { toggleModelRow(SEMANTICS_MODEL_PICKERS, provider); }
+
+// ---------- نموذج تحليل معاني الأعمدة (إعداد مستقل) ----------
+function renderSettingsSemanticsProviders() {
+  const s = state.llmSettings;
+  const current = s.activeSemanticsProvider || '';
+  const options = [
+    { id: '', label: 'نفس الموديل الحالي', configured: true },
+    ...s.providers,
+    { id: 'none', label: 'معطّل — تخمين من أسماء الأعمدة فقط', configured: true },
+  ];
+  el('settings-semantics-providers').innerHTML = options.map(p => `
+    <label class="model-switch-option${p.configured ? '' : ' disabled'}">
+      <input type="radio" name="settings-semantics-provider" value="${esc(p.id)}"
+        ${p.id === current ? 'checked' : ''} ${p.configured ? '' : 'disabled'}>
+      ${esc(p.label)}
+      ${p.id && p.id !== 'none' ? `<span class="badge${p.configured ? ' ok' : ''}">${p.configured ? 'مُعد' : 'غير مُعد'}</span>` : ''}
+    </label>`).join('');
+  el('settings-semantics-providers').querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleSemanticsModelRow(inp.value)));
+  toggleSemanticsModelRow(current);
+}
+
+el('settings-semantics-save').addEventListener('click', async () => {
+  const provider = el('settings-semantics-providers').querySelector('input:checked')?.value ?? '';
+  const picker = SEMANTICS_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider: provider || null };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+  const btn = el('settings-semantics-save');
+  btn.disabled = true;
+  el('settings-semantics-error').classList.add('hidden');
+  el('settings-semantics-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings/semantics-analyzer', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الحفظ (${res.status})`); }
+    state.llmSettings.activeSemanticsProvider = provider || null;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsSemanticsProviders();
+    el('settings-semantics-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-semantics-error').textContent = err.message;
+    el('settings-semantics-error').classList.remove('hidden');
+  } finally { btn.disabled = false; }
+});
+el('link-to-llm-keys').addEventListener('click', e => { e.preventDefault(); showScreen('llm-keys'); });
+
+// ---------- صفحة «مفاتيح الموديلات» (GET/PUT/DELETE /api/llm-settings/credentials) ----------
+const KEY_SOURCE_LABEL = {
+  db: ['badge-ok', '✓ محفوظ من هذه الصفحة'], config: ['badge-blue', '◆ من إعدادات الخادم'],
+  none: ['badge-danger', '! غير مُعد'], unreadable: ['badge-danger', '! محفوظ لكن لا يُقرأ — أعد إدخاله'],
+};
+const BASE_SOURCE_LABEL = { db: 'من هذه الصفحة', config: 'من إعدادات الخادم', default: 'الافتراضي' };
+async function loadLlmKeysPage() {
+  const grid = el('llm-keys-grid');
+  try {
+    const res = await fetch('/api/llm-settings/credentials');
+    if (!res.ok) throw new Error(`(${res.status})`);
+    const data = await res.json();
+    grid.innerHTML = data.providers.map(p => {
+      const [tone, label] = KEY_SOURCE_LABEL[p.keySource] || KEY_SOURCE_LABEL.none;
+      return `<article class="settings-section llm-key-card" data-provider="${esc(p.provider)}">
+        <div class="llm-key-head"><h3>${esc(p.label)}</h3><span class="badge ${tone}">${label}</span></div>
+        <label class="llm-key-field">مفتاح الوصول (API key)
+          <input type="password" autocomplete="new-password" dir="ltr" data-key placeholder="${p.hasKey ? `محفوظ (${esc(p.keyHint || '…')}) — اكتب مفتاحًا جديدًا لاستبداله` : 'الصق المفتاح هنا'}">
+        </label>
+        <label class="llm-key-field">عنوان البوابة (Base URL)
+          <input type="url" dir="ltr" data-base value="${esc(p.baseUrlSource === 'db' ? (p.baseUrl || '') : '')}" placeholder="${esc(p.baseUrl || p.defaultBaseUrl)}">
+          <small class="muted">الحالي: <span dir="ltr">${esc(p.baseUrl || p.defaultBaseUrl)}</span> (${BASE_SOURCE_LABEL[p.baseUrlSource] || ''}) — اتركه فارغًا للإبقاء على الافتراضي.</small>
+        </label>
+        <div class="model-switch-actions llm-key-actions">
+          <span class="llm-key-status" data-status aria-live="polite"></span>
+          <button type="button" class="btn btn-sm btn-ghost" data-clear ${p.keySource === 'db' || p.baseUrlSource === 'db' ? '' : 'disabled'}>مسح المحفوظ هنا</button>
+          <button type="button" class="btn btn-sm btn-soft" data-test ${p.hasKey ? '' : 'disabled'}>اختبار الاتصال</button>
+          <button type="button" class="btn btn-sm" data-save>حفظ</button>
+        </div>
+      </article>`;
+    }).join('');
+    bindLlmKeysPage();
+  } catch (err) {
+    grid.innerHTML = `<div class="lib-empty">تعذّر تحميل مفاتيح الموديلات ${esc(err.message || '')}</div>`;
+  }
+}
+function bindLlmKeysPage() {
+  el('llm-keys-grid').querySelectorAll('.llm-key-card').forEach(card => {
+    const provider = card.dataset.provider;
+    const status = (text, tone) => { const s = card.querySelector('[data-status]'); s.textContent = text; s.className = `llm-key-status ${tone || ''}`; };
+    const busy = on => card.querySelectorAll('button').forEach(b => { b.disabled = on; });
+    card.querySelector('[data-save]').addEventListener('click', async () => {
+      const apiKey = card.querySelector('[data-key]').value;
+      const baseUrl = card.querySelector('[data-base]').value.trim();
+      busy(true); status('جارٍ الحفظ…');
+      try {
+        const res = await fetch(`/api/llm-settings/credentials/${encodeURIComponent(provider)}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey: apiKey.length ? apiKey : null, baseUrl: baseUrl || null }),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الحفظ (${res.status})`); }
+        state.llmSettings = null; state.settingsModelChoices = {};
+        await loadLlmKeysPage();
+        const fresh = el('llm-keys-grid').querySelector(`.llm-key-card[data-provider="${provider}"] [data-status]`);
+        if (fresh) { fresh.textContent = 'تم الحفظ — يسري على أول نداء جديد.'; fresh.className = 'llm-key-status ok'; }
+      } catch (err) { status(err.message, 'bad'); busy(false); }
+    });
+    card.querySelector('[data-test]').addEventListener('click', async () => {
+      busy(true); status('جارٍ اختبار الاتصال…');
+      try {
+        const res = await fetch(`/api/llm-settings/credentials/${encodeURIComponent(provider)}/test`, { method: 'POST' });
+        const r = await res.json();
+        status(`${r.ok ? '✓' : '✗'} ${r.message}${r.ms != null ? ` (${(r.ms / 1000).toFixed(1)} ث)` : ''}`, r.ok ? 'ok' : 'bad');
+      } catch (err) { status(`تعذّر الاختبار: ${err.message}`, 'bad'); }
+      finally { busy(false); card.querySelector('[data-clear]').disabled = false; }
+    });
+    card.querySelector('[data-clear]').addEventListener('click', async () => {
+      if (!confirm('مسح المفتاح والعنوان المحفوظين من هذه الصفحة لهذا المزوّد؟ سيعود إلى إعدادات الخادم إن وُجدت.')) return;
+      busy(true);
+      try {
+        const res = await fetch(`/api/llm-settings/credentials/${encodeURIComponent(provider)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`(${res.status})`);
+        state.llmSettings = null; state.settingsModelChoices = {};
+        await loadLlmKeysPage();
+      } catch (err) { status(`تعذّر المسح ${err.message}`, 'bad'); busy(false); }
+    });
+  });
+}
+
+function toggleModelRow(pickers, provider) {
+  for (const [id, picker] of Object.entries(pickers)) {
+    const isActive = provider === id;
+    el(picker.rowId).classList.toggle('hidden', !isActive);
+    if (isActive) loadSettingsModelChoices(picker, id);
+  }
+}
+
+// The live model list (state.settingsModelChoices[providerId]) is fetched once and shared
+// between the dashboard picker and the document-reader picker — it's the same "what models
+// exist" either way; only which one is pre-selected (picker.activeKey) differs.
+async function loadSettingsModelChoices(picker, providerId) {
+  const select = el(picker.selectId);
+  const cached = state.settingsModelChoices[providerId];
+  if (cached) { renderModelSelect(picker, cached.models, cached.note); return; }
+  select.innerHTML = '<option>جارٍ التحميل…</option>';
+  try {
+    const res = await fetch(`/api/llm-settings/${picker.endpoint}`);
+    const data = await res.json();
+    state.settingsModelChoices[providerId] = { models: data.models || [], note: data.note || '' };
+    renderModelSelect(picker, data.models || [], data.note || '');
+  } catch {
+    select.innerHTML = '';
+    el(picker.noteId).textContent = 'تعذّر تحميل قائمة الموديلات.';
+  }
+}
+
+function renderModelSelect(picker, models, note) {
+  const current = state.llmSettings?.[picker.activeKey];
+  el(picker.selectId).innerHTML = models.map(m =>
+    `<option value="${esc(m)}"${m === current ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  el(picker.noteId).textContent = note || '';
+}
+
+function renderSettingsInfoBadges() {
+  const s = state.llmSettings;
+  document.querySelectorAll('.settings-info-card').forEach(card => {
+    const p = s.providers.find(x => x.id === card.dataset.provider);
+    const badge = card.querySelector('.settings-info-badge');
+    if (!p || !badge) return;
+    badge.textContent = p.configured ? 'مُعد على الخادم' : 'غير مُعد على الخادم';
+    badge.classList.toggle('ok', p.configured);
+  });
+}
+
+el('settings-save').addEventListener('click', async () => {
+  const provider = el('settings-providers').querySelector('input:checked')?.value;
+  if (!provider) return;
+  const picker = SETTINGS_MODEL_PICKERS[provider];
+  const chosenModel = picker ? el(picker.selectId).value : undefined;
+  const body = { provider };
+  if (picker && chosenModel) body[picker.bodyKey] = chosenModel;
+
+  const btn = el('settings-save');
+  btn.disabled = true;
+  el('settings-error').classList.add('hidden');
+  el('settings-save-note').classList.add('hidden');
+  try {
+    const res = await fetch('/api/llm-settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `فشل الحفظ (${res.status})`);
+    }
+    state.llmSettings.activeProvider = provider;
+    if (picker && chosenModel) state.llmSettings[picker.activeKey] = chosenModel;
+    renderSettingsCurrent();
+    el('settings-save-note').classList.remove('hidden');
+  } catch (err) {
+    el('settings-error').textContent = err.message;
+    el('settings-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const username = el('login-username').value.trim();
+  const password = el('login-password').value;
+  if (!username || !password) return;
+  el('login-submit').disabled = true;
+  el('login-error').classList.add('hidden');
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, orgSlug: state.loginOrgSlug || '' }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      el('login-error').textContent = err.error || 'تعذّر تسجيل الدخول.';
+      el('login-error').classList.remove('hidden');
+      return;
+    }
+    state.currentUser = await res.json();
+    el('login-password').value = '';
+    hideLoginScreen();
+    await startApp();
+  } finally {
+    el('login-submit').disabled = false;
+  }
+});
+
+el('logout-btn').addEventListener('click', async () => {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  location.href = '/';
+});
+
+el('theme-toggle').addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+});
+// Sync the button's icon/title with whatever the head script already set on <html>,
+// without triggering a dashboard rebuild (nothing is rendered yet at boot).
+(() => {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  el('theme-toggle').textContent = current === 'light' ? '🌙' : '☀️';
+  el('theme-toggle').title = current === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
+})();
+
+// Language switch reloads the page rather than re-rendering in place — every screen (chat,
+// dashboard, repository, history, settings…) builds its own Arabic strings straight from
+// JS, with no single re-render entry point that touches all of them at once the way
+// renderDashboard() does for the theme. A reload re-runs the whole boot sequence with
+// translateNode()'s MutationObserver (see I18N_EN below) already attached from the very
+// first paint, so everything comes up translated consistently instead of needing dozens of
+// call sites each manually re-invoked.
+el('lang-toggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('lang') === 'en' ? 'ar' : 'en';
+  try { localStorage.setItem('chatToDashboardLang', next); } catch {}
+  location.reload();
+});
+(() => {
+  const current = document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'ar';
+  el('lang-toggle').textContent = current === 'en' ? 'AR' : 'EN';
+  el('lang-toggle').title = current === 'en' ? 'التبديل للعربية' : 'Switch to English';
+})();
+
+// ---------- التكاملات الخارجية (External Integrations) ----------
+// Admin-only screen over /api/integrations — settings CRUD, the three visual-identity paths
+// (manual/AI-suggest/extraction), the identity-transport NL-match+confirm flow, the publish
+// log, and the two deliverable downloads. Publishing itself lives on the dashboard toolbar's
+// نشر button (see btn-publish below) — never here, since it acts on an Active dashboard, not
+// on integration settings.
+state.integrations = [];
+state.currentIntegrationId = null;
+state.integrationDetail = null;
+state.viProposal = null; // last suggest/extract result, pending the analyst's review+apply
+state.identityMatch = null;
+
+async function loadIntegrations() {
+  el('integrations-list').innerHTML = '<div class="model-switch-note">جارٍ التحميل…</div>';
+  try {
+    const res = await fetch('/api/integrations');
+    if (!res.ok) throw new Error();
+    state.integrations = await res.json();
+  } catch { state.integrations = []; }
+  renderIntegrationsList();
+}
+
+function renderIntegrationsList() {
+  const box = el('integrations-list');
+  if (!state.integrations.length) { box.innerHTML = '<div class="model-switch-note">لا توجد تكاملات بعد.</div>'; return; }
+  box.innerHTML = state.integrations.map(i => `
+    <div class="integration-row" data-id="${esc(i.id)}">
+      <span class="integration-row-name">${esc(i.name)}</span>
+      <div class="integration-row-badges">
+        <span class="integration-badge ${i.connectorConfigured ? 'ok' : 'warn'}">${i.connectorConfigured ? '✓ خدمة الاتصال مضبوطة' : '⚠️ خدمة الاتصال غير مضبوطة'}</span>
+        <span class="integration-badge ${i.identityConfirmed ? 'ok' : 'warn'}">${i.identityConfirmed ? '✓ هوية المستخدم مؤكدة' : '⚠️ هوية المستخدم غير مؤكدة'}</span>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.integration-row').forEach(row =>
+    row.addEventListener('click', () => openIntegration(row.dataset.id)));
+}
+
+el('btn-new-integration').addEventListener('click', async () => {
+  const nameInput = el('new-integration-name');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  const res = await fetch('/api/integrations', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+  });
+  if (!res.ok) { alert('تعذّر إنشاء التكامل.'); return; }
+  const created = await res.json();
+  nameInput.value = '';
+  await loadIntegrations();
+  openIntegration(created.id);
+});
+
+async function openIntegration(id) {
+  state.currentIntegrationId = id;
+  state.viProposal = null;
+  state.identityMatch = null;
+  const res = await fetch('/api/integrations/' + id);
+  if (!res.ok) { alert('تعذّر تحميل التكامل.'); return; }
+  state.integrationDetail = await res.json();
+  const [dashboards, log] = await Promise.all([
+    fetch('/api/integrations/' + id + '/dashboards').then(r => r.ok ? r.json() : []),
+    fetch('/api/integrations/' + id + '/publish-log').then(r => r.ok ? r.json() : []),
+  ]);
+  state.integrationDashboards = dashboards;
+  state.integrationPublishLog = log;
+  renderIntegrationDetail();
+  el('integration-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderIntegrationDetail() {
+  const d = state.integrationDetail;
+  const box = el('integration-detail');
+  if (!d) { box.innerHTML = ''; return; }
+
+  const identityStatusHtml = d.identityConfirmed
+    ? `<span class="integration-badge ok">✓ مؤكدة — ${identityMechanismLabel(d.identityMechanism)} باسم "${esc(d.identityParameterName)}"</span>`
+    : (d.identityMechanism
+        ? `<span class="integration-badge warn">⚠️ محدّدة لكن غير مؤكدة — ${identityMechanismLabel(d.identityMechanism)} باسم "${esc(d.identityParameterName)}"</span>`
+        : `<span class="integration-badge warn">⚠️ لم تُحدَّد بعد</span>`);
+
+  // The one thing that actually gates whether this integration shows up as a buildable data
+  // source (see SourcesController.Get) — surfaced here so "why isn't it in the sources list?"
+  // has a visible, self-diagnosable answer instead of a silent discovery failure.
+  const tableCount = (d.clientSchemaDescription || '').split('\n').filter(Boolean).length;
+  const errorNoteHtml = d.lastSchemaDiscoveryError
+    ? `<div class="model-switch-note" style="color:var(--danger);margin-top:6px">السبب: ${esc(d.lastSchemaDiscoveryError)}</div>`
+    : `<p class="model-switch-note" style="margin-top:6px">تأكد إن خدمة الاتصال شغّالة ومتاحة على الرابط ده وإن قيمة/اسم المصادقة متطابقين، وبعدين احفظ نقاط الاتصال تاني لإعادة المحاولة.</p>`;
+  const schemaStatusHtml = d.clientSchemaDescription
+    ? `<span class="integration-badge ok">✓ بنية مكتشفة — ${tableCount} جدول (${esc(d.clientDbProvider || '')})${d.dataPermissionsAvailable ? ' · جدول صلاحيات بيانات متاح' : ''}</span>` +
+      // The schema itself is never wiped by a later failed refresh (see UpdateClientSchemaAsync/
+      // SetSchemaDiscoveryErrorAsync) — so a green badge alone could hide that the MOST RECENT
+      // save attempt actually failed and the schema on file may now be stale.
+      (d.lastSchemaDiscoveryError
+        ? `<div class="model-switch-note" style="color:var(--danger);margin-top:6px">⚠️ آخر محاولة تحديث فشلت — البنية المعروضة فوق من آخر مرة نجحت، ممكن تكون قديمة. السبب: ${esc(d.lastSchemaDiscoveryError)}</div>`
+        : '')
+    : `<span class="integration-badge warn">⚠️ لسه مفيش بنية مكتشفة — التكامل مش هيظهر في قائمة المصادر لحد ما يتكشف.</span>` + errorNoteHtml;
+
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">⚙️ ${esc(d.name)}</h3>
+      <button type="button" id="btn-delete-integration"
+        style="border:1px solid var(--danger);color:var(--danger);background:transparent;padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer">
+        🗑️ حذف التكامل</button>
+    </div>
+
+    <div class="integ-tabs">
+      <button type="button" class="integ-tab active" data-pane="integ-connection">الاتصال</button>
+      <button type="button" class="integ-tab" data-pane="integ-visual">الهوية البصرية</button>
+      <button type="button" class="integ-tab" data-pane="integ-identity">هوية المستخدم</button>
+      <button type="button" class="integ-tab" data-pane="integ-files">الملفات والنشر</button>
+    </div>
+
+    <div id="integ-connection" class="integ-pane active">
+    <div class="settings-section">
+      <form id="integ-apis-form" class="integrations-form" style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <div class="model-switch-note" style="margin:0 0 8px;font-weight:700;color:var(--ink)">خدمة الاتصال (connector)</div>
+          <div class="integrations-form-grid">
+            <label>رابط الخدمة الأساسي (Connector Base URL)
+              <input type="text" id="ia-connector-url" value="${escAttr(d.connectorBaseUrl)}" placeholder="مثال: http://connector.client-network:5000">
+            </label>
+            <label>اسم رأس المصادقة (Header)
+              <input type="text" id="ia-connector-auth-header" value="${escAttr(d.connectorAuthHeader)}" placeholder="X-Api-Key">
+            </label>
+            <label>قيمة المصادقة ${d.connectorAuthConfigured ? '<span class="hint">(محفوظة — اكتب لاستبدالها)</span>' : ''}
+              <input type="text" id="ia-connector-auth-value" placeholder="${d.connectorAuthConfigured ? '••••••••' : ''}">
+            </label>
+          </div>
+          <p class="model-switch-note">رابط واحد بس — نقاط الاتصال كلها (الكتابة، القراءة، الصلاحيات،
+            الدليل، اكتشاف البنية) عايشة على نفس الخدمة الجاهزة (connector.zip تحت) بشكل ثابت، فمحتاجينش
+            نضبطهم كل واحد لوحده. مفتاح المصادقة ده بيحمي بس الاستدعاءات الجاية من عندنا (النشر واكتشاف
+            البنية) — صفحتا العرض والإدارة بتكلّموا الخدمة مباشرة من غير مفتاح، لأنهم ملفات ثابتة موزّعة
+            ومفيش سر ممكن نحطه فيهم بأمان؛ الحماية هناك بحدود شبكة العميل الداخلية. بمجرد ما الخدمة
+            تشتغل عند العميل بقاعدة بياناته الحقيقية وتحفظ الرابط هنا، بنكتشف بنية قاعدة بياناته
+            تلقائيًا (وبنعيد الاكتشاف تاني قبل كل عملية نشر) — من غير أي زرار أو خطوة إضافية.</p>
+          <div style="margin:8px 0">${schemaStatusHtml}</div>
+        </div>
+        <div class="model-switch-actions">
+          <span id="ia-apis-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+          <button type="submit">حفظ نقاط الاتصال</button>
+        </div>
+      </form>
+    </div>
+    </div>
+
+    <div id="integ-visual" class="integ-pane">
+    <div class="settings-section">
+      <h3>الهوية البصرية</h3>
+      <div class="vi-swatches">
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(d.accentColor) || '#2AB37F'}"></span>أساسي: ${esc(d.accentColor || '(افتراضي)')}</div>
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(d.secondaryColor) || '#0B2A22'}"></span>ثانوي: ${esc(d.secondaryColor || '(افتراضي)')}</div>
+        <div class="vi-swatch">الخط: ${esc(d.fontFamily || '(افتراضي)')}</div>
+      </div>
+      <div class="vi-tabs">
+        <button type="button" class="vi-tab active" data-pane="vi-manual">يدوي</button>
+        <button type="button" class="vi-tab" data-pane="vi-suggest">اقتراح بالذكاء الاصطناعي</button>
+        <button type="button" class="vi-tab" data-pane="vi-extract">استخراج من ملف</button>
+      </div>
+
+      <div id="vi-manual" class="vi-pane active">
+        <form id="integ-vi-manual-form" class="integrations-form">
+          <div class="integrations-form-grid">
+            <label>اللون الأساسي (hex)
+              <input type="text" id="vi-accent" value="${escAttr(d.accentColor) || '#2AB37F'}" placeholder="#2AB37F">
+            </label>
+            <label>اللون الثانوي (hex)
+              <input type="text" id="vi-secondary" value="${escAttr(d.secondaryColor) || '#0B2A22'}" placeholder="#0B2A22">
+            </label>
+            <label>اسم الخط
+              <input type="text" id="vi-font" value="${escAttr(d.fontFamily) || 'Inter'}" placeholder="Inter">
+            </label>
+          </div>
+          <div class="model-switch-actions">
+            <span id="ia-vi-note" class="settings-save-note hidden">✓ تم الحفظ</span>
+            <button type="submit">حفظ الهوية البصرية</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="vi-suggest" class="vi-pane">
+        <div class="integrations-form">
+          <label>وصف مختصر (اختياري لو عندك لون)
+            <textarea id="vi-desc" placeholder="مثال: أزرق داكن وذهبي، خط رسمي"></textarea>
+          </label>
+          <label>لون معروف بالفعل (اختياري لو عندك وصف)
+            <input type="text" id="vi-seed-color" placeholder="#123456">
+          </label>
+          <div class="model-switch-actions">
+            <button type="button" id="btn-vi-suggest">اقترح هوية بصرية</button>
+          </div>
+        </div>
+        <div id="vi-suggest-result"></div>
+      </div>
+
+      <div id="vi-extract" class="vi-pane">
+        <div class="integrations-form" style="gap:10px">
+          <div class="deliverable-row">
+            <button type="button" id="btn-vi-extract-palette">🎨 استخراج ألوان من صورة (بدون AI)</button>
+            <input type="file" id="vi-file-palette" accept="image/*" class="hidden">
+          </div>
+          <div class="deliverable-row">
+            <button type="button" id="btn-vi-extract-font">🔤 استخراج اسم خط من ملف PDF</button>
+            <input type="file" id="vi-file-font" accept="application/pdf" class="hidden">
+          </div>
+          <div class="deliverable-row">
+            <button type="button" id="btn-vi-extract-image">🖼️ استخراج هوية من صورة شعار (AI بصري)</button>
+            <input type="file" id="vi-file-image" accept="image/*" class="hidden">
+          </div>
+          <p class="model-switch-note">الاستخراج بالصورة (AI بصري) يحتاج موديل مُعد صراحةً كداعم للصور من
+            <a href="#" id="link-to-vi-model-settings">إعدادات نموذج استخراج الهوية البصرية</a> — غير كده هيترفض بوضوح.</p>
+        </div>
+        <div id="vi-extract-result"></div>
+      </div>
+    </div>
+    </div>
+
+    <div id="integ-identity" class="integ-pane">
+    <div class="settings-section">
+      <h3>آلية تعريف المستخدم الحالي</h3>
+      <div class="identity-status">${identityStatusHtml}</div>
+      <div class="integrations-form">
+        <label>اوصف إزاي نظام العميل بيعرّف هوية المستخدم الحالي (بالعربي، بلغتك)
+          <textarea id="id-transport-desc" placeholder="مثال: بيبعتوا معرف المستخدم في رأس HTTP اسمه X-User-Id"></textarea>
+        </label>
+        <div class="model-switch-actions">
+          <button type="button" id="btn-id-match">طابق الوصف مع آلية</button>
+        </div>
+      </div>
+      <div id="id-match-result"></div>
+
+      <div class="integrations-form" style="margin-top:14px">
+        <div class="integrations-form-grid">
+          <label>الآلية
+            <select id="id-mechanism">
+              <option value="query" ${d.identityMechanism === 'query' ? 'selected' : ''}>معامل ضمن الرابط (Query Parameter)</option>
+              <option value="header" ${d.identityMechanism === 'header' ? 'selected' : ''}>رأس HTTP مخصّص (Header)</option>
+              <option value="cookie" ${d.identityMechanism === 'cookie' ? 'selected' : ''}>كوكي (Cookie)</option>
+            </select>
+          </label>
+          <label>الاسم الدقيق للمعامل/الرأس/الكوكي
+            <input type="text" id="id-param-name" value="${escAttr(d.identityParameterName)}" placeholder="X-User-Id">
+          </label>
+        </div>
+        <div class="model-switch-actions">
+          <span id="ia-id-pending-note" class="settings-save-note hidden">✓ تم الحفظ كمعلّق</span>
+          <button type="button" id="btn-id-save-pending">حفظ كمعلّق</button>
+          <button type="button" id="btn-id-confirm" style="background:var(--accent);color:#fff;border:0">✅ تأكيد وتفعيل</button>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <div id="integ-files" class="integ-pane">
+    <div class="settings-section">
+      <h3>الملفات الجاهزة للعميل</h3>
+      <p class="model-switch-note">نزّل الملفات الثلاثة وسلّمهم لفريق العميل التقني: صفحتا العرض
+        وإدارة الصلاحيات يُستضافوا على نطاقهم، وخدمة الاتصال (connector) تُشغَّل جوه شبكتهم بعد
+        ما يحطّوا فيها رقم الاتصال بقاعدة بياناتهم الحقيقية محليًا (شرح كامل داخل الملف نفسه —
+        README.md). أعد التنزيل بعد أي تعديل في الإعدادات أعلاه — الملفات لا تتحدّث تلقائيًا.</p>
+      <div class="deliverable-row">
+        <a href="/api/integrations/${esc(d.id)}/deliverables/viewer"><button type="button">⬇️ صفحة العرض (viewer.html)</button></a>
+        <a href="/api/integrations/${esc(d.id)}/deliverables/admin"><button type="button">⬇️ صفحة إدارة الصلاحيات (admin.html)</button></a>
+        <a href="/api/integrations/${esc(d.id)}/deliverables/connector"><button type="button">⬇️ خدمة الاتصال بقاعدة البيانات (connector.zip)</button></a>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>اللوحات المنشورة وسجل النشر</h3>
+      ${integrationDashboardsTableHtml(state.integrationDashboards)}
+      <div class="model-switch-note" style="margin-top:14px;font-weight:700;color:var(--ink)">آخر عمليات النشر</div>
+      ${integrationPublishLogTableHtml(state.integrationPublishLog)}
+    </div>
+    </div>
+  `;
+  wireIntegrationDetailHandlers();
+}
+
+function identityMechanismLabel(m) {
+  return m === 'query' ? 'معامل رابط' : m === 'header' ? 'رأس HTTP' : m === 'cookie' ? 'كوكي' : m || '';
+}
+
+function integrationDashboardsTableHtml(rows) {
+  if (!rows || !rows.length) return '<p class="model-switch-note">لا توجد لوحات منشورة بعد — استخدم زر "نشر" من شريط أدوات أي لوحة مفعّلة (Active).</p>';
+  return `<table class="integ-table"><thead><tr><th>العنوان</th><th>معرّف اللوحة عند العميل</th><th>أول نشر</th><th>آخر نشر</th><th>بواسطة</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${esc(r.title)}</td><td style="font-family:var(--mono);font-size:11px">${esc(r.externalDashboardId)}</td>
+      <td>${esc(relTime(r.firstPublishedAt))}</td><td>${esc(relTime(r.lastPublishedAt))}</td><td>${esc(r.lastPublishedBy)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function integrationPublishLogTableHtml(rows) {
+  if (!rows || !rows.length) return '<p class="model-switch-note">لا يوجد سجل نشر بعد.</p>';
+  return `<table class="integ-table"><thead><tr><th>الحالة</th><th>اللوحة</th><th>الوقت</th><th>تفاصيل</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${r.success ? '✅' : '❌'}</td><td>${esc(r.dashboardTitle)}</td>
+      <td>${esc(relTime(r.createdAt))}</td><td style="color:var(--danger);font-size:11px">${esc(r.error || '')}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function wireIntegrationDetailHandlers() {
+  const id = state.currentIntegrationId;
+
+  document.querySelectorAll('.integ-tab').forEach(tab => tab.addEventListener('click', () => {
+    document.querySelectorAll('.integ-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.integ-pane').forEach(p => p.classList.toggle('active', p.id === tab.dataset.pane));
+  }));
+
+  el('btn-delete-integration').addEventListener('click', async () => {
+    if (!confirm('حذف هذا التكامل نهائيًا؟ هيتشال معاه سجل النشر واللوحات المرتبطة به.')) return;
+    await fetch('/api/integrations/' + id, { method: 'DELETE' });
+    state.currentIntegrationId = null;
+    state.integrationDetail = null;
+    el('integration-detail').innerHTML = '';
+    await loadIntegrations();
+  });
+
+  el('integ-apis-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const body = {
+      connectorBaseUrl: el('ia-connector-url').value.trim() || null,
+      connectorAuthHeader: el('ia-connector-auth-header').value.trim() || null,
+      connectorAuthValue: el('ia-connector-auth-value').value.trim() || null,
+    };
+    const res = await fetch('/api/integrations/' + id + '/apis', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { alert('تعذّر الحفظ.'); return; }
+    await loadIntegrations();
+    // Keep the credential-value fields blank (already-saved secrets are represented by the
+    // "configured" placeholder text, never echoed back) — a full re-render after refetching
+    // the detail keeps everything else in sync.
+    const refreshed = await fetch('/api/integrations/' + id).then(r => r.json());
+    state.integrationDetail = refreshed;
+    renderIntegrationDetail();
+    el('ia-apis-note').classList.remove('hidden');
+  });
+
+
+  document.querySelectorAll('.vi-tab').forEach(tab => tab.addEventListener('click', () => {
+    document.querySelectorAll('.vi-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.vi-pane').forEach(p => p.classList.toggle('active', p.id === tab.dataset.pane));
+  }));
+
+  el('integ-vi-manual-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const body = { accentColor: el('vi-accent').value.trim(), secondaryColor: el('vi-secondary').value.trim(), fontFamily: el('vi-font').value.trim() };
+    const res = await fetch('/api/integrations/' + id + '/visual-identity', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر الحفظ.'); return; }
+    el('ia-vi-note').classList.remove('hidden');
+    await openIntegration(id);
+  });
+
+  el('btn-vi-suggest').addEventListener('click', async () => {
+    const description = el('vi-desc').value.trim();
+    const seedColor = el('vi-seed-color').value.trim();
+    const btn = el('btn-vi-suggest');
+    btn.disabled = true;
+    el('vi-suggest-result').innerHTML = '<p class="model-switch-note">جارٍ التوليد…</p>';
+    try {
+      const res = await fetch('/api/integrations/' + id + '/visual-identity/suggest', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, seedColor }),
+      });
+      const data = await res.json();
+      if (!res.ok) { el('vi-suggest-result').innerHTML = `<p class="model-switch-note bad">${esc(data.error || 'تعذّر التوليد.')}</p>`; return; }
+      renderViProposal('vi-suggest-result', data);
+    } finally { btn.disabled = false; }
+  });
+
+  wireViFileButton('btn-vi-extract-palette', 'vi-file-palette', '/visual-identity/extract-palette', 'vi-extract-result');
+  wireViFileButton('btn-vi-extract-font', 'vi-file-font', '/visual-identity/extract-pdf-font', 'vi-extract-result', true);
+  wireViFileButton('btn-vi-extract-image', 'vi-file-image', '/visual-identity/extract-image', 'vi-extract-result');
+
+  el('link-to-vi-model-settings').addEventListener('click', e => { e.preventDefault(); showScreen('settings'); });
+
+  el('btn-id-match').addEventListener('click', async () => {
+    const description = el('id-transport-desc').value.trim();
+    if (!description) return;
+    const btn = el('btn-id-match');
+    btn.disabled = true;
+    el('id-match-result').innerHTML = '<p class="model-switch-note">جارٍ التحليل…</p>';
+    try {
+      const res = await fetch('/api/integrations/' + id + '/identity-transport/match', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description }),
+      });
+      const match = await res.json();
+      el('id-match-result').innerHTML = `<div class="identity-match-result">${esc(match.summary)}</div>`;
+      if (match.matched) {
+        el('id-mechanism').value = match.mechanism;
+        el('id-param-name').value = match.parameterName;
+      }
+    } finally { btn.disabled = false; }
+  });
+
+  el('btn-id-save-pending').addEventListener('click', async () => {
+    const mechanism = el('id-mechanism').value;
+    const parameterName = el('id-param-name').value.trim();
+    if (!parameterName) { alert('اكتب اسم المعامل/الرأس/الكوكي أولاً.'); return; }
+    const res = await fetch('/api/integrations/' + id + '/identity-transport/pending', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mechanism, parameterName }),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر الحفظ.'); return; }
+    el('ia-id-pending-note').classList.remove('hidden');
+    const refreshed = await fetch('/api/integrations/' + id).then(r => r.json());
+    state.integrationDetail = refreshed;
+  });
+
+  el('btn-id-confirm').addEventListener('click', async () => {
+    const mechanism = el('id-mechanism').value;
+    const parameterName = el('id-param-name').value.trim();
+    if (!parameterName) { alert('اكتب اسم المعامل/الرأس/الكوكي أولاً.'); return; }
+    const summary = `ستقرأ صفحة العرض هوية المستخدم من ${identityMechanismLabel(mechanism)} اسمه "${parameterName}"، وترسلها بنفس الاسم إلى نقطة القراءة عندكم في كل استدعاء. متأكد إنك عايز تفعّل ده؟`;
+    if (!confirm(summary)) return;
+    await fetch('/api/integrations/' + id + '/identity-transport/pending', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mechanism, parameterName }),
+    });
+    const res = await fetch('/api/integrations/' + id + '/identity-transport/confirm', { method: 'POST' });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'تعذّر التأكيد.'); return; }
+    await openIntegration(id);
+  });
+}
+
+function renderViProposal(targetId, proposal) {
+  const note = proposal.adjusted ? `<div class="vi-proposal-note">⚠️ ${esc(proposal.adjustmentNote)}</div>` : '';
+  el(targetId).innerHTML = `
+    <div class="vi-proposal">
+      <div class="vi-swatches">
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(proposal.accentColor)}"></span>${esc(proposal.accentColor)}</div>
+        <div class="vi-swatch"><span class="vi-swatch-dot" style="background:${escAttr(proposal.secondaryColor)}"></span>${esc(proposal.secondaryColor)}</div>
+        <div class="vi-swatch">${esc(proposal.fontFamily)}</div>
+      </div>
+      ${note}
+      <div class="model-switch-actions"><button type="button" id="btn-vi-apply-proposal">تطبيق هذا الاقتراح</button></div>
+    </div>`;
+  el('btn-vi-apply-proposal').addEventListener('click', () => {
+    el('vi-accent').value = proposal.accentColor;
+    el('vi-secondary').value = proposal.secondaryColor;
+    el('vi-font').value = proposal.fontFamily;
+    document.querySelector('.vi-tab[data-pane="vi-manual"]').click();
+  });
+}
+
+/// Font extraction only returns { fontFamily } (a PDF's own text carries no colors) — its
+/// proposal box merges that with the CURRENT accent/secondary rather than the full three-token
+/// UI the other two paths show, since there is nothing else to apply.
+function renderFontProposal(targetId, fontFamily) {
+  el(targetId).innerHTML = `
+    <div class="vi-proposal">
+      <div class="vi-swatch">الخط المستخرج: <strong>${esc(fontFamily)}</strong></div>
+      <div class="model-switch-actions"><button type="button" id="btn-vi-apply-font">تطبيق اسم الخط هذا</button></div>
+    </div>`;
+  el('btn-vi-apply-font').addEventListener('click', () => {
+    el('vi-font').value = fontFamily;
+    document.querySelector('.vi-tab[data-pane="vi-manual"]').click();
+  });
+}
+
+function wireViFileButton(btnId, inputId, endpointSuffix, resultId, isFont) {
+  const btn = el(btnId);
+  const input = el(inputId);
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    input.value = '';
+    if (!file) return;
+    const id = state.currentIntegrationId;
+    const form = new FormData();
+    form.append('file', file);
+    el(resultId).innerHTML = '<p class="model-switch-note">جارٍ المعالجة…</p>';
+    try {
+      const res = await fetch('/api/integrations/' + id + endpointSuffix, { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) { el(resultId).innerHTML = `<p class="model-switch-note bad">${esc(data.error || 'تعذّرت المعالجة.')}</p>`; return; }
+      if (isFont) renderFontProposal(resultId, data.fontFamily);
+      else renderViProposal(resultId, data);
+    } catch (err) {
+      el(resultId).innerHTML = `<p class="model-switch-note bad">${esc(err.message)}</p>`;
+    }
+  });
+}
+
+function escAttr(s) { return esc(s ?? '').replace(/"/g, '&quot;'); }
+
+// ---------- guided tour ----------
+// A short, dismissible walkthrough of the main screens — starts automatically once per user
+// per browser (see maybeAutoStartTour, called from startApp), and can be replayed any time
+// via the ❓ button. Each step either highlights a real header element (the nav tabs
+// themselves, always present regardless of which screen is active — no screen-switching
+// needed to keep them visible) or, for chat-only controls, relies on startTour forcing the
+// chat screen active first.
+function buildTourSteps() {
+  const isAdmin = state.currentUser?.role === 'Admin';
+  const steps = [
+    {
+      title: '👋 مرحبًا بك',
+      body: 'جولة موجزة تتناول أهم صفحات النظام. يمكنك تخطّيها الآن، وإعادة تشغيلها في أي وقت لاحقًا من الزر ❓ أعلى الصفحة.',
+    },
+    {
+      target: '[data-screen="chat"]',
+      title: '💬 المحادثة',
+      body: 'الصفحة الرئيسية: اكتب سؤالك بلغة عربية طبيعية عن بياناتك، ويقوم النظام ببناء لوحة معلومات تفاعلية فورًا.',
+    },
+    {
+      target: '#chat-mode-tabs',
+      title: '🧭 بناء اللوحة / الاستفسارات / النماذج',
+      body: '«بناء اللوحة» يحوّل سؤالك إلى عناصر رسومية وجداول. «الاستفسارات» يقدّم إجابة نصية سريعة دون بناء لوحة. «النماذج» عناصر جاهزة تُضاف للوحة الحالية بضغطة واحدة.',
+    },
+    {
+      target: '#sources-btn',
+      title: '📁 مصادر البيانات',
+      body: 'من هنا يمكن التحكم في الأنظمة أو الملفات المفعّلة وقت السؤال، واقتصار البحث على مصدر معيّن عند الحاجة.',
+    },
+    {
+      target: '[data-screen="repo"]',
+      title: '📎 مستودع الملفات',
+      body: 'من هذه الصفحة تُرفع ملفات Excel أو CSV أو PDF، لتُستخدم كمصدر بيانات يمكن الاستفسار عنه أسوة بأي نظام متصل.',
+    },
+    {
+      target: '[data-screen="history"]',
+      title: '🕘 السجل',
+      body: 'يضم جميع اللوحات التي سبق إنشاؤها، ويتيح العودة إلى أي منها لمتابعة العمل عليها أو تعديلها.',
+    },
+    {
+      target: '[data-screen="active"]',
+      title: '✅ اللوحات النشطة',
+      body: 'لوحات مفعّلة يمكن مشاركتها مع فريق العمل بأدوار مختلفة (مالك/محرر/مشاهد)، وتظل بياناتها تتحدّث تلقائيًا من المصدر الحي.',
+    },
+    {
+      target: '[data-screen="sharelinks"]',
+      title: '🔗 روابط المشاركة',
+      body: 'روابط ثابتة لمشاركة نسخة لحظية من لوحة مع أي شخص، دون الحاجة إلى تسجيل الدخول.',
+    },
+  ];
+  if (isAdmin) {
+    steps.push(
+      {
+        target: '#tab-users',
+        title: '👥 المستخدمون',
+        body: 'إدارة حسابات المستخدمين وأدوارهم والأنظمة المسموح لهم بالوصول إليها.',
+      },
+      {
+        target: '#tab-settings',
+        title: '⚙️ الإعدادات',
+        body: 'التحكم في نموذج الذكاء الاصطناعي المستخدم لبناء اللوحات، وفي نموذج قراءة ملفات PDF بشكل مستقل عنه.',
+      },
+      {
+        target: '#usage-link',
+        title: '📊 الاستهلاك',
+        body: 'سجل تفصيلي لكل سؤال أُرسل إلى النموذج: عدد التوكنز المستخدمة، التكلفة التقديرية، والمستخدم الذي طرح السؤال.',
+      },
+    );
+  }
+  steps.push({
+    target: '#tour-btn',
+    title: '❓ هل تحتاج إلى الدليل مرة أخرى؟',
+    body: 'اضغط هذا الزر في أي وقت لإعادة عرض هذا الدليل من البداية.',
+  });
+  return steps;
+}
+
+let tourSteps = [];
+let tourIndex = 0;
+
+function startTour() {
+  tourSteps = buildTourSteps();
+  tourIndex = 0;
+  showScreen('chat'); // guarantees the chat-only steps' targets are actually visible
+  el('tour-dim').classList.add('open');
+  renderTourStep();
+}
+
+function endTour() {
+  el('tour-dim').classList.remove('open');
+  el('tour-pop').classList.remove('open');
+  document.querySelectorAll('.tour-target').forEach(e => e.classList.remove('tour-target'));
+}
+
+function renderTourStep() {
+  document.querySelectorAll('.tour-target').forEach(e => e.classList.remove('tour-target'));
+  const step = tourSteps[tourIndex];
+  if (!step) { endTour(); return; }
+
+  const pop = el('tour-pop');
+  const isFirst = tourIndex === 0;
+  const isLast = tourIndex === tourSteps.length - 1;
+  pop.innerHTML = `
+    <h4>${esc(step.title)}</h4>
+    <p>${esc(step.body)}</p>
+    <div class="tour-foot">
+      <span class="tour-step-count">${tourIndex + 1} من ${tourSteps.length}</span>
+      <div class="tour-actions">
+        ${!isFirst ? '<button type="button" id="tour-prev">السابق</button>' : ''}
+        <button type="button" id="tour-next" class="primary">${isLast ? 'إنهاء' : 'التالي'}</button>
+      </div>
+    </div>
+    ${!isLast ? '<button type="button" class="tour-skip" id="tour-skip">تخطّي الدليل</button>' : ''}`;
+  pop.classList.add('open');
+
+  const targetEl = step.target ? document.querySelector(step.target) : null;
+  if (targetEl) {
+    targetEl.classList.add('tour-target');
+    positionTourPopover(targetEl, pop);
+  } else {
+    pop.style.top = '50%'; pop.style.insetInlineStart = '50%'; pop.style.transform = 'translate(-50%,-50%)';
+  }
+
+  el('tour-next').addEventListener('click', () => { tourIndex++; renderTourStep(); });
+  el('tour-prev')?.addEventListener('click', () => { tourIndex--; renderTourStep(); });
+  el('tour-skip')?.addEventListener('click', endTour);
+}
+
+/// Plain top/left (not RTL logical properties) since getBoundingClientRect() is always
+/// viewport/physical-coordinate, regardless of document direction.
+function positionTourPopover(targetEl, pop) {
+  pop.style.transform = 'none';
+  pop.style.insetInlineStart = '';
+  const rect = targetEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const margin = 14;
+  let top = rect.bottom + margin;
+  if (top + popRect.height > window.innerHeight - 10) top = Math.max(10, rect.top - popRect.height - margin);
+  let left = Math.min(Math.max(10, rect.left), window.innerWidth - popRect.width - 10);
+  pop.style.top = `${top}px`;
+  pop.style.left = `${left}px`;
+}
+
+el('tour-btn').addEventListener('click', startTour);
+el('tour-dim').addEventListener('click', endTour);
+
+/// Once per user per browser, a little while after their first successful login or
+/// session-restore — long enough for the chat screen to have settled. Marks itself seen the
+/// moment it decides to auto-start (not when the user finishes), so it never re-nags even if
+/// they close the tab mid-tour; they can always replay it manually via #tour-btn regardless.
+function maybeAutoStartTour() {
+  const key = `tourSeen:${state.currentUser?.username || 'anon'}`;
+  try {
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+  } catch { return; }
+  setTimeout(startTour, 700);
+}
+
+async function startApp() {
+  renderCurrentUser();
+  renderMessages();
+  renderDashboard();
+  await loadSources();
+  await loadFiles();
+  await loadTemplateCatalog();
+  loadCurrentProjectNav();
+  maybeAutoStartTour();
+}
+
+// ---------- users admin ----------
+// ---------- هيكل SaaS: المنصّة (كل المنظمات، لمالك المنصّة فقط) والمشاريع (مستوى المنظمة) ----------
+async function loadOrganizations() {
+  const res = await fetch('/api/organizations');
+  const orgs = res.ok ? await res.json() : [];
+  renderOrganizations(orgs);
+}
+
+function renderOrganizations(orgs) {
+  el('org-stat-active').textContent = orgs.filter(o => o.isActive).length;
+  el('org-stat-total-label').textContent = `من ${orgs.length} مسجلة`;
+  el('org-stat-projects').textContent = orgs.reduce((sum, o) => sum + o.projectCount, 0);
+  el('org-stat-users').textContent = orgs.reduce((sum, o) => sum + o.userCount, 0);
+
+  el('organizations-table-body').innerHTML = orgs.map(o => `
+    <tr>
+      <td><div class="cell-user"><span class="org-avatar" style="width:36px;height:36px;font-size:15px">${esc((o.name || '؟').trim().slice(0, 1))}</span><div><strong>${esc(o.name)}</strong><span>${esc(o.slug)}</span></div></div></td>
+      <td><span class="status ${o.isActive ? 'ok' : 'off'}">${o.isActive ? 'نشطة' : 'معطّلة'}</span></td>
+      <td><span class="num">${o.projectCount}</span></td>
+      <td><span class="num">${o.userCount}</span></td>
+      <td class="muted">${new Date(o.createdAt).toLocaleDateString('ar-EG')}</td>
+      <td><div class="row-actions">
+        <button type="button" class="btn btn-ghost btn-sm" data-copy-login-link="${esc(o.slug)}" title="نسخ رابط تسجيل الدخول الخاص بهذه المنظمة">نسخ رابط الدخول</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-assign-admin="${esc(o.id)}" data-org-name="${esc(o.name)}">تعيين مسؤول</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-toggle-org="${esc(o.id)}" data-active="${o.isActive}">${o.isActive ? 'تعطيل' : 'تفعيل'}</button>
+      </div></td>
+    </tr>`).join('');
+  el('organizations-count-label').textContent = `عرض ${orgs.length} منظمة`;
+
+  el('organizations-table-body').querySelectorAll('[data-toggle-org]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const activate = btn.dataset.active !== 'true';
+      await fetch(`/api/organizations/${btn.dataset.toggleOrg}/${activate ? 'activate' : 'suspend'}`, { method: 'POST' });
+      loadOrganizations();
+    }));
+  el('organizations-table-body').querySelectorAll('[data-assign-admin]').forEach(btn =>
+    btn.addEventListener('click', () => openOrgAdminModal(btn.dataset.assignAdmin, btn.dataset.orgName)));
+  el('organizations-table-body').querySelectorAll('[data-copy-login-link]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const link = `${location.origin}/o/${btn.dataset.copyLoginLink}`;
+      try {
+        await navigator.clipboard.writeText(link);
+        const original = btn.textContent;
+        btn.textContent = 'تم النسخ ✓';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      } catch { /* clipboard access denied — nothing to recover from here */ }
+    }));
+}
+
+el('new-org-btn').addEventListener('click', () => {
+  el('new-org-error').classList.add('hidden');
+  el('new-org-name').value = '';
+  el('new-org-admin-username').value = '';
+  el('new-org-admin-name').value = '';
+  el('new-org-admin-password').value = '';
+  el('new-org-modal').classList.remove('hidden');
+});
+el('new-org-cancel').addEventListener('click', () => el('new-org-modal').classList.add('hidden'));
+el('new-org-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = el('new-org-name').value.trim();
+  if (!name) return;
+  const adminUsername = el('new-org-admin-username').value.trim();
+  const adminPassword = el('new-org-admin-password').value;
+  // Either both admin fields are given (create the org's first admin in the same step)
+  // or neither is — half-filled would silently create an org with no working admin login.
+  if (!!adminUsername !== !!adminPassword) {
+    el('new-org-error').textContent = 'لو هتضيف مسؤول دلوقتي، لازم اسم المستخدم وكلمة المرور مع بعض.';
+    el('new-org-error').classList.remove('hidden');
+    return;
+  }
+  const btn = el('new-org-save');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/organizations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || `تعذّر إنشاء المنظمة (${res.status}).`);
+    if (!data?.organization?.id) throw new Error('تعذّر إنشاء المنظمة: رد غير متوقع من الخادم.');
+    if (adminUsername) {
+      const adminRes = await fetch(`/api/organizations/${data.organization.id}/admins`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: adminUsername, displayName: el('new-org-admin-name').value.trim(), password: adminPassword }),
+      });
+      const adminData = await adminRes.json().catch(() => null);
+      if (!adminRes.ok) throw new Error(`اتعملت المنظمة، لكن تعذّر تعيين المسؤول: ${adminData?.error || adminRes.status}`);
+    }
+    el('new-org-modal').classList.add('hidden');
+    loadOrganizations();
+  } catch (err) {
+    el('new-org-error').textContent = err.message;
+    el('new-org-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function openOrgAdminModal(orgId, orgName) {
+  el('new-org-admin-error').classList.add('hidden');
+  el('new-org-admin-org-id').value = orgId;
+  el('new-org-admin-org-name').textContent = orgName;
+  el('org-admin-username').value = '';
+  el('org-admin-name').value = '';
+  el('org-admin-password').value = '';
+  el('new-org-admin-modal').classList.remove('hidden');
+}
+el('new-org-admin-cancel').addEventListener('click', () => el('new-org-admin-modal').classList.add('hidden'));
+el('new-org-admin-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const orgId = el('new-org-admin-org-id').value;
+  const username = el('org-admin-username').value.trim();
+  const password = el('org-admin-password').value;
+  if (!username || !password) return;
+  const btn = el('new-org-admin-save');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/organizations/${orgId}/admins`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, displayName: el('org-admin-name').value.trim(), password }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || 'تعذّر تعيين المسؤول.');
+    el('new-org-admin-modal').classList.add('hidden');
+    loadOrganizations();
+  } catch (err) {
+    el('new-org-admin-error').textContent = err.message;
+    el('new-org-admin-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ---------- مكتبة النماذج (platform-templates admin) ----------
+// مسؤول المنصة بس (screen-templates-admin, خلف PlatformOwner). مطابق لتصميم jeem-ui المرجعي
+// (platform-templates.html/js): صف إحصائيات أعلى الصفحة، تبويبات بعدد كل نوع، قائمة بفلاتر
+// حالة/تصنيف وجدول يعرض "وصف الذكاء الاصطناعي" نفسه (مع تمييز {{متغيرات}})، ومحرّر بمعاينة
+// حية جانبية. النص الفعلي المُرسل لجيم (promptText) بيتحمّل وبيتعدّل هنا فقط؛ المستخدم العادي
+// شايف العنوان/الوصف بس (انظر loadTemplateCatalog فوق) وبيبعت templateId عند الإضافة — جيم
+// (TemplatePromptService) هو اللي بيجمّع النص النهائي، عشان المستخدم مايقدرش يغيّره من عنده.
+//
+// قرار متعمّد يخالف المرجع: المرجع بيستخدم "قالب عام" واحد لكل مكتبة المؤشرات (1,899 مؤشر)
+// معتمدًا على {{measure_type}} للتفريق بين الأنواع. هنا فضّلنا الإبقاء على 6 قوالب جاهزة (نسبة/
+// زمن/مالي/تقييم/عدد/أخرى) لأنها كانت الصيغة الأصلية الأدق لكل نوع قياس (TEMPLATE_PROMPT سابقًا
+// في app.js) — معروضة في «مكتبة المؤشرات» كبطاقة «قوالب أنواع القياس» بدل القالب الواحد.
+const tplIc = (n, c = 'icon icon-sm') => `<svg class="${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+
+const TPLADM_VARS = [
+  { key: 'project_name', label: 'اسم المشروع', sample: 'منصّة المبيعات', scope: 'all' },
+  { key: 'org_name', label: 'اسم المنظمة', sample: 'شركة تجربة', scope: 'all' },
+  { key: 'sources', label: 'المصادر المفعّلة', sample: 'نظام ERP، ملف المبيعات.xlsx', scope: 'all' },
+  { key: 'widgets', label: 'قائمة العناصر العشرة', sample: '1) إجمالي المبيعات\n2) عدد الطلبات', scope: 'dashboard' },
+  { key: 'kpi_name', label: 'اسم المؤشر', sample: 'رضا العملاء', scope: 'kpi' },
+  { key: 'kpi_name_en', label: 'اسم المؤشر (إنجليزي)', sample: 'Customer Satisfaction', scope: 'kpi' },
+  { key: 'category', label: 'تصنيف المؤشر', sample: 'خدمة العملاء', scope: 'kpi' },
+  { key: 'measure_type', label: 'نوع القياس', sample: 'نسبة مئوية', scope: 'kpi' },
+];
+const tpladmVarScope = kind => kind === 'dashboard' ? 'dashboard' : (kind === 'kpi' || kind === 'kpi_mtype') ? 'kpi' : null;
+const tpladmVarsFor = kind => TPLADM_VARS.filter(v => v.scope === 'all' || v.scope === tpladmVarScope(kind));
+// نفس نمط \w+ المستخدم في TemplatePromptService.FindUnknownVariables على السيرفر بالظبط —
+// عشان التحقق هنا (فوري، للراحة) يطابق التحقق الحاسم هناك (اللي مفيش طريقة لتجاوزه).
+function tpladmUnknownVars(text, kind) {
+  const known = new Set(tpladmVarsFor(kind).map(v => v.key));
+  const found = new Set();
+  (text.match(/\{\{\s*(\w+)\s*\}\}/g) || []).forEach(m => {
+    const name = m.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
+    if (!known.has(name)) found.add(name);
+  });
+  return [...found];
+}
+function tpladmFillHtml(text, kind, extra) {
+  const ctx = {}; tpladmVarsFor(kind).forEach(v => { ctx[v.key] = v.sample; });
+  Object.assign(ctx, extra || {});
+  return esc(text || '').replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) =>
+    ctx[k] != null && ctx[k] !== '' ? `<b class="pv-var" title="{{${esc(k)}}}">${esc(ctx[k])}</b>` : `<mark class="pv-bad" title="متغير غير معروف">${esc(m)}</mark>`);
+}
+const tpladmCodeVars = text => esc(text || '').replace(/\{\{\s*(\w+)\s*\}\}/g, '<code dir="ltr">{{$1}}</code>');
+const tpladmVarChips = kind => `<div class="var-chips" role="group" aria-label="إدراج متغير">${tpladmVarsFor(kind).map(v =>
+  `<button type="button" class="var-chip" data-var="${v.key}" title="${esc(v.label)}"><code dir="ltr">{{${v.key}}}</code><span>${esc(v.label)}</span></button>`).join('')}</div>`;
+
+function tpladmToast(msg, undo) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.innerHTML = `${tplIc('check')}<span>${esc(msg)}</span>${undo ? '<button type="button" class="toast-undo">تراجع</button>' : ''}`;
+  if (undo) t.querySelector('.toast-undo').addEventListener('click', () => { clearTimeout(t._h); t.classList.remove('is-on'); undo(); });
+  t.classList.remove('is-on'); void t.offsetWidth; t.classList.add('is-on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), undo ? 6000 : 2800);
+}
+
+const TPLADM_KINDS = {
+  widget: { tab: 'عناصر المحادثة', one: 'عنصر', add: 'عنصر جديد', icon: 'chat', where: 'يظهر في تبويب «النماذج» داخل المحادثة، ويُضاف للوحة الحالية بضغطة.' },
+  dashboard: { tab: 'نماذج اللوحات', one: 'نموذج لوحة', add: 'نموذج لوحة جديد', icon: 'dashboard', where: 'يظهر في معرض «لوحة جديدة»، وينشئ لوحة كاملة بعناصره.' },
+  kpi: { tab: 'مكتبة المؤشرات', one: 'مؤشر', icon: 'target', where: 'يظهر في «النماذج ← مكتبة المؤشرات» داخل المحادثة.' },
+  schema: { tab: 'مكتبة الحقول والجداول', icon: 'database', where: 'الأسماء المرشّحة لكل جدول/عمود يستخدمه أي مؤشر أو نموذج لوحة — تُستخدم وقت بناء لوحة فعلية على مصدر متصل لمطابقة البنية الحقيقية بدل تخمين الموديل من الصفر.' },
+  semantics: { tab: 'معاني الأعمدة', icon: 'spark', where: 'طبقة المعنى: كل جدول في مشروعك الحالي وأعمدته وما فهمه جيم من كل عمود (إيراد، حالة صفقة، مندوب…). النماذج تُبنى على هذه المعاني لا على أسماء الأعمدة — صحّح أي معنى هنا ويُحفظ تأكيدك فوق أي تحليل آلي لاحق.' },
+  rules: { tab: 'القواعد العامة', icon: 'shield' },
+};
+const TPLADM_STATUS = { published: ['منشور', 'ok'], draft: ['مسودة', 'warn'], stopped: ['موقوف', 'off'] };
+const tpladmStatusPill = s => { const v = TPLADM_STATUS[s] || TPLADM_STATUS.published; return `<span class="status ${v[1]}">${v[0]}</span>`; };
+const TPLADM_STATUS_OPTS = [['', 'الكل'], ['published', 'منشور'], ['draft', 'مسودة'], ['stopped', 'موقوف']];
+const TPLADM_WIDGET_CATS = [['kpi', 'مؤشر'], ['chart', 'رسم بياني'], ['table', 'جدول']];
+const TPLADM_WIDGET_ICONS = ['spark', 'up', 'chart', 'calendar', 'filter', 'share', 'list', 'grid', 'target', 'percent', 'wallet', 'star', 'hash'];
+const TPLADM_DASH_CATS = DASH_GAL_CATS.filter(c => c[0] !== 'all').map(c => [c[0], c[1]]);
+const TPLADM_CHART_TYPES = [['line', 'خط'], ['donut', 'دائري'], ['hbars', 'أعمدة أفقي'], ['cbars', 'أعمدة مقارنة'], ['table', 'جدول'], ['funnel', 'قمع'], ['heat', 'خريطة حرارية']];
+const TPLADM_WIDGET_TYPES = [['kpi', 'مؤشر رقمي'], ...TPLADM_CHART_TYPES];
+const tpladmBlankWidgets = () => [
+  { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' }, { type: 'kpi', title: '', prompt: '' },
+  { type: 'line', title: '', prompt: '' }, { type: 'donut', title: '', prompt: '' }, { type: 'hbars', title: '', prompt: '' },
+  { type: 'cbars', title: '', prompt: '' }, { type: 'table', title: '', prompt: '' }, { type: 'funnel', title: '', prompt: '' },
+];
+
+const TPLADM = {
+  kind: 'widget', widgets: [], dashboards: [], kpiOverrides: {}, kpiMtypes: [], kpiCatOff: new Set(), schemaRows: [],
+  semantics: null, // يُحمَّل عند فتح تبويب «معاني الأعمدة» فقط (ملف تعريف كل الجداول)
+  filt: {
+    widget: { q: '', s: '', c: '' }, dashboard: { q: '', s: '', c: '' },
+    kpi: { v: 'cats', q: '', s: '', c: '', m: '', p: 0, cq: '', cs: '' },
+    schema: { q: '' },
+    semantics: { q: '', only: '' },
+  },
+};
+let TPLADM_RULES_CACHE = '';
+let TPLADM_ED = null;
+
+async function tpladmLoadWidgets() { const r = await fetch('/api/templates/admin/widget'); TPLADM.widgets = r.ok ? await r.json() : []; }
+async function tpladmLoadDashboards() { const r = await fetch('/api/templates/admin/dashboard'); TPLADM.dashboards = r.ok ? await r.json() : []; }
+async function tpladmLoadKpiOverrides() {
+  const r = await fetch('/api/templates/admin/kpi-overrides');
+  const rows = r.ok ? await r.json() : [];
+  TPLADM.kpiOverrides = {}; rows.forEach(x => { TPLADM.kpiOverrides[x.index] = x; });
+}
+async function tpladmLoadKpiCategories() {
+  const r = await fetch('/api/templates/admin/kpi-categories');
+  const rows = r.ok ? await r.json() : [];
+  TPLADM.kpiCatOff = new Set(rows.map(x => x.index));
+}
+async function tpladmLoadKpiMtypes() { const r = await fetch('/api/templates/admin/kpi-mtypes'); TPLADM.kpiMtypes = r.ok ? await r.json() : []; }
+async function tpladmLoadRulesCache() { const r = await fetch('/api/templates/admin/rules'); TPLADM_RULES_CACHE = r.ok ? (await r.json()).promptText || '' : ''; }
+async function tpladmLoadSchemaAliases() { const r = await fetch('/api/schema-aliases'); TPLADM.schemaRows = r.ok ? await r.json() : []; }
+async function tpladmRefreshKind(kind) { if (kind === 'widget') await tpladmLoadWidgets(); else if (kind === 'dashboard') await tpladmLoadDashboards(); }
+
+async function loadTemplatesAdmin() {
+  await Promise.all([
+    tpladmLoadWidgets(), tpladmLoadDashboards(), tpladmLoadKpiOverrides(),
+    tpladmLoadKpiCategories(), tpladmLoadKpiMtypes(), tpladmLoadRulesCache(), tpladmLoadSchemaAliases(),
+  ]);
+  tpladmStats();
+  tpladmRender();
+}
+
+function tpladmStats() {
+  const W = TPLADM.widgets, D = TPLADM.dashboards;
+  const drafts = W.concat(D).filter(x => x.status !== 'published').length;
+  let custom = 0, stopped = 0;
+  Object.values(TPLADM.kpiOverrides).forEach(o => { if (o.promptText) custom++; if (o.status && o.status !== 'published') stopped++; });
+  const kpiCount = KPI_LIB ? KPI_LIB.rows.length.toLocaleString('en-US') : '0';
+  el('tpladm-stats').innerHTML = `
+    <div style="background:var(--surface)"><span class="stat-label">${tplIc('chat')}عناصر المحادثة</span><span class="stat-value num">${W.length}</span><span class="stat-foot"><span class="num">${W.filter(x => x.status === 'published').length}</span> منشور</span></div>
+    <div><span class="stat-label">${tplIc('dashboard')}نماذج اللوحات</span><span class="stat-value num">${D.length}</span><span class="stat-foot"><span class="num">${D.reduce((s, x) => s + (x.widgets ? x.widgets.length : 0), 0).toLocaleString('en-US')}</span> عنصر إجمالاً</span></div>
+    <div><span class="stat-label">${tplIc('target')}مكتبة المؤشرات</span><span class="stat-value num">${kpiCount}</span><span class="stat-foot"><span class="num">${custom}</span> بوصف مخصص · <span class="num">${TPLADM.kpiCatOff.size}</span> تصنيف موقوف · <span class="num">${stopped}</span> موقوف فرديًا</span></div>
+    <div><span class="stat-label">${tplIc('edit')}مسودات وموقوفة</span><span class="stat-value num">${drafts}</span><span class="stat-foot">لا تظهر للمستخدمين</span></div>`;
+}
+
+function tpladmTabs() {
+  const n = { widget: TPLADM.widgets.length, dashboard: TPLADM.dashboards.length, kpi: KPI_LIB ? KPI_LIB.rows.length : 0, schema: TPLADM.schemaRows.length,
+    semantics: TPLADM.semantics ? TPLADM.semantics.tables.reduce((s, t) => s + t.columns.length, 0) : null };
+  el('tpladm-tabs').innerHTML = Object.entries(TPLADM_KINDS).map(([k, v]) =>
+    `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === TPLADM.kind}">${tplIc(v.icon)}${v.tab}${n[k] != null ? ` <span class="tab-n num">${n[k].toLocaleString('en-US')}</span>` : ''}</button>`).join('');
+  el('tpladm-tabs').querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { TPLADM.kind = b.dataset.kind; tpladmRender(); }));
+  el('tpladm-new-btn').classList.toggle('hidden', TPLADM.kind !== 'widget' && TPLADM.kind !== 'dashboard');
+  el('tpladm-new-btn-label').textContent = TPLADM_KINDS[TPLADM.kind]?.add || 'عنصر جديد';
+}
+
+function tpladmRender() {
+  tpladmTabs();
+  if (TPLADM.kind === 'widget') tpladmListPane('widget');
+  else if (TPLADM.kind === 'dashboard') tpladmListPane('dashboard');
+  else if (TPLADM.kind === 'kpi') tpladmKpiPane();
+  else if (TPLADM.kind === 'schema') tpladmSchemaPane();
+  else if (TPLADM.kind === 'semantics') tpladmSemanticsPane();
+  else tpladmRulesPane();
+}
+
+// ---------- جدول معاني الأعمدة المشترك (صفحة «مصادر المشروع» + تبويب الإدارة) ----------
+// t = جدول من /api/semantics بأعمدته. تغيير المعنى يُحفظ فورًا عبر PUT /api/semantics/{table}/{column}
+// ويُحدّث الكائن محليًا، فكل شاشة تعرض نفس البيانات بلا إعادة تحميل.
+const SEM_ANALYSIS_LABEL = { analyzed: ['badge-ok', '✓ محلَّل'], pending: ['badge-blue', '⏳ قيد التحليل الآلي'], failed: ['badge-danger', '! فشل التحليل الآلي'], rule: ['badge-warn', '◐ تخمين من الأسماء فقط'], none: ['badge-danger', '! لم يُحلَّل'] };
+// جداول «قيد التحليل» (بدأه الخادم تلقائيًا عند فتح الصفحة): إعادة تحميل واحدة بعد ثوانٍ لإظهار النتيجة.
+// سبب فشل التحليل الآلي (من `analysisError` في رد /api/semantics) مع إرشاد: يُعرض تحت شارة الحالة.
+function semErrorHtml(t) {
+  if (!t.analysisError) return '';
+  return `<div class="sem-error" role="alert">⚠️ تعذّر التحليل الآلي: <span dir="auto">${esc(t.analysisError)}</span> — راجع <a href="#" data-goto-screen="llm-keys">«مفاتيح الموديلات»</a> أو <a href="#" data-goto-screen="settings">نموذج تحليل معاني الأعمدة في «الإعدادات»</a> ثم اضغط «إعادة التحليل الآلي».</div>`;
+}
+function semScheduleRefresh(tables, reload) {
+  if (!tables.some(t => t.analysis === 'pending')) return;
+  clearTimeout(semScheduleRefresh._t);
+  semScheduleRefresh._t = setTimeout(reload, 8000);
+}
+function semColumnRowHtml(t, c) {
+  const conf = Math.round((c.confidence || 0) * 100);
+  const tone = c.source === 'user' ? 'badge-ok' : !c.source ? '' : conf >= 80 ? 'badge-teal' : conf >= 40 ? 'badge-warn' : 'badge-danger';
+  const src = c.source === 'user' ? '✅ مؤكّد منك' : c.source ? `${SEM_SOURCE_LABEL[c.source] || c.source} · ${conf.toLocaleString('en-US')}٪` : '—';
+  let map = '';
+  if (c.valueMapJson) { try { const m = Object.entries(JSON.parse(c.valueMapJson)); if (m.length) map = m.slice(0, 4).map(([k, v]) => `${k}←${v}`).join('، '); } catch { /* تجاهل */ } }
+  return `<tr data-table="${esc(t.table)}" data-column="${esc(c.name)}">
+    <td><b dir="auto">${esc(c.name)}</b><br><small class="muted">${esc(WIDGET_COLS_KIND[c.kind] || c.kind)}${c.sample?.length ? ` · ${esc(c.sample.join('، ')).slice(0, 60)}` : ''}</small></td>
+    <td><select class="sem-select" aria-label="مفهوم العمود ${esc(c.name)}">${semConceptOptions(c.concept)}</select></td>
+    <td><span class="badge ${tone}">${esc(src)}</span></td>
+    <td><small class="muted">${esc(c.note || '')}${map ? `<br>${esc(map)}` : ''}</small></td>
+  </tr>`;
+}
+function semTableHtml(t) {
+  return `<table class="dtable sem-dtable">
+    <thead><tr><th>العمود</th><th>المعنى</th><th>المصدر والثقة</th><th>ملاحظة / خريطة القيم</th></tr></thead>
+    <tbody>${t.columns.map(c => semColumnRowHtml(t, c)).join('')}</tbody>
+  </table>`;
+}
+// يربط قوائم المعنى داخل حاوية: الحفظ ثم تحديث الكائن t والشارة. onStatus(text, tone) للرسائل.
+function bindSemTable(container, tables, onStatus) {
+  container.querySelectorAll('.sem-select').forEach(sel => sel.addEventListener('change', async () => {
+    const row = sel.closest('tr'); const table = row.dataset.table, column = row.dataset.column;
+    sel.disabled = true;
+    const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/${encodeURIComponent(column)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept: sel.value || null }),
+    });
+    sel.disabled = false;
+    if (!res.ok) { onStatus('تعذّر حفظ المعنى.', 'bad'); return; }
+    const tbl = tables.find(x => x.table === table); const col = tbl?.columns.find(x => x.name === column);
+    if (col) { const c = semModalConcepts.find(x => x.id === sel.value); col.concept = sel.value || null; col.conceptLabel = c?.label || null; col.source = 'user'; col.confidence = 1; if (tbl.analysis !== 'analyzed') tbl.analysis = 'analyzed'; }
+    row.querySelector('td:nth-child(3)').innerHTML = '<span class="badge badge-ok">✅ مؤكّد منك</span>';
+    dashGalFeasibility = null;
+    onStatus(`تم حفظ معنى «${column}».`, 'ok');
+  }));
+}
+async function semReanalyze(table, onStatus) {
+  onStatus(`جارٍ تحليل ${table}… (ثوانٍ)`, '');
+  const res = await fetch(`/api/semantics/${encodeURIComponent(table)}/analyze`, { method: 'POST' });
+  if (!res.ok) { onStatus('تعذّر إعادة التحليل — راجع صفحة «الاستهلاك» لسبب فشل نداء الموديل.', 'bad'); return null; }
+  dashGalFeasibility = null;
+  const r = await res.json().catch(() => ({}));
+  // الطلب نجح لكن نداء الموديل قد يفشل: يعيد السبب (أو null) ليعرضه المنادي بعد إعادة الرسم.
+  return { error: r.analysisError || null };
+}
+async function tpladmLoadSemantics() {
+  const r = await fetch('/api/semantics');
+  TPLADM.semantics = r.ok ? await r.json() : { tables: [], concepts: [] };
+  semModalConcepts = TPLADM.semantics.concepts || [];
+}
+async function tpladmSemanticsPane() {
+  if (!TPLADM.semantics) {
+    el('tpladm-pane').innerHTML = '<div class="lib-empty"><span class="spinner"></span> جارٍ تحميل جداول المشروع…</div>';
+    await tpladmLoadSemantics();
+    if (TPLADM.kind !== 'semantics') return;
+    tpladmTabs();
+    semScheduleRefresh(TPLADM.semantics.tables, () => { if (TPLADM.kind === 'semantics') { TPLADM.semantics = null; tpladmSemanticsPane(); } });
+  }
+  const f = TPLADM.filt.semantics;
+  const data = TPLADM.semantics;
+  const qs = kpiNorm((f.q || '').trim());
+  const tables = data.tables.filter(t => {
+    if (f.only === 'missing' && t.analysis === 'analyzed') return false;
+    if (f.only === 'unknown' && !t.columns.some(c => !c.concept)) return false;
+    if (!qs) return true;
+    return kpiNorm(t.table + ' ' + (t.fileName || '') + ' ' + t.columns.map(c => c.name + ' ' + (c.conceptLabel || '')).join(' ')).includes(qs);
+  });
+  const totalCols = data.tables.reduce((s, t) => s + t.columns.length, 0);
+  const unknownCols = data.tables.reduce((s, t) => s + t.columns.filter(c => !c.concept).length, 0);
+  const userCols = data.tables.reduce((s, t) => s + t.columns.filter(c => c.source === 'user').length, 0);
+
+  const tableCard = t => {
+    const [tone, label] = SEM_ANALYSIS_LABEL[t.analysis] || SEM_ANALYSIS_LABEL.none;
+    const unknown = t.columns.filter(c => !c.concept).length;
+    return `<article class="cat-card sem-table-card" data-table="${esc(t.table)}">
+      <div class="cc-top">
+        <div class="cc-name"><b>${esc(t.fileName || t.table)}</b><small dir="ltr">${esc(t.table)} · ${t.rowCount.toLocaleString('en-US')} صف · ${t.columns.length.toLocaleString('en-US')} عمود${unknown ? ` · ${unknown.toLocaleString('en-US')} بلا معنى` : ''}</small></div>
+        <span class="badge ${tone}">${label}</span>
+        <button type="button" class="btn btn-sm btn-soft" data-analyze="${esc(t.table)}">${tplIc('spark')}إعادة التحليل الآلي</button>
+      </div>
+      ${semErrorHtml(t)}
+      <div style="margin-top:8px">${semTableHtml(t)}</div>
+    </article>`;
+  };
+
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.semantics.where)}</p>
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث</span><input type="search" id="tpladm-sem-q" value="${esc(f.q)}" placeholder="ابحث باسم الجدول أو العمود أو المعنى"></label>
+      ${tpladmSegmented(f.only, [['', 'كل الجداول'], ['missing', 'غير محلَّلة'], ['unknown', 'فيها أعمدة بلا معنى']], 'sem-only')}
+      <span class="muted"><span class="num">${data.tables.length.toLocaleString('en-US')}</span> جدول · <span class="num">${totalCols.toLocaleString('en-US')}</span> عمود · <span class="num">${unknownCols.toLocaleString('en-US')}</span> بلا معنى · <span class="num">${userCols.toLocaleString('en-US')}</span> مؤكّد منك</span>
+      <button type="button" class="btn btn-sm" id="tpladm-sem-reload">${tplIc('history')}تحديث</button>
+    </div>
+    <div id="tpladm-sem-status" class="sem-status hidden"></div>
+    <div class="cat-grid sem-grid">${tables.length ? tables.map(tableCard).join('') : `<div class="lib-empty">${data.tables.length ? 'لا توجد نتائج.' : 'لا توجد جداول في المشروع الحالي — ارفع ملفًا من «المصادر» أولًا.'}</div>`}</div>`;
+  tpladmBindSemanticsPane();
+}
+function tpladmSemStatus(text, tone) {
+  const box = el('tpladm-sem-status'); if (!box) return;
+  box.textContent = text; box.className = 'sem-status' + (text ? ` ${tone || ''}` : ' hidden');
+}
+function tpladmBindSemanticsPane() {
+  const f = TPLADM.filt.semantics;
+  let t;
+  el('tpladm-sem-q').addEventListener('input', e => { f.q = e.target.value; clearTimeout(t); t = setTimeout(() => tpladmSemanticsPane(), 150); });
+  el('tpladm-pane').querySelectorAll('[data-sem-only]').forEach(b => b.addEventListener('click', () => { f.only = b.dataset.semOnly; tpladmSemanticsPane(); }));
+  el('tpladm-sem-reload').addEventListener('click', async () => { TPLADM.semantics = null; dashGalFeasibility = null; await tpladmSemanticsPane(); });
+  bindSemTable(el('tpladm-pane'), TPLADM.semantics.tables, tpladmSemStatus);
+  el('tpladm-pane').querySelectorAll('[data-analyze]').forEach(btn => btn.addEventListener('click', async () => {
+    const table = btn.dataset.analyze; btn.disabled = true;
+    try {
+      const r = await semReanalyze(table, tpladmSemStatus); if (!r) return;
+      TPLADM.semantics = null;
+      await tpladmSemanticsPane();
+      tpladmSemStatus(r.error ? `تعذّر التحليل الآلي لـ${table}: ${r.error}` : `اكتمل تحليل ${table}. تأكيداتك السابقة بقيت كما هي.`, r.error ? 'bad' : 'ok');
+    } finally { btn.disabled = false; }
+  }));
+}
+el('tpladm-new-btn').addEventListener('click', () => {
+  if (TPLADM.kind === 'widget') tpladmOpenEditor('widget', null, true);
+  else if (TPLADM.kind === 'dashboard') tpladmOpenEditor('dashboard', null, true);
+});
+
+function tpladmSegmented(cur, opts, key) {
+  return `<div class="segmented" role="group" aria-label="الحالة">${opts.map(([v, t]) => `<button type="button" data-${key}="${v}" aria-pressed="${cur === v}">${t}</button>`).join('')}</div>`;
+}
+
+// ---------- قائمة "نماذج الشات" / "نماذج اللوحات" ----------
+function tpladmListPane(kind) {
+  const f = TPLADM.filt[kind];
+  const all = kind === 'widget' ? TPLADM.widgets : TPLADM.dashboards;
+  const cats = kind === 'widget' ? TPLADM_WIDGET_CATS : TPLADM_DASH_CATS;
+  const q = f.q.trim().toLowerCase();
+  const rows = all.filter(x => (!f.s || x.status === f.s) && (!f.c || x.category === f.c) &&
+    (!q || (x.title + ' ' + (x.description || '') + ' ' + (x.promptText || '')).toLowerCase().includes(q)));
+  const catName = c => { const m = cats.find(([k]) => k === c); return m ? m[1] : (c || '—'); };
+  const thumbOf = x => kind === 'widget'
+    ? `<span class="lib-thumb">${tplIc(x.icon || 'spark', 'icon')}</span>`
+    : `<span class="lib-thumb is-dash">${dashGalThumb(x)}</span>`;
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS[kind].where)}</p>
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث</span><input type="search" id="tpladm-q" value="${esc(f.q)}" placeholder="ابحث بالاسم أو داخل وصف الذكاء الاصطناعي"></label>
+      ${tpladmSegmented(f.s, TPLADM_STATUS_OPTS, 'st')}
+      <label class="sr-only" for="tpladm-cat">التصنيف</label>
+      <select id="tpladm-cat" class="select"><option value="">كل التصنيفات</option>${cats.map(([k, n]) => `<option value="${k}"${f.c === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+    </div>
+    <div class="dtable-wrap"><table class="dtable lib-table">
+      <thead><tr><th>النموذج</th><th>التصنيف</th><th>وصف الذكاء الاصطناعي</th><th>الحالة</th><th>الإصدار</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+      <tbody>${rows.map(x => `
+        <tr data-key="${esc(x.key)}">
+          <td><div class="lib-name">${thumbOf(x)}<div><strong>${esc(x.title)}${x.isCustom ? ' <span class="badge badge-blue">مضاف</span>' : x.isOverridden ? ' <span class="badge">معدّل</span>' : ''}</strong><span>${esc(x.description || '')}</span>${x.databoxRef ? `<span class="muted" style="display:block;font-size:11px">${tplIc('link', 'icon icon-sm')} مرجع التصميم (لا يظهر للعميل): ${esc(x.databoxRef)}</span>` : ''}</div></div></td>
+          <td><span class="badge">${esc(catName(x.category))}</span></td>
+          <td><p class="lib-prompt">${tpladmCodeVars(x.promptText)}</p></td>
+          <td>${tpladmStatusPill(x.status)}</td>
+          <td class="muted"><span class="num">v${x.version || 1}</span><span class="lib-date num">${x.updatedAt ? new Date(x.updatedAt).toLocaleDateString('ar-EG') : ''}</span></td>
+          <td><div class="row-actions">
+            <button class="btn btn-sm" type="button" data-act="edit">${tplIc('edit')}تعديل</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="dup" aria-label="نسخ كنموذج جديد" title="نسخ كنموذج جديد">${tplIc('layers')}</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="toggle" aria-label="${x.status === 'published' ? 'إيقاف' : 'نشر'}" title="${x.status === 'published' ? 'إيقاف' : 'نشر'}">${tplIc(x.status === 'published' ? 'pause' : 'play')}</button>
+          </div></td>
+        </tr>`).join('') || `<tr><td colspan="6"><div class="lib-empty">لا توجد نماذج مطابقة.</div></td></tr>`}</tbody>
+    </table></div>
+    <div class="table-foot"><span>عرض <span class="num">${rows.length}</span> من <span class="num">${all.length}</span></span></div>`;
+
+  const rerender = () => tpladmListPane(kind);
+  let t;
+  el('tpladm-q').addEventListener('input', e => { f.q = e.target.value; clearTimeout(t); t = setTimeout(rerender, 180); });
+  el('tpladm-pane').querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => { f.s = b.dataset.st; rerender(); }));
+  el('tpladm-cat').addEventListener('change', e => { f.c = e.target.value; rerender(); });
+
+  el('tpladm-pane').querySelectorAll('tr[data-key]').forEach(tr => {
+    const key = tr.dataset.key;
+    const item = () => all.find(x => x.key === key);
+    tr.querySelector('[data-act="edit"]').addEventListener('click', () => tpladmOpenEditor(kind, item()));
+    tr.querySelector('[data-act="dup"]').addEventListener('click', () => {
+      const src = item();
+      tpladmOpenEditor(kind, { ...src, title: src.title + ' (نسخة)', status: 'draft' }, true);
+    });
+    tr.querySelector('[data-act="toggle"]').addEventListener('click', () => tpladmToggleStatus(kind, item()));
+  });
+}
+
+async function tpladmToggleStatus(kind, item) {
+  const next = item.status === 'published' ? 'stopped' : 'published';
+  if (kind === 'widget' || kind === 'dashboard') {
+    const body = { title: item.title, description: item.description, icon: item.icon, category: item.category, sources: item.sources, widgets: item.widgets, promptText: item.promptText, status: next };
+    const res = await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(item.key)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { alert('تعذّر التحديث.'); return; }
+    tpladmToast(next === 'published' ? `تم نشر «${item.title}»` : `تم إيقاف «${item.title}» ولن يظهر للمستخدمين`);
+    await tpladmRefreshKind(kind);
+  } else if (kind === 'kpi') {
+    const res = await fetch(`/api/templates/admin/kpi/${item.index}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: item.promptText || '', status: next, table: item.table || '', sql: item.sql || '' }) });
+    if (!res.ok) { alert('تعذّر التحديث.'); return; }
+    tpladmToast(next === 'published' ? 'تم النشر' : 'تم الإيقاف');
+    await tpladmLoadKpiOverrides();
+  }
+  tpladmStats(); tpladmRender();
+}
+
+// ---------- مكتبة المؤشرات ----------
+function tpladmKpiTplCard() {
+  if (!KPI_LIB) return '';
+  return `<div class="kpi-tpl-card">
+    <div class="kt-head"><div><b>${tplIc('layers')}قوالب أنواع القياس</b><span>تُرسل لجيم مع أي مؤشر ليس له وصف مخصص، حسب نوع قياسه.</span></div></div>
+    <div class="row-actions" style="flex-wrap:wrap;margin-top:10px">
+      ${KPI_LIB.mtypes.map((n, i) => `<button type="button" class="btn btn-ghost btn-sm" data-edit-mt="${i}">${tplIc('edit')}${esc(n)}</button>`).join('')}
+    </div>
+  </div>`;
+}
+function tpladmKpiPane() {
+  if (!KPI_LIB) { el('tpladm-pane').innerHTML = `<div class="lib-empty">مكتبة المؤشرات غير متاحة.</div>`; return; }
+  const f = TPLADM.filt.kpi; f.v = f.v || 'cats';
+  const head = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.kpi.where)} المصدر: مكتبة Spider Strategies، والترجمة ونوع القياس من جيم.</p>
+    ${tpladmKpiTplCard()}
+    <div class="kv-switch">${tpladmSegmented(f.v, [['cats', 'حسب التصنيف'], ['list', 'كل المؤشرات']], 'kv')}</div>`;
+  el('tpladm-pane').innerHTML = head + (f.v === 'cats' ? tpladmKpiCatsViewHtml() : tpladmKpiListViewHtml());
+  el('tpladm-pane').querySelectorAll('[data-edit-mt]').forEach(b => b.addEventListener('click', () => {
+    const mt = +b.dataset.editMt;
+    const m = TPLADM.kpiMtypes.find(x => x.mtype === mt) || { mtype: mt, promptText: '', status: 'published', isOverridden: false };
+    tpladmOpenEditor('kpi_mtype', { key: String(mt), label: KPI_LIB.mtypes[mt], promptText: m.promptText, status: m.status, isOverridden: m.isOverridden });
+  }));
+  el('tpladm-pane').querySelectorAll('[data-kv]').forEach(b => b.addEventListener('click', () => { f.v = b.dataset.kv; tpladmKpiPane(); }));
+  (f.v === 'cats' ? tpladmBindKpiCats : tpladmBindKpiList)();
+}
+
+/* -- إيقاف/إظهار تصنيف أو مجموعة تصنيفات، مع «تراجع» -- */
+const TPLADM_KPI_GROUPS = [[0, 'الأقسام الوظيفية'], [1, 'القطاعات']];
+function tpladmKpiCatStats() {
+  const m = KPI_LIB.cats.map(() => ({ total: 0, ownOn: 0, custom: 0 }));
+  KPI_LIB.rows.forEach((r, i) => {
+    const c = m[r[0]]; c.total++;
+    if ((TPLADM.kpiOverrides[i]?.status || 'published') === 'published') c.ownOn++;
+    if (TPLADM.kpiOverrides[i]?.promptText) c.custom++;
+  });
+  return m;
+}
+// ملحوظة: الكتابة هنا لازم تتأكد من نجاحها فعليًا (res.ok) قبل ما نحدّث الحالة محليًا أو نعرض
+// توست نجاح — خطأ صامت هنا بالظبط هو اللي كان بيخلي التصنيف يرجع يظهر بعد إعادة تحميل الصفحة
+// (الواجهة كانت بتفترض النجاح وتحدّث TPLADM.kpiCatOff محليًا حتى لو فشل الطلب فعليًا).
+async function tpladmSetCats(ids, on) {
+  const prev = ids.map(i => [i, !TPLADM.kpiCatOff.has(i)]);
+  const changed = prev.filter(([, was]) => was !== on);
+  if (!changed.length) { tpladmToast(on ? 'كل التصنيفات المحددة ظاهرة بالفعل' : 'كل التصنيفات المحددة موقوفة بالفعل'); return; }
+  const indices = changed.map(p => p[0]);
+  const res = await fetch('/api/templates/admin/kpi-categories/bulk', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ indices, isOn: on }),
+  });
+  if (!res.ok) { alert('تعذّر حفظ التغيير على الخادم — حاول مرة أخرى.'); return; }
+  changed.forEach(([i]) => { on ? TPLADM.kpiCatOff.delete(i) : TPLADM.kpiCatOff.add(i); });
+  const n = changed.reduce((a, [i]) => a + KPI_LIB.rows.filter(r => r[0] === i).length, 0);
+  const what = changed.length === 1 ? `تصنيف «${KPI_LIB.cats[changed[0][0]][0]}»` : `${changed.length} تصنيفات`;
+  tpladmToast(on ? `تم إظهار ${what} · ${n.toLocaleString('en-US')} مؤشرًا` : `تم إيقاف ${what} · ${n.toLocaleString('en-US')} مؤشرًا لن يظهر للمستخدمين`,
+    async () => {
+      const undoRes = await fetch('/api/templates/admin/kpi-categories/bulk', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ indices, isOn: !on }),
+      });
+      if (!undoRes.ok) { alert('تعذّر التراجع على الخادم.'); return; }
+      changed.forEach(([i]) => { !on ? TPLADM.kpiCatOff.delete(i) : TPLADM.kpiCatOff.add(i); });
+      tpladmToast('تم التراجع'); tpladmStats(); tpladmRender();
+    });
+  tpladmStats(); tpladmRender();
+}
+
+function tpladmKpiCatsViewHtml() {
+  const f = TPLADM.filt.kpi, m = tpladmKpiCatStats(), qs = kpiNorm(f.cq || ''), cs = f.cs || '';
+  const groups = TPLADM_KPI_GROUPS.map(([g, title]) => {
+    const ids = KPI_LIB.cats.map((c, i) => i).filter(i => KPI_LIB.cats[i][2] === g);
+    const shown = ids.filter(i => (!qs || kpiNorm(KPI_LIB.cats[i][0] + ' ' + KPI_LIB.cats[i][1]).includes(qs)) &&
+      (!cs || (cs === 'on') === !TPLADM.kpiCatOff.has(i)));
+    const onN = ids.filter(i => !TPLADM.kpiCatOff.has(i)).length;
+    if (!shown.length) return '';
+    return `
+      <section class="cat-group" data-group="${g}">
+        <div class="cg-head">
+          <div><h3>${esc(title)}</h3><span><span class="num">${onN}</span> ظاهر من <span class="num">${ids.length}</span> · <span class="num">${ids.reduce((a, i) => a + m[i].total, 0).toLocaleString('en-US')}</span> مؤشرًا</span></div>
+          <div class="cg-actions">
+            <button class="btn btn-sm" type="button" data-grp-on="${g}"${onN === ids.length ? ' disabled' : ''}>${tplIc('play')}إظهار الكل</button>
+            <button class="btn btn-sm btn-ghost danger-txt" type="button" data-grp-off="${g}"${onN === 0 ? ' disabled' : ''}>${tplIc('pause')}إيقاف الكل</button>
+          </div>
+        </div>
+        <div class="cat-grid">${shown.map(i => {
+          const c = KPI_LIB.cats[i], on = !TPLADM.kpiCatOff.has(i), x = m[i], vis = on ? x.ownOn : 0;
+          return `
+          <article class="cat-card${on ? '' : ' is-off'}" data-cat="${i}">
+            <div class="cc-top">
+              <div class="cc-name"><b>${esc(c[0])}</b><small dir="ltr">${esc(c[1])}</small></div>
+              <label class="switch" title="${on ? 'إيقاف التصنيف' : 'إظهار التصنيف'}"><input type="checkbox" data-cat-toggle="${i}"${on ? ' checked' : ''} aria-label="إظهار تصنيف ${esc(c[0])} للمستخدمين"><span></span></label>
+            </div>
+            <div class="cc-bar" role="img" aria-label="${vis} ظاهر من ${x.total}"><i style="width:${x.total ? (vis / x.total * 100).toFixed(1) : 0}%"></i></div>
+            <div class="cc-meta">
+              <span><b class="num">${vis.toLocaleString('en-US')}</b> ظاهر من <span class="num">${x.total.toLocaleString('en-US')}</span></span>
+              ${on && x.total - x.ownOn ? `<span class="muted"><span class="num">${x.total - x.ownOn}</span> موقوف فرديًا</span>` : ''}
+              ${x.custom ? `<span class="badge badge-blue"><span class="num">${x.custom}</span> وصف مخصص</span>` : ''}
+            </div>
+            <div class="cc-foot">${on ? tpladmStatusPill('published') : `<span class="status off">موقوف — لا يظهر أي مؤشر منه</span>`}
+              <button class="btn btn-ghost btn-sm" type="button" data-cat-open="${i}">عرض المؤشرات ${tplIc('chev-left')}</button></div>
+          </article>`;
+        }).join('')}</div>
+      </section>`;
+  }).join('');
+  return `
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث في التصنيفات</span><input type="search" id="tpladm-cat-q" value="${esc(f.cq || '')}" placeholder="ابحث باسم التصنيف"></label>
+      ${tpladmSegmented(cs, [['', 'كل التصنيفات'], ['on', 'ظاهرة'], ['off', 'موقوفة']], 'cs')}
+    </div>
+    <p class="cat-note">${tplIc('info')}إيقاف التصنيف يخفي كل مؤشراته من المحادثة فورًا، ولا يغيّر حالة المؤشرات نفسها: عند إظهاره مرة أخرى يرجع كل مؤشر لحالته السابقة.</p>
+    ${groups || '<div class="lib-empty">لا توجد تصنيفات مطابقة.</div>'}`;
+}
+function tpladmBindKpiCats() {
+  const f = TPLADM.filt.kpi;
+  let t;
+  el('tpladm-cat-q').addEventListener('input', e => { f.cq = e.target.value; clearTimeout(t); t = setTimeout(() => tpladmKpiPane(), 150); });
+  el('tpladm-pane').querySelectorAll('[data-cs]').forEach(b => b.addEventListener('click', () => { f.cs = b.dataset.cs; tpladmKpiPane(); }));
+  el('tpladm-pane').querySelectorAll('[data-cat-toggle]').forEach(c => c.addEventListener('change', () => tpladmSetCats([+c.dataset.catToggle], c.checked)));
+  const grp = (g, on) => tpladmSetCats(KPI_LIB.cats.map((c, i) => i).filter(i => KPI_LIB.cats[i][2] === +g), on);
+  el('tpladm-pane').querySelectorAll('[data-grp-on]').forEach(b => b.addEventListener('click', () => grp(b.dataset.grpOn, true)));
+  el('tpladm-pane').querySelectorAll('[data-grp-off]').forEach(b => b.addEventListener('click', () => grp(b.dataset.grpOff, false)));
+  el('tpladm-pane').querySelectorAll('[data-cat-open]').forEach(b => b.addEventListener('click', () => {
+    Object.assign(f, { v: 'list', c: b.dataset.catOpen, q: '', s: '', m: '', p: 0 }); tpladmKpiPane();
+  }));
+}
+
+/* -- عرض كل المؤشرات -- */
+function tpladmKpiListViewHtml() {
+  const f = TPLADM.filt.kpi, PAGE = 25;
+  const qs = kpiNorm(f.q.trim()).split(/\s+/).filter(Boolean);
+  const hits = [];
+  KPI_LIB.rows.forEach((r, i) => {
+    if (f.c !== '' && r[0] !== +f.c) return;
+    if (f.m !== '' && r[4] !== +f.m) return;
+    const over = TPLADM.kpiOverrides[i], status = over?.status || 'published';
+    if (f.s === 'custom' ? !over?.promptText : f.s && status !== f.s) return;
+    if (qs.length) { const t = kpiNorm(r[2] + ' ' + r[3]); if (!qs.every(w => t.includes(w))) return; }
+    hits.push(i);
+  });
+  const pages = Math.max(1, Math.ceil(hits.length / PAGE));
+  f.p = Math.min(f.p, pages - 1);
+  const slice = hits.slice(f.p * PAGE, f.p * PAGE + PAGE);
+  const opt = (c, i) => `<option value="${i}"${f.c === String(i) ? ' selected' : ''}>${esc(c[0])}${TPLADM.kpiCatOff.has(i) ? ' (موقوف)' : ''}</option>`;
+  const sel = f.c !== '' ? +f.c : null, selOn = sel != null && !TPLADM.kpiCatOff.has(sel);
+
+  return `
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث في المؤشرات</span><input type="search" id="tpladm-kpi-q" value="${esc(f.q)}" placeholder="ابحث بالعربي أو English"></label>
+      ${tpladmSegmented(f.s, [['', 'الكل'], ['published', 'منشور'], ['stopped', 'موقوف'], ['custom', 'وصف مخصص']], 'st')}
+      <label class="sr-only" for="tpladm-kpi-cat">التصنيف</label>
+      <select id="tpladm-kpi-cat" class="select"><option value="">كل التصنيفات</option><optgroup label="الأقسام الوظيفية">${KPI_LIB.cats.map((c, i) => c[2] === 0 ? opt(c, i) : '').join('')}</optgroup><optgroup label="القطاعات">${KPI_LIB.cats.map((c, i) => c[2] === 1 ? opt(c, i) : '').join('')}</optgroup></select>
+      <label class="sr-only" for="tpladm-kpi-mt">نوع القياس</label>
+      <select id="tpladm-kpi-mt" class="select"><option value="">كل أنواع القياس</option>${KPI_LIB.mtypes.map((m, i) => `<option value="${i}"${f.m === String(i) ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select>
+    </div>
+    ${sel != null ? `
+    <div class="cat-banner${selOn ? '' : ' is-off'}">
+      <div><b>تصنيف «${esc(KPI_LIB.cats[sel][0])}»</b><span>${selOn ? 'ظاهر للمستخدمين. يمكنك إيقاف مؤشرات بعينها، أو إيقاف التصنيف كله.' : 'موقوف: لا يظهر أي مؤشر منه للمستخدمين، مهما كانت حالة المؤشر.'}</span></div>
+      <label class="switch"><input type="checkbox" data-cat-toggle="${sel}"${selOn ? ' checked' : ''} aria-label="إظهار تصنيف ${esc(KPI_LIB.cats[sel][0])} للمستخدمين"><span></span></label>
+    </div>` : ''}
+    <div class="dtable-wrap"><table class="dtable lib-table">
+      <thead><tr><th>المؤشر</th><th>التصنيف</th><th>نوع القياس</th><th>الوصف المرسل</th><th>الحالة</th><th><span class="sr-only">إجراءات</span></th></tr></thead>
+      <tbody>${slice.map(i => {
+        const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]], over = TPLADM.kpiOverrides[i];
+        const catOff = TPLADM.kpiCatOff.has(r[0]), own = over?.status || 'published';
+        return `<tr data-k="${i}"${catOff ? ' class="is-cat-off"' : ''}>
+          <td><div class="lib-kpi"><strong>${esc(r[2])}</strong><span dir="ltr">${esc(r[3])}</span></div></td>
+          <td class="muted">${esc(c[0])}</td>
+          <td><span class="badge">${esc(KPI_LIB.mtypes[r[4]])}</span></td>
+          <td>${over?.promptText ? `<span class="badge badge-blue">مخصص</span><p class="lib-prompt one">${tpladmCodeVars(over.promptText)}</p>` : '<span class="muted">قالب نوع القياس</span>'}</td>
+          <td>${catOff ? '<span class="status off">موقوف مع التصنيف</span>' : tpladmStatusPill(own)}</td>
+          <td><div class="row-actions">
+            <button class="btn btn-sm" type="button" data-act="edit">${tplIc('edit')}تعديل</button>
+            <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="toggle"${catOff ? ' disabled title="التصنيف كله موقوف — أظهِر التصنيف أولًا"' : ` title="${own === 'published' ? 'إيقاف' : 'نشر'}"`} aria-label="${own === 'published' ? 'إيقاف' : 'نشر'} المؤشر">${tplIc(own === 'published' ? 'pause' : 'play')}</button>
+          </div></td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="6"><div class="lib-empty">لا توجد مؤشرات مطابقة.</div></td></tr>`}</tbody>
+    </table></div>
+    <div class="table-foot"><span>عرض <span class="num">${hits.length ? (f.p * PAGE + 1).toLocaleString('en-US') + '–' + (f.p * PAGE + slice.length).toLocaleString('en-US') : 0}</span> من <span class="num">${hits.length.toLocaleString('en-US')}</span></span>
+      <div class="pager"><button type="button" data-pg="-1" ${f.p ? '' : 'disabled'} aria-label="السابق">السابق</button><button type="button" aria-current="true"><span class="num">${f.p + 1} / ${pages}</span></button><button type="button" data-pg="1" ${f.p < pages - 1 ? '' : 'disabled'} aria-label="التالي">التالي</button></div></div>`;
+}
+function tpladmBindKpiList() {
+  const f = TPLADM.filt.kpi;
+  const rerender = () => tpladmKpiPane();
+  let t;
+  el('tpladm-kpi-q').addEventListener('input', e => { f.q = e.target.value; f.p = 0; clearTimeout(t); t = setTimeout(rerender, 180); });
+  el('tpladm-pane').querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => { f.s = b.dataset.st; f.p = 0; rerender(); }));
+  el('tpladm-kpi-cat').addEventListener('change', e => { f.c = e.target.value; f.p = 0; rerender(); });
+  el('tpladm-kpi-mt').addEventListener('change', e => { f.m = e.target.value; f.p = 0; rerender(); });
+  el('tpladm-pane').querySelector('.cat-banner [data-cat-toggle]')?.addEventListener('change', e => tpladmSetCats([+e.target.dataset.catToggle], e.target.checked));
+  el('tpladm-pane').querySelectorAll('[data-pg]').forEach(b => b.addEventListener('click', () => { f.p += +b.dataset.pg; rerender(); el('tpladm-pane').scrollIntoView({ block: 'start', behavior: 'smooth' }); }));
+
+  el('tpladm-pane').querySelectorAll('tr[data-k]').forEach(tr => {
+    const i = +tr.dataset.k;
+    tr.querySelector('[data-act="edit"]').addEventListener('click', () => {
+      const r = KPI_LIB.rows[i], c = KPI_LIB.cats[r[0]], over = TPLADM.kpiOverrides[i];
+      const mt = TPLADM.kpiMtypes.find(x => x.mtype === r[4]);
+      const [defTable, defSql] = r[5] || ['', ''];
+      tpladmOpenEditor('kpi', {
+        key: String(i), index: i, nameAr: r[2], nameEn: r[3], catName: c[0], mtName: KPI_LIB.mtypes[r[4]],
+        mtPromptText: mt?.promptText || '', promptText: over?.promptText || '', status: over?.status || 'published',
+        hasOverrideRow: !!over,
+        table: over?.table || defTable, sql: over?.sql || defSql,
+      });
+    });
+    const toggleBtn = tr.querySelector('[data-act="toggle"]');
+    if (!toggleBtn.disabled) toggleBtn.addEventListener('click', () => {
+      const over = TPLADM.kpiOverrides[i];
+      tpladmToggleStatus('kpi', {
+        index: i, status: over?.status || 'published', promptText: over?.promptText || '',
+        table: over?.table || '', sql: over?.sql || '',
+      });
+    });
+  });
+}
+
+// ---------- مكتبة الحقول والجداول ----------
+function tpladmSchemaPane() {
+  const f = TPLADM.filt.schema;
+  const groups = {};
+  TPLADM.schemaRows.forEach(r => { (groups[r.conceptId] ||= []).push(r); });
+  const qs = kpiNorm((f.q || '').trim());
+  const conceptIds = Object.keys(groups)
+    .filter(cid => {
+      if (!qs) return true;
+      const g = groups[cid];
+      return kpiNorm(cid + ' ' + (g[0].label || '') + ' ' + g.map(r => r.name).join(' ')).includes(qs);
+    })
+    .sort((a, b) => a.localeCompare(b));
+
+  const rowHtml = r => `
+    <tr data-id="${esc(r.id)}">
+      <td><input type="text" data-f="name" value="${esc(r.name)}" dir="ltr"></td>
+      <td><input type="number" data-f="score" value="${r.score.toFixed(2)}" min="0" max="1" step="0.05" style="width:76px"></td>
+      <td>${r.source === 'learned' ? '<span class="badge badge-blue">تعلّم تلقائي</span>' : '<span class="badge">أساسي</span>'}</td>
+      <td><button type="button" class="icon-btn danger-txt" data-del="${esc(r.id)}" title="حذف">${tplIc('trash')}</button></td>
+    </tr>`;
+
+  const conceptCard = cid => {
+    const rows = groups[cid].slice().sort((a, b) => b.score - a.score);
+    const first = rows[0];
+    const kindLabel = first.kind === 'table' ? 'جدول' : 'عمود';
+    const parentNote = first.parentTable ? ` — تحت جدول: <code dir="ltr">${esc(first.parentTable)}</code>` : '';
+    return `
+      <article class="cat-card" data-concept="${esc(cid)}">
+        <div class="cc-top">
+          <div class="cc-name"><b>${esc(first.label || cid)}</b><small dir="ltr">${esc(cid)}${parentNote}</small></div>
+          <span class="badge">${kindLabel}</span>
+        </div>
+        <table class="dtable" style="margin-top:8px">
+          <thead><tr><th>الاسم المرشّح</th><th>Score</th><th>المصدر</th><th><span class="sr-only">حذف</span></th></tr></thead>
+          <tbody>
+            ${rows.map(rowHtml).join('')}
+            <tr class="schema-add-row" data-add-concept="${esc(cid)}" data-kind="${esc(first.kind)}" data-parent="${esc(first.parentTable || '')}" data-label="${esc(first.label || '')}">
+              <td><input type="text" data-add-name placeholder="اسم مرشّح جديد" dir="ltr"></td>
+              <td><input type="number" data-add-score value="0.50" min="0" max="1" step="0.05" style="width:76px"></td>
+              <td colspan="2"><button type="button" class="btn btn-sm" data-add-btn>${tplIc('plus')}إضافة</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </article>`;
+  };
+
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}${esc(TPLADM_KINDS.schema.where)}</p>
+    <div class="toolbar lib-toolbar">
+      <label class="search">${tplIc('search')}<span class="sr-only">بحث</span><input type="search" id="tpladm-schema-q" value="${esc(f.q)}" placeholder="ابحث باسم الجدول/العمود أو أي اسم مرشّح"></label>
+      <span class="muted"><span class="num">${conceptIds.length.toLocaleString('en-US')}</span> مفهوم · <span class="num">${TPLADM.schemaRows.length.toLocaleString('en-US')}</span> اسم مرشّح</span>
+    </div>
+    <div class="cat-grid">${conceptIds.length ? conceptIds.map(conceptCard).join('') : '<div class="lib-empty">لا توجد نتائج.</div>'}</div>`;
+
+  tpladmBindSchemaPane();
+}
+
+function tpladmBindSchemaPane() {
+  const f = TPLADM.filt.schema;
+  let t;
+  el('tpladm-schema-q').addEventListener('input', e => { f.q = e.target.value; clearTimeout(t); t = setTimeout(() => tpladmSchemaPane(), 150); });
+
+  el('tpladm-pane').querySelectorAll('.dtable tbody tr[data-id]').forEach(row => {
+    const id = row.dataset.id;
+    const save = async () => {
+      const name = row.querySelector('[data-f="name"]').value.trim();
+      const score = Math.max(0, Math.min(1, +row.querySelector('[data-f="score"]').value || 0));
+      if (!name) return;
+      const r = TPLADM.schemaRows.find(x => x.id === id);
+      const res = await fetch(`/api/schema-aliases/${encodeURIComponent(id)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, score, label: r?.label || '' }),
+      });
+      if (!res.ok) { alert('تعذّر الحفظ على الخادم.'); return; }
+      if (r) { r.name = name; r.score = score; }
+      tpladmToast('تم الحفظ');
+    };
+    row.querySelector('[data-f="name"]').addEventListener('change', save);
+    row.querySelector('[data-f="score"]').addEventListener('change', save);
+  });
+
+  el('tpladm-pane').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.del;
+    const removed = TPLADM.schemaRows.find(x => x.id === id);
+    const res = await fetch(`/api/schema-aliases/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) { alert('تعذّر الحذف على الخادم.'); return; }
+    TPLADM.schemaRows = TPLADM.schemaRows.filter(x => x.id !== id);
+    tpladmStats(); tpladmTabs(); tpladmSchemaPane();
+    if (removed) tpladmToast('تم الحذف', async () => {
+      const addRes = await fetch('/api/schema-aliases', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conceptId: removed.conceptId, kind: removed.kind, parentTable: removed.parentTable,
+          label: removed.label, name: removed.name, score: removed.score,
+        }),
+      });
+      if (!addRes.ok) { alert('تعذّر التراجع على الخادم.'); return; }
+      TPLADM.schemaRows.push(await addRes.json());
+      tpladmStats(); tpladmTabs(); tpladmSchemaPane();
+    });
+  }));
+
+  el('tpladm-pane').querySelectorAll('[data-add-btn]').forEach(btn => btn.addEventListener('click', async () => {
+    const row = btn.closest('[data-add-concept]');
+    const name = row.querySelector('[data-add-name]').value.trim();
+    const score = Math.max(0, Math.min(1, +row.querySelector('[data-add-score]').value || 0.5));
+    if (!name) return;
+    const res = await fetch('/api/schema-aliases', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conceptId: row.dataset.addConcept, kind: row.dataset.kind, parentTable: row.dataset.parent || null,
+        label: row.dataset.label, name, score,
+      }),
+    });
+    if (!res.ok) { alert('تعذّر الإضافة على الخادم.'); return; }
+    TPLADM.schemaRows.push(await res.json());
+    tpladmStats(); tpladmTabs(); tpladmSchemaPane();
+    tpladmToast('تمت الإضافة');
+  }));
+}
+
+// ---------- القواعد العامة ----------
+async function tpladmRulesPane() {
+  const r = await fetch('/api/templates/admin/rules');
+  const data = r.ok ? await r.json() : { promptText: '' };
+  TPLADM_RULES_CACHE = data.promptText || '';
+  el('tpladm-pane').innerHTML = `
+    <p class="lib-where">${tplIc('info')}تُرسل هذه القواعد لجيم قبل وصف أي نموذج (عنصر أو لوحة أو مؤشر)، في كل المنظمات.</p>
+    <div class="rules-grid">
+      <div class="field">
+        <label for="rulesTa">القواعد العامة المرسلة مع كل نموذج</label>
+        ${tpladmVarChips('rules')}
+        <textarea id="rulesTa" class="prompt-box" rows="12" dir="rtl">${esc(data.promptText || '')}</textarea>
+        <div class="prompt-meta"><span class="pm-warn" hidden></span><span><span class="num pm-count">${(data.promptText || '').length.toLocaleString('en-US')}</span> حرف</span></div>
+        <div class="row-actions" style="margin-top:10px"><button class="btn btn-primary" type="button" id="tpladm-rules-save">${tplIc('check')}حفظ القواعد</button><span class="muted" id="tpladm-rules-meta">${data.updatedAt ? `آخر تعديل: ${new Date(data.updatedAt).toLocaleDateString('ar-EG')}${data.updatedByName ? ' · ' + esc(data.updatedByName) : ''}` : ''}</span></div>
+      </div>
+      <div class="field">
+        <label>المتغيرات المتاحة</label>
+        <div class="dtable-wrap"><table class="dtable vars-table"><thead><tr><th>المتغير</th><th>المعنى</th><th>يُستخدم في</th></tr></thead><tbody>
+          ${TPLADM_VARS.map(v => `<tr><td><code dir="ltr">{{${v.key}}}</code></td><td>${esc(v.label)}<span class="muted vs">مثال: ${esc(v.sample)}</span></td><td><span class="badge">${{ all: 'الكل', dashboard: 'اللوحات', kpi: 'المؤشرات' }[v.scope]}</span></td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+    </div>`;
+  const ta = el('rulesTa');
+  const meta = () => {
+    const bad = tpladmUnknownVars(ta.value, 'rules');
+    const w = document.querySelector('#tpladm-pane .pm-warn');
+    document.querySelector('#tpladm-pane .pm-count').textContent = ta.value.length.toLocaleString('en-US');
+    w.hidden = !bad.length;
+    w.innerHTML = bad.length ? `${tplIc('info')}متغير غير معروف: <code dir="ltr">${bad.map(b => `{{${esc(b)}}}`).join('، ')}</code>` : '';
+  };
+  ta.addEventListener('input', meta);
+  el('tpladm-pane').querySelectorAll('[data-var]').forEach(b => b.addEventListener('click', () => {
+    const a = ta.selectionStart ?? ta.value.length, z = ta.selectionEnd ?? a, t = `{{${b.dataset.var}}}`;
+    ta.value = ta.value.slice(0, a) + t + ta.value.slice(z); ta.focus(); meta();
+  }));
+  el('tpladm-rules-save').addEventListener('click', async () => {
+    const promptText = ta.value.trim();
+    const unknown = tpladmUnknownVars(promptText, 'rules');
+    if (unknown.length) { alert('متغيرات غير معروفة: ' + unknown.join(', ')); return; }
+    const res = await fetch('/api/templates/admin/rules', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText, status: 'published' }) });
+    if (!res.ok) { const d = await res.json().catch(() => null); alert(d?.error || 'تعذّر الحفظ.'); return; }
+    TPLADM_RULES_CACHE = promptText;
+    tpladmToast('تم حفظ القواعد العامة — تُطبّق على كل الطلبات الجديدة');
+    tpladmRulesPane();
+  });
+  meta();
+}
+
+// ---------- المحرِّر (نافذة واحدة لكل الأنواع) ----------
+function tpladmPromptField(val, kind, hint) {
+  return `<div class="field ed-prompt">
+    <label for="ed-prompt">وصف الذكاء الاصطناعي <span class="req" aria-hidden="true">*</span></label>
+    <span class="hint">${hint}</span>
+    ${tpladmVarChips(kind)}
+    <textarea id="ed-prompt" class="prompt-box" rows="9" dir="rtl">${esc(val || '')}</textarea>
+    <div class="prompt-meta"><span class="pm-warn" hidden></span><span><span class="num pm-count">0</span> حرف</span></div>
+  </div>`;
+}
+function tpladmStatusField(s) {
+  return `<div class="field"><span class="flabel" id="ed-st-l">الحالة</span><div class="segmented" role="group" aria-labelledby="ed-st-l">${Object.entries(TPLADM_STATUS).map(([k, v]) => `<button type="button" data-status="${k}" aria-pressed="${(s || 'published') === k}">${v[0]}</button>`).join('')}</div><span class="hint">المسودة والموقوف لا يظهران للمستخدمين.</span></div>`;
+}
+function tpladmEdSide() {
+  return `<aside class="ed-side" aria-label="معاينة">
+    <div class="ed-thumb" id="ed-thumb"></div>
+    <div class="ed-out-head"><h3>النص النهائي المرسل لجيم</h3><label class="check sm"><input type="checkbox" id="ed-withrules">مع القواعد العامة</label></div>
+    <div class="prompt-out" id="ed-out" aria-live="polite"></div>
+    <p class="ed-note">${tplIc('info')}القيم المميّزة مُعوّضة بقيم تجريبية توضيحية. في الاستخدام الفعلي تُستبدل بقيم مشروع المستخدم الحقيقية.</p>
+  </aside>`;
+}
+// مش كل نموذج لوحة بقى بالضبط 4 مؤشرات + 6 رسوم: النماذج الـ55 المنقولة من كتالوج لوحات
+// Power BI المرجعي (BuiltinDashboardsGenerated.cs) متفاوتة العدد والتركيب (8 لـ40 عنصر). فبدل
+// افتراض إن أول 4 عناصر مؤشرات دايمًا، كل صف بقى له اختيار نوع حر (بما فيه "مؤشر رقمي").
+// صف كل عنصر لوحة: سطر رئيسي (نوع/عنوان/تعليمات) + سطر ثانٍ لجملة الـselect المتوقعة
+// (الجدول المفترض وجملة SELECT) — مسودة أولى مولّدة آليًا (انظر BuiltinDashboardWidgetSpec)،
+// معروضة هنا وقابلة للتعديل تمهيدًا لمرحلة لاحقة يعتمد فيها جيم عليها بدل تأليف SQL من الصفر.
+function tpladmWidgetRows(ws) {
+  return ws.map((w, i) => `
+    <li class="dw-row" data-i="${i}">
+      <div class="dw-row-main">
+        <span class="dw-n num">${i + 1}</span>
+        <span class="dw-ic">${DASH_GAL_GLYPH[w.type] || DASH_GAL_GLYPH.kpi}</span>
+        <label class="sr-only" for="dw-t${i}">نوع العنصر ${i + 1}</label><select id="dw-t${i}" class="select dw-type" data-k="type">${TPLADM_WIDGET_TYPES.map(([k, n]) => `<option value="${k}"${k === w.type ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+        <label class="sr-only" for="dw-n${i}">عنوان العنصر ${i + 1}</label><input id="dw-n${i}" data-k="title" value="${esc(w.title || '')}" placeholder="مثال: إجمالي المبيعات">
+        <label class="sr-only" for="dw-p${i}">تعليمات إضافية للعنصر ${i + 1}</label><input id="dw-p${i}" data-k="prompt" class="dw-prompt" value="${esc(w.prompt || '')}" placeholder="تعليمات إضافية لجيم (اختياري)">
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" data-dw-del aria-label="حذف العنصر ${i + 1}" title="حذف العنصر">${tplIc('x')}</button>
+      </div>
+      <div class="dw-row-query">
+        <label class="sr-only" for="dw-tb${i}">الجدول المفترض للعنصر ${i + 1}</label><input id="dw-tb${i}" data-k="table" class="dw-table" value="${esc(w.table || '')}" placeholder="الجدول المفترض، مثال: staging_budget">
+        <label class="sr-only" for="dw-sq${i}">جملة SELECT المفترضة للعنصر ${i + 1}</label><input id="dw-sq${i}" data-k="sql" class="dw-sql" dir="ltr" value="${esc(w.sql || '')}" placeholder="SELECT ... FROM ... GROUP BY ...">
+      </div>
+    </li>`).join('');
+}
+
+function tpladmOpenEditor(kind, item, isNew) {
+  TPLADM_ED = { kind, isNew: !!isNew, key: isNew ? null : item?.key, orig: item };
+  let title, sub, formHtml, sideHtml = tpladmEdSide();
+
+  if (kind === 'widget') {
+    const x = item || { title: '', description: '', icon: 'spark', category: 'kpi', promptText: '', status: 'draft' };
+    title = isNew ? 'عنصر جديد' : `تعديل: ${x.title}`; sub = TPLADM_KINDS.widget.where;
+    formHtml = `
+      <div class="ed-row">
+        <div class="field"><label for="ed-title">الاسم الظاهر للمستخدم</label><input id="ed-title" value="${esc(x.title)}" required placeholder="مثال: المبيعات حسب المنطقة"></div>
+        <div class="field"><label for="ed-cat">التصنيف</label><select id="ed-cat" class="select">${TPLADM_WIDGET_CATS.map(([c, n]) => `<option value="${c}"${c === x.category ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label for="ed-desc">الوصف المختصر (يظهر تحت الاسم)</label><input id="ed-desc" value="${esc(x.description || '')}" placeholder="جملة واحدة توضح ما يعرضه العنصر"></div>
+      <div class="field"><label for="ed-icon">الأيقونة</label><select id="ed-icon" class="select">${TPLADM_WIDGET_ICONS.map(i => `<option value="${i}"${i === (x.icon || 'spark') ? ' selected' : ''}>${esc(i)}</option>`).join('')}</select></div>
+      ${tpladmPromptField(x.promptText, 'widget', 'يُرسل لجيم عند ضغط المستخدم على العنصر. اكتب ما يحسبه العنصر، ومن أين، وكيف يُعرض، وماذا يفعل إذا نقصت البيانات.')}
+      ${tpladmStatusField(x.status)}`;
+  } else if (kind === 'dashboard') {
+    const x = item || { title: '', description: '', category: 'sales', sources: [], widgets: tpladmBlankWidgets(), layout: 'a', promptText: 'ابنِ لوحة «» بالعناصر التالية:\n{{widgets}}', status: 'draft' };
+    const widgets = (x.widgets && x.widgets.length) ? x.widgets.map(w => ({ ...w })) : tpladmBlankWidgets();
+    title = isNew ? 'نموذج لوحة جديد' : `تعديل: ${x.title}`; sub = TPLADM_KINDS.dashboard.where;
+    formHtml = `
+      <div class="ed-row">
+        <div class="field"><label for="ed-title">اسم النموذج</label><input id="ed-title" value="${esc(x.title)}" required placeholder="مثال: أداء الفروع"></div>
+        <div class="field"><label for="ed-cat">التصنيف</label><select id="ed-cat" class="select">${TPLADM_DASH_CATS.map(([c, n]) => `<option value="${c}"${c === x.category ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label for="ed-desc">الوصف (يظهر في المعرض)</label><input id="ed-desc" value="${esc(x.description || '')}" placeholder="لمن هذه اللوحة وماذا تجيب عنه"></div>
+      <div class="ed-row">
+        <div class="field"><label for="ed-sources">المصادر المطلوبة</label><input id="ed-sources" value="${esc((x.sources || []).join('، '))}" placeholder="افصل بينها بفاصلة"><span class="hint">تظهر للمستخدم كتلميح فقط.</span></div>
+        <div class="field"><label for="ed-layout">التوزيع (شكل المصغّرة)</label><select id="ed-layout" class="select">${['a', 'b', 'c', 'd'].map((l, i) => `<option value="${l}"${l === (x.layout || 'a') ? ' selected' : ''}>توزيع ${['أ', 'ب', 'ج', 'د'][i]}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><span class="flabel">عناصر اللوحة <span class="muted" style="font-weight:300">· <span class="num" id="ed-dw-count">${widgets.length}</span> عنصر — اختر نوع كل عنصر وعنوانه، وتحت كل عنصر جملة الـselect المفترضة (مسودة أولى قابلة للتعديل، مش استعلامًا فعليًا بعد)</span></span><ol class="dw-list" id="ed-dw-list">${tpladmWidgetRows(widgets)}</ol>
+        <button class="btn btn-ghost btn-sm" type="button" id="ed-dw-add" style="align-self:flex-start;margin-top:8px">${tplIc('plus')}إضافة عنصر</button></div>
+      ${tpladmPromptField(x.promptText, 'dashboard', 'يُرسل لجيم عند اختيار النموذج. استخدم <code dir="ltr">{{widgets}}</code> ليُدرج جيم قائمة العناصر وتعليماتها تلقائيًا.')}
+      ${tpladmStatusField(x.status)}`;
+  } else if (kind === 'kpi') {
+    const x = item;
+    title = `تعديل: ${x.nameAr}`; sub = TPLADM_KINDS.kpi.where;
+    formHtml = `
+      <div class="ed-row">
+        <div class="field"><span class="flabel">اسم المؤشر</span><p class="muted" style="margin:0">${esc(x.nameAr)} <span dir="ltr">(${esc(x.nameEn)})</span></p></div>
+        <div class="field"><span class="flabel">التصنيف ونوع القياس</span><p class="muted" style="margin:0">${esc(x.catName)} · ${esc(x.mtName)}</p></div>
+      </div>
+      <div class="field"><span class="flabel" id="ed-pm-l">مصدر الوصف</span><div class="segmented" role="group" aria-labelledby="ed-pm-l"><button type="button" data-pmode="tpl" aria-pressed="${!x.promptText}">قالب نوع القياس</button><button type="button" data-pmode="custom" aria-pressed="${!!x.promptText}">وصف مخصص لهذا المؤشر</button></div></div>
+      ${tpladmPromptField(x.promptText || x.mtPromptText, 'kpi', 'عند اختيار «قالب نوع القياس» يُستخدم القالب كما هو. اختر «وصف مخصص» لكتابة طريقة حساب أدق لهذا المؤشر.')}
+      <div class="ed-row">
+        <div class="field"><label for="ed-kpi-table">الجدول المفترض</label><input id="ed-kpi-table" value="${esc(x.table || '')}" placeholder="مثال: staging_budget"></div>
+        <div class="field"><label for="ed-kpi-sql">جملة SELECT المفترضة</label><input id="ed-kpi-sql" dir="ltr" value="${esc(x.sql || '')}" placeholder="SELECT ... FROM ... GROUP BY ..."></div>
+      </div>
+      <p class="hint">مسودة أولى مولّدة آليًا من اسم المؤشر — جدول وأعمدة افتراضية، مش استعلامًا فعليًا يُنفَّذ كما هو حاليًا. عدّلها لتقريبها من بياناتك الحقيقية.</p>
+      ${tpladmStatusField(x.status)}`;
+  } else if (kind === 'kpi_mtype') {
+    const x = item;
+    title = `قالب نوع القياس: ${x.label}`; sub = `يُطبّق على كل مؤشرات «${x.label}» التي ليس لها وصف مخصص.`;
+    formHtml = `${tpladmPromptField(x.promptText, 'kpi_mtype', 'استخدم متغيرات المؤشر ليصبح الوصف خاصًا بكل مؤشر تلقائيًا.')}${tpladmStatusField(x.status)}`;
+  }
+
+  const canRevert = (kind === 'widget' || kind === 'dashboard') ? !!(item && item.isOverridden && !item.isCustom)
+    : kind === 'kpi_mtype' ? !!(item && item.isOverridden)
+      : kind === 'kpi' ? !!(item && item.hasOverrideRow) : false;
+  const canDelete = (kind === 'widget' || kind === 'dashboard') && !!(item && item.isCustom);
+
+  el('tpladm-editor-box').innerHTML = `
+    <form id="tpladm-ed-form" class="ed" novalidate>
+      <div class="modal-head">
+        <div><span class="badge">${esc(TPLADM_KINDS[kind]?.one || '')}${!isNew && item?.version ? ` · <span class="num">v${item.version}</span>` : ''}</span><h2 id="tpladm-ed-title">${esc(title)}</h2><p>${esc(sub)}</p></div>
+        <button class="btn btn-ghost btn-icon btn-sm" type="button" data-close aria-label="إغلاق">${tplIc('x')}</button>
+      </div>
+      <div class="ed-body"><div class="ed-form">${formHtml}</div>${sideHtml}</div>
+      <div class="modal-foot">
+        ${canDelete ? `<button class="btn btn-ghost danger-txt" type="button" data-del>${tplIc('trash')}حذف النموذج</button>` : ''}
+        ${canRevert ? `<button class="btn btn-ghost" type="button" data-revert>${tplIc('history')}استعادة الأصل</button>` : ''}
+        <span class="note ed-err" role="alert"></span>
+        <button class="btn btn-ghost" type="button" data-close>إلغاء</button>
+        <button class="btn btn-primary" type="submit">${tplIc('check')}${isNew ? 'إضافة النموذج' : 'حفظ التغييرات'}</button>
+      </div>
+    </form>`;
+  el('tpladm-editor-modal').classList.remove('hidden');
+  tpladmWireEditor();
+}
+
+function tpladmReadForm() {
+  const kind = TPLADM_ED.kind;
+  const v = id => el(id)?.value?.trim() ?? '';
+  const status = document.querySelector('#tpladm-ed-form [data-status][aria-pressed="true"]')?.dataset.status || 'published';
+  const promptText = el('ed-prompt')?.value.trim() || '';
+  if (kind === 'widget') return { title: v('ed-title'), description: v('ed-desc'), icon: el('ed-icon')?.value, category: el('ed-cat')?.value, promptText, status };
+  if (kind === 'dashboard') {
+    const widgets = [...document.querySelectorAll('#ed-dw-list .dw-row')].map(row => ({
+      type: row.querySelector('[data-k=type]').value,
+      title: row.querySelector('[data-k=title]').value.trim(),
+      prompt: row.querySelector('[data-k=prompt]').value.trim(),
+      table: row.querySelector('[data-k=table]').value.trim(),
+      sql: row.querySelector('[data-k=sql]').value.trim(),
+    }));
+    return { title: v('ed-title'), description: v('ed-desc'), category: el('ed-cat')?.value, sources: v('ed-sources').split(/[،,]/).map(s => s.trim()).filter(Boolean), layout: el('ed-layout')?.value, widgets, promptText, status };
+  }
+  if (kind === 'kpi') {
+    const custom = document.querySelector('[data-pmode="custom"]')?.getAttribute('aria-pressed') === 'true';
+    return {
+      promptText: custom ? promptText : '', status,
+      table: el('ed-kpi-table')?.value.trim() || '', sql: el('ed-kpi-sql')?.value.trim() || '',
+    };
+  }
+  return { promptText, status }; // kpi_mtype
+}
+
+function tpladmPreview() {
+  if (!TPLADM_ED) return;
+  const kind = TPLADM_ED.kind, x = tpladmReadForm();
+  let text = x.promptText, extra = {};
+  if (kind === 'dashboard') extra.widgets = (x.widgets || []).map((w, i) => `${i + 1}) ${w.title || '—'}${w.prompt ? ' — ' + w.prompt : ''}`).join('\n');
+  if (kind === 'kpi' || kind === 'kpi_mtype') {
+    const o = TPLADM_ED.orig;
+    extra = { kpi_name: o.nameAr || 'نسبة رضا العملاء', kpi_name_en: o.nameEn || 'Customer satisfaction rate', category: o.catName || 'خدمة العملاء', measure_type: o.mtName || o.label || 'نسبة مئوية' };
+    if (kind === 'kpi' && !x.promptText) text = o.mtPromptText || '';
+  }
+  const withRules = el('ed-withrules')?.checked;
+  const rulesHtml = withRules && TPLADM_RULES_CACHE ? `<div class="po-rules">${tpladmFillHtml(TPLADM_RULES_CACHE, kind, extra)}</div>` : '';
+  const out = el('ed-out');
+  if (out) out.innerHTML = rulesHtml + `<div>${tpladmFillHtml(text, kind, extra) || '<span class="muted">اكتب الوصف ليظهر هنا…</span>'}</div>`;
+  const th = el('ed-thumb');
+  if (!th) return;
+  if (kind === 'widget') th.innerHTML = `<div class="et-w"><span class="lib-thumb">${tplIc(x.icon || 'spark', 'icon')}</span><b>${esc(x.title) || 'اسم العنصر'}</b><small>${esc(x.description) || 'الوصف المختصر'}</small></div><span class="et-cap">كما يظهر في تبويب «النماذج»</span>`;
+  else if (kind === 'dashboard') th.innerHTML = `${dashGalThumb({ widgets: x.widgets, layout: x.layout })}<span class="et-cap">${esc(x.title) || 'اسم النموذج'} · ${(x.widgets ? x.widgets.length : 0).toLocaleString('en-US')} عنصر</span>`;
+  else { const o = TPLADM_ED.orig; th.innerHTML = `<div class="et-k"><b>${esc(o.nameAr || o.label || 'اسم المؤشر')}</b>${o.nameEn ? `<small dir="ltr">${esc(o.nameEn)}</small>` : ''}<span class="badge">${esc(o.mtName || o.label || '')}</span></div>`; }
+}
+
+function tpladmWireEditor() {
+  const form = el('tpladm-ed-form'), ta = el('ed-prompt');
+  const meta = () => {
+    const bad = tpladmUnknownVars(ta.value, TPLADM_ED.kind);
+    const w = form.querySelector('.pm-warn');
+    form.querySelector('.pm-count').textContent = ta.value.length.toLocaleString('en-US');
+    w.hidden = !bad.length;
+    w.innerHTML = bad.length ? `${tplIc('info')}متغير غير معروف: <code dir="ltr">${bad.map(b => `{{${esc(b)}}}`).join('، ')}</code>` : '';
+    tpladmPreview();
+  };
+  ta.addEventListener('input', meta);
+  form.querySelectorAll('[data-var]').forEach(b => b.addEventListener('click', () => {
+    const a = ta.selectionStart ?? ta.value.length, z = ta.selectionEnd ?? a, t = `{{${b.dataset.var}}}`;
+    if (ta.setRangeText) ta.setRangeText(t, a, z, 'end'); else ta.value = ta.value.slice(0, a) + t + ta.value.slice(z);
+    ta.focus(); meta();
+  }));
+  form.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => el('tpladm-editor-modal').classList.add('hidden')));
+  form.addEventListener('input', tpladmPreview);
+  form.addEventListener('change', tpladmPreview);
+  form.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', () => {
+    form.querySelectorAll('[data-status]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    tpladmPreview();
+  }));
+
+  const pm = form.querySelectorAll('[data-pmode]');
+  if (pm.length) {
+    const setMode = custom => {
+      pm.forEach(b => b.setAttribute('aria-pressed', String((b.dataset.pmode === 'custom') === custom)));
+      ta.readOnly = !custom; ta.classList.toggle('is-ro', !custom);
+      if (!custom) ta.value = TPLADM_ED.orig.mtPromptText || '';
+      const chips = form.querySelector('.ed-prompt .var-chips'); if (chips) chips.style.display = custom ? '' : 'none';
+      meta();
+    };
+    pm.forEach(b => b.addEventListener('click', () => setMode(b.dataset.pmode === 'custom')));
+    setMode(!!TPLADM_ED.orig.promptText);
+  }
+
+  const list = el('ed-dw-list');
+  if (list) {
+    list.addEventListener('change', e => {
+      if (e.target.dataset.k === 'type') e.target.closest('.dw-row').querySelector('.dw-ic').innerHTML = DASH_GAL_GLYPH[e.target.value] || '';
+      tpladmPreview();
+    });
+    list.addEventListener('click', e => {
+      const del = e.target.closest('[data-dw-del]');
+      if (!del) return;
+      del.closest('.dw-row').remove();
+      list.querySelectorAll('.dw-row').forEach((row, i) => { row.dataset.i = i; row.querySelector('.dw-n').textContent = i + 1; });
+      const c = el('ed-dw-count'); if (c) c.textContent = list.querySelectorAll('.dw-row').length;
+      tpladmPreview();
+    });
+    el('ed-dw-add')?.addEventListener('click', () => {
+      const i = list.querySelectorAll('.dw-row').length;
+      list.insertAdjacentHTML('beforeend', tpladmWidgetRows([{ type: 'kpi', title: '', prompt: '' }]).replace('data-i="0"', `data-i="${i}"`).replace(/dw-(t|n|p|tb|sq)0/g, `dw-$1${i}`));
+      const c = el('ed-dw-count'); if (c) c.textContent = list.querySelectorAll('.dw-row').length;
+      const lastRow = list.lastElementChild;
+      lastRow.querySelector('.dw-n').textContent = i + 1;
+      lastRow.querySelector('[data-k=title]').focus();
+      tpladmPreview();
+    });
+  }
+  el('ed-withrules')?.addEventListener('change', tpladmPreview);
+
+  form.querySelector('[data-del]')?.addEventListener('click', function () {
+    if (!this.dataset.sure) { this.dataset.sure = '1'; this.innerHTML = `${tplIc('trash')}اضغط مرة أخرى للتأكيد`; setTimeout(() => { if (this.isConnected) { delete this.dataset.sure; this.innerHTML = `${tplIc('trash')}حذف النموذج`; } }, 3000); return; }
+    tpladmDelete(TPLADM_ED.kind, TPLADM_ED.key);
+  });
+  form.querySelector('[data-revert]')?.addEventListener('click', () => tpladmRevert(TPLADM_ED.kind, TPLADM_ED.key));
+  form.addEventListener('submit', tpladmSubmitEditor);
+  meta();
+}
+
+async function tpladmSubmitEditor(e) {
+  e.preventDefault();
+  const kind = TPLADM_ED.kind, x = tpladmReadForm();
+  const form = el('tpladm-ed-form'), err = form.querySelector('.ed-err');
+  const bad = [];
+  if ((kind === 'widget' || kind === 'dashboard') && !x.title) bad.push('ed-title');
+  if (kind === 'dashboard') [...document.querySelectorAll('#ed-dw-list [data-k=title]')].forEach(i => { if (!i.value.trim()) bad.push(i.id); });
+  if (kind !== 'kpi' && !el('ed-prompt').value.trim()) bad.push('ed-prompt');
+  form.querySelectorAll('[aria-invalid]').forEach(i => i.removeAttribute('aria-invalid'));
+  if (bad.length) { bad.forEach(id => el(id)?.setAttribute('aria-invalid', 'true')); err.textContent = 'أكمل الحقول المطلوبة المميّزة باللون الأحمر.'; el(bad[0])?.focus(); return; }
+  const checkText = kind === 'kpi' ? x.promptText : el('ed-prompt').value.trim();
+  if (checkText && tpladmUnknownVars(checkText, kind).length) { err.textContent = 'في الوصف متغير غير معروف، صحّحه أو احذفه قبل الحفظ.'; el('ed-prompt').focus(); return; }
+
+  const btn = form.querySelector('[type=submit]');
+  btn.disabled = true;
+  try {
+    let res, data, msg;
+    if (kind === 'widget' || kind === 'dashboard') {
+      const body = { title: x.title, description: x.description, icon: x.icon, category: x.category, sources: x.sources, widgets: x.widgets, promptText: x.promptText, status: x.status };
+      res = TPLADM_ED.isNew
+        ? await fetch(`/api/templates/admin/${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        : await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(TPLADM_ED.key)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      data = await res.json().catch(() => null);
+      if (!res.ok) { err.textContent = data?.error || 'تعذّر الحفظ.'; return; }
+      msg = `${TPLADM_ED.isNew ? 'تمت إضافة' : 'تم حفظ'} «${x.title}»`;
+      await tpladmRefreshKind(kind);
+    } else if (kind === 'kpi') {
+      res = await fetch(`/api/templates/admin/kpi/${TPLADM_ED.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: x.promptText, status: x.status, table: x.table, sql: x.sql }) });
+      data = await res.json().catch(() => null);
+      if (!res.ok) { err.textContent = data?.error || 'تعذّر الحفظ.'; return; }
+      msg = `تم حفظ «${TPLADM_ED.orig.nameAr}»`;
+      await tpladmLoadKpiOverrides();
+    } else {
+      res = await fetch(`/api/templates/admin/kpi-mtypes/${TPLADM_ED.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ promptText: x.promptText, status: x.status }) });
+      data = await res.json().catch(() => null);
+      if (!res.ok) { err.textContent = data?.error || 'تعذّر الحفظ.'; return; }
+      msg = `تم حفظ قالب «${TPLADM_ED.orig.label}»`;
+      await tpladmLoadKpiMtypes();
+    }
+    el('tpladm-editor-modal').classList.add('hidden');
+    tpladmToast(msg);
+    tpladmStats(); tpladmRender();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function tpladmRevert(kind, key) {
+  if (!confirm('رجوع هذا العنصر للنص الأصلي؟ هيتم تجاهل كل تعديلاتك عليه.')) return;
+  const url = kind === 'kpi_mtype' ? `/api/templates/admin/kpi-mtypes/${key}/revert` : `/api/templates/admin/${kind}/${encodeURIComponent(key)}/revert`;
+  await fetch(url, { method: 'POST' });
+  el('tpladm-editor-modal').classList.add('hidden');
+  tpladmToast('تمت الاستعادة للأصل');
+  if (kind === 'widget' || kind === 'dashboard') await tpladmRefreshKind(kind);
+  else if (kind === 'kpi_mtype') await tpladmLoadKpiMtypes();
+  tpladmStats(); tpladmRender();
+}
+async function tpladmDelete(kind, key) {
+  if (!confirm('حذف هذا العنصر نهائيًا؟ لن يظهر للمستخدمين بعد الآن.')) return;
+  const res = await fetch(`/api/templates/admin/${kind}/${encodeURIComponent(key)}`, { method: 'DELETE' });
+  if (!res.ok) { alert('تعذّر الحذف.'); return; }
+  el('tpladm-editor-modal').classList.add('hidden');
+  tpladmToast('تم الحذف');
+  await tpladmRefreshKind(kind);
+  tpladmStats(); tpladmRender();
+}
+
+el('tpladm-editor-modal').addEventListener('click', e => { if (e.target.id === 'tpladm-editor-modal') el('tpladm-editor-modal').classList.add('hidden'); });
+
+
+const state_projects = { all: [], rolesByProject: {}, filter: 'all', search: '' };
+
+function openNewProjectModal() {
+  el('new-project-error').classList.add('hidden');
+  el('new-project-name').value = '';
+  el('new-project-modal').classList.remove('hidden');
+}
+
+async function loadProjects() {
+  const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
+  const res = await fetch('/api/projects');
+  if (!res.ok) { el('projects-grid').innerHTML = ''; return; }
+  const data = await res.json();
+  el('projects-org-name').textContent = data.organization.name;
+  state_projects.all = data.projects;
+
+  // صف الإحصاءات أعلى الصفحة — كله أرقام حقيقية من endpoints موجودة فعلًا، مفيش فيها أي
+  // رقم مُلفّق: المصادر والمشروعات من نفس الاستجابة، اللوحات من سجل المستخدم، والأعضاء من
+  // قائمة مستخدمي المنظمة (للمسؤول فقط، لأنها endpoint مقصورة عليه).
+  el('proj-stat-projects').textContent = data.projects.length;
+  el('proj-stat-users-box').classList.toggle('hidden', !isAdmin);
+  document.getElementById('projects-hero').classList.toggle('cols-3', !isAdmin);
+  document.getElementById('projects-hero').classList.toggle('cols-4', isAdmin);
+
+  const [sourcesRes, historyRes] = await Promise.all([
+    fetch('/api/sources').then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/api/history').then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  if (sourcesRes) {
+    const count = (sourcesRes.systems?.length || 0) + (sourcesRes.files?.length || 0) + (sourcesRes.integrations?.length || 0);
+    el('proj-stat-sources').textContent = count;
+  }
+  if (historyRes) el('proj-stat-dashboards').textContent = historyRes.length;
+
+  if (isAdmin) {
+    if (!state.users.length) await loadUsers();
+    el('proj-stat-users').textContent = state.users.length;
+    state_projects.rolesByProject = {};
+    await Promise.all(data.projects.map(async p => {
+      const r = await fetch(`/api/projects/${encodeURIComponent(p.id)}/roles`).then(r => r.ok ? r.json() : { roles: [] }).catch(() => ({ roles: [] }));
+      state_projects.rolesByProject[p.id] = r.roles || [];
+    }));
+  }
+
+  el('new-project-btn-top').classList.toggle('hidden', !isAdmin);
+  renderProjects();
+}
+
+// أول مشروع (الافتراضي، المُنشأ تلقائيًا مع المنظمة) هو الوحيد المرتبط فعليًا بمساحة
+// العمل الحالية (المحادثة/اللوحات/المصادر/الملفات) — أي مشروع تاني لسه مجرد سجل، لحد ما
+// يبقى في تبديل حقيقي بين المشاريع على مستوى البيانات (خطوة تالية، مش جزء من هذا البناء).
+function renderProjects() {
+  const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
+  const myId = state.currentUser?.id;
+  const liveProjectId = state_projects.all.length ? state_projects.all[0].id : null;
+
+  let projects = state_projects.all;
+  if (state_projects.search.trim()) {
+    const q = state_projects.search.trim().toLowerCase();
+    projects = projects.filter(p => p.name.toLowerCase().includes(q));
+  }
+  if (isAdmin && state_projects.filter === 'mine') {
+    projects = projects.filter(p => (state_projects.rolesByProject[p.id] || []).some(r => r.userId === myId));
+  }
+
+  const cards = projects.map(p => {
+    const isLive = p.id === liveProjectId;
+    const roles = state_projects.rolesByProject[p.id];
+    const myRole = roles?.find(r => r.userId === myId)?.role;
+    const badge = myRole ? `<span class="proj-role-badge">${esc(ROLE_LABELS[myRole] || myRole)}</span>` : '';
+    const statsLine = isAdmin && roles
+      ? `<div class="stats-line"><span class="s"><b>${roles.length}</b><span>أعضاء</span></span></div>`
+      : '';
+    return `
+    <a href="#" class="proj-card ${isLive ? 'is-live' : 'is-pending'}" data-project="${esc(p.id)}" data-live="${isLive}">
+      ${badge}
+      <div class="top">
+        <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg></span>
+        <div><h3>${esc(p.name)}</h3><p class="desc">${isLive ? 'مساحة العمل النشطة الآن' : 'سيُربط بمساحة عمل خاصة قريبًا'}</p></div>
+        ${isAdmin ? `<button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="أعضاء المشروع" aria-label="أعضاء المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button>` : ''}
+      </div>
+      ${statsLine}
+    </a>`;
+  }).join('');
+  const newCard = isAdmin
+    ? '<button type="button" class="new-card" id="new-project-card"><span class="plus"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><strong>مشروع جديد</strong></button>'
+    : '';
+  el('projects-grid').innerHTML = cards + newCard;
+  el('projects-empty-note').classList.toggle('hidden', projects.length > 0);
+  el('projects-toolbar').classList.toggle('hidden', state_projects.all.length === 0);
+  document.getElementById('projects-filter').classList.toggle('hidden', !isAdmin);
+
+  el('projects-grid').querySelectorAll('[data-project]').forEach(card =>
+    card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); }));
+  el('projects-grid').querySelectorAll('[data-members]').forEach(btn =>
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openProjectRolesModal(btn.dataset.members, btn.dataset.pname); }));
+  el('new-project-card')?.addEventListener('click', openNewProjectModal);
+}
+
+el('new-project-btn-top').addEventListener('click', openNewProjectModal);
+el('projects-search').addEventListener('input', e => { state_projects.search = e.target.value; renderProjects(); });
+document.getElementById('projects-filter').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-filter]');
+  if (!btn) return;
+  state_projects.filter = btn.dataset.filter;
+  document.getElementById('projects-filter').querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b === btn);
+    b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+  });
+  renderProjects();
+});
+
+el('new-project-cancel').addEventListener('click', () => el('new-project-modal').classList.add('hidden'));
+el('new-project-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = el('new-project-name').value.trim();
+  if (!name) return;
+  const btn = el('new-project-save');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'تعذّر إنشاء المشروع.');
+    el('new-project-modal').classList.add('hidden');
+    loadProjects();
+  } catch (err) {
+    el('new-project-error').textContent = err.message;
+    el('new-project-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ---------- project members (Owner/Editor/Viewer roles on a project) ----------
+async function openProjectRolesModal(projectId, projectName) {
+  el('project-roles-error').classList.add('hidden');
+  el('project-roles-id').value = projectId;
+  el('project-roles-name').textContent = projectName;
+  el('project-roles-list').innerHTML = '';
+  if (!state.users.length) await loadUsers();
+  el('project-role-add-user').innerHTML = state.users.length
+    ? state.users.filter(u => u.isActive).map(u => `<option value="${esc(u.id)}">${esc(u.displayName || u.username)}</option>`).join('')
+    : '<option value="">لا يوجد مستخدمون آخرون بعد</option>';
+  el('project-roles-modal').classList.remove('hidden');
+  await reloadProjectRolesModal();
+}
+
+async function reloadProjectRolesModal() {
+  const id = el('project-roles-id').value;
+  const res = await fetch(`/api/projects/${encodeURIComponent(id)}/roles`);
+  if (!res.ok) {
+    el('project-roles-error').textContent = 'تعذّر تحميل الأعضاء.';
+    el('project-roles-error').classList.remove('hidden');
+    return;
+  }
+  const data = await res.json();
+  el('project-roles-list').innerHTML = data.roles.length ? data.roles.map(r => `
+      <div class="role-row">
+        <span class="name">${esc(r.displayName)} — ${ROLE_LABELS[r.role] || r.role}</span>
+        <button type="button" class="remove-role-btn" data-remove="${esc(r.userId)}">إزالة</button>
+      </div>`).join('') : `<div class="owner-line">لا يوجد أعضاء بعد — المشروع متاح للمسؤولين فقط.</div>`;
+  el('project-roles-list').querySelectorAll('[data-remove]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      await fetch(`/api/projects/${encodeURIComponent(id)}/roles/${encodeURIComponent(btn.dataset.remove)}`, { method: 'DELETE' });
+      await reloadProjectRolesModal();
+    }));
+}
+
+el('project-role-add-btn').addEventListener('click', async () => {
+  const id = el('project-roles-id').value;
+  const userId = el('project-role-add-user').value;
+  const role = el('project-role-add-select').value;
+  if (!userId) return;
+  const res = await fetch(`/api/projects/${encodeURIComponent(id)}/roles/${encodeURIComponent(userId)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    el('project-roles-error').textContent = data?.error || 'تعذّر إضافة العضو.';
+    el('project-roles-error').classList.remove('hidden');
+    return;
+  }
+  el('project-roles-error').classList.add('hidden');
+  await reloadProjectRolesModal();
+});
+el('project-roles-modal-close').addEventListener('click', () => el('project-roles-modal').classList.add('hidden'));
+
+async function loadUsers() {
+  const res = await fetch('/api/users');
+  state.users = res.ok ? await res.json() : [];
+  renderUsers();
+}
+
+function renderUsers() {
+  el('users-count').textContent = `${state.users.length} مستخدم`;
+  el('users-tbody').innerHTML = state.users.map(u => `
+    <tr>
+      <td>${esc(u.username)}</td>
+      <td>${esc(u.displayName)}</td>
+      <td>${u.authMethod === 'ActiveDirectory' ? 'Active Directory' : 'محلي'}</td>
+      <td><span class="role-badge${u.role === 'Admin' ? ' admin' : ''}">${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'}</span></td>
+      <td>${u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`}</td>
+      <td><span class="status-dot${u.isActive ? '' : ' off'}"></span>${u.isActive ? 'نشط' : 'معطّل'}</td>
+      <td>
+        <button class="edit-btn" data-edit="${esc(u.id)}">تعديل</button>
+        <button class="del-btn" data-del="${esc(u.id)}">حذف</button>
+      </td>
+    </tr>`).join('');
+
+  el('users-tbody').querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', () => openUserModal(state.users.find(u => u.id === btn.dataset.edit))));
+  el('users-tbody').querySelectorAll('[data-del]').forEach(btn =>
+    btn.addEventListener('click', () => deleteUser(btn.dataset.del)));
+}
+
+function renderPermChecklist(containerId, items, checkedList, keyFn, labelFn) {
+  const container = el(containerId);
+  if (!items.length) { container.innerHTML = '<span class="empty">لا يوجد عناصر بعد</span>'; return; }
+  container.innerHTML = items.map(item => {
+    const key = keyFn(item);
+    return `<label><input type="checkbox" value="${esc(key)}" ${checkedList.includes(key) ? 'checked' : ''}> ${esc(labelFn(item))}</label>`;
+  }).join('');
+}
+
+function togglePermList(listId, allCheckboxId) {
+  el(listId).classList.toggle('hidden', el(allCheckboxId).checked);
+}
+
+el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
+el('user-authmethod').addEventListener('change', () => {
+  el('user-password-row').style.display = el('user-authmethod').value === 'Local' ? '' : 'none';
+});
+
+function openUserModal(user) {
+  el('user-form-error').classList.add('hidden');
+  el('user-id').value = user ? user.id : '';
+  el('user-modal-title').textContent = user ? `تعديل ${user.username}` : 'مستخدم جديد';
+  el('user-username').value = user ? user.username : '';
+  el('user-username').disabled = !!user;
+  el('user-displayname').value = user ? user.displayName : '';
+  el('user-authmethod').value = user ? user.authMethod : 'Local';
+  el('user-role').value = user ? user.role : 'User';
+  el('user-active').checked = user ? user.isActive : true;
+  el('user-password').value = '';
+  el('user-password-hint').textContent = user ? '(اتركها فاضية لعدم التغيير)' : '';
+  el('user-password-row').style.display = (user ? user.authMethod : 'Local') === 'Local' ? '' : 'none';
+
+  el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
+  renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name);
+  togglePermList('user-systems-list', 'user-allow-all-systems');
+
+  el('user-modal').classList.remove('hidden');
+}
+
+el('btn-new-user').addEventListener('click', () => openUserModal(null));
+el('user-cancel').addEventListener('click', () => el('user-modal').classList.add('hidden'));
+el('user-modal').addEventListener('click', e => { if (e.target.id === 'user-modal') el('user-modal').classList.add('hidden'); });
+
+el('user-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = el('user-id').value;
+  const body = {
+    username: el('user-username').value.trim(),
+    displayName: el('user-displayname').value.trim(),
+    password: el('user-password').value || null,
+    authMethod: el('user-authmethod').value,
+    role: el('user-role').value,
+    isActive: el('user-active').checked,
+    allowAllSystems: el('user-allow-all-systems').checked,
+    allowedSystems: [...el('user-systems-list').querySelectorAll('input:checked')].map(i => i.value),
+    // File permissions are managed only from "مستودع الملفات" now — the server ignores
+    // these two regardless (see UsersController), but omitting them keeps the request
+    // honest about what this form actually controls.
+  };
+  const saveBtn = el('user-save');
+  saveBtn.disabled = true;
+  try {
+    const res = await fetch(id ? `/api/users/${id}` : '/api/users', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      el('user-form-error').textContent = err.error || `فشل الحفظ (${res.status})`;
+      el('user-form-error').classList.remove('hidden');
+      return;
+    }
+    el('user-modal').classList.add('hidden');
+    await loadUsers();
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+async function deleteUser(id) {
+  const user = state.users.find(u => u.id === id);
+  if (!user || !confirm(`حذف المستخدم "${user.username}"؟`)) return;
+  const res = await fetch('/api/users/' + id, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || 'تعذّر الحذف.');
+    return;
+  }
+  await loadUsers();
+}
+
+// ---------- §4.23: وضع التضمين (?embed=1&pub=<معرّف النشر>&p=<الصفحة>) ----------
+// لوحة منشورة واحدة داخل إطار شاشة «اللوحات المنشورة»: بلا قائمة ولا شريط علوي ولا
+// محادثة (قواعد .is-embed في jeem.css)، للقراءة فقط بدور «مشاهد». تُفتح بمسار الفتح العادي
+// نفسه (openHistoryEntry) فتعمل اللوحات المبنية من المحادثة والتفاعلية كما هي، وتتبادل مع
+// الصفحة الأم رسائل postMessage: الارتفاع { jeemEmbedH }، والصفحة الحالية وعدد الصفحات
+// { jeemPage, jeemPages }، وتستقبل { jeemSetPage } للانتقال لصفحة (وضع العرض والرابط العميق).
+async function bootEmbedView(pubId, startPage) {
+  document.documentElement.classList.add('is-embed');
+  const fail = msg => {
+    el.dash.innerHTML = `<div class="empty"><div><div class="big">تعذّر عرض اللوحة</div><div>${esc(msg)}</div></div></div>`;
+    postEmbedHeight();
+  };
+  const post = data => { if (window.parent !== window) window.parent.postMessage(data, location.origin); };
+  function postEmbedHeight() {
+    post({ jeemEmbedH: Math.ceil(Math.max(el('dash-pane')?.scrollHeight || 0, el.dash.scrollHeight)) });
+  }
+
+  const me = await fetch('/api/auth/me');
+  if (!me.ok) { fail('انتهت الجلسة — سجّل الدخول من جديد.'); return; }
+  state.currentUser = await me.json();
+
+  const res = await fetch(`/api/published-dashboards/${encodeURIComponent(pubId)}/entry`);
+  const entry = await res.json().catch(() => null);
+  if (!res.ok || !entry) { fail(entry?.error || 'اللوحة غير متاحة لك.'); return; }
+
+  // مزامنة الصفحة الداخلية مع الصفحة الأم: تُقرأ من تبويبات الصفحات بعد كل إعادة رسم.
+  let pendingPage = startPage > 0 ? startPage : 0, lastSent = '';
+  const pageTabs = () => [...el.dash.querySelectorAll('.dash-tabs button')];
+  const syncPage = () => {
+    const tabs = pageTabs();
+    if (pendingPage && tabs[pendingPage]) { const b = tabs[pendingPage]; pendingPage = 0; b.click(); return; }
+    const idx = Math.max(0, tabs.findIndex(b => b.getAttribute('aria-selected') === 'true'));
+    const key = `${idx}/${Math.max(1, tabs.length)}`;
+    if (key !== lastSent) { lastSent = key; post({ jeemPage: idx, jeemPages: Math.max(1, tabs.length) }); }
+    postEmbedHeight();
+  };
+  new MutationObserver(syncPage).observe(el.dash, { childList: true, subtree: true });
+  new ResizeObserver(postEmbedHeight).observe(el.dash);
+  addEventListener('message', e => {
+    if (e.origin !== location.origin || e.source !== window.parent) return;
+    const pg = e.data && e.data.jeemSetPage;
+    if (typeof pg !== 'number') return;
+    const b = pageTabs()[pg];
+    if (b && b.getAttribute('aria-selected') !== 'true') b.click();
+  });
+
+  state.history = [entry];
+  openHistoryEntry(entry.id);
+  syncPage();
+}
+
+(async function boot() {
+  const params = new URLSearchParams(location.search);
+  const shareId = params.get('share');
+  if (shareId) { await bootSharedView(shareId); return; }
+  if (params.get('embed') === '1' && params.get('pub')) {
+    await bootEmbedView(params.get('pub'), parseInt(params.get('p'), 10) || 0);
+    return;
+  }
+
+  const res = await fetch('/api/auth/me');
+  if (!res.ok) { await resolveOrgScopedLoginAsync(); return; }
+  state.currentUser = await res.json();
+  await startApp();
+  // §4.23: رابط عميق إلى لوحة منشورة (#d=<معرّف النشر>&p=<الصفحة>) يفتح شاشتها مباشرة.
+  if (/^#d=/.test(location.hash)) showScreen('published');
+})();

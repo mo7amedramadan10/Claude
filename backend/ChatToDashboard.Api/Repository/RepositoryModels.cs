@@ -7,6 +7,12 @@ public class RepositoryFile
 {
     [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
 
+    /// <summary>The project this file belongs to — scopes it away from every other project's
+    /// files, even within the same organization. Never null on a file created after project
+    /// scoping existed; a pre-existing file was backfilled to its organization's default
+    /// project (see Program.cs's startup backfill).</summary>
+    [JsonPropertyName("projectId")] public string? ProjectId { get; set; }
+
     /// <summary>The uploader-chosen, human-readable name — what's shown everywhere in the
     /// UI and in chat/dashboard references. Required, distinct from the actual uploaded
     /// filename (see <see cref="OriginalFileName"/>).</summary>

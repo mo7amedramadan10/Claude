@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تفاصيل منظمة · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="platform">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="قائمة المنصّة">
+    <div class="sb-brand">
+      <a href="platform-organizations.html" aria-label="جيم — المنصّة"><img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم"><img class="mark" src="assets/img/logo-mark.svg" alt="جيم"></a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+    <div class="platform-badge"><span class="org-avatar">ث</span><span class="org-meta"><strong>إدارة المنصّة</strong><span>شركة ثقة · Super Admin</span></span></div>
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنصّة</span></div>
+      <ul class="nav"><li><a class="nav-link is-active" href="platform-organizations.html" aria-current="page" title="المنظمات"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المنظمات</span><span class="badge">24</span></a></li><li><a class="nav-link" href="platform-templates.html" title="مكتبة النماذج"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">مكتبة النماذج</span></a></li><li><a class="nav-link" href="#" title="الخطط والأسعار"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span class="nav-text">الخطط والأسعار</span></a></li><li><a class="nav-link" href="#" title="سجل التجهيز"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg><span class="nav-text">سجل التجهيز</span><span class="badge badge-danger">1</span></a></li><li><a class="nav-link" href="#" title="فريق المنصة"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">فريق المنصة</span></a></li><li><a class="nav-link" href="#" title="إعدادات المنصة"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">إعدادات المنصة</span></a></li></ul>
+    </nav>
+    <div class="sb-foot">
+      <div class="isolation" style="background:var(--surface-2);color:var(--ink-2)"><span class="pulse"></span><span class="txt">كل الخدمات تعمل · 99.98%</span></div>
+      <button class="user-card" type="button" aria-label="الحساب"><span class="avatar" style="background:var(--brand-gray)">أ</span><span class="meta"><strong>أحمد الزهراني</strong><span>مسؤول المنصّة</span></span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg></button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="platform-organizations.html">المنصّة</a><span class="sep">/</span><a href="platform-organizations.html">المنظمات</a><span class="sep">/</span><strong>هيئة تطوير المدن</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><button class="btn" type="button">تغيير الخطة</button><button class="btn" type="button" style="color:var(--danger)">تعطيل المنظمة</button></div>
+    </header>
+    <main class="page page-narrow">
+      <section class="page-head">
+        <div style="display:flex;align-items:center;gap:18px">
+          <span class="org-avatar" style="width:64px;height:64px;font-size:28px;border-radius:18px;background:var(--brand-teal)">ه</span>
+          <div><h1>هيئة تطوير المدن</h1><div class="dash-meta" style="margin-top:6px"><span class="mono">cdev</span><span class="dot-sep"></span><span>خطة المؤسسات</span><span class="dot-sep"></span><span class="status run">قيد التجهيز</span></div></div>
+        </div>
+      </section>
+
+      <div role="tablist" class="tabs" aria-label="أقسام المنظمة">
+        <button role="tab" aria-selected="true" aria-controls="t-prov"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-server"/></svg>التجهيز</button>
+        <button role="tab" aria-selected="false" aria-controls="t-plan"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chart"/></svg>الخطة والاستهلاك</button>
+        <button role="tab" aria-selected="false" aria-controls="t-admins"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>المسؤولون</button>
+      </div>
+
+      <div class="two-col" id="t-prov">
+        <section class="card panel" style="gap:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between"><div><div class="section-title">مراحل التجهيز</div><div class="section-sub">بدأ اليوم 09:14 ص · يستغرق عادة 3 دقائق</div></div><span class="jbars is-live"><i></i><i></i><i></i></span></div>
+          <ol class="prov">
+            <li class="done"><span class="dot"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div><strong>إنشاء قاعدة البيانات</strong><p>قاعدة مستقلة <span class="mono">jeem_cdev</span> على خادم الرياض 2</p></div><time>09:14:08</time></li>
+            <li class="run"><span class="dot"><span class="jbars is-live" style="height:12px"><i></i><i></i><i></i></span></span><div><strong>تشغيل الـ migrations</strong><p>26 من 48 · إنشاء جداول المشاريع والصلاحيات</p><div class="mini-progress" style="width:220px;margin-top:8px"><i style="width:55%"></i></div></div><time>جارٍ…</time></li>
+            <li><span class="dot"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></span><div><strong>إنشاء حساب أول مسؤول</strong><p>إرسال دعوة إلى <span class="mono">it-admin@cdev.gov.sa</span></p></div><time>—</time></li>
+            <li><span class="dot"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span><div><strong>جاهزة للاستخدام</strong><p>تفعيل الدخول وإظهار المنظمة للمسؤول</p></div><time>—</time></li>
+          </ol>
+          <div class="logbox" aria-label="سجل التجهيز">
+            <div><span class="dim">09:14:02</span> <span class="info">INFO</span> provisioning tenant=cdev plan=enterprise</div>
+            <div><span class="dim">09:14:08</span> <span class="ok">OK</span>   database jeem_cdev created (riyadh-db-02)</div>
+            <div><span class="dim">09:14:11</span> <span class="info">INFO</span> applying migrations 1..48</div>
+            <div><span class="dim">09:15:39</span> <span class="ok">OK</span>   025_AddProjectMembers</div>
+            <div><span class="dim">09:15:44</span> <span class="info">INFO</span> 026_AddRowLevelPolicies …</div>
+          </div>
+        </section>
+        <aside class="stack-v">
+          <section class="card panel">
+            <h2>بيانات المنظمة</h2>
+            <dl class="kv" style="font-size:var(--fs-sm);gap:10px 16px"><dt>الخطة</dt><dd>المؤسسات</dd><dt>حد المشاريع</dt><dd>غير محدود</dd><dt>حد المستخدمين</dt><dd>500</dd><dt>خادم القاعدة</dt><dd class="mono" style="text-align:right">riyadh-db-02</dd><dt>تاريخ الإنشاء</dt><dd>اليوم 09:14 ص</dd><dt>أنشأها</dt><dd>أحمد الزهراني</dd></dl>
+          </section>
+          <section class="card panel">
+            <h2>إجراءات التجهيز</h2>
+            <button class="btn" type="button" style="justify-content:flex-start"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-history"/></svg>إعادة تشغيل الـ migrations</button>
+            <button class="btn" type="button" style="justify-content:flex-start"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>إعادة إرسال دعوة المسؤول</button>
+          </section>
+          <div class="privacy-note"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><div>كمسؤول منصّة تقدر تدير وجود المنظمة وخطتها وتجهيزها، لكن <b>لا يمكنك الاطلاع على مشاريعها أو بياناتها أو لوحاتها</b>.</div></div>
+        </aside>
+      </div>
+
+      <section class="card panel" id="t-plan" hidden>
+        <h2>الاستهلاك هذا الشهر</h2>
+        <div class="three-col">
+          <div class="quota"><div class="row">الأسئلة<span class="num">0 / غير محدود</span></div><div class="track"><i style="width:0%"></i></div></div>
+          <div class="quota"><div class="row">المستخدمون<span class="num">1 / 500</span></div><div class="track"><i style="width:1%"></i></div></div>
+          <div class="quota"><div class="row">المساحة<span><span class="num">0 / 200</span> GB</span></div><div class="track"><i style="width:0%"></i></div></div>
+        </div>
+      </section>
+      <section class="card" id="t-admins" hidden style="overflow:hidden">
+        <div class="dtable-wrap"><table class="dtable"><thead><tr><th>المسؤول</th><th>الحالة</th><th>أُضيف</th></tr></thead>
+          <tbody><tr><td><div class="cell-user"><span class="avatar" style="background:var(--brand-teal)">ت</span><div><strong>مسؤول تقنية المعلومات</strong><span class="mono" style="text-align:right;display:block">it-admin@cdev.gov.sa</span></div></div></td><td><span class="status warn">بانتظار انتهاء التجهيز</span></td><td class="muted">اليوم</td></tr></tbody></table></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تسجيل الدخول · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="login">
+<script src="assets/js/icons.js"></script>
+<div class="auth">
+  <main class="auth-form">
+    <a class="brand" href="login.html" aria-label="جيم"><img src="assets/img/logo-lockup.svg" alt="جيم"></a>
+    <div><h1>أهلًا بعودتك</h1><p class="lead">اسأل عن بياناتك، واحصل على لوحتك في ثوانٍ.</p></div>
+    <form action="org-projects.html">
+      <div class="field org-field"><label for="org">رمز المنظمة</label><input id="org" required dir="ltr" style="text-align:right;padding-inline-end:120px" placeholder="company-s" autocomplete="organization"><span class="suffix">.jeem.sa</span></div>
+      <div class="field"><label for="email">البريد الإلكتروني</label><input id="email" type="email" required dir="ltr" style="text-align:right" placeholder="name@company.sa" autocomplete="username"></div>
+      <div class="field"><label for="pw" style="display:flex;justify-content:space-between">كلمة المرور <a href="#" style="font-weight:300;font-size:var(--fs-xs)">نسيت كلمة المرور؟</a></label><input id="pw" type="password" required autocomplete="current-password"></div>
+      <button class="btn btn-primary" type="submit">تسجيل الدخول</button>
+      <div class="divider">أو</div>
+      <button class="btn" type="button"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>الدخول الموحّد لمنظمتك (SSO)</button>
+    </form>
+    <div class="auth-foot"><span>© 2026 جيم · شركة ثقة</span><a href="#">الخصوصية</a><a href="#">الدعم</a></div>
+  </main>
+  <aside class="auth-side" aria-hidden="true">
+    <img class="bgmark" src="assets/img/logo-mark.svg" alt="">
+    <div class="demo">
+      <div class="tagline">عليك <em>السين</em>..<br>وعلينا <em>الجيم</em>.</div>
+      <div class="q">كم حققنا من المستهدف هذا الربع؟</div>
+      <div class="a">
+        <div style="display:flex;align-items:center;gap:10px;font-size:var(--fs-sm);color:var(--ink-2)"><span class="jbars"><i></i><i></i><i></i></span>جهّز جيم لوحتك</div>
+        <div class="row"><div class="tile"><span>تحقيق المستهدف</span><b class="num">97%</b></div><div class="tile"><span>إجمالي المبيعات</span><b class="num">50.6م</b></div></div>
+        <div class="bars"><i style="height:42%;animation-delay:.4s"></i><i style="height:50%;animation-delay:.48s"></i><i style="height:58%;animation-delay:.56s"></i><i style="height:55%;animation-delay:.64s"></i><i style="height:68%;animation-delay:.72s"></i><i style="height:74%;animation-delay:.8s"></i><i style="height:80%;animation-delay:.88s"></i><i style="height:88%;animation-delay:.96s"></i><i style="height:100%;animation-delay:1.04s"></i></div>
+      </div>
+    </div>
+  </aside>
+</div>
+<script src="assets/js/roles.js"></script>
+<script>
+  /* المعاينة: زر الدخول يوجّه حسب الدور المختار */
+  document.querySelector('.auth-form form').addEventListener('submit', e => { e.preventDefault(); let k = 'orgadmin'; try { k = localStorage.getItem('jeem.persona') || k; } catch (x) {} location.href = (k === 'super' ? 'platform-organizations.html' : 'org-projects.html') + '?as=' + k; });
+</script>
+</body>
+</html>

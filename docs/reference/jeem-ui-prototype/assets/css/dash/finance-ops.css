@@ -1,0 +1,33 @@
+/* الإدارة المالية (fo) — أبيض مع لمسة خضراء */
+.fo { --acc: #0E8A6A; --bg: #F6F9F7; }
+.fo-sel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mut); }
+.fo-sel select { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 9px; padding: 5px 8px; background: var(--card); color: var(--tx); }
+.fo-date { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mut); border: 1px solid var(--line); border-radius: 9px; padding: 5px 10px; background: var(--card); } .fo-date b { color: var(--tx); }
+.fo-kp { display: flex; flex-direction: column; gap: 12px; }
+.fo-k { flex: 1; gap: 10px; } .fo-k .row { width: 100%; } .fo-k .ib { background: color-mix(in srgb, var(--c) 13%, transparent); color: var(--c); width: 30px; height: 30px; border-radius: 9px; } .fo-k .sp { flex: 1; } .fo-k b { font-size: 24px; }
+.fo-k[aria-pressed="true"] { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 18%, transparent); }
+.fo-cf .col .b { animation-delay: calc(var(--i) * 18ms); } .fo-cf .nd { stroke: #fff; stroke-width: 1.5; animation: dkPop .4s var(--ease) both; animation-delay: calc(300ms + var(--i) * 18ms); transform-box: fill-box; transform-origin: center; }
+.fo-tg { align-items: center; } .fo-tg button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: var(--card); border-radius: 99px; padding: 3px 10px; font: inherit; font-size: 11.5px; color: var(--tx); cursor: pointer; }
+.fo-tg button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; } .fo-tg .mut { margin-inline-start: auto; } .fo-tg .mut b { color: var(--tx); }
+.fo-map { direction: ltr; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(3, 62px); gap: 6px; background: repeating-linear-gradient(0deg, transparent 0 20px, color-mix(in srgb, var(--line) 50%, transparent) 20px 21px); border-radius: 14px; padding: 8px; }
+.fo-map .tl { direction: rtl; border: 0; border-radius: 12px; background: color-mix(in srgb, #127DBD calc(var(--a) * 100%), #EAF2F8); color: #fff; font: inherit; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px; padding: 4px; transition: opacity .25s, transform .25s, box-shadow .25s; animation: dkPop .5s var(--ease) both; animation-delay: calc(var(--i) * 50ms); }
+.fo-map .tl b { font-size: 11.5px; text-shadow: 0 1px 2px rgba(0,0,0,.25); } .fo-map .tl span { font-size: 12px; font-weight: 700; } .fo-map .tl small.u { color: rgba(255,255,255,.85); }
+.fo-map .tl:hover { transform: translateY(-2px); } .fo-map .tl.on { box-shadow: 0 0 0 3px #F2C14E; transform: scale(1.04); } .fo-map .tl.dim { opacity: .3; }
+.fo-info { font-size: 12px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-height: 22px; }
+.fo-pm { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 12px; }
+.fo-list { border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--soft); }
+.fo-list header { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; } .fo-list .dk-lnk { font-size: 18px; width: 24px; justify-content: center; }
+.fo-list input { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; background: var(--card); }
+.fo-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fo-list li { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: flex; gap: 8px; align-items: flex-start; animation: rise .35s var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
+.fo-list li > div { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; } .fo-list li b { font-size: 12.5px; } .fo-list li small { color: var(--mut); font-size: 11px; }
+.fo-list li button { border: 0; background: none; color: var(--mut); cursor: pointer; padding: 2px; } .fo-list li button:hover { color: var(--bad); }
+.fo-flow { background: radial-gradient(circle, var(--line) 1px, transparent 1.2px) 0 0 / 16px 16px; border-radius: 14px; border: 1px solid var(--line); padding: 6px; display: flex; flex-direction: column; }
+.fo-fl .ed { fill: none; stroke: #9AA5B1; stroke-width: 2; stroke-dasharray: 6 6; animation: foDash 1.2s linear infinite; transition: opacity .25s, stroke .25s; }
+.fo-fl .ed.on { stroke: var(--acc); stroke-width: 2.5; } .fo-fl .ed.dim { opacity: .2; }
+@keyframes foDash { to { stroke-dashoffset: -24; } }
+.fo-fl .nd { cursor: pointer; } .fo-fl .nd rect { fill: var(--card); stroke: var(--line); stroke-width: 1.5; transition: stroke .2s, fill .2s; } .fo-fl .nd text { font-size: 12px; font-weight: 600; text-anchor: middle; fill: var(--tx); }
+.fo-fl .nd:hover rect, .fo-fl .nd.on rect { stroke: var(--acc); fill: color-mix(in srgb, var(--acc) 10%, var(--card)); } .fo-fl .nd:focus-visible rect { stroke: var(--tx); }
+.fo-fi { font-size: 12px; text-align: center; color: var(--mut); padding: 4px; } .fo-fi b { color: var(--tx); }
+@media (max-width: 1100px) { .fo-kp { flex-direction: row; flex-wrap: wrap; } .fo-k { min-width: 220px; } .fo-pm { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) { .fo-map { grid-template-rows: repeat(3, 54px); } .fo-map .tl b { font-size: 9.5px; } .fo-map .tl span { font-size: 10px; } }

@@ -7,6 +7,7 @@ using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Repository;
 using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Usage;
 using ChatToDashboard.Api.Widgets;
 using Dapper;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,14 @@ public record ToolSpec(string Name, string Description, JsonObject InputSchema);
 public class AnalyticsTools
 {
     public const int MaxRowsReturned = 500;
+
+    // A row-count cap alone doesn't bound a tool result's actual size: a wide SELECT * (many
+    // columns, some long free-text fields) can still serialize into hundreds of KB even at
+    // exactly MaxRowsReturned rows — observed live: 500 rows x 42 columns on a real uploaded
+    // file serialized to ~524,000 characters, alone pushing one request past the model's whole
+    // context window and failing the build outright (a hard 400, not just one noData widget).
+    // See ExecuteQueryAsync's own trimming loop for where this is enforced.
+    private const int MaxResultChars = 20_000;
 
     private static readonly Regex ForbiddenSqlKeywords = new(
         @"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|MERGE|EXEC|EXECUTE|GRANT|REVOKE|BACKUP|RESTORE|USE|KILL|SHUTDOWN|PRAGMA|ATTACH|DETACH|VACUUM|REINDEX|REPLACE)\b|(\bsp_\w+)|(\bxp_\w+)",
@@ -67,7 +76,14 @@ public class AnalyticsTools
     private readonly RepositoryStore _repository;
     private readonly SystemApiLoader _systemLoader;
     private readonly SourceOptions _sources;
+    private readonly Integrations.IntegrationStore _integrations;
+    private readonly Integrations.ClientQueryService _clientQuery;
     private readonly ILogger<AnalyticsTools> _logger;
+
+    // Off by default — this whole feature is net-new, and defaulting off keeps every existing
+    // deployment's behavior exactly as it was until someone opts in. Set
+    // "Inquiry:SuggestFollowUps": true in appsettings.json (or via user-secrets) to enable it.
+    private readonly bool _suggestFollowUps;
 
     public AnalyticsTools(
         DataFolderLoader loader,
@@ -76,6 +92,9 @@ public class AnalyticsTools
         RepositoryStore repository,
         SystemApiLoader systemLoader,
         IOptions<SourceOptions> sources,
+        Integrations.IntegrationStore integrations,
+        Integrations.ClientQueryService clientQuery,
+        IConfiguration configuration,
         ILogger<AnalyticsTools> logger)
     {
         _loader = loader;
@@ -84,6 +103,9 @@ public class AnalyticsTools
         _repository = repository;
         _systemLoader = systemLoader;
         _sources = sources.Value;
+        _integrations = integrations;
+        _clientQuery = clientQuery;
+        _suggestFollowUps = configuration.GetValue("Inquiry:SuggestFollowUps", false);
         _logger = logger;
     }
 
@@ -106,6 +128,13 @@ public class AnalyticsTools
         // (all of them, enabled or not) — used to label list_files' "tables" entries and to
         // name the file in a refusal message.
         IReadOnlyDictionary<string, string> TableFiles,
+        // Table -> that file's RepositoryFile.LastUpdatedAt — the only per-source freshness
+        // timestamp this app tracks anywhere today (see AnalystVerification's C3: a connected
+        // system/integration has no equivalent "last synced at" field anywhere in this codebase,
+        // so freshness only ever applies to file sources). A table with no entry here either
+        // isn't a file's table at all, or the file predates LastUpdatedAt — either way, "no data
+        // to check" rather than "fails the check".
+        IReadOnlyDictionary<string, DateTime> TableFileLastUpdated,
         IReadOnlyDictionary<string, string> TableSystems,
         IReadOnlyDictionary<string, string> DisabledSystemTables,
         // Table -> owning file's display name, DISABLED files only — the query-blocking
@@ -119,7 +148,22 @@ public class AnalyticsTools
         // from DisabledFileTables since the reason is per-user identity, not the on/off
         // toggle every file also carries.
         IReadOnlyDictionary<string, string> RestrictedFileTables,
-        bool HasDocuments);
+        bool HasDocuments,
+        // External integrations the user has toggled on as a source (see SourceSelection —
+        // reuses the exact same Systems list/AllowsSystem check a configured system already
+        // gets, an integration id just being another entry in it), and whose client schema has
+        // actually been discovered — an integration with no schema yet offers nothing to build
+        // on, so it's simply left out rather than offered as an empty, unusable source.
+        IReadOnlyList<EnabledIntegration> EnabledIntegrations,
+        // Carried through from SourceSelection.ProjectId so ExecuteToolAsync's list_files/
+        // search_documents handlers (which only receive this context, not the original
+        // selection) can scope their own direct RepositoryStore calls the same way
+        // DescribeSourcesAsync already scoped the file/integration lists above.
+        string? ProjectId);
+
+    /// <summary>One toggled-on, schema-discovered integration — everything query_client_data's
+    /// tool description needs to let the model write correct SQL against it.</summary>
+    public record EnabledIntegration(string Id, string Name, string DbProvider, string SchemaDescription);
 
     public async Task<SourceContext> DescribeSourcesAsync(
         SourceSelection selection, CancellationToken ct = default)
@@ -145,15 +189,20 @@ public class AnalyticsTools
             if (!system.IsConnected) unconnected.Add(system.Name);
         }
 
-        var files = await _repository.ListAsync(ct);
+        var files = await _repository.ListAsync(selection.ProjectId, ct);
         var enabledFiles = new List<string>();
         var disabledFiles = new List<string>();
         var enabledFileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var tableFiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var tableFileLastUpdated = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         var disabledFileTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var f in files)
         {
-            if (!string.IsNullOrWhiteSpace(f.TableName)) tableFiles[f.TableName!] = f.DisplayName;
+            if (!string.IsNullOrWhiteSpace(f.TableName))
+            {
+                tableFiles[f.TableName!] = f.DisplayName;
+                tableFileLastUpdated[f.TableName!] = f.LastUpdatedAt;
+            }
 
             if (selection.AllowsFile(f.Id))
             {
@@ -189,11 +238,28 @@ public class AnalyticsTools
 
         var hasDocuments = files.Any(f => f.Kind == "pdf" && selection.AllowsFile(f.Id));
 
+        var allIntegrations = await _integrations.ListAsync(selection.ProjectId, ct);
+        var enabledIntegrations = allIntegrations
+            .Where(i => selection.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
+            .Select(i => new EnabledIntegration(i.Id, i.Name, i.ClientDbProvider!, i.ClientSchemaDescription!))
+            .ToList();
+
         return new SourceContext(
             enabledSystems, disabledSystems, unconnected,
-            enabledFiles, disabledFiles, enabledFileIds, tableFiles,
-            systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments);
+            enabledFiles, disabledFiles, enabledFileIds, tableFiles, tableFileLastUpdated,
+            systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments,
+            enabledIntegrations, selection.ProjectId);
     }
+
+    /// <summary>Forwards to <see cref="Data.DataFolderLoader.GetSchemaAsync"/> — the shared
+    /// schema's tables, unioned with <paramref name="projectId"/>'s own uploaded-file schema
+    /// when given (see <see cref="IsTableKnownToProject"/> for the app-level filter every caller
+    /// still applies on top) — for callers outside this class that need it alongside a
+    /// <see cref="SourceContext"/> to call <see cref="CheckSourcePermission"/>
+    /// (DashboardAccessService, InquiryAccessService). WidgetQueryService holds its own
+    /// DataFolderLoader directly and doesn't need this.</summary>
+    public Task<IReadOnlyList<Data.TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default) =>
+        _loader.GetSchemaAsync(projectId, ct);
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
     {
@@ -217,7 +283,10 @@ public class AnalyticsTools
                 "query_data",
                 $"Runs a read-only SELECT query ({_db.DialectName} dialect) against the loaded data tables " +
                 $"and returns the rows as JSON. Only SELECT statements are allowed; results are capped at " +
-                $"{MaxRowsReturned} rows, so always use {rowCap} (or less). Reference tables as {_db.TableNamingHint}.",
+                $"{MaxRowsReturned} rows, so always use {rowCap} (or less). A wide SELECT * can still be cut " +
+                $"further and truncated even under that row cap if the table has many/long columns — select " +
+                $"only the columns you actually need, and prefer SUM/COUNT/AVG/GROUP BY over pulling raw rows " +
+                $"whenever you just need a number. Reference tables as {_db.TableNamingHint(context.ProjectId)}.",
                 new JsonObject
                 {
                     ["type"] = "object",
@@ -292,6 +361,42 @@ public class AnalyticsTools
                 }));
         }
 
+        if (context.EnabledIntegrations.Count > 0)
+        {
+            var integrationsBlock = string.Join("\n\n", context.EnabledIntegrations.Select(i =>
+                $"- integrationId \"{i.Id}\" — \"{i.Name}\" ({i.DbProvider} dialect). Tables:\n{i.SchemaDescription}"));
+            // 500 mirrors the connector's own AdHocQueryMaxRows constant — kept as a literal
+            // here rather than shared code since the two projects never reference each other.
+            tools.Add(new ToolSpec(
+                "query_client_data",
+                "Runs a read-only SELECT query LIVE against an external client system's own real " +
+                "database — not this app's own data — so a widget built this way shows the client's " +
+                "actual current rows immediately while building, the same way it will once published. " +
+                "Only SELECT statements are allowed; results are capped at 500 rows. Use ONLY the " +
+                "tables/columns listed below for the chosen integrationId — never invent one, and never " +
+                "mix a table from one integration into a query against another. Write the SQL in that " +
+                "integration's own dialect, not this app's.\n\n" +
+                "Available integrations:\n" + integrationsBlock,
+                new JsonObject
+                {
+                    ["type"] = "object",
+                    ["properties"] = new JsonObject
+                    {
+                        ["integrationId"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "Exactly one of the integrationId values listed above.",
+                        },
+                        ["sql"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "A single SELECT statement, in that integration's own SQL dialect.",
+                        },
+                    },
+                    ["required"] = new JsonArray { "integrationId", "sql" },
+                }));
+        }
+
         return tools;
     }
 
@@ -327,7 +432,7 @@ public class AnalyticsTools
     }
 
     /// <summary>
-    /// "➕ أضف إلى لوحة المتابعة" — frames an already-answered Inquiries response as a pure
+    /// "🔄 حوّله لداشبورد" — frames one already-answered Inquiries block as a pure
     /// restructuring task: the real data is handed over verbatim, no tool call is offered
     /// (see IDashboardGenerator.GenerateDashboardFromInquiryAsync), and the model's only job
     /// is to shape it into the normal widgets JSON — never to re-derive or second-guess the
@@ -337,10 +442,12 @@ public class AnalyticsTools
     /// append behavior off that one phrase, so reusing it here (rather than duplicating those
     /// instructions) makes this call add to the existing dashboard exactly the same way a
     /// "بناء اللوحة" follow-up question would, with no changes to the system prompt itself.
+    /// Its absence — whether nothing is on screen yet, or the user chose "استبدال" on the
+    /// replace-or-add prompt (see ConvertInquiryBlockRequest) — builds a fresh dashboard.
     /// </summary>
-    public static string ComposeConversionUserMessage(InquiryResponse inquiry, DashboardStateInput? currentDashboard = null)
+    public static string ComposeConversionUserMessage(InquiryBlock block, DashboardStateInput? currentDashboard = null)
     {
-        var dataJson = JsonSerializer.Serialize(inquiry.Data, ToolResultJsonOptions);
+        var dataJson = JsonSerializer.Serialize(block.Data, ToolResultJsonOptions);
         var currentDashboardBlock = "";
         if (currentDashboard is { Widgets.Count: > 0 })
         {
@@ -355,6 +462,13 @@ public class AnalyticsTools
                 """;
         }
 
+        // A block from a resumed conversation can be days old — the widget's own source text
+        // should say so rather than reading as a live number, matching the spec's "show its
+        // extraction date so the user knows it is not live".
+        var staleness = block.ExtractedAt is { } at
+            ? $" (البيانات دي مستخرجة بتاريخ {at:yyyy-MM-dd}، مش لحظة إنشاء اللوحة دي.)"
+            : "";
+
         return $$"""
             {{currentDashboardBlock}}مهمة إعادة هيكلة فقط — من غير أي نداء أداة (list_files أو query_data أو غيرها):
             الأرقام دي جاية فعليًا من استعلام سابق نُفِّذ بالفعل، ومهمتك دلوقتي إنك تحوّلها لعنصر
@@ -363,10 +477,10 @@ public class AnalyticsTools
             فعلًا)، من غير ما تخترع أي رقم إضافي أو تحسب حاجة مختلفة عن اللي جاي تحت.
 
             الإجابة النصية الأصلية (استرشد بيها لصياغة summary وnarration، من غير نسخ حرفي بالضرورة):
-            {{inquiry.Answer}}
+            {{block.Text}}
 
             مصدر البيانات وطريقة حسابها (استخدمه كما هو في حقل source):
-            {{inquiry.Source}}
+            {{block.Source}}{{staleness}}
 
             البيانات الفعلية اللي استندت عليها الإجابة — استخدمها زي ما هي بالضبط:
             {{dataJson}}
@@ -454,6 +568,312 @@ public class AnalyticsTools
         """;
 
     /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.SuggestVisualIdentityAsync — External
+    /// Integrations' Part B path 2 (AI-assisted suggestion). Deliberately restricted to the
+    /// exact same three-token set every other visual-identity path produces (accent color,
+    /// secondary color, font family) — never open-ended CSS — so a suggested set is a drop-in
+    /// replacement for a manually-entered one. Contrast is checked and, if needed, adjusted by
+    /// VisualIdentityService server-side after this returns — never trusted as already
+    /// accessible just because the model was told to aim for it.
+    /// </summary>
+    public const string VisualIdentitySystemPrompt =
+        "أنت مساعد يقترح هوية بصرية صغيرة لصفحة تكامل خارجي، من وصف مختصر أو لون واحد يديه لك " +
+        "المستخدم. رجّع مجموعة توكنز محدودة فقط — لون أساسي (accent)، لون ثانوي (secondary)، " +
+        "واسم خط (fontFamily) — أبدًا مش CSS حر أو أكتر من كده. اختر اسم خط شائع ومتاح فعليًا " +
+        "على الويب (مثلاً Cairo, Tajawal, IBM Plex Sans Arabic, Inter, Roboto) يناسب الوصف، مش " +
+        "اسم خط تخيّلي. اللونين لازم يكونا أكواد hex صحيحة (#RRGGBB). حاول قدر الإمكان إن التباين " +
+        "بين اللون الأساسي وخلفية بيضاء يكون مقروء (نسبة تباين معقولة)، لكن مش لازم تحسب النسبة " +
+        "بنفسك — فيه تحقق تلقائي بعد اقتراحك بيعدّل القيمة لو مش كافية.\n\n" +
+        "رجّع JSON فقط بالشكل:\n" +
+        """{ "accentColor": "#RRGGBB", "secondaryColor": "#RRGGBB", "fontFamily": "اسم الخط" }""";
+
+    /// <summary>The per-request prompt accompanying VisualIdentitySystemPrompt.</summary>
+    public static string VisualIdentityUserMessage(string? description, string? seedColor) =>
+        $"""
+        الوصف: {(string.IsNullOrWhiteSpace(description) ? "(لا يوجد)" : description)}
+        لون معروف بالفعل: {(string.IsNullOrWhiteSpace(seedColor) ? "(لا يوجد)" : seedColor)}
+
+        اقترح مجموعة الهوية البصرية.
+        """;
+
+    /// <summary>Tolerant JSON parse for VisualIdentitySystemPrompt's reply — same extraction
+    /// helper as TryParseDashboard/TryParseInquiry, a much smaller schema. Loose hex-color
+    /// validation only (VisualIdentityService does the real contrast check); a missing/invalid
+    /// field fails the whole parse rather than silently defaulting, since a partially-invented
+    /// token set is worse than falling back to manual entry.</summary>
+    /// <summary>مفسّر الرد في البناء المرحلي (انظر IStagedLlm): يكفي أن يكون كائن JSON واحدًا صالحًا؛
+    /// التحقق من شكله مسؤولية StagedTemplateBuilder لأن كل مرحلة لها مخططها.</summary>
+    public static (StagedResult? Result, string? Error) TryParseStagedJson(string text)
+    {
+        var (candidate, extractError) = ExtractJsonCandidate(text);
+        if (candidate is null) return (null, extractError);
+        try
+        {
+            var node = JsonNode.Parse(candidate);
+            return node is JsonObject obj ? (new StagedResult(candidate, obj), null) : (null, "الرد ليس كائن JSON.");
+        }
+        catch (JsonException ex)
+        {
+            return (null, ex.Message);
+        }
+    }
+
+    public static (VisualIdentitySuggestion? Suggestion, string? Error) TryParseVisualIdentity(string text)
+    {
+        var (candidate, extractError) = ExtractJsonCandidate(text);
+        if (candidate is null) return (null, extractError);
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate);
+            var root = doc.RootElement;
+            var accent = root.TryGetProperty("accentColor", out var a) ? a.GetString() : null;
+            var secondary = root.TryGetProperty("secondaryColor", out var s) ? s.GetString() : null;
+            var font = root.TryGetProperty("fontFamily", out var f) ? f.GetString() : null;
+            if (!IsHexColor(accent) || !IsHexColor(secondary) || string.IsNullOrWhiteSpace(font))
+                return (null, "الرد ما فيهوش accentColor/secondaryColor (hex) و fontFamily صالحين.");
+            return (new VisualIdentitySuggestion(accent!, secondary!, font!.Trim(), null), null);
+        }
+        catch (JsonException ex)
+        {
+            return (null, $"JSON deserialization failed: {ex.Message}");
+        }
+    }
+
+    private static bool IsHexColor(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value.Trim(), @"^#[0-9A-Fa-f]{6}$");
+
+    /// <summary>System prompt for the vision-only path (Part B path 3, "genuine visual/image
+    /// understanding") — same JSON contract as VisualIdentitySystemPrompt/TryParseVisualIdentity
+    /// above, just fed an image instead of text. Only ever reached after the caller has already
+    /// verified LlmSettingsStore's VisualIdentitySupportsImage flag is set (see
+    /// VisualIdentityImageRouter) — this prompt itself does not repeat that check.</summary>
+    public const string VisualIdentityImageSystemPrompt =
+        "أنت مساعد يستخرج هوية بصرية من صورة (شعار أو دليل هوية) يرفعها المستخدم. افحص الصورة " +
+        "وحدد لون أساسي (accent) ولون ثانوي (secondary) بصيغة hex (#RRGGBB) يعكسان ألوان الصورة " +
+        "الفعلية، واسم خط شائع متاح على الويب يناسب طابعها لو قدرت تحدد طابع الخط من الصورة " +
+        "(وإلا رجّع أقرب خط عام مناسب). رجّع JSON فقط بالشكل:\n" +
+        """{ "accentColor": "#RRGGBB", "secondaryColor": "#RRGGBB", "fontFamily": "اسم الخط" }""";
+
+    public const string VisualIdentityImageInstruction =
+        "الصورة المرفقة شعار أو دليل هوية بصرية. استخرج منها مجموعة التوكنز المطلوبة.";
+
+    /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.SuggestFontFromPdfTextAsync — Part B path 3's
+    /// text-only half (locating an EXPLICIT font-name mention already written in a brand-guide
+    /// PDF's text layer, e.g. "الخط الرسمي: Cairo Bold"). Deliberately does not infer a font from
+    /// general document styling — PdfPig's text extraction carries no font-rendering info, only
+    /// characters — so this only ever succeeds when the document literally names its own font.
+    /// </summary>
+    public const string FontExtractionSystemPrompt =
+        "هيتم إديك نص مستخرج من ملف PDF (دليل هوية بصرية على الأغلب). مهمتك الوحيدة: هل النص ده " +
+        "فيه ذكر صريح لاسم خط (Font) متبنّى رسميًا؟ لو لقيت ذكر صريح، رجّع اسم الخط فقط في سطر " +
+        "واحد، من غير أي شرح. لو مفيش ذكر صريح لاسم خط في النص، رجّع بالضبط الكلمة: NONE. ممنوع " +
+        "تخمّن أو تقترح خط مش مذكور فعليًا في النص.";
+
+    public static string FontExtractionUserMessage(string extractedPdfText) =>
+        $"""
+        النص المستخرج من الملف:
+        ---
+        {extractedPdfText}
+        ---
+
+        فيه ذكر صريح لاسم خط؟
+        """;
+
+    /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.MatchIdentityTransportAsync — Part C. The
+    /// model's ONLY job is picking one of the three pre-written mechanisms and extracting the
+    /// variable part; it never writes new transport logic (see IdentityTransportMatch's
+    /// remarks). "matched": false plus a clarifying question is the required response whenever
+    /// the description doesn't clearly map to one of the three — guessing an approximation is
+    /// explicitly disallowed by this prompt.
+    /// </summary>
+    public const string IdentityTransportSystemPrompt =
+        "أنت تحلل وصف محلل لكيفية تعريف هوية المستخدم في نظام عميل خارجي، وتطابقه مع واحدة من " +
+        "ثلاث آليات ثابتة فقط — ممنوع تقترح أو تتخيل آلية رابعة:\n" +
+        "1) \"query\" — معامل ضمن رابط الصفحة (Query Parameter)\n" +
+        "2) \"header\" — رأس طلب HTTP مخصّص (Custom HTTP Header)\n" +
+        "3) \"cookie\" — كوكي ضمن نطاق العميل\n\n" +
+        "لو الوصف بيحدد بوضوح واحدة من التلاتة، واسم المعامل/الرأس/الكوكي مذكور أو ممكن تستنتجه " +
+        "بثقة، رجّع JSON بالشكل:\n" +
+        """{ "matched": true, "mechanism": "query|header|cookie", "parameterName": "الاسم الدقيق" }""" + "\n\n" +
+        "لو الوصف غامض أو ما بيحددش آلية واضحة من التلاتة أو اسم المعامل مش واضح، رجّع:\n" +
+        """{ "matched": false, "mechanism": null, "parameterName": null }""" + "\n\n" +
+        "رجّع الـ JSON فقط، من غير أي نص تاني.";
+
+    public static string IdentityTransportUserMessage(string description) =>
+        $"""
+        وصف المحلل: {description}
+
+        طابق الوصف مع آلية.
+        """;
+
+    private static readonly HashSet<string> KnownIdentityTransportMechanisms =
+        new(StringComparer.OrdinalIgnoreCase) { "query", "header", "cookie" };
+
+    /// <summary>Tolerant JSON parse for IdentityTransportSystemPrompt's reply, plus the
+    /// plain-language confirmation summary shown to the analyst before activation (Part C: "show
+    /// the analyst a plain-language summary ... and require explicit confirmation"). Any parse
+    /// failure, an unrecognized mechanism value, or matched=true with an empty parameterName all
+    /// fall back to Matched=false — never a guessed approximation.</summary>
+    public static IdentityTransportMatch ParseIdentityTransportMatch(string text)
+    {
+        var unclear = new IdentityTransportMatch(false, null, null,
+            "الوصف مش واضح بما يكفي — يُرجى تحديد الآلية (معامل في الرابط / رأس HTTP / كوكي) واسمها الدقيق.");
+        var (candidate, _) = ExtractJsonCandidate(text);
+        if (candidate is null) return unclear;
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate);
+            var root = doc.RootElement;
+            var matched = root.TryGetProperty("matched", out var m) && m.ValueKind == JsonValueKind.True;
+            if (!matched) return unclear;
+
+            var mechanism = root.TryGetProperty("mechanism", out var mech) ? mech.GetString() : null;
+            var parameterName = root.TryGetProperty("parameterName", out var p) ? p.GetString()?.Trim() : null;
+            if (mechanism is null || !KnownIdentityTransportMechanisms.Contains(mechanism) || string.IsNullOrWhiteSpace(parameterName))
+                return unclear;
+
+            var mechanismLabel = mechanism.ToLowerInvariant() switch
+            {
+                "query" => $"معامل ضمن رابط الصفحة اسمه \"{parameterName}\"",
+                "header" => $"رأس HTTP مخصّص اسمه \"{parameterName}\"",
+                _ => $"كوكي اسمه \"{parameterName}\"",
+            };
+            var summary = $"ستقرأ صفحة العرض هوية المستخدم من {mechanismLabel}، وترسلها بنفس الاسم إلى نقطة القراءة عندكم في كل استدعاء.";
+            return new IdentityTransportMatch(true, mechanism.ToLowerInvariant(), parameterName, summary);
+        }
+        catch (JsonException)
+        {
+            return unclear;
+        }
+    }
+
+    /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.MatchSchemaContractAsync — §4.16+
+    /// interactive templates' real-data matching (see Interactive/InteractiveContractMatcher.cs).
+    /// The model's only job is picking REAL names it's given in the catalog, never inventing
+    /// one — the caller independently re-verifies every claimed table/column actually exists
+    /// before trusting it, so a hallucinated name just falls back to "not found" rather than
+    /// causing a broken query.
+    /// </summary>
+    public const string InteractiveSchemaMatchSystemPrompt =
+        "أنت تطابق بين (أ) شكل بيانات مطلوب للوحة تفاعلية — مجموعة \"جداول منطقية\" بأسمائها " +
+        "ووصفها وأعمدتها، و(ب) الجداول الحقيقية المتاحة فعليًا في مشروع المستخدم بأسمائها الدقيقة " +
+        "وأعمدتها. لكل جدول منطقي، اختر الجدول الحقيقي الأقرب معنى له من القائمة المتاحة (إن وُجد)، " +
+        "ولكل عمود منطقي فيه اختر العمود الحقيقي الأقرب معنى له من أعمدة ذلك الجدول. " +
+        "لا تخترع أبدًا اسم جدول أو عمود غير موجود حرفيًا في القائمة المتاحة — لو مفيش تطابق واضح " +
+        "لجدول أو عمود، استخدم null بدل تخمين اسم قريب. لا يشترط تطابق كل الأعمدة حتى لو الجدول " +
+        "نفسه اتطابق.\n\n" +
+        "رجّع JSON فقط بالشكل:\n" +
+        """{ "matched": true, "tables": { "<مفتاح الجدول المنطقي>": { "realTable": "الاسم الحقيقي أو null", "columns": { "<مفتاح العمود المنطقي>": "الاسم الحقيقي أو null" } } } }""" + "\n\n" +
+        "لو مفيش ولا جدول واحد من القائمة المطلوبة يقابله جدول حقيقي معقول، رجّع:\n" +
+        """{ "matched": false, "tables": {} }""" + "\n\n" +
+        "رجّع الـ JSON فقط، من غير أي نص أو شرح تاني.";
+
+    public static string InteractiveSchemaMatchUserMessage(string contractDescription, string tableCatalog) =>
+        $"""
+        شكل البيانات المطلوب (الجداول المنطقية):
+        {contractDescription}
+
+        الجداول الحقيقية المتاحة في هذا المشروع:
+        {tableCatalog}
+
+        طابق كل جدول منطقي بجدول حقيقي (إن وُجد) وكل عمود منطقي بعمود حقيقي (إن وُجد).
+        """;
+
+    /// <summary>Tolerant JSON parse for InteractiveSchemaMatchSystemPrompt's reply. Any parse
+    /// failure falls back to Matched=false, never a guessed/partial mapping — the caller
+    /// (InteractiveContractMatcher) still re-verifies every name that does come back exists in
+    /// the real catalog before using it, since this parse alone can't catch a hallucinated
+    /// name that happens to be well-formed JSON.</summary>
+    public static InteractiveSchemaMatch ParseInteractiveSchemaMatch(string text)
+    {
+        var unclear = new InteractiveSchemaMatch(false, null, "تعذّر تحليل استجابة المطابقة.");
+        var (candidate, _) = ExtractJsonCandidate(text);
+        if (candidate is null) return unclear;
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate);
+            var root = doc.RootElement;
+            var matched = root.TryGetProperty("matched", out var m) && m.ValueKind == JsonValueKind.True;
+            if (!matched) return new InteractiveSchemaMatch(false, null, null);
+            if (!root.TryGetProperty("tables", out var tablesEl) || tablesEl.ValueKind != JsonValueKind.Object)
+                return unclear;
+
+            var tables = new Dictionary<string, InteractiveTableMatch>();
+            foreach (var tableProp in tablesEl.EnumerateObject())
+            {
+                var tableEl = tableProp.Value;
+                string? realTable = tableEl.TryGetProperty("realTable", out var rt) && rt.ValueKind == JsonValueKind.String
+                    ? rt.GetString()?.Trim() : null;
+                var columns = new Dictionary<string, string?>();
+                if (tableEl.TryGetProperty("columns", out var colsEl) && colsEl.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var colProp in colsEl.EnumerateObject())
+                        columns[colProp.Name] = colProp.Value.ValueKind == JsonValueKind.String ? colProp.Value.GetString()?.Trim() : null;
+                }
+                tables[tableProp.Name] = new InteractiveTableMatch(string.IsNullOrWhiteSpace(realTable) ? null : realTable, columns);
+            }
+            return new InteractiveSchemaMatch(true, tables, null);
+        }
+        catch (JsonException)
+        {
+            return unclear;
+        }
+    }
+
+    /// <summary>
+    /// System prompt for IIntegrationSetupAssistant.RetargetSqlAsync — External Integrations'
+    /// "build the dashboard directly on the client's own tables" design: a Publish retargets
+    /// each widget's query to the CLIENT's real schema (given once at integration setup, see
+    /// ExternalIntegration.ClientSchemaDescription) instead of shipping this app's own internal
+    /// SQL (meaningless — often unreachable — outside this app's own database). The model's
+    /// only job is a faithful SQL-to-SQL translation: same intent, different schema/dialect.
+    /// Never invents a table or column that isn't in the given schema description; a widget
+    /// whose intent has no honest equivalent there must come back NONE rather than a guess —
+    /// the caller (PublishService) leaves such a widget's Sql unset rather than shipping a
+    /// query that might silently return wrong data at the client's end.
+    /// </summary>
+    public const string RetargetSqlSystemPrompt =
+        "أنت تترجم استعلام SQL من قاعدة بيانات إلى قاعدة بيانات تانية، بنفس القصد بالظبط. " +
+        "هيتم إديك: (1) عنوان العنصر ونيّته، (2) الاستعلام الأصلي (لو موجود) كمرجع للفهم بس — " +
+        "مش للتنفيذ، لأنه شغّال على جداول مش موجودة عند الطرف التاني، (3) وصف بنية قاعدة بيانات " +
+        "الطرف التاني (الجداول والأعمدة وأنواعها) ونوع محرك قاعدة البيانات بتاعه.\n\n" +
+        "اكتب استعلام SELECT واحد بس (ممكن يبدأ بـ WITH)، يستخدم فقط الجداول والأعمدة المذكورة " +
+        "صراحة في وصف البنية المُعطى — ممنوع تمامًا تخترع اسم جدول أو عمود مش موجود في الوصف. " +
+        "اكتب الصياغة المناسبة لمحرك قاعدة البيانات المحدد (SQL Server أو SQLite). لازم يكون " +
+        "الاستعلام قراءة فقط (SELECT بس، بدون INSERT/UPDATE/DELETE/DDL). لو مفيش طريقة صادقة " +
+        "تحقق نفس القصد ببنية البيانات المُعطاة، رجّع بالضبط الكلمة: NONE. رجّع نص الاستعلام فقط " +
+        "(أو NONE)، من غير أي شرح أو Markdown.";
+
+    public static string RetargetSqlUserMessage(
+        string widgetTitle, string? originalSql, string clientDbProvider, string clientSchemaDescription) =>
+        $"""
+        عنوان العنصر: {widgetTitle}
+        الاستعلام الأصلي (مرجع فهم فقط، مش قابل للتنفيذ عند الطرف التاني): {(string.IsNullOrWhiteSpace(originalSql) ? "(غير متاح)" : originalSql)}
+        نوع محرك قاعدة بيانات الطرف التاني: {clientDbProvider}
+        وصف بنية قاعدة بيانات الطرف التاني:
+        ---
+        {clientSchemaDescription}
+        ---
+
+        اكتب استعلامًا مكافئًا صحيحًا على بنية البيانات دي.
+        """;
+
+    /// <summary>Trims the model's reply and normalizes "no honest equivalent" to null — the
+    /// caller (PublishService) still re-validates the result is read-only via
+    /// ValidateReadOnlySql before ever including it in a publish payload; this only handles the
+    /// NONE/empty sentinel, not SQL safety.</summary>
+    public static string? ParseRetargetedSql(string text)
+    {
+        var trimmed = text.Trim().Trim('`');
+        if (trimmed.Length == 0 || string.Equals(trimmed, "NONE", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return trimmed;
+    }
+
+    /// <summary>
     /// Prepended to both BuildSystemPrompt and BuildInquirySystemPrompt when the frontend's
     /// language toggle (see index.html's #lang-toggle) is set to English — everything else in
     /// either prompt stays exactly as tuned (in Arabic, addressed to the model), since an LLM
@@ -532,6 +952,12 @@ public class AnalyticsTools
         القاعدة الذهبية: ممنوع تختلق رقمًا أو تخمّنه أو "تقرّبه" من غير ما يكون جاي فعليًا
         من نتيجة أداة ناديتها (list_files أو query_data أو search_documents). لو مش
         متاح عندك الرقم، قول كده صراحة في summary بدل ما تخترعه أو تسكت عن غيابه.
+        نفس القاعدة تنطبق على أي قيمة نصية حرفية تستخدمها في شرط WHERE/CASE جوه الاستعلام
+        نفسه (مش بس خيارات الفلاتر تحت) — مثلاً WHERE [Status] = 'Achieved': ممنوع تخمّن
+        القيمة دي من اسم العمود أو من معناه المتوقع. لو شرطك محتاج قيمة معيّنة من عمود نصي،
+        اتأكد منها أولًا بـ SELECT DISTINCT على العمود ده قبل ما تستخدمها — قيمة مخمّنة غلط
+        بترجع نتيجة صفر أو فاضية بهدوء من غير أي خطأ ظاهر، وده أخطر من noData الصريح لأنه
+        بيبان كإنه رقم حقيقي.
 
         استنتاج المنطق التجاري والمعادلات
         مش لازم المستخدم يحدد كل معادلة بنفسه — لو السؤال يقتضي حساب مؤشر مركّب (نسبة،
@@ -593,6 +1019,14 @@ public class AnalyticsTools
         فقط. لا تشارك خطوات التفكير دي مع المستخدم أبدًا — بس النتيجة النهائية.
 
         خطوات العمل
+        0. ممنوع تمامًا الرد مباشرة (سواء بالقبول أو بالرفض) من غير ما تنادي list_files
+           الأول — حتى لو السؤال فيه قائمة طويلة من أنظمة وملفات، حتى لو أسماء الملفات
+           شكلها غريب أو مكرر أو فيها أرقام زي "(1)"/"(4)"، وحتى لو حاسس إن البيانات
+           غالبًا مش هتكون متاحة. "مفعّلة" في قسم "المصادر المفعّلة حاليًا" فوق يعني
+           عندك صلاحية فعلية تستخدمها — مش اقتراح للتجربة. الحكم على توفر البيانات بُني
+           على تخمين بدل نتيجة list_files فعلية هو بالظبط الخطأ الممنوع هنا، وبيتساوى
+           في الخطورة مع اختلاق رقم من غير استعلام. لا ترفض طلبًا أو تقول "غير مصرّح"/
+           "غير متاح" إلا بعد ما تشوف نتيجة list_files فعليًا وتتأكد منها.
         1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة، وكمان قائمة الملفات المحفوظة في
            مستودع الملفات (الاسم والتصنيف والنوع وعدد الصفوف أو الصفحات وتاريخ الرفع).
            لو السؤال عن المستودع نفسه — كام ملف، إيه التصنيفات، أحدث ملف — الإجابة موجودة
@@ -642,6 +1076,15 @@ public class AnalyticsTools
             جديد محتاجه — بيانات الرد اللي فات مش نتيجة أداة متاحة لك، بس خليها مرجعك لفهم
             "الأساس" اللي مبني عليه السؤال (نفس الجدول والتجميع) مش استعلام مختلف تمامًا،
             إلا لو التعديل نفسه بيقتضي كده.
+          - عنصر من "العناصر الحالية" حامل "noData": true (عنصر من لوحة قالب مطلوب إلزاميًا
+            مالقيتش له مصدر بيانات فعليًا — شوف "عناصر هذه اللوحة المطلوبة" لو موجودة فوق)
+            ولا هو عادي: لو سؤال المستخدم بيتكلم عنه بالاسم أو بيوضح مصدر بديل (مثلاً "جرّب
+            نظام المبيعات لعنصر كذا" أو "استخدم ملف كذا بدل كده")، ده طلب بناء حقيقي —
+            نادِ list_files/query_data فعليًا وحاول تبنيه بجد، ومتفضلش ناسخه noData زي ما
+            هو. لو جربت ولسه مفيش مصدر مطابق، سيبه noData لكن حدّث missingReason بالسبب
+            الجديد. أي عنصر noData تاني مالوش علاقة بسؤال المستخدم الحالي يفضل زي ما هو
+            (noData:true) زي أي عنصر تاني من "العناصر الحالية" — قاعدة الحفاظ عليه زي ما هو
+            فوق تنطبق عليه بالظبط.
           - لو طلب المستخدم "غيّر اللون" أو "كبّر الخط" أو أي تعديل شكلي بحت: وضّح في summary
             إن شكل اللوحة (الألوان والأحجام) بيتحدد تلقائيًا حسب نوع العنصر ومش قابل للتغيير
             من هنا، وركّز بدل كده على أي تعديل حقيقي في المحتوى لو موجود ضمن نفس الرسالة.
@@ -688,7 +1131,7 @@ public class AnalyticsTools
         - ملفات الـ PDF مالهاش جداول: بياناتها الوصفية بترجع في list_files، ومحتواها بيتبحث فيه
           بـ search_documents. لو السؤال عن عدد الملفات أو أسمائها، استخدم list_files.
 
-        {{_db.DialectPrompt}}
+        {{_db.DialectPrompt(context.ProjectId)}}
 
         قواعد إضافية على الاستعلام
         - لو مش متأكد من اسم عمود أو جدول بالظبط، ارجع لنتيجة list_files تاني بدل ما تخمّن
@@ -726,7 +1169,7 @@ public class AnalyticsTools
           "narration": "شرح سردي أغنى بالفصحى، ٤ إلى ٨ جمل، يستعرض كل عنصر بالترتيب — شوف قسم (الشرح السردي) فوق",
           "widgets": [
             {
-              "type": "kpi | bar | line | pie | table | progress-table | trend-matrix | status-bar | radial-gauge | linear-gauge",
+              "type": "kpi | bar | line | pie | table | progress-table | trend-matrix | status-bar | radial-gauge | linear-gauge | radar | semi | dco | iconrank | ribbon | people | feed | goal | stages | bullet | funnel | treemap | scatter",
               "title": "عنوان العنصر",
               "data": [ ... ],
               "xKey": "اختياري، لـ bar/line: اسم حقل التصنيف",
@@ -736,6 +1179,7 @@ public class AnalyticsTools
               "areaFill": "اختياري، line فقط مع series — شوف قسم (أشكال إضافية) تحت",
               "centerLabel": "اختياري، pie فقط — شوف قسم (أشكال إضافية) تحت",
               "comparison": "اختياري على أي نوع — تخطيط مقارنة، شوف قسم (تخطيط المقارنة) تحت",
+              "options": "اختياري — تعديلات عرض خاصة بالنوع (radar/semi/dco/iconrank/people/feed/goal/stages/bullet)، شوف قسم كل نوع تحت",
               "source": "جملتان بالعربي: الأولى مصدر البيانات، والثانية طريقة الحساب.",
               "forecast": "اختياري، بس فقط لو المستخدم طلب توقع فعليًا — شوف قسم (التنبؤ) تحت",
               "query": "اختياري لكن مهم لتفعيل الفلاتر — شوف قسم (حقل query) تحت"
@@ -755,18 +1199,44 @@ public class AnalyticsTools
         }
         حقل filters اختياري تمامًا — سيبه [] لو مفيش فلاتر مفيدة فعلًا (قسم "الفلاتر" فوق).
 
-        حقل type إجباري ولازم يكون بالظبط واحد من القيم العشرة: kpi أو bar أو line أو pie
+        حقل type إجباري ولازم يكون بالظبط واحد من القيم دي: kpi أو bar أو line أو pie
         أو table أو progress-table أو trend-matrix أو status-bar أو radial-gauge أو
-        linear-gauge — أي قيمة تانية أو نوع جديد مش موجود في القايمة دي هيترفض تلقائيًا من
+        linear-gauge أو radar أو semi أو dco أو iconrank أو ribbon أو people أو feed أو
+        goal أو stages أو bullet — أي قيمة تانية أو نوع جديد مش موجود في القايمة دي هيترفض تلقائيًا من
         الواجهة ويتعرض كجدول احتياطي بدل ما يختفي. لو مش متأكد أنهي نوع الأنسب لبيانات
         معيّنة، استخدم table لأنه بيقبل أي شكل بيانات جدولية بأمان.
 
         حقل source إجباري في كل عنصر، ولازم يكون جملتين بالظبط تفصل بينهما نقطة ومسافة:
-        - الجملة الأولى: منين جت البيانات — اسم الجدول أو الملف والتصنيف أو النظام.
-        - الجملة الثانية: إزاي اتحسبت — العملية الفعلية اللي عملتها.
-        مثال: "من جدول staging_sample_sales في مستودع الملفات (تصنيف المبيعات). تم تجميع
-        SUM(Revenue) وتقسيمها حسب Region مع ترتيب تنازلي."
-        الكلام ده لازم يكون مطابق للأدوات اللي ناديتها فعلًا — ممنوع تأليف مصدر أو طريقة حساب.
+        - الجملة الأولى: منين جت البيانات — اسم الجدول أو الملف والتصنيف أو النظام، وأسماء
+          العمود/الأعمدة الفعلية اللي جابت القيمة أو القيم المعروضة (نفس الاسم الحرفي اللي
+          استخدمته في SQL، مش وصف عام زي "عمود المبيعات" أو "عمود القيمة").
+        - الجملة الثانية: إزاي اتحسبت — العملية الفعلية اللي عملتها (SUM/AVG/COUNT/GROUP BY
+          ...إلخ) مطبّقة على نفس أسماء الأعمدة دي بالحرف.
+        إجباري بلا استثناء: اسم كل عمود حقيقي دخل في بناء العنصر (عمود القيمة، وعمود
+        التجميع/التصنيف لو موجود) لازم يظهر صريحًا بالاسم الحرفي جوه نص source — حتى لو
+        العنصر بسيط وبقيمة واحدة (kpi). ممنوع إطلاقًا تجاوب بوصف عام زي "من جدول المبيعات"
+        أو "تم تجميع البيانات" من غير ما تسمّي العمود نفسه؛ ذكر اسم الجدول فقط من غير اسم
+        العمود مرفوض ومش كافي.
+        مثال: "من جدول staging_sample_sales (عمود Revenue) في مستودع الملفات (تصنيف
+        المبيعات). تم تجميع SUM(Revenue) وتقسيمها حسب عمود Region مع ترتيب تنازلي."
+        الكلام ده لازم يكون مطابق للأدوات اللي ناديتها فعلًا — ممنوع تأليف مصدر أو طريقة حساب
+        أو اسم عمود غير حقيقي.
+
+        حقل dataIssues — مشاكل بيانات حقيقية في ملف المستخدم تجاوزتها عشان تبني العنصر
+        لو استخدمت TRY_CAST/TRY_CONVERT (قسم SQL DIALECT فوق) وده فعليًا استبعد صف أو أكتر
+        من الحساب (NULL بدل قيمة حقيقية)، ده عيب في بيانات المستخدم نفسها لازم يعرفه، مش
+        تفصيلة تقنية تسيبها جوه النتيجة بصمت. في الحالة دي إجباري:
+        1) نادِ استعلام تحقّق حقيقي يحدد الصفوف المستبعدة بالظبط (مثلاً
+           WHERE TRY_CAST(العمود AS DECIMAL) IS NULL AND العمود IS NOT NULL AND العمود <> '')
+           — ممنوع تخمّن عدد الصفوف أو القيم من غير استعلام فعلي.
+        2) حط جملة عربية واحدة قصيرة لكل صف/مجموعة صفوف مستبعدة في مصفوفة "dataIssues" على
+           نفس العنصر، تحدد: الصف (بأي عمود هوية حقيقي موجود فعلاً — اسم العميل، اسم الفرصة،
+           رقم الطلب، ...إلخ؛ ممنوع تستخدم رقم صف داخلي مش موجود في البيانات نفسها)، والقيمة
+           الفعلية الغلط، والإجراء اللي اتخذته (استبعاد الصف من الحساب).
+        مثال: "تم استبعاد الصف الخاص بالفرصة «تجديد ترخيص النظام» من حساب هامش الربح لأن قيمة
+        عمود Margin_ فيه («-») غير رقمية."
+        لو مفيش صفوف اتستبعدت، سيب dataIssues غايبة أو مصفوفة فاضية — ممنوع تحطها "عشان
+        الشكل" من غير مشكلة حقيقية مؤكدة باستعلام.
 
         حقل query — بيخلي فلاتر اللوحة تقدر تأثّر فعليًا على العنصر
         لو بنيت عنصر (bar/line/pie/kpi) من نتيجة نداء query_data واحد بالظبط (مش مجمّع من
@@ -776,10 +1246,13 @@ public class AnalyticsTools
         - "sql" لازم يكون النص الحرفي اللي بعته لـ query_data، مش نسخة معدّلة أو مبسّطة —
           الواجهة بتضيف شرط WHERE فوقه لاحقًا لما المستخدم يختار فلتر، فأي اختلاف عن
           الاستعلام الحقيقي هيدّي نتيجة غلط.
-        - سيب query غايبة (من غير الحقل خالص) لو العنصر مبني من أكتر من نداء query_data
-          مجمّعين، أو من list_files/search_documents بس، أو كان forecast — في الحالات دي
-          مفيش استعلام واحد واضح يترجعله الفلتر، والعنصر هيظهر ببساطة "غير متأثر بالفلتر"
-          وده أفضل من query غلط بيرجّع نتيجة غير صحيحة.
+        - لو العنصر مبني من نداء query_client_data بدل query_data، حط "integrationId" كمان
+          جوه query بنفس القيمة اللي استخدمتها ("table" و"sql" زي ما هما، بلهجة قاعدة بيانات
+          التكامل ده): { "table": "...", "sql": "...", "integrationId": "..." }
+        - سيب query غايبة (من غير الحقل خالص) لو العنصر مبني من أكتر من نداء query_data/
+          query_client_data مجمّعين، أو من list_files/search_documents بس، أو كان forecast —
+          في الحالات دي مفيش استعلام واحد واضح يترجعله الفلتر، والعنصر هيظهر ببساطة "غير
+          متأثر بالفلتر" وده أفضل من query غلط بيرجّع نتيجة غير صحيحة.
         - ده منفصل تمامًا عن source: source نص عربي للعرض، وquery بيانات تقنية خام للتنفيذ
           الآلي فقط — الاثنين لازم يوصفوا نفس الاستعلام لكن بصيغتين مختلفتين تمامًا.
 
@@ -872,6 +1345,100 @@ public class AnalyticsTools
         نفس منطق tone بتاع progress-table بالظبط. الواجهة بتحسب النسبة وترسم الشريط
         والمقبض ورقم النسبة — سيب الحساب كله ليها.
 
+        funnel — قمع تحويل بين مراحل متتالية
+        استخدمه لما السؤال عن تسلسل مراحل بتضيق (زيارات ← تسجيل ← شراء، أو عملاء محتملون ←
+        مؤهلون ← عروض ← صفقات). data: مصفوفة [{"label": "اسم المرحلة", "value": <عدد أو
+        قيمة>}] مرتّبة من الأوسع إلى الأضيق، ٣ إلى ٨ مراحل. الواجهة تحسب نسب التحويل
+        وترسمها — لا تحسبها إنت. لو المراحل فيها حالات فرعية (ملغاة/معلّقة) استخدم stages بدل كده.
+
+        treemap — خريطة شجرية لحصص عناصر كثيرة (حتى ٢٠) بمساحة تناسب القيمة
+        استخدمه لما السؤال عن توزيع إجمالي على عناصر كثيرة (أكتر من ٦) زي حصص المنتجات أو
+        العملاء أو المدن، حيث الدائري يبقى مزدحمًا. data: مصفوفة [{"label": "...", "value":
+        <رقم موجب>, "group": "مجموعة أعلى اختيارية (مثلًا الفئة فوق المنتج)"}]، ٢٠ صفًا كحد أقصى.
+
+        scatter — مبعثر لعلاقة مقياسين رقميين لكل عنصر
+        استخدمه لما السؤال عن علاقة بين رقمين لنفس العناصر (مثلًا الكمية مقابل الإيراد لكل منتج،
+        أو عدد الزيارات مقابل التحويلات لكل حملة). data: مصفوفة [{"label": "اسم النقطة", "x":
+        <رقم>, "y": <رقم>, "group": "تصنيف اختياري يلوّن النقاط"}] مع "xKey" و"yKey" كأسماء
+        المحورين بالعربية (هنا اسمان للعرض لا مفاتيح حقول). ٣٠ نقطة كحد أقصى.
+
+        radar (نوع جديد كليًا) — ملف كيان واحد (أو ٢-٣ كيانات) على محاور متعددة متجانسة المقياس
+        استخدمه لما السؤال عن أداء كيان واحد (فريق/منتج/مورد) على عدة أبعاد متجانسة المقياس
+        مرة واحدة (مثلًا "قيّم أداء الفريق على الجودة والسرعة والالتزام")، أو مقارنة ٢-٣
+        كيانات على نفس الأبعاد دي. ممنوع استخدامه لمجرد مقارنة قيم فئات عادية — في الحالة دي
+        استخدم bar مع spot (تحت) بدل كده. data: مصفوفة [{"axis": "اسم المحور", "<اسم السلسلة
+        الأولى>": <رقم>, "<اسم سلسلة ثانية، اختياري>": <رقم>}, ...] — كل المحاور على نفس
+        مقياس الأرقام تقريبًا، وعدد السلاسل ٣ كحد أقصى. options: {"max": <رقم اختياري>}.
+
+        semi (نوع جديد كليًا) — إجمالي واحد مقسوم على ٢-٣ أجزاء، برقم الإجمالي أعلى الرسم
+        استخدمه لما السؤال عن توزيع إجمالي واحد على ٢ أو ٣ فئات بس (مثلًا "قسّم الميزانية بين
+        التشغيل والتطوير"). ممنوع استخدامه كمؤشر تقدّم مقابل هدف (ده شغل radial-gauge). data:
+        مصفوفة [{"label": "...", "value": <رقم>}, ...] (٢ أو ٣ صفوف بالظبط). options:
+        {"tl": "نص قصير يوصف الإجمالي، اختياري"}.
+
+        dco (نوع جديد كليًا) — دائري بأسماء وأرقام واضحة لكل شريحة (٣-٥ أجزاء اسمها مهم)
+        استخدمه بدل pie العادي لما أسماء الأجزاء نفسها (٣ إلى ٥ أجزاء بالضبط) مهم تتقرا
+        مباشرة بدل الاعتماد على legend منفصل. لأكتر من ٥ أجزاء استخدم hbars أو pie بتجميع
+        "أخرى". data: مصفوفة [{"label": "...", "value": <رقم>}, ...] (٣ إلى ٥ صفوف) — النسب
+        بتُحسب تلقائيًا وتجمع ١٠٠٪ دايمًا. options: {"tl": "نص قصير يوصف الإجمالي، اختياري"}.
+
+        iconrank (نوع جديد كليًا) — ترتيب تنافسي لعناصر معروفة باسم/رمز قصير
+        استخدمه لما السؤال عن ترتيب عناصر معروفة باسم أو رمز قصير مميز (مثلًا "رتّب الموردين
+        حسب حجم التوريد"). data: مصفوفة [{"label": "...", "value": <رقم>}, ...] — بترتّب
+        تنازليًا تلقائيًا في الواجهة. options: {"av": ["رمز قصير للصف الأول", "..."]، اختياري،
+        "u": "وحدة تُعرض بعد الرقم، اختياري"}.
+
+        ribbon (نوع جديد كليًا) — تتبّع نسب فئات (≤٦) عبر ٣-٦ فترات زمنية متتابعة
+        استخدمه لما السؤال عن إزاي تغيّر توزيع فئات (٦ فئات كحد أقصى) عبر ٣ إلى ٦ فترات زمنية
+        (مثلًا "إزاي تغيّر توزيع القطاعات على مدار آخر ٤ شهور"). لأكتر من ٦ فترات أو ٦ فئات
+        استخدم bar بعدة سلاسل (series، فوق) بدل كده. data: مصفوفة طويلة الشكل [{"period":
+        "اسم الفترة", "category": "اسم الفئة", "value": <رقم>}, ...] — صف واحد لكل تركيبة
+        فترة/فئة، وكل الفترات لازم تشترك في نفس مجموعة الفئات.
+
+        people (نوع جديد كليًا) — بطاقات أفراد أو فرق مرتّبة حسب القيمة
+        استخدمه لما السؤال عن ترتيب أداء أفراد أو فرق (مثلًا "رتّب المناديب حسب المبيعات").
+        data: مصفوفة [{"name": "...", "value": <رقم>, "goalPct": <رقم من ٠ إلى ١٠٠، اختياري
+        نسبة من الهدف>, "role": "دور/منصب، اختياري"}, ...] — الأعلى قيمة بيُعرض متميّزًا
+        تلقائيًا. options: {"u": "وحدة تُعرض بعد الرقم، اختياري"}.
+
+        feed (نوع جديد كليًا) — قائمة أحداث/أنشطة أخيرة مع حالة كل واحد
+        استخدمه لما السؤال عن أحدث الأحداث أو الأنشطة مع حالتها (مثلًا "آخر الطلبات وحالتها").
+        data: مصفوفة [{"title": "...", "desc": "وصف، اختياري", "value": "نص أو رقم مختصر،
+        اختياري", "status": "ok | pend | bad | info", "time": "نص زمني، اختياري", "owner":
+        "اسم مسؤول، اختياري"}, ...]. status لازم تكون بالظبط واحدة من القيم الأربعة دي
+        (ok=منجز/أخضر، pend=قيد الانتظار/برتقالي، bad=متعثر/أحمر، info=معلومة/أزرق) — الواجهة
+        بترسم أيقونة+لون+نص لكل حالة، فما تحطش أيقونة أو لون إنت.
+
+        goal (نوع جديد كليًا) — جملة واحدة مُركّبة من البيانات تلخّص التقدّم نحو هدف
+        استخدمه لما السؤال عن ملخّص سردي قصير لتقدّم مقياس واحد نحو هدفه — جملة عربية كاملة،
+        مش رقم مجرد ولا رسم. data: كائن واحد (مش مصفوفة) {"percent": <رقم نسبة الإنجاز>,
+        "remaining": <رقم المتبقي، اختياري>, "who": "الجهة/الفريق المسؤول، اختياري", "days":
+        <رقم الأيام المتبقية، اختياري>, "headline": "جملة افتتاحية قصيرة، اختياري"}. الواجهة
+        بتركّب الجملة وتلوّنها تلقائيًا حسب النسبة — ما تكتبش الجملة أو التلوين إنت، خلي
+        الأرقام خام. options: {"risk": <رقم نسبة اعتبار "قريب من الهدف"، اختياري وافتراضه ٨٠>}.
+
+        bullet (نوع جديد كليًا) — فعلي مقابل مستهدف لعدة عناصر، صف لكل عنصر
+        استخدمه لما السؤال عن مقارنة قيمة فعلية بمستهدف لعدة عناصر مرة واحدة (مثلًا "أداء كل
+        فرع مقابل مستهدفه"). data: مصفوفة [{"label": "...", "actual": <رقم>, "target":
+        <رقم>}, ...]. options: {"hi": true لو الأعلى أفضل، اختياري وافتراضه إن الأقل أفضل
+        (مثل أيام الإغلاق)}.
+
+        stages (نوع جديد كليًا) — مسار عملية متعدد المراحل بعدد العناصر في كل مرحلة وحالاتها
+        استخدمه لما السؤال عن توزيع عناصر عملية مرحلية على مراحلها بالترتيب (مثلًا "مراحل الفرص
+        من التأهيل حتى التعاقد" أو مسار مشتريات أو توظيف أو معاملات)، مع حالات فرعية لكل مرحلة
+        (ملغاة، معلّقة، متأخرة، خاسرة...). ممنوع استخدامه لمجرد مقارنة قيم فئات (ده شغل bar).
+        data: مصفوفة طويلة الشكل، صف لكل خانة — بالظبط اللي بيرجع من استعلام GROUP BY على
+        المرحلة والحالة: [{"stage": "اسم المرحلة", "label": "اسم الخانة/الحالة", "count":
+        <عدد العناصر>, "tone": "info | ok | warn | bad | dark | mute", "value": <قيمة مالية
+        إجمالية للخانة، اختياري>, "row": "main | sub | total، اختياري وافتراضه main"}, ...].
+        رتّب الصفوف بترتيب المراحل الفعلي (أول مرحلة أولًا) — الواجهة بتجمّعها حسب stage بترتيب
+        أول ظهور وبترسمها من اليمين للشمال بأسهم. row="sub" للحالات الفرعية اللي بتظهر في سطر
+        تحت المرحلة، وrow="total" صف واحد اختياري لكل مرحلة بإجمالي عددها (count) لو مختلف عن
+        أول خانة رئيسية. tone لازم تكون بالظبط واحدة من القيم الست دي (info=أزرق محايد،
+        ok=أخضر منجز، warn=برتقالي تنبيه، bad=أحمر متعثر، dark=داكن منتهٍ/ملغى، mute=رمادي
+        غير مؤهل/مستبعد) — الواجهة بتكتب التسمية دايمًا جنب اللون، فما تحطش ألوان إنت.
+        options: {"u": "وحدة تُعرض بعد value، اختياري (مثلًا ر.س)"}.
+
         تخطيط المقارنة (comparison) — خيار عرض على أي نوع موجود، مش نوع إضافي
         استخدمه لما السؤال فيه مقارنة صريحة بين فترتين أو سيناريوهين لنفس التوزيع أو نفس
         المؤشر (مثلاً "قارن حالة المبادرات بين الربع الأول والتاني" أو "قارن الإيرادات بين
@@ -896,11 +1463,14 @@ public class AnalyticsTools
         - حقل source في كل عنصر مطابق للأداة اللي ناديتها فعلًا؟
         - لو فيه افتراض اتخذته (فترة زمنية، تفسير غامض)، مذكور بوضوح في summary؟
         - الـ JSON مطابق للمخطط بالظبط (نفس الحقول، من غير حقول زيادة، وtype من القيم
-          العشرة المسموحة فقط)؟
+          المسموحة فقط)؟
         - لو استخدمت progress-table أو status-bar أو radial-gauge أو linear-gauge، كل حقل
           لون/severity فيها واحد بالظبط من القيم المسموحة (accent/danger/amber/muted أو
           severe/warning/ontrack) — مش لون hex ولا كلمة تانية مخترعة؟ ولو حطيت comparison،
           سيبت data في المستوى الأعلى فاضية وحطيت كل حاجة جوه left/right؟
+        - لو استخدمت feed، كل status فيها واحدة بالظبط من (ok/pend/bad/info)؟ ولو استخدمت
+          radar، كل محور فيه نفس مقياس الأرقام تقريبًا؟ ولو استخدمت semi/dco، القيم موجبة
+          وعدد الصفوف في النطاق المسموح (٢-٣ لـ semi، ٣-٥ لـ dco)؟
         - لو المصدر مقفول أو غير مربوط، اتبعت "قواعد المصادر" بالظبط (widgets فاضية + توضيح)؟
         - لو فيه filters، كل "options" فيها جاي من استعلام DISTINCT حقيقي، وكل "table"
           مطابق لاسم الجدول اللي فعلًا استخدمته؟
@@ -922,33 +1492,80 @@ public class AnalyticsTools
 
     /// <summary>
     /// "الاستفسارات" mode — same tool catalogue (BuildTools) and the exact same source-
-    /// permission rules as BuildSystemPrompt, but the final answer is a short, direct text
-    /// answer instead of a dashboard: no widgets, no narration, no filters, no chart-type
-    /// vocabulary at all. Kept as its own separate prompt (not a parameterized branch of
-    /// BuildSystemPrompt) so the carefully-tuned dashboard prompt is never touched by this.
+    /// permission rules as BuildSystemPrompt, but a real multi-turn conversation (see
+    /// AnalyticsTools.ComposeInquiryUserMessage — the caller replays recent turns/summary/
+    /// findings ledger as part of the single user turn, the same "continuation" pattern
+    /// BuildSystemPrompt's own dashboard-continuation already uses) that can draw on both the
+    /// organization's data and the model's own general knowledge, each part of the answer
+    /// labeled so the UI and later turns never confuse the two. Kept as its own separate
+    /// prompt (not a parameterized branch of BuildSystemPrompt) so the carefully-tuned
+    /// dashboard prompt is never touched by this.
     /// </summary>
-    public string BuildInquirySystemPrompt(SourceContext context, string? lang = null) =>
-        $$"""
-        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بترد على استفسارات عن بيانات
-        المؤسسة بإجابة نصية مباشرة وواضحة — من غير ما تبني لوحة معلومات أو أي عناصر رسوم
-        بيانية أو تُرجع حقل widgets أصلًا. اكتب كل النصوص الظاهرة للمستخدم بالعربية الفصحى،
+    public string BuildInquirySystemPrompt(SourceContext context, string? lang = null)
+    {
+        // Only ever added when explicitly turned on (see _suggestFollowUps above) — a stock
+        // deployment's prompt is byte-for-byte what it was before this existed.
+        var followUpsInstruction = _suggestFollowUps ? """
+
+            اقتراحات متابعة — اختياري ومفيد: لو فيه أسئلة متابعة طبيعية تنبني على إجابتك، رجّع
+            من ٢ إلى ٣ منها في حقل followUps تحت. لازم كل واحد يكون صياغته سؤال فعلي منتهي بعلامة
+            استفهام (؟) — أبدًا مش جملة خبرية أو ادّعاء عن البيانات، وأبدًا مش تكرار لنفس سؤال
+            المستخدم الحالي.
+            """ : "";
+        var followUpsSchemaField = _suggestFollowUps ? """
+            ,
+              "followUps": "اختياري — مصفوفة ٢-٣ أسئلة متابعة مقترحة، كل واحد منتهي بـ؟"
+            """ : "";
+
+        return $$"""
+        {{LanguageOverrideBlock(lang)}}أنت "محلّل بيانات مؤسسي" (Enterprise Analytics Agent) بتتحاور مع المستخدم حول بيانات
+        المؤسسة — محادثة حقيقية متعددة الأدوار، مش سؤال وجواب منفصلين؛ تقدر تتذكر وتبني على
+        اللي اتقال قبل كده في نفس المحادثة (هتشوف تحت ملخصًا وآخر التبادلات وسجل النتائج
+        السابقة لو المحادثة مستمرة). من غير ما تبني لوحة معلومات أو أي عناصر رسوم بيانية أو
+        تُرجع حقل widgets أصلًا. اكتب كل النصوص الظاهرة للمستخدم بالعربية الفصحى المبسّطة،
         بأسلوب مهني ومباشر وبدون حشو.
 
-        القاعدة الذهبية: ممنوع تختلق رقمًا أو تخمّنه أو "تقرّبه" من غير ما يكون جاي فعليًا
-        من نتيجة أداة ناديتها (list_files أو query_data أو forecast_data أو
-        search_documents). لو مش متاح عندك الرقم، قول كده صراحة في إجابتك بدل ما تخترعه
-        أو تسكت عن غيابه.
+        نطاق المعرفة — نوعان لازم تفرّق بينهما بوضوح في كل جزء من ردك
+        1. "بيانات المؤسسة": أي رقم أو حقيقة عن بيانات المؤسسة نفسها — ده لازم يجي حصرًا من
+           نتيجة أداة ناديتها فعليًا (list_files أو query_data أو forecast_data أو
+           search_documents)، أو يكون مأخوذ من سجل نتائج سابق فعلاً استخرجته في نفس المحادثة
+           (هتلاقيه تحت). القاعدة الذهبية: ممنوع تختلق رقمًا عن المؤسسة أو تخمّنه أو
+           "تقرّبه" من غير أداة أو سجل فعلي — لو مش متاح، قول كده صراحة بدل ما تخترعه أو
+           تسكت عن غيابه. المعرفة العامة ممنوع تحل محل بيانات ناقصة أو معطّلة — لو مصدر
+           مقفول أو البيانات مش متاحة، اعتذر ووضّح السبب (زي قواعد المصادر تحت)، وما تجاوبش
+           برقم تقديري من عندك بديل عنه.
+        2. "خارج البيانات": مفاهيم، أطر عمل، ممارسات شائعة، شرح، أو عصف ذهني — معرفتك العامة
+           كموديل، مش بيانات المؤسسة. استخدمها بحرية للسياق والتفسير والاقتراحات، لكن بصياغة
+           توضّح إنها اجتهاد عام مش رقم رسمي ("بشكل عام…"، "من الممارسات الشائعة…"، "قد يكون
+           السبب…" — مش "بيانات المؤسسة بتقول…"). تجنّب ذكر أرقام إحصائية خارجية محددة من
+           ذاكرتك؛ لو مفيش مفر، وضّح صراحة إنها غير موثّقة/غير مؤكدة. وممنوع تماما إن جزء
+           "خارج البيانات" يقدّم أي رقم جديد عن المؤسسة نفسها. القاعدة دي تشمل كمان أي رقم
+           توضيحي/افتراضي بتستخدمه كمثال (نسبة مئوية، عدد أيام، حد أدنى/أقصى) — حتى لو مش
+           بتنسبه للمؤسسة أو لمصدر خارجي بعينه، اختلاق رقم كمثال بيوهم إنه حقيقة محددة. اوصف
+           الأمثلة بصياغة وصفية بدل رقم مختلق: "فجوات مفاجئة دون تفسير" مش "فجوة ٣٠٪"،
+           "فترة طويلة من غير نشاط" مش "٩٠ يومًا".
+           لو النص فيه نقاط متعددة (خطوات، أسباب محتملة، توصيات)، رتّبها كقائمة حقيقية —
+           كل نقطة في سطر يبدأ بـ"- " (شرطة ومسافة) أو برقم متبوع بنقطة زي "1. "، مش فقرة
+           واحدة متصلة بأرقام داخلها زي "1) ... 2) ...".
 
-        خطوات العمل
-        1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة والملفات المحفوظة في المستودع.
+        خطوات العمل لأي جزء "بيانات المؤسسة"
+        1. نادِ list_files لمعرفة الجداول والأعمدة المتاحة والملفات المحفوظة في المستودع
+           (إلا لو الرقم موجود بالفعل في سجل النتائج السابق تحت وما يحتاجش تحديث). ممنوع
+           تحكم على توفر البيانات أو ترفض جزء "بيانات المؤسسة" بدعوى عدم الصلاحية أو عدم
+           التوفر من غير ما تنادي list_files فعليًا أولًا وتتأكد — حتى لو شكل السؤال أو
+           أسماء المصادر المطلوبة موحية بعدم التوفر.
         2. نادِ query_data باستعلام SELECT واحد مباشر (مجمّع لو محتاج) يرجّع بالظبط الرقم
-           أو الأرقام المطلوبة للإجابة على سؤال المستخدم — من غير ما تجيب صفوف خام زيادة
-           عن الحاجة.
+           أو الأرقام المطلوبة — من غير ما تجيب صفوف خام زيادة عن الحاجة.
         3. لو السؤال فيه طلب توقع/تنبؤ صريح لفترة مستقبلية، نادِ forecast_data بدل ما تحسب
-           أو تخمّن الرقم بنفسك — بنفس القواعد المعتادة (استعلام برجّع فترة وقيمة رقمية
-           بس، مرتب زمنيًا تصاعديًا).
-        4. قبل الرد، تأكد إن كل رقم هتذكره فعلاً موجود في نتيجة أداة ناديتها.
+           أو تخمّن الرقم بنفسك.
+        4. قبل الرد، تأكد إن كل رقم هتذكره في جزء "بيانات المؤسسة" فعلاً موجود في نتيجة أداة
+           ناديتها أو في سجل النتائج السابق تحت.
 
+        سجل النتائج والحداثة — لو المحادثة مستمرة، هتلاقي تحت "سجل نتائج سابقة" بتواريخ
+        استخراجها. اعتبرها "صحيحة حتى تاريخ استخراجها" مش بالضرورة حالة النهاردة — لو
+        المستخدم سأل صراحة عن الوضع الحالي أو استخدم كلمة زي "دلوقتي"/"حاليًا"، أعد الاستعلام
+        بأداة query_data بدل ما تعتمد على الرقم القديم من السجل.
+        {{followUpsInstruction}}
         {{SourcesSummaryBullets(context)}}
 
         قواعد المصادر — مهمة جدًا، وهي حدود صلاحيات حقيقية مش مجرد اقتراح (نفس القواعد
@@ -961,23 +1578,101 @@ public class AnalyticsTools
           الوصول له، لكن مفيش بيانات منه لسه لأنه لسه مش موصّل فعليًا. قول ده بوضوح.
         - "لا توجد بيانات" (مصدر مفعّل ومربوط لكن الاستعلام رجع صفوف فاضية فعليًا): وضّح إن
           البيانات مفحوصة فعلًا لكن مفيش نتائج تطابق الشرط المطلوب.
-        - في الحالات التلاتة، لسه لازم ترجع كائن JSON صحيح بنفس الصيغة تحت — answer يشرح
-          الحالة بوضوح (وليه مفيش رقم)، وsource يوضّح المصدر المقصود، وdata فاضية ({}).
+        - في الحالات التلاتة، لسه لازم ترجع بلوك "بيانات المؤسسة" واحد يشرح الحالة بوضوح
+          (وليه مفيش رقم)، مع source يوضّح المصدر المقصود، وdata فاضية ({}) وtable فاضي.
 
         صيغة الرد النهائي — إجباري، JSON فقط من غير أي نص خارجه أو markdown fence
         {
-          "answer": "الإجابة الكاملة بالعربية الفصحى — جملة أو فقرة قصيرة (لا تتعدى ٣-٤
-            جمل)، تجاوب على سؤال المستخدم مباشرة بالأرقام الفعلية، من غير أي تفاصيل تقنية
-            (اسم جدول أو ملف أو تصنيف أو كلمة \"استعلام\" أو \"قاعدة بيانات\") — كل ده مكانه
-            source بس.",
-          "source": "جملتان بالظبط، بنفس تنسيق حقل source في عناصر اللوحة العادية: الجملة
-            الأولى منين جت البيانات (اسم الجدول أو الملف والتصنيف أو النظام)، والتانية إزاي
-            اتحسبت.",
-          "data": "القيمة أو الصفوف الفعلية اللي استندت عليها الإجابة، بنفس شكلها من نتيجة
-            الأداة (رقم واحد، أو مصفوفة صفوف، أو كائن) — لازم تكون نفس الأرقام بالظبط اللي
-            ذكرتها في answer، من غير أي فرق، عشان ممكن تتحول لاحقًا لعنصر لوحة معلومات."
+          "blocks": [
+            {
+              "kind": "data أو knowledge — data لجزء مبني على بيانات المؤسسة، knowledge لجزء
+                من معرفتك العامة أو اجتهادك الشخصي",
+              "text": "نص هذا الجزء بالعربية الفصحى المبسّطة — جملة أو فقرة قصيرة، من غير أي
+                تفاصيل تقنية (اسم جدول أو ملف أو تصنيف أو كلمة \"استعلام\" أو \"قاعدة
+                بيانات\") — كل ده مكانه source بس.",
+              "source": "إلزامي لو kind=data فقط، ويُترك فاضي أو يُحذف لو kind=knowledge —
+                جملتان بالظبط: الأولى منين جت البيانات (اسم الجدول أو الملف والتصنيف أو
+                النظام) + اسم العمود/الأعمدة الفعلية اللي جابت القيمة (بالاسم الحرفي من
+                SQL، مش وصف عام)، والتانية إزاي اتحسبت مطبّقة على نفس أسماء الأعمدة دي.
+                ذكر اسم الجدول من غير اسم العمود مرفوض ومش كافي.",
+              "table": "إلزامي لو kind=data فقط — الاسم الفعلي للجدول اللي جاي منه الرقم
+                (نفس الاسم اللي استخدمته في SQL)، عشان يُستخدم لاحقًا في تحويل الجزء ده
+                للوحة معلومات.",
+              "data": "إلزامي لو kind=data فقط — القيمة أو الصفوف الفعلية بنفس شكلها من نتيجة
+                الأداة (رقم واحد، أو مصفوفة صفوف، أو كائن) — لازم تكون نفس الأرقام بالظبط
+                اللي ذكرتها في text."
+            }
+          ],
+          "summary": "ملخص محدّث لكل المحادثة حتى الآن (المواضيع اللي اتناقشت، وأي اجتهاد
+            \"خارج البيانات\" اتقال — من غير أرقام بيانات المؤسسة نفسها، ده مكانه سجل
+            النتائج مش الملخص) — اكتبه كإنه هيستخدم بدل التفاصيل الكاملة لأقدم أجزاء المحادثة
+            في تركيزة جاية، فخلّيه شامل الخط العام للنقاش. لو المحادثة لسه أول سؤال فيها،
+            اكتب ملخص قصير لسؤال المستخدم وإجابتك."{{followUpsSchemaField}}
         }
         """;
+    }
+
+    /// <summary>
+    /// Threads recent-turns/rolling-summary/findings-ledger context into a single Inquiries
+    /// user turn — same "continuation as one framed user message" pattern ComposeUserMessage
+    /// uses for a dashboard follow-up, not a real multi-message array, so it works identically
+    /// across every IDashboardGenerator implementation without touching each client's own
+    /// message-building code. <paramref name="recentTurns"/> is the tail of the conversation
+    /// (kept verbatim, in full, block labels included, for wording continuity);
+    /// <paramref name="priorSummary"/> covers everything older than that (see
+    /// InquiryResponse.Summary — refreshed by the model itself every turn);
+    /// <paramref name="ledger"/> is every "data" block ever produced in this conversation so
+    /// far, always included in full regardless of how old — the spec's "the ledger is never
+    /// summarized away", since only the ledger's own dated entries carry real MOI figures once
+    /// their surrounding turn has scrolled out of <paramref name="recentTurns"/>.
+    /// </summary>
+    public static string ComposeInquiryUserMessage(
+        string question, IReadOnlyList<ConversationTurn> recentTurns, string? priorSummary,
+        IReadOnlyList<InquiryBlock> ledger)
+    {
+        if (recentTurns.Count == 0 && string.IsNullOrWhiteSpace(priorSummary) && ledger.Count == 0)
+            return question;
+
+        var summaryBlock = string.IsNullOrWhiteSpace(priorSummary) ? "" : $$"""
+            ملخص لما سبق في هذه المحادثة (قبل التبادلات الأخيرة اللي جايه كاملة تحت):
+            {{priorSummary}}
+
+
+            """;
+
+        var ledgerBlock = ledger.Count == 0 ? "" : $$"""
+            سجل نتائج سابقة استخرجتها فعليًا في هذه المحادثة (بتاريخ كل واحدة — راجع تعليمات
+            "سجل النتائج والحداثة" فوق):
+            {{FormatLedger(ledger)}}
+
+
+            """;
+
+        var turnsBlock = recentTurns.Count == 0 ? "" : $$"""
+            آخر التبادلات في هذه المحادثة:
+            {{FormatTurns(recentTurns)}}
+
+
+            """;
+
+        return $$"""
+            {{summaryBlock}}{{ledgerBlock}}{{turnsBlock}}سؤال المستخدم الجديد:
+            {{question}}
+            """;
+    }
+
+    private static string FormatLedger(IReadOnlyList<InquiryBlock> ledger) =>
+        string.Join("\n", ledger.Select(b =>
+            $"- [{b.ExtractedAt:yyyy-MM-dd}] {b.Text} — الجدول: {b.Table}؛ القيمة: " +
+            JsonSerializer.Serialize(b.Data, ToolResultJsonOptions)));
+
+    private static string FormatTurns(IReadOnlyList<ConversationTurn> turns) =>
+        string.Join("\n", turns.Select(t => t.Role == ConversationRoles.User
+            ? $"المستخدم: {t.Text}"
+            : "أنت: " + string.Join(" | ", (t.Blocks ?? new List<InquiryBlock>())
+                .Select(b => b.Masked
+                    ? $"[محجوب — {b.MaskedReason}]"
+                    : $"[{(b.Kind == InquiryBlockKinds.Data ? "بيانات المؤسسة" : "خارج البيانات")}] {b.Text}"))));
 
     /// <summary>Shared between BuildSystemPrompt and BuildInquirySystemPrompt — kept as its
     /// own small helper (not extracted from BuildSystemPrompt's inline text) so neither
@@ -998,6 +1693,23 @@ public class AnalyticsTools
         @"invalid (object|column) name|no such (table|column)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>Every table this request can actually see and use — known to this project (see
+    /// <see cref="IsTableKnownToProject"/>), not disabled, not restricted. The same gate
+    /// list_files and <see cref="BuildValidTablesHintAsync"/> apply, extracted here so
+    /// <see cref="Templates.TemplatePromptService"/> can reuse it to feed
+    /// SchemaMatchingService's internal-table matching the exact same set a template build is
+    /// actually allowed to query — never a table the request can't reach, even as a hint.</summary>
+    public async Task<IReadOnlyList<Data.TableSchema>> GetVisibleTablesAsync(SourceContext context, CancellationToken ct)
+    {
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        return schema
+            .Where(t => IsTableKnownToProject(t.Table, context))
+            .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
+            .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
+            .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
+            .ToList();
+    }
+
     /// <summary>The same valid-table list list_files itself returns (see that case above),
     /// reused as a hint appended to an "invalid object/column name" query_data error so the
     /// model can self-correct with the real table name in its very next turn. Returns null
@@ -1005,15 +1717,31 @@ public class AnalyticsTools
     /// an empty hint would be worse than no hint at all.</summary>
     private async Task<string?> BuildValidTablesHintAsync(SourceContext context, CancellationToken ct)
     {
-        var schema = await _loader.GetSchemaAsync(ct);
-        var validTables = schema
-            .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
-            .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
-            .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
-            .Select(t => t.Table)
-            .ToList();
+        var validTables = (await GetVisibleTablesAsync(context, ct)).Select(t => t.Table).ToList();
         return validTables.Count == 0 ? null : $"Valid tables are: {string.Join(", ", validTables)}.";
     }
+
+    /// <summary>
+    /// _loader.GetSchemaAsync() reflects every table in the shared database's "staging" schema
+    /// — across every project/organization on this deployment, not just the current one — since
+    /// the underlying SQL (DataStore.GetSchemaAsync) has no project filter at all. A table is
+    /// only "known" here if it owns up to a file or system DescribeSourcesAsync actually found
+    /// for THIS project (TableFiles/TableSystems are populated for every file/system it iterates,
+    /// enabled or disabled — see that method). Without this positive check, every table
+    /// belonging to every OTHER project on a shared SQL Server deployment would silently pass
+    /// list_files' and BuildValidTablesHintAsync's purely negative "not explicitly disabled"
+    /// filter (disabled-for-this-project is the only thing those dictionaries record), which
+    /// both exposed those other projects' table/column names to this one and — on a deployment
+    /// with enough projects — was large enough by itself to blow past the model's context
+    /// window (observed live: a single list_files result over 100k tokens).
+    /// Internal (not private): <see cref="Widgets.WidgetQueryService"/> applies the same
+    /// project-ownership check to the table name the UI's structured widget wizard sends
+    /// directly (see ResolveTableAsync/GetAvailableFieldsAsync there) — a table the client
+    /// names explicitly, not one the LLM writes into generated SQL, but foreign to this
+    /// project in exactly the same way.
+    /// </summary>
+    internal static bool IsTableKnownToProject(string table, SourceContext context) =>
+        context.TableFiles.ContainsKey(table) || context.TableSystems.ContainsKey(table);
 
     public async Task<(string Result, bool IsError)> ExecuteToolAsync(
         string toolName, JsonObject input, SourceContext context, CancellationToken ct)
@@ -1024,13 +1752,9 @@ public class AnalyticsTools
             {
                 case "list_files":
                 {
-                    var schema = await _loader.GetSchemaAsync(ct);
-                    // Hide tables belonging to a switched-off repository file, and label
-                    // the rest so the model can attribute each number to a real source.
-                    var visible = schema
-                        .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
-                        .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
-                        .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
+                    // Hides a table belonging to a switched-off repository file (and every
+                    // table this project doesn't own at all) — see GetVisibleTablesAsync.
+                    var visible = (await GetVisibleTablesAsync(context, ct))
                         .Select(t => new
                         {
                             table = t.Table,
@@ -1040,7 +1764,7 @@ public class AnalyticsTools
                         });
                     // The repository's own catalogue: a PDF contributes no table, so without
                     // this the model has no way to know the file exists at all.
-                    var files = await _repository.ListAsync(ct);
+                    var files = await _repository.ListAsync(context.ProjectId, ct);
                     var visibleFiles = files
                         .Where(f => context.EnabledFileIds.Contains(f.Id))
                         .Where(f => f.TableName is null || !context.RestrictedFileTables.ContainsKey(f.TableName))
@@ -1072,10 +1796,31 @@ public class AnalyticsTools
                     if (string.IsNullOrWhiteSpace(sql))
                         return ("Error: 'sql' input is required.", true);
 
-                    var permissionError = CheckSourcePermission(sql, context);
+                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteQueryAsync(sql, ct);
+                }
+                case "query_client_data":
+                {
+                    var integrationId = input["integrationId"]?.GetValue<string>();
+                    var sql = input["sql"]?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(integrationId) || string.IsNullOrWhiteSpace(sql))
+                        return ("Error: 'integrationId' and 'sql' inputs are required.", true);
+
+                    // Never trust the model's own integrationId choice — it must be one this
+                    // exact request actually offered (context.EnabledIntegrations), the same
+                    // permission surface query_data's own CheckSourcePermission enforces for
+                    // internal sources.
+                    if (!context.EnabledIntegrations.Any(i => string.Equals(i.Id, integrationId, StringComparison.OrdinalIgnoreCase)))
+                        return ("Error: unknown or disabled integrationId — use only one from the tool's own description.", true);
+
+                    var integration = await _integrations.GetByIdAsync(integrationId, ct);
+                    if (integration is null)
+                        return ("Error: integration no longer exists.", true);
+
+                    var (resultJson, error) = await _clientQuery.RunQueryAsync(integration, sql, ct);
+                    return resultJson is not null ? (resultJson, false) : (error ?? "Error: query failed.", true);
                 }
                 case "forecast_data":
                 {
@@ -1087,7 +1832,7 @@ public class AnalyticsTools
                     periodsAhead = Math.Clamp(periodsAhead, 1, 12);
                     int? seasonLength = input["seasonLength"] is JsonValue seasonNode && seasonNode.TryGetValue<int>(out var sl) ? sl : null;
 
-                    var permissionError = CheckSourcePermission(sql, context);
+                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteForecastAsync(sql, periodsAhead, seasonLength, ct);
@@ -1105,7 +1850,7 @@ public class AnalyticsTools
                             file = string.Empty, category = (string?)null, score = 0d, text = string.Empty,
                         });
 
-                    var documents = await _repository.GetTextDocumentsAsync(ct);
+                    var documents = await _repository.GetTextDocumentsAsync(context.ProjectId, ct);
                     var repositoryHits = documents
                         .Where(d => context.EnabledFileIds.Contains(d.Id))
                         .Select(d => new
@@ -1171,36 +1916,138 @@ public class AnalyticsTools
         return text.Substring(index, Math.Min(window, text.Length - index));
     }
 
+    /// <summary>Runs a read-only SELECT through the exact same gate the model's own query_data
+    /// tool call goes through (<see cref="CheckSourcePermission"/> then <see
+    /// cref="ExecuteQueryAsync"/>) — for a caller outside the tool loop that still needs to run
+    /// one real, scoped, read-only query. Used by AnalystVerification's C1 (audit_sql) and by
+    /// AnalystController's reverify (re-running a stored ExecutedSql), so a stray/forged query
+    /// can never reach a source it shouldn't, same as a model-issued one couldn't.</summary>
+    public async Task<(string Result, bool IsError)> RunReadOnlyQueryAsync(string sql, SourceContext context, CancellationToken ct)
+    {
+        var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
+        return permissionError is not null ? (permissionError, true) : await ExecuteQueryAsync(sql, ct);
+    }
+
     /// <summary>
     /// Null if the query is allowed; otherwise the Arabic refusal message to return to the
     /// model. Internal (not private) so <see cref="Widgets.WidgetQueryService"/> can apply the
     /// exact same table/category gate to a widget's stored SQL before re-executing it with a
     /// filter spliced in — the same permission surface as the LLM's own query_data tool.
+    /// <paramref name="schema"/> is the full table list from <see
+    /// cref="Data.DataFolderLoader.GetSchemaAsync"/> (every table in the shared database, not
+    /// just this project's — see <see cref="IsTableKnownToProject"/>), needed for the last
+    /// check below; callers already have it or can fetch it cheaply (a metadata-only scan).
     /// </summary>
-    internal static string? CheckSourcePermission(string sql, SourceContext context)
+    internal static string? CheckSourcePermission(
+        string sql, SourceContext context, IReadOnlyList<Data.TableSchema> schema)
     {
         var blockedSystem = context.DisabledSystemTables
-            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(kv => ReferencesTable(sql, kv.Key) || ReferencesTable(sql, kv.Key.Split('.').Last()));
         if (blockedSystem.Key is not null)
             return $"الاستعلام مرفوض: الجدول {blockedSystem.Key} تابع لـ\"{blockedSystem.Value}\" " +
                    "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
 
         var blockedFile = context.DisabledFileTables
-            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(kv => ReferencesTable(sql, kv.Key) || ReferencesTable(sql, kv.Key.Split('.').Last()));
         if (blockedFile.Key is not null)
             return $"الاستعلام مرفوض: الجدول {blockedFile.Key} تابع لملف \"{blockedFile.Value}\" " +
                    "وهو غير مفعّل حاليًا. اطلب من المستخدم تفعيله من قائمة المصادر.";
 
         var restrictedFile = context.RestrictedFileTables
-            .FirstOrDefault(kv => sql.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)
-                || sql.Contains(kv.Key.Split('.').Last(), StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(kv => ReferencesTable(sql, kv.Key) || ReferencesTable(sql, kv.Key.Split('.').Last()));
         if (restrictedFile.Key is not null)
             return $"الاستعلام مرفوض: الجدول {restrictedFile.Key} تابع لملف \"{restrictedFile.Value}\" " +
                    "وصلاحية استخدامه كمصدر بيانات غير ممنوحة لهذا المستخدم.";
 
+        // The three checks above only catch a table THIS project's own dictionaries record as
+        // disabled/restricted. A table belonging to a completely different project on a shared
+        // SQL Server deployment is neither enabled nor disabled from this project's own point
+        // of view — DescribeSourcesAsync never even saw it — so none of them match it, and
+        // without this it would run unchecked. Same substring-match style as the checks above,
+        // just over "every table this project has never heard of at all" instead of "a table
+        // it knows about and has turned off".
+        var foreignTable = schema.FirstOrDefault(t => !IsTableKnownToProject(t.Table, context)
+            && (ReferencesTable(sql, t.Table) || ReferencesTable(sql, t.Table.Split('.').Last())));
+        if (foreignTable is not null)
+            return $"الاستعلام مرفوض: الجدول {foreignTable.Table} غير معروف أو غير تابع لهذا المشروع.";
+
         return null;
+    }
+
+    /// <summary>True if <paramref name="sql"/> references <paramref name="tableName"/> as a
+    /// whole identifier, not merely as a substring of a longer one — observed live: an orphaned
+    /// stale table "staging.business_opportunities" (no catalog row pointed to it any more, left
+    /// behind by an old upload/delete) blocked every query against the real, currently-uploaded
+    /// table "business_opportunities_2", because the plain .Contains check used here before
+    /// found "business_opportunities" sitting right inside "business_opportunities_2" and
+    /// treated that as a reference to the orphan. SQL identifier characters are letters, digits
+    /// and underscore — exactly .NET regex \w — so requiring a non-\w boundary (or start/end of
+    /// string) on both sides is what "whole identifier" means here. Still a plain substring
+    /// heuristic, not a SQL parser — this only closes the one specific failure mode where one
+    /// table's name happens to be a textual prefix of another's.</summary>
+    private static bool ReferencesTable(string sql, string tableName) =>
+        Regex.IsMatch(sql, $@"(?<!\w){Regex.Escape(tableName)}(?!\w)", RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// "تم فحص" — the real, human-readable sources actually touched while producing one
+    /// Inquiries turn's answer, derived purely from the tool calls already recorded on the
+    /// trace (see UsageTrace.ToolCalls) — never from text the model wrote, so it can't be
+    /// fabricated. Scans every query_data/forecast_data call's own "sql" argument for a real
+    /// table name, the same substring heuristic <see cref="CheckSourcePermission"/> already
+    /// uses to decide which table a query touches, then resolves each to its display name (a
+    /// system's name, or a file's own display name) via the same dictionaries
+    /// DescribeSourcesAsync already built for this request.
+    /// </summary>
+    public static List<string> ExtractExaminedSources(IEnumerable<UsageToolCall> toolCalls, SourceContext context)
+    {
+        var allTables = context.TableSystems
+            .Concat(context.TableFiles)
+            .Concat(context.DisabledSystemTables)
+            .Concat(context.DisabledFileTables)
+            .GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Value, StringComparer.OrdinalIgnoreCase);
+
+        var examined = new List<string>();
+        foreach (var call in toolCalls)
+        {
+            if (call.IsError || call.Tool is not ("query_data" or "forecast_data")) continue;
+            string? sql;
+            try { sql = JsonNode.Parse(call.Input)?["sql"]?.GetValue<string>(); }
+            catch (JsonException) { continue; }
+            if (string.IsNullOrWhiteSpace(sql)) continue;
+
+            foreach (var (table, displayName) in allTables)
+            {
+                if (examined.Contains(displayName, StringComparer.OrdinalIgnoreCase)) continue;
+                if (ReferencesTable(sql, table) || ReferencesTable(sql, table.Split('.').Last()))
+                    examined.Add(displayName);
+            }
+        }
+        return examined;
+    }
+
+    /// <summary>Convenience wrapper around <see cref="ExtractExaminedSources"/> — computes the
+    /// examined-sources list once per response and stamps it onto every "data" block (turn-
+    /// level info shared by every block that turn's answer produced), unioned with each
+    /// block's own <see cref="InquiryBlock.Table"/> display name so a block's own primary
+    /// source is never missing from its own chip row even if, for some reason, it didn't show
+    /// up in the scanned SQL text.</summary>
+    public static void ApplyExaminedSources(InquiryResponse response, UsageTrace trace, SourceContext context)
+    {
+        var examined = ExtractExaminedSources(trace.ToolCalls, context);
+        foreach (var block in response.Blocks)
+        {
+            if (block.Kind != InquiryBlockKinds.Data) continue;
+            var own = !string.IsNullOrWhiteSpace(block.Table) && context.TableFiles.TryGetValue(block.Table, out var fileName)
+                ? fileName
+                : !string.IsNullOrWhiteSpace(block.Table) && context.TableSystems.TryGetValue(block.Table, out var systemName)
+                    ? systemName
+                    : null;
+            var list = own is not null && !examined.Contains(own, StringComparer.OrdinalIgnoreCase)
+                ? examined.Append(own).ToList()
+                : examined;
+            block.Examined = list.Count > 0 ? list : null;
+        }
     }
 
     private async Task<(string Result, bool IsError)> ExecuteQueryAsync(string sql, CancellationToken ct)
@@ -1223,6 +2070,21 @@ public class AnalyticsTools
         }
 
         var warning = DetectQuotedIdentifierMistake(sql);
+
+        // Trim rows from the end until the serialized result fits a sane per-call budget —
+        // see MaxResultChars. A model that just hit this should narrow its own next query
+        // (name the columns it actually needs instead of SELECT *, or aggregate with SUM/
+        // COUNT/AVG/GROUP BY instead of pulling raw rows), so say so plainly rather than
+        // silently handing back a truncated-but-unexplained sample.
+        var fullRowCount = rows.Count;
+        while (rows.Count > 1 &&
+               JsonSerializer.Serialize(new { rowCount = rows.Count, rows }, ToolResultJsonOptions).Length > MaxResultChars)
+            rows.RemoveAt(rows.Count - 1);
+        if (rows.Count < fullRowCount)
+            warning = (warning is null ? "" : warning + " ") +
+                $"النتيجة قُصّت إلى {rows.Count} صف فقط من أصل {fullRowCount} لأن حجمها كان ضخمًا جدًا — " +
+                "حدد الأعمدة المطلوبة فعليًا بدل SELECT *، أو استخدم SUM/COUNT/AVG/GROUP BY لتلخيص البيانات بدل سحبها خام.";
+
         if (warning is not null)
             return (JsonSerializer.Serialize(new { rowCount = rows.Count, rows, warning }, ToolResultJsonOptions), false);
 
@@ -1338,9 +2200,11 @@ public class AnalyticsTools
     /// <summary>
     /// Pulls the single JSON object out of a model's final-turn text — tolerates a markdown
     /// code fence or stray prose around it. Shared by every "parse the model's final answer"
-    /// path (dashboard, Inquiries); each does its own typed deserialization/validation after.
+    /// path (dashboard, Inquiries, and — internal, since Analyst.AnalystPrompts is a different
+    /// namespace in this same assembly — the Project Analyst's own result JSON); each caller
+    /// does its own typed deserialization/validation after.
     /// </summary>
-    private static (string? Candidate, string? Error) ExtractJsonCandidate(string text)
+    internal static (string? Candidate, string? Error) ExtractJsonCandidate(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return (null, "the response contained no text.");
@@ -1379,6 +2243,11 @@ public class AnalyticsTools
         if (spec is null)
             return (null, "JSON deserialized to null.");
 
+        // Before validating: a malformed filter entry (missing field/table, an empty
+        // "options" for a select type, ...) is dropped rather than failing the whole
+        // response — see DashboardSpec.SanitizeFilters' doc comment.
+        spec.SanitizeFilters();
+
         var validationErrors = spec.Validate();
         if (validationErrors.Count > 0)
             return (null, string.Join(" ", validationErrors));
@@ -1396,9 +2265,9 @@ public class AnalyticsTools
     }
 
     /// <summary>
-    /// Parses and validates an Inquiries-mode final answer JSON (see InquiryModels.cs and
+    /// Parses and validates an Inquiries-mode final answer JSON (see ConversationModels.cs and
     /// BuildInquirySystemPrompt) — same tolerant extraction as <see cref="TryParseDashboard"/>,
-    /// just a much smaller contract.
+    /// just a smaller contract: a list of labeled blocks plus a rolling summary.
     /// </summary>
     public static (InquiryResponse? Inquiry, string? Error) TryParseInquiry(string text)
     {
@@ -1422,11 +2291,31 @@ public class AnalyticsTools
         if (validationErrors.Count > 0)
             return (null, string.Join(" ", validationErrors));
 
-        // Same Undefined-JsonElement serialization hazard as a dashboard widget's "data" —
-        // see TryParseDashboard. Here "data" is required by Validate() to be present at all
-        // only in spirit (the model is told to always include the real values), but nothing
-        // enforces it structurally, so guard the same way regardless.
-        if (spec.Data.ValueKind == JsonValueKind.Undefined) spec.Data = EmptyArrayElement;
+        var now = DateTime.UtcNow;
+        foreach (var block in spec.Blocks)
+        {
+            // Same Undefined-JsonElement serialization hazard as a dashboard widget's "data" —
+            // see TryParseDashboard.
+            if (block.Data.ValueKind == JsonValueKind.Undefined) block.Data = EmptyArrayElement;
+            // The model is never asked for a timestamp — it has no reliable notion of "now",
+            // and the point of ExtractedAt is when *we* actually ran the query, not when the
+            // model happened to write the token.
+            if (block.Kind == InquiryBlockKinds.Data) block.ExtractedAt = now;
+        }
+
+        // Dropped rather than failing the whole parse: a suggested chip is a minor nicety, not
+        // worth a JSON-repair retry over. Anything not phrased as a question is exactly the
+        // "statement/claim about the data" the spec forbids here, so it's filtered out instead
+        // of shown — a stray non-question slipping through would read as the model asserting
+        // something, not suggesting what to ask next.
+        if (spec.FollowUps is { Count: > 0 })
+        {
+            spec.FollowUps = spec.FollowUps
+                .Where(f => !string.IsNullOrWhiteSpace(f) && (f.TrimEnd().EndsWith('؟') || f.TrimEnd().EndsWith('?')))
+                .Take(3)
+                .ToList();
+            if (spec.FollowUps.Count == 0) spec.FollowUps = null;
+        }
 
         return (spec, null);
     }

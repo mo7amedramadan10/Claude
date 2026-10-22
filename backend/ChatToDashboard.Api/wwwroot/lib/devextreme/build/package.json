@@ -1,0 +1,12 @@
+{
+  "name": "jeem-devextreme-viz-bundle",
+  "private": true,
+  "description": "يبني dx.viz.jeem.js: حزمة DevExtreme للرسوم (viz) فقط بدل dx.all.js الكاملة.",
+  "scripts": {
+    "build": "esbuild entry.js --bundle --minify --format=iife --outfile=../dx.viz.jeem.js"
+  },
+  "devDependencies": {
+    "devextreme": "26.1.5",
+    "esbuild": "0.24.2"
+  }
+}

@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Integrations;
 using ChatToDashboard.Api.Repository;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Users;
@@ -15,14 +16,19 @@ public class SourcesController : ControllerBase
     private readonly RepositoryStore _store;
     private readonly SystemApiLoader _systems;
     private readonly PermissionsService _permissions;
+    private readonly IntegrationStore _integrations;
+    private readonly ChatToDashboard.Api.Semantics.ColumnSemanticsService _semantics;
 
     public SourcesController(
-        IOptions<SourceOptions> options, RepositoryStore store, SystemApiLoader systems, PermissionsService permissions)
+        IOptions<SourceOptions> options, RepositoryStore store, SystemApiLoader systems,
+        PermissionsService permissions, IntegrationStore integrations, ChatToDashboard.Api.Semantics.ColumnSemanticsService semantics)
     {
+        _semantics = semantics;
         _options = options.Value;
         _store = store;
         _systems = systems;
         _permissions = permissions;
+        _integrations = integrations;
     }
 
     /// <summary>Re-fetches one system's records from its endpoint, on demand — an operational action, admin only.</summary>
@@ -36,6 +42,13 @@ public class SourcesController : ControllerBase
             return BadRequest(new { error = $"\"{system.Name}\" غير مربوط بـ endpoint، فمفيش بيانات تُجلب." });
 
         var result = await _systems.LoadOneAsync(id, ct);
+        if (result?.Error is null)
+        {
+            // بيانات النظام تغيّرت: أعد تحليل معاني أعمدته للمشروع الحالي في الخلفية (جدول النظام لا يمر بمسار الرفع).
+            var user = await _permissions.GetCurrentUserAsync(User, ct);
+            var selection = user is null ? null : await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+            _semantics.AnalyzeInBackground(selection?.ProjectId, _systems.TableFor(system));
+        }
         return result?.Error is null
             ? Ok(new { system = system.Name, records = result?.Records ?? 0 })
             : StatusCode(502, new { system = system.Name, error = result.Error });
@@ -53,10 +66,10 @@ public class SourcesController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
-        var allowed = PermissionsService.GetEffectiveSelection(user, null);
+        var allowed = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         var isAdmin = user.Role == UserRoles.Admin;
 
-        var repoFiles = await _store.ListAsync(ct);
+        var repoFiles = await _store.ListAsync(allowed.ProjectId, ct);
         // allowed.AllowsFile is now always true (file access is never set per-user anymore —
         // see UsersController), so the actual gate for a non-Admin is the same creator/
         // explicitly-granted rule RepositoryController.Files applies to the file list itself.
@@ -66,6 +79,18 @@ public class SourcesController : ControllerBase
                 || f.PermittedUserIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase)))
             .Select(f => new { id = f.Id, name = f.DisplayName, category = f.Category })
             .ToList();
+
+        // External integrations, offered as data sources exactly like a configured system —
+        // an integration id is just another entry in the same "systems" toggle list the
+        // frontend already sends per chat request (see SourceSelection/AnalyticsTools.
+        // DescribeSourcesAsync). Only one whose client schema has actually been discovered is
+        // worth offering — an integration still being set up has nothing to build on yet.
+        var allIntegrations = await _integrations.ListAsync(allowed.ProjectId, ct);
+        var integrations = allIntegrations
+            .Where(i => allowed.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
+            .Select(i => new { id = i.Id, name = i.Name, connected = true, kind = "integration" })
+            .ToList();
+
         return Ok(new
         {
             systems = _options.Systems.Where(s => allowed.AllowsSystem(s.Id)).Select(s =>
@@ -85,6 +110,7 @@ public class SourcesController : ControllerBase
                 };
             }),
             files,
+            integrations,
             tableLabels = BuildTableLabels(repoFiles, allowed),
         });
     }

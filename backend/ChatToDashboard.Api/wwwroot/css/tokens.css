@@ -1,0 +1,78 @@
+/* ==========================================================
+   جيم — Design Tokens (مستمدة من هوية أحد)
+   كل الألوان والخطوط والمسافات في مكان واحد.
+
+   ملاحظة هجرة: الأصل كان :root عام، لكن القيم دي (--bg/--ink/--surface/--line…)
+   بتتعارض مباشرة مع متغيرات app.css القديمة بنفس الأسماء بالظبط وقيم مختلفة تمامًا
+   (الوضع الداكن الحالي). طول ما في شاشات لسه مابتحولتش للهوية الجديدة، لازم المتغيرات
+   دي تتقيّد بـ .jeem-scope (مش :root) عشان متبوظش ألوان الشاشات القديمة. حطّ
+   class="jeem-scope" على أي حاوية شاشة بتتحوّل للهوية الجديدة. لما كل الشاشات تتحول،
+   ده يرجع :root عادي وتتشال .jeem-scope من كل مكان.
+   ========================================================== */
+
+@font-face { font-family: "Tanseek"; src: url("../fonts/tanseek-arabic-light.woff2") format("woff2");  font-weight: 300; font-display: swap; }
+@font-face { font-family: "Tanseek"; src: url("../fonts/tanseek-arabic-medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Tanseek"; src: url("../fonts/tanseek-arabic-bold.woff2") format("woff2");   font-weight: 700; font-display: swap; }
+
+.jeem-scope {
+  /* ---- ألوان الهوية ---- */
+  --brand-blue:   #127DBD;  /* 7461 C — اللون الأساسي (أزرار، روابط، الحرف) */
+  --brand-cyan:   #28B6E6;  /* 298 C  — لون «الجواب»: لمسة مميزة فقط */
+  --brand-teal:   #00BAB3;  /* 361 C */
+  --brand-purple: #4D4286;  /* 7672 C */
+  --brand-mint:   #9DD5CA;  /* 565 C */
+  --brand-gray:   #40403D;  /* P179-14 — النصوص */
+
+  /* ---- درجات مشتقة ---- */
+  --blue-700: #0E6399;
+  --blue-600: #0F6FAA;
+  --blue-100: #D6EAF6;
+  --blue-50:  #EDF6FB;
+  --cyan-100: #D4F0FA;
+  --cyan-50:  #EAF7FD;
+  --teal-50:  #E5F7F6;
+  --purple-50:#EEECF6;
+
+  /* ---- النصوص ---- */
+  --ink:        #40403D;
+  --ink-2:      #5E5E5A;   /* نص ثانوي — 6.4:1 على الأبيض */
+  --ink-3:      #767672;   /* نص خافت — 4.6:1 على الأبيض */
+  --ink-inv:    #FFFFFF;
+
+  /* ---- الأسطح والحدود ---- */
+  --bg:         #F4F7F9;
+  --surface:    #FFFFFF;
+  --surface-2:  #F9FBFC;
+  --line:       #E4E8EC;
+  --line-2:     #EEF1F4;
+
+  /* ---- الحالات (محجوزة — لا تُستخدم كألوان سلاسل بيانات) ---- */
+  --ok:      #1A8F5E;  --ok-50:   #E7F5EE;
+  --warn:    #A86B00;  --warn-50: #FBF2E0;
+  --danger:  #C2413B;  --danger-50:#FBEAE9;
+
+  /* ---- ألوان الرسوم البيانية (بترتيب ثابت — تم التحقق منها لعمى الألوان) ---- */
+  --chart-1: #127DBD;
+  --chart-2: #00BAB3;
+  --chart-3: #6E62B0;
+  --chart-4: #28B6E6;
+  --chart-grid: #EEF1F4;
+
+  /* ---- الخط ---- */
+  --font: "Tanseek", "Microsoft Sans Serif", Tahoma, sans-serif;
+  --fs-xs: 12px;  --fs-sm: 13px;  --fs-md: 14px;  --fs-lg: 16px;
+  --fs-xl: 20px;  --fs-2xl: 26px; --fs-3xl: 34px;
+
+  /* ---- المسافات والزوايا والظلال ---- */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px; --r-full: 999px;
+  --shadow-1: 0 1px 2px rgba(20, 40, 60, .05);
+  --shadow-2: 0 1px 2px rgba(20, 40, 60, .04), 0 6px 18px rgba(20, 40, 60, .06);
+  --shadow-3: 0 12px 40px rgba(14, 50, 80, .16);
+
+  /* ---- الهيكل ---- */
+  --sidebar-w: 280px;
+  --sidebar-w-collapsed: 76px;
+  --chat-w: 400px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}

@@ -62,9 +62,13 @@ public class WidgetQueryService
     public async Task<FieldsResponse> GetAvailableFieldsAsync(SourceSelection selection, CancellationToken ct)
     {
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
 
         var tables = schema
+            // Keep only tables this project actually knows about — GetSchemaAsync otherwise
+            // reflects every project's tables on a shared deployment (see
+            // AnalyticsTools.IsTableKnownToProject).
+            .Where(t => AnalyticsTools.IsTableKnownToProject(t.Table, context))
             .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
             .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
             // Every file is now auto-restricted to its creator (see
@@ -100,7 +104,7 @@ public class WidgetQueryService
         var col = FindColumn(table, field)
             ?? throw new WidgetQueryValidationException("العمود المطلوب غير موجود في هذا الجدول.");
 
-        var tableRef = QualifiedTable(table.Table);
+        var tableRef = _db.QualifiedTable(table.Table);
         var colQuoted = Quote(col.Name);
         var limit = 50;
         var sql = _db.Provider == DbProvider.Sqlite
@@ -148,7 +152,7 @@ public class WidgetQueryService
             dateCol = FindColumn(table, request.DateColumn)
                 ?? throw new WidgetQueryValidationException("حقل التاريخ المطلوب غير موجود في هذا الجدول.");
 
-        var tableRef = QualifiedTable(table.Table);
+        var tableRef = _db.QualifiedTable(table.Table);
 
         // Every filter value becomes a real parameter — never string-interpolated — even
         // though the field name itself is schema-verified like any other identifier here.
@@ -220,7 +224,8 @@ public class WidgetQueryService
         var table = await ResolveTableAsync(tableName, selection, ct);
 
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        if (AnalyticsTools.CheckSourcePermission(sql, context) is not null)
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        if (AnalyticsTools.CheckSourcePermission(sql, context, schema) is not null)
             throw new WidgetQueryValidationException("لا يوجد صلاحية لتنفيذ هذا الاستعلام.");
 
         var parameters = new DynamicParameters();
@@ -238,6 +243,95 @@ public class WidgetQueryService
             .ToList<object>();
 
         return new SqlFilterResult { Data = rows };
+    }
+
+    /// <summary>
+    /// «التغيّر عن الفترة السابقة» لبطاقة مؤشر: يعيد تنفيذ استعلام المؤشر نفسه مرتين بنافذتين زمنيتين
+    /// متتاليتين (آخر 30 يومًا حتى أحدث تاريخ في الجدول، والـ30 يومًا التي قبلها) على عمود التاريخ الذي
+    /// يستخدمه الاستعلام (أو أول عمود تاريخ في الجدول)، مع الفلاتر النشطة إن وُجدت. بلا موديل. null
+    /// عندما لا يوجد عمود تاريخ، أو لا يرجع الاستعلام صفًا واحدًا برقم (مؤشر غير مجمَّع).
+    /// </summary>
+    public async Task<KpiDeltaResult?> ComputeKpiDeltaAsync(
+        string tableName, string sql, List<FilterCondition>? filters, SourceSelection selection, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(tableName) || string.IsNullOrWhiteSpace(sql) || AnalyticsTools.ValidateReadOnlySql(sql) is not null)
+            return null;
+        var table = await ResolveTableAsync(tableName, selection, ct);
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        if (AnalyticsTools.CheckSourcePermission(sql, context, schema) is not null) return null;
+
+        var dateCols = table.Columns.Where(IsDate).Select(c => c.Name).ToList();
+        if (dateCols.Count == 0) return null;
+        var column = SqlColumnRewriter.UsedColumns(sql, dateCols).FirstOrDefault() ?? dateCols[0];
+        var q = Quote(column);
+
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var maxRaw = await connection.ExecuteScalarAsync<object?>(new CommandDefinition(
+            $"SELECT MAX({q}) FROM {_db.QualifiedTable(table.Table)} WHERE {q} IS NOT NULL",
+            commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct));
+        if (!TryDate(maxRaw, out var max)) return null;
+
+        const int window = 30;
+        var end = max.Date.AddDays(1);
+        var curFrom = end.AddDays(-window);
+        var prevFrom = curFrom.AddDays(-window);
+
+        var current = await WindowValueAsync(connection, table, sql, q, filters, curFrom, end, ct);
+        var previous = await WindowValueAsync(connection, table, sql, q, filters, prevFrom, curFrom, ct);
+        if (current is null || previous is null) return null;
+        double? pct = previous.Value == 0 ? null : (current.Value - previous.Value) / Math.Abs(previous.Value) * 100;
+        // الخط المصغّر: ٨ أسابيع متتالية تنتهي بأحدث تاريخ (نافذة فارغة = ٠).
+        var series = new List<double>();
+        for (var k = 7; k >= 0; k--)
+        {
+            var wTo = end.AddDays(-7 * k);
+            series.Add(await WindowValueAsync(connection, table, sql, q, filters, wTo.AddDays(-7), wTo, ct) ?? 0);
+        }
+        return new KpiDeltaResult(column, window, curFrom.ToString("yyyy-MM-dd"), end.AddDays(-1).ToString("yyyy-MM-dd"),
+            current.Value, previous.Value, pct, series);
+    }
+
+    private async Task<double?> WindowValueAsync(System.Data.Common.DbConnection connection, TableSchema table, string sql, string quotedCol,
+        List<FilterCondition>? filters, DateTime from, DateTime toExclusive, CancellationToken ct)
+    {
+        var parameters = new DynamicParameters();
+        var (clauses, _) = BuildFilterClauses(table, filters ?? new List<FilterCondition>(), parameters);
+        // SQLite يخزّن تواريخ الملفات نصًا بصيغة ISO فتُقارن معجميًا؛ SQL Server بأنواع تاريخ حقيقية.
+        if (_db.Provider == DbProvider.Sqlite) { parameters.Add("@kdFrom", from.ToString("yyyy-MM-dd")); parameters.Add("@kdTo", toExclusive.ToString("yyyy-MM-dd")); }
+        else { parameters.Add("@kdFrom", from); parameters.Add("@kdTo", toExclusive); }
+        clauses.Add($"{quotedCol} >= @kdFrom AND {quotedCol} < @kdTo");
+        var windowed = SpliceWhereClause(sql, string.Join(" AND ", clauses));
+        if (AnalyticsTools.ValidateReadOnlySql(windowed) is not null) return null;
+        var rows = (await connection.QueryAsync(new CommandDefinition(windowed, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
+            .Take(2).Select(r => (IDictionary<string, object?>)r).ToList();
+        if (rows.Count != 1) return null;
+        foreach (var v in rows[0].Values)
+        {
+            switch (v)
+            {
+                case null: continue;
+                case double d: return d;
+                case float f: return f;
+                case decimal m: return (double)m;
+                case long l: return l;
+                case int i: return i;
+                case string s when double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var ps): return ps;
+            }
+        }
+        return 0; // صف واحد بلا رقم (مثلًا SUM على نافذة فارغة = NULL) يُعدّ صفرًا
+    }
+
+    private static bool TryDate(object? raw, out DateTime value)
+    {
+        value = default;
+        switch (raw)
+        {
+            case DateTime dt: value = dt; return true;
+            case DateTimeOffset dto: value = dto.DateTime; return true;
+            case string s when DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeLocal, out var p): value = p; return true;
+            default: return false;
+        }
     }
 
     /// <summary>
@@ -308,9 +402,19 @@ public class WidgetQueryService
     private async Task<TableSchema> ResolveTableAsync(string tableName, SourceSelection selection, CancellationToken ct)
     {
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(ct);
+        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
 
-        var table = schema.FirstOrDefault(t => string.Equals(t.Table, tableName, StringComparison.OrdinalIgnoreCase))
+        // tableName comes straight from the client (the widget wizard's own picker, or a
+        // stored widget's query.table replayed on a filter click) — unlike query_data's SQL,
+        // there's no model in the loop to have followed any instruction about which project's
+        // tables it may name. schema is every table on the whole shared deployment, so without
+        // the IsTableKnownToProject check, a table name simply guessed or reused from another
+        // project would resolve successfully here and this service would go on to query (and
+        // return) that other project's actual data. Treated identically to "doesn't exist" —
+        // same exception, same message — so a prober can't tell "foreign table" apart from
+        // "no such table" by the error alone.
+        var table = schema.FirstOrDefault(t => string.Equals(t.Table, tableName, StringComparison.OrdinalIgnoreCase)
+                && AnalyticsTools.IsTableKnownToProject(t.Table, context))
             ?? throw new WidgetQueryValidationException("الجدول المطلوب غير موجود أو غير متاح.");
 
         // Same permission gate query_data enforces for the LLM path.
@@ -418,7 +522,7 @@ public class WidgetQueryService
     {
         var topN = Cap(request.TopN, 10);
         var sortDir = string.Equals(request.Sort, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
-        var tableRef = QualifiedTable(table.Table);
+        var tableRef = _db.QualifiedTable(table.Table);
         var dimQuoted = Quote(dimensionCol.Name);
         var sql = _db.Provider == DbProvider.Sqlite
             ? $"SELECT {dimQuoted} AS label, {aggExpr} AS value FROM {tableRef}{where} " +
@@ -473,21 +577,12 @@ public class WidgetQueryService
 
     private static int Cap(int? requested, int fallback) => requested is > 0 and <= 100 ? requested.Value : fallback;
 
+    /// <summary>اقتباس معرّف بحسب المزوّد — للمسارات التي تبني SQL خارج هذه الخدمة (تصحيح الأعمدة).</summary>
+    public string QuoteIdentifier(string identifier) => Quote(identifier);
+
     private string Quote(string identifier) => _db.Provider == DbProvider.Sqlite
         ? $"\"{identifier.Replace("\"", "\"\"")}\""
         : $"[{identifier.Replace("]", "]]")}]";
-
-    /// <summary>
-    /// The display table name from the schema (e.g. "staging_sales" for SQLite, or the
-    /// dotted "staging.Sales" for SQL Server) turned into a properly bracket/quote-qualified
-    /// SQL reference — never built from client input, only from a name the schema itself returned.
-    /// </summary>
-    private string QualifiedTable(string displayName)
-    {
-        if (_db.Provider == DbProvider.Sqlite) return Quote(displayName);
-        var parts = displayName.Split('.');
-        return string.Join(".", parts.Select(p => $"[{p.Replace("]", "]]")}]"));
-    }
 
     private string PeriodExpr(string dateColName, string granularity)
     {

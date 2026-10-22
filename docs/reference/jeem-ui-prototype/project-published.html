@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>اللوحات المنشورة · جيم</title>
+  <link rel="icon" href="assets/img/logo-mark.svg">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-scope="project">
+<script src="assets/js/icons.js"></script>
+<div class="app">
+
+  <aside class="sidebar" aria-label="القائمة الرئيسية">
+    <div class="sb-brand">
+      <a href="org-projects.html" aria-label="جيم — الرئيسية">
+        <img class="lockup" src="assets/img/logo-lockup.svg" alt="جيم">
+        <img class="mark" src="assets/img/logo-mark.svg" alt="جيم">
+      </a>
+      <button class="sb-collapse" type="button" data-action="collapse" aria-label="طي القائمة" aria-expanded="true"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    </div>
+
+    <button class="org-switch" type="button" aria-label="تبديل المنظمة">
+      <span class="org-avatar">س</span>
+      <span class="org-meta"><strong>شركة س</strong><span>خطة الأعمال · <span class="js-proj-count">4</span> مشاريع</span></span>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg>
+    </button>
+
+    <label class="sb-search">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+      <span class="sr-only">بحث</span>
+      <input type="search" placeholder="ابحث في اللوحات والمشاريع">
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <nav class="sb-scroll">
+      <div class="sb-label"><span>المنظمة</span></div>
+      <ul class="nav"><li><a class="nav-link" href="org-projects.html" title="المشاريع"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span><span class="badge js-proj-count">4</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-users.html" title="المستخدمون"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span><span class="badge">37</span></a></li><li data-require="org-admin"><a class="nav-link" href="org-settings.html" title="الإعدادات والاشتراك"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات والاشتراك</span></a></li></ul>
+
+      <div class="sb-label"><span>المشاريع</span><a href="org-projects.html#new" data-require="org-admin" aria-label="مشروع جديد" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg></a></div>
+      <ul class="nav"><li class="proj-item is-open" data-project="sales"><a class="nav-link" href="project-workspace.html" title="منصة المبيعات" aria-expanded="true"><span class="proj-dot" style="background:var(--brand-blue)">م</span><span class="nav-text">منصة المبيعات</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a><ul class="proj-sub"><li><a class="nav-link" href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></a></li><li><a class="nav-link is-active" href="project-published.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span></a></li><li><a class="nav-link" href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></a></li><li><a class="nav-link" href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></a></li><li><a class="nav-link" href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></a></li><li><a class="nav-link" href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span></a></li></ul></li><li class="proj-item" data-project="hr"><a class="nav-link" href="project-workspace.html" title="منصة الموارد البشرية"><span class="proj-dot" style="background:var(--brand-teal)">ب</span><span class="nav-text">منصة الموارد البشرية</span></a></li><li class="proj-item" data-project="proc"><a class="nav-link" href="project-workspace.html" title="المشتريات والعقود"><span class="proj-dot" style="background:var(--brand-purple)">ع</span><span class="nav-text">المشتريات والعقود</span></a></li><li class="proj-item" data-project="cx"><a class="nav-link" href="project-workspace.html" title="تجربة العملاء"><span class="proj-dot" style="background:#0E8FB8">ت</span><span class="nav-text">تجربة العملاء</span></a></li></ul>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="isolation" title="بيانات المنظمة معزولة في قاعدة بيانات مستقلة">
+        <span class="pulse"></span><span class="txt">بيئة معزولة · قاعدة بيانات مستقلة</span>
+      </div>
+      <button class="user-card" type="button" aria-label="الحساب">
+        <span class="avatar">م</span>
+        <span class="meta"><strong>محمد رمضان</strong><span>مسؤول المنظمة</span></span>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-more"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="main">
+
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon menu-btn" type="button" data-action="nav" aria-label="فتح القائمة"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" aria-label="مسار التنقل"><a href="org-projects.html">شركة س</a><span class="sep">/</span><a href="project-workspace.html">منصة المبيعات</a><span class="sep">/</span><strong>اللوحات المنشورة</strong></nav>
+      <span class="spacer"></span>
+      <div class="actions"><a class="btn btn-primary" href="project-workspace.html" data-require="project:editor"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-publish"/></svg>نشر لوحة</a></div>
+    </header>
+    <main class="page">
+      
+      <section class="page-head">
+        <div>
+          <div class="eyebrow"><span class="proj-dot" style="background:var(--brand-blue);width:22px;height:22px;font-size:11px;border-radius:7px">م</span>منصة المبيعات <span class="badge js-my-role"></span></div>
+          <h1>اللوحات المنشورة</h1>
+          <p>كل لوحات المتابعة المنشورة على هذا المشروع في مكان واحد. تنقّل بينها بالتبويبات، ولكل لوحة صفحاتها الخاصة داخلها.</p>
+        </div>
+        <div class="head-actions"></div>
+      </section>
+      <div class="alert viewer-note" data-show-roles="viewer"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="grow">أنت <b>مشاهد</b> في هذا المشروع: تقدر تستعرض المحتوى، لكن الإضافة والتعديل لأصحاب صلاحية أعلى.</span></div>
+      <nav class="tabs" aria-label="أقسام المشروع"><a href="project-workspace.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg>المحادثة واللوحات</a><a href="project-published.html" aria-current="page"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>اللوحات المنشورة</a><a href="project-analyst.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg>المحلل الذكي</a><a href="project-sources.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>المصادر</a><a href="project-permissions.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg>الصلاحيات</a><a href="project-files.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg>الملفات</a></nav>
+      <div class="pd" id="pdRoot">
+        <div class="pd-prog" aria-hidden="true"><i id="pdProg"></i></div>
+        <div class="pd-strip">
+          <button type="button" class="pd-arrow" data-scroll="-1" aria-label="تبويبات سابقة" hidden><svg class="icon icon-sm flip" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+          <div class="pd-tabs" id="pdTabs" role="tablist" aria-label="اللوحات المنشورة"></div>
+          <button type="button" class="pd-arrow" data-scroll="1" aria-label="تبويبات تالية" hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+          <button type="button" class="btn btn-sm pd-all" data-all aria-haspopup="true" aria-expanded="false" aria-controls="pdMenu"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg><span class="lbl">كل اللوحات</span> <span class="badge num" id="pdCount">0</span></button>
+          <button type="button" class="btn btn-sm pd-all" data-show aria-pressed="false"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-play"/></svg><span>وضع العرض</span></button>
+          <div class="pd-menu" id="pdMenu" hidden><label class="sr-only" for="pdQ">ابحث في اللوحات المنشورة</label><input id="pdQ" type="search" placeholder="ابحث باسم اللوحة أو الجمهور…"><ul id="pdList"></ul></div>
+        </div>
+        <div id="pdPanels"></div>
+      </div>
+      <p class="pd-hint"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg> الأسهم ← → للتنقل بين التبويبات · Ctrl + سهم لإعادة ترتيب اللوحة (المالك والمحرر) · «وضع العرض» يمر على صفحات كل لوحة ثم ينتقل للتالية</p>
+    </main>
+
+  </div>
+</div>
+<div class="scrim"></div>
+<script src="assets/js/roles.js"></script>
+<script src="assets/js/dash-library.js"></script>
+<script src="assets/js/dash-render.js"></script>
+<script src="assets/js/project-published.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

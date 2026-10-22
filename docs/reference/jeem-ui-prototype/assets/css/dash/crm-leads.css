@@ -1,0 +1,29 @@
+/* العملاء المحتملون (cl) — رمادي دافئ بألوان باستيل */
+.cl { --acc: #181818; --bg: #F1F1F1; --card: #FAFAF9; --line: #E4E2DE; --soft: #ECEAE6; font-variant-numeric: tabular-nums; }
+.cl .dk-seg button[aria-pressed="true"] { background: #181818; color: #fff; }
+.cl-pack #clPack { overflow: hidden; border-radius: 14px; flex: 1; display: grid; place-items: center; min-height: 300px; }
+.cl-bub { max-height: 380px; transition: transform .35s var(--ease); }
+.cl-bub .bb { cursor: pointer; } .cl-bub .bb circle { transform-box: fill-box; transform-origin: center; animation: dkPop .6s var(--ease) both; animation-delay: calc(var(--i) * 80ms); transition: opacity .25s, stroke-width .2s; stroke: #fff; stroke-width: 2; }
+.cl-bub .bb:hover circle, .cl-bub .bb.on circle { stroke: #181818; stroke-width: 2.5; } .cl-bub .bb.dim { opacity: .35; }
+.cl-bub .n { font-size: 11px; font-weight: 600; text-anchor: middle; fill: #2A2A28; pointer-events: none; } .cl-bub .p { font-size: 10.5px; text-anchor: middle; fill: #2A2A28; pointer-events: none; font-weight: 700; }
+.cl-zoom select { font: inherit; font-size: 11.5px; border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; background: var(--card); }
+.cl-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cl .dk-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cl .dk-kpi .row { justify-content: space-between; } .cl .dk-kpi b { font-size: 20px; }
+.cl .dk-chip.ok { background: #C4DCC9; color: #23502E; } .cl .dk-chip.bad { background: #EBCACA; color: #7A2626; } .cl .dk-chip.info { background: #C9D6EA; color: #23406B; }
+.cl-row { display: flex; flex-direction: column; gap: 6px; } .cl-row + .cl-row { margin-top: 6px; }
+.cl-rh { display: flex; align-items: center; gap: 6px; font-size: 12.5px; } .cl-rh .sp { flex: 1; }
+.cl .ib { width: 26px; height: 26px; display: inline-grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: var(--card); cursor: pointer; color: var(--tx); }
+.cl-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 232px); gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; scrollbar-width: thin; }
+.cl-card { scroll-snap-align: start; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; position: relative; animation: rise .4s var(--ease) both; animation-delay: calc(var(--i) * 50ms); }
+.cl-card header { display: flex; align-items: center; } .cl-card header .sp { flex: 1; } .cl-card > b { font-size: 13.5px; }
+.cl-card p { color: var(--mut); font-size: 11.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+.cl-card .mn { border: 0; background: none; font-size: 18px; line-height: 1; cursor: pointer; color: var(--mut); padding: 0 4px; }
+.cl-card .pop { position: absolute; inset-inline-end: 8px; top: 34px; z-index: 5; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: flex; flex-direction: column; padding: 4px; min-width: 170px; animation: rise .2s var(--ease) both; }
+.cl-card .pop button { border: 0; background: none; font: inherit; font-size: 12px; text-align: start; padding: 7px 10px; border-radius: 7px; cursor: pointer; } .cl-card .pop button:hover { background: var(--soft); }
+.cl-card .who { display: flex; align-items: center; gap: 8px; } .cl-card .who > span:last-child { display: flex; flex-direction: column; } .cl-card .who small { color: var(--mut); font-size: 10.5px; }
+.cl-card footer { display: flex; align-items: center; gap: 8px; color: var(--mut); font-size: 11px; border-top: 1px solid var(--line); padding-top: 6px; } .cl-card footer > span { display: inline-flex; align-items: center; gap: 3px; } .cl-card footer .sp { flex: 1; }
+.cl .dk-heat .cl { min-height: 20px; }
+.cl .dk-heat { grid-template-columns: auto repeat(var(--c), minmax(14px, 1fr)); }
+@media (max-width: 700px) { .cl .dk-kpis { grid-template-columns: minmax(0, 1fr); } }
+.cl-pack { align-self: start; position: sticky; top: 76px; } .cl-pack #clPack { min-height: 340px; }
+@media (max-width: 1100px) { .cl-pack { position: static; } }
