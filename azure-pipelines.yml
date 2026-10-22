@@ -2,7 +2,8 @@
 # Full reference of every option: platform/examples/TEMPLATE.azure-pipelines.yml
 trigger:
   branches:
-    include: [main]
+    include:
+     - develop
 
 resources:
   repositories:
