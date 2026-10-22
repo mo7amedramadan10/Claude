@@ -37,6 +37,12 @@ public class ProjectStore
             await command.ExecuteNonQueryAsync(ct);
         }
 
+        // ترحيل: عمودا المنظمة والاسم في الرابط لجداول Projects أُنشئت قبل وجودهما (أثناء
+        // التطوير التكراري على نفس قاعدة البيانات المشتركة، قبل أن يصير المشروع مُقسَّمًا
+        // بالمنظمة) — نفس نمط AddColumnIfMissingAsync في PresentationStore.
+        await AddColumnIfMissingAsync(connection, "OrganizationId", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Slug", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
+
         // Owner/Editor/Viewer roles on a project — mirrors DashboardRoles' shape (see its
         // own remarks), except Owner lives here too since a Project has no OwnerId column.
         var rolesText = _db.Provider == DbProvider.Sqlite
@@ -56,6 +62,20 @@ public class ProjectStore
             rolesCommand.CommandText = rolesText;
             await rolesCommand.ExecuteNonQueryAsync(ct);
         }
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
     public async Task<int> CountForOrganizationAsync(string organizationId, CancellationToken ct = default)
