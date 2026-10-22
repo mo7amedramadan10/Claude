@@ -49,13 +49,22 @@ public class PresentationStore
             command.CommandText = text;
             await command.ExecuteNonQueryAsync(ct);
         }
-        // ترحيل: عمود الاسم في الرابط (Slug) لجداول أُنشئت قبل وجوده — فريد داخل المنظمة (يُفرض في الكود).
+        // ترحيل: عمودا المنظمة (OrganizationId) والاسم في الرابط (Slug) لجداول أُنشئت قبل
+        // وجودهما — Slug فريد داخل المنظمة (يُفرض في الكود).
+        await AddColumnIfMissingAsync(connection, "OrganizationId",
+            sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Slug",
+            sqlite: "TEXT", sqlServer: "NVARCHAR(100)", ct);
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
         try
         {
             await using var alter = connection.CreateCommand();
             alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"Slug\" TEXT"
-                : $"ALTER TABLE {Table} ADD [Slug] NVARCHAR(100)";
+                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
         catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
