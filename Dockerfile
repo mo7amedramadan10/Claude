@@ -4,6 +4,10 @@ WORKDIR /src
 COPY backend/ChatToDashboard.Api/ChatToDashboard.Api.csproj ChatToDashboard.Api/
 RUN dotnet restore ChatToDashboard.Api/ChatToDashboard.Api.csproj
 COPY backend/ChatToDashboard.Api/ ChatToDashboard.Api/
+# ChatToDashboard.Api.csproj embeds IntegrationConnector's source as resources (for
+# ConnectorPackager to zip up at download time) without building it as a project — it must
+# still be present as a sibling directory for that embed to resolve.
+COPY backend/IntegrationConnector/ IntegrationConnector/
 RUN dotnet publish ChatToDashboard.Api/ChatToDashboard.Api.csproj -c Release -o /app/publish
 
 # ---- Runtime: one container serving the API and the UI ----
