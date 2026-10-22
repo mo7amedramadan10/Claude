@@ -274,10 +274,13 @@
   مقطع `claude_desktop_config.json` جاهز (`apiTokenSnippet`: عنوان المنصة الحالي + المفتاح)، قائمة بالبادئات وآخر
   استخدام، إلغاء.
 - **الجسر** `tools/jeem-mcp/index.js` (Node ≥20، `@modelcontextprotocol/sdk` عبر stdio؛ `node_modules/` في .gitignore):
-  أدوات `publish_presentation(title, html, expiresInDays?)` → multipart إلى `/api/presentations` ويعيد `/p/{id}`،
+  أدوات `publish_presentation(title, html|filePath, slug?, expiresInDays?)` → multipart إلى `/api/presentations` ويعيد الرابط المقروء،
   `replace_presentation`، `list_presentations`، `revoke_presentation`، `whoami`. البيئة `JEEM_URL` + `JEEM_TOKEN`.
   القيد: المنصة داخلية فلا Custom Connector من claude.ai؛ الجسر يعمل من **Claude Desktop فقط** على جهاز داخل الشبكة
   (التركيب في `tools/jeem-mcp/README.md`). لو أُتيح نطاق عام لاحقًا تتحول الأدوات نفسها إلى خادم MCP بعيد.
+- **`filePath` بدل `html`** في النشر والاستبدال (`resolveHtml` في index.js): الجسر محلي فيقرأ ملف `.html` من جهاز
+  المستخدم (مسار مطلق أو `~`، ≤15MB) ويرسله — أُضيف لأن Claude كان يضطر إلى إعادة كتابة صفحة 1.1MB حرفًا بحرف في كل
+  تحديث. تحقق حي: نشر واستبدال ملف 1.15MB من المسار، ورسائل واضحة لملف مفقود أو بلا أي مصدر.
 - تحقق حي: إنشاء مفتاح → whoami بالـBearer 200 بلا كوكي، إنشاء مفتاح بمفتاح 403، مفتاح مُلغى/خاطئ 401؛ عميل MCP
   stdio حقيقي ضد الجسر: نشر → رابط عام 200، استبدال يغيّر المحتوى على نفس الرابط، قائمة، إلغاء → 410، HTML أقصر
   من الحد يُرفض من المخطط؛ النافذة بلا أخطاء JS وبلا تمرير أفقي على 390px.

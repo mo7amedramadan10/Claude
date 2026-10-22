@@ -36,6 +36,11 @@
 3. أعد تشغيل Claude Desktop. ستظهر أدوات «jeem» في قائمة الأدوات.
 
 ## الاستخدام
+### الصفحات الكبيرة: مرّر مسار الملف بدل النص
+`publish_presentation` و`replace_presentation` يقبلان `filePath` (مسار ملف `.html` على جهازك، مطلق أو يبدأ
+بـ `~`) بدل `html`. الجسر يقرأ الملف بنفسه ويرسله، فلا يعيد Claude كتابة صفحة بحجم ميغابايت في كل تحديث:
+«عدّل الملف `~/Downloads/site/index.html` ثم استبدل العرض `q3-results` منه». الحد 15 ميغابايت.
+
 في أي محادثة: «اعمل عرضًا عن نتائج الربع الثالث وانشره على جيم» — Claude يبني الصفحة، ينادي
 `publish_presentation`، ويعطيك الرابط `…/p/xxxxxxxx`. أدوات أخرى: `replace_presentation` (نسخة أحدث على
 نفس الرابط)، `list_presentations`، `revoke_presentation`، و`whoami` للتحقق من الاتصال.
