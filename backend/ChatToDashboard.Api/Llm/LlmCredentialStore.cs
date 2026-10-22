@@ -77,6 +77,27 @@ public class LlmCredentialStore
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
+
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // بلا تأثير إن كان الجدول جديدًا أصلًا.
+        await AddColumnIfMissingAsync(connection, "Provider", "TEXT", "NVARCHAR(50)", ct);
+        await AddColumnIfMissingAsync(connection, "ApiKey", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "BaseUrl", "TEXT", "NVARCHAR(500)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT", "DATETIME2", ct);
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (SqlException ex) when (ex.Number == 2705) { }
     }
 
     private static string Canonical(string provider) =>

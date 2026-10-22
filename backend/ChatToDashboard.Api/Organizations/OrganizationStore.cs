@@ -36,12 +36,16 @@ public class OrganizationStore
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل: أعمدة أُضيفت بعد إنشاء هذا الجدول لأول مرة على قاعدة بيانات مشتركة (نفس نمط
-        // AddColumnIfMissingAsync في ProjectStore/PresentationStore). بلا UNIQUE هنا — SQLite
-        // لا يقبل قيدًا UNIQUE في ALTER TABLE ADD COLUMN أصلًا، وتفرّد Slug محسوم في الكود
-        // بالفعل عبر UniqueSlugAsync (نفس أسلوب Slug في ProjectStore/PresentationStore).
+        // ترحيل: لا عمود هنا مضمون الوجود بافتراض — الدليل الحي أن جدول Organizations
+        // المشترك هذا سبق وجوده بشكل مختلف تمامًا عن هذا الكود (حتى Id/Name/CreatedAt
+        // ظهرا كأعمدة غير موجودة في الإنتاج رغم كونهما من صلب التعريف الأول) فكل عمود
+        // يُضاف دفاعيًا كعمود عادي (بلا PRIMARY KEY ولا UNIQUE — SQLite لا يقبلهما في
+        // ALTER TABLE ADD COLUMN أصلًا، وتفرّد Slug محسوم في الكود عبر UniqueSlugAsync).
+        await AddColumnIfMissingAsync(connection, "Id", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Name", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
         await AddColumnIfMissingAsync(connection, "Slug", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
         await AddColumnIfMissingAsync(connection, "IsActive", sqlite: "INTEGER", sqlServer: "BIT", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlite: "TEXT", sqlServer: "DATETIME2", ct);
     }
 
     private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
