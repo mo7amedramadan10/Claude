@@ -59,6 +59,33 @@ public class ApiTokenStore
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
+
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE على TokenHash هنا (نفس استثناء
+        // OrganizationStore) — SQLite لا يقبله في ALTER TABLE ADD COLUMN؛ تصادم عشوائي على
+        // تجزئة 256-بت مستبعد عمليًا.
+        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(32)", ct);
+        await AddColumnIfMissingAsync(connection, "UserId", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(200) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Name", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(200) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "TokenHash", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Prefix", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(20) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", "TEXT NOT NULL DEFAULT ''", "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
+        await AddColumnIfMissingAsync(connection, "LastUsedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "RevokedAt", "TEXT", "DATETIME2", ct);
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
     /// <summary>ينشئ مفتاحًا جديدًا ويعيد نصه الكامل (المرة الوحيدة التي يتوفر فيها) مع سجله.</summary>

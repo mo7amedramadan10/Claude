@@ -48,6 +48,30 @@ public class ConversationStore
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
+
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // بلا تأثير إن كان الجدول جديدًا أصلًا.
+        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "UserId", "TEXT", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Title", "TEXT", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, "TranscriptJson", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "Summary", "TEXT", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT", "DATETIME2", ct);
+    }
+
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    {
+        try
+        {
+            await using var alter = connection.CreateCommand();
+            alter.CommandText = _db.Provider == DbProvider.Sqlite
+                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
+                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            await alter.ExecuteNonQueryAsync(ct);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
     /// <summary>Creates a new conversation from its first turn pair (the user's question and
