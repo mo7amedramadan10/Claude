@@ -8525,7 +8525,7 @@ async function loadClaudeChatScreen() {
   if (!st.allowed) { el('cc-status').textContent = 'غير متاح لحسابك.'; el('cc-send').disabled = true; return; }
   if (!st.available) {
     el('cc-status').textContent = 'الأمر claude غير متاح على الخادم';
-    el('cc-messages').innerHTML = `<div class="cc-msg err">تعذّر تشغيل Claude Code CLI على الخادم: ${esc(st.detail || '')}\nثبّت الأمر claude على الخادم وسجّل دخوله، أو اضبط ClaudeCli:Command.</div>`;
+    el('cc-messages').innerHTML = `<div class="cc-msg err">تعذّر تشغيل Claude Code CLI على الخادم.\n${esc(st.detail || '')}</div>`;
     el('cc-send').disabled = true; return;
   }
   el('cc-status').textContent = st.detail ? `claude ${st.detail}${st.model ? ' · ' + st.model : ''}` : '';

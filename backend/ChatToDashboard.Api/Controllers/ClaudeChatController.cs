@@ -46,7 +46,7 @@ public class ClaudeChatController : ControllerBase
         var allowed = _cli.Enabled && _cli.AllowedRoles.Contains(user.Role, StringComparer.OrdinalIgnoreCase);
         if (!allowed) return Ok(new { enabled = _cli.Enabled, allowed = false, available = false, detail = (string?)null });
         var (available, detail) = await _cli.ProbeAsync(ct);
-        return Ok(new { enabled = true, allowed = true, available, detail, model = _cli.Model, workingDirectory = _cli.WorkingDirectory });
+        return Ok(new { enabled = true, allowed = true, available, detail, model = _cli.Model, workingDirectory = _cli.WorkingDirectory, command = _cli.ResolvedCommand });
     }
 
     [HttpGet("chats")]

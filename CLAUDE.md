@@ -300,6 +300,9 @@
   `chats/{id}/messages`، `PUT/DELETE chats/{id}`، و`POST chats/{id}/send` بـ Server-Sent Events (`id=new` ينشئ
   محادثة ويعيد `chat` أولًا). الإعدادات `ClaudeCli` في appsettings (Command/WorkingDirectory/Model/AllowedRoles).
   **الأمر `claude` يجب أن يكون مثبّتًا ومسجَّل دخوله على الخادم**، والتكلفة على حساب Claude الخاص بالخادم.
+  **Windows**: `Process.Start` بلا shell لا يكمل الامتداد، فالاسم «claude» وحده يفشل (علّة حقيقية ظهرت للمستخدم).
+  `ResolvedCommand` يبحث في PATH بكل PATHEXT ثم `%USERPROFILE%\.local\bin` (المثبّت الأصلي `claude.exe`) و`%APPDATA%\npm`
+  (`claude.cmd`)، ورسالة التعذّر تذكر أين بحث وكيف يُضبط المسار الكامل في `ClaudeCli:Command`؛ `status` يعيد `command` المحلول.
 - تحقق حي ضد CLI حقيقي (2.1.312): غير المسؤول لا يرى البند و`status.allowed=false`؛ المسؤول: بث يبدأ فورًا، رد
   بعنوان وقائمة وكود مُنسَّق في 3.6 ثانية مع المدة والتكلفة؛ متابعة بذاكرة («كم بندًا؟» → 3)؛ القائمة والفتح
   بعد إعادة التحميل؛ بلا أخطاء JS وبلا تمرير أفقي على 390px.

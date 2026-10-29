@@ -27,6 +27,55 @@ public class ClaudeCliService
     }
 
     public string Command => _configuration["ClaudeCli:Command"]?.Trim() is { Length: > 0 } c ? c : "claude";
+
+    private string? _resolved;
+
+    /// <summary>المسار الفعلي للأمر. على Windows يُثبَّت claude إمّا كـ <c>claude.exe</c> (المثبّت الأصلي في
+    /// <c>%USERPROFILE%\.local\bin</c>) أو كغلاف npm <c>claude.cmd</c> في <c>%APPDATA%\npm</c> — و<c>Process.Start</c>
+    /// بلا shell لا يكمل الامتداد تلقائيًا فيفشل باسم «claude» وحده. نبحث في PATH بكل امتدادات PATHEXT ثم في
+    /// المواقع المعروفة، ونُبقي الاسم كما هو إن كان مسارًا صريحًا.</summary>
+    public string ResolvedCommand
+    {
+        get
+        {
+            if (_resolved is not null) return _resolved;
+            var cmd = Command;
+            if (cmd.Contains(Path.DirectorySeparatorChar) || cmd.Contains(Path.AltDirectorySeparatorChar) || File.Exists(cmd))
+                return _resolved = cmd;
+            var isWindows = OperatingSystem.IsWindows();
+            var extensions = isWindows
+                ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT").Split(';', StringSplitOptions.RemoveEmptyEntries).Prepend("").ToArray()
+                : new[] { "" };
+            var dirs = (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            dirs.Add(Path.Combine(home, ".local", "bin"));
+            if (isWindows)
+            {
+                dirs.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm"));
+                dirs.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "claude"));
+            }
+            else
+            {
+                dirs.Add("/usr/local/bin"); dirs.Add("/opt/homebrew/bin"); dirs.Add(Path.Combine(home, ".npm-global", "bin"));
+            }
+            foreach (var dir in dirs.Where(d => d.Length > 0).Distinct())
+                foreach (var ext in extensions)
+                {
+                    var candidate = Path.Combine(dir, cmd + ext.ToLowerInvariant());
+                    if (File.Exists(candidate)) return _resolved = candidate;
+                    if (isWindows && File.Exists(Path.Combine(dir, cmd + ext))) return _resolved = Path.Combine(dir, cmd + ext);
+                }
+            return _resolved = cmd; // غير موجود: يُترك للنظام ليبلّغ، والرسالة تشرح أين بحثنا
+        }
+    }
+
+    /// <summary>وصف للمستخدم عند التعذّر: أين بحثنا وكيف يضبط المسار.</summary>
+    public string NotFoundHint =>
+        OperatingSystem.IsWindows()
+            ? "لم يُعثر على «claude.exe/claude.cmd» في PATH الخاص بالخدمة ولا في %USERPROFILE%\\.local\\bin ولا %APPDATA%\\npm. " +
+              "تأكد أن Claude Code مثبّت لنفس حساب Windows الذي يشغّل الخادم، أو اضبط المسار الكامل في ClaudeCli:Command " +
+              "(مثل C:\\Users\\<user>\\.local\\bin\\claude.exe أو C:\\Users\\<user>\\AppData\\Roaming\\npm\\claude.cmd) ثم أعد التشغيل."
+            : "لم يُعثر على «claude» في PATH ولا في ~/.local/bin أو /usr/local/bin. ثبّت Claude Code لنفس المستخدم الذي يشغّل الخادم أو اضبط المسار الكامل في ClaudeCli:Command.";
     public string? Model => _configuration["ClaudeCli:Model"]?.Trim() is { Length: > 0 } m ? m : null;
     public bool Enabled => _configuration.GetValue("ClaudeCli:Enabled", true);
     public IReadOnlyList<string> AllowedRoles =>
@@ -55,7 +104,9 @@ public class ClaudeCliService
         }
         catch (Exception ex)
         {
-            return (false, $"تعذّر تشغيل «{Command}»: {ex.Message}");
+            var resolved = ResolvedCommand;
+            var hint = File.Exists(resolved) ? "" : " " + NotFoundHint;
+            return (false, $"تعذّر تشغيل «{resolved}»: {ex.Message}.{hint}");
         }
     }
 
@@ -78,7 +129,7 @@ public class ClaudeCliService
         catch (Exception ex) { process = null!; startError = ex.Message; }
         if (startError is not null)
         {
-            yield return new StreamEvent("error", $"تعذّر تشغيل «{Command}» على الخادم: {startError}");
+            yield return new StreamEvent("error", $"تعذّر تشغيل «{ResolvedCommand}» على الخادم: {startError}.{(File.Exists(ResolvedCommand) ? "" : " " + NotFoundHint)}");
             yield break;
         }
 
@@ -155,7 +206,7 @@ public class ClaudeCliService
     {
         var psi = new ProcessStartInfo
         {
-            FileName = Command, WorkingDirectory = WorkingDirectory,
+            FileName = ResolvedCommand, WorkingDirectory = WorkingDirectory,
             RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
             UseShellExecute = false, CreateNoWindow = true,
             StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8, StandardInputEncoding = new UTF8Encoding(false),
