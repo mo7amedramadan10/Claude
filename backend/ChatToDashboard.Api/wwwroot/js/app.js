@@ -7891,7 +7891,7 @@ const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'sources
 const SCREEN_LABELS = {
   chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
-  projects: 'المشاريع', presentations: 'العروض التقديمية', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
+  projects: 'المشاريع', presentations: 'العروض التقديمية', 'claude-chat': 'محادثة Claude', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
@@ -7929,6 +7929,7 @@ function showScreen(name) {
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
   if (name === 'sharelinks') loadShareList();
   if (name === 'presentations') loadPresentations();
+  if (name === 'claude-chat') loadClaudeChatScreen();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
   if (name === 'llm-keys') loadLlmKeysPage();
@@ -8450,6 +8451,203 @@ async function loadShareList() {
   }
 }
 
+// ---------- محادثة Claude (Claude Code CLI على الخادم) — ClaudeChatController ----------
+// الشريط الجانبي = المحادثة (رسائلك وردود مختصرة)، ولوحة النتائج = الرد الكامل منسّقًا من Markdown.
+// البث بـ Server-Sent Events عبر fetch (لا EventSource لأن الطلب POST) مع إمكانية الإيقاف (AbortController).
+const CC = { chatId: null, messages: [], chats: [], abort: null, status: null, activeMsgId: null };
+
+// محوّل Markdown صغير وآمن (كل النص يُهرَّب أولًا): عناوين، فقرات، قوائم، كود، جداول، اقتباسات، روابط، تشديد.
+function ccMarkdown(src) {
+  const lines = (src || '').replace(/\r\n?/g, '\n').split('\n');
+  const out = []; let i = 0;
+  const inline = t => esc(t)
+    .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`)
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, '$1<i>$2</i>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const flushPara = buf => { if (buf.length) { out.push(`<p>${buf.map(inline).join('<br>')}</p>`); buf.length = 0; } };
+  const para = [];
+  while (i < lines.length) {
+    const line = lines[i];
+    const fence = line.match(/^```(\w*)/);
+    if (fence) {
+      flushPara(para); const code = []; i++;
+      while (i < lines.length && !/^```/.test(lines[i])) code.push(lines[i++]);
+      i++;
+      out.push(`<pre><button type="button" class="cc-copy-code">نسخ</button><code${fence[1] ? ` class="lang-${esc(fence[1])}"` : ''}>${esc(code.join('\n'))}</code></pre>`);
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { flushPara(para); const lvl = Math.min(h[1].length, 3); out.push(`<h${lvl}>${inline(h[2])}</h${lvl}>`); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { flushPara(para); out.push('<hr>'); i++; continue; }
+    if (/^\s*>/.test(line)) {
+      flushPara(para); const q = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) q.push(lines[i++].replace(/^\s*>\s?/, ''));
+      out.push(`<blockquote>${ccMarkdown(q.join('\n'))}</blockquote>`); continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
+      flushPara(para);
+      const cells = l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+      const head = cells(line); i += 2; const rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) rows.push(cells(lines[i++]));
+      out.push(`<table><thead><tr>${head.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+      continue;
+    }
+    const li = line.match(/^\s*(?:[-*+]|(\d+)[.)])\s+(.*)$/);
+    if (li) {
+      flushPara(para); const ordered = !!li[1]; const items = [];
+      const re = /^\s*(?:[-*+]|\d+[.)])\s+(.*)$/;
+      while (i < lines.length && re.test(lines[i])) {
+        let item = lines[i].match(re)[1]; i++;
+        while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !re.test(lines[i])) item += ' ' + lines[i++].trim();
+        items.push(`<li>${inline(item)}</li>`);
+      }
+      out.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`); continue;
+    }
+    if (line.trim() === '') { flushPara(para); i++; continue; }
+    para.push(line); i++;
+  }
+  flushPara(para);
+  return out.join('\n');
+}
+
+async function ccLoadStatus() {
+  try {
+    const r = await fetch('/api/claude-chat/status');
+    CC.status = r.ok ? await r.json() : { allowed: false };
+  } catch { CC.status = { allowed: false }; }
+  el('nav-claude-chat').classList.toggle('hidden', !CC.status.allowed);
+  return CC.status;
+}
+
+async function loadClaudeChatScreen() {
+  const st = CC.status || await ccLoadStatus();
+  if (!st.allowed) { el('cc-status').textContent = 'غير متاح لحسابك.'; el('cc-send').disabled = true; return; }
+  if (!st.available) {
+    el('cc-status').textContent = 'الأمر claude غير متاح على الخادم';
+    el('cc-messages').innerHTML = `<div class="cc-msg err">تعذّر تشغيل Claude Code CLI على الخادم: ${esc(st.detail || '')}\nثبّت الأمر claude على الخادم وسجّل دخوله، أو اضبط ClaudeCli:Command.</div>`;
+    el('cc-send').disabled = true; return;
+  }
+  el('cc-status').textContent = st.detail ? `claude ${st.detail}${st.model ? ' · ' + st.model : ''}` : '';
+  el('cc-send').disabled = false;
+  await ccLoadChats();
+  if (!CC.chatId && CC.chats.length) await ccOpenChat(CC.chats[0].id); else ccRenderMessages();
+}
+async function ccLoadChats() {
+  const r = await fetch('/api/claude-chat/chats');
+  CC.chats = r.ok ? await r.json() : [];
+}
+async function ccOpenChat(id) {
+  const r = await fetch(`/api/claude-chat/chats/${encodeURIComponent(id)}/messages`);
+  if (!r.ok) return;
+  const data = await r.json();
+  CC.chatId = id; CC.messages = data.messages; CC.activeMsgId = null;
+  el('cc-head-desc').textContent = data.chat.title;
+  ccRenderMessages();
+  const last = [...CC.messages].reverse().find(m => m.role === 'assistant');
+  if (last) ccShowResult(last); else ccShowEmpty();
+}
+function ccNewChat() {
+  CC.chatId = null; CC.messages = []; CC.activeMsgId = null;
+  el('cc-head-desc').textContent = 'محادثة جديدة — الرد يظهر في لوحة النتائج';
+  ccRenderMessages(); ccShowEmpty(); el('cc-q').focus();
+}
+function ccShowEmpty() {
+  el('cc-pane-title').textContent = 'النتائج'; el('cc-pane-meta').textContent = ''; el('cc-copy').classList.add('hidden');
+  el('cc-result').innerHTML = '<div class="empty"><div><div class="big">ابدأ محادثة من اليسار</div><div>الرد الكامل من Claude يظهر هنا منسّقًا، والمحادثة تبقى في الشريط الجانبي.</div></div></div>';
+}
+function ccShowResult(m, streaming = false) {
+  CC.activeMsgId = m.id || null;
+  const q = [...CC.messages].reverse().find(x => x.role === 'user' && (!m.createdAt || x.createdAt <= m.createdAt));
+  el('cc-pane-title').textContent = q ? q.text.slice(0, 90) : 'النتائج';
+  el('cc-pane-meta').textContent = m.createdAt ? `${relTime(m.createdAt)}${m.durationMs ? ` · ${(m.durationMs / 1000).toFixed(1)} ث` : ''}${m.costUsd != null ? ` · $${m.costUsd.toFixed(4)}` : ''}` : (streaming ? 'جارٍ الرد…' : '');
+  el('cc-copy').classList.toggle('hidden', streaming);
+  el('cc-copy').onclick = async () => { try { await navigator.clipboard.writeText(m.text); } catch {} el('cc-copy').textContent = '✓ نُسخ'; setTimeout(() => { el('cc-copy').textContent = 'نسخ النص'; }, 1200); };
+  el('cc-result').innerHTML = `<div class="cc-doc${streaming ? ' streaming' : ''}">${ccMarkdown(m.text)}</div>`;
+  el('cc-result').querySelectorAll('.cc-copy-code').forEach(b => b.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(b.nextElementSibling.textContent); } catch {}
+    b.textContent = '✓'; setTimeout(() => { b.textContent = 'نسخ'; }, 1200);
+  }));
+  el('cc-messages').querySelectorAll('.cc-msg.assistant').forEach(x => x.classList.toggle('active', x.dataset.id === String(m.id)));
+}
+function ccRenderMessages() {
+  const box = el('cc-messages');
+  box.innerHTML = CC.messages.map(m => m.role === 'user'
+    ? `<div class="cc-msg user">${esc(m.text)}</div>`
+    : `<div class="cc-msg assistant${m.id === CC.activeMsgId ? ' active' : ''}" data-id="${esc(m.id)}" title="عرض الرد كاملًا في لوحة النتائج"><span class="cc-preview">${esc(m.text.replace(/```[\s\S]*?```/g, '[كود]').replace(/[#*`>_]+/g, '').replace(/\n{2,}/g, '\n').trim())}</span><span class="cc-meta">${relTime(m.createdAt)} · اضغط للعرض</span></div>`
+  ).join('') || '<div class="muted" style="padding:12px 0">اكتب أول رسالة لبدء المحادثة.</div>';
+  box.querySelectorAll('.cc-msg.assistant').forEach(d => d.addEventListener('click', () => { const m = CC.messages.find(x => x.id === d.dataset.id); if (m) ccShowResult(m); }));
+  box.scrollTop = box.scrollHeight;
+}
+async function ccSend(text) {
+  if (CC.abort) return;
+  const userMsg = { id: 'u' + Date.now(), role: 'user', text, createdAt: new Date().toISOString() };
+  CC.messages.push(userMsg); ccRenderMessages();
+  const draft = { id: 'pending', role: 'assistant', text: '', createdAt: null };
+  ccShowResult(draft, true);
+  el('cc-send').disabled = true; el('cc-stop').classList.remove('hidden'); el('cc-status').textContent = 'جارٍ الاتصال…';
+  CC.abort = new AbortController();
+  try {
+    const res = await fetch(`/api/claude-chat/chats/${encodeURIComponent(CC.chatId || 'new')}/send`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }), signal: CC.abort.signal,
+    });
+    if (!res.ok || !res.body) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `فشل الإرسال (${res.status})`); }
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''; let finished = false;
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0) {
+        const block = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        const ev = (block.match(/^event: (.*)$/m) || [])[1]; const dataLine = (block.match(/^data: (.*)$/m) || [])[1];
+        if (!ev || !dataLine) continue;
+        const data = JSON.parse(dataLine);
+        if (ev === 'chat') { if (!CC.chatId) { CC.chatId = data.id; el('cc-head-desc').textContent = data.title; ccLoadChats(); } }
+        else if (ev === 'init') { el('cc-status').textContent = `جارٍ الرد… ${data.model || ''}`; }
+        else if (ev === 'delta') { draft.text += data.text; el('cc-result').querySelector('.cc-doc').innerHTML = ccMarkdown(draft.text); }
+        else if (ev === 'done') { CC.messages.push(data.message); ccRenderMessages(); ccShowResult(data.message); finished = true; }
+        else if (ev === 'error') { throw new Error(data.message || 'خطأ من الخادم'); }
+      }
+    }
+    if (!finished) throw new Error('انقطع البث قبل اكتمال الرد.');
+  } catch (err) {
+    if (err.name === 'AbortError') { el('cc-messages').insertAdjacentHTML('beforeend', '<div class="cc-msg err">أُوقف الرد.</div>'); }
+    else el('cc-messages').insertAdjacentHTML('beforeend', `<div class="cc-msg err">${esc(err.message)}</div>`);
+    if (!draft.text) ccShowEmpty(); else { draft.createdAt = new Date().toISOString(); ccShowResult(draft); }
+  } finally {
+    CC.abort = null; el('cc-send').disabled = false; el('cc-stop').classList.add('hidden');
+    el('cc-status').textContent = CC.status?.detail ? `claude ${CC.status.detail}` : '';
+    el('cc-messages').scrollTop = el('cc-messages').scrollHeight;
+  }
+}
+el('cc-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const text = el('cc-q').value.trim(); if (!text || CC.abort) return;
+  el('cc-q').value = ''; el('cc-q').style.height = '';
+  ccSend(text);
+});
+el('cc-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('cc-form').requestSubmit(); } });
+el('cc-q').addEventListener('input', () => { const t = el('cc-q'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 160) + 'px'; });
+el('cc-stop').addEventListener('click', () => CC.abort?.abort());
+el('cc-new-btn').addEventListener('click', ccNewChat);
+el('cc-list-btn').addEventListener('click', async e => {
+  e.stopPropagation();
+  const panel = el('cc-list-panel');
+  const wasOpen = !panel.classList.contains('hidden');
+  closeAllDropdowns();
+  if (wasOpen) return;
+  await ccLoadChats();
+  panel.innerHTML = CC.chats.length ? CC.chats.map(c => `<div class="cc-list-item${c.id === CC.chatId ? ' active' : ''}" data-id="${esc(c.id)}"><span class="t">${esc(c.title)}</span><span class="d">${relTime(c.updatedAt)}</span><button type="button" class="icon-btn" data-del="${esc(c.id)}" title="حذف">🗑️</button></div>`).join('') : '<div class="muted" style="padding:8px">لا توجد محادثات بعد.</div>';
+  panel.querySelectorAll('.cc-list-item').forEach(d => d.addEventListener('click', async ev => { if (ev.target.closest('[data-del]')) return; closeAllDropdowns(); await ccOpenChat(d.dataset.id); }));
+  panel.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async ev => {
+    ev.stopPropagation(); if (!confirm('حذف هذه المحادثة؟')) return;
+    await fetch(`/api/claude-chat/chats/${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE' });
+    if (CC.chatId === b.dataset.del) ccNewChat();
+    closeAllDropdowns(); await ccLoadChats();
+  }));
+  panel.classList.remove('hidden');
+});
+
 // ---------- العروض التقديمية (HTML مرفوع) — على مستوى المنظمة، رابط عام /p/{id} ----------
 // نفس شاشة «روابط المشاركة»: قائمة أعلى قائمة الروابط، ورفع من نافذة presentation-modal.
 // الرفع أو استبدال الملف عبر multipart إلى /api/presentations (أو PUT …/{id}/file).
@@ -8778,6 +8976,8 @@ function renderCurrentUser() {
   // AppUser.IsPlatformOwner and OrganizationsController.
   el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
   el('platform-badge').classList.toggle('hidden', !u.isPlatformOwner);
+  // محادثة Claude: يظهر البند فقط لمن تسمح له إعدادات الخادم (ClaudeCli:AllowedRoles).
+  ccLoadStatus();
 }
 
 // ---------- settings page (admin only) — the system-wide AI model/provider, via

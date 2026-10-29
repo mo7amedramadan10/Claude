@@ -114,6 +114,7 @@
       <ul class="nav">
         <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="presentations"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">العروض التقديمية</span><span class="badge hidden" id="presentations-badge">0</span></button></li>
+        <li class="hidden" id="nav-claude-chat"><button type="button" class="nav-link tab" data-screen="claude-chat"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">محادثة Claude</span></button></li>
       </ul>
 
       <div class="sb-label"><span>المشروع الحالي</span></div>
@@ -787,6 +788,43 @@
     </div>
   </div>
 </div>
+
+<!-- محادثة Claude: شريط محادثة (يسار) + لوحة النتائج (يمين) عبر Claude Code CLI على الخادم — ClaudeChatController -->
+<main id="screen-claude-chat" class="screen">
+  <aside id="cc-rail" class="cc-rail">
+    <div class="chat-head">
+      <span class="ai-ava"><img src="img/logo-mark.svg" alt=""></span>
+      <div class="grow"><h2>محادثة Claude</h2><p id="cc-head-desc">محادثة فقط — الرد يظهر في لوحة النتائج</p></div>
+      <button type="button" id="cc-new-btn" class="btn btn-ghost btn-sm" title="بدء محادثة جديدة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>جديدة</button>
+      <div class="dropdown" id="cc-list-dropdown">
+        <button type="button" id="cc-list-btn" class="btn btn-ghost btn-sm" title="المحادثات السابقة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg>المحادثات</button>
+        <div id="cc-list-panel" class="dropdown-panel hidden"></div>
+      </div>
+    </div>
+    <div id="cc-messages" class="cc-messages"></div>
+    <form id="cc-form" class="composer cc-composer">
+      <div class="input-box">
+        <label for="cc-q" class="visually-hidden">الرسالة</label>
+        <textarea id="cc-q" rows="2" placeholder="اكتب رسالتك لـ Claude… (Enter للإرسال، Shift+Enter لسطر جديد)"></textarea>
+        <div class="input-tools">
+          <span class="hint" id="cc-status"></span>
+          <span class="grow"></span>
+          <button type="button" id="cc-stop" class="btn btn-ghost btn-sm hidden">⏹ إيقاف</button>
+          <button id="cc-send" class="send" type="submit" aria-label="إرسال"></button>
+        </div>
+      </div>
+    </form>
+  </aside>
+  <section id="cc-pane" class="cc-pane">
+    <div class="cc-pane-head">
+      <div class="grow"><b id="cc-pane-title">النتائج</b><small class="muted" id="cc-pane-meta"></small></div>
+      <button type="button" id="cc-copy" class="btn btn-sm btn-soft hidden">نسخ النص</button>
+    </div>
+    <article id="cc-result" class="cc-result">
+      <div class="empty"><div><div class="big">ابدأ محادثة من اليسار</div><div>الرد الكامل من Claude يظهر هنا منسّقًا، والمحادثة تبقى في الشريط الجانبي.</div></div></div>
+    </article>
+  </section>
+</main>
 
 <!-- العروض التقديمية (صفحات HTML مرفوعة) على مستوى المنظمة — رابط عام /p/{id} في iframe معزول -->
 <div id="screen-presentations" class="screen">

@@ -285,6 +285,25 @@
   stdio حقيقي ضد الجسر: نشر → رابط عام 200، استبدال يغيّر المحتوى على نفس الرابط، قائمة، إلغاء → 410، HTML أقصر
   من الحد يُرفض من المخطط؛ النافذة بلا أخطاء JS وبلا تمرير أفقي على 390px.
 
+## محادثة Claude (Claude Code CLI على الخادم) — `ClaudeChat/`
+
+- **الفكرة**: شاشة `screen-claude-chat` (بند «محادثة Claude» تحت «المنظمة»، يظهر فقط لمن تسمح له
+  `ClaudeCli:AllowedRoles`، افتراضيًا Admin): شريط محادثة يسارًا بعرض الشات المعتاد + لوحة نتائج يمينًا تعرض
+  الرد الكامل منسّقًا من Markdown (`ccMarkdown` في app.js: محوّل صغير يهرّب النص كله أولًا؛ عناوين/قوائم/كود مع زر
+  نسخ/جداول/اقتباسات/روابط). الشريط يعرض رسائل المستخدم وردودًا مختصرة؛ الضغط على رد يعرضه في اللوحة.
+- **الخادم** `ClaudeCliService`: يشغّل `claude -p --output-format stream-json --verbose --include-partial-messages
+  --tools "" --permission-prompts none --no-chrome` (محادثة فقط، بلا أدوات ولا ملفات)، الرسالة عبر stdin، ومعرّف
+  الجلسة نختاره (`--session-id`) ثم `--resume` للمتابعة فتبقى الذاكرة لدى الـ CLI. يزيل `CLAUDECODE` من البيئة.
+  يبث `init/delta/done/error`؛ مهلة `ClaudeCli:TimeoutSeconds` (600) وقتل العملية عند إلغاء الطلب.
+  `ClaudeChatStore`: جدولا `ClaudeChats`/`ClaudeChatMessages` (لكل مستخدم محادثاته فقط) مع التكلفة والمدة من حدث
+  `result`. `ClaudeChatController` (`/api/claude-chat`): `status` (مفعّل؟ مسموح؟ الأمر متاح؟ بالإصدار)، `chats`،
+  `chats/{id}/messages`، `PUT/DELETE chats/{id}`، و`POST chats/{id}/send` بـ Server-Sent Events (`id=new` ينشئ
+  محادثة ويعيد `chat` أولًا). الإعدادات `ClaudeCli` في appsettings (Command/WorkingDirectory/Model/AllowedRoles).
+  **الأمر `claude` يجب أن يكون مثبّتًا ومسجَّل دخوله على الخادم**، والتكلفة على حساب Claude الخاص بالخادم.
+- تحقق حي ضد CLI حقيقي (2.1.312): غير المسؤول لا يرى البند و`status.allowed=false`؛ المسؤول: بث يبدأ فورًا، رد
+  بعنوان وقائمة وكود مُنسَّق في 3.6 ثانية مع المدة والتكلفة؛ متابعة بذاكرة («كم بندًا؟» → 3)؛ القائمة والفتح
+  بعد إعادة التحميل؛ بلا أخطاء JS وبلا تمرير أفقي على 390px.
+
 ## رسوم لوحات المحادثة: DevExtreme بدل ApexCharts (`wwwroot/js/jeem-dx.js`)
 
 - **النطاق**: لوحات المحادثة فقط (bar/line/pie/multi-series/forecast/radial-gauge). اللوحات

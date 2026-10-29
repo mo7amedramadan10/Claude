@@ -79,6 +79,9 @@ builder.Services.AddSingleton<HistoryStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.History.DashboardAccessService>();
 builder.Services.AddSingleton<ShareStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationStore>();
+// محادثة Claude عبر Claude Code CLI على الخادم (ClaudeChat/) — انظر ClaudeCliService.
+builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeCliService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeChatStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.ConversationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.InquiryAccessService>();
