@@ -42,6 +42,10 @@ public class SystemSource
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>معطَّل = النظام مخفي تمامًا: لا يُحمَّل عند الإقلاع ولا يُحدَّث ولا يظهر في «المصادر»
+    /// ولا يراه الموديل، كأنه غير معرَّف — مع بقاء تعريفه في الإعدادات لإعادة تفعيله لاحقًا.</summary>
+    public bool Enabled { get; set; } = true;
+
     /// <summary>Set once the system is connected to a database; empty means not wired up.</summary>
     public string? ConnectionString { get; set; }
 
@@ -62,4 +66,7 @@ public class SourceOptions
     public const string SectionName = "Sources";
 
     public List<SystemSource> Systems { get; set; } = new();
+
+    /// <summary>الأنظمة المفعَّلة فقط — كل الاستهلاك يمر من هنا لا من <see cref="Systems"/> مباشرة.</summary>
+    public IEnumerable<SystemSource> ActiveSystems => Systems.Where(s => s.Enabled);
 }

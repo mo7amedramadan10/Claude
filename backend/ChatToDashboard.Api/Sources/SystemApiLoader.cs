@@ -51,11 +51,11 @@ public class SystemApiLoader
         _status.TryGetValue(systemId, out var status) ? status : new SystemStatus(null, 0, null, false);
 
     public SystemSource? Find(string systemId) =>
-        _options.Systems.FirstOrDefault(s => string.Equals(s.Id, systemId, StringComparison.OrdinalIgnoreCase));
+        _options.ActiveSystems.FirstOrDefault(s => string.Equals(s.Id, systemId, StringComparison.OrdinalIgnoreCase));
 
     public async Task<IReadOnlyList<LoadedSystem>> LoadAllAsync(CancellationToken ct = default)
     {
-        var systems = _options.Systems.Where(s => s.HasApi).ToList();
+        var systems = _options.ActiveSystems.Where(s => s.HasApi).ToList();
         var results = new List<LoadedSystem>();
         foreach (var system in systems)
         {

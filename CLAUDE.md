@@ -441,14 +441,37 @@ naming policy تلقائية في السيريلايزر.
   (رفع جداول حقيقية فعلًا واختباره) محتاج مفتاح OpenAI/Anthropic خاص
   بتطبيق جيم نفسه** (مش مفاتيح الجلسة) — تأكد منه في `appsettings.json`/
   user-secrets قبل ما تفترض إن التحقق الحي مش ممكن.
-- تحقّق حيّ عبر Playwright: شغّل السيرفر محليًا بـ
-  `ASPNETCORE_URLS=http://127.0.0.1:5050 DatabaseProvider=Sqlite dotnet bin/Debug/net8.0/ChatToDashboard.Api.dll`،
-  سجّل دخول بمنظمة "شركة النموذج التجريبي" ومستخدم `project.owner`
-  (كلمة المرور تُطبع في الـ log عند أول تشغيل — دوّر على
-  "Seeded a project-owner demo account" في الإخراج، أو جرّب كلمة مرور
-  معروفة لو قاعدة البيانات محليًا فعلًا اتولدت قبل كده)، افتح معرض
-  النماذج → التصنيف المناسب → زر المعاينة التجريبية، وتأكد من الشكل
-  وعدم وجود أخطاء جافاسكربت.
+- تحقّق حيّ عبر Playwright: شغّل السيرفر محليًا **على SQL Server لا SQLite** (قرار المستخدم: لا
+  تشغيل محلي على SQLite إطلاقًا) بـ
+  `ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:5050 dotnet bin/Debug/net8.0/ChatToDashboard.Api.dll`.
+  بيئة Development ضرورية لأن سلسلة الاتصال `ConnectionStrings:DataDb` (قاعدة `ChatToDashboard` على
+  `OL-MHGOMAA\SQLEXPRESS`) ومفاتيح الموديلات في user-secrets للمشروع (`chat-to-dashboard-api`)، ولا تُقرأ في
+  Production. تأكد في السجل من «database: SqlServer». سجّل دخول بمنظمة «المنظمة الافتراضية»
+  (slug `المنظمة-الافتراضية`) وحساب `admin` (كلمة المرور في user-secrets تحت `Auth:SeedAdmin`)، افتح معرض
+  النماذج → التصنيف المناسب → زر المعاينة التجريبية، وتأكد من الشكل وعدم وجود أخطاء جافاسكربت.
+  القاعدة حقيقية فيها ملفات العميل التجريبية، فلا تحذف منها شيئًا أثناء الفحص.
+
+## الأنظمة الخارجية في `Sources:Systems` — خاصية `Enabled`
+
+- `SystemSource.Enabled` (افتراضيًا true). `false` = النظام مخفي تمامًا كأنه غير معرَّف: لا يُحمَّل عند الإقلاع ولا
+  يُحدَّث (`refresh` يعيد 404) ولا يظهر في «المصادر» ولا يراه الموديل. كل الاستهلاك يمر من `SourceOptions.ActiveSystems`
+  لا من `Systems` مباشرة — أي مستهلك جديد يستخدمها.
+- «نظام المشتريات» (`procurement`، بوابة `platformtest.ahad.sa`) معطَّل حاليًا في appsettings.json بقرار المستخدم
+  (2026-10-29) لأن البوابة غير متاحة؛ أعده إلى true عند الحاجة. التكامل المستقل «نظام المشتريات» في
+  «التكاملات» (IntegrationConnector) شيء آخر ولم يُمس.
+
+## حالة القاعدة الحقيقية (SQL Server) — إعادة ضبط 2026-10-29
+
+- بطلب المستخدم حُذفت كل المنظمات وملفاتها (صفوف 26 جدول مستأجرين بـ TRUNCATE + إسقاط جداول الرفع ومخططات
+  `proj_*`)، مع الاحتفاظ بمكتبة الأسماء وسوابق المفاهيم وإعدادات/مفاتيح الموديلات وتعديلات القوالب، وبكل جداول
+  `dbo` (KPI/OKR/All…) لأنها ليست من التطبيق. نسخة احتياطية كاملة قبل الحذف:
+  `C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\Backup\ChatToDashboard_before_reset_20261029.bak`.
+- المنصة تبدأ الآن بـ«المنظمة الافتراضية» وحساب `admin` (مالك المنصّة، كلمة مروره في user-secrets تحت
+  `Auth:SeedAdmin:Password`) وهو من ينشئ المنظمات من `POST /api/organizations` (شاشة «المنظمات»).
+- **`Auth:SeedDemoOrganization`** (appsettings.json، افتراضيًا false): كان Program.cs يزرع «شركة النموذج التجريبي»
+  بحسابي `org.admin`/`project.owner` في كل إقلاع ويعيد إنشاءها إن حُذفت. فعّله true في بيئة عرض فقط.
+- درس تشغيلي: حذف `usage_Log` بـ DELETE فشل بـ«insufficient memory in the buffer pool» (184 صفًا بحجم 231MB نصوصًا)
+  على جهاز بذاكرة شبه معدومة؛ `TRUNCATE` لكل جدول في دفعة مستقلة هو الطريق. لا مفاتيح أجنبية في القاعدة.
 
 ## المستودعان: GitHub (`origin`) و Azure DevOps (`azure`) من مجلد واحد
 

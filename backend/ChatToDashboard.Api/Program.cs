@@ -453,6 +453,9 @@ using (var scope = app.Services.CreateScope())
     // row rather than an OwnerId column). Looked up by name/username first so a restart
     // never recreates or duplicates them; the role assignment is re-applied every time
     // regardless, so it self-heals if ever removed by hand.
+    // معطَّل افتراضيًا (Auth:SeedDemoOrganization = false): المنصة الحقيقية تبدأ بمالك المنصّة فقط،
+    // وهو من ينشئ المنظمات؛ فعّله true في بيئة عرض تجريبي فقط.
+    if (builder.Configuration.GetValue<bool>("Auth:SeedDemoOrganization"))
     try
     {
         var orgStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Organizations.OrganizationStore>();

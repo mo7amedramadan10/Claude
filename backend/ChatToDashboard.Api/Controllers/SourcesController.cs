@@ -93,7 +93,7 @@ public class SourcesController : ControllerBase
 
         return Ok(new
         {
-            systems = _options.Systems.Where(s => allowed.AllowsSystem(s.Id)).Select(s =>
+            systems = _options.ActiveSystems.Where(s => allowed.AllowsSystem(s.Id)).Select(s =>
             {
                 var status = _systems.StatusFor(s.Id);
                 return new
@@ -127,7 +127,7 @@ public class SourcesController : ControllerBase
         IReadOnlyList<RepositoryFile> repoFiles, SourceSelection allowed)
     {
         var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var system in _options.Systems)
+        foreach (var system in _options.ActiveSystems)
         {
             var table = system.HasApi ? _systems.TableFor(system) : null;
             if (table is not null) labels[table] = system.Name;

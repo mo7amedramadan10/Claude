@@ -173,7 +173,7 @@ public class AnalyticsTools
         var unconnected = new List<string>();
         var systemTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var disabledSystemTables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var system in _sources.Systems)
+        foreach (var system in _sources.ActiveSystems)
         {
             // A system with an endpoint owns the staging table its records were loaded into.
             var table = system.HasApi ? _systemLoader.TableFor(system) : null;
