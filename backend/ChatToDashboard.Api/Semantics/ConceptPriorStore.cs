@@ -26,19 +26,13 @@ public class ConceptPriorStore
         finally { _schemaGate.Release(); }
     }
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"ConceptPriors\"" : "[staging].[ConceptPriors]";
+    private string Table => "[staging].[ConceptPriors]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "NormalizedName" TEXT NOT NULL, "Concept" TEXT NOT NULL, "Hits" INTEGER NOT NULL, "UserHits" INTEGER NOT NULL,
-                 "UpdatedAt" TEXT NOT NULL, PRIMARY KEY ("NormalizedName", "Concept"))
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.ConceptPriors') IS NULL
                CREATE TABLE {Table} (
                  [NormalizedName] NVARCHAR(200) NOT NULL, [Concept] NVARCHAR(64) NOT NULL, [Hits] INT NOT NULL, [UserHits] INT NOT NULL,
@@ -52,24 +46,21 @@ public class ConceptPriorStore
         // بلا تأثير إن كان الجدول جديدًا أصلًا. NormalizedName/Concept هنا أعمدة عادية (بلا
         // إعادة تركيب المفتاح المركّب نفسه) — إضافتهما فقط تمنع "Invalid column name" على
         // جدول سابق بشكل مختلف، كما ثبت فعليًا مع Organizations/Projects.
-        await AddColumnIfMissingAsync(connection, "NormalizedName", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(200) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "Concept", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "Hits", "INTEGER NOT NULL DEFAULT 0", "INT NOT NULL DEFAULT 0", ct);
-        await AddColumnIfMissingAsync(connection, "UserHits", "INTEGER NOT NULL DEFAULT 0", "INT NOT NULL DEFAULT 0", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT NOT NULL DEFAULT ''", "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
+        await AddColumnIfMissingAsync(connection, "NormalizedName", "NVARCHAR(200) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Concept", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Hits", "INT NOT NULL DEFAULT 0", ct);
+        await AddColumnIfMissingAsync(connection, "UserHits", "INT NOT NULL DEFAULT 0", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 

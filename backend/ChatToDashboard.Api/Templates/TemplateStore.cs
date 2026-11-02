@@ -18,26 +18,17 @@ public class TemplateStore
 
     public TemplateStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"PromptTemplateOverrides\"" : "[staging].[PromptTemplateOverrides]";
+    private string Table => "[staging].[PromptTemplateOverrides]";
     // "Key" is a reserved word in SQL Server (used in PRIMARY KEY/FOREIGN KEY) — referencing it
-    // unquoted in the INSERT column list below throws a syntax error there (SQLite is lenient
-    // about it, which is how this went unnoticed against the Sqlite-only path tested so far).
-    private string KeyCol => _db.Provider == DbProvider.Sqlite ? "\"Key\"" : "[Key]";
+    // unquoted in the INSERT column list below throws a syntax error there.
+    private string KeyCol => "[Key]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "Kind" TEXT, "Key" TEXT, "IsCustom" INTEGER, "Status" TEXT,
-                 "Title" TEXT, "Description" TEXT, "Icon" TEXT, "Category" TEXT,
-                 "SourcesJson" TEXT, "WidgetsJson" TEXT, "PromptText" TEXT, "Version" INTEGER,
-                 "UpdatedByUserId" TEXT, "UpdatedByName" TEXT, "UpdatedAt" TEXT, "CreatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.PromptTemplateOverrides') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(200) PRIMARY KEY, [Kind] NVARCHAR(32), [Key] NVARCHAR(100), [IsCustom] BIT, [Status] NVARCHAR(16),
@@ -53,39 +44,36 @@ public class TemplateStore
         // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. عمود Key يُضاف بالاسم المهرّب (KeyCol) لأنه
         // محجوز في SQL Server — نفس سبب وجود KeyCol أصلًا.
-        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "Kind", "TEXT", "NVARCHAR(32)", ct);
-        await AddColumnIfMissingAsync(connection, KeyCol, "TEXT", "NVARCHAR(100)", ct);
-        await AddColumnIfMissingAsync(connection, "IsCustom", "INTEGER", "BIT", ct);
-        await AddColumnIfMissingAsync(connection, "Status", "TEXT", "NVARCHAR(16)", ct);
-        await AddColumnIfMissingAsync(connection, "Title", "TEXT", "NVARCHAR(400)", ct);
-        await AddColumnIfMissingAsync(connection, "Description", "TEXT", "NVARCHAR(1000)", ct);
-        await AddColumnIfMissingAsync(connection, "Icon", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "Category", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "SourcesJson", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, "WidgetsJson", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, "PromptText", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, "Version", "INTEGER", "INT", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedByUserId", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedByName", "TEXT", "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT", "DATETIME2", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Kind", "NVARCHAR(32)", ct);
+        await AddColumnIfMissingAsync(connection, KeyCol, "NVARCHAR(100)", ct);
+        await AddColumnIfMissingAsync(connection, "IsCustom", "BIT", ct);
+        await AddColumnIfMissingAsync(connection, "Status", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, "Title", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, "Description", "NVARCHAR(1000)", ct);
+        await AddColumnIfMissingAsync(connection, "Icon", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Category", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "SourcesJson", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "WidgetsJson", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "PromptText", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "Version", "INT", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedByUserId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedByName", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", "DATETIME2", ct);
     }
 
     /// <summary><paramref name="column"/> is either a bare name (quoted here the normal way) or
     /// already-escaped (like <see cref="KeyCol"/>, for the one column whose name is reserved in
     /// SQL Server) — detected by whether it already starts with a quote/bracket.</summary>
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN {(column.StartsWith('"') ? column : $"\"{column}\"")} {sqlite}"
-                : $"ALTER TABLE {Table} ADD {(column.StartsWith('[') ? column : $"[{column}]")} {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD {(column.StartsWith('[') ? column : $"[{column}]")} {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 

@@ -11,20 +11,15 @@ public class ProjectStore
 
     public ProjectStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"Projects\"" : "[staging].[Projects]";
-    private string RolesTable => _db.Provider == DbProvider.Sqlite ? "\"ProjectRoles\"" : "[staging].[ProjectRoles]";
+    private string Table => "[staging].[Projects]";
+    private string RolesTable => "[staging].[ProjectRoles]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "OrganizationId" TEXT, "Name" TEXT, "Slug" TEXT, "CreatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.Projects') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [OrganizationId] NVARCHAR(64), [Name] NVARCHAR(200),
@@ -40,21 +35,15 @@ public class ProjectStore
         // ترحيل: لا عمود هنا مضمون الوجود بافتراض — جدول Projects المشترك هذا ظهر عمليًا
         // بشكل مختلف تمامًا عن هذا الكود (حتى Id/Name/CreatedAt غابا في الإنتاج رغم كونهما
         // من صلب التعريف الأول)، فكل عمود يُضاف دفاعيًا كعمود عادي (بلا PRIMARY KEY).
-        await AddColumnIfMissingAsync(connection, "Id", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "OrganizationId", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "Name", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "Slug", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlite: "TEXT", sqlServer: "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "Id", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "OrganizationId", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Name", sqlServer: "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Slug", sqlServer: "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlServer: "DATETIME2", ct);
 
         // Owner/Editor/Viewer roles on a project — mirrors DashboardRoles' shape (see its
         // own remarks), except Owner lives here too since a Project has no OwnerId column.
-        var rolesText = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {RolesTable} (
-                 "ProjectId" TEXT NOT NULL, "UserId" TEXT NOT NULL, "Role" TEXT NOT NULL,
-                 PRIMARY KEY ("ProjectId", "UserId"))
-               """
-            : $"""
+        var rolesText = $"""
                IF OBJECT_ID('staging.ProjectRoles') IS NULL
                CREATE TABLE {RolesTable} (
                  [ProjectId] NVARCHAR(64) NOT NULL, [UserId] NVARCHAR(200) NOT NULL, [Role] NVARCHAR(20) NOT NULL,
@@ -67,17 +56,14 @@ public class ProjectStore
         }
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
@@ -111,10 +97,8 @@ public class ProjectStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var top = _db.Provider == DbProvider.Sqlite ? "" : "TOP 1 ";
-        var tail = _db.Provider == DbProvider.Sqlite ? " LIMIT 1" : "";
         return await connection.QuerySingleOrDefaultAsync<Project>(
-            $"SELECT {top}* FROM {Table} WHERE OrganizationId = @organizationId ORDER BY CreatedAt{tail}", new { organizationId });
+            $"SELECT TOP 1 * FROM {Table} WHERE OrganizationId = @organizationId ORDER BY CreatedAt", new { organizationId });
     }
 
     /// <summary>

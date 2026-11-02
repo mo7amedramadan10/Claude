@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Llm;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Repository;
@@ -40,29 +39,17 @@ public class RepositoryStore
     /// fast link and gives a slow one the room a single-row blob write can genuinely need.</summary>
     private const int FileWriteCommandTimeoutSeconds = 120;
 
-    private string CatalogueTable => _db.Provider == DbProvider.Sqlite
-        ? "\"repo_Files\"" : "[staging].[repo_Files]";
-    private string PermissionsTable => _db.Provider == DbProvider.Sqlite
-        ? "\"repo_FilePermissions\"" : "[staging].[repo_FilePermissions]";
-    private string RelationshipsTable => _db.Provider == DbProvider.Sqlite
-        ? "\"repo_FileRelationships\"" : "[staging].[repo_FileRelationships]";
-    private string HistoryTable => _db.Provider == DbProvider.Sqlite
-        ? "\"DashboardHistory\"" : "[staging].[DashboardHistory]";
+    private string CatalogueTable => "[staging].[repo_Files]";
+    private string PermissionsTable => "[staging].[repo_FilePermissions]";
+    private string RelationshipsTable => "[staging].[repo_FileRelationships]";
+    private string HistoryTable => "[staging].[DashboardHistory]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {CatalogueTable} (
-                 "Id" TEXT PRIMARY KEY, "DisplayName" TEXT, "OriginalFileName" TEXT, "Description" TEXT,
-                 "Category" TEXT, "Kind" TEXT, "RowCount" INTEGER, "ColumnCount" INTEGER, "PageCount" INTEGER,
-                 "UploadedAt" TEXT, "LastUpdatedAt" TEXT, "TableName" TEXT, "TextContent" TEXT,
-                 "ColumnsJson" TEXT, "SchemaChangedAt" TEXT, "CreatedByUserId" TEXT, "FileContent" BLOB)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.repo_Files') IS NULL
                CREATE TABLE {CatalogueTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [DisplayName] NVARCHAR(400), [OriginalFileName] NVARCHAR(400),
@@ -78,36 +65,31 @@ public class RepositoryStore
             await command.ExecuteNonQueryAsync(ct);
         }
 
-        // Migration for a catalogue created before the fields above existed. SQLite has no
-        // "ADD COLUMN IF NOT EXISTS", so the duplicate-column failure is just swallowed (same
-        // pattern as HistoryStore/ShareStore). Pre-existing rows' "Name" column (the old,
+        // Migration for a catalogue created before the fields above existed — the
+        // duplicate-column failure is just swallowed (same pattern as HistoryStore/ShareStore).
+        // Pre-existing rows' "Name" column (the old,
         // single "uploaded filename" field) becomes the DisplayName fallback below, since
         // that's the only name they ever had. A pre-migration row's FileContent stays NULL —
         // its original bytes were never kept — so GET .../download 404s for it specifically
         // rather than the whole feature failing; re-uploading via "Update this file" fixes it.
-        foreach (var (column, sqliteType, sqlServerType) in new[]
+        foreach (var (column, sqlServerType) in new[]
                  {
-                     ("DisplayName", "TEXT", "NVARCHAR(400)"),
-                     ("OriginalFileName", "TEXT", "NVARCHAR(400)"),
-                     ("Description", "TEXT", "NVARCHAR(1000)"),
-                     ("LastUpdatedAt", "TEXT", "DATETIME2"),
-                     ("ColumnsJson", "TEXT", "NVARCHAR(MAX)"),
-                     ("SchemaChangedAt", "TEXT", "DATETIME2"),
-                     ("CreatedByUserId", "TEXT", "NVARCHAR(200)"),
-                     ("FileContent", "BLOB", "VARBINARY(MAX)"),
-                     ("ProjectId", "TEXT", "NVARCHAR(64)"),
+                     ("DisplayName", "NVARCHAR(400)"),
+                     ("OriginalFileName", "NVARCHAR(400)"),
+                     ("Description", "NVARCHAR(1000)"),
+                     ("LastUpdatedAt", "DATETIME2"),
+                     ("ColumnsJson", "NVARCHAR(MAX)"),
+                     ("SchemaChangedAt", "DATETIME2"),
+                     ("CreatedByUserId", "NVARCHAR(200)"),
+                     ("FileContent", "VARBINARY(MAX)"),
+                     ("ProjectId", "NVARCHAR(64)"),
                  })
         {
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {CatalogueTable} ADD COLUMN \"{column}\" {sqliteType}"
-                    : $"ALTER TABLE {CatalogueTable} ADD [{column}] {sqlServerType}";
+                alter.CommandText = $"ALTER TABLE {CatalogueTable} ADD [{column}] {sqlServerType}";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             // Error 2705: "Column names in each table must be unique" — SQL Server's actual
             // wording for a duplicate ADD COLUMN never contains "already" (see UserStore's
@@ -120,24 +102,14 @@ public class RepositoryStore
         // is gone (the column was never renamed, just superseded) — nothing to backfill from
         // here since ListAsync's COALESCE already falls back sensibly on read.
 
-        var permText = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {PermissionsTable} (
-                 "FileId" TEXT, "UserId" TEXT, PRIMARY KEY ("FileId", "UserId"))
-               """
-            : $"""
+        var permText = $"""
                IF OBJECT_ID('staging.repo_FilePermissions') IS NULL
                CREATE TABLE {PermissionsTable} (
                  [FileId] NVARCHAR(64), [UserId] NVARCHAR(200), PRIMARY KEY ([FileId], [UserId]))
                """;
         await using (var command = connection.CreateCommand()) { command.CommandText = permText; await command.ExecuteNonQueryAsync(ct); }
 
-        var relText = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {RelationshipsTable} (
-                 "Id" TEXT PRIMARY KEY, "FileId" TEXT, "RelatedFileId" TEXT, "SharedColumn" TEXT)
-               """
-            : $"""
+        var relText = $"""
                IF OBJECT_ID('staging.repo_FileRelationships') IS NULL
                CREATE TABLE {RelationshipsTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [FileId] NVARCHAR(64), [RelatedFileId] NVARCHAR(64),
@@ -150,9 +122,7 @@ public class RepositoryStore
         "Id, ProjectId, COALESCE(DisplayName, OriginalFileName, '') AS DisplayName, " +
         "COALESCE(OriginalFileName, '') AS OriginalFileName, COALESCE(Description, '') AS Description, " +
         // RowCount bracketed: SQL Server's parser rejects it bare here ("Incorrect syntax
-        // near the keyword 'RowCount'") even though it isn't formally reserved; [brackets]
-        // are valid in both SQL Server and SQLite (its Access-compatibility quoting), so this
-        // needs no per-provider branching like the rest of this shared literal.
+        // near the keyword 'RowCount'") even though it isn't formally reserved.
         "Category, Kind, [RowCount], ColumnCount, PageCount, UploadedAt, " +
         "COALESCE(LastUpdatedAt, UploadedAt) AS LastUpdatedAt, TableName, SchemaChangedAt, " +
         "COALESCE(CreatedByUserId, '') AS CreatedByUserId";
@@ -173,7 +143,7 @@ public class RepositoryStore
     /// <summary>One-time move of each project's existing uploaded-file tables out of the shared
     /// schema and into that project's own (see DataStore.ProjectSchema) — called once from
     /// Program.cs's startup, after BackfillMissingProjectAsync above has already given every
-    /// pre-existing file a ProjectId. SQL Server only (SQLite has no per-project schema at all).
+    /// pre-existing file a ProjectId.
     /// Uses ALTER SCHEMA ... TRANSFER — a metadata-only move with no data copy — so it's fast
     /// and safe to run even with real data already in place; no need for the "rebuild table,
     /// copy rows, drop old" pattern UserStore.RelaxUsernameUniquenessAsync uses for a change
@@ -183,8 +153,6 @@ public class RepositoryStore
     /// same best-effort posture as every other migration in this codebase.</summary>
     public async Task MigrateExistingTablesToProjectSchemasAsync(CancellationToken ct = default)
     {
-        if (_db.Provider == DbProvider.Sqlite) return;
-
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var sharedSchema = _db.ProjectSchema(null);
@@ -357,19 +325,31 @@ public class RepositoryStore
             await _db.RecreateAndLoadAsync(connection, projectId, bareName, table, ct);
         }
 
-        await connection.ExecuteAsync(new CommandDefinition(
-            $"INSERT INTO {CatalogueTable} (Id, ProjectId, DisplayName, OriginalFileName, Description, Category, Kind, " +
-            "[RowCount], ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
-            "VALUES (@Id, @ProjectId, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
-            "@RowCount, @ColumnCount, @PageCount, @UploadedAt, @LastUpdatedAt, @TableName, @TextContent, @ColumnsJson, @CreatedByUserId, @FileContent)",
-            new
-            {
-                record.Id, record.ProjectId, record.DisplayName, record.OriginalFileName, record.Description, record.Category,
-                record.Kind, record.RowCount, record.ColumnCount, record.PageCount, record.UploadedAt,
-                record.LastUpdatedAt, record.TableName, TextContent = parsed.Text, ColumnsJson = columnsJson,
-                record.CreatedByUserId, FileContent = parsed.Content,
-            },
-            commandTimeout: FileWriteCommandTimeoutSeconds, cancellationToken: ct));
+        try
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                $"INSERT INTO {CatalogueTable} (Id, ProjectId, DisplayName, OriginalFileName, Description, Category, Kind, " +
+                "[RowCount], ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
+                "VALUES (@Id, @ProjectId, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
+                "@RowCount, @ColumnCount, @PageCount, @UploadedAt, @LastUpdatedAt, @TableName, @TextContent, @ColumnsJson, @CreatedByUserId, @FileContent)",
+                new
+                {
+                    record.Id, record.ProjectId, record.DisplayName, record.OriginalFileName, record.Description, record.Category,
+                    record.Kind, record.RowCount, record.ColumnCount, record.PageCount, record.UploadedAt,
+                    record.LastUpdatedAt, record.TableName, TextContent = parsed.Text, ColumnsJson = columnsJson,
+                    record.CreatedByUserId, FileContent = parsed.Content,
+                },
+                commandTimeout: FileWriteCommandTimeoutSeconds, cancellationToken: ct));
+        }
+        catch (Exception ex) when (bareName is not null)
+        {
+            // جدول البيانات أُنشئ وحُمِّل أعلاه ثم فشل تسجيل الملف في الفهرس (مهلة SQL Server مثلًا تحت ضغط
+            // الذاكرة): بلا هذا التنظيف يبقى الجدول يتيمًا، وكل محاولة رفع تالية تأخذ اسمًا جديدًا (opportunities_2…).
+            _logger.LogWarning(ex, "Catalogue insert for {File} failed after its data table was loaded — dropping {Table}", record.DisplayName, record.TableName);
+            try { await _db.DropTableAsync(connection, projectId, bareName, CancellationToken.None); }
+            catch (Exception dropEx) { _logger.LogWarning(dropEx, "Could not drop the orphan table {Table}", record.TableName); }
+            throw;
+        }
 
         _logger.LogInformation("Saved {File} to repository under category {Category}", record.DisplayName, record.Category);
         return record;

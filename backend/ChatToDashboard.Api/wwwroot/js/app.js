@@ -3863,8 +3863,8 @@ async function applyFilters() {
 
   const sources = { systems: [...state.onSystems], files: [...state.onFiles] };
   const widgets = state.dashboard?.widgets || [];
-  // Each attempt below can transiently fail (e.g. the SQLite file taking a concurrent write
-  // from another request while this filter's burst of per-widget reads lands) without being
+  // Each attempt below can transiently fail (e.g. a transient SQL Server timeout while this
+  // filter's burst of per-widget reads lands alongside other requests' writes) without being
   // this widget's fault — a single retry after a short pause clears the vast majority of
   // those instead of leaving the widget stuck on stale/empty data with no way to recover
   // short of a full page reload. `failed` tracks whatever doesn't clear even after the

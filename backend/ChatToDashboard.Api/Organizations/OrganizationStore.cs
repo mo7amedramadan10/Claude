@@ -12,20 +12,14 @@ public class OrganizationStore
 
     public OrganizationStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"Organizations\"" : "[staging].[Organizations]";
+    private string Table => "[staging].[Organizations]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "Name" TEXT, "Slug" TEXT UNIQUE,
-                 "IsActive" INTEGER, "CreatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.Organizations') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Name] NVARCHAR(200), [Slug] NVARCHAR(200) UNIQUE,
@@ -39,26 +33,22 @@ public class OrganizationStore
         // ترحيل: لا عمود هنا مضمون الوجود بافتراض — الدليل الحي أن جدول Organizations
         // المشترك هذا سبق وجوده بشكل مختلف تمامًا عن هذا الكود (حتى Id/Name/CreatedAt
         // ظهرا كأعمدة غير موجودة في الإنتاج رغم كونهما من صلب التعريف الأول) فكل عمود
-        // يُضاف دفاعيًا كعمود عادي (بلا PRIMARY KEY ولا UNIQUE — SQLite لا يقبلهما في
-        // ALTER TABLE ADD COLUMN أصلًا، وتفرّد Slug محسوم في الكود عبر UniqueSlugAsync).
-        await AddColumnIfMissingAsync(connection, "Id", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "Name", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "Slug", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "IsActive", sqlite: "INTEGER", sqlServer: "BIT", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlite: "TEXT", sqlServer: "DATETIME2", ct);
+        // يُضاف دفاعيًا كعمود عادي (بلا PRIMARY KEY ولا UNIQUE، وتفرّد Slug محسوم في الكود عبر UniqueSlugAsync).
+        await AddColumnIfMissingAsync(connection, "Id", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Name", sqlServer: "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Slug", sqlServer: "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "IsActive", sqlServer: "BIT", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlServer: "DATETIME2", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
@@ -76,10 +66,8 @@ public class OrganizationStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var top = _db.Provider == DbProvider.Sqlite ? "" : "TOP 1 ";
-        var tail = _db.Provider == DbProvider.Sqlite ? " LIMIT 1" : "";
         return await connection.QuerySingleOrDefaultAsync<Organization>(
-            $"SELECT {top}* FROM {Table} ORDER BY CreatedAt{tail}");
+            $"SELECT TOP 1 * FROM {Table} ORDER BY CreatedAt");
     }
 
     public async Task<IReadOnlyList<Organization>> ListAsync(CancellationToken ct = default)

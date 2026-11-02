@@ -11,8 +11,9 @@ public static class IdentityTransportMechanisms
 }
 
 /// <summary>The two database engines the generated connector service (Deliverable 3) knows how
-/// to run a live query against — the same pair this app's own DataStore already supports, so
-/// the exact same driver packages (Microsoft.Data.SqlClient / Microsoft.Data.Sqlite) cover it.
+/// to run a live query against — the standalone IntegrationConnector project references both
+/// driver packages (Microsoft.Data.SqlClient / Microsoft.Data.Sqlite) itself, independently of
+/// this app's own SQL Server-only DataStore.
 /// A client on a different engine isn't supported yet — surfaced as a clear "غير مدعوم" choice
 /// rather than silently accepting a value the connector can't act on.</summary>
 public static class ClientDbProviders

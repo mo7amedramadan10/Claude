@@ -47,21 +47,13 @@ public class ColumnSemanticsStore
 
     public ColumnSemanticsStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"ColumnSemantics\"" : "[staging].[ColumnSemantics]";
+    private string Table => "[staging].[ColumnSemantics]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "ProjectId" TEXT NOT NULL, "TableName" TEXT NOT NULL, "ColumnName" TEXT NOT NULL,
-                 "Concept" TEXT, "Role" TEXT NOT NULL, "Unit" TEXT, "ValueMapJson" TEXT, "Confidence" REAL NOT NULL,
-                 "Source" TEXT NOT NULL, "Note" TEXT, "UpdatedAt" TEXT NOT NULL,
-                 UNIQUE ("ProjectId", "TableName", "ColumnName"))
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.ColumnSemantics') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64) NOT NULL, [TableName] NVARCHAR(300) NOT NULL,
@@ -76,32 +68,29 @@ public class ColumnSemanticsStore
 
         // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE هنا (نفس استثناء
-        // OrganizationStore) — SQLite لا يقبله في ALTER TABLE ADD COLUMN.
-        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "ProjectId", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "TableName", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "ColumnName", "TEXT NOT NULL DEFAULT ''", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "Concept", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "Role", "TEXT NOT NULL DEFAULT 'text'", "NVARCHAR(20) NOT NULL DEFAULT 'text'", ct);
-        await AddColumnIfMissingAsync(connection, "Unit", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, "ValueMapJson", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, "Confidence", "REAL NOT NULL DEFAULT 0", "FLOAT NOT NULL DEFAULT 0", ct);
-        await AddColumnIfMissingAsync(connection, "Source", "TEXT NOT NULL DEFAULT 'rule'", "NVARCHAR(10) NOT NULL DEFAULT 'rule'", ct);
-        await AddColumnIfMissingAsync(connection, "Note", "TEXT", "NVARCHAR(500)", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT NOT NULL DEFAULT ''", "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
+        // OrganizationStore).
+        await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "ProjectId", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "TableName", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "ColumnName", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Concept", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Role", "NVARCHAR(20) NOT NULL DEFAULT 'text'", ct);
+        await AddColumnIfMissingAsync(connection, "Unit", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, "ValueMapJson", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "Confidence", "FLOAT NOT NULL DEFAULT 0", ct);
+        await AddColumnIfMissingAsync(connection, "Source", "NVARCHAR(10) NOT NULL DEFAULT 'rule'", ct);
+        await AddColumnIfMissingAsync(connection, "Note", "NVARCHAR(500)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 

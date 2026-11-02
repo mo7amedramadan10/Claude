@@ -1,7 +1,6 @@
 using System.Text.Json;
 using ChatToDashboard.Api.Data;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Usage;
@@ -23,24 +22,14 @@ public class UsageStore
         _logger = logger;
     }
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"usage_Log\"" : "[staging].[usage_Log]";
+    private string Table => "[staging].[usage_Log]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "Timestamp" TEXT, "Provider" TEXT, "Model" TEXT,
-                 "Question" TEXT, "EnabledSources" TEXT, "TurnCount" INTEGER, "ToolCallCount" INTEGER,
-                 "InputTokens" INTEGER, "OutputTokens" INTEGER, "CacheReadTokens" INTEGER,
-                 "CacheWriteTokens" INTEGER, "TotalTokens" INTEGER, "EstimatedCost" REAL,
-                 "DurationMs" INTEGER, "Success" INTEGER, "Error" TEXT,
-                 "SystemPrompt" TEXT, "TurnsJson" TEXT, "ToolCallsJson" TEXT, "FinalResponse" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.usage_Log') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Timestamp] DATETIME2, [Provider] NVARCHAR(40), [Model] NVARCHAR(120),
@@ -63,13 +52,8 @@ public class UsageStore
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" TEXT"
-                    : $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
+                alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             catch (SqlException ex) when (ex.Number == 2705)
             {
@@ -114,12 +98,10 @@ public class UsageStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
-        var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
         var rows = await connection.QueryAsync<UsageRecord>(
-            $"SELECT {top}Id, Timestamp, Provider, Model, Question, UserId, UserName, EnabledSources, TurnCount, ToolCallCount, " +
+            $"SELECT TOP {limit} Id, Timestamp, Provider, Model, Question, UserId, UserName, EnabledSources, TurnCount, ToolCallCount, " +
             "InputTokens, OutputTokens, CacheReadTokens, CacheWriteTokens, TotalTokens, EstimatedCost, " +
-            $"DurationMs, Success, Error FROM {Table} ORDER BY Timestamp DESC{tail}");
+            $"DurationMs, Success, Error FROM {Table} ORDER BY Timestamp DESC");
 
         // Priced at read time so an edited price table applies to the whole history.
         var records = rows.ToList();

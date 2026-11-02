@@ -13,7 +13,7 @@ public class PresentationStore
 
     public PresentationStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"Presentations\"" : "[staging].[Presentations]";
+    private string Table => "[staging].[Presentations]";
 
     private const string Columns =
         "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount";
@@ -30,14 +30,7 @@ public class PresentationStore
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "OrganizationId" TEXT, "CreatedByUserId" TEXT NOT NULL, "CreatedByName" TEXT,
-                 "Title" TEXT NOT NULL, "Slug" TEXT, "FileName" TEXT NOT NULL, "Html" TEXT NOT NULL, "SizeBytes" INTEGER NOT NULL,
-                 "CreatedAt" TEXT NOT NULL, "UpdatedAt" TEXT NOT NULL, "ExpiresAt" TEXT, "RevokedAt" TEXT, "ViewCount" INTEGER NOT NULL DEFAULT 0)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.Presentations') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(32) PRIMARY KEY, [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL, [CreatedByName] NVARCHAR(200),
@@ -52,36 +45,32 @@ public class PresentationStore
         // ترحيل: لا عمود هنا مضمون الوجود بافتراض — جداول هذه القاعدة المشتركة ظهرت عمليًا
         // بأشكال مختلفة تمامًا عن هذا الكود حتى في أعمدة من صلب التعريف الأول (انظر
         // Organizations/ProjectStore)، فكل عمود يُضاف دفاعيًا — بلا PRIMARY KEY/UNIQUE/
-        // NOT NULL حتى لو كان معرَّفًا هكذا في CREATE (SQLite يرفض القيدين الأولين في
-        // ALTER TABLE ADD COLUMN أصلًا، وقيمة افتراضية لكل عمود NOT NULL تكفي للإضافة
-        // بأمان على صفوف موجودة مسبقًا).
-        await AddColumnIfMissingAsync(connection, "Id", sqlite: "TEXT", sqlServer: "NVARCHAR(32)", ct);
-        await AddColumnIfMissingAsync(connection, "OrganizationId", sqlite: "TEXT", sqlServer: "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedByUserId", sqlite: "TEXT NOT NULL DEFAULT ''", sqlServer: "NVARCHAR(200) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedByName", sqlite: "TEXT", sqlServer: "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "Title", sqlite: "TEXT NOT NULL DEFAULT ''", sqlServer: "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "Slug", sqlite: "TEXT", sqlServer: "NVARCHAR(100)", ct);
-        await AddColumnIfMissingAsync(connection, "FileName", sqlite: "TEXT NOT NULL DEFAULT ''", sqlServer: "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "Html", sqlite: "TEXT NOT NULL DEFAULT ''", sqlServer: "NVARCHAR(MAX) NOT NULL DEFAULT ''", ct);
-        await AddColumnIfMissingAsync(connection, "SizeBytes", sqlite: "INTEGER NOT NULL DEFAULT 0", sqlServer: "BIGINT NOT NULL DEFAULT 0", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlite: "TEXT NOT NULL DEFAULT ''", sqlServer: "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedAt", sqlite: "TEXT NOT NULL DEFAULT ''", sqlServer: "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
-        await AddColumnIfMissingAsync(connection, "ExpiresAt", sqlite: "TEXT", sqlServer: "DATETIME2", ct);
-        await AddColumnIfMissingAsync(connection, "RevokedAt", sqlite: "TEXT", sqlServer: "DATETIME2", ct);
-        await AddColumnIfMissingAsync(connection, "ViewCount", sqlite: "INTEGER NOT NULL DEFAULT 0", sqlServer: "INT NOT NULL DEFAULT 0", ct);
+        // NOT NULL حتى لو كان معرَّفًا هكذا في CREATE (قيمة افتراضية لكل عمود NOT NULL تكفي
+        // للإضافة بأمان على صفوف موجودة مسبقًا).
+        await AddColumnIfMissingAsync(connection, "Id", sqlServer: "NVARCHAR(32)", ct);
+        await AddColumnIfMissingAsync(connection, "OrganizationId", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedByUserId", sqlServer: "NVARCHAR(200) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedByName", sqlServer: "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Title", sqlServer: "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Slug", sqlServer: "NVARCHAR(100)", ct);
+        await AddColumnIfMissingAsync(connection, "FileName", sqlServer: "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "Html", sqlServer: "NVARCHAR(MAX) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "SizeBytes", sqlServer: "BIGINT NOT NULL DEFAULT 0", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", sqlServer: "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", sqlServer: "DATETIME2 NOT NULL DEFAULT '1970-01-01'", ct);
+        await AddColumnIfMissingAsync(connection, "ExpiresAt", sqlServer: "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "RevokedAt", sqlServer: "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "ViewCount", sqlServer: "INT NOT NULL DEFAULT 0", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 

@@ -6,7 +6,7 @@
 
 ## السياق العام
 
-- بنية التطبيق الأساسية (ASP.NET Core + SQL Server/SQLite، كيف البيانات
+- بنية التطبيق الأساسية (ASP.NET Core + SQL Server حصرًا، كيف البيانات
   بتتحمّل، إزاي المحادثة بتولّد لوحات) موثّقة في [README.md](README.md) —
   اقرأه لو محتاج خلفية عن الـ `staging` schema أو مسار `/api/chat`.
 - فرع العمل الحالي: **`claude/chat-to-dashboard-app-at0up6`** (مش `main`) —
@@ -442,7 +442,10 @@ naming policy تلقائية في السيريلايزر.
   بتطبيق جيم نفسه** (مش مفاتيح الجلسة) — تأكد منه في `appsettings.json`/
   user-secrets قبل ما تفترض إن التحقق الحي مش ممكن.
 - تحقّق حيّ عبر Playwright: شغّل السيرفر محليًا **على SQL Server لا SQLite** (قرار المستخدم: لا
-  تشغيل محلي على SQLite إطلاقًا) بـ
+  تشغيل محلي على SQLite إطلاقًا؛ منذ 2026-11-02 أُزيل دعم SQLite من الكود كله: لا `DbProvider` ولا
+  `DataStore.Provider`، وحزمة `Microsoft.Data.Sqlite` محذوفة من مشروع API، و`DatabaseProvider=Sqlite` يوقف الإقلاع
+  برسالة. **`ClientDbProvider` في التكاملات شيء آخر**: نوع قاعدة بيانات العميل لمشروع `IntegrationConnector`
+  المستقل الذي ما زال يدعم SqlServer/Sqlite عند العميل ولم يُمس) بـ
   `ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:5050 dotnet bin/Debug/net8.0/ChatToDashboard.Api.dll`.
   بيئة Development ضرورية لأن سلسلة الاتصال `ConnectionStrings:DataDb` (قاعدة `ChatToDashboard` على
   `OL-MHGOMAA\SQLEXPRESS`) ومفاتيح الموديلات في user-secrets للمشروع (`chat-to-dashboard-api`)، ولا تُقرأ في

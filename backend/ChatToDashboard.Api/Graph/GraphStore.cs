@@ -27,29 +27,15 @@ public class GraphStore
 
     public GraphStore(DataStore db) => _db = db;
 
-    private string NodesTable => _db.Provider == DbProvider.Sqlite ? "\"GraphNodes\"" : "[staging].[GraphNodes]";
-    private string EdgesTable => _db.Provider == DbProvider.Sqlite ? "\"GraphEdges\"" : "[staging].[GraphEdges]";
+    private string NodesTable => "[staging].[GraphNodes]";
+    private string EdgesTable => "[staging].[GraphEdges]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var statements = _db.Provider == DbProvider.Sqlite
-            ? new[]
-            {
-                $"""
-                 CREATE TABLE IF NOT EXISTS {NodesTable} (
-                   "Id" TEXT PRIMARY KEY, "ProjectId" TEXT, "NetworkKey" TEXT, "NodeKey" TEXT,
-                   "Type" TEXT, "Name" TEXT, "Description" TEXT, "Year" INTEGER, "DataJson" TEXT, "CreatedAt" TEXT)
-                 """,
-                $"""
-                 CREATE TABLE IF NOT EXISTS {EdgesTable} (
-                   "Id" TEXT PRIMARY KEY, "ProjectId" TEXT, "NetworkKey" TEXT, "FromKey" TEXT,
-                   "ToKey" TEXT, "RelType" TEXT, "Year" INTEGER, "CreatedAt" TEXT)
-                 """,
-            }
-            : new[]
+        var statements = new[]
             {
                 $"""
                  IF OBJECT_ID('staging.GraphNodes') IS NULL
@@ -74,38 +60,35 @@ public class GraphStore
 
         // ترحيل دفاعي: إضافة أي عمود مفقود من جدول أُنشئ قبل وجوده (نفس نمط AnalystStore/
         // ProjectStore) — بلا تأثير إن كان الجدول جديدًا أصلًا.
-        await AddColumnIfMissingAsync(connection, NodesTable, "Id", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "ProjectId", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "NetworkKey", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "NodeKey", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "Type", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "Name", "TEXT", "NVARCHAR(400)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "Description", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "Year", "INTEGER", "INT", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "DataJson", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "CreatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "Id", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "NetworkKey", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "NodeKey", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "Type", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "Name", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "Description", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "Year", "INT", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "DataJson", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "CreatedAt", "DATETIME2", ct);
 
-        await AddColumnIfMissingAsync(connection, EdgesTable, "Id", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "ProjectId", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "NetworkKey", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "FromKey", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "ToKey", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "RelType", "TEXT", "NVARCHAR(40)", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "Year", "INTEGER", "INT", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "CreatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "Id", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "NetworkKey", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "FromKey", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "ToKey", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "RelType", "NVARCHAR(40)", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "Year", "INT", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "CreatedAt", "DATETIME2", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string table, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string table, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 

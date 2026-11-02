@@ -173,7 +173,7 @@ public class DataProfileService
                     TopDistinctSql(table, col), commandTimeout: 20, cancellationToken: ct))).ToList();
                 var values = rows.Select(r => ((object?)r.v, (long)Convert.ToInt64((object)r.n))).Where(x => x.Item1 is not null)
                     .Select(x => (Value: Convert.ToString(x.Item1, CultureInfo.InvariantCulture) ?? "", x.Item2)).ToList();
-                // الأعمدة النصية في SQLite قد تحمل تواريخ أو أرقامًا: نستنتج النوع من القيم نفسها.
+                // الأعمدة النصية قد تحمل تواريخ أو أرقامًا: نستنتج النوع من القيم نفسها.
                 if (kind == "text" && values.Count > 0)
                 {
                     if (values.All(v => IsoDate.IsMatch(v.Value))) kind = "date";
@@ -222,17 +222,12 @@ public class DataProfileService
         return new ProfiledTable(schema.Table, SourceOf(schema.Table, context), rowCount, columns, samples);
     }
 
-    private string TopDistinctSql(string table, string col) => _db.Provider == DbProvider.Sqlite
-        ? $"SELECT {col} AS v, COUNT(*) AS n FROM {table} WHERE {col} IS NOT NULL AND {col} <> '' GROUP BY {col} ORDER BY n DESC LIMIT {MaxDistinctValues + 1}"
-        : $"SELECT TOP {MaxDistinctValues + 1} {col} AS v, COUNT(*) AS n FROM {table} WHERE {col} IS NOT NULL AND CAST({col} AS NVARCHAR(MAX)) <> '' GROUP BY {col} ORDER BY n DESC";
+    private string TopDistinctSql(string table, string col) =>
+        $"SELECT TOP {MaxDistinctValues + 1} {col} AS v, COUNT(*) AS n FROM {table} WHERE {col} IS NOT NULL AND CAST({col} AS NVARCHAR(MAX)) <> '' GROUP BY {col} ORDER BY n DESC";
 
-    private string SampleSql(string table) => _db.Provider == DbProvider.Sqlite
-        ? $"SELECT * FROM {table} LIMIT {SampleRowCount}"
-        : $"SELECT TOP {SampleRowCount} * FROM {table}";
+    private string SampleSql(string table) => $"SELECT TOP {SampleRowCount} * FROM {table}";
 
-    private string Quote(string identifier) => _db.Provider == DbProvider.Sqlite
-        ? $"\"{identifier.Replace("\"", "\"\"")}\""
-        : $"[{identifier.Replace("]", "]]")}]";
+    private string Quote(string identifier) => $"[{identifier.Replace("]", "]]")}]";
 
     internal static string KindFromSqlType(string sqlType)
     {

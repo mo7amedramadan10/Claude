@@ -22,22 +22,14 @@ public class ConversationStore
         _db = db;
     }
 
-    private string Table => _db.Provider == DbProvider.Sqlite
-        ? "\"InquiryConversations\""
-        : "[staging].[InquiryConversations]";
+    private string Table => "[staging].[InquiryConversations]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "UserId" TEXT, "Title" TEXT, "TranscriptJson" TEXT,
-                 "Summary" TEXT, "CreatedAt" TEXT, "UpdatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.InquiryConversations') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [UserId] NVARCHAR(200), [Title] NVARCHAR(400),
@@ -51,26 +43,23 @@ public class ConversationStore
 
         // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا.
-        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "UserId", "TEXT", "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "Title", "TEXT", "NVARCHAR(400)", ct);
-        await AddColumnIfMissingAsync(connection, "TranscriptJson", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, "Summary", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedAt", "TEXT", "DATETIME2", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "UserId", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Title", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, "TranscriptJson", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "Summary", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "DATETIME2", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
@@ -138,11 +127,9 @@ public class ConversationStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
-        var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
         var rows = await connection.QueryAsync<InquiryConversationEntry>(
-            $"SELECT {top}Id, UserId, Title, TranscriptJson, Summary, CreatedAt, UpdatedAt FROM {Table} " +
-            $"WHERE UserId = @userId ORDER BY UpdatedAt DESC{tail}",
+            $"SELECT TOP {limit} Id, UserId, Title, TranscriptJson, Summary, CreatedAt, UpdatedAt FROM {Table} " +
+            "WHERE UserId = @userId ORDER BY UpdatedAt DESC",
             new { userId });
         return rows.ToList();
     }

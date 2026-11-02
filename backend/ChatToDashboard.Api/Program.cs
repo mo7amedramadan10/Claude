@@ -314,7 +314,7 @@ using (var scope = app.Services.CreateScope())
     // model selector (LlmSettingsStore) — that only takes effect per-question, not here.
     var dataStore = scope.ServiceProvider.GetRequiredService<DataStore>();
     logger.LogInformation("Configuration in use — LLM provider (default): {Llm}, database: {Db}",
-        llmProvider, dataStore.Provider);
+        llmProvider, "SqlServer");
 
     // Must run before anything below touches the database: on a fresh SQL Server the
     // target database doesn't exist yet, so without this the very first operation (seeding

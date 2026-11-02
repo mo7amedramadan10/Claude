@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using ChatToDashboard.Api.Data;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Share;
@@ -17,23 +16,14 @@ public class ShareStore
 
     public ShareStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite
-        ? "\"SharedDashboard\""
-        : "[staging].[SharedDashboard]";
+    private string Table => "[staging].[SharedDashboard]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "CreatedByUserId" TEXT, "Question" TEXT,
-                 "Summary" TEXT, "WidgetsJson" TEXT, "FiltersJson" TEXT, "ActiveFiltersJson" TEXT,
-                 "CreatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.SharedDashboard') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(32) PRIMARY KEY, [CreatedByUserId] NVARCHAR(200), [Question] NVARCHAR(MAX),
@@ -48,27 +38,22 @@ public class ShareStore
         }
 
         // Migration for a table created before FiltersJson/ActiveFiltersJson/the Part 3
-        // columns existed — SQLite has no "ADD COLUMN IF NOT EXISTS", so the duplicate-column
-        // failure is just swallowed (same pattern as HistoryStore.EnsureSchemaAsync).
-        foreach (var (column, sqliteType, sqlServerType) in new[]
+        // columns existed — the duplicate-column failure is just swallowed (same pattern as
+        // HistoryStore.EnsureSchemaAsync).
+        foreach (var (column, sqlServerType) in new[]
                  {
-                     ("FiltersJson", "TEXT", "NVARCHAR(MAX)"),
-                     ("ActiveFiltersJson", "TEXT", "NVARCHAR(MAX)"),
-                     ("ExpiresAt", "TEXT", "DATETIME2"),
-                     ("RevokedAt", "TEXT", "DATETIME2"),
-                     ("ViewCount", "INTEGER", "INT"),
+                     ("FiltersJson", "NVARCHAR(MAX)"),
+                     ("ActiveFiltersJson", "NVARCHAR(MAX)"),
+                     ("ExpiresAt", "DATETIME2"),
+                     ("RevokedAt", "DATETIME2"),
+                     ("ViewCount", "INT"),
                  })
         {
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqliteType}"
-                    : $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
+                alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             // Error 2705: "Column names in each table must be unique" — SQL Server's actual
             // wording for a duplicate ADD COLUMN never contains "already" (see UserStore's

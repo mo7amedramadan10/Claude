@@ -1,6 +1,5 @@
 using ChatToDashboard.Api.Data;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Llm;
@@ -17,21 +16,14 @@ public class LlmSettingsStore
 
     public LlmSettingsStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite
-        ? "\"LlmSettings\""
-        : "[staging].[LlmSettings]";
+    private string Table => "[staging].[LlmSettings]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" INTEGER PRIMARY KEY CHECK ("Id" = 1), "Provider" TEXT, "OllamaModel" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.LlmSettings') IS NULL
                CREATE TABLE {Table} (
                  [Id] INT PRIMARY KEY CHECK ([Id] = 1), [Provider] NVARCHAR(50), [OllamaModel] NVARCHAR(200))
@@ -43,18 +35,13 @@ public class LlmSettingsStore
             await command.ExecuteNonQueryAsync(ct);
         }
 
-        // Migration for a table created before OpenAiModel existed — SQLite has no
-        // "ADD COLUMN IF NOT EXISTS", so the duplicate-column failure is just swallowed.
+        // Migration for a table created before OpenAiModel existed — the duplicate-column
+        // failure is just swallowed.
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"OpenAiModel\" TEXT"
-                : $"ALTER TABLE {Table} ADD [OpenAiModel] NVARCHAR(200)";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [OpenAiModel] NVARCHAR(200)";
             await alter.ExecuteNonQueryAsync(ct);
-        }
-        catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-        {
         }
         // Error 2705: "Column names in each table must be unique" — SQL Server's actual
         // wording for a duplicate ADD COLUMN never contains "already" (see UserStore's
@@ -69,13 +56,8 @@ public class LlmSettingsStore
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"DocumentReaderProvider\" TEXT"
-                : $"ALTER TABLE {Table} ADD [DocumentReaderProvider] NVARCHAR(50)";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [DocumentReaderProvider] NVARCHAR(50)";
             await alter.ExecuteNonQueryAsync(ct);
-        }
-        catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-        {
         }
         catch (SqlException ex) when (ex.Number == 2705)
         {
@@ -91,13 +73,8 @@ public class LlmSettingsStore
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" TEXT"
-                    : $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
+                alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             catch (SqlException ex) when (ex.Number == 2705)
             {
@@ -114,13 +91,8 @@ public class LlmSettingsStore
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" TEXT"
-                    : $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
+                alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] NVARCHAR(200)";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             catch (SqlException ex) when (ex.Number == 2705)
             {
@@ -135,28 +107,23 @@ public class LlmSettingsStore
         // VisualIdentitySupportsImage below. That flag is set explicitly by an admin — never
         // inferred from the provider/model name — so a model without it is refused up front
         // (see VisualIdentityImageRouter) instead of being sent an image and failing remotely.
-        foreach (var (column, sqliteType, sqlServerType) in new[]
+        foreach (var (column, sqlServerType) in new[]
                  {
-                     ("VisualIdentityReaderProvider", "TEXT", "NVARCHAR(50)"),
-                     ("VisualIdentityReaderOllamaModel", "TEXT", "NVARCHAR(200)"),
-                     ("VisualIdentityReaderOpenAiModel", "TEXT", "NVARCHAR(200)"),
-                     ("VisualIdentitySupportsImage", "INTEGER", "BIT"),
+                     ("VisualIdentityReaderProvider", "NVARCHAR(50)"),
+                     ("VisualIdentityReaderOllamaModel", "NVARCHAR(200)"),
+                     ("VisualIdentityReaderOpenAiModel", "NVARCHAR(200)"),
+                     ("VisualIdentitySupportsImage", "BIT"),
                      // موديل تحليل معاني الأعمدة (طبقة المعنى): null = نفس موديل اللوحات، "none" = معطَّل.
-                     ("SemanticsProvider", "TEXT", "NVARCHAR(50)"),
-                     ("SemanticsOllamaModel", "TEXT", "NVARCHAR(200)"),
-                     ("SemanticsOpenAiModel", "TEXT", "NVARCHAR(200)"),
+                     ("SemanticsProvider", "NVARCHAR(50)"),
+                     ("SemanticsOllamaModel", "NVARCHAR(200)"),
+                     ("SemanticsOpenAiModel", "NVARCHAR(200)"),
                  })
         {
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqliteType}"
-                    : $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
+                alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             catch (SqlException ex) when (ex.Number == 2705)
             {
@@ -203,15 +170,7 @@ public class LlmSettingsStore
 
         // Only the field relevant to the provider being saved is touched — switching to
         // OpenAI, say, must not wipe out a previously chosen Ollama model for next time.
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               INSERT INTO {Table} (Id, Provider, OllamaModel, OpenAiModel) VALUES (1, @provider, @ollamaModel, @openAiModel)
-               ON CONFLICT(Id) DO UPDATE SET
-                 Provider = @provider,
-                 OllamaModel = COALESCE(@ollamaModel, OllamaModel),
-                 OpenAiModel = COALESCE(@openAiModel, OpenAiModel)
-               """
-            : $"""
+        var sql = $"""
                MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
                WHEN MATCHED THEN UPDATE SET
                  Provider = @provider,
@@ -237,16 +196,7 @@ public class LlmSettingsStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               INSERT INTO {Table} (Id, DocumentReaderProvider, DocumentReaderOllamaModel, DocumentReaderOpenAiModel)
-               VALUES (1, @provider, @ollamaModel, @openAiModel)
-               ON CONFLICT(Id) DO UPDATE SET
-                 DocumentReaderProvider = @provider,
-                 DocumentReaderOllamaModel = COALESCE(@ollamaModel, DocumentReaderOllamaModel),
-                 DocumentReaderOpenAiModel = COALESCE(@openAiModel, DocumentReaderOpenAiModel)
-               """
-            : $"""
+        var sql = $"""
                MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
                WHEN MATCHED THEN UPDATE SET
                  DocumentReaderProvider = @provider,
@@ -296,18 +246,7 @@ public class LlmSettingsStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               INSERT INTO {Table} (Id, VisualIdentityReaderProvider, VisualIdentityReaderOllamaModel,
-                 VisualIdentityReaderOpenAiModel, VisualIdentitySupportsImage)
-               VALUES (1, @provider, @ollamaModel, @openAiModel, @supportsImage)
-               ON CONFLICT(Id) DO UPDATE SET
-                 VisualIdentityReaderProvider = @provider,
-                 VisualIdentityReaderOllamaModel = COALESCE(@ollamaModel, VisualIdentityReaderOllamaModel),
-                 VisualIdentityReaderOpenAiModel = COALESCE(@openAiModel, VisualIdentityReaderOpenAiModel),
-                 VisualIdentitySupportsImage = @supportsImage
-               """
-            : $"""
+        var sql = $"""
                MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
                WHEN MATCHED THEN UPDATE SET
                  VisualIdentityReaderProvider = @provider,
@@ -337,16 +276,7 @@ public class LlmSettingsStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               INSERT INTO {Table} (Id, ImageReaderProvider, ImageReaderOllamaModel, ImageReaderOpenAiModel)
-               VALUES (1, @provider, @ollamaModel, @openAiModel)
-               ON CONFLICT(Id) DO UPDATE SET
-                 ImageReaderProvider = @provider,
-                 ImageReaderOllamaModel = COALESCE(@ollamaModel, ImageReaderOllamaModel),
-                 ImageReaderOpenAiModel = COALESCE(@openAiModel, ImageReaderOpenAiModel)
-               """
-            : $"""
+        var sql = $"""
                MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
                WHEN MATCHED THEN UPDATE SET
                  ImageReaderProvider = @provider,
@@ -395,16 +325,7 @@ public class LlmSettingsStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               INSERT INTO {Table} (Id, SemanticsProvider, SemanticsOllamaModel, SemanticsOpenAiModel)
-               VALUES (1, @provider, @ollamaModel, @openAiModel)
-               ON CONFLICT(Id) DO UPDATE SET
-                 SemanticsProvider = @provider,
-                 SemanticsOllamaModel = COALESCE(@ollamaModel, SemanticsOllamaModel),
-                 SemanticsOpenAiModel = COALESCE(@openAiModel, SemanticsOpenAiModel)
-               """
-            : $"""
+        var sql = $"""
                MERGE {Table} AS t USING (SELECT 1 AS Id) AS s ON t.Id = s.Id
                WHEN MATCHED THEN UPDATE SET
                  SemanticsProvider = @provider,

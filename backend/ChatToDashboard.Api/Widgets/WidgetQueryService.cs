@@ -36,8 +36,8 @@ public class WidgetQueryService
         { "sum", "avg", "count", "min", "max" };
     private static readonly HashSet<string> TimeRanges = new(StringComparer.OrdinalIgnoreCase)
         { "all", "this_month", "last_month", "last_3_months", "last_6_months", "this_year", "custom" };
-    // SQLite stores dates as ISO-8601 text, so the SQL type alone can't tell a date column
-    // from any other text column there — this name heuristic fills that gap.
+    // The SQL type alone can't tell a date column stored as text from any other text column
+    // — this name heuristic fills that gap.
     private static readonly Regex DateNameHint = new(@"date|_at$|^at$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     // The default SqlCommand timeout (30s) is what previously caused live "Execution Timeout
@@ -107,9 +107,7 @@ public class WidgetQueryService
         var tableRef = _db.QualifiedTable(table.Table);
         var colQuoted = Quote(col.Name);
         var limit = 50;
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"SELECT DISTINCT {colQuoted} AS v FROM {tableRef} WHERE {colQuoted} IS NOT NULL ORDER BY v LIMIT {limit}"
-            : $"SELECT DISTINCT TOP {limit} {colQuoted} AS v FROM {tableRef} WHERE {colQuoted} IS NOT NULL ORDER BY v";
+        var sql = $"SELECT DISTINCT TOP {limit} {colQuoted} AS v FROM {tableRef} WHERE {colQuoted} IS NOT NULL ORDER BY v";
 
         await using var connection = await _db.OpenConnectionAsync(ct);
         var values = (await connection.QueryAsync<string>(new CommandDefinition(sql, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
@@ -297,9 +295,7 @@ public class WidgetQueryService
     {
         var parameters = new DynamicParameters();
         var (clauses, _) = BuildFilterClauses(table, filters ?? new List<FilterCondition>(), parameters);
-        // SQLite يخزّن تواريخ الملفات نصًا بصيغة ISO فتُقارن معجميًا؛ SQL Server بأنواع تاريخ حقيقية.
-        if (_db.Provider == DbProvider.Sqlite) { parameters.Add("@kdFrom", from.ToString("yyyy-MM-dd")); parameters.Add("@kdTo", toExclusive.ToString("yyyy-MM-dd")); }
-        else { parameters.Add("@kdFrom", from); parameters.Add("@kdTo", toExclusive); }
+        parameters.Add("@kdFrom", from); parameters.Add("@kdTo", toExclusive);
         clauses.Add($"{quotedCol} >= @kdFrom AND {quotedCol} < @kdTo");
         var windowed = SpliceWhereClause(sql, string.Join(" AND ", clauses));
         if (AnalyticsTools.ValidateReadOnlySql(windowed) is not null) return null;
@@ -473,9 +469,7 @@ public class WidgetQueryService
         var selectList = string.Join(", ", cols.Select(Quote));
         var order = dateCol is not null ? $" ORDER BY {Quote(dateCol.Name)} DESC" : "";
         var limit = Cap(request.TopN, 50);
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"SELECT {selectList} FROM {tableRef}{where}{order} LIMIT {limit}"
-            : $"SELECT TOP {limit} {selectList} FROM {tableRef}{where}{order}";
+        var sql = $"SELECT TOP {limit} {selectList} FROM {tableRef}{where}{order}";
 
         var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r).ToList();
@@ -524,11 +518,8 @@ public class WidgetQueryService
         var sortDir = string.Equals(request.Sort, "asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
         var tableRef = _db.QualifiedTable(table.Table);
         var dimQuoted = Quote(dimensionCol.Name);
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"SELECT {dimQuoted} AS label, {aggExpr} AS value FROM {tableRef}{where} " +
-              $"GROUP BY {dimQuoted} ORDER BY value {sortDir} LIMIT {topN}"
-            : $"SELECT TOP {topN} {dimQuoted} AS label, {aggExpr} AS value FROM {tableRef}{where} " +
-              $"GROUP BY {dimQuoted} ORDER BY value {sortDir}";
+        var sql = $"SELECT TOP {topN} {dimQuoted} AS label, {aggExpr} AS value FROM {tableRef}{where} " +
+                  $"GROUP BY {dimQuoted} ORDER BY value {sortDir}";
 
         var rows = (await connection.QueryAsync(new CommandDefinition(sql, parameters, commandTimeout: QueryCommandTimeoutSeconds, cancellationToken: ct)))
             .Select(r => (IDictionary<string, object?>)r)
@@ -580,20 +571,11 @@ public class WidgetQueryService
     /// <summary>اقتباس معرّف بحسب المزوّد — للمسارات التي تبني SQL خارج هذه الخدمة (تصحيح الأعمدة).</summary>
     public string QuoteIdentifier(string identifier) => Quote(identifier);
 
-    private string Quote(string identifier) => _db.Provider == DbProvider.Sqlite
-        ? $"\"{identifier.Replace("\"", "\"\"")}\""
-        : $"[{identifier.Replace("]", "]]")}]";
+    private string Quote(string identifier) => $"[{identifier.Replace("]", "]]")}]";
 
     private string PeriodExpr(string dateColName, string granularity)
     {
         var col = Quote(dateColName);
-        if (_db.Provider == DbProvider.Sqlite)
-            return granularity switch
-            {
-                "day" => $"date({col})",
-                "week" => $"strftime('%Y-W%W', {col})",
-                _ => $"strftime('%Y-%m', {col})",
-            };
         return granularity switch
         {
             "day" => $"FORMAT({col}, 'yyyy-MM-dd')",
@@ -615,24 +597,13 @@ public class WidgetQueryService
     /// </summary>
     private string BuildTimeRangeFilter(string tableRef, string col, string range, string? customFrom, string? customTo)
     {
-        var sqlite = _db.Provider == DbProvider.Sqlite;
         return range switch
         {
-            "this_month" => sqlite
-                ? $"strftime('%Y-%m', {col}) = (SELECT strftime('%Y-%m', MAX({col})) FROM {tableRef})"
-                : $"FORMAT({col}, 'yyyy-MM') = (SELECT FORMAT(MAX({col}), 'yyyy-MM') FROM {tableRef})",
-            "last_month" => sqlite
-                ? $"strftime('%Y-%m', {col}) = (SELECT strftime('%Y-%m', date(MAX({col}), '-1 month')) FROM {tableRef})"
-                : $"FORMAT({col}, 'yyyy-MM') = (SELECT FORMAT(DATEADD(month, -1, MAX({col})), 'yyyy-MM') FROM {tableRef})",
-            "last_3_months" => sqlite
-                ? $"{col} >= (SELECT date(MAX({col}), '-3 months') FROM {tableRef})"
-                : $"{col} >= (SELECT DATEADD(month, -3, MAX({col})) FROM {tableRef})",
-            "last_6_months" => sqlite
-                ? $"{col} >= (SELECT date(MAX({col}), '-6 months') FROM {tableRef})"
-                : $"{col} >= (SELECT DATEADD(month, -6, MAX({col})) FROM {tableRef})",
-            "this_year" => sqlite
-                ? $"strftime('%Y', {col}) = (SELECT strftime('%Y', MAX({col})) FROM {tableRef})"
-                : $"YEAR({col}) = (SELECT YEAR(MAX({col})) FROM {tableRef})",
+            "this_month" => $"FORMAT({col}, 'yyyy-MM') = (SELECT FORMAT(MAX({col}), 'yyyy-MM') FROM {tableRef})",
+            "last_month" => $"FORMAT({col}, 'yyyy-MM') = (SELECT FORMAT(DATEADD(month, -1, MAX({col})), 'yyyy-MM') FROM {tableRef})",
+            "last_3_months" => $"{col} >= (SELECT DATEADD(month, -3, MAX({col})) FROM {tableRef})",
+            "last_6_months" => $"{col} >= (SELECT DATEADD(month, -6, MAX({col})) FROM {tableRef})",
+            "this_year" => $"YEAR({col}) = (SELECT YEAR(MAX({col})) FROM {tableRef})",
             "custom" => BuildCustomRangeFilter(col, customFrom, customTo),
             _ => throw new WidgetQueryValidationException("الفترة الزمنية غير مدعومة."),
         };

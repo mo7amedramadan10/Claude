@@ -19,20 +19,14 @@ public class SchemaAliasStore
 
     public SchemaAliasStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"SchemaAliasEntries\"" : "[staging].[SchemaAliasEntries]";
+    private string Table => "[staging].[SchemaAliasEntries]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "ConceptId" TEXT, "Kind" TEXT, "ParentTable" TEXT, "Label" TEXT,
-                 "Name" TEXT, "Score" REAL, "Source" TEXT, "CreatedAt" TEXT, "UpdatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.SchemaAliasEntries') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(200) PRIMARY KEY, [ConceptId] NVARCHAR(400), [Kind] NVARCHAR(16), [ParentTable] NVARCHAR(200),
@@ -46,29 +40,26 @@ public class SchemaAliasStore
 
         // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا.
-        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "ConceptId", "TEXT", "NVARCHAR(400)", ct);
-        await AddColumnIfMissingAsync(connection, "Kind", "TEXT", "NVARCHAR(16)", ct);
-        await AddColumnIfMissingAsync(connection, "ParentTable", "TEXT", "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "Label", "TEXT", "NVARCHAR(400)", ct);
-        await AddColumnIfMissingAsync(connection, "Name", "TEXT", "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "Score", "REAL", "FLOAT", ct);
-        await AddColumnIfMissingAsync(connection, "Source", "TEXT", "NVARCHAR(16)", ct);
-        await AddColumnIfMissingAsync(connection, "CreatedAt", "TEXT", "DATETIME2", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "ConceptId", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, "Kind", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, "ParentTable", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Label", "NVARCHAR(400)", ct);
+        await AddColumnIfMissingAsync(connection, "Name", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "Score", "FLOAT", ct);
+        await AddColumnIfMissingAsync(connection, "Source", "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, "CreatedAt", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "DATETIME2", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
@@ -138,16 +129,11 @@ public class SchemaAliasStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
 
-        var existing = await connection.QuerySingleOrDefaultAsync<SchemaAliasEntry>(
-            $"SELECT * FROM {Table} WHERE ConceptId = @conceptId AND Name = @name COLLATE NOCASE",
-            new { conceptId, name });
-        // SQL Server has no COLLATE NOCASE — fall back to an in-memory case-insensitive check
-        // there (the table is small enough per concept that this never matters for performance).
-        if (existing is null && _db.Provider != DbProvider.Sqlite)
-        {
-            var all = await connection.QueryAsync<SchemaAliasEntry>($"SELECT * FROM {Table} WHERE ConceptId = @conceptId", new { conceptId });
-            existing = all.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
-        }
+        // مطابقة غير حساسة لحالة الأحرف في الذاكرة بدل الاعتماد على ترتيب (collation) القاعدة — كان هنا
+        // استعلام بصيغة SQLite (COLLATE NOCASE) يفشل على SQL Server قبل أن يصل إلى هذا المسار البديل.
+        // الجدول صغير لكل مفهوم فلا أثر على الأداء.
+        var all = await connection.QueryAsync<SchemaAliasEntry>($"SELECT * FROM {Table} WHERE ConceptId = @conceptId", new { conceptId });
+        var existing = all.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
 
         if (existing is not null)
         {

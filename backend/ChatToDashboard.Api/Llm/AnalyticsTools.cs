@@ -40,7 +40,7 @@ public class AnalyticsTools
 
     // A recurring mistake (seen with Ollama's smaller models, but not exclusive to it): writing
     // 'column_name' with single quotes — a SQL *string literal* — instead of "column_name"
-    // with double quotes (SQLite's identifier syntax), in GROUP BY and/or in a SELECT-list
+    // with double quotes, in GROUP BY and/or in a SELECT-list
     // alias. A query still runs and "succeeds" either way, but every row evaluates the literal
     // identically, so GROUP BY 'x' silently collapses into a single group instead of one per
     // real value, and SELECT 'x' AS label shows the literal text "x" instead of each row's
@@ -263,7 +263,7 @@ public class AnalyticsTools
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
     {
-        var rowCap = _db.Provider == DbProvider.Sqlite ? "LIMIT 500" : "TOP 500";
+        var rowCap = "TOP 500";
 
         var tools = new List<ToolSpec>
         {
@@ -1686,11 +1686,11 @@ public class AnalyticsTools
         - ملفات مستودع الملفات المقفولة (لا يحق للمستخدم الوصول لها): {Bullets(context.DisabledFiles)}
         """;
 
-    /// <summary>Matches both dialects' "you referenced something that doesn't exist" errors —
-    /// SQL Server's "Invalid object name"/"Invalid column name" and SQLite's "no such table"/
-    /// "no such column" — see ExecuteToolAsync's DbException handling below.</summary>
+    /// <summary>Matches SQL Server's "you referenced something that doesn't exist" errors —
+    /// "Invalid object name"/"Invalid column name" — see ExecuteToolAsync's DbException
+    /// handling below.</summary>
     private static readonly Regex InvalidNameErrorRegex = new(
-        @"invalid (object|column) name|no such (table|column)",
+        @"invalid (object|column) name",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>Every table this request can actually see and use — known to this project (see

@@ -1,6 +1,5 @@
 using ChatToDashboard.Api.Data;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.History;
@@ -24,27 +23,16 @@ public class HistoryStore
         _logger = logger;
     }
 
-    private string Table => _db.Provider == DbProvider.Sqlite
-        ? "\"DashboardHistory\""
-        : "[staging].[DashboardHistory]";
+    private string Table => "[staging].[DashboardHistory]";
 
-    private string RolesTable => _db.Provider == DbProvider.Sqlite
-        ? "\"DashboardRoles\""
-        : "[staging].[DashboardRoles]";
+    private string RolesTable => "[staging].[DashboardRoles]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "UserId" TEXT, "Question" TEXT, "QueryDescription" TEXT,
-                 "Summary" TEXT, "WidgetsJson" TEXT, "FiltersJson" TEXT, "ActiveFiltersJson" TEXT,
-                 "CreatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.DashboardHistory') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [UserId] NVARCHAR(200), [Question] NVARCHAR(MAX),
@@ -58,30 +46,24 @@ public class HistoryStore
             await command.ExecuteNonQueryAsync(ct);
         }
 
-        // Migration for a table created before FiltersJson/ActiveFiltersJson existed —
-        // SQLite has no "ADD COLUMN IF NOT EXISTS", so the duplicate-column failure is just
-        // swallowed (same pattern as LlmSettingsStore.EnsureSchemaAsync).
-        foreach (var (column, sqliteType, sqlServerType) in new[]
+        // Migration for a table created before FiltersJson/ActiveFiltersJson existed — the
+        // duplicate-column failure is just swallowed (same pattern as LlmSettingsStore.EnsureSchemaAsync).
+        foreach (var (column, sqlServerType) in new[]
                  {
-                     ("FiltersJson", "TEXT", "NVARCHAR(MAX)"),
-                     ("ActiveFiltersJson", "TEXT", "NVARCHAR(MAX)"),
-                     ("IsActive", "INTEGER", "BIT"),
-                     ("OwnerId", "TEXT", "NVARCHAR(200)"),
-                     ("ProjectId", "TEXT", "NVARCHAR(64)"),
-                     ("RenderKind", "TEXT", "NVARCHAR(64)"),
-                     ("TemplateId", "TEXT", "NVARCHAR(128)"),
+                     ("FiltersJson", "NVARCHAR(MAX)"),
+                     ("ActiveFiltersJson", "NVARCHAR(MAX)"),
+                     ("IsActive", "BIT"),
+                     ("OwnerId", "NVARCHAR(200)"),
+                     ("ProjectId", "NVARCHAR(64)"),
+                     ("RenderKind", "NVARCHAR(64)"),
+                     ("TemplateId", "NVARCHAR(128)"),
                  })
         {
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqliteType}"
-                    : $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
+                alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             // Error 2705: "Column names in each table must be unique" — SQL Server's actual
             // wording for a duplicate ADD COLUMN never contains "already" (see UserStore's
@@ -93,13 +75,7 @@ public class HistoryStore
 
         // Editor/Viewer roles on Active dashboards — mirrors repo_FilePermissions' shape.
         // The Owner is not in here; it's DashboardHistory.OwnerId.
-        var rolesText = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {RolesTable} (
-                 "DashboardId" TEXT NOT NULL, "UserId" TEXT NOT NULL, "Role" TEXT NOT NULL,
-                 PRIMARY KEY ("DashboardId", "UserId"))
-               """
-            : $"""
+        var rolesText = $"""
                IF OBJECT_ID('staging.DashboardRoles') IS NULL
                CREATE TABLE {RolesTable} (
                  [DashboardId] NVARCHAR(64) NOT NULL, [UserId] NVARCHAR(200) NOT NULL, [Role] NVARCHAR(20) NOT NULL,
@@ -156,8 +132,7 @@ public class HistoryStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
-        var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
+        var top = $"TOP {limit} ";
         var projectFilter = projectId is null ? "" : "AND (t.ProjectId = @projectId OR t.ProjectId IS NULL) ";
         // COALESCE covers rows saved before FiltersJson/ActiveFiltersJson/IsActive existed —
         // the migration in EnsureSchemaAsync adds the columns as NULL on old rows.
@@ -169,7 +144,7 @@ public class HistoryStore
             $"OR (COALESCE(t.IsActive, 0) = 1 AND (t.OwnerId = @userId " +
             $"OR EXISTS (SELECT 1 FROM {RolesTable} r WHERE r.DashboardId = t.Id AND r.UserId = @userId)))) " +
             $"{projectFilter}" +
-            $"ORDER BY t.CreatedAt DESC{tail}",
+            $"ORDER BY t.CreatedAt DESC",
             new { userId, projectId });
         return rows.ToList();
     }

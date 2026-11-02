@@ -1,7 +1,6 @@
 using System.Text.Json;
 using ChatToDashboard.Api.Data;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Users;
@@ -18,22 +17,14 @@ public class UserStore
         _logger = logger;
     }
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"AppUsers\"" : "[staging].[AppUsers]";
+    private string Table => "[staging].[AppUsers]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "Username" TEXT UNIQUE, "DisplayName" TEXT,
-                 "PasswordHash" TEXT, "AuthMethod" TEXT, "Role" TEXT, "IsActive" INTEGER,
-                 "AllowAllSystems" INTEGER, "AllowedSystemsJson" TEXT,
-                 "AllowAllFiles" INTEGER, "AllowedFilesJson" TEXT, "CreatedAt" TEXT)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.AppUsers') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Username] NVARCHAR(200) UNIQUE, [DisplayName] NVARCHAR(200),
@@ -51,25 +42,20 @@ public class UserStore
         // Migration for a table created before per-file permissions replaced per-category
         // ones (AllowAllCategories/AllowedCategoriesJson stay in place, unused, per this
         // codebase's own no-drop-columns convention — see HistoryStore.EnsureSchemaAsync).
-        foreach (var (column, sqliteType, sqlServerType) in new[]
+        foreach (var (column, sqlServerType) in new[]
                  {
-                     ("AllowAllFiles", "INTEGER", "BIT"),
-                     ("AllowedFilesJson", "TEXT", "NVARCHAR(MAX)"),
+                     ("AllowAllFiles", "BIT"),
+                     ("AllowedFilesJson", "NVARCHAR(MAX)"),
                      // SaaS hierarchy (Platform → Organization → Project) — see AppUser's remarks.
-                     ("OrganizationId", "TEXT", "NVARCHAR(64)"),
-                     ("IsPlatformOwner", "INTEGER", "BIT"),
+                     ("OrganizationId", "NVARCHAR(64)"),
+                     ("IsPlatformOwner", "BIT"),
                  })
         {
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqliteType}"
-                    : $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
+                alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServerType}";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             // Error 2705: "Column names in each table must be unique" — the wording SQL
             // Server actually uses for a duplicate ADD COLUMN never contains "already", so
@@ -100,9 +86,6 @@ public class UserStore
             try { await backfill.ExecuteNonQueryAsync(ct); }
             // AllowAllCategories column absent on a brand-new DB (never created at all) —
             // nothing to backfill.
-            catch (SqliteException ex) when (ex.Message.Contains("no such column", StringComparison.OrdinalIgnoreCase))
-            {
-            }
             catch (SqlException ex) when (ex.Message.Contains("Invalid column name", StringComparison.OrdinalIgnoreCase))
             {
             }
@@ -135,116 +118,41 @@ public class UserStore
     /// replaces the single-column constraint with a composite one on (OrganizationId,
     /// Username).
     ///
-    /// SQLite has no ALTER TABLE ... DROP CONSTRAINT, so the only way to actually remove a
-    /// column-level UNIQUE is the standard SQLite pattern: rebuild the table without it, copy
-    /// every row across, swap it in. Guarded by inspecting sqlite_master's stored CREATE TABLE
-    /// text so this only ever runs once per database, not on every startup. SQL Server's
-    /// inline UNIQUE became an auto-named constraint, discoverable (but not guessable) via
+    /// SQL Server's inline UNIQUE became an auto-named constraint, discoverable (but not guessable) via
     /// sys.key_constraints — dropped by that discovered name, then replaced by a filtered
     /// unique index (filtered so legacy rows with OrganizationId still NULL, pre-backfill,
     /// never collide with each other under the new index).
     /// </summary>
     private async Task RelaxUsernameUniquenessAsync(System.Data.Common.DbConnection connection, CancellationToken ct)
     {
-        if (_db.Provider == DbProvider.Sqlite)
+        try
         {
-            var createSql = await connection.ExecuteScalarAsync<string?>(
-                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'AppUsers'");
-            if (createSql is null || !createSql.Contains("\"Username\" TEXT UNIQUE", StringComparison.Ordinal))
-                return; // already rebuilt, or a brand-new table that never had the old clause
-
-            await using var transaction = await connection.BeginTransactionAsync(ct);
-            try
+            await using (var cmd = connection.CreateCommand())
             {
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.Transaction = (SqliteTransaction)transaction;
-                    cmd.CommandText = """
-                        CREATE TABLE "AppUsers_rebuild" (
-                          "Id" TEXT PRIMARY KEY, "Username" TEXT, "DisplayName" TEXT,
-                          "PasswordHash" TEXT, "AuthMethod" TEXT, "Role" TEXT, "IsActive" INTEGER,
-                          "AllowAllSystems" INTEGER, "AllowedSystemsJson" TEXT,
-                          "AllowAllFiles" INTEGER, "AllowedFilesJson" TEXT, "CreatedAt" TEXT,
-                          "OrganizationId" TEXT, "IsPlatformOwner" INTEGER)
-                        """;
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.Transaction = (SqliteTransaction)transaction;
-                    cmd.CommandText = """
-                        INSERT INTO "AppUsers_rebuild"
-                          (Id, Username, DisplayName, PasswordHash, AuthMethod, Role, IsActive,
-                           AllowAllSystems, AllowedSystemsJson, AllowAllFiles, AllowedFilesJson, CreatedAt,
-                           OrganizationId, IsPlatformOwner)
-                        SELECT Id, Username, DisplayName, PasswordHash, AuthMethod, Role, IsActive,
-                               AllowAllSystems, AllowedSystemsJson, AllowAllFiles, AllowedFilesJson, CreatedAt,
-                               OrganizationId, IsPlatformOwner
-                        FROM "AppUsers"
-                        """;
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.Transaction = (SqliteTransaction)transaction;
-                    cmd.CommandText = "DROP TABLE \"AppUsers\"";
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.Transaction = (SqliteTransaction)transaction;
-                    cmd.CommandText = "ALTER TABLE \"AppUsers_rebuild\" RENAME TO \"AppUsers\"";
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.Transaction = (SqliteTransaction)transaction;
-                    // SQLite treats each NULL as distinct under a UNIQUE index (unlike SQL
-                    // Server), so pre-backfill rows with OrganizationId still NULL never
-                    // collide with each other here — no WHERE filter needed.
-                    cmd.CommandText = "CREATE UNIQUE INDEX \"idx_appusers_org_username\" ON \"AppUsers\" (\"OrganizationId\", \"Username\")";
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-                await transaction.CommitAsync(ct);
-                _logger.LogInformation("Migrated AppUsers.Username from a globally-unique to an organization-scoped unique constraint.");
+                cmd.CommandText = """
+                    DECLARE @constraintName NVARCHAR(200);
+                    SELECT @constraintName = kc.name
+                    FROM sys.key_constraints kc
+                    JOIN sys.index_columns ic ON ic.object_id = kc.parent_object_id AND ic.index_id = kc.unique_index_id
+                    JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+                    WHERE kc.parent_object_id = OBJECT_ID('staging.AppUsers') AND c.name = 'Username' AND kc.type = 'UQ';
+                    IF @constraintName IS NOT NULL
+                      EXEC('ALTER TABLE staging.AppUsers DROP CONSTRAINT [' + @constraintName + ']');
+                    """;
+                await cmd.ExecuteNonQueryAsync(ct);
             }
-            catch (Exception ex)
+            await using (var cmd = connection.CreateCommand())
             {
-                await transaction.RollbackAsync(ct);
-                _logger.LogError(ex, "Failed to relax AppUsers.Username's uniqueness constraint — usernames remain globally unique until this is retried.");
+                cmd.CommandText = """
+                    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_appusers_org_username' AND object_id = OBJECT_ID('staging.AppUsers'))
+                      CREATE UNIQUE INDEX idx_appusers_org_username ON staging.AppUsers (OrganizationId, Username) WHERE OrganizationId IS NOT NULL;
+                    """;
+                await cmd.ExecuteNonQueryAsync(ct);
             }
         }
-        else
+        catch (SqlException ex)
         {
-            try
-            {
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = """
-                        DECLARE @constraintName NVARCHAR(200);
-                        SELECT @constraintName = kc.name
-                        FROM sys.key_constraints kc
-                        JOIN sys.index_columns ic ON ic.object_id = kc.parent_object_id AND ic.index_id = kc.unique_index_id
-                        JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-                        WHERE kc.parent_object_id = OBJECT_ID('staging.AppUsers') AND c.name = 'Username' AND kc.type = 'UQ';
-                        IF @constraintName IS NOT NULL
-                          EXEC('ALTER TABLE staging.AppUsers DROP CONSTRAINT [' + @constraintName + ']');
-                        """;
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = """
-                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_appusers_org_username' AND object_id = OBJECT_ID('staging.AppUsers'))
-                          CREATE UNIQUE INDEX idx_appusers_org_username ON staging.AppUsers (OrganizationId, Username) WHERE OrganizationId IS NOT NULL;
-                        """;
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-            }
-            catch (SqlException ex)
-            {
-                _logger.LogError(ex, "Failed to relax AppUsers.Username's uniqueness constraint — usernames remain globally unique until this is retried.");
-            }
+            _logger.LogError(ex, "Failed to relax AppUsers.Username's uniqueness constraint — usernames remain globally unique until this is retried.");
         }
     }
 
@@ -341,12 +249,11 @@ public class UserStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var like = $"%{query}%";
-        var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
-        var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
+        var top = $"TOP {limit} ";
         var rows = await connection.QueryAsync<AppUser>(
             $"SELECT {top}* FROM {Table} WHERE IsActive = 1 AND OrganizationId = @organizationId AND " +
             "(LOWER(Username) LIKE LOWER(@like) OR LOWER(DisplayName) LIKE LOWER(@like)) " +
-            $"ORDER BY Username{tail}",
+            $"ORDER BY Username",
             new { organizationId, like, limit });
         return rows.ToList();
     }

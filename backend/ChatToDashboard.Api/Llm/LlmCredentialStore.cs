@@ -3,7 +3,6 @@ using ChatToDashboard.Api.Data;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
 
 namespace ChatToDashboard.Api.Llm;
 
@@ -50,7 +49,7 @@ public class LlmCredentialStore
         _ => ("Anthropic:ApiKey", "Anthropic:BaseUrl"),
     };
 
-    private string Table => _db.Provider == DbProvider.Sqlite ? "\"LlmCredentials\"" : "[staging].[LlmCredentials]";
+    private string Table => "[staging].[LlmCredentials]";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -64,12 +63,7 @@ public class LlmCredentialStore
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Provider" TEXT NOT NULL PRIMARY KEY, "ApiKey" TEXT, "BaseUrl" TEXT, "UpdatedAt" TEXT NOT NULL)
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.LlmCredentials') IS NULL
                CREATE TABLE {Table} (
                  [Provider] NVARCHAR(50) NOT NULL PRIMARY KEY, [ApiKey] NVARCHAR(MAX), [BaseUrl] NVARCHAR(500), [UpdatedAt] DATETIME2 NOT NULL)
@@ -80,23 +74,20 @@ public class LlmCredentialStore
 
         // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا.
-        await AddColumnIfMissingAsync(connection, "Provider", "TEXT", "NVARCHAR(50)", ct);
-        await AddColumnIfMissingAsync(connection, "ApiKey", "TEXT", "NVARCHAR(MAX)", ct);
-        await AddColumnIfMissingAsync(connection, "BaseUrl", "TEXT", "NVARCHAR(500)", ct);
-        await AddColumnIfMissingAsync(connection, "UpdatedAt", "TEXT", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "Provider", "NVARCHAR(50)", ct);
+        await AddColumnIfMissingAsync(connection, "ApiKey", "NVARCHAR(MAX)", ct);
+        await AddColumnIfMissingAsync(connection, "BaseUrl", "NVARCHAR(500)", ct);
+        await AddColumnIfMissingAsync(connection, "UpdatedAt", "DATETIME2", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (SqlException ex) when (ex.Number == 2705) { }
     }
 
@@ -170,12 +161,7 @@ public class LlmCredentialStore
         if (storedBase is not null && (!Uri.TryCreate(storedBase, UriKind.Absolute, out var parsed) || parsed.Scheme is not ("http" or "https")))
             throw new ArgumentException("العنوان يجب أن يكون رابطًا كاملًا يبدأ بـ http:// أو https://");
         var args = new { provider, apiKey = storedKey, baseUrl = storedBase, now = DateTime.UtcNow };
-        var sql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               INSERT INTO {Table} (Provider, ApiKey, BaseUrl, UpdatedAt) VALUES (@provider, @apiKey, @baseUrl, @now)
-               ON CONFLICT(Provider) DO UPDATE SET ApiKey = @apiKey, BaseUrl = @baseUrl, UpdatedAt = @now
-               """
-            : $"""
+        var sql = $"""
                MERGE {Table} AS t USING (SELECT @provider AS Provider) AS s ON t.Provider = s.Provider
                WHEN MATCHED THEN UPDATE SET ApiKey = @apiKey, BaseUrl = @baseUrl, UpdatedAt = @now
                WHEN NOT MATCHED THEN INSERT (Provider, ApiKey, BaseUrl, UpdatedAt) VALUES (@provider, @apiKey, @baseUrl, @now);

@@ -359,11 +359,9 @@ public class StagedTemplateBuilder
                 try
                 {
                     await using var connection = await _db.OpenConnectionAsync(ct);
-                    var col = _db.Provider == DbProvider.Sqlite ? $"\"{column.Name.Replace("\"", "\"\"")}\"" : $"[{column.Name.Replace("]", "]]")}]";
+                    var col = $"[{column.Name.Replace("]", "]]")}]";
                     var qt = _db.QualifiedTable(table.Table);
-                    var sql = _db.Provider == DbProvider.Sqlite
-                        ? $"SELECT DISTINCT {col} AS v FROM {qt} WHERE {col} IS NOT NULL AND {col} <> '' ORDER BY 1 LIMIT {MaxFilterOptions + 1}"
-                        : $"SELECT DISTINCT TOP {MaxFilterOptions + 1} {col} AS v FROM {qt} WHERE {col} IS NOT NULL AND CAST({col} AS NVARCHAR(MAX)) <> '' ORDER BY 1";
+                    var sql = $"SELECT DISTINCT TOP {MaxFilterOptions + 1} {col} AS v FROM {qt} WHERE {col} IS NOT NULL AND CAST({col} AS NVARCHAR(MAX)) <> '' ORDER BY 1";
                     var values = (await connection.QueryAsync<string>(new CommandDefinition(sql, commandTimeout: 20, cancellationToken: ct))).ToList();
                     if (values.Count == 0 || values.Count > MaxFilterOptions) continue; // عمود عالي التنوع لا يصلح فلترًا
                     options = values.Select(v => new FilterOption { Label = v, Value = v }).ToList();

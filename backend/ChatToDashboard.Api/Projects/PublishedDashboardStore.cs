@@ -5,7 +5,7 @@ namespace ChatToDashboard.Api.Projects;
 
 /// <summary>
 /// تخزين جدول <c>PublishedDashboards</c> (§4.23) — بنفس نمط Dapper المشترك لبقية المخازن
-/// هنا (SQLite أو SQL Server تحت مخطط <c>staging</c>). صف واحد لكل (مشروع، لوحة): إعادة
+/// هنا (SQL Server تحت مخطط <c>staging</c>). صف واحد لكل (مشروع، لوحة): إعادة
 /// النشر تحدّث الصف نفسه وترفع رقم الإصدار بدل إضافة صف جديد.
 /// </summary>
 public class PublishedDashboardStore
@@ -14,25 +14,14 @@ public class PublishedDashboardStore
 
     public PublishedDashboardStore(DataStore db) => _db = db;
 
-    private string Table => _db.Provider == DbProvider.Sqlite
-        ? "\"PublishedDashboards\""
-        : "[staging].[PublishedDashboards]";
+    private string Table => "[staging].[PublishedDashboards]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var text = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {Table} (
-                 "Id" TEXT PRIMARY KEY, "ProjectId" TEXT NOT NULL, "DashboardId" TEXT NOT NULL,
-                 "Version" INTEGER NOT NULL, "PublishedBy" TEXT, "PublishedAt" TEXT,
-                 "Audience" TEXT NOT NULL, "RefreshMode" TEXT NOT NULL, "RefreshEvery" TEXT,
-                 "SortOrder" INTEGER NOT NULL, "Kind" TEXT NOT NULL,
-                 UNIQUE ("ProjectId", "DashboardId"))
-               """
-            : $"""
+        var text = $"""
                IF OBJECT_ID('staging.PublishedDashboards') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64) NOT NULL, [DashboardId] NVARCHAR(64) NOT NULL,
@@ -48,32 +37,28 @@ public class PublishedDashboardStore
 
         // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE هنا (نفس استثناء
-        // OrganizationStore) — SQLite لا يقبله في ALTER TABLE ADD COLUMN، والتكرار محسوم
-        // بالفعل في PublishAsync (SELECT قبل أي INSERT).
-        await AddColumnIfMissingAsync(connection, "Id", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "ProjectId", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "DashboardId", "TEXT", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "Version", "INTEGER", "INT", ct);
-        await AddColumnIfMissingAsync(connection, "PublishedBy", "TEXT", "NVARCHAR(200)", ct);
-        await AddColumnIfMissingAsync(connection, "PublishedAt", "TEXT", "DATETIME2", ct);
-        await AddColumnIfMissingAsync(connection, "Audience", "TEXT", "NVARCHAR(20)", ct);
-        await AddColumnIfMissingAsync(connection, "RefreshMode", "TEXT", "NVARCHAR(20)", ct);
-        await AddColumnIfMissingAsync(connection, "RefreshEvery", "TEXT", "NVARCHAR(100)", ct);
-        await AddColumnIfMissingAsync(connection, "SortOrder", "INTEGER", "INT", ct);
-        await AddColumnIfMissingAsync(connection, "Kind", "TEXT", "NVARCHAR(20)", ct);
+        // OrganizationStore)، والتكرار محسوم بالفعل في PublishAsync (SELECT قبل أي INSERT).
+        await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "DashboardId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "Version", "INT", ct);
+        await AddColumnIfMissingAsync(connection, "PublishedBy", "NVARCHAR(200)", ct);
+        await AddColumnIfMissingAsync(connection, "PublishedAt", "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "Audience", "NVARCHAR(20)", ct);
+        await AddColumnIfMissingAsync(connection, "RefreshMode", "NVARCHAR(20)", ct);
+        await AddColumnIfMissingAsync(connection, "RefreshEvery", "NVARCHAR(100)", ct);
+        await AddColumnIfMissingAsync(connection, "SortOrder", "INT", ct);
+        await AddColumnIfMissingAsync(connection, "Kind", "NVARCHAR(20)", ct);
     }
 
-    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlite, string sqlServer, CancellationToken ct)
+    private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
     {
         try
         {
             await using var alter = connection.CreateCommand();
-            alter.CommandText = _db.Provider == DbProvider.Sqlite
-                ? $"ALTER TABLE {Table} ADD COLUMN \"{column}\" {sqlite}"
-                : $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
+            alter.CommandText = $"ALTER TABLE {Table} ADD [{column}] {sqlServer}";
             await alter.ExecuteNonQueryAsync(ct);
         }
-        catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)) { }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 

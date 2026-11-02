@@ -18,8 +18,8 @@ so the whole thing still works on a machine with no internet access.
 
 Because the data lives in a central SQL Server (local or Azure SQL), multiple users on
 different machines all query the same up-to-date data through the app — no one needs local
-access to the source files. To try it on a single machine with nothing to install, it can also
-run against a local SQLite file (`"DatabaseProvider": "Sqlite"`).
+access to the source files. SQL Server is the only supported database (a local SQL Server
+Express instance is enough for development); SQLite is no longer supported.
 
 ```
 ┌──────────┐   POST /api/chat   ┌─────────────────┐   Messages API + tools   ┌────────┐
@@ -44,10 +44,9 @@ run against a local SQLite file (`"DatabaseProvider": "Sqlite"`).
 - An LLM API key — either [Anthropic](https://console.anthropic.com/) (default) or
   [OpenAI](https://platform.openai.com/api-keys); set `Llm:Provider` to pick between them
 - A database — either:
-  - **SQL Server** (local, Express, or Azure SQL) — the default, and what makes the data
-    centrally queryable for everyone; or
-  - **nothing to install** — set `"DatabaseProvider": "Sqlite"` and the app keeps its data in a
-    local file. Good for trying it out on one machine; not for the shared multi-user setup.
+  - **SQL Server** (local, Express, or Azure SQL) — the only supported database, and what makes
+    the data centrally queryable for everyone. Setting `"DatabaseProvider": "Sqlite"` stops the
+    app at startup with a clear message.
 
 ## Setup
 
@@ -65,8 +64,8 @@ For Azure SQL, use its ADO.NET connection string instead. Both values live in
 The app creates the database itself if it doesn't exist (where it has permission to; on Azure
 SQL, create the database first).
 
-**Out of the box the app runs on OpenAI with a local SQLite file**, so the only thing you have
-to provide is the key:
+**Out of the box the app runs on OpenAI against SQL Server**, so you have to provide the key
+and the `ConnectionStrings:DataDb` connection string (via user-secrets in Development):
 
 ```bash
 dotnet user-secrets set "OpenAI:ApiKey" "sk-..."
@@ -78,11 +77,8 @@ Both providers run the identical agent — same tools, same read-only SQL valida
 dashboard schema and retry logic; only the wire protocol differs (Anthropic tool use vs.
 OpenAI tool calling). Change `OpenAI:Model` to pick a different model.
 
-**No database server?** Set `"DatabaseProvider": "Sqlite"` in `appsettings.json` and skip the
-connection string entirely — the app creates `chat-to-dashboard.db` next to the binary on first
-run. Only the Anthropic key is then required. Everything else works the same; Claude is told to
-write SQLite SQL instead of T-SQL, and tables are named `staging_<FileName>` (SQLite has no
-schemas) rather than `staging.<FileName>`.
+**No database server?** Install SQL Server Express locally; a SQLite fallback used to exist but
+was removed (the app refuses to start with `"DatabaseProvider": "Sqlite"`).
 
 ### 2. Configure the data folder
 
@@ -513,7 +509,7 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 |---|---|---|
 | `DataFolderPath` | `../../data` | Folder scanned for data files (env var `DataFolderPath` overrides) |
 | `EnableRag` | `false` | Index PDF/DOCX and expose `search_documents` |
-| `DatabaseProvider` | `Sqlite` | `Sqlite` (local file, nothing to install) or `SqlServer` (shared/central) |
+| `DatabaseProvider` | `SqlServer` | `SqlServer` only (SQLite is no longer supported) |
 | `Llm:Provider` | `OpenAI` | `OpenAI` or `Anthropic` |
 | `Anthropic:Model` | `claude-sonnet-5` | Claude model ID used for chat |
 | `OpenAI:Model` | `gpt-4o` | OpenAI model ID (used when `Llm:Provider` is `OpenAI`) |
@@ -553,7 +549,7 @@ Secrets are easiest to set from the IDE: right-click the **ChatToDashboard.Api**
 }
 ```
 
-Omit the connection string when running with `"DatabaseProvider": "Sqlite"`.
+The connection string is always required.
 
 To change the UI, edit `backend/ChatToDashboard.Api/wwwroot/index.html` and refresh the
 browser — there is no build step.

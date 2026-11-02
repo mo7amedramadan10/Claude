@@ -1,13 +1,12 @@
 using ChatToDashboard.Api.Data;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 
 namespace ChatToDashboard.Api.Integrations;
 
 /// <summary>
 /// Persists External Integrations, their published-dashboard slots, and the publish audit log —
-/// same SQLite/SqlServer dual-schema pattern as ConversationStore/HistoryStore. Admin-only
+/// same schema pattern as ConversationStore/HistoryStore. Admin-only
 /// (enforced by IntegrationsController, not here — this store trusts its caller, same as every
 /// other *Store in this app).
 /// </summary>
@@ -17,31 +16,17 @@ public class IntegrationStore
 
     public IntegrationStore(DataStore db) => _db = db;
 
-    private string IntegrationsTable => _db.Provider == DbProvider.Sqlite
-        ? "\"ExternalIntegrations\"" : "[staging].[ExternalIntegrations]";
-    private string SlotsTable => _db.Provider == DbProvider.Sqlite
-        ? "\"PublishedDashboardSlots\"" : "[staging].[PublishedDashboardSlots]";
-    private string LogTable => _db.Provider == DbProvider.Sqlite
-        ? "\"IntegrationPublishLog\"" : "[staging].[IntegrationPublishLog]";
-    private string WidgetFiltersTable => _db.Provider == DbProvider.Sqlite
-        ? "\"WidgetDataFilters\"" : "[staging].[WidgetDataFilters]";
+    private string IntegrationsTable => "[staging].[ExternalIntegrations]";
+    private string SlotsTable => "[staging].[PublishedDashboardSlots]";
+    private string LogTable => "[staging].[IntegrationPublishLog]";
+    private string WidgetFiltersTable => "[staging].[WidgetDataFilters]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
-        var integrationsSql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {IntegrationsTable} (
-                 "Id" TEXT PRIMARY KEY, "Name" TEXT,
-                 "ConnectorBaseUrl" TEXT, "ConnectorAuthHeader" TEXT, "ConnectorAuthValue" TEXT,
-                 "IdentityMechanism" TEXT, "IdentityParameterName" TEXT,
-                 "IdentityConfirmed" INTEGER, "IdentityConfirmedAt" TEXT, "IdentityConfirmedBy" TEXT,
-                 "AccentColor" TEXT, "SecondaryColor" TEXT, "FontFamily" TEXT,
-                 "CreatedBy" TEXT, "CreatedAt" TEXT, "UpdatedAt" TEXT)
-               """
-            : $"""
+        var integrationsSql = $"""
                IF OBJECT_ID('staging.ExternalIntegrations') IS NULL
                CREATE TABLE {IntegrationsTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Name] NVARCHAR(200),
@@ -57,42 +42,30 @@ public class IntegrationStore
         // WriteApiUrl/ReadApiBaseUrl/DirectoryApiUrl/PermissionsApiUrl* columns (superseded by
         // the single ConnectorBaseUrl above, since the connector's route shape is fixed and
         // known) are simply left behind, unused, on any such table rather than dropped.
-        foreach (var (column, sqliteType, sqlServerType) in new[]
+        foreach (var (column, sqlServerType) in new[]
                  {
-                     ("ConnectorBaseUrl", "TEXT", "NVARCHAR(1000)"),
-                     ("ConnectorAuthHeader", "TEXT", "NVARCHAR(200)"),
-                     ("ConnectorAuthValue", "TEXT", "NVARCHAR(1000)"),
-                     ("ClientDbProvider", "TEXT", "NVARCHAR(20)"),
-                     ("ClientSchemaDescription", "TEXT", "NVARCHAR(MAX)"),
-                     ("DataPermissionsAvailable", "INTEGER", "BIT"),
-                     ("LastSchemaDiscoveryError", "TEXT", "NVARCHAR(1000)"),
-                     ("ProjectId", "TEXT", "NVARCHAR(64)"),
+                     ("ConnectorBaseUrl", "NVARCHAR(1000)"),
+                     ("ConnectorAuthHeader", "NVARCHAR(200)"),
+                     ("ConnectorAuthValue", "NVARCHAR(1000)"),
+                     ("ClientDbProvider", "NVARCHAR(20)"),
+                     ("ClientSchemaDescription", "NVARCHAR(MAX)"),
+                     ("DataPermissionsAvailable", "BIT"),
+                     ("LastSchemaDiscoveryError", "NVARCHAR(1000)"),
+                     ("ProjectId", "NVARCHAR(64)"),
                  })
         {
             try
             {
                 await using var alter = connection.CreateCommand();
-                alter.CommandText = _db.Provider == DbProvider.Sqlite
-                    ? $"ALTER TABLE {IntegrationsTable} ADD COLUMN \"{column}\" {sqliteType}"
-                    : $"ALTER TABLE {IntegrationsTable} ADD [{column}] {sqlServerType}";
+                alter.CommandText = $"ALTER TABLE {IntegrationsTable} ADD [{column}] {sqlServerType}";
                 await alter.ExecuteNonQueryAsync(ct);
-            }
-            catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
-            {
             }
             catch (SqlException ex) when (ex.Number == 2705)
             {
             }
         }
 
-        var slotsSql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {SlotsTable} (
-                 "Id" TEXT PRIMARY KEY, "IntegrationId" TEXT, "ExternalDashboardId" TEXT,
-                 "LocalHistoryId" TEXT, "Title" TEXT,
-                 "FirstPublishedAt" TEXT, "LastPublishedAt" TEXT, "LastPublishedBy" TEXT)
-               """
-            : $"""
+        var slotsSql = $"""
                IF OBJECT_ID('staging.PublishedDashboardSlots') IS NULL
                CREATE TABLE {SlotsTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [IntegrationId] NVARCHAR(64), [ExternalDashboardId] NVARCHAR(64),
@@ -101,14 +74,7 @@ public class IntegrationStore
                """;
         await using (var cmd = connection.CreateCommand()) { cmd.CommandText = slotsSql; await cmd.ExecuteNonQueryAsync(ct); }
 
-        var logSql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {LogTable} (
-                 "Id" TEXT PRIMARY KEY, "IntegrationId" TEXT, "ExternalDashboardId" TEXT,
-                 "LocalHistoryId" TEXT, "DashboardTitle" TEXT, "UserId" TEXT,
-                 "Success" INTEGER, "Error" TEXT, "CreatedAt" TEXT)
-               """
-            : $"""
+        var logSql = $"""
                IF OBJECT_ID('staging.IntegrationPublishLog') IS NULL
                CREATE TABLE {LogTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [IntegrationId] NVARCHAR(64), [ExternalDashboardId] NVARCHAR(64),
@@ -117,13 +83,7 @@ public class IntegrationStore
                """;
         await using (var cmd = connection.CreateCommand()) { cmd.CommandText = logSql; await cmd.ExecuteNonQueryAsync(ct); }
 
-        var widgetFiltersSql = _db.Provider == DbProvider.Sqlite
-            ? $"""
-               CREATE TABLE IF NOT EXISTS {WidgetFiltersTable} (
-                 "IntegrationId" TEXT, "LocalHistoryId" TEXT, "WidgetIndex" INTEGER, "FilterKey" TEXT,
-                 PRIMARY KEY ("IntegrationId", "LocalHistoryId", "WidgetIndex"))
-               """
-            : $"""
+        var widgetFiltersSql = $"""
                IF OBJECT_ID('staging.WidgetDataFilters') IS NULL
                CREATE TABLE {WidgetFiltersTable} (
                  [IntegrationId] NVARCHAR(64), [LocalHistoryId] NVARCHAR(64), [WidgetIndex] INT, [FilterKey] NVARCHAR(100),
@@ -376,10 +336,9 @@ public class IntegrationStore
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var top = _db.Provider == DbProvider.Sqlite ? "" : $"TOP {limit} ";
-        var tail = _db.Provider == DbProvider.Sqlite ? $" LIMIT {limit}" : "";
+        var top = $"TOP {limit} ";
         var rows = await connection.QueryAsync<IntegrationPublishLogEntry>(
-            $"SELECT {top}* FROM {LogTable} WHERE IntegrationId = @integrationId ORDER BY CreatedAt DESC{tail}",
+            $"SELECT {top}* FROM {LogTable} WHERE IntegrationId = @integrationId ORDER BY CreatedAt DESC",
             new { integrationId });
         return rows.ToList();
     }

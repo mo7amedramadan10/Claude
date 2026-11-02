@@ -37,8 +37,8 @@ public class ClaudeChatStore
 
     public ClaudeChatStore(DataStore db) => _db = db;
 
-    private string Chats => _db.Provider == DbProvider.Sqlite ? "\"ClaudeChats\"" : "[staging].[ClaudeChats]";
-    private string Messages => _db.Provider == DbProvider.Sqlite ? "\"ClaudeChatMessages\"" : "[staging].[ClaudeChatMessages]";
+    private string Chats => "[staging].[ClaudeChats]";
+    private string Messages => "[staging].[ClaudeChatMessages]";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -52,14 +52,7 @@ public class ClaudeChatStore
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
-        var sqlite = _db.Provider == DbProvider.Sqlite;
-        var statements = sqlite
-            ? new[]
-            {
-                $"""CREATE TABLE IF NOT EXISTS {Chats} ("Id" TEXT PRIMARY KEY, "UserId" TEXT NOT NULL, "Title" TEXT NOT NULL, "CreatedAt" TEXT NOT NULL, "UpdatedAt" TEXT NOT NULL)""",
-                $"""CREATE TABLE IF NOT EXISTS {Messages} ("Id" TEXT PRIMARY KEY, "ChatId" TEXT NOT NULL, "Role" TEXT NOT NULL, "Text" TEXT NOT NULL, "CreatedAt" TEXT NOT NULL, "CostUsd" REAL, "DurationMs" INTEGER)""",
-            }
-            : new[]
+        var statements = new[]
             {
                 $"""IF OBJECT_ID('staging.ClaudeChats') IS NULL CREATE TABLE {Chats} ([Id] NVARCHAR(64) PRIMARY KEY, [UserId] NVARCHAR(200) NOT NULL, [Title] NVARCHAR(300) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, [UpdatedAt] DATETIME2 NOT NULL)""",
                 $"""IF OBJECT_ID('staging.ClaudeChatMessages') IS NULL CREATE TABLE {Messages} ([Id] NVARCHAR(32) PRIMARY KEY, [ChatId] NVARCHAR(64) NOT NULL, [Role] NVARCHAR(16) NOT NULL, [Text] NVARCHAR(MAX) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, [CostUsd] FLOAT, [DurationMs] BIGINT)""",
