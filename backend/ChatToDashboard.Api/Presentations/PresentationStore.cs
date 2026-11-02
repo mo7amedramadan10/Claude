@@ -13,7 +13,7 @@ public class PresentationStore
 
     public PresentationStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[Presentations]";
+    private string Table => "[dbo].[Presentations]";
 
     private const string Columns =
         "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount";
@@ -31,7 +31,7 @@ public class PresentationStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
         var text = $"""
-               IF OBJECT_ID('staging.Presentations') IS NULL
+               IF OBJECT_ID('dbo.Presentations') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(32) PRIMARY KEY, [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL, [CreatedByName] NVARCHAR(200),
                  [Title] NVARCHAR(300) NOT NULL, [Slug] NVARCHAR(100), [FileName] NVARCHAR(300) NOT NULL, [Html] NVARCHAR(MAX) NOT NULL, [SizeBytes] BIGINT NOT NULL,

@@ -11,8 +11,8 @@ public class ProjectStore
 
     public ProjectStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[Projects]";
-    private string RolesTable => "[staging].[ProjectRoles]";
+    private string Table => "[dbo].[Projects]";
+    private string RolesTable => "[dbo].[ProjectRoles]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -20,7 +20,7 @@ public class ProjectStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.Projects') IS NULL
+               IF OBJECT_ID('dbo.Projects') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [OrganizationId] NVARCHAR(64), [Name] NVARCHAR(200),
                  [Slug] NVARCHAR(200), [CreatedAt] DATETIME2)
@@ -44,7 +44,7 @@ public class ProjectStore
         // Owner/Editor/Viewer roles on a project — mirrors DashboardRoles' shape (see its
         // own remarks), except Owner lives here too since a Project has no OwnerId column.
         var rolesText = $"""
-               IF OBJECT_ID('staging.ProjectRoles') IS NULL
+               IF OBJECT_ID('dbo.ProjectRoles') IS NULL
                CREATE TABLE {RolesTable} (
                  [ProjectId] NVARCHAR(64) NOT NULL, [UserId] NVARCHAR(200) NOT NULL, [Role] NVARCHAR(20) NOT NULL,
                  PRIMARY KEY ([ProjectId], [UserId]))

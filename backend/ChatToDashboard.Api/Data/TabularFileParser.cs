@@ -8,73 +8,17 @@ using CsvHelper.Configuration;
 
 namespace ChatToDashboard.Api.Data;
 
-public record LoadedTable(string Table, string SourceFile, int Rows);
-
 public record TableColumn(string Name, string SqlType);
 
 public record TableSchema(string Table, IReadOnlyList<TableColumn> Columns);
 
 /// <summary>
-/// Scans the configured data folder and bulk-loads each .csv/.xlsx/.json file into
-/// its own table in the [staging] schema of SQL Server. Tables are dropped and
-/// recreated on every load so the app can be refreshed against updated files.
+/// قراءة ملفات CSV/XLSX/JSON إلى DataTable مع استنتاج أنواع الأعمدة وتنقية الأسماء — دوال ساكنة مشتركة
+/// بين رفع الملفات (UploadParser) والأنظمة الخارجية (SystemApiLoader). آلية «مجلد البيانات» التي كانت
+/// تحمّل ملفات مجلد data في المخطط المشترك عند كل إقلاع أُزيلت بقرار المستخدم (2026-11-02).
 /// </summary>
-public class DataFolderLoader
+public static class TabularFileParser
 {
-    private readonly DataStore _db;
-    private readonly ILogger<DataFolderLoader> _logger;
-    private readonly string _dataFolderPath;
-
-    public DataFolderLoader(DataStore db, IConfiguration configuration, ILogger<DataFolderLoader> logger)
-    {
-        _db = db;
-        _logger = logger;
-        _dataFolderPath = configuration["DataFolderPath"]
-            ?? throw new InvalidOperationException("DataFolderPath is not configured.");
-    }
-
-    public string DataFolderPath => Path.GetFullPath(_dataFolderPath);
-
-    public async Task<IReadOnlyList<LoadedTable>> LoadAllAsync(CancellationToken ct = default)
-    {
-        var folder = DataFolderPath;
-        if (!Directory.Exists(folder))
-            throw new DirectoryNotFoundException($"Data folder not found: {folder}");
-
-        var files = Directory.EnumerateFiles(folder)
-            .Where(f => new[] { ".csv", ".xlsx", ".json" }.Contains(Path.GetExtension(f).ToLowerInvariant()))
-            .OrderBy(f => f)
-            .ToList();
-
-        await _db.EnsureDatabaseExistsAsync(_logger, ct);
-        await using var connection = await _db.OpenConnectionAsync(ct);
-        await _db.CreateContainerIfMissingAsync(connection, ct);
-
-        var results = new List<LoadedTable>();
-        foreach (var file in files)
-        {
-            ct.ThrowIfCancellationRequested();
-            try
-            {
-                var table = LoadFileIntoDataTable(file);
-                var tableName = SanitizeTableName(Path.GetFileNameWithoutExtension(file));
-                await _db.RecreateAndLoadAsync(connection, null, tableName, table, ct);
-                var displayName = _db.DisplayTable(null, tableName);
-                results.Add(new LoadedTable(displayName, Path.GetFileName(file), table.Rows.Count));
-                _logger.LogInformation("Loaded {File} into {Table} ({Rows} rows)",
-                    Path.GetFileName(file), displayName, table.Rows.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to load {File}", file);
-            }
-        }
-        return results;
-    }
-
-    public Task<IReadOnlyList<TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default) =>
-        _db.GetSchemaAsync(projectId, ct);
-
     public static string SanitizeTableName(string name)
     {
         var sanitized = Regex.Replace(name, @"[^\w]", "_");

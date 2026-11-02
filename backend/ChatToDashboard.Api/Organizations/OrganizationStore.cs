@@ -12,7 +12,7 @@ public class OrganizationStore
 
     public OrganizationStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[Organizations]";
+    private string Table => "[dbo].[Organizations]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -20,7 +20,7 @@ public class OrganizationStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.Organizations') IS NULL
+               IF OBJECT_ID('dbo.Organizations') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Name] NVARCHAR(200), [Slug] NVARCHAR(200) UNIQUE,
                  [IsActive] BIT, [CreatedAt] DATETIME2)

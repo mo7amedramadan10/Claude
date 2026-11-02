@@ -5,8 +5,8 @@ namespace ChatToDashboard.Api.Llm;
 /// <summary>
 /// Suggests a short, clean SQL table identifier for a newly uploaded repository file, so the
 /// model building dashboards later has a name short enough to type back correctly instead of
-/// mentally "simplifying" a long filename-derived one (e.g. writing "staging.opportunities"
-/// instead of the real "staging.repo_Opportunities_Tracker_V_3_0__1__976323") — see
+/// mentally "simplifying" a long filename-derived one (e.g. writing "dbo.opportunities"
+/// instead of the real "dbo.repo_Opportunities_Tracker_V_3_0__1__976323") — see
 /// RepositoryStore.SaveAsync, the only caller, and AnalyticsTools' "Invalid object name"
 /// error-hint fix that handles the same underlying failure from the other direction.
 ///

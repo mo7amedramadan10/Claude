@@ -18,7 +18,7 @@ public class TemplateStore
 
     public TemplateStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[PromptTemplateOverrides]";
+    private string Table => "[dbo].[PromptTemplateOverrides]";
     // "Key" is a reserved word in SQL Server (used in PRIMARY KEY/FOREIGN KEY) — referencing it
     // unquoted in the INSERT column list below throws a syntax error there.
     private string KeyCol => "[Key]";
@@ -29,7 +29,7 @@ public class TemplateStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.PromptTemplateOverrides') IS NULL
+               IF OBJECT_ID('dbo.PromptTemplateOverrides') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(200) PRIMARY KEY, [Kind] NVARCHAR(32), [Key] NVARCHAR(100), [IsCustom] BIT, [Status] NVARCHAR(16),
                  [Title] NVARCHAR(400), [Description] NVARCHAR(1000), [Icon] NVARCHAR(64), [Category] NVARCHAR(64),

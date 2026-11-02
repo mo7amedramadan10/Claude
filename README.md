@@ -5,7 +5,7 @@ folder and get back a dynamically generated dashboard (KPI cards, bar/line/pie c
 for every question.
 
 **How it works:** on startup (and on demand), the backend scans a configurable data folder and
-bulk-loads every `.csv` / `.xlsx` / `.json` file into its own table in a `staging` schema on a
+bulk-loads every `.csv` / `.xlsx` / `.json` file into its own table (shared tables in the `dbo` schema, each project's uploads in its own `proj_<id>` schema) on a
 shared SQL Server instance. When you ask a question, the backend calls the Anthropic Claude API
 with three tools — `list_files`, `query_data` (read-only T-SQL), and optionally
 `search_documents` — loops through Claude's tool calls, and returns a validated dashboard JSON
@@ -30,7 +30,7 @@ Express instance is enough for development); SQLite is no longer supported.
                                         ▼
                                  ┌─────────────┐        ┌─────────────────┐
                                  │ SQL Server  │ ◀───── │ data folder      │
-                                 │ [staging].* │  load  │ (.csv/.xlsx/...) │
+                                 │  [dbo].*    │  load  │ (.csv/.xlsx/...) │
                                  └─────────────┘        └─────────────────┘
 ```
 
@@ -80,21 +80,14 @@ OpenAI tool calling). Change `OpenAI:Model` to pick a different model.
 **No database server?** Install SQL Server Express locally; a SQLite fallback used to exist but
 was removed (the app refuses to start with `"DatabaseProvider": "Sqlite"`).
 
-### 2. Configure the data folder
+### 2. Data comes from uploads and systems
 
-`DataFolderPath` in `backend/ChatToDashboard.Api/appsettings.json` defaults to `../../data`
-(the `data/` folder at the repo root, which ships with `sample_sales.csv` so the app works out
-of the box). Point it anywhere — including a **synced OneDrive folder**, which is just a normal
-local path once OneDrive has synced it:
-
-```jsonc
-"DataFolderPath": "C:\\Users\\me\\OneDrive\\TeamData"
-```
-
-or override with the `DataFolderPath` environment variable.
+There is no seed data and no data folder: every table comes from a file a user uploads in the
+app (stored under that project's own `proj_<id>` schema) or from an external system in
+`Sources:Systems` (stored under `dbo`).
 
 Supported structured files: `.csv`, `.xlsx`, `.json` (array of objects). Each file becomes a
-table `staging.<FileName>` — dropped and recreated on every load, so re-running or refreshing
+table `dbo.<FileName>` — dropped and recreated on every load, so re-running or refreshing
 always reflects the current files.
 
 ### 3. Run it
@@ -110,8 +103,8 @@ runs at startup (a failure — e.g. SQL Server unreachable — is logged but doe
 ## Connecting a back-office system to an API
 
 A system in the `Sources` list becomes a real data source by giving it an `Api` block. Its
-records are fetched on startup and on `POST /api/data/refresh`, flattened into a staging table
-(`staging_sys_<id>`), and from then on queried with SQL like any loaded file — so the model can
+records are fetched on startup and on `POST /api/data/refresh`, flattened into a table
+(`dbo.sys_<id>`), and from then on queried with SQL like any loaded file — so the model can
 aggregate over them and the dashboard charts them.
 
 ```jsonc
@@ -146,7 +139,7 @@ aggregate over them and the dashboard charts them.
 **Refreshing one system:** the Sources dropdown shows a ⟳ button beside every system that has
 an endpoint, with its record count and the time of the last fetch underneath (or the error, if
 the fetch failed). `POST /api/sources/{id}/refresh` does the same thing from a script.
-`POST /api/data/refresh` still reloads everything — files and all systems — at once.
+`POST /api/data/refresh` reloads all enabled systems at once.
 
 ## Usage & observability (`/usage`)
 
@@ -486,7 +479,7 @@ picking a specific Arabic dialect. That's a deliberate scope cut for now, not an
 
 ## Refreshing data
 
-When files in the data folder change, reload all staging tables without restarting:
+Reload every enabled external system without restarting:
 
 ```bash
 curl -X POST http://localhost:5000/api/data/refresh
@@ -507,7 +500,6 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 
 | Key | Default | Meaning |
 |---|---|---|
-| `DataFolderPath` | `../../data` | Folder scanned for data files (env var `DataFolderPath` overrides) |
 | `EnableRag` | `false` | Index PDF/DOCX and expose `search_documents` |
 | `DatabaseProvider` | `SqlServer` | `SqlServer` only (SQLite is no longer supported) |
 | `Llm:Provider` | `OpenAI` | `OpenAI` or `Anthropic` |

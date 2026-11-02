@@ -3826,7 +3826,7 @@ function clearAllFilters() {
 // a chat-authored dashboard's filter tool call and its widgets' own query tool calls are
 // separate model outputs, so nothing guarantees they spell the same table identically. The
 // backend's own ResolveTableAsync already matches table names case-insensitively (SQL
-// Server's schema-qualified "staging.Sales" is a live example of a name the model can easily
+// Server's schema-qualified "dbo.Sales" is a live example of a name the model can easily
 // write inconsistently — with or without the schema prefix, in any case), but activeByTable's
 // lookup below is a plain JS object key: an exact-string requirement that a filter and its
 // widget disagree on gives a filter that silently matches nothing — no error, the request
@@ -3836,7 +3836,7 @@ function normalizeTableKey(t) {
   return String(t || '').trim().toLowerCase()
     .replace(/["[\]]/g, '')     // SQL Server bracket / quoted identifiers
     .replace(/^dbo\./, '')      // SQL Server's default schema is effectively invisible
-    .replace(/^staging[._]/, ''); // this app's own schema prefix — see DataStore.DisplayTable
+    .replace(/^(dbo|staging)[._]/, ''); // this app's own schema prefix (dbo; staging historically) — see DataStore.DisplayTable
 }
 
 let applyFiltersSeq = 0;

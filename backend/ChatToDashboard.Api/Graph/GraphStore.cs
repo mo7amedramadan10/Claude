@@ -27,8 +27,8 @@ public class GraphStore
 
     public GraphStore(DataStore db) => _db = db;
 
-    private string NodesTable => "[staging].[GraphNodes]";
-    private string EdgesTable => "[staging].[GraphEdges]";
+    private string NodesTable => "[dbo].[GraphNodes]";
+    private string EdgesTable => "[dbo].[GraphEdges]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -38,13 +38,13 @@ public class GraphStore
         var statements = new[]
             {
                 $"""
-                 IF OBJECT_ID('staging.GraphNodes') IS NULL
+                 IF OBJECT_ID('dbo.GraphNodes') IS NULL
                  CREATE TABLE {NodesTable} (
                    [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64), [NetworkKey] NVARCHAR(40), [NodeKey] NVARCHAR(40),
                    [Type] NVARCHAR(40), [Name] NVARCHAR(400), [Description] NVARCHAR(MAX), [Year] INT, [DataJson] NVARCHAR(MAX), [CreatedAt] DATETIME2)
                  """,
                 $"""
-                 IF OBJECT_ID('staging.GraphEdges') IS NULL
+                 IF OBJECT_ID('dbo.GraphEdges') IS NULL
                  CREATE TABLE {EdgesTable} (
                    [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64), [NetworkKey] NVARCHAR(40), [FromKey] NVARCHAR(40),
                    [ToKey] NVARCHAR(40), [RelType] NVARCHAR(40), [Year] INT, [CreatedAt] DATETIME2)

@@ -16,7 +16,7 @@ public class ShareStore
 
     public ShareStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[SharedDashboard]";
+    private string Table => "[dbo].[SharedDashboard]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -24,7 +24,7 @@ public class ShareStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.SharedDashboard') IS NULL
+               IF OBJECT_ID('dbo.SharedDashboard') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(32) PRIMARY KEY, [CreatedByUserId] NVARCHAR(200), [Question] NVARCHAR(MAX),
                  [Summary] NVARCHAR(MAX), [WidgetsJson] NVARCHAR(MAX), [FiltersJson] NVARCHAR(MAX),

@@ -19,7 +19,7 @@ public class SchemaAliasStore
 
     public SchemaAliasStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[SchemaAliasEntries]";
+    private string Table => "[dbo].[SchemaAliasEntries]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -27,7 +27,7 @@ public class SchemaAliasStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.SchemaAliasEntries') IS NULL
+               IF OBJECT_ID('dbo.SchemaAliasEntries') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(200) PRIMARY KEY, [ConceptId] NVARCHAR(400), [Kind] NVARCHAR(16), [ParentTable] NVARCHAR(200),
                  [Label] NVARCHAR(400), [Name] NVARCHAR(200), [Score] FLOAT, [Source] NVARCHAR(16),

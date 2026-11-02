@@ -16,7 +16,7 @@ namespace ChatToDashboard.Api.Widgets;
 /// "click a button" never does.
 ///
 /// Every table/column name that ends up in generated SQL is first matched against the real
-/// schema (<see cref="DataFolderLoader.GetSchemaAsync"/>) and the caller's own source
+/// schema (<see cref="DataStore.GetSchemaAsync"/>) and the caller's own source
 /// permissions (<see cref="AnalyticsTools.DescribeSourcesAsync"/>) — the same gate
 /// query_data enforces for the LLM path — so nothing the client sends is interpolated into
 /// SQL verbatim; only names the schema itself reports back are used. Filter *values* (which
@@ -49,20 +49,18 @@ public class WidgetQueryService
     private const int QueryCommandTimeoutSeconds = 120;
 
     private readonly DataStore _db;
-    private readonly DataFolderLoader _loader;
     private readonly AnalyticsTools _tools;
 
-    public WidgetQueryService(DataStore db, DataFolderLoader loader, AnalyticsTools tools)
+    public WidgetQueryService(DataStore db, AnalyticsTools tools)
     {
         _db = db;
-        _loader = loader;
         _tools = tools;
     }
 
     public async Task<FieldsResponse> GetAvailableFieldsAsync(SourceSelection selection, CancellationToken ct)
     {
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        var schema = await _db.GetSchemaAsync(context.ProjectId, ct);
 
         var tables = schema
             // Keep only tables this project actually knows about — GetSchemaAsync otherwise
@@ -222,7 +220,7 @@ public class WidgetQueryService
         var table = await ResolveTableAsync(tableName, selection, ct);
 
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        var schema = await _db.GetSchemaAsync(context.ProjectId, ct);
         if (AnalyticsTools.CheckSourcePermission(sql, context, schema) is not null)
             throw new WidgetQueryValidationException("لا يوجد صلاحية لتنفيذ هذا الاستعلام.");
 
@@ -256,7 +254,7 @@ public class WidgetQueryService
             return null;
         var table = await ResolveTableAsync(tableName, selection, ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        var schema = await _db.GetSchemaAsync(context.ProjectId, ct);
         if (AnalyticsTools.CheckSourcePermission(sql, context, schema) is not null) return null;
 
         var dateCols = table.Columns.Where(IsDate).Select(c => c.Name).ToList();
@@ -398,7 +396,7 @@ public class WidgetQueryService
     private async Task<TableSchema> ResolveTableAsync(string tableName, SourceSelection selection, CancellationToken ct)
     {
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        var schema = await _db.GetSchemaAsync(context.ProjectId, ct);
 
         // tableName comes straight from the client (the widget wizard's own picker, or a
         // stored widget's query.table replayed on a filter click) — unlike query_data's SQL,

@@ -63,7 +63,6 @@ builder.Services.Configure<LdapOptions>(builder.Configuration.GetSection(LdapOpt
 builder.Services.AddSingleton<LdapAuthenticator>();
 
 builder.Services.AddSingleton<DataStore>();
-builder.Services.AddSingleton<DataFolderLoader>();
 builder.Services.AddSingleton<DocumentSearchService>();
 builder.Services.AddSingleton<RepositoryStore>();
 builder.Services.AddSingleton<UploadProgressTracker>();
@@ -303,9 +302,8 @@ app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
 // actually for ever sees the login screen.
 app.MapFallbackToFile("index.html").AllowAnonymous();
 
-// Initial load: scan the data folder and (re)create the staging tables so the
-// shared SQL Server copy reflects the current files. Failures are logged but do
-// not prevent startup — POST /api/data/refresh can retry once SQL is reachable.
+// Initial load: fetch the enabled external systems into the shared schema. Failures are logged
+// but do not prevent startup — POST /api/data/refresh can retry once SQL is reachable.
 using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
@@ -518,14 +516,6 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        var loader = scope.ServiceProvider.GetRequiredService<DataFolderLoader>();
-        var loaded = await loader.LoadAllAsync();
-        logger.LogInformation("Startup data load complete: {Count} table(s) loaded from {Folder}",
-            loaded.Count, loader.DataFolderPath);
-
-        var documents = scope.ServiceProvider.GetRequiredService<DocumentSearchService>();
-        documents.Reindex(loader.DataFolderPath);
-
         var systems = await scope.ServiceProvider.GetRequiredService<SystemApiLoader>().LoadAllAsync();
         foreach (var system in systems.Where(s => s.Error is not null))
             logger.LogWarning("System {System} could not be loaded: {Error}", system.System, system.Error);
@@ -533,7 +523,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex,
-            "Startup data load failed. Check ConnectionStrings:DataDb (user-secrets) and DataFolderPath, " +
+            "Startup data load failed. Check ConnectionStrings:DataDb (user-secrets), " +
             "then call POST /api/data/refresh to retry without restarting.");
     }
 }

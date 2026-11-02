@@ -23,9 +23,9 @@ public class HistoryStore
         _logger = logger;
     }
 
-    private string Table => "[staging].[DashboardHistory]";
+    private string Table => "[dbo].[DashboardHistory]";
 
-    private string RolesTable => "[staging].[DashboardRoles]";
+    private string RolesTable => "[dbo].[DashboardRoles]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -33,7 +33,7 @@ public class HistoryStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.DashboardHistory') IS NULL
+               IF OBJECT_ID('dbo.DashboardHistory') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [UserId] NVARCHAR(200), [Question] NVARCHAR(MAX),
                  [QueryDescription] NVARCHAR(MAX), [Summary] NVARCHAR(MAX), [WidgetsJson] NVARCHAR(MAX),
@@ -76,7 +76,7 @@ public class HistoryStore
         // Editor/Viewer roles on Active dashboards — mirrors repo_FilePermissions' shape.
         // The Owner is not in here; it's DashboardHistory.OwnerId.
         var rolesText = $"""
-               IF OBJECT_ID('staging.DashboardRoles') IS NULL
+               IF OBJECT_ID('dbo.DashboardRoles') IS NULL
                CREATE TABLE {RolesTable} (
                  [DashboardId] NVARCHAR(64) NOT NULL, [UserId] NVARCHAR(200) NOT NULL, [Role] NVARCHAR(20) NOT NULL,
                  PRIMARY KEY ([DashboardId], [UserId]))

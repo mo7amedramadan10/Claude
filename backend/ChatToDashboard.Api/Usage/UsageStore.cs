@@ -22,7 +22,7 @@ public class UsageStore
         _logger = logger;
     }
 
-    private string Table => "[staging].[usage_Log]";
+    private string Table => "[dbo].[usage_Log]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -30,7 +30,7 @@ public class UsageStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.usage_Log') IS NULL
+               IF OBJECT_ID('dbo.usage_Log') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Timestamp] DATETIME2, [Provider] NVARCHAR(40), [Model] NVARCHAR(120),
                  [Question] NVARCHAR(MAX), [EnabledSources] NVARCHAR(MAX), [TurnCount] INT, [ToolCallCount] INT,

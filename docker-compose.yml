@@ -32,10 +32,6 @@ services:
       Ollama__BaseUrl: ${OLLAMA_BASE_URL:-http://172.17.242.1:8081/api/v1/}
       Ollama__Model: ${OLLAMA_MODEL:-qwen3:14b}
       EnableRag: ${ENABLE_RAG:-false}
-      DataFolderPath: /data
-    volumes:
-      # Put your .csv/.xlsx/.json files here; POST /api/data/refresh reloads them.
-      - ./data:/data
 
 volumes:
   mssql-data:

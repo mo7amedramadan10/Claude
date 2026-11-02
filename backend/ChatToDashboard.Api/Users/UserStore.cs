@@ -17,7 +17,7 @@ public class UserStore
         _logger = logger;
     }
 
-    private string Table => "[staging].[AppUsers]";
+    private string Table => "[dbo].[AppUsers]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -25,7 +25,7 @@ public class UserStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.AppUsers') IS NULL
+               IF OBJECT_ID('dbo.AppUsers') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Username] NVARCHAR(200) UNIQUE, [DisplayName] NVARCHAR(200),
                  [PasswordHash] NVARCHAR(400), [AuthMethod] NVARCHAR(40), [Role] NVARCHAR(40), [IsActive] BIT,
@@ -135,17 +135,17 @@ public class UserStore
                     FROM sys.key_constraints kc
                     JOIN sys.index_columns ic ON ic.object_id = kc.parent_object_id AND ic.index_id = kc.unique_index_id
                     JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-                    WHERE kc.parent_object_id = OBJECT_ID('staging.AppUsers') AND c.name = 'Username' AND kc.type = 'UQ';
+                    WHERE kc.parent_object_id = OBJECT_ID('dbo.AppUsers') AND c.name = 'Username' AND kc.type = 'UQ';
                     IF @constraintName IS NOT NULL
-                      EXEC('ALTER TABLE staging.AppUsers DROP CONSTRAINT [' + @constraintName + ']');
+                      EXEC('ALTER TABLE dbo.AppUsers DROP CONSTRAINT [' + @constraintName + ']');
                     """;
                 await cmd.ExecuteNonQueryAsync(ct);
             }
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = """
-                    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_appusers_org_username' AND object_id = OBJECT_ID('staging.AppUsers'))
-                      CREATE UNIQUE INDEX idx_appusers_org_username ON staging.AppUsers (OrganizationId, Username) WHERE OrganizationId IS NOT NULL;
+                    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_appusers_org_username' AND object_id = OBJECT_ID('dbo.AppUsers'))
+                      CREATE UNIQUE INDEX idx_appusers_org_username ON dbo.AppUsers (OrganizationId, Username) WHERE OrganizationId IS NOT NULL;
                     """;
                 await cmd.ExecuteNonQueryAsync(ct);
             }

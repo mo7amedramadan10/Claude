@@ -8,7 +8,7 @@
 
 - بنية التطبيق الأساسية (ASP.NET Core + SQL Server حصرًا، كيف البيانات
   بتتحمّل، إزاي المحادثة بتولّد لوحات) موثّقة في [README.md](README.md) —
-  اقرأه لو محتاج خلفية عن الـ `staging` schema أو مسار `/api/chat`.
+  اقرأه لو محتاج خلفية عن مخططات القاعدة (`dbo` المشترك + `proj_<id>` لكل مشروع) أو مسار `/api/chat`.
 - فرع العمل الحالي: **`claude/chat-to-dashboard-app-at0up6`** (مش `main`) —
   كل الشغل بتاع §4.16-4.24 عليه.
 
@@ -475,6 +475,28 @@ naming policy تلقائية في السيريلايزر.
   بحسابي `org.admin`/`project.owner` في كل إقلاع ويعيد إنشاءها إن حُذفت. فعّله true في بيئة عرض فقط.
 - درس تشغيلي: حذف `usage_Log` بـ DELETE فشل بـ«insufficient memory in the buffer pool» (184 صفًا بحجم 231MB نصوصًا)
   على جهاز بذاكرة شبه معدومة؛ `TRUNCATE` لكل جدول في دفعة مستقلة هو الطريق. لا مفاتيح أجنبية في القاعدة.
+
+## مخطط القاعدة: `dbo` بدل `staging` (2026-11-02)
+
+- بقرار المستخدم انتقلت كل جداول التطبيق (31 جدولًا) من مخطط `staging` إلى `dbo` بـ `ALTER SCHEMA dbo TRANSFER` مع
+  حفظ البيانات، وحُذف مخطط `staging`. الكود: `DataStore.SqlServerSchema = "dbo"` وكل الأسماء الثابتة `[dbo].[X]`
+  و`OBJECT_ID('dbo.X')`. مخططات المشاريع `proj_<id>` كما هي. نسخة احتياطية قبل النقل:
+  `ChatToDashboard_before_dbo_move_20261102.bak` في مجلد Backup بتاع SQLEXPRESS.
+- تبعة أمنية واعية: الموديل يرى كل أعمدة `dbo` (`GetSchemaAsync` بـ `@shared = dbo`)، فأي جدول غريب يوضع في `dbo`
+  يصير مرئيًا للذكاء الاصطناعي. القاعدة الآن للتطبيق وحده.
+- أسماء `staging_x` في قوالب `Templates/BuiltinDashboards*.cs` والاختبارات أسماء افتراضية (placeholders) من عهد
+  SQLite لا أسماء جداول حقيقية، وتُطابَق على جداول العميل عند البناء؛ لم تُغيَّر.
+
+## إزالة «مجلد البيانات» وملف العينة (2026-11-02)
+
+- بقرار المستخدم حُذف `data/sample_sales.csv` وآلية `DataFolderLoader` (المسح والتحميل عند كل إقلاع + `DataFolderPath`
+  في appsettings/Dockerfile/docker-compose/pipeline). ما بقي من الصنف صار `Data/TabularFileParser.cs`: دوال ساكنة
+  فقط (`ReadCsv`/`ReadXlsx`/`InferTypes`/`SanitizeTableName`) يستخدمها رفع الملفات والأنظمة الخارجية.
+- `AnalyticsTools` و`WidgetQueryService` و`DataController` تقرأ الكتالوج من `DataStore.GetSchemaAsync` مباشرة.
+  `POST /api/data/refresh` صار يعيد تحميل الأنظمة الخارجية المفعَّلة فقط.
+- `DocumentSearchService` (RAG، `EnableRag=false`) كان يفهرس مستندات المجلد نفسه؛ بلا مجلد لم يعد يُستدعى `Reindex`
+  من أي مكان، فالصنف وأداة `search_documents` معطَّلان فعليًا — مرشّحان للحذف لاحقًا إن لم تُعد RAG على ملفات المستودع.
+- لا بيانات مشتركة افتراضية الآن: كل جدول إما ملف مرفوع في `proj_<id>` أو نظام خارجي في `dbo`.
 
 ## المستودعان: GitHub (`origin`) و Azure DevOps (`azure`) من مجلد واحد
 

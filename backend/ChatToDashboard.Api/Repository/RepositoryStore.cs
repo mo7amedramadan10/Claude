@@ -39,10 +39,10 @@ public class RepositoryStore
     /// fast link and gives a slow one the room a single-row blob write can genuinely need.</summary>
     private const int FileWriteCommandTimeoutSeconds = 120;
 
-    private string CatalogueTable => "[staging].[repo_Files]";
-    private string PermissionsTable => "[staging].[repo_FilePermissions]";
-    private string RelationshipsTable => "[staging].[repo_FileRelationships]";
-    private string HistoryTable => "[staging].[DashboardHistory]";
+    private string CatalogueTable => "[dbo].[repo_Files]";
+    private string PermissionsTable => "[dbo].[repo_FilePermissions]";
+    private string RelationshipsTable => "[dbo].[repo_FileRelationships]";
+    private string HistoryTable => "[dbo].[DashboardHistory]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -50,7 +50,7 @@ public class RepositoryStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.repo_Files') IS NULL
+               IF OBJECT_ID('dbo.repo_Files') IS NULL
                CREATE TABLE {CatalogueTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [DisplayName] NVARCHAR(400), [OriginalFileName] NVARCHAR(400),
                  [Description] NVARCHAR(1000), [Category] NVARCHAR(200), [Kind] NVARCHAR(20),
@@ -103,14 +103,14 @@ public class RepositoryStore
         // here since ListAsync's COALESCE already falls back sensibly on read.
 
         var permText = $"""
-               IF OBJECT_ID('staging.repo_FilePermissions') IS NULL
+               IF OBJECT_ID('dbo.repo_FilePermissions') IS NULL
                CREATE TABLE {PermissionsTable} (
                  [FileId] NVARCHAR(64), [UserId] NVARCHAR(200), PRIMARY KEY ([FileId], [UserId]))
                """;
         await using (var command = connection.CreateCommand()) { command.CommandText = permText; await command.ExecuteNonQueryAsync(ct); }
 
         var relText = $"""
-               IF OBJECT_ID('staging.repo_FileRelationships') IS NULL
+               IF OBJECT_ID('dbo.repo_FileRelationships') IS NULL
                CREATE TABLE {RelationshipsTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [FileId] NVARCHAR(64), [RelatedFileId] NVARCHAR(64),
                  [SharedColumn] NVARCHAR(200))
@@ -372,7 +372,7 @@ public class RepositoryStore
         string displayName, string description, IReadOnlyList<string> columnNames,
         string fileName, string id, string? projectId, CancellationToken ct)
     {
-        var fallback = $"repo_{DataFolderLoader.SanitizeTableName(Path.GetFileNameWithoutExtension(fileName))}_{id[..6]}";
+        var fallback = $"repo_{TabularFileParser.SanitizeTableName(Path.GetFileNameWithoutExtension(fileName))}_{id[..6]}";
 
         string? suggestion;
         try
@@ -406,7 +406,7 @@ public class RepositoryStore
     /// <summary>Never trusts a model reply as already a safe SQL identifier: takes only its
     /// first line, strips anything outside lowercase ASCII letters/digits/underscores, and
     /// enforces the same "doesn't start with a digit" rule and a 30-character cap the way
-    /// DataFolderLoader.SanitizeTableName enforces its own (much looser, 100-character) rule
+    /// TabularFileParser.SanitizeTableName enforces its own (much looser, 100-character) rule
     /// for the filename-derived fallback. Returns null for anything that sanitizes down to
     /// nothing usable, telling the caller to fall back instead of using a mangled name.</summary>
     private static string? SanitizeSuggestedTableName(string? suggestion)

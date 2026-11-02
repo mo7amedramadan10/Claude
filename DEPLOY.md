@@ -91,8 +91,6 @@ git pull && docker compose up -d --build
      Ollama in the dashboard (same caveat as above: `dotnet user-secrets` never reaches
      this app — set it here)
    - `WEBSITES_PORT` = `8080`
-   - optionally `DataFolderPath` = `/data` with an Azure Files mount at `/data` so you can
-     update data files without rebuilding the image (the baked-in seed data is used otherwise).
 4. Open `https://<app>.azurewebsites.net`. HTTPS is automatic.
 
 Note: on Azure SQL the app cannot create the database itself (no `master` access) — create

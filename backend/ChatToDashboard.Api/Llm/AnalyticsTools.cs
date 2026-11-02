@@ -70,7 +70,6 @@ public class AnalyticsTools
     /// serializable JsonElement, never the default Undefined one JsonSerializer can't write.</summary>
     private static readonly JsonElement EmptyArrayElement = JsonDocument.Parse("[]").RootElement;
 
-    private readonly DataFolderLoader _loader;
     private readonly DataStore _db;
     private readonly DocumentSearchService _documents;
     private readonly RepositoryStore _repository;
@@ -86,7 +85,6 @@ public class AnalyticsTools
     private readonly bool _suggestFollowUps;
 
     public AnalyticsTools(
-        DataFolderLoader loader,
         DataStore db,
         DocumentSearchService documents,
         RepositoryStore repository,
@@ -97,7 +95,6 @@ public class AnalyticsTools
         IConfiguration configuration,
         ILogger<AnalyticsTools> logger)
     {
-        _loader = loader;
         _db = db;
         _documents = documents;
         _repository = repository;
@@ -251,15 +248,14 @@ public class AnalyticsTools
             enabledIntegrations, selection.ProjectId);
     }
 
-    /// <summary>Forwards to <see cref="Data.DataFolderLoader.GetSchemaAsync"/> — the shared
+    /// <summary>Forwards to <see cref="DataStore.GetSchemaAsync"/> — the shared
     /// schema's tables, unioned with <paramref name="projectId"/>'s own uploaded-file schema
     /// when given (see <see cref="IsTableKnownToProject"/> for the app-level filter every caller
     /// still applies on top) — for callers outside this class that need it alongside a
     /// <see cref="SourceContext"/> to call <see cref="CheckSourcePermission"/>
-    /// (DashboardAccessService, InquiryAccessService). WidgetQueryService holds its own
-    /// DataFolderLoader directly and doesn't need this.</summary>
+    /// (DashboardAccessService, InquiryAccessService).</summary>
     public Task<IReadOnlyList<Data.TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default) =>
-        _loader.GetSchemaAsync(projectId, ct);
+        _db.GetSchemaAsync(projectId, ct);
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
     {
@@ -530,7 +526,7 @@ public class AnalyticsTools
     /// <summary>
     /// System prompt for ITableNamingAssistant.SuggestTableNameAsync — asked at upload time,
     /// for a NEW file only (see RepositoryStore.SaveAsync), to propose a short SQL identifier
-    /// instead of the long, filename-derived one DataFolderLoader.SanitizeTableName would
+    /// instead of the long, filename-derived one TabularFileParser.SanitizeTableName would
     /// otherwise produce (e.g. "repo_Opportunities_Tracker_V_3_0__1__976323") — a name long
     /// enough that the model building dashboards later tends to mentally "simplify" it when
     /// writing SQL, which is exactly how it ends up querying a table that doesn't exist. In
@@ -1217,7 +1213,7 @@ public class AnalyticsTools
         العنصر بسيط وبقيمة واحدة (kpi). ممنوع إطلاقًا تجاوب بوصف عام زي "من جدول المبيعات"
         أو "تم تجميع البيانات" من غير ما تسمّي العمود نفسه؛ ذكر اسم الجدول فقط من غير اسم
         العمود مرفوض ومش كافي.
-        مثال: "من جدول staging_sample_sales (عمود Revenue) في مستودع الملفات (تصنيف
+        مثال: "من جدول proj_xxx.sales (عمود Revenue) في مستودع الملفات (تصنيف
         المبيعات). تم تجميع SUM(Revenue) وتقسيمها حسب عمود Region مع ترتيب تنازلي."
         الكلام ده لازم يكون مطابق للأدوات اللي ناديتها فعلًا — ممنوع تأليف مصدر أو طريقة حساب
         أو اسم عمود غير حقيقي.
@@ -1701,7 +1697,7 @@ public class AnalyticsTools
     /// actually allowed to query — never a table the request can't reach, even as a hint.</summary>
     public async Task<IReadOnlyList<Data.TableSchema>> GetVisibleTablesAsync(SourceContext context, CancellationToken ct)
     {
-        var schema = await _loader.GetSchemaAsync(context.ProjectId, ct);
+        var schema = await _db.GetSchemaAsync(context.ProjectId, ct);
         return schema
             .Where(t => IsTableKnownToProject(t.Table, context))
             .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
@@ -1722,7 +1718,7 @@ public class AnalyticsTools
     }
 
     /// <summary>
-    /// _loader.GetSchemaAsync() reflects every table in the shared database's "staging" schema
+    /// _db.GetSchemaAsync() reflects every table in the shared database's "dbo" schema
     /// — across every project/organization on this deployment, not just the current one — since
     /// the underlying SQL (DataStore.GetSchemaAsync) has no project filter at all. A table is
     /// only "known" here if it owns up to a file or system DescribeSourcesAsync actually found
@@ -1796,7 +1792,7 @@ public class AnalyticsTools
                     if (string.IsNullOrWhiteSpace(sql))
                         return ("Error: 'sql' input is required.", true);
 
-                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
+                    var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.ProjectId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteQueryAsync(sql, ct);
@@ -1832,7 +1828,7 @@ public class AnalyticsTools
                     periodsAhead = Math.Clamp(periodsAhead, 1, 12);
                     int? seasonLength = input["seasonLength"] is JsonValue seasonNode && seasonNode.TryGetValue<int>(out var sl) ? sl : null;
 
-                    var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
+                    var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.ProjectId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteForecastAsync(sql, periodsAhead, seasonLength, ct);
@@ -1875,9 +1871,9 @@ public class AnalyticsTools
             // Feed SQL errors back so the model can correct its query.
             _logger.LogWarning(ex, "SQL error executing tool {Tool}", toolName);
             // query_data's most common failure mode in practice isn't a malformed query — it's
-            // the model inventing a plausible-but-wrong table name (e.g. "staging.opportunities")
+            // the model inventing a plausible-but-wrong table name (e.g. "dbo.opportunities")
             // instead of the exact, often long and GUID-suffixed one list_files actually gave it
-            // (e.g. "staging.repo_Opportunities_Tracker_V_3_0__1__976323"). A bare "Invalid object
+            // (e.g. "dbo.repo_Opportunities_Tracker_V_3_0__1__976323"). A bare "Invalid object
             // name" leaves it to guess a replacement — appending the current valid table list
             // (the same one list_files itself returns) lets it self-correct with the real name
             // in the very next turn instead of guessing again or failing the whole response.
@@ -1924,7 +1920,7 @@ public class AnalyticsTools
     /// can never reach a source it shouldn't, same as a model-issued one couldn't.</summary>
     public async Task<(string Result, bool IsError)> RunReadOnlyQueryAsync(string sql, SourceContext context, CancellationToken ct)
     {
-        var permissionError = CheckSourcePermission(sql, context, await _loader.GetSchemaAsync(context.ProjectId, ct));
+        var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.ProjectId, ct));
         return permissionError is not null ? (permissionError, true) : await ExecuteQueryAsync(sql, ct);
     }
 
@@ -1934,7 +1930,7 @@ public class AnalyticsTools
     /// exact same table/category gate to a widget's stored SQL before re-executing it with a
     /// filter spliced in — the same permission surface as the LLM's own query_data tool.
     /// <paramref name="schema"/> is the full table list from <see
-    /// cref="Data.DataFolderLoader.GetSchemaAsync"/> (every table in the shared database, not
+    /// cref="DataStore.GetSchemaAsync"/> (every table in the shared database, not
     /// just this project's — see <see cref="IsTableKnownToProject"/>), needed for the last
     /// check below; callers already have it or can fetch it cheaply (a metadata-only scan).
     /// </summary>
@@ -1976,7 +1972,7 @@ public class AnalyticsTools
 
     /// <summary>True if <paramref name="sql"/> references <paramref name="tableName"/> as a
     /// whole identifier, not merely as a substring of a longer one — observed live: an orphaned
-    /// stale table "staging.business_opportunities" (no catalog row pointed to it any more, left
+    /// stale table "dbo.business_opportunities" (no catalog row pointed to it any more, left
     /// behind by an old upload/delete) blocked every query against the real, currently-uploaded
     /// table "business_opportunities_2", because the plain .Contains check used here before
     /// found "business_opportunities" sitting right inside "business_opportunities_2" and

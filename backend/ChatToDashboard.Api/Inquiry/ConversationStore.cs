@@ -22,7 +22,7 @@ public class ConversationStore
         _db = db;
     }
 
-    private string Table => "[staging].[InquiryConversations]";
+    private string Table => "[dbo].[InquiryConversations]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -30,7 +30,7 @@ public class ConversationStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.InquiryConversations') IS NULL
+               IF OBJECT_ID('dbo.InquiryConversations') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [UserId] NVARCHAR(200), [Title] NVARCHAR(400),
                  [TranscriptJson] NVARCHAR(MAX), [Summary] NVARCHAR(MAX), [CreatedAt] DATETIME2,

@@ -37,8 +37,8 @@ public class ClaudeChatStore
 
     public ClaudeChatStore(DataStore db) => _db = db;
 
-    private string Chats => "[staging].[ClaudeChats]";
-    private string Messages => "[staging].[ClaudeChatMessages]";
+    private string Chats => "[dbo].[ClaudeChats]";
+    private string Messages => "[dbo].[ClaudeChatMessages]";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -54,8 +54,8 @@ public class ClaudeChatStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
         var statements = new[]
             {
-                $"""IF OBJECT_ID('staging.ClaudeChats') IS NULL CREATE TABLE {Chats} ([Id] NVARCHAR(64) PRIMARY KEY, [UserId] NVARCHAR(200) NOT NULL, [Title] NVARCHAR(300) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, [UpdatedAt] DATETIME2 NOT NULL)""",
-                $"""IF OBJECT_ID('staging.ClaudeChatMessages') IS NULL CREATE TABLE {Messages} ([Id] NVARCHAR(32) PRIMARY KEY, [ChatId] NVARCHAR(64) NOT NULL, [Role] NVARCHAR(16) NOT NULL, [Text] NVARCHAR(MAX) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, [CostUsd] FLOAT, [DurationMs] BIGINT)""",
+                $"""IF OBJECT_ID('dbo.ClaudeChats') IS NULL CREATE TABLE {Chats} ([Id] NVARCHAR(64) PRIMARY KEY, [UserId] NVARCHAR(200) NOT NULL, [Title] NVARCHAR(300) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, [UpdatedAt] DATETIME2 NOT NULL)""",
+                $"""IF OBJECT_ID('dbo.ClaudeChatMessages') IS NULL CREATE TABLE {Messages} ([Id] NVARCHAR(32) PRIMARY KEY, [ChatId] NVARCHAR(64) NOT NULL, [Role] NVARCHAR(16) NOT NULL, [Text] NVARCHAR(MAX) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, [CostUsd] FLOAT, [DurationMs] BIGINT)""",
             };
         foreach (var text in statements)
         {

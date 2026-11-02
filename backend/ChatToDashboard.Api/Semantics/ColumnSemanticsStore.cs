@@ -47,14 +47,14 @@ public class ColumnSemanticsStore
 
     public ColumnSemanticsStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[ColumnSemantics]";
+    private string Table => "[dbo].[ColumnSemantics]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
         var text = $"""
-               IF OBJECT_ID('staging.ColumnSemantics') IS NULL
+               IF OBJECT_ID('dbo.ColumnSemantics') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64) NOT NULL, [TableName] NVARCHAR(300) NOT NULL,
                  [ColumnName] NVARCHAR(300) NOT NULL, [Concept] NVARCHAR(64), [Role] NVARCHAR(20) NOT NULL,

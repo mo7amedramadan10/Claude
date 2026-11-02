@@ -60,9 +60,9 @@ public class UploadParser
             ParsedUpload parsed = extension switch
             {
                 ".csv" => new ParsedUpload(fileName, "csv",
-                    DataFolderLoader.InferTypes(DataFolderLoader.ReadCsv(temp)), null, 0, bytes),
+                    TabularFileParser.InferTypes(TabularFileParser.ReadCsv(temp)), null, 0, bytes),
                 ".xlsx" or ".xls" => new ParsedUpload(fileName, "excel",
-                    DataFolderLoader.InferTypes(DataFolderLoader.ReadXlsx(temp)), null, 0, bytes),
+                    TabularFileParser.InferTypes(TabularFileParser.ReadXlsx(temp)), null, 0, bytes),
                 ".pdf" => await ParsePdfAsync(fileName, temp, bytes, requestingUser, progressToken, ct),
                 _ => throw new NotSupportedException($"Unsupported file type: {extension}"),
             };

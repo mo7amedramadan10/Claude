@@ -16,10 +16,10 @@ public class IntegrationStore
 
     public IntegrationStore(DataStore db) => _db = db;
 
-    private string IntegrationsTable => "[staging].[ExternalIntegrations]";
-    private string SlotsTable => "[staging].[PublishedDashboardSlots]";
-    private string LogTable => "[staging].[IntegrationPublishLog]";
-    private string WidgetFiltersTable => "[staging].[WidgetDataFilters]";
+    private string IntegrationsTable => "[dbo].[ExternalIntegrations]";
+    private string SlotsTable => "[dbo].[PublishedDashboardSlots]";
+    private string LogTable => "[dbo].[IntegrationPublishLog]";
+    private string WidgetFiltersTable => "[dbo].[WidgetDataFilters]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -27,7 +27,7 @@ public class IntegrationStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var integrationsSql = $"""
-               IF OBJECT_ID('staging.ExternalIntegrations') IS NULL
+               IF OBJECT_ID('dbo.ExternalIntegrations') IS NULL
                CREATE TABLE {IntegrationsTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [Name] NVARCHAR(200),
                  [ConnectorBaseUrl] NVARCHAR(1000), [ConnectorAuthHeader] NVARCHAR(200), [ConnectorAuthValue] NVARCHAR(1000),
@@ -66,7 +66,7 @@ public class IntegrationStore
         }
 
         var slotsSql = $"""
-               IF OBJECT_ID('staging.PublishedDashboardSlots') IS NULL
+               IF OBJECT_ID('dbo.PublishedDashboardSlots') IS NULL
                CREATE TABLE {SlotsTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [IntegrationId] NVARCHAR(64), [ExternalDashboardId] NVARCHAR(64),
                  [LocalHistoryId] NVARCHAR(64), [Title] NVARCHAR(500),
@@ -75,7 +75,7 @@ public class IntegrationStore
         await using (var cmd = connection.CreateCommand()) { cmd.CommandText = slotsSql; await cmd.ExecuteNonQueryAsync(ct); }
 
         var logSql = $"""
-               IF OBJECT_ID('staging.IntegrationPublishLog') IS NULL
+               IF OBJECT_ID('dbo.IntegrationPublishLog') IS NULL
                CREATE TABLE {LogTable} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [IntegrationId] NVARCHAR(64), [ExternalDashboardId] NVARCHAR(64),
                  [LocalHistoryId] NVARCHAR(64), [DashboardTitle] NVARCHAR(500), [UserId] NVARCHAR(200),
@@ -84,7 +84,7 @@ public class IntegrationStore
         await using (var cmd = connection.CreateCommand()) { cmd.CommandText = logSql; await cmd.ExecuteNonQueryAsync(ct); }
 
         var widgetFiltersSql = $"""
-               IF OBJECT_ID('staging.WidgetDataFilters') IS NULL
+               IF OBJECT_ID('dbo.WidgetDataFilters') IS NULL
                CREATE TABLE {WidgetFiltersTable} (
                  [IntegrationId] NVARCHAR(64), [LocalHistoryId] NVARCHAR(64), [WidgetIndex] INT, [FilterKey] NVARCHAR(100),
                  PRIMARY KEY ([IntegrationId], [LocalHistoryId], [WidgetIndex]))

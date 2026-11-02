@@ -49,7 +49,7 @@ public class LlmCredentialStore
         _ => ("Anthropic:ApiKey", "Anthropic:BaseUrl"),
     };
 
-    private string Table => "[staging].[LlmCredentials]";
+    private string Table => "[dbo].[LlmCredentials]";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -64,7 +64,7 @@ public class LlmCredentialStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
         var text = $"""
-               IF OBJECT_ID('staging.LlmCredentials') IS NULL
+               IF OBJECT_ID('dbo.LlmCredentials') IS NULL
                CREATE TABLE {Table} (
                  [Provider] NVARCHAR(50) NOT NULL PRIMARY KEY, [ApiKey] NVARCHAR(MAX), [BaseUrl] NVARCHAR(500), [UpdatedAt] DATETIME2 NOT NULL)
                """;

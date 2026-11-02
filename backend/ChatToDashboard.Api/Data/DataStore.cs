@@ -10,7 +10,7 @@ namespace ChatToDashboard.Api.Data;
 /// </summary>
 public class DataStore
 {
-    private const string SqlServerSchema = "staging";
+    private const string SqlServerSchema = "dbo";
 
     private readonly string _connectionString;
 
@@ -71,10 +71,10 @@ public class DataStore
     // ---- Naming ----
 
     /// <summary>The schema a project's own uploaded-file tables live in. Falls back to the shared
-    /// "staging" schema when <paramref name="projectId"/> is null/blank or doesn't look like one
+    /// "dbo" schema when <paramref name="projectId"/> is null/blank or doesn't look like one
     /// of this app's own ids (defensive: an unexpected value never flows into a dynamically
-    /// built schema name). System-sourced and data-folder tables (see SystemApiLoader,
-    /// DataFolderLoader) have no project of their own and always stay in "staging" — only
+    /// built schema name). System-sourced and data-folder tables (see SystemApiLoader)
+    /// have no project of their own and always stay in "dbo" — only
     /// RepositoryStore's uploaded files get their own project schema.</summary>
     internal string ProjectSchema(string? projectId)
     {
@@ -90,7 +90,7 @@ public class DataStore
         $"[{schema}].[{tableName.Replace("]", "]]")}]";
 
     /// <summary>Same as the two-argument overload, but for a display name already carrying its
-    /// own schema (e.g. "proj_xxx.Sales" or "staging.Sales") — as returned by
+    /// own schema (e.g. "proj_xxx.Sales" or "dbo.Sales") — as returned by
     /// <see cref="GetSchemaAsync"/>, never built from client input. Generic over whichever
     /// schema the name actually carries (shared or any project's), so callers never need to
     /// know or re-derive which one a given table lives in.</summary>
@@ -262,7 +262,7 @@ public class DataStore
     private const int LoadCommandTimeoutSeconds = 120;
 
     /// <summary>Drops and recreates the table under <paramref name="projectId"/>'s own schema
-    /// (or the shared schema when null — used by SystemApiLoader/DataFolderLoader, which have
+    /// (or the shared schema when null — used by SystemApiLoader, which has
     /// no project of their own), then loads every row of <paramref name="table"/>.</summary>
     public async Task RecreateAndLoadAsync(
         DbConnection connection, string? projectId, string tableName, DataTable table, CancellationToken ct = default)
@@ -310,7 +310,7 @@ public class DataStore
     /// <summary><paramref name="projectId"/> picks which schema the hint names — a project's
     /// own uploaded files live under its own schema, not the shared one.</summary>
     public string TableNamingHint(string? projectId) =>
-        $"{ProjectSchema(projectId)}.<TableName> for your own uploaded files, or staging.<TableName> for shared/system tables";
+        $"{ProjectSchema(projectId)}.<TableName> for your own uploaded files, or dbo.<TableName> for shared/system tables";
 
     /// <summary>Same <paramref name="projectId"/> scoping as <see cref="TableNamingHint"/>.</summary>
     public string DialectPrompt(string? projectId) =>
@@ -320,7 +320,7 @@ public class DataStore
           - Use GETDATE() instead of NOW(); DATEADD/DATEDIFF for date math; FORMAT() or CONVERT() for formatting.
           - Quote identifiers with [square brackets], not double quotes.
           - Reference a table exactly as it was listed to you (either {ProjectSchema(projectId)}.[TableName]
-            or staging.[TableName]) — never assume one schema for every table.
+            or dbo.[TableName]) — never assume one schema for every table.
           - Only SELECT statements are allowed. Any INSERT/UPDATE/DELETE/DDL is rejected.
           - Every uploaded-file column is stored as nvarchar regardless of what it actually
             holds, even a column that is numeric in almost every row. A plain CAST/CONVERT to a

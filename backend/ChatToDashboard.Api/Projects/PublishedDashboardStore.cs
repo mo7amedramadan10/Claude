@@ -5,7 +5,7 @@ namespace ChatToDashboard.Api.Projects;
 
 /// <summary>
 /// تخزين جدول <c>PublishedDashboards</c> (§4.23) — بنفس نمط Dapper المشترك لبقية المخازن
-/// هنا (SQL Server تحت مخطط <c>staging</c>). صف واحد لكل (مشروع، لوحة): إعادة
+/// هنا (SQL Server تحت مخطط <c>dbo</c>). صف واحد لكل (مشروع، لوحة): إعادة
 /// النشر تحدّث الصف نفسه وترفع رقم الإصدار بدل إضافة صف جديد.
 /// </summary>
 public class PublishedDashboardStore
@@ -14,7 +14,7 @@ public class PublishedDashboardStore
 
     public PublishedDashboardStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[PublishedDashboards]";
+    private string Table => "[dbo].[PublishedDashboards]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -22,7 +22,7 @@ public class PublishedDashboardStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.PublishedDashboards') IS NULL
+               IF OBJECT_ID('dbo.PublishedDashboards') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64) NOT NULL, [DashboardId] NVARCHAR(64) NOT NULL,
                  [Version] INT NOT NULL, [PublishedBy] NVARCHAR(200), [PublishedAt] DATETIME2,

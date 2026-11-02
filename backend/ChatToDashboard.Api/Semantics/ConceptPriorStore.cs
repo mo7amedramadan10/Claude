@@ -26,14 +26,14 @@ public class ConceptPriorStore
         finally { _schemaGate.Release(); }
     }
 
-    private string Table => "[staging].[ConceptPriors]";
+    private string Table => "[dbo].[ConceptPriors]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
         var text = $"""
-               IF OBJECT_ID('staging.ConceptPriors') IS NULL
+               IF OBJECT_ID('dbo.ConceptPriors') IS NULL
                CREATE TABLE {Table} (
                  [NormalizedName] NVARCHAR(200) NOT NULL, [Concept] NVARCHAR(64) NOT NULL, [Hits] INT NOT NULL, [UserHits] INT NOT NULL,
                  [UpdatedAt] DATETIME2 NOT NULL, PRIMARY KEY ([NormalizedName], [Concept]))

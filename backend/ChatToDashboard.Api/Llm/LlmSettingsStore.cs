@@ -16,7 +16,7 @@ public class LlmSettingsStore
 
     public LlmSettingsStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[LlmSettings]";
+    private string Table => "[dbo].[LlmSettings]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -24,7 +24,7 @@ public class LlmSettingsStore
         await _db.CreateContainerIfMissingAsync(connection, ct);
 
         var text = $"""
-               IF OBJECT_ID('staging.LlmSettings') IS NULL
+               IF OBJECT_ID('dbo.LlmSettings') IS NULL
                CREATE TABLE {Table} (
                  [Id] INT PRIMARY KEY CHECK ([Id] = 1), [Provider] NVARCHAR(50), [OllamaModel] NVARCHAR(200))
                """;

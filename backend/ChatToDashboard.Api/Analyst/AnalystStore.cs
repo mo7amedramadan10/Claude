@@ -5,7 +5,7 @@ using Dapper;
 namespace ChatToDashboard.Api.Analyst;
 
 /// <summary>
-/// Persists everything "المحلل الذكي" needs — same shared-DB/Dapper/[staging] pattern as every
+/// Persists everything "المحلل الذكي" needs — same shared-DB/Dapper/[dbo] pattern as every
 /// other store in this app (see TemplateStore, Inquiry.ConversationStore), not a separate
 /// database per organization (the reference design's own sidebar copy about an "isolated
 /// database" is aspirational mockup text, not this app's real multi-tenancy — see
@@ -24,10 +24,10 @@ public class AnalystStore
 
     public AnalystStore(DataStore db) => _db = db;
 
-    private string ConversationsTable => "[staging].[AnalystConversations]";
-    private string MessagesTable => "[staging].[AnalystMessages]";
-    private string ResultsTable => "[staging].[AnalystResults]";
-    private string ResultSourcesTable => "[staging].[AnalystResultSources]";
+    private string ConversationsTable => "[dbo].[AnalystConversations]";
+    private string MessagesTable => "[dbo].[AnalystMessages]";
+    private string ResultsTable => "[dbo].[AnalystResults]";
+    private string ResultSourcesTable => "[dbo].[AnalystResultSources]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -37,20 +37,20 @@ public class AnalystStore
         var statements = new[]
             {
                 $"""
-                 IF OBJECT_ID('staging.AnalystConversations') IS NULL
+                 IF OBJECT_ID('dbo.AnalystConversations') IS NULL
                  CREATE TABLE {ConversationsTable} (
                    [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64), [OwnerUserId] NVARCHAR(64), [Title] NVARCHAR(400),
                    [IsSaved] BIT, [RollingSummary] NVARCHAR(MAX), [FindingsLedgerJson] NVARCHAR(MAX),
                    [CreatedAt] DATETIME2, [UpdatedAt] DATETIME2)
                  """,
                 $"""
-                 IF OBJECT_ID('staging.AnalystMessages') IS NULL
+                 IF OBJECT_ID('dbo.AnalystMessages') IS NULL
                  CREATE TABLE {MessagesTable} (
                    [Id] NVARCHAR(64) PRIMARY KEY, [ConversationId] NVARCHAR(64), [Role] NVARCHAR(16), [Text] NVARCHAR(MAX),
                    [TemplateText] NVARCHAR(MAX), [ResultId] NVARCHAR(64), [KnowledgeScope] NVARCHAR(16), [CreatedAt] DATETIME2)
                  """,
                 $"""
-                 IF OBJECT_ID('staging.AnalystResults') IS NULL
+                 IF OBJECT_ID('dbo.AnalystResults') IS NULL
                  CREATE TABLE {ResultsTable} (
                    [Id] NVARCHAR(64) PRIMARY KEY, [ConversationId] NVARCHAR(64), [ProjectId] NVARCHAR(64), [Title] NVARCHAR(400),
                    [ResultType] NVARCHAR(16), [ColumnsJson] NVARCHAR(MAX), [RowsJson] NVARCHAR(MAX), [KeyColumn] NVARCHAR(200),
@@ -58,7 +58,7 @@ public class AnalystStore
                    [DataVersion] INT, [IsTruncated] BIT, [CreatedAt] DATETIME2)
                  """,
                 $"""
-                 IF OBJECT_ID('staging.AnalystResultSources') IS NULL
+                 IF OBJECT_ID('dbo.AnalystResultSources') IS NULL
                  CREATE TABLE {ResultSourcesTable} (
                    [Id] NVARCHAR(64) PRIMARY KEY, [ResultId] NVARCHAR(64), [SourceId] NVARCHAR(200), [SourceDisplayName] NVARCHAR(400),
                    [SourceKind] NVARCHAR(16), [TablesJson] NVARCHAR(MAX), [SourceLastUpdatedAt] DATETIME2, [IsStale] BIT)

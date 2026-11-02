@@ -33,7 +33,6 @@ extends:
 
     env:
       ASPNETCORE_ENVIRONMENT: Production
-      DataFolderPath: /data
       DatabaseProvider: SqlServer
       EnableRag: "false"
       Llm__Provider: OpenAI

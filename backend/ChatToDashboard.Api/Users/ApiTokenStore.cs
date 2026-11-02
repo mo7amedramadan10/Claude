@@ -30,7 +30,7 @@ public class ApiTokenStore
 
     public ApiTokenStore(DataStore db) => _db = db;
 
-    private string Table => "[staging].[ApiTokens]";
+    private string Table => "[dbo].[ApiTokens]";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -45,7 +45,7 @@ public class ApiTokenStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await _db.CreateContainerIfMissingAsync(connection, ct);
         var text = $"""
-               IF OBJECT_ID('staging.ApiTokens') IS NULL
+               IF OBJECT_ID('dbo.ApiTokens') IS NULL
                CREATE TABLE {Table} (
                  [Id] NVARCHAR(32) PRIMARY KEY, [UserId] NVARCHAR(200) NOT NULL, [Name] NVARCHAR(200) NOT NULL, [TokenHash] NVARCHAR(64) NOT NULL UNIQUE,
                  [Prefix] NVARCHAR(20) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, [LastUsedAt] DATETIME2, [RevokedAt] DATETIME2)

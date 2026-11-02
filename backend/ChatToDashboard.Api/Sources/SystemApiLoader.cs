@@ -45,7 +45,7 @@ public class SystemApiLoader
 
     /// <summary>The staging table a system's records land in.</summary>
     public string TableFor(SystemSource system) =>
-        _db.DisplayTable(null, "sys_" + DataFolderLoader.SanitizeTableName(system.Id));
+        _db.DisplayTable(null, "sys_" + TabularFileParser.SanitizeTableName(system.Id));
 
     public SystemStatus StatusFor(string systemId) =>
         _status.TryGetValue(systemId, out var status) ? status : new SystemStatus(null, 0, null, false);
@@ -80,7 +80,7 @@ public class SystemApiLoader
 
         var previous = StatusFor(system.Id);
         _status[system.Id] = previous with { Refreshing = true };
-        var bareName = "sys_" + DataFolderLoader.SanitizeTableName(system.Id);
+        var bareName = "sys_" + TabularFileParser.SanitizeTableName(system.Id);
         try
         {
             var records = await FetchAsync(system, ct);
@@ -203,7 +203,7 @@ public class SystemApiLoader
             return values;
         }).ToList();
 
-        return DataFolderLoader.InferTypes((headers, matrix));
+        return TabularFileParser.InferTypes((headers, matrix));
     }
 
     private static void Flatten(
