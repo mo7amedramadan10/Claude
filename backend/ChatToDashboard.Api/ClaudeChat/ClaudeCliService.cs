@@ -19,12 +19,47 @@ public class ClaudeCliService
 
     private readonly IConfiguration _configuration;
     private readonly ILogger<ClaudeCliService> _logger;
+    private readonly Mcp.McpSessionTokens _tokens;
+    private readonly Microsoft.AspNetCore.Hosting.Server.IServer _server;
 
-    public ClaudeCliService(IConfiguration configuration, ILogger<ClaudeCliService> logger)
+    public ClaudeCliService(IConfiguration configuration, ILogger<ClaudeCliService> logger, Mcp.McpSessionTokens tokens,
+        Microsoft.AspNetCore.Hosting.Server.IServer server)
     {
         _configuration = configuration;
         _logger = logger;
+        _tokens = tokens;
+        _server = server;
     }
+
+    /// <summary>أدوات القراءة عبر MCP مفعَّلة؟ (ClaudeCli:ToolsEnabled، افتراضيًا true). false = محادثة صِرف بلا أدوات.</summary>
+    public bool ToolsEnabled => _configuration.GetValue("ClaudeCli:ToolsEnabled", true);
+
+    /// <summary>عنوان خادم MCP الداخلي الذي يناديه الـ CLI من الجهاز نفسه: ClaudeCli:McpBaseUrl إن ضُبط، وإلا أول عنوان
+    /// HTTP يستمع إليه هذا الخادم مع استبدال 0.0.0.0/* بـ 127.0.0.1.</summary>
+    public string McpUrl
+    {
+        get
+        {
+            var configured = _configuration["ClaudeCli:McpBaseUrl"]?.Trim();
+            string baseUrl;
+            if (!string.IsNullOrEmpty(configured)) baseUrl = configured;
+            else
+            {
+                var addresses = _server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>()?.Addresses ?? Array.Empty<string>();
+                var http = addresses.FirstOrDefault(a => a.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) ?? addresses.FirstOrDefault() ?? "http://127.0.0.1:5000";
+                baseUrl = http.Replace("://0.0.0.0", "://127.0.0.1").Replace("://[::]", "://127.0.0.1").Replace("://*", "://127.0.0.1").Replace("://+", "://127.0.0.1");
+            }
+            return baseUrl.TrimEnd('/') + Mcp.McpTokenMiddleware.Path;
+        }
+    }
+
+    /// <summary>تعليمات قصيرة بالعربية تُلحق بتعليمات الـ CLI: تعريف الأدوات الثلاث وطلب الاستكشاف قبل الإجابة.</summary>
+    public const string ToolsSystemPrompt =
+        "أنت مساعد تحليل بيانات داخل منصة «جيم». لديك ثلاث أدوات قراءة فقط على بيانات مشروع المستخدم الحالي: " +
+        "list_tables (الجداول المتاحة)، describe_table (الأعمدة ومعانيها وعينة)، run_sql (استعلام SELECT واحد بـ T-SQL على SQL Server). " +
+        "قبل الإجابة عن أي سؤال يخص البيانات: نادِ list_tables ثم describe_table للجداول المعنية، ثم run_sql، ولا تخمّن أسماء أعمدة أو أرقامًا. " +
+        "اكتب أسماء الجداول كما تعيدها list_tables (بالمخطط). الأدوات للقراءة فقط ولا ترى جداول مشاريع أخرى. " +
+        "أجب بالعربية باختصار مع الأرقام التي حصلت عليها فعلًا، واذكر الاستعلام الذي اعتمدت عليه عند الحاجة.";
 
     public string Command => _configuration["ClaudeCli:Command"]?.Trim() is { Length: > 0 } c ? c : "claude";
 
@@ -112,9 +147,10 @@ public class ClaudeCliService
 
     /// <summary>يرسل رسالة إلى جلسة CLI (جديدة أو مستأنفة) ويبث الأحداث: delta (نص جزئي)، done (النص الكامل
     /// والتكلفة)، error. يُقتل العملية عند إلغاء الطلب.</summary>
-    public async IAsyncEnumerable<StreamEvent> SendAsync(string sessionId, bool resume, string message,
+    public async IAsyncEnumerable<StreamEvent> SendAsync(string sessionId, bool resume, string message, string userId, string? projectId,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
     {
+        // الأدوات المدمجة معطَّلة دائمًا (--tools "")؛ أدوات القراءة تأتي من خادم MCP الداخلي فقط (الخطوة 4 من الخطة).
         var args = new List<string>
         {
             "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
@@ -124,6 +160,40 @@ public class ClaudeCliService
         if (Model is { } model) { args.Add("--model"); args.Add(model); }
         var timeout = TimeSpan.FromSeconds(_configuration.GetValue("ClaudeCli:TimeoutSeconds", 600));
 
+        // مفتاح جلسة مؤقت لهذه الرسالة + ملف mcp-config مؤقت يحمل عنوان الخادم والمفتاح؛ يُلغى الاثنان في النهاية.
+        Mcp.McpSession? session = null; string? configPath = null;
+        if (ToolsEnabled)
+        {
+            session = _tokens.Issue(userId, projectId, TimeSpan.FromMinutes(Math.Max(10, timeout.TotalMinutes + 1)));
+            configPath = Path.Combine(Path.GetTempPath(), $"jeem-mcp-{Guid.NewGuid():N}.json");
+            var config = new JsonObject
+            {
+                ["mcpServers"] = new JsonObject
+                {
+                    ["jeem"] = new JsonObject
+                    {
+                        ["type"] = "http", ["url"] = McpUrl,
+                        ["headers"] = new JsonObject { ["Authorization"] = "Bearer " + session.Token },
+                    },
+                },
+            };
+            await File.WriteAllTextAsync(configPath, config.ToJsonString(), ct);
+            args.AddRange(new[] { "--mcp-config", configPath, "--strict-mcp-config", "--allowedTools", "mcp__jeem__*", "--append-system-prompt", ToolsSystemPrompt });
+        }
+        try
+        {
+            await foreach (var ev in RunAsync(args, message, timeout, ct)) yield return ev;
+        }
+        finally
+        {
+            if (session is not null) _tokens.Revoke(session.Token);
+            if (configPath is not null) { try { File.Delete(configPath); } catch { } }
+        }
+    }
+
+    private async IAsyncEnumerable<StreamEvent> RunAsync(List<string> args, string message, TimeSpan timeout,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
         Process process; string? startError = null;
         try { process = Start(args); }
         catch (Exception ex) { process = null!; startError = ex.Message; }

@@ -46,7 +46,7 @@ public class ClaudeChatController : ControllerBase
         var allowed = _cli.Enabled && _cli.AllowedRoles.Contains(user.Role, StringComparer.OrdinalIgnoreCase);
         if (!allowed) return Ok(new { enabled = _cli.Enabled, allowed = false, available = false, detail = (string?)null });
         var (available, detail) = await _cli.ProbeAsync(ct);
-        return Ok(new { enabled = true, allowed = true, available, detail, model = _cli.Model, workingDirectory = _cli.WorkingDirectory, command = _cli.ResolvedCommand });
+        return Ok(new { enabled = true, allowed = true, available, detail, model = _cli.Model, workingDirectory = _cli.WorkingDirectory, command = _cli.ResolvedCommand, toolsEnabled = _cli.ToolsEnabled, mcpUrl = _cli.McpUrl });
     }
 
     [HttpGet("chats")]
@@ -116,7 +116,9 @@ public class ClaudeChatController : ControllerBase
         await WriteAsync("chat", new { chat.Id, chat.Title }, ct);
 
         await _store.AddMessageAsync(chat.Id, "user", message, ct: ct);
-        await foreach (var ev in _cli.SendAsync(chat.Id, resume: !isNew, message, ct))
+        // مشروع المستخدم الحالي هو نطاق أدوات القراءة لهذه الرسالة (لا يرى غيره).
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        await foreach (var ev in _cli.SendAsync(chat.Id, resume: !isNew, message, user.Id, selection.ProjectId, ct))
         {
             switch (ev.Kind)
             {

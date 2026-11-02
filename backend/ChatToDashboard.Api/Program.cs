@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.ClaudeChat.Mcp;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -81,6 +82,17 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationStor
 // محادثة Claude عبر Claude Code CLI على الخادم (ClaudeChat/) — انظر ClaudeCliService.
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeCliService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeChatStore>();
+// خادم MCP داخلي لأدوات القراءة في محادثة Claude (ClaudeChat/Mcp): نقل Streamable HTTP بلا حالة على
+// /api/claude-chat/mcp، يحرسه مفتاح جلسة مؤقت (McpTokenMiddleware) لا كوكي المستخدم.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.Mcp.McpSessionTokens>();
+builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.Mcp.ProjectCatalog>();
+builder.Services.AddMcpServer(options =>
+    {
+        options.ServerInfo = new ModelContextProtocol.Protocol.Implementation { Name = "jeem", Version = "1.0.0" };
+    })
+    .WithHttpTransport(options => { options.Stateless = true; })
+    .WithTools<ChatToDashboard.Api.ClaudeChat.Mcp.JeemMcpTools>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Widgets.WidgetQueryService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.ConversationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Inquiry.InquiryAccessService>();
@@ -248,10 +260,13 @@ app.UseStaticFiles();
 app.UseWebSockets();
 
 app.UseRouting();
+app.UseMcpSessionGate();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+// خادم MCP لمحادثة Claude — بلا سياسة الكوكي (الحارس أعلاه يتحقق من مفتاح الجلسة).
+app.MapMcp(ChatToDashboard.Api.ClaudeChat.Mcp.McpTokenMiddleware.Path).AllowAnonymous();
 
 // INTERACTIVE-HANDOFF.md §7's "hub /hubs/live" — see LiveChannelHub's own doc comment for
 // why this is a plain WebSocket endpoint instead of a SignalR hub. Channel convention:

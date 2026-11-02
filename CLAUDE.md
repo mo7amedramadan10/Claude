@@ -303,6 +303,32 @@
   **Windows**: `Process.Start` بلا shell لا يكمل الامتداد، فالاسم «claude» وحده يفشل (علّة حقيقية ظهرت للمستخدم).
   `ResolvedCommand` يبحث في PATH بكل PATHEXT ثم `%USERPROFILE%\.local\bin` (المثبّت الأصلي `claude.exe`) و`%APPDATA%\npm`
   (`claude.cmd`)، ورسالة التعذّر تذكر أين بحث وكيف يُضبط المسار الكامل في `ClaudeCli:Command`؛ `status` يعيد `command` المحلول.
+- **أدوات القراءة عبر MCP (الخطوات 1–4 من `docs/plans/claude-chat-mcp-tools.md`)** — `ClaudeChat/Mcp/`، منطق مستقل
+  بالكامل عن `AnalyticsTools`/`WidgetQueryService`/البنّاء (قيد الخطة):
+  - خادم MCP بالحزمة الرسمية `ModelContextProtocol.AspNetCore` 2.3.0 على `/api/claude-chat/mcp` (Streamable HTTP،
+    `Stateless = true`، `MapMcp(...).AllowAnonymous()`)، يحرسه `McpTokenMiddleware` (`UseMcpSessionGate` قبل
+    `UseAuthentication`): `Authorization: Bearer mcp_…` لمفتاح صالح وإلا 401، والجلسة تُوضع في `HttpContext.Items`.
+  - `McpSessionTokens` في الذاكرة: `Issue(userId, projectId, عمر)` → `mcp_<48 hex>`، `Resolve` يرفض المنتهي/المجهول،
+    `Revoke` عند انتهاء الرسالة، وعدّاد استعلامات لكل جلسة (`McpSession.CountQuery`).
+  - `JeemMcpTools` (`[McpServerToolType]`): `list_tables` (من `dbo.repo_Files` حيث `ProjectId` = مشروع المستخدم وضمن
+    مخطط `proj_<id>` فقط + `dbo.sys_*` للأنظمة المفعَّلة الموجودة فعلًا)، `describe_table` (INFORMATION_SCHEMA +
+    `dbo.ColumnSemantics` بالاسم الكامل أو المجرد + عينة 5 صفوف؛ يرفض ما ليس في القائمة)، `run_sql` (المدقّق ثم تنفيذ
+    بمهلة `QueryTimeoutSeconds` وقراءة حتى `MaxRows`+1 لتحديد `truncated`). سقف `MaxQueriesPerMessage` يعيد
+    «توقف وأجب بما لديك». الأخطاء نص يبدأ بـ«خطأ:» ليقرأه الموديل.
+  - `ReadOnlySqlValidator` (ساكن، مختبَر): يزيل التعليقات ويفرّغ النصوص المقتبسة قبل الفحص؛ جملة واحدة تبدأ بـ
+    SELECT/WITH؛ كلمات ممنوعة بحدود كلمات + بادئات `xp_/sp_/fn_`؛ كل اسم بعد FROM/JOIN/APPLY وفي قائمة FROM يجب أن
+    يطابق `schema.name` مسموحًا (أو اسمًا مجردًا فريدًا؛ أسماء CTE مسموحة)؛ `EnsureTop` يُدرج `TOP (n)` بعد SELECT
+    الرئيسي (بعد DISTINCT/ALL) ما لم يوجد TOP أو OFFSET. 
+  - `ClaudeCliService.SendAsync(…, userId, projectId)`: مع `ClaudeCli:ToolsEnabled` (true) يصدر مفتاح جلسة ويكتب
+    `mcp-config` مؤقتًا (`{"mcpServers":{"jeem":{"type":"http","url":…,"headers":{"Authorization":…}}}}`) ويشغّل الـ CLI
+    بـ `--tools ""` (المدمجة معطَّلة دائمًا) + `--mcp-config <file> --strict-mcp-config --allowedTools mcp__jeem__*
+    --append-system-prompt <ToolsSystemPrompt>`، ويحذف الملف ويلغي المفتاح في `finally`. عنوان الخادم من
+    `ClaudeCli:McpBaseUrl` أو أول عنوان HTTP يستمع إليه الخادم (`IServerAddressesFeature`، 0.0.0.0→127.0.0.1).
+    المتحكم يمرّر `GetEffectiveSelectionAsync(user).ProjectId`؛ `status` يعيد `toolsEnabled` و`mcpUrl`.
+  - اختبارات `ClaudeChatMcpTests.cs` (21): المفاتيح (إصدار/رفض/انتهاء بـ FakeTimeProvider/إلغاء) والمدقّق
+    (UPDATE/DELETE/INSERT/DROP/INTO/xp_/OPENROWSET/WAITFOR مرفوضة، جمل متعددة مرفوضة، جدول خارج المشروع و
+    `dbo.repo_Files`/`INFORMATION_SCHEMA`/`sys.` مرفوضة، WITH مقبول، TOP يُفرض ولا يُكرَّر ولا مع OFFSET، الكلمات
+    داخل النصوص/التعليقات لا تُرفض) ومطابقة الأسماء في الكتالوج. 135/135. **لم يُجرَ تحقق حي** (يحتاج SQL Server).
 - تحقق حي ضد CLI حقيقي (2.1.312): غير المسؤول لا يرى البند و`status.allowed=false`؛ المسؤول: بث يبدأ فورًا، رد
   بعنوان وقائمة وكود مُنسَّق في 3.6 ثانية مع المدة والتكلفة؛ متابعة بذاكرة («كم بندًا؟» → 3)؛ القائمة والفتح
   بعد إعادة التحميل؛ بلا أخطاء JS وبلا تمرير أفقي على 390px.
