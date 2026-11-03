@@ -27,6 +27,9 @@ public class Presentation
     [JsonPropertyName("expiresAt")] public DateTime? ExpiresAt { get; set; }
     [JsonPropertyName("revokedAt")] public DateTime? RevokedAt { get; set; }
     [JsonPropertyName("viewCount")] public int ViewCount { get; set; }
+    /// <summary>من يكتب في «بيانات العرض»: <c>anyone</c> (أي من معه الرابط — الافتراضي بقرار المستخدم)،
+    /// <c>members</c> (مستخدمو المنظمة المسجَّلون)، <c>owner</c> (صاحب العرض والمسؤول).</summary>
+    [JsonPropertyName("editPolicy")] public string EditPolicy { get; set; } = PresentationEditPolicy.Anyone;
 
     /// <summary>المسار العام النسبي: بالاسم إن وُجد وإلا بالمعرّف.</summary>
     public string PublicPath(string? orgSlug) =>
@@ -51,4 +54,14 @@ public static class PresentationSlug
     }
 
     public static bool IsValid(string slug) => slug.Length is >= 2 and <= MaxLength && slug == Normalize(slug);
+}
+
+/// <summary>سياسات الكتابة في بيانات العرض.</summary>
+public static class PresentationEditPolicy
+{
+    public const string Anyone = "anyone";
+    public const string Members = "members";
+    public const string Owner = "owner";
+    public static readonly string[] All = { Anyone, Members, Owner };
+    public static bool IsValid(string? v) => v is not null && All.Contains(v);
 }

@@ -79,6 +79,7 @@ builder.Services.AddSingleton<HistoryStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.History.DashboardAccessService>();
 builder.Services.AddSingleton<ShareStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationDataStore>();
 // محادثة Claude عبر Claude Code CLI على الخادم (ClaudeChat/) — انظر ClaudeCliService.
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeCliService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeChatStore>();
@@ -303,6 +304,13 @@ app.MapGet("/usage", (IWebHostEnvironment env) =>
 app.MapGet("/p/{id}", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
     .AllowAnonymous();
+// دليل «بيانات العرض» لمؤلفي الصفحات (نص عادي من docs/ في المستودع، يُنسخ مع النشر إن وُجد).
+app.MapGet("/docs/presentations-data.md", (IWebHostEnvironment env) =>
+{
+    var candidates = new[] { Path.Combine(env.ContentRootPath, "..", "..", "docs", "presentations-data.md"), Path.Combine(env.WebRootPath, "docs", "presentations-data.md") };
+    var file = candidates.FirstOrDefault(File.Exists);
+    return file is null ? Results.NotFound() : Results.File(Path.GetFullPath(file), "text/markdown; charset=utf-8");
+}).AllowAnonymous();
 // الرابط المقروء: /p/{اسم-المنظمة}/{اسم-العرض} (فريد داخل المنظمة) — نفس صفحة المشاهدة.
 app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))

@@ -196,3 +196,48 @@ public class ToolUseSummaryTests
         Assert.Equal(("list_tables", ""), ChatToDashboard.Api.ClaudeChat.ClaudeCliService.SummarizeToolUse("mcp__jeem__list_tables", null));
     }
 }
+
+/// <summary>بيانات العرض: صلاحية الكتابة بحسب السياسة، وصحة المفاتيح.</summary>
+public class PresentationDataTests
+{
+    private static ChatToDashboard.Api.Presentations.Presentation P(string policy) =>
+        new() { Id = "p1", OrganizationId = "org1", CreatedByUserId = "owner", EditPolicy = policy };
+    private static ChatToDashboard.Api.Users.AppUser U(string id, string org, string role = ChatToDashboard.Api.Users.UserRoles.User) =>
+        new() { Id = id, OrganizationId = org, Role = role };
+
+    [Fact]
+    public void anyone_يسمح_حتى_بلا_دخول()
+    {
+        Assert.True(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(null, P("anyone")));
+        Assert.True(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(U("x", "other"), P("anyone")));
+    }
+
+    [Fact]
+    public void members_يتطلب_مسجَّلًا_من_نفس_المنظمة()
+    {
+        Assert.False(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(null, P("members")));
+        Assert.False(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(U("x", "other"), P("members")));
+        Assert.True(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(U("x", "org1"), P("members")));
+    }
+
+    [Fact]
+    public void owner_لصاحب_العرض_أو_المسؤول_في_المنظمة_فقط()
+    {
+        Assert.False(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(U("x", "org1"), P("owner")));
+        Assert.True(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(U("owner", "org1"), P("owner")));
+        Assert.True(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(U("a", "org1", ChatToDashboard.Api.Users.UserRoles.Admin), P("owner")));
+        Assert.False(ChatToDashboard.Api.Controllers.PresentationsController.CanWriteData(U("a", "other", ChatToDashboard.Api.Users.UserRoles.Admin), P("owner")));
+    }
+
+    [Theory]
+    [InlineData("tasks", true)] [InlineData("q3.notes-v2", true)] [InlineData("", false)] [InlineData("bad key", false)] [InlineData("a/b", false)]
+    public void المفاتيح_الصالحة(string key, bool ok) =>
+        Assert.Equal(ok, ChatToDashboard.Api.Presentations.PresentationDataStore.IsValidKey(key));
+
+    [Fact]
+    public void السياسات_المعروفة_فقط()
+    {
+        Assert.True(ChatToDashboard.Api.Presentations.PresentationEditPolicy.IsValid("anyone"));
+        Assert.False(ChatToDashboard.Api.Presentations.PresentationEditPolicy.IsValid("public"));
+    }
+}

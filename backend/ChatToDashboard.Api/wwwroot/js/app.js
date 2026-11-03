@@ -8729,6 +8729,11 @@ async function loadPresentations() {
           <div class="col-actions">
             ${live ? `<a class="icon-btn" href="${esc(p.url || `/p/${p.id}`)}" target="_blank" rel="noopener" title="فتح العرض">↗</a>
             <button class="icon-btn" data-pres-copy="${esc(p.id)}" data-url="${esc(presPublicUrl(p))}" title="نسخ الرابط">🔗</button>` : ''}
+            ${manage ? `<select class="pres-policy" data-pres-policy="${esc(p.id)}" title="من يستطيع تعديل بيانات العرض (المهام والجداول القابلة للتعديل داخل الصفحة)" aria-label="سياسة التعديل">
+              <option value="anyone"${p.editPolicy === 'anyone' ? ' selected' : ''}>يعدّل: أي شخص معه الرابط</option>
+              <option value="members"${p.editPolicy === 'members' ? ' selected' : ''}>يعدّل: أعضاء المنظمة</option>
+              <option value="owner"${p.editPolicy === 'owner' ? ' selected' : ''}>يعدّل: صاحب العرض والمسؤول</option>
+            </select>` : ''}
             ${manage ? `<button class="icon-btn" data-pres-rename="${esc(p.id)}" data-slug="${esc(p.slug || '')}" title="تغيير اسم الرابط">✏️</button>` : ''}
             ${manage ? `<button class="icon-btn" data-pres-replace="${esc(p.id)}" title="استبدال الملف بنسخة أحدث على نفس الرابط">⬆️</button>` : ''}
             ${manage && live ? `<button class="icon-btn revoke-share-btn" data-pres-revoke="${esc(p.id)}" title="إلغاء الرابط">🚫</button>` : ''}
@@ -8757,6 +8762,12 @@ async function loadPresentations() {
       await loadPresentations();
     }));
     list.querySelectorAll('[data-pres-replace]').forEach(btn => btn.addEventListener('click', () => openPresentationModal(btn.dataset.presReplace)));
+    list.querySelectorAll('[data-pres-policy]').forEach(sel => sel.addEventListener('change', async () => {
+      const res = await fetch(`/api/presentations/${encodeURIComponent(sel.dataset.presPolicy)}/edit-policy`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy: sel.value }),
+      });
+      if (!res.ok) { alert('تعذّر حفظ سياسة التعديل'); await loadPresentations(); }
+    }));
     list.querySelectorAll('[data-pres-rename]').forEach(btn => btn.addEventListener('click', async () => {
       const slug = prompt('اسم الرابط الجديد (حروف وأرقام وشرطات، فريد داخل منظمتك):', btn.dataset.slug);
       if (slug === null) return;

@@ -16,7 +16,7 @@ public class PresentationStore
     private string Table => "[dbo].[Presentations]";
 
     private const string Columns =
-        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount";
+        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, COALESCE(EditPolicy, 'anyone') AS EditPolicy";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -61,6 +61,7 @@ public class PresentationStore
         await AddColumnIfMissingAsync(connection, "ExpiresAt", sqlServer: "DATETIME2", ct);
         await AddColumnIfMissingAsync(connection, "RevokedAt", sqlServer: "DATETIME2", ct);
         await AddColumnIfMissingAsync(connection, "ViewCount", sqlServer: "INT NOT NULL DEFAULT 0", ct);
+        await AddColumnIfMissingAsync(connection, "EditPolicy", sqlServer: "NVARCHAR(16)", ct);
     }
 
     private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
@@ -157,6 +158,12 @@ public class PresentationStore
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"UPDATE {Table} SET RevokedAt = @now WHERE Id = @id AND RevokedAt IS NULL", new { id, now = DateTime.UtcNow });
+    }
+
+    public async Task SetEditPolicyAsync(string id, string policy, CancellationToken ct = default)
+    {
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {Table} SET EditPolicy = @policy, UpdatedAt = @now WHERE Id = @id", new { id, policy, now = DateTime.UtcNow });
     }
 
     public async Task DeleteAsync(string id, CancellationToken ct = default)

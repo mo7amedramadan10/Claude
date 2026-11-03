@@ -260,6 +260,32 @@
   العلوي فلم يجدها المستخدم. `loadPresentations`، نافذة `presentation-modal` للرفع والاستبدال، نسخ الرابط `/p/{id}`،
   فتح، إلغاء/إعادة تفعيل/حذف، وزر «🔑 ربط Claude». بلا تمرير أفقي على 390px للقائمة وللعارض.
 
+## بيانات العرض: أجزاء قابلة للتعديل في صفحات HTML المرفوعة (المرحلة الأولى)
+
+- **الهدف**: صفحة العرض تبقى ثابتة وبياناتها القابلة للتعديل (مهام، جداول…) في القاعدة بصلاحيات من المنصة —
+  بدل إعادة نشر الصفحة كلها أو تنزيل نسخة (ما كانت تفعله صفحة المستخدم عبر واجهة Claude artifact).
+- **المخزن** `Presentations/PresentationDataStore.cs`: جدول `dbo.PresentationData(PresentationId, Key, Json, Version,
+  UpdatedAt, UpdatedBy)`؛ مفتاح `[\w.-]{1,100}`، قيمة ≤256KB، ≤50 مفتاحًا للعرض؛ `SetAsync` بإصدار متوقع (null = بلا
+  تحقق) ويعيد تعارضًا عند عدم التطابق، والتحديث مشروط بـ`Version = current` ضد السباق. تُحذف مع العرض.
+- **السياسة** `Presentation.EditPolicy` (عمود جديد، افتراضي `anyone` بقرار المستخدم): `anyone` = أي من يفتح الرابط حتى
+  بلا دخول، `members` = مسجَّل من نفس المنظمة، `owner` = صاحبه/المسؤول. `CanWriteData` (internal، مختبَرة).
+  قائمة العروض فيها قائمة منسدلة لتغييرها (`PUT {id}/edit-policy`).
+- **API عامة** (`[AllowAnonymous]`، بالمعرّف أو `by/{org}/{slug}`): `GET …/access` (signedIn/canEdit/editPolicy)،
+  `GET …/data` (المفاتيح)، `GET …/data/{key}` (مفقود → `value:null, version:0`)، `PUT …/data/{key}` `{value, version?}`
+  (401 بلا دخول حين تلزم، 403، 409 تعارض مع `version` الحالي)، `DELETE …/data/{key}` لصاحبه.
+- **الجسر**: الصفحة داخل iframe معزول (أصل معتم) فلا تنادي الـ API مباشرة. `wwwroot/js/jeem-page.js` (تضمّنه الصفحة
+  بـ `<script src="/js/jeem-page.js">`) يرسل `{jeem:1,id,type,payload}` بـ postMessage إلى `presentation.html`
+  (`installBridge`: يتحقق أن `event.source === frame.contentWindow`، ينفّذ على الـ API بكوكي المشاهد، ويرد بنفس
+  المعرّف). الواجهة: `jeem.store.get/set/list/getWithMeta`، `jeem.viewer()`، `jeem.onChange(key, fn)` (استطلاع 20 ث).
+  `set` يرسل آخر إصدار قرأته تلقائيًا (`{force:true}` يتجاوز)؛ الأخطاء بـ `code`: conflict/sign_in_required/forbidden/
+  bad_key. خارج المنصة يعمل على localStorage بنفس العقد (للتأليف). الدليل للمؤلفين `docs/presentations-data.md`
+  (يُخدم على `/docs/presentations-data.md`) ومقتطف في نافذة الرفع.
+- **تحقق** (بلا SQL Server: خادم Node وهمي يحاكي الـ API + صفحة المشاهدة الحقيقية + الجسر الحقيقي في Playwright):
+  get/set/الإصدار/409/list/bad_key، `fetch` مباشر من داخل الإطار محجوب، سياسة members بلا دخول → 401 والقراءة تعمل؛
+  وصفحة المستخدم («دور الإدارة في مشروع الخوارزمي») بعد تكييف تبويب المهام: حفظ ← API v1 ← إعادة تحميل تحتفظ ←
+  تعارض يعرض الرسالة. اختبارات وحدة للسياسات والمفاتيح (146/146). **المرحلتان 2 و3** (وضع التحديد + الأنماط الجاهزة،
+  ثم التحويل بالـ AI) لم تبدآ.
+
 ## ربط Claude Desktop: مفاتيح الوصول الشخصية + جسر MCP (`tools/jeem-mcp/`)
 
 - **مفاتيح الوصول** (`Users/ApiTokenStore.cs`، جدول `ApiTokens`): `jeem_<48 hex>`، يُخزَّن SHA-256 فقط + بادئة 12 حرفًا

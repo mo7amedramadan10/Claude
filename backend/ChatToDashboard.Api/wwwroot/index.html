@@ -1140,7 +1140,9 @@
   <div class="modal share-modal-box">
     <h3 id="presentation-modal-title">رفع عرض تقديمي</h3>
     <p class="modal-note">صفحة HTML واحدة (مثل عرض أعددته بأداة خارجية). أي شخص معه الرابط يفتحها بدون
-      تسجيل دخول، وتُعرض داخل إطار معزول لا يصل إلى بيانات النظام. الحد 15 ميغابايت.</p>
+      تسجيل دخول، وتُعرض داخل إطار معزول لا يصل إلى بيانات النظام. الحد 15 ميغابايت.
+      لو الصفحة فيها أجزاء قابلة للتعديل (مهام، جداول…)، ضمّن فيها <code>&lt;script src="/js/jeem-page.js"&gt;</code>
+      واحفظ بياناتها بـ <code>jeem.store</code> — تُحفظ في المنصة لا داخل الملف. <a href="/docs/presentations-data.md" target="_blank" rel="noopener">الدليل</a>.</p>
     <label class="share-expiry-label">العنوان</label>
     <input type="text" id="presentation-title" placeholder="مثال: عرض نتائج الربع الثالث" />
     <div id="presentation-slug-wrap">

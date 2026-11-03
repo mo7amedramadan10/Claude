@@ -23,12 +23,14 @@ public class PresentationsController : ControllerBase
     private const string SandboxCsp = "sandbox allow-scripts allow-popups allow-forms allow-modals allow-downloads";
 
     private readonly PresentationStore _store;
+    private readonly PresentationDataStore _data;
     private readonly PermissionsService _permissions;
     private readonly OrganizationStore _organizations;
 
-    public PresentationsController(PresentationStore store, PermissionsService permissions, OrganizationStore organizations)
+    public PresentationsController(PresentationStore store, PresentationDataStore data, PermissionsService permissions, OrganizationStore organizations)
     {
         _store = store;
+        _data = data;
         _permissions = permissions;
         _organizations = organizations;
     }
@@ -39,7 +41,7 @@ public class PresentationsController : ControllerBase
     private object Shape(Presentation p, AppUser user, string? orgSlug) => new
     {
         p.Id, p.Title, p.Slug, p.FileName, p.SizeBytes, p.CreatedByUserId, p.CreatedByName, p.CreatedAt, p.UpdatedAt, p.ExpiresAt, p.RevokedAt,
-        p.ViewCount, p.IsActive, canManage = CanManage(user, p), url = p.PublicPath(orgSlug),
+        p.ViewCount, p.IsActive, p.EditPolicy, canManage = CanManage(user, p), url = p.PublicPath(orgSlug),
     };
 
     /// <summary>اسم الرابط النهائي: المُدخل أو المشتق من العنوان، مع 409 إن كان مستخدمًا داخل المنظمة (ومقترح بديل).</summary>
@@ -182,6 +184,7 @@ public class PresentationsController : ControllerBase
         var (_, _, fail) = await ManagedAsync(id, ct);
         if (fail is not null) return fail;
         await _store.DeleteAsync(id, ct);
+        await _data.DeleteAllAsync(id, ct);
         return NoContent();
     }
 
@@ -217,6 +220,120 @@ public class PresentationsController : ControllerBase
         Response.Headers["Cache-Control"] = "no-store";
         return Content(html, "text/html; charset=utf-8");
     }
+
+    // ---------- بيانات العرض (مخزن مفتاح ← JSON تقرأه/تكتبه الصفحة عبر jeem-page.js) ----------
+
+    public class EditPolicyRequest { public string? Policy { get; set; } }
+    public class DataWriteRequest { public System.Text.Json.JsonElement Value { get; set; } public long? Version { get; set; } }
+
+    /// <summary>سياسة الكتابة في بيانات العرض (anyone/members/owner) — صاحب العرض أو المسؤول.</summary>
+    [HttpPut("{id}/edit-policy")]
+    public async Task<IActionResult> SetEditPolicy(string id, [FromBody] EditPolicyRequest request, CancellationToken ct)
+    {
+        var (_, _, fail) = await ManagedAsync(id, ct);
+        if (fail is not null) return fail;
+        if (!PresentationEditPolicy.IsValid(request.Policy)) return BadRequest(new { error = "سياسة غير معروفة: anyone أو members أو owner." });
+        await _store.SetEditPolicyAsync(id, request.Policy!, ct);
+        return NoContent();
+    }
+
+    /// <summary>ما يستطيعه من يفتح الرابط الآن: هل هو مسجَّل؟ هل يستطيع الكتابة بحسب سياسة العرض؟ — بلا تسجيل دخول.</summary>
+    [HttpGet("{id}/access")]
+    [AllowAnonymous]
+    public Task<IActionResult> Access(string id, CancellationToken ct) => AccessCoreAsync(() => _store.GetAsync(id, ct), ct);
+
+    [HttpGet("by/{org}/{slug}/access")]
+    [AllowAnonymous]
+    public Task<IActionResult> AccessBySlug(string org, string slug, CancellationToken ct) => AccessCoreAsync(() => FindBySlugAsync(org, slug, ct), ct);
+
+    private async Task<IActionResult> AccessCoreAsync(Func<Task<Presentation?>> find, CancellationToken ct)
+    {
+        var p = await find();
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        var canEdit = CanWriteData(user, p);
+        return Ok(new { presentationId = p.Id, signedIn = user is not null, name = user?.DisplayName, canEdit, p.EditPolicy });
+    }
+
+    [HttpGet("{id}/data")]
+    [AllowAnonymous]
+    public Task<IActionResult> DataList(string id, CancellationToken ct) => DataListCoreAsync(() => _store.GetAsync(id, ct), ct);
+
+    [HttpGet("by/{org}/{slug}/data")]
+    [AllowAnonymous]
+    public Task<IActionResult> DataListBySlug(string org, string slug, CancellationToken ct) => DataListCoreAsync(() => FindBySlugAsync(org, slug, ct), ct);
+
+    private async Task<IActionResult> DataListCoreAsync(Func<Task<Presentation?>> find, CancellationToken ct)
+    {
+        var p = await find();
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        var keys = await _data.ListAsync(p.Id, ct);
+        return Ok(new { keys = keys.Select(k => new { k.Key, k.Version, k.UpdatedAt, k.UpdatedBy, k.Bytes }) });
+    }
+
+    /// <summary>قراءة قيمة: عامة لأي من يفتح الرابط (كما الصفحة نفسها). مفتاح غير موجود → قيمة null وإصدار 0.</summary>
+    [HttpGet("{id}/data/{key}")]
+    [AllowAnonymous]
+    public Task<IActionResult> DataGet(string id, string key, CancellationToken ct) => DataGetCoreAsync(() => _store.GetAsync(id, ct), key, ct);
+
+    [HttpGet("by/{org}/{slug}/data/{key}")]
+    [AllowAnonymous]
+    public Task<IActionResult> DataGetBySlug(string org, string slug, string key, CancellationToken ct) => DataGetCoreAsync(() => FindBySlugAsync(org, slug, ct), key, ct);
+
+    private async Task<IActionResult> DataGetCoreAsync(Func<Task<Presentation?>> find, string key, CancellationToken ct)
+    {
+        var p = await find();
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        if (!PresentationDataStore.IsValidKey(key)) return BadRequest(new { error = "مفتاح غير صالح." });
+        var entry = await _data.GetAsync(p.Id, key, ct);
+        Response.Headers["Cache-Control"] = "no-store";
+        if (entry is null) return Ok(new { key, value = (object?)null, version = 0L, updatedAt = (DateTime?)null, updatedBy = (string?)null });
+        return Ok(new { key, value = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(entry.Json), entry.Version, entry.UpdatedAt, entry.UpdatedBy });
+    }
+
+    /// <summary>كتابة قيمة بحسب سياسة العرض (anyone افتراضيًا)، مع إصدار متوقع اختياري (409 عند التعارض).</summary>
+    [HttpPut("{id}/data/{key}")]
+    [AllowAnonymous]
+    public Task<IActionResult> DataSet(string id, string key, [FromBody] DataWriteRequest request, CancellationToken ct) =>
+        DataSetCoreAsync(() => _store.GetAsync(id, ct), key, request, ct);
+
+    [HttpPut("by/{org}/{slug}/data/{key}")]
+    [AllowAnonymous]
+    public Task<IActionResult> DataSetBySlug(string org, string slug, string key, [FromBody] DataWriteRequest request, CancellationToken ct) =>
+        DataSetCoreAsync(() => FindBySlugAsync(org, slug, ct), key, request, ct);
+
+    private async Task<IActionResult> DataSetCoreAsync(Func<Task<Presentation?>> find, string key, DataWriteRequest request, CancellationToken ct)
+    {
+        var p = await find();
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        if (!PresentationDataStore.IsValidKey(key)) return BadRequest(new { error = "مفتاح غير صالح." });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (!CanWriteData(user, p))
+            return StatusCode(user is null ? 401 : 403, new { error = user is null ? "سجّل الدخول لتعديل بيانات هذا العرض." : "لا تملك صلاحية تعديل بيانات هذا العرض." });
+        var json = request.Value.ValueKind == System.Text.Json.JsonValueKind.Undefined ? "null" : request.Value.GetRawText();
+        if (Encoding.UTF8.GetByteCount(json) > PresentationDataStore.MaxJsonBytes)
+            return BadRequest(new { error = $"حجم البيانات يتجاوز الحد ({PresentationDataStore.MaxJsonBytes / 1024} كيلوبايت)." });
+        var (ok, version, error) = await _data.SetAsync(p.Id, key, json, request.Version, user?.DisplayName ?? user?.Username ?? "زائر", ct);
+        if (!ok) return StatusCode(error!.StartsWith("تعارض") ? 409 : 400, new { error, version });
+        return Ok(new { key, version, updatedAt = DateTime.UtcNow });
+    }
+
+    [HttpDelete("{id}/data/{key}")]
+    public async Task<IActionResult> DataDelete(string id, string key, CancellationToken ct)
+    {
+        var (_, _, fail) = await ManagedAsync(id, ct);
+        if (fail is not null) return fail;
+        await _data.DeleteAsync(id, key, ct);
+        return NoContent();
+    }
+
+    /// <summary>سياسة الكتابة: anyone = أي من يفتح الرابط (حتى بلا دخول)؛ members = مسجَّل من نفس المنظمة؛ owner = صاحبه/المسؤول.</summary>
+    internal static bool CanWriteData(AppUser? user, Presentation p) => p.EditPolicy switch
+    {
+        PresentationEditPolicy.Members => user is not null && string.Equals(user.OrganizationId, p.OrganizationId, StringComparison.Ordinal),
+        PresentationEditPolicy.Owner => user is not null && string.Equals(user.OrganizationId, p.OrganizationId, StringComparison.Ordinal) && CanManage(user, p),
+        _ => true,
+    };
 
     private static bool CanManage(AppUser user, Presentation p) =>
         user.Role == UserRoles.Admin || string.Equals(p.CreatedByUserId, user.Id, StringComparison.Ordinal);
