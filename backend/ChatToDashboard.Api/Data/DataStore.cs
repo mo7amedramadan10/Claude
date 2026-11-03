@@ -68,6 +68,79 @@ public class DataStore
         }
     }
 
+    /// <summary>ترحيل لمرة واحدة من المخطط القديم <c>staging</c> إلى <c>dbo</c> (قرار 2026-11-02): أي قاعدة نُشرت قبل
+    /// ذلك (Azure مثلًا) ما زالت جداولها كلها تحت <c>staging</c>، وبدون هذا الترحيل كان الكود سينشئ جداول <c>dbo</c>
+    /// فارغة ويترك الحسابات والبيانات معزولة فلا يدخل أحد. يعمل عند كل إقلاع قبل أن يلمس أي مخزن قاعدته: ينقل كل
+    /// جدول في <c>staging</c> لا نظير له في <c>dbo</c> بـ <c>ALTER SCHEMA TRANSFER</c> (البيانات والفهارس تبقى كما هي)،
+    /// ويعيد كتابة أسماء جداول الملفات المسجَّلة بالبادئة القديمة، ثم يحذف المخطط إن فرغ. جدول له نظير في
+    /// <c>dbo</c> بالفعل يُترك مكانه مع تحذير في السجل (لا يُدمج ولا يُحذف شيء تلقائيًا).</summary>
+    public async Task MigrateLegacyStagingSchemaAsync(ILogger logger, CancellationToken ct = default)
+    {
+        const string legacy = "staging";
+        await using var connection = await OpenConnectionAsync(ct);
+
+        await using (var probe = connection.CreateCommand())
+        {
+            probe.CommandText = "SELECT SCHEMA_ID(@s)";
+            probe.Parameters.Add(new SqlParameter("@s", legacy));
+            if (await probe.ExecuteScalarAsync(ct) is null or DBNull) return;
+        }
+
+        var tables = new List<string>();
+        await using (var list = connection.CreateCommand())
+        {
+            list.CommandText = "SELECT t.name FROM sys.tables t WHERE t.schema_id = SCHEMA_ID(@s) ORDER BY t.name";
+            list.Parameters.Add(new SqlParameter("@s", legacy));
+            await using var reader = await list.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct)) tables.Add(reader.GetString(0));
+        }
+
+        var moved = 0;
+        foreach (var table in tables)
+        {
+            await using var exists = connection.CreateCommand();
+            exists.CommandText = "SELECT OBJECT_ID(@t)";
+            exists.Parameters.Add(new SqlParameter("@t", $"{SqlServerSchema}.{table}"));
+            if (await exists.ExecuteScalarAsync(ct) is not (null or DBNull))
+            {
+                logger.LogWarning(
+                    "Legacy table {Legacy}.{Table} left in place: {Schema}.{Table} already exists — merge or drop it by hand.",
+                    legacy, table, SqlServerSchema);
+                continue;
+            }
+
+            await using var transfer = connection.CreateCommand();
+            transfer.CommandText = $"ALTER SCHEMA [{SqlServerSchema}] TRANSFER [{legacy}].[{table.Replace("]", "]]")}]";
+            await transfer.ExecuteNonQueryAsync(ct);
+            moved++;
+        }
+
+        if (moved > 0)
+        {
+            // أسماء جداول الملفات المحفوظة في الفهرس بالبادئة القديمة (ملفات المخطط المشترك فقط؛ ملفات المشاريع
+            // تحمل proj_<id>. ولا تتأثر).
+            await using var rename = connection.CreateCommand();
+            rename.CommandText =
+                $"IF OBJECT_ID('{SqlServerSchema}.repo_Files') IS NOT NULL " +
+                $"UPDATE [{SqlServerSchema}].[repo_Files] SET TableName = '{SqlServerSchema}.' + SUBSTRING(TableName, {legacy.Length + 2}, 4000) " +
+                $"WHERE TableName LIKE '{legacy}.%'";
+            await rename.ExecuteNonQueryAsync(ct);
+            logger.LogWarning("Migrated {Count} table(s) from the legacy [{Legacy}] schema to [{Schema}].", moved, legacy, SqlServerSchema);
+        }
+
+        await using (var remaining = connection.CreateCommand())
+        {
+            remaining.CommandText = "SELECT COUNT(*) FROM sys.objects WHERE schema_id = SCHEMA_ID(@s)";
+            remaining.Parameters.Add(new SqlParameter("@s", legacy));
+            if (Convert.ToInt32(await remaining.ExecuteScalarAsync(ct)) == 0)
+            {
+                await using var drop = connection.CreateCommand();
+                drop.CommandText = $"DROP SCHEMA [{legacy}]";
+                await drop.ExecuteNonQueryAsync(ct);
+            }
+        }
+    }
+
     // ---- Naming ----
 
     /// <summary>The schema a project's own uploaded-file tables live in. Falls back to the shared

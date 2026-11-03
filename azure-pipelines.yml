@@ -41,6 +41,7 @@ extends:
       Ollama__BaseUrl: http://172.17.242.1:8081/api/v1/
       Ollama__Model: qwen3:14b
       Auth__SeedAdmin__Username: admin
+      ClaudeCli__Enabled: "false"      # لا Claude Code CLI في الحاوية بعد؛ تُخفى شاشة «محادثة Claude» حتى يتوفر
 
     secrets:                           # container env : Library group 'ai-dashboard'
       OpenAI__ApiKey: OPENAI_API_KEY

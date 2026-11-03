@@ -335,6 +335,11 @@ using (var scope = app.Services.CreateScope())
     // gets created — a silent lockout, since there's no self-signup to fall back on.
     await dataStore.EnsureDatabaseExistsAsync(logger);
 
+    // قاعدة نُشرت قبل 2026-11-02 ما زالت جداولها تحت [staging]؛ تُنقل إلى [dbo] هنا قبل أن ينشئ أي مخزن جداوله
+    // (انظر DataStore.MigrateLegacyStagingSchemaAsync). فشله يُسجَّل ولا يوقف الإقلاع.
+    try { await dataStore.MigrateLegacyStagingSchemaAsync(logger); }
+    catch (Exception ex) { logger.LogError(ex, "Legacy [staging] → [dbo] schema migration failed."); }
+
     // SaaS hierarchy (Platform → Organization → Project — see Organizations/Projects): every
     // install needs at least a default organization and project for its existing/first users
     // and data to belong to. Created once, here, before the admin-seeding step below so a
