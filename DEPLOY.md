@@ -104,7 +104,10 @@ it in step 1; the app still creates the `staging` schema and tables on its own.
   is either the one you set via `Auth:SeedAdmin:Username`/`Password` (user-secrets)
   before first run, or a random one generated and logged once on first startup — check
   the startup log if you didn't set it yourself. Change that password (or replace the
-  account) before sharing the URL beyond yourself.
+  account) before sharing the URL beyond yourself. Forgot it on a running deployment? Set
+  `Auth__SeedAdmin__ResetPassword=true` together with `Auth__SeedAdmin__Password` for one
+  restart (the platform-owner account named `Auth__SeedAdmin__Username` is reset), then
+  remove the flag.
 - **Use HTTPS** for anything reachable from the internet (App Service gives it for free; on
   a VPS put Caddy or nginx with Let's Encrypt in front of port 8080).
 - **Database user**: the compose file uses `sa` for simplicity. For a hardened setup, create

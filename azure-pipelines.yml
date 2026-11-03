@@ -41,6 +41,8 @@ extends:
       Ollama__BaseUrl: http://172.17.242.1:8081/api/v1/
       Ollama__Model: qwen3:14b
       Auth__SeedAdmin__Username: admin
+      # لاستعادة كلمة مرور admin (مالك المنصّة) من SEED_ADMIN_PASSWORD على قاعدة قائمة: فعّل السطر التالي لنشرة
+      # واحدة ثم أزله (وإلا أُعيدت الكتابة مع كل إقلاع). Auth__SeedAdmin__ResetPassword: "true"
       ClaudeCli__Enabled: "false"      # لا Claude Code CLI في الحاوية بعد؛ تُخفى شاشة «محادثة Claude» حتى يتوفر
 
     secrets:                           # container env : Library group 'ai-dashboard'

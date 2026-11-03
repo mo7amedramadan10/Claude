@@ -542,6 +542,13 @@ naming policy تلقائية في السيريلايزر.
   (البند يختفي من القائمة، و`status.enabled=false`). خادم MCP الداخلي يُسجَّل لكنه بلا فائدة دون الـ CLI. تفعيلها لاحقًا =
   تثبيت الـ CLI وتسجيل دخوله داخل الصورة + إزالة هذا السطر.
 - «نظام المشتريات» معطَّل في appsettings؛ لتفعيله على Azure دون تعديل الملف: متغير بيئة `Sources__Systems__0__Enabled=true`.
+- **استعادة كلمة مرور مالك المنصّة على نشر قائم** (2026-11-03): الزرع في Program.cs لا يعمل إلا على قاعدة بلا حسابات،
+  فأُضيف `Auth:SeedAdmin:ResetPassword` (افتراضيًا false): true عند الإقلاع يعيد كتابة كلمة مرور حساب مالك المنصّة المحلي
+  الحامل لاسم `Auth:SeedAdmin:Username` من `Auth:SeedAdmin:Password` (ويفعّله) ثم يسجّل تحذيرًا بإزالة العلم؛ بلا كلمة أو
+  بغير حساب واحد بالضبط لا يغيّر شيئًا. على Azure: `Auth__SeedAdmin__ResetPassword: "true"` في env الـ pipeline لنشرة واحدة
+  (السطر موجود معلَّقًا) مع `SEED_ADMIN_PASSWORD` في مجموعة `ai-dashboard`، ثم يُزال. البديل الفوري بلا نشر: UPDATE على
+  `dbo.AppUsers.PasswordHash` بتجزئة بصيغة `PasswordHasher` (`100000.<salt b64>.<hash b64>`، PBKDF2-HMACSHA256) —
+  سكربت جاهز في `Claude outputs/azure-reset-admin-password.sql` (مجلد غير متتبَّع؛ لا يُرفع).
 - لوحات محفوظة قديمة في `DashboardHistory` قد تحمل SQL بأسماء `staging.sys_*`؛ لا يُعاد كتابتها تلقائيًا (نادرة، والنظام
   الوحيد معطَّل).
 

@@ -513,6 +513,7 @@ in a real embeddings + vector-store pipeline (e.g. Qdrant) without touching the 
 | `Pricing:Models` | Anthropic list prices | Price per million tokens, per model, for the `/usage` cost estimate |
 | `Auth:SeedAdmin:Username` | `admin` | Username for the auto-created first admin account |
 | `Auth:SeedAdmin:Password` | — | Set via user-secrets; leave unset to get a random generated one, logged once |
+| `Auth:SeedAdmin:ResetPassword` | `false` | `true` resets the platform-owner account named `Auth:SeedAdmin:Username` to `Auth:SeedAdmin:Password` on startup (recover a forgotten password on an existing deployment); set it back to `false` afterwards |
 | `ActiveDirectory:Enabled` | `false` | Turn on AD login |
 | `ActiveDirectory:Host` | — | Domain controller hostname/IP, via user-secrets |
 | `ActiveDirectory:Domain` | — | DNS domain used to build the login UPN (`user@domain`) |

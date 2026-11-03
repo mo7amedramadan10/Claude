@@ -457,6 +457,44 @@ using (var scope = app.Services.CreateScope())
                     "No accounts existed — created the initial admin account {Username} from Auth:SeedAdmin.",
                     seedUsername);
         }
+        // إعادة ضبط كلمة مرور مالك المنصّة من الإعدادات عند الإقلاع (Auth:SeedAdmin:ResetPassword = true مع
+        // Auth:SeedAdmin:Password): الطريق الوحيد لاستعادة الدخول على نشر قائم (Azure) حين تُنسى كلمة المرور،
+        // لأن الزرع أعلاه لا يعمل إلا على قاعدة بلا حسابات. يُطبَّق على حساب مالك المنصّة الحامل لاسم الزرع
+        // فقط، ويُسجَّل تحذير بإزالة العلم بعدها حتى لا تُعاد الكتابة مع كل إقلاع.
+        else if (builder.Configuration.GetValue<bool>("Auth:SeedAdmin:ResetPassword"))
+        {
+            var seedUsername = builder.Configuration["Auth:SeedAdmin:Username"] ?? "admin";
+            var seedPassword = builder.Configuration["Auth:SeedAdmin:Password"];
+            if (string.IsNullOrWhiteSpace(seedPassword))
+            {
+                logger.LogWarning(
+                    "Auth:SeedAdmin:ResetPassword is set but Auth:SeedAdmin:Password is empty — nothing was reset.");
+            }
+            else
+            {
+                var owners = (await userStore.ListAsync())
+                    .Where(u => u.IsPlatformOwner && u.AuthMethod == AuthMethods.Local &&
+                                string.Equals(u.Username, seedUsername, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (owners.Count != 1)
+                {
+                    logger.LogWarning(
+                        "Auth:SeedAdmin:ResetPassword: expected exactly one platform-owner account named {Username}, found {Count} — nothing was reset.",
+                        seedUsername, owners.Count);
+                }
+                else
+                {
+                    var owner = owners[0];
+                    owner.PasswordHash = PasswordHasher.Hash(seedPassword);
+                    owner.IsActive = true;
+                    await userStore.UpdateAsync(owner);
+                    logger.LogWarning(
+                        "Auth:SeedAdmin:ResetPassword: password of platform-owner account {Username} was reset from configuration. " +
+                        "Remove Auth:SeedAdmin:ResetPassword now so it is not reapplied on every startup.",
+                        seedUsername);
+                }
+            }
+        }
     }
     catch (Exception ex)
     {
