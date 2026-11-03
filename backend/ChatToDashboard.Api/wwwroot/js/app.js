@@ -8579,6 +8579,15 @@ function ccRenderMessages() {
   box.querySelectorAll('.cc-msg.assistant').forEach(d => d.addEventListener('click', () => { const m = CC.messages.find(x => x.id === d.dataset.id); if (m) ccShowResult(m); }));
   box.scrollTop = box.scrollHeight;
 }
+// سطر «🔎 يستعلم عن…» في الشريط لكل نداء أداة أثناء الرد (حدث SSE: tool) — يبقى بعد الرد كسجل مختصر.
+const CC_TOOL_LABEL = { list_tables: 'يستعرض جداول مشروعك', describe_table: 'يفحص أعمدة', run_sql: 'يستعلم عن' };
+function ccShowToolActivity(data) {
+  let box = el('cc-messages').querySelector('.cc-activity.live');
+  if (!box) { box = document.createElement('div'); box.className = 'cc-activity live'; el('cc-messages').appendChild(box); }
+  const label = CC_TOOL_LABEL[data.tool] || data.tool;
+  box.insertAdjacentHTML('beforeend', `<div class="cc-tool">🔎 ${esc(label)}${data.detail ? ` <code dir="ltr">${esc(data.detail)}</code>` : ''}</div>`);
+  el('cc-messages').scrollTop = el('cc-messages').scrollHeight;
+}
 async function ccSend(text) {
   if (CC.abort) return;
   const userMsg = { id: 'u' + Date.now(), role: 'user', text, createdAt: new Date().toISOString() };
@@ -8605,7 +8614,17 @@ async function ccSend(text) {
         if (ev === 'chat') { if (!CC.chatId) { CC.chatId = data.id; el('cc-head-desc').textContent = data.title; ccLoadChats(); } }
         else if (ev === 'init') { el('cc-status').textContent = `جارٍ الرد… ${data.model || ''}`; }
         else if (ev === 'delta') { draft.text += data.text; el('cc-result').querySelector('.cc-doc').innerHTML = ccMarkdown(draft.text); }
-        else if (ev === 'done') { CC.messages.push(data.message); ccRenderMessages(); ccShowResult(data.message); finished = true; }
+        else if (ev === 'tool') { ccShowToolActivity(data); }
+        else if (ev === 'done') {
+          const activity = el('cc-messages').querySelector('.cc-activity.live');
+          const activityHtml = activity ? activity.innerHTML : '';
+          CC.messages.push(data.message); ccRenderMessages(); ccShowResult(data.message); finished = true;
+          if (activityHtml) {
+            const n = (activityHtml.match(/cc-tool/g) || []).length;
+            const last = el('cc-messages').querySelector('.cc-msg.assistant:last-of-type');
+            last?.insertAdjacentHTML('beforebegin', `<details class="cc-activity done"><summary>🔎 ${n} ${n === 1 ? 'عملية' : 'عمليات'} على البيانات</summary>${activityHtml}</details>`);
+          }
+        }
         else if (ev === 'error') { throw new Error(data.message || 'خطأ من الخادم'); }
       }
     }

@@ -3275,3 +3275,10 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
   .jeem-scope .cc-rail { order: 2; width: 100%; height: 48%; border-inline-start: 0; border-top: 1px solid var(--line); }
   .jeem-scope .cc-pane { order: 1; height: 52%; }
 }
+
+/* محادثة Claude — نشاط الأدوات أثناء الرد (حدث tool) وسجلّه المطوي بعده */
+.jeem-scope .cc-activity { align-self: stretch; font-size: var(--fs-xs); color: var(--ink-2); background: var(--plane); border: 1px dashed var(--line); border-radius: 10px; padding: 6px 10px; }
+.jeem-scope .cc-activity.live .cc-tool:last-child::after { content: " …"; }
+.jeem-scope .cc-activity summary { cursor: pointer; }
+.jeem-scope .cc-tool { padding: 2px 0; overflow-wrap: anywhere; }
+.jeem-scope .cc-tool code { font-size: 11px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 4px; }

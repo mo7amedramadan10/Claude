@@ -173,3 +173,26 @@ public class ReadOnlySqlValidatorTests
         Assert.Null(ProjectCatalog.Match(allowed, "repo_Files"));
     }
 }
+
+/// <summary>ملخص نداء الأداة الذي يُبث للواجهة (الخطوة 5).</summary>
+public class ToolUseSummaryTests
+{
+    [Fact]
+    public void يزيل_بادئة_الخادم_ويختصر_الاستعلام()
+    {
+        var input = System.Text.Json.Nodes.JsonNode.Parse("{\"sql\":\"SELECT Stage, COUNT(*)\\nFROM proj_ab12.Opportunities GROUP BY Stage\"}")!.AsObject();
+        var (tool, detail) = ChatToDashboard.Api.ClaudeChat.ClaudeCliService.SummarizeToolUse("mcp__jeem__run_sql", input);
+        Assert.Equal("run_sql", tool);
+        Assert.Equal("SELECT Stage, COUNT(*) FROM proj_ab12.Opportunities GROUP BY Stage", detail);
+        var longSql = new string('x', 300);
+        Assert.Equal(161, ChatToDashboard.Api.ClaudeChat.ClaudeCliService.SummarizeToolUse("mcp__jeem__run_sql", System.Text.Json.Nodes.JsonNode.Parse($"{{\"sql\":\"{longSql}\"}}")!.AsObject()).Detail.Length);
+    }
+
+    [Fact]
+    public void describe_table_يعرض_اسم_الجدول_وlist_tables_بلا_تفصيل()
+    {
+        var d = ChatToDashboard.Api.ClaudeChat.ClaudeCliService.SummarizeToolUse("mcp__jeem__describe_table", System.Text.Json.Nodes.JsonNode.Parse("{\"table\":\"proj_ab12.Sales\"}")!.AsObject());
+        Assert.Equal(("describe_table", "proj_ab12.Sales"), d);
+        Assert.Equal(("list_tables", ""), ChatToDashboard.Api.ClaudeChat.ClaudeCliService.SummarizeToolUse("mcp__jeem__list_tables", null));
+    }
+}

@@ -124,6 +124,7 @@ public class ClaudeChatController : ControllerBase
             {
                 case "init": await WriteAsync("init", new { model = ev.Model }, ct); break;
                 case "delta": await WriteAsync("delta", new { text = ev.Text }, ct); break;
+                case "tool": await WriteAsync("tool", new { tool = ev.Tool, detail = ev.Detail }, ct); break;
                 case "error":
                     await WriteAsync("error", new { message = ev.Text }, ct);
                     return;

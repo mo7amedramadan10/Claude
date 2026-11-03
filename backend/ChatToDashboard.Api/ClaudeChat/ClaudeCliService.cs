@@ -15,7 +15,22 @@ namespace ChatToDashboard.Api.ClaudeChat;
 /// </summary>
 public class ClaudeCliService
 {
-    public sealed record StreamEvent(string Kind, string? Text = null, double? CostUsd = null, long? DurationMs = null, string? Model = null);
+    public sealed record StreamEvent(string Kind, string? Text = null, double? CostUsd = null, long? DurationMs = null, string? Model = null,
+        string? Tool = null, string? Detail = null);
+
+    /// <summary>ملخص قصير لنداء أداة يُعرض في شريط المحادثة («🔎 يستعلم عن…»): اسم الأداة بلا بادئة الخادم وأهم مدخلاتها.</summary>
+    public static (string Tool, string Detail) SummarizeToolUse(string? name, JsonObject? input)
+    {
+        var tool = (name ?? "").Replace("mcp__jeem__", "");
+        var detail = tool switch
+        {
+            "run_sql" => Shorten(input?["sql"]?.GetValue<string>(), 160),
+            "describe_table" => input?["table"]?.GetValue<string>() ?? "",
+            _ => "",
+        };
+        return (tool, detail);
+        static string Shorten(string? v, int max) { var t = (v ?? "").Replace("\n", " ").Trim(); return t.Length > max ? t[..max] + "…" : t; }
+    }
 
     private readonly IConfiguration _configuration;
     private readonly ILogger<ClaudeCliService> _logger;
@@ -244,6 +259,18 @@ public class ClaudeCliService
                             full.Append(t);
                             yield return new StreamEvent("delta", t);
                         }
+                        break;
+                    }
+                    case "assistant":
+                    {
+                        // كتل tool_use في رسالة المساعد (مع الأدوات): تُبث لتظهر في الشريط أثناء العمل.
+                        if (node["message"]?["content"] is JsonArray blocks)
+                            foreach (var block in blocks.OfType<JsonObject>())
+                                if (block["type"]?.GetValue<string>() == "tool_use")
+                                {
+                                    var (toolName, detail) = SummarizeToolUse(block["name"]?.GetValue<string>(), block["input"] as JsonObject);
+                                    yield return new StreamEvent("tool", Tool: toolName, Detail: detail);
+                                }
                         break;
                     }
                     case "result":
