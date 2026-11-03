@@ -8475,18 +8475,145 @@ function dkFeasBadge(t) {
   const pct = t.buildable / t.dataSlides, cls = pct >= .8 ? 'badge-ok' : pct >= .4 ? 'badge-warn' : 'badge-danger', ic = pct >= .8 ? '✓' : pct >= .4 ? '◐' : '!';
   return `<span class="badge ${cls}" title="${esc((t.topMissing || []).join('، '))}">${ic} ${t.buildable} من ${t.dataSlides} ببياناتك</span>`;
 }
+// حالة البداية في لوحة العرض: بطاقة «عرض جديد» (تفتح معرض النماذج) + عروض المشروع المحفوظة.
 async function dkShowGallery() {
   el('dk-gallery').classList.remove('hidden'); el('dk-editor').classList.add('hidden');
-  el('dk-title').textContent = 'منشئ العروض'; el('dk-meta').textContent = 'اختر نموذجًا أو اكتب طلبك في المحادثة';
+  el('dk-title').textContent = 'منشئ العروض'; el('dk-meta').textContent = 'ابدأ عرضًا جديدًا من نموذج أو اكتب طلبك في المحادثة';
   el('dk-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
   await dkLoadDecks();
   const g = el('dk-gallery');
-  g.innerHTML = `<div class="dk-gallery-head"><h3>النماذج</h3><span class="muted">اختر نموذجًا يُملأ من بيانات مشروعك بالموديل، أو ابدأ من فراغ</span></div>`
-    + (DK.templates || []).map(t => `<div class="dk-card" data-tpl="${esc(t.key)}"><span class="ic">${t.icon}</span><b>${esc(t.name)}</b><p>${esc(t.description)}</p><div class="dk-feas">${dkFeasBadge(t)}</div><div class="dk-slides">${t.total} شرائح: ${t.slides.map(s => esc(s.title)).slice(0, 4).join(' · ')}${t.total > 4 ? ' …' : ''}</div></div>`).join('')
-    + (DK.decks.length ? `<div class="dk-gallery-head" style="margin-top:12px"><h3>عروض المشروع</h3></div>` + DK.decks.map(d => `<div class="dk-card" data-deck="${esc(d.id)}"><span class="ic">📑</span><b>${esc(d.title)}</b><p>${d.slideCount} شريحة · ${relTime(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</p></div>`).join('') : '');
-  g.querySelectorAll('[data-tpl]').forEach(c => c.addEventListener('click', () => dkCreateFromTemplate(c.dataset.tpl)));
+  g.innerHTML = `<div class="dk-start"><button type="button" class="btn btn-primary" id="dk-start-new"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>عرض جديد</button><p>${(DK.templates || []).length.toLocaleString('en-US')} نموذج عرض جاهز بتصنيفاته، مع معاينة بأرقام توضيحية قبل البناء من بياناتك. أو اكتب طلبك في المحادثة وجيم يبني العرض مباشرة.</p></div>`
+    + (DK.decks.length ? `<div class="dk-gallery-head"><h3>عروض المشروع</h3><span class="muted">${DK.decks.length.toLocaleString('en-US')} عرض</span></div>` + DK.decks.map(d => `<div class="dk-card" data-deck="${esc(d.id)}" role="button" tabindex="0"><span class="ic">📑</span><b>${esc(d.title)}</b><p>${d.slideCount} شريحة · ${relTime(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</p></div>`).join('') : '');
+  el('dk-start-new').addEventListener('click', openDeckGallery);
   g.querySelectorAll('[data-deck]').forEach(c => c.addEventListener('click', () => dkOpen(c.dataset.deck)));
 }
+
+// ---------- معرض نماذج العروض («عرض جديد») — نفس تجربة معرض اللوحات ----------
+// التصنيفات مفاتيح ثابتة تطابق DeckTemplates.cs؛ المصغّرات والمعاينة التوضيحية من jeem-deck-demo.js
+// (بيانات وهمية لمعرض النماذج فقط)، وزر «استخدم هذا النموذج» ينشئ العرض فارغًا ليُملأ من بيانات المشروع.
+const DK_CATS = [
+  ['all', 'كل النماذج', 'grid'], ['mgmt', 'الإدارة والتقارير الدورية', 'briefcase'], ['sales', 'المبيعات والعملاء', 'chart'],
+  ['projects', 'المشاريع', 'layers'], ['finance', 'المالية', 'sheet'], ['hr', 'الموارد البشرية', 'users'],
+  ['marketing', 'التسويق', 'target'], ['ops', 'العمليات والإمداد', 'server'], ['cx', 'خدمة العملاء', 'headset'], ['general', 'عام', 'more'],
+];
+const DK_GLYPH = { title: '🏷️', section: '➖', bullets: '•', 'two-column': '⫴', kpis: '🔢', chart: '📊', table: '▦', image: '🖼️', quote: '❝', tasks: '☑' };
+let dkGalCat = 'all', dkGalQuery = '';
+function dkDemoSpec(t) { return window.JEEM_DECK_DEMO ? JEEM_DECK_DEMO.build(t) : null; }
+// مصغّرة البطاقة: أول شريحة بيانات (مؤشرات/رسم/جدول) من المواصفة التوضيحية، وإلا شريحة العنوان.
+function dkGalThumbInto(holder, t) {
+  const spec = dkDemoSpec(t); if (!spec || !window.JEEM_DECK) { holder.innerHTML = `<span class="dash-thumb dash-thumb-network">${esc(t.icon)}</span>`; return; }
+  const slide = spec.slides.find(s => ['kpis', 'chart', 'table'].includes(s.layout)) || spec.slides[0];
+  const box = document.createElement('div'); holder.appendChild(box);
+  JEEM_DECK.renderSlide(box, slide, spec, { index: 0, total: spec.slides.length });
+}
+async function openDeckGallery() {
+  if (!DK.templates) await dkLoadTemplates();
+  dkGalCat = 'all'; dkGalQuery = '';
+  el('dkgal-search-input').value = '';
+  renderDeckGalCats(); renderDeckGalGrid();
+  el('dkgal-view-list').classList.remove('hidden'); el('dkgal-view-preview').classList.add('hidden'); el('dkgal-view-demo').classList.add('hidden');
+  el('deck-gallery-modal').classList.remove('hidden');
+}
+function closeDeckGallery() { el('deck-gallery-modal').classList.add('hidden'); }
+function renderDeckGalCats() {
+  const all = DK.templates || [];
+  el('dkgal-cats').innerHTML = DK_CATS.map(([k, name, icon]) => {
+    const count = k === 'all' ? all.length : all.filter(t => t.category === k).length;
+    if (!count && k !== 'all') return '';
+    return `<button type="button" data-cat="${k}" aria-pressed="${k === dkGalCat}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}</span><em>${count}</em></button>`;
+  }).join('');
+  el('dkgal-cats').querySelectorAll('[data-cat]').forEach(btn => btn.addEventListener('click', () => { dkGalCat = btn.dataset.cat; renderDeckGalCats(); renderDeckGalGrid(); }));
+}
+function renderDeckGalGrid() {
+  const q = dkGalQuery.toLowerCase();
+  const items = (DK.templates || []).filter(t => (dkGalCat === 'all' || t.category === dkGalCat) && (!q || (t.name + ' ' + t.description + ' ' + t.slides.map(s => s.title).join(' ')).toLowerCase().includes(q)));
+  el('dkgal-grid').innerHTML = items.map(t => `
+    <button type="button" class="dash-card" data-tpl="${esc(t.key)}">
+      <span class="dc-deck-thumb" data-thumb></span>
+      <span class="dc-body">
+        <b>${esc(t.icon)} ${esc(t.name)}</b>
+        <small>${esc(t.description)}</small>
+        <span class="dc-meta">
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>${t.total.toLocaleString('en-US')} شرائح</span>
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${t.dataSlides ? `${t.dataSlides.toLocaleString('en-US')} من بياناتك` : 'يدوي بلا بيانات'}</span>
+          ${t.dataSlides ? dkFeasBadge(t) : ''}
+        </span>
+      </span>
+    </button>`).join('');
+  el('dkgal-empty').classList.toggle('hidden', items.length > 0);
+  el('dkgal-grid').querySelectorAll('[data-tpl]').forEach(card => {
+    const t = items.find(x => x.key === card.dataset.tpl);
+    dkGalThumbInto(card.querySelector('[data-thumb]'), t);
+    card.addEventListener('click', () => openDeckGalPreview(t));
+  });
+}
+function dkGalFeasHint(t) {
+  if (!t.dataSlides) return `<div class="pv-feas"><span class="badge">يدوي بلا بيانات</span><small>كل الشرائح نصوص تكتبها بنفسك أو تطلبها من جيم.</small></div>`;
+  const missing = (t.topMissing || []).filter(Boolean);
+  return `<div class="pv-feas">${dkFeasBadge(t)}${t.buildable == null ? '<small>تظهر الجدوى بعد تحليل معاني أعمدة بياناتك من «المصادر».</small>' : missing.length
+    ? `<small>ينقص بياناتك: ${esc(missing.join('، '))}. أضف عمودًا له أو أكّد معنى عمود موجود من «المصادر» ← 🏷️ معاني الأعمدة.</small>`
+    : '<small>كل شرائح البيانات في هذا النموذج لها ما يلزمها في بياناتك.</small>'}</div>`;
+}
+function openDeckGalPreview(t) {
+  el('dkgal-view-preview').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="dkgal-back-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>كل النماذج</span></button>
+    <div class="pv-grid">
+      <div class="pv-thumb"><span class="dc-deck-thumb" id="dkgal-pv-thumb"></span></div>
+      <div class="pv-info">
+        <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}</p>
+        ${dkGalFeasHint(t)}
+        <h4>شرائح العرض (${t.total.toLocaleString('en-US')})</h4>
+        <ol class="pv-list">${t.slides.map(s => `<li><span class="pv-ic">${DK_GLYPH[s.layout] || '•'}</span>${esc(s.title)}${s.needsData ? ' <span class="muted">· من بياناتك</span>' : ''}</li>`).join('')}</ol>
+        <div class="pv-actions">
+          <button type="button" class="btn btn-primary" id="dkgal-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
+          ${window.JEEM_DECK_DEMO ? `<button type="button" class="btn btn-soft" id="dkgal-demo-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة بأرقام توضيحية</button>` : ''}
+          <span class="muted" style="font-size:var(--fs-xs)">يُنشأ عرض جديد بهيكل النموذج ويُملأ من بيانات مشروعك، وتقدر تعدّله بعدها يدويًا أو من المحادثة.</span>
+        </div>
+      </div>
+    </div>`;
+  dkGalThumbInto(el('dkgal-pv-thumb'), t);
+  el('dkgal-back-btn').addEventListener('click', () => { el('dkgal-view-preview').classList.add('hidden'); el('dkgal-view-list').classList.remove('hidden'); });
+  el('dkgal-use-btn').addEventListener('click', () => { closeDeckGallery(); dkCreateFromTemplate(t.key); });
+  el('dkgal-demo-btn')?.addEventListener('click', () => openDeckGalDemo(t));
+  el('dkgal-view-list').classList.add('hidden'); el('dkgal-view-preview').classList.remove('hidden');
+}
+// معاينة توضيحية: العرض كاملًا بالتنقّل بين الشرائح — أرقام وهمية مُعلَنة صراحة في الشريط الأصفر.
+function openDeckGalDemo(t) {
+  const spec = dkDemoSpec(t); if (!spec) return;
+  let i = 0;
+  el('dkgal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="dkgal-demo-back-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span></button>
+    <div class="gal-demo-banner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل العرض — ليست بيانات حقيقية من مشروعك. لبناء العرض الفعلي ببيانات مشروعك، اضغط «استخدم هذا النموذج».</div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title"><h3>${esc(t.icon)} ${esc(t.name)}</h3><span class="muted" style="font-size:var(--fs-xs)">${ic2('layers')}${spec.slides.length.toLocaleString('en-US')} شرائح · ${t.dataSlides ? `${t.dataSlides.toLocaleString('en-US')} منها من بياناتك` : 'يدوي بلا بيانات'}</span></div>
+      <button type="button" class="btn btn-primary" id="dkgal-demo-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
+    </div>
+    <div class="dkgal-demo">
+      <div><div class="jd-slide" id="dkgal-demo-slide"></div>
+        <div class="dkgal-nav"><button type="button" class="btn btn-sm btn-soft" id="dkgal-prev">→ السابق</button><span id="dkgal-pos"></span><button type="button" class="btn btn-sm btn-soft" id="dkgal-next">التالي ←</button></div></div>
+      <div class="dkgal-strip" id="dkgal-strip">${spec.slides.map((s, k) => JEEM_DECK.thumbnail(s, k)).join('')}</div>
+    </div>`;
+  const go = n => {
+    i = Math.max(0, Math.min(spec.slides.length - 1, n));
+    JEEM_DECK.renderSlide(el('dkgal-demo-slide'), spec.slides[i], spec, { index: i, total: spec.slides.length });
+    el('dkgal-pos').textContent = `${(i + 1).toLocaleString('en-US')} / ${spec.slides.length.toLocaleString('en-US')}`;
+    el('dkgal-strip').querySelectorAll('.jd-thumb').forEach((th, k) => th.classList.toggle('active', k === i));
+    el('dkgal-prev').disabled = i === 0; el('dkgal-next').disabled = i === spec.slides.length - 1;
+  };
+  el('dkgal-prev').addEventListener('click', () => go(i - 1)); el('dkgal-next').addEventListener('click', () => go(i + 1));
+  el('dkgal-strip').addEventListener('click', e => { const th = e.target.closest('.jd-thumb'); if (th) go(+th.dataset.i); });
+  el('dkgal-demo-back-btn').addEventListener('click', () => { el('dkgal-view-demo').classList.add('hidden'); el('dkgal-view-preview').classList.remove('hidden'); });
+  el('dkgal-demo-use-btn').addEventListener('click', () => { closeDeckGallery(); dkCreateFromTemplate(t.key); });
+  go(0);
+  el('dkgal-view-preview').classList.add('hidden'); el('dkgal-view-demo').classList.remove('hidden');
+}
+el('dkgal-search-input').addEventListener('input', e => { dkGalQuery = e.target.value.trim(); renderDeckGalGrid(); });
+el('dkgal-close').addEventListener('click', closeDeckGallery);
+el('deck-gallery-modal').addEventListener('click', e => { if (e.target.id === 'deck-gallery-modal') closeDeckGallery(); });
+el('dkgal-start-blank').addEventListener('click', () => { closeDeckGallery(); dkCreateFromTemplate('blank'); });
+el('dkgal-start-ai').addEventListener('click', () => { closeDeckGallery(); el('dk-q').focus(); });
+
 async function dkCreateFromTemplate(key) {
   const t = (DK.templates || []).find(x => x.key === key);
   const r = await fetch('/api/decks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateKey: key }) });
@@ -8651,7 +8778,7 @@ async function dkAsk(text) {
 }
 el('dk-form').addEventListener('submit', e => { e.preventDefault(); const t = el('dk-q').value.trim(); if (!t) return; el('dk-q').value = ''; dkAsk(t); });
 el('dk-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('dk-form').requestSubmit(); } });
-el('dk-new-btn').addEventListener('click', () => { if (DK.dirty && !confirm('لديك تعديلات غير محفوظة. المتابعة؟')) return; DK.deck = null; DK.spec = null; DK.publishedUrl = null; DK.messages = []; dkShowGallery(); dkRenderMessages(); });
+el('dk-new-btn').addEventListener('click', () => { if (DK.dirty && !confirm('لديك تعديلات غير محفوظة. المتابعة؟')) return; DK.deck = null; DK.spec = null; DK.publishedUrl = null; DK.messages = []; dkShowGallery(); dkRenderMessages(); openDeckGallery(); });
 el('dk-list-btn').addEventListener('click', async e => {
   e.stopPropagation(); const panel = el('dk-list-panel'); const wasOpen = !panel.classList.contains('hidden'); closeAllDropdowns(); if (wasOpen) return;
   await dkLoadDecks();

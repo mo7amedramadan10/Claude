@@ -507,7 +507,7 @@
    يدويًا بيعدي عليه — المصغّرات هنا أشكال تجريدية (GLYPH) بس، مفيش رقم أو بيانات
    وهمية متعروضة في أي مكان. محصور بـ #dash-gallery-modal عشان ميأثرش على بقية
    الموديلز اللي بتستخدم .modal-overlay/.modal القدام (نفس درس .roles-modal-box). */
-#dash-gallery-modal .modal.dash-gallery-box {
+#dash-gallery-modal .modal.dash-gallery-box, #deck-gallery-modal .modal.dash-gallery-box {
   width: min(1240px, calc(100vw - 32px)); max-width: none; height: min(820px, calc(100vh - 32px));
   padding: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r-xl);
 }
@@ -3324,3 +3324,18 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
   #screen-decks .cc-pane { order: 1; height: 60%; }
   .jeem-scope .dk-stage { padding: 10px; }
 }
+
+/* معرض نماذج العروض (#deck-gallery-modal) — يعيد استخدام .dash-gallery-box؛ المصغّرة شريحة حقيقية من المحرك ببيانات توضيحية */
+.dash-gallery-box .dc-deck-thumb { display: block; padding: 10px; background: var(--surface-2); border-radius: var(--r-lg); pointer-events: none; }
+.dash-gallery-box .dc-deck-thumb .jd-slide { border-radius: 8px; box-shadow: none; border: 1px solid var(--line-2); }
+.dash-gallery-box .dkgal-grid .dash-card { padding: 10px; }
+.dash-gallery-box .pv-thumb .dc-deck-thumb { padding: 14px; }
+.dash-gallery-box .pv-list .pv-ic { font-size: 12px; }
+.dash-gallery-box .dkgal-demo { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 16px; align-items: start; }
+.dash-gallery-box .dkgal-demo .dkgal-strip { display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow: auto; }
+.dash-gallery-box .dkgal-demo .dkgal-strip .jd-thumb { cursor: pointer; }
+.dash-gallery-box .dkgal-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; font-size: var(--fs-sm); color: var(--ink-2); }
+@media (max-width: 760px) { .dash-gallery-box .dkgal-demo { grid-template-columns: 1fr; } .dash-gallery-box .dkgal-demo .dkgal-strip { flex-direction: row; max-height: none; overflow-x: auto; } .dash-gallery-box .dkgal-demo .dkgal-strip .jd-thumb { flex: 0 0 120px; } }
+/* حالة البداية في لوحة منشئ العروض: بطاقة «عرض جديد» + عروض المشروع */
+.jeem-scope .dk-start { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 18px; border: 1px dashed var(--line); border-radius: var(--r-lg); background: var(--surface-2); }
+.jeem-scope .dk-start p { margin: 0; color: var(--ink-3); font-size: var(--fs-sm); flex: 1; min-width: 200px; }

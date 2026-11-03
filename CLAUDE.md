@@ -602,9 +602,17 @@ naming policy تلقائية في السيريلايزر.
   `title|section|bullets|two-column|kpis|chart|table|image|tasks|quote`؛ `DeckChart{type: bar|line|pie, labels, values|series, unit}`،
   `DeckTable`، `DeckKpi`، و`DeckEditable{key,kind}` لكتلة المهام القابلة للتعديل عبر بيانات العرض. المخزن `DeckStore`
   (جدول `dbo.Decks` بالمشروع والمنشئ والمواصفة JSON و`PresentationId` إن نُشر).
-- **القوالب** `DeckTemplates.cs` (business-review، project-status، sales-pipeline، okr-review، kickoff، blank) بعناوين
-  وشرائح ونوايا بيانات؛ `GET /api/decks/templates` يعيد لكل قالب جدوى حتمية بنفس آلية اللوحات
-  (`WidgetRequirementResolver.Resolve(title,intent)` + `WidgetFeasibilityService.Evaluate`) تظهر شارة «✓/◐/! n من m ببياناتك».
+- **القوالب** `DeckTemplates.cs`: 20 نموذجًا في 9 تصنيفات بمفاتيح ثابتة (`mgmt`, `sales`, `projects`, `finance`, `hr`,
+  `marketing`, `ops`, `cx`, `general`؛ الأسماء والأيقونات في `DK_CATS` في app.js — لا تُعاد تسميتها) بعناوين وشرائح ونوايا
+  بيانات، و`Hint` نوع الرسم أو عناوين العمودين (`أ|ب`). `GET /api/decks/templates` يعيد لكل قالب جدوى حتمية بنفس آلية
+  اللوحات (`WidgetRequirementResolver.Resolve(title,intent)` + `WidgetFeasibilityService.Evaluate`) تظهر شارة «✓/◐/! n من m ببياناتك».
+- **معرض «عرض جديد»** (`deck-gallery-modal` في index.html، يعيد استخدام أنماط `.dash-gallery-box`): بطلب المستخدم نفس تجربة
+  معرض «لوحة جديدة» — زر «جديد» في الشريط أو بطاقة «عرض جديد» في حالة البداية يفتحانه؛ تصنيفات بعدّاد، بحث، بطاقتا
+  «عرض فارغ»/«اطلب من جيم»، وبطاقة لكل نموذج مصغّرتها **شريحة حقيقية من المحرك** (أول شريحة مؤشرات/رسم/جدول)، ثم معاينة
+  (قائمة الشرائح + الجدوى + «استخدم هذا النموذج») ثم «معاينة بأرقام توضيحية» تعرض العرض كاملًا بالتنقّل (`openDeckGalDemo`).
+  البيانات التجريبية في `wwwroot/js/jeem-deck-demo.js` (`JEEM_DECK_DEMO.build(template)`: مصفوفة لكل مفتاح نموذج بترتيب
+  شرائحه + احتياطي حسب التخطيط لأي نموذج جديد بلا بيانات) — **للمعرض فقط**، والبناء الحقيقي يبدأ فارغًا ويُملأ من
+  بيانات المشروع. لوحة العرض بلا عرض مفتوح تعرض حالة بداية (`.dk-start`) + عروض المشروع المحفوظة فقط.
 - **البناء بالذكاء الاصطناعي** `DeckBuilder.cs` (`POST /api/decks/generate {message, deckId?, templateKey?, spec?}`):
   نداء تخطيط واحد بلا أدوات يعيد `{reply, spec}` وكل شريحة بيانات فيها `needsData/intent/sql`، ثم نداءات ملء بالتوازي
   لكل شريحة (`FillSlideAsync`، أداة `query_data` فقط) على بيانات المشروع الحقيقية. تعديل عرض مفتوح يمرّر `spec` الحالية
@@ -620,7 +628,8 @@ naming policy تلقائية في السيريلايزر.
 - **الواجهة** في app.js (قسم `DK`): معرض القوالب + العروض المحفوظة (`dkShowGallery`)، المحرر (`dkRender`: الشريحة +
   شريط مصغّرات بسحب لإعادة الترتيب + مفتّش `dkInspectorHtml` لبيانات الرسم/الجدول/المؤشرات/النقاط/الصورة/الملاحظات)،
   شريط أدوات (إضافة/حذف/نقل/تخطيط/حفظ/نشر/PPTX/طباعة)، والمحادثة `dkAsk`.
-- **ما تحقق** (بلا SQL Server: خادم Node وهمي يحاكي `/api/decks/*` + Playwright): القائمة والمعرض والجدوى، توليد 7 شرائح
+- **ما تحقق** (بلا SQL Server: خادم Node وهمي يحاكي `/api/decks/*` + Playwright): المعرض بـ20 نموذجًا و9 تصنيفات وبحث
+  ومعاينة وعرض توضيحي بكل شرائح الـ20 بلا `jd-missing`، حالة البداية، توليد 7 شرائح
   من المحادثة، رسم KPI/خط/دائري/جدول، التحرير المباشر والمفتّش، إضافة/تخطيط/نقل/حذف، مهام تُحفظ، حفظ، تعديل بالمحادثة،
   نشر برابط، تنزيل PPTX، بلا تمرير أفقي على 390px. اختبارات الوحدة 146/146. **التوليد الحي بموديل حقيقي والنشر على
   القاعدة الحقيقية لم يُجرَيا** — على جهاز المستخدم.

@@ -556,6 +556,45 @@
   </div>
 </div>
 
+<!-- معرض نماذج العروض («عرض جديد» في منشئ العروض) — نفس بنية معرض اللوحات: تصنيفات + بحث + معاينة + معاينة بأرقام توضيحية -->
+<div id="deck-gallery-modal" class="modal-overlay hidden">
+  <div class="modal dash-gallery-box">
+    <div class="gal-head">
+      <div><h2>عرض جديد</h2><p>اختر نموذج عرض جاهزًا يُملأ من بياناتك، أو ابدأ من فراغ، أو اطلب من جيم.</p></div>
+      <label class="gal-search">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+        <span class="sr-only">بحث في نماذج العروض</span>
+        <input type="search" id="dkgal-search-input" placeholder="ابحث في النماذج… مثال: مبيعات">
+      </label>
+      <button type="button" class="btn btn-ghost btn-icon" id="dkgal-close" aria-label="إغلاق">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="gal-body">
+      <nav class="gal-cats" id="dkgal-cats" aria-label="تصنيفات نماذج العروض"></nav>
+      <div class="gal-main">
+        <section class="gal-view" id="dkgal-view-list">
+          <div class="gal-quick">
+            <button type="button" class="quick-card" id="dkgal-start-blank">
+              <span class="qi"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-plus"/></svg></span>
+              <span><b>عرض فارغ</b><small>ابدأ من شريحة عنوان وأضف الشرائح بنفسك أو من المحادثة</small></span>
+            </button>
+            <button type="button" class="quick-card ai" id="dkgal-start-ai">
+              <span class="qi"><img src="img/logo-mark.svg" alt=""></span>
+              <span><b>اطلب من جيم</b><small>اكتب وصف العرض اللي محتاجه وجيم يبنيه من بيانات مشروعك</small></span>
+            </button>
+          </div>
+          <h3 class="gal-sub">النماذج <span class="muted">· عرض كامل بشرائحه الجاهزة</span></h3>
+          <div class="gal-grid dkgal-grid" id="dkgal-grid"></div>
+          <p class="gal-empty hidden" id="dkgal-empty">لا توجد نماذج مطابقة. جرّب «اطلب من جيم».</p>
+        </section>
+        <section class="gal-view gal-preview hidden" id="dkgal-view-preview"></section>
+        <section class="gal-view gal-demo hidden" id="dkgal-view-demo"></section>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="new-project-modal" class="modal-overlay hidden">
   <div class="modal">
     <h3>مشروع جديد</h3>
@@ -1454,6 +1493,7 @@
 <script src="/api/ui-config.js"></script>
 <script src="lib/devextreme/dx.viz.jeem.js"></script>
 <script src="js/jeem-deck.js"></script>
+<script src="js/jeem-deck-demo.js"></script>
 <script src="js/jeem-dx.js"></script>
 <script src="js/kpi-library.js"></script>
 <!-- محرّك عرض معرض الأمثلة التوضيحية فقط (dashGalDemo* في app.js) — بيانات دي تجريبية

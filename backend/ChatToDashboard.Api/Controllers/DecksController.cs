@@ -77,7 +77,7 @@ public class DecksController : ControllerBase
             return new
             {
                 key = t.Key, name = t.Name, category = t.Category, description = t.Description, icon = t.Icon,
-                slides = t.Slides.Select(s => new { s.Layout, s.Title, s.NeedsData }), total = t.Slides.Count, dataSlides = dataSlides.Count, buildable,
+                slides = t.Slides.Select(s => new { s.Layout, s.Title, s.NeedsData, s.Hint }), total = t.Slides.Count, dataSlides = dataSlides.Count, buildable,
                 topMissing = missing.GroupBy(m => m).OrderByDescending(g => g.Count()).Take(3).Select(g => g.Key),
             };
         }));
