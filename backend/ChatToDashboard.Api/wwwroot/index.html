@@ -129,6 +129,7 @@
             <li><button type="button" class="nav-link tab active" data-screen="chat"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chat"/></svg><span class="nav-text">المحادثة واللوحات</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="published"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span><span class="badge hidden" id="published-badge">0</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="analyst"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></button></li>
+            <li><button type="button" class="nav-link tab" data-screen="decks"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">منشئ العروض</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="sources"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></button></li>
             <li><button type="button" class="nav-link tab hidden" id="proj-permissions-link" data-screen="users"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
@@ -789,6 +790,60 @@
   </div>
 </div>
 
+<!-- منشئ العروض (مستوى المشروع): محادثة تولّد/تعدّل مواصفة عرض بالموديل، معاينة ومحرر شرائح يمينًا، نماذج، نشر وتصدير — DecksController -->
+<main id="screen-decks" class="screen">
+  <aside id="dk-rail" class="cc-rail">
+    <div class="chat-head">
+      <span class="ai-ava"><img src="img/logo-mark.svg" alt=""></span>
+      <div class="grow"><h2>منشئ العروض</h2><p id="dk-head-desc">اطلب عرضًا من بياناتك أو ابدأ من نموذج</p></div>
+      <button type="button" id="dk-new-btn" class="btn btn-ghost btn-sm" title="عرض جديد (من نموذج أو فراغ)"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>جديد</button>
+      <div class="dropdown" id="dk-list-dropdown">
+        <button type="button" id="dk-list-btn" class="btn btn-ghost btn-sm" title="عروض المشروع المحفوظة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg>العروض</button>
+        <div id="dk-list-panel" class="dropdown-panel hidden"></div>
+      </div>
+    </div>
+    <div id="dk-messages" class="cc-messages"></div>
+    <form id="dk-form" class="composer cc-composer">
+      <div class="input-box">
+        <label for="dk-q" class="visually-hidden">الطلب</label>
+        <textarea id="dk-q" rows="2" placeholder="مثال: اعمل عرض نتائج الربع الثالث من بيانات المبيعات… أو: ضيف شريحة عن أعلى 5 عملاء"></textarea>
+        <div class="input-tools">
+          <span class="hint" id="dk-status"></span>
+          <span class="grow"></span>
+          <button id="dk-send" class="send" type="submit" aria-label="إرسال"></button>
+        </div>
+      </div>
+    </form>
+  </aside>
+  <section id="dk-pane" class="cc-pane">
+    <div class="cc-pane-head dk-toolbar">
+      <div class="grow"><b id="dk-title" contenteditable="true" spellcheck="false" title="اضغط لتعديل عنوان العرض">عرض جديد</b><small class="muted" id="dk-meta"></small></div>
+      <div class="dk-actions">
+        <button type="button" id="dk-add-slide" class="btn btn-sm btn-soft" title="إضافة شريحة بعد الحالية">+ شريحة</button>
+        <select id="dk-layout" class="pres-policy" title="تخطيط الشريحة الحالية" aria-label="تخطيط الشريحة">
+          <option value="title">عنوان</option><option value="section">فاصل قسم</option><option value="bullets">نقاط</option><option value="two-column">عمودان</option>
+          <option value="kpis">مؤشرات</option><option value="chart">رسم</option><option value="table">جدول</option><option value="quote">اقتباس</option><option value="tasks">مهام قابلة للتعديل</option>
+        </select>
+        <button type="button" id="dk-move-up" class="icon-btn" title="تقديم الشريحة">▲</button>
+        <button type="button" id="dk-move-down" class="icon-btn" title="تأخير الشريحة">▼</button>
+        <button type="button" id="dk-del-slide" class="icon-btn" title="حذف الشريحة">🗑️</button>
+        <span class="dk-sep"></span>
+        <button type="button" id="dk-save" class="btn btn-sm btn-soft">حفظ</button>
+        <button type="button" id="dk-publish" class="btn btn-sm">نشر</button>
+        <button type="button" id="dk-export" class="btn btn-sm btn-ghost" title="تنزيل PowerPoint">PPTX</button>
+        <button type="button" id="dk-print" class="btn btn-sm btn-ghost" title="طباعة أو حفظ PDF">PDF</button>
+      </div>
+    </div>
+    <div id="dk-body" class="dk-body">
+      <div id="dk-gallery" class="dk-gallery"></div>
+      <div id="dk-editor" class="dk-editor hidden">
+        <div class="dk-stage"><div id="dk-slide" class="jd-slide"></div><div id="dk-slide-meta" class="dk-slide-meta"></div></div>
+        <div id="dk-strip" class="dk-strip"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
 <!-- محادثة Claude: شريط محادثة (يسار) + لوحة النتائج (يمين) عبر Claude Code CLI على الخادم — ClaudeChatController -->
 <main id="screen-claude-chat" class="screen">
   <aside id="cc-rail" class="cc-rail">
@@ -1398,6 +1453,7 @@
      ترخيص تجاري لكل مطوّر، مفتاحه يُحقن وقت التشغيل من /api/ui-config.js ولا يُكتب هنا. -->
 <script src="/api/ui-config.js"></script>
 <script src="lib/devextreme/dx.viz.jeem.js"></script>
+<script src="js/jeem-deck.js"></script>
 <script src="js/jeem-dx.js"></script>
 <script src="js/kpi-library.js"></script>
 <!-- محرّك عرض معرض الأمثلة التوضيحية فقط (dashGalDemo* في app.js) — بيانات دي تجريبية

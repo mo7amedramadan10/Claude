@@ -17,14 +17,14 @@ namespace ChatToDashboard.Api.Export;
 /// </summary>
 public static class PptxBuilder
 {
-    private const long SlideWidth = 12192000L;   // 13.333in, 16:9
-    private const long SlideHeight = 6858000L;   // 7.5in
-    private const long Margin = 457200L;         // 0.5in
-    private const long TitleTop = 274638L;
-    private const long TitleHeight = 800100L;
-    private const long ContentTop = TitleTop + TitleHeight + 137160L;
-    private static long ContentWidth => SlideWidth - 2 * Margin;
-    private static long ContentHeight => SlideHeight - ContentTop - Margin;
+    internal const long SlideWidth = 12192000L;   // 13.333in, 16:9
+    internal const long SlideHeight = 6858000L;   // 7.5in
+    internal const long Margin = 457200L;         // 0.5in
+    internal const long TitleTop = 274638L;
+    internal const long TitleHeight = 800100L;
+    internal const long ContentTop = TitleTop + TitleHeight + 137160L;
+    internal static long ContentWidth => SlideWidth - 2 * Margin;
+    internal static long ContentHeight => SlideHeight - ContentTop - Margin;
 
     /// <summary>How many widgets share one slide — see CreateWidgetGroupSlide.</summary>
     private const int WidgetsPerSlide = 3;
@@ -75,7 +75,7 @@ public static class PptxBuilder
 
     // ---------- theme / master / layout (fixed boilerplate) ----------
 
-    private static SlideMasterPart CreateSlideMaster(PresentationPart presentationPart)
+    internal static SlideMasterPart CreateSlideMaster(PresentationPart presentationPart)
     {
         var slideMasterPart = presentationPart.AddNewPart<SlideMasterPart>();
         var themePart = slideMasterPart.AddNewPart<ThemePart>();
@@ -185,7 +185,7 @@ public static class PptxBuilder
 
     // ---------- slides ----------
 
-    private static SlidePart NewSlidePart(PresentationPart presentationPart, SlideLayoutPart layoutPart)
+    internal static SlidePart NewSlidePart(PresentationPart presentationPart, SlideLayoutPart layoutPart)
     {
         var slidePart = presentationPart.AddNewPart<SlidePart>();
         slidePart.AddPart(layoutPart);
@@ -204,7 +204,7 @@ public static class PptxBuilder
         return slidePart;
     }
 
-    private static P.Shape TextBox(
+    internal static P.Shape TextBox(
         uint id, string text, long x, long y, long cx, long cy,
         int sizePt, bool bold = false, string colorHex = "0B0B0B", A.TextAlignmentTypeValues? align = null)
     {
@@ -337,7 +337,7 @@ public static class PptxBuilder
         }
     }
 
-    private static P.GraphicFrame BuildTable(uint id, PptxWidgetInput widget, long x, long y, long cx, long cy)
+    internal static P.GraphicFrame BuildTable(uint id, PptxWidgetInput widget, long x, long y, long cx, long cy)
     {
         var columns = widget.Columns is { Count: > 0 } ? widget.Columns : new List<string> { "" };
         const int maxRows = 18; // keep every row readable on one slide; note the rest below
@@ -388,7 +388,7 @@ public static class PptxBuilder
         return row;
     }
 
-    private static P.Picture BuildPicture(SlidePart slidePart, uint id, byte[] pngBytes, long x, long y, long maxCx, long maxCy)
+    internal static P.Picture BuildPicture(SlidePart slidePart, uint id, byte[] pngBytes, long x, long y, long maxCx, long maxCy)
     {
         var imagePart = slidePart.AddImagePart(ImagePartType.Png);
         using (var imgStream = new MemoryStream(pngBytes)) imagePart.FeedData(imgStream);
@@ -426,7 +426,7 @@ public static class PptxBuilder
         return (Width(), Height());
     }
 
-    private static byte[]? TryDecodeImage(string? dataUrlOrBase64)
+    internal static byte[]? TryDecodeImage(string? dataUrlOrBase64)
     {
         if (string.IsNullOrWhiteSpace(dataUrlOrBase64)) return null;
         var comma = dataUrlOrBase64.IndexOf(',');

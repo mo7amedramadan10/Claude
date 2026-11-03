@@ -7883,7 +7883,7 @@ el('history-clear').addEventListener('click', async () => {
 // (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
 // integrations) and the platform-only "organizations" screen never show a project name,
 // since you're managing the organization/platform itself there, not a project within it.
-const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
 // Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
 // lookup here instead of reading the DOM, since the same data-screen value can be the
 // target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
@@ -7891,7 +7891,7 @@ const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'sources
 const SCREEN_LABELS = {
   chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
-  projects: 'المشاريع', presentations: 'العروض التقديمية', 'claude-chat': 'محادثة Claude', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
+  projects: 'المشاريع', presentations: 'العروض التقديمية', 'claude-chat': 'محادثة Claude', decks: 'منشئ العروض', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
@@ -7930,6 +7930,7 @@ function showScreen(name) {
   if (name === 'sharelinks') loadShareList();
   if (name === 'presentations') loadPresentations();
   if (name === 'claude-chat') loadClaudeChatScreen();
+  if (name === 'decks') loadDecksScreen();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
   if (name === 'llm-keys') loadLlmKeysPage();
@@ -8450,6 +8451,215 @@ async function loadShareList() {
     list.innerHTML = `<div class="repo-empty">تعذّر تحميل الروابط.</div>`;
   }
 }
+
+// ---------- منشئ العروض (DecksController): محادثة ← مواصفة عرض JSON ← محرك jeem-deck.js ----------
+// DK.spec هي الحقيقة الواحدة: المحرر يعدّلها مباشرة (نصوص قابلة للتعديل، ترتيب، تخطيط)، والمحادثة تستبدلها برد
+// الموديل، والحفظ يرسلها كاملة. المعرض يظهر حين لا يوجد عرض مفتوح.
+const DK = { deck: null, spec: null, index: 0, dirty: false, busy: false, templates: null, decks: [], messages: [] };
+const DK_LAYOUT_LABEL = { title: 'عنوان', section: 'فاصل قسم', bullets: 'نقاط', 'two-column': 'عمودان', kpis: 'مؤشرات', chart: 'رسم', table: 'جدول', image: 'صورة', quote: 'اقتباس', tasks: 'مهام قابلة للتعديل' };
+
+async function loadDecksScreen() {
+  if (!DK.templates) await dkLoadTemplates();
+  if (DK.spec) dkRender(); else dkShowGallery();
+  dkRenderMessages();
+}
+async function dkLoadTemplates() {
+  try { const r = await fetch('/api/decks/templates'); DK.templates = r.ok ? await r.json() : []; } catch { DK.templates = []; }
+}
+async function dkLoadDecks() {
+  try { const r = await fetch('/api/decks'); DK.decks = r.ok ? await r.json() : []; } catch { DK.decks = []; }
+}
+function dkFeasBadge(t) {
+  if (!t.dataSlides) return '<span class="badge">بلا بيانات — يدوي</span>';
+  if (t.buildable == null) return `<span class="badge">${t.dataSlides} شرائح من بياناتك</span>`;
+  const pct = t.buildable / t.dataSlides, cls = pct >= .8 ? 'badge-ok' : pct >= .4 ? 'badge-warn' : 'badge-danger', ic = pct >= .8 ? '✓' : pct >= .4 ? '◐' : '!';
+  return `<span class="badge ${cls}" title="${esc((t.topMissing || []).join('، '))}">${ic} ${t.buildable} من ${t.dataSlides} ببياناتك</span>`;
+}
+async function dkShowGallery() {
+  el('dk-gallery').classList.remove('hidden'); el('dk-editor').classList.add('hidden');
+  el('dk-title').textContent = 'منشئ العروض'; el('dk-meta').textContent = 'اختر نموذجًا أو اكتب طلبك في المحادثة';
+  el('dk-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
+  await dkLoadDecks();
+  const g = el('dk-gallery');
+  g.innerHTML = `<div class="dk-gallery-head"><h3>النماذج</h3><span class="muted">اختر نموذجًا يُملأ من بيانات مشروعك بالموديل، أو ابدأ من فراغ</span></div>`
+    + (DK.templates || []).map(t => `<div class="dk-card" data-tpl="${esc(t.key)}"><span class="ic">${t.icon}</span><b>${esc(t.name)}</b><p>${esc(t.description)}</p><div class="dk-feas">${dkFeasBadge(t)}</div><div class="dk-slides">${t.total} شرائح: ${t.slides.map(s => esc(s.title)).slice(0, 4).join(' · ')}${t.total > 4 ? ' …' : ''}</div></div>`).join('')
+    + (DK.decks.length ? `<div class="dk-gallery-head" style="margin-top:12px"><h3>عروض المشروع</h3></div>` + DK.decks.map(d => `<div class="dk-card" data-deck="${esc(d.id)}"><span class="ic">📑</span><b>${esc(d.title)}</b><p>${d.slideCount} شريحة · ${relTime(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</p></div>`).join('') : '');
+  g.querySelectorAll('[data-tpl]').forEach(c => c.addEventListener('click', () => dkCreateFromTemplate(c.dataset.tpl)));
+  g.querySelectorAll('[data-deck]').forEach(c => c.addEventListener('click', () => dkOpen(c.dataset.deck)));
+}
+async function dkCreateFromTemplate(key) {
+  const t = (DK.templates || []).find(x => x.key === key);
+  const r = await fetch('/api/decks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateKey: key }) });
+  if (!r.ok) { alert('تعذّر إنشاء العرض'); return; }
+  const data = await r.json(); DK.deck = data.deck; DK.spec = data.spec; DK.index = 0; DK.dirty = false; DK.messages = [];
+  dkRender();
+  if (t && t.dataSlides) {
+    dkPushMsg('bot', `أنشأت هيكل «${t.name}» (${t.total} شرائح، منها ${t.dataSlides} من بياناتك). اضغط «املأ من بياناتي» أو اكتب ما تريد تركيزه.`, `<button type="button" class="btn btn-sm btn-soft" data-dk-fill>⚡ املأ من بياناتي</button>`);
+  } else dkPushMsg('bot', `أنشأت هيكل «${t ? t.name : 'عرض جديد'}». عدّل النصوص مباشرة على الشريحة أو اطلب مني إضافة شرائح.`);
+}
+async function dkOpen(id) {
+  const r = await fetch(`/api/decks/${encodeURIComponent(id)}`); if (!r.ok) return;
+  const data = await r.json(); DK.deck = data.deck; DK.spec = data.spec; DK.index = 0; DK.dirty = false; DK.messages = []; DK.publishedUrl = data.publishedUrl;
+  dkRender(); dkPushMsg('bot', `فتحت «${DK.spec.title}»${data.publishedUrl ? ` — منشور على ${location.origin}${data.publishedUrl}` : ''}. اطلب أي تعديل أو عدّل مباشرة.`);
+}
+function dkRender() {
+  el('dk-gallery').classList.add('hidden'); el('dk-editor').classList.remove('hidden');
+  el('dk-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
+  const spec = DK.spec; if (!spec.slides.length) spec.slides.push({ id: dkId(), layout: 'title', title: spec.title || 'عرض جديد' });
+  DK.index = Math.max(0, Math.min(DK.index, spec.slides.length - 1));
+  el('dk-title').textContent = spec.title || 'عرض بلا عنوان';
+  el('dk-meta').textContent = `${spec.slides.length} شريحة${DK.dirty ? ' · تعديلات غير محفوظة' : DK.deck ? ' · محفوظ' : ''}${DK.publishedUrl ? ' · منشور' : ''}`;
+  const slide = spec.slides[DK.index];
+  JEEM_DECK.renderSlide(el('dk-slide'), slide, spec, { index: DK.index, total: spec.slides.length, editable: true, onEdit: () => dkMarkDirty() });
+  el('dk-layout').value = slide.layout || 'bullets';
+  el('dk-slide-meta').innerHTML = dkInspectorHtml(slide);
+  dkBindInspector(slide);
+  el('dk-strip').innerHTML = spec.slides.map((s, i) => JEEM_DECK.thumbnail(s, i)).join('');
+  el('dk-strip').querySelectorAll('.jd-thumb').forEach((t, i) => { t.classList.toggle('active', i === DK.index); t.draggable = true; t.addEventListener('click', () => { DK.index = i; dkRender(); }); t.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', String(i)); t.classList.add('dragging'); }); t.addEventListener('dragend', () => t.classList.remove('dragging')); t.addEventListener('dragover', e => e.preventDefault()); t.addEventListener('drop', e => { e.preventDefault(); const from = +e.dataTransfer.getData('text/plain'); if (from === i) return; const [m] = spec.slides.splice(from, 1); spec.slides.splice(i, 0, m); DK.index = i; dkMarkDirty(); dkRender(); }); });
+  el('dk-strip').querySelector('.jd-thumb.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+// محرر بيانات الشريحة (ما لا يُعدَّل بالنص المباشر): الرسم والجدول والمؤشرات والملاحظات
+function dkInspectorHtml(s) {
+  const L = s.layout || 'bullets'; let fields = '';
+  if (L === 'chart') { const c = s.chart || { type: 'bar', labels: [], values: [] }; fields = `<label class="dk-field">نوع الرسم <select data-ins="chart.type"><option value="bar"${c.type === 'bar' ? ' selected' : ''}>أعمدة</option><option value="line"${c.type === 'line' ? ' selected' : ''}>خط</option><option value="pie"${c.type === 'pie' ? ' selected' : ''}>دائري</option></select></label><label class="dk-field">البيانات (سطر لكل نقطة: التسمية، القيمة)<textarea rows="4" data-ins="chart.data">${esc((c.labels || []).map((l, i) => `${l}، ${c.values?.[i] ?? ''}`).join('\n'))}</textarea></label>`; }
+  else if (L === 'table') { const t = s.table || { columns: [], rows: [] }; fields = `<label class="dk-field">الجدول (السطر الأول رؤوس الأعمدة؛ افصل الخلايا بـ |)<textarea rows="5" data-ins="table.data">${esc([t.columns.join(' | '), ...t.rows.map(r => r.join(' | '))].join('\n'))}</textarea></label>`; }
+  else if (L === 'kpis') { fields = `<label class="dk-field">المؤشرات (سطر لكل مؤشر: التسمية، القيمة، التغيّر اختياري)<textarea rows="4" data-ins="kpis.data">${esc((s.kpis || []).map(k => [k.label, k.value, k.delta].filter(x => x != null && x !== '').join('، ')).join('\n'))}</textarea></label>`; }
+  else if (L === 'bullets' || L === 'two-column') { fields = L === 'bullets' ? `<label class="dk-field">النقاط (سطر لكل نقطة)<textarea rows="4" data-ins="bullets.data">${esc((s.bullets || []).join('\n'))}</textarea></label>` : (s.columns || []).map((c, i) => `<label class="dk-field">عمود ${i + 1}: ${esc(c.title || '')} (سطر لكل نقطة)<textarea rows="3" data-ins="columns.${i}.data">${esc((c.bullets || []).join('\n'))}</textarea></label>`).join(''); }
+  else if (L === 'image') fields = `<label class="dk-field">رابط الصورة<input data-ins="image.src" value="${esc(s.image?.src || '')}" dir="ltr"></label>`;
+  fields += `<label class="dk-field">ملاحظات المتحدث<textarea rows="2" data-ins="notes">${esc(s.notes || '')}</textarea></label>`;
+  const src = s.source ? `<span>المصدر: ${esc(s.source)}</span>` : ''; const q = s.query?.sql ? `<code title="${esc(s.query.sql)}">${esc(s.query.sql.slice(0, 80))}${s.query.sql.length > 80 ? '…' : ''}</code>` : '';
+  const miss = s.missingReason ? `<span class="badge badge-danger">⚠️ ${esc(s.missingReason)}</span>` : '';
+  return `${miss}${src}${q}<details class="dk-inspector"><summary>تحرير بيانات الشريحة (${DK_LAYOUT_LABEL[L] || L})</summary>${fields}</details>`;
+}
+function dkBindInspector(s) {
+  el('dk-slide-meta').querySelectorAll('[data-ins]').forEach(inp => inp.addEventListener('change', () => {
+    const k = inp.dataset.ins, v = inp.value;
+    const lines = v.split('\n').map(x => x.trim()).filter(Boolean), splitCsv = l => l.split(/[،,]\s*/);
+    if (k === 'chart.type') { s.chart = s.chart || { labels: [], values: [] }; s.chart.type = v; }
+    else if (k === 'chart.data') { s.chart = s.chart || { type: 'bar' }; s.chart.labels = lines.map(l => splitCsv(l)[0]); s.chart.values = lines.map(l => parseFloat((splitCsv(l)[1] || '0').replace(/[^\d.\-]/g, '')) || 0); }
+    else if (k === 'table.data') { s.table = { columns: (lines[0] || '').split('|').map(x => x.trim()), rows: lines.slice(1).map(l => l.split('|').map(x => x.trim())) }; }
+    else if (k === 'kpis.data') { s.kpis = lines.map(l => { const p = splitCsv(l); return { label: p[0] || '', value: p[1] || '', delta: p[2] || undefined }; }); }
+    else if (k === 'bullets.data') s.bullets = lines;
+    else if (k.startsWith('columns.')) { const i = +k.split('.')[1]; s.columns = s.columns || []; s.columns[i] = s.columns[i] || { title: '', bullets: [] }; s.columns[i].bullets = lines; }
+    else if (k === 'image.src') { s.image = s.image || {}; s.image.src = v.trim(); }
+    else if (k === 'notes') s.notes = v.trim() || undefined;
+    dkMarkDirty(); dkRender();
+  }));
+}
+const dkId = () => Math.random().toString(36).slice(2, 10);
+function dkMarkDirty() { DK.dirty = true; el('dk-meta').textContent = `${DK.spec.slides.length} شريحة · تعديلات غير محفوظة`; }
+el('dk-title').addEventListener('blur', () => { if (!DK.spec) return; DK.spec.title = el('dk-title').textContent.trim(); dkMarkDirty(); });
+el('dk-title').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el('dk-title').blur(); } });
+el('dk-add-slide').addEventListener('click', () => { if (!DK.spec) return; DK.spec.slides.splice(DK.index + 1, 0, { id: dkId(), layout: 'bullets', title: 'شريحة جديدة', bullets: ['…'] }); DK.index++; dkMarkDirty(); dkRender(); });
+el('dk-del-slide').addEventListener('click', () => { if (!DK.spec || DK.spec.slides.length <= 1 || !confirm('حذف هذه الشريحة؟')) return; DK.spec.slides.splice(DK.index, 1); DK.index = Math.max(0, DK.index - 1); dkMarkDirty(); dkRender(); });
+el('dk-move-up').addEventListener('click', () => { if (!DK.spec || DK.index === 0) return; const s = DK.spec.slides; [s[DK.index - 1], s[DK.index]] = [s[DK.index], s[DK.index - 1]]; DK.index--; dkMarkDirty(); dkRender(); });
+el('dk-move-down').addEventListener('click', () => { if (!DK.spec || DK.index >= DK.spec.slides.length - 1) return; const s = DK.spec.slides; [s[DK.index + 1], s[DK.index]] = [s[DK.index], s[DK.index + 1]]; DK.index++; dkMarkDirty(); dkRender(); });
+el('dk-layout').addEventListener('change', () => {
+  const s = DK.spec.slides[DK.index], L = el('dk-layout').value; s.layout = L;
+  if (L === 'chart' && !s.chart) s.chart = { type: 'bar', labels: ['أ', 'ب', 'ج'], values: [3, 5, 2] };
+  if (L === 'table' && !s.table) s.table = { columns: ['البند', 'القيمة'], rows: [['…', '…']] };
+  if (L === 'kpis' && !s.kpis) s.kpis = [{ label: 'مؤشر', value: '0' }];
+  if (L === 'two-column' && !s.columns) s.columns = [{ title: 'الأول', bullets: ['…'] }, { title: 'الثاني', bullets: ['…'] }];
+  if (L === 'tasks' && !s.editable) s.editable = { key: 'tasks-' + s.id, kind: 'tasks' };
+  if (L === 'bullets' && !s.bullets) s.bullets = ['…'];
+  dkMarkDirty(); dkRender();
+});
+async function dkSave(silent) {
+  if (!DK.spec) return false;
+  if (!DK.deck) {
+    const r = await fetch('/api/decks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateKey: 'blank', title: DK.spec.title }) });
+    if (!r.ok) { if (!silent) alert('تعذّر الحفظ'); return false; } DK.deck = (await r.json()).deck;
+  }
+  const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spec: DK.spec }) });
+  if (!r.ok) { if (!silent) alert('تعذّر الحفظ'); return false; }
+  DK.spec = (await r.json()).spec; DK.dirty = false; dkRender(); return true;
+}
+el('dk-save').addEventListener('click', () => dkSave(false));
+el('dk-publish').addEventListener('click', async () => {
+  if (!DK.spec) return; if (!(await dkSave(true))) return;
+  const btn = el('dk-publish'); btn.disabled = true; btn.textContent = 'جارٍ النشر…';
+  try {
+    const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `(${r.status})`); }
+    const d = await r.json(); DK.publishedUrl = d.url; dkRender();
+    dkPushMsg('bot', `${d.updated ? 'حُدّث العرض المنشور' : 'نُشر العرض'} على: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(location.origin + d.url)}</a> — يظهر أيضًا في «العروض التقديمية».`, '', true);
+  } catch (e) { dkPushMsg('err', 'تعذّر النشر: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'نشر'; }
+});
+el('dk-print').addEventListener('click', () => {
+  if (!DK.spec) return;
+  const w = window.open('', '_blank'); if (!w) return;
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(DK.spec.title)}</title><style>${JEEM_DECK.CSS}body{margin:0;background:#fff}.jd-print .jd-slide{width:100%;page-break-after:always;border-radius:0;box-shadow:none;margin:0}</style></head><body><div class="jd-print"></div></body></html>`);
+  w.document.close();
+  const host = w.document.querySelector('.jd-print');
+  DK.spec.slides.forEach((s, i) => { const d = w.document.createElement('div'); host.appendChild(d); JEEM_DECK.renderSlide(d, s, DK.spec, { index: i, total: DK.spec.slides.length }); });
+  setTimeout(() => w.print(), 600);
+});
+// تصدير PPTX: الرسوم تُحوَّل إلى PNG من SVG في المتصفح، والباقي نصوص/جداول/مؤشرات أصلية
+async function dkSvgToPng(svgMarkup, w, h) {
+  return new Promise(resolve => {
+    const img = new Image(); const blob = new Blob([svgMarkup.replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" `)], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    img.onload = () => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); resolve(c.toDataURL('image/png')); };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+el('dk-export').addEventListener('click', async () => {
+  if (!DK.spec) return; const btn = el('dk-export'); btn.disabled = true; btn.textContent = '…';
+  try {
+    const slides = [];
+    for (const s of DK.spec.slides) {
+      const L = s.layout || 'bullets', o = { title: s.title, subtitle: s.subtitle, notes: s.notes, source: s.source, isTitle: L === 'title' || L === 'section' };
+      if (L === 'chart' && s.chart) o.image = await dkSvgToPng(JEEM_DECK.chartSvg(s.chart, 960, 440), 960, 440);
+      else if (L === 'table' && s.table) { o.columns = s.table.columns; o.rows = s.table.rows; }
+      else if (L === 'kpis') o.kpis = s.kpis || [];
+      else if (L === 'two-column') o.bullets = (s.columns || []).flatMap(c => [c.title ? `${c.title}:` : '', ...(c.bullets || []).map(b => '   ' + b)].filter(Boolean));
+      else if (L === 'quote') o.bullets = [s.quote || ''];
+      else if (L === 'tasks') o.bullets = (s.tasks || []).map(t => (t.done ? '☑ ' : '☐ ') + (t.t || t));
+      else o.bullets = s.bullets || [];
+      slides.push(o);
+    }
+    const r = await fetch('/api/decks/export/pptx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: DK.spec.title, slides }) });
+    if (!r.ok) throw new Error(`(${r.status})`);
+    const url = URL.createObjectURL(await r.blob()); const a = document.createElement('a'); a.href = url; a.download = (DK.spec.title || 'deck') + '.pptx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (e) { dkPushMsg('err', 'تعذّر التصدير: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'PPTX'; }
+});
+// ---- المحادثة ----
+function dkPushMsg(role, text, extraHtml, isHtml) { DK.messages.push({ role, text, extraHtml: extraHtml || '', isHtml: !!isHtml }); dkRenderMessages(); }
+function dkRenderMessages() {
+  const box = el('dk-messages');
+  box.innerHTML = DK.messages.map(m => `<div class="cc-msg ${m.role === 'user' ? 'user' : m.role === 'err' ? 'err' : 'assistant'}" style="cursor:default">${m.isHtml ? m.text : esc(m.text)}${m.extraHtml ? `<div style="margin-top:6px">${m.extraHtml}</div>` : ''}</div>`).join('')
+    || '<div class="muted" style="padding:12px 0">اكتب ما تريده في العرض، مثل: «اعمل عرض نتائج الربع الثالث من بيانات المبيعات في 8 شرائح». أو اختر نموذجًا من اليمين.</div>';
+  box.querySelectorAll('[data-dk-fill]').forEach(b => b.addEventListener('click', () => dkAsk('املأ شرائح العرض الحالي التي تحتاج بيانات من بيانات المشروع، وأبقِ الهيكل والعناوين كما هي.')));
+  box.scrollTop = box.scrollHeight;
+}
+async function dkAsk(text) {
+  if (DK.busy) return; DK.busy = true;
+  dkPushMsg('user', text); el('dk-send').disabled = true; el('dk-status').textContent = DK.spec ? 'جارٍ التعديل بالموديل…' : 'جارٍ بناء العرض من بياناتك…';
+  const thinking = { role: 'bot', text: '⏳ يخطط الشرائح ثم يستعلم عن بيانات كل شريحة…' }; DK.messages.push(thinking); dkRenderMessages();
+  try {
+    const r = await fetch('/api/decks/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, deckId: DK.deck?.id || null, templateKey: DK.deck?.templateKey || null, spec: DK.spec || null }) });
+    DK.messages = DK.messages.filter(m => m !== thinking);
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `(${r.status})`); }
+    const d = await r.json(); DK.deck = d.deck; DK.spec = d.spec; DK.dirty = false; DK.index = Math.min(DK.index, d.spec.slides.length - 1);
+    const stats = d.dataSlidesTotal ? ` (بُنيت ${d.dataSlidesBuilt} من ${d.dataSlidesTotal} شرائح البيانات)` : '';
+    dkPushMsg('bot', d.reply + stats); dkRender();
+  } catch (e) { DK.messages = DK.messages.filter(m => m !== thinking); dkPushMsg('err', e.message); }
+  finally { DK.busy = false; el('dk-send').disabled = false; el('dk-status').textContent = ''; }
+}
+el('dk-form').addEventListener('submit', e => { e.preventDefault(); const t = el('dk-q').value.trim(); if (!t) return; el('dk-q').value = ''; dkAsk(t); });
+el('dk-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('dk-form').requestSubmit(); } });
+el('dk-new-btn').addEventListener('click', () => { if (DK.dirty && !confirm('لديك تعديلات غير محفوظة. المتابعة؟')) return; DK.deck = null; DK.spec = null; DK.publishedUrl = null; DK.messages = []; dkShowGallery(); dkRenderMessages(); });
+el('dk-list-btn').addEventListener('click', async e => {
+  e.stopPropagation(); const panel = el('dk-list-panel'); const wasOpen = !panel.classList.contains('hidden'); closeAllDropdowns(); if (wasOpen) return;
+  await dkLoadDecks();
+  panel.innerHTML = DK.decks.length ? DK.decks.map(d => `<div class="cc-list-item${DK.deck?.id === d.id ? ' active' : ''}" data-id="${esc(d.id)}"><span class="t">${esc(d.title)}</span><span class="d">${d.slideCount} شريحة · ${relTime(d.updatedAt)}</span><button type="button" class="icon-btn" data-del="${esc(d.id)}" title="حذف">🗑️</button></div>`).join('') : '<div class="muted" style="padding:8px">لا توجد عروض بعد.</div>';
+  panel.querySelectorAll('.cc-list-item').forEach(d => d.addEventListener('click', async ev => { if (ev.target.closest('[data-del]')) return; closeAllDropdowns(); await dkOpen(d.dataset.id); }));
+  panel.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async ev => { ev.stopPropagation(); if (!confirm('حذف هذا العرض؟ (العرض المنشور في «العروض التقديمية» لا يُحذف)')) return; await fetch(`/api/decks/${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE' }); if (DK.deck?.id === b.dataset.del) { DK.deck = null; DK.spec = null; dkShowGallery(); } closeAllDropdowns(); }));
+  panel.classList.remove('hidden');
+});
 
 // ---------- محادثة Claude (Claude Code CLI على الخادم) — ClaudeChatController ----------
 // الشريط الجانبي = المحادثة (رسائلك وردود مختصرة)، ولوحة النتائج = الرد الكامل منسّقًا من Markdown.

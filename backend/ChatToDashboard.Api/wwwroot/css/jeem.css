@@ -3283,3 +3283,44 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .cc-tool { padding: 2px 0; overflow-wrap: anywhere; }
 .jeem-scope .cc-tool code { font-size: 11px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 4px; }
 .jeem-scope .pres-policy { height: 32px; font-size: var(--fs-xs); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 0 6px; max-width: 200px; }
+
+/* ==========================================================
+   منشئ العروض (#screen-decks): نفس تخطيط محادثة Claude + محرر شرائح
+   ========================================================== */
+#screen-decks { height: calc(100vh - 53px); }
+#screen-decks.active { display: flex; }
+.jeem-scope .dk-toolbar { flex-wrap: wrap; gap: 8px 12px; }
+.jeem-scope .dk-toolbar #dk-title { outline: none; border-radius: 6px; padding: 0 4px; }
+.jeem-scope .dk-toolbar #dk-title:focus { box-shadow: 0 0 0 2px var(--blue-50); }
+.jeem-scope .dk-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.jeem-scope .dk-sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+.jeem-scope .dk-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.jeem-scope .dk-gallery { flex: 1; overflow: auto; padding: 20px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; align-content: start; }
+.jeem-scope .dk-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: border-color .15s, transform .15s; }
+.jeem-scope .dk-card:hover { border-color: var(--brand-blue); transform: translateY(-2px); }
+.jeem-scope .dk-card .ic { font-size: 26px; }
+.jeem-scope .dk-card b { font-size: var(--fs-md); }
+.jeem-scope .dk-card p { margin: 0; font-size: var(--fs-xs); color: var(--ink-3); line-height: 1.6; }
+.jeem-scope .dk-card .dk-feas { font-size: var(--fs-xs); }
+.jeem-scope .dk-card .dk-slides { font-size: 11px; color: var(--ink-3); }
+.jeem-scope .dk-gallery-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.jeem-scope .dk-gallery-head h3 { margin: 0; font-size: var(--fs-lg); }
+.jeem-scope .dk-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.jeem-scope .dk-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px 24px; background: var(--plane); }
+.jeem-scope .dk-stage .jd-slide { width: min(100%, calc((100vh - 290px) * 16 / 9)); }
+.jeem-scope .dk-slide-meta { font-size: var(--fs-xs); color: var(--ink-3); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.jeem-scope .dk-slide-meta code { font-size: 11px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; direction: ltr; }
+.jeem-scope .dk-strip { display: flex; gap: 8px; overflow-x: auto; padding: 10px 24px 14px; border-top: 1px solid var(--line-2); background: var(--surface); scrollbar-width: thin; }
+.jeem-scope .dk-strip .jd-thumb { flex: 0 0 132px; border-color: var(--line); }
+.jeem-scope .dk-strip .jd-thumb.active { border-color: var(--brand-blue); }
+.jeem-scope .dk-strip .jd-thumb.dragging { opacity: .4; }
+.jeem-scope .dk-field { display: grid; gap: 4px; font-size: var(--fs-sm); margin-bottom: 8px; }
+.jeem-scope .dk-field textarea, .jeem-scope .dk-field input { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.jeem-scope .dk-inspector { width: min(100%, calc((100vh - 290px) * 16 / 9)); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.jeem-scope .dk-inspector summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 600; }
+@media (max-width: 900px) {
+  #screen-decks.active { flex-direction: column; }
+  #screen-decks .cc-rail { order: 2; width: 100%; height: 40%; border-inline-start: 0; border-top: 1px solid var(--line); }
+  #screen-decks .cc-pane { order: 1; height: 60%; }
+  .jeem-scope .dk-stage { padding: 10px; }
+}

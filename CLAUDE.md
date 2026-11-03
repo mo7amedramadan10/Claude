@@ -592,3 +592,35 @@ naming policy تلقائية في السيريلايزر.
   `feature/newSaaS` إلى `develop` على Azure (الـ pipeline يعمل على `develop`).
 - `frontend/node_modules` كان متتبَّعًا بالخطأ على Azure (5265 ملفًا، سبب بطء النسخ القديم) ويُحذف من هناك مع أول PR؛ وهو في
   `.gitignore` أصلًا. أي إصلاح خاص بالنشر يُكتب هنا ويُدفع للاثنين حتى لا يتباعد المستودعان ثانية.
+
+## منشئ العروض (`Decks/`) — صفحة على مستوى المشروع تحت «المحلل الذكي»
+
+- **القرار**: شاشة «العروض التقديمية» (مستوى المنظمة، رفع HTML جاهز) بقيت كما هي. الجديد شاشة `screen-decks`
+  («منشئ العروض» في القائمة بعد «المحلل الذكي»، ضمن `PROJECT_SCOPED_SCREENS`): محادثة يسارًا ومعاينة/محرر يمينًا،
+  يبني عرضًا من **مواصفة JSON منظّمة** (`DeckSpec`) لا HTML خام، فيُحرَّر يدويًا ويُصدَّر ويُنشر.
+- **النموذج** `Decks/DeckModels.cs`: `DeckSpec{title,subtitle,theme,slides[]}` مع `Normalize()`؛ تخطيطات الشريحة
+  `title|section|bullets|two-column|kpis|chart|table|image|tasks|quote`؛ `DeckChart{type: bar|line|pie, labels, values|series, unit}`،
+  `DeckTable`، `DeckKpi`، و`DeckEditable{key,kind}` لكتلة المهام القابلة للتعديل عبر بيانات العرض. المخزن `DeckStore`
+  (جدول `dbo.Decks` بالمشروع والمنشئ والمواصفة JSON و`PresentationId` إن نُشر).
+- **القوالب** `DeckTemplates.cs` (business-review، project-status، sales-pipeline، okr-review، kickoff، blank) بعناوين
+  وشرائح ونوايا بيانات؛ `GET /api/decks/templates` يعيد لكل قالب جدوى حتمية بنفس آلية اللوحات
+  (`WidgetRequirementResolver.Resolve(title,intent)` + `WidgetFeasibilityService.Evaluate`) تظهر شارة «✓/◐/! n من m ببياناتك».
+- **البناء بالذكاء الاصطناعي** `DeckBuilder.cs` (`POST /api/decks/generate {message, deckId?, templateKey?, spec?}`):
+  نداء تخطيط واحد بلا أدوات يعيد `{reply, spec}` وكل شريحة بيانات فيها `needsData/intent/sql`، ثم نداءات ملء بالتوازي
+  لكل شريحة (`FillSlideAsync`، أداة `query_data` فقط) على بيانات المشروع الحقيقية. تعديل عرض مفتوح يمرّر `spec` الحالية
+  فيعيد الموديل نسخة معدَّلة (إضافة شريحة، تغيير عنوان…). يُسجَّل في الاستهلاك بعنوان `[عرض] …`.
+- **المحرك** `wwwroot/js/jeem-deck.js` (`window.JEEM_DECK`): `renderSlide/thumbnail/present/chartSvg/CSS` — رسوم SVG
+  خفيفة (أعمدة/خط/دائري) بوحدات `cqw` فتتدرج مع الحاوية، تحرير مباشر `contenteditable` بمسارات `data-f` إلى المواصفة،
+  وكتلة المهام تُخزَّن عبر `opts.editableStore` (في الصفحة المنشورة = `jeem.store` من `jeem-page.js`، وإلا محليًا).
+  `present()` عرض ملء الشاشة بلوحة مفاتيح وطباعة.
+- **التصدير والنشر**: `DeckHtmlExporter.Build(spec, runtimeJs, includeBridge)` صفحة HTML واحدة تضمّن المحرك والجسر؛
+  `POST /api/decks/{id}/publish` ينشئ عرضًا في «العروض التقديمية» (أو يستبدل ملفه على نفس الرابط إن نُشر قبلًا) ويعيد
+  الرابط المقروء؛ `POST /api/decks/export/pptx` عبر `DeckPptxBuilder` (يعيد استخدام دوال `PptxBuilder` التي صارت
+  `internal`؛ الرسوم تُرسل PNG من الواجهة بـ `dkSvgToPng`)؛ PDF من نافذة طباعة.
+- **الواجهة** في app.js (قسم `DK`): معرض القوالب + العروض المحفوظة (`dkShowGallery`)، المحرر (`dkRender`: الشريحة +
+  شريط مصغّرات بسحب لإعادة الترتيب + مفتّش `dkInspectorHtml` لبيانات الرسم/الجدول/المؤشرات/النقاط/الصورة/الملاحظات)،
+  شريط أدوات (إضافة/حذف/نقل/تخطيط/حفظ/نشر/PPTX/طباعة)، والمحادثة `dkAsk`.
+- **ما تحقق** (بلا SQL Server: خادم Node وهمي يحاكي `/api/decks/*` + Playwright): القائمة والمعرض والجدوى، توليد 7 شرائح
+  من المحادثة، رسم KPI/خط/دائري/جدول، التحرير المباشر والمفتّش، إضافة/تخطيط/نقل/حذف، مهام تُحفظ، حفظ، تعديل بالمحادثة،
+  نشر برابط، تنزيل PPTX، بلا تمرير أفقي على 390px. اختبارات الوحدة 146/146. **التوليد الحي بموديل حقيقي والنشر على
+  القاعدة الحقيقية لم يُجرَيا** — على جهاز المستخدم.
