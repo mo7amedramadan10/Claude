@@ -544,9 +544,11 @@ naming policy تلقائية في السيريلايزر.
 - «نظام المشتريات» معطَّل في appsettings؛ لتفعيله على Azure دون تعديل الملف: متغير بيئة `Sources__Systems__0__Enabled=true`.
 - **استعادة كلمة مرور مالك المنصّة على نشر قائم** (2026-11-03): الزرع في Program.cs لا يعمل إلا على قاعدة بلا حسابات،
   فأُضيف `Auth:SeedAdmin:ResetPassword` (افتراضيًا false): true عند الإقلاع يعيد كتابة كلمة مرور حساب مالك المنصّة المحلي
-  الحامل لاسم `Auth:SeedAdmin:Username` من `Auth:SeedAdmin:Password` (ويفعّله) ثم يسجّل تحذيرًا بإزالة العلم؛ بلا كلمة أو
-  بغير حساب واحد بالضبط لا يغيّر شيئًا. على Azure: `Auth__SeedAdmin__ResetPassword: "true"` في env الـ pipeline لنشرة واحدة
-  (السطر موجود معلَّقًا) مع `SEED_ADMIN_PASSWORD` في مجموعة `ai-dashboard`، ثم يُزال. البديل الفوري بلا نشر: UPDATE على
+  الحامل لاسم `Auth:SeedAdmin:Username` من `Auth:SeedAdmin:Password` (ويفعّله)، أو **ينشئه** مالكَ منصّة في المنظمة
+  الافتراضية إن لم يوجد (اسم جديد = حساب جديد)، ثم يسجّل تحذيرًا بإزالة العلم؛ بلا كلمة أو مع أكثر من حساب بالاسم لا يغيّر
+  شيئًا. على Azure: `Auth__SeedAdmin__ResetPassword: "true"` **مفعَّل الآن في env الـ pipeline** (المستخدم بلا وصول للقاعدة
+  هناك) مع `SEED_ADMIN_PASSWORD` التي يحلّها القالب `deploy-app.yml@platform` بـ `$(VAR)` من مجموعة المكتبة `ai-dashboard`
+  أو متغيرات الـ pipeline؛ يُعاد إلى false بعد أول نشر ناجح. البديل الفوري بلا نشر: UPDATE على
   `dbo.AppUsers.PasswordHash` بتجزئة بصيغة `PasswordHasher` (`100000.<salt b64>.<hash b64>`، PBKDF2-HMACSHA256) —
   سكربت جاهز في `Claude outputs/azure-reset-admin-password.sql` (مجلد غير متتبَّع؛ لا يُرفع).
 - لوحات محفوظة قديمة في `DashboardHistory` قد تحمل SQL بأسماء `staging.sys_*`؛ لا يُعاد كتابتها تلقائيًا (نادرة، والنظام

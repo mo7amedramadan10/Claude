@@ -460,7 +460,7 @@ using (var scope = app.Services.CreateScope())
         // إعادة ضبط كلمة مرور مالك المنصّة من الإعدادات عند الإقلاع (Auth:SeedAdmin:ResetPassword = true مع
         // Auth:SeedAdmin:Password): الطريق الوحيد لاستعادة الدخول على نشر قائم (Azure) حين تُنسى كلمة المرور،
         // لأن الزرع أعلاه لا يعمل إلا على قاعدة بلا حسابات. يُطبَّق على حساب مالك المنصّة الحامل لاسم الزرع
-        // فقط، ويُسجَّل تحذير بإزالة العلم بعدها حتى لا تُعاد الكتابة مع كل إقلاع.
+        // فقط (ويُنشأ إن لم يوجد)، ويُسجَّل تحذير بإزالة العلم بعدها حتى لا تُعاد الكتابة مع كل إقلاع.
         else if (builder.Configuration.GetValue<bool>("Auth:SeedAdmin:ResetPassword"))
         {
             var seedUsername = builder.Configuration["Auth:SeedAdmin:Username"] ?? "admin";
@@ -476,11 +476,33 @@ using (var scope = app.Services.CreateScope())
                     .Where(u => u.IsPlatformOwner && u.AuthMethod == AuthMethods.Local &&
                                 string.Equals(u.Username, seedUsername, StringComparison.OrdinalIgnoreCase))
                     .ToList();
-                if (owners.Count != 1)
+                if (owners.Count == 0)
+                {
+                    // لا حساب بهذا الاسم: يُنشأ حساب مالك منصّة جديد (كالزرع الأول) — هكذا يُستعاد الدخول باسم جديد
+                    // حين يتعذّر الوصول إلى القاعدة لإصلاح الحساب القديم.
+                    await userStore.CreateAsync(new AppUser
+                    {
+                        Username = seedUsername,
+                        DisplayName = "مدير النظام",
+                        Role = UserRoles.Admin,
+                        AuthMethod = AuthMethods.Local,
+                        PasswordHash = PasswordHasher.Hash(seedPassword),
+                        IsActive = true,
+                        AllowAllSystems = true,
+                        AllowAllFiles = true,
+                        OrganizationId = defaultOrg?.Id,
+                        IsPlatformOwner = true,
+                    });
+                    logger.LogWarning(
+                        "Auth:SeedAdmin:ResetPassword: no platform-owner account named {Username} existed — created one from configuration. " +
+                        "Remove Auth:SeedAdmin:ResetPassword now.",
+                        seedUsername);
+                }
+                else if (owners.Count > 1)
                 {
                     logger.LogWarning(
-                        "Auth:SeedAdmin:ResetPassword: expected exactly one platform-owner account named {Username}, found {Count} — nothing was reset.",
-                        seedUsername, owners.Count);
+                        "Auth:SeedAdmin:ResetPassword: found {Count} platform-owner accounts named {Username} — nothing was reset.",
+                        owners.Count, seedUsername);
                 }
                 else
                 {
