@@ -3369,3 +3369,20 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .dk-brand-fonts-list li .sample { font-size: 18px; line-height: 1.3; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dk-brand-fonts-list li small { color: var(--ink-3); white-space: nowrap; }
 .dk-brand-fonts-list li .x { all: unset; cursor: pointer; color: var(--ink-3); padding: 0 6px; font-size: 16px; } .dk-brand-fonts-list li .x:hover { color: var(--danger); }
+
+/* قالب الشركة داخل نافذة الهوية: مصغّرات SVG حقيقية للتخطيطات والصفحات */
+.dk-brand-tpl { margin-top: 14px; padding: 12px; border: 1px dashed var(--line); border-radius: var(--r-lg); background: var(--surface-2); display: grid; gap: 10px; }
+.dk-tpl-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--fs-sm); }
+.dk-tpl-summary span { flex: 1; min-width: 200px; }
+.dk-tpl-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dk-tpl-tab { all: unset; cursor: pointer; padding: 6px 12px; border-radius: 999px; font-size: var(--fs-sm); color: var(--ink-2); border: 1px solid var(--line); background: var(--surface); }
+.dk-tpl-tab[aria-selected="true"] { background: var(--blue-50); color: var(--blue-700); border-color: var(--brand-blue); }
+.dk-tpl-tab em { font-style: normal; opacity: .7; margin-inline-start: 4px; }
+.dk-tpl-all { margin-inline-start: auto; font-size: var(--fs-xs); color: var(--ink-3); display: flex; gap: 6px; align-items: center; }
+.dk-tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; max-height: 360px; overflow: auto; padding: 2px; }
+.dk-tpl-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; display: grid; gap: 4px; }
+.dk-tpl-card .th { aspect-ratio: 16/9; background: #fff; border-radius: 6px; overflow: hidden; border: 1px solid var(--line-2); display: grid; place-items: center; color: var(--ink-3); font-size: var(--fs-xs); }
+.dk-tpl-card .th svg { width: 100%; height: 100%; display: block; }
+.dk-tpl-card b { font-size: var(--fs-xs); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dk-tpl-card small { font-size: 10px; color: var(--ink-3); }
+.dk-tpl-card .bad { color: var(--danger); }

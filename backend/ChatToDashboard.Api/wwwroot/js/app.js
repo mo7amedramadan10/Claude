@@ -8561,9 +8561,10 @@ function openDeckBrandModal() {
   el('dkb-font').value = ''; dkbFillFontSelect(); dkbRenderFonts(); el('dkb-fonts-note').textContent = '';
   el('dkb-logo-file').value = ''; el('dkb-error').classList.add('hidden');
   const ro = !DK.brandCanEdit;
-  el('deck-brand-modal').querySelectorAll('input, select, #dkb-save, #dkb-reset, #dkb-logo-clear, #dkb-fonts-upload').forEach(x => { x.disabled = ro; });
+  el('deck-brand-modal').querySelectorAll('input, select, #dkb-save, #dkb-reset, #dkb-logo-clear, #dkb-fonts-upload, #dkb-tpl-upload, #dkb-tpl-replace, #dkb-tpl-delete').forEach(x => { x.disabled = ro; });
   if (ro) { el('dkb-error').textContent = 'عرض فقط: تعديل الهوية لمالك المشروع أو محرّره أو المسؤول.'; el('dkb-error').classList.remove('hidden'); }
   dkbPreview();
+  el('dkb-tpl-file').value = ''; el('dkb-tpl-note').textContent = ''; el('dkb-tpl-all').checked = false; dkbTplKind = 'layout'; dkbLoadTemplate();
   el('deck-brand-modal').classList.remove('hidden');
 }
 function closeDeckBrandModal() { el('deck-brand-modal').classList.add('hidden'); }
@@ -8643,6 +8644,53 @@ el('dki-go').addEventListener('click', async () => {
     dkPushMsg('bot', `استوردت ${kind} «${f.name}»: ${d.pagesRead} ${d.kind === 'pptx' ? 'شريحة' : 'صفحة'} ← ${d.spec.slides.length} شريحة بهوية مشروعك. عدّل مباشرة على الشريحة أو اطلب مني تعديلًا، ثم احفظ وانشر.`
       + (d.warnings && d.warnings.length ? '\n\nملاحظات: ' + d.warnings.join(' · ') : ''));
   } catch (e) { err('تعذّر الاستيراد: ' + e.message); el('dki-go').disabled = false; el('dki-go').textContent = 'استيراد'; }
+});
+
+// ---------- قالب الشركة (PowerPoint) — DeckBrandTemplateStore ----------
+let dkbTplKind = 'layout';
+async function dkbLoadTemplate() {
+  try { const r = await fetch('/api/decks/brand/template?all=' + (el('dkb-tpl-all').checked ? 'true' : 'false')); const d = r.ok ? await r.json() : {}; DK.template = d.template || null; DK.templateMax = d.maxBytes || 64 * 1024 * 1024; }
+  catch { DK.template = null; }
+  dkbRenderTemplate();
+}
+function dkbRenderTemplate() {
+  const t = DK.template;
+  el('dkb-tpl-empty').classList.toggle('hidden', !!t); el('dkb-tpl-info').classList.toggle('hidden', !t);
+  if (!t) return;
+  el('dkb-tpl-summary').innerHTML = `<b>${esc(t.fileName)}</b> · ${(t.sizeBytes / 1024 / 1024).toFixed(1)} ميغابايت · ${t.layouts.length.toLocaleString('en-US')} تخطيط · ${t.slides.length.toLocaleString('en-US')} صفحة جاهزة${t.fonts && t.fonts.length ? ` · الخطوط: ${esc(t.fonts.slice(0, 3).join('، '))}` : ''}`;
+  el('dkb-tpl-warn').textContent = (t.warnings || []).join(' · ');
+  el('dkb-tpl-nl').textContent = t.layouts.length.toLocaleString('en-US'); el('dkb-tpl-ns').textContent = t.slides.length.toLocaleString('en-US');
+  el('dkb-tpl').querySelectorAll('.dk-tpl-tab').forEach(b => b.setAttribute('aria-selected', b.dataset.kind === dkbTplKind));
+  const pages = dkbTplKind === 'layout' ? t.layouts : t.slides;
+  const g = el('dkb-tpl-grid');
+  g.innerHTML = pages.map(p => `<div class="dk-tpl-card" data-svg="${esc(p.svgUrl)}" title="${esc(p.name)}"><div class="th">…</div><b>${esc(p.name)}</b><small>${p.kind === 'layout' ? `${p.placeholders.length} مكان محجوز${p.usedBySlides ? ` · ${p.usedBySlides} صفحة` : ''}` : `${p.texts} نص${p.charts ? ` · ${p.charts} رسم` : ''}`}${p.unsupported && p.unsupported.length ? ` <span class="bad">· صورة EMF</span>` : ''}</small></div>`).join('');
+  // المصغّرات SVG تُحقن مضمّنة (داخل <img> لا يحمّل المتصفح الصور الخارجية ولا يرسم foreignObject)، بالتتابع كيلا تُغرق الخادم
+  const cards = [...g.querySelectorAll('.dk-tpl-card')]; let i = 0;
+  const next = async () => { const c = cards[i++]; if (!c || !c.isConnected) return; try { const r = await fetch(c.dataset.svg); if (r.ok) { c.querySelector('.th').innerHTML = (await r.text()).replace(/<svg([^>]*?)\swidth="[^"]*"\sheight="[^"]*"/, '<svg$1'); } else c.querySelector('.th').textContent = 'تعذّر'; } catch { c.querySelector('.th').textContent = 'تعذّر'; } next(); };
+  next(); next(); next();
+}
+el('dkb-tpl').querySelectorAll('.dk-tpl-tab').forEach(b => b.addEventListener('click', () => { dkbTplKind = b.dataset.kind; dkbRenderTemplate(); }));
+el('dkb-tpl-all').addEventListener('change', dkbLoadTemplate);
+async function dkbUploadTemplate() {
+  const f = el('dkb-tpl-file').files && el('dkb-tpl-file').files[0]; const note = el('dkb-tpl-note');
+  if (!f) { note.textContent = 'اختر ملف القالب أولًا.'; return; }
+  if (!/\.(pptx|potx)$/i.test(f.name)) { note.textContent = 'الصيغة غير مدعومة — .pptx أو .potx فقط.'; return; }
+  if (f.size > (DK.templateMax || 64 * 1024 * 1024)) { note.textContent = 'حجم القالب يتجاوز 64 ميغابايت.'; return; }
+  const fd = new FormData(); fd.append('file', f);
+  el('dkb-tpl-upload').disabled = true; note.textContent = `يرفع ${(f.size / 1024 / 1024).toFixed(1)} ميغابايت ويرسم الصفحات… (قد يستغرق دقيقة)`;
+  try {
+    const r = await fetch('/api/decks/brand/template', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    DK.template = d.template; note.textContent = ''; el('dkb-tpl-all').checked = false; dkbTplKind = 'layout'; dkbRenderTemplate();
+  } catch (e) { note.textContent = 'تعذّر الرفع: ' + e.message; }
+  finally { el('dkb-tpl-upload').disabled = false; }
+}
+el('dkb-tpl-upload').addEventListener('click', dkbUploadTemplate);
+el('dkb-tpl-replace').addEventListener('click', () => { el('dkb-tpl-info').classList.add('hidden'); el('dkb-tpl-empty').classList.remove('hidden'); el('dkb-tpl-note').textContent = 'اختر القالب الجديد — يحلّ محل الحالي.'; });
+el('dkb-tpl-delete').addEventListener('click', async () => {
+  if (!confirm('حذف قالب الشركة من هذا المشروع؟')) return;
+  const r = await fetch('/api/decks/brand/template', { method: 'DELETE' });
+  if (r.ok || r.status === 204) { DK.template = null; dkbRenderTemplate(); } else el('dkb-tpl-warn').textContent = 'تعذّر الحذف';
 });
 
 // ---------- معرض نماذج العروض («عرض جديد») — نفس تجربة معرض اللوحات ----------

@@ -37,6 +37,7 @@ public class DecksController : ControllerBase
     private readonly DeckStore _decks;
     private readonly DeckBrandStore _brands;
     private readonly DeckBrandFontStore _fonts;
+    private readonly DeckBrandTemplateStore _templates;
     private readonly ProjectStore _projects;
     private readonly DeckBuilder _builder;
     private readonly DeckImporter _importer;
@@ -48,9 +49,9 @@ public class DecksController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     public DecksController(DeckStore decks, DeckBrandStore brands, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
-        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts)
+        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts, DeckBrandTemplateStore templates)
     {
-        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fonts = fonts; _builder = builder; _presentations = presentations; _organizations = organizations;
+        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fonts = fonts; _templates = templates; _builder = builder; _presentations = presentations; _organizations = organizations;
         _permissions = permissions; _tools = tools; _feasibility = feasibility; _env = env;
     }
 
@@ -156,6 +157,68 @@ public class DecksController : ControllerBase
         if (f is null) return NotFound();
         Response.Headers["Access-Control-Allow-Origin"] = "*";
         return File(f.Value.Bytes, f.Value.ContentType, f.Value.FileName);
+    }
+
+    // ---- قالب الشركة (PowerPoint) لكل مشروع ----
+    [HttpGet("brand/template")]
+    public async Task<IActionResult> GetTemplate([FromQuery] bool all, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var info = await _templates.GetInfoAsync(cur.Value.Selection.ProjectId, ct);
+        if (info is not null && !all) info.Layouts = info.Layouts.Where(l => !l.Generic).ToList();
+        return Ok(new { template = info, maxBytes = DeckBrandTemplateStore.MaxBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct) });
+    }
+
+    [HttpPost("brand/template")]
+    [RequestSizeLimit(DeckBrandTemplateStore.MaxBytes + 2 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckBrandTemplateStore.MaxBytes + 2 * 1024 * 1024)]
+    public async Task<IActionResult> UploadTemplate([FromForm] IFormFile? file, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "رفع قالب الشركة للمسؤول أو مالك المشروع فقط." });
+        if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملف قالب PowerPoint (.pptx أو .potx)." });
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext is not (".pptx" or ".potx")) return BadRequest(new { error = "الصيغة غير مدعومة — المدعوم .pptx و.potx." });
+        if (file.Length > DeckBrandTemplateStore.MaxBytes) return BadRequest(new { error = $"حجم القالب يتجاوز {DeckBrandTemplateStore.MaxBytes / 1024 / 1024} ميغابايت." });
+        byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
+        TemplateInfo info;
+        try { info = await _templates.SaveAsync(cur.Value.Selection.ProjectId, cur.Value.User.Id, file.FileName, bytes, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة القالب: " + ex.Message }); }
+        info.Layouts = info.Layouts.Where(l => !l.Generic).ToList();
+        return Ok(new { template = info });
+    }
+
+    [HttpDelete("brand/template")]
+    public async Task<IActionResult> DeleteTemplate(CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "حذف قالب الشركة للمسؤول أو مالك المشروع فقط." });
+        await _templates.DeleteAsync(cur.Value.Selection.ProjectId, ct);
+        return NoContent();
+    }
+
+    /// <summary>صفحة مرسومة SVG — بلا دخول (الصفحة المنشورة لاحقًا داخل iframe بلا كوكي؛ المعرّف عشوائي).</summary>
+    [HttpGet("brand/template/{tid}/pages/{kind}/{idx:int}.svg")]
+    [AllowAnonymous]
+    [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> TemplatePage(string tid, string kind, int idx, CancellationToken ct)
+    {
+        if (!Regex.IsMatch(tid, "^[0-9a-f]{16}$") || kind is not ("layout" or "slide")) return NotFound();
+        var svg = await _templates.GetPageSvgAsync(tid, kind, idx, ct);
+        if (svg is null) return NotFound();
+        return Content(svg, "image/svg+xml; charset=utf-8");
+    }
+
+    [HttpGet("brand/template/{tid}/media/{name}")]
+    [AllowAnonymous]
+    [ResponseCache(Duration = 86400 * 30, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> TemplateMedia(string tid, string name, CancellationToken ct)
+    {
+        if (!Regex.IsMatch(tid, "^[0-9a-f]{16}$")) return NotFound();
+        var bytes = await _templates.GetBytesAsync(tid, ct); if (bytes is null) return NotFound();
+        var m = DeckBrandTemplateStore.Media(bytes, name); if (m is null) return NotFound();
+        return File(m.Value.Bytes, m.Value.ContentType);
     }
 
     /// <summary>المسؤول أو من له دور مالك/محرّر في المشروع الحالي (المشاهد لا يغيّر الهوية). الحساب بلا دور صريح يُعامل كمشاهد.</summary>

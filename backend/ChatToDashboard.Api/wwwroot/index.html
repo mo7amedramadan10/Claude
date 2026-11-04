@@ -639,6 +639,24 @@
         <div id="dkb-prev-body" class="jd-slide"></div>
       </div>
     </div>
+    <section class="dk-brand-tpl" id="dkb-tpl">
+      <div class="dk-brand-fonts-head"><b>قالب الشركة (PowerPoint)</b><span class="muted">ارفع ملف .pptx أو .potx حتى 64 ميغابايت — تُرسم تخطيطاته وصفحاته الجاهزة هنا بنفس خلفياتها ورسوماتها، وتُستخدم لاحقًا لصفحات العرض وتصدير PowerPoint</span></div>
+      <div id="dkb-tpl-empty" class="dk-brand-logo-row">
+        <input type="file" id="dkb-tpl-file" accept=".pptx,.potx,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.presentationml.template">
+        <button type="button" id="dkb-tpl-upload" class="btn btn-sm btn-soft">رفع القالب</button>
+        <span id="dkb-tpl-note" class="model-switch-note"></span>
+      </div>
+      <div id="dkb-tpl-info" class="hidden">
+        <div class="dk-tpl-summary"><span id="dkb-tpl-summary"></span><button type="button" id="dkb-tpl-replace" class="btn btn-sm btn-ghost">استبدال</button><button type="button" id="dkb-tpl-delete" class="btn btn-sm btn-ghost">حذف القالب</button></div>
+        <div id="dkb-tpl-warn" class="model-switch-note"></div>
+        <div class="dk-tpl-tabs" role="tablist">
+          <button type="button" class="dk-tpl-tab" data-kind="layout" aria-selected="true">التخطيطات <em id="dkb-tpl-nl"></em></button>
+          <button type="button" class="dk-tpl-tab" data-kind="slide" aria-selected="false">الصفحات الجاهزة <em id="dkb-tpl-ns"></em></button>
+          <label class="dk-tpl-all"><input type="checkbox" id="dkb-tpl-all"> إظهار التخطيطات الافتراضية</label>
+        </div>
+        <div id="dkb-tpl-grid" class="dk-tpl-grid"></div>
+      </div>
+    </section>
     <div class="modal-actions">
       <button type="button" id="dkb-reset" class="btn btn-ghost">إعادة الافتراضي</button>
       <span class="grow"></span>
