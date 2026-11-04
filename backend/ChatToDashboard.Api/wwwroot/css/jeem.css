@@ -507,7 +507,7 @@
    يدويًا بيعدي عليه — المصغّرات هنا أشكال تجريدية (GLYPH) بس، مفيش رقم أو بيانات
    وهمية متعروضة في أي مكان. محصور بـ #dash-gallery-modal عشان ميأثرش على بقية
    الموديلز اللي بتستخدم .modal-overlay/.modal القدام (نفس درس .roles-modal-box). */
-#dash-gallery-modal .modal.dash-gallery-box, #deck-gallery-modal .modal.dash-gallery-box {
+#dash-gallery-modal .modal.dash-gallery-box, #deck-gallery-modal .modal.dash-gallery-box, #ff-gallery-modal .modal.dash-gallery-box {
   width: min(1240px, calc(100vw - 32px)); max-width: none; height: min(820px, calc(100vh - 32px));
   padding: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r-xl);
 }
@@ -544,7 +544,7 @@
    بتخصيص أعلى (3 كلاسات) عشان فعلاً تقدر تخفي القايمة أو المعاينة. */
 .dash-gallery-box .gal-view.hidden { display: none; }
 .dash-gallery-box .gal-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-#deck-gallery-modal .gal-quick { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+#deck-gallery-modal .gal-quick, #ff-gallery-modal .gal-quick { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .dash-gallery-box .quick-card {
   display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: var(--r-lg);
   border: 1.5px dashed #C9D6E0; background: var(--surface); text-align: start; cursor: pointer;
@@ -3331,7 +3331,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* معرض نماذج العروض (#deck-gallery-modal) — يعيد استخدام .dash-gallery-box؛ المصغّرة شريحة حقيقية من المحرك ببيانات توضيحية */
 .dash-gallery-box .dc-deck-thumb { display: block; padding: 10px; background: var(--surface-2); border-radius: var(--r-lg); pointer-events: none; }
 .dash-gallery-box .dc-deck-thumb .jd-slide { border-radius: 8px; box-shadow: none; border: 1px solid var(--line-2); }
-.dash-gallery-box .dkgal-grid .dash-card { padding: 10px; }
+.dash-gallery-box .dkgal-grid .dash-card, .dash-gallery-box .ffgal-grid .dash-card { padding: 10px; }
 .dash-gallery-box .pv-thumb .dc-deck-thumb { padding: 14px; }
 .dash-gallery-box .pv-list .pv-ic { font-size: 12px; }
 .dash-gallery-box .dkgal-demo { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 16px; align-items: start; }
@@ -3477,6 +3477,50 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
   .jeem-scope .ff-search:focus-within input, .jeem-scope .ff-search.open input { width: 110px; }
   .jeem-scope .ff-cards { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
 }
+
+/* نماذج تصميم حر: مصغّرة تخطيطية (wireframe) من Sketch النموذج داخل ورقة، ومرفق النموذج في صندوق الكتابة */
+.jeem-scope .ff-sk { display: block; aspect-ratio: 16 / 10; border-radius: 10px; padding: 10px; position: relative; overflow: hidden; background: var(--surface-2); }
+.jeem-scope .ff-sk .paper { position: absolute; inset: 10px 10px 0 10px; background: #fff; border-radius: 6px 6px 0 0; box-shadow: 0 2px 8px rgba(16,32,48,.10); padding: 8px; display: grid; gap: 5px; align-content: start; --sk: #C9D4DE; --sk-2: #E6ECF1; --sk-a: var(--brand-blue); }
+.jeem-scope .ff-sk.k-doc { background: #E3EDFB; } .jeem-scope .ff-sk.k-slides { background: #FBEBDF; } .jeem-scope .ff-sk.k-design { background: #EEE7FB; }
+.jeem-scope .ff-sk.k-dashboard { background: #FBE4E4; } .jeem-scope .ff-sk.k-motion { background: #E2F5EE; }
+.jeem-scope .ff-sk.k-doc .paper { --sk-a: #2A5BD7; } .jeem-scope .ff-sk.k-slides .paper { --sk-a: #9A4A15; } .jeem-scope .ff-sk.k-design .paper { --sk-a: #6A3FC9; }
+.jeem-scope .ff-sk.k-dashboard .paper { --sk-a: #B3261E; } .jeem-scope .ff-sk.k-motion .paper { --sk-a: #0E7A5C; }
+.jeem-scope .ff-sk .row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; min-height: 0; }
+.jeem-scope .ff-sk .sk { border-radius: 3px; background: var(--sk-2); min-height: 10px; }
+.jeem-scope .ff-sk .sk-n { height: 8px; background: var(--sk-a); opacity: .85; }
+.jeem-scope .ff-sk .sk-h { height: 9px; width: 55%; background: var(--sk); justify-self: start; }
+.jeem-scope .ff-sk .sk-p { height: 16px; background: repeating-linear-gradient(to bottom, var(--sk-2) 0 3px, transparent 3px 6px); }
+.jeem-scope .ff-sk .sk-b { height: 16px; background: repeating-linear-gradient(to bottom, var(--sk-2) 0 3px, transparent 3px 6px); width: 80%; justify-self: end; position: relative; }
+.jeem-scope .ff-sk .sk-b::before { content: ""; position: absolute; inset-inline-end: 100%; margin-inline-end: 3px; top: 0; width: 3px; height: 16px; background: repeating-linear-gradient(to bottom, var(--sk-a) 0 3px, transparent 3px 6px); }
+.jeem-scope .ff-sk .sk-k { height: 18px; background: var(--sk-2); border-top: 3px solid var(--sk-a); }
+.jeem-scope .ff-sk .sk-c { height: 26px; background: linear-gradient(to top, var(--sk-a) 0 40%, transparent 40%) 0 100% / 18% 100% no-repeat, linear-gradient(to top, var(--sk-a) 0 70%, transparent 70%) 27% 100% / 18% 100% no-repeat, linear-gradient(to top, var(--sk-a) 0 55%, transparent 55%) 54% 100% / 18% 100% no-repeat, linear-gradient(to top, var(--sk-a) 0 85%, transparent 85%) 81% 100% / 18% 100% no-repeat; opacity: .8; }
+.jeem-scope .ff-sk .sk-l { height: 26px; background: linear-gradient(170deg, transparent 48%, var(--sk-a) 48% 52%, transparent 52%) ; opacity: .8; position: relative; }
+.jeem-scope .ff-sk .sk-l::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, var(--sk-2) 0 1px, transparent 1px) 0 100% / 100% 1px no-repeat; }
+.jeem-scope .ff-sk .sk-d { height: 26px; background: radial-gradient(circle at 50% 50%, #fff 0 5px, var(--sk-a) 5px 11px, transparent 11px); opacity: .85; }
+.jeem-scope .ff-sk .sk-t { height: 22px; background: repeating-linear-gradient(to bottom, var(--sk) 0 1px, transparent 1px 7px), var(--sk-2); }
+.jeem-scope .ff-sk .sk-i { height: 26px; background: var(--sk-2); position: relative; }
+.jeem-scope .ff-sk .sk-i::after { content: ""; position: absolute; inset: 30% 30%; background: var(--sk); clip-path: polygon(0 100%, 35% 30%, 60% 70%, 75% 50%, 100% 100%); }
+.jeem-scope .ff-sk .sk-f { height: 22px; background: repeating-linear-gradient(to bottom, transparent 0 2px, var(--sk-2) 2px 8px, transparent 8px 10px); border-inline-start: 2px solid var(--sk-a); }
+.jeem-scope .ff-sk .sk-g { height: 22px; background: linear-gradient(90deg, var(--sk-2) 0 30%, transparent 30% 35%, var(--sk-2) 35% 65%, transparent 65% 70%, var(--sk-2) 70%); }
+.jeem-scope .ff-sk .sk-s { aspect-ratio: 16 / 9; height: auto; background: var(--sk-2); border: 1px solid var(--sk); position: relative; }
+.jeem-scope .ff-sk .sk-s::before { content: ""; position: absolute; inset: 20% 15% auto 15%; height: 12%; background: var(--sk-a); border-radius: 2px; opacity: .8; }
+.jeem-scope .ff-sk .sk-s::after { content: ""; position: absolute; inset: 45% 15% 20% 15%; background: repeating-linear-gradient(to bottom, var(--sk) 0 2px, transparent 2px 5px); }
+.jeem-scope .ff-sk .sk-a { height: 34px; background: radial-gradient(circle at 20% 50%, var(--sk-a) 0 6px, transparent 6px), radial-gradient(circle at 50% 50%, var(--sk-a) 0 6px, transparent 6px), radial-gradient(circle at 80% 50%, var(--sk-a) 0 6px, transparent 6px), linear-gradient(to bottom, transparent 48%, var(--sk) 48% 52%, transparent 52%); opacity: .85; }
+.jeem-scope .ff-sk .row.slides { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+.jeem-scope .ffgal-grid .ff-sk { border-radius: 10px 10px 0 0; }
+.jeem-scope .gal-preview .ff-sk { max-width: 420px; border-radius: 12px; }
+
+.jeem-scope .ff-attach { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 0; }
+.jeem-scope .ff-attach.hidden { display: none; }
+.jeem-scope .ff-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 8px 4px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: var(--fs-xs); color: var(--ink-2); cursor: pointer; }
+.jeem-scope .ff-chip:hover { border-color: var(--brand-blue); }
+.jeem-scope .ff-chip .ff-chip-ico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; background: var(--line-2); flex: none; }
+.jeem-scope .ff-chip.tpl .ff-chip-ico { background: var(--blue-50); }
+.jeem-scope .ff-chip b { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jeem-scope .ff-chip .ff-chip-x { all: unset; cursor: pointer; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); font-size: 12px; }
+.jeem-scope .ff-chip .ff-chip-x:hover { background: var(--line-2); color: var(--ink); }
+.jeem-scope .cc-msg .ff-msg-attach { display: flex; width: max-content; max-width: 100%; align-items: center; gap: 6px; margin-bottom: 6px; padding: 3px 8px; border-radius: 8px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); font-size: var(--fs-xs); }
+.jeem-scope .cc-msg.assistant .ff-msg-attach { background: var(--surface-2); border-color: var(--line); }
 .jeem-scope .ff-preview-wrap.doc { background: #E9EEF2; }
 .jeem-scope .ff-preview-wrap.doc .ff-preview { max-width: 980px; }
 .jeem-scope #ff-present.hidden, .jeem-scope #ff-replay.hidden, .jeem-scope #ff-print.hidden { display: none; }

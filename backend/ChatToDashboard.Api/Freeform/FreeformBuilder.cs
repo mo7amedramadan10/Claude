@@ -26,7 +26,7 @@ public class FreeformBuilder
     public FreeformBuilder(LlmRouter router, DataProfileService profiles, AnalyticsTools tools, ColumnSemanticsService semantics, ILogger<FreeformBuilder> logger)
     { _router = router; _profiles = profiles; _tools = tools; _semantics = semantics; _logger = logger; }
 
-    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design")
+    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design", FreeformTemplate? template = null)
     {
         var llm = await _router.ResolveStagedAsync(ct) ?? throw new InvalidOperationException("لا يوجد مزوّد موديل مهيأ — اضبط مفاتيح الموديلات من الإعدادات.");
         var profile = await _profiles.BuildAsync(context, ct);
@@ -37,7 +37,7 @@ public class FreeformBuilder
             await _semantics.EnsureAnalyzedAsync(context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
             profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.ProjectId, ct));
         }
-        var system = BuildSystemPrompt(brand, hasData, profileText, kind);
+        var system = BuildSystemPrompt(brand, hasData, profileText, kind, template);
         var userMsg = new StringBuilder();
         if (history.Count > 0)
         {
@@ -110,7 +110,7 @@ public class FreeformBuilder
             """,
     };
 
-    public static string BuildSystemPrompt(DeckBrand? brand, bool hasData, string profileText, string kind = "design")
+    public static string BuildSystemPrompt(DeckBrand? brand, bool hasData, string profileText, string kind = "design", FreeformTemplate? template = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("""
@@ -126,6 +126,7 @@ public class FreeformBuilder
             أعد JSON فقط: {"reply": "جملة أو اثنتان بالعربية عمّا صممته وما يمكن تعديله", "html": "<!doctype html>…", "usedData": true|false}
             """);
         sb.AppendLine(KindInstructions(kind));
+        if (template is not null) sb.AppendLine(FreeformTemplates.BriefFor(template));
         if (brand is not null && !brand.IsEmpty)
         {
             sb.AppendLine("# هوية المشروع (التزم بها)");

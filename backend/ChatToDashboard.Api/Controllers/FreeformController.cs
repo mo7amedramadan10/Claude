@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
-public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } }
+public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } public string? TemplateKey { get; set; } }
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
 
@@ -82,6 +82,11 @@ public class FreeformController : ControllerBase
         return Ok(new { version, html = ApplyBrandAssets(html, await BrandAsync(cur.Value.Selection.ProjectId, ct)) });
     }
 
+    /// <summary>كتالوج نماذج تصميم حر (اختياريًا لنوع واحد <c>?kind=doc</c>).</summary>
+    [HttpGet("templates")]
+    public IActionResult Templates([FromQuery] string? kind)
+        => Ok(string.IsNullOrWhiteSpace(kind) ? FreeformTemplates.All : FreeformTemplates.All.Where(t => t.Kind == kind).ToList());
+
     /// <summary>توليد أو تعديل بالمحادثة. بلا <c>designId</c> يُنشأ تصميم جديد بعنوان من الطلب.</summary>
     [HttpPost("generate")]
     public async Task<IActionResult> Generate([FromBody] FreeformGenerateRequest request, CancellationToken ct)
@@ -101,13 +106,16 @@ public class FreeformController : ControllerBase
         var brand = await BrandAsync(selection.ProjectId, ct);
         FreeformResult result;
         var kind = FreeformStore.NormalizeKind(design?.Kind ?? request.Kind);
-        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind); }
+        // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
+        var template = FreeformTemplates.Find(design?.TemplateKey ?? request.TemplateKey);
+        if (template is not null && template.Kind != kind) template = null;
+        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         int? version = null;
         if (design is null)
         {
             var title = TitleFrom(request.Message);
-            design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, result.Html ?? "", request.Message, kind, ct);
+            design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, result.Html ?? "", request.Message, kind, template?.Key, ct);
             version = design.Version > 0 ? design.Version : null;
         }
         else if (result.Html is not null) { version = await _store.AddVersionAsync(design.Id, result.Html, request.Message, null, ct); design.Version = version.Value; design.Html = result.Html; }

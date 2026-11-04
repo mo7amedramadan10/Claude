@@ -14,6 +14,8 @@ public class FreeformDesign
     [JsonPropertyName("title")] public string Title { get; set; } = "";
     /// <summary>نوع المخرج كما في Claude: doc | slides | design | dashboard | motion.</summary>
     [JsonPropertyName("kind")] public string Kind { get; set; } = "design";
+    /// <summary>مفتاح النموذج الذي بُني عليه (من <see cref="FreeformTemplates"/>)؛ null = تصميم حر بلا نموذج.</summary>
+    [JsonPropertyName("templateKey")] public string? TemplateKey { get; set; }
     [JsonIgnore] public string Html { get; set; } = "";
     [JsonPropertyName("version")] public int Version { get; set; }
     [JsonPropertyName("presentationId")] public string? PresentationId { get; set; }
@@ -48,7 +50,7 @@ public class FreeformStore
     private volatile bool _schemaReady;
     public FreeformStore(DataStore db) => _db = db;
     private const string T = "[dbo].[FreeformDesigns]", V = "[dbo].[FreeformVersions]", M = "[dbo].[FreeformMessages]";
-    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
     public static readonly string[] Kinds = { "doc", "slides", "design", "dashboard", "motion" };
     public static string NormalizeKind(string? k) => Kinds.Contains(k ?? "") ? k! : "design";
 
@@ -78,6 +80,7 @@ public class FreeformStore
                   [Version] INT NULL, [CreatedAt] DATETIME2 NOT NULL);
                 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_FreeformMessages_Design') CREATE INDEX IX_FreeformMessages_Design ON {M} ([DesignId], [Id]);
                 IF COL_LENGTH('dbo.FreeformDesigns', 'Kind') IS NULL ALTER TABLE {T} ADD [Kind] NVARCHAR(16) NOT NULL DEFAULT 'design';
+                IF COL_LENGTH('dbo.FreeformDesigns', 'TemplateKey') IS NULL ALTER TABLE {T} ADD [TemplateKey] NVARCHAR(60) NULL;
                 """;
             await command.ExecuteNonQueryAsync(ct);
             _schemaReady = true;
@@ -85,13 +88,13 @@ public class FreeformStore
         finally { _schemaGate.Release(); }
     }
 
-    public async Task<FreeformDesign> CreateAsync(string? projectId, string? organizationId, string userId, string title, string html, string? prompt, string? kind = null, CancellationToken ct = default)
+    public async Task<FreeformDesign> CreateAsync(string? projectId, string? organizationId, string userId, string title, string html, string? prompt, string? kind = null, string? templateKey = null, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         var now = DateTime.UtcNow;
-        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
+        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = FreeformTemplates.Find(templateKey)?.Key, Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
+        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
         if (d.Version == 1) await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, 1, @html, @prompt, @size, @now)", new { id = d.Id, html, prompt = Trim(prompt), size = d.SizeBytes, now });
         return d;
     }
