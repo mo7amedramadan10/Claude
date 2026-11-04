@@ -3306,6 +3306,8 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .dk-gallery-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .jeem-scope .dk-gallery-head h3 { margin: 0; font-size: var(--fs-lg); }
 .jeem-scope .dk-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* .jeem-scope .dk-* (تخصيص 20) تغلب .hidden العامة — نفس درس .gal-view.hidden */
+.jeem-scope .dk-gallery.hidden, .jeem-scope .dk-editor.hidden { display: none; }
 .jeem-scope .dk-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px 24px; background: var(--plane); }
 .jeem-scope .dk-stage .jd-slide { width: min(100%, calc((100vh - 290px) * 16 / 9)); }
 .jeem-scope .dk-slide-meta { font-size: var(--fs-xs); color: var(--ink-3); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
