@@ -1026,7 +1026,24 @@
       </div>
     </div>
     <div id="ff-body" class="ff-body">
+      <!-- حالة البداية: نسخة من معرض Artifacts في Claude — عنوان، تبويبات (الكل/تصاميمي/مشترك معي)، بحث وتصفية بالنوع وتبديل العرض، بطاقات «اصنع شيئًا جديدًا»، ثم التصاميم السابقة بمعاينات مصغّرة -->
       <div id="ff-start" class="ff-start">
+        <div class="ff-gal-head">
+          <h2 class="ff-gal-title">تصميم حر</h2>
+          <div class="ff-tabs" role="tablist" aria-label="تصفية التصاميم">
+            <button type="button" class="ff-tab" role="tab" data-tab="all" aria-selected="true">الكل</button>
+            <button type="button" class="ff-tab" role="tab" data-tab="mine" aria-selected="false">تصاميمي</button>
+            <button type="button" class="ff-tab" role="tab" data-tab="shared" aria-selected="false">مشترك معي</button>
+          </div>
+          <div class="ff-tools">
+            <label class="ff-search" id="ff-search-wrap"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث في التصاميم</span><input type="search" id="ff-search" placeholder="بحث"></label>
+            <div class="dropdown" id="ff-filter-dropdown">
+              <button type="button" id="ff-filter-btn" class="ff-tool" title="تصفية بالنوع" aria-haspopup="true" aria-expanded="false"><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sr-only">تصفية بالنوع</span></button>
+              <div id="ff-filter-panel" class="dropdown-panel hidden"></div>
+            </div>
+            <button type="button" id="ff-view-btn" class="ff-tool" aria-pressed="false" title="عرض كقائمة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg><span class="sr-only">تبديل بين الشبكة والقائمة</span></button>
+          </div>
+        </div>
         <div class="ff-make">
           <h3>اصنع شيئًا جديدًا</h3>
           <div class="ff-kinds" role="list">
@@ -1038,8 +1055,7 @@
           </div>
           <p class="muted ff-make-hint" id="ff-make-hint">اختر نوعًا ثم اكتب طلبك في المحادثة. جيم يكتب الصفحة كاملة بهوية مشروعك ويقدر يستخدم بياناته.</p>
         </div>
-        <div class="dk-gallery-head"><h3>تصاميم المشروع</h3><span class="muted" id="ff-count"></span></div>
-        <div id="ff-list" class="ff-list"></div>
+        <div id="ff-list" class="ff-cards" aria-live="polite"></div>
       </div>
       <div id="ff-preview-wrap" class="ff-preview-wrap hidden">
         <iframe id="ff-preview" class="ff-preview" title="معاينة التصميم" sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>

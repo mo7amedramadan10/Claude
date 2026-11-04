@@ -8723,24 +8723,84 @@ const FF_KINDS = { doc: { label: 'مستند', ph: 'مثال: مذكرة داخ�
 function ffSetKind(k) { FF.kind = k; const info = FF_KINDS[k]; el('ff-q').placeholder = info ? info.ph : ''; el('ff-head-desc').textContent = info ? `${info.label} جديد — اكتب طلبك` : 'اختر نوعًا من اللوحة ثم اكتب طلبك'; document.querySelectorAll('.ff-kind').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === k ? 'true' : 'false')); el('ff-make-hint').textContent = info ? `النوع: ${info.label}. اكتب طلبك في المحادثة (يسار) وسيُبنى بهوية مشروعك.` : 'اختر نوعًا ثم اكتب طلبك في المحادثة.'; }
 document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', () => { ffSetKind(b.dataset.kind); el('ff-q').focus(); }));
 async function loadFreeformScreen() { if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
+// حالة البداية = معرض كمعرض Artifacts في Claude: تبويبات (الكل/تصاميمي/مشترك معي)، بحث، تصفية بالنوع، شبكة/قائمة، وبطاقات بمعاينة مصغّرة حيّة
+// لكل تصميم سابق تُجلب صفحته كسولًا عند ظهورها. «فُتح قبل…» يُسجَّل محليًا لكل مشاهد (localStorage) وإلا يُعرض آخر تعديل.
+FF.gal = { tab: 'all', q: '', kind: '', list: false, htmlCache: {}, io: null };
+try { FF.gal.list = localStorage.getItem('ffGalView') === 'list'; } catch {}
+function ffOpenedAt(id) { try { return localStorage.getItem('ffOpened:' + id); } catch { return null; } }
+function ffMarkOpened(id) { try { localStorage.setItem('ffOpened:' + id, new Date().toISOString()); } catch {} }
+function ffAgo(iso) {
+  const ms = Date.now() - new Date(iso).getTime(); if (!(ms >= 0)) return '';
+  const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24), mo = Math.floor(d / 30);
+  // جمع عربي: 1 مفرد، 2 مثنى، 3–10 جمع، فوق 10 مفرد منصوب
+  const ar = (n, one, two, few, many) => n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${few}` : `${n} ${many}`;
+  if (m < 1) return 'الآن'; if (m < 60) return 'قبل ' + ar(m, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة');
+  if (h < 24) return 'قبل ' + ar(h, 'ساعة', 'ساعتين', 'ساعات', 'ساعة'); if (d < 30) return 'قبل ' + ar(d, 'يوم', 'يومين', 'أيام', 'يومًا');
+  if (mo < 12) return 'قبل ' + ar(mo, 'شهر', 'شهرين', 'أشهر', 'شهرًا'); const y = Math.floor(mo / 12); return 'قبل ' + ar(y, 'سنة', 'سنتين', 'سنوات', 'سنة');
+}
+function ffKindIcon(k) { const n = document.querySelector(`.ff-kind[data-kind="${FF_KINDS[k] ? k : 'design'}"] .ff-ico`); return n ? n.outerHTML : ''; }
+function ffGalFiltered() {
+  const me = state.currentUser ? state.currentUser.id : null; const q = FF.gal.q.trim().toLowerCase();
+  return FF.list.filter(d => (FF.gal.tab === 'all' || (FF.gal.tab === 'mine' ? d.createdByUserId === me : d.createdByUserId !== me))
+    && (!FF.gal.kind || (d.kind || 'design') === FF.gal.kind) && (!q || (d.title || '').toLowerCase().includes(q)));
+}
 async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
   el('ff-title').textContent = 'تصميم حر'; el('ff-meta').textContent = 'اكتب طلبك في المحادثة';
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
   try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
-  el('ff-count').textContent = FF.list.length ? `${FF.list.length.toLocaleString('en-US')} تصميم` : 'لا تصاميم بعد';
-  el('ff-list').innerHTML = FF.list.map(d => `<div class="dk-card" data-ff="${esc(d.id)}" role="button" tabindex="0"><span class="ic">${({ doc: '📄', slides: '🖼️', dashboard: '📊', motion: '🎞️' })[d.kind] || '🎨'}</span><b>${esc(d.title)}${ffKindChip(d.kind)}</b><p>إصدار ${d.version} · ${relTime(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</p></div>`).join('');
   ffSetKind(FF.kind);
-  el('ff-list').querySelectorAll('[data-ff]').forEach(c => c.addEventListener('click', () => ffOpen(c.dataset.ff)));
+  ffRenderGallery();
 }
+function ffRenderGallery() {
+  const box = el('ff-list'); const items = ffGalFiltered();
+  document.querySelectorAll('.ff-tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === FF.gal.tab ? 'true' : 'false'));
+  box.classList.toggle('list', FF.gal.list); el('ff-view-btn').setAttribute('aria-pressed', FF.gal.list ? 'true' : 'false'); el('ff-view-btn').title = FF.gal.list ? 'عرض كشبكة' : 'عرض كقائمة';
+  el('ff-filter-btn').classList.toggle('active', !!FF.gal.kind);
+  box.dataset.empty = FF.list.length ? 'لا تصاميم تطابق التصفية.' : 'لا تصاميم بعد — اختر نوعًا من الأعلى واكتب طلبك.';
+  box.innerHTML = items.map(d => { const k = FF_KINDS[d.kind] ? d.kind : 'design'; const opened = ffOpenedAt(d.id);
+    return `<article class="ff-card k-${k}" data-ff="${esc(d.id)}" role="button" tabindex="0" aria-label="${esc(d.title)}">
+      <div class="ff-card-art"><div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(d.title)}"></iframe></div></div>
+      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(d.title)}</b><small>${opened ? 'فُتح ' + ffAgo(opened) : 'عُدِّل ' + ffAgo(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</small></div></div>
+    </article>`; }).join('');
+  box.querySelectorAll('[data-ff]').forEach(c => { c.addEventListener('click', () => ffOpen(c.dataset.ff)); c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ffOpen(c.dataset.ff); } }); });
+  ffScaleThumbs();
+  if (!FF.gal.io) FF.gal.io = new IntersectionObserver(entries => entries.forEach(en => { if (en.isIntersecting) { FF.gal.io.unobserve(en.target); ffLoadThumb(en.target); } }), { root: el('ff-start'), rootMargin: '200px' });
+  if (!FF.gal.list) box.querySelectorAll('.ff-card').forEach(c => FF.gal.io.observe(c));
+}
+function ffScaleThumbs() { const first = el('ff-list').querySelector('.ff-card-paper'); if (!first) return; const w = first.clientWidth || 200; el('ff-list').style.setProperty('--ff-s', (w / 1100).toFixed(4)); }
+async function ffLoadThumb(card) {
+  const id = card.dataset.ff; const f = card.querySelector('.ff-thumb'); if (!f) return;
+  let html = FF.gal.htmlCache[id];
+  if (html == null) { try { const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); html = r.ok ? ((await r.json()).html || '') : ''; } catch { html = ''; } FF.gal.htmlCache[id] = html; }
+  if (html) f.srcdoc = html;
+}
+document.querySelectorAll('.ff-tab').forEach(t => t.addEventListener('click', () => { FF.gal.tab = t.dataset.tab; ffRenderGallery(); }));
+el('ff-search').addEventListener('input', () => { FF.gal.q = el('ff-search').value; ffRenderGallery(); });
+el('ff-search-wrap').addEventListener('click', () => { el('ff-search-wrap').classList.add('open'); el('ff-search').focus(); });
+el('ff-search').addEventListener('blur', () => { if (!el('ff-search').value) el('ff-search-wrap').classList.remove('open'); });
+el('ff-view-btn').addEventListener('click', () => { FF.gal.list = !FF.gal.list; try { localStorage.setItem('ffGalView', FF.gal.list ? 'list' : 'grid'); } catch {} ffRenderGallery(); });
+el('ff-filter-btn').addEventListener('click', e => {
+  e.stopPropagation(); // الإغلاق العام للقوائم المنسدلة (closeAllDropdowns) مربوط على نقر المستند
+  const panel = el('ff-filter-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
+  if (open) {
+    panel.innerHTML = [['', 'كل الأنواع'], ...Object.entries(FF_KINDS).map(([k, v]) => [k, v.label])].map(([k, l]) => `<button type="button" class="dropdown-item ff-filter-item" role="menuitemradio" data-kind="${k}" aria-checked="${FF.gal.kind === k ? 'true' : 'false'}">${l}</button>`).join('');
+    panel.querySelectorAll('.ff-filter-item').forEach(b => b.addEventListener('click', () => { FF.gal.kind = b.dataset.kind; panel.classList.add('hidden'); el('ff-filter-btn').setAttribute('aria-expanded', 'false'); ffRenderGallery(); }));
+  }
+  panel.classList.toggle('hidden', !open); el('ff-filter-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+document.addEventListener('click', () => el('ff-filter-btn').setAttribute('aria-expanded', 'false'));
+el('ff-filter-panel').addEventListener('click', e => e.stopPropagation());
+window.addEventListener('resize', () => { if (!el('ff-start').classList.contains('hidden')) ffScaleThumbs(); });
 function ffKindChip(k) { const info = FF_KINDS[k]; return info ? `<span class="ff-kind-chip">${esc(info.label)}</span>` : ''; }
 async function ffOpen(id) {
-  const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return;
+  const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return; ffMarkOpened(id);
   const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl;
   FF.messages = (d.messages || []).map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
   ffRender(); ffRenderMessages();
 }
 function ffRender() {
+  if (FF.design && FF.gal) delete FF.gal.htmlCache[FF.design.id]; // المعاينة المصغّرة تُجلب من جديد بعد التعديل
   el('ff-start').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden'); el('ff-preview-wrap').classList.remove('hidden');
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
   el('ff-code').setAttribute('aria-pressed', 'false');
