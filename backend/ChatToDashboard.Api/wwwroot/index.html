@@ -583,6 +583,10 @@
               <span class="qi"><img src="img/logo-mark.svg" alt=""></span>
               <span><b>اطلب من جيم</b><small>اكتب وصف العرض اللي محتاجه وجيم يبنيه من بيانات مشروعك</small></span>
             </button>
+            <button type="button" class="quick-card" id="dkgal-start-import">
+              <span class="qi"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-file"/></svg></span>
+              <span><b>استيراد ملف موجود</b><small>PowerPoint أو PDF أو صفحة HTML — يتحوّل لعرض بنفس المحتوى تقدر تعدّله وتنشره</small></span>
+            </button>
           </div>
           <h3 class="gal-sub">النماذج <span class="muted">· عرض كامل بشرائحه الجاهزة</span></h3>
           <div class="gal-grid dkgal-grid" id="dkgal-grid"></div>
@@ -631,6 +635,24 @@
       <span class="grow"></span>
       <button type="button" id="dkb-cancel" class="btn btn-ghost">إلغاء</button>
       <button type="button" id="dkb-save" class="btn btn-primary">حفظ الهوية</button>
+    </div>
+  </div>
+</div>
+
+<!-- استيراد ملف موجود (PowerPoint/PDF/HTML) كعرض قابل للتعديل — POST /api/decks/import -->
+<div id="deck-import-modal" class="modal-overlay hidden">
+  <div class="modal share-modal-box">
+    <h3>استيراد ملف موجود</h3>
+    <p class="modal-note">يُستخرج المحتوى (العناوين، النقاط، الجداول، الصور، ورسوم PowerPoint البيانية) ويتحوّل إلى شرائح بهوية مشروعك، ثم تعدّله وتنشره كأي عرض. الحد 25 ميغابايت.</p>
+    <label class="share-expiry-label">الملف <span class="muted">(.pptx أو .pdf أو .html)</span></label>
+    <input type="file" id="dki-file" accept=".pptx,.pdf,.html,.htm,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,text/html">
+    <label class="share-expiry-label">عنوان العرض <span class="muted">(اختياري — الافتراضي من الملف)</span></label>
+    <input type="text" id="dki-title" placeholder="مثال: نتائج الربع الثالث" maxlength="200">
+    <label class="dki-refine"><input type="checkbox" id="dki-refine"> تحسين الترتيب بالذكاء الاصطناعي <span class="muted">(نداء واحد للموديل: عناوين أوضح ومؤشرات من الأرقام — بلا اختلاق بيانات)</span></label>
+    <div id="dki-error" class="model-switch-note bad hidden"></div>
+    <div class="modal-actions">
+      <button type="button" id="dki-cancel">إلغاء</button>
+      <button type="button" id="dki-go" class="btn btn-primary">استيراد</button>
     </div>
   </div>
 </div>

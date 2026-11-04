@@ -544,6 +544,7 @@
    بتخصيص أعلى (3 كلاسات) عشان فعلاً تقدر تخفي القايمة أو المعاينة. */
 .dash-gallery-box .gal-view.hidden { display: none; }
 .dash-gallery-box .gal-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+#deck-gallery-modal .gal-quick { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .dash-gallery-box .quick-card {
   display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: var(--r-lg);
   border: 1.5px dashed #C9D6E0; background: var(--surface); text-align: start; cursor: pointer;
@@ -3354,3 +3355,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .dk-brand-preview .jd-slide { box-shadow: var(--shadow-1); }
 .dk-toolbar .dk-actions .dk-always { opacity: 1; }
 @media (max-width: 760px) { .dk-brand-grid { grid-template-columns: 1fr; } }
+
+/* استيراد ملف موجود */
+.dki-refine { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0 4px; font-size: var(--fs-sm); line-height: 1.6; }
+.dki-refine input { margin-top: 4px; }

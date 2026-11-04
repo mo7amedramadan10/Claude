@@ -84,6 +84,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationData
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBrandStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBuilder>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckImporter>();
 // محادثة Claude عبر Claude Code CLI على الخادم (ClaudeChat/) — انظر ClaudeCliService.
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeCliService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeChatStore>();

@@ -8564,6 +8564,33 @@ el('dkb-reset').addEventListener('click', async () => {
   if (r.ok || r.status === 204) await dkbApply(null); else { el('dkb-error').textContent = 'تعذّر الحذف'; el('dkb-error').classList.remove('hidden'); }
 });
 
+// ---------- استيراد ملف موجود (PowerPoint/PDF/HTML) ----------
+function openDeckImportModal() { el('dki-file').value = ''; el('dki-title').value = ''; el('dki-error').classList.add('hidden'); el('dki-go').disabled = false; el('dki-go').textContent = 'استيراد'; el('deck-import-modal').classList.remove('hidden'); }
+function closeDeckImportModal() { el('deck-import-modal').classList.add('hidden'); }
+el('dkgal-start-import').addEventListener('click', () => { closeDeckGallery(); openDeckImportModal(); });
+el('dki-cancel').addEventListener('click', closeDeckImportModal);
+el('deck-import-modal').addEventListener('click', e => { if (e.target.id === 'deck-import-modal') closeDeckImportModal(); });
+el('dki-go').addEventListener('click', async () => {
+  const f = el('dki-file').files && el('dki-file').files[0];
+  const err = m => { el('dki-error').textContent = m; el('dki-error').classList.remove('hidden'); };
+  if (!f) return err('اختر ملفًا أولًا.');
+  if (!/\.(pptx|pdf|html?)$/i.test(f.name)) return err('الصيغة غير مدعومة — المدعوم: .pptx و.pdf و.html.');
+  if (f.size > 25 * 1024 * 1024) return err('حجم الملف يتجاوز 25 ميغابايت.');
+  const fd = new FormData(); fd.append('file', f); fd.append('refine', el('dki-refine').checked ? 'true' : 'false'); fd.append('title', el('dki-title').value.trim());
+  el('dki-go').disabled = true; el('dki-go').textContent = el('dki-refine').checked ? 'يستخرج ويحسّن…' : 'يستخرج…'; el('dki-error').classList.add('hidden');
+  try {
+    const r = await fetch('/api/decks/import', { method: 'POST', body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    closeDeckImportModal();
+    DK.deck = d.deck; DK.spec = d.spec; DK.index = 0; DK.dirty = false; DK.messages = []; DK.publishedUrl = null;
+    dkRender();
+    const kind = { pptx: 'PowerPoint', pdf: 'PDF', html: 'HTML' }[d.kind] || d.kind;
+    dkPushMsg('bot', `استوردت ${kind} «${f.name}»: ${d.pagesRead} ${d.kind === 'pptx' ? 'شريحة' : 'صفحة'} ← ${d.spec.slides.length} شريحة بهوية مشروعك. عدّل مباشرة على الشريحة أو اطلب مني تعديلًا، ثم احفظ وانشر.`
+      + (d.warnings && d.warnings.length ? '\n\nملاحظات: ' + d.warnings.join(' · ') : ''));
+  } catch (e) { err('تعذّر الاستيراد: ' + e.message); el('dki-go').disabled = false; el('dki-go').textContent = 'استيراد'; }
+});
+
 // ---------- معرض نماذج العروض («عرض جديد») — نفس تجربة معرض اللوحات ----------
 // التصنيفات مفاتيح ثابتة تطابق DeckTemplates.cs؛ المصغّرات والمعاينة التوضيحية من jeem-deck-demo.js
 // (بيانات وهمية لمعرض النماذج فقط)، وزر «استخدم هذا النموذج» ينشئ العرض فارغًا ليُملأ من بيانات المشروع.

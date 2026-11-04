@@ -36,6 +36,7 @@ public class DecksController : ControllerBase
     private readonly DeckBrandStore _brands;
     private readonly ProjectStore _projects;
     private readonly DeckBuilder _builder;
+    private readonly DeckImporter _importer;
     private readonly PresentationStore _presentations;
     private readonly OrganizationStore _organizations;
     private readonly PermissionsService _permissions;
@@ -44,9 +45,9 @@ public class DecksController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     public DecksController(DeckStore decks, DeckBrandStore brands, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
-        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects)
+        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer)
     {
-        _decks = decks; _brands = brands; _projects = projects; _builder = builder; _presentations = presentations; _organizations = organizations;
+        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _builder = builder; _presentations = presentations; _organizations = organizations;
         _permissions = permissions; _tools = tools; _feasibility = feasibility; _env = env;
     }
 
@@ -195,6 +196,36 @@ public class DecksController : ControllerBase
         if (deck is null) deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, result.Spec, template?.Key, ct);
         else await _decks.UpdateSpecAsync(deck.Id, result.Spec, ct);
         return Ok(new { deck, spec = result.Spec, reply = result.Reply, dataSlidesBuilt = result.DataSlidesBuilt, dataSlidesTotal = result.DataSlidesTotal });
+    }
+
+    /// <summary>استيراد ملف PowerPoint/PDF/HTML موجود كعرض قابل للتعديل: استخراج حتمي ← شرائح ← (اختياريًا) تحسين الترتيب بالموديل.</summary>
+    [HttpPost("import")]
+    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> Import([FromForm] IFormFile? file, [FromForm] bool refine, [FromForm] string? title, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملفًا بصيغة .pptx أو .pdf أو .html." });
+        if (DeckImporter.KindOf(file.FileName) is null) return BadRequest(new { error = "الصيغة غير مدعومة — المدعوم: PowerPoint (.pptx) وPDF وصفحة HTML." });
+        if (file.Length > DeckImporter.MaxBytes) return BadRequest(new { error = $"حجم الملف يتجاوز {DeckImporter.MaxBytes / 1024 / 1024} ميغابايت." });
+        byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
+        ImportedDocument doc;
+        try { doc = DeckImporter.Extract(file.FileName, bytes); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة الملف: " + ex.Message }); }
+        if (doc.Pages.Count == 0) return BadRequest(new { error = "لم يُعثر على محتوى نصي في الملف.", warnings = doc.Warnings });
+        var spec = DeckImporter.ToSpec(doc);
+        if (!string.IsNullOrWhiteSpace(title)) spec.Title = title.Trim();
+        var warnings = new List<string>(doc.Warnings);
+        if (refine)
+        {
+            var context = await _tools.DescribeSourcesAsync(selection, ct);
+            var (refined, note) = await _importer.RefineAsync(spec, context, user, ct);
+            spec = refined; if (note is not null) warnings.Add(note);
+        }
+        var deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, spec, null, ct);
+        return Ok(new { deck, spec, kind = doc.Kind, pagesRead = doc.Pages.Count, warnings });
     }
 
     /// <summary>ينشر العرض كصفحة HTML مستقلة في «العروض التقديمية» (أو يحدّث المنشور سابقًا على نفس الرابط).</summary>
