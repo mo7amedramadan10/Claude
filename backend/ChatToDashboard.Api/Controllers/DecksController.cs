@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Projects;
 using System.Text;
 using System.Text.Json;
 using ChatToDashboard.Api.Decks;
@@ -32,6 +33,8 @@ public class PublishDeckRequest { public string? Slug { get; set; } public strin
 public class DecksController : ControllerBase
 {
     private readonly DeckStore _decks;
+    private readonly DeckBrandStore _brands;
+    private readonly ProjectStore _projects;
     private readonly DeckBuilder _builder;
     private readonly PresentationStore _presentations;
     private readonly OrganizationStore _organizations;
@@ -40,10 +43,10 @@ public class DecksController : ControllerBase
     private readonly WidgetFeasibilityService _feasibility;
     private readonly IWebHostEnvironment _env;
 
-    public DecksController(DeckStore decks, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
-        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env)
+    public DecksController(DeckStore decks, DeckBrandStore brands, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
+        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects)
     {
-        _decks = decks; _builder = builder; _presentations = presentations; _organizations = organizations;
+        _decks = decks; _brands = brands; _projects = projects; _builder = builder; _presentations = presentations; _organizations = organizations;
         _permissions = permissions; _tools = tools; _feasibility = feasibility; _env = env;
     }
 
@@ -52,6 +55,44 @@ public class DecksController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return null;
         return (user, await _permissions.GetEffectiveSelectionAsync(user, null, ct));
+    }
+
+    // ---- هوية المشروع (تُعمَّم على كل النماذج والمعاينات والنشر والتصدير) ----
+    [HttpGet("brand")]
+    public async Task<IActionResult> GetBrand(CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var b = await _brands.GetAsync(cur.Value.Selection.ProjectId, ct);
+        return Ok(new { brand = b, fonts = DeckBrand.Fonts, maxLogoBytes = DeckBrand.MaxLogoBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct) });
+    }
+
+    [HttpPut("brand")]
+    public async Task<IActionResult> SetBrand([FromBody] DeckBrand brand, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        if (brand.Validate() is { } err) return BadRequest(new { error = err });
+        if (brand.IsEmpty) await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct);
+        else await _brands.SetAsync(cur.Value.Selection.ProjectId, cur.Value.User.OrganizationId, cur.Value.User.Id, brand, ct);
+        return Ok(new { brand = await _brands.GetAsync(cur.Value.Selection.ProjectId, ct) });
+    }
+
+    [HttpDelete("brand")]
+    public async Task<IActionResult> DeleteBrand(CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct);
+        return NoContent();
+    }
+
+    /// <summary>المسؤول أو من له دور مالك/محرّر في المشروع الحالي (المشاهد لا يغيّر الهوية). الحساب بلا دور صريح يُعامل كمشاهد.</summary>
+    private async Task<bool> CanEditBrandAsync(AppUser user, string? projectId, CancellationToken ct)
+    {
+        if (user.Role == UserRoles.Admin || user.IsPlatformOwner) return true;
+        if (projectId is null) return false;
+        var role = (await _projects.ListRolesAsync(projectId, ct)).FirstOrDefault(r => string.Equals(r.UserId, user.Id, StringComparison.Ordinal))?.Role;
+        return role is "owner" or "editor";
     }
 
     /// <summary>نماذج العروض مع جدواها لبيانات المشروع الحالي (بنفس قواعد عناوين عناصر اللوحات).</summary>
@@ -165,6 +206,7 @@ public class DecksController : ControllerBase
         var d = await _decks.GetAsync(id, selection.ProjectId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         var spec = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json)!.Normalize();
+        spec.Brand = await _brands.GetAsync(selection.ProjectId, ct);
         var runtimePath = Path.Combine(_env.WebRootPath, "js", "jeem-deck.js");
         if (!System.IO.File.Exists(runtimePath)) return StatusCode(500, new { error = "محرك العرض غير موجود على الخادم (js/jeem-deck.js)." });
         var runtime = await System.IO.File.ReadAllTextAsync(runtimePath, ct);

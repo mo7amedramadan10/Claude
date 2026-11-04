@@ -16,7 +16,8 @@ public static class DeckHtmlExporter
         var sb = new StringBuilder();
         sb.Append("<!doctype html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
         sb.Append("<title>").Append(title).Append("</title>\n");
-        sb.Append("<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap\">\n");
+        var font = spec.Brand?.Font is { } f && DeckBrand.Fonts.Contains(f) ? f : "IBM Plex Sans Arabic";
+        sb.Append("<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=").Append(Uri.EscapeDataString(font).Replace("%20", "+")).Append(":wght@400;500;600;700&display=swap\">\n");
         sb.Append("<style>").Append(DeckRuntimeCss).Append("</style>\n</head>\n<body>\n");
         if (includeBridge) sb.Append("<script src=\"/js/jeem-page.js\"></script>\n");
         sb.Append("<div id=\"deck\" class=\"jeem-deck-root\"></div>\n");

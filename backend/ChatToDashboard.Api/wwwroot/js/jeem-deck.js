@@ -10,12 +10,12 @@
   const num = v => (typeof v === 'number' && isFinite(v)) ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : esc(v);
 
   const CSS = `
-.jd-slide{position:relative;aspect-ratio:16/9;width:100%;background:#fff;color:#13232E;border-radius:14px;overflow:hidden;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;direction:rtl;box-shadow:0 10px 30px -18px rgba(0,0,0,.45);container-type:inline-size}
+.jd-slide{position:relative;aspect-ratio:16/9;width:100%;background:#fff;color:#13232E;border-radius:14px;overflow:hidden;font-family:var(--jd-font,'IBM Plex Sans Arabic'),'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;direction:rtl;box-shadow:0 10px 30px -18px rgba(0,0,0,.45);container-type:inline-size}
 .jd-slide *{box-sizing:border-box}
 .jd-slide .jd-in{position:absolute;inset:0;padding:5.5cqw 6cqw;display:flex;flex-direction:column;gap:2.2cqw}
 .jd-slide .jd-accent{position:absolute;top:0;right:0;left:0;height:1.1cqw;background:var(--jd-accent,#2A78D6)}
-.jd-slide h1{font-size:4.6cqw;margin:0;line-height:1.35;font-weight:700;color:#0B3D5C}
-.jd-slide h2{font-size:3.4cqw;margin:0;line-height:1.35;font-weight:700;color:#0B3D5C;padding-bottom:1cqw;border-bottom:2px solid #E3EAF0}
+.jd-slide h1{font-size:4.6cqw;margin:0;line-height:1.35;font-weight:700;color:var(--jd-primary,#0B3D5C)}
+.jd-slide h2{font-size:3.4cqw;margin:0;line-height:1.35;font-weight:700;color:var(--jd-primary,#0B3D5C);padding-bottom:1cqw;border-bottom:2px solid #E3EAF0}
 .jd-slide .jd-sub{font-size:2.1cqw;color:#5A6B77;margin:0}
 .jd-slide .jd-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:1.6cqw;font-size:2.2cqw;line-height:1.7}
 .jd-slide ul.jd-bullets{margin:0;padding-inline-start:3cqw;display:flex;flex-direction:column;gap:1.1cqw}
@@ -42,7 +42,12 @@
 .jd-slide .jd-src{position:absolute;bottom:2cqw;left:6cqw;right:6cqw;font-size:1.5cqw;color:#8A98A3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .jd-slide .jd-num{position:absolute;bottom:2cqw;left:6cqw;font-size:1.6cqw;color:#8A98A3}
 .jd-slide .jd-missing{margin:auto;padding:2cqw 3cqw;border:1px dashed #C2413B;border-radius:1.2cqw;color:#C2413B;font-size:2cqw;text-align:center;max-width:70%}
-.jd-slide.jd-title .jd-in{justify-content:center;align-items:center;text-align:center;background:linear-gradient(135deg,#0B3D5C,#0E8F86);color:#fff}
+.jd-slide.jd-title .jd-in{justify-content:center;align-items:center;text-align:center;background:linear-gradient(135deg,var(--jd-primary,#0B3D5C),var(--jd-secondary,#0E8F86));color:#fff}
+.jd-slide .jd-logo{position:absolute;top:2.4cqw;left:6cqw;height:5cqw;max-width:20cqw;object-fit:contain;object-position:left center}
+.jd-slide .jd-logo~.jd-in h2{padding-left:22cqw}
+.jd-slide.jd-title .jd-logo{position:static;height:11cqw;max-width:34cqw;margin-bottom:1cqw;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+.jd-slide.jd-title .jd-foot{position:absolute;bottom:2.4cqw;left:6cqw;right:6cqw;text-align:center;font-size:1.7cqw;color:rgba(255,255,255,.8)}
+.jd-slide.jd-section .jd-logo{top:auto;bottom:2.4cqw}
 .jd-slide.jd-title h1{font-size:6cqw;color:#fff}.jd-slide.jd-title .jd-sub{color:#D7E9F2;font-size:2.6cqw}
 .jd-slide.jd-section .jd-in{justify-content:center;background:#F5F8FA}
 .jd-slide.jd-section h1{font-size:5cqw}.jd-slide.jd-section .jd-sub{font-size:2.4cqw}
@@ -63,8 +68,8 @@
 .jd-thumb.active{border-color:#2A78D6}
 .jd-thumb .jd-tt{position:absolute;inset:0;padding:8px 10px;font-size:11px;font-weight:700;color:#0B3D5C;overflow:hidden;line-height:1.4}
 .jd-thumb .jd-tk{position:absolute;bottom:4px;left:6px;font-size:10px;color:#8A98A3}
-.jd-thumb.jd-title{background:linear-gradient(135deg,#0B3D5C,#0E8F86)}.jd-thumb.jd-title .jd-tt{color:#fff}
-.jd-present{height:100%;display:flex;flex-direction:column;background:#0f1720;color:#E6EEF2;font-family:'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;direction:rtl}
+.jd-thumb.jd-title{background:linear-gradient(135deg,var(--jd-primary,#0B3D5C),var(--jd-secondary,#0E8F86))}.jd-thumb.jd-title .jd-tt{color:#fff}
+.jd-present{height:100%;display:flex;flex-direction:column;background:#0f1720;color:#E6EEF2;font-family:var(--jd-font,'IBM Plex Sans Arabic'),'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;direction:rtl}
 .jd-present .jd-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px}
 .jd-present .jd-stage .jd-slide{max-height:100%;max-width:min(100%,calc((100vh - 150px) * 16 / 9))}
 .jd-present .jd-bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#15222B;border-top:1px solid #26394A;font-size:13px}
@@ -125,7 +130,9 @@
     opts = opts || {}; ensureCss(root.ownerDocument);
     const ed = !!opts.editable, ce = ed ? ' contenteditable="true" spellcheck="false"' : '';
     const L = slide.layout || 'bullets';
-    root.className = 'jd-slide jd-' + L; root.style.setProperty('--jd-accent', spec.accent || '#2A78D6');
+    root.className = 'jd-slide jd-' + L; applyBrand(root, spec);
+    const brand = spec.brand || {}; const logo = brand.logo ? `<img class="jd-logo" src="${esc(brand.logo)}" alt="${esc(brand.name || '')}">` : '';
+    const footText = brand.footer || brand.name || '';
     let body = '';
     const title = `<h${L === 'title' || L === 'section' ? 1 : 2} data-f="title"${ce}>${esc(slide.title)}</h${L === 'title' || L === 'section' ? 1 : 2}>`;
     const sub = (slide.subtitle || ed) ? `<p class="jd-sub" data-f="subtitle"${ce}>${esc(slide.subtitle || (ed ? '' : ''))}</p>` : '';
@@ -142,7 +149,8 @@
       default: body = `<ul class="jd-bullets">${(slide.bullets || (ed ? [''] : [])).map((b, k) => `<li data-f="bullets.${k}"${ce}>${esc(b)}</li>`).join('')}</ul>`;
     }
     const idx = opts.index != null ? `<div class="jd-num">${opts.index + 1}${opts.total ? ' / ' + opts.total : ''}</div>` : '';
-    root.innerHTML = `<div class="jd-accent"></div><div class="jd-in">${title}${sub}<div class="jd-body">${body}</div></div>${slide.source && L !== 'title' ? `<div class="jd-src" title="${esc(slide.source)}">المصدر: ${esc(slide.source)}</div>` : ''}${idx}`;
+    const srcLine = L === 'title' ? '' : [slide.source ? 'المصدر: ' + slide.source : '', footText].filter(Boolean).join('  ·  ');
+    root.innerHTML = `<div class="jd-accent"></div>${L === 'title' ? '' : logo}<div class="jd-in">${L === 'title' ? logo : ''}${title}${sub}<div class="jd-body">${body}</div></div>${srcLine ? `<div class="jd-src" title="${esc(srcLine)}">${esc(srcLine)}</div>` : ''}${L === 'title' && footText ? `<div class="jd-foot">${esc(footText)}</div>` : ''}${idx}`;
     if (L === 'tasks') mountTasks(root.querySelector('[data-tasks]'), slide, opts);
     if (ed) bindEditing(root, slide, opts);
     return root;
@@ -190,17 +198,27 @@
     })();
   }
 
-  function thumbnail(slide, index) {
-    return `<div class="jd-thumb jd-${slide.layout || 'bullets'}" data-i="${index}"><div class="jd-tt">${esc(slide.title || '(بلا عنوان)')}</div><div class="jd-tk">${index + 1}</div></div>`;
+  // متغيّرات الهوية على عنصر الشريحة/المصغّرة: الألوان والخط من spec.brand (هوية المشروع) أو spec.accent القديم.
+  function brandVars(spec) {
+    const b = (spec && spec.brand) || {}; const out = {};
+    out['--jd-primary'] = b.primary || '#0B3D5C'; out['--jd-secondary'] = b.secondary || b.primary || '#0E8F86';
+    out['--jd-accent'] = b.accent || b.primary || (spec && spec.accent) || '#2A78D6'; if (b.font) out['--jd-font'] = `'${b.font}'`;
+    return out;
+  }
+  function applyBrand(root, spec) { const v = brandVars(spec); for (const k in v) root.style.setProperty(k, v[k]); if (!(spec && spec.brand && spec.brand.font)) root.style.removeProperty('--jd-font'); }
+  function thumbnail(slide, index, spec) {
+    const v = brandVars(spec); const st = Object.keys(v).map(k => `${k}:${v[k]}`).join(';');
+    return `<div class="jd-thumb jd-${slide.layout || 'bullets'}" data-i="${index}" style="${st}"><div class="jd-tt">${esc(slide.title || '(بلا عنوان)')}</div><div class="jd-tk">${index + 1}</div></div>`;
   }
 
   // ---- العرض الكامل (الصفحة المنشورة) ----
   function present(root, spec, opts) {
     opts = opts || {}; ensureCss(root.ownerDocument);
     const slides = spec.slides || []; let i = 0;
+    applyBrand(root, spec);
     root.innerHTML = `<div class="jd-present"><div class="jd-stage"><div class="jd-slide"></div></div><div class="jd-bar"><button data-prev>→ السابق</button><span class="jd-pos"></span><button data-print>طباعة / PDF</button><button data-next>التالي ←</button></div><div class="jd-strip"></div></div>`;
     const stage = root.querySelector('.jd-stage .jd-slide'), pos = root.querySelector('.jd-pos'), strip = root.querySelector('.jd-strip');
-    strip.innerHTML = slides.map(thumbnail).join('');
+    strip.innerHTML = slides.map((s, k) => thumbnail(s, k, spec)).join('');
     const go = n => { i = Math.max(0, Math.min(slides.length - 1, n)); renderSlide(stage, slides[i], spec, { index: i, total: slides.length, editableStore: opts.editableStore, viewer: opts.viewer }); pos.textContent = `${i + 1} / ${slides.length}`; strip.querySelectorAll('.jd-thumb').forEach((t, k) => t.classList.toggle('active', k === i)); strip.querySelector('.jd-thumb.active')?.scrollIntoView({ inline: 'center', block: 'nearest' }); try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {} };
     root.querySelector('[data-prev]').onclick = () => go(i - 1); root.querySelector('[data-next]').onclick = () => go(i + 1);
     root.querySelector('[data-print]').onclick = () => { const all = root.ownerDocument.createElement('div'); all.className = 'jd-print'; slides.forEach((s, k) => { const d = root.ownerDocument.createElement('div'); all.appendChild(d); renderSlide(d, s, spec, { index: k, total: slides.length }); }); const st = root.querySelector('.jd-stage'); const keep = st.innerHTML; st.innerHTML = ''; st.appendChild(all); window.print(); setTimeout(() => { st.innerHTML = keep; go(i); }, 300); };
@@ -210,5 +228,5 @@
     return { go, get index() { return i; } };
   }
 
-  window.JEEM_DECK = { renderSlide, thumbnail, present, chartSvg, CSS };
+  window.JEEM_DECK = { renderSlide, thumbnail, present, chartSvg, CSS, brandVars };
 })();

@@ -15,6 +15,8 @@ public class DeckSpec
     [JsonPropertyName("title")] public string Title { get; set; } = "";
     [JsonPropertyName("subtitle")] public string? Subtitle { get; set; }
     [JsonPropertyName("accent")] public string? Accent { get; set; }
+    /// <summary>هوية المشروع المرفقة عند الرسم/النشر/التصدير (من <see cref="DeckBrandStore"/>؛ لا تُحفظ داخل العرض).</summary>
+    [JsonPropertyName("brand")] public DeckBrand? Brand { get; set; }
     [JsonPropertyName("slides")] public List<DeckSlide> Slides { get; set; } = new();
 
     /// <summary>تطبيع: معرّفات فريدة، تخطيط معروف (وإلا bullets)، حدود الحجم، وإزالة الحقول الفارغة.</summary>

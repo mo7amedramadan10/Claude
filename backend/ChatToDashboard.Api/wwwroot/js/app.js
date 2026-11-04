@@ -8459,7 +8459,7 @@ const DK = { deck: null, spec: null, index: 0, dirty: false, busy: false, templa
 const DK_LAYOUT_LABEL = { title: 'عنوان', section: 'فاصل قسم', bullets: 'نقاط', 'two-column': 'عمودان', kpis: 'مؤشرات', chart: 'رسم', table: 'جدول', image: 'صورة', quote: 'اقتباس', tasks: 'مهام قابلة للتعديل' };
 
 async function loadDecksScreen() {
-  if (!DK.templates) await dkLoadTemplates();
+  if (!DK.templates) await Promise.all([dkLoadTemplates(), dkLoadBrand()]);
   if (DK.spec) dkRender(); else dkShowGallery();
   dkRenderMessages();
 }
@@ -8479,7 +8479,7 @@ function dkFeasBadge(t) {
 async function dkShowGallery() {
   el('dk-gallery').classList.remove('hidden'); el('dk-editor').classList.add('hidden');
   el('dk-title').textContent = 'منشئ العروض'; el('dk-meta').textContent = 'ابدأ عرضًا جديدًا من نموذج أو اكتب طلبك في المحادثة';
-  el('dk-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
+  el('dk-pane').querySelectorAll('.dk-actions button:not(.dk-always), .dk-actions select').forEach(b => { b.disabled = true; });
   await dkLoadDecks();
   const g = el('dk-gallery');
   g.innerHTML = `<div class="dk-start"><button type="button" class="btn btn-primary" id="dk-start-new"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>عرض جديد</button><p>${(DK.templates || []).length.toLocaleString('en-US')} نموذج عرض جاهز بتصنيفاته، مع معاينة بأرقام توضيحية قبل البناء من بياناتك. أو اكتب طلبك في المحادثة وجيم يبني العرض مباشرة.</p></div>`
@@ -8487,6 +8487,82 @@ async function dkShowGallery() {
   el('dk-start-new').addEventListener('click', openDeckGallery);
   g.querySelectorAll('[data-deck]').forEach(c => c.addEventListener('click', () => dkOpen(c.dataset.deck)));
 }
+
+// ---------- هوية المشروع (DeckBrandStore) — تُرفق بالمواصفة عند الرسم فقط ولا تُحفظ داخل العرض ----------
+async function dkLoadBrand() {
+  try { const r = await fetch('/api/decks/brand'); const d = r.ok ? await r.json() : {}; DK.brand = d.brand || null; DK.brandFonts = d.fonts || []; DK.brandCanEdit = !!d.canEdit; DK.brandMaxLogo = d.maxLogoBytes || 400 * 1024; }
+  catch { DK.brand = null; DK.brandFonts = []; DK.brandCanEdit = false; }
+}
+// نسخة المواصفة للحفظ/الإرسال للموديل بلا الهوية (تُعاد الهوية من المخزن عند النشر والتصدير).
+function dkSpecForSave() { const c = Object.assign({}, DK.spec); delete c.brand; return c; }
+const DKB_DEFAULTS = { primary: '#0B3D5C', secondary: '#0E8F86', accent: '#2A78D6' };
+let dkbDraft = null;
+function dkbReadForm() {
+  const v = id => el(id).value.trim();
+  return { name: v('dkb-name') || null, logo: dkbDraft?.logo || null, primary: v('dkb-primary').toUpperCase(), secondary: v('dkb-secondary').toUpperCase(), accent: v('dkb-accent').toUpperCase(), font: v('dkb-font') || null, footer: v('dkb-footer') || null };
+}
+function dkbPreview() {
+  const b = dkbReadForm(); dkbDraft = Object.assign(dkbDraft || {}, b);
+  const spec = { title: b.name || 'عنوان العرض', subtitle: 'عنوان فرعي توضيحي', brand: b, slides: [] };
+  JEEM_DECK.renderSlide(el('dkb-prev-title'), { layout: 'title', title: b.name ? `عرض ${b.name}` : 'عنوان العرض', subtitle: 'الربع الثالث 2026' }, spec, { index: 0, total: 2 });
+  JEEM_DECK.renderSlide(el('dkb-prev-body'), { layout: 'kpis', title: 'المؤشرات الرئيسية', kpis: [{ label: 'الإيراد', value: '4.2M', delta: '+12٪' }, { label: 'الصفقات', value: '318' }, { label: 'النمو', value: '12٪' }], source: 'بيانات توضيحية' }, spec, { index: 1, total: 2 });
+}
+function openDeckBrandModal() {
+  const b = DK.brand || {}; dkbDraft = { logo: b.logo || null };
+  el('dkb-name').value = b.name || ''; el('dkb-footer').value = b.footer || '';
+  el('dkb-primary').value = b.primary || DKB_DEFAULTS.primary; el('dkb-secondary').value = b.secondary || DKB_DEFAULTS.secondary; el('dkb-accent').value = b.accent || DKB_DEFAULTS.accent;
+  el('dkb-font').innerHTML = `<option value="">الخط الافتراضي (IBM Plex Sans Arabic)</option>` + (DK.brandFonts || []).filter(f => f !== 'IBM Plex Sans Arabic').map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  el('dkb-font').value = b.font && b.font !== 'IBM Plex Sans Arabic' ? b.font : '';
+  el('dkb-logo-file').value = ''; el('dkb-error').classList.add('hidden');
+  const ro = !DK.brandCanEdit;
+  el('deck-brand-modal').querySelectorAll('input, select, #dkb-save, #dkb-reset, #dkb-logo-clear').forEach(x => { x.disabled = ro; });
+  if (ro) { el('dkb-error').textContent = 'عرض فقط: تعديل الهوية لمالك المشروع أو محرّره أو المسؤول.'; el('dkb-error').classList.remove('hidden'); }
+  dkbPreview();
+  el('deck-brand-modal').classList.remove('hidden');
+}
+function closeDeckBrandModal() { el('deck-brand-modal').classList.add('hidden'); }
+// الشعار: يُصغَّر في المتصفح إلى 512px كحد أقصى ويُحوَّل إلى PNG (فيعمل في PPTX أيضًا) قبل الإرسال كـ data URL.
+async function dkbLogoFromFile(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const max = 512, k = Math.min(1, max / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round((img.naturalWidth || 256) * k)); c.height = Math.max(1, Math.round((img.naturalHeight || 256) * k));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/png');
+  } finally { URL.revokeObjectURL(url); }
+}
+el('dk-brand-btn').addEventListener('click', openDeckBrandModal);
+el('dkb-cancel').addEventListener('click', closeDeckBrandModal);
+el('deck-brand-modal').addEventListener('click', e => { if (e.target.id === 'deck-brand-modal') closeDeckBrandModal(); });
+['dkb-name', 'dkb-footer', 'dkb-primary', 'dkb-secondary', 'dkb-accent', 'dkb-font'].forEach(id => el(id).addEventListener('input', dkbPreview));
+el('dkb-logo-file').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  try { const data = await dkbLogoFromFile(f); if (data.length * 3 / 4 > (DK.brandMaxLogo || 400 * 1024)) throw new Error('الشعار كبير جدًا بعد التصغير — استخدم صورة أبسط.'); dkbDraft.logo = data; el('dkb-error').classList.add('hidden'); dkbPreview(); }
+  catch (err) { el('dkb-error').textContent = 'تعذّر قراءة الشعار: ' + (err.message || 'ملف غير صالح'); el('dkb-error').classList.remove('hidden'); }
+});
+el('dkb-logo-clear').addEventListener('click', () => { dkbDraft.logo = null; el('dkb-logo-file').value = ''; dkbPreview(); });
+async function dkbApply(brand) {
+  DK.brand = brand; closeDeckBrandModal();
+  if (DK.spec) dkRender();
+  if (!el('deck-gallery-modal').classList.contains('hidden')) renderDeckGalGrid();
+}
+el('dkb-save').addEventListener('click', async () => {
+  const b = dkbReadForm(); el('dkb-save').disabled = true;
+  try {
+    const r = await fetch('/api/decks/brand', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    await dkbApply(d.brand || null);
+    dkPushMsg('bot', 'حُفظت هوية المشروع — تسري على كل النماذج والعروض الجديدة والمنشورة عند إعادة نشرها.');
+  } catch (err) { el('dkb-error').textContent = err.message; el('dkb-error').classList.remove('hidden'); }
+  finally { el('dkb-save').disabled = false; }
+});
+el('dkb-reset').addEventListener('click', async () => {
+  if (!confirm('إعادة الهوية إلى الافتراضي وحذف الشعار والألوان المحفوظة؟')) return;
+  const r = await fetch('/api/decks/brand', { method: 'DELETE' });
+  if (r.ok || r.status === 204) await dkbApply(null); else { el('dkb-error').textContent = 'تعذّر الحذف'; el('dkb-error').classList.remove('hidden'); }
+});
 
 // ---------- معرض نماذج العروض («عرض جديد») — نفس تجربة معرض اللوحات ----------
 // التصنيفات مفاتيح ثابتة تطابق DeckTemplates.cs؛ المصغّرات والمعاينة التوضيحية من jeem-deck-demo.js
@@ -8498,7 +8574,7 @@ const DK_CATS = [
 ];
 const DK_GLYPH = { title: '🏷️', section: '➖', bullets: '•', 'two-column': '⫴', kpis: '🔢', chart: '📊', table: '▦', image: '🖼️', quote: '❝', tasks: '☑' };
 let dkGalCat = 'all', dkGalQuery = '';
-function dkDemoSpec(t) { return window.JEEM_DECK_DEMO ? JEEM_DECK_DEMO.build(t) : null; }
+function dkDemoSpec(t) { const spec = window.JEEM_DECK_DEMO ? JEEM_DECK_DEMO.build(t) : null; if (spec) spec.brand = DK.brand || null; return spec; }
 // مصغّرة البطاقة: أول شريحة بيانات (مؤشرات/رسم/جدول) من المواصفة التوضيحية، وإلا شريحة العنوان.
 function dkGalThumbInto(holder, t) {
   const spec = dkDemoSpec(t); if (!spec || !window.JEEM_DECK) { holder.innerHTML = `<span class="dash-thumb dash-thumb-network">${esc(t.icon)}</span>`; return; }
@@ -8592,7 +8668,7 @@ function openDeckGalDemo(t) {
     <div class="dkgal-demo">
       <div><div class="jd-slide" id="dkgal-demo-slide"></div>
         <div class="dkgal-nav"><button type="button" class="btn btn-sm btn-soft" id="dkgal-prev">→ السابق</button><span id="dkgal-pos"></span><button type="button" class="btn btn-sm btn-soft" id="dkgal-next">التالي ←</button></div></div>
-      <div class="dkgal-strip" id="dkgal-strip">${spec.slides.map((s, k) => JEEM_DECK.thumbnail(s, k)).join('')}</div>
+      <div class="dkgal-strip" id="dkgal-strip">${spec.slides.map((s, k) => JEEM_DECK.thumbnail(s, k, spec)).join('')}</div>
     </div>`;
   const go = n => {
     i = Math.max(0, Math.min(spec.slides.length - 1, n));
@@ -8636,12 +8712,12 @@ function dkRender() {
   DK.index = Math.max(0, Math.min(DK.index, spec.slides.length - 1));
   el('dk-title').textContent = spec.title || 'عرض بلا عنوان';
   el('dk-meta').textContent = `${spec.slides.length} شريحة${DK.dirty ? ' · تعديلات غير محفوظة' : DK.deck ? ' · محفوظ' : ''}${DK.publishedUrl ? ' · منشور' : ''}`;
-  const slide = spec.slides[DK.index];
+  const slide = spec.slides[DK.index]; spec.brand = DK.brand || null;
   JEEM_DECK.renderSlide(el('dk-slide'), slide, spec, { index: DK.index, total: spec.slides.length, editable: true, onEdit: () => dkMarkDirty() });
   el('dk-layout').value = slide.layout || 'bullets';
   el('dk-slide-meta').innerHTML = dkInspectorHtml(slide);
   dkBindInspector(slide);
-  el('dk-strip').innerHTML = spec.slides.map((s, i) => JEEM_DECK.thumbnail(s, i)).join('');
+  el('dk-strip').innerHTML = spec.slides.map((s, i) => JEEM_DECK.thumbnail(s, i, spec)).join('');
   el('dk-strip').querySelectorAll('.jd-thumb').forEach((t, i) => { t.classList.toggle('active', i === DK.index); t.draggable = true; t.addEventListener('click', () => { DK.index = i; dkRender(); }); t.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', String(i)); t.classList.add('dragging'); }); t.addEventListener('dragend', () => t.classList.remove('dragging')); t.addEventListener('dragover', e => e.preventDefault()); t.addEventListener('drop', e => { e.preventDefault(); const from = +e.dataTransfer.getData('text/plain'); if (from === i) return; const [m] = spec.slides.splice(from, 1); spec.slides.splice(i, 0, m); DK.index = i; dkMarkDirty(); dkRender(); }); });
   el('dk-strip').querySelector('.jd-thumb.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
@@ -8697,7 +8773,7 @@ async function dkSave(silent) {
     const r = await fetch('/api/decks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateKey: 'blank', title: DK.spec.title }) });
     if (!r.ok) { if (!silent) alert('تعذّر الحفظ'); return false; } DK.deck = (await r.json()).deck;
   }
-  const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spec: DK.spec }) });
+  const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spec: dkSpecForSave() }) });
   if (!r.ok) { if (!silent) alert('تعذّر الحفظ'); return false; }
   DK.spec = (await r.json()).spec; DK.dirty = false; dkRender(); return true;
 }
@@ -8747,7 +8823,7 @@ el('dk-export').addEventListener('click', async () => {
       else o.bullets = s.bullets || [];
       slides.push(o);
     }
-    const r = await fetch('/api/decks/export/pptx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: DK.spec.title, slides }) });
+    const r = await fetch('/api/decks/export/pptx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: DK.spec.title, slides, brand: DK.brand || null }) });
     if (!r.ok) throw new Error(`(${r.status})`);
     const url = URL.createObjectURL(await r.blob()); const a = document.createElement('a'); a.href = url; a.download = (DK.spec.title || 'deck') + '.pptx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
   } catch (e) { dkPushMsg('err', 'تعذّر التصدير: ' + e.message); }
@@ -8767,7 +8843,7 @@ async function dkAsk(text) {
   dkPushMsg('user', text); el('dk-send').disabled = true; el('dk-status').textContent = DK.spec ? 'جارٍ التعديل بالموديل…' : 'جارٍ بناء العرض من بياناتك…';
   const thinking = { role: 'bot', text: '⏳ يخطط الشرائح ثم يستعلم عن بيانات كل شريحة…' }; DK.messages.push(thinking); dkRenderMessages();
   try {
-    const r = await fetch('/api/decks/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, deckId: DK.deck?.id || null, templateKey: DK.deck?.templateKey || null, spec: DK.spec || null }) });
+    const r = await fetch('/api/decks/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, deckId: DK.deck?.id || null, templateKey: DK.deck?.templateKey || null, spec: DK.spec ? dkSpecForSave() : null }) });
     DK.messages = DK.messages.filter(m => m !== thinking);
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `(${r.status})`); }
     const d = await r.json(); DK.deck = d.deck; DK.spec = d.spec; DK.dirty = false; DK.index = Math.min(DK.index, d.spec.slides.length - 1);

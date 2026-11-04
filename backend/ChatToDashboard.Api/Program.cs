@@ -82,6 +82,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationStor
 builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationDataStore>();
 // منشئ العروض (مستوى المشروع): مواصفة JSON + بناء بالموديل + نشر في العروض التقديمية — Decks/
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBrandStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBuilder>();
 // محادثة Claude عبر Claude Code CLI على الخادم (ClaudeChat/) — انظر ClaudeCliService.
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeCliService>();

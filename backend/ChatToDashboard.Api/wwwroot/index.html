@@ -595,6 +595,46 @@
   </div>
 </div>
 
+<!-- هوية المشروع لمنشئ العروض: شعار + ألوان + خط + تذييل، تُعمَّم على كل النماذج والمعاينات والنشر والتصدير (DeckBrandStore) -->
+<div id="deck-brand-modal" class="modal-overlay hidden">
+  <div class="modal share-modal-box dk-brand-box">
+    <h3>🎨 هوية المشروع</h3>
+    <p class="modal-note">تُطبَّق تلقائيًا على كل نماذج العروض ومعايناتها، وعلى العروض المنشورة وملفات PowerPoint — بلا تعديل في كل عرض على حدة.</p>
+    <div class="dk-brand-grid">
+      <div class="dk-brand-form">
+        <label class="share-expiry-label">اسم الجهة أو المشروع</label>
+        <input type="text" id="dkb-name" placeholder="مثال: شركة الأفق للتقنية" maxlength="120">
+        <label class="share-expiry-label">الشعار <span class="muted">(PNG/JPG/SVG — يُصغَّر تلقائيًا إلى 512px)</span></label>
+        <div class="dk-brand-logo-row">
+          <input type="file" id="dkb-logo-file" accept="image/png,image/jpeg,image/svg+xml,image/webp">
+          <button type="button" id="dkb-logo-clear" class="btn btn-sm btn-ghost">إزالة الشعار</button>
+        </div>
+        <div class="dk-brand-colors">
+          <label>اللون الأساسي <input type="color" id="dkb-primary" value="#0B3D5C"></label>
+          <label>اللون الثانوي <input type="color" id="dkb-secondary" value="#0E8F86"></label>
+          <label>لون الإبراز <input type="color" id="dkb-accent" value="#2A78D6"></label>
+        </div>
+        <label class="share-expiry-label">الخط</label>
+        <select id="dkb-font" class="pres-policy"></select>
+        <label class="share-expiry-label">نص التذييل <span class="muted">(يظهر أسفل كل شريحة)</span></label>
+        <input type="text" id="dkb-footer" placeholder="مثال: سرّي — للاستخدام الداخلي · 2026" maxlength="200">
+        <div id="dkb-error" class="model-switch-note bad hidden"></div>
+      </div>
+      <div class="dk-brand-preview">
+        <div class="muted" style="font-size:var(--fs-xs)">معاينة حيّة</div>
+        <div id="dkb-prev-title" class="jd-slide"></div>
+        <div id="dkb-prev-body" class="jd-slide"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="dkb-reset" class="btn btn-ghost">إعادة الافتراضي</button>
+      <span class="grow"></span>
+      <button type="button" id="dkb-cancel" class="btn btn-ghost">إلغاء</button>
+      <button type="button" id="dkb-save" class="btn btn-primary">حفظ الهوية</button>
+    </div>
+  </div>
+</div>
+
 <div id="new-project-modal" class="modal-overlay hidden">
   <div class="modal">
     <h3>مشروع جديد</h3>
@@ -871,6 +911,8 @@
         <button type="button" id="dk-publish" class="btn btn-sm">نشر</button>
         <button type="button" id="dk-export" class="btn btn-sm btn-ghost" title="تنزيل PowerPoint">PPTX</button>
         <button type="button" id="dk-print" class="btn btn-sm btn-ghost" title="طباعة أو حفظ PDF">PDF</button>
+        <span class="dk-sep"></span>
+        <button type="button" id="dk-brand-btn" class="btn btn-sm btn-ghost dk-always" title="هوية المشروع: الشعار والألوان والخط — تُعمَّم على كل النماذج والعروض">🎨 الهوية</button>
       </div>
     </div>
     <div id="dk-body" class="dk-body">
