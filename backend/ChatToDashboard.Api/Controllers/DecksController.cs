@@ -189,6 +189,17 @@ public class DecksController : ControllerBase
         return Ok(new { template = info });
     }
 
+    [HttpPut("brand/template/defaults")]
+    public async Task<IActionResult> SetTemplateDefaults([FromBody] TemplateDefaults defaults, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل قالب الشركة للمسؤول أو مالك المشروع فقط." });
+        var info = await _templates.SetDefaultsAsync(cur.Value.Selection.ProjectId, defaults, ct);
+        if (info is null) return NotFound(new { error = "لا قالب مرفوعًا." });
+        info.Layouts = info.Layouts.Where(l => !l.Generic).ToList();
+        return Ok(new { template = info });
+    }
+
     [HttpDelete("brand/template")]
     public async Task<IActionResult> DeleteTemplate(CancellationToken ct)
     {
@@ -204,7 +215,7 @@ public class DecksController : ControllerBase
     [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any)]
     public async Task<IActionResult> TemplatePage(string tid, string kind, int idx, CancellationToken ct)
     {
-        if (!Regex.IsMatch(tid, "^[0-9a-f]{16}$") || kind is not ("layout" or "slide")) return NotFound();
+        if (!Regex.IsMatch(tid, "^[0-9a-f]{16}$") || kind is not ("layout" or "slide" or "bg")) return NotFound();
         var svg = await _templates.GetPageSvgAsync(tid, kind, idx, ct);
         if (svg is null) return NotFound();
         return Content(svg, "image/svg+xml; charset=utf-8");
@@ -374,6 +385,7 @@ public class DecksController : ControllerBase
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         var spec = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json)!.Normalize();
         spec.Brand = await BrandWithFontsAsync(selection.ProjectId, ct);
+        if (spec.TemplateMode != "off" && await _templates.GetInfoAsync(selection.ProjectId, ct) is { } tinfo) { tinfo.Layouts = tinfo.Layouts.Where(l => !l.Generic).ToList(); spec.Template = tinfo; }
         var runtimePath = Path.Combine(_env.WebRootPath, "js", "jeem-deck.js");
         if (!System.IO.File.Exists(runtimePath)) return StatusCode(500, new { error = "محرك العرض غير موجود على الخادم (js/jeem-deck.js)." });
         var runtime = await System.IO.File.ReadAllTextAsync(runtimePath, ct);

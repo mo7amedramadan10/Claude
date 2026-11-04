@@ -53,6 +53,8 @@ public sealed class PptxSvgRenderer : IDisposable
     public int LayoutIndexOfSlide(SlidePart s) => Layouts.ToList().IndexOf(s.SlideLayoutPart!);
 
     public string RenderLayout(int index, bool showPrompts = true) { var l = Layouts[index]; return Render(Xml(l), Xml(MasterOf(l)), null, l, MasterOf(l), showPrompts); }
+    /// <summary>التخطيط كخلفية لشريحة من المنصة: بلا الأماكن المحجوزة إطلاقًا (المحتوى يوضع مكانها من المحرك).</summary>
+    public string RenderLayoutBackground(int index) { var l = Layouts[index]; return Render(Xml(l), Xml(MasterOf(l)), null, l, MasterOf(l), false, null, skipPagePlaceholders: true); }
     public string RenderSlide(int index) { var s = Slides[index]; var l = s.SlideLayoutPart!; return Render(Xml(s), Xml(MasterOf(l)), Xml(l), l, MasterOf(l), false, s); }
     public string RenderMaster(int index) { var m = Masters[index]; return Render(Xml(m), Xml(m), null, null, m, true); }
 
@@ -71,7 +73,7 @@ public sealed class PptxSvgRenderer : IDisposable
         public StringBuilder Defs = new(); public int DefId;
     }
 
-    private string Render(XElement page, XElement master, XElement? layout, SlideLayoutPart? layoutPart, SlideMasterPart masterPart, bool showPrompts, SlidePart? slidePart = null)
+    private string Render(XElement page, XElement master, XElement? layout, SlideLayoutPart? layoutPart, SlideMasterPart masterPart, bool showPrompts, SlidePart? slidePart = null, bool skipPagePlaceholders = false)
     {
         Unsupported.Clear();
         var theme = masterPart.ThemePart is { } tp ? Xml(tp) : null;
@@ -98,7 +100,7 @@ public sealed class PptxSvgRenderer : IDisposable
                 RenderTree(master.Element(P + "cSld")!.Element(P + "spTree")!, ctx with { Part = masterPart }, body, skipPlaceholders: true);
             if (layout is not null && slidePart is not null) RenderTree(layout.Element(P + "cSld")!.Element(P + "spTree")!, ctx with { Part = layoutPart! }, body, skipPlaceholders: true);
         }
-        RenderTree(page.Element(P + "cSld")!.Element(P + "spTree")!, ctx, body, skipPlaceholders: false);
+        RenderTree(page.Element(P + "cSld")!.Element(P + "spTree")!, ctx, body, skipPlaceholders: skipPagePlaceholders);
         var sb = new StringBuilder();
         sb.Append(CultureInfo.InvariantCulture, $"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 {Width:0.##} {Height:0.##}\" width=\"{Width:0.##}\" height=\"{Height:0.##}\" font-family=\"{Esc(ctx.MinorFont)}, 'IBM Plex Sans Arabic', Arial, sans-serif\">");
         if (ctx.Defs.Length > 0) sb.Append("<defs>").Append(ctx.Defs).Append("</defs>");

@@ -3344,7 +3344,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .dk-start p { margin: 0; color: var(--ink-3); font-size: var(--fs-sm); flex: 1; min-width: 200px; }
 
 /* هوية المشروع (deck-brand-modal) */
-#deck-brand-modal .modal.dk-brand-box { width: min(980px, calc(100vw - 32px)); max-width: none; }
+#deck-brand-modal .modal.dk-brand-box { width: min(980px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); overflow: auto; }
 .dk-brand-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
 .dk-brand-form input[type="text"], .dk-brand-form select { width: 100%; }
 .dk-brand-logo-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -3386,3 +3386,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .dk-tpl-card b { font-size: var(--fs-xs); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dk-tpl-card small { font-size: 10px; color: var(--ink-3); }
 .dk-tpl-card .bad { color: var(--danger); }
+
+.dk-tpl-defaults { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.dk-tpl-defaults label { display: grid; gap: 3px; font-size: var(--fs-xs); color: var(--ink-3); }
+.dk-tpl-defaults select { font-size: var(--fs-sm); }

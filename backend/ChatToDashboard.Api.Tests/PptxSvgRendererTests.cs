@@ -68,6 +68,8 @@ public class DeckBrandTemplateAnalyzeTests
         Assert.Null(DeckBrandTemplateStore.Media(bytes, "../x"));
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(path)!, "info.json"), System.Text.Json.JsonSerializer.Serialize(info));
         var dir = Path.Combine(Path.GetDirectoryName(path)!, "pages"); Directory.CreateDirectory(dir);
-        foreach (var pg in pages) File.WriteAllText(Path.Combine(dir, $"{pg.Kind}-{pg.Index}.svg"), pg.Svg);
+        foreach (var pg in pages) { File.WriteAllText(Path.Combine(dir, $"{pg.Kind}-{pg.Index}.svg"), pg.Svg); if (pg.BgSvg is not null) File.WriteAllText(Path.Combine(dir, $"bg-{pg.Index}.svg"), pg.BgSvg); }
+        Assert.All(info.Layouts, l => Assert.NotNull(l.BgUrl));
+        Assert.DoesNotContain("عنوان الشريحة", pages[9].BgSvg!); Assert.Contains("عنوان الشريحة", pages[9].Svg);
     }
 }

@@ -17,6 +17,10 @@ public class DeckSpec
     [JsonPropertyName("accent")] public string? Accent { get; set; }
     /// <summary>هوية المشروع المرفقة عند الرسم/النشر/التصدير (من <see cref="DeckBrandStore"/>؛ لا تُحفظ داخل العرض).</summary>
     [JsonPropertyName("brand")] public DeckBrand? Brand { get; set; }
+    /// <summary>قالب الشركة المرفق عند الرسم/النشر فقط (من <see cref="DeckBrandTemplateStore"/>؛ لا يُحفظ داخل العرض).</summary>
+    [JsonPropertyName("template")] public TemplateInfo? Template { get; set; }
+    /// <summary>"auto" (افتراضي: استخدام قالب الشركة إن وُجد) أو "off" (الشكل الافتراضي للمحرك).</summary>
+    [JsonPropertyName("templateMode")] public string? TemplateMode { get; set; }
     [JsonPropertyName("slides")] public List<DeckSlide> Slides { get; set; } = new();
 
     /// <summary>تطبيع: معرّفات فريدة، تخطيط معروف (وإلا bullets)، حدود الحجم، وإزالة الحقول الفارغة.</summary>
@@ -25,6 +29,7 @@ public class DeckSpec
         Title = (Title ?? "").Trim(); if (Title.Length > 200) Title = Title[..200];
         Subtitle = string.IsNullOrWhiteSpace(Subtitle) ? null : Subtitle.Trim();
         Accent = Accent is { Length: 7 } a && a[0] == '#' && a[1..].All(Uri.IsHexDigit) ? a : null;
+        TemplateMode = TemplateMode is "off" ? "off" : null;
         Slides ??= new();
         if (Slides.Count > MaxSlides) Slides = Slides.Take(MaxSlides).ToList();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -40,6 +45,7 @@ public class DeckSpec
             if (s.Table is { } t) { t.Columns ??= new(); t.Rows = (t.Rows ?? new()).Take(40).ToList(); }
             if (s.Chart is { } c) { c.Type = c.Type is "bar" or "line" or "pie" or "column" ? c.Type : "bar"; c.Labels ??= new(); c.Values ??= new(); }
             s.Tasks = s.Tasks?.Where(t => !string.IsNullOrWhiteSpace(t.T)).Take(30).ToList(); if (s.Tasks is { Count: 0 }) s.Tasks = null;
+            if (s.Page is { } pg) { pg.Kind = pg.Kind is "slide" or "none" ? pg.Kind : "layout"; if (pg.Index < 0) pg.Index = 0; }
             if (s.Editable is { } e) { e.Kind = e.Kind is "tasks" or "text" ? e.Kind : "text"; e.Key = string.IsNullOrWhiteSpace(e.Key) ? "slide-" + s.Id : e.Key; }
         }
         return this;
@@ -84,6 +90,8 @@ public class DeckSlide
     [JsonPropertyName("needsData")] public bool? NeedsData { get; set; }
     [JsonPropertyName("intent")] public string? Intent { get; set; }
     [JsonPropertyName("missingReason")] public string? MissingReason { get; set; }
+    /// <summary>صفحة القالب لهذه الشريحة: {kind: layout|slide, index}، أو kind "none" لإلغاء القالب لها، أو null = تلقائي بحسب التخطيط.</summary>
+    [JsonPropertyName("page")] public DeckPageRef? Page { get; set; }
 }
 
 public class DeckColumn { [JsonPropertyName("title")] public string? Title { get; set; } [JsonPropertyName("bullets")] public List<string> Bullets { get; set; } = new(); }
@@ -101,6 +109,7 @@ public class DeckSeries { [JsonPropertyName("name")] public string Name { get; s
 public class DeckTable { [JsonPropertyName("columns")] public List<string> Columns { get; set; } = new(); [JsonPropertyName("rows")] public List<List<string>> Rows { get; set; } = new(); }
 public class DeckImage { [JsonPropertyName("src")] public string Src { get; set; } = ""; [JsonPropertyName("caption")] public string? Caption { get; set; } }
 public class DeckQuery { [JsonPropertyName("table")] public string? Table { get; set; } [JsonPropertyName("sql")] public string? Sql { get; set; } }
+public class DeckPageRef { [JsonPropertyName("kind")] public string Kind { get; set; } = "layout"; [JsonPropertyName("index")] public int Index { get; set; } }
 public class DeckTask { [JsonPropertyName("t")] public string T { get; set; } = ""; [JsonPropertyName("done")] public bool Done { get; set; } }
 public class DeckEditable { [JsonPropertyName("key")] public string Key { get; set; } = ""; [JsonPropertyName("kind")] public string Kind { get; set; } = "text"; }
 

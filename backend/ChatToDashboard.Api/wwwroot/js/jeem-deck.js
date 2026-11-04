@@ -64,6 +64,17 @@
 .jd-slide .jd-tasks-bar{display:flex;gap:1.4cqw;align-items:center;font-size:1.8cqw;color:#5A6B77}
 .jd-slide .jd-tasks-bar button{all:unset;cursor:pointer;background:#0B3D5C;color:#fff;padding:.8cqw 2cqw;border-radius:999px;font-weight:600}
 .jd-slide .jd-tasks-bar button[disabled]{opacity:.5;cursor:default}
+.jd-slide.jd-tpl{aspect-ratio:var(--jd-ar,16/9)}
+.jd-tpl .jd-tpl-bg{position:absolute;inset:0}.jd-tpl .jd-tpl-bg svg{width:100%;height:100%;display:block}
+.jd-tpl .jd-box{position:absolute;overflow:hidden;display:flex;flex-direction:column;min-width:0;font-size:var(--fs,2cqw);color:var(--c,#13232E)}
+.jd-tpl .jd-box h2{font-size:1em;color:var(--c,var(--jd-primary,#0B3D5C));border:0;padding:0;margin:0;line-height:1.3}
+.jd-tpl .jd-box .jd-sub{font-size:1em;color:var(--c,#5A6B77);margin:0;line-height:1.3}
+.jd-tpl .jd-box.body .jd-body{font-size:1em;gap:.7em;line-height:1.6}
+.jd-tpl .jd-box.body ul.jd-bullets{gap:.4em;padding-inline-start:1.2em}.jd-tpl .jd-box.body .jd-col h3{font-size:1.05em}
+.jd-tpl .jd-box.body .jd-quote{font-size:1.2em}.jd-tpl .jd-box.body .jd-tasks{font-size:.9em}
+.jd-tpl .jd-box.body .jd-body{flex:1;min-height:0;height:100%}.jd-tpl .jd-box.body .jd-chart{flex:1;min-height:0}.jd-tpl .jd-box.body .jd-chart svg{width:100%;height:100%}
+.jd-tpl .jd-box.body .jd-kpis{align-content:start;gap:.8em}.jd-tpl .jd-box.body .jd-kpi{padding:.6em .4em;gap:.2em}.jd-tpl .jd-box.body .jd-kpi b{font-size:2em}.jd-tpl .jd-box.body .jd-kpi span{font-size:.85em}.jd-tpl .jd-box.body .jd-kpi i{font-size:.75em}
+.jd-tpl .jd-box.body table{font-size:.85em}.jd-tpl .jd-box.body .jd-img img{max-height:100%}
 .jd-thumb{aspect-ratio:16/9;width:100%;border-radius:8px;overflow:hidden;background:#fff;border:2px solid transparent;cursor:pointer;position:relative;color:#13232E;font-family:inherit;direction:rtl}
 .jd-thumb.active{border-color:#2A78D6}
 .jd-thumb .jd-tt{position:absolute;inset:0;padding:8px 10px;font-size:11px;font-weight:700;color:#0B3D5C;overflow:hidden;line-height:1.4}
@@ -125,17 +136,9 @@
   const trunc = (s, n) => { s = String(s ?? ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
   const deltaTone = d => !d ? '' : /^[-−]/.test(String(d).trim()) ? 'down' : /^[+▲]/.test(String(d).trim()) || /\d/.test(d) ? 'up' : 'flat';
 
-  // ---- شريحة واحدة ----
-  function renderSlide(root, slide, spec, opts) {
-    opts = opts || {}; ensureCss(root.ownerDocument);
-    const ed = !!opts.editable, ce = ed ? ' contenteditable="true" spellcheck="false"' : '';
-    const L = slide.layout || 'bullets';
-    root.className = 'jd-slide jd-' + L; applyBrand(root, spec);
-    const brand = spec.brand || {}; const logo = brand.logo ? `<img class="jd-logo" src="${esc(brand.logo)}" alt="${esc(brand.name || '')}">` : '';
-    const footText = brand.footer || brand.name || '';
+  // محتوى الشريحة بحسب تخطيطها (مشترك بين الشكل الافتراضي والعرض على صفحة قالب الشركة)
+  function bodyHtml(slide, L, ce, ed) {
     let body = '';
-    const title = `<h${L === 'title' || L === 'section' ? 1 : 2} data-f="title"${ce}>${esc(slide.title)}</h${L === 'title' || L === 'section' ? 1 : 2}>`;
-    const sub = (slide.subtitle || ed) ? `<p class="jd-sub" data-f="subtitle"${ce}>${esc(slide.subtitle || (ed ? '' : ''))}</p>` : '';
     if (slide.missingReason && !(slide.bullets || slide.kpis || slide.chart?.values?.length || slide.table?.rows?.length)) body = `<div class="jd-missing">⚠️ ${esc(slide.missingReason)}</div>`;
     else switch (L) {
       case 'title': case 'section': body = ''; break;
@@ -148,6 +151,66 @@
       case 'tasks': body = `<div class="jd-tasks" data-tasks></div>`; break;
       default: body = `<ul class="jd-bullets">${(slide.bullets || (ed ? [''] : [])).map((b, k) => `<li data-f="bullets.${k}"${ce}>${esc(b)}</li>`).join('')}</ul>`;
     }
+    return body;
+  }
+
+  // ---- صفحات قالب الشركة: الشريحة تُرسم فوق SVG الصفحة الأصلية وتُوضع نصوصها في الأماكن المحجوزة بإحداثياتها ----
+  const svgCache = new Map();
+  function fetchSvg(url) {
+    if (!svgCache.has(url)) svgCache.set(url, fetch(url).then(r => r.ok ? r.text() : '').then(t => t.replace(/<svg([^>]*?)\swidth="[^"]*"\sheight="[^"]*"/, '<svg$1')).catch(() => ''));
+    return svgCache.get(url);
+  }
+  /** الصفحة المختارة لشريحة: صريحة من slide.page، وإلا الافتراضي بحسب التخطيط؛ null = بلا قالب. */
+  function templatePage(spec, slide) {
+    const t = spec && spec.template; if (!t || spec.templateMode === 'off') return null;
+    const p = slide.page; if (p && p.kind === 'none') return null;
+    const layouts = t.layouts || [], slides = t.slides || [];
+    if (p) return (p.kind === 'slide' ? slides : layouts).find(x => x.index === p.index) || null;
+    const d = t.defaults || {}; const L = slide.layout || 'bullets';
+    const idx = L === 'title' ? d.title : L === 'section' ? d.section : d.content;
+    return layouts.find(x => x.index === idx) || layouts[0] || null;
+  }
+  function pageLayout(spec, page) { return page.kind === 'slide' ? (spec.template.layouts || []).find(l => l.index === page.layout) : page; }
+  const pct = v => (v * 100).toFixed(2) + '%';
+  function ptToCqw(pt, W) { return (pt * 96 / 72 / W * 100).toFixed(3) + 'cqw'; }
+  function renderOnTemplate(root, slide, spec, opts, page) {
+    const ed = !!opts.editable, ce = ed ? ' contenteditable="true" spellcheck="false"' : '';
+    const L = slide.layout || 'bullets'; const t = spec.template; const W = t.width || 1280, H = t.height || 720;
+    root.className = 'jd-slide jd-tpl jd-' + L; applyBrand(root, spec); root.style.setProperty('--jd-ar', `${W} / ${H}`);
+    const lay = pageLayout(spec, page) || { placeholders: [] }; const phs = lay.placeholders || [];
+    const ph = r => phs.find(p => p.role === r);
+    const box = (p, cls, inner, fsPt, extra) => `<div class="jd-box ${cls}" style="left:${pct(p.x)};top:${pct(p.y)};width:${pct(p.w)};height:${pct(p.h)};--fs:${ptToCqw(fsPt || 24, W)};${p.color ? `--c:${p.color};` : ''}${p.align === 'ctr' ? 'text-align:center;' : ''}${extra || ''}">${inner}</div>`;
+    const bgUrl = page.bgUrl || page.svgUrl;
+    let html = `<div class="jd-tpl-bg" data-svg="${esc(bgUrl)}"></div>`;
+    const tp = ph('title');
+    if (tp) html += box(tp, 'title', `<h2 data-f="title"${ce}${tp.bold === false ? ' style="font-weight:400"' : ''}>${esc(slide.title)}</h2>`, tp.size);
+    const sp = ph('subtitle');
+    if (sp && (slide.subtitle || ed)) html += box(sp, 'sub', `<p class="jd-sub" data-f="subtitle"${ce}>${esc(slide.subtitle || '')}</p>`, sp.size);
+    // الصفحة الجاهزة تُعرض كما هي مع العنوان فقط (رسوماتها تشغل المساحة)؛ المحتوى يوضع على التخطيطات فقط
+    if (L !== 'title' && L !== 'section' && page.kind === 'layout') {
+      let bp = ph('body');
+      if (!bp) { const top = tp ? tp.y + tp.h + 0.03 : 0.2; bp = { x: 0.06, y: top, w: 0.88, h: Math.max(0.2, 0.9 - top), size: 24 }; }
+      if (bp) html += box(bp, 'body', `<div class="jd-body">${bodyHtml(slide, L, ce, ed)}</div>`, Math.min(bp.size || 24, 24));
+    }
+    root.innerHTML = html;
+    fetchSvg(bgUrl).then(svg => { const bg = root.querySelector('.jd-tpl-bg'); if (bg && bg.dataset.svg === bgUrl) bg.innerHTML = svg; });
+    if (L === 'tasks') { const tb = root.querySelector('[data-tasks]'); if (tb) mountTasks(tb, slide, opts); }
+    if (ed) bindEditing(root, slide, opts);
+    return root;
+  }
+
+  // ---- شريحة واحدة ----
+  function renderSlide(root, slide, spec, opts) {
+    opts = opts || {}; ensureCss(root.ownerDocument);
+    { const page = templatePage(spec, slide); if (page) return renderOnTemplate(root, slide, spec, opts, page); }
+    const ed = !!opts.editable, ce = ed ? ' contenteditable="true" spellcheck="false"' : '';
+    const L = slide.layout || 'bullets';
+    root.className = 'jd-slide jd-' + L; applyBrand(root, spec);
+    const brand = spec.brand || {}; const logo = brand.logo ? `<img class="jd-logo" src="${esc(brand.logo)}" alt="${esc(brand.name || '')}">` : '';
+    const footText = brand.footer || brand.name || '';
+    const title = `<h${L === 'title' || L === 'section' ? 1 : 2} data-f="title"${ce}>${esc(slide.title)}</h${L === 'title' || L === 'section' ? 1 : 2}>`;
+    const sub = (slide.subtitle || ed) ? `<p class="jd-sub" data-f="subtitle"${ce}>${esc(slide.subtitle || (ed ? '' : ''))}</p>` : '';
+    const body = bodyHtml(slide, L, ce, ed);
     const idx = opts.index != null ? `<div class="jd-num">${opts.index + 1}${opts.total ? ' / ' + opts.total : ''}</div>` : '';
     const srcLine = L === 'title' ? '' : [slide.source ? 'المصدر: ' + slide.source : '', footText].filter(Boolean).join('  ·  ');
     root.innerHTML = `<div class="jd-accent"></div>${L === 'title' ? '' : logo}<div class="jd-in">${L === 'title' ? logo : ''}${title}${sub}<div class="jd-body">${body}</div></div>${srcLine ? `<div class="jd-src" title="${esc(srcLine)}">${esc(srcLine)}</div>` : ''}${L === 'title' && footText ? `<div class="jd-foot">${esc(footText)}</div>` : ''}${idx}`;
@@ -228,5 +291,5 @@
     return { go, get index() { return i; } };
   }
 
-  window.JEEM_DECK = { renderSlide, thumbnail, present, chartSvg, CSS, brandVars };
+  window.JEEM_DECK = { renderSlide, thumbnail, present, chartSvg, CSS, brandVars, templatePage };
 })();

@@ -8493,6 +8493,7 @@ async function dkLoadBrand() {
   try { const r = await fetch('/api/decks/brand'); const d = r.ok ? await r.json() : {}; DK.brand = d.brand || null; DK.brandFonts = d.fonts || []; DK.brandUploaded = d.uploadedFonts || []; DK.brandCanEdit = !!d.canEdit; DK.brandMaxLogo = d.maxLogoBytes || 400 * 1024; DK.brandMaxFont = d.maxFontBytes || 6 * 1024 * 1024; }
   catch { DK.brand = null; DK.brandFonts = []; DK.brandUploaded = []; DK.brandCanEdit = false; }
   dkInjectBrandFonts();
+  try { const r = await fetch('/api/decks/brand/template'); const d = r.ok ? await r.json() : {}; DK.template = d.template || null; DK.templateMax = d.maxBytes || 64 * 1024 * 1024; } catch { DK.template = null; }
 }
 // خطوط الشركة المرفوعة: @font-face في الصفحة (المحرر، المعرض، المعاينة الحيّة)؛ الصفحة المنشورة تحقنها من الخادم (DeckHtmlExporter).
 function dkInjectBrandFonts() {
@@ -8541,7 +8542,7 @@ el('dkb-fonts-upload').addEventListener('click', async () => {
   finally { el('dkb-fonts-upload').disabled = false; }
 });
 // نسخة المواصفة للحفظ/الإرسال للموديل بلا الهوية (تُعاد الهوية من المخزن عند النشر والتصدير).
-function dkSpecForSave() { const c = Object.assign({}, DK.spec); delete c.brand; return c; }
+function dkSpecForSave() { const c = Object.assign({}, DK.spec); delete c.brand; delete c.template; return c; }
 const DKB_DEFAULTS = { primary: '#0B3D5C', secondary: '#0E8F86', accent: '#2A78D6' };
 let dkbDraft = null;
 function dkbReadForm() {
@@ -8656,11 +8657,13 @@ async function dkbLoadTemplate() {
 function dkbRenderTemplate() {
   const t = DK.template;
   el('dkb-tpl-empty').classList.toggle('hidden', !!t); el('dkb-tpl-info').classList.toggle('hidden', !t);
-  if (!t) return;
+  if (DK.spec) { dkUpdateTplToggle(); }
+  if (!t) { el('dkb-tpl-defaults').innerHTML = ''; return; }
   el('dkb-tpl-summary').innerHTML = `<b>${esc(t.fileName)}</b> · ${(t.sizeBytes / 1024 / 1024).toFixed(1)} ميغابايت · ${t.layouts.length.toLocaleString('en-US')} تخطيط · ${t.slides.length.toLocaleString('en-US')} صفحة جاهزة${t.fonts && t.fonts.length ? ` · الخطوط: ${esc(t.fonts.slice(0, 3).join('، '))}` : ''}`;
   el('dkb-tpl-warn').textContent = (t.warnings || []).join(' · ');
   el('dkb-tpl-nl').textContent = t.layouts.length.toLocaleString('en-US'); el('dkb-tpl-ns').textContent = t.slides.length.toLocaleString('en-US');
   el('dkb-tpl').querySelectorAll('.dk-tpl-tab').forEach(b => b.setAttribute('aria-selected', b.dataset.kind === dkbTplKind));
+  dkbRenderDefaults();
   const pages = dkbTplKind === 'layout' ? t.layouts : t.slides;
   const g = el('dkb-tpl-grid');
   g.innerHTML = pages.map(p => `<div class="dk-tpl-card" data-svg="${esc(p.svgUrl)}" title="${esc(p.name)}"><div class="th">…</div><b>${esc(p.name)}</b><small>${p.kind === 'layout' ? `${p.placeholders.length} مكان محجوز${p.usedBySlides ? ` · ${p.usedBySlides} صفحة` : ''}` : `${p.texts} نص${p.charts ? ` · ${p.charts} رسم` : ''}`}${p.unsupported && p.unsupported.length ? ` <span class="bad">· صورة EMF</span>` : ''}</small></div>`).join('');
@@ -8693,6 +8696,25 @@ el('dkb-tpl-delete').addEventListener('click', async () => {
   if (r.ok || r.status === 204) { DK.template = null; dkbRenderTemplate(); } else el('dkb-tpl-warn').textContent = 'تعذّر الحذف';
 });
 
+// ---- تفعيل/تعطيل قالب الشركة للعرض الحالي (spec.templateMode) ----
+function dkUpdateTplToggle() {
+  const b = el('dk-tpl-toggle'); if (!b) return;
+  const has = !!DK.template; b.classList.toggle('hidden', !has);
+  if (has) { const on = DK.spec && DK.spec.templateMode !== 'off'; b.textContent = on ? '🏢 القالب: مفعّل' : '🏢 القالب: معطّل'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+}
+el('dk-tpl-toggle').addEventListener('click', () => { if (!DK.spec) return; DK.spec.templateMode = DK.spec.templateMode === 'off' ? undefined : 'off'; if (DK.spec.templateMode === undefined) delete DK.spec.templateMode; dkMarkDirty(); dkRender(); });
+// ---- الربط الافتراضي بين أنواع الشرائح وتخطيطات القالب ----
+function dkbRenderDefaults() {
+  const t = DK.template; const box = el('dkb-tpl-defaults'); if (!t) { box.innerHTML = ''; return; }
+  const d = t.defaults || {}; const opts = v => `<option value="">—</option>` + (t.layouts || []).map(l => `<option value="${l.index}"${d[v] === l.index ? ' selected' : ''}>${esc(l.name)}</option>`).join('');
+  box.innerHTML = [['title', 'شريحة العنوان'], ['section', 'فاصل القسم'], ['content', 'شرائح المحتوى'], ['end', 'الخاتمة']].map(([k, lbl]) => `<label>${lbl}<select data-def="${k}" ${DK.brandCanEdit ? '' : 'disabled'}>${opts(k)}</select></label>`).join('');
+  box.querySelectorAll('[data-def]').forEach(sel => sel.addEventListener('change', async () => {
+    const payload = {}; box.querySelectorAll('[data-def]').forEach(x => { payload[x.dataset.def] = x.value === '' ? null : +x.value; });
+    const r = await fetch('/api/decks/brand/template/defaults', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const res = await r.json().catch(() => ({}));
+    if (r.ok && res.template) { DK.template = res.template; if (DK.spec) dkRender(); } else el('dkb-tpl-warn').textContent = res.error || 'تعذّر حفظ الربط';
+  }));
+}
+
 // ---------- معرض نماذج العروض («عرض جديد») — نفس تجربة معرض اللوحات ----------
 // التصنيفات مفاتيح ثابتة تطابق DeckTemplates.cs؛ المصغّرات والمعاينة التوضيحية من jeem-deck-demo.js
 // (بيانات وهمية لمعرض النماذج فقط)، وزر «استخدم هذا النموذج» ينشئ العرض فارغًا ليُملأ من بيانات المشروع.
@@ -8703,7 +8725,7 @@ const DK_CATS = [
 ];
 const DK_GLYPH = { title: '🏷️', section: '➖', bullets: '•', 'two-column': '⫴', kpis: '🔢', chart: '📊', table: '▦', image: '🖼️', quote: '❝', tasks: '☑' };
 let dkGalCat = 'all', dkGalQuery = '';
-function dkDemoSpec(t) { const spec = window.JEEM_DECK_DEMO ? JEEM_DECK_DEMO.build(t) : null; if (spec) spec.brand = DK.brand || null; return spec; }
+function dkDemoSpec(t) { const spec = window.JEEM_DECK_DEMO ? JEEM_DECK_DEMO.build(t) : null; if (spec) { spec.brand = DK.brand || null; spec.template = DK.template || null; } return spec; }
 // مصغّرة البطاقة: أول شريحة بيانات (مؤشرات/رسم/جدول) من المواصفة التوضيحية، وإلا شريحة العنوان.
 function dkGalThumbInto(holder, t) {
   const spec = dkDemoSpec(t); if (!spec || !window.JEEM_DECK) { holder.innerHTML = `<span class="dash-thumb dash-thumb-network">${esc(t.icon)}</span>`; return; }
@@ -8841,11 +8863,12 @@ function dkRender() {
   DK.index = Math.max(0, Math.min(DK.index, spec.slides.length - 1));
   el('dk-title').textContent = spec.title || 'عرض بلا عنوان';
   el('dk-meta').textContent = `${spec.slides.length} شريحة${DK.dirty ? ' · تعديلات غير محفوظة' : DK.deck ? ' · محفوظ' : ''}${DK.publishedUrl ? ' · منشور' : ''}`;
-  const slide = spec.slides[DK.index]; spec.brand = DK.brand || null;
+  const slide = spec.slides[DK.index]; spec.brand = DK.brand || null; spec.template = DK.template || null; dkUpdateTplToggle();
   JEEM_DECK.renderSlide(el('dk-slide'), slide, spec, { index: DK.index, total: spec.slides.length, editable: true, onEdit: () => dkMarkDirty() });
   el('dk-layout').value = slide.layout || 'bullets';
   el('dk-slide-meta').innerHTML = dkInspectorHtml(slide);
   dkBindInspector(slide);
+  { const det = el('dk-slide-meta').querySelector('details'); if (det) { det.open = !!DK.inspOpen; det.addEventListener('toggle', () => { DK.inspOpen = det.open; }); } }
   el('dk-strip').innerHTML = spec.slides.map((s, i) => JEEM_DECK.thumbnail(s, i, spec)).join('');
   el('dk-strip').querySelectorAll('.jd-thumb').forEach((t, i) => { t.classList.toggle('active', i === DK.index); t.draggable = true; t.addEventListener('click', () => { DK.index = i; dkRender(); }); t.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', String(i)); t.classList.add('dragging'); }); t.addEventListener('dragend', () => t.classList.remove('dragging')); t.addEventListener('dragover', e => e.preventDefault()); t.addEventListener('drop', e => { e.preventDefault(); const from = +e.dataTransfer.getData('text/plain'); if (from === i) return; const [m] = spec.slides.splice(from, 1); spec.slides.splice(i, 0, m); DK.index = i; dkMarkDirty(); dkRender(); }); });
   el('dk-strip').querySelector('.jd-thumb.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
@@ -8859,6 +8882,11 @@ function dkInspectorHtml(s) {
   else if (L === 'bullets' || L === 'two-column') { fields = L === 'bullets' ? `<label class="dk-field">النقاط (سطر لكل نقطة)<textarea rows="4" data-ins="bullets.data">${esc((s.bullets || []).join('\n'))}</textarea></label>` : (s.columns || []).map((c, i) => `<label class="dk-field">عمود ${i + 1}: ${esc(c.title || '')} (سطر لكل نقطة)<textarea rows="3" data-ins="columns.${i}.data">${esc((c.bullets || []).join('\n'))}</textarea></label>`).join(''); }
   else if (L === 'image') fields = `<label class="dk-field">رابط الصورة<input data-ins="image.src" value="${esc(s.image?.src || '')}" dir="ltr"></label>`;
   fields += `<label class="dk-field">ملاحظات المتحدث<textarea rows="2" data-ins="notes">${esc(s.notes || '')}</textarea></label>`;
+  if (DK.template && DK.spec.templateMode !== 'off') {
+    const cur = s.page ? `${s.page.kind}:${s.page.index}` : '';
+    const opt = (v, label) => `<option value="${v}"${cur === v ? ' selected' : ''}>${esc(label)}</option>`;
+    fields = `<label class="dk-field">صفحة القالب<select data-ins="page">${opt('', 'تلقائي بحسب نوع الشريحة')}${opt('none:0', 'بلا قالب (الشكل الافتراضي)')}<optgroup label="التخطيطات">${(DK.template.layouts || []).map(l => opt(`layout:${l.index}`, l.name)).join('')}</optgroup><optgroup label="الصفحات الجاهزة (تُعرض كما هي مع العنوان فقط)">${(DK.template.slides || []).map(l => opt(`slide:${l.index}`, l.name)).join('')}</optgroup></select></label>` + fields;
+  }
   const src = s.source ? `<span>المصدر: ${esc(s.source)}</span>` : ''; const q = s.query?.sql ? `<code title="${esc(s.query.sql)}">${esc(s.query.sql.slice(0, 80))}${s.query.sql.length > 80 ? '…' : ''}</code>` : '';
   const miss = s.missingReason ? `<span class="badge badge-danger">⚠️ ${esc(s.missingReason)}</span>` : '';
   return `${miss}${src}${q}<details class="dk-inspector"><summary>تحرير بيانات الشريحة (${DK_LAYOUT_LABEL[L] || L})</summary>${fields}</details>`;
@@ -8875,6 +8903,7 @@ function dkBindInspector(s) {
     else if (k.startsWith('columns.')) { const i = +k.split('.')[1]; s.columns = s.columns || []; s.columns[i] = s.columns[i] || { title: '', bullets: [] }; s.columns[i].bullets = lines; }
     else if (k === 'image.src') { s.image = s.image || {}; s.image.src = v.trim(); }
     else if (k === 'notes') s.notes = v.trim() || undefined;
+    else if (k === 'page') { if (!v) delete s.page; else { const [kind, idx] = v.split(':'); s.page = { kind, index: +idx || 0 }; } }
     dkMarkDirty(); dkRender();
   }));
 }

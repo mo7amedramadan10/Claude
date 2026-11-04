@@ -18,6 +18,22 @@ public sealed class TemplatePlaceholder
     [JsonPropertyName("w")] public double W { get; set; }
     [JsonPropertyName("h")] public double H { get; set; }
     [JsonPropertyName("prompt")] public string? Prompt { get; set; }
+    /// <summary>الدور المستنتج: title | subtitle | body | pic | other.</summary>
+    [JsonPropertyName("role")] public string Role { get; set; } = "other";
+    [JsonPropertyName("size")] public double? Size { get; set; }
+    [JsonPropertyName("color")] public string? Color { get; set; }
+    [JsonPropertyName("align")] public string? Align { get; set; }
+    [JsonPropertyName("font")] public string? Font { get; set; }
+    [JsonPropertyName("bold")] public bool? Bold { get; set; }
+}
+
+/// <summary>الربط الافتراضي بين أنواع شرائح العرض وتخطيطات القالب (فهارس في Layouts) — يحسبه التحليل ويعدّله المستخدم.</summary>
+public sealed class TemplateDefaults
+{
+    [JsonPropertyName("title")] public int? Title { get; set; }
+    [JsonPropertyName("section")] public int? Section { get; set; }
+    [JsonPropertyName("content")] public int? Content { get; set; }
+    [JsonPropertyName("end")] public int? End { get; set; }
 }
 
 /// <summary>صفحة من القالب: تخطيط (<c>layout</c>) أو شريحة مثال (<c>slide</c>) مع ما يلزم لاختيارها وعرضها.</summary>
@@ -36,7 +52,10 @@ public sealed class TemplatePage
     [JsonPropertyName("texts")] public int Texts { get; set; }
     [JsonPropertyName("charts")] public int Charts { get; set; }
     [JsonPropertyName("svgUrl")] public string SvgUrl { get; set; } = "";
+    /// <summary>للتخطيطات: نسخة بلا الأماكن المحجوزة تُستخدم خلفيةً لشرائح المنصة.</summary>
+    [JsonPropertyName("bgUrl")] public string? BgUrl { get; set; }
     [JsonIgnore] public string Svg { get; set; } = "";
+    [JsonIgnore] public string? BgSvg { get; set; }
 }
 
 public sealed class TemplateInfo
@@ -50,6 +69,7 @@ public sealed class TemplateInfo
     [JsonPropertyName("themeColors")] public Dictionary<string, string> ThemeColors { get; set; } = new();
     [JsonPropertyName("fonts")] public List<string> Fonts { get; set; } = new();
     [JsonPropertyName("logo")] public string? Logo { get; set; }
+    [JsonPropertyName("defaults")] public TemplateDefaults Defaults { get; set; } = new();
     [JsonPropertyName("layouts")] public List<TemplatePage> Layouts { get; set; } = new();
     [JsonPropertyName("slides")] public List<TemplatePage> Slides { get; set; } = new();
     [JsonPropertyName("warnings")] public List<string> Warnings { get; set; } = new();
@@ -124,7 +144,8 @@ public class DeckBrandTemplateStore
         {
             var l = r.Layouts[i]; var name = PptxSvgRenderer.LayoutName(l); var masterIdx = r.Masters.ToList().IndexOf(r.MasterOf(l));
             var svg = r.RenderLayout(i);
-            var page = new TemplatePage { Kind = "layout", Index = i, Name = name, Master = masterIdx, UsedBySlides = usage[i], Svg = svg, Unsupported = r.Unsupported.Distinct().ToList(), SvgUrl = $"/api/decks/brand/template/{templateId}/pages/layout/{i}.svg" };
+            var page = new TemplatePage { Kind = "layout", Index = i, Name = name, Master = masterIdx, UsedBySlides = usage[i], Svg = svg, Unsupported = r.Unsupported.Distinct().ToList(), SvgUrl = $"/api/decks/brand/template/{templateId}/pages/layout/{i}.svg", BgUrl = $"/api/decks/brand/template/{templateId}/pages/bg/{i}.svg" };
+            page.BgSvg = r.RenderLayoutBackground(i);
             page.Generic = usage[i] == 0 && GenericNames.Any(g => string.Equals(g, name, StringComparison.OrdinalIgnoreCase)) && (r.Masters.Count > 1 && masterIdx > 0 || r.Layouts.Count > 20);
             page.Placeholders = Placeholders(l, r.Width, r.Height);
             CountFonts(l); pages.Add(page);
@@ -141,12 +162,35 @@ public class DeckBrandTemplateStore
             CountFonts(s);
         }
         info.Fonts = fontCounts.OrderByDescending(k => k.Value).Select(k => k.Key).Take(8).ToList();
+        info.Defaults = GuessDefaults(pages.Where(p => p.Kind == "layout").ToList());
         info.Layouts = pages.Where(p => p.Kind == "layout").ToList(); info.Slides = pages.Where(p => p.Kind == "slide").ToList();
         var unsupported = pages.SelectMany(p => p.Unsupported).Distinct().ToList();
         if (unsupported.Count > 0) info.Warnings.Add($"{unsupported.Count} صورة بصيغة EMF/WMF لا يعرضها المتصفح (تظهر في PowerPoint المُصدَّر فقط): {string.Join("، ", unsupported.Take(5))}");
         var generic = info.Layouts.Count(l => l.Generic);
         if (generic > 0) info.Warnings.Add($"{generic} تخطيطًا افتراضيًا من PowerPoint لا تستخدمه أي صفحة مثال أُخفي من القائمة.");
         return (info, pages);
+    }
+
+    /// <summary>اختيار التخطيطات الافتراضية بالاسم ثم بالبنية (غلاف/عنوان، فاصل، محتوى بأكبر مساحة، خاتمة).</summary>
+    public static TemplateDefaults GuessDefaults(List<TemplatePage> layouts)
+    {
+        var real = layouts.Where(l => !l.Generic).ToList(); if (real.Count == 0) real = layouts;
+        int? Pick(string rx, Func<TemplatePage, bool>? structural = null)
+        {
+            var byName = real.Where(l => Regex.IsMatch(l.Name, rx, RegexOptions.IgnoreCase)).OrderByDescending(l => l.UsedBySlides).FirstOrDefault();
+            if (byName is not null) return byName.Index;
+            return structural is null ? null : real.Where(structural).OrderByDescending(l => l.UsedBySlides).FirstOrDefault()?.Index;
+        }
+        var d = new TemplateDefaults
+        {
+            Title = Pick(@"^(cover|title slide|غلاف|عنوان)", l => l.Placeholders.Any(p => p.Type == "ctrTitle")),
+            Section = Pick(@"separator|section|فاصل|قسم", l => l.Placeholders.Count(p => p.Role is "title" or "subtitle") >= 1 && !l.Placeholders.Any(p => p.Role == "body")),
+            Content = Pick(@"general|inner|content|محتوى|داخلي", l => l.Placeholders.Any(p => p.Role == "body")),
+            End = Pick(@"end|closing|thank|شكر|خاتمة"),
+        };
+        d.Content ??= real.OrderByDescending(l => l.Placeholders.Where(p => p.Role == "body").Sum(p => p.W * p.H)).FirstOrDefault()?.Index;
+        d.Title ??= real.FirstOrDefault()?.Index;
+        return d;
     }
 
     private static List<TemplatePlaceholder> Placeholders(SlideLayoutPart l, double W, double H)
@@ -162,8 +206,29 @@ public class DeckBrandTemplateStore
             if (off is null || ext is null) continue;
             double Em(XElement e, string a) => double.Parse(e.Attribute(a)?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture) / PptxSvgRenderer.Emu;
             var prompt = string.Concat(sp.Descendants(A + "t").Select(t => t.Value)).Trim();
-            list.Add(new TemplatePlaceholder { Type = type, Idx = int.TryParse(ph.Attribute("idx")?.Value, out var ix) ? ix : null, X = Math.Round(Em(off, "x") / W, 4), Y = Math.Round(Em(off, "y") / H, 4), W = Math.Round(Em(ext, "cx") / W, 4), H = Math.Round(Em(ext, "cy") / H, 4), Prompt = prompt.Length > 0 ? prompt : null });
+            var lvl1 = sp.Element(P + "txBody")?.Element(A + "lstStyle")?.Element(A + "lvl1pPr"); var rpr = lvl1?.Element(A + "defRPr");
+            var tp = new TemplatePlaceholder
+            {
+                Type = type, Idx = int.TryParse(ph.Attribute("idx")?.Value, out var ix) ? ix : null,
+                X = Math.Round(Em(off, "x") / W, 4), Y = Math.Round(Em(off, "y") / H, 4), W = Math.Round(Em(ext, "cx") / W, 4), H = Math.Round(Em(ext, "cy") / H, 4),
+                Prompt = prompt.Length > 0 ? prompt : null, Align = lvl1?.Attribute("algn")?.Value,
+                Size = rpr?.Attribute("sz")?.Value is { } sz ? double.Parse(sz, System.Globalization.CultureInfo.InvariantCulture) / 100 : null,
+                Color = rpr?.Element(A + "solidFill")?.Element(A + "srgbClr")?.Attribute("val")?.Value is { } c ? "#" + c : null,
+                Font = rpr?.Element(A + "latin")?.Attribute("typeface")?.Value, Bold = rpr?.Attribute("b")?.Value is { } b ? b == "1" : null,
+            };
+            list.Add(tp);
         }
+        // الأدوار: عنوان = ctrTitle/title أو أعلى محجوز نصي قصير بمطالبة «عنوان»؛ فرعي = subTitle أو مطالبة «فرعي»؛ محتوى = أكبر مساحة متبقية
+        var textPh = list.Where(p => p.Type is "body" or "title" or "ctrTitle" or "subTitle" or "obj").OrderBy(p => p.Y).ToList();
+        var title = list.FirstOrDefault(p => p.Type is "ctrTitle" or "title")
+                    ?? textPh.FirstOrDefault(p => p.Prompt is { } pr && (Regex.IsMatch(pr, @"عنوان|title", RegexOptions.IgnoreCase)) && !Regex.IsMatch(pr, @"فرعي|sub", RegexOptions.IgnoreCase))
+                    ?? textPh.FirstOrDefault(p => p.H < 0.2);
+        if (title is not null) title.Role = "title";
+        var sub = list.FirstOrDefault(p => p.Type == "subTitle") ?? textPh.FirstOrDefault(p => p.Role == "other" && p.Prompt is { } pr && Regex.IsMatch(pr, @"فرعي|sub", RegexOptions.IgnoreCase));
+        if (sub is not null && sub != title) sub.Role = "subtitle";
+        var body = textPh.Where(p => p.Role == "other").OrderByDescending(p => p.W * p.H).FirstOrDefault();
+        if (body is not null && body.W * body.H > 0.05) body.Role = "body";
+        foreach (var p in list.Where(p => p.Type == "pic")) p.Role = "pic";
         return list;
     }
 
@@ -179,7 +244,11 @@ public class DeckBrandTemplateStore
             if (old is not null) { await connection.ExecuteAsync($"DELETE FROM {Pages} WHERE TemplateId = @old", new { old }, tx); await connection.ExecuteAsync($"DELETE FROM {Table} WHERE ProjectKey = @k", new { k = Key(projectId) }, tx); }
             await connection.ExecuteAsync($"INSERT INTO {Table} (ProjectKey, Id, FileName, SizeBytes, Bytes, InfoJson, UploadedBy, UploadedAt) VALUES (@k, @id, @fileName, @size, @bytes, @json, @userId, @at)",
                 new { k = Key(projectId), id, fileName = info.FileName, size = info.SizeBytes, bytes, json = JsonSerializer.Serialize(info, Json), userId, at = info.UploadedAt }, tx);
-            foreach (var p in pages) await connection.ExecuteAsync($"INSERT INTO {Pages} (TemplateId, Kind, Idx, Svg) VALUES (@id, @kind, @idx, @svg)", new { id, kind = p.Kind, idx = p.Index, svg = p.Svg }, tx);
+            foreach (var p in pages)
+            {
+                await connection.ExecuteAsync($"INSERT INTO {Pages} (TemplateId, Kind, Idx, Svg) VALUES (@id, @kind, @idx, @svg)", new { id, kind = p.Kind, idx = p.Index, svg = p.Svg }, tx);
+                if (p.BgSvg is not null) await connection.ExecuteAsync($"INSERT INTO {Pages} (TemplateId, Kind, Idx, Svg) VALUES (@id, 'bg', @idx, @svg)", new { id, idx = p.Index, svg = p.BgSvg }, tx);
+            }
             await tx.CommitAsync(ct);
         }
         lock (_cacheLock) { if (old is not null) _bytesCache.Remove(old); _bytesCache[id] = (bytes, DateTime.UtcNow); }
@@ -235,6 +304,16 @@ public class DeckBrandTemplateStore
             }
         }
         return Walk(pkg);
+    }
+
+    public async Task<TemplateInfo?> SetDefaultsAsync(string? projectId, TemplateDefaults defaults, CancellationToken ct = default)
+    {
+        var info = await GetInfoAsync(projectId, ct); if (info is null) return null;
+        int? Valid(int? i) => i is { } v && v >= 0 && v < info.Layouts.Count ? v : null;
+        info.Defaults = new TemplateDefaults { Title = Valid(defaults.Title), Section = Valid(defaults.Section), Content = Valid(defaults.Content), End = Valid(defaults.End) };
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {Table} SET InfoJson = @json WHERE ProjectKey = @k", new { json = JsonSerializer.Serialize(info, Json), k = Key(projectId) });
+        return info;
     }
 
     public async Task DeleteAsync(string? projectId, CancellationToken ct = default)
