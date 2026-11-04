@@ -12,6 +12,8 @@ public class FreeformDesign
     [JsonPropertyName("organizationId")] public string? OrganizationId { get; set; }
     [JsonPropertyName("createdByUserId")] public string CreatedByUserId { get; set; } = "";
     [JsonPropertyName("title")] public string Title { get; set; } = "";
+    /// <summary>نوع المخرج كما في Claude: doc | slides | design | dashboard | motion.</summary>
+    [JsonPropertyName("kind")] public string Kind { get; set; } = "design";
     [JsonIgnore] public string Html { get; set; } = "";
     [JsonPropertyName("version")] public int Version { get; set; }
     [JsonPropertyName("presentationId")] public string? PresentationId { get; set; }
@@ -46,7 +48,9 @@ public class FreeformStore
     private volatile bool _schemaReady;
     public FreeformStore(DataStore db) => _db = db;
     private const string T = "[dbo].[FreeformDesigns]", V = "[dbo].[FreeformVersions]", M = "[dbo].[FreeformMessages]";
-    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    public static readonly string[] Kinds = { "doc", "slides", "design", "dashboard", "motion" };
+    public static string NormalizeKind(string? k) => Kinds.Contains(k ?? "") ? k! : "design";
 
     private async Task EnsureSchemaAsync(CancellationToken ct)
     {
@@ -62,7 +66,7 @@ public class FreeformStore
                 IF OBJECT_ID('dbo.FreeformDesigns') IS NULL
                 CREATE TABLE {T} (
                   [Id] NVARCHAR(32) PRIMARY KEY, [ProjectId] NVARCHAR(64), [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL,
-                  [Title] NVARCHAR(300) NOT NULL, [Html] NVARCHAR(MAX) NOT NULL, [Version] INT NOT NULL DEFAULT 0, [PresentationId] NVARCHAR(32),
+                  [Title] NVARCHAR(300) NOT NULL, [Kind] NVARCHAR(16) NOT NULL DEFAULT 'design', [Html] NVARCHAR(MAX) NOT NULL, [Version] INT NOT NULL DEFAULT 0, [PresentationId] NVARCHAR(32),
                   [SizeBytes] INT NOT NULL DEFAULT 0, [CreatedAt] DATETIME2 NOT NULL, [UpdatedAt] DATETIME2 NOT NULL);
                 IF OBJECT_ID('dbo.FreeformVersions') IS NULL
                 CREATE TABLE {V} (
@@ -73,6 +77,7 @@ public class FreeformStore
                   [Id] INT IDENTITY PRIMARY KEY, [DesignId] NVARCHAR(32) NOT NULL, [Role] NVARCHAR(12) NOT NULL, [Text] NVARCHAR(MAX) NOT NULL,
                   [Version] INT NULL, [CreatedAt] DATETIME2 NOT NULL);
                 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_FreeformMessages_Design') CREATE INDEX IX_FreeformMessages_Design ON {M} ([DesignId], [Id]);
+                IF COL_LENGTH('dbo.FreeformDesigns', 'Kind') IS NULL ALTER TABLE {T} ADD [Kind] NVARCHAR(16) NOT NULL DEFAULT 'design';
                 """;
             await command.ExecuteNonQueryAsync(ct);
             _schemaReady = true;
@@ -80,13 +85,13 @@ public class FreeformStore
         finally { _schemaGate.Release(); }
     }
 
-    public async Task<FreeformDesign> CreateAsync(string? projectId, string? organizationId, string userId, string title, string html, string? prompt, CancellationToken ct = default)
+    public async Task<FreeformDesign> CreateAsync(string? projectId, string? organizationId, string userId, string title, string html, string? prompt, string? kind = null, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         var now = DateTime.UtcNow;
-        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
+        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
+        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
         if (d.Version == 1) await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, 1, @html, @prompt, @size, @now)", new { id = d.Id, html, prompt = Trim(prompt), size = d.SizeBytes, now });
         return d;
     }

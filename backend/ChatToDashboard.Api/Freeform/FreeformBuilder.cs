@@ -26,7 +26,7 @@ public class FreeformBuilder
     public FreeformBuilder(LlmRouter router, DataProfileService profiles, AnalyticsTools tools, ColumnSemanticsService semantics, ILogger<FreeformBuilder> logger)
     { _router = router; _profiles = profiles; _tools = tools; _semantics = semantics; _logger = logger; }
 
-    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct)
+    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design")
     {
         var llm = await _router.ResolveStagedAsync(ct) ?? throw new InvalidOperationException("لا يوجد مزوّد موديل مهيأ — اضبط مفاتيح الموديلات من الإعدادات.");
         var profile = await _profiles.BuildAsync(context, ct);
@@ -37,7 +37,7 @@ public class FreeformBuilder
             await _semantics.EnsureAnalyzedAsync(context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
             profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.ProjectId, ct));
         }
-        var system = BuildSystemPrompt(brand, hasData, profileText);
+        var system = BuildSystemPrompt(brand, hasData, profileText, kind);
         var userMsg = new StringBuilder();
         if (history.Count > 0)
         {
@@ -53,7 +53,7 @@ public class FreeformBuilder
         }
         userMsg.AppendLine("# الطلب").AppendLine(message.Trim());
         var tools = hasData ? _tools.BuildTools(context).Where(t => t.Name == "query_data").ToList() : null;
-        var call = new StagedCall($"[تصميم حر] {Shorten(message, 40)}", system, userMsg.ToString(), tools, context, MaxIterations, false, user);
+        var call = new StagedCall($"[تصميم حر/{KindLabel(kind)}] {Shorten(message, 40)}", system, userMsg.ToString(), tools, context, MaxIterations, false, user);
         var res = await llm.RunStagedAsync(call, ct);
         var html = ExtractHtml(res.Json, res.Text);
         var reply = res.Json["reply"]?.GetValue<string>() ?? (html is null ? "لم أستطع إنتاج صفحة من هذا الطلب — وضّح أكثر." : "جاهزة.");
@@ -72,7 +72,45 @@ public class FreeformBuilder
     private static string EnsureDocument(string h) => Regex.IsMatch(h, @"^\s*<!doctype", RegexOptions.IgnoreCase) || Regex.IsMatch(h, @"^\s*<html", RegexOptions.IgnoreCase) ? h
         : "<!doctype html>\n<html lang=\"ar\" dir=\"rtl\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>\n" + h + "\n</body></html>";
 
-    public static string BuildSystemPrompt(DeckBrand? brand, bool hasData, string profileText)
+    public static string KindLabel(string kind) => kind switch { "doc" => "مستند", "slides" => "شرائح", "dashboard" => "لوحة", "motion" => "حركة", _ => "تصميم" };
+
+    /// <summary>تعليمات كل نوع مخرج (كما تختلف Docs/Slides/Design/Dashboard/Motion في Claude): البنية والتفاعل والطباعة.</summary>
+    public static string KindInstructions(string kind) => kind switch
+    {
+        "doc" => """
+            # النوع: مستند (Docs)
+            - صفحة بشكل ورقة: حاوية بيضاء بعرض أقصى 820px في المنتصف بظل خفيف، هوامش 48px، خط 16px وسطر 1.8، عناوين مرقّمة عند الحاجة، جداول بحدود خفيفة، قوائم.
+            - ابدأ بترويسة (العنوان، الجهة، التاريخ) وعند الحاجة جدول محتويات بروابط داخلية، واختم بتذييل.
+            - `@media print { @page { size: A4; margin: 18mm } }` بلا ظلال ولا خلفيات، وفواصل صفحات مناسبة (`break-inside: avoid` للجداول).
+            - لا عناصر تفاعلية إلا طيّ الأقسام الطويلة إن لزم. المحتوى هو الأساس: اكتب نصًا كاملًا لا عناوين فارغة.
+            """,
+        "slides" => """
+            # النوع: شرائح (Slides)
+            - عرض تقديمي داخل صفحة واحدة: كل شريحة `<section class="slide">` بنسبة 16:9 تملأ الشاشة، تُعرض واحدة في كل مرة.
+            - تنقّل بالأسهم/المسافة والنقر، وأزرار «السابق/التالي» ورقم الشريحة وشريط تقدّم، ودعم اللمس (سحب) وزر ملء الشاشة.
+            - 8–15 شريحة: غلاف، أقسام، محتوى بنقاط قليلة وخط كبير (العنوان ≥ 40px، النص ≥ 22px)، خاتمة. استخدم SVG للرسوم والأيقونات.
+            - `@media print` تطبع كل شريحة في صفحة أفقية مستقلة.
+            """,
+        "dashboard" => """
+            # النوع: لوحة (Dashboard)
+            - لوحة مؤشرات: صف بطاقات مؤشرات (القيمة الكبيرة + التسمية + التغيّر بسهم ولون مع نص)، ثم شبكة رسوم (أعمدة/خط/دائري) مرسومة بـ SVG مضمّن بكود صغير تكتبه أنت، وجدول تفصيلي، وفلاتر بسيطة (قائمة/أزرار) تعيد الرسم من البيانات المضمّنة في JS.
+            - البيانات: إن توفرت أداة query_data فاستعلم عن الأرقام الحقيقية وضعها في مصفوفة JS واحدة في أعلى السكربت، واذكر المصدر تحت كل رسم. بلا بيانات اكتب قيمًا توضيحية مع شارة «بيانات توضيحية» واضحة.
+            - ألوان الحالة ثابتة: أخضر للصعود الجيد، أحمر للهبوط، رمادي للثبات، ولا تعتمد على اللون وحده (أيقونة + نص). لا رسوم بمحورين. شبكة متجاوبة (4 → 2 → 1 أعمدة).
+            """,
+        "motion" => """
+            # النوع: حركة (Motion)
+            - مشهد متحرك قصير (10–30 ثانية) بـ SVG + CSS animations أو JS (requestAnimationFrame) يشرح فكرة/عملية/أرقامًا: عناصر تظهر بترتيب، أسهم تتحرك، أرقام تُعدّ تصاعديًا.
+            - عناصر تحكم ثابتة أسفل المشهد: تشغيل/إيقاف، إعادة، شريط زمن، وخيار تكرار. المشهد بنسبة 16:9 يملأ العرض.
+            - احترم `prefers-reduced-motion`: عند تفعيله اعرض الحالة النهائية ثابتة. لا صوت. لا اعتماد على مكتبات.
+            """,
+        _ => """
+            # النوع: تصميم (Design)
+            - صفحة أو نموذج أولي بصري حرّ: واجهة، صفحة هبوط، بطاقات، نموذج، رسم توضيحي… بحرية كاملة في التخطيط والتفاعل.
+            - اهتم بالتفاصيل: تسلسل بصري واضح، مساحات متوازنة، حالات تحويم/تركيز، وتجاوب كامل.
+            """,
+    };
+
+    public static string BuildSystemPrompt(DeckBrand? brand, bool hasData, string profileText, string kind = "design")
     {
         var sb = new StringBuilder();
         sb.AppendLine("""
@@ -87,6 +125,7 @@ public class FreeformBuilder
             - عند التعديل أعد الصفحة **كاملة** بعد التعديل (لا مقتطفًا).
             أعد JSON فقط: {"reply": "جملة أو اثنتان بالعربية عمّا صممته وما يمكن تعديله", "html": "<!doctype html>…", "usedData": true|false}
             """);
+        sb.AppendLine(KindInstructions(kind));
         if (brand is not null && !brand.IsEmpty)
         {
             sb.AppendLine("# هوية المشروع (التزم بها)");

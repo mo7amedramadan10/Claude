@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
-public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } }
+public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } }
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
 
@@ -100,13 +100,14 @@ public class FreeformController : ControllerBase
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var brand = await BrandAsync(selection.ProjectId, ct);
         FreeformResult result;
-        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct); }
+        var kind = FreeformStore.NormalizeKind(design?.Kind ?? request.Kind);
+        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         int? version = null;
         if (design is null)
         {
             var title = TitleFrom(request.Message);
-            design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, result.Html ?? "", request.Message, ct);
+            design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, result.Html ?? "", request.Message, kind, ct);
             version = design.Version > 0 ? design.Version : null;
         }
         else if (result.Html is not null) { version = await _store.AddVersionAsync(design.Id, result.Html, request.Message, null, ct); design.Version = version.Value; design.Html = result.Html; }

@@ -46,3 +46,21 @@ public class FreeformTests
         Assert.DoesNotContain("# بيانات المشروع", FreeformBuilder.BuildSystemPrompt(null, false, ""));
     }
 }
+
+public class FreeformKindTests
+{
+    [Theory]
+    [InlineData("doc", "A4")]
+    [InlineData("slides", "16:9")]
+    [InlineData("dashboard", "query_data")]
+    [InlineData("motion", "prefers-reduced-motion")]
+    [InlineData("design", "نموذج أولي")]
+    public void KindInstructions_Present(string kind, string marker) => Assert.Contains(marker, FreeformBuilder.BuildSystemPrompt(null, true, "x", kind));
+
+    [Fact]
+    public void NormalizeKind_FallsBackToDesign()
+    {
+        Assert.Equal("design", FreeformStore.NormalizeKind(null)); Assert.Equal("design", FreeformStore.NormalizeKind("video")); Assert.Equal("motion", FreeformStore.NormalizeKind("motion"));
+        Assert.Equal("مستند", FreeformBuilder.KindLabel("doc"));
+    }
+}

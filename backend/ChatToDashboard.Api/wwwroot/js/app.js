@@ -8718,7 +8718,10 @@ function dkbRenderDefaults() {
 
 // ======================= تصميم حر (FreeformController) =======================
 // المحادثة تنتج صفحة HTML كاملة (كـ artifacts) تُعرض في iframe معزول (sandbox بلا same-origin) مع إصدارات وتعديل كود ونشر.
-const FF = { design: null, html: '', versions: [], messages: [], viewing: null, busy: false, list: [], mobile: false };
+const FF = { design: null, html: '', versions: [], messages: [], viewing: null, busy: false, list: [], mobile: false, kind: null };
+const FF_KINDS = { doc: { label: 'مستند', ph: 'مثال: مذكرة داخلية عن خطة الربع القادم بأقسام الأهداف والميزانية والجدول الزمني… أو: تقرير أداء المبيعات هذا الشهر من بياناتي' }, slides: { label: 'شرائح', ph: 'مثال: عرض تقديمي عن إطلاق منتج جديد في 10 شرائح: المشكلة، الحل، السوق، الخطة، الفريق' }, design: { label: 'تصميم', ph: 'مثال: صفحة هبوط لخدمة جديدة بقسم أعلى وميزات وشهادات ونموذج تواصل… أو: نموذج أولي لشاشة طلب إجازة' }, dashboard: { label: 'لوحة', ph: 'مثال: لوحة متابعة المبيعات بمؤشرات الإيراد والصفقات واتجاه شهري وتوزيع بالمنطقة من بياناتي' }, motion: { label: 'حركة', ph: 'مثال: مشهد متحرك 20 ثانية يشرح رحلة الطلب من الاستلام حتى التسليم بأربع خطوات' } };
+function ffSetKind(k) { FF.kind = k; const info = FF_KINDS[k]; el('ff-q').placeholder = info ? info.ph : ''; el('ff-head-desc').textContent = info ? `${info.label} جديد — اكتب طلبك` : 'اختر نوعًا من اللوحة ثم اكتب طلبك'; document.querySelectorAll('.ff-kind').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === k ? 'true' : 'false')); el('ff-make-hint').textContent = info ? `النوع: ${info.label}. اكتب طلبك في المحادثة (يسار) وسيُبنى بهوية مشروعك.` : 'اختر نوعًا ثم اكتب طلبك في المحادثة.'; }
+document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', () => { ffSetKind(b.dataset.kind); el('ff-q').focus(); }));
 async function loadFreeformScreen() { if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
 async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
@@ -8726,10 +8729,11 @@ async function ffShowStart() {
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
   try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
   el('ff-count').textContent = FF.list.length ? `${FF.list.length.toLocaleString('en-US')} تصميم` : 'لا تصاميم بعد';
-  el('ff-list').innerHTML = FF.list.map(d => `<div class="dk-card" data-ff="${esc(d.id)}" role="button" tabindex="0"><span class="ic">🧩</span><b>${esc(d.title)}</b><p>إصدار ${d.version} · ${relTime(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</p></div>`).join('');
+  el('ff-list').innerHTML = FF.list.map(d => `<div class="dk-card" data-ff="${esc(d.id)}" role="button" tabindex="0"><span class="ic">${({ doc: '📄', slides: '🖼️', dashboard: '📊', motion: '🎞️' })[d.kind] || '🎨'}</span><b>${esc(d.title)}${ffKindChip(d.kind)}</b><p>إصدار ${d.version} · ${relTime(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</p></div>`).join('');
+  ffSetKind(FF.kind);
   el('ff-list').querySelectorAll('[data-ff]').forEach(c => c.addEventListener('click', () => ffOpen(c.dataset.ff)));
 }
-el('ff-start-new').addEventListener('click', () => { el('ff-q').focus(); });
+function ffKindChip(k) { const info = FF_KINDS[k]; return info ? `<span class="ff-kind-chip">${esc(info.label)}</span>` : ''; }
 async function ffOpen(id) {
   const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return;
   const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl;
@@ -8740,9 +8744,11 @@ function ffRender() {
   el('ff-start').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden'); el('ff-preview-wrap').classList.remove('hidden');
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
   el('ff-code').setAttribute('aria-pressed', 'false');
-  const d = FF.design; el('ff-title').textContent = d ? d.title : 'تصميم حر';
+  const d = FF.design; el('ff-title').textContent = d ? d.title : 'تصميم حر'; const kind = d ? d.kind : FF.kind;
+  el('ff-present').classList.toggle('hidden', kind !== 'slides' && kind !== 'motion'); el('ff-replay').classList.toggle('hidden', kind !== 'motion'); el('ff-print').classList.toggle('hidden', kind !== 'doc' && kind !== 'slides');
+  el('ff-preview-wrap').classList.toggle('doc', kind === 'doc'); el('ff-head-desc').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} — اطلب تعديلًا بالمحادثة`;
   const viewingOld = FF.viewing != null && FF.viewing !== d.version;
-  el('ff-meta').textContent = `${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}`;
+  el('ff-meta').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} · ${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}`;
   el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
@@ -8759,7 +8765,8 @@ async function ffAsk(text) {
   if (FF.busy || !text.trim()) return;
   ffPushMsg('user', text); FF.busy = true; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
   try {
-    const body = { message: text, designId: FF.design ? FF.design.id : null, html: FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null };
+    if (!FF.design && !FF.kind) { FF.busy = false; ffPushMsg('bot', 'اختر نوع المخرج أولًا من بطاقات «اصنع شيئًا جديدًا» (مستند، شرائح، تصميم، لوحة، حركة).'); el('ff-send').disabled = false; el('ff-status').textContent = ''; return; }
+    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, html: FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null };
     const r = await fetch('/api/freeform/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
@@ -8772,7 +8779,10 @@ async function ffAsk(text) {
 }
 el('ff-form').addEventListener('submit', e => { e.preventDefault(); const t = el('ff-q').value.trim(); if (!t) return; el('ff-q').value = ''; ffAsk(t); });
 el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('ff-form').requestSubmit(); } });
-el('ff-new-btn').addEventListener('click', () => { FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; ffShowStart(); ffRenderMessages(); el('ff-q').focus(); });
+el('ff-new-btn').addEventListener('click', () => { FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; ffShowStart(); ffRenderMessages(); });
+el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
+el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
+el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(FF.html.replace('</body>', '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script></body>')); w.document.close(); });
 el('ff-list-btn').addEventListener('click', async () => {
   const panel = el('ff-list-panel'); if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
   try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }

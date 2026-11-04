@@ -988,7 +988,7 @@
   <aside id="ff-rail" class="cc-rail">
     <div class="chat-head">
       <span class="ai-ava"><img src="img/logo-mark.svg" alt=""></span>
-      <div class="grow"><h2>تصميم حر</h2><p id="ff-head-desc">صف الصفحة اللي عايزها وجيم يبنيها كاملة</p></div>
+      <div class="grow"><h2>تصميم حر</h2><p id="ff-head-desc">اختر نوعًا من اللوحة ثم اكتب طلبك</p></div>
       <button type="button" id="ff-new-btn" class="btn btn-ghost btn-sm" title="تصميم جديد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>جديد</button>
       <div class="dropdown" id="ff-list-dropdown">
         <button type="button" id="ff-list-btn" class="btn btn-ghost btn-sm" title="تصاميم المشروع المحفوظة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg>التصاميم</button>
@@ -1015,6 +1015,9 @@
         <select id="ff-version" class="pres-policy" title="الإصدارات" aria-label="الإصدار"></select>
         <button type="button" id="ff-restore" class="btn btn-sm btn-ghost" title="اجعل الإصدار المعروض هو الحالي">استعادة</button>
         <span class="dk-sep"></span>
+        <button type="button" id="ff-present" class="btn btn-sm btn-ghost hidden" title="عرض ملء الشاشة">⛶ ملء الشاشة</button>
+        <button type="button" id="ff-replay" class="btn btn-sm btn-ghost hidden" title="إعادة تشغيل الحركة">↻ إعادة</button>
+        <button type="button" id="ff-print" class="btn btn-sm btn-ghost hidden" title="طباعة أو حفظ PDF">PDF</button>
         <button type="button" id="ff-mobile" class="btn btn-sm btn-ghost" aria-pressed="false" title="معاينة بعرض جوال 390px">📱 جوال</button>
         <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
         <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
@@ -1024,7 +1027,17 @@
     </div>
     <div id="ff-body" class="ff-body">
       <div id="ff-start" class="ff-start">
-        <div class="dk-start"><button type="button" class="btn btn-primary" id="ff-start-new"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>تصميم جديد</button><p>اكتب في المحادثة وصف الصفحة اللي عايزها (عرض، لوحة، صفحة تعريفية، تقرير تفاعلي…) وجيم يكتبها HTML كاملة بهوية مشروعك ويقدر يستخدم بيانات المشروع. عدّلها بالمحادثة أو من الكود، وانشرها برابط.</p></div>
+        <div class="ff-make">
+          <h3>اصنع شيئًا جديدًا</h3>
+          <div class="ff-kinds" role="list">
+            <button type="button" class="ff-kind k-doc" data-kind="doc" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><path d="M14 6h14l8 8v26a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M28 6v8h8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg></span><span class="ff-kind-name">مستند <em>جديد</em></span><small>مذكرة، تقرير، محضر، عرض سعر</small></button>
+            <button type="button" class="ff-kind k-slides" data-kind="slides" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><rect x="8" y="10" width="32" height="22" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 32v8M18 40h12M8 10h32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">شرائح <em>جديد</em></span><small>عرض تقديمي بتنقّل وشاشة كاملة</small></button>
+            <button type="button" class="ff-kind k-design" data-kind="design" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><path d="M24 8c-9 0-16 6.5-16 15 0 7 5 11 10 11h3a3 3 0 0 1 3 3c0 2 1.5 3 3 3 8 0 13-7 13-16C40 14 33 8 24 8z" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="17" cy="21" r="2.2" fill="currentColor"/><circle cx="24" cy="16" r="2.2" fill="currentColor"/><circle cx="31" cy="21" r="2.2" fill="currentColor"/></svg></span><span class="ff-kind-name">تصميم <em>جديد</em></span><small>صفحة أو نموذج أولي بحرية كاملة</small></button>
+            <button type="button" class="ff-kind k-dashboard" data-kind="dashboard" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><path d="M10 38V22M20 38V12M30 38V18M40 38V26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M6 40h36" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">لوحة <em>تجريبي</em></span><small>مؤشرات ورسوم من بياناتك</small></button>
+            <button type="button" class="ff-kind k-motion" data-kind="motion" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><circle cx="29" cy="24" r="10" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M6 18h10M4 24h8M6 30h10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">حركة <em>تجريبي</em></span><small>مشهد متحرك قصير يشرح فكرة</small></button>
+          </div>
+          <p class="muted ff-make-hint" id="ff-make-hint">اختر نوعًا ثم اكتب طلبك في المحادثة. جيم يكتب الصفحة كاملة بهوية مشروعك ويقدر يستخدم بياناته.</p>
+        </div>
         <div class="dk-gallery-head"><h3>تصاميم المشروع</h3><span class="muted" id="ff-count"></span></div>
         <div id="ff-list" class="ff-list"></div>
       </div>
