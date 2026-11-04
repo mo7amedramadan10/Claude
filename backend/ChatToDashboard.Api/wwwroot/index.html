@@ -648,7 +648,13 @@
     <input type="file" id="dki-file" accept=".pptx,.pdf,.html,.htm,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,text/html">
     <label class="share-expiry-label">عنوان العرض <span class="muted">(اختياري — الافتراضي من الملف)</span></label>
     <input type="text" id="dki-title" placeholder="مثال: نتائج الربع الثالث" maxlength="200">
-    <label class="dki-refine"><input type="checkbox" id="dki-refine"> تحسين الترتيب بالذكاء الاصطناعي <span class="muted">(نداء واحد للموديل: عناوين أوضح ومؤشرات من الأرقام — بلا اختلاق بيانات)</span></label>
+    <label class="share-expiry-label">طريقة التحويل</label>
+    <select id="dki-mode" class="pres-policy" style="width:100%">
+      <option value="understand">فهم المحتوى بالذكاء الاصطناعي (مستحسن لصفحات HTML التفاعلية)</option>
+      <option value="refine">استخراج حتمي + تحسين الترتيب بالذكاء الاصطناعي</option>
+      <option value="none">استخراج حتمي فقط (بلا موديل)</option>
+    </select>
+    <p class="model-switch-note" id="dki-mode-note">صفحات HTML المبنية كتطبيقات (تبويبات، بيانات داخل السكربت) يُقرأ محتواها الحقيقي من بياناتها ويُبنى منه العرض بنداء واحد للموديل — بلا اختلاق بيانات.</p>
     <div id="dki-error" class="model-switch-note bad hidden"></div>
     <div class="modal-actions">
       <button type="button" id="dki-cancel">إلغاء</button>

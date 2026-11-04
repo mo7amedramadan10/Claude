@@ -39,6 +39,7 @@ public class DeckSpec
             s.Kpis = s.Kpis?.Take(6).ToList();
             if (s.Table is { } t) { t.Columns ??= new(); t.Rows = (t.Rows ?? new()).Take(40).ToList(); }
             if (s.Chart is { } c) { c.Type = c.Type is "bar" or "line" or "pie" or "column" ? c.Type : "bar"; c.Labels ??= new(); c.Values ??= new(); }
+            s.Tasks = s.Tasks?.Where(t => !string.IsNullOrWhiteSpace(t.T)).Take(30).ToList(); if (s.Tasks is { Count: 0 }) s.Tasks = null;
             if (s.Editable is { } e) { e.Kind = e.Kind is "tasks" or "text" ? e.Kind : "text"; e.Key = string.IsNullOrWhiteSpace(e.Key) ? "slide-" + s.Id : e.Key; }
         }
         return this;
@@ -77,6 +78,8 @@ public class DeckSlide
     [JsonPropertyName("query")] public DeckQuery? Query { get; set; }
     /// <summary>كتلة قابلة للتعديل من الجمهور عبر «بيانات العرض» (jeem.store) بعد النشر.</summary>
     [JsonPropertyName("editable")] public DeckEditable? Editable { get; set; }
+    /// <summary>المهام الأولية لشريحة tasks (يقرؤها المحرك `slide.tasks`؛ بعد النشر تُحفظ في بيانات العرض).</summary>
+    [JsonPropertyName("tasks")] public List<DeckTask>? Tasks { get; set; }
     /// <summary>من مرحلة التخطيط: تحتاج بيانات من المشروع وما المطلوب تحديدًا (يُحذف بعد التعبئة).</summary>
     [JsonPropertyName("needsData")] public bool? NeedsData { get; set; }
     [JsonPropertyName("intent")] public string? Intent { get; set; }
@@ -98,6 +101,7 @@ public class DeckSeries { [JsonPropertyName("name")] public string Name { get; s
 public class DeckTable { [JsonPropertyName("columns")] public List<string> Columns { get; set; } = new(); [JsonPropertyName("rows")] public List<List<string>> Rows { get; set; } = new(); }
 public class DeckImage { [JsonPropertyName("src")] public string Src { get; set; } = ""; [JsonPropertyName("caption")] public string? Caption { get; set; } }
 public class DeckQuery { [JsonPropertyName("table")] public string? Table { get; set; } [JsonPropertyName("sql")] public string? Sql { get; set; } }
+public class DeckTask { [JsonPropertyName("t")] public string T { get; set; } = ""; [JsonPropertyName("done")] public bool Done { get; set; } }
 public class DeckEditable { [JsonPropertyName("key")] public string Key { get; set; } = ""; [JsonPropertyName("kind")] public string Kind { get; set; } = "text"; }
 
 /// <summary>سجل عرض محفوظ لمشروع (المواصفة كاملة في SpecJson).</summary>

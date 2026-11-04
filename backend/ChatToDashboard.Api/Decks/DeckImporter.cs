@@ -21,11 +21,18 @@ public sealed class ImportedPage
     public List<DeckTable> Tables { get; } = new();
     public List<DeckChart> Charts { get; } = new();
     public List<string> Images { get; } = new();
+    /// <summary>روابط خارجية (نص ← عنوان) تُجمع في شريحة روابط بدل أن تتناثر كنقاط.</summary>
+    public List<(string Text, string Href)> Links { get; } = new();
     public string? Notes { get; set; }
-    public bool IsEmpty => Title is null && Paragraphs.Count == 0 && Tables.Count == 0 && Charts.Count == 0 && Images.Count == 0;
+    public bool IsEmpty => Title is null && Paragraphs.Count == 0 && Tables.Count == 0 && Charts.Count == 0 && Images.Count == 0 && Links.Count == 0;
 }
 
-public sealed record ImportedDocument(string Kind, string Title, List<ImportedPage> Pages, List<string> Warnings);
+/// <summary>الوثيقة المستخرجة. <see cref="DataBlocks"/>: كتل JSON مضمّنة في الصفحة ونصوص حرفية من سكربتاتها (بلا تنفيذ أي كود) —
+/// تُستخدم فقط مدخلًا لوضع «فهم المحتوى بالذكاء الاصطناعي» لأن صفحات التطبيقات التفاعلية تحمل محتواها الحقيقي في بياناتها لا في وسومها.</summary>
+public sealed record ImportedDocument(string Kind, string Title, List<ImportedPage> Pages, List<string> Warnings)
+{
+    public List<string> DataBlocks { get; } = new();
+}
 
 /// <summary>استيراد ملف موجود (PowerPoint أو PDF أو صفحة HTML) إلى مواصفة عرض قابلة للتعديل:
 /// استخراج حتمي بلا موديل (العناوين، الفقرات/النقاط، الجداول، الصور، ورسوم PowerPoint البيانية)، ثم تحويل كل صفحة إلى شريحة
@@ -51,10 +58,13 @@ public class DeckImporter
         var kind = KindOf(fileName) ?? throw new InvalidOperationException("الصيغة غير مدعومة — ارفع ملف .pptx أو .pdf أو .html.");
         var title = Path.GetFileNameWithoutExtension(fileName).Replace('_', ' ').Replace('-', ' ').Trim();
         var warnings = new List<string>();
-        var pages = kind switch { "pptx" => ExtractPptx(bytes, warnings), "pdf" => ExtractPdf(bytes, warnings), _ => ExtractHtml(bytes, warnings, ref title) };
+        var dataBlocks = new List<string>();
+        var pages = kind switch { "pptx" => ExtractPptx(bytes, warnings), "pdf" => ExtractPdf(bytes, warnings), _ => ExtractHtml(bytes, warnings, dataBlocks, ref title) };
         pages = pages.Where(p => !p.IsEmpty).ToList();
-        if (pages.Count == 0) warnings.Add("لم يُعثر على محتوى نصي قابل للاستخراج (قد يكون الملف صورًا ممسوحة).");
-        return new ImportedDocument(kind, title, pages, warnings);
+        if (pages.Count == 0 && dataBlocks.Count == 0) warnings.Add("لم يُعثر على محتوى نصي قابل للاستخراج (قد يكون الملف صورًا ممسوحة).");
+        var doc = new ImportedDocument(kind, title, pages, warnings);
+        doc.DataBlocks.AddRange(dataBlocks);
+        return doc;
     }
 
     private static List<ImportedPage> ExtractPptx(byte[] bytes, List<string> warnings)
@@ -198,14 +208,22 @@ public class DeckImporter
         return pages;
     }
 
-    private static readonly Regex TagRx = new(@"<(/?)(h[1-6]|p|li|table|tr|td|th|img|br|div|section|article|script|style|title|ul|ol)\b([^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex TagRx = new(@"<(/?)(h[1-6]|p|li|table|tr|td|th|img|br|div|section|article|aside|header|footer|main|nav|button|a|span|label|input|select|option|textarea|form|ul|ol|blockquote|pre|figure|figcaption|summary|details)\b([^>]*?)(/?)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly HashSet<string> SkipTags = new(StringComparer.OrdinalIgnoreCase) { "nav", "button", "input", "select", "option", "textarea", "form" };
+    private static readonly HashSet<string> VoidTags = new(StringComparer.OrdinalIgnoreCase) { "img", "br", "input" };
+    private const int MaxDataChars = 60_000;
+    /// <summary>رسائل وتلميحات واجهة شائعة لا تُعد محتوى (في النص المرئي وفي نصوص السكربت).</summary>
+    private static readonly Regex UiTextRx = new(@"^(اضغط|انقر|جارٍ|جاري|يرجى|اسحب|اختر|لديك تعديلات|تم الحفظ|تم التنزيل|تعذّر|تعذر|حفظ |تراجع$|إلغاء$|عرض فقط|العودة إلى|التالي|السابق)", RegexOptions.Compiled);
 
-    /// <summary>قراءة خفيفة لصفحة HTML بلا مكتبة: العناوين تبدأ شرائح، والفقرات/عناصر القوائم نقاط، والجداول جداول، والصور (data URL أو صغيرة) صور.</summary>
-    private static List<ImportedPage> ExtractHtml(byte[] bytes, List<string> warnings, ref string title)
+    /// <summary>قراءة خفيفة لصفحة HTML بلا مكتبة: العناوين تبدأ شرائح، والفقرات/عناصر القوائم نقاط، والجداول جداول، والصور (data URL) صور،
+    /// والروابط تُجمع على حدة. عناصر الواجهة (أزرار، تنقّل، حقول إدخال، <c>aria-hidden</c>، <c>role=tab</c>) تُتجاهل بكاملها لأنها ليست محتوى.
+    /// كتل <c>&lt;script type="application/json"&gt;</c> والنصوص الحرفية في السكربتات تُحفظ في <paramref name="dataBlocks"/> (بلا تنفيذ) لوضع الفهم بالموديل.</summary>
+    private static List<ImportedPage> ExtractHtml(byte[] bytes, List<string> warnings, List<string> dataBlocks, ref string title)
     {
         var html = Encoding.UTF8.GetString(bytes);
         html = Regex.Replace(html, @"<!--.*?-->", "", RegexOptions.Singleline);
-        html = Regex.Replace(html, @"<(script|style|svg|noscript)\b[^>]*>.*?</\1\s*>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        CollectDataBlocks(html, dataBlocks);
+        html = Regex.Replace(html, @"<(script|style|svg|noscript|template)\b[^>]*>.*?</\1\s*>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
         var t = Regex.Match(html, @"<title[^>]*>(.*?)</title>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
         if (t.Success && Clean(WebUtility.HtmlDecode(Regex.Replace(t.Groups[1].Value, "<[^>]+>", ""))) is { Length: > 0 } tt) title = tt;
         var body = Regex.Match(html, @"<body[^>]*>(.*)</body>", RegexOptions.Singleline | RegexOptions.IgnoreCase) is { Success: true } bm ? bm.Groups[1].Value : html;
@@ -213,6 +231,9 @@ public class DeckImporter
         var pages = new List<ImportedPage>(); var page = new ImportedPage();
         List<List<string>>? table = null; List<string>? row = null; var cellBuf = new StringBuilder(); var textBuf = new StringBuilder(); var images = 0;
         int pos = 0; string? open = null;
+        // تجاهل شجرة عنصر واجهة: اسم الوسم المتجاهَل وعمق تداخله حتى يُغلق
+        string? skipTag = null; var skipDepth = 0;
+        string? linkHref = null; var linkBuf = new StringBuilder();
         void FlushText()
         {
             var s = Clean(WebUtility.HtmlDecode(Regex.Replace(textBuf.ToString(), "<[^>]+>", " "))); textBuf.Clear();
@@ -221,15 +242,31 @@ public class DeckImporter
         foreach (Match m in TagRx.Matches(body))
         {
             var between = body[pos..m.Index]; pos = m.Index + m.Length;
-            if (table is not null && row is not null) cellBuf.Append(between); else if (open is not null) textBuf.Append(between);
-            var closing = m.Groups[1].Value == "/"; var tag = m.Groups[2].Value.ToLowerInvariant();
+            var closing = m.Groups[1].Value == "/"; var tag = m.Groups[2].Value.ToLowerInvariant(); var attrs = m.Groups[3].Value; var selfClosed = m.Groups[4].Value == "/" || VoidTags.Contains(tag);
+            if (skipTag is not null)
+            {
+                if (tag == skipTag && !selfClosed) { if (closing) { if (--skipDepth == 0) skipTag = null; } else skipDepth++; }
+                continue;
+            }
+            if (linkHref is not null) { if (linkBuf.Length > 0 && between.Length > 0) linkBuf.Append(' '); linkBuf.Append(between); }
+            else if (table is not null && row is not null) { if (cellBuf.Length > 0 && between.Length > 0) cellBuf.Append(' '); cellBuf.Append(between); }
+            else if (open is not null) textBuf.Append(between);
+            if (!closing && !selfClosed && (SkipTags.Contains(tag) || Regex.IsMatch(attrs, @"aria-hidden\s*=\s*[""']?true", RegexOptions.IgnoreCase) || Regex.IsMatch(attrs, @"role\s*=\s*[""']?(tab|tablist|button|presentation)\b", RegexOptions.IgnoreCase)))
+            { skipTag = tag; skipDepth = 1; continue; }
+            if (tag == "a")
+            {
+                if (!closing) { var href = Regex.Match(attrs, @"href\s*=\s*[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value; if (href.StartsWith("http", StringComparison.OrdinalIgnoreCase)) { linkHref = href; linkBuf.Clear(); } }
+                else if (linkHref is not null) { var text = Clean(WebUtility.HtmlDecode(Regex.Replace(linkBuf.ToString(), "<[^>]+>", " "))); page.Links.Add((text.Length > 0 ? text : linkHref, linkHref)); linkHref = null; }
+                continue;
+            }
+            if (linkHref is not null) continue;
             switch (tag)
             {
                 case "h1": case "h2": case "h3": case "h4": case "h5": case "h6":
                     if (!closing) { FlushText(); if (!page.IsEmpty) { pages.Add(page); page = new ImportedPage(); } open = tag; }
                     else { var s = Clean(WebUtility.HtmlDecode(Regex.Replace(textBuf.ToString(), "<[^>]+>", " "))); textBuf.Clear(); open = null; if (s.Length > 0) { if (page.Title is null) page.Title = s; else page.Paragraphs.Add(s); } }
                     break;
-                case "p": case "li": case "div": case "section": case "article": case "br":
+                case "p": case "li": case "div": case "section": case "article": case "aside": case "header": case "footer": case "main": case "blockquote": case "pre": case "figure": case "figcaption": case "summary": case "details": case "label": case "br":
                     if (table is not null) break;
                     if (!closing && tag != "br") { FlushText(); open = tag; } else { FlushText(); if (tag != "br") open = null; }
                     break;
@@ -237,14 +274,49 @@ public class DeckImporter
                 case "tr": if (table is null) break; if (!closing) row = new(); else { if (row is { Count: > 0 }) table.Add(row); row = null; } break;
                 case "td": case "th": if (row is null) break; if (!closing) cellBuf.Clear(); else row.Add(Clean(WebUtility.HtmlDecode(Regex.Replace(cellBuf.ToString(), "<[^>]+>", " ")))); break;
                 case "img":
-                    var src = Regex.Match(m.Groups[3].Value, @"src\s*=\s*[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value;
+                    var src = Regex.Match(attrs, @"src\s*=\s*[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value;
                     if (src.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) && src.Length < MaxImageBytes * 4 / 3 && images < MaxImagesPerDeck) { page.Images.Add(src); images++; }
                     else if (src.Length > 0 && !src.StartsWith("data:")) warnings.Add("صورة خارجية تُركت (الروابط الخارجية لا تُضمَّن): " + (src.Length > 60 ? src[..60] + "…" : src));
                     break;
             }
         }
         FlushText(); if (!page.IsEmpty) pages.Add(page);
+        // تلميحات الواجهة القصيرة الشائعة («اضغط على…», «جارٍ التحميل…») ليست محتوى
+        foreach (var pg in pages) pg.Paragraphs.RemoveAll(x => UiTextRx.IsMatch(x) || x.Length <= 1);
         return pages;
+    }
+
+    /// <summary>كتل JSON المضمّنة كما هي، ثم النصوص الحرفية (بين علامات اقتباس) في السكربتات المضمّنة التي تبدو كلامًا لا كودًا.</summary>
+    private static void CollectDataBlocks(string html, List<string> dataBlocks)
+    {
+        var total = 0;
+        foreach (Match m in Regex.Matches(html, @"<script\b[^>]*type\s*=\s*[""']application/(?:ld\+)?json[""'][^>]*>(.*?)</script\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase))
+        {
+            var j = m.Groups[1].Value.Trim(); if (j.Length == 0) continue;
+            if (total + j.Length > MaxDataChars) j = j[..Math.Max(0, MaxDataChars - total)];
+            if (j.Length == 0) break;
+            dataBlocks.Add("JSON:\n" + j); total += j.Length;
+        }
+        var strings = new List<string>(); var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in Regex.Matches(html, @"<script\b(?![^>]*\bsrc\s*=)(?![^>]*type\s*=\s*[""']application/)[^>]*>(.*?)</script\s*>", RegexOptions.Singleline | RegexOptions.IgnoreCase))
+        {
+            foreach (Match lit in Regex.Matches(m.Groups[1].Value, @"""((?:[^""\\\n]|\\.){3,})""|'((?:[^'\\\n]|\\.){3,})'|`((?:[^`\\]|\\.){3,})`"))
+            {
+                var v = lit.Groups[1].Success ? lit.Groups[1].Value : lit.Groups[2].Success ? lit.Groups[2].Value : lit.Groups[3].Value;
+                v = Clean(Regex.Replace(v, @"\$\{[^}]*\}|<[^>]+>", " "));
+                // عربي = كلام غالبًا؛ لاتيني فقط = كلام إن حمل حرفًا كبيرًا أو 4 كلمات فأكثر (يستبعد أسماء الأصناف مثل «node dim»)
+                if (v.Length < 3 || Regex.IsMatch(v, @"[{};=]|^[#.][\w-]+$|^(application|text|image)/")) continue;
+                if (!Regex.IsMatch(v, @"[\u0600-\u06FF]") && !(Regex.IsMatch(v, @"[A-Z]") && Regex.IsMatch(v, @"[A-Za-z]{2,}\s+[A-Za-z]{2,}")) && Regex.Matches(v, @"[A-Za-z]{2,}").Count < 4) continue;
+                if (UiTextRx.IsMatch(v)) continue;
+                if (seen.Add(v)) strings.Add(v);
+            }
+        }
+        if (strings.Count > 0)
+        {
+            var sb = new StringBuilder("نصوص من بيانات الصفحة:\n");
+            foreach (var v in strings) { if (total + sb.Length + v.Length > MaxDataChars) break; sb.Append("- ").Append(v).Append('\n'); }
+            dataBlocks.Add(sb.ToString());
+        }
     }
 
     private static string Clean(string s) => Regex.Replace(s ?? "", @"\s+", " ").Trim();
@@ -281,7 +353,9 @@ public class DeckImporter
                 spec.Slides.Add(new DeckSlide { Id = DeckSpec.NewId(), Layout = "table", Title = title, Table = new DeckTable { Columns = t.Columns, Rows = t.Rows.Select(r => r.Take(t.Columns.Count).ToList()).ToList() } });
             foreach (var c in p.Charts) spec.Slides.Add(new DeckSlide { Id = DeckSpec.NewId(), Layout = "chart", Title = title, Chart = c });
             foreach (var img in p.Images) spec.Slides.Add(new DeckSlide { Id = DeckSpec.NewId(), Layout = "image", Title = title, Image = new DeckImage { Src = img } });
-            if (!placedText && p.Tables.Count == 0 && p.Charts.Count == 0 && p.Images.Count == 0 && p.Title is not null)
+            if (p.Links.Count > 0)
+                spec.Slides.Add(new DeckSlide { Id = DeckSpec.NewId(), Layout = "bullets", Title = p.Title ?? "روابط", Bullets = p.Links.Take(12).Select(l => l.Text == l.Href ? l.Href : $"{l.Text} — {l.Href}").ToList() });
+            if (!placedText && p.Tables.Count == 0 && p.Charts.Count == 0 && p.Images.Count == 0 && p.Links.Count == 0 && p.Title is not null)
                 spec.Slides.Add(new DeckSlide { Id = DeckSpec.NewId(), Layout = "section", Title = p.Title, Notes = p.Notes });
             if (spec.Slides.Count >= DeckSpec.MaxSlides) break;
         }
@@ -290,6 +364,75 @@ public class DeckImporter
 
     private static IEnumerable<List<string>> Chunk(List<string> items, int size) { for (var i = 0; i < items.Count; i += size) yield return items.Skip(i).Take(size).ToList(); }
     private static string Shorten(string s, int n) => s.Length <= n ? s : s[..n] + "…";
+
+// ================= فهم المحتوى بالموديل (لصفحات التطبيقات التفاعلية خاصة) =================
+    /// <summary>المدخل النصي للموديل: مخطط الصفحات (عنوان، نقاط، جداول، روابط، صور بمعرّفات) ثم كتل بيانات الصفحة. مقيَّد بالطول.</summary>
+    public static string BuildUnderstandInput(ImportedDocument doc)
+    {
+        var sb = new StringBuilder();
+        sb.Append("العنوان: ").AppendLine(doc.Title);
+        for (var i = 0; i < doc.Pages.Count; i++)
+        {
+            var p = doc.Pages[i];
+            sb.Append("\n## ").Append(i + 1).Append(". ").AppendLine(p.Title ?? "(بلا عنوان)");
+            foreach (var x in p.Paragraphs) sb.Append("- ").AppendLine(x);
+            foreach (var t in p.Tables) { sb.Append("جدول: ").AppendLine(string.Join(" | ", t.Columns)); foreach (var r in t.Rows.Take(20)) sb.Append("  ").AppendLine(string.Join(" | ", r)); }
+            foreach (var c in p.Charts) sb.Append("رسم ").Append(c.Type).Append(": ").AppendLine(string.Join(", ", c.Labels.Zip(c.Values, (l, v) => $"{l}={v}")));
+            for (var k = 0; k < p.Images.Count; k++) sb.Append("صورة: image:").Append(i).Append('-').AppendLine(k.ToString());
+            foreach (var l in p.Links) sb.Append("رابط: ").Append(l.Text).Append(" — ").AppendLine(l.Href);
+            if (p.Notes is not null) sb.Append("ملاحظات: ").AppendLine(p.Notes);
+        }
+        if (doc.DataBlocks.Count > 0) { sb.AppendLine("\n# بيانات مضمّنة في الصفحة (محتواها الحقيقي غالبًا هنا):"); foreach (var b in doc.DataBlocks) sb.AppendLine(b); }
+        var text = sb.ToString();
+        return text.Length > MaxDataChars + 20_000 ? text[..(MaxDataChars + 20_000)] + "\n…(اقتُطع)" : text;
+    }
+
+    public const string UnderstandSystemPrompt = """
+        أنت مصمم عروض تقديمية داخل منصة «جيم». تتلقى محتوى مستخرجًا آليًا من ملف أو صفحة ويب (مخطط الأقسام، ثم بيانات مضمّنة في الصفحة قد تحمل
+        المحتوى الحقيقي: مصفوفات نصوص، JSON مهام، أدوار أطراف…). ابنِ منه عرضًا تقديميًا كاملًا يعبّر عن المحتوى نفسه بترتيب منطقي:
+        - اقرأ البيانات المضمّنة بعناية: قوائم المسؤوليات والآليات والمخرجات، الأطراف وأدوارهم، المهام وحالتها… واجعلها شرائح حقيقية.
+        - التخطيطات: title, section, bullets, two-column (columns:[{title,bullets}]), kpis (kpis:[{label,value,delta}]), chart, table (table:{columns,rows}),
+          image (image:{src:"image:…"} بنفس المعرّف الوارد)، quote، tasks (tasks:[{t,done}] + editable:{key:"tasks-<n>",kind:"tasks"}) لقوائم المهام.
+        - تجاهل نصوص الواجهة (أزرار، تلميحات «اضغط على…»، رسائل الحفظ). الروابط تُجمع في شريحة «روابط» بنقاط «الاسم — الرابط».
+        - لا تخترع أرقامًا أو حقائق؛ لا تحذف محتوى جوهريًا؛ 5–20 شريحة؛ عناوين موجزة بالعربية الفصحى؛ نقاط لا تتجاوز 8 في الشريحة.
+        أعد JSON فقط بالشكل: {"spec": {"title": "...", "subtitle": "...", "slides": [ ... ]}}
+        """;
+
+    /// <summary>نداء واحد بلا أدوات يبني المواصفة كاملة من المحتوى المستخرج؛ عند الفشل تعود المواصفة الحتمية مع ملاحظة.</summary>
+    public async Task<(DeckSpec Spec, string? Note)> UnderstandAsync(ImportedDocument doc, DeckSpec fallback, AnalyticsTools.SourceContext context, AppUser? user, CancellationToken ct)
+    {
+        var llm = await _router.ResolveStagedAsync(ct);
+        if (llm is null) return (fallback, "لا يوجد مزوّد موديل مهيأ — أُبقي الترتيب الحتمي.");
+        try
+        {
+            var call = new StagedCall("[عرض] استيراد — فهم المحتوى", UnderstandSystemPrompt, BuildUnderstandInput(doc), null, context, 1, false, user);
+            var res = await llm.RunStagedAsync(call, ct);
+            var spec = ApplyUnderstood(res.Json, doc);
+            return spec is null ? (fallback, "لم يُعد الموديل مواصفة صالحة — أُبقي الترتيب الحتمي.") : (spec, null);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { _logger.LogWarning(ex, "فشل فهم المحتوى المستورد بالموديل"); return (fallback, "تعذّر الفهم بالموديل: " + ex.Message); }
+    }
+
+    /// <summary>تفسير رد الموديل: مواصفة مطبَّعة، إعادة الصور الحقيقية مكان معرّفاتها، وإسقاط صور بمعرّف مجهول.</summary>
+    public static DeckSpec? ApplyUnderstood(JsonObject json, ImportedDocument doc)
+    {
+        var spec = json["spec"]?.Deserialize<DeckSpec>(DeckSpec.Json);
+        if (spec is null || spec.Slides.Count == 0) return null;
+        if (string.IsNullOrWhiteSpace(spec.Title)) spec.Title = doc.Title;
+        foreach (var s in spec.Slides)
+        {
+            if (s.Image is not null)
+            {
+                var m = Regex.Match(s.Image.Src ?? "", @"^image:(\d+)-(\d+)$");
+                if (m.Success && int.Parse(m.Groups[1].Value) < doc.Pages.Count && int.Parse(m.Groups[2].Value) < doc.Pages[int.Parse(m.Groups[1].Value)].Images.Count)
+                    s.Image.Src = doc.Pages[int.Parse(m.Groups[1].Value)].Images[int.Parse(m.Groups[2].Value)];
+                else if (!(s.Image.Src ?? "").StartsWith("data:image/")) s.Image = null;
+            }
+            if (s.Layout == "tasks" && s.Editable is null) s.Editable = new DeckEditable { Key = "tasks-" + (string.IsNullOrEmpty(s.Id) ? DeckSpec.NewId() : s.Id), Kind = "tasks" };
+        }
+        return spec.Normalize();
+    }
 
     // ================= تحسين اختياري بالموديل =================
     /// <summary>نداء واحد بلا أدوات: يعيد ترتيب المواصفة الحتمية في تخطيطات أفضل وعناوين أوضح دون اختلاق أرقام. عند الفشل تعود المواصفة كما هي.</summary>

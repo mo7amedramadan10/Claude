@@ -8565,7 +8565,15 @@ el('dkb-reset').addEventListener('click', async () => {
 });
 
 // ---------- استيراد ملف موجود (PowerPoint/PDF/HTML) ----------
-function openDeckImportModal() { el('dki-file').value = ''; el('dki-title').value = ''; el('dki-error').classList.add('hidden'); el('dki-go').disabled = false; el('dki-go').textContent = 'استيراد'; el('deck-import-modal').classList.remove('hidden'); }
+const DKI_MODE_NOTE = {
+  understand: 'يُبنى العرض بنداء واحد للموديل من النص المرئي وبيانات الصفحة/الملف (مستحسن لصفحات HTML التفاعلية) — بلا اختلاق بيانات.',
+  refine: 'استخراج حتمي أمين للملف، ثم نداء واحد للموديل يحسّن العناوين والترتيب فقط.',
+  none: 'استخراج حتمي فقط: العناوين والنقاط والجداول والصور كما وردت، بلا أي نداء للموديل.',
+};
+function dkiDefaultMode(name) { return /\.html?$/i.test(name || '') ? 'understand' : 'none'; }
+function openDeckImportModal() { el('dki-file').value = ''; el('dki-title').value = ''; el('dki-error').classList.add('hidden'); el('dki-go').disabled = false; el('dki-go').textContent = 'استيراد'; el('dki-mode').value = 'understand'; el('dki-mode-note').textContent = DKI_MODE_NOTE.understand; el('deck-import-modal').classList.remove('hidden'); }
+el('dki-mode').addEventListener('change', () => { el('dki-mode-note').textContent = DKI_MODE_NOTE[el('dki-mode').value] || ''; });
+el('dki-file').addEventListener('change', () => { const f = el('dki-file').files && el('dki-file').files[0]; if (f) { el('dki-mode').value = dkiDefaultMode(f.name); el('dki-mode-note').textContent = DKI_MODE_NOTE[el('dki-mode').value]; } });
 function closeDeckImportModal() { el('deck-import-modal').classList.add('hidden'); }
 el('dkgal-start-import').addEventListener('click', () => { closeDeckGallery(); openDeckImportModal(); });
 el('dki-cancel').addEventListener('click', closeDeckImportModal);
@@ -8576,8 +8584,8 @@ el('dki-go').addEventListener('click', async () => {
   if (!f) return err('اختر ملفًا أولًا.');
   if (!/\.(pptx|pdf|html?)$/i.test(f.name)) return err('الصيغة غير مدعومة — المدعوم: .pptx و.pdf و.html.');
   if (f.size > 25 * 1024 * 1024) return err('حجم الملف يتجاوز 25 ميغابايت.');
-  const fd = new FormData(); fd.append('file', f); fd.append('refine', el('dki-refine').checked ? 'true' : 'false'); fd.append('title', el('dki-title').value.trim());
-  el('dki-go').disabled = true; el('dki-go').textContent = el('dki-refine').checked ? 'يستخرج ويحسّن…' : 'يستخرج…'; el('dki-error').classList.add('hidden');
+  const mode = el('dki-mode').value; const fd = new FormData(); fd.append('file', f); fd.append('mode', mode); fd.append('title', el('dki-title').value.trim());
+  el('dki-go').disabled = true; el('dki-go').textContent = mode === 'understand' ? 'يقرأ المحتوى ويبني العرض…' : mode === 'refine' ? 'يستخرج ويحسّن…' : 'يستخرج…'; el('dki-error').classList.add('hidden');
   try {
     const r = await fetch('/api/decks/import', { method: 'POST', body: fd });
     const d = await r.json().catch(() => ({}));

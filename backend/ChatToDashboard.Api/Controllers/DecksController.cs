@@ -202,7 +202,7 @@ public class DecksController : ControllerBase
     [HttpPost("import")]
     [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
-    public async Task<IActionResult> Import([FromForm] IFormFile? file, [FromForm] bool refine, [FromForm] string? title, CancellationToken ct)
+    public async Task<IActionResult> Import([FromForm] IFormFile? file, [FromForm] bool refine, [FromForm] string? mode, [FromForm] string? title, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
@@ -214,18 +214,20 @@ public class DecksController : ControllerBase
         try { doc = DeckImporter.Extract(file.FileName, bytes); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة الملف: " + ex.Message }); }
-        if (doc.Pages.Count == 0) return BadRequest(new { error = "لم يُعثر على محتوى نصي في الملف.", warnings = doc.Warnings });
+        mode = (mode ?? (refine ? "refine" : "none")).Trim().ToLowerInvariant();
+        if (doc.Pages.Count == 0 && !(mode == "understand" && doc.DataBlocks.Count > 0)) return BadRequest(new { error = "لم يُعثر على محتوى نصي في الملف.", warnings = doc.Warnings });
         var spec = DeckImporter.ToSpec(doc);
         if (!string.IsNullOrWhiteSpace(title)) spec.Title = title.Trim();
         var warnings = new List<string>(doc.Warnings);
-        if (refine)
+        if (mode is "refine" or "understand")
         {
             var context = await _tools.DescribeSourcesAsync(selection, ct);
-            var (refined, note) = await _importer.RefineAsync(spec, context, user, ct);
-            spec = refined; if (note is not null) warnings.Add(note);
+            var (result, note) = mode == "understand" ? await _importer.UnderstandAsync(doc, spec, context, user, ct) : await _importer.RefineAsync(spec, context, user, ct);
+            spec = result; if (note is not null) warnings.Add(note);
+            if (!string.IsNullOrWhiteSpace(title)) spec.Title = title.Trim();
         }
         var deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, spec, null, ct);
-        return Ok(new { deck, spec, kind = doc.Kind, pagesRead = doc.Pages.Count, warnings });
+        return Ok(new { deck, spec, kind = doc.Kind, pagesRead = doc.Pages.Count, dataBlocks = doc.DataBlocks.Count, mode, warnings });
     }
 
     /// <summary>ينشر العرض كصفحة HTML مستقلة في «العروض التقديمية» (أو يحدّث المنشور سابقًا على نفس الرابط).</summary>
