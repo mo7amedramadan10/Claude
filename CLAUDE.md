@@ -626,6 +626,20 @@ naming policy تلقائية في السيريلايزر.
   شعار (يُصغَّر في المتصفح إلى 512px ويُحوَّل PNG في `dkbLogoFromFile`)، 3 ألوان، خط، تذييل، ومعاينة حيّة بشريحتين،
   حفظ/إعادة الافتراضي. تحقق Playwright على الـ mock: المعاينة الحيّة، الحفظ يطبّقها على مصغّرات المعرض الـ20 والعرض التوضيحي
   والمحرر، الحفظ لا يرسل `brand`، طلب PPTX يحملها، إعادة الافتراضي تزيل الشعار، بلا تمرير أفقي على 390px.
+- **خطوط الشركة** (`Decks/DeckBrandFontStore.cs`، جدول `dbo.DeckBrandFonts` بالبايتات في القاعدة): قسم «خطوط الشركة» في نافذة الهوية
+  يرفع ttf/otf/woff/woff2 (≤6MB للملف، ≤12 للمشروع) عبر `POST /api/decks/brand/fonts` (multipart `files` متعددة + `family` اختياري):
+  العائلة والوزن والميل تُقرأ من جدول `name` في ملفات sfnt بمحلّل صغير بلا مكتبة (`ReadSfntNames`: nameID 16/17 تغلب 1/2؛
+  `WeightStyleOf` من العائلة الفرعية)، وملفات woff/woff2 تأخذ العائلة من اسم الملف. `DELETE brand/fonts/{id}` (ويعيد الهوية
+  إلى الخط الافتراضي إن كانت تختار عائلة لم يبقَ لها ملف)، و`GET brand/fonts/{id}/file` **بلا دخول** مع تخزين مؤقت 30 يومًا
+  (الصفحة المنشورة داخل iframe بأصل معتم بلا كوكي؛ المعرّف عشوائي 16 hex والخط ليس سرًّا). `DeckBrand.FontFaces` تُملأ من
+  المخزن عند القراءة والنشر فقط (`BrandWithFontsAsync`) ولا تُخزَّن؛ `Validate(uploadedFamilies)` يقبل العائلات المرفوعة في
+  `Font` إلى جانب القائمة الحرة. الحقن: الواجهة `dkInjectBrandFonts` (وسم `<style id="dk-brand-fonts-css">` بقواعد
+  `@font-face` من `brand.fontFaces`/`uploadedFonts`) فتعمل في المحرر والمعرض والمعاينة الحيّة؛ الصفحة المنشورة عبر
+  `DeckHtmlExporter` (`DeckBrandFont.FontFaceCss`)؛ وPPTX يسمّي العائلة في `a:latin`/`a:cs` لكل نص (`PptxBuilder.TextBox(typeface:)`)
+  فيظهر على أي جهاز الخط مثبّت عليه (لا تضمين للخط داخل الملف). قائمة الخط في النافذة مجموعتان: «خطوط الشركة (مرفوعة)»
+  و«خطوط حرة (Google Fonts)». اختبارات `DeckBrandFontTests` (TTF حقيقي إن وُجد، ملف تالف، الأوزان، @font-face، قبول العائلة
+  المرفوعة). تحقق Playwright على الـ mock برفع DejaVuSerif عادي+عريض: الصفان، `document.fonts` 400/700 loaded، المعاينة والمعرض
+  بالخط، الحفظ يحمل `fontFaces`، الحذف يعيد الافتراضي، بلا تمرير أفقي على 390px.
 - **استيراد ملف موجود** (`Decks/DeckImporter.cs`، `POST /api/decks/import` multipart `file` + `refine` + `title`، ≤25MB):
   بطاقة «استيراد ملف موجود» في معرض «عرض جديد» تفتح `deck-import-modal`. الاستخراج **حتمي بلا موديل**: PPTX بـ OpenXML (عنوان
   من placeholder العنوان، فقرات/أسطر النص كنقاط بلا رموز التنقيط، جداول `a:tbl`، صور مضمّنة ≤600KB حتى 20، وأول سلسلة من رسوم

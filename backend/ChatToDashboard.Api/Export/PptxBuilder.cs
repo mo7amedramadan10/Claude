@@ -206,7 +206,7 @@ public static class PptxBuilder
 
     internal static P.Shape TextBox(
         uint id, string text, long x, long y, long cx, long cy,
-        int sizePt, bool bold = false, string colorHex = "0B0B0B", A.TextAlignmentTypeValues? align = null)
+        int sizePt, bool bold = false, string colorHex = "0B0B0B", A.TextAlignmentTypeValues? align = null, string? typeface = null)
     {
         var paragraphProperties = new A.ParagraphProperties
         {
@@ -219,6 +219,8 @@ public static class PptxBuilder
             Bold = bold,
         };
         runProperties.Append(new A.SolidFill(new A.RgbColorModelHex { Val = colorHex }));
+        // خط الهوية (اسم العائلة كما يراه PowerPoint على جهاز فيه الخط مثبّتًا) للنص اللاتيني والعربي معًا
+        if (!string.IsNullOrWhiteSpace(typeface)) { runProperties.Append(new A.LatinFont { Typeface = typeface }); runProperties.Append(new A.ComplexScriptFont { Typeface = typeface }); }
 
         return new P.Shape(
             new P.NonVisualShapeProperties(

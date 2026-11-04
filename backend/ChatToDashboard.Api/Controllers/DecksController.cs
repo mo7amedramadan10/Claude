@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Projects;
 using System.Text;
 using System.Text.Json;
@@ -34,6 +36,7 @@ public class DecksController : ControllerBase
 {
     private readonly DeckStore _decks;
     private readonly DeckBrandStore _brands;
+    private readonly DeckBrandFontStore _fonts;
     private readonly ProjectStore _projects;
     private readonly DeckBuilder _builder;
     private readonly DeckImporter _importer;
@@ -45,9 +48,9 @@ public class DecksController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     public DecksController(DeckStore decks, DeckBrandStore brands, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
-        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer)
+        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts)
     {
-        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _builder = builder; _presentations = presentations; _organizations = organizations;
+        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fonts = fonts; _builder = builder; _presentations = presentations; _organizations = organizations;
         _permissions = permissions; _tools = tools; _feasibility = feasibility; _env = env;
     }
 
@@ -63,8 +66,8 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> GetBrand(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var b = await _brands.GetAsync(cur.Value.Selection.ProjectId, ct);
-        return Ok(new { brand = b, fonts = DeckBrand.Fonts, maxLogoBytes = DeckBrand.MaxLogoBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct) });
+        var b = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct);
+        return Ok(new { brand = b, fonts = DeckBrand.Fonts, uploadedFonts = b?.FontFaces ?? await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct), maxLogoBytes = DeckBrand.MaxLogoBytes, maxFontBytes = DeckBrandFontStore.MaxBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct) });
     }
 
     [HttpPut("brand")]
@@ -72,10 +75,11 @@ public class DecksController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
-        if (brand.Validate() is { } err) return BadRequest(new { error = err });
+        var uploaded = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct);
+        if (brand.Validate(uploaded.Select(f => f.Family)) is { } err) return BadRequest(new { error = err });
         if (brand.IsEmpty) await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct);
         else await _brands.SetAsync(cur.Value.Selection.ProjectId, cur.Value.User.OrganizationId, cur.Value.User.Id, brand, ct);
-        return Ok(new { brand = await _brands.GetAsync(cur.Value.Selection.ProjectId, ct) });
+        return Ok(new { brand = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct) });
     }
 
     [HttpDelete("brand")]
@@ -85,6 +89,73 @@ public class DecksController : ControllerBase
         if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
         await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct);
         return NoContent();
+    }
+
+    /// <summary>الهوية مع خطوطها المرفوعة (@font-face) — null بلا هوية؛ إن وُجدت خطوط بلا هوية تُعاد هوية فارغة تحملها.</summary>
+    private async Task<DeckBrand?> BrandWithFontsAsync(string? projectId, CancellationToken ct)
+    {
+        var b = await _brands.GetAsync(projectId, ct);
+        var fonts = await _fonts.ListAsync(projectId, ct);
+        if (b is null && fonts.Count == 0) return null;
+        b ??= new DeckBrand();
+        b.FontFaces = fonts;
+        return b;
+    }
+
+    // ---- خطوط الشركة (ttf/otf/woff/woff2) ----
+    [HttpPost("brand/fonts")]
+    [RequestSizeLimit(DeckBrandFontStore.MaxBytes * 4 + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckBrandFontStore.MaxBytes * 4 + 1024 * 1024)]
+    public async Task<IActionResult> UploadFonts([FromForm] List<IFormFile> files, [FromForm] string? family, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        if (files is null || files.Count == 0) return BadRequest(new { error = "اختر ملف خط واحدًا على الأقل (.ttf أو .otf أو .woff أو .woff2)." });
+        var existing = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct);
+        var added = new List<DeckBrandFont>(); var errors = new List<string>();
+        foreach (var file in files)
+        {
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!DeckBrandFont.Formats.ContainsKey(ext)) { errors.Add($"{file.FileName}: الصيغة غير مدعومة."); continue; }
+            if (file.Length == 0 || file.Length > DeckBrandFontStore.MaxBytes) { errors.Add($"{file.FileName}: الحجم يتجاوز {DeckBrandFontStore.MaxBytes / 1024 / 1024} ميغابايت."); continue; }
+            if (existing.Count + added.Count >= DeckBrandFontStore.MaxPerProject) { errors.Add($"{file.FileName}: الحد {DeckBrandFontStore.MaxPerProject} ملفًا للمشروع."); continue; }
+            byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
+            var names = DeckBrandFontStore.ReadSfntNames(bytes);
+            if (ext is ".ttf" or ".otf" && names is null) { errors.Add($"{file.FileName}: ليس ملف خط صالحًا."); continue; }
+            var fam = !string.IsNullOrWhiteSpace(family) ? family.Trim() : names?.Family ?? Regex.Replace(Path.GetFileNameWithoutExtension(file.FileName), @"[-_](regular|bold|light|medium|italic|semibold|black|thin)+$", "", RegexOptions.IgnoreCase).Replace('-', ' ').Replace('_', ' ');
+            if (fam.Length > 120) fam = fam[..120];
+            var (weight, style) = DeckBrandFontStore.WeightStyleOf(names?.Subfamily ?? Path.GetFileNameWithoutExtension(file.FileName));
+            added.Add(await _fonts.AddAsync(cur.Value.Selection.ProjectId, cur.Value.User.Id, file.FileName, bytes, fam, weight, style, ct));
+        }
+        if (added.Count == 0) return BadRequest(new { error = string.Join(" ", errors) });
+        return Ok(new { added, errors, fonts = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct), brand = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct) });
+    }
+
+    [HttpDelete("brand/fonts/{id}")]
+    public async Task<IActionResult> DeleteFont(string id, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        if (!await _fonts.DeleteAsync(cur.Value.Selection.ProjectId, id, ct)) return NotFound(new { error = "ملف الخط غير موجود." });
+        // لو كانت الهوية تختار عائلة لم يعد لها ملفات تُعاد إلى الافتراضي
+        var b = await _brands.GetAsync(cur.Value.Selection.ProjectId, ct);
+        var remaining = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct);
+        if (b?.Font is { } f && !DeckBrand.Fonts.Contains(f) && !remaining.Any(x => string.Equals(x.Family, f, StringComparison.OrdinalIgnoreCase)))
+        { b.Font = null; b.Validate(); if (b.IsEmpty) await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct); else await _brands.SetAsync(cur.Value.Selection.ProjectId, cur.Value.User.OrganizationId, cur.Value.User.Id, b, ct); }
+        return Ok(new { fonts = remaining, brand = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct) });
+    }
+
+    /// <summary>ملف الخط للمتصفح والصفحة المنشورة (داخل iframe بأصل معتم بلا كوكي) — بلا دخول؛ المعرّف عشوائي والخط ليس سرًّا.</summary>
+    [HttpGet("brand/fonts/{id}/file")]
+    [AllowAnonymous]
+    [ResponseCache(Duration = 86400 * 30, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> FontFile(string id, CancellationToken ct)
+    {
+        if (!Regex.IsMatch(id, "^[0-9a-f]{16}$")) return NotFound();
+        var f = await _fonts.GetFileAsync(id, ct);
+        if (f is null) return NotFound();
+        Response.Headers["Access-Control-Allow-Origin"] = "*";
+        return File(f.Value.Bytes, f.Value.ContentType, f.Value.FileName);
     }
 
     /// <summary>المسؤول أو من له دور مالك/محرّر في المشروع الحالي (المشاهد لا يغيّر الهوية). الحساب بلا دور صريح يُعامل كمشاهد.</summary>
@@ -239,7 +310,7 @@ public class DecksController : ControllerBase
         var d = await _decks.GetAsync(id, selection.ProjectId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         var spec = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json)!.Normalize();
-        spec.Brand = await _brands.GetAsync(selection.ProjectId, ct);
+        spec.Brand = await BrandWithFontsAsync(selection.ProjectId, ct);
         var runtimePath = Path.Combine(_env.WebRootPath, "js", "jeem-deck.js");
         if (!System.IO.File.Exists(runtimePath)) return StatusCode(500, new { error = "محرك العرض غير موجود على الخادم (js/jeem-deck.js)." });
         var runtime = await System.IO.File.ReadAllTextAsync(runtimePath, ct);

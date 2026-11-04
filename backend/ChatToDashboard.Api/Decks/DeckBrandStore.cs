@@ -23,15 +23,19 @@ public class DeckBrand
     [JsonPropertyName("font")] public string? Font { get; set; }
     [JsonPropertyName("footer")] public string? Footer { get; set; }
     [JsonPropertyName("updatedAt")] public DateTime? UpdatedAt { get; set; }
+    /// <summary>خطوط الشركة المرفوعة (تُملأ من <see cref="DeckBrandFontStore"/> عند القراءة والنشر؛ لا تُخزَّن هنا). الواجهة والصفحة المنشورة تحقن @font-face لها.</summary>
+    [JsonPropertyName("fontFaces")] public List<DeckBrandFont>? FontFaces { get; set; }
 
     public bool IsEmpty => string.IsNullOrWhiteSpace(Name) && string.IsNullOrWhiteSpace(Logo) && Primary is null && Secondary is null && Accent is null && Font is null && string.IsNullOrWhiteSpace(Footer) && string.IsNullOrWhiteSpace(Tagline);
 
     /// <summary>تطبيع وتحقق: ألوان hex من 6 خانات، خط من القائمة، شعار صورة بحجم محدود. يعيد رسالة خطأ أو null.</summary>
-    public string? Validate()
+    /// <param name="uploadedFamilies">عائلات الخطوط المرفوعة للمشروع — مقبولة في <see cref="Font"/> إلى جانب القائمة الثابتة.</param>
+    public string? Validate(IEnumerable<string>? uploadedFamilies = null)
     {
         Name = Trim(Name, 120); Tagline = Trim(Tagline, 200); Footer = Trim(Footer, 200);
         Primary = Color(Primary); Secondary = Color(Secondary); Accent = Color(Accent);
-        Font = string.IsNullOrWhiteSpace(Font) ? null : Fonts.FirstOrDefault(f => string.Equals(f, Font.Trim(), StringComparison.OrdinalIgnoreCase));
+        Font = string.IsNullOrWhiteSpace(Font) ? null : Fonts.Concat(uploadedFamilies ?? Enumerable.Empty<string>()).FirstOrDefault(f => string.Equals(f, Font.Trim(), StringComparison.OrdinalIgnoreCase));
+        FontFaces = null;
         if (string.IsNullOrWhiteSpace(Logo)) Logo = null;
         else
         {

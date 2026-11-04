@@ -59,7 +59,7 @@ public static class DeckPptxBuilder
     private static SlidePart BuildSlide(PresentationPart presentationPart, SlideLayoutPart layout, DeckPptxSlideInput s, DeckBrand? brand, byte[]? logo)
     {
         var primary = (brand?.Primary ?? "#0B3D5C")[1..]; var accent = (brand?.Accent ?? brand?.Primary ?? "#2A78D6")[1..];
-        var footer = brand?.Footer ?? brand?.Name;
+        var footer = brand?.Footer ?? brand?.Name; var face = brand?.Font;
         var part = PptxBuilder.NewSlidePart(presentationPart, layout);
         var tree = part.Slide!.CommonSlideData!.ShapeTree!;
         uint next = 2;
@@ -67,13 +67,13 @@ public static class DeckPptxBuilder
         if (s.IsTitle)
         {
             if (logo is not null) tree.Append(PptxBuilder.BuildPicture(part, next++, logo, PptxBuilder.SlideWidth / 2 - 700000L, PptxBuilder.SlideHeight / 3 - 1500000L, 1400000L, 1200000L));
-            tree.Append(PptxBuilder.TextBox(next++, s.Title, margin, PptxBuilder.SlideHeight / 3, w, 1100000L, 40, bold: true, colorHex: accent, align: A.TextAlignmentTypeValues.Center));
-            if (!string.IsNullOrWhiteSpace(s.Subtitle)) tree.Append(PptxBuilder.TextBox(next++, s.Subtitle, margin, PptxBuilder.SlideHeight / 3 + 1200000L, w, 700000L, 20, colorHex: "52514E", align: A.TextAlignmentTypeValues.Center));
-            if (!string.IsNullOrWhiteSpace(footer)) tree.Append(PptxBuilder.TextBox(next++, footer, margin, PptxBuilder.SlideHeight - margin - 350000L, w, 350000L, 12, colorHex: "898781", align: A.TextAlignmentTypeValues.Center));
+            tree.Append(PptxBuilder.TextBox(next++, s.Title, margin, PptxBuilder.SlideHeight / 3, w, 1100000L, 40, bold: true, colorHex: accent, align: A.TextAlignmentTypeValues.Center, typeface: face));
+            if (!string.IsNullOrWhiteSpace(s.Subtitle)) tree.Append(PptxBuilder.TextBox(next++, s.Subtitle, margin, PptxBuilder.SlideHeight / 3 + 1200000L, w, 700000L, 20, colorHex: "52514E", align: A.TextAlignmentTypeValues.Center, typeface: face));
+            if (!string.IsNullOrWhiteSpace(footer)) tree.Append(PptxBuilder.TextBox(next++, footer, margin, PptxBuilder.SlideHeight - margin - 350000L, w, 350000L, 12, colorHex: "898781", align: A.TextAlignmentTypeValues.Center, typeface: face));
             return part;
         }
         if (logo is not null) tree.Append(PptxBuilder.BuildPicture(part, next++, logo, margin, PptxBuilder.TitleTop, 900000L, PptxBuilder.TitleHeight));
-        tree.Append(PptxBuilder.TextBox(next++, s.Title, margin + (logo is null ? 0 : 1000000L), PptxBuilder.TitleTop, w - (logo is null ? 0 : 1000000L), PptxBuilder.TitleHeight, 28, bold: true, colorHex: primary));
+        tree.Append(PptxBuilder.TextBox(next++, s.Title, margin + (logo is null ? 0 : 1000000L), PptxBuilder.TitleTop, w - (logo is null ? 0 : 1000000L), PptxBuilder.TitleHeight, 28, bold: true, colorHex: primary, typeface: face));
         var top = PptxBuilder.ContentTop; var h = PptxBuilder.ContentHeight - (string.IsNullOrWhiteSpace(s.Source) ? 0 : 400000L);
         if (s.Kpis is { Count: > 0 })
         {
@@ -81,8 +81,8 @@ public static class DeckPptxBuilder
             for (var i = 0; i < n; i++)
             {
                 var x = margin + (long)i * (cw + gap);
-                tree.Append(PptxBuilder.TextBox(next++, s.Kpis[i].Value, x, top + 400000L, cw, 900000L, 36, bold: true, colorHex: accent, align: A.TextAlignmentTypeValues.Center));
-                tree.Append(PptxBuilder.TextBox(next++, s.Kpis[i].Label + (string.IsNullOrWhiteSpace(s.Kpis[i].Delta) ? "" : "  " + s.Kpis[i].Delta), x, top + 1350000L, cw, 600000L, 16, colorHex: "52514E", align: A.TextAlignmentTypeValues.Center));
+                tree.Append(PptxBuilder.TextBox(next++, s.Kpis[i].Value, x, top + 400000L, cw, 900000L, 36, bold: true, colorHex: accent, align: A.TextAlignmentTypeValues.Center, typeface: face));
+                tree.Append(PptxBuilder.TextBox(next++, s.Kpis[i].Label + (string.IsNullOrWhiteSpace(s.Kpis[i].Delta) ? "" : "  " + s.Kpis[i].Delta), x, top + 1350000L, cw, 600000L, 16, colorHex: "52514E", align: A.TextAlignmentTypeValues.Center, typeface: face));
             }
         }
         else if (s.Rows is { Count: > 0 } && s.Columns is { Count: > 0 })
@@ -90,10 +90,10 @@ public static class DeckPptxBuilder
         else if (!string.IsNullOrWhiteSpace(s.Image) && PptxBuilder.TryDecodeImage(s.Image) is { } png)
             tree.Append(PptxBuilder.BuildPicture(part, next++, png, margin, top, w, h));
         else if (s.Bullets is { Count: > 0 })
-            tree.Append(PptxBuilder.TextBox(next++, string.Join("\n", s.Bullets.Select(b => "• " + b)), margin, top, w, h, 20));
+            tree.Append(PptxBuilder.TextBox(next++, string.Join("\n", s.Bullets.Select(b => "• " + b)), margin, top, w, h, 20, typeface: face));
         var foot = string.Join("   ·   ", new[] { s.Source, footer }.Where(x => !string.IsNullOrWhiteSpace(x)));
         if (foot.Length > 0)
-            tree.Append(PptxBuilder.TextBox(next++, foot, margin, PptxBuilder.SlideHeight - margin - 350000L, w, 350000L, 10, colorHex: "898781"));
+            tree.Append(PptxBuilder.TextBox(next++, foot, margin, PptxBuilder.SlideHeight - margin - 350000L, w, 350000L, 10, colorHex: "898781", typeface: face));
         return part;
     }
 }

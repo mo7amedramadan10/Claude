@@ -8490,9 +8490,56 @@ async function dkShowGallery() {
 
 // ---------- هوية المشروع (DeckBrandStore) — تُرفق بالمواصفة عند الرسم فقط ولا تُحفظ داخل العرض ----------
 async function dkLoadBrand() {
-  try { const r = await fetch('/api/decks/brand'); const d = r.ok ? await r.json() : {}; DK.brand = d.brand || null; DK.brandFonts = d.fonts || []; DK.brandCanEdit = !!d.canEdit; DK.brandMaxLogo = d.maxLogoBytes || 400 * 1024; }
-  catch { DK.brand = null; DK.brandFonts = []; DK.brandCanEdit = false; }
+  try { const r = await fetch('/api/decks/brand'); const d = r.ok ? await r.json() : {}; DK.brand = d.brand || null; DK.brandFonts = d.fonts || []; DK.brandUploaded = d.uploadedFonts || []; DK.brandCanEdit = !!d.canEdit; DK.brandMaxLogo = d.maxLogoBytes || 400 * 1024; DK.brandMaxFont = d.maxFontBytes || 6 * 1024 * 1024; }
+  catch { DK.brand = null; DK.brandFonts = []; DK.brandUploaded = []; DK.brandCanEdit = false; }
+  dkInjectBrandFonts();
 }
+// خطوط الشركة المرفوعة: @font-face في الصفحة (المحرر، المعرض، المعاينة الحيّة)؛ الصفحة المنشورة تحقنها من الخادم (DeckHtmlExporter).
+function dkInjectBrandFonts() {
+  let st = document.getElementById('dk-brand-fonts-css');
+  if (!st) { st = document.createElement('style'); st.id = 'dk-brand-fonts-css'; document.head.appendChild(st); }
+  st.textContent = (DK.brandUploaded || []).map(f => `@font-face{font-family:'${f.family.replace(/'/g, '')}';src:url('${f.url}') format('${f.format}');font-weight:${f.weight};font-style:${f.style};font-display:swap}`).join('\n');
+}
+function dkbUploadedFamilies() { return [...new Set((DK.brandUploaded || []).map(f => f.family))]; }
+function dkbRenderFonts() {
+  const list = DK.brandUploaded || [];
+  el('dkb-fonts-list').innerHTML = list.length ? list.map(f => `<li data-font="${esc(f.id)}"><span class="sample" style="font-family:'${esc(f.family)}';font-weight:${f.weight};font-style:${f.style}">${esc(f.family)} — نموذج نص عربي Sample</span><small>${f.weight}${f.style === 'italic' ? ' مائل' : ''} · ${(f.sizeBytes / 1024).toFixed(0)}KB</small><button type="button" class="x" title="حذف الخط" aria-label="حذف ${esc(f.fileName)}" ${DK.brandCanEdit ? '' : 'disabled'}>×</button></li>`).join('')
+    : '<li class="muted" style="border-style:dashed">لا خطوط مرفوعة — الخطوط المتاحة الآن من قائمة الخطوط الحرة فقط.</li>';
+  el('dkb-fonts-list').querySelectorAll('[data-font] .x').forEach(b => b.addEventListener('click', async () => {
+    const id = b.closest('[data-font]').dataset.font;
+    if (!confirm('حذف ملف الخط؟ لو كان مختارًا في الهوية يعود الخط إلى الافتراضي.')) return;
+    const r = await fetch(`/api/decks/brand/fonts/${encodeURIComponent(id)}`, { method: 'DELETE' }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) { el('dkb-fonts-note').textContent = d.error || 'تعذّر الحذف'; return; }
+    DK.brandUploaded = d.fonts || []; if (d.brand !== undefined) DK.brand = d.brand; dkInjectBrandFonts(); dkbFillFontSelect(); dkbRenderFonts(); dkbPreview();
+  }));
+}
+function dkbFillFontSelect() {
+  const cur = el('dkb-font').value; const b = DK.brand || {};
+  const fixed = (DK.brandFonts || []).filter(f => f !== 'IBM Plex Sans Arabic').map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  const up = dkbUploadedFamilies().map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  el('dkb-font').innerHTML = `<option value="">الخط الافتراضي (IBM Plex Sans Arabic)</option>` + (up ? `<optgroup label="خطوط الشركة (مرفوعة)">${up}</optgroup>` : '') + `<optgroup label="خطوط حرة (Google Fonts)">${fixed}</optgroup>`;
+  const want = cur || (b.font && b.font !== 'IBM Plex Sans Arabic' ? b.font : '');
+  el('dkb-font').value = [...el('dkb-font').options].some(o => o.value === want) ? want : '';
+}
+el('dkb-fonts-upload').addEventListener('click', async () => {
+  const files = [...(el('dkb-fonts-file').files || [])]; const note = el('dkb-fonts-note');
+  if (!files.length) { note.textContent = 'اختر ملف خط أولًا.'; return; }
+  const bad = files.find(f => !/\.(ttf|otf|woff2?)$/i.test(f.name)); if (bad) { note.textContent = `الصيغة غير مدعومة: ${bad.name}`; return; }
+  const big = files.find(f => f.size > (DK.brandMaxFont || 6 * 1024 * 1024)); if (big) { note.textContent = `الملف أكبر من الحد: ${big.name}`; return; }
+  const fd = new FormData(); files.forEach(f => fd.append('files', f));
+  el('dkb-fonts-upload').disabled = true; note.textContent = 'يرفع…';
+  try {
+    const r = await fetch('/api/decks/brand/fonts', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    DK.brandUploaded = d.fonts || []; if (d.brand) DK.brand = Object.assign({}, DK.brand || {}, { fontFaces: d.brand.fontFaces });
+    dkInjectBrandFonts(); dkbFillFontSelect(); dkbRenderFonts();
+    const fams = [...new Set((d.added || []).map(a => a.family))];
+    if (fams.length === 1 && !el('dkb-font').value) el('dkb-font').value = fams[0];
+    note.textContent = `رُفع ${d.added.length} ملف (${fams.join('، ')})${d.errors && d.errors.length ? ' — ' + d.errors.join(' ') : ''}. اختر العائلة من قائمة الخط ثم احفظ الهوية.`;
+    el('dkb-fonts-file').value = ''; dkbPreview();
+  } catch (e) { note.textContent = 'تعذّر الرفع: ' + e.message; }
+  finally { el('dkb-fonts-upload').disabled = false; }
+});
 // نسخة المواصفة للحفظ/الإرسال للموديل بلا الهوية (تُعاد الهوية من المخزن عند النشر والتصدير).
 function dkSpecForSave() { const c = Object.assign({}, DK.spec); delete c.brand; return c; }
 const DKB_DEFAULTS = { primary: '#0B3D5C', secondary: '#0E8F86', accent: '#2A78D6' };
@@ -8511,11 +8558,10 @@ function openDeckBrandModal() {
   const b = DK.brand || {}; dkbDraft = { logo: b.logo || null };
   el('dkb-name').value = b.name || ''; el('dkb-footer').value = b.footer || '';
   el('dkb-primary').value = b.primary || DKB_DEFAULTS.primary; el('dkb-secondary').value = b.secondary || DKB_DEFAULTS.secondary; el('dkb-accent').value = b.accent || DKB_DEFAULTS.accent;
-  el('dkb-font').innerHTML = `<option value="">الخط الافتراضي (IBM Plex Sans Arabic)</option>` + (DK.brandFonts || []).filter(f => f !== 'IBM Plex Sans Arabic').map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
-  el('dkb-font').value = b.font && b.font !== 'IBM Plex Sans Arabic' ? b.font : '';
+  el('dkb-font').value = ''; dkbFillFontSelect(); dkbRenderFonts(); el('dkb-fonts-note').textContent = '';
   el('dkb-logo-file').value = ''; el('dkb-error').classList.add('hidden');
   const ro = !DK.brandCanEdit;
-  el('deck-brand-modal').querySelectorAll('input, select, #dkb-save, #dkb-reset, #dkb-logo-clear').forEach(x => { x.disabled = ro; });
+  el('deck-brand-modal').querySelectorAll('input, select, #dkb-save, #dkb-reset, #dkb-logo-clear, #dkb-fonts-upload').forEach(x => { x.disabled = ro; });
   if (ro) { el('dkb-error').textContent = 'عرض فقط: تعديل الهوية لمالك المشروع أو محرّره أو المسؤول.'; el('dkb-error').classList.remove('hidden'); }
   dkbPreview();
   el('deck-brand-modal').classList.remove('hidden');

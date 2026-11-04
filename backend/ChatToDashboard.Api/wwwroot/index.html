@@ -620,6 +620,15 @@
         </div>
         <label class="share-expiry-label">الخط</label>
         <select id="dkb-font" class="pres-policy"></select>
+        <div class="dk-brand-fonts">
+          <div class="dk-brand-fonts-head"><b>خطوط الشركة</b><span class="muted">ttf / otf / woff / woff2 — حتى 6 ميغابايت للملف، تُستخدم في المعاينة والصفحة المنشورة وتُسمّى في PowerPoint</span></div>
+          <ul id="dkb-fonts-list" class="dk-brand-fonts-list"></ul>
+          <div class="dk-brand-logo-row">
+            <input type="file" id="dkb-fonts-file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple>
+            <button type="button" id="dkb-fonts-upload" class="btn btn-sm btn-soft">رفع الخطوط</button>
+          </div>
+          <div id="dkb-fonts-note" class="model-switch-note"></div>
+        </div>
         <label class="share-expiry-label">نص التذييل <span class="muted">(يظهر أسفل كل شريحة)</span></label>
         <input type="text" id="dkb-footer" placeholder="مثال: سرّي — للاستخدام الداخلي · 2026" maxlength="200">
         <div id="dkb-error" class="model-switch-note bad hidden"></div>
