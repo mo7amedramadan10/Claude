@@ -7883,7 +7883,7 @@ el('history-clear').addEventListener('click', async () => {
 // (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
 // integrations) and the platform-only "organizations" screen never show a project name,
 // since you're managing the organization/platform itself there, not a project within it.
-const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks', 'freeform', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
 // Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
 // lookup here instead of reading the DOM, since the same data-screen value can be the
 // target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
@@ -7891,7 +7891,7 @@ const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks',
 const SCREEN_LABELS = {
   chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
-  projects: 'المشاريع', presentations: 'العروض التقديمية', 'claude-chat': 'محادثة Claude', decks: 'منشئ العروض', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
+  projects: 'المشاريع', presentations: 'العروض التقديمية', 'claude-chat': 'محادثة Claude', decks: 'منشئ العروض', freeform: 'تصميم حر', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
@@ -7931,6 +7931,7 @@ function showScreen(name) {
   if (name === 'presentations') loadPresentations();
   if (name === 'claude-chat') loadClaudeChatScreen();
   if (name === 'decks') loadDecksScreen();
+  if (name === 'freeform') loadFreeformScreen();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettingsPage();
   if (name === 'llm-keys') loadLlmKeysPage();
@@ -8714,6 +8715,116 @@ function dkbRenderDefaults() {
     if (r.ok && res.template) { DK.template = res.template; if (DK.spec) dkRender(); } else el('dkb-tpl-warn').textContent = res.error || 'تعذّر حفظ الربط';
   }));
 }
+
+// ======================= تصميم حر (FreeformController) =======================
+// المحادثة تنتج صفحة HTML كاملة (كـ artifacts) تُعرض في iframe معزول (sandbox بلا same-origin) مع إصدارات وتعديل كود ونشر.
+const FF = { design: null, html: '', versions: [], messages: [], viewing: null, busy: false, list: [], mobile: false };
+async function loadFreeformScreen() { if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
+async function ffShowStart() {
+  el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
+  el('ff-title').textContent = 'تصميم حر'; el('ff-meta').textContent = 'اكتب طلبك في المحادثة';
+  el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
+  try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
+  el('ff-count').textContent = FF.list.length ? `${FF.list.length.toLocaleString('en-US')} تصميم` : 'لا تصاميم بعد';
+  el('ff-list').innerHTML = FF.list.map(d => `<div class="dk-card" data-ff="${esc(d.id)}" role="button" tabindex="0"><span class="ic">🧩</span><b>${esc(d.title)}</b><p>إصدار ${d.version} · ${relTime(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</p></div>`).join('');
+  el('ff-list').querySelectorAll('[data-ff]').forEach(c => c.addEventListener('click', () => ffOpen(c.dataset.ff)));
+}
+el('ff-start-new').addEventListener('click', () => { el('ff-q').focus(); });
+async function ffOpen(id) {
+  const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return;
+  const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl;
+  FF.messages = (d.messages || []).map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
+  ffRender(); ffRenderMessages();
+}
+function ffRender() {
+  el('ff-start').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden'); el('ff-preview-wrap').classList.remove('hidden');
+  el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
+  el('ff-code').setAttribute('aria-pressed', 'false');
+  const d = FF.design; el('ff-title').textContent = d ? d.title : 'تصميم حر';
+  const viewingOld = FF.viewing != null && FF.viewing !== d.version;
+  el('ff-meta').textContent = `${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}`;
+  el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
+  el('ff-restore').classList.toggle('hidden', !viewingOld);
+  el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
+  el('ff-preview').srcdoc = FF.html || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
+}
+function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }
+function ffRenderMessages() {
+  const box = el('ff-messages');
+  box.innerHTML = FF.messages.map(m => `<div class="cc-msg ${m.role === 'user' ? 'user' : m.role === 'err' ? 'err' : 'assistant'}" style="cursor:default">${esc(m.text)}${m.extraHtml ? `<div style="margin-top:6px">${m.extraHtml}</div>` : ''}</div>`).join('')
+    + (FF.busy ? '<div class="cc-msg assistant"><span class="typing">يصمّم الصفحة… قد يستغرق حتى دقيقة</span></div>' : '');
+  box.scrollTop = box.scrollHeight;
+}
+async function ffAsk(text) {
+  if (FF.busy || !text.trim()) return;
+  ffPushMsg('user', text); FF.busy = true; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
+  try {
+    const body = { message: text, designId: FF.design ? FF.design.id : null, html: FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null };
+    const r = await fetch('/api/freeform/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.design = d.design; FF.versions = d.versions || FF.versions; FF.viewing = null;
+    if (d.html) FF.html = d.html;
+    FF.busy = false; ffPushMsg('bot', d.reply + (d.version ? ` (الإصدار ${d.version})` : '') + (d.usedData ? ' · استخدمت بيانات المشروع' : ''));
+    ffRender();
+  } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التصميم: ' + e.message); }
+  finally { FF.busy = false; el('ff-send').disabled = false; el('ff-status').textContent = ''; ffRenderMessages(); }
+}
+el('ff-form').addEventListener('submit', e => { e.preventDefault(); const t = el('ff-q').value.trim(); if (!t) return; el('ff-q').value = ''; ffAsk(t); });
+el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('ff-form').requestSubmit(); } });
+el('ff-new-btn').addEventListener('click', () => { FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; ffShowStart(); ffRenderMessages(); el('ff-q').focus(); });
+el('ff-list-btn').addEventListener('click', async () => {
+  const panel = el('ff-list-panel'); if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+  try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
+  panel.innerHTML = FF.list.length ? FF.list.map(d => `<button type="button" class="dropdown-item" data-ff="${esc(d.id)}">${esc(d.title)} <small class="muted">· إصدار ${d.version}</small></button>`).join('') : '<div class="dropdown-item muted">لا تصاميم محفوظة</div>';
+  panel.querySelectorAll('[data-ff]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffOpen(b.dataset.ff); }));
+  panel.classList.remove('hidden');
+});
+document.addEventListener('click', e => { if (!e.target.closest('#ff-list-dropdown')) el('ff-list-panel').classList.add('hidden'); });
+el('ff-version').addEventListener('change', async () => {
+  const v = +el('ff-version').value; if (!FF.design) return;
+  if (v === FF.design.version) { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`); const d = await r.json(); FF.html = d.html; FF.viewing = null; ffRender(); return; }
+  const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/versions/${v}`); if (!r.ok) return;
+  const d = await r.json(); FF.html = d.html; FF.viewing = v; ffRender();
+});
+el('ff-restore').addEventListener('click', async () => {
+  if (!FF.design || FF.viewing == null) return;
+  const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/restore/${FF.viewing}`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
+  if (!r.ok) { ffPushMsg('err', d.error || 'تعذّرت الاستعادة'); return; }
+  FF.design.version = d.version; FF.versions = d.versions; FF.html = d.html; FF.viewing = null; ffPushMsg('bot', `استُعيد الإصدار كإصدار ${d.version}.`); ffRender();
+});
+el('ff-mobile').addEventListener('click', () => { FF.mobile = !FF.mobile; ffRender(); });
+el('ff-code').addEventListener('click', () => {
+  const show = el('ff-code-wrap').classList.contains('hidden');
+  el('ff-code-wrap').classList.toggle('hidden', !show); el('ff-preview-wrap').classList.toggle('hidden', show); el('ff-code').setAttribute('aria-pressed', show ? 'true' : 'false');
+  if (show) el('ff-code-text').value = FF.html;
+});
+el('ff-code-cancel').addEventListener('click', () => { el('ff-code-wrap').classList.add('hidden'); el('ff-preview-wrap').classList.remove('hidden'); el('ff-code').setAttribute('aria-pressed', 'false'); });
+el('ff-code-apply').addEventListener('click', async () => {
+  if (!FF.design) return; const html = el('ff-code-text').value;
+  const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, note: 'تعديل يدوي للكود' }) });
+  const d = await r.json().catch(() => ({})); if (!r.ok) { el('ff-code-note').textContent = d.error || 'تعذّر الحفظ'; return; }
+  FF.html = html; if (d.version) { FF.design.version = d.version; FF.versions = d.versions; ffPushMsg('bot', `حُفظ تعديل الكود كإصدار ${d.version}.`); }
+  FF.viewing = null; ffRender();
+});
+el('ff-title').addEventListener('blur', async () => {
+  const t = el('ff-title').textContent.trim(); if (!FF.design || !t || t === FF.design.title) return;
+  const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: t }) });
+  if (r.ok) FF.design.title = t;
+});
+el('ff-open').addEventListener('click', () => { if (!FF.html) return; const blob = new Blob([FF.html], { type: 'text/html' }); const url = URL.createObjectURL(blob); window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000); });
+el('ff-download').addEventListener('click', () => { if (!FF.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([FF.html], { type: 'text/html' })); a.download = (FF.design ? FF.design.title : 'design') + '.html'; document.body.appendChild(a); a.click(); a.remove(); });
+el('ff-publish').addEventListener('click', async () => {
+  if (!FF.design) return; el('ff-publish').disabled = true;
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.publishedUrl = d.url; const full = location.origin + d.url;
+    ffPushMsg('bot', d.updated ? 'حُدّثت الصفحة المنشورة على نفس الرابط.' : 'نُشرت الصفحة في «العروض التقديمية».', `<a href="${esc(full)}" target="_blank" rel="noopener" dir="ltr">${esc(full)}</a> <button type="button" class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText('${esc(full)}')">نسخ</button>`);
+    ffRender();
+  } catch (e) { ffPushMsg('err', 'تعذّر النشر: ' + e.message); }
+  finally { el('ff-publish').disabled = false; }
+});
 
 // ---------- معرض نماذج العروض («عرض جديد») — نفس تجربة معرض اللوحات ----------
 // التصنيفات مفاتيح ثابتة تطابق DeckTemplates.cs؛ المصغّرات والمعاينة التوضيحية من jeem-deck-demo.js

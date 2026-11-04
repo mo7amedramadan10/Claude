@@ -130,6 +130,7 @@
             <li><button type="button" class="nav-link tab" data-screen="published"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="nav-text">اللوحات المنشورة</span><span class="badge hidden" id="published-badge">0</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="analyst"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="decks"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">منشئ العروض</span></button></li>
+            <li><button type="button" class="nav-link tab" data-screen="freeform"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg><span class="nav-text">تصميم حر</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="sources"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></button></li>
             <li><button type="button" class="nav-link tab hidden" id="proj-permissions-link" data-screen="users"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
@@ -977,6 +978,62 @@
       <div id="dk-editor" class="dk-editor hidden">
         <div class="dk-stage"><div id="dk-slide" class="jd-slide"></div><div id="dk-slide-meta" class="dk-slide-meta"></div></div>
         <div id="dk-strip" class="dk-strip"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- تصميم حر: المحادثة تنتج صفحة HTML كاملة (كـ artifacts) تُعرض في معاينة معزولة، بإصدارات وتعديل كود ونشر — FreeformController -->
+<main id="screen-freeform" class="screen">
+  <aside id="ff-rail" class="cc-rail">
+    <div class="chat-head">
+      <span class="ai-ava"><img src="img/logo-mark.svg" alt=""></span>
+      <div class="grow"><h2>تصميم حر</h2><p id="ff-head-desc">صف الصفحة اللي عايزها وجيم يبنيها كاملة</p></div>
+      <button type="button" id="ff-new-btn" class="btn btn-ghost btn-sm" title="تصميم جديد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>جديد</button>
+      <div class="dropdown" id="ff-list-dropdown">
+        <button type="button" id="ff-list-btn" class="btn btn-ghost btn-sm" title="تصاميم المشروع المحفوظة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg>التصاميم</button>
+        <div id="ff-list-panel" class="dropdown-panel hidden"></div>
+      </div>
+    </div>
+    <div id="ff-messages" class="cc-messages"></div>
+    <form id="ff-form" class="composer cc-composer">
+      <div class="input-box">
+        <label for="ff-q" class="visually-hidden">الطلب</label>
+        <textarea id="ff-q" rows="3" placeholder="مثال: صفحة تعريفية بمشروع مركز الاتصال فيها الأهداف والفريق والجدول الزمني وقائمة مهام قابلة للتعديل… أو: خلّي الألوان أغمق وضيف قسم للمخاطر"></textarea>
+        <div class="input-tools">
+          <span class="hint" id="ff-status"></span>
+          <span class="grow"></span>
+          <button id="ff-send" class="send" type="submit" aria-label="إرسال"></button>
+        </div>
+      </div>
+    </form>
+  </aside>
+  <section id="ff-pane" class="cc-pane">
+    <div class="cc-pane-head dk-toolbar">
+      <div class="grow"><b id="ff-title" contenteditable="true" spellcheck="false" title="اضغط لتعديل العنوان">تصميم حر</b><small class="muted" id="ff-meta"></small></div>
+      <div class="dk-actions">
+        <select id="ff-version" class="pres-policy" title="الإصدارات" aria-label="الإصدار"></select>
+        <button type="button" id="ff-restore" class="btn btn-sm btn-ghost" title="اجعل الإصدار المعروض هو الحالي">استعادة</button>
+        <span class="dk-sep"></span>
+        <button type="button" id="ff-mobile" class="btn btn-sm btn-ghost" aria-pressed="false" title="معاينة بعرض جوال 390px">📱 جوال</button>
+        <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
+        <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
+        <button type="button" id="ff-download" class="btn btn-sm btn-ghost" title="تنزيل ملف HTML">تنزيل</button>
+        <button type="button" id="ff-publish" class="btn btn-sm">نشر</button>
+      </div>
+    </div>
+    <div id="ff-body" class="ff-body">
+      <div id="ff-start" class="ff-start">
+        <div class="dk-start"><button type="button" class="btn btn-primary" id="ff-start-new"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>تصميم جديد</button><p>اكتب في المحادثة وصف الصفحة اللي عايزها (عرض، لوحة، صفحة تعريفية، تقرير تفاعلي…) وجيم يكتبها HTML كاملة بهوية مشروعك ويقدر يستخدم بيانات المشروع. عدّلها بالمحادثة أو من الكود، وانشرها برابط.</p></div>
+        <div class="dk-gallery-head"><h3>تصاميم المشروع</h3><span class="muted" id="ff-count"></span></div>
+        <div id="ff-list" class="ff-list"></div>
+      </div>
+      <div id="ff-preview-wrap" class="ff-preview-wrap hidden">
+        <iframe id="ff-preview" class="ff-preview" title="معاينة التصميم" sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
+      </div>
+      <div id="ff-code-wrap" class="ff-code-wrap hidden">
+        <textarea id="ff-code-text" spellcheck="false" dir="ltr" aria-label="كود الصفحة"></textarea>
+        <div class="ff-code-bar"><span class="muted" id="ff-code-note">تعديلك يُحفظ كإصدار جديد.</span><span class="grow"></span><button type="button" id="ff-code-cancel" class="btn btn-sm btn-ghost">إلغاء</button><button type="button" id="ff-code-apply" class="btn btn-sm btn-primary">تطبيق وحفظ</button></div>
       </div>
     </div>
   </section>
