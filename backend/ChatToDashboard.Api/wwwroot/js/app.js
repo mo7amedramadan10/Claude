@@ -8747,7 +8747,11 @@ function ffGalFiltered() {
 // صفحات المعاينة داخل iframe بـ srcdoc: الرابط الداخلي `#قسم` يُحلّ على عنوان الصفحة الأم (about:srcdoc يرث أصلها) فينتقل الإطار
 // إلى المنصة نفسها. نحقن قبل العرض اعتراضًا يحوّل روابط الأجزاء إلى تمرير داخل الوثيقة. الصفحة المحفوظة/المنشورة لا تُمس.
 const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('click',function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href^=\"#\"]');if(!a)return;e.preventDefault();var id=decodeURIComponent(a.getAttribute('href').slice(1));var t=id&&(document.getElementById(id)||document.querySelector('[name=\"'+id+'\"]'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'});else if(!id)window.scrollTo({top:0,behavior:'smooth'})},true)<\/script>";
-function ffSandboxHtml(html) { if (!html || html.includes('ff-anchor-fix')) return html; return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, FF_ANCHOR_FIX + '</body>') : html + FF_ANCHOR_FIX; }
+// عدّة تعديل النص المباشر داخل إطار المعاينة (تُحقن مع صفحة التصميم المفتوحة فقط، خاملة حتى يُفعَّل الوضع من الشريط):
+// الأم ترسل {jeemEdit:1,type:enable|disable|get}، والإطار يجعل العنصر النصي المنقور قابلًا للتحرير ويعيد {type:dirty|html}.
+// قبل الإرجاع يُنظَّف كل أثر للعدّة (السمات والأنماط والسكربتات المحقونة) فتبقى الصفحة المحفوظة كما لو كُتبت يدويًا.
+const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop()}}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-anchor-fix','#ff-edit-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
+function ffSandboxHtml(html, withEditor) { if (!html) return html; let add = html.includes('ff-anchor-fix') ? '' : FF_ANCHOR_FIX; if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT; if (!add) return html; return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, add + '</body>') : html + add; }
 async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
   el('ff-title').textContent = 'تصميم حر'; el('ff-meta').textContent = 'اكتب طلبك في المحادثة';
@@ -8919,6 +8923,33 @@ function ffRenderAttach() {
 }
 function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(t.name)}</b></span>` : '<span class="ff-msg-attach">✦ تصميم حر بلا نموذج</span>'; }
 
+// ---------- تعديل النص مباشرة من مساحة العمل: وضع ✏️ على إطار المعاينة، والحفظ إصدار جديد عبر PUT ----------
+FF.edit = { on: false, dirty: 0, pending: null };
+function ffEditSetMode(on, silent) {
+  FF.edit.on = on; FF.edit.dirty = 0;
+  el('ff-edit-text').setAttribute('aria-pressed', on ? 'true' : 'false'); el('ff-edit-bar').classList.toggle('hidden', !on); el('ff-preview-wrap').classList.toggle('editing', on);
+  el('ff-edit-save').disabled = true; el('ff-edit-count').textContent = 'لا تعديلات بعد';
+  const w = el('ff-preview').contentWindow; if (w && !silent) w.postMessage({ jeemEdit: 1, type: on ? 'enable' : 'disable' }, '*');
+}
+el('ff-edit-text').addEventListener('click', () => { if (!FF.design) return; if (FF.edit.on) { ffEditCancel(); return; } ffEditSetMode(true); });
+function ffEditCancel() { if (FF.edit.dirty && !confirm('إلغاء التعديلات غير المحفوظة؟')) return; ffEditSetMode(false, true); ffRender(); }
+el('ff-edit-cancel').addEventListener('click', ffEditCancel);
+el('ff-edit-save').addEventListener('click', () => { const w = el('ff-preview').contentWindow; if (!w) return; el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now(); w.postMessage({ jeemEdit: 1, type: 'get' }, '*'); });
+window.addEventListener('message', async e => {
+  const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
+  if (m.type === 'dirty') { FF.edit.dirty = m.count || 1; el('ff-edit-save').disabled = false; el('ff-edit-count').textContent = FF.edit.dirty === 1 ? 'عنصر واحد معدَّل' : `${FF.edit.dirty.toLocaleString('en-US')} عناصر معدَّلة`; return; }
+  if (m.type === 'html' && FF.edit.pending) {
+    FF.edit.pending = null; const html = m.html || '';
+    try {
+      const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, note: 'تعديل نصي مباشر من مساحة العمل' }) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+      FF.html = html; FF.viewing = null; if (d.versions) FF.versions = d.versions; if (d.version) FF.design.version = d.version;
+      ffEditSetMode(false, true); ffRender(); ffPushMsg('bot', `حُفظ تعديلك النصي المباشر${d.version ? ` (الإصدار ${d.version})` : ''}.`);
+    } catch (err) { ffPushMsg('err', 'تعذّر حفظ التعديل: ' + err.message); el('ff-edit-save').disabled = false; }
+    finally { el('ff-edit-save').textContent = 'حفظ كإصدار جديد'; }
+  }
+});
+
 // ---------- رفع ملف موجود → نموذج مخصص (FreeformTemplateStore) ----------
 el('ffgal-start-import').addEventListener('click', () => { el('ffi-kind-label').textContent = (FF_KINDS[ffGalKind] || FF_KINDS.design).label; el('ffi-file').value = ''; el('ffi-name').value = ''; el('ffi-error').classList.add('hidden'); el('ff-import-modal').classList.remove('hidden'); });
 el('ffi-cancel').addEventListener('click', () => el('ff-import-modal').classList.add('hidden'));
@@ -8970,6 +9001,7 @@ async function ffOpen(id) {
 function ffRender() {
   if (FF.design && FF.gal) delete FF.gal.htmlCache[FF.design.id]; // المعاينة المصغّرة تُجلب من جديد بعد التعديل
   ffRenderAttach(); // بعد البناء تثبت الشريحة (بلا ✕) لأن النموذج صار جزءًا من التصميم
+  ffEditSetMode(false, true);
   el('ff-start').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden'); el('ff-preview-wrap').classList.remove('hidden');
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
   el('ff-code').setAttribute('aria-pressed', 'false');
@@ -8981,7 +9013,7 @@ function ffRender() {
   el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
-  el('ff-preview').srcdoc = ffSandboxHtml(FF.html) || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
+  el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true) || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
 }
 function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }
 function ffRenderMessages() {

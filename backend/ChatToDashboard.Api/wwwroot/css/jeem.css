@@ -3395,8 +3395,11 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .jeem-scope .ff-start { flex: 1; overflow: auto; background: #fff; padding: 20px 28px 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-content: start; }
 .jeem-scope .ff-start > * { min-width: 0; }
-.jeem-scope .ff-preview-wrap { flex: 1; min-height: 0; display: flex; justify-content: center; background: var(--plane); padding: 14px; }
-.jeem-scope .ff-preview { flex: 1; width: 100%; max-width: 100%; height: 100%; border: 1px solid var(--line); border-radius: var(--r-lg); background: #fff; transition: max-width .2s; }
+.jeem-scope .ff-preview-wrap { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-content: stretch; justify-content: center; background: var(--plane); padding: 14px; gap: 8px; }
+.jeem-scope .ff-edit-bar { flex: 1 0 100%; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: #FFF4CC; border: 1px solid #F2D77A; color: #5A4300; font-size: var(--fs-sm); }
+.jeem-scope .ff-edit-bar.hidden { display: none; }
+.jeem-scope .ff-preview-wrap.editing .ff-preview { outline: 2px dashed #E0A100; outline-offset: 2px; }
+.jeem-scope .ff-preview { flex: 1; width: 100%; max-width: 100%; height: 100%; min-height: 0; border: 1px solid var(--line); border-radius: var(--r-lg); background: #fff; transition: max-width .2s; }
 .jeem-scope .ff-preview-wrap.mobile .ff-preview { max-width: 390px; flex: none; }
 .jeem-scope .ff-code-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px; gap: 8px; }
 .jeem-scope .ff-code-wrap textarea { flex: 1; min-height: 0; width: 100%; font: 12.5px/1.5 ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px; resize: none; background: var(--surface); color: var(--ink); white-space: pre; overflow: auto; }

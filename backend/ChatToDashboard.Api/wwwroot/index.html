@@ -1076,6 +1076,7 @@
         <button type="button" id="ff-present" class="btn btn-sm btn-ghost hidden" title="عرض ملء الشاشة">⛶ ملء الشاشة</button>
         <button type="button" id="ff-replay" class="btn btn-sm btn-ghost hidden" title="إعادة تشغيل الحركة">↻ إعادة</button>
         <button type="button" id="ff-print" class="btn btn-sm btn-ghost hidden" title="طباعة أو حفظ PDF">PDF</button>
+        <button type="button" id="ff-edit-text" class="btn btn-sm btn-ghost" aria-pressed="false" title="تعديل النصوص مباشرة على الصفحة بالنقر عليها">✏️ تعديل النص</button>
         <button type="button" id="ff-mobile" class="btn btn-sm btn-ghost" aria-pressed="false" title="معاينة بعرض جوال 390px">📱 جوال</button>
         <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
         <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
@@ -1120,6 +1121,13 @@
         <div id="ff-list" class="ff-cards" aria-live="polite"></div>
       </div>
       <div id="ff-preview-wrap" class="ff-preview-wrap hidden">
+        <!-- شريط وضع تعديل النص المباشر: يظهر فوق المعاينة عند تفعيل ✏️ -->
+        <div id="ff-edit-bar" class="ff-edit-bar hidden" role="status">
+          <span>✏️ وضع تعديل النص: اضغط أي نص في الصفحة وعدّله، ثم احفظ. <small class="muted" id="ff-edit-count">لا تعديلات بعد</small></span>
+          <span class="grow"></span>
+          <button type="button" id="ff-edit-cancel" class="btn btn-sm btn-ghost">إلغاء</button>
+          <button type="button" id="ff-edit-save" class="btn btn-sm btn-primary" disabled>حفظ كإصدار جديد</button>
+        </div>
         <iframe id="ff-preview" class="ff-preview" title="معاينة التصميم" sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
       </div>
       <div id="ff-code-wrap" class="ff-code-wrap hidden">
