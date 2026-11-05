@@ -64,4 +64,12 @@ public static class FreeformDataBlock
     }
 
     public static bool HasBlock(string? html) => !string.IsNullOrEmpty(html) && DataRx.IsMatch(html);
+
+    /// <summary>لصفحات «شرائح»: يضمن وجود سكربت شريط المصغّرات <c>/js/jeem-slides.js</c> قبل <c>&lt;/body&gt;</c> (عند النشر).</summary>
+    public static string EnsureSlidesKit(string html)
+    {
+        if (string.IsNullOrEmpty(html) || Regex.IsMatch(html, @"jeem-slides\.js", RegexOptions.IgnoreCase)) return html;
+        const string tag = "<script src=\"/js/jeem-slides.js\"></script>";
+        return Regex.IsMatch(html, @"</body>", RegexOptions.IgnoreCase) ? Regex.Replace(html, @"</body>", tag + "</body>", RegexOptions.IgnoreCase) : html + tag;
+    }
 }

@@ -278,6 +278,7 @@ public class FreeformController : ControllerBase
         var d = await _store.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
         if (string.IsNullOrWhiteSpace(d.Html)) return BadRequest(new { error = "لا توجد صفحة لنشرها بعد." });
         var html = ApplyBrandAssets(d.Html, await BrandAsync(selection.ProjectId, ct));
+        if (d.Kind == "slides") html = FreeformDataBlock.EnsureSlidesKit(html);
         var title = string.IsNullOrWhiteSpace(request.Title) ? d.Title : request.Title.Trim();
         var orgSlug = user.OrganizationId is null ? null : (await _organizations.FindByIdAsync(user.OrganizationId, ct))?.Slug;
         Presentation? existing = d.PresentationId is null ? null : await _presentations.GetAsync(d.PresentationId, ct);
