@@ -8932,14 +8932,18 @@ el('ff-refresh').addEventListener('click', e => {
   e.stopPropagation(); const panel = el('ff-refresh-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
   if (!FF.design) return;
   panel.classList.toggle('hidden', !open); el('ff-refresh').setAttribute('aria-expanded', open ? 'true' : 'false');
-  el('ff-refresh-fast').disabled = !FF.design.queryCount; el('ff-refresh-fast').title = FF.design.queryCount ? '' : 'لا استعلامات مسجَّلة لهذا التصميم (بُني قبل عقد البيانات أو بلا بيانات)';
-  el('ff-auto-refresh').checked = !!FF.design.autoRefresh; el('ff-auto-refresh').disabled = !FF.design.queryCount;
+  // متاح لكل الأنواع: فوري بلا موديل إن وُجدت استعلامات مسجَّلة، وإلا إعادة بناء بالموديل هذه المرة فقط (تسجّل استعلاماتها فتصير التالية فورية)
+  const hasQ = !!FF.design.queryCount; el('ff-refresh-fast').disabled = false;
+  el('ff-refresh-fast').querySelector('small').textContent = hasQ ? ' — إعادة تنفيذ الاستعلامات المحفوظة بلا موديل (ثوانٍ)' : ' — لا استعلامات محفوظة بعد؛ هذه المرة بالموديل ثم تصير التحديثات التالية فورية';
+  el('ff-auto-refresh').checked = !!FF.design.autoRefresh; el('ff-auto-refresh').disabled = false;
 });
 el('ff-refresh-panel').addEventListener('click', e => e.stopPropagation());
 el('ff-refresh-fast').addEventListener('click', () => { el('ff-refresh-panel').classList.add('hidden'); ffRefreshFast(); });
 el('ff-stale').addEventListener('click', ffRefreshFast);
+const FF_REBUILD_MSG = 'أعد بناء الصفحة بالبيانات الحالية: نفّذ الاستعلامات من جديد عبر query_data وحدّث كل الأرقام والجداول والرسوم، ولا تغيّر التصميم أو النصوص الأخرى.';
 async function ffRefreshFast() {
   if (!FF.design || FF.busy) return;
+  if (!FF.design.queryCount) { ffPushMsg('bot', 'لا استعلامات محفوظة لهذا التصميم (بُني قبل عقد البيانات)، فسأعيد بناءه بالموديل من البيانات الحالية مرة واحدة، وبعدها يصير التحديث فوريًا بلا موديل.'); ffAsk(FF_REBUILD_MSG); return; }
   FF.busy = true; ffPushMsg('user', 'حدّث البيانات'); el('ff-status').textContent = 'يحدّث البيانات…';
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/refresh`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
@@ -8955,7 +8959,7 @@ el('ff-auto-refresh').addEventListener('change', async () => {
   try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autoRefresh: on }) }); if (!r.ok) throw new Error(r.status); FF.design.autoRefresh = on; ffPushMsg('bot', on ? 'سيُحدَّث هذا التصميم تلقائيًا عند فتحه إن تغيّرت بيانات المصدر.' : 'أُلغي التحديث التلقائي عند الفتح.'); }
   catch (e) { el('ff-auto-refresh').checked = !on; ffPushMsg('err', 'تعذّر حفظ الإعداد.'); }
 });
-el('ff-refresh-rebuild').addEventListener('click', () => { el('ff-refresh-panel').classList.add('hidden'); if (!FF.design) return; ffAsk('أعد بناء الصفحة بالبيانات الحالية: نفّذ الاستعلامات من جديد عبر query_data وحدّث كل الأرقام والجداول والرسوم، ولا تغيّر التصميم أو النصوص الأخرى.'); });
+el('ff-refresh-rebuild').addEventListener('click', () => { el('ff-refresh-panel').classList.add('hidden'); if (!FF.design) return; ffAsk(FF_REBUILD_MSG); });
 
 // ---------- تعديل النص مباشرة من مساحة العمل: وضع ✏️ على إطار المعاينة، والحفظ إصدار جديد عبر PUT ----------
 FF.edit = { on: false, dirty: 0, pending: null };
