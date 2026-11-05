@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -9,7 +10,7 @@ using ChatToDashboard.Api.Users;
 
 namespace ChatToDashboard.Api.Freeform;
 
-public sealed record FreeformResult(string Reply, string? Html, bool UsedData);
+public sealed record FreeformResult(string Reply, string? Html, bool UsedData, IReadOnlyList<FreeformQuery>? Queries = null);
 
 /// <summary>يكتب صفحة HTML كاملة من طلب حر (كما تفعل artifacts) داخل المنصة: الموديل يرى ملف تعريف بيانات المشروع ويستطيع
 /// الاستعلام بـ <c>query_data</c> لتضمين أرقام حقيقية، ويلتزم بهوية المشروع (ألوان/خطوط) وجسر <c>jeem-page.js</c> للأجزاء القابلة
@@ -54,11 +55,24 @@ public class FreeformBuilder
         userMsg.AppendLine("# الطلب").AppendLine(message.Trim());
         var tools = hasData ? _tools.BuildTools(context).Where(t => t.Name == "query_data").ToList() : null;
         var call = new StagedCall($"[تصميم حر/{KindLabel(kind)}] {Shorten(message, 40)}", system, userMsg.ToString(), tools, context, MaxIterations, false, user);
-        var res = await llm.RunStagedAsync(call, ct);
+        // تسجيل كل استعلام ينفّذه الموديل مع نتيجته (مراقب محيطي على حلقة الأدوات)، وإلحاق مفتاحه بالرد ليقرأه من JEEM_DATA
+        var queries = FreeformDataBlock.Parse(currentHtml); var recorded = new List<FreeformQuery>(queries); var gate = new object();
+        AnalyticsTools.ToolObserver.Value = (name, input, result, isError) =>
+        {
+            if (name != "query_data" || isError) return result;
+            var sql = input["sql"]?.GetValue<string>(); if (string.IsNullOrWhiteSpace(sql)) return result;
+            JsonNode? parsed; try { parsed = JsonNode.Parse(result); } catch (JsonException) { return result; }
+            string key; lock (gate) { key = FreeformDataBlock.NextKey(recorded); recorded.Add(new FreeformQuery(key, sql.Trim(), parsed)); }
+            return result + $"\n\n[مفتاح هذه النتيجة في الصفحة: JEEM_DATA.{key} — اقرأ الصفوف من JEEM_DATA.{key}.rows في جافاسكربت الصفحة ولا تكتب الأرقام حرفيًا]";
+        };
+        StagedResult res;
+        try { res = await llm.RunStagedAsync(call, ct); }
+        finally { AnalyticsTools.ToolObserver.Value = null; }
         var html = ExtractHtml(res.Json, res.Text);
         var reply = res.Json["reply"]?.GetValue<string>() ?? (html is null ? "لم أستطع إنتاج صفحة من هذا الطلب — وضّح أكثر." : "جاهزة.");
+        if (html is not null && recorded.Count > 0) html = FreeformDataBlock.Inject(html, recorded, DateTime.UtcNow);
         if (html is not null && html.Length > FreeformStore.MaxHtmlBytes) html = html[..FreeformStore.MaxHtmlBytes];
-        return new FreeformResult(reply, html, res.Json["usedData"]?.GetValue<bool>() ?? false);
+        return new FreeformResult(reply, html, (res.Json["usedData"]?.GetValue<bool>() ?? false) || recorded.Count > queries.Count, recorded);
     }
 
     /// <summary>HTML من رد الموديل: حقل <c>html</c> في JSON، وإلا أول وثيقة <c>&lt;!doctype&gt;/&lt;html&gt;</c> في النص.</summary>
@@ -139,7 +153,19 @@ public class FreeformBuilder
             if (brand.Footer is not null) sb.AppendLine($"- تذييل الصفحة: {brand.Footer}");
             if (brand.Logo is not null) sb.AppendLine("- شعار الجهة متاح في المنصة؛ ضع عنصر <img data-jeem-logo alt=\"الشعار\"> حيث يناسب (ستملؤه المنصة) ولا تضمّن بياناته.");
         }
-        if (hasData) sb.AppendLine().AppendLine("# بيانات المشروع المتاحة عبر query_data").AppendLine(profileText);
+        if (hasData)
+        {
+            sb.AppendLine().AppendLine("# بيانات المشروع المتاحة عبر query_data").AppendLine(profileText);
+            sb.AppendLine("""
+                # عقد البيانات الحيّة (إلزامي عند استخدام query_data)
+                - كل نتيجة من query_data تُحفظ تلقائيًا في الصفحة تحت مفتاح يُذكر في ذيل النتيجة (مثل JEEM_DATA.q1)، ويعرّفه المتصفح
+                  قبل تشغيل سكربتاتك: `window.JEEM_DATA.q1 = {sql, rowCount, rows: [ {عمود: قيمة, …}, … ]}`.
+                - لا تكتب أرقام النتائج حرفيًا في HTML. اكتب جافاسكربت في الصفحة يقرأ `JEEM_DATA.qN.rows` ويحسب ويملأ المؤشرات والجداول
+                  ويرسم الرسوم عند التحميل (`DOMContentLoaded`). هكذا يستطيع المستخدم تحديث البيانات لاحقًا بلا إعادة بناء.
+                - لا تُدرج بنفسك أي وسم `<script id="jeem-data">` أو `jeem-data-rt`؛ المنصة تحقنهما. عند التعديل أبقِهما كما هما إن وُجدا.
+                - أرقام لا تأتي من الاستعلامات (توضيحية) تبقى بشارة «توضيحية» كما سبق.
+                """);
+        }
         return sb.ToString();
     }
 

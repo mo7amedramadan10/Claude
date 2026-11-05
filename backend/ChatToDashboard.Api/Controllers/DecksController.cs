@@ -309,6 +309,29 @@ public class DecksController : ControllerBase
         return Ok(new { spec });
     }
 
+    /// <summary>تحديث بيانات شرائح العرض بلا موديل: إعادة تنفيذ <c>query.sql</c> لكل شريحة وإعادة صياغتها بقواعد ثابتة (DeckDataRefresher).</summary>
+    [HttpPost("{id}/refresh")]
+    public async Task<IActionResult> RefreshData(string id, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var d = await _decks.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "العرض غير موجود." });
+        var spec = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json)!.Normalize(); var withSql = spec.Slides.Where(s => !string.IsNullOrWhiteSpace(s.Query?.Sql)).ToList();
+        if (withSql.Count == 0) return BadRequest(new { error = "لا شرائح بيانات باستعلام محفوظ في هذا العرض.", noQueries = true });
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var updated = 0; var failed = new List<object>();
+        foreach (var slide in withSql)
+        {
+            var (res, isError) = await _tools.RunReadOnlyQueryAsync(slide.Query!.Sql!, context, ct);
+            if (isError) { failed.Add(new { slide = slide.Title, error = res }); continue; }
+            System.Text.Json.Nodes.JsonArray? rows = null; try { rows = System.Text.Json.Nodes.JsonNode.Parse(res)?["rows"] as System.Text.Json.Nodes.JsonArray; } catch (System.Text.Json.JsonException) { }
+            if (rows is null || !DeckDataRefresher.Apply(slide, rows)) { failed.Add(new { slide = slide.Title, error = "نتيجة فارغة أو لا تناسب تخطيط الشريحة" }); continue; }
+            slide.MissingReason = null; updated++;
+        }
+        if (updated > 0) await _decks.UpdateSpecAsync(id, spec.Normalize(), ct);
+        return Ok(new { spec, updated, total = withSql.Count, failed, refreshedAt = DateTime.UtcNow });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {

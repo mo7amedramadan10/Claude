@@ -8923,6 +8923,27 @@ function ffRenderAttach() {
 }
 function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(t.name)}</b></span>` : '<span class="ff-msg-attach">✦ تصميم حر بلا نموذج</span>'; }
 
+// ---------- تحديث البيانات: بلا موديل (إعادة تنفيذ الاستعلامات المسجَّلة) أو إعادة البناء بالموديل ----------
+el('ff-refresh').addEventListener('click', e => {
+  e.stopPropagation(); const panel = el('ff-refresh-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
+  if (!FF.design) return;
+  panel.classList.toggle('hidden', !open); el('ff-refresh').setAttribute('aria-expanded', open ? 'true' : 'false');
+  el('ff-refresh-fast').disabled = !FF.design.queryCount; el('ff-refresh-fast').title = FF.design.queryCount ? '' : 'لا استعلامات مسجَّلة لهذا التصميم (بُني قبل عقد البيانات أو بلا بيانات)';
+});
+el('ff-refresh-panel').addEventListener('click', e => e.stopPropagation());
+el('ff-refresh-fast').addEventListener('click', async () => {
+  el('ff-refresh-panel').classList.add('hidden'); if (!FF.design || FF.busy) return;
+  FF.busy = true; ffPushMsg('user', 'حدّث البيانات'); el('ff-status').textContent = 'يحدّث البيانات…';
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/refresh`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.html = d.html; FF.viewing = null; FF.design.version = d.version; FF.design.dataRefreshedAt = d.refreshedAt; if (d.versions) FF.versions = d.versions;
+    FF.busy = false; ffPushMsg('bot', `حُدِّثت البيانات من ${d.ok} استعلامًا (الإصدار ${d.version})${(d.failed || []).length ? ` — فشل ${d.failed.length}: ${d.failed.map(f => f.key).join('، ')}` : ''}.`); ffRender();
+  } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التحديث: ' + e.message); }
+  finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); }
+});
+el('ff-refresh-rebuild').addEventListener('click', () => { el('ff-refresh-panel').classList.add('hidden'); if (!FF.design) return; ffAsk('أعد بناء الصفحة بالبيانات الحالية: نفّذ الاستعلامات من جديد عبر query_data وحدّث كل الأرقام والجداول والرسوم، ولا تغيّر التصميم أو النصوص الأخرى.'); });
+
 // ---------- تعديل النص مباشرة من مساحة العمل: وضع ✏️ على إطار المعاينة، والحفظ إصدار جديد عبر PUT ----------
 FF.edit = { on: false, dirty: 0, pending: null };
 function ffEditSetMode(on, silent) {
@@ -9009,7 +9030,8 @@ function ffRender() {
   el('ff-present').classList.toggle('hidden', kind !== 'slides' && kind !== 'motion'); el('ff-replay').classList.toggle('hidden', kind !== 'motion'); el('ff-print').classList.toggle('hidden', kind !== 'doc' && kind !== 'slides');
   el('ff-preview-wrap').classList.toggle('doc', kind === 'doc'); el('ff-head-desc').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} — اطلب تعديلًا بالمحادثة`;
   const viewingOld = FF.viewing != null && FF.viewing !== d.version;
-  el('ff-meta').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} · ${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}`;
+  el('ff-meta').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} · ${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}${d && d.queryCount ? ` · بيانات حيّة (${d.queryCount} استعلام${d.dataRefreshedAt ? '، آخر تحديث ' + ffAgo(d.dataRefreshedAt) : ''})` : ''}`;
+  el('ff-refresh').classList.toggle('no-queries', !(d && d.queryCount));
   el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
@@ -9319,6 +9341,19 @@ async function dkSave(silent) {
   DK.spec = (await r.json()).spec; DK.dirty = false; dkRender(); return true;
 }
 el('dk-save').addEventListener('click', () => dkSave(false));
+// تحديث بيانات شرائح العرض بلا موديل (DeckDataRefresher): لكل شريحة بـ query.sql تُعاد الصفوف وتُصاغ حتميًا
+el('dk-refresh').addEventListener('click', async () => {
+  if (!DK.deck) return; const btn = el('dk-refresh'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'يحدّث…';
+  try {
+    if (DK.dirty) await dkSave(true);
+    const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}/refresh`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    DK.spec = d.spec; DK.dirty = false; dkRender();
+    dkPushMsg('bot', `حُدِّثت ${d.updated} من ${d.total} شرائح بيانات من بيانات المشروع الحالية${(d.failed || []).length ? ` — تعذّر: ${d.failed.map(f => f.slide).join('، ')}` : ''}.`);
+  } catch (e) { dkPushMsg('err', 'تعذّر تحديث البيانات: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = label; }
+});
+
 el('dk-publish').addEventListener('click', async () => {
   if (!DK.spec) return; if (!(await dkSave(true))) return;
   const btn = el('dk-publish'); btn.disabled = true; btn.textContent = 'جارٍ النشر…';

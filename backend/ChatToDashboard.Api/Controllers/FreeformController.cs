@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text;
 using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Decks;
@@ -184,9 +186,39 @@ public class FreeformController : ControllerBase
             version = design.Version > 0 ? design.Version : null;
         }
         else if (result.Html is not null) { version = await _store.AddVersionAsync(design.Id, result.Html, request.Message, null, ct); design.Version = version.Value; design.Html = result.Html; }
+        if (result.Html is not null && result.Queries is { Count: > 0 } qs) { var now = DateTime.UtcNow; await _store.SetQueriesAsync(design.Id, qs, now, ct); design.QueryCount = qs.Count; design.DataRefreshedAt = now; }
         await _store.AddMessageAsync(design.Id, "user", request.Message, null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, version, usedData = result.UsedData, versions = await _store.VersionsAsync(design.Id, ct) });
+    }
+
+    /// <summary>تحديث بيانات الصفحة بلا موديل: إعادة تنفيذ الاستعلامات المسجَّلة واستبدال كتلة <c>jeem-data</c> كإصدار جديد.</summary>
+    [HttpPost("{id}/refresh")]
+    public async Task<IActionResult> Refresh(string id, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var d = await _store.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
+        var stored = await _store.QueriesAsync(id, ct);
+        if (stored.Count == 0) stored = FreeformDataBlock.Parse(d.Html); // تصميم قديم فيه كتلة بلا تسجيل في الجدول
+        if (stored.Count == 0) return BadRequest(new { error = "هذا التصميم بلا استعلامات مسجَّلة (بُني قبل عقد البيانات أو بلا بيانات). استخدم «إعادة البناء بالبيانات الحالية» بالموديل.", noQueries = true });
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var fresh = new List<FreeformQuery>(); var failed = new List<object>();
+        foreach (var q in stored)
+        {
+            var (res, isError) = await _tools.RunReadOnlyQueryAsync(q.Sql, context, ct);
+            if (isError) { failed.Add(new { key = q.Key, error = res }); fresh.Add(q with { Result = FreeformDataBlock.Parse(d.Html).FirstOrDefault(x => x.Key == q.Key)?.Result }); continue; }
+            JsonNode? parsed; try { parsed = JsonNode.Parse(res); } catch (JsonException) { parsed = null; }
+            fresh.Add(q with { Result = parsed });
+        }
+        if (failed.Count == stored.Count) return StatusCode(502, new { error = "فشلت كل الاستعلامات — ربما تغيّرت أعمدة البيانات. راجع المصادر أو أعد البناء بالموديل.", failed });
+        var now = DateTime.UtcNow;
+        var html = FreeformDataBlock.Inject(d.Html, fresh, now);
+        var version = await _store.AddVersionAsync(id, html, $"تحديث البيانات ({fresh.Count - failed.Count} من {stored.Count} استعلامًا)", null, ct);
+        await _store.SetQueriesAsync(id, fresh, now, ct);
+        await _store.AddMessageAsync(id, "assistant", failed.Count == 0 ? $"حُدِّثت البيانات من {stored.Count} استعلامًا." : $"حُدِّثت البيانات من {stored.Count - failed.Count} استعلامًا وفشل {failed.Count}.", version, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct);
+        return Ok(new { version, html = ApplyBrandAssets(html, brand), refreshedAt = now, ok = stored.Count - failed.Count, failed, versions = await _store.VersionsAsync(id, ct) });
     }
 
     /// <summary>حفظ تعديل يدوي للكود (إصدار جديد) و/أو تغيير العنوان.</summary>

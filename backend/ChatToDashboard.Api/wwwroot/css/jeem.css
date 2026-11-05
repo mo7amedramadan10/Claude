@@ -3536,3 +3536,6 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* تصميم حر: أيقونة النوع داخل قائمة «تحويل إلى» */
 .jeem-scope #ff-convert-panel .dropdown-item { display: flex; align-items: center; gap: 8px; }
 .jeem-scope #ff-convert-panel .ff-ico { width: 18px; height: 18px; }
+.jeem-scope #ff-refresh-panel { min-width: 320px; }
+.jeem-scope #ff-refresh-panel .dropdown-item { display: block; white-space: normal; text-align: start; }
+.jeem-scope #ff-refresh-panel .dropdown-item:disabled { opacity: .5; cursor: not-allowed; }

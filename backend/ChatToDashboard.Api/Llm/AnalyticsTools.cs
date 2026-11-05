@@ -1739,7 +1739,26 @@ public class AnalyticsTools
     internal static bool IsTableKnownToProject(string table, SourceContext context) =>
         context.TableFiles.ContainsKey(table) || context.TableSystems.ContainsKey(table);
 
+    /// <summary>
+    /// مراقب محيطي (AsyncLocal) لنداءات الأدوات داخل حلقة واحدة: يراه كل نداء لـ <see cref="ExecuteToolAsync"/> في نفس التدفق
+    /// غير المتزامن أيًّا كان المزوّد، ويمكنه تسجيل النداء وتعديل النص المعاد للموديل (مثل إلحاق مفتاح نتيجة الاستعلام في «تصميم حر»).
+    /// يُضبط حول <c>RunStagedAsync</c> ويُعاد إلى null في finally.
+    /// </summary>
+    public static readonly AsyncLocal<Func<string, JsonObject, string, bool, string>?> ToolObserver = new();
+
     public async Task<(string Result, bool IsError)> ExecuteToolAsync(
+        string toolName, JsonObject input, SourceContext context, CancellationToken ct)
+    {
+        var (result, isError) = await ExecuteToolCoreAsync(toolName, input, context, ct);
+        if (ToolObserver.Value is { } observe)
+        {
+            try { result = observe(toolName, input, result, isError); }
+            catch (Exception ex) { _logger.LogWarning(ex, "فشل مراقب الأدوات لـ {Tool}", toolName); }
+        }
+        return (result, isError);
+    }
+
+    private async Task<(string Result, bool IsError)> ExecuteToolCoreAsync(
         string toolName, JsonObject input, SourceContext context, CancellationToken ct)
     {
         try

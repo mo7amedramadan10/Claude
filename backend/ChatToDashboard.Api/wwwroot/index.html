@@ -1027,6 +1027,7 @@
         <span class="dk-sep"></span>
         <button type="button" id="dk-brand-btn" class="btn btn-sm btn-ghost dk-always" title="هوية المشروع: الشعار والألوان والخط — تُعمَّم على كل النماذج والعروض">🎨 الهوية</button>
         <button type="button" id="dk-tpl-toggle" class="btn btn-sm btn-ghost hidden" title="عرض شرائح هذا العرض على صفحات قالب الشركة أو بالشكل الافتراضي" aria-pressed="true">🏢 القالب: مفعّل</button>
+        <button type="button" id="dk-refresh" class="btn btn-sm btn-ghost" title="إعادة تنفيذ استعلامات شرائح البيانات وتحديث أرقامها بلا موديل">🔄 تحديث البيانات</button>
       </div>
     </div>
     <div id="dk-body" class="dk-body">
@@ -1081,6 +1082,13 @@
         <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
         <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
         <button type="button" id="ff-download" class="btn btn-sm btn-ghost" title="تنزيل ملف HTML">تنزيل</button>
+        <div class="dropdown" id="ff-refresh-dropdown">
+          <button type="button" id="ff-refresh" class="btn btn-sm btn-ghost" title="تحديث أرقام الصفحة من بيانات المشروع الحالية" aria-haspopup="true" aria-expanded="false">🔄 تحديث البيانات</button>
+          <div id="ff-refresh-panel" class="dropdown-panel hidden">
+            <button type="button" class="dropdown-item" id="ff-refresh-fast"><b>تحديث البيانات</b><small class="muted"> — إعادة تنفيذ الاستعلامات المحفوظة بلا موديل (ثوانٍ)</small></button>
+            <button type="button" class="dropdown-item" id="ff-refresh-rebuild"><b>إعادة البناء بالبيانات الحالية</b><small class="muted"> — بالموديل، للصفحات القديمة أو التي كتبت أرقامها حرفيًا</small></button>
+          </div>
+        </div>
         <div class="dropdown" id="ff-convert-dropdown">
           <button type="button" id="ff-convert" class="btn btn-sm btn-ghost" title="إنشاء نسخة من هذا التصميم بنوع آخر (الأصل يبقى)" aria-haspopup="true" aria-expanded="false">⇄ تحويل إلى</button>
           <div id="ff-convert-panel" class="dropdown-panel hidden"></div>

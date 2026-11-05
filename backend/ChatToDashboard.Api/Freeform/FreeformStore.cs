@@ -16,6 +16,10 @@ public class FreeformDesign
     [JsonPropertyName("kind")] public string Kind { get; set; } = "design";
     /// <summary>مفتاح النموذج الذي بُني عليه (من <see cref="FreeformTemplates"/>)؛ null = تصميم حر بلا نموذج.</summary>
     [JsonPropertyName("templateKey")] public string? TemplateKey { get; set; }
+    /// <summary>عدد الاستعلامات المسجَّلة التي تغذّي كتلة بيانات الصفحة (0 = لا بيانات حيّة).</summary>
+    [JsonPropertyName("queryCount")] public int QueryCount { get; set; }
+    /// <summary>آخر تحديث لبيانات الصفحة (بناء أو تحديث بلا موديل).</summary>
+    [JsonPropertyName("dataRefreshedAt")] public DateTime? DataRefreshedAt { get; set; }
     [JsonIgnore] public string Html { get; set; } = "";
     [JsonPropertyName("version")] public int Version { get; set; }
     [JsonPropertyName("presentationId")] public string? PresentationId { get; set; }
@@ -50,7 +54,8 @@ public class FreeformStore
     private volatile bool _schemaReady;
     public FreeformStore(DataStore db) => _db = db;
     private const string T = "[dbo].[FreeformDesigns]", V = "[dbo].[FreeformVersions]", M = "[dbo].[FreeformMessages]";
-    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Q = "[dbo].[FreeformQueries]";
     public static readonly string[] Kinds = { "doc", "slides", "design", "dashboard", "motion" };
     public static string NormalizeKind(string? k) => Kinds.Contains(k ?? "") ? k! : "design";
 
@@ -81,6 +86,10 @@ public class FreeformStore
                 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_FreeformMessages_Design') CREATE INDEX IX_FreeformMessages_Design ON {M} ([DesignId], [Id]);
                 IF COL_LENGTH('dbo.FreeformDesigns', 'Kind') IS NULL ALTER TABLE {T} ADD [Kind] NVARCHAR(16) NOT NULL DEFAULT 'design';
                 IF COL_LENGTH('dbo.FreeformDesigns', 'TemplateKey') IS NULL ALTER TABLE {T} ADD [TemplateKey] NVARCHAR(60) NULL;
+                IF COL_LENGTH('dbo.FreeformDesigns', 'QueryCount') IS NULL ALTER TABLE {T} ADD [QueryCount] INT NOT NULL DEFAULT 0;
+                IF COL_LENGTH('dbo.FreeformDesigns', 'DataRefreshedAt') IS NULL ALTER TABLE {T} ADD [DataRefreshedAt] DATETIME2 NULL;
+                IF OBJECT_ID('dbo.FreeformQueries') IS NULL
+                CREATE TABLE {Q} ([DesignId] NVARCHAR(32) NOT NULL, [Key] NVARCHAR(16) NOT NULL, [Sql] NVARCHAR(MAX) NOT NULL, [Seq] INT NOT NULL, CONSTRAINT PK_FreeformQueries PRIMARY KEY ([DesignId], [Key]));
                 """;
             await command.ExecuteNonQueryAsync(ct);
             _schemaReady = true;
@@ -94,7 +103,7 @@ public class FreeformStore
         var now = DateTime.UtcNow;
         var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = string.IsNullOrWhiteSpace(templateKey) ? null : templateKey.Trim(), Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
+        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
         if (d.Version == 1) await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, 1, @html, @prompt, @size, @now)", new { id = d.Id, html, prompt = Trim(prompt), size = d.SizeBytes, now });
         return d;
     }
@@ -123,6 +132,30 @@ public class FreeformStore
         await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, @v, @html, @prompt, @size, @now)", new { id, v, html, prompt = Trim(prompt), size, now });
         await connection.ExecuteAsync($"DELETE FROM {V} WHERE DesignId = @id AND Version <= @v - @max", new { id, v, max = MaxVersions });
         return v;
+    }
+
+    /// <summary>يستبدل الاستعلامات المسجَّلة للتصميم (مفتاح + SQL) ويحدّث العدّاد ووقت آخر تحديث للبيانات.</summary>
+    public async Task SetQueriesAsync(string id, IReadOnlyList<FreeformQuery> queries, DateTime refreshedAt, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"DELETE FROM {Q} WHERE DesignId = @id", new { id });
+        var seq = 0;
+        foreach (var q in queries) await connection.ExecuteAsync($"INSERT INTO {Q} (DesignId, [Key], [Sql], Seq) VALUES (@id, @key, @sql, @seq)", new { id, key = q.Key, sql = q.Sql, seq = seq++ });
+        await connection.ExecuteAsync($"UPDATE {T} SET QueryCount = @n, DataRefreshedAt = @at WHERE Id = @id", new { id, n = queries.Count, at = refreshedAt });
+    }
+
+    public async Task<IReadOnlyList<FreeformQuery>> QueriesAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return (await connection.QueryAsync<(string Key, string Sql)>($"SELECT [Key], [Sql] FROM {Q} WHERE DesignId = @id ORDER BY Seq", new { id })).Select(r => new FreeformQuery(r.Key, r.Sql, null)).ToList();
+    }
+
+    public async Task TouchDataAsync(string id, DateTime refreshedAt, CancellationToken ct = default)
+    {
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {T} SET DataRefreshedAt = @at WHERE Id = @id", new { id, at = refreshedAt });
     }
 
     public async Task<IReadOnlyList<FreeformVersion>> VersionsAsync(string id, CancellationToken ct = default)
