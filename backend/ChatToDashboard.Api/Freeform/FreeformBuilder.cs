@@ -106,6 +106,7 @@ public class FreeformBuilder
             - `@media print` تطبع كل شريحة في صفحة أفقية مستقلة.
             - عرّف دالة عامة `window.goToSlide(i)` (الفهرس من 0) تنتقل إلى الشريحة وتحدّث حالتها، وضمّن قبل `</body>`:
               `<script src="/js/jeem-slides.js"></script>` — تضيف المنصة بها شريط مصغّرات الشرائح أسفل الصفحة للتنقّل (لا تبنِ شريطًا بنفسك).
+              الشريط ثابت أسفل الصفحة ويعلن ارتفاعه في `--jeem-strip-h` على `<html>`؛ احجز له مساحة: `body{padding-bottom:var(--jeem-strip-h,0px)}` أو اطرحه من ارتفاع الشريحة.
             """,
         "dashboard" => """
             # النوع: لوحة (Dashboard)

@@ -9015,9 +9015,9 @@ el('ff-page-modal').addEventListener('click', e => { if (e.target === el('ff-pag
 el('ffp-go').addEventListener('click', async () => {
   const f = el('ffp-file').files[0]; const err = el('ffp-error'); err.classList.add('hidden');
   if (!f) { err.textContent = 'اختر ملف الصفحة أولًا.'; err.classList.remove('hidden'); return; }
-  if (!/\.html?$/i.test(f.name)) { err.textContent = 'هذا الخيار لصفحات HTML فقط (.html أو .htm).'; err.classList.remove('hidden'); return; }
+  if (!/\.(html?|pptx)$/i.test(f.name)) { err.textContent = 'هذا الخيار لصفحات HTML وملفات PowerPoint (.pptx) فقط.'; err.classList.remove('hidden'); return; }
   const fd = new FormData(); fd.append('file', f); fd.append('kind', ffGalKind); fd.append('title', el('ffp-title').value.trim());
-  el('ffp-go').disabled = true; el('ffp-go').textContent = 'يرفع…';
+  el('ffp-go').disabled = true; el('ffp-go').textContent = /\.pptx$/i.test(f.name) ? 'يرسم الشرائح…' : 'يرفع…';
   try {
     const r = await fetch('/api/freeform/import-page', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);

@@ -39,6 +39,10 @@
     bar.appendChild(row); bar.appendChild(cnt); root.appendChild(tg); root.appendChild(bar); document.body.appendChild(root);
     function setHidden(h) { hidden = h; root.classList.toggle('hid', h); tg.textContent = h ? '▴ إظهار المصغّرات' : '▾ إخفاء المصغّرات'; tg.setAttribute('aria-expanded', h ? 'false' : 'true'); try { localStorage.setItem('jeemStripHidden', h ? '1' : '0'); } catch (e) {} }
     tg.addEventListener('click', function () { setHidden(!hidden); });
+    // ارتفاع الشريط المرئي يُعلن للصفحة في المتغيّر --jeem-strip-h على <html> حتى تحجز له مساحة (الشريط ثابت أسفل الصفحة ويغطي ما تحته).
+    function announceHeight() { var h = hidden ? tg.getBoundingClientRect().height : root.getBoundingClientRect().height; try { document.documentElement.style.setProperty('--jeem-strip-h', Math.round(h) + 'px'); } catch (e) {} }
+    if ('ResizeObserver' in window) new ResizeObserver(announceHeight).observe(root); else setTimeout(announceHeight, 50);
+    var _setHidden = setHidden; setHidden = function (h) { _setHidden(h); setTimeout(announceHeight, 0); };
     var thumbs = [];
     function slideSize(el) { var r = el.getBoundingClientRect(); if (r.width > 50 && r.height > 50) return { w: r.width, h: r.height }; var v = list.filter(isVisible)[0]; if (v) { var rv = v.getBoundingClientRect(); if (rv.width > 50) return { w: rv.width, h: rv.height }; } return { w: innerWidth, h: Math.max(innerHeight, innerWidth * 9 / 16) }; }
     function renderThumb(k) {

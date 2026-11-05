@@ -51,7 +51,8 @@ public class FreeformMessage
 /// <summary>جداول <c>dbo.FreeformDesigns</c> (آخر HTML) و<c>dbo.FreeformVersions</c> (كل إصدار بطلبه) و<c>dbo.FreeformMessages</c>.</summary>
 public class FreeformStore
 {
-    public const int MaxHtmlBytes = 4 * 1024 * 1024;
+    /// <summary>حد صفحة التصميم (رُفع من 4 إلى 16 ميغابايت ليتسع لعرض PowerPoint مرسومًا بصوره المضمّنة).</summary>
+    public const int MaxHtmlBytes = 16 * 1024 * 1024;
     public const int MaxVersions = 40;
     private readonly DataStore _db;
     private readonly SemaphoreSlim _schemaGate = new(1, 1);

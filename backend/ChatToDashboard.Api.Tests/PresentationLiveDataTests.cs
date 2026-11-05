@@ -101,3 +101,26 @@ public class PresentationLiveDataTests
         File.WriteAllText(Path.Combine(Scratch, "live-deck-fresh.json"), JsonSerializer.Serialize(fresh, DeckSpec.Json));
     }
 }
+
+/// <summary>رفع PowerPoint كما هو: صفحة شرائح واحدة بكل شريحة SVG مضمّنة وتنقّل وgoToSlide.</summary>
+public class PptxPageBuilderTests
+{
+    private const string Scratch = "/tmp/claude-0/-home-user-Claude/da72bb5f-6107-5fbc-b2dd-f8387c2e28b5/scratchpad/decks";
+
+    [Fact]
+    public void Build_GeneratedDeck_OneSectionPerSlide_SelfContained()
+    {
+        var pptx = DeckPptxBuilder.Build(new DeckPptxRequest { Title = "x", Slides = { new DeckPptxSlideInput { Title = "عنوان", IsTitle = true }, new DeckPptxSlideInput { Title = "نقاط", Bullets = new() { "أ", "ب" } } } });
+        var r = ChatToDashboard.Api.Freeform.PptxPageBuilder.Build(pptx, "تجربة");
+        Assert.Equal(2, r.SlideCount);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(r.Html, "<section class=\"slide").Count);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(r.Html, "<svg xmlns=").Count);
+        Assert.Contains("window.goToSlide=go", r.Html);
+        Assert.Contains("<title>تجربة</title>", r.Html);
+        Assert.Contains("عنوان", r.Html);
+        Assert.DoesNotContain("/api/decks/brand/template", r.Html); // الصور مضمّنة لا روابط خادم
+        if (Directory.Exists(Scratch)) File.WriteAllText(Path.Combine(Scratch, "pptx-page.html"), r.Html);
+        var userFile = Path.Combine(Scratch, "..", "imp", "user.pptx");
+        if (File.Exists(userFile)) { var u = ChatToDashboard.Api.Freeform.PptxPageBuilder.Build(File.ReadAllBytes(userFile), "ملف المستخدم"); Assert.True(u.SlideCount > 0); File.WriteAllText(Path.Combine(Scratch, "pptx-page-user.html"), u.Html); }
+    }
+}
