@@ -8744,6 +8744,10 @@ function ffGalFiltered() {
   return FF.list.filter(d => (FF.gal.tab === 'all' || (FF.gal.tab === 'mine' ? d.createdByUserId === me : d.createdByUserId !== me))
     && (!FF.gal.kind || (d.kind || 'design') === FF.gal.kind) && (!q || (d.title || '').toLowerCase().includes(q)));
 }
+// صفحات المعاينة داخل iframe بـ srcdoc: الرابط الداخلي `#قسم` يُحلّ على عنوان الصفحة الأم (about:srcdoc يرث أصلها) فينتقل الإطار
+// إلى المنصة نفسها. نحقن قبل العرض اعتراضًا يحوّل روابط الأجزاء إلى تمرير داخل الوثيقة. الصفحة المحفوظة/المنشورة لا تُمس.
+const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('click',function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href^=\"#\"]');if(!a)return;e.preventDefault();var id=decodeURIComponent(a.getAttribute('href').slice(1));var t=id&&(document.getElementById(id)||document.querySelector('[name=\"'+id+'\"]'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'});else if(!id)window.scrollTo({top:0,behavior:'smooth'})},true)<\/script>";
+function ffSandboxHtml(html) { if (!html || html.includes('ff-anchor-fix')) return html; return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, FF_ANCHOR_FIX + '</body>') : html + FF_ANCHOR_FIX; }
 async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
   el('ff-title').textContent = 'تصميم حر'; el('ff-meta').textContent = 'اكتب طلبك في المحادثة';
@@ -8773,7 +8777,7 @@ async function ffLoadThumb(card) {
   const id = card.dataset.ff; const f = card.querySelector('.ff-thumb'); if (!f) return;
   let html = FF.gal.htmlCache[id];
   if (html == null) { try { const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); html = r.ok ? ((await r.json()).html || '') : ''; } catch { html = ''; } FF.gal.htmlCache[id] = html; }
-  if (html) f.srcdoc = html;
+  if (html) f.srcdoc = ffSandboxHtml(html);
 }
 document.querySelectorAll('.ff-tab').forEach(t => t.addEventListener('click', () => { FF.gal.tab = t.dataset.tab; ffRenderGallery(); }));
 el('ff-search').addEventListener('input', () => { FF.gal.q = el('ff-search').value; ffRenderGallery(); });
@@ -8871,7 +8875,7 @@ function openFfGalPreview(t) {
 function ffLiveInto(holder, t) {
   if (!holder || !window.JEEM_FF_DEMO) return;
   const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-scripts'); f.tabIndex = -1; f.title = `معاينة ${t.name}`; f.setAttribute('aria-hidden', 'true');
-  holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4)); f.srcdoc = JEEM_FF_DEMO.build(t);
+  holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4)); f.srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t));
 }
 // معاينة تفاعلية كاملة ببيانات تجريبية — الصفحة في إطار معزول بحجمها الطبيعي مع شريط يوضّح أن الأرقام توضيحية
 function openFfGalDemo(t) {
@@ -8884,7 +8888,7 @@ function openFfGalDemo(t) {
       <button type="button" class="btn btn-primary" id="ffgal-demo-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
     </div>
     <iframe class="ffgal-demo-frame" id="ffgal-demo-frame" title="معاينة تفاعلية: ${esc(t.name)}" sandbox="allow-scripts allow-modals"></iframe>`;
-  el('ffgal-demo-frame').srcdoc = JEEM_FF_DEMO.build(t);
+  el('ffgal-demo-frame').srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t));
   el('ffgal-demo-back-btn').addEventListener('click', () => { el('ffgal-view-demo').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden'); });
   el('ffgal-demo-use-btn').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(t); });
   el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-demo').classList.remove('hidden');
@@ -8929,7 +8933,7 @@ function ffRender() {
   el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
-  el('ff-preview').srcdoc = FF.html || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
+  el('ff-preview').srcdoc = ffSandboxHtml(FF.html) || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
 }
 function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }
 function ffRenderMessages() {
