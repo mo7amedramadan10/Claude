@@ -128,6 +128,43 @@ public class FreeformController : ControllerBase
         return Ok(new { template = t, pagesRead = doc.Pages.Count(p => !p.IsEmpty), warnings = doc.Warnings });
     }
 
+    /// <summary>رفع صفحة HTML لتصير تصميمًا <b>كما هي بلا أي تعديل</b> (لا موديل، لا نموذج): الملف يُحفظ حرفيًا كإصدار 1 ويُفتح في
+    /// المحرر ليُعدَّل نصيًا أو بالمحادثة أو يُنشر. الحجم بحد صفحة التصميم (4MB).</summary>
+    [HttpPost("import-page")]
+    [RequestSizeLimit(FreeformStore.MaxHtmlBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = FreeformStore.MaxHtmlBytes + 1024 * 1024)]
+    public async Task<IActionResult> ImportPage([FromForm] IFormFile? file, [FromForm] string? kind, [FromForm] string? title, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملف صفحة بصيغة .html." });
+        if (!Regex.IsMatch(file.FileName, @"\.html?$", RegexOptions.IgnoreCase)) return BadRequest(new { error = "هذا الخيار لصفحات HTML فقط (.html أو .htm). لملفات PowerPoint وPDF استخدم «رفع من ملف موجود»." });
+        if (file.Length > FreeformStore.MaxHtmlBytes) return BadRequest(new { error = $"حجم الصفحة يتجاوز {FreeformStore.MaxHtmlBytes / 1024 / 1024} ميغابايت." });
+        string html;
+        using (var reader = new StreamReader(file.OpenReadStream(), new UTF8Encoding(false), detectEncodingFromByteOrderMarks: true)) html = await reader.ReadToEndAsync(ct);
+        if (string.IsNullOrWhiteSpace(html)) return BadRequest(new { error = "الملف فارغ." });
+        var name = string.IsNullOrWhiteSpace(title) ? TitleFromHtml(html) ?? Path.GetFileNameWithoutExtension(file.FileName) : title.Trim();
+        if (name.Length > 120) name = name[..120];
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, name, html, $"رفع الصفحة «{file.FileName}» كما هي", kind, null, ct);
+        await _store.AddMessageAsync(design.Id, "user", $"رفع الصفحة «{file.FileName}» كما هي بلا تعديل.", null, ct);
+        await _store.AddMessageAsync(design.Id, "assistant", "وُضعت الصفحة كما رُفعت حرفيًا (بلا أي تعديل من الموديل). يمكنك الآن تعديل نصها من مساحة العمل، أو طلب تعديلات بالمحادثة، أو نشرها.", 1, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct);
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct) });
+    }
+
+    /// <summary>عنوان الصفحة من <c>&lt;title&gt;</c> أو أول <c>&lt;h1&gt;</c> (بلا وسوم)، أو null.</summary>
+    internal static string? TitleFromHtml(string html)
+    {
+        foreach (var rx in new[] { @"<title\b[^>]*>([\s\S]*?)</title>", @"<h1\b[^>]*>([\s\S]*?)</h1>" })
+        {
+            var m = Regex.Match(html, rx, RegexOptions.IgnoreCase);
+            if (!m.Success) continue;
+            var t = System.Net.WebUtility.HtmlDecode(Regex.Replace(Regex.Replace(m.Groups[1].Value, "<[^>]+>", ""), @"\s+", " ")).Trim();
+            if (t.Length > 0) return t;
+        }
+        return null;
+    }
+
     [HttpDelete("templates/{key}")]
     public async Task<IActionResult> DeleteTemplate(string key, CancellationToken ct)
     {

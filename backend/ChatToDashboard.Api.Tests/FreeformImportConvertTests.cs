@@ -33,3 +33,16 @@ public class FreeformImportConvertTests
         Assert.True(t.Sections.Count < 300);
     }
 }
+
+/// <summary>رفع صفحة HTML كما هي: العنوان يُستخرج من title ثم h1 بلا وسوم، وإلا null.</summary>
+public class FreeformImportPageTests
+{
+    [Xunit.Fact]
+    public void TitleFromHtml_PrefersTitle_ThenH1_ElseNull()
+    {
+        Xunit.Assert.Equal("صفحتي", ChatToDashboard.Api.Controllers.FreeformController.TitleFromHtml("<html><head><title> صفحتي </title></head><body><h1>غير</h1></body></html>"));
+        Xunit.Assert.Equal("عنوان رئيسي", ChatToDashboard.Api.Controllers.FreeformController.TitleFromHtml("<body><h1 class=\"x\">عنوان <b>رئيسي</b></h1></body>"));
+        Xunit.Assert.Null(ChatToDashboard.Api.Controllers.FreeformController.TitleFromHtml("<p>بلا عنوان</p>"));
+        Xunit.Assert.Equal("أ & ب", ChatToDashboard.Api.Controllers.FreeformController.TitleFromHtml("<title>أ &amp; ب</title>"));
+    }
+}

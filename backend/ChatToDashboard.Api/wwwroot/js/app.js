@@ -9008,6 +9008,24 @@ el('ffi-go').addEventListener('click', async () => {
   } catch (e) { err.textContent = 'تعذّر: ' + e.message; err.classList.remove('hidden'); }
   finally { el('ffi-go').disabled = false; el('ffi-go').textContent = 'رفع وتحويل إلى نموذج'; }
 });
+// ---------- رفع صفحة HTML كما هي: تصميم جديد بالملف حرفيًا (بلا موديل ولا نموذج) ----------
+el('ffgal-start-page').addEventListener('click', () => { el('ffp-kind-label').textContent = (FF_KINDS[ffGalKind] || FF_KINDS.design).label; el('ffp-file').value = ''; el('ffp-title').value = ''; el('ffp-error').classList.add('hidden'); el('ff-page-modal').classList.remove('hidden'); });
+el('ffp-cancel').addEventListener('click', () => el('ff-page-modal').classList.add('hidden'));
+el('ff-page-modal').addEventListener('click', e => { if (e.target === el('ff-page-modal')) el('ff-page-modal').classList.add('hidden'); });
+el('ffp-go').addEventListener('click', async () => {
+  const f = el('ffp-file').files[0]; const err = el('ffp-error'); err.classList.add('hidden');
+  if (!f) { err.textContent = 'اختر ملف الصفحة أولًا.'; err.classList.remove('hidden'); return; }
+  if (!/\.html?$/i.test(f.name)) { err.textContent = 'هذا الخيار لصفحات HTML فقط (.html أو .htm).'; err.classList.remove('hidden'); return; }
+  const fd = new FormData(); fd.append('file', f); fd.append('kind', ffGalKind); fd.append('title', el('ffp-title').value.trim());
+  el('ffp-go').disabled = true; el('ffp-go').textContent = 'يرفع…';
+  try {
+    const r = await fetch('/api/freeform/import-page', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    el('ff-page-modal').classList.add('hidden'); closeFfGallery();
+    FF.kind = d.design.kind || ffGalKind; await ffOpen(d.design.id);
+  } catch (e) { err.textContent = 'تعذّر: ' + e.message; err.classList.remove('hidden'); }
+  finally { el('ffp-go').disabled = false; el('ffp-go').textContent = 'رفع كما هي'; }
+});
 // ---------- تحويل تصميم إلى نوع آخر: نسخة جديدة بالنوع المطلوب، والأصل يبقى ----------
 el('ff-convert').addEventListener('click', e => {
   e.stopPropagation(); const panel = el('ff-convert-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
