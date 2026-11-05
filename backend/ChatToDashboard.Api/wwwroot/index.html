@@ -1120,7 +1120,7 @@
           </div>
         </div>
         <div class="ff-make">
-          <h3>اصنع شيئًا جديدًا</h3>
+          <div class="ff-sec-head"><h3>اصنع شيئًا جديدًا</h3><p>اختر نوع المخرج، ثم نموذجًا أو تصميمًا حرًّا، واكتب طلبك في المحادثة.</p></div>
           <div class="ff-kinds" role="list">
             <button type="button" class="ff-kind k-doc" data-kind="doc" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><path d="M14 6h14l8 8v26a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M28 6v8h8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg></span><span class="ff-kind-name">مستند <em>جديد</em></span><small>مذكرة، تقرير، محضر، عرض سعر</small></button>
             <button type="button" class="ff-kind k-slides" data-kind="slides" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><rect x="8" y="10" width="32" height="22" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 32v8M18 40h12M8 10h32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">شرائح <em>جديد</em></span><small>عرض تقديمي بتنقّل وشاشة كاملة</small></button>
@@ -1128,8 +1128,9 @@
             <button type="button" class="ff-kind k-dashboard" data-kind="dashboard" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><path d="M10 38V22M20 38V12M30 38V18M40 38V26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M6 40h36" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">لوحة <em>تجريبي</em></span><small>مؤشرات ورسوم من بياناتك</small></button>
             <button type="button" class="ff-kind k-motion" data-kind="motion" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><circle cx="29" cy="24" r="10" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M6 18h10M4 24h8M6 30h10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">حركة <em>تجريبي</em></span><small>مشهد متحرك قصير يشرح فكرة</small></button>
           </div>
-          <p class="muted ff-make-hint" id="ff-make-hint">اختر نوعًا ثم اكتب طلبك في المحادثة. جيم يكتب الصفحة كاملة بهوية مشروعك ويقدر يستخدم بياناته.</p>
+          <p class="ff-make-hint" id="ff-make-hint" hidden></p>
         </div>
+        <div class="ff-sec-head ff-recent-head"><h3>تصاميمك السابقة</h3><p id="ff-recent-note">كل تصاميم هذا المشروع — افتح أيًّا منها للتعديل أو النشر.</p><span class="ff-count" id="ff-count"></span></div>
         <div id="ff-list" class="ff-cards" aria-live="polite"></div>
       </div>
       <div id="ff-preview-wrap" class="ff-preview-wrap hidden">

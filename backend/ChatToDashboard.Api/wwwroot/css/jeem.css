@@ -3393,7 +3393,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 
 /* تصميم حر (screen-freeform) — نفس بنية منشئ العروض */
 .jeem-scope .ff-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.jeem-scope .ff-start { flex: 1; overflow: auto; background: #fff; padding: 20px 28px 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-content: start; }
+.jeem-scope .ff-start { flex: 1; overflow: auto; background: #fff; padding: 24px 32px 36px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-content: start; }
 .jeem-scope .ff-start > * { min-width: 0; }
 .jeem-scope .ff-preview-wrap { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-content: stretch; justify-content: center; background: var(--plane); padding: 14px; gap: 8px; }
 .jeem-scope .ff-edit-bar { flex: 1 0 100%; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: #FFF4CC; border: 1px solid #F2D77A; color: #5A4300; font-size: var(--fs-sm); }
@@ -3408,10 +3408,10 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 
 /* بطاقات «اصنع شيئًا جديدًا» في تصميم حر — نفس فكرة اختيار النوع في Claude */
 .jeem-scope .ff-make { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
-.jeem-scope .ff-make h3 { margin: 0; font-size: var(--fs-md); font-weight: 600; color: var(--ink-2); }
-.jeem-scope .ff-kinds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; max-width: 900px; }
+.jeem-scope .ff-make h3 { margin: 0; }
+.jeem-scope .ff-kinds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
 @media (max-width: 760px) { .jeem-scope .ff-kinds { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } }
-.jeem-scope .ff-kind { all: unset; cursor: pointer; display: grid; gap: 6px; border-radius: 14px; padding: 4px; transition: transform .15s; }
+.jeem-scope .ff-kind { all: unset; cursor: pointer; display: grid; gap: 8px; border-radius: 14px; padding: 4px; transition: transform .15s; align-content: start; }
 .jeem-scope .ff-kind:hover, .jeem-scope .ff-kind:focus-visible { transform: translateY(-2px); outline: none; }
 .jeem-scope .ff-kind:focus-visible .ff-kind-art, .jeem-scope .ff-kind[aria-pressed="true"] .ff-kind-art { box-shadow: 0 0 0 3px var(--brand-blue); }
 .jeem-scope .ff-kind-art { aspect-ratio: 3 / 2; border-radius: 14px; display: grid; place-items: center; position: relative; overflow: hidden; }
@@ -3422,17 +3422,23 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .k-design .ff-kind-art { background: #E3D7FA; color: #6A3FC9; }
 .jeem-scope .k-dashboard .ff-kind-art { background: #F8CFCF; color: #B3261E; }
 .jeem-scope .k-motion .ff-kind-art { background: #CFEFE5; color: #0E7A5C; }
-.jeem-scope .ff-kind-name { font-weight: 600; font-size: var(--fs-sm); display: flex; align-items: center; gap: 6px; }
-.jeem-scope .ff-kind-name em { font-style: normal; font-size: 10px; padding: 1px 7px; border-radius: 999px; background: var(--blue-50); color: var(--blue-700); border: 1px solid var(--line); }
-.jeem-scope .ff-kind small { font-size: var(--fs-xs); color: var(--ink-3); }
+.jeem-scope .ff-kind-name { font-weight: 700; font-size: 15px; color: var(--ink); display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.jeem-scope .ff-kind-name em { font-style: normal; font-size: 11px; font-weight: 600; line-height: 1.5; padding: 1px 8px; border-radius: 999px; background: var(--blue-50); color: var(--blue-700); border: 1px solid transparent; }
+.jeem-scope .ff-kind small { font-size: 13px; line-height: 1.6; color: var(--ink-3); }
 .jeem-scope .ff-make-hint { margin: 0; font-size: var(--fs-xs); }
+.jeem-scope .ff-sec-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.jeem-scope .ff-sec-head h3 { margin: 0; font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.jeem-scope .ff-sec-head p { margin: 0; font-size: 13px; color: var(--ink-3); line-height: 1.6; }
+.jeem-scope .ff-recent-head { padding-top: 24px; border-top: 1px solid var(--line-2); }
+.jeem-scope .ff-count { margin-inline-start: auto; font-size: 12px; font-weight: 600; color: var(--ink-3); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 2px 10px; }
+.jeem-scope .ff-recent-head + .ff-cards { margin-top: 4px; }
 .jeem-scope .ff-kind-chip { font-size: 10px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); margin-inline-start: 6px; vertical-align: middle; }
 
 /* معرض تصميم حر — نسخة من معرض Artifacts في Claude: رأس بعنوان وتبويبات وأدوات، ثم بطاقات التصاميم السابقة بمعاينة مصغّرة */
-.jeem-scope .ff-gal-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.jeem-scope .ff-gal-title { margin: 0; font-size: 22px; font-weight: 600; color: var(--ink); }
+.jeem-scope .ff-gal-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--line-2); }
+.jeem-scope .ff-gal-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; }
 .jeem-scope .ff-tabs { display: flex; gap: 2px; }
-.jeem-scope .ff-tab { all: unset; cursor: pointer; padding: 6px 12px; border-radius: 999px; font-size: var(--fs-sm); color: var(--ink-3); transition: background .15s, color .15s; }
+.jeem-scope .ff-tab { all: unset; cursor: pointer; padding: 7px 14px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--ink-3); transition: background .15s, color .15s; }
 .jeem-scope .ff-tab:hover { color: var(--ink); background: var(--surface-2); }
 .jeem-scope .ff-tab[aria-selected="true"] { color: var(--ink); background: var(--line-2); font-weight: 600; }
 .jeem-scope .ff-tab:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
@@ -3447,7 +3453,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-filter-item[aria-checked="true"] { font-weight: 600; color: var(--brand-blue); }
 
 .jeem-scope .ff-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-.jeem-scope .ff-cards:empty::before { content: attr(data-empty); grid-column: 1 / -1; color: var(--ink-3); font-size: var(--fs-sm); padding: 24px 0; }
+.jeem-scope .ff-cards:empty::before { content: attr(data-empty); grid-column: 1 / -1; color: var(--ink-3); font-size: 14px; padding: 28px 16px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
 .jeem-scope .ff-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; cursor: pointer; display: grid; grid-template-rows: auto auto; min-width: 0; transition: border-color .15s, transform .15s, box-shadow .15s; }
 .jeem-scope .ff-card:hover, .jeem-scope .ff-card:focus-visible { border-color: var(--line-3, var(--ink-3)); transform: translateY(-2px); box-shadow: var(--shadow-1); outline: none; }
 .jeem-scope .ff-card-art { aspect-ratio: 16 / 10; position: relative; overflow: hidden; background: var(--surface-2); }
@@ -3457,15 +3463,15 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-card-paper { position: absolute; inset: 14px 14px 0 14px; background: #fff; border-radius: 8px 8px 0 0; box-shadow: 0 2px 10px rgba(16, 32, 48, .10); overflow: hidden; }
 .jeem-scope .ff-thumb { position: absolute; top: 0; inset-inline-start: 0; width: 1100px; height: 760px; border: 0; pointer-events: none; transform-origin: top right; transform: scale(var(--ff-s, .2)); background: #fff; }
 [dir="ltr"] .jeem-scope .ff-thumb { transform-origin: top left; }
-.jeem-scope .ff-card-foot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-width: 0; }
+.jeem-scope .ff-card-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px; min-width: 0; border-top: 1px solid var(--line-2); }
 .jeem-scope .ff-card-ico { flex: none; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--surface-2); color: var(--ink-2); }
 .jeem-scope .ff-card-ico .ff-ico { width: 20px; height: 20px; }
 .jeem-scope .ff-card.k-doc .ff-card-ico { background: #CFE0FA; color: #2A5BD7; } .jeem-scope .ff-card.k-slides .ff-card-ico { background: #F6DCC4; color: #9A4A15; }
 .jeem-scope .ff-card.k-design .ff-card-ico { background: #E3D7FA; color: #6A3FC9; } .jeem-scope .ff-card.k-dashboard .ff-card-ico { background: #F8CFCF; color: #B3261E; }
 .jeem-scope .ff-card.k-motion .ff-card-ico { background: #CFEFE5; color: #0E7A5C; }
 .jeem-scope .ff-card-foot > div { min-width: 0; display: grid; gap: 1px; }
-.jeem-scope .ff-card-foot b { font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.jeem-scope .ff-card-foot small { font-size: var(--fs-xs); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jeem-scope .ff-card-foot b { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jeem-scope .ff-card-foot small { font-size: 12px; color: var(--ink-3); line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* عرض القائمة: صف لكل تصميم بلا معاينة */
 .jeem-scope .ff-cards.list { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .jeem-scope .ff-cards.list .ff-card { border: 0; border-radius: 0; border-bottom: 1px solid var(--line); grid-template-rows: auto; transform: none; box-shadow: none; }
@@ -3475,7 +3481,8 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-cards.list .ff-card-foot { padding: 10px 14px; }
 .jeem-scope .ff-cards.list .ff-card-foot > div { grid-template-columns: 1fr auto; gap: 12px; align-items: center; flex: 1; }
 @media (max-width: 720px) {
-  .jeem-scope .ff-start { padding: 14px 16px 20px; }
+  .jeem-scope .ff-start { padding: 16px 16px 24px; gap: 22px; }
+  .jeem-scope .ff-gal-title { font-size: 22px; }
   .jeem-scope .ff-gal-head { gap: 10px; }
   .jeem-scope .ff-search:focus-within input, .jeem-scope .ff-search.open input { width: 110px; }
   .jeem-scope .ff-cards { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }

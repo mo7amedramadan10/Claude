@@ -8720,7 +8720,7 @@ function dkbRenderDefaults() {
 // المحادثة تنتج صفحة HTML كاملة (كـ artifacts) تُعرض في iframe معزول (sandbox بلا same-origin) مع إصدارات وتعديل كود ونشر.
 const FF = { design: null, html: '', versions: [], messages: [], viewing: null, busy: false, list: [], mobile: false, kind: null, template: undefined, templates: null };
 const FF_KINDS = { doc: { label: 'مستند', ph: 'مثال: مذكرة داخلية عن خطة الربع القادم بأقسام الأهداف والميزانية والجدول الزمني… أو: تقرير أداء المبيعات هذا الشهر من بياناتي' }, slides: { label: 'شرائح', ph: 'مثال: عرض تقديمي عن إطلاق منتج جديد في 10 شرائح: المشكلة، الحل، السوق، الخطة، الفريق' }, design: { label: 'تصميم', ph: 'مثال: صفحة هبوط لخدمة جديدة بقسم أعلى وميزات وشهادات ونموذج تواصل… أو: نموذج أولي لشاشة طلب إجازة' }, dashboard: { label: 'لوحة', ph: 'مثال: لوحة متابعة المبيعات بمؤشرات الإيراد والصفقات واتجاه شهري وتوزيع بالمنطقة من بياناتي' }, motion: { label: 'حركة', ph: 'مثال: مشهد متحرك 20 ثانية يشرح رحلة الطلب من الاستلام حتى التسليم بأربع خطوات' } };
-function ffSetKind(k) { FF.kind = k; const info = FF_KINDS[k]; el('ff-q').placeholder = info ? info.ph : ''; el('ff-head-desc').textContent = info ? `${info.label} جديد — اكتب طلبك` : 'اختر نوعًا من اللوحة ثم اكتب طلبك'; document.querySelectorAll('.ff-kind').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === k ? 'true' : 'false')); el('ff-make-hint').textContent = info ? `النوع: ${info.label}. اكتب طلبك في المحادثة (يسار) وسيُبنى بهوية مشروعك.` : 'اختر نوعًا ثم اكتب طلبك في المحادثة.'; }
+function ffSetKind(k) { FF.kind = k; const info = FF_KINDS[k]; el('ff-q').placeholder = info ? info.ph : ''; el('ff-head-desc').textContent = info ? `${info.label} جديد — اكتب طلبك` : 'اختر نوعًا من اللوحة ثم اكتب طلبك'; document.querySelectorAll('.ff-kind').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === k ? 'true' : 'false')); }
 document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', () => { ffSetKind(b.dataset.kind); openFfGallery(b.dataset.kind); }));
 async function loadFreeformScreen() { if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
 // حالة البداية = معرض كمعرض Artifacts في Claude: تبويبات (الكل/تصاميمي/مشترك معي)، بحث، تصفية بالنوع، شبكة/قائمة، وبطاقات بمعاينة مصغّرة حيّة
@@ -8770,6 +8770,7 @@ function ffRenderGallery() {
   box.classList.toggle('list', FF.gal.list); el('ff-view-btn').setAttribute('aria-pressed', FF.gal.list ? 'true' : 'false'); el('ff-view-btn').title = FF.gal.list ? 'عرض كشبكة' : 'عرض كقائمة';
   el('ff-filter-btn').classList.toggle('active', !!FF.gal.kind);
   box.dataset.empty = FF.list.length ? 'لا تصاميم تطابق التصفية.' : 'لا تصاميم بعد — اختر نوعًا من الأعلى واكتب طلبك.';
+  el('ff-count').textContent = FF.list.length ? (items.length === FF.list.length ? `${FF.list.length.toLocaleString('en-US')} تصميم` : `${items.length.toLocaleString('en-US')} من ${FF.list.length.toLocaleString('en-US')}`) : '';
   box.innerHTML = items.map(d => { const k = FF_KINDS[d.kind] ? d.kind : 'design'; const opened = ffOpenedAt(d.id);
     return `<article class="ff-card k-${k}" data-ff="${esc(d.id)}" role="button" tabindex="0" aria-label="${esc(d.title)}">
       <div class="ff-card-art"><div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(d.title)}"></iframe></div></div>
