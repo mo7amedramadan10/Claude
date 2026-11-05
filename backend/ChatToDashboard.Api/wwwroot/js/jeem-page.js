@@ -35,9 +35,41 @@
     else resolve(m.result);
   });
 
+  function platformOrigin() {
+    const me = document.currentScript || document.querySelector('script[src*="jeem-page.js"]');
+    try { return me && me.src ? new URL(me.src).origin : location.origin; } catch (e) { return location.origin; }
+  }
+  // نفس عقد صفحة المشاهدة (presentation.html) لكن بنداء مباشر من صفحة بأصل المنصة.
+  async function viaApi(base, type, payload) {
+    const key = payload && payload.key;
+    const okKey = typeof key === 'string' && /^[\w.-]{1,100}$/.test(key);
+    const fail = async r => {
+      const body = await r.json().catch(() => ({}));
+      const code = r.status === 409 ? 'conflict' : r.status === 401 ? 'sign_in_required' : r.status === 403 ? 'forbidden' : r.status === 404 ? 'not_found' : 'error';
+      throw Object.assign(new Error(body.error || ('خطأ (' + r.status + ')')), { code, status: r.status, version: body.version });
+    };
+    const call = async (path, init) => { const r = await fetch(base + path, init); if (!r.ok) await fail(r); return r.json(); };
+    if (type === 'viewer') return call('/access');
+    if (type === 'data') return call('/live-data', { cache: 'no-store' });
+    if (type === 'list') return call('/data');
+    if (!okKey) throw Object.assign(new Error('مفتاح غير صالح'), { code: 'bad_key', status: 400 });
+    if (type === 'get') return call('/data/' + encodeURIComponent(key), { cache: 'no-store' });
+    if (type === 'set') return call('/data/' + encodeURIComponent(key), { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: payload.value === undefined ? null : payload.value, version: typeof payload.version === 'number' ? payload.version : null }) });
+    throw Object.assign(new Error('نوع غير معروف: ' + type), { code: 'bad_type', status: 400 });
+  }
   // بديل محلي خارج المنصة: نفس العقد على localStorage (مفيد أثناء التأليف).
   function local(type, payload) {
-    const ns = 'jeem.store.' + (location.pathname || 'page') + ':';
+    // صفحة فتحتها مساحة عمل «تصميم حر» في نافذة (blob:) تحمل meta jeem-design: المخزن نفسه الذي تستخدمه المعاينة هناك
+    // (jeem.ff.<id>:<key>) فتتشارك النافذة ومساحة العمل البيانات حتى النشر؛ وإلا مسار الصفحة كما كان.
+    const designMeta = document.querySelector('meta[name="jeem-design"]');
+    const designId = designMeta && designMeta.content;
+    // تصميم منشور: النافذة تحمل أصل المنصة (blob من صفحتها) فتنادي واجهة بيانات العرض المنشور مباشرة بكوكي المستخدم،
+    // فتتشارك النافذة ومساحة العمل والرابط العام البيانات نفسها.
+    const presentationId = designMeta && designMeta.getAttribute('data-presentation');
+    // أصل المنصة من مصدر هذا السكربت (داخل blob: لا تُحل الروابط النسبية حتى في fetch).
+    if (presentationId) return viaApi(platformOrigin() + '/api/presentations/' + encodeURIComponent(presentationId), type, payload);
+    const ns = designId ? 'jeem.ff.' + designId + ':' : 'jeem.store.' + (location.pathname || 'page') + ':';
     try {
       if (type === 'get') { const raw = localStorage.getItem(ns + payload.key); return Promise.resolve(raw ? JSON.parse(raw) : { value: null, version: 0 }); }
       if (type === 'set') { const cur = JSON.parse(localStorage.getItem(ns + payload.key) || '{"version":0}'); const next = { value: payload.value, version: (cur.version || 0) + 1, updatedAt: new Date().toISOString() }; localStorage.setItem(ns + payload.key, JSON.stringify(next)); return Promise.resolve({ version: next.version }); }

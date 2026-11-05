@@ -9192,7 +9192,20 @@ el('ff-title').addEventListener('blur', async () => {
   const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: t }) });
   if (r.ok) FF.design.title = t;
 });
-el('ff-open').addEventListener('click', () => { if (!FF.html) return; const blob = new Blob([FF.html], { type: 'text/html' }); const url = URL.createObjectURL(blob); window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000); });
+// «فتح في نافذة» يفتح الصفحة من رابط blob: الروابط الجذرية مثل /js/jeem-page.js لا تُحل هناك فيصير الجسر غائبًا وتتحول الأجزاء
+// القابلة للتعديل إلى عرض فقط. نجعل الروابط الجذرية مطلقة إلى أصل المنصة ونضيف معرّف التصميم (meta jeem-design) ليستخدم
+// jeem-page.js المخزن المحلي نفسه الذي تستخدمه مساحة العمل (jeem.ff.<id>:<key>) فتتشارك النافذة والمعاينة البيانات حتى النشر؛
+// وبعد النشر تحمل الوسم معرّف العرض (data-presentation) فتنادي النافذة بيانات العرض المنشور مباشرة (أصل المنصة + كوكي المستخدم).
+function ffStandaloneHtml(html) {
+  let out = html.replace(/(\s(?:src|href)=["'])\/(?!\/)/gi, `$1${location.origin}/`);
+  if (FF.design && !/name=["']jeem-design["']/i.test(out)) {
+    const tag = `<meta name="jeem-design" content="${esc(FF.design.id)}"${FF.design.presentationId ? ` data-presentation="${esc(FF.design.presentationId)}"` : ''}>`;
+    const head = out.match(/<head\b[^>]*>/i);
+    out = head ? out.slice(0, head.index + head[0].length) + tag + out.slice(head.index + head[0].length) : tag + out;
+  }
+  return out;
+}
+el('ff-open').addEventListener('click', () => { if (!FF.html) return; const blob = new Blob([ffStandaloneHtml(FF.html)], { type: 'text/html' }); const url = URL.createObjectURL(blob); window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000); });
 el('ff-download').addEventListener('click', () => { if (!FF.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([FF.html], { type: 'text/html' })); a.download = (FF.design ? FF.design.title : 'design') + '.html'; document.body.appendChild(a); a.click(); a.remove(); });
 el('ff-publish').addEventListener('click', async () => {
   if (!FF.design) return; el('ff-publish').disabled = true;
