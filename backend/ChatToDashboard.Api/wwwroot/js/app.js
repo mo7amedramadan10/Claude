@@ -8823,7 +8823,7 @@ function closeFfGallery() { el('ff-gallery-modal').classList.add('hidden'); }
 function ffGalItems() { return (FF.templates || []).filter(t => t.kind === ffGalKind); }
 function renderFfGalCats() {
   const all = ffGalItems();
-  el('ffgal-cats').innerHTML = DK_CATS.map(([k, name, icon]) => {
+  el('ffgal-cats').innerHTML = [DK_CATS[0], ['uploaded', 'مرفوعة من ملف', 'file'], ...DK_CATS.slice(1)].map(([k, name, icon]) => {
     const count = k === 'all' ? all.length : all.filter(t => t.category === k).length;
     if (!count && k !== 'all') return '';
     return `<button type="button" data-cat="${k}" aria-pressed="${k === ffGalCat}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}</span><em>${count}</em></button>`;
@@ -8854,13 +8854,14 @@ function openFfGalPreview(t) {
     <div class="pv-grid">
       <div class="pv-thumb">${window.JEEM_FF_DEMO ? '<span class="ff-live" id="ffgal-pv-live"></span>' : ffSketchHtml(t)}</div>
       <div class="pv-info">
-        <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}</p>
+        <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}${t.custom ? ' <span class="ff-kind-chip">مرفوع من ملف</span>' : ''}</p>
         <h4>الأقسام (${t.total.toLocaleString('en-US')})</h4>
         <ol class="pv-list">${t.sections.map(x => `<li><span class="pv-ic">${x.needsData ? '📊' : '•'}</span>${esc(x.title)}${x.needsData ? ' <span class="muted">· من بياناتك</span>' : ''}</li>`).join('')}</ol>
         <p class="muted" style="font-size:var(--fs-xs)">${esc(t.brief)}</p>
         <div class="pv-actions">
           <button type="button" class="btn btn-primary" id="ffgal-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
           ${window.JEEM_FF_DEMO ? '<button type="button" class="btn btn-soft" id="ffgal-demo-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية ببيانات تجريبية</button>' : ''}
+          ${t.custom ? '<button type="button" class="btn btn-ghost btn-sm" id="ffgal-del-btn">🗑️ حذف النموذج</button>' : ''}
           <span class="muted" style="font-size:var(--fs-xs)">يُرفق النموذج في المحادثة، ثم اكتب ما تريده بالتحديد ويُبنى عليه بهوية مشروعك.</span>
         </div>
       </div>
@@ -8868,6 +8869,12 @@ function openFfGalPreview(t) {
   el('ffgal-back-btn').addEventListener('click', () => { el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-list').classList.remove('hidden'); });
   el('ffgal-use-btn').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(t); });
   el('ffgal-demo-btn')?.addEventListener('click', () => openFfGalDemo(t));
+  el('ffgal-del-btn')?.addEventListener('click', async () => {
+    if (!confirm(`حذف النموذج «${t.name}»؟ التصاميم المبنية عليه لا تتأثر.`)) return;
+    const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}`, { method: 'DELETE' }); if (!r.ok) { alert('تعذّر الحذف.'); return; }
+    FF.templates = FF.templates.filter(x => x.key !== t.key); if (FF.template && FF.template.key === t.key) ffSetTemplate(null);
+    el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-list').classList.remove('hidden'); renderFfGalCats(); renderFfGalGrid();
+  });
   el('ffgal-view-list').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden'); el('ffgal-view-demo').classList.add('hidden');
   ffLiveInto(el('ffgal-pv-live'), t);
 }
@@ -8911,6 +8918,47 @@ function ffRenderAttach() {
   if (!locked) { chip.addEventListener('click', e => { if (e.target.closest('.ff-chip-x')) { ffSetTemplate(null); return; } openFfGallery(FF.kind || 'design'); }); chip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFfGallery(FF.kind || 'design'); } }); }
 }
 function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(t.name)}</b></span>` : '<span class="ff-msg-attach">✦ تصميم حر بلا نموذج</span>'; }
+
+// ---------- رفع ملف موجود → نموذج مخصص (FreeformTemplateStore) ----------
+el('ffgal-start-import').addEventListener('click', () => { el('ffi-kind-label').textContent = (FF_KINDS[ffGalKind] || FF_KINDS.design).label; el('ffi-file').value = ''; el('ffi-name').value = ''; el('ffi-error').classList.add('hidden'); el('ff-import-modal').classList.remove('hidden'); });
+el('ffi-cancel').addEventListener('click', () => el('ff-import-modal').classList.add('hidden'));
+el('ff-import-modal').addEventListener('click', e => { if (e.target === el('ff-import-modal')) el('ff-import-modal').classList.add('hidden'); });
+el('ffi-go').addEventListener('click', async () => {
+  const f = el('ffi-file').files[0]; const err = el('ffi-error'); err.classList.add('hidden');
+  if (!f) { err.textContent = 'اختر ملفًا أولًا.'; err.classList.remove('hidden'); return; }
+  if (!/\.(pptx|pdf|html?)$/i.test(f.name)) { err.textContent = 'الصيغة غير مدعومة — المدعوم: .pptx و.pdf و.html.'; err.classList.remove('hidden'); return; }
+  const fd = new FormData(); fd.append('file', f); fd.append('kind', ffGalKind); fd.append('name', el('ffi-name').value.trim());
+  el('ffi-go').disabled = true; el('ffi-go').textContent = 'يقرأ الملف…';
+  try {
+    const r = await fetch('/api/freeform/templates/import', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.templates = [d.template, ...(FF.templates || [])];
+    el('ff-import-modal').classList.add('hidden'); closeFfGallery(); ffSetTemplate(d.template);
+    ffPushMsg('bot', `حُوِّل الملف «${f.name}» إلى نموذج «${d.template.name}» بـ${d.template.total} أقسام (قُرئت ${d.pagesRead} صفحة)${(d.warnings || []).length ? ' — ملاحظات: ' + d.warnings.join('؛ ') : ''}. اكتب الآن ما تريده وسيُبنى على محتواه.`);
+  } catch (e) { err.textContent = 'تعذّر: ' + e.message; err.classList.remove('hidden'); }
+  finally { el('ffi-go').disabled = false; el('ffi-go').textContent = 'رفع وتحويل إلى نموذج'; }
+});
+// ---------- تحويل تصميم إلى نوع آخر: نسخة جديدة بالنوع المطلوب، والأصل يبقى ----------
+el('ff-convert').addEventListener('click', e => {
+  e.stopPropagation(); const panel = el('ff-convert-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
+  if (open && FF.design) {
+    panel.innerHTML = Object.entries(FF_KINDS).filter(([k]) => k !== FF.design.kind).map(([k, v]) => `<button type="button" class="dropdown-item" data-kind="${k}">${ffKindIcon(k)} ${esc(v.label)}</button>`).join('');
+    panel.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffConvert(b.dataset.kind); }));
+  }
+  panel.classList.toggle('hidden', !open); el('ff-convert').setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+el('ff-convert-panel').addEventListener('click', e => e.stopPropagation());
+async function ffConvert(kind) {
+  if (!FF.design || FF.busy) return;
+  const to = FF_KINDS[kind].label, from = FF.design.title; FF.busy = true; ffPushMsg('user', `حوّل «${from}» إلى ${to}`); ffRenderMessages(); el('ff-status').textContent = 'يحوّل…';
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/convert`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.busy = false; await ffOpen(d.design.id);
+    ffPushMsg('bot', `هذه نسخة ${to} من «${from}» — الأصل محفوظ كما هو في قائمة التصاميم. ${d.reply || ''}`);
+  } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التحويل: ' + e.message); }
+  finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); }
+}
 async function ffOpen(id) {
   const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return; ffMarkOpened(id);
   const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl;

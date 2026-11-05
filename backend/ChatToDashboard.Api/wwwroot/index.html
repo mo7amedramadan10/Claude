@@ -623,6 +623,10 @@
               <span class="qi"><img src="img/logo-mark.svg" alt=""></span>
               <span><b>تصميم حر بلا نموذج</b><small>اكتب طلبك كما تريد وجيم يصمّم من الصفر بهوية مشروعك</small></span>
             </button>
+            <button type="button" class="quick-card" id="ffgal-start-import">
+              <span class="qi"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-file"/></svg></span>
+              <span><b>رفع من ملف موجود</b><small>PowerPoint أو PDF أو صفحة HTML — يتحوّل إلى نموذج بأقسامه ومحتواه ويُستخدم فورًا</small></span>
+            </button>
           </div>
           <h3 class="gal-sub">النماذج <span class="muted" id="ffgal-sub-note">· بنية جاهزة يُبنى عليها طلبك</span></h3>
           <div class="gal-grid ffgal-grid" id="ffgal-grid"></div>
@@ -704,6 +708,23 @@
 </div>
 
 <!-- استيراد ملف موجود (PowerPoint/PDF/HTML) كعرض قابل للتعديل — POST /api/decks/import -->
+<!-- رفع ملف موجود وتحويله إلى نموذج تصميم حر مخصص للمشروع (FreeformTemplateStore) -->
+<div id="ff-import-modal" class="modal-overlay hidden">
+  <div class="modal share-modal-box">
+    <h3>رفع من ملف موجود</h3>
+    <p class="modal-note">يُقرأ الملف حتميًا (العناوين، النصوص، الجداول، الرسوم) ويصير نموذجًا بأقسامه ومحتواه يُرفق في المحادثة ويُبنى عليه بنوع <b id="ffi-kind-label">تصميم</b>. يبقى في «مرفوعة من ملف» لإعادة استخدامه. الحد 25 ميغابايت.</p>
+    <label class="share-expiry-label">الملف <span class="muted">(.pptx أو .pdf أو .html)</span></label>
+    <input type="file" id="ffi-file" accept=".pptx,.pdf,.html,.htm,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,text/html">
+    <label class="share-expiry-label">اسم النموذج <span class="muted">(اختياري — الافتراضي من الملف)</span></label>
+    <input type="text" id="ffi-name" placeholder="مثال: تقرير الربع — قالب الشركة" maxlength="120">
+    <div id="ffi-error" class="model-switch-note bad hidden"></div>
+    <div class="modal-actions">
+      <button type="button" id="ffi-cancel">إلغاء</button>
+      <button type="button" id="ffi-go" class="btn btn-primary">رفع وتحويل إلى نموذج</button>
+    </div>
+  </div>
+</div>
+
 <div id="deck-import-modal" class="modal-overlay hidden">
   <div class="modal share-modal-box">
     <h3>استيراد ملف موجود</h3>
@@ -1059,6 +1080,10 @@
         <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
         <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
         <button type="button" id="ff-download" class="btn btn-sm btn-ghost" title="تنزيل ملف HTML">تنزيل</button>
+        <div class="dropdown" id="ff-convert-dropdown">
+          <button type="button" id="ff-convert" class="btn btn-sm btn-ghost" title="إنشاء نسخة من هذا التصميم بنوع آخر (الأصل يبقى)" aria-haspopup="true" aria-expanded="false">⇄ تحويل إلى</button>
+          <div id="ff-convert-panel" class="dropdown-panel hidden"></div>
+        </div>
         <button type="button" id="ff-publish" class="btn btn-sm">نشر</button>
       </div>
     </div>

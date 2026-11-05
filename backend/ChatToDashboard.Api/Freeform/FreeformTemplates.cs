@@ -23,6 +23,13 @@ public sealed class FreeformTemplate
     [JsonPropertyName("sketch")] public string Sketch { get; init; } = "h/p";
     [JsonPropertyName("sections")] public IReadOnlyList<FreeformTemplateSection> Sections { get; init; } = Array.Empty<FreeformTemplateSection>();
     [JsonPropertyName("brief")] public string Brief { get; init; } = "";
+    /// <summary>نموذج مرفوع من ملف (مخصص للمشروع) لا من الكتالوج الثابت.</summary>
+    [JsonPropertyName("custom")] public bool Custom { get; init; }
+    [JsonPropertyName("sourceFile")] public string? SourceFile { get; init; }
+    [JsonPropertyName("createdByUserId")] public string? CreatedByUserId { get; init; }
+    [JsonPropertyName("createdAt")] public DateTime? CreatedAt { get; init; }
+    /// <summary>محتوى نصي مرجعي من الملف المرفوع يُرفق بنظام الموديل؛ لا يُرسل للواجهة.</summary>
+    [JsonIgnore] public string? Content { get; init; }
     [JsonPropertyName("dataSections")] public int DataSections => Sections.Count(s => s.NeedsData);
     [JsonPropertyName("total")] public int Total => Sections.Count;
 }
@@ -145,6 +152,7 @@ public static class FreeformTemplates
         sb.AppendLine("الأقسام المطلوبة بترتيبها (التزم بها وأضف ما يطلبه المستخدم):");
         for (var i = 0; i < t.Sections.Count; i++) sb.AppendLine($"{i + 1}. {t.Sections[i].Title}{(t.Sections[i].NeedsData ? " — من بيانات المشروع عبر query_data إن وُجدت، وإلا توضيحية بشارة" : "")}");
         sb.AppendLine("تعليمات الشكل: " + t.Brief);
+        if (!string.IsNullOrWhiteSpace(t.Content)) sb.AppendLine("# محتوى الملف المرفوع (مرجع البنية والمحتوى)").AppendLine(t.Content);
         return sb.ToString();
     }
 }

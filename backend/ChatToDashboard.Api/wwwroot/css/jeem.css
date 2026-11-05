@@ -3529,3 +3529,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-preview-wrap.doc { background: #E9EEF2; }
 .jeem-scope .ff-preview-wrap.doc .ff-preview { max-width: 980px; }
 .jeem-scope #ff-present.hidden, .jeem-scope #ff-replay.hidden, .jeem-scope #ff-print.hidden { display: none; }
+
+/* تصميم حر: أيقونة النوع داخل قائمة «تحويل إلى» */
+.jeem-scope #ff-convert-panel .dropdown-item { display: flex; align-items: center; gap: 8px; }
+.jeem-scope #ff-convert-panel .ff-ico { width: 18px; height: 18px; }

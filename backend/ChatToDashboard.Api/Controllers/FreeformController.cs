@@ -14,6 +14,7 @@ namespace ChatToDashboard.Api.Controllers;
 public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } public string? TemplateKey { get; set; } }
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
+public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } }
 
 /// <summary>«تصميم حر»: صفحات HTML كاملة يكتبها الموديل من المحادثة (كـ artifacts) لكل مشروع — إصدارات، تعديل يدوي، نشر في «العروض التقديمية».</summary>
 [ApiController]
@@ -29,9 +30,10 @@ public class FreeformController : ControllerBase
     private readonly OrganizationStore _organizations;
     private readonly PermissionsService _permissions;
     private readonly AnalyticsTools _tools;
+    private readonly FreeformTemplateStore _templates;
 
-    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools)
-    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; }
+    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates)
+    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; }
 
     private async Task<(AppUser User, Sources.SourceSelection Selection)?> CurrentAsync(CancellationToken ct)
     {
@@ -84,8 +86,71 @@ public class FreeformController : ControllerBase
 
     /// <summary>كتالوج نماذج تصميم حر (اختياريًا لنوع واحد <c>?kind=doc</c>).</summary>
     [HttpGet("templates")]
-    public IActionResult Templates([FromQuery] string? kind)
-        => Ok(string.IsNullOrWhiteSpace(kind) ? FreeformTemplates.All : FreeformTemplates.All.Where(t => t.Kind == kind).ToList());
+    public async Task<IActionResult> Templates([FromQuery] string? kind, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var custom = await _templates.ListAsync(cur.Value.Selection.ProjectId, ct);
+        var all = custom.Concat(FreeformTemplates.All);
+        return Ok(string.IsNullOrWhiteSpace(kind) ? all.ToList() : all.Where(t => t.Kind == kind).ToList());
+    }
+
+    /// <summary>رفع ملف موجود (PowerPoint/PDF/HTML) وتحويله إلى نموذج مخصص للمشروع من النوع المطلوب — قراءة حتمية بلا موديل.</summary>
+    [HttpPost("templates/import")]
+    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> ImportTemplate([FromForm] IFormFile? file, [FromForm] string? kind, [FromForm] string? name, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملفًا بصيغة .pptx أو .pdf أو .html." });
+        if (DeckImporter.KindOf(file.FileName) is null) return BadRequest(new { error = "الصيغة غير مدعومة — المدعوم: PowerPoint (.pptx) وPDF وصفحة HTML." });
+        if (file.Length > DeckImporter.MaxBytes) return BadRequest(new { error = $"حجم الملف يتجاوز {DeckImporter.MaxBytes / 1024 / 1024} ميغابايت." });
+        byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
+        ImportedDocument doc;
+        try { doc = DeckImporter.Extract(file.FileName, bytes); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة الملف: " + ex.Message }); }
+        if (doc.Pages.All(p => p.IsEmpty) && doc.DataBlocks.Count == 0) return BadRequest(new { error = "لم يُعثر على محتوى نصي في الملف.", warnings = doc.Warnings });
+        var t = await _templates.CreateAsync(selection.ProjectId, user.Id, FreeformTemplateStore.FromDocument(doc, kind ?? "design", name, file.FileName), ct);
+        return Ok(new { template = t, pagesRead = doc.Pages.Count(p => !p.IsEmpty), warnings = doc.Warnings });
+    }
+
+    [HttpDelete("templates/{key}")]
+    public async Task<IActionResult> DeleteTemplate(string key, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var t = await _templates.GetAsync(key, cur.Value.Selection.ProjectId, ct); if (t is null) return NotFound();
+        if (t.CreatedByUserId != cur.Value.User.Id && cur.Value.User.Role != "Admin") return Forbid();
+        await _templates.DeleteAsync(key, cur.Value.Selection.ProjectId, ct); return NoContent();
+    }
+
+    private async Task<FreeformTemplate?> ResolveTemplateAsync(string? key, string? projectId, CancellationToken ct)
+        => string.IsNullOrWhiteSpace(key) ? null : FreeformTemplates.Find(key) ?? await _templates.GetAsync(key, projectId, ct);
+
+    /// <summary>تحويل تصميم إلى نوع آخر (مستند ← شرائح…): تصميم جديد من النوع المطلوب بالمحتوى نفسه، والأصل يبقى كما هو.</summary>
+    [HttpPost("{id}/convert")]
+    public async Task<IActionResult> Convert(string id, [FromBody] FreeformConvertRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var src = await _store.GetAsync(id, selection.ProjectId, ct); if (src is null) return NotFound(new { error = "التصميم غير موجود." });
+        if (!FreeformStore.Kinds.Contains(request.Kind ?? "")) return BadRequest(new { error = "نوع غير معروف." });
+        if (request.Kind == src.Kind) return BadRequest(new { error = "التصميم من هذا النوع بالفعل." });
+        if (string.IsNullOrWhiteSpace(src.Html)) return BadRequest(new { error = "التصميم بلا صفحة بعد." });
+        var fromLabel = FreeformBuilder.KindLabel(src.Kind); var toLabel = FreeformBuilder.KindLabel(request.Kind);
+        var message = $"حوّل الصفحة الحالية (وهي {fromLabel}) إلى {toLabel} كاملة: احتفظ بكل المحتوى والنصوص والأرقام والجداول والهوية البصرية نفسها، وأعد تنظيمه وفق بنية «{toLabel}» الموضحة في التعليمات."
+            + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}");
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct);
+        FreeformResult result;
+        try { result = await _builder.GenerateAsync(message, src.Html, Array.Empty<FreeformMessage>(), context, brand, user, ct, request.Kind!); }
+        catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
+        if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل صفحة من التحويل — جرّب ثانية أو أضف ملاحظة." });
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{src.Title} ({toLabel})", result.Html, message, request.Kind, null, ct);
+        await _store.AddMessageAsync(design.Id, "user", $"تحويل «{src.Title}» من {fromLabel} إلى {toLabel}", null, ct);
+        await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, sourceId = src.Id });
+    }
 
     /// <summary>توليد أو تعديل بالمحادثة. بلا <c>designId</c> يُنشأ تصميم جديد بعنوان من الطلب.</summary>
     [HttpPost("generate")]
@@ -107,7 +172,7 @@ public class FreeformController : ControllerBase
         FreeformResult result;
         var kind = FreeformStore.NormalizeKind(design?.Kind ?? request.Kind);
         // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
-        var template = FreeformTemplates.Find(design?.TemplateKey ?? request.TemplateKey);
+        var template = await ResolveTemplateAsync(design?.TemplateKey ?? request.TemplateKey, selection.ProjectId, ct);
         if (template is not null && template.Kind != kind) template = null;
         try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
