@@ -8812,7 +8812,7 @@ async function openFfGallery(kind) {
   const info = FF_KINDS[kind] || FF_KINDS.design;
   el('ffgal-title').textContent = `${info.label} جديد`; el('ffgal-desc').textContent = `اختر نموذج ${info.label} جاهزًا يُبنى عليه طلبك، أو ابدأ تصميمًا حرًّا بلا نموذج — يظهر اختيارك مرفقًا في المحادثة.`;
   renderFfGalCats(); renderFfGalGrid();
-  el('ffgal-view-list').classList.remove('hidden'); el('ffgal-view-preview').classList.add('hidden');
+  el('ffgal-view-list').classList.remove('hidden'); el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-demo').classList.add('hidden');
   el('ff-gallery-modal').classList.remove('hidden');
 }
 function closeFfGallery() { el('ff-gallery-modal').classList.add('hidden'); }
@@ -8848,7 +8848,7 @@ function openFfGalPreview(t) {
   el('ffgal-view-preview').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="ffgal-back-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>كل النماذج</span></button>
     <div class="pv-grid">
-      <div class="pv-thumb">${ffSketchHtml(t)}</div>
+      <div class="pv-thumb">${window.JEEM_FF_DEMO ? '<span class="ff-live" id="ffgal-pv-live"></span>' : ffSketchHtml(t)}</div>
       <div class="pv-info">
         <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}</p>
         <h4>الأقسام (${t.total.toLocaleString('en-US')})</h4>
@@ -8856,13 +8856,38 @@ function openFfGalPreview(t) {
         <p class="muted" style="font-size:var(--fs-xs)">${esc(t.brief)}</p>
         <div class="pv-actions">
           <button type="button" class="btn btn-primary" id="ffgal-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
+          ${window.JEEM_FF_DEMO ? '<button type="button" class="btn btn-soft" id="ffgal-demo-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية ببيانات تجريبية</button>' : ''}
           <span class="muted" style="font-size:var(--fs-xs)">يُرفق النموذج في المحادثة، ثم اكتب ما تريده بالتحديد ويُبنى عليه بهوية مشروعك.</span>
         </div>
       </div>
     </div>`;
   el('ffgal-back-btn').addEventListener('click', () => { el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-list').classList.remove('hidden'); });
   el('ffgal-use-btn').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(t); });
-  el('ffgal-view-list').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden');
+  el('ffgal-demo-btn')?.addEventListener('click', () => openFfGalDemo(t));
+  el('ffgal-view-list').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden'); el('ffgal-view-demo').classList.add('hidden');
+  ffLiveInto(el('ffgal-pv-live'), t);
+}
+// الصفحة التوضيحية الحقيقية للنموذج مصغّرة داخل الورقة (بلا تفاعل) — من JEEM_FF_DEMO
+function ffLiveInto(holder, t) {
+  if (!holder || !window.JEEM_FF_DEMO) return;
+  const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-scripts'); f.tabIndex = -1; f.title = `معاينة ${t.name}`; f.setAttribute('aria-hidden', 'true');
+  holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4)); f.srcdoc = JEEM_FF_DEMO.build(t);
+}
+// معاينة تفاعلية كاملة ببيانات تجريبية — الصفحة في إطار معزول بحجمها الطبيعي مع شريط يوضّح أن الأرقام توضيحية
+function openFfGalDemo(t) {
+  el('ffgal-view-demo').innerHTML = `
+    <button type="button" class="btn btn-ghost btn-sm gal-back" id="ffgal-demo-back-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span></button>
+    <div class="gal-demo-banner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
+      بيانات تجريبية توضيحية فقط لعرض شكل النموذج وتفاعله — ليست من مشروعك. لبناء الصفحة الفعلية بهوية مشروعك وبياناته، اضغط «استخدم هذا النموذج» ثم اكتب طلبك.</div>
+    <div class="gal-demo-top">
+      <div class="gal-demo-title"><h3>${esc(t.icon)} ${esc(t.name)}</h3><span class="muted" style="font-size:var(--fs-xs)">${(FF_KINDS[t.kind] || FF_KINDS.design).label} · ${t.total.toLocaleString('en-US')} أقسام${t.dataSections ? ` · ${t.dataSections.toLocaleString('en-US')} منها من بياناتك` : ''}</span></div>
+      <button type="button" class="btn btn-primary" id="ffgal-demo-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
+    </div>
+    <iframe class="ffgal-demo-frame" id="ffgal-demo-frame" title="معاينة تفاعلية: ${esc(t.name)}" sandbox="allow-scripts allow-modals"></iframe>`;
+  el('ffgal-demo-frame').srcdoc = JEEM_FF_DEMO.build(t);
+  el('ffgal-demo-back-btn').addEventListener('click', () => { el('ffgal-view-demo').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden'); });
+  el('ffgal-demo-use-btn').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(t); });
+  el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-demo').classList.remove('hidden');
 }
 el('ffgal-close').addEventListener('click', closeFfGallery);
 el('ff-gallery-modal').addEventListener('click', e => { if (e.target === el('ff-gallery-modal')) closeFfGallery(); });

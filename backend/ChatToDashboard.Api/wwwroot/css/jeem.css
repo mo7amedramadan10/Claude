@@ -3393,7 +3393,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 
 /* تصميم حر (screen-freeform) — نفس بنية منشئ العروض */
 .jeem-scope .ff-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.jeem-scope .ff-start { flex: 1; overflow: auto; padding: 20px 28px 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-content: start; }
+.jeem-scope .ff-start { flex: 1; overflow: auto; background: #fff; padding: 20px 28px 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-content: start; }
 .jeem-scope .ff-start > * { min-width: 0; }
 .jeem-scope .ff-preview-wrap { flex: 1; min-height: 0; display: flex; justify-content: center; background: var(--plane); padding: 14px; }
 .jeem-scope .ff-preview { flex: 1; width: 100%; max-width: 100%; height: 100%; border: 1px solid var(--line); border-radius: var(--r-lg); background: #fff; transition: max-width .2s; }
@@ -3509,6 +3509,11 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-sk .row.slides { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
 .jeem-scope .ffgal-grid .ff-sk { border-radius: 10px 10px 0 0; }
 .jeem-scope .gal-preview .ff-sk { max-width: 420px; border-radius: 12px; }
+/* معاينة النموذج الحيّة في المعرض: الصفحة التوضيحية نفسها مصغّرة داخل الورقة، وعرض كامل تفاعلي في ffgal-view-demo */
+.jeem-scope .ff-live { display: block; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface-2); }
+.jeem-scope .ff-live iframe { position: absolute; top: 0; inset-inline-start: 0; width: 1100px; height: 688px; border: 0; transform-origin: top right; transform: scale(var(--s, .38)); pointer-events: none; background: #fff; }
+[dir="ltr"] .jeem-scope .ff-live iframe { transform-origin: top left; }
+.jeem-scope .ffgal-demo-frame { width: 100%; height: min(560px, calc(100vh - 330px)); min-height: 320px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 
 .jeem-scope .ff-attach { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 0; }
 .jeem-scope .ff-attach.hidden { display: none; }
