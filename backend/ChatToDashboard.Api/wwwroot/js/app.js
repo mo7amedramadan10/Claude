@@ -12771,6 +12771,15 @@ async function bootEmbedView(pubId, startPage) {
   syncPage();
 }
 
+// ارتفاع الشريط العلوي الفعلي → المتغيّر --topbar-h الذي تطرحه الشاشات ذات الارتفاع الثابت من 100vh
+// (كان ثابتًا 53px بينما الشريط 68px فظهر تمرير 15px للصفحة كلها؛ وعلى الجوال يلتف مسار التنقل فيزيد الارتفاع).
+(function trackTopbarHeight() {
+  const bar = document.querySelector('.topbar'), shell = el('app-shell');
+  if (!bar || !shell || !('ResizeObserver' in window)) return;
+  const apply = () => { const h = Math.round(bar.getBoundingClientRect().height); if (h > 0) shell.style.setProperty('--topbar-h', h + 'px'); };
+  new ResizeObserver(apply).observe(bar); apply();
+})();
+
 (async function boot() {
   const params = new URLSearchParams(location.search);
   const shareId = params.get('share');

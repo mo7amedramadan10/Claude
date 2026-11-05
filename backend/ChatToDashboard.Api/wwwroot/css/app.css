@@ -148,7 +148,7 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
 /* ---------- layout ---------- */
 .screen{display:none}
 .screen.active{display:flex}
-#screen-chat{height:calc(100vh - 53px)}
+#screen-chat{height:calc(100vh - var(--topbar-h, 68px))}
 #chat-rail{width:35%;min-width:320px;display:flex;flex-direction:column;
   background:var(--surface);border-inline-start:1px solid var(--grid)}
 #chat-rail.rail-small{width:22%;min-width:220px}
@@ -734,7 +734,7 @@ tr:last-child td{border-bottom:0}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ---------- repository screen ---------- */
-#screen-repo,#screen-active,#screen-sharelinks,#screen-presentations{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+#screen-repo,#screen-active,#screen-sharelinks,#screen-presentations{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - var(--topbar-h, 68px));overflow-y:auto}
 .repo-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .upload-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:11px;border:0;
   background:var(--accent);color:#fff;font-weight:600}
@@ -844,7 +844,7 @@ tr:last-child td{border-bottom:0}
 }
 
 /* ---------- history screen ---------- */
-#screen-history{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+#screen-history{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - var(--topbar-h, 68px));overflow-y:auto}
 .hist-bar{display:flex;align-items:center;gap:14px}
 .hist-bar .count{color:var(--muted);font-size:13px}
 .clear-btn{margin-inline-start:auto;padding:7px 14px;border:1px solid var(--grid);border-radius:9px;
@@ -1086,7 +1086,7 @@ tr:last-child td{border-bottom:0}
 .tab.hidden,.hidden{display:none}
 
 /* ---------- users admin screen ---------- */
-#screen-users,#screen-settings{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - 53px);overflow-y:auto}
+#screen-users,#screen-settings{flex-direction:column;padding:20px;gap:16px;height:calc(100vh - var(--topbar-h, 68px));overflow-y:auto}
 .users-bar{display:flex;align-items:center;gap:14px}
 .users-bar .count{color:var(--muted);font-size:13px}
 .new-btn{margin-inline-start:auto;padding:8px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600}
