@@ -26,6 +26,8 @@ public static class DeckHtmlExporter
         sb.Append("<script type=\"application/json\" id=\"deck-spec\">").Append(json).Append("</script>\n");
         sb.Append("<script>\n").Append(deckRuntimeJs).Append("\n</script>\n");
         sb.Append("<script>JEEM_DECK.present(document.getElementById('deck'), JSON.parse(document.getElementById('deck-spec').textContent), { editableStore: window.jeem ? jeem.store : null, viewer: window.jeem ? jeem.viewer : null });</script>\n");
+        // البيانات الحيّة: حين يصل من الجسر spec محدَّثة (شرائح البيانات بعد إعادة الصياغة) يُعاد العرض من الشريحة الحالية بلا إعادة تحميل.
+        if (includeBridge) sb.Append("<script>document.addEventListener('jeem:data', function (e) { var s = e.detail && e.detail.spec; if (!s) return; var root = document.getElementById('deck'); var pos = root.querySelector('.jd-pos'); var idx = pos ? parseInt(pos.textContent, 10) - 1 : 0; JEEM_DECK.present(root, s, { editableStore: window.jeem ? jeem.store : null, viewer: window.jeem ? jeem.viewer : null, startAt: isNaN(idx) ? 0 : idx }); });</script>\n");
         sb.Append("</body>\n</html>\n");
         return sb.ToString();
     }

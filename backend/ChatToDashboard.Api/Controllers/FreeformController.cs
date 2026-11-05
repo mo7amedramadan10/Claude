@@ -35,9 +35,10 @@ public class FreeformController : ControllerBase
     private readonly AnalyticsTools _tools;
     private readonly FreeformTemplateStore _templates;
     private readonly DataFingerprintService _fingerprints;
+    private readonly PresentationLiveDataService _live;
 
-    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints)
-    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; }
+    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live)
+    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; _live = live; }
 
     private async Task<(AppUser User, Sources.SourceSelection Selection)?> CurrentAsync(CancellationToken ct)
     {
@@ -226,6 +227,7 @@ public class FreeformController : ControllerBase
         var html = FreeformDataBlock.Inject(d.Html, fresh, now);
         var version = await _store.AddVersionAsync(id, html, $"تحديث البيانات ({fresh.Count - failed.Count} من {stored.Count} استعلامًا)", null, ct);
         await _store.SetQueriesAsync(id, fresh, now, await _fingerprints.ComputeAsync(fresh.Select(q => q.Sql), selection.ProjectId, ct), ct);
+        if (d.PresentationId is not null) _live.Invalidate(d.PresentationId);
         await _store.AddMessageAsync(id, "assistant", failed.Count == 0 ? $"حُدِّثت البيانات من {stored.Count} استعلامًا." : $"حُدِّثت البيانات من {stored.Count - failed.Count} استعلامًا وفشل {failed.Count}.", version, ct);
         var brand = await BrandAsync(selection.ProjectId, ct);
         return Ok(new { version, html = ApplyBrandAssets(html, brand), refreshedAt = now, ok = stored.Count - failed.Count, failed, versions = await _store.VersionsAsync(id, ct) });
@@ -279,13 +281,18 @@ public class FreeformController : ControllerBase
         if (string.IsNullOrWhiteSpace(d.Html)) return BadRequest(new { error = "لا توجد صفحة لنشرها بعد." });
         var html = ApplyBrandAssets(d.Html, await BrandAsync(selection.ProjectId, ct));
         if (d.Kind == "slides") html = FreeformDataBlock.EnsureSlidesKit(html);
+        // صفحة ببيانات: تُربط بمصدرها فتُقدَّم بآخر الأرقام عند كل فتح (بيانات حيّة) ويضمَن فيها الجسر لتحديثها وهي مفتوحة.
+        var hasData = d.QueryCount > 0 || FreeformDataBlock.HasBlock(d.Html);
+        if (hasData) html = FreeformDataBlock.EnsurePageBridge(html);
         var title = string.IsNullOrWhiteSpace(request.Title) ? d.Title : request.Title.Trim();
         var orgSlug = user.OrganizationId is null ? null : (await _organizations.FindByIdAsync(user.OrganizationId, ct))?.Slug;
         Presentation? existing = d.PresentationId is null ? null : await _presentations.GetAsync(d.PresentationId, ct);
         if (existing is not null && string.Equals(existing.OrganizationId, user.OrganizationId, StringComparison.Ordinal))
         {
             await _presentations.ReplaceAsync(existing.Id, html, Slugify(title) + ".html", title, ct);
-            return Ok(new { presentationId = existing.Id, url = existing.PublicPath(orgSlug), updated = true });
+            await _presentations.SetSourceAsync(existing.Id, PresentationLiveDataService.KindFreeform, d.Id, hasData && (existing.SourceKind is null || existing.LiveData), ct);
+            _live.Invalidate(existing.Id);
+            return Ok(new { presentationId = existing.Id, url = existing.PublicPath(orgSlug), updated = true, liveData = hasData && (existing.SourceKind is null || existing.LiveData) });
         }
         var slug = PresentationSlug.Normalize(string.IsNullOrWhiteSpace(request.Slug) ? title : request.Slug);
         if (slug.Length < 2) slug = "design";
@@ -297,8 +304,9 @@ public class FreeformController : ControllerBase
             Title = title, Slug = slug, FileName = Slugify(title) + ".html", Html = html, SizeBytes = Encoding.UTF8.GetByteCount(html),
         };
         await _presentations.SaveAsync(p, ct);
+        await _presentations.SetSourceAsync(p.Id, PresentationLiveDataService.KindFreeform, d.Id, hasData, ct);
         await _store.SetPresentationAsync(d.Id, p.Id, ct);
-        return Ok(new { presentationId = p.Id, url = p.PublicPath(orgSlug), updated = false });
+        return Ok(new { presentationId = p.Id, url = p.PublicPath(orgSlug), updated = false, liveData = hasData });
     }
 
     private async Task<string?> PublishedUrlAsync(FreeformDesign d, CancellationToken ct)

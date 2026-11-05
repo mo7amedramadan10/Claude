@@ -286,8 +286,11 @@
     root.querySelector('[data-prev]').onclick = () => go(i - 1); root.querySelector('[data-next]').onclick = () => go(i + 1);
     root.querySelector('[data-print]').onclick = () => { const all = root.ownerDocument.createElement('div'); all.className = 'jd-print'; slides.forEach((s, k) => { const d = root.ownerDocument.createElement('div'); all.appendChild(d); renderSlide(d, s, spec, { index: k, total: slides.length }); }); const st = root.querySelector('.jd-stage'); const keep = st.innerHTML; st.innerHTML = ''; st.appendChild(all); window.print(); setTimeout(() => { st.innerHTML = keep; go(i); }, 300); };
     strip.addEventListener('click', e => { const t = e.target.closest('.jd-thumb'); if (t) go(+t.dataset.i); });
-    root.ownerDocument.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') go(i + 1); if (e.key === 'ArrowRight' || e.key === 'PageUp') go(i - 1); if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1); });
-    const h = parseInt((location.hash || '').slice(1), 10); go(isNaN(h) ? 0 : h - 1);
+    // إعادة العرض على الجذر نفسه (مثلًا بعد وصول بيانات حيّة) تستبدل مستمع لوحة المفاتيح السابق بدل مضاعفته.
+    if (root.__jdKeydown) root.ownerDocument.removeEventListener('keydown', root.__jdKeydown);
+    root.__jdKeydown = e => { if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') go(i + 1); if (e.key === 'ArrowRight' || e.key === 'PageUp') go(i - 1); if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1); };
+    root.ownerDocument.addEventListener('keydown', root.__jdKeydown);
+    const h = typeof opts.startAt === 'number' ? opts.startAt + 1 : parseInt((location.hash || '').slice(1), 10); go(isNaN(h) ? 0 : h - 1);
     return { go, get index() { return i; } };
   }
 

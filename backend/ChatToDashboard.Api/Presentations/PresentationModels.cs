@@ -30,6 +30,13 @@ public class Presentation
     /// <summary>من يكتب في «بيانات العرض»: <c>anyone</c> (أي من معه الرابط — الافتراضي بقرار المستخدم)،
     /// <c>members</c> (مستخدمو المنظمة المسجَّلون)، <c>owner</c> (صاحب العرض والمسؤول).</summary>
     [JsonPropertyName("editPolicy")] public string EditPolicy { get; set; } = PresentationEditPolicy.Anyone;
+    /// <summary>مصدر الصفحة داخل المنصة إن نُشرت من «تصميم حر» (<c>freeform</c>) أو «منشئ العروض» (<c>deck</c>)؛ null لملف مرفوع يدويًا.
+    /// يُستخدم لإعادة تنفيذ استعلاماته المسجَّلة عند كل فتح (البيانات الحيّة) بلا إعادة نشر.</summary>
+    [JsonPropertyName("sourceKind")] public string? SourceKind { get; set; }
+    [JsonPropertyName("sourceId")] public string? SourceId { get; set; }
+    /// <summary>البيانات الحيّة: عند الفتح تُعاد قراءة بيانات المصدر من قاعدة البيانات وتُحقن في الصفحة، وتُحدَّث داخلها دوريًا عبر الجسر.
+    /// تُفعَّل تلقائيًا عند النشر من مصدر له استعلامات؛ يطفئها صاحب العرض من القائمة.</summary>
+    [JsonPropertyName("liveData")] public bool LiveData { get; set; }
 
     /// <summary>المسار العام النسبي: بالاسم إن وُجد وإلا بالمعرّف.</summary>
     public string PublicPath(string? orgSlug) =>

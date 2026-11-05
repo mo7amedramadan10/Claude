@@ -121,6 +121,14 @@ public class FreeformStore
         return await connection.QuerySingleOrDefaultAsync<FreeformDesign>($"SELECT {Cols}, Html FROM {T} WHERE Id = @id AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL))", new { id, projectId });
     }
 
+    /// <summary>بالمعرّف وحده بلا تقييد بالمشروع — للبيانات الحيّة للعروض المنشورة (الربط محفوظ على العرض نفسه).</summary>
+    public async Task<FreeformDesign?> GetByIdAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<FreeformDesign>($"SELECT {Cols}, Html FROM {T} WHERE Id = @id", new { id });
+    }
+
     public async Task<IReadOnlyList<FreeformDesign>> ListAsync(string? projectId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

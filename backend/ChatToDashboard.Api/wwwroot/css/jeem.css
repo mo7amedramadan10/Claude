@@ -3290,6 +3290,8 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .cc-activity summary { cursor: pointer; }
 .jeem-scope .cc-tool { padding: 2px 0; overflow-wrap: anywhere; }
 .jeem-scope .cc-tool code { font-size: 11px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 4px; }
+.jeem-scope .pres-live { width: auto; padding: 0 10px; font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; }
+.jeem-scope .pres-live.on { border-color: var(--ok); color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }
 .jeem-scope .pres-policy { height: 32px; font-size: var(--fs-xs); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 0 6px; max-width: 200px; }
 
 /* ==========================================================

@@ -70,13 +70,15 @@
 
 /* جسر «بيانات العرض»: الصفحة المرفوعة (أصل معتم داخل iframe) ترسل {jeem:1,id,type,payload} بـ postMessage؛
    هنا نتحقق أن المرسل هو إطار العرض نفسه، ننفّذ الطلب على واجهة المنصة بصلاحيات من يفتح الرابط (الكوكي)،
-   ونرد بنفس المعرّف. الأنواع: get / set / list / viewer. */
+   ونرد بنفس المعرّف. الأنواع: get / set / list / viewer / data (البيانات الحيّة). */
 function installBridge(apiBase) {
   const frame = document.getElementById('frame');
   async function handle(type, payload) {
     const key = payload && payload.key;
     const okKey = typeof key === 'string' && /^[\w.-]{1,100}$/.test(key);
     if (type === 'viewer') return (await fetch(`${apiBase}/access`)).json();
+    // البيانات الحيّة: آخر نتائج استعلامات مصدر العرض (مخزَّنة مؤقتًا في الخادم) — بلا SQL من الصفحة.
+    if (type === 'data') { const r = await fetch(`${apiBase}/live-data`, { cache: 'no-store' }); if (!r.ok) throw await err(r); return r.json(); }
     if (type === 'list') return (await fetch(`${apiBase}/data`)).json();
     if (!okKey) throw Object.assign(new Error('مفتاح غير صالح'), { code: 'bad_key', status: 400 });
     if (type === 'get') { const r = await fetch(`${apiBase}/data/${encodeURIComponent(key)}`, { cache: 'no-store' }); if (!r.ok) throw await err(r); return r.json(); }

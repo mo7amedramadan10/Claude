@@ -16,7 +16,7 @@ public class PresentationStore
     private string Table => "[dbo].[Presentations]";
 
     private const string Columns =
-        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, COALESCE(EditPolicy, 'anyone') AS EditPolicy";
+        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, COALESCE(EditPolicy, 'anyone') AS EditPolicy, SourceKind, SourceId, COALESCE(LiveData, 0) AS LiveData";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -62,6 +62,9 @@ public class PresentationStore
         await AddColumnIfMissingAsync(connection, "RevokedAt", sqlServer: "DATETIME2", ct);
         await AddColumnIfMissingAsync(connection, "ViewCount", sqlServer: "INT NOT NULL DEFAULT 0", ct);
         await AddColumnIfMissingAsync(connection, "EditPolicy", sqlServer: "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, "SourceKind", sqlServer: "NVARCHAR(16)", ct);
+        await AddColumnIfMissingAsync(connection, "SourceId", sqlServer: "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "LiveData", sqlServer: "BIT NOT NULL DEFAULT 0", ct);
     }
 
     private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
@@ -158,6 +161,21 @@ public class PresentationStore
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"UPDATE {Table} SET RevokedAt = @now WHERE Id = @id AND RevokedAt IS NULL", new { id, now = DateTime.UtcNow });
+    }
+
+    /// <summary>ربط العرض بمصدره داخل المنصة (تصميم حر / عرض) وحالة البيانات الحيّة.</summary>
+    public async Task SetSourceAsync(string id, string? sourceKind, string? sourceId, bool liveData, CancellationToken ct = default)
+    {
+        await EnsureSchemaOnceAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {Table} SET SourceKind = @sourceKind, SourceId = @sourceId, LiveData = @liveData WHERE Id = @id", new { id, sourceKind, sourceId, liveData });
+    }
+
+    public async Task SetLiveDataAsync(string id, bool on, CancellationToken ct = default)
+    {
+        await EnsureSchemaOnceAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {Table} SET LiveData = @on, UpdatedAt = @now WHERE Id = @id", new { id, on, now = DateTime.UtcNow });
     }
 
     public async Task SetEditPolicyAsync(string id, string policy, CancellationToken ct = default)

@@ -43,6 +43,7 @@ public class DecksController : ControllerBase
     private readonly DeckBuilder _builder;
     private readonly DeckImporter _importer;
     private readonly DataFingerprintService _fingerprints;
+    private readonly PresentationLiveDataService _live;
     private readonly PresentationStore _presentations;
     private readonly OrganizationStore _organizations;
     private readonly PermissionsService _permissions;
@@ -51,9 +52,9 @@ public class DecksController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     public DecksController(DeckStore decks, DeckBrandStore brands, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
-        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts, DeckBrandTemplateStore templates, DataFingerprintService fingerprints)
+        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts, DeckBrandTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live)
     {
-        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fingerprints = fingerprints; _fonts = fonts; _templates = templates; _builder = builder; _presentations = presentations; _organizations = organizations;
+        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fingerprints = fingerprints; _live = live; _fonts = fonts; _templates = templates; _builder = builder; _presentations = presentations; _organizations = organizations;
         _permissions = permissions; _tools = tools; _feasibility = feasibility; _env = env;
     }
 
@@ -347,7 +348,7 @@ public class DecksController : ControllerBase
             slide.MissingReason = null; updated++;
         }
         var refreshedAt = DateTime.UtcNow;
-        if (updated > 0) { await _decks.UpdateSpecAsync(id, spec.Normalize(), ct); await _decks.SetDataStateAsync(id, await _fingerprints.ComputeAsync(withSql.Select(x => x.Query!.Sql!), selection.ProjectId, ct), refreshedAt, ct); }
+        if (updated > 0) { await _decks.UpdateSpecAsync(id, spec.Normalize(), ct); await _decks.SetDataStateAsync(id, await _fingerprints.ComputeAsync(withSql.Select(x => x.Query!.Sql!), selection.ProjectId, ct), refreshedAt, ct); if (d.PresentationId is not null) _live.Invalidate(d.PresentationId); }
         return Ok(new { spec, updated, total = withSql.Count, failed, refreshedAt });
     }
 
@@ -433,7 +434,8 @@ public class DecksController : ControllerBase
         var runtimePath = Path.Combine(_env.WebRootPath, "js", "jeem-deck.js");
         if (!System.IO.File.Exists(runtimePath)) return StatusCode(500, new { error = "محرك العرض غير موجود على الخادم (js/jeem-deck.js)." });
         var runtime = await System.IO.File.ReadAllTextAsync(runtimePath, ct);
-        var html = DeckHtmlExporter.Build(spec, runtime, includeBridge: spec.Slides.Any(s => s.Editable is not null));
+        var hasData = spec.Slides.Any(s => !string.IsNullOrWhiteSpace(s.Query?.Sql));
+        var html = DeckHtmlExporter.Build(spec, runtime, includeBridge: hasData || spec.Slides.Any(s => s.Editable is not null));
         var title = string.IsNullOrWhiteSpace(request.Title) ? spec.Title : request.Title.Trim();
         var orgSlug = user.OrganizationId is null ? null : (await _organizations.FindByIdAsync(user.OrganizationId, ct))?.Slug;
 
@@ -441,7 +443,10 @@ public class DecksController : ControllerBase
         if (existing is not null && string.Equals(existing.OrganizationId, user.OrganizationId, StringComparison.Ordinal))
         {
             await _presentations.ReplaceAsync(existing.Id, html, Slugify(title) + ".html", title, ct);
-            return Ok(new { presentationId = existing.Id, url = existing.PublicPath(orgSlug), updated = true });
+            var liveOn = hasData && (existing.SourceKind is null || existing.LiveData);
+            await _presentations.SetSourceAsync(existing.Id, PresentationLiveDataService.KindDeck, d.Id, liveOn, ct);
+            _live.Invalidate(existing.Id);
+            return Ok(new { presentationId = existing.Id, url = existing.PublicPath(orgSlug), updated = true, liveData = liveOn });
         }
         var slug = PresentationSlug.Normalize(string.IsNullOrWhiteSpace(request.Slug) ? title : request.Slug);
         if (slug.Length < 2) slug = "deck";
@@ -453,8 +458,9 @@ public class DecksController : ControllerBase
             Title = title, Slug = slug, FileName = Slugify(title) + ".html", Html = html, SizeBytes = Encoding.UTF8.GetByteCount(html),
         };
         await _presentations.SaveAsync(p, ct);
+        await _presentations.SetSourceAsync(p.Id, PresentationLiveDataService.KindDeck, d.Id, hasData, ct);
         await _decks.SetPresentationAsync(d.Id, p.Id, ct);
-        return Ok(new { presentationId = p.Id, url = p.PublicPath(orgSlug), updated = false });
+        return Ok(new { presentationId = p.Id, url = p.PublicPath(orgSlug), updated = false, liveData = hasData });
     }
 
     /// <summary>تصدير PPTX شريحةً بشريحة (الرسوم تصل كصور PNG من المتصفح).</summary>

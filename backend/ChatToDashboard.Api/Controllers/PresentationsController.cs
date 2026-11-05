@@ -26,13 +26,15 @@ public class PresentationsController : ControllerBase
     private readonly PresentationDataStore _data;
     private readonly PermissionsService _permissions;
     private readonly OrganizationStore _organizations;
+    private readonly PresentationLiveDataService _live;
 
-    public PresentationsController(PresentationStore store, PresentationDataStore data, PermissionsService permissions, OrganizationStore organizations)
+    public PresentationsController(PresentationStore store, PresentationDataStore data, PermissionsService permissions, OrganizationStore organizations, PresentationLiveDataService live)
     {
         _store = store;
         _data = data;
         _permissions = permissions;
         _organizations = organizations;
+        _live = live;
     }
 
     private async Task<string?> OrgSlugAsync(string? organizationId, CancellationToken ct) =>
@@ -41,7 +43,7 @@ public class PresentationsController : ControllerBase
     private object Shape(Presentation p, AppUser user, string? orgSlug) => new
     {
         p.Id, p.Title, p.Slug, p.FileName, p.SizeBytes, p.CreatedByUserId, p.CreatedByName, p.CreatedAt, p.UpdatedAt, p.ExpiresAt, p.RevokedAt,
-        p.ViewCount, p.IsActive, p.EditPolicy, canManage = CanManage(user, p), url = p.PublicPath(orgSlug),
+        p.ViewCount, p.IsActive, p.EditPolicy, p.SourceKind, p.LiveData, canManage = CanManage(user, p), url = p.PublicPath(orgSlug),
     };
 
     /// <summary>اسم الرابط النهائي: المُدخل أو المشتق من العنوان، مع 409 إن كان مستخدمًا داخل المنظمة (ومقترح بديل).</summary>
@@ -138,6 +140,14 @@ public class PresentationsController : ControllerBase
         return p is null ? NotFound() : await Content(p.Id, ct);
     }
 
+    [HttpGet("by/{org}/{slug}/live-data")]
+    [AllowAnonymous]
+    public async Task<IActionResult> LiveDataBySlug(string org, string slug, CancellationToken ct)
+    {
+        var p = await FindBySlugAsync(org, slug, ct);
+        return p is null ? NotFound() : await LiveData(p.Id, ct);
+    }
+
     private async Task<Presentation?> FindBySlugAsync(string org, string slug, CancellationToken ct)
     {
         var organization = await _organizations.FindBySlugAsync(org, ct);
@@ -213,12 +223,45 @@ public class PresentationsController : ControllerBase
         var p = await _store.GetAsync(id, ct);
         if (p is null || !p.IsActive) return NotFound();
         var html = await _store.GetHtmlAsync(id, ct) ?? "";
+        // البيانات الحيّة: صفحة منشورة من داخل المنصة تُقدَّم بآخر نتائج استعلامات مصدرها لا بلقطة النشر.
+        if (PresentationLiveDataService.IsLive(p) && await _live.GetAsync(p, force: false, ct) is { } live)
+            html = PresentationLiveDataService.ApplyToHtml(html, p, live);
         await _store.IncrementViewCountAsync(id, ct);
         Response.Headers["Content-Security-Policy"] = SandboxCsp;
         Response.Headers["X-Content-Type-Options"] = "nosniff";
         Response.Headers["Referrer-Policy"] = "no-referrer";
         Response.Headers["Cache-Control"] = "no-store";
         return Content(html, "text/html; charset=utf-8");
+    }
+
+    /// <summary>البيانات الحيّة للصفحة المفتوحة (تطلبها الصفحة دوريًا عبر الجسر <c>jeem.data</c>) — بلا تسجيل دخول كالمحتوى نفسه.
+    /// <c>{live:false}</c> لعرض بلا مصدر حيّ؛ وإلا <c>{refreshedAt, queries, spec?, failed}</c> من الذاكرة المؤقتة (60 ثانية).</summary>
+    [HttpGet("{id}/live-data")]
+    [AllowAnonymous]
+    public async Task<IActionResult> LiveData(string id, CancellationToken ct)
+    {
+        var p = await _store.GetAsync(id, ct);
+        if (p is null || !p.IsActive) return NotFound();
+        Response.Headers["Cache-Control"] = "no-store";
+        if (!PresentationLiveDataService.IsLive(p)) return Ok(new { live = false });
+        var live = await _live.GetAsync(p, force: false, ct);
+        if (live is null) return Ok(new { live = false, error = "مصدر العرض لم يعد موجودًا." });
+        var o = live.ToJson(); o["live"] = true;
+        return Content(o.ToJsonString(), "application/json; charset=utf-8");
+    }
+
+    public class LiveDataRequest { public bool On { get; set; } }
+
+    /// <summary>تشغيل/إيقاف البيانات الحيّة — صاحب العرض أو المسؤول. لا يعمل لعرض بلا مصدر داخل المنصة.</summary>
+    [HttpPut("{id}/live-data")]
+    public async Task<IActionResult> SetLiveData(string id, [FromBody] LiveDataRequest request, CancellationToken ct)
+    {
+        var (_, p, fail) = await ManagedAsync(id, ct);
+        if (fail is not null) return fail;
+        if (request.On && (p!.SourceKind is null || p.SourceId is null)) return BadRequest(new { error = "هذا العرض ملف مرفوع يدويًا بلا مصدر بيانات داخل المنصة، فلا بيانات حيّة له." });
+        await _store.SetLiveDataAsync(id, request.On, ct);
+        _live.Invalidate(id);
+        return Ok(new { liveData = request.On });
     }
 
     // ---------- بيانات العرض (مخزن مفتاح ← JSON تقرأه/تكتبه الصفحة عبر jeem-page.js) ----------

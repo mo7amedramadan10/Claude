@@ -62,6 +62,14 @@ public class DeckStore
         return await connection.QuerySingleOrDefaultAsync<DeckRecord>($"SELECT {Columns}, SpecJson FROM {Table} WHERE Id = @id AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL))", new { id, projectId });
     }
 
+    /// <summary>بالمعرّف وحده بلا تقييد بالمشروع — للبيانات الحيّة للعروض المنشورة.</summary>
+    public async Task<DeckRecord?> GetByIdAsync(string id, CancellationToken ct = default)
+    {
+        await EnsureSchemaOnceAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<DeckRecord>($"SELECT {Columns}, SpecJson FROM {Table} WHERE Id = @id", new { id });
+    }
+
     public async Task<IReadOnlyList<DeckRecord>> ListAsync(string? projectId, CancellationToken ct = default)
     {
         await EnsureSchemaOnceAsync(ct);

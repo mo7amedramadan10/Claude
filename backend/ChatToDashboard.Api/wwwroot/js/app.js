@@ -9135,7 +9135,8 @@ el('ff-publish').addEventListener('click', async () => {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
     FF.publishedUrl = d.url; const full = location.origin + d.url;
-    ffPushMsg('bot', d.updated ? 'حُدّثت الصفحة المنشورة على نفس الرابط.' : 'نُشرت الصفحة في «العروض التقديمية».', `<a href="${esc(full)}" target="_blank" rel="noopener" dir="ltr">${esc(full)}</a> <button type="button" class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText('${esc(full)}')">نسخ</button>`);
+    const liveNote = d.liveData ? ' الصفحة المنشورة <b>حيّة</b>: تُقدَّم بآخر الأرقام من بياناتك عند كل فتح وتتحدّث وهي مفتوحة — بلا إعادة نشر (يمكن إيقافها من «العروض التقديمية»).' : '';
+    ffPushMsg('bot', (d.updated ? 'حُدّثت الصفحة المنشورة على نفس الرابط.' : 'نُشرت الصفحة في «العروض التقديمية».') + liveNote, `<a href="${esc(full)}" target="_blank" rel="noopener" dir="ltr">${esc(full)}</a> <button type="button" class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText('${esc(full)}')">نسخ</button>`);
     ffRender();
   } catch (e) { ffPushMsg('err', 'تعذّر النشر: ' + e.message); }
   finally { el('ff-publish').disabled = false; }
@@ -9391,7 +9392,7 @@ el('dk-publish').addEventListener('click', async () => {
     const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `(${r.status})`); }
     const d = await r.json(); DK.publishedUrl = d.url; dkRender();
-    dkPushMsg('bot', `${d.updated ? 'حُدّث العرض المنشور' : 'نُشر العرض'} على: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(location.origin + d.url)}</a> — يظهر أيضًا في «العروض التقديمية».`, '', true);
+    dkPushMsg('bot', `${d.updated ? 'حُدّث العرض المنشور' : 'نُشر العرض'} على: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(location.origin + d.url)}</a> — يظهر أيضًا في «العروض التقديمية».${d.liveData ? ' العرض المنشور <b>حيّ</b>: شرائح البيانات تُقدَّم بآخر الأرقام عند كل فتح وتتحدّث وهو مفتوح — بلا إعادة نشر.' : ''}`, '', true);
   } catch (e) { dkPushMsg('err', 'تعذّر النشر: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = 'نشر'; }
 });
@@ -9753,6 +9754,9 @@ async function loadPresentations() {
               <option value="members"${p.editPolicy === 'members' ? ' selected' : ''}>يعدّل: أعضاء المنظمة</option>
               <option value="owner"${p.editPolicy === 'owner' ? ' selected' : ''}>يعدّل: صاحب العرض والمسؤول</option>
             </select>` : ''}
+            ${p.sourceKind ? (manage
+              ? `<button class="icon-btn pres-live${p.liveData ? ' on' : ''}" data-pres-live="${esc(p.id)}" data-on="${p.liveData ? '1' : '0'}" aria-pressed="${p.liveData ? 'true' : 'false'}" title="${p.liveData ? 'بيانات حيّة مفعّلة: الصفحة تُقدَّم بآخر الأرقام من بياناتك عند كل فتح وتتحدّث وهي مفتوحة. انقر للإيقاف (تبقى لقطة النشر).' : 'بيانات حيّة موقوفة: الصفحة تعرض لقطة النشر. انقر للتفعيل.'}">${p.liveData ? '🟢 حيّة' : '⚪ لقطة'}</button>`
+              : `<span class="share-status-tag ${p.liveData ? 'live' : ''}" title="${p.liveData ? 'تُقدَّم بآخر الأرقام عند كل فتح' : 'لقطة النشر'}">${p.liveData ? '🟢 حيّة' : '⚪ لقطة'}</span>`) : ''}
             ${manage ? `<button class="icon-btn" data-pres-rename="${esc(p.id)}" data-slug="${esc(p.slug || '')}" title="تغيير اسم الرابط">✏️</button>` : ''}
             ${manage ? `<button class="icon-btn" data-pres-replace="${esc(p.id)}" title="استبدال الملف بنسخة أحدث على نفس الرابط">⬆️</button>` : ''}
             ${manage && live ? `<button class="icon-btn revoke-share-btn" data-pres-revoke="${esc(p.id)}" title="إلغاء الرابط">🚫</button>` : ''}
@@ -9786,6 +9790,14 @@ async function loadPresentations() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy: sel.value }),
       });
       if (!res.ok) { alert('تعذّر حفظ سياسة التعديل'); await loadPresentations(); }
+    }));
+    list.querySelectorAll('[data-pres-live]').forEach(btn => btn.addEventListener('click', async () => {
+      const on = btn.dataset.on !== '1';
+      const res = await fetch(`/api/presentations/${encodeURIComponent(btn.dataset.presLive)}/live-data`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on }),
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || `تعذّر التغيير (${res.status})`); return; }
+      await loadPresentations();
     }));
     list.querySelectorAll('[data-pres-rename]').forEach(btn => btn.addEventListener('click', async () => {
       const slug = prompt('اسم الرابط الجديد (حروف وأرقام وشرطات، فريد داخل منظمتك):', btn.dataset.slug);
