@@ -65,12 +65,21 @@ public static class FreeformDataBlock
 
     public static bool HasBlock(string? html) => !string.IsNullOrEmpty(html) && DataRx.IsMatch(html);
 
+    /// <summary>إدراج وسم قبل <b>آخر</b> <c>&lt;/body&gt;</c> لا أوّله ولا كل تكراراته: صفحة قد تحمل «&lt;/body&gt;» داخل نص JavaScript مقتبس
+    /// (دالة تعيد بناء الملف مثلًا)، والاستبدال الأعمى يحقن الوسم داخل السكربت فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
+    /// بلا <c>&lt;/body&gt;</c> يُلحق الوسم في النهاية.</summary>
+    internal static string InsertBeforeBodyEnd(string html, string tag)
+    {
+        var i = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
+        return i < 0 ? html + tag : html.Insert(i, tag);
+    }
+
     /// <summary>يضمن تضمين الجسر <c>/js/jeem-page.js</c> (قبل <c>&lt;/body&gt;</c>) لصفحة ببيانات حتى تحدّث أرقامها وهي مفتوحة عبر <c>jeem.data</c>.</summary>
     public static string EnsurePageBridge(string html)
     {
         if (string.IsNullOrEmpty(html) || Regex.IsMatch(html, @"jeem-page\.js", RegexOptions.IgnoreCase)) return html;
         const string tag = "<script src=\"/js/jeem-page.js\"></script>";
-        return Regex.IsMatch(html, @"</body>", RegexOptions.IgnoreCase) ? Regex.Replace(html, @"</body>", tag + "</body>", RegexOptions.IgnoreCase) : html + tag;
+        return InsertBeforeBodyEnd(html, tag);
     }
 
     /// <summary>لصفحات «شرائح»: يضمن وجود سكربت شريط المصغّرات <c>/js/jeem-slides.js</c> قبل <c>&lt;/body&gt;</c> (عند النشر).</summary>
@@ -78,6 +87,6 @@ public static class FreeformDataBlock
     {
         if (string.IsNullOrEmpty(html) || Regex.IsMatch(html, @"jeem-slides\.js", RegexOptions.IgnoreCase)) return html;
         const string tag = "<script src=\"/js/jeem-slides.js\"></script>";
-        return Regex.IsMatch(html, @"</body>", RegexOptions.IgnoreCase) ? Regex.Replace(html, @"</body>", tag + "</body>", RegexOptions.IgnoreCase) : html + tag;
+        return InsertBeforeBodyEnd(html, tag);
     }
 }

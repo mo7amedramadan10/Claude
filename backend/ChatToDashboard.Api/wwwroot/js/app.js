@@ -8751,10 +8751,13 @@ const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('c
 // الأم ترسل {jeemEdit:1,type:enable|disable|get}، والإطار يجعل العنصر النصي المنقور قابلًا للتحرير ويعيد {type:dirty|html}.
 // قبل الإرجاع يُنظَّف كل أثر للعدّة (السمات والأنماط والسكربتات المحقونة) فتبقى الصفحة المحفوظة كما لو كُتبت يدويًا.
 const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop()}}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
+// الحقن قبل «آخر» </body> لا أوّله: صفحة قد تحمل «</body>» داخل نص JavaScript مقتبس (دالة تعيد بناء الملف مثلًا)،
+// والاستبدال الأعمى يضع سكربتات المنصة داخل سكربت الصفحة فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
+function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
 function ffSandboxHtml(html, withEditor, kind) {
   if (!html) return html; let add = html.includes('ff-anchor-fix') ? '' : FF_ANCHOR_FIX;
   if (kind === 'slides' && !/jeem-slides\.js/.test(html)) add += '<script id="ff-slides-kit" src="/js/jeem-slides.js"></script>'; // شريط مصغّرات الشرائح (يُحقن عند النشر أيضًا)
-  if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT; if (!add) return html; return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, add + '</body>') : html + add;
+  if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT; if (!add) return html; return ffInsertBeforeBodyEnd(html, add);
 }
 async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
@@ -8974,6 +8977,50 @@ el('ff-edit-text').addEventListener('click', () => { if (!FF.design) return; if 
 function ffEditCancel() { if (FF.edit.dirty && !confirm('إلغاء التعديلات غير المحفوظة؟')) return; ffEditSetMode(false, true); ffRender(); }
 el('ff-edit-cancel').addEventListener('click', ffEditCancel);
 el('ff-edit-save').addEventListener('click', () => { const w = el('ff-preview').contentWindow; if (!w) return; el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now(); w.postMessage({ jeemEdit: 1, type: 'get' }, '*'); });
+// جسر بيانات العرض داخل معاينة المحرر: الصفحة المعروضة قد تضمّن jeem-page.js وتنادي jeem.store/jeem.viewer بـ postMessage
+// (كما تفعل داخل صفحة المشاهدة). تصميم منشور → نفس واجهة بيانات العرض المنشور فيتشارك المحرر والمشاهدون البيانات نفسها؛
+// غير منشور → مخزن مؤقت في متصفح المحرر بمفتاح التصميم حتى تُجرَّب الصفحة قبل النشر. مصغّرات المعرض تُجاب للعرض فقط.
+function ffLocalStoreKey(key) { return `jeem.ff.${FF.design ? FF.design.id : 'new'}:${key}`; }
+async function ffBridgeHandle(type, payload, readOnly) {
+  const key = payload && payload.key; const okKey = typeof key === 'string' && /^[\w.-]{1,100}$/.test(key);
+  const bad = (message, code, status, version) => Object.assign(new Error(message), { code, status, version });
+  const pid = !readOnly && FF.design && FF.design.presentationId;
+  if (pid) {
+    const base = `/api/presentations/${encodeURIComponent(pid)}`;
+    const fail = async r => { const b = await r.json().catch(() => ({})); throw bad(b.error || `خطأ (${r.status})`, r.status === 409 ? 'conflict' : r.status === 401 ? 'sign_in_required' : r.status === 403 ? 'forbidden' : r.status === 404 ? 'not_found' : 'error', r.status, b.version); };
+    const call = async (path, init) => { const r = await fetch(base + path, init); if (!r.ok) await fail(r); return r.json(); };
+    if (type === 'viewer') return call('/access');
+    if (type === 'data') return call('/live-data', { cache: 'no-store' });
+    if (type === 'list') return call('/data');
+    if (!okKey) throw bad('مفتاح غير صالح', 'bad_key', 400);
+    if (type === 'get') return call(`/data/${encodeURIComponent(key)}`, { cache: 'no-store' });
+    if (type === 'set') return call(`/data/${encodeURIComponent(key)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: payload.value === undefined ? null : payload.value, version: typeof payload.version === 'number' ? payload.version : null }) });
+    throw bad('نوع غير معروف', 'bad_type', 400);
+  }
+  if (type === 'viewer') return { signedIn: true, canEdit: !readOnly, name: null, editPolicy: 'anyone', local: true };
+  if (type === 'data') return { live: false, local: true };
+  if (type === 'list') { const p = ffLocalStoreKey(''); let keys = []; try { keys = Object.keys(localStorage).filter(k => k.startsWith(p)).map(k => ({ key: k.slice(p.length) })); } catch { /* تخزين المتصفح غير متاح */ } return { keys }; }
+  if (!okKey) throw bad('مفتاح غير صالح', 'bad_key', 400);
+  let cur = null; try { cur = JSON.parse(localStorage.getItem(ffLocalStoreKey(key)) || 'null'); } catch { cur = null; }
+  if (type === 'get') return cur || { value: null, version: 0 };
+  if (type === 'set') {
+    if (readOnly) throw bad('عرض فقط', 'forbidden', 403);
+    const curV = cur ? cur.version || 0 : 0;
+    if (typeof payload.version === 'number' && payload.version !== curV) throw bad('تعارض: تغيّرت القيمة منذ قراءتك', 'conflict', 409, curV);
+    const next = { value: payload.value === undefined ? null : payload.value, version: curV + 1, updatedAt: new Date().toISOString() };
+    try { localStorage.setItem(ffLocalStoreKey(key), JSON.stringify(next)); } catch { /* تخزين المتصفح غير متاح */ }
+    return { version: next.version, updatedAt: next.updatedAt };
+  }
+  throw bad('نوع غير معروف', 'bad_type', 400);
+}
+window.addEventListener('message', async e => {
+  const m = e.data; if (!m || m.jeem !== 1 || !m.id || !e.source) return;
+  const preview = el('ff-preview'); const isPreview = !!preview && e.source === preview.contentWindow;
+  const isThumb = !isPreview && [...document.querySelectorAll('#screen-freeform iframe')].some(f => f.contentWindow === e.source);
+  if (!isPreview && !isThumb) return;
+  try { const result = await ffBridgeHandle(m.type, m.payload || {}, isThumb); e.source.postMessage({ jeem: 1, id: m.id, result }, '*'); }
+  catch (err) { e.source.postMessage({ jeem: 1, id: m.id, error: { message: err.message, code: err.code || 'error', status: err.status, version: err.version } }, '*'); }
+});
 window.addEventListener('message', async e => {
   const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
   if (m.type === 'dirty') { FF.edit.dirty = m.count || 1; el('ff-edit-save').disabled = false; el('ff-edit-count').textContent = FF.edit.dirty === 1 ? 'عنصر واحد معدَّل' : `${FF.edit.dirty.toLocaleString('en-US')} عناصر معدَّلة`; return; }
@@ -9105,7 +9152,7 @@ el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftK
 el('ff-new-btn').addEventListener('click', () => { FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
-el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(FF.html.replace('</body>', '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script></body>')); w.document.close(); });
+el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(FF.html, '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
 el('ff-list-btn').addEventListener('click', async () => {
   const panel = el('ff-list-panel'); if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
   try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
