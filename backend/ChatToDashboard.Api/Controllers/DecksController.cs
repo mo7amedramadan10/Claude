@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Projects;
@@ -41,6 +42,7 @@ public class DecksController : ControllerBase
     private readonly ProjectStore _projects;
     private readonly DeckBuilder _builder;
     private readonly DeckImporter _importer;
+    private readonly DataFingerprintService _fingerprints;
     private readonly PresentationStore _presentations;
     private readonly OrganizationStore _organizations;
     private readonly PermissionsService _permissions;
@@ -49,9 +51,9 @@ public class DecksController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     public DecksController(DeckStore decks, DeckBrandStore brands, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
-        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts, DeckBrandTemplateStore templates)
+        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts, DeckBrandTemplateStore templates, DataFingerprintService fingerprints)
     {
-        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fonts = fonts; _templates = templates; _builder = builder; _presentations = presentations; _organizations = organizations;
+        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fingerprints = fingerprints; _fonts = fonts; _templates = templates; _builder = builder; _presentations = presentations; _organizations = organizations;
         _permissions = permissions; _tools = tools; _feasibility = feasibility; _env = env;
     }
 
@@ -283,7 +285,14 @@ public class DecksController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var d = await _decks.GetAsync(id, cur.Value.Selection.ProjectId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
-        return Ok(new { deck = d, spec = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json), publishedUrl = await PublishedUrlAsync(d, ct) });
+        var spec0 = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json);
+        bool? dataChanged = null;
+        if (d.DataFingerprint is not null && spec0 is not null)
+        {
+            var fp = await _fingerprints.ComputeAsync(spec0.Slides.Select(x => x.Query?.Sql).Where(x => !string.IsNullOrWhiteSpace(x))!, cur.Value.Selection.ProjectId, ct);
+            dataChanged = fp is not null && fp != d.DataFingerprint;
+        }
+        return Ok(new { deck = d, spec = spec0, publishedUrl = await PublishedUrlAsync(d, ct), dataChanged });
     }
 
     /// <summary>عرض جديد من نموذج (هيكل بلا بيانات) أو فارغ.</summary>
@@ -309,6 +318,15 @@ public class DecksController : ControllerBase
         return Ok(new { spec });
     }
 
+    public class DeckAutoRefreshRequest { public bool On { get; set; } }
+    [HttpPut("{id}/auto-refresh")]
+    public async Task<IActionResult> SetAutoRefresh(string id, [FromBody] DeckAutoRefreshRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var d = await _decks.GetAsync(id, cur.Value.Selection.ProjectId, ct); if (d is null) return NotFound(new { error = "العرض غير موجود." });
+        await _decks.SetAutoRefreshAsync(id, request.On, ct); return Ok(new { autoRefresh = request.On });
+    }
+
     /// <summary>تحديث بيانات شرائح العرض بلا موديل: إعادة تنفيذ <c>query.sql</c> لكل شريحة وإعادة صياغتها بقواعد ثابتة (DeckDataRefresher).</summary>
     [HttpPost("{id}/refresh")]
     public async Task<IActionResult> RefreshData(string id, CancellationToken ct)
@@ -328,8 +346,9 @@ public class DecksController : ControllerBase
             if (rows is null || !DeckDataRefresher.Apply(slide, rows)) { failed.Add(new { slide = slide.Title, error = "نتيجة فارغة أو لا تناسب تخطيط الشريحة" }); continue; }
             slide.MissingReason = null; updated++;
         }
-        if (updated > 0) await _decks.UpdateSpecAsync(id, spec.Normalize(), ct);
-        return Ok(new { spec, updated, total = withSql.Count, failed, refreshedAt = DateTime.UtcNow });
+        var refreshedAt = DateTime.UtcNow;
+        if (updated > 0) { await _decks.UpdateSpecAsync(id, spec.Normalize(), ct); await _decks.SetDataStateAsync(id, await _fingerprints.ComputeAsync(withSql.Select(x => x.Query!.Sql!), selection.ProjectId, ct), refreshedAt, ct); }
+        return Ok(new { spec, updated, total = withSql.Count, failed, refreshedAt });
     }
 
     [HttpDelete("{id}")]
@@ -363,6 +382,8 @@ public class DecksController : ControllerBase
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         if (deck is null) deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, result.Spec, template?.Key, ct);
         else await _decks.UpdateSpecAsync(deck.Id, result.Spec, ct);
+        var sqls = result.Spec.Slides.Select(x => x.Query?.Sql).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
+        if (sqls.Count > 0) { var at = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(sqls, selection.ProjectId, ct); await _decks.SetDataStateAsync(deck.Id, fp, at, ct); deck.DataFingerprint = fp; deck.DataRefreshedAt = at; }
         return Ok(new { deck, spec = result.Spec, reply = result.Reply, dataSlidesBuilt = result.DataSlidesBuilt, dataSlidesTotal = result.DataSlidesTotal });
     }
 

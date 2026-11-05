@@ -8929,18 +8929,27 @@ el('ff-refresh').addEventListener('click', e => {
   if (!FF.design) return;
   panel.classList.toggle('hidden', !open); el('ff-refresh').setAttribute('aria-expanded', open ? 'true' : 'false');
   el('ff-refresh-fast').disabled = !FF.design.queryCount; el('ff-refresh-fast').title = FF.design.queryCount ? '' : 'لا استعلامات مسجَّلة لهذا التصميم (بُني قبل عقد البيانات أو بلا بيانات)';
+  el('ff-auto-refresh').checked = !!FF.design.autoRefresh; el('ff-auto-refresh').disabled = !FF.design.queryCount;
 });
 el('ff-refresh-panel').addEventListener('click', e => e.stopPropagation());
-el('ff-refresh-fast').addEventListener('click', async () => {
-  el('ff-refresh-panel').classList.add('hidden'); if (!FF.design || FF.busy) return;
+el('ff-refresh-fast').addEventListener('click', () => { el('ff-refresh-panel').classList.add('hidden'); ffRefreshFast(); });
+el('ff-stale').addEventListener('click', ffRefreshFast);
+async function ffRefreshFast() {
+  if (!FF.design || FF.busy) return;
   FF.busy = true; ffPushMsg('user', 'حدّث البيانات'); el('ff-status').textContent = 'يحدّث البيانات…';
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/refresh`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
-    FF.html = d.html; FF.viewing = null; FF.design.version = d.version; FF.design.dataRefreshedAt = d.refreshedAt; if (d.versions) FF.versions = d.versions;
+    FF.html = d.html; FF.viewing = null; FF.design.version = d.version; FF.design.dataRefreshedAt = d.refreshedAt; if (d.versions) FF.versions = d.versions; FF.dataChanged = false;
     FF.busy = false; ffPushMsg('bot', `حُدِّثت البيانات من ${d.ok} استعلامًا (الإصدار ${d.version})${(d.failed || []).length ? ` — فشل ${d.failed.length}: ${d.failed.map(f => f.key).join('، ')}` : ''}.`); ffRender();
   } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التحديث: ' + e.message); }
   finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); }
+}
+// خيار التحديث التلقائي عند الفتح (يُحفظ على التصميم)
+el('ff-auto-refresh').addEventListener('change', async () => {
+  if (!FF.design) return; const on = el('ff-auto-refresh').checked;
+  try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autoRefresh: on }) }); if (!r.ok) throw new Error(r.status); FF.design.autoRefresh = on; ffPushMsg('bot', on ? 'سيُحدَّث هذا التصميم تلقائيًا عند فتحه إن تغيّرت بيانات المصدر.' : 'أُلغي التحديث التلقائي عند الفتح.'); }
+  catch (e) { el('ff-auto-refresh').checked = !on; ffPushMsg('err', 'تعذّر حفظ الإعداد.'); }
 });
 el('ff-refresh-rebuild').addEventListener('click', () => { el('ff-refresh-panel').classList.add('hidden'); if (!FF.design) return; ffAsk('أعد بناء الصفحة بالبيانات الحالية: نفّذ الاستعلامات من جديد عبر query_data وحدّث كل الأرقام والجداول والرسوم، ولا تغيّر التصميم أو النصوص الأخرى.'); });
 
@@ -9013,11 +9022,13 @@ async function ffConvert(kind) {
 }
 async function ffOpen(id) {
   const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return; ffMarkOpened(id);
-  const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl;
+  const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl; FF.dataChanged = !!d.dataChanged;
   FF.messages = (d.messages || []).map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
   await ffLoadTemplates(); FF.template = FF.design.templateKey ? (FF.templates.find(t => t.key === FF.design.templateKey) || null) : null;
   const firstUser = FF.messages.find(m => m.role === 'user'); if (firstUser) firstUser.extraHtml = ffAttachLineHtml(FF.template);
   ffRenderAttach(); ffRender(); ffRenderMessages();
+  // تغيّرت بيانات المصدر منذ آخر تحديث: تحديث تلقائي إن فُعِّل، وإلا شارة تحذير قابلة للنقر
+  if (FF.dataChanged && FF.design.autoRefresh && FF.design.queryCount) { ffPushMsg('bot', 'تغيّرت بيانات المصدر منذ آخر تحديث — أحدّثها تلقائيًا كما ضبطت.'); ffRefreshFast(); }
 }
 function ffRender() {
   if (FF.design && FF.gal) delete FF.gal.htmlCache[FF.design.id]; // المعاينة المصغّرة تُجلب من جديد بعد التعديل
@@ -9032,6 +9043,7 @@ function ffRender() {
   const viewingOld = FF.viewing != null && FF.viewing !== d.version;
   el('ff-meta').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} · ${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}${d && d.queryCount ? ` · بيانات حيّة (${d.queryCount} استعلام${d.dataRefreshedAt ? '، آخر تحديث ' + ffAgo(d.dataRefreshedAt) : ''})` : ''}`;
   el('ff-refresh').classList.toggle('no-queries', !(d && d.queryCount));
+  el('ff-stale').classList.toggle('hidden', !(d && d.queryCount && FF.dataChanged));
   el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
@@ -9250,7 +9262,7 @@ async function dkCreateFromTemplate(key) {
   const t = (DK.templates || []).find(x => x.key === key);
   const r = await fetch('/api/decks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ templateKey: key }) });
   if (!r.ok) { alert('تعذّر إنشاء العرض'); return; }
-  const data = await r.json(); DK.deck = data.deck; DK.spec = data.spec; DK.index = 0; DK.dirty = false; DK.messages = [];
+  const data = await r.json(); DK.deck = data.deck; DK.spec = data.spec; DK.index = 0; DK.dirty = false; DK.messages = []; DK.dataChanged = !!data.dataChanged;
   dkRender();
   if (t && t.dataSlides) {
     dkPushMsg('bot', `أنشأت هيكل «${t.name}» (${t.total} شرائح، منها ${t.dataSlides} من بياناتك). اضغط «املأ من بياناتي» أو اكتب ما تريد تركيزه.`, `<button type="button" class="btn btn-sm btn-soft" data-dk-fill>⚡ املأ من بياناتي</button>`);
@@ -9258,10 +9270,12 @@ async function dkCreateFromTemplate(key) {
 }
 async function dkOpen(id) {
   const r = await fetch(`/api/decks/${encodeURIComponent(id)}`); if (!r.ok) return;
-  const data = await r.json(); DK.deck = data.deck; DK.spec = data.spec; DK.index = 0; DK.dirty = false; DK.messages = []; DK.publishedUrl = data.publishedUrl;
+  const data = await r.json(); DK.deck = data.deck; DK.spec = data.spec; DK.index = 0; DK.dirty = false; DK.messages = []; DK.publishedUrl = data.publishedUrl; DK.dataChanged = !!data.dataChanged;
   dkRender(); dkPushMsg('bot', `فتحت «${DK.spec.title}»${data.publishedUrl ? ` — منشور على ${location.origin}${data.publishedUrl}` : ''}. اطلب أي تعديل أو عدّل مباشرة.`);
+  if (DK.dataChanged && DK.deck.autoRefresh) { dkPushMsg('bot', 'تغيّرت بيانات المصدر منذ آخر تحديث — أحدّثها تلقائيًا كما ضبطت.'); dkRefreshData(); }
 }
 function dkRender() {
+  if (DK.deck) { const hasQ = (DK.spec.slides || []).some(x => x.query && x.query.sql); el('dk-stale').classList.toggle('hidden', !(hasQ && DK.dataChanged)); el('dk-auto-refresh').classList.toggle('hidden', !hasQ); el('dk-auto-refresh').setAttribute('aria-pressed', DK.deck.autoRefresh ? 'true' : 'false'); el('dk-auto-refresh').textContent = DK.deck.autoRefresh ? '⏱ تلقائي: مفعّل' : '⏱ تلقائي: معطّل'; }
   el('dk-gallery').classList.add('hidden'); el('dk-editor').classList.remove('hidden');
   el('dk-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
   const spec = DK.spec; if (!spec.slides.length) spec.slides.push({ id: dkId(), layout: 'title', title: spec.title || 'عرض جديد' });
@@ -9342,17 +9356,24 @@ async function dkSave(silent) {
 }
 el('dk-save').addEventListener('click', () => dkSave(false));
 // تحديث بيانات شرائح العرض بلا موديل (DeckDataRefresher): لكل شريحة بـ query.sql تُعاد الصفوف وتُصاغ حتميًا
-el('dk-refresh').addEventListener('click', async () => {
+el('dk-refresh').addEventListener('click', () => dkRefreshData());
+el('dk-stale').addEventListener('click', () => dkRefreshData());
+el('dk-auto-refresh').addEventListener('click', async () => {
+  if (!DK.deck) return; const on = !DK.deck.autoRefresh;
+  try { const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}/auto-refresh`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on }) }); if (!r.ok) throw new Error(r.status); DK.deck.autoRefresh = on; dkRender(); dkPushMsg('bot', on ? 'سيُحدَّث هذا العرض تلقائيًا عند فتحه إن تغيّرت بيانات المصدر.' : 'أُلغي التحديث التلقائي عند الفتح.'); }
+  catch (e) { dkPushMsg('err', 'تعذّر حفظ الإعداد.'); }
+});
+async function dkRefreshData() {
   if (!DK.deck) return; const btn = el('dk-refresh'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'يحدّث…';
   try {
     if (DK.dirty) await dkSave(true);
     const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}/refresh`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
-    DK.spec = d.spec; DK.dirty = false; dkRender();
+    DK.spec = d.spec; DK.dirty = false; DK.dataChanged = false; dkRender();
     dkPushMsg('bot', `حُدِّثت ${d.updated} من ${d.total} شرائح بيانات من بيانات المشروع الحالية${(d.failed || []).length ? ` — تعذّر: ${d.failed.map(f => f.slide).join('، ')}` : ''}.`);
   } catch (e) { dkPushMsg('err', 'تعذّر تحديث البيانات: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = label; }
-});
+}
 
 el('dk-publish').addEventListener('click', async () => {
   if (!DK.spec) return; if (!(await dkSave(true))) return;

@@ -125,6 +125,10 @@ public class DeckRecord
     [JsonPropertyName("templateKey")] public string? TemplateKey { get; set; }
     /// <summary>معرّف العرض المنشور في «العروض التقديمية» (على مستوى المنظمة) إن نُشر.</summary>
     [JsonPropertyName("presentationId")] public string? PresentationId { get; set; }
+    /// <summary>بصمة جداول المصدر عند آخر بناء/تحديث بيانات؛ تُقارن عند الفتح لإظهار «تغيّرت البيانات».</summary>
+    [JsonIgnore] public string? DataFingerprint { get; set; }
+    [JsonPropertyName("dataRefreshedAt")] public DateTime? DataRefreshedAt { get; set; }
+    [JsonPropertyName("autoRefresh")] public bool AutoRefresh { get; set; }
     [JsonPropertyName("slideCount")] public int SlideCount { get; set; }
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
     [JsonPropertyName("updatedAt")] public DateTime UpdatedAt { get; set; }

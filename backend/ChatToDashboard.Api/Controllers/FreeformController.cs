@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Data;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text;
@@ -14,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ChatToDashboard.Api.Controllers;
 
 public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } public string? TemplateKey { get; set; } }
-public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } }
+public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
 public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } }
 
@@ -33,9 +34,10 @@ public class FreeformController : ControllerBase
     private readonly PermissionsService _permissions;
     private readonly AnalyticsTools _tools;
     private readonly FreeformTemplateStore _templates;
+    private readonly DataFingerprintService _fingerprints;
 
-    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates)
-    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; }
+    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints)
+    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; }
 
     private async Task<(AppUser User, Sources.SourceSelection Selection)?> CurrentAsync(CancellationToken ct)
     {
@@ -74,7 +76,15 @@ public class FreeformController : ControllerBase
         var d = await _store.GetAsync(id, cur.Value.Selection.ProjectId, ct);
         if (d is null) return NotFound(new { error = "التصميم غير موجود." });
         var brand = await BrandAsync(cur.Value.Selection.ProjectId, ct);
-        return Ok(new { design = d, html = ApplyBrandAssets(d.Html, brand), versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), publishedUrl = await PublishedUrlAsync(d, ct) });
+        // تغيّر بيانات المصدر منذ آخر تحديث؟ (بصمة الجداول المذكورة في الاستعلامات المسجَّلة مقابل المحفوظة)
+        bool? dataChanged = null;
+        if (d.QueryCount > 0 && d.DataFingerprint is not null)
+        {
+            var qs = await _store.QueriesAsync(id, ct);
+            var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), cur.Value.Selection.ProjectId, ct);
+            dataChanged = fp is not null && fp != d.DataFingerprint;
+        }
+        return Ok(new { design = d, html = ApplyBrandAssets(d.Html, brand), versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), publishedUrl = await PublishedUrlAsync(d, ct), dataChanged });
     }
 
     [HttpGet("{id}/versions/{version:int}")]
@@ -186,7 +196,7 @@ public class FreeformController : ControllerBase
             version = design.Version > 0 ? design.Version : null;
         }
         else if (result.Html is not null) { version = await _store.AddVersionAsync(design.Id, result.Html, request.Message, null, ct); design.Version = version.Value; design.Html = result.Html; }
-        if (result.Html is not null && result.Queries is { Count: > 0 } qs) { var now = DateTime.UtcNow; await _store.SetQueriesAsync(design.Id, qs, now, ct); design.QueryCount = qs.Count; design.DataRefreshedAt = now; }
+        if (result.Html is not null && result.Queries is { Count: > 0 } qs) { var now = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, now, fp, ct); design.QueryCount = qs.Count; design.DataRefreshedAt = now; design.DataFingerprint = fp; }
         await _store.AddMessageAsync(design.Id, "user", request.Message, null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, version, usedData = result.UsedData, versions = await _store.VersionsAsync(design.Id, ct) });
@@ -215,7 +225,7 @@ public class FreeformController : ControllerBase
         var now = DateTime.UtcNow;
         var html = FreeformDataBlock.Inject(d.Html, fresh, now);
         var version = await _store.AddVersionAsync(id, html, $"تحديث البيانات ({fresh.Count - failed.Count} من {stored.Count} استعلامًا)", null, ct);
-        await _store.SetQueriesAsync(id, fresh, now, ct);
+        await _store.SetQueriesAsync(id, fresh, now, await _fingerprints.ComputeAsync(fresh.Select(q => q.Sql), selection.ProjectId, ct), ct);
         await _store.AddMessageAsync(id, "assistant", failed.Count == 0 ? $"حُدِّثت البيانات من {stored.Count} استعلامًا." : $"حُدِّثت البيانات من {stored.Count - failed.Count} استعلامًا وفشل {failed.Count}.", version, ct);
         var brand = await BrandAsync(selection.ProjectId, ct);
         return Ok(new { version, html = ApplyBrandAssets(html, brand), refreshedAt = now, ok = stored.Count - failed.Count, failed, versions = await _store.VersionsAsync(id, ct) });
@@ -228,6 +238,7 @@ public class FreeformController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var d = await _store.GetAsync(id, cur.Value.Selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
         int? version = null;
+        if (request.AutoRefresh is { } ar) await _store.SetAutoRefreshAsync(id, ar, ct);
         if (!string.IsNullOrWhiteSpace(request.Html))
         {
             if (Encoding.UTF8.GetByteCount(request.Html) > FreeformStore.MaxHtmlBytes) return BadRequest(new { error = "الصفحة تتجاوز 4 ميغابايت." });

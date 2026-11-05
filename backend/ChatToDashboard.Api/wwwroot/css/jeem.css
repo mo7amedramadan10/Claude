@@ -3539,3 +3539,10 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope #ff-refresh-panel { min-width: 320px; }
 .jeem-scope #ff-refresh-panel .dropdown-item { display: block; white-space: normal; text-align: start; }
 .jeem-scope #ff-refresh-panel .dropdown-item:disabled { opacity: .5; cursor: not-allowed; }
+
+/* شارة «تغيّرت البيانات» في شريط أدوات تصميم حر ومنشئ العروض + خيار التحديث التلقائي في القائمة */
+.jeem-scope .ff-stale { background: #FFF4CC; border: 1px solid #F2D77A; color: #5A4300; font-weight: 600; }
+.jeem-scope .ff-stale:hover { background: #FFEBA8; }
+.jeem-scope .ff-stale.hidden { display: none; }
+.jeem-scope .ff-auto-label { display: flex; align-items: center; gap: 6px; cursor: pointer; border-top: 1px solid var(--line-2); margin-top: 4px; padding-top: 8px; }
+.jeem-scope #dk-auto-refresh.hidden { display: none; }
