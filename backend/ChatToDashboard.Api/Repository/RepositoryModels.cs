@@ -51,6 +51,14 @@ public class RepositoryFile
     /// null if the shape has never changed since upload. A dashboard saved before this
     /// timestamp may depend on a column that no longer exists.</summary>
     [JsonPropertyName("schemaChangedAt")] public DateTime? SchemaChangedAt { get; set; }
+    /// <summary>ملف مرتبط برابط عام (Google Sheets / OneDrive / SharePoint / Dropbox / رابط مباشر): يُعاد تنزيله عند «مزامنة».
+    /// null = ملف مرفوع يدويًا.</summary>
+    [JsonPropertyName("sourceUrl")] public string? SourceUrl { get; set; }
+    [JsonPropertyName("lastSyncedAt")] public DateTime? LastSyncedAt { get; set; }
+    /// <summary>سبب فشل آخر مزامنة (يبقى الجدول القديم)؛ null عند النجاح.</summary>
+    [JsonPropertyName("syncError")] public string? SyncError { get; set; }
+    /// <summary>نوع مصدر الرابط للعرض (google/onedrive/sharepoint/dropbox/url)؛ null لملف مرفوع.</summary>
+    [JsonPropertyName("sourceProvider")] public string? SourceProvider => SourceUrl is null ? null : LinkedFileFetcher.ProviderOf(SourceUrl);
 
     /// <summary>The account that created this file identity (via "Upload new file").</summary>
     [JsonPropertyName("createdByUserId")] public string CreatedByUserId { get; set; } = string.Empty;
@@ -110,6 +118,15 @@ public class SaveUploadRequest
 public class UpdateFileDataRequest
 {
     [JsonPropertyName("token")] public string Token { get; set; } = string.Empty;
+}
+
+/// <summary>ربط ملف برابط عام: يُنزَّل ويُحفظ كملف جديد في المشروع مع الاحتفاظ بالرابط للمزامنة.</summary>
+public class LinkFileRequest
+{
+    [JsonPropertyName("url")] public string Url { get; set; } = string.Empty;
+    [JsonPropertyName("displayName")] public string DisplayName { get; set; } = string.Empty;
+    [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
+    [JsonPropertyName("category")] public string Category { get; set; } = string.Empty;
 }
 
 /// <summary>Body of PUT /api/repository/files/{id}/meta — editing display name/description

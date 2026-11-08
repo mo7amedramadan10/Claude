@@ -83,6 +83,9 @@ public class RepositoryStore
                      ("CreatedByUserId", "NVARCHAR(200)"),
                      ("FileContent", "VARBINARY(MAX)"),
                      ("ProjectId", "NVARCHAR(64)"),
+                     ("SourceUrl", "NVARCHAR(2000)"),
+                     ("LastSyncedAt", "DATETIME2"),
+                     ("SyncError", "NVARCHAR(1000)"),
                  })
         {
             try
@@ -125,7 +128,7 @@ public class RepositoryStore
         // near the keyword 'RowCount'") even though it isn't formally reserved.
         "Category, Kind, [RowCount], ColumnCount, PageCount, UploadedAt, " +
         "COALESCE(LastUpdatedAt, UploadedAt) AS LastUpdatedAt, TableName, SchemaChangedAt, " +
-        "COALESCE(CreatedByUserId, '') AS CreatedByUserId";
+        "COALESCE(CreatedByUserId, '') AS CreatedByUserId, SourceUrl, LastSyncedAt, SyncError";
 
     /// <summary>Attaches every file that predates project scoping (ProjectId still NULL) to
     /// the organization's default project — called once from Program.cs's startup, the same
@@ -531,6 +534,31 @@ public class RepositoryStore
     /// delete) call this to 404 a file that exists but belongs to a different project, the
     /// same "don't even confirm it exists" treatment UsersController gives a cross-organization
     /// user id.</summary>
+    /// <summary>أعمدة الجدول كما سُجّلت عند آخر رفع/مزامنة — للمقارنة بعد المزامنة وإبلاغ المستخدم بما تغيّر.</summary>
+    public async Task<List<string>> GetColumnsAsync(string fileId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var json = await connection.ExecuteScalarAsync<string?>($"SELECT ColumnsJson FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json ?? "[]") ?? new(); } catch { return new(); }
+    }
+
+    /// <summary>ربط الملف برابط مصدر (أو فكّه بـ null) وحالة آخر مزامنة.</summary>
+    public async Task SetSourceAsync(string fileId, string? sourceUrl, DateTime? syncedAt, string? error, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {CatalogueTable} SET SourceUrl = @sourceUrl, LastSyncedAt = @syncedAt, SyncError = @error WHERE Id = @fileId",
+            new { fileId, sourceUrl, syncedAt, error = error is { Length: > 1000 } ? error[..1000] : error });
+    }
+
+    public async Task<RepositoryFile?> FindAsync(string fileId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<RepositoryFile>($"SELECT {SelectColumns} FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
+    }
+
     public async Task<string?> GetProjectIdAsync(string fileId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

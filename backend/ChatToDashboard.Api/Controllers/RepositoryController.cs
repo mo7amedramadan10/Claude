@@ -17,12 +17,14 @@ public class RepositoryController : ControllerBase
     private readonly ChatToDashboard.Api.Semantics.ColumnSemanticsService _semantics;
     private readonly ChatToDashboard.Api.Semantics.ColumnSemanticsStore _semanticsStore;
     private readonly ILogger<RepositoryController> _logger;
+    private readonly LinkedFileFetcher _linked;
 
     public RepositoryController(
         RepositoryStore store, UploadParser parser, PermissionsService permissions, UserStore users,
         ChatToDashboard.Api.Semantics.ColumnSemanticsService semantics, ChatToDashboard.Api.Semantics.ColumnSemanticsStore semanticsStore,
-        ILogger<RepositoryController> logger)
+        ILogger<RepositoryController> logger, LinkedFileFetcher linked)
     {
+        _linked = linked;
         _semantics = semantics;
         _semanticsStore = semanticsStore;
         _store = store;
@@ -159,6 +161,99 @@ public class RepositoryController : ControllerBase
             _logger.LogError(ex, "Failed to save {File} to the repository", parsed.FileName);
             return StatusCode(500, new { error = ex.Message });
         }
+    }
+
+    // ---------- ملف مرتبط برابط عام: ربط + مزامنة (الخيار الأول من مزامنة الجداول السحابية) ----------
+
+    /// <summary>ينزّل الملف من الرابط ويمرّره على محلّل الرفع نفسه ثم يحفظه ملفًا جديدًا في المشروع مع الرابط للمزامنة لاحقًا.</summary>
+    [HttpPost("link")]
+    public async Task<IActionResult> Link([FromBody] LinkFileRequest request, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        if (!LinkedFileFetcher.IsValidUrl(request.Url)) return BadRequest(new { error = "أدخل رابطًا صحيحًا يبدأ بـ https://" });
+        if (string.IsNullOrWhiteSpace(request.DisplayName)) return BadRequest(new { error = "اسم العرض مطلوب." });
+        var (parsed, error) = await FetchAndParseAsync(request.Url.Trim(), request.DisplayName.Trim(), user, ct);
+        if (parsed is null) return BadRequest(new { error });
+        try
+        {
+            var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+            var saved = await _store.SaveAsync(parsed, request.DisplayName.Trim(), request.Description ?? "", request.Category ?? "", user.Id, selection.ProjectId, ct);
+            await _store.SetSourceAsync(saved.Id, request.Url.Trim(), DateTime.UtcNow, null, ct);
+            _semantics.AnalyzeInBackground(saved.ProjectId, saved.TableName);
+            return Ok(await _store.FindAsync(saved.Id, ct) ?? saved);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save linked file {Url}", request.Url);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    /// <summary>مزامنة ملف مرتبط: إعادة التنزيل واستبدال الجدول (هوية الجدول ثابتة كـ«تحديث الملف»)، مع تقرير بالأعمدة المضافة/المحذوفة.
+    /// الفشل يبقي الجدول القديم ويُسجَّل سببه على الملف.</summary>
+    [HttpPost("files/{id}/sync")]
+    public async Task<IActionResult> Sync(string id, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)) return NotFound(new { error = "الملف غير موجود." });
+        var file = await _store.FindAsync(id, ct);
+        if (file?.SourceUrl is null) return BadRequest(new { error = "هذا الملف غير مرتبط برابط. استخدم «تحديث البيانات» لرفع نسخة جديدة." });
+        var before = await _store.GetColumnsAsync(id, ct);
+        var (parsed, error) = await FetchAndParseAsync(file.SourceUrl, file.DisplayName, user, ct);
+        if (parsed is null)
+        {
+            await _store.SetSourceAsync(id, file.SourceUrl, file.LastSyncedAt, error, ct);
+            return StatusCode(502, new { error, keptOld = true });
+        }
+        try
+        {
+            var updated = await _store.UpdateDataAsync(id, parsed, ct);
+            if (updated is null) return NotFound(new { error = "الملف غير موجود." });
+            await _store.SetSourceAsync(id, file.SourceUrl, DateTime.UtcNow, null, ct);
+            _semantics.AnalyzeInBackground(updated.ProjectId, updated.TableName);
+            var after = await _store.GetColumnsAsync(id, ct);
+            var added = after.Except(before, StringComparer.OrdinalIgnoreCase).ToList();
+            var removed = before.Except(after, StringComparer.OrdinalIgnoreCase).ToList();
+            return Ok(new { file = await _store.FindAsync(id, ct) ?? updated, rows = updated.RowCount, columns = updated.ColumnCount, addedColumns = added, removedColumns = removed, schemaChanged = added.Count > 0 || removed.Count > 0 });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to sync linked file {Id}", id);
+            await _store.SetSourceAsync(id, file.SourceUrl, file.LastSyncedAt, ex.Message, ct);
+            return StatusCode(500, new { error = ex.Message, keptOld = true });
+        }
+    }
+
+    /// <summary>فكّ الربط: يبقى الملف وجدوله كلقطة أخيرة، ويزول زر المزامنة.</summary>
+    [HttpDelete("files/{id}/link")]
+    public async Task<IActionResult> Unlink(string id, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
+        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)) return NotFound(new { error = "الملف غير موجود." });
+        await _store.SetSourceAsync(id, null, null, null, ct);
+        return NoContent();
+    }
+
+    /// <summary>تنزيل من الرابط ثم التحليل بمحلّل الرفع (نفس المسار: مؤقت → ParsedUpload) — يعيد (null, سبب) عند أي فشل برسالة للمستخدم.</summary>
+    private async Task<(ParsedUpload? Parsed, string? Error)> FetchAndParseAsync(string url, string displayName, AppUser user, CancellationToken ct)
+    {
+        FetchedFile fetched;
+        try { fetched = await _linked.FetchAsync(url, displayName, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (InvalidOperationException ex) { return (null, ex.Message); }
+        catch (HttpRequestException ex) { return (null, "تعذّر الوصول إلى الرابط: " + ex.Message); }
+        catch (TaskCanceledException) { return (null, "انتهت مهلة التنزيل (60 ثانية). جرّب لاحقًا أو تأكد من الرابط."); }
+        PendingUpload pending;
+        using (var ms = new MemoryStream(fetched.Bytes)) pending = await _parser.ParseAsync(fetched.FileName, ms, user, null, ct);
+        if (pending.Error is not null) return (null, "تعذّرت قراءة الملف: " + pending.Error);
+        if (!_parser.TryTake(pending.Token, out var parsed)) return (null, "تعذّرت قراءة الملف.");
+        if (parsed.Table is null || parsed.Table.Columns.Count == 0) return (null, "لم يُعثر على جدول بيانات في الملف (الورقة الأولى فارغة؟).");
+        return (parsed, null);
     }
 
     /// <summary>

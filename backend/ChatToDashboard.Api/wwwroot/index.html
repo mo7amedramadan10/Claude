@@ -809,6 +809,7 @@
 <div id="screen-repo" class="screen">
   <div class="repo-bar">
     <button type="button" class="upload-btn" id="btn-open-upload-modal">رفع ملفات جديدة</button>
+    <button type="button" class="upload-btn link-btn" id="btn-open-link-modal" title="Google Sheets أو Excel على OneDrive/SharePoint أو أي رابط CSV/XLSX مشارك للعامة">🔗 ربط ملف برابط</button>
     <!-- Bound to one existing file's id right before it's clicked (see openUpdateFilePicker) —
          "Update this file" re-uses the same server-side parser, just skips the "assign a
          category" step since display name/category/relationships/permissions are preserved. -->
@@ -845,6 +846,29 @@
     <div class="modal-actions">
       <button type="button" id="upload-modal-close">إغلاق</button>
     </div>
+  </div>
+</div>
+
+<!-- ربط ملف برابط عام (Google Sheets / OneDrive / SharePoint / Dropbox / رابط مباشر): يُنزَّل ويدخل مسار الرفع نفسه، ويُزامَن بزر «مزامنة» من صف الملف -->
+<div id="link-modal" class="modal-overlay hidden">
+  <div class="modal share-modal-box">
+    <h3>ربط ملف برابط</h3>
+    <p class="modal-note">الصق رابط جدول <b>Google Sheets</b> أو ملف Excel/CSV على <b>OneDrive</b> أو <b>SharePoint</b> أو <b>Dropbox</b> أو أي رابط مباشر. الشرط الوحيد أن يكون الملف مشاركًا بخيار «أي شخص معه الرابط» (عرض). يُحفظ كملف في مشروعك ويعمل عليه كل شيء (المعاني، النماذج، اللوحات، التصاميم)، وتعيد مزامنته متى شئت من زر 🔄 في صف الملف. تُقرأ الورقة الأولى من ملف Excel، أو ورقة Google بعينها إن كان الرابط يحمل <code dir="ltr">gid</code>.</p>
+    <form id="link-form">
+      <label class="share-expiry-label">الرابط</label>
+      <input type="url" id="link-url" placeholder="https://docs.google.com/spreadsheets/d/…" required dir="ltr">
+      <label class="share-expiry-label">اسم العرض</label>
+      <input type="text" id="link-name" maxlength="200" placeholder="مثال: مبيعات 2026" required>
+      <label class="share-expiry-label">التصنيف <span class="muted">(اختياري)</span></label>
+      <input type="text" id="link-category" list="cat-suggestions" placeholder="عام">
+      <label class="share-expiry-label">الوصف <span class="muted">(اختياري)</span></label>
+      <textarea id="link-description" rows="2" maxlength="500"></textarea>
+      <div id="link-error" class="model-switch-note bad hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="link-cancel">إلغاء</button>
+        <button type="submit" id="link-go" class="btn btn-primary">ربط وتنزيل</button>
+      </div>
+    </form>
   </div>
 </div>
 

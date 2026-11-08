@@ -68,6 +68,8 @@ builder.Services.AddSingleton<DocumentSearchService>();
 builder.Services.AddSingleton<RepositoryStore>();
 builder.Services.AddSingleton<UploadProgressTracker>();
 builder.Services.AddSingleton<UploadParser>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Repository.LinkedFileFetcher>();
+builder.Services.AddHttpClient("linked-files", c => { c.Timeout = TimeSpan.FromSeconds(60); c.MaxResponseContentBufferSize = ChatToDashboard.Api.Repository.LinkedFileFetcher.MaxBytes; });
 builder.Services.Configure<SourceOptions>(builder.Configuration.GetSection(SourceOptions.SectionName));
 builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection(PricingOptions.SectionName));
 builder.Services.AddSingleton<CostCalculator>();

@@ -124,3 +124,74 @@ public class PptxPageBuilderTests
         if (File.Exists(userFile)) { var u = ChatToDashboard.Api.Freeform.PptxPageBuilder.Build(File.ReadAllBytes(userFile), "ملف المستخدم"); Assert.True(u.SlideCount > 0); File.WriteAllText(Path.Combine(Scratch, "pptx-page-user.html"), u.Html); }
     }
 }
+
+/// <summary>ربط ملف برابط عام: تحويل روابط المشاركة إلى تنزيل مباشر، وكشف صيغة الملف المنزَّل.</summary>
+public class LinkedFileFetcherTests
+{
+    [Fact]
+    public void ToDownloadUrl_GoogleSheets_WholeFileXlsx_OrSheetCsvWithGid()
+    {
+        Assert.Equal("https://docs.google.com/spreadsheets/d/1AbC_x-9/export?format=xlsx", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://docs.google.com/spreadsheets/d/1AbC_x-9/edit?usp=sharing"));
+        Assert.Equal("https://docs.google.com/spreadsheets/d/1AbC_x-9/export?format=csv&gid=123", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://docs.google.com/spreadsheets/d/1AbC_x-9/edit#gid=123"));
+        Assert.Equal("google", ChatToDashboard.Api.Repository.LinkedFileFetcher.ProviderOf("https://docs.google.com/spreadsheets/d/1AbC/edit"));
+    }
+
+    [Fact]
+    public void ToDownloadUrl_OneDrive_SharePoint_Dropbox_Direct()
+    {
+        var od = ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://1drv.ms/x/s!AbCd-ef");
+        Assert.StartsWith("https://api.onedrive.com/v1.0/shares/u!", od); Assert.EndsWith("/root/content", od); Assert.DoesNotContain("=", od[od.IndexOf("u!")..]);
+        Assert.Equal("https://contoso.sharepoint.com/:x:/s/team/Ebook.xlsx?e=abc&download=1", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://contoso.sharepoint.com/:x:/s/team/Ebook.xlsx?e=abc"));
+        Assert.Equal("https://www.dropbox.com/s/abc/data.csv?dl=1", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://www.dropbox.com/s/abc/data.csv?dl=0"));
+        Assert.Equal("https://example.com/data.csv", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://example.com/data.csv"));
+        Assert.Equal("sharepoint", ChatToDashboard.Api.Repository.LinkedFileFetcher.ProviderOf("https://contoso.sharepoint.com/x"));
+        Assert.Equal("onedrive", ChatToDashboard.Api.Repository.LinkedFileFetcher.ProviderOf("https://1drv.ms/x/s!a"));
+        Assert.Equal("url", ChatToDashboard.Api.Repository.LinkedFileFetcher.ProviderOf("https://example.com/a.csv"));
+        Assert.False(ChatToDashboard.Api.Repository.LinkedFileFetcher.IsValidUrl("ftp://x")); Assert.True(ChatToDashboard.Api.Repository.LinkedFileFetcher.IsValidUrl(" https://a.b/c "));
+    }
+
+    [Fact]
+    public void DetectExtension_ByMagic_Header_ContentType_OrSniff()
+    {
+        var zip = new byte[] { 0x50, 0x4B, 0x03, 0x04, 0, 0 };
+        Assert.Equal(".xlsx", ChatToDashboard.Api.Repository.LinkedFileFetcher.DetectExtension(zip, "application/octet-stream", null, "https://x/y"));
+        var csv = System.Text.Encoding.UTF8.GetBytes("a,b,c\n1,2,3\n");
+        Assert.Equal(".csv", ChatToDashboard.Api.Repository.LinkedFileFetcher.DetectExtension(csv, "text/plain", null, "https://x/y"));
+        Assert.Equal(".csv", ChatToDashboard.Api.Repository.LinkedFileFetcher.DetectExtension(csv, "application/octet-stream", "report.csv", "https://x/y"));
+        var html = System.Text.Encoding.UTF8.GetBytes("<!doctype html><html><head><title>Sign in</title></head></html>");
+        Assert.Null(ChatToDashboard.Api.Repository.LinkedFileFetcher.DetectExtension(html, "text/html", null, "https://docs.google.com/spreadsheets/d/x/export?format=csv"));
+        Assert.Null(ChatToDashboard.Api.Repository.LinkedFileFetcher.DetectExtension(html, "text/html", null, "https://x/y.xlsx"));
+    }
+}
+
+public class LinkedFileFetcherHttpTests
+{
+    private sealed class StubHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _f; public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> f) { _f = f; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => Task.FromResult(_f(request));
+    }
+    private sealed class Factory : IHttpClientFactory
+    {
+        private readonly HttpMessageHandler _h; public Factory(HttpMessageHandler h) { _h = h; }
+        public HttpClient CreateClient(string name) => new(_h, disposeHandler: false);
+    }
+
+    [Fact]
+    public async Task FetchAsync_Csv_FromGoogleExport_And_HtmlLoginPage_Error()
+    {
+        string? seen = null;
+        var ok = new Factory(new StubHandler(r => { seen = r.RequestUri!.ToString(); return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("الاسم,القيمة\nأ,1\n")) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/csv") } } }; }));
+        var f = await new ChatToDashboard.Api.Repository.LinkedFileFetcher(ok).FetchAsync("https://docs.google.com/spreadsheets/d/ID1/edit#gid=7", "مبيعات 2026", CancellationToken.None);
+        Assert.Equal("https://docs.google.com/spreadsheets/d/ID1/export?format=csv&gid=7", seen);
+        Assert.EndsWith(".csv", f.FileName); Assert.True(f.Bytes.Length > 0);
+
+        var html = new Factory(new StubHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("<!doctype html><html><head><title>Sign in</title></head></html>", System.Text.Encoding.UTF8, "text/html") }));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => new ChatToDashboard.Api.Repository.LinkedFileFetcher(html).FetchAsync("https://example.com/private", "x", CancellationToken.None));
+        Assert.Contains("أي شخص معه الرابط", ex.Message);
+
+        var forbidden = new Factory(new StubHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)));
+        var ex2 = await Assert.ThrowsAsync<InvalidOperationException>(() => new ChatToDashboard.Api.Repository.LinkedFileFetcher(forbidden).FetchAsync("https://example.com/p.csv", "x", CancellationToken.None));
+        Assert.Contains("تسجيل دخول", ex2.Message);
+    }
+}

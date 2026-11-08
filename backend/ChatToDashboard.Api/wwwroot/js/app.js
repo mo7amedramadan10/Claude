@@ -6757,6 +6757,7 @@ function renderRepo() {
             <div class="fr-line1">
               <span class="fr-name">${esc(f.displayName)}</span>
               <span class="cat-badge">${esc(f.category || 'عام')}</span>
+              ${f.sourceUrl ? `<span class="link-badge${f.syncError ? ' bad' : ''}" title="${esc(f.syncError ? 'فشلت آخر مزامنة: ' + f.syncError : 'مرتبط برابط · آخر مزامنة ' + (f.lastSyncedAt ? relTime(f.lastSyncedAt) : '—'))}">${f.syncError ? '⚠️' : '🔗'} ${esc(LINK_PROVIDER_LABEL[f.sourceProvider] || 'رابط')}${f.lastSyncedAt ? ` · ${esc(relTime(f.lastSyncedAt))}` : ''}</span>` : ''}
               ${staleBadge}
             </div>
             <div class="fr-line2">${esc(f.description || meta)}${f.description ? ` <span class="sep">·</span> ${meta} <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>` : ` <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>`}</div>
@@ -6768,7 +6769,7 @@ function renderRepo() {
         <div class="col-access">${access}</div>
         <div class="col-actions">
           <a class="icon-btn dl" href="/api/repository/files/${esc(f.id)}/download" title="تنزيل الملف">⬇️</a>
-          <button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>
+          ${f.sourceUrl ? `<button class="icon-btn sync-btn" data-id="${esc(f.id)}" title="مزامنة من الرابط الآن">🔄</button>` : `<button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>`}
           <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
           ${permBtn}
           <button class="icon-btn rel-btn" data-id="${esc(f.id)}" title="الملفات المرتبطة">🔗</button>
@@ -6780,6 +6781,7 @@ function renderRepo() {
     : `<div class="repo-empty">لا يوجد ملفات ${state.filter !== 'الكل' ? 'في هذا التصنيف' : 'في المستودع بعد'}. ارفع ملفاً من الأعلى.</div>`;
 
   el('repo-list').querySelectorAll('.upd').forEach(btn => btn.addEventListener('click', () => openUpdateFilePicker(btn.dataset.id)));
+  el('repo-list').querySelectorAll('.sync-btn').forEach(btn => btn.addEventListener('click', () => syncLinkedFile(btn.dataset.id, btn)));
   el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.perm-btn').forEach(btn => btn.addEventListener('click', () => openFilePermModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.rel-btn').forEach(btn => btn.addEventListener('click', () => openFileRelModal(btn.dataset.id)));
@@ -6850,6 +6852,50 @@ function renderPending() {
 // picking, per-file metadata, and the save-to-repository step all happen inside it, instead
 // of inline on the page. Unsaved pending cards (state.pending) are left as-is on close, so
 // reopening the modal shows them again ready to finish, exactly like before this was a modal. ----------
+// ---------- ملف مرتبط برابط عام: ربط + مزامنة ----------
+// رسالة حالة للمزامنة بمدة أطول من tpladmToast (تقرير الأعمدة المتغيّرة يحتاج وقتًا للقراءة)
+function linkToast(msg, ms, bad) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.innerHTML = `${bad ? '⚠️' : tplIc('check')}<span>${esc(msg)}</span>`;
+  t.classList.remove('is-on'); void t.offsetWidth; t.classList.add('is-on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), ms || 2800);
+}
+const LINK_PROVIDER_LABEL = { google: 'Google Sheets', onedrive: 'OneDrive', sharepoint: 'SharePoint', dropbox: 'Dropbox', url: 'رابط' };
+el('btn-open-link-modal').addEventListener('click', () => { el('link-form').reset(); el('link-error').classList.add('hidden'); el('link-modal').classList.remove('hidden'); el('link-url').focus(); });
+el('link-cancel').addEventListener('click', () => el('link-modal').classList.add('hidden'));
+el('link-modal').addEventListener('click', e => { if (e.target === el('link-modal')) el('link-modal').classList.add('hidden'); });
+el('link-form').addEventListener('submit', async e => {
+  e.preventDefault(); const err = el('link-error'); err.classList.add('hidden');
+  const btn = el('link-go'); btn.disabled = true; btn.textContent = 'ينزّل الملف…';
+  try {
+    const r = await fetch('/api/repository/link', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: el('link-url').value.trim(), displayName: el('link-name').value.trim(), category: el('link-category').value.trim() || 'عام', description: el('link-description').value.trim() }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    el('link-modal').classList.add('hidden');
+    await loadFiles(); renderRepo();
+    linkToast(`رُبط «${d.displayName}» ونُزِّل: ${(d.rowCount || 0).toLocaleString('en-US')} صف · ${(d.columnCount || 0).toLocaleString('en-US')} عمود.`);
+  } catch (ex) { err.textContent = 'تعذّر الربط: ' + ex.message; err.classList.remove('hidden'); }
+  finally { btn.disabled = false; btn.textContent = 'ربط وتنزيل'; }
+});
+async function syncLinkedFile(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const r = await fetch(`/api/repository/files/${encodeURIComponent(id)}/sync`, { method: 'POST' });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    await loadFiles(); renderRepo();
+    let msg = `تمت المزامنة: ${(d.rows || 0).toLocaleString('en-US')} صف · ${(d.columns || 0).toLocaleString('en-US')} عمود.`;
+    if (d.schemaChanged) {
+      const parts = [];
+      if (d.addedColumns?.length) parts.push(`أُضيفت: ${d.addedColumns.join('، ')}`);
+      if (d.removedColumns?.length) parts.push(`اختفت: ${d.removedColumns.join('، ')}`);
+      msg += ` ⚠️ تغيّرت الأعمدة (${parts.join(' — ')}). ما بُني على الأعمدة المختفية يحتاج «تصحيح الأعمدة» من قائمة العنصر.`;
+    }
+    linkToast(msg, d.schemaChanged ? 10000 : 4500);
+  } catch (ex) { await loadFiles(); renderRepo(); linkToast('فشلت المزامنة وبقي الجدول القديم: ' + ex.message, 8000, true); }
+}
 function openUploadModal() { el('upload-modal').classList.remove('hidden'); }
 function closeUploadModal() { el('upload-modal').classList.add('hidden'); }
 el('btn-open-upload-modal').addEventListener('click', openUploadModal);
