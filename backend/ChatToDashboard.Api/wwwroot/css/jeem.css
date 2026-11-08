@@ -189,10 +189,16 @@
 .app.is-collapsed .org-switch { padding: 6px; justify-content: center; background: none; border-color: transparent; }
 .app.is-collapsed .org-meta, .app.is-collapsed .org-switch > .icon,
 .app.is-collapsed .sb-search, .app.is-collapsed .nav-text, .app.is-collapsed .badge,
-.app.is-collapsed .chev, .app.is-collapsed .proj-sub, .app.is-collapsed .sb-label span,
+.app.is-collapsed .chev, .app.is-collapsed .sb-label span,
 .app.is-collapsed .sb-label button, .app.is-collapsed .isolation .txt,
 .app.is-collapsed .user-card .meta, .app.is-collapsed .user-card > .icon { display: none !important; }
 .app.is-collapsed .nav-link { justify-content: center; padding: 0; }
+/* القائمة المطوية: صفحات المشروع (المحادثة، اللوحات المنشورة، المحلل، منشئ العروض، تصميم حر، المصادر…) تبقى ظاهرة كأيقونات
+   تحت نقطة المشروع — كانت تختفي كليًا (علّة أبلغ عنها المستخدم). التلميح title يحمل الاسم. */
+.app.is-collapsed .proj-item > .proj-sub { display: flex !important; padding-inline-start: 0; margin: 2px 0 6px; }
+.app.is-collapsed .proj-sub::before { display: none; }
+.app.is-collapsed .proj-sub .nav-link { padding-inline-start: 0; min-height: 36px; }
+.app.is-collapsed .proj-sub .nav-link.is-active::before, .app.is-collapsed .proj-sub .nav-link.active::before { inset-inline-start: 0; top: 8px; bottom: 8px; width: 3px; }
 .app.is-collapsed .sb-label { padding: 10px 0 4px; justify-content: center; }
 .app.is-collapsed .sb-label::after { content: ""; width: 20px; height: 1px; background: var(--line); }
 .app.is-collapsed .isolation { justify-content: center; padding: 12px 0; }
@@ -3232,7 +3238,18 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #screen-claude-chat { height: calc(100vh - var(--topbar-h, 68px)); }
 #screen-claude-chat.active { display: flex; }
 .jeem-scope .cc-rail { order: 2; width: var(--chat-w); min-width: 0; flex: none; display: flex; flex-direction: column; background: var(--surface); border-inline-start: 1px solid var(--line); }
-.jeem-scope .cc-pane { order: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--plane); }
+.jeem-scope .cc-pane { order: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--plane); position: relative; }
+/* حالة الانتظار: طبقة فوق مساحة العمل أثناء نداء الموديل (تصميم حر / منشئ العروض) + فقاعة «يكتب…» بنقاط متحركة في المحادثة */
+.jeem-scope .cc-loading { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(244, 247, 249, .72); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.jeem-scope .cc-loading .box { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 12px 36px rgba(20, 40, 60, .14); min-width: 240px; max-width: min(360px, calc(100% - 32px)); text-align: center; }
+.jeem-scope .cc-loading b { font-size: var(--fs-base); color: var(--ink); }
+.jeem-scope .cc-loading small { font-size: var(--fs-xs); color: var(--ink-3); line-height: 1.6; }
+.jeem-scope .cc-spin { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--blue-50); border-top-color: var(--brand-blue); animation: cc-spin .9s linear infinite; }
+@keyframes cc-spin { to { transform: rotate(360deg); } }
+.jeem-scope .cc-msg .typing { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
+.jeem-scope .cc-msg .typing::before { content: ""; width: 26px; height: 8px; flex: none; background: radial-gradient(circle 3px, var(--brand-blue) 100%, transparent 0) 0 50% / 8px 8px no-repeat, radial-gradient(circle 3px, var(--brand-blue) 100%, transparent 0) 9px 50% / 8px 8px no-repeat, radial-gradient(circle 3px, var(--brand-blue) 100%, transparent 0) 18px 50% / 8px 8px no-repeat; animation: cc-dots 1.1s steps(1) infinite; }
+@keyframes cc-dots { 0% { opacity: .35; } 33% { opacity: .65; } 66% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .jeem-scope .cc-spin, .jeem-scope .cc-msg .typing::before { animation: none; } }
 .jeem-scope .cc-pane-head { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line-2); background: var(--surface); }
 /* طلب المستخدم: رأس مساحة العمل ورأس المحادثة بخلفية داكنة قليلًا كقوائم Claude، ونصّهما بعيد عن الخطوط */
 .jeem-scope .cc-pane-head.dk-toolbar { background: #F3F5F7; border-bottom: 1px solid var(--line); padding: 16px 24px 14px; }

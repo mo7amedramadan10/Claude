@@ -7957,6 +7957,8 @@ document.addEventListener('click', e => {
 // ---------- طي القائمة الجانبية (يُحفظ لكل مستخدم في المتصفح) ----------
 const appShell = el('app-shell');
 if (localStorage.getItem('jeem.sidebar') === 'collapsed') appShell.classList.add('is-collapsed');
+// تلميح باسم الصفحة على كل بند حتى تُقرأ الأيقونات حين تُطوى القائمة
+document.querySelectorAll('.sidebar .nav-link').forEach(a => { const t = a.querySelector('.nav-text'); if (t && !a.title) a.title = t.textContent.trim(); });
 const sbCollapseBtn = el('sb-collapse-btn');
 sbCollapseBtn.addEventListener('click', () => {
   appShell.classList.toggle('is-collapsed');
@@ -8948,14 +8950,14 @@ const FF_REBUILD_MSG = 'أعد بناء الصفحة بالبيانات الحا
 async function ffRefreshFast() {
   if (!FF.design || FF.busy) return;
   if (!FF.design.queryCount) { ffPushMsg('bot', 'لا استعلامات محفوظة لهذا التصميم (بُني قبل عقد البيانات)، فسأعيد بناءه بالموديل من البيانات الحالية مرة واحدة، وبعدها يصير التحديث فوريًا بلا موديل.'); ffAsk(FF_REBUILD_MSG); return; }
-  FF.busy = true; ffPushMsg('user', 'حدّث البيانات'); el('ff-status').textContent = 'يحدّث البيانات…';
+  FF.busy = true; FF.busyText = 'يعيد تنفيذ الاستعلامات…'; ffPushMsg('user', 'حدّث البيانات'); el('ff-status').textContent = 'يحدّث البيانات…'; ccSetLoading('ff-pane', 'جارٍ تحديث البيانات', 'إعادة تنفيذ الاستعلامات المسجَّلة بلا موديل.');
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/refresh`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
     FF.html = d.html; FF.viewing = null; FF.design.version = d.version; FF.design.dataRefreshedAt = d.refreshedAt; if (d.versions) FF.versions = d.versions; FF.dataChanged = false;
     FF.busy = false; ffPushMsg('bot', `حُدِّثت البيانات من ${d.ok} استعلامًا (الإصدار ${d.version})${(d.failed || []).length ? ` — فشل ${d.failed.length}: ${d.failed.map(f => f.key).join('، ')}` : ''}.`); ffRender();
   } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التحديث: ' + e.message); }
-  finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); }
+  finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); ccSetLoading('ff-pane', null); }
 }
 // خيار التحديث التلقائي عند الفتح (يُحفظ على التصميم)
 el('ff-auto-refresh').addEventListener('change', async () => {
@@ -9085,14 +9087,14 @@ el('ff-convert').addEventListener('click', e => {
 el('ff-convert-panel').addEventListener('click', e => e.stopPropagation());
 async function ffConvert(kind) {
   if (!FF.design || FF.busy) return;
-  const to = FF_KINDS[kind].label, from = FF.design.title; FF.busy = true; ffPushMsg('user', `حوّل «${from}» إلى ${to}`); ffRenderMessages(); el('ff-status').textContent = 'يحوّل…';
+  const to = FF_KINDS[kind].label, from = FF.design.title; FF.busy = true; FF.busyText = `يحوّل إلى ${to}…`; ffPushMsg('user', `حوّل «${from}» إلى ${to}`); ffRenderMessages(); el('ff-status').textContent = 'يحوّل…'; ccSetLoading('ff-pane', `جارٍ التحويل إلى ${to}`, 'الموديل يعيد بناء الصفحة بالنوع الجديد محتفظًا بالمحتوى.');
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/convert`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
     FF.busy = false; await ffOpen(d.design.id);
     ffPushMsg('bot', `هذه نسخة ${to} من «${from}» — الأصل محفوظ كما هو في قائمة التصاميم. ${d.reply || ''}`);
   } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التحويل: ' + e.message); }
-  finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); }
+  finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); ccSetLoading('ff-pane', null); }
 }
 async function ffOpen(id) {
   const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return; ffMarkOpened(id);
@@ -9124,15 +9126,24 @@ function ffRender() {
   el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true, kind) || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
 }
 function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }
+// طبقة انتظار فوق مساحة العمل (تصميم حر / منشئ العروض) أثناء نداء الموديل أو تحديث البيانات. null يزيلها.
+function ccSetLoading(paneId, title, hint) {
+  const pane = el(paneId); if (!pane) return;
+  let ov = pane.querySelector(':scope > .cc-loading');
+  if (!title) { if (ov) ov.remove(); return; }
+  if (!ov) { ov = document.createElement('div'); ov.className = 'cc-loading'; ov.setAttribute('role', 'status'); ov.setAttribute('aria-live', 'polite'); pane.appendChild(ov); }
+  ov.innerHTML = `<div class="box"><div class="cc-spin" aria-hidden="true"></div><b>${esc(title)}</b>${hint ? `<small>${esc(hint)}</small>` : ''}</div>`;
+}
 function ffRenderMessages() {
   const box = el('ff-messages');
   box.innerHTML = FF.messages.map(m => `<div class="cc-msg ${m.role === 'user' ? 'user' : m.role === 'err' ? 'err' : 'assistant'}" style="cursor:default">${m.extraHtml && m.extraHtml.includes('ff-msg-attach') ? m.extraHtml : ''}${esc(m.text)}${m.extraHtml && !m.extraHtml.includes('ff-msg-attach') ? `<div style="margin-top:6px">${m.extraHtml}</div>` : ''}</div>`).join('')
-    + (FF.busy ? '<div class="cc-msg assistant"><span class="typing">يصمّم الصفحة… قد يستغرق حتى دقيقة</span></div>' : '');
+    + (FF.busy ? `<div class="cc-msg assistant"><span class="typing">${esc(FF.busyText || 'يصمّم الصفحة… قد يستغرق حتى دقيقة')}</span></div>` : '');
   box.scrollTop = box.scrollHeight;
 }
 async function ffAsk(text) {
   if (FF.busy || !text.trim()) return;
-  ffPushMsg('user', text); FF.busy = true; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
+  ffPushMsg('user', text); FF.busy = true; FF.busyText = FF.design ? 'يعدّل الصفحة…' : 'يصمّم الصفحة… قد يستغرق حتى دقيقة'; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
+  ccSetLoading('ff-pane', FF.design ? 'جارٍ تعديل الصفحة' : 'جارٍ بناء الصفحة', 'الموديل يعمل على طلبك وقد يستغرق حتى دقيقة — ستظهر النتيجة هنا فور اكتمالها.');
   try {
     if (!FF.design && (!FF.kind || FF.template === undefined)) { FF.busy = false; ffPushMsg('bot', 'اختر نوع المخرج أولًا من بطاقات «اصنع شيئًا جديدًا» (مستند، شرائح، تصميم، لوحة، حركة) ثم نموذجًا أو «تصميم حر بلا نموذج».'); el('ff-send').disabled = false; el('ff-status').textContent = ''; return; }
     if (!FF.design) FF.messages[FF.messages.length - 1].extraHtml = ffAttachLineHtml(FF.template); // أول رسالة تحمل المرفق ليظهر الاختيار في المحادثة
@@ -9145,7 +9156,7 @@ async function ffAsk(text) {
     FF.busy = false; ffPushMsg('bot', d.reply + (d.version ? ` (الإصدار ${d.version})` : '') + (d.usedData ? ' · استخدمت بيانات المشروع' : ''));
     ffRender();
   } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التصميم: ' + e.message); }
-  finally { FF.busy = false; el('ff-send').disabled = false; el('ff-status').textContent = ''; ffRenderMessages(); }
+  finally { FF.busy = false; el('ff-send').disabled = false; el('ff-status').textContent = ''; ffRenderMessages();  ccSetLoading('ff-pane', null); }
 }
 el('ff-form').addEventListener('submit', e => { e.preventDefault(); const t = el('ff-q').value.trim(); if (!t) return; el('ff-q').value = ''; ffAsk(t); });
 el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('ff-form').requestSubmit(); } });
@@ -9452,7 +9463,7 @@ el('dk-auto-refresh').addEventListener('click', async () => {
   catch (e) { dkPushMsg('err', 'تعذّر حفظ الإعداد.'); }
 });
 async function dkRefreshData() {
-  if (!DK.deck) return; const btn = el('dk-refresh'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'يحدّث…';
+  if (!DK.deck) return; const btn = el('dk-refresh'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'يحدّث…'; ccSetLoading('dk-pane', 'جارٍ تحديث بيانات الشرائح', 'إعادة تنفيذ استعلامات الشرائح بلا موديل.');
   try {
     if (DK.dirty) await dkSave(true);
     const r = await fetch(`/api/decks/${encodeURIComponent(DK.deck.id)}/refresh`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
@@ -9460,7 +9471,7 @@ async function dkRefreshData() {
     DK.spec = d.spec; DK.dirty = false; DK.dataChanged = false; dkRender();
     dkPushMsg('bot', `حُدِّثت ${d.updated} من ${d.total} شرائح بيانات من بيانات المشروع الحالية${(d.failed || []).length ? ` — تعذّر: ${d.failed.map(f => f.slide).join('، ')}` : ''}.`);
   } catch (e) { dkPushMsg('err', 'تعذّر تحديث البيانات: ' + e.message); }
-  finally { btn.disabled = false; btn.textContent = label; }
+  finally { btn.disabled = false; btn.textContent = label;  ccSetLoading('dk-pane', null); }
 }
 
 el('dk-publish').addEventListener('click', async () => {
@@ -9526,7 +9537,8 @@ function dkRenderMessages() {
 async function dkAsk(text) {
   if (DK.busy) return; DK.busy = true;
   dkPushMsg('user', text); el('dk-send').disabled = true; el('dk-status').textContent = DK.spec ? 'جارٍ التعديل بالموديل…' : 'جارٍ بناء العرض من بياناتك…';
-  const thinking = { role: 'bot', text: '⏳ يخطط الشرائح ثم يستعلم عن بيانات كل شريحة…' }; DK.messages.push(thinking); dkRenderMessages();
+  const thinking = { role: 'bot', text: `<span class="typing">${DK.spec ? 'يعدّل العرض…' : 'يخطط الشرائح ثم يستعلم عن بيانات كل شريحة…'}</span>`, isHtml: true }; DK.messages.push(thinking); dkRenderMessages();
+  ccSetLoading('dk-pane', DK.spec ? 'جارٍ تعديل العرض' : 'جارٍ بناء العرض من بياناتك', 'تخطيط الشرائح ثم ملء كل شريحة بيانات بالتوازي — قد يستغرق حتى دقيقة.');
   try {
     const r = await fetch('/api/decks/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, deckId: DK.deck?.id || null, templateKey: DK.deck?.templateKey || null, spec: DK.spec ? dkSpecForSave() : null }) });
     DK.messages = DK.messages.filter(m => m !== thinking);
@@ -9535,7 +9547,7 @@ async function dkAsk(text) {
     const stats = d.dataSlidesTotal ? ` (بُنيت ${d.dataSlidesBuilt} من ${d.dataSlidesTotal} شرائح البيانات)` : '';
     dkPushMsg('bot', d.reply + stats); dkRender();
   } catch (e) { DK.messages = DK.messages.filter(m => m !== thinking); dkPushMsg('err', e.message); }
-  finally { DK.busy = false; el('dk-send').disabled = false; el('dk-status').textContent = ''; }
+  finally { DK.busy = false; el('dk-send').disabled = false; el('dk-status').textContent = ''; ccSetLoading('dk-pane', null); }
 }
 el('dk-form').addEventListener('submit', e => { e.preventDefault(); const t = el('dk-q').value.trim(); if (!t) return; el('dk-q').value = ''; dkAsk(t); });
 el('dk-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('dk-form').requestSubmit(); } });

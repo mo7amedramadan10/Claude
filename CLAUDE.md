@@ -796,6 +796,14 @@ naming policy تلقائية في السيريلايزر.
   الآن `calc(100vh - var(--topbar-h, 68px))` في jeem.css وapp.css، و`trackTopbarHeight` في app.js (ResizeObserver على `.topbar`) يضبط
   المتغيّر على `#app-shell` بالارتفاع الفعلي فيصحّ على الجوال أيضًا حين يلتف مسار التنقل. تحقق: لا تمرير للصفحة في المحادثة/تصميم حر/
   منشئ العروض على 950px ولا على 390px.
+  **القائمة المطوية تُبقي صفحات المشروع** (علّة أبلغ عنها المستخدم: كانت تختفي كليًا): `.proj-sub` خرجت من قائمة الإخفاء في
+  `.app.is-collapsed` وتُعرض أيقونات تحت نقطة المشروع بلا الخط العمودي، وكل `.nav-link` يأخذ `title` من نصه عند الإقلاع (app.js قبل
+  `sbCollapseBtn`) فتُقرأ الأيقونات بالتلميح. **حالة الانتظار** (طلب المستخدم): `ccSetLoading(paneId, title, hint)` في app.js تضع طبقة
+  `.cc-loading` (دوّار + عنوان + تلميح، `role=status`) فوق `#ff-pane`/`#dk-pane` أثناء `ffAsk`/`ffRefreshFast`/`ffConvert`/`dkAsk`/`dkRefreshData`
+  وتزيلها في `finally`؛ وفي المحادثة فقاعة «يكتب…» بثلاث نقاط متحركة (`.cc-msg .typing::before`؛ نص الحالة في `FF.busyText`، ورسالة
+  `thinking` في منشئ العروض صارت `isHtml` بـ`span.typing`). `prefers-reduced-motion` يوقف الدوّار والنقاط. تحقق Playwright بتأخير 1.5 ث على
+  `generate`: 8 صفحات ظاهرة بأيقوناتها عند الطي والتنقل منها يعمل، الطبقة والفقاعة تظهران أثناء الانتظار وتزولان بعد الرد في الشاشتين،
+  بلا أخطاء وبلا تمرير أفقي على 390px.
 - **نماذج تصميم حر مرفقة في المحادثة ✅** (`Freeform/FreeformTemplates.cs`): كتالوج ثابت 29 نموذجًا في الأنواع الخمسة (مستند 6، شرائح 6،
   تصميم 6، لوحة 6، حركة 5) بتصنيفات `DK_CATS` نفسها؛ النموذج **موجز بنيوي لا HTML**: `{key, kind, category, icon, name, description,
   sketch, sections[{title, needsData}], brief}` (المفاتيح تُحفظ في `FreeformDesigns.TemplateKey` — الإضافة آمنة وإعادة التسمية تكسر المحفوظ).
