@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace ChatToDashboard.Api.Repository;
@@ -55,6 +56,16 @@ public class RepositoryFile
     /// null = ملف مرفوع يدويًا.</summary>
     [JsonPropertyName("sourceUrl")] public string? SourceUrl { get; set; }
     [JsonPropertyName("lastSyncedAt")] public DateTime? LastSyncedAt { get; set; }
+    /// <summary>اسم ورقة Excel التي تُقرأ من الملف المرتبط؛ null = الأولى.</summary>
+    [JsonPropertyName("sourceSheet")] public string? SourceSheet { get; set; }
+    /// <summary>أسماء أوراق الملف المرتبط كما وُجدت عند آخر مزامنة (JSON في القاعدة) — للاختيار من الواجهة.</summary>
+    [JsonPropertyName("sourceSheets")] public List<string> SourceSheets { get; set; } = new();
+    /// <summary>عمود القاعدة (Dapper) ← <see cref="SourceSheets"/>.</summary>
+    [JsonIgnore] public string? SourceSheetsJson
+    {
+        get => SourceSheets.Count == 0 ? null : JsonSerializer.Serialize(SourceSheets);
+        set { try { SourceSheets = string.IsNullOrWhiteSpace(value) ? new() : JsonSerializer.Deserialize<List<string>>(value) ?? new(); } catch { SourceSheets = new(); } }
+    }
     /// <summary>سبب فشل آخر مزامنة (يبقى الجدول القديم)؛ null عند النجاح.</summary>
     [JsonPropertyName("syncError")] public string? SyncError { get; set; }
     /// <summary>نوع مصدر الرابط للعرض (google/onedrive/sharepoint/dropbox/url)؛ null لملف مرفوع.</summary>
@@ -112,6 +123,12 @@ public class SaveUploadRequest
     [JsonPropertyName("category")] public string Category { get; set; } = string.Empty;
 }
 
+public class SyncFileRequest
+{
+    /// <summary>تغيير الورقة المقروءة قبل المزامنة (اختياري).</summary>
+    [JsonPropertyName("sheet")] public string? Sheet { get; set; }
+}
+
 /// <summary>Body of POST /api/repository/files/{id}/update — "Update this file": replaces
 /// the data behind an existing identity. Display name, category, relationships and
 /// permissions are untouched; only the data, OriginalFileName and LastUpdatedAt change.</summary>
@@ -127,6 +144,8 @@ public class LinkFileRequest
     [JsonPropertyName("displayName")] public string DisplayName { get; set; } = string.Empty;
     [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
     [JsonPropertyName("category")] public string Category { get; set; } = string.Empty;
+    /// <summary>اسم ورقة Excel التي تُقرأ (اختياري؛ الافتراضي الأولى).</summary>
+    [JsonPropertyName("sheet")] public string? Sheet { get; set; }
 }
 
 /// <summary>Body of PUT /api/repository/files/{id}/meta — editing display name/description

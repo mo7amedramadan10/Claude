@@ -86,6 +86,8 @@ public class RepositoryStore
                      ("SourceUrl", "NVARCHAR(2000)"),
                      ("LastSyncedAt", "DATETIME2"),
                      ("SyncError", "NVARCHAR(1000)"),
+                     ("SourceSheet", "NVARCHAR(200)"),
+                     ("SourceSheetsJson", "NVARCHAR(MAX)"),
                  })
         {
             try
@@ -128,7 +130,7 @@ public class RepositoryStore
         // near the keyword 'RowCount'") even though it isn't formally reserved.
         "Category, Kind, [RowCount], ColumnCount, PageCount, UploadedAt, " +
         "COALESCE(LastUpdatedAt, UploadedAt) AS LastUpdatedAt, TableName, SchemaChangedAt, " +
-        "COALESCE(CreatedByUserId, '') AS CreatedByUserId, SourceUrl, LastSyncedAt, SyncError";
+        "COALESCE(CreatedByUserId, '') AS CreatedByUserId, SourceUrl, LastSyncedAt, SyncError, SourceSheet, SourceSheetsJson";
 
     /// <summary>Attaches every file that predates project scoping (ProjectId still NULL) to
     /// the organization's default project — called once from Program.cs's startup, the same
@@ -544,12 +546,12 @@ public class RepositoryStore
     }
 
     /// <summary>ربط الملف برابط مصدر (أو فكّه بـ null) وحالة آخر مزامنة.</summary>
-    public async Task SetSourceAsync(string fileId, string? sourceUrl, DateTime? syncedAt, string? error, CancellationToken ct = default)
+    public async Task SetSourceAsync(string fileId, string? sourceUrl, DateTime? syncedAt, string? error, string? sheet = null, IReadOnlyList<string>? sheets = null, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"UPDATE {CatalogueTable} SET SourceUrl = @sourceUrl, LastSyncedAt = @syncedAt, SyncError = @error WHERE Id = @fileId",
-            new { fileId, sourceUrl, syncedAt, error = error is { Length: > 1000 } ? error[..1000] : error });
+        await connection.ExecuteAsync($"UPDATE {CatalogueTable} SET SourceUrl = @sourceUrl, LastSyncedAt = @syncedAt, SyncError = @error, SourceSheet = @sheet, SourceSheetsJson = @sheetsJson WHERE Id = @fileId",
+            new { fileId, sourceUrl, syncedAt, error = error is { Length: > 1000 } ? error[..1000] : error, sheet = string.IsNullOrWhiteSpace(sheet) ? null : sheet.Trim(), sheetsJson = sheets is null ? null : System.Text.Json.JsonSerializer.Serialize(sheets) });
     }
 
     public async Task<RepositoryFile?> FindAsync(string fileId, CancellationToken ct = default)

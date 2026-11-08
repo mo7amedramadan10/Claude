@@ -40,14 +40,9 @@ public sealed class LinkedFileFetcher
     {
         url = url.Trim();
         var g = GoogleSheetRx.Match(url);
-        if (g.Success)
-        {
-            var gid = GidRx.Match(url);
-            // ورقة بعينها (gid) → csv لتلك الورقة؛ وإلا الملف كاملًا xlsx (الورقة الأولى تُقرأ كما في الرفع العادي).
-            return gid.Success
-                ? $"https://docs.google.com/spreadsheets/d/{g.Groups["id"].Value}/export?format=csv&gid={gid.Groups["gid"].Value}"
-                : $"https://docs.google.com/spreadsheets/d/{g.Groups["id"].Value}/export?format=xlsx";
-        }
+        // الملف كاملًا دائمًا (xlsx بكل أوراقه) حتى يحتفظ «تنزيل الملف» بكل التبويبات بترميز صحيح؛ الورقة المقروءة تُحدَّد بالاسم
+        // (SheetName) لا بـ gid — تصدير csv لورقة واحدة كان يفقد باقي التبويبات ويظهر العربي مشوّهًا في Excel (بلا BOM).
+        if (g.Success) return $"https://docs.google.com/spreadsheets/d/{g.Groups["id"].Value}/export?format=xlsx";
         var host = SafeHost(url);
         if (host is "1drv.ms" || host.EndsWith("onedrive.live.com", StringComparison.OrdinalIgnoreCase))
         {
@@ -61,6 +56,9 @@ public sealed class LinkedFileFetcher
             return Regex.IsMatch(url, @"[?&]dl=") ? Regex.Replace(url, @"([?&])dl=\d", "$1dl=1") : url + (url.Contains('?') ? "&" : "?") + "dl=1";
         return url;
     }
+
+    /// <summary>رقم الورقة gid في رابط Google إن وُجد — يُعرض كتلميح فقط لأن تصدير xlsx لا يحمل الأرقام؛ الاختيار بالاسم.</summary>
+    public static string? GoogleGid(string url) { var m = GidRx.Match(url ?? ""); return m.Success ? m.Groups["gid"].Value : null; }
 
     public static bool IsValidUrl(string? url) => !string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url.Trim(), UriKind.Absolute, out var u) && (u.Scheme == "https" || u.Scheme == "http");
 

@@ -75,10 +75,24 @@ public static class TabularFileParser
         return (headers, rows);
     }
 
-    public static (List<string> Headers, List<string?[]> Rows) ReadXlsx(string file)
+    /// <summary>أسماء أوراق ملف Excel بترتيبها.</summary>
+    public static List<string> SheetNames(string file)
     {
         using var workbook = new XLWorkbook(file);
-        var sheet = workbook.Worksheets.First();
+        return workbook.Worksheets.Select(w => w.Name).ToList();
+    }
+
+    public static (List<string> Headers, List<string?[]> Rows) ReadXlsx(string file) => ReadXlsx(file, null);
+
+    /// <summary>يقرأ ورقة بعينها بالاسم (بلا حساسية لحالة الأحرف والمسافات الطرفية)؛ null = الورقة الأولى.
+    /// ورقة غير موجودة ترمي استثناءً يذكر الأوراق المتاحة.</summary>
+    public static (List<string> Headers, List<string?[]> Rows) ReadXlsx(string file, string? sheetName)
+    {
+        using var workbook = new XLWorkbook(file);
+        var sheet = string.IsNullOrWhiteSpace(sheetName)
+            ? workbook.Worksheets.First()
+            : workbook.Worksheets.FirstOrDefault(w => string.Equals(w.Name.Trim(), sheetName.Trim(), StringComparison.OrdinalIgnoreCase))
+              ?? throw new InvalidDataException($"الورقة «{sheetName.Trim()}» غير موجودة في الملف. الأوراق المتاحة: {string.Join("، ", workbook.Worksheets.Select(w => w.Name))}.");
         var range = sheet.RangeUsed();
         if (range is null) return (new List<string>(), new List<string?[]>());
 

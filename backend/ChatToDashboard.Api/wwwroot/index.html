@@ -853,12 +853,14 @@
 <div id="link-modal" class="modal-overlay hidden">
   <div class="modal share-modal-box">
     <h3>ربط ملف برابط</h3>
-    <p class="modal-note">الصق رابط جدول <b>Google Sheets</b> أو ملف Excel/CSV على <b>OneDrive</b> أو <b>SharePoint</b> أو <b>Dropbox</b> أو أي رابط مباشر. الشرط الوحيد أن يكون الملف مشاركًا بخيار «أي شخص معه الرابط» (عرض). يُحفظ كملف في مشروعك ويعمل عليه كل شيء (المعاني، النماذج، اللوحات، التصاميم)، وتعيد مزامنته متى شئت من زر 🔄 في صف الملف. تُقرأ الورقة الأولى من ملف Excel، أو ورقة Google بعينها إن كان الرابط يحمل <code dir="ltr">gid</code>.</p>
+    <p class="modal-note">الصق رابط جدول <b>Google Sheets</b> أو ملف Excel/CSV على <b>OneDrive</b> أو <b>SharePoint</b> أو <b>Dropbox</b> أو أي رابط مباشر. الشرط الوحيد أن يكون الملف مشاركًا بخيار «أي شخص معه الرابط» (عرض). يُحفظ كملف في مشروعك ويعمل عليه كل شيء (المعاني، النماذج، اللوحات، التصاميم)، وتعيد مزامنته متى شئت من زر 🔄 في صف الملف. يُحتفظ بالملف كاملًا بكل تبويباته للتنزيل، وتُقرأ ورقة واحدة منه للبيانات (الأولى ما لم تحدد اسمها).</p>
     <form id="link-form">
       <label class="share-expiry-label">الرابط</label>
       <input type="url" id="link-url" placeholder="https://docs.google.com/spreadsheets/d/…" required dir="ltr">
       <label class="share-expiry-label">اسم العرض</label>
       <input type="text" id="link-name" maxlength="200" placeholder="مثال: مبيعات 2026" required>
+      <label class="share-expiry-label">الورقة (التبويب) في ملف Excel <span class="muted">(اختياري — الافتراضي الورقة الأولى؛ اكتب اسمها كما يظهر في التبويب)</span></label>
+      <input type="text" id="link-sheet" maxlength="120" placeholder="مثال: البيانات">
       <label class="share-expiry-label">التصنيف <span class="muted">(اختياري)</span></label>
       <input type="text" id="link-category" list="cat-suggestions" placeholder="عام">
       <label class="share-expiry-label">الوصف <span class="muted">(اختياري)</span></label>

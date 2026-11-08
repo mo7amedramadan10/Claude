@@ -132,7 +132,9 @@ public class LinkedFileFetcherTests
     public void ToDownloadUrl_GoogleSheets_WholeFileXlsx_OrSheetCsvWithGid()
     {
         Assert.Equal("https://docs.google.com/spreadsheets/d/1AbC_x-9/export?format=xlsx", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://docs.google.com/spreadsheets/d/1AbC_x-9/edit?usp=sharing"));
-        Assert.Equal("https://docs.google.com/spreadsheets/d/1AbC_x-9/export?format=csv&gid=123", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://docs.google.com/spreadsheets/d/1AbC_x-9/edit#gid=123"));
+        // الملف كاملًا دائمًا (كل التبويبات للتنزيل)؛ الورقة تُختار بالاسم لا بـ gid
+        Assert.Equal("https://docs.google.com/spreadsheets/d/1AbC_x-9/export?format=xlsx", ChatToDashboard.Api.Repository.LinkedFileFetcher.ToDownloadUrl("https://docs.google.com/spreadsheets/d/1AbC_x-9/edit#gid=123"));
+        Assert.Equal("123", ChatToDashboard.Api.Repository.LinkedFileFetcher.GoogleGid("https://docs.google.com/spreadsheets/d/1AbC_x-9/edit#gid=123"));
         Assert.Equal("google", ChatToDashboard.Api.Repository.LinkedFileFetcher.ProviderOf("https://docs.google.com/spreadsheets/d/1AbC/edit"));
     }
 
@@ -182,8 +184,8 @@ public class LinkedFileFetcherHttpTests
     {
         string? seen = null;
         var ok = new Factory(new StubHandler(r => { seen = r.RequestUri!.ToString(); return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("الاسم,القيمة\nأ,1\n")) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/csv") } } }; }));
-        var f = await new ChatToDashboard.Api.Repository.LinkedFileFetcher(ok).FetchAsync("https://docs.google.com/spreadsheets/d/ID1/edit#gid=7", "مبيعات 2026", CancellationToken.None);
-        Assert.Equal("https://docs.google.com/spreadsheets/d/ID1/export?format=csv&gid=7", seen);
+        var f = await new ChatToDashboard.Api.Repository.LinkedFileFetcher(ok).FetchAsync("https://example.com/export/data", "مبيعات 2026", CancellationToken.None);
+        Assert.Equal("https://example.com/export/data", seen);
         Assert.EndsWith(".csv", f.FileName); Assert.True(f.Bytes.Length > 0);
 
         var html = new Factory(new StubHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("<!doctype html><html><head><title>Sign in</title></head></html>", System.Text.Encoding.UTF8, "text/html") }));
@@ -193,5 +195,33 @@ public class LinkedFileFetcherHttpTests
         var forbidden = new Factory(new StubHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)));
         var ex2 = await Assert.ThrowsAsync<InvalidOperationException>(() => new ChatToDashboard.Api.Repository.LinkedFileFetcher(forbidden).FetchAsync("https://example.com/p.csv", "x", CancellationToken.None));
         Assert.Contains("تسجيل دخول", ex2.Message);
+    }
+}
+
+
+/// <summary>قراءة ورقة بعينها من ملف Excel متعدد الأوراق، وأسماء الأوراق، ورسالة واضحة لورقة غير موجودة.</summary>
+public class MultiSheetXlsxTests
+{
+    [Fact]
+    public void ReadXlsx_BySheetName_AndSheetNames()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".xlsx");
+        try
+        {
+            using (var wb = new ClosedXML.Excel.XLWorkbook())
+            {
+                var a = wb.Worksheets.Add("الملخص"); a.Cell(1, 1).Value = "البند"; a.Cell(1, 2).Value = "القيمة"; a.Cell(2, 1).Value = "أ"; a.Cell(2, 2).Value = 1;
+                var b = wb.Worksheets.Add("التفاصيل"); b.Cell(1, 1).Value = "الاسم"; b.Cell(1, 2).Value = "المدينة"; b.Cell(1, 3).Value = "المبلغ"; b.Cell(2, 1).Value = "محمد"; b.Cell(2, 2).Value = "الرياض"; b.Cell(2, 3).Value = 250;
+                wb.SaveAs(temp);
+            }
+            Assert.Equal(new[] { "الملخص", "التفاصيل" }, ChatToDashboard.Api.Data.TabularFileParser.SheetNames(temp));
+            var first = ChatToDashboard.Api.Data.TabularFileParser.ReadXlsx(temp);
+            Assert.Equal(2, first.Headers.Count);
+            var second = ChatToDashboard.Api.Data.TabularFileParser.ReadXlsx(temp, " التفاصيل ");
+            Assert.Equal(3, second.Headers.Count); Assert.Equal("محمد", second.Rows[0][0]);
+            var ex = Assert.Throws<InvalidDataException>(() => ChatToDashboard.Api.Data.TabularFileParser.ReadXlsx(temp, "غير موجودة"));
+            Assert.Contains("الملخص", ex.Message); Assert.Contains("التفاصيل", ex.Message);
+        }
+        finally { File.Delete(temp); }
     }
 }

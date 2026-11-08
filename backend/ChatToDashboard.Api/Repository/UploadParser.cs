@@ -43,6 +43,11 @@ public class UploadParser
     /// this key while this same call is still running, for the browser to poll.</param>
     public async Task<PendingUpload> ParseAsync(
         string fileName, Stream content, AppUser? requestingUser = null, string? progressToken = null, CancellationToken ct = default)
+        => await ParseAsync(fileName, content, requestingUser, progressToken, null, ct);
+
+    /// <param name="sheetName">لملف Excel: الورقة المطلوبة بالاسم؛ null = الأولى (الملفات المرتبطة برابط تحدد ورقة).</param>
+    public async Task<PendingUpload> ParseAsync(
+        string fileName, Stream content, AppUser? requestingUser, string? progressToken, string? sheetName, CancellationToken ct = default)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         var token = Guid.NewGuid().ToString("N");
@@ -62,7 +67,7 @@ public class UploadParser
                 ".csv" => new ParsedUpload(fileName, "csv",
                     TabularFileParser.InferTypes(TabularFileParser.ReadCsv(temp)), null, 0, bytes),
                 ".xlsx" or ".xls" => new ParsedUpload(fileName, "excel",
-                    TabularFileParser.InferTypes(TabularFileParser.ReadXlsx(temp)), null, 0, bytes),
+                    TabularFileParser.InferTypes(TabularFileParser.ReadXlsx(temp, sheetName)), null, 0, bytes),
                 ".pdf" => await ParsePdfAsync(fileName, temp, bytes, requestingUser, progressToken, ct),
                 _ => throw new NotSupportedException($"Unsupported file type: {extension}"),
             };

@@ -1,3 +1,4 @@
+using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Repository;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Mvc;
@@ -173,13 +174,13 @@ public class RepositoryController : ControllerBase
         if (user is null) return Unauthorized();
         if (!LinkedFileFetcher.IsValidUrl(request.Url)) return BadRequest(new { error = "أدخل رابطًا صحيحًا يبدأ بـ https://" });
         if (string.IsNullOrWhiteSpace(request.DisplayName)) return BadRequest(new { error = "اسم العرض مطلوب." });
-        var (parsed, error) = await FetchAndParseAsync(request.Url.Trim(), request.DisplayName.Trim(), user, ct);
+        var (parsed, sheets, error) = await FetchAndParseAsync(request.Url.Trim(), request.DisplayName.Trim(), request.Sheet, user, ct);
         if (parsed is null) return BadRequest(new { error });
         try
         {
             var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
             var saved = await _store.SaveAsync(parsed, request.DisplayName.Trim(), request.Description ?? "", request.Category ?? "", user.Id, selection.ProjectId, ct);
-            await _store.SetSourceAsync(saved.Id, request.Url.Trim(), DateTime.UtcNow, null, ct);
+            await _store.SetSourceAsync(saved.Id, request.Url.Trim(), DateTime.UtcNow, null, request.Sheet, sheets, ct);
             _semantics.AnalyzeInBackground(saved.ProjectId, saved.TableName);
             return Ok(await _store.FindAsync(saved.Id, ct) ?? saved);
         }
@@ -193,7 +194,7 @@ public class RepositoryController : ControllerBase
     /// <summary>مزامنة ملف مرتبط: إعادة التنزيل واستبدال الجدول (هوية الجدول ثابتة كـ«تحديث الملف»)، مع تقرير بالأعمدة المضافة/المحذوفة.
     /// الفشل يبقي الجدول القديم ويُسجَّل سببه على الملف.</summary>
     [HttpPost("files/{id}/sync")]
-    public async Task<IActionResult> Sync(string id, CancellationToken ct)
+    public async Task<IActionResult> Sync(string id, [FromBody] SyncFileRequest? request, CancellationToken ct)
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
@@ -202,17 +203,18 @@ public class RepositoryController : ControllerBase
         var file = await _store.FindAsync(id, ct);
         if (file?.SourceUrl is null) return BadRequest(new { error = "هذا الملف غير مرتبط برابط. استخدم «تحديث البيانات» لرفع نسخة جديدة." });
         var before = await _store.GetColumnsAsync(id, ct);
-        var (parsed, error) = await FetchAndParseAsync(file.SourceUrl, file.DisplayName, user, ct);
+        var sheet = string.IsNullOrWhiteSpace(request?.Sheet) ? file.SourceSheet : request!.Sheet!.Trim();
+        var (parsed, sheets, error) = await FetchAndParseAsync(file.SourceUrl, file.DisplayName, sheet, user, ct);
         if (parsed is null)
         {
-            await _store.SetSourceAsync(id, file.SourceUrl, file.LastSyncedAt, error, ct);
+            await _store.SetSourceAsync(id, file.SourceUrl, file.LastSyncedAt, error, file.SourceSheet, file.SourceSheets, ct);
             return StatusCode(502, new { error, keptOld = true });
         }
         try
         {
             var updated = await _store.UpdateDataAsync(id, parsed, ct);
             if (updated is null) return NotFound(new { error = "الملف غير موجود." });
-            await _store.SetSourceAsync(id, file.SourceUrl, DateTime.UtcNow, null, ct);
+            await _store.SetSourceAsync(id, file.SourceUrl, DateTime.UtcNow, null, sheet, sheets, ct);
             _semantics.AnalyzeInBackground(updated.ProjectId, updated.TableName);
             var after = await _store.GetColumnsAsync(id, ct);
             var added = after.Except(before, StringComparer.OrdinalIgnoreCase).ToList();
@@ -222,7 +224,7 @@ public class RepositoryController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to sync linked file {Id}", id);
-            await _store.SetSourceAsync(id, file.SourceUrl, file.LastSyncedAt, ex.Message, ct);
+            await _store.SetSourceAsync(id, file.SourceUrl, file.LastSyncedAt, ex.Message, file.SourceSheet, file.SourceSheets, ct);
             return StatusCode(500, new { error = ex.Message, keptOld = true });
         }
     }
@@ -235,25 +237,35 @@ public class RepositoryController : ControllerBase
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)) return NotFound(new { error = "الملف غير موجود." });
-        await _store.SetSourceAsync(id, null, null, null, ct);
+        await _store.SetSourceAsync(id, null, null, null, null, null, ct);
         return NoContent();
     }
 
     /// <summary>تنزيل من الرابط ثم التحليل بمحلّل الرفع (نفس المسار: مؤقت → ParsedUpload) — يعيد (null, سبب) عند أي فشل برسالة للمستخدم.</summary>
-    private async Task<(ParsedUpload? Parsed, string? Error)> FetchAndParseAsync(string url, string displayName, AppUser user, CancellationToken ct)
+    /// <summary>يعيد أيضًا أسماء أوراق ملف Excel (فارغة لـ CSV) لتعرضها الواجهة للاختيار.</summary>
+    private async Task<(ParsedUpload? Parsed, List<string> Sheets, string? Error)> FetchAndParseAsync(string url, string displayName, string? sheet, AppUser user, CancellationToken ct)
     {
         FetchedFile fetched;
         try { fetched = await _linked.FetchAsync(url, displayName, ct); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (InvalidOperationException ex) { return (null, ex.Message); }
-        catch (HttpRequestException ex) { return (null, "تعذّر الوصول إلى الرابط: " + ex.Message); }
-        catch (TaskCanceledException) { return (null, "انتهت مهلة التنزيل (60 ثانية). جرّب لاحقًا أو تأكد من الرابط."); }
+        catch (InvalidOperationException ex) { return (null, new(), ex.Message); }
+        catch (HttpRequestException ex) { return (null, new(), "تعذّر الوصول إلى الرابط: " + ex.Message); }
+        catch (TaskCanceledException) { return (null, new(), "انتهت مهلة التنزيل (60 ثانية). جرّب لاحقًا أو تأكد من الرابط."); }
+        var sheets = new List<string>();
+        if (fetched.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            var temp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".xlsx");
+            try { await System.IO.File.WriteAllBytesAsync(temp, fetched.Bytes, ct); sheets = TabularFileParser.SheetNames(temp); }
+            catch (Exception ex) { return (null, new(), "تعذّرت قراءة ملف Excel: " + ex.Message); }
+            finally { try { System.IO.File.Delete(temp); } catch { } }
+        }
+        else sheet = null;
         PendingUpload pending;
-        using (var ms = new MemoryStream(fetched.Bytes)) pending = await _parser.ParseAsync(fetched.FileName, ms, user, null, ct);
-        if (pending.Error is not null) return (null, "تعذّرت قراءة الملف: " + pending.Error);
-        if (!_parser.TryTake(pending.Token, out var parsed)) return (null, "تعذّرت قراءة الملف.");
-        if (parsed.Table is null || parsed.Table.Columns.Count == 0) return (null, "لم يُعثر على جدول بيانات في الملف (الورقة الأولى فارغة؟).");
-        return (parsed, null);
+        using (var ms = new MemoryStream(fetched.Bytes)) pending = await _parser.ParseAsync(fetched.FileName, ms, user, null, sheet, ct);
+        if (pending.Error is not null) return (null, sheets, "تعذّرت قراءة الملف: " + pending.Error);
+        if (!_parser.TryTake(pending.Token, out var parsed)) return (null, sheets, "تعذّرت قراءة الملف.");
+        if (parsed.Table is null || parsed.Table.Columns.Count == 0) return (null, sheets, $"لم يُعثر على جدول بيانات في {(sheet is null ? "الورقة الأولى" : "الورقة «" + sheet + "»")} — هل هي فارغة؟{(sheets.Count > 1 ? " الأوراق المتاحة: " + string.Join("، ", sheets) + "." : "")}");
+        return (parsed, sheets, null);
     }
 
     /// <summary>
@@ -372,6 +384,9 @@ public class RepositoryController : ControllerBase
 
         var (content, originalFileName) = file.Value;
         var downloadName = string.IsNullOrWhiteSpace(originalFileName) ? $"{id}.bin" : originalFileName;
+        // CSV بترميز UTF-8 بلا BOM يفتحه Excel على Windows بترميز النظام فيظهر العربي مشوّهًا؛ إضافة BOM تصلحه ولا تؤثر في غيره.
+        if (downloadName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) && content.Length >= 3 && !(content[0] == 0xEF && content[1] == 0xBB && content[2] == 0xBF))
+            content = new byte[] { 0xEF, 0xBB, 0xBF }.Concat(content).ToArray();
         return File(content, ContentTypeFor(downloadName), downloadName);
     }
 

@@ -6758,6 +6758,7 @@ function renderRepo() {
               <span class="fr-name">${esc(f.displayName)}</span>
               <span class="cat-badge">${esc(f.category || 'عام')}</span>
               ${f.sourceUrl ? `<span class="link-badge${f.syncError ? ' bad' : ''}" title="${esc(f.syncError ? 'فشلت آخر مزامنة: ' + f.syncError : 'مرتبط برابط · آخر مزامنة ' + (f.lastSyncedAt ? relTime(f.lastSyncedAt) : '—'))}">${f.syncError ? '⚠️' : '🔗'} ${esc(LINK_PROVIDER_LABEL[f.sourceProvider] || 'رابط')}${f.lastSyncedAt ? ` · ${esc(relTime(f.lastSyncedAt))}` : ''}</span>` : ''}
+              ${f.sourceUrl && (f.sourceSheets || []).length > 1 ? `<select class="link-sheet-pick" data-id="${esc(f.id)}" title="الورقة المقروءة من الملف — التغيير يزامن فورًا">${f.sourceSheets.map((n, i) => `<option value="${esc(n)}"${(f.sourceSheet ? n === f.sourceSheet : i === 0) ? ' selected' : ''}>📑 ${esc(n)}</option>`).join('')}</select>` : (f.sourceUrl && f.sourceSheet ? `<span class="cat-badge" title="الورقة المقروءة">📑 ${esc(f.sourceSheet)}</span>` : '')}
               ${staleBadge}
             </div>
             <div class="fr-line2">${esc(f.description || meta)}${f.description ? ` <span class="sep">·</span> ${meta} <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>` : ` <span class="sep">·</span> <span class="orig-name">${esc(f.originalFileName)}</span>`}</div>
@@ -6782,6 +6783,8 @@ function renderRepo() {
 
   el('repo-list').querySelectorAll('.upd').forEach(btn => btn.addEventListener('click', () => openUpdateFilePicker(btn.dataset.id)));
   el('repo-list').querySelectorAll('.sync-btn').forEach(btn => btn.addEventListener('click', () => syncLinkedFile(btn.dataset.id, btn)));
+  el('repo-list').querySelectorAll('.link-sheet-pick').forEach(sel => sel.addEventListener('click', e => e.stopPropagation()));
+  el('repo-list').querySelectorAll('.link-sheet-pick').forEach(sel => sel.addEventListener('change', () => syncLinkedFile(sel.dataset.id, el('repo-list').querySelector(`.sync-btn[data-id="${CSS.escape(sel.dataset.id)}"]`), sel.value)));
   el('repo-list').querySelectorAll('.cfg').forEach(btn => btn.addEventListener('click', () => openFileModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.perm-btn').forEach(btn => btn.addEventListener('click', () => openFilePermModal(btn.dataset.id)));
   el('repo-list').querySelectorAll('.rel-btn').forEach(btn => btn.addEventListener('click', () => openFileRelModal(btn.dataset.id)));
@@ -6870,7 +6873,7 @@ el('link-form').addEventListener('submit', async e => {
   const btn = el('link-go'); btn.disabled = true; btn.textContent = 'ينزّل الملف…';
   try {
     const r = await fetch('/api/repository/link', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: el('link-url').value.trim(), displayName: el('link-name').value.trim(), category: el('link-category').value.trim() || 'عام', description: el('link-description').value.trim() }) });
+      body: JSON.stringify({ url: el('link-url').value.trim(), displayName: el('link-name').value.trim(), category: el('link-category').value.trim() || 'عام', description: el('link-description').value.trim(), sheet: el('link-sheet').value.trim() || null }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
     el('link-modal').classList.add('hidden');
@@ -6879,10 +6882,10 @@ el('link-form').addEventListener('submit', async e => {
   } catch (ex) { err.textContent = 'تعذّر الربط: ' + ex.message; err.classList.remove('hidden'); }
   finally { btn.disabled = false; btn.textContent = 'ربط وتنزيل'; }
 });
-async function syncLinkedFile(id, btn) {
+async function syncLinkedFile(id, btn, sheet) {
   if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
   try {
-    const r = await fetch(`/api/repository/files/${encodeURIComponent(id)}/sync`, { method: 'POST' });
+    const r = await fetch(`/api/repository/files/${encodeURIComponent(id)}/sync`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sheet: sheet || null }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
     await loadFiles(); renderRepo();
