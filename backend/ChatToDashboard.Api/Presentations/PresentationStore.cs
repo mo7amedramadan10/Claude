@@ -16,7 +16,7 @@ public class PresentationStore
     private string Table => "[dbo].[Presentations]";
 
     private const string Columns =
-        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, COALESCE(EditPolicy, 'anyone') AS EditPolicy, SourceKind, SourceId, COALESCE(LiveData, 0) AS LiveData";
+        "Id, OrganizationId, CreatedByUserId, CreatedByName, Title, Slug, FileName, SizeBytes, CreatedAt, UpdatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, COALESCE(EditPolicy, 'anyone') AS EditPolicy, SourceKind, SourceId, COALESCE(LiveData, 0) AS LiveData, COALESCE(Assistant, 1) AS Assistant, COALESCE(AssistantPolicy, 'anyone') AS AssistantPolicy";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -65,6 +65,8 @@ public class PresentationStore
         await AddColumnIfMissingAsync(connection, "SourceKind", sqlServer: "NVARCHAR(16)", ct);
         await AddColumnIfMissingAsync(connection, "SourceId", sqlServer: "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, "LiveData", sqlServer: "BIT NOT NULL DEFAULT 0", ct);
+        await AddColumnIfMissingAsync(connection, "Assistant", sqlServer: "BIT NOT NULL DEFAULT 1", ct);
+        await AddColumnIfMissingAsync(connection, "AssistantPolicy", sqlServer: "NVARCHAR(16)", ct);
     }
 
     private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
@@ -176,6 +178,14 @@ public class PresentationStore
         await EnsureSchemaOnceAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"UPDATE {Table} SET LiveData = @on, UpdatedAt = @now WHERE Id = @id", new { id, on, now = DateTime.UtcNow });
+    }
+
+    /// <summary>إعدادات مساعد «جيم» للعرض: مفعَّل؟ ومن يستطيع سؤاله.</summary>
+    public async Task SetAssistantAsync(string id, bool enabled, string policy, CancellationToken ct = default)
+    {
+        await EnsureSchemaOnceAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {Table} SET Assistant = @enabled, AssistantPolicy = @policy WHERE Id = @id", new { id, enabled, policy });
     }
 
     public async Task SetEditPolicyAsync(string id, string policy, CancellationToken ct = default)

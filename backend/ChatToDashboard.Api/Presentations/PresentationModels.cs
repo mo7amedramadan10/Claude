@@ -37,6 +37,10 @@ public class Presentation
     /// <summary>البيانات الحيّة: عند الفتح تُعاد قراءة بيانات المصدر من قاعدة البيانات وتُحقن في الصفحة، وتُحدَّث داخلها دوريًا عبر الجسر.
     /// تُفعَّل تلقائيًا عند النشر من مصدر له استعلامات؛ يطفئها صاحب العرض من القائمة.</summary>
     [JsonPropertyName("liveData")] public bool LiveData { get; set; }
+    /// <summary>مساعد «جيم» في صفحة العرض (يشرح محتوى الملف كله لمن يفتح الرابط ويناقشه فيه) — مفعَّل افتراضيًا؛ يطفئه صاحب العرض.</summary>
+    [JsonPropertyName("assistant")] public bool Assistant { get; set; } = true;
+    /// <summary>من يستطيع سؤال المساعد: <c>anyone</c> (أي من معه الرابط) أو <c>members</c> (مسجَّل من المنظمة نفسها).</summary>
+    [JsonPropertyName("assistantPolicy")] public string AssistantPolicy { get; set; } = PresentationEditPolicy.Anyone;
 
     /// <summary>المسار العام النسبي: بالاسم إن وُجد وإلا بالمعرّف.</summary>
     public string PublicPath(string? orgSlug) =>

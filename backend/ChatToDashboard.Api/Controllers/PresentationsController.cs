@@ -27,14 +27,16 @@ public class PresentationsController : ControllerBase
     private readonly PermissionsService _permissions;
     private readonly OrganizationStore _organizations;
     private readonly PresentationLiveDataService _live;
+    private readonly PresentationAssistantService _assistant;
 
-    public PresentationsController(PresentationStore store, PresentationDataStore data, PermissionsService permissions, OrganizationStore organizations, PresentationLiveDataService live)
+    public PresentationsController(PresentationStore store, PresentationDataStore data, PermissionsService permissions, OrganizationStore organizations, PresentationLiveDataService live, PresentationAssistantService assistant)
     {
         _store = store;
         _data = data;
         _permissions = permissions;
         _organizations = organizations;
         _live = live;
+        _assistant = assistant;
     }
 
     private async Task<string?> OrgSlugAsync(string? organizationId, CancellationToken ct) =>
@@ -43,7 +45,7 @@ public class PresentationsController : ControllerBase
     private object Shape(Presentation p, AppUser user, string? orgSlug) => new
     {
         p.Id, p.Title, p.Slug, p.FileName, p.SizeBytes, p.CreatedByUserId, p.CreatedByName, p.CreatedAt, p.UpdatedAt, p.ExpiresAt, p.RevokedAt,
-        p.ViewCount, p.IsActive, p.EditPolicy, p.SourceKind, p.LiveData, canManage = CanManage(user, p), url = p.PublicPath(orgSlug),
+        p.ViewCount, p.IsActive, p.EditPolicy, p.SourceKind, p.LiveData, p.Assistant, p.AssistantPolicy, canManage = CanManage(user, p), url = p.PublicPath(orgSlug),
     };
 
     /// <summary>اسم الرابط النهائي: المُدخل أو المشتق من العنوان، مع 409 إن كان مستخدمًا داخل المنظمة (ومقترح بديل).</summary>
@@ -164,6 +166,7 @@ public class PresentationsController : ControllerBase
         var (html, error) = await ReadHtmlAsync(file, ct);
         if (error is not null) return BadRequest(new { error });
         await _store.ReplaceAsync(id, html!, Path.GetFileName(file!.FileName), string.IsNullOrWhiteSpace(title) ? null : title.Trim(), ct);
+        _assistant.Invalidate(id);
         return NoContent();
     }
 
@@ -261,7 +264,85 @@ public class PresentationsController : ControllerBase
         if (request.On && (p!.SourceKind is null || p.SourceId is null)) return BadRequest(new { error = "هذا العرض ملف مرفوع يدويًا بلا مصدر بيانات داخل المنصة، فلا بيانات حيّة له." });
         await _store.SetLiveDataAsync(id, request.On, ct);
         _live.Invalidate(id);
+        _assistant.Invalidate(id);
         return Ok(new { liveData = request.On });
+    }
+
+    // ---------- مساعد «جيم» في صفحة العرض (انظر PresentationAssistantService) ----------
+
+    public class AssistantSettingsRequest { public bool Enabled { get; set; } = true; public string? Policy { get; set; } }
+    public class AssistantAskRequest { public string? Question { get; set; } public List<AssistantTurnRequest>? History { get; set; } }
+    public class AssistantTurnRequest { public string? Role { get; set; } public string? Text { get; set; } }
+
+    /// <summary>تشغيل/إيقاف المساعد وسياسة من يسأله (anyone/members) — صاحب العرض أو المسؤول.</summary>
+    [HttpPut("{id}/assistant")]
+    public async Task<IActionResult> SetAssistant(string id, [FromBody] AssistantSettingsRequest request, CancellationToken ct)
+    {
+        var (_, _, fail) = await ManagedAsync(id, ct);
+        if (fail is not null) return fail;
+        var policy = string.IsNullOrWhiteSpace(request.Policy) ? PresentationEditPolicy.Anyone : request.Policy.Trim();
+        if (policy is not (PresentationEditPolicy.Anyone or PresentationEditPolicy.Members)) return BadRequest(new { error = "سياسة غير معروفة: anyone أو members." });
+        await _store.SetAssistantAsync(id, request.Enabled, policy, ct);
+        return Ok(new { assistant = request.Enabled, assistantPolicy = policy });
+    }
+
+    /// <summary>حالة المساعد لمن يفتح الرابط: مفعَّل؟ مسموح له؟ — بلا تسجيل دخول.</summary>
+    [HttpGet("{id}/assistant")]
+    [AllowAnonymous]
+    public Task<IActionResult> AssistantInfo(string id, CancellationToken ct) => AssistantInfoCoreAsync(() => _store.GetAsync(id, ct), ct);
+
+    [HttpGet("by/{org}/{slug}/assistant")]
+    [AllowAnonymous]
+    public Task<IActionResult> AssistantInfoBySlug(string org, string slug, CancellationToken ct) => AssistantInfoCoreAsync(() => FindBySlugAsync(org, slug, ct), ct);
+
+    private async Task<IActionResult> AssistantInfoCoreAsync(Func<Task<Presentation?>> find, CancellationToken ct)
+    {
+        var p = await find();
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        var allowed = PresentationAssistantService.CanAsk(user, p);
+        Response.Headers["Cache-Control"] = "no-store";
+        return Ok(new
+        {
+            name = PresentationAssistantService.Name, enabled = p.Assistant, allowed, signedIn = user is not null, policy = p.AssistantPolicy,
+            reason = !p.Assistant ? "المساعد موقوف لهذا العرض." : allowed ? null : user is null ? "سجّل الدخول بحساب المنظمة لسؤال جيم عن هذا العرض." : "المساعد متاح لأعضاء منظمة صاحب العرض فقط.",
+        });
+    }
+
+    /// <summary>سؤال المساعد عن محتوى العرض كله؛ المحادثة السابقة تُرسل من المتصفح ولا تُخزَّن. 429 عند تجاوز السقف.</summary>
+    [HttpPost("{id}/assistant/ask")]
+    [AllowAnonymous]
+    public Task<IActionResult> AssistantAsk(string id, [FromBody] AssistantAskRequest request, CancellationToken ct) => AssistantAskCoreAsync(() => _store.GetAsync(id, ct), request, ct);
+
+    [HttpPost("by/{org}/{slug}/assistant/ask")]
+    [AllowAnonymous]
+    public Task<IActionResult> AssistantAskBySlug(string org, string slug, [FromBody] AssistantAskRequest request, CancellationToken ct) => AssistantAskCoreAsync(() => FindBySlugAsync(org, slug, ct), request, ct);
+
+    private async Task<IActionResult> AssistantAskCoreAsync(Func<Task<Presentation?>> find, AssistantAskRequest request, CancellationToken ct)
+    {
+        var p = await find();
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (!p.Assistant) return StatusCode(403, new { error = "المساعد موقوف لهذا العرض." });
+        if (!PresentationAssistantService.CanAsk(user, p))
+            return StatusCode(user is null ? 401 : 403, new { error = user is null ? "سجّل الدخول بحساب المنظمة لسؤال جيم عن هذا العرض." : "المساعد متاح لأعضاء منظمة صاحب العرض فقط." });
+        var question = (request.Question ?? "").Trim();
+        if (question.Length == 0) return BadRequest(new { error = "اكتب سؤالًا." });
+        if (question.Length > PresentationAssistantService.MaxQuestionChars) return BadRequest(new { error = $"السؤال أطول من الحد ({PresentationAssistantService.MaxQuestionChars} حرفًا)." });
+        var viewerKey = user?.Id ?? HttpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        if (!_assistant.TryConsume(p.Id, viewerKey)) return StatusCode(429, new { error = "أسئلة كثيرة في وقت قصير — انتظر قليلًا ثم أعد المحاولة." });
+        var history = (request.History ?? new()).Where(h => !string.IsNullOrWhiteSpace(h.Text)).TakeLast(PresentationAssistantService.MaxHistoryTurns)
+            .Select(h => new AssistantTurn(h.Role == "user" ? "user" : "assistant", h.Text!.Trim())).ToList();
+        try
+        {
+            var reply = await _assistant.AskAsync(p, question, history, ct);
+            return Ok(new { reply });
+        }
+        catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return StatusCode(502, new { error = "تعذّر الحصول على رد من المساعد الآن — حاول مرة أخرى.", detail = ex.Message });
+        }
     }
 
     // ---------- بيانات العرض (مخزن مفتاح ← JSON تقرأه/تكتبه الصفحة عبر jeem-page.js) ----------

@@ -82,6 +82,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.History.DashboardAccessService
 builder.Services.AddSingleton<ShareStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationLiveDataService>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationAssistantService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationDataStore>();
 // منشئ العروض (مستوى المشروع): مواصفة JSON + بناء بالموديل + نشر في العروض التقديمية — Decks/
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckStore>();

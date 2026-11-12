@@ -9896,6 +9896,11 @@ async function loadPresentations() {
             ${p.sourceKind ? (manage
               ? `<button class="icon-btn pres-live${p.liveData ? ' on' : ''}" data-pres-live="${esc(p.id)}" data-on="${p.liveData ? '1' : '0'}" aria-pressed="${p.liveData ? 'true' : 'false'}" title="${p.liveData ? 'بيانات حيّة مفعّلة: الصفحة تُقدَّم بآخر الأرقام من بياناتك عند كل فتح وتتحدّث وهي مفتوحة. انقر للإيقاف (تبقى لقطة النشر).' : 'بيانات حيّة موقوفة: الصفحة تعرض لقطة النشر. انقر للتفعيل.'}">${p.liveData ? '🟢 حيّة' : '⚪ لقطة'}</button>`
               : `<span class="share-status-tag ${p.liveData ? 'live' : ''}" title="${p.liveData ? 'تُقدَّم بآخر الأرقام عند كل فتح' : 'لقطة النشر'}">${p.liveData ? '🟢 حيّة' : '⚪ لقطة'}</span>`) : ''}
+            ${manage ? `<select class="pres-policy pres-assistant" data-pres-assistant="${esc(p.id)}" title="مساعد جيم في صفحة العرض: يشرح محتوى الملف كله لمن يفتح الرابط ويناقشه فيه (صوتًا أو كتابة)" aria-label="مساعد جيم">
+              <option value="anyone"${p.assistant !== false && p.assistantPolicy !== 'members' ? ' selected' : ''}>جيم: لأي شخص معه الرابط</option>
+              <option value="members"${p.assistant !== false && p.assistantPolicy === 'members' ? ' selected' : ''}>جيم: لأعضاء المنظمة</option>
+              <option value="off"${p.assistant === false ? ' selected' : ''}>جيم: موقوف</option>
+            </select>` : `<span class="share-status-tag" title="مساعد جيم في صفحة العرض">${p.assistant === false ? '🤖 جيم موقوف' : '🤖 جيم'}</span>`}
             ${manage ? `<button class="icon-btn" data-pres-rename="${esc(p.id)}" data-slug="${esc(p.slug || '')}" title="تغيير اسم الرابط">✏️</button>` : ''}
             ${manage ? `<button class="icon-btn" data-pres-replace="${esc(p.id)}" title="استبدال الملف بنسخة أحدث على نفس الرابط">⬆️</button>` : ''}
             ${manage && live ? `<button class="icon-btn revoke-share-btn" data-pres-revoke="${esc(p.id)}" title="إلغاء الرابط">🚫</button>` : ''}
@@ -9929,6 +9934,13 @@ async function loadPresentations() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy: sel.value }),
       });
       if (!res.ok) { alert('تعذّر حفظ سياسة التعديل'); await loadPresentations(); }
+    }));
+    list.querySelectorAll('[data-pres-assistant]').forEach(sel => sel.addEventListener('change', async () => {
+      const v = sel.value;
+      const res = await fetch(`/api/presentations/${encodeURIComponent(sel.dataset.presAssistant)}/assistant`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: v !== 'off', policy: v === 'members' ? 'members' : 'anyone' }),
+      });
+      if (!res.ok) { alert('تعذّر حفظ إعداد مساعد جيم'); await loadPresentations(); }
     }));
     list.querySelectorAll('[data-pres-live]').forEach(btn => btn.addEventListener('click', async () => {
       const on = btn.dataset.on !== '1';

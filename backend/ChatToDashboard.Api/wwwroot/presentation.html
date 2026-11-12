@@ -40,6 +40,7 @@
   <iframe id="frame" class="hidden" title="محتوى العرض"
           sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads allow-popups-to-escape-sandbox"
           referrerpolicy="no-referrer"></iframe>
+<script src="/js/jeem-assistant.js"></script>
 <script>
 (async () => {
   // /p/{id} أو /p/{org}/{slug} — يُترجَم إلى مسار الواجهة المناسب
@@ -65,6 +66,8 @@
     $('open').href = src; $('open').classList.remove('hidden');
     $('frame').src = src; $('frame').classList.remove('hidden');
     installBridge(apiBase);
+    // مساعد «جيم»: زر عائم يشرح محتوى الملف كله ويناقشه (صوتًا أو كتابة) — خارج الإطار المعزول (js/jeem-assistant.js)
+    if (window.JEEM_ASSISTANT) window.jeemAssistant = JEEM_ASSISTANT.mount({ apiBase, title: meta.title });
   } catch { show('تعذّر تحميل العرض.'); }
 })();
 
