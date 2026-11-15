@@ -832,6 +832,17 @@ tr:last-child td{border-bottom:0}
 #file-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
 #file-form input[type="text"],#file-form textarea{padding:9px 12px;border:1px solid var(--grid);
   border-radius:9px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface)}
+/* نافذة «ربط ملف برابط»: الحقول كانت بعرضها الافتراضي الضيق (بلا غلاف label كنموذج تفاصيل الملف) — بطلب المستخدم
+   تأخذ العرض كاملًا بنفس مظهر حقول #file-form، والتسمية فوق الحقل بمسافة موحّدة. */
+#link-modal .share-modal-box{width:min(520px,100%);max-width:none}
+#link-form{display:flex;flex-direction:column;gap:4px}
+#link-form .share-expiry-label{margin:8px 0 2px}
+#link-form .share-expiry-label:first-child{margin-top:0}
+#link-form input[type="url"],#link-form input[type="text"],#link-form textarea{display:block;width:100%;box-sizing:border-box;padding:9px 12px;
+  border:1px solid var(--grid);border-radius:9px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface)}
+#link-form textarea{resize:vertical;min-height:64px}
+#link-form input:focus,#link-form textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+#link-form .modal-actions{gap:8px}
 .rel-title{display:block;margin-bottom:8px;font-size:12.5px;color:var(--ink-2)}
 .rel-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .rel-row .rel-label{flex:1;font-size:12.5px}
