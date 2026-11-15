@@ -33,6 +33,15 @@ window.JEEM_ASSISTANT = (function () {
 @keyframes ja-talk{from{transform:scaleY(.45)}to{transform:scaleY(1)}}
 @keyframes ja-wave{from{transform:scaleY(.6)}to{transform:scaleY(1)}}
 @keyframes ja-think{0%,100%{opacity:1}50%{opacity:.35}}
+.ja-hello{position:absolute;bottom:64px;inset-inline-end:0;width:280px;max-width:calc(100vw - 36px);background:#fff;border:1px solid var(--ja-line);border-radius:16px;border-end-end-radius:4px;box-shadow:0 12px 32px rgba(20,40,60,.2);padding:12px 14px;padding-inline-start:34px;font-size:14px;line-height:1.7;color:var(--ja-ink);cursor:pointer;animation:ja-hello-in .35s ease-out}
+.ja-hello::after{content:"";position:absolute;bottom:-8px;inset-inline-end:22px;width:14px;height:14px;background:#fff;border-inline-end:1px solid var(--ja-line);border-bottom:1px solid var(--ja-line);transform:rotate(45deg)}
+.ja-hello b{color:var(--ja-blue)}
+.ja-hello .ja-hello-x{position:absolute;top:6px;inset-inline-start:8px;background:transparent;border:0;font-size:14px;color:var(--ja-mute);cursor:pointer;padding:2px 6px;border-radius:8px}
+.ja-hello .ja-hello-x:hover{background:#eef1f4}
+.ja-hello.hidden{display:none}
+.ja-fab.ja-wave .ja-char{animation:ja-nod 1.2s ease-in-out 2}
+@keyframes ja-hello-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ja-nod{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
 .ja-panel{position:absolute;bottom:62px;inset-inline-end:0;width:380px;max-width:calc(100vw - 36px);height:560px;max-height:calc(100vh - 100px);background:#fff;border:1px solid var(--ja-line);border-radius:18px;box-shadow:0 18px 50px rgba(20,40,60,.22);display:flex;flex-direction:column;overflow:hidden;color:var(--ja-ink)}
 .ja-panel.hidden{display:none}
 .ja-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--ja-line);background:#F3F5F7}
@@ -123,6 +132,7 @@ window.JEEM_ASSISTANT = (function () {
     document.head.appendChild(style);
     root.innerHTML = `
 <button type="button" class="ja-fab" aria-expanded="false" aria-controls="ja-panel" title="اسأل ${NAME} عن هذا العرض"><span class="ja-ring"></span>${CHAR}<span class="ja-fab-name">${NAME}</span></button>
+<div class="ja-hello hidden" id="ja-hello" role="status"><button type="button" class="ja-hello-x" aria-label="إغلاق التنبيه">✕</button>👋 أهلًا! أنا <b>${NAME}</b>، أعرف محتوى هذا العرض كاملًا. اسألني عن أي شيء فيه — صوتًا أو كتابة.</div>
 <section class="ja-panel hidden" id="ja-panel" role="dialog" aria-label="مساعد ${NAME}">
   <header class="ja-head">${CHAR}<div class="ja-who"><b>${NAME}</b><span class="ja-status" id="ja-status">مساعد العرض — اسألني عن أي شيء في الملف</span></div>
     <button type="button" class="ja-ib" id="ja-speaker" aria-pressed="true" title="قراءة الردود بصوت عالٍ (تشغيل/إيقاف)">🔊</button>
@@ -251,7 +261,17 @@ window.JEEM_ASSISTANT = (function () {
     }
 
     /* ---------- الأحداث ---------- */
-    function open() { panel.classList.remove('hidden'); fab.setAttribute('aria-expanded', 'true'); renderAll(); if (S.allowed) setTimeout(() => input.focus(), 50); }
+    /* فقاعة تنبيه عند أول فتح للصفحة في هذه الجلسة: تختفي بالنقر أو بالفتح أو بعد 12 ثانية */
+    const hello = $('ja-hello'); const helloKey = storeKey + ':hello'; let helloTimer = null;
+    function hideHello() { hello.classList.add('hidden'); fab.classList.remove('ja-wave'); if (helloTimer) { clearTimeout(helloTimer); helloTimer = null; } try { sessionStorage.setItem(helloKey, '1'); } catch { } }
+    function showHello() {
+      let seen = false; try { seen = sessionStorage.getItem(helloKey) === '1'; } catch { }
+      if (seen || S.history.length || !S.allowed) return;
+      hello.classList.remove('hidden'); fab.classList.add('ja-wave');
+      helloTimer = setTimeout(hideHello, 12000);
+    }
+    hello.addEventListener('click', ev => { hideHello(); if (!ev.target.classList.contains('ja-hello-x')) open(); });
+    function open() { hideHello(); panel.classList.remove('hidden'); fab.setAttribute('aria-expanded', 'true'); renderAll(); if (S.allowed) setTimeout(() => input.focus(), 50); }
     function close() { panel.classList.add('hidden'); fab.setAttribute('aria-expanded', 'false'); S.voiceLoop = false; stopListening(); stopSpeaking(); }
     fab.addEventListener('click', () => panel.classList.contains('hidden') ? open() : close());
     $('ja-close').addEventListener('click', close);
@@ -271,6 +291,7 @@ window.JEEM_ASSISTANT = (function () {
       if (!info.enabled) { root.remove(); style.remove(); return; }
       S.allowed = !!info.allowed; S.reason = info.reason || null;
       if (!panel.classList.contains('hidden')) renderAll();
+      else setTimeout(showHello, 900);
     }).catch(() => { });
 
     return { ask, open, close, setState, get state() { return S.state; }, get history() { return S.history; }, voice: { supported: !!SR, tts: !!TTS } };
