@@ -67,7 +67,18 @@ public class FreeformController : ControllerBase
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        return Ok(await _store.ListAsync(cur.Value.Selection.ProjectId, ct));
+        var list = await _store.ListAsync(cur.Value.Selection.ProjectId, ct);
+        // الرابط الدائم لكل تصميم منشور (عرض واحد لكل تصميم؛ إعادة النشر تحدّثه على الرابط نفسه) — تحلّه القائمة مرة واحدة
+        var presentations = await _presentations.ListAsync(cur.Value.User.OrganizationId, ct);
+        var byId = presentations.ToDictionary(p => p.Id, p => p);
+        var orgSlug = cur.Value.User.OrganizationId is null ? null : (await _organizations.FindByIdAsync(cur.Value.User.OrganizationId, ct))?.Slug;
+        return Ok(list.Select(d => new
+        {
+            id = d.Id, projectId = d.ProjectId, organizationId = d.OrganizationId, createdByUserId = d.CreatedByUserId, title = d.Title, kind = d.Kind, templateKey = d.TemplateKey,
+            version = d.Version, presentationId = d.PresentationId, queryCount = d.QueryCount, dataRefreshedAt = d.DataRefreshedAt, autoRefresh = d.AutoRefresh, sizeBytes = d.SizeBytes, createdAt = d.CreatedAt, updatedAt = d.UpdatedAt,
+            publishedUrl = d.PresentationId is not null && byId.TryGetValue(d.PresentationId, out var pres) ? pres.PublicPath(orgSlug) : null,
+            publishedActive = d.PresentationId is not null && byId.TryGetValue(d.PresentationId, out var pa) && pa.IsActive,
+        }));
     }
 
     [HttpGet("{id}")]

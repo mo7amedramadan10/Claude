@@ -3608,3 +3608,11 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
   overflow-wrap: anywhere; text-align: start;
 }
 #ff-list-panel .dropdown-item small { display: block; font-weight: 400; }
+
+/* تصميم حر — الرابط الدائم للتصاميم المنشورة: شارة في البطاقة وزر نسخ لا يفتح التصميم */
+.jeem-scope .ff-card-foot .ff-pub { color: var(--brand-blue); font-weight: 600; }
+.jeem-scope .ff-card-foot .ff-pub.off { color: var(--danger); }
+.jeem-scope .ff-card-link { margin-inline-start: auto; flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--brand-blue); }
+.jeem-scope .ff-card-link:hover { background: var(--surface-2); border-color: var(--brand-blue); }
+.jeem-scope .ff-card-link.copied { font-size: 11px; width: auto; padding: 0 8px; white-space: nowrap; }
+.jeem-scope #ff-link.copied { color: var(--ok); }

@@ -8792,7 +8792,7 @@ function ffAgo(iso) {
 function ffKindIcon(k) { const n = document.querySelector(`.ff-kind[data-kind="${FF_KINDS[k] ? k : 'design'}"] .ff-ico`); return n ? n.outerHTML : ''; }
 function ffGalFiltered() {
   const me = state.currentUser ? state.currentUser.id : null; const q = FF.gal.q.trim().toLowerCase();
-  return FF.list.filter(d => (FF.gal.tab === 'all' || (FF.gal.tab === 'mine' ? d.createdByUserId === me : d.createdByUserId !== me))
+  return FF.list.filter(d => (FF.gal.tab === 'all' || (FF.gal.tab === 'published' ? !!d.publishedUrl : FF.gal.tab === 'mine' ? d.createdByUserId === me : d.createdByUserId !== me))
     && (!FF.gal.kind || (d.kind || 'design') === FF.gal.kind) && (!q || (d.title || '').toLowerCase().includes(q)));
 }
 // صفحات المعاينة داخل iframe بـ srcdoc: الرابط الداخلي `#قسم` يُحلّ على عنوان الصفحة الأم (about:srcdoc يرث أصلها) فينتقل الإطار
@@ -8828,12 +8828,20 @@ function ffRenderGallery() {
   box.innerHTML = items.map(d => { const k = FF_KINDS[d.kind] ? d.kind : 'design'; const opened = ffOpenedAt(d.id);
     return `<article class="ff-card k-${k}" data-ff="${esc(d.id)}" role="button" tabindex="0" aria-label="${esc(d.title)}">
       <div class="ff-card-art"><div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(d.title)}"></iframe></div></div>
-      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(d.title)}</b><small>${opened ? 'فُتح ' + ffAgo(opened) : 'عُدِّل ' + ffAgo(d.updatedAt)}${d.presentationId ? ' · منشور' : ''}</small></div></div>
+      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(d.title)}</b><small>${opened ? 'فُتح ' + ffAgo(opened) : 'عُدِّل ' + ffAgo(d.updatedAt)}${d.publishedUrl ? (d.publishedActive === false ? ' · <span class="ff-pub off">منشور (الرابط موقوف)</span>' : ' · <span class="ff-pub">🔗 منشور</span>') : ''}</small></div>${d.publishedUrl ? `<button type="button" class="ff-card-link" data-ff-link="${esc(location.origin + d.publishedUrl)}" title="نسخ الرابط الدائم: ${esc(location.origin + d.publishedUrl)}" aria-label="نسخ رابط ${esc(d.title)}">🔗</button>` : ''}</div>
     </article>`; }).join('');
   box.querySelectorAll('[data-ff]').forEach(c => { c.addEventListener('click', () => ffOpen(c.dataset.ff)); c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ffOpen(c.dataset.ff); } }); });
+  // زر نسخ الرابط الدائم على البطاقة: لا يفتح التصميم
+  box.querySelectorAll('[data-ff-link]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); ffCopyLink(b.dataset.ffLink, b); }));
   ffScaleThumbs();
   if (!FF.gal.io) FF.gal.io = new IntersectionObserver(entries => entries.forEach(en => { if (en.isIntersecting) { FF.gal.io.unobserve(en.target); ffLoadThumb(en.target); } }), { root: el('ff-start'), rootMargin: '200px' });
   if (!FF.gal.list) box.querySelectorAll('.ff-card').forEach(c => FF.gal.io.observe(c));
+}
+/* نسخ الرابط الدائم للتصميم المنشور (لكل تصميم عرض واحد؛ إعادة النشر تحدّث الصفحة على الرابط نفسه) */
+async function ffCopyLink(url, btn) {
+  let ok = true; try { await navigator.clipboard.writeText(url); } catch { ok = false; }
+  if (btn) { const t = btn.textContent; btn.textContent = ok ? '✓ نُسخ' : 'تعذّر'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = t; btn.classList.remove('copied'); }, 1400); }
+  if (!ok) prompt('انسخ الرابط:', url);
 }
 function ffScaleThumbs() { const first = el('ff-list').querySelector('.ff-card-paper'); if (!first) return; const w = first.clientWidth || 200; el('ff-list').style.setProperty('--ff-s', (w / 1100).toFixed(4)); }
 async function ffLoadThumb(card) {
@@ -9168,6 +9176,8 @@ function ffRender() {
   const viewingOld = FF.viewing != null && FF.viewing !== d.version;
   el('ff-meta').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} · ${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}${d && d.queryCount ? ` · بيانات حيّة (${d.queryCount} استعلام${d.dataRefreshedAt ? '، آخر تحديث ' + ffAgo(d.dataRefreshedAt) : ''})` : ''}`;
   el('ff-refresh').classList.toggle('no-queries', !(d && d.queryCount));
+  el('ff-publish').textContent = FF.publishedUrl ? 'تحديث النشر' : 'نشر'; el('ff-publish').title = FF.publishedUrl ? 'إعادة نشر آخر إصدار على الرابط الدائم نفسه' : 'نشر الصفحة برابط عام';
+  el('ff-link').classList.toggle('hidden', !FF.publishedUrl); if (FF.publishedUrl) el('ff-link').title = `الرابط الدائم: ${location.origin + FF.publishedUrl} — انقر لنسخه`;
   el('ff-stale').classList.toggle('hidden', !(d && d.queryCount && FF.dataChanged));
   el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
   el('ff-restore').classList.toggle('hidden', !viewingOld);
@@ -9267,6 +9277,7 @@ function ffStandaloneHtml(html) {
 }
 el('ff-open').addEventListener('click', () => { if (!FF.html) return; const blob = new Blob([ffStandaloneHtml(FF.html)], { type: 'text/html' }); const url = URL.createObjectURL(blob); window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000); });
 el('ff-download').addEventListener('click', () => { if (!FF.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([FF.html], { type: 'text/html' })); a.download = (FF.design ? FF.design.title : 'design') + '.html'; document.body.appendChild(a); a.click(); a.remove(); });
+el('ff-link').addEventListener('click', () => { if (FF.publishedUrl) ffCopyLink(location.origin + FF.publishedUrl, el('ff-link')); });
 el('ff-publish').addEventListener('click', async () => {
   if (!FF.design) return; el('ff-publish').disabled = true;
   try {
@@ -9274,7 +9285,7 @@ el('ff-publish').addEventListener('click', async () => {
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
     FF.publishedUrl = d.url; const full = location.origin + d.url;
     const liveNote = d.liveData ? ' الصفحة المنشورة <b>حيّة</b>: تُقدَّم بآخر الأرقام من بياناتك عند كل فتح وتتحدّث وهي مفتوحة — بلا إعادة نشر (يمكن إيقافها من «العروض التقديمية»).' : '';
-    ffPushMsg('bot', (d.updated ? 'حُدّثت الصفحة المنشورة على نفس الرابط.' : 'نُشرت الصفحة في «العروض التقديمية».') + liveNote, `<a href="${esc(full)}" target="_blank" rel="noopener" dir="ltr">${esc(full)}</a> <button type="button" class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText('${esc(full)}')">نسخ</button>`);
+    ffPushMsg('bot', (d.updated ? 'حُدّثت الصفحة المنشورة على رابطها الدائم نفسه.' : 'نُشرت الصفحة في «العروض التقديمية» — هذا رابطها الدائم، وأي نشر لاحق يحدّثه لا يغيّره.') + liveNote, `<a href="${esc(full)}" target="_blank" rel="noopener" dir="ltr">${esc(full)}</a> <button type="button" class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText('${esc(full)}')">نسخ</button>`);
     ffRender();
   } catch (e) { ffPushMsg('err', 'تعذّر النشر: ' + e.message); }
   finally { el('ff-publish').disabled = false; }
