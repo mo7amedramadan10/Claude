@@ -4477,7 +4477,34 @@ const DASH_GAL_CATS = [
 
 let dashGalCat = 'all', dashGalQuery = '';
 
-function openDashGallery() {
+// وضع المعرض: 'chat' (بناء لوحة محادثة، الافتراضي) أو 'freeform' (اختيار نموذج لوحة لتصميم حر — نفس المعرض والمعاينات بالضبط)
+let dashGalMode = 'chat';
+function galApplyMode() {
+  const ff = dashGalMode === 'freeform';
+  el('gal-start-blank').querySelector('b').textContent = ff ? 'لوحة بلا نموذج' : 'لوحة فارغة';
+  el('gal-start-blank').querySelector('small').textContent = ff ? 'تصميم حر: اكتب طلبك في المحادثة بلا نموذج' : 'ابدأ من الصفر وأضف العناصر بنفسك أو من «النماذج»';
+  el('gal-start-ai').querySelector('b').textContent = ff ? 'رفع من ملف موجود' : 'اطلب من جيم';
+  el('gal-start-ai').querySelector('small').textContent = ff ? 'PowerPoint أو PDF أو HTML يتحوّل إلى نموذج لوحة مخصص' : 'اكتب وصف اللوحة اللي محتاجها وجيم يبنيها من مصادرك';
+  el('dash-gallery-modal').querySelector('.gal-head h2').textContent = ff ? 'لوحة جديد — تصميم حر' : 'لوحة جديدة';
+  el('dash-gallery-modal').querySelector('.gal-head p').textContent = ff ? 'اختر نموذج لوحة من كتالوج النماذج يُبنى عليه طلبك في تصميم حر، أو ابدأ بلا نموذج.' : 'اختر نموذجًا جاهزًا، أو ابدأ من الصفر، أو اطلب من جيم.';
+}
+/* «استخدم هذا النموذج» من المعاينة أو أي عرض توضيحي: في وضع تصميم حر يُرفق النموذج (المفتاح d:<id>) في المحادثة بدل بناء لوحة */
+async function galUseTemplate(d) {
+  const freeform = dashGalMode === 'freeform';
+  closeDashGallery(); // يعيد الوضع إلى المحادثة، فنقرأه قبل الإغلاق
+  if (freeform) {
+    const list = await ffLoadTemplates();
+    const t = list.find(x => x.key === 'd:' + d.id) || { key: 'd:' + d.id, kind: 'dashboard', category: d.cat, icon: '📊', name: d.name, description: d.desc, sections: (d.widgets || []).map(w => ({ title: w.title, needsData: true, type: w.type })), total: (d.widgets || []).length, dataSections: (d.widgets || []).length, dashboard: true };
+    ffSetTemplate(t);
+    return;
+  }
+  startBlankDashboard();
+  setChatMode('dashboard');
+  if (d.renderKind) return useInteractiveTemplate(d);
+  ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
+}
+function openDashGallery(mode = 'chat') {
+  dashGalMode = mode; galApplyMode();
   dashGalCat = 'all'; dashGalQuery = '';
   el('gal-search-input').value = '';
   renderDashGalCats();
@@ -4487,7 +4514,7 @@ function openDashGallery() {
   el('gal-view-preview').classList.add('hidden');
   el('dash-gallery-modal').classList.remove('hidden');
 }
-function closeDashGallery() { el('dash-gallery-modal').classList.add('hidden'); }
+function closeDashGallery() { el('dash-gallery-modal').classList.add('hidden'); if (dashGalMode === 'freeform') { dashGalMode = 'chat'; galApplyMode(); } }
 
 function renderDashGalCats() {
   el('gal-cats').innerHTML = DASH_GAL_CATS.map(([k, name, icon]) => {
@@ -4592,13 +4619,7 @@ function openDashGalPreview(d) {
     el('gal-view-preview').classList.add('hidden');
     el('gal-view-list').classList.remove('hidden');
   });
-  el('gal-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    closeDashGallery();
-    startBlankDashboard();
-    setChatMode('dashboard');
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-use-btn').addEventListener('click', () => galUseTemplate(d));
   el('gal-demo-btn')?.addEventListener('click', () => {
     if (d.renderKind === 'network') return openNetworkGalDemo(d);
     if (d.renderKind === 'workflow') return openWorkflowGalDemo(d);
@@ -4667,12 +4688,7 @@ function openDashGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    closeDashGallery();
-    startBlankDashboard();
-    setChatMode('dashboard');
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JR.mount(entry, el('gal-demo-grid'), { bar: el('gal-demo-bar') });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -4755,13 +4771,7 @@ function openNetworkGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    closeDashGallery();
-    startBlankDashboard();
-    setChatMode('dashboard');
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_DRILL_INIT?.();
   window.JEEM_NET_MOUNT(entry);
   el('gal-view-preview').classList.add('hidden');
@@ -4835,13 +4845,7 @@ function openWorkflowGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    closeDashGallery();
-    startBlankDashboard();
-    setChatMode('dashboard');
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_WORKFLOW_MOUNT(window.JEEM_WORKFLOW);
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -4914,13 +4918,7 @@ function openMarketplaceGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    closeDashGallery();
-    startBlankDashboard();
-    setChatMode('dashboard');
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_MARKETPLACE_MOUNT(window.JEEM_MARKET);
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -4955,10 +4953,7 @@ function openWarehouseGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_WAREHOUSE_MOUNT(el('gal-view-demo').querySelector('#whRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -4991,10 +4986,7 @@ function openPoolsGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_POOLS_MOUNT(el('gal-view-demo').querySelector('#lpRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5027,10 +5019,7 @@ function openTreasuryGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_TREASURY_MOUNT(el('gal-view-demo').querySelector('#ttRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5063,10 +5052,7 @@ function openCrmGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_CRM_MOUNT(el('gal-view-demo').querySelector('#crRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5099,10 +5085,7 @@ function openTeamTasksGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_TEAMTASKS_MOUNT(el('gal-view-demo').querySelector('#tmRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5135,10 +5118,7 @@ function openTimeTrackingGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_TIMETRACKING_MOUNT(el('gal-view-demo').querySelector('#tkRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5169,10 +5149,7 @@ function openSaasGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_SAAS_MOUNT(el('gal-view-demo').querySelector('#smRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5203,10 +5180,7 @@ function openStudioGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_STUDIO_MOUNT(el('gal-view-demo').querySelector('#psRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5237,10 +5211,7 @@ function openCampaignGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_CAMPAIGN_MOUNT(el('gal-view-demo').querySelector('#cpRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5271,10 +5242,7 @@ function openFundingGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_FUNDING_MOUNT(el('gal-view-demo').querySelector('#tfRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5305,10 +5273,7 @@ function openConstructionGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_CONSTRUCTION_MOUNT(el('gal-view-demo').querySelector('#ccRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5339,10 +5304,7 @@ function openBoardGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_BOARD_MOUNT(el('gal-view-demo').querySelector('#tbRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5373,10 +5335,7 @@ function openLeadsGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_LEADS_MOUNT(el('gal-view-demo').querySelector('#clRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5407,10 +5366,7 @@ function openRiskGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_RISK_MOUNT(el('gal-view-demo').querySelector('#srRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5441,10 +5397,7 @@ function openAnalysisGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_ANALYSIS_MOUNT(el('gal-view-demo').querySelector('#caRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5475,10 +5428,7 @@ function openCommandGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_COMMAND_MOUNT(el('gal-view-demo').querySelector('#scRoot'), demo, { demo: true });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
@@ -5509,20 +5459,19 @@ function openFinanceGalDemo(d) {
     el('gal-view-demo').classList.add('hidden');
     el('gal-view-preview').classList.remove('hidden');
   });
-  el('gal-demo-use-btn').addEventListener('click', () => {
-    if (d.renderKind) return useInteractiveTemplate(d);
-    ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
-  });
+  el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_FINANCE_MOUNT(el('gal-view-demo').querySelector('#foRoot'), demo, { demo: true, userName: state.currentUser?.displayName || state.currentUser?.username || '' });
   el('gal-view-preview').classList.add('hidden');
   el('gal-view-demo').classList.remove('hidden');
 }
 
 el('gal-start-blank').addEventListener('click', () => {
+  if (dashGalMode === 'freeform') { closeDashGallery(); ffSetTemplate(null); return; }
   closeDashGallery();
   startBlankDashboard();
 });
 el('gal-start-ai').addEventListener('click', () => {
+  if (dashGalMode === 'freeform') { closeDashGallery(); ffGalKind = 'dashboard'; el('ffgal-start-import').click(); return; }
   closeDashGallery();
   startBlankDashboard();
   setChatMode('dashboard');
@@ -8882,6 +8831,8 @@ function ffSketchHtml(t) {
   return `<span class="ff-sk k-${esc(t.kind)}" aria-hidden="true"><span class="paper">${inner}</span></span>`;
 }
 async function openFfGallery(kind) {
+  // نوع «لوحة»: المعرض الأصلي لنماذج اللوحات نفسه (نفس البطاقات والمصغّرات والمعاينات والعروض التوضيحية) في وضع تصميم حر
+  if (kind === 'dashboard') { ffGalKind = kind; if (!DASH_GALLERY.length) await loadTemplateCatalog(); openDashGallery('freeform'); return; }
   await ffLoadTemplates();
   ffGalKind = kind; ffGalCat = 'all'; ffGalQuery = ''; el('ffgal-search-input').value = '';
   const info = FF_KINDS[kind] || FF_KINDS.design;
