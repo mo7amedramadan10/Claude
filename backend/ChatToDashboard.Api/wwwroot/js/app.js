@@ -4477,44 +4477,44 @@ const DASH_GAL_CATS = [
 
 let dashGalCat = 'all', dashGalQuery = '';
 
-// وضع المعرض: 'chat' (بناء لوحة محادثة، الافتراضي) أو 'freeform' (اختيار نموذج لوحة لتصميم حر — نفس المعرض والمعاينات بالضبط)
-let dashGalMode = 'chat';
-function galApplyMode() {
-  const ff = dashGalMode === 'freeform';
-  el('gal-start-blank').querySelector('b').textContent = ff ? 'لوحة بلا نموذج' : 'لوحة فارغة';
-  el('gal-start-blank').querySelector('small').textContent = ff ? 'تصميم حر: اكتب طلبك في المحادثة بلا نموذج' : 'ابدأ من الصفر وأضف العناصر بنفسك أو من «النماذج»';
-  el('gal-start-ai').querySelector('b').textContent = ff ? 'رفع من ملف موجود' : 'اطلب من جيم';
-  el('gal-start-ai').querySelector('small').textContent = ff ? 'PowerPoint أو PDF أو HTML يتحوّل إلى نموذج لوحة مخصص' : 'اكتب وصف اللوحة اللي محتاجها وجيم يبنيها من مصادرك';
-  el('dash-gallery-modal').querySelector('.gal-head h2').textContent = ff ? 'لوحة جديد — تصميم حر' : 'لوحة جديدة';
-  el('dash-gallery-modal').querySelector('.gal-head p').textContent = ff ? 'اختر نموذج لوحة من كتالوج النماذج يُبنى عليه طلبك في تصميم حر، أو ابدأ بلا نموذج.' : 'اختر نموذجًا جاهزًا، أو ابدأ من الصفر، أو اطلب من جيم.';
+// مضيف المعرض: معرض المحادثة (الافتراضي) أو معرض «تصميم حر» — دوال المعاينة والعروض التوضيحية الـ22 نفسها ترسم في حاويات
+// المضيف الحالي بلا تكرار، فنماذج كتالوج اللوحات تظهر في تصميم حر بشكلها الأصلي حرفيًا.
+const GAL_HOSTS = { chat: { kind: 'chat', list: 'gal-view-list', preview: 'gal-view-preview', demo: 'gal-view-demo' }, ff: { kind: 'ff', list: 'ffgal-view-list', preview: 'ffgal-view-preview', demo: 'ffgal-view-demo' } };
+let galHost = GAL_HOSTS.chat;
+function galEl(part) { return el(galHost[part]); }
+function galSetHost(kind) {
+  galHost = GAL_HOSTS[kind] || GAL_HOSTS.chat;
+  // المعرّفات داخل المعاينة/العرض التوضيحي ثابتة (gal-use-btn…) فتُفرَّغ حاويات المضيف الآخر حتى لا يلتقطها el()
+  const other = galHost.kind === 'chat' ? GAL_HOSTS.ff : GAL_HOSTS.chat;
+  el(other.preview).innerHTML = ''; el(other.demo).innerHTML = '';
 }
-/* «استخدم هذا النموذج» من المعاينة أو أي عرض توضيحي: في وضع تصميم حر يُرفق النموذج (المفتاح d:<id>) في المحادثة بدل بناء لوحة */
+/* «استخدم هذا النموذج» من المعاينة أو أي عرض توضيحي: في معرض تصميم حر يُرفق النموذج (المفتاح d:<id>) في المحادثة بدل بناء لوحة */
 async function galUseTemplate(d) {
-  const freeform = dashGalMode === 'freeform';
-  closeDashGallery(); // يعيد الوضع إلى المحادثة، فنقرأه قبل الإغلاق
-  if (freeform) {
+  if (galHost.kind === 'ff') {
+    closeFfGallery();
     const list = await ffLoadTemplates();
     const t = list.find(x => x.key === 'd:' + d.id) || { key: 'd:' + d.id, kind: 'dashboard', category: d.cat, icon: '📊', name: d.name, description: d.desc, sections: (d.widgets || []).map(w => ({ title: w.title, needsData: true, type: w.type })), total: (d.widgets || []).length, dataSections: (d.widgets || []).length, dashboard: true };
     ffSetTemplate(t);
     return;
   }
+  closeDashGallery();
   startBlankDashboard();
   setChatMode('dashboard');
   if (d.renderKind) return useInteractiveTemplate(d);
   ask(`📊 بناء لوحة «${d.name}»`, undefined, { kind: 'dashboard', key: d.id });
 }
-function openDashGallery(mode = 'chat') {
-  dashGalMode = mode; galApplyMode();
+function openDashGallery() {
+  galSetHost('chat');
   dashGalCat = 'all'; dashGalQuery = '';
   el('gal-search-input').value = '';
   renderDashGalCats();
   renderDashGalGrid();
   if (!dashGalFeasibility) loadDashGalFeasibility().then(f => { if (f && !el('dash-gallery-modal').classList.contains('hidden')) renderDashGalGrid(); });
-  el('gal-view-list').classList.remove('hidden');
-  el('gal-view-preview').classList.add('hidden');
+  galEl('list').classList.remove('hidden');
+  galEl('preview').classList.add('hidden');
   el('dash-gallery-modal').classList.remove('hidden');
 }
-function closeDashGallery() { el('dash-gallery-modal').classList.add('hidden'); if (dashGalMode === 'freeform') { dashGalMode = 'chat'; galApplyMode(); } }
+function closeDashGallery() { el('dash-gallery-modal').classList.add('hidden'); }
 
 function renderDashGalCats() {
   el('gal-cats').innerHTML = DASH_GAL_CATS.map(([k, name, icon]) => {
@@ -4588,7 +4588,7 @@ function dashGalFeasHint(d) {
     : `<small>كل عناصر هذا النموذج لها ما يلزمها في بياناتك.</small>`}</div>`;
 }
 function openDashGalPreview(d) {
-  el('gal-view-preview').innerHTML = `
+  galEl('preview').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>كل النماذج</span>
     </button>
@@ -4611,13 +4611,13 @@ function openDashGalPreview(d) {
           <button type="button" class="btn btn-soft" id="gal-demo-btn">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية بأرقام توضيحية
           </button>` : ''}
-          <span class="muted" style="font-size:var(--fs-xs)">تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.</span>
+          <span class="muted" style="font-size:var(--fs-xs)">${galHost.kind === 'ff' ? 'يُرفق النموذج في المحادثة، ثم اكتب ما تريده بالتحديد ويُبنى عليه كصفحة لوحة بهوية مشروعك وبياناته.' : 'تُنشأ لوحة جديدة ببيانات مشروعك، وتقدر تعدّلها بعدها من المحادثة.'}</span>
         </div>
       </div>
     </div>`;
   el('gal-back-btn').addEventListener('click', () => {
-    el('gal-view-preview').classList.add('hidden');
-    el('gal-view-list').classList.remove('hidden');
+    galEl('preview').classList.add('hidden');
+    galEl('list').classList.remove('hidden');
   });
   el('gal-use-btn').addEventListener('click', () => galUseTemplate(d));
   el('gal-demo-btn')?.addEventListener('click', () => {
@@ -4643,8 +4643,8 @@ function openDashGalPreview(d) {
     if (d.renderKind === 'finance') return openFinanceGalDemo(d);
     return openDashGalDemo(d);
   });
-  el('gal-view-list').classList.add('hidden');
-  el('gal-view-preview').classList.remove('hidden');
+  galEl('list').classList.add('hidden');
+  galEl('preview').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية (معرض الأمثلة) ----------
@@ -4659,7 +4659,7 @@ function openDashGalDemo(d) {
   const entry = (window.JEEM_DASH_LIBRARY || []).find(x => x.id === d.id);
   if (!entry || !window.JR) return;
   const nPages = entry.p.length, nWidgets = entry.p.reduce((s, p) => s + p.w.length, 0);
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -4685,13 +4685,13 @@ function openDashGalDemo(d) {
     <div class="jr-bar" id="gal-demo-bar"></div>
     <div class="grid" id="gal-demo-grid"></div>`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JR.mount(entry, el('gal-demo-grid'), { bar: el('gal-demo-bar') });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function ic2(n) { return `<svg class="icon icon-sm" aria-hidden="true"><use href="#i-${n}"/></svg>`; }
 
@@ -4701,7 +4701,7 @@ function ic2(n) { return `<svg class="icon icon-sm" aria-hidden="true"><use href
 function openNetworkGalDemo(d) {
   const entry = (window.JEEM_NETWORK_LIBRARY || []).find(x => x.id === d.id);
   if (!entry || !window.JEEM_NET_MOUNT) return;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -4768,14 +4768,14 @@ function openNetworkGalDemo(d) {
       <div class="grid" id="pgGrid"></div>
     </main>`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_DRILL_INIT?.();
   window.JEEM_NET_MOUNT(entry);
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (سير عمل/SLA) ----------
@@ -4783,7 +4783,7 @@ function openNetworkGalDemo(d) {
 // مش شبكة عقد ومش JR.mount — يستخدم window.JEEM_WORKFLOW مباشرة (نموذج واحد فقط حاليًا).
 function openWorkflowGalDemo(d) {
   if (!window.JEEM_WORKFLOW || !window.JEEM_WORKFLOW_MOUNT) return;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -4842,13 +4842,13 @@ function openWorkflowGalDemo(d) {
       <div class="grid" id="pgGrid"></div>
     </main>`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_WORKFLOW_MOUNT(window.JEEM_WORKFLOW);
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (منصة/Sankey) ----------
@@ -4856,7 +4856,7 @@ function openWorkflowGalDemo(d) {
 // يستخدم window.JEEM_MARKET المُحمَّل سلفًا لشبكة العملاء والموردين (Phase 3).
 function openMarketplaceGalDemo(d) {
   if (!window.JEEM_MARKET || !window.JEEM_MARKETPLACE_MOUNT) return;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -4915,13 +4915,13 @@ function openMarketplaceGalDemo(d) {
       <div class="grid" id="pgGrid"></div>
     </main>`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
   window.JEEM_MARKETPLACE_MOUNT(window.JEEM_MARKET);
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (نظرة على فريق المستودع) ----------
@@ -4930,7 +4930,7 @@ function openMarketplaceGalDemo(d) {
 function openWarehouseGalDemo(d) {
   if (!window.JEEM_WAREHOUSE_DEMO || !window.JEEM_WAREHOUSE_MOUNT) return;
   const demo = window.JEEM_WAREHOUSE_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -4950,20 +4950,20 @@ function openWarehouseGalDemo(d) {
     </div>
     ${interactiveWarehouseSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_WAREHOUSE_MOUNT(el('gal-view-demo').querySelector('#whRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_WAREHOUSE_MOUNT(galEl('demo').querySelector('#whRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (مجمّعات السيولة المركّزة) ----------
 function openPoolsGalDemo(d) {
   if (!window.JEEM_POOLS_DEMO || !window.JEEM_POOLS_MOUNT) return;
   const demo = window.JEEM_POOLS_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -4983,20 +4983,20 @@ function openPoolsGalDemo(d) {
     </div>
     ${interactivePoolsSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_POOLS_MOUNT(el('gal-view-demo').querySelector('#lpRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_POOLS_MOUNT(galEl('demo').querySelector('#lpRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (خزينة الأصول الرقمية) ----------
 function openTreasuryGalDemo(d) {
   if (!window.JEEM_TREASURY_DEMO || !window.JEEM_TREASURY_MOUNT) return;
   const demo = window.JEEM_TREASURY_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5016,20 +5016,20 @@ function openTreasuryGalDemo(d) {
     </div>
     ${interactiveTreasurySkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_TREASURY_MOUNT(el('gal-view-demo').querySelector('#ttRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_TREASURY_MOUNT(galEl('demo').querySelector('#ttRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (إدارة العملاء — مراحل البيع) ----------
 function openCrmGalDemo(d) {
   if (!window.JEEM_CRM_DEMO || !window.JEEM_CRM_MOUNT) return;
   const demo = window.JEEM_CRM_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5049,20 +5049,20 @@ function openCrmGalDemo(d) {
     </div>
     ${interactiveCrmSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_CRM_MOUNT(el('gal-view-demo').querySelector('#crRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_CRM_MOUNT(galEl('demo').querySelector('#crRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (إدارة مهام الفريق) ----------
 function openTeamTasksGalDemo(d) {
   if (!window.JEEM_TEAMTASKS_DEMO || !window.JEEM_TEAMTASKS_MOUNT) return;
   const demo = window.JEEM_TEAMTASKS_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5082,20 +5082,20 @@ function openTeamTasksGalDemo(d) {
     </div>
     ${interactiveTeamTasksSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_TEAMTASKS_MOUNT(el('gal-view-demo').querySelector('#tmRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_TEAMTASKS_MOUNT(galEl('demo').querySelector('#tmRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 // ---------- معاينة توضيحية تفاعلية لنموذج "لوحة تفاعلية" (تتبع الوقت للفرق) ----------
 function openTimeTrackingGalDemo(d) {
   if (!window.JEEM_TIMETRACKING_DEMO || !window.JEEM_TIMETRACKING_MOUNT) return;
   const demo = window.JEEM_TIMETRACKING_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5115,18 +5115,18 @@ function openTimeTrackingGalDemo(d) {
     </div>
     ${interactiveTimeTrackingSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_TIMETRACKING_MOUNT(el('gal-view-demo').querySelector('#tkRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_TIMETRACKING_MOUNT(galEl('demo').querySelector('#tkRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openSaasGalDemo(d) {
   if (!window.JEEM_SAAS_DEMO || !window.JEEM_SAAS_MOUNT) return;
   const demo = window.JEEM_SAAS_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5146,18 +5146,18 @@ function openSaasGalDemo(d) {
     </div>
     ${interactiveSaasSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_SAAS_MOUNT(el('gal-view-demo').querySelector('#smRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_SAAS_MOUNT(galEl('demo').querySelector('#smRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openStudioGalDemo(d) {
   if (!window.JEEM_STUDIO_DEMO || !window.JEEM_STUDIO_MOUNT) return;
   const demo = window.JEEM_STUDIO_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5177,18 +5177,18 @@ function openStudioGalDemo(d) {
     </div>
     ${interactiveStudioSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_STUDIO_MOUNT(el('gal-view-demo').querySelector('#psRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_STUDIO_MOUNT(galEl('demo').querySelector('#psRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openCampaignGalDemo(d) {
   if (!window.JEEM_CAMPAIGN_DEMO || !window.JEEM_CAMPAIGN_MOUNT) return;
   const demo = window.JEEM_CAMPAIGN_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5208,18 +5208,18 @@ function openCampaignGalDemo(d) {
     </div>
     ${interactiveCampaignSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_CAMPAIGN_MOUNT(el('gal-view-demo').querySelector('#cpRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_CAMPAIGN_MOUNT(galEl('demo').querySelector('#cpRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openFundingGalDemo(d) {
   if (!window.JEEM_FUNDING_DEMO || !window.JEEM_FUNDING_MOUNT) return;
   const demo = window.JEEM_FUNDING_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5239,18 +5239,18 @@ function openFundingGalDemo(d) {
     </div>
     ${interactiveFundingSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_FUNDING_MOUNT(el('gal-view-demo').querySelector('#tfRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_FUNDING_MOUNT(galEl('demo').querySelector('#tfRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openConstructionGalDemo(d) {
   if (!window.JEEM_CONSTRUCTION_DEMO || !window.JEEM_CONSTRUCTION_MOUNT) return;
   const demo = window.JEEM_CONSTRUCTION_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5270,18 +5270,18 @@ function openConstructionGalDemo(d) {
     </div>
     ${interactiveConstructionSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_CONSTRUCTION_MOUNT(el('gal-view-demo').querySelector('#ccRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_CONSTRUCTION_MOUNT(galEl('demo').querySelector('#ccRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openBoardGalDemo(d) {
   if (!window.JEEM_BOARD_DEMO || !window.JEEM_BOARD_MOUNT) return;
   const demo = window.JEEM_BOARD_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5301,18 +5301,18 @@ function openBoardGalDemo(d) {
     </div>
     ${interactiveBoardSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_BOARD_MOUNT(el('gal-view-demo').querySelector('#tbRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_BOARD_MOUNT(galEl('demo').querySelector('#tbRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openLeadsGalDemo(d) {
   if (!window.JEEM_LEADS_DEMO || !window.JEEM_LEADS_MOUNT) return;
   const demo = window.JEEM_LEADS_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5332,18 +5332,18 @@ function openLeadsGalDemo(d) {
     </div>
     ${interactiveLeadsSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_LEADS_MOUNT(el('gal-view-demo').querySelector('#clRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_LEADS_MOUNT(galEl('demo').querySelector('#clRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openRiskGalDemo(d) {
   if (!window.JEEM_RISK_DEMO || !window.JEEM_RISK_MOUNT) return;
   const demo = window.JEEM_RISK_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5363,18 +5363,18 @@ function openRiskGalDemo(d) {
     </div>
     ${interactiveRiskSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_RISK_MOUNT(el('gal-view-demo').querySelector('#srRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_RISK_MOUNT(galEl('demo').querySelector('#srRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openAnalysisGalDemo(d) {
   if (!window.JEEM_ANALYSIS_DEMO || !window.JEEM_ANALYSIS_MOUNT) return;
   const demo = window.JEEM_ANALYSIS_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5394,18 +5394,18 @@ function openAnalysisGalDemo(d) {
     </div>
     ${interactiveAnalysisSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_ANALYSIS_MOUNT(el('gal-view-demo').querySelector('#caRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_ANALYSIS_MOUNT(galEl('demo').querySelector('#caRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openCommandGalDemo(d) {
   if (!window.JEEM_COMMAND_DEMO || !window.JEEM_COMMAND_MOUNT) return;
   const demo = window.JEEM_COMMAND_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5425,18 +5425,18 @@ function openCommandGalDemo(d) {
     </div>
     ${interactiveCommandSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_COMMAND_MOUNT(el('gal-view-demo').querySelector('#scRoot'), demo, { demo: true });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_COMMAND_MOUNT(galEl('demo').querySelector('#scRoot'), demo, { demo: true });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 function openFinanceGalDemo(d) {
   if (!window.JEEM_FINANCE_DEMO || !window.JEEM_FINANCE_MOUNT) return;
   const demo = window.JEEM_FINANCE_DEMO;
-  el('gal-view-demo').innerHTML = `
+  galEl('demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="gal-demo-back-btn">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span>
     </button>
@@ -5456,22 +5456,20 @@ function openFinanceGalDemo(d) {
     </div>
     ${interactiveFinanceSkeletonHtml(d)}`;
   el('gal-demo-back-btn').addEventListener('click', () => {
-    el('gal-view-demo').classList.add('hidden');
-    el('gal-view-preview').classList.remove('hidden');
+    galEl('demo').classList.add('hidden');
+    galEl('preview').classList.remove('hidden');
   });
   el('gal-demo-use-btn').addEventListener('click', () => galUseTemplate(d));
-  window.JEEM_FINANCE_MOUNT(el('gal-view-demo').querySelector('#foRoot'), demo, { demo: true, userName: state.currentUser?.displayName || state.currentUser?.username || '' });
-  el('gal-view-preview').classList.add('hidden');
-  el('gal-view-demo').classList.remove('hidden');
+  window.JEEM_FINANCE_MOUNT(galEl('demo').querySelector('#foRoot'), demo, { demo: true, userName: state.currentUser?.displayName || state.currentUser?.username || '' });
+  galEl('preview').classList.add('hidden');
+  galEl('demo').classList.remove('hidden');
 }
 
 el('gal-start-blank').addEventListener('click', () => {
-  if (dashGalMode === 'freeform') { closeDashGallery(); ffSetTemplate(null); return; }
   closeDashGallery();
   startBlankDashboard();
 });
 el('gal-start-ai').addEventListener('click', () => {
-  if (dashGalMode === 'freeform') { closeDashGallery(); ffGalKind = 'dashboard'; el('ffgal-start-import').click(); return; }
   closeDashGallery();
   startBlankDashboard();
   setChatMode('dashboard');
@@ -8831,9 +8829,10 @@ function ffSketchHtml(t) {
   return `<span class="ff-sk k-${esc(t.kind)}" aria-hidden="true"><span class="paper">${inner}</span></span>`;
 }
 async function openFfGallery(kind) {
-  // نوع «لوحة»: المعرض الأصلي لنماذج اللوحات نفسه (نفس البطاقات والمصغّرات والمعاينات والعروض التوضيحية) في وضع تصميم حر
-  if (kind === 'dashboard') { ffGalKind = kind; if (!DASH_GALLERY.length) await loadTemplateCatalog(); openDashGallery('freeform'); return; }
   await ffLoadTemplates();
+  // نوع «لوحة»: نماذج كتالوج اللوحات تُعرض هنا ببطاقاتها ومعايناتها وعروضها التوضيحية الأصلية، فيلزم الكتالوج وجدواه
+  if (kind === 'dashboard') { if (!DASH_GALLERY.length) await loadTemplateCatalog(); if (!dashGalFeasibility) loadDashGalFeasibility().then(f => { if (f && ffGalKind === 'dashboard' && !el('ff-gallery-modal').classList.contains('hidden')) renderFfGalGrid(); }); }
+  galSetHost('ff');
   ffGalKind = kind; ffGalCat = 'all'; ffGalQuery = ''; el('ffgal-search-input').value = '';
   const info = FF_KINDS[kind] || FF_KINDS.design;
   el('ffgal-title').textContent = `${info.label} جديد`; el('ffgal-desc').textContent = `اختر نموذج ${info.label} جاهزًا يُبنى عليه طلبك، أو ابدأ تصميمًا حرًّا بلا نموذج — يظهر اختيارك مرفقًا في المحادثة.`;
@@ -8856,8 +8855,21 @@ function renderFfGalCats() {
 }
 function renderFfGalGrid() {
   const q = ffGalQuery.toLowerCase();
-  const items = ffGalItems().filter(t => (ffGalCat === 'all' || t.category === ffGalCat) && (!q || (t.name + ' ' + t.description + ' ' + t.sections.map(x => x.title).join(' ')).toLowerCase().includes(q)));
-  el('ffgal-grid').innerHTML = items.map(t => `
+  const items = ffGalItems().filter(t => (ffGalCat === 'all' || t.category === ffGalCat) && (!q || (t.name + ' ' + t.description + ' ' + (t.sections || []).map(x => x.title).join(' ')).toLowerCase().includes(q)));
+  const catalogOf = t => t.dashboard ? DASH_GALLERY.find(d => 'd:' + d.id === t.key) : null;
+  el('ffgal-grid').innerHTML = items.map(t => { const d = catalogOf(t); return d ? `
+    <button type="button" class="dash-card" data-dash="${esc(d.id)}">
+      ${dashGalThumb(d)}
+      <span class="dc-body">
+        <b>${esc(d.name)}${d.popular ? ' <span class="badge badge-blue">الأكثر استخدامًا</span>' : ''}</b>
+        <small>${esc(d.desc)}</small>
+        <span class="dc-meta">
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>${d.widgets.length.toLocaleString('en-US')} عنصر</span>
+          <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${d.sources.length ? esc(d.sources.join('، ')) : 'حسب مصادر مشروعك المتاحة'}</span>
+          ${dashGalFeasBadge(d)}
+        </span>
+      </span>
+    </button>` : `
     <button type="button" class="dash-card" data-tpl="${esc(t.key)}">
       ${ffSketchHtml(t)}
       <span class="dc-body">
@@ -8868,9 +8880,10 @@ function renderFfGalGrid() {
           <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>${t.dataSections ? `${t.dataSections.toLocaleString('en-US')} من بياناتك` : 'بلا بيانات'}</span>
         </span>
       </span>
-    </button>`).join('');
+    </button>`; }).join('');
   el('ffgal-empty').classList.toggle('hidden', items.length > 0);
   el('ffgal-grid').querySelectorAll('[data-tpl]').forEach(card => card.addEventListener('click', () => openFfGalPreview(items.find(x => x.key === card.dataset.tpl))));
+  el('ffgal-grid').querySelectorAll('[data-dash]').forEach(card => card.addEventListener('click', () => { galSetHost('ff'); openDashGalPreview(DASH_GALLERY.find(d => d.id === card.dataset.dash)); }));
 }
 function openFfGalPreview(t) {
   el('ffgal-view-preview').innerHTML = `
