@@ -37,8 +37,9 @@ public class FreeformController : ControllerBase
     private readonly DataFingerprintService _fingerprints;
     private readonly PresentationLiveDataService _live;
 
-    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live)
-    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; _live = live; }
+    private readonly FreeformDashboardTemplates _dashTemplates;
+    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live, FreeformDashboardTemplates dashTemplates)
+    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; _live = live; _dashTemplates = dashTemplates; }
 
     private async Task<(AppUser User, Sources.SourceSelection Selection)?> CurrentAsync(CancellationToken ct)
     {
@@ -114,7 +115,9 @@ public class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var custom = await _templates.ListAsync(cur.Value.Selection.ProjectId, ct);
-        var all = custom.Concat(FreeformTemplates.All);
+        // نماذج اللوحات من كتالوج المحادثة تُعرض تحت نوع «لوحة» بعد الثابتة (مع احترام تعديلات/إخفاء مالك المنصّة)
+        var dashboards = string.IsNullOrWhiteSpace(kind) || kind == "dashboard" ? await _dashTemplates.ListAsync(ct) : Array.Empty<FreeformTemplate>();
+        var all = custom.Concat(FreeformTemplates.All).Concat(dashboards);
         return Ok(string.IsNullOrWhiteSpace(kind) ? all.ToList() : all.Where(t => t.Kind == kind).ToList());
     }
 
@@ -208,7 +211,7 @@ public class FreeformController : ControllerBase
     }
 
     private async Task<FreeformTemplate?> ResolveTemplateAsync(string? key, string? projectId, CancellationToken ct)
-        => string.IsNullOrWhiteSpace(key) ? null : FreeformTemplates.Find(key) ?? await _templates.GetAsync(key, projectId, ct);
+        => string.IsNullOrWhiteSpace(key) ? null : FreeformTemplates.Find(key) ?? await _dashTemplates.FindAsync(key, ct) ?? await _templates.GetAsync(key, projectId, ct);
 
     /// <summary>تحويل تصميم إلى نوع آخر (مستند ← شرائح…): تصميم جديد من النوع المطلوب بالمحتوى نفسه، والأصل يبقى كما هو.</summary>
     [HttpPost("{id}/convert")]

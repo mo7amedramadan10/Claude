@@ -94,6 +94,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckImporter>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformBuilder>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformTemplateStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformDashboardTemplates>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Data.DataFingerprintService>();
 // محادثة Claude عبر Claude Code CLI على الخادم (ClaudeChat/) — انظر ClaudeCliService.
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeCliService>();

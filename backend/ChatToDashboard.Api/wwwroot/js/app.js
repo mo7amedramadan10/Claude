@@ -8894,7 +8894,9 @@ function closeFfGallery() { el('ff-gallery-modal').classList.add('hidden'); }
 function ffGalItems() { return (FF.templates || []).filter(t => t.kind === ffGalKind); }
 function renderFfGalCats() {
   const all = ffGalItems();
-  el('ffgal-cats').innerHTML = [DK_CATS[0], ['uploaded', 'مرفوعة من ملف', 'file'], ...DK_CATS.slice(1)].map(([k, name, icon]) => {
+  // لنوع «لوحة» تُضاف تصنيفات كتالوج اللوحات (المشتريات، التجزئة، البنوك…) التي لا توجد في تصنيفات النماذج الثابتة
+  const extraCats = ffGalKind === 'dashboard' ? DASH_GAL_CATS.filter(c => c[0] !== 'all' && !DK_CATS.some(d => d[0] === c[0])) : [];
+  el('ffgal-cats').innerHTML = [DK_CATS[0], ['uploaded', 'مرفوعة من ملف', 'file'], ...DK_CATS.slice(1), ...extraCats].map(([k, name, icon]) => {
     const count = k === 'all' ? all.length : all.filter(t => t.category === k).length;
     if (!count && k !== 'all') return '';
     return `<button type="button" data-cat="${k}" aria-pressed="${k === ffGalCat}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}</span><em>${count}</em></button>`;
@@ -8925,7 +8927,7 @@ function openFfGalPreview(t) {
     <div class="pv-grid">
       <div class="pv-thumb">${window.JEEM_FF_DEMO ? '<span class="ff-live" id="ffgal-pv-live"></span>' : ffSketchHtml(t)}</div>
       <div class="pv-info">
-        <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}${t.custom ? ' <span class="ff-kind-chip">مرفوع من ملف</span>' : ''}</p>
+        <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}${t.custom ? ' <span class="ff-kind-chip">مرفوع من ملف</span>' : ''}${t.dashboard ? ' <span class="ff-kind-chip">من كتالوج اللوحات</span>' : ''}</p>
         <h4>الأقسام (${t.total.toLocaleString('en-US')})</h4>
         <ol class="pv-list">${t.sections.map(x => `<li><span class="pv-ic">${x.needsData ? '📊' : '•'}</span>${esc(x.title)}${x.needsData ? ' <span class="muted">· من بياناتك</span>' : ''}</li>`).join('')}</ol>
         <p class="muted" style="font-size:var(--fs-xs)">${esc(t.brief)}</p>

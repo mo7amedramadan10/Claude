@@ -58,13 +58,15 @@ public class TemplatesController : ControllerBase
     private readonly ChatToDashboard.Api.Semantics.WidgetFeasibilityService _feasibility;
     private readonly ChatToDashboard.Api.Users.PermissionsService _permissions;
 
+    private readonly ChatToDashboard.Api.Freeform.FreeformDashboardTemplates _ffDashboards;
     public TemplatesController(
         TemplateStore templates, ChatToDashboard.Api.Semantics.WidgetFeasibilityService feasibility,
-        ChatToDashboard.Api.Users.PermissionsService permissions)
+        ChatToDashboard.Api.Users.PermissionsService permissions, ChatToDashboard.Api.Freeform.FreeformDashboardTemplates ffDashboards)
     {
         _templates = templates;
         _feasibility = feasibility;
         _permissions = permissions;
+        _ffDashboards = ffDashboards;
     }
 
     /// <summary>جدوى كل قالب لوحة لمشروع المستخدم الحالي، حتميًا من معاني أعمدته (طبقة المعنى):
@@ -198,7 +200,7 @@ public class TemplatesController : ControllerBase
         row.Status = body.Status;
         row.UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         row.UpdatedByName = HttpContext.User.Identity?.Name;
-        var saved = await _templates.UpsertAsync(row, ct);
+        var saved = await _templates.UpsertAsync(row, ct); _ffDashboards.Invalidate();
         return Ok(new { version = saved.Version });
     }
 
@@ -222,7 +224,7 @@ public class TemplatesController : ControllerBase
             UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
             UpdatedByName = HttpContext.User.Identity?.Name,
         };
-        await _templates.UpsertAsync(row, ct);
+        await _templates.UpsertAsync(row, ct); _ffDashboards.Invalidate();
         return Ok(new { id = key });
     }
 
@@ -232,7 +234,7 @@ public class TemplatesController : ControllerBase
     {
         var existing = await _templates.GetAsync(kind, key, ct);
         if (existing is { IsCustom: true }) return BadRequest(new { error = "عنصر مُضاف بالكامل — استخدم الحذف بدلًا من الرجوع للأصل." });
-        await _templates.DeleteAsync(kind, key, ct);
+        await _templates.DeleteAsync(kind, key, ct); _ffDashboards.Invalidate();
         return Ok(new { ok = true });
     }
 
@@ -243,7 +245,7 @@ public class TemplatesController : ControllerBase
         var existing = await _templates.GetAsync(kind, key, ct);
         if (existing is null || !existing.IsCustom)
             return BadRequest(new { error = "لا يمكن حذف نموذج أساسي — استخدم «رجوع للنص الأصلي»." });
-        await _templates.DeleteAsync(kind, key, ct);
+        await _templates.DeleteAsync(kind, key, ct); _ffDashboards.Invalidate();
         return Ok(new { ok = true });
     }
 
@@ -269,7 +271,7 @@ public class TemplatesController : ControllerBase
         row.PromptText = body.PromptText; row.Status = TemplateStatuses.Published;
         row.UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         row.UpdatedByName = HttpContext.User.Identity?.Name;
-        var saved = await _templates.UpsertAsync(row, ct);
+        var saved = await _templates.UpsertAsync(row, ct); _ffDashboards.Invalidate();
         return Ok(new { version = saved.Version });
     }
 
@@ -306,7 +308,7 @@ public class TemplatesController : ControllerBase
         row.PromptText = body.PromptText; row.Status = body.Status;
         row.UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         row.UpdatedByName = HttpContext.User.Identity?.Name;
-        var saved = await _templates.UpsertAsync(row, ct);
+        var saved = await _templates.UpsertAsync(row, ct); _ffDashboards.Invalidate();
         return Ok(new { version = saved.Version });
     }
 
@@ -362,7 +364,7 @@ public class TemplatesController : ControllerBase
             : JsonSerializer.Serialize(new KpiQueryOverride(body.Table, body.Sql), TemplatePromptService.JsonOptions);
         row.UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         row.UpdatedByName = HttpContext.User.Identity?.Name;
-        var saved = await _templates.UpsertAsync(row, ct);
+        var saved = await _templates.UpsertAsync(row, ct); _ffDashboards.Invalidate();
         return Ok(new { version = saved.Version });
     }
 
@@ -420,7 +422,7 @@ public class TemplatesController : ControllerBase
         row.Status = TemplateStatuses.Stopped;
         row.UpdatedByUserId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         row.UpdatedByName = HttpContext.User.Identity?.Name;
-        await _templates.UpsertAsync(row, ct);
+        await _templates.UpsertAsync(row, ct); _ffDashboards.Invalidate();
     }
 
     // ---------- helpers ----------

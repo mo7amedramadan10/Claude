@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 namespace ChatToDashboard.Api.Freeform;
 
 /// <summary>قسم في نموذج تصميم حر: عنوانه، وهل يُملأ من بيانات المشروع.</summary>
-public sealed record FreeformTemplateSection([property: JsonPropertyName("title")] string Title, [property: JsonPropertyName("needsData")] bool NeedsData = false);
+/// <summary>قسم في نموذج تصميم حر؛ <c>Type</c> اختياري (kpi/bar/line/donut/table/funnel/heat/interactive) لنماذج اللوحات المحوَّلة من كتالوج اللوحات.</summary>
+public sealed record FreeformTemplateSection([property: JsonPropertyName("title")] string Title, [property: JsonPropertyName("needsData")] bool NeedsData = false, [property: JsonPropertyName("type")] string? Type = null);
 
 /// <summary>
 /// نموذج جاهز لصفحة «تصميم حر» من نوع معيّن (مستند/شرائح/تصميم/لوحة/حركة). النموذج ليس HTML محفوظًا بل
@@ -25,6 +26,8 @@ public sealed class FreeformTemplate
     [JsonPropertyName("brief")] public string Brief { get; init; } = "";
     /// <summary>نموذج مرفوع من ملف (مخصص للمشروع) لا من الكتالوج الثابت.</summary>
     [JsonPropertyName("custom")] public bool Custom { get; init; }
+    /// <summary>نموذج محوَّل من كتالوج لوحات المتابعة (مفتاحه <c>d:</c>) — انظر <see cref="FreeformDashboardTemplates"/>.</summary>
+    [JsonPropertyName("dashboard")] public bool Dashboard { get; init; }
     [JsonPropertyName("sourceFile")] public string? SourceFile { get; init; }
     [JsonPropertyName("createdByUserId")] public string? CreatedByUserId { get; init; }
     [JsonPropertyName("createdAt")] public DateTime? CreatedAt { get; init; }

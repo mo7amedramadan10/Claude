@@ -58,6 +58,13 @@
   // محتوى القسم من عنوانه
   function sectionBody(s, r) {
     const t = s.title;
+    // نماذج كتالوج اللوحات تحمل نوع العنصر صراحة فلا نخمّن من العنوان
+    if (s.type === 'kpi') return kpis(r, 4);
+    if (s.type === 'line') return line(r, t);
+    if (s.type === 'donut' || s.type === 'funnel') return donut(r, t);
+    if (s.type === 'table') return table(r, t);
+    if (s.type === 'bar' || s.type === 'heat') return bars(r, t);
+    if (s.type === 'interactive') return cards(r, t);
     if (kw(t, /مؤشر|أرقام|نتائج|عدّاد|الستة|بارزة/)) return kpis(r);
     if (kw(t, /اتجاه|مقابل|إنجاز|يومي|شهري|رسم/)) return line(r, t);
     if (kw(t, /توزيع|تركيبة|بالإدارة|بالبند|بالفئة/)) return kw(t, /حالة|تركيبة/) ? donut(r, t) : bars(r, t);
@@ -116,8 +123,18 @@
     const tags = ['أجهزة', 'برمجيات', 'خدمات']; const items = Array.from({ length: 6 }, (_, i) => ({ n: ['حاسوب محمول', 'نظام إدارة', 'صيانة سنوية', 'شاشة عرض', 'تطبيق جوال', 'تدريب'][i], t: tags[i % 3], p: Math.round(r() * 9000 + 500) }));
     return `<div class="flt"><button type="button" class="on" data-t="all">الكل</button>${tags.map(x => `<button type="button" data-t="${x}">${x}</button>`).join('')}</div><div class="grid cat">${items.map(it => `<div class="card" data-t="${it.t}"><span class="ic">📦</span><b>${it.n}</b><p>${it.t} · ${fmt(it.p)} ر.س</p></div>`).join('')}</div>`;
   }
+  // بطاقة مؤشر واحد بعنوانه (لنماذج كتالوج اللوحات: كل عنصر kpi قسم مستقل فتُجمع المتتالية في صف واحد)
+  function kpiOne(r, title) {
+    const v = fmt(Math.round(r() * 900 + 100) * (r() > .5 ? 1000 : 1)); const d = Math.round(r() * 30 - 10);
+    return `<div class="kpi"><small>${esc(title)}</small><b>${v}</b><span class="${d >= 0 ? 'up' : 'dn'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(d)}٪ عن الفترة السابقة</span></div>`;
+  }
   function dashboardPage(t, r, c) {
-    const secs = t.sections.map(s => `<section><h2>${esc(s.title)}</h2>${sectionBody(s, r)}</section>`).join('');
+    let secs = '';
+    for (let i = 0; i < t.sections.length; i++) {
+      const s = t.sections[i];
+      if (s.type === 'kpi') { const grp = []; while (i < t.sections.length && t.sections[i].type === 'kpi') grp.push(t.sections[i++]); i--; secs += `<div class="kpis">${grp.map(k => kpiOne(r, k.title.replace(/^.*? — /, ''))).join('')}</div>`; continue; }
+      secs += `<section><h2>${esc(s.title)}</h2>${sectionBody(s, r)}</section>`;
+    }
     return `<style>${CSS(c, 'dashboard')} body{background:#F4F7FA}header{background:#fff;border-bottom:1px solid #E3E8EE;padding:12px 24px;display:flex;gap:12px;align-items:center;position:sticky;top:0;z-index:2}header b{color:${c[1]};font-size:18px;margin-inline-end:auto}header select{font:inherit;padding:6px 10px;border:1px solid #C9D4DE;border-radius:8px}main{max-width:1200px;margin:0 auto;padding:16px 24px}section{margin-bottom:8px}h2{font-size:16px;margin-top:16px}</style>
       <header><b>${esc(t.name)}</b><span class="badge">بيانات توضيحية</span><label>الفترة <select id="per"><option>هذا الشهر</option><option>هذا الربع</option><option>هذه السنة</option></select></label><label>المنطقة <select><option>الكل</option>${NAMES.map(n => `<option>${n}</option>`).join('')}</select></label></header>
       <main>${secs}</main>
