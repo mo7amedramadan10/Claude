@@ -34,6 +34,10 @@
      still disagree with the spec need their own fix below. */
   --mono: var(--font);
   --display: var(--font);
+  /* رمز الحدود القديم --grid في app.css داكن (#333436) ما لم تُضبط data-theme="light"، والهوية الجديدة
+     فاتحة دائمًا — فيُعاد تعريفه هنا إلى خط الهوية الفاتح حتى تتبعه كل قواعد app.css (جداول اللوحة، النوافذ،
+     الحقول، البطاقات) بلا تعديل كل قاعدة. */
+  --grid: var(--line);
 }
 .jeem-scope h1, .jeem-scope h2, .jeem-scope h3, .jeem-scope h4 { margin: 0; font-weight: 700; line-height: 1.3; }
 .jeem-scope p { margin: 0; }
