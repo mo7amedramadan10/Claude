@@ -1805,15 +1805,12 @@
 </div><!-- /.app -->
 <div class="scrim"></div>
 
-<!-- مكتبات الرسم محلية (wwwroot/lib/) لا من CDN — التطبيق يعمل بلا إنترنت. رسوم لوحات المحادثة:
-     DevExtreme (حزمة viz فقط مبنية محليًا، انظر lib/devextreme/README.md) عبر طبقة jeem-dx.js —
-     ترخيص تجاري لكل مطوّر، مفتاحه يُحقن وقت التشغيل من /api/ui-config.js ولا يُكتب هنا. -->
-<script src="/api/ui-config.js"></script>
-<script src="lib/devextreme/dx.viz.jeem.js"></script>
+<!-- رسوم لوحات المحادثة: محرّك SVG موحّد خاص بالمنصة (js/jeem-viz.js) بالعقد نفسه الذي كانت عليه طبقة
+     DevExtreme (jeem-dx.js) — بلا مكتبة خارجية ولا ترخيص؛ لغة بصرية واحدة مع معاينة المعرض. -->
 <script src="js/jeem-deck.js"></script>
 <script src="js/jeem-deck-demo.js"></script>
 <script src="js/jeem-ff-demo.js"></script>
-<script src="js/jeem-dx.js"></script>
+<script src="js/jeem-viz.js"></script>
 <script src="js/kpi-library.js"></script>
 <!-- محرّك عرض معرض الأمثلة التوضيحية فقط (dashGalDemo* في app.js) — بيانات دي تجريبية
      وثابتة لكل لوحة، ومفيش أي اتصال لها بمسار بناء اللوحات الحقيقي (ask()/templateRef)،

@@ -1745,13 +1745,13 @@ function renderKpiDelta(slot, d) {
   if (!d || d.deltaPct == null || !isFinite(d.deltaPct)) { slot.remove(); return; }
   // خط مصغّر لآخر ٨ أسابيع بجانب الرقم (يُرسم بـ DevExtreme Sparkline لو توفرت).
   const card = slot.closest('.widget');
-  if (Array.isArray(d.series) && d.series.length >= 3 && d.series.some(v => v) && card && !card.querySelector('.kpi-spark') && window.JEEM_DX?.ready()) {
+  if (Array.isArray(d.series) && d.series.length >= 3 && d.series.some(v => v) && card && !card.querySelector('.kpi-spark') && window.JEEM_VIZ?.ready()) {
     const spark = document.createElement('div');
     spark.className = 'kpi-spark';
     spark.setAttribute('aria-label', 'اتجاه آخر ٨ أسابيع');
     card.querySelector('.kpi-body')?.appendChild(spark);
     const tone = d.deltaPct > 0.05 ? 'up' : d.deltaPct < -0.05 ? 'down' : 'flat';
-    try { chartInstances.push(JEEM_DX.mount(spark, { kind: 'sparkline', values: d.series, tone }, { theme: THEME, fmt })); }
+    try { chartInstances.push(JEEM_VIZ.mount(spark, { kind: 'sparkline', values: d.series, tone }, { theme: THEME, fmt })); }
     catch { spark.remove(); }
   }
   const pct = d.deltaPct;
@@ -1787,7 +1787,7 @@ function TableCard(w) {
 // explicit `undefined` value for those keys (throws inside its own constructor), so a
 // donut's config must omit them entirely instead.
 function chartConfig(type, labels, values, title, centerLabel) {
-  // مواصفة محايدة عن المكتبة — JEEM_DX.mount (jeem-dx.js) هو الذي يترجمها لخيارات DevExtreme.
+  // مواصفة محايدة — JEEM_VIZ.mount (jeem-viz.js) هو الذي يرسمها SVG بمحرّك المنصة.
   // الدائري يُرسم حلقةً بتسمية في المنتصف (الإجمالي + deriveUnitLabel) كما كان.
   return {
     kind: type === 'pie' ? 'pie' : type, labels, values, title,
@@ -1846,7 +1846,7 @@ function attachCrossFilterClick(options, holder, w, labels) {
   const target = resolveCrossFilterField(w);
   if (!target || !Array.isArray(labels) || !labels.length) return;
   holder.classList.add('chart-clickable');
-  // JEEM_DX يستدعيها عند النقر على عمود/نقطة/شريحة بفهرس النقطة في labels نفسها التي بُني بها الرسم.
+  // JEEM_VIZ يستدعيها عند النقر على عمود/نقطة/شريحة بفهرس النقطة في labels نفسها التي بُني بها الرسم.
   options.onPointClick = idx => {
     if (idx == null || idx < 0 || idx >= labels.length) return;
     // The chip names the *field* being filtered (e.g. "Region: North"), not the widget's
@@ -3677,13 +3677,13 @@ function renderDashboard() {
       // with future periods, so clicking one wouldn't correspond to an actual row to filter by.
       if (widget) attachCrossFilterClick(spec, holder, widget, pointLabels);
       let handle;
-      try { handle = JEEM_DX.mount(holder, spec, { theme: THEME, fmt }); }
+      try { handle = JEEM_VIZ.mount(holder, spec, { theme: THEME, fmt }); }
       catch (err) {
         console.error('تعذّر رسم العنصر', spec.kind, err);
         holder.innerHTML = '<div class="chart-note">تعذّر رسم هذا العنصر.</div>';
         return;
       }
-      // الأسماء التاريخية (__apex*) أُبقيت لأن تصدير PPTX يقرأها — المقبض الآن من JEEM_DX.
+      // الأسماء التاريخية (__apex*) أُبقيت لأن تصدير PPTX يقرأها — المقبض من JEEM_VIZ (jeem-viz.js).
       card.__apexChart = handle;
       card.__apexHolder = holder;
       card.__apexRendered = handle.rendered;
@@ -4222,7 +4222,7 @@ async function widgetToPptxInput(w, card) {
     // instant this runs — snap it to its finished state first, or the export can capture a
     // bar not yet at full height or a line not yet fully drawn. `animate: false` on this
     // particular update redraws immediately rather than transitioning.
-    if (chart.freeze) await chart.freeze(); // DevExtreme: يثبّت الرسم في حالته النهائية بلا حركة
+    if (chart.freeze) await chart.freeze(); // يثبّت الرسم في حالته النهائية بلا حركة
     const svg = holder.querySelector('svg');
     if (!svg) return base;
     return { ...base, image: await svgElementToPngDataUrl(svg) };

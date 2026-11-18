@@ -3675,3 +3675,27 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope #ff-link.copied { color: var(--ok); }
 /* زر التنبؤ وزر المصدر في رأس البطاقة أصغر حتى لا يزاحما العنوان */
 #dash .forecast-btn { font-size: 11px; padding: 2px 8px; }
+/* ---------- محرّك الرسوم الموحّد (jeem-viz.js): تلميح، شرح، وحركة دخول تُلغى مع تقليل الحركة ---------- */
+.viz-holder { position: relative; }
+.viz-holder svg { display: block; overflow: visible; }
+.viz-holder svg text { font-family: var(--font); }
+.viz-tip { position: absolute; display: none; z-index: 5; pointer-events: none; max-width: 240px; padding: 6px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-2); font-size: 12px; line-height: 1.5; color: var(--ink); white-space: nowrap; }
+.viz-tip b { font-weight: 700; }
+.viz-tip small { color: var(--ink-3); }
+.viz-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin-top: 6px; font-size: 11px; color: var(--ink-2); }
+.viz-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.viz-legend i { width: 10px; height: 10px; border-radius: 3px; }
+#dash .widget .chart-holder.viz-holder { display: flex; flex-direction: column; }
+#dash .widget .chart-holder.viz-holder svg { flex: 1; min-height: 0; }
+.viz-anim .viz-bar { animation: viz-grow-x .45s var(--ease, ease-out) both; }
+.viz-anim .viz-bar-v { animation: viz-grow-y .45s var(--ease, ease-out) both; }
+.viz-anim .viz-slice { animation: viz-pop .4s var(--ease, ease-out) both; }
+.viz-anim .viz-line, .viz-anim .viz-area, .viz-anim .viz-pt, .viz-anim .viz-ring { animation: viz-fade .5s ease-out both; }
+@keyframes viz-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes viz-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes viz-pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes viz-fade { from { opacity: 0; } to { opacity: 1; } }
+.viz-holder [tabindex]:focus { outline: none; }
+.viz-holder [tabindex]:focus-visible { stroke: var(--brand-blue); stroke-width: 2px; }
+@media (prefers-reduced-motion: reduce) { .viz-anim * { animation: none !important; } }
+@media print { .viz-tip { display: none !important; } }
