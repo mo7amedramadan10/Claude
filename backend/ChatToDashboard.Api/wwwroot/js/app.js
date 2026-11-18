@@ -7968,6 +7968,9 @@ function updateCrumbs(name) {
 }
 
 function showScreen(name) {
+  // «لوحات المتابعة» داخل تصميم حر: أي انتقال لشاشة أخرى (بما فيها «المحادثة واللوحات» من القائمة) يعيد
+  // #screen-chat إلى مكانها الأصلي أولًا حتى يعمل التبديل العادي عليها.
+  if (name !== 'freeform' && typeof ffTrackActive === 'function' && ffTrackActive()) { state.currentScreen = name; ffCloseTrack(); }
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
@@ -8774,10 +8777,43 @@ function dkbRenderDefaults() {
 // ======================= تصميم حر (FreeformController) =======================
 // المحادثة تنتج صفحة HTML كاملة (كـ artifacts) تُعرض في iframe معزول (sandbox بلا same-origin) مع إصدارات وتعديل كود ونشر.
 const FF = { design: null, html: '', versions: [], messages: [], viewing: null, busy: false, list: [], mobile: false, kind: null, template: undefined, templates: null };
-const FF_KINDS = { doc: { label: 'مستند', ph: 'مثال: مذكرة داخلية عن خطة الربع القادم بأقسام الأهداف والميزانية والجدول الزمني… أو: تقرير أداء المبيعات هذا الشهر من بياناتي' }, slides: { label: 'شرائح', ph: 'مثال: عرض تقديمي عن إطلاق منتج جديد في 10 شرائح: المشكلة، الحل، السوق، الخطة، الفريق' }, design: { label: 'تصميم', ph: 'مثال: صفحة هبوط لخدمة جديدة بقسم أعلى وميزات وشهادات ونموذج تواصل… أو: نموذج أولي لشاشة طلب إجازة' }, dashboard: { label: 'لوحة', ph: 'مثال: لوحة متابعة المبيعات بمؤشرات الإيراد والصفقات واتجاه شهري وتوزيع بالمنطقة من بياناتي' }, motion: { label: 'حركة', ph: 'مثال: مشهد متحرك 20 ثانية يشرح رحلة الطلب من الاستلام حتى التسليم بأربع خطوات' } };
+const FF_KINDS = { doc: { label: 'مستند', ph: 'مثال: مذكرة داخلية عن خطة الربع القادم بأقسام الأهداف والميزانية والجدول الزمني… أو: تقرير أداء المبيعات هذا الشهر من بياناتي' }, slides: { label: 'شرائح', ph: 'مثال: عرض تقديمي عن إطلاق منتج جديد في 10 شرائح: المشكلة، الحل، السوق، الخطة، الفريق' }, design: { label: 'تصميم', ph: 'مثال: صفحة هبوط لخدمة جديدة بقسم أعلى وميزات وشهادات ونموذج تواصل… أو: نموذج أولي لشاشة طلب إجازة' }, dashboard: { label: 'لوحة', ph: 'مثال: لوحة متابعة المبيعات بمؤشرات الإيراد والصفقات واتجاه شهري وتوزيع بالمنطقة من بياناتي' }, motion: { label: 'حركة', ph: 'مثال: مشهد متحرك 20 ثانية يشرح رحلة الطلب من الاستلام حتى التسليم بأربع خطوات' }, track: { label: 'لوحات المتابعة', ph: '' } };
 function ffSetKind(k) { FF.kind = k; const info = FF_KINDS[k]; el('ff-q').placeholder = info ? info.ph : ''; el('ff-head-desc').textContent = info ? `${info.label} جديد — اكتب طلبك` : 'اختر نوعًا من اللوحة ثم اكتب طلبك'; document.querySelectorAll('.ff-kind').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === k ? 'true' : 'false')); }
-document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', () => { ffSetKind(b.dataset.kind); openFfGallery(b.dataset.kind); }));
-async function loadFreeformScreen() { if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
+document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', () => { if (b.dataset.kind === 'track') { ffOpenTrack(); return; } ffSetKind(b.dataset.kind); openFfGallery(b.dataset.kind); }));
+
+// ---------- «لوحات المتابعة» داخل تصميم حر ----------
+// بطلب المستخدم: شاشة المحادثة واللوحات نفسها (#screen-chat بكل أدواتها وحالتها) تُنقل بعقدة DOM واحدة إلى مضيف داخل
+// شاشة تصميم حر عند اختيار النوع، وتعود إلى مكانها الأصلي في .main عند الخروج أو الانتقال لأي شاشة أخرى — فلا تكرار
+// للمستمعين ولا للحالة. تبويب «الاستفسارات» لا ينتقل (يُخفى داخل المضيف بـ CSS، ويبقى في الشاشة الأصلية).
+// بند «المحادثة واللوحات» في القائمة الجانبية يبقى اختصارًا يفتح الشاشة الأصلية.
+let ffChatAnchor = null;
+function ffTrackActive() { return !!FF.track; }
+function ffOpenTrack() {
+  const chat = el('screen-chat'); const body = el('ff-dash-host-body');
+  if (!chat || !body) return;
+  if (!FF.track) {
+    if (!ffChatAnchor) { ffChatAnchor = document.createComment('مكان #screen-chat الأصلي'); chat.parentNode.insertBefore(ffChatAnchor, chat); }
+    body.appendChild(chat);
+    chat.classList.add('in-ff', 'active');
+    FF.track = true;
+  }
+  if (state.chatMode === 'inquiry') setChatMode('dashboard');
+  el('screen-freeform').classList.add('ff-track-mode'); el('ff-dash-host').classList.remove('hidden');
+  el('dash-toolbar-wrap').classList.remove('hidden');
+  loadSources();
+}
+function ffCloseTrack() {
+  if (!FF.track) return;
+  const chat = el('screen-chat');
+  chat.classList.remove('in-ff');
+  if (ffChatAnchor && ffChatAnchor.parentNode) ffChatAnchor.parentNode.insertBefore(chat, ffChatAnchor);
+  chat.classList.toggle('active', state.currentScreen === 'chat');
+  FF.track = false;
+  el('ff-dash-host').classList.add('hidden'); el('screen-freeform').classList.remove('ff-track-mode');
+  el('dash-toolbar-wrap').classList.toggle('hidden', state.currentScreen !== 'chat');
+}
+el('ff-dash-back').addEventListener('click', () => { ffCloseTrack(); loadFreeformScreen(); });
+async function loadFreeformScreen() { if (FF.track) { ffOpenTrack(); return; } if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
 // حالة البداية = معرض كمعرض Artifacts في Claude: تبويبات (الكل/تصاميمي/مشترك معي)، بحث، تصفية بالنوع، شبكة/قائمة، وبطاقات بمعاينة مصغّرة حيّة
 // لكل تصميم سابق تُجلب صفحته كسولًا عند ظهورها. «فُتح قبل…» يُسجَّل محليًا لكل مشاهد (localStorage) وإلا يُعرض آخر تعديل.
 FF.gal = { tab: 'all', q: '', kind: '', list: false, htmlCache: {}, io: null };

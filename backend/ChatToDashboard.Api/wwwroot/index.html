@@ -1161,6 +1161,7 @@
             <button type="button" class="ff-kind k-slides" data-kind="slides" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><rect x="8" y="10" width="32" height="22" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 32v8M18 40h12M8 10h32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">شرائح</span><small>عرض تقديمي بتنقّل وشاشة كاملة</small></button>
             <button type="button" class="ff-kind k-design" data-kind="design" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><path d="M24 8c-9 0-16 6.5-16 15 0 7 5 11 10 11h3a3 3 0 0 1 3 3c0 2 1.5 3 3 3 8 0 13-7 13-16C40 14 33 8 24 8z" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="17" cy="21" r="2.2" fill="currentColor"/><circle cx="24" cy="16" r="2.2" fill="currentColor"/><circle cx="31" cy="21" r="2.2" fill="currentColor"/></svg></span><span class="ff-kind-name">تصميم</span><small>صفحة أو نموذج أولي بحرية كاملة</small></button>
             <button type="button" class="ff-kind k-dashboard" data-kind="dashboard" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><path d="M10 38V22M20 38V12M30 38V18M40 38V26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M6 40h36" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">لوحة</span><small>مؤشرات ورسوم من بياناتك</small></button>
+            <button type="button" class="ff-kind k-track" data-kind="track" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><rect x="6" y="8" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="26" y="8" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="6" y="24" width="36" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M12 36l6-6 5 4 7-8 6 5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ff-kind-name">لوحات المتابعة</span><small>لوحة من بياناتك بالمحادثة أو من النماذج</small></button>
             <button type="button" class="ff-kind k-motion" data-kind="motion" role="listitem"><span class="ff-kind-art" aria-hidden="true"><svg viewBox="0 0 48 48" class="ff-ico"><circle cx="29" cy="24" r="10" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M6 18h10M4 24h8M6 30h10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="ff-kind-name">حركة</span><small>مشهد متحرك قصير يشرح فكرة</small></button>
           </div>
           <p class="ff-make-hint" id="ff-make-hint" hidden></p>
@@ -1198,6 +1199,16 @@
         <div class="ff-code-bar"><span class="muted" id="ff-code-note">تعديلك يُحفظ كإصدار جديد.</span><span class="grow"></span><button type="button" id="ff-code-cancel" class="btn btn-sm btn-ghost">إلغاء</button><button type="button" id="ff-code-apply" class="btn btn-sm btn-primary">تطبيق وحفظ</button></div>
       </div>
     </div>
+  </section>
+  <!-- مضيف «لوحات المتابعة»: شاشة المحادثة واللوحات (#screen-chat) تُنقل إلى هنا بالكامل عند اختيار هذا النوع
+       وتعود إلى مكانها عند الخروج (ffOpenTrack/ffCloseTrack في app.js). -->
+  <section id="ff-dash-host" class="ff-dash-host hidden">
+    <div class="ff-dash-bar">
+      <button type="button" id="ff-dash-back" class="btn btn-ghost btn-sm">→ العودة إلى تصميم حر</button>
+      <span class="ff-kind-chip">لوحات المتابعة</span>
+      <span class="muted ff-dash-hint">المحادثة واللوحات بكل أدواتها — المحفوظة منها في معرض تصميم حر</span>
+    </div>
+    <div id="ff-dash-host-body" class="ff-dash-host-body"></div>
   </section>
 </main>
 

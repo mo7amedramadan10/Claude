@@ -3697,3 +3697,21 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .viz-holder [tabindex]:focus-visible { stroke: var(--brand-blue); stroke-width: 2px; }
 @media (prefers-reduced-motion: reduce) { .viz-anim * { animation: none !important; } }
 @media print { .viz-tip { display: none !important; } }
+
+/* ---------- «لوحات المتابعة» داخل تصميم حر: النوع السادس ومضيف شاشة المحادثة ---------- */
+.jeem-scope .ff-kinds { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 900px) { .jeem-scope .ff-kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.jeem-scope .k-track .ff-kind-art { background: #D6EEF8; color: #0B5C8F; }
+.jeem-scope .ff-card.k-track .ff-card-art { background: #E4F3FA; }
+.jeem-scope .ff-card.k-track .ff-card-ico { background: #D6EEF8; color: #0B5C8F; }
+.ff-dash-host { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ff-dash-host.hidden { display: none; }
+/* وضع «لوحات المتابعة»: يُخفى شريط تصميم حر ولوحته بمحدِّد أقوى من .cc-rail/.cc-pane (الصنف .hidden وحده أضعف) */
+#screen-freeform.ff-track-mode > #ff-rail, #screen-freeform.ff-track-mode > #ff-pane { display: none !important; }
+.ff-dash-bar { display: flex; align-items: center; gap: 10px; padding: 6px 14px; background: #F3F5F7; border-bottom: 1px solid var(--line); font-size: var(--fs-xs); }
+.ff-dash-bar .ff-dash-hint { color: var(--ink-3); }
+.ff-dash-host-body { flex: 1; min-height: 0; display: flex; }
+/* شاشة المحادثة وهي داخل المضيف: تملأ المضيف لا الشاشة، وتبويب «الاستفسارات» لا ينتقل معها */
+#ff-dash-host-body > #screen-chat.in-ff { display: flex; height: 100%; flex: 1; min-width: 0; }
+#screen-chat.in-ff .chat-mode-tab[data-mode="inquiry"] { display: none; }
+@media (max-width: 760px) { .ff-dash-bar .ff-dash-hint { display: none; } }
