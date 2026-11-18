@@ -3614,6 +3614,10 @@ function renderDashboard() {
     const grid = document.createElement('div');
     grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
     let kpiRow = null;
+    // خارج وضع التحرير تُرسم مؤشرات الصفحة كلها (بما فيها الناقصة) في صف واحد أول اللوحة كما في معاينة
+    // المعرض، ثم بقية العناصر بترتيبها؛ في وضع التحرير يبقى الترتيب الحقيقي ليطابق السحب والإفلات.
+    const isKpiLike = w => w.type === 'kpi';
+    if (!state.editMode) widgets = [...widgets.filter(isKpiLike), ...widgets.filter(w => !isKpiLike(w))];
     widgets.forEach((w, i) => {
       const card = buildWidget(w);
       // Every freshly mounted card gets a quick settle-in fade (widget-mount, see its own
@@ -3648,7 +3652,10 @@ function renderDashboard() {
       }
       // المؤشرات المتتالية في صف خاص بها (كما في معاينة المعرض) حتى لا تتمدد بطاقة المؤشر إلى
       // ارتفاع رسم مجاور في صف الشبكة نفسه؛ السحب والإفلات يعمل بمعرّف العنصر فلا يتأثر بالتجميع.
-      if (card.classList.contains('kpi')) {
+      // عنصر مؤشر بلا بيانات (widget-nodata) يبقى في صف المؤشرات أيضًا حتى لا يكسر الصف
+      // (القوالب تضع مؤشرًا ناقصًا بين مؤشرين فيتمدد كل مؤشر إلى عرض الصفحة).
+      if (card.classList.contains('kpi') || (w.type === 'kpi' && card.classList.contains('widget-nodata'))) {
+        card.classList.add('kpi-slot');
         if (!kpiRow) { kpiRow = document.createElement('div'); kpiRow.className = 'kpi-row'; grid.appendChild(kpiRow); }
         kpiRow.appendChild(card);
       } else {
