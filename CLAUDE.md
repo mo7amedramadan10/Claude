@@ -1135,9 +1135,9 @@ naming policy تلقائية في السيريلايزر.
   (`--chart-1..4`، `--line`، `--ink-3`…) تُقرأ من الحاوية. تلميح `.viz-tip` عند التحويم/التركيز، شرح `.viz-legend` تحت الرسم،
   حركة دخول بـ CSS (`.viz-anim`) تُلغى مع `prefers-reduced-motion`، وإعادة رسم عند تغيّر عرض الحاوية (ResizeObserver).
   **الـ SVG بسمة `direction="ltr"`** حتى تكون `text-anchor` هندسية؛ الاتجاه المنطقي يُحسب من `isRtl()` في كل رسم.
-- **index.html**: أُزيل وسما `dx.viz.jeem.js` و`/api/ui-config.js` وحلّ `jeem-viz.js` محل `jeem-dx.js`. ملفات
-  `lib/devextreme/` و`js/jeem-dx.js` و`UiConfigController` وقواعد `.dx-license` **ما زالت على القرص بلا استخدام** بانتظار
-  إذن المستخدم بالحذف (قاعدة «لا حذف بلا سؤال»).
+- **الحذف بإذن المستخدم («احذف»)**: `wwwroot/lib/devextreme/` (الحزمة ووصفة البناء وREADME)، `js/jeem-dx.js`،
+  `Controllers/UiConfigController.cs` (مسار `/api/ui-config.js`)، قواعد `.dx-license`، والاسم البديل `JEEM_DX`. إعداد
+  `DevExtreme:LicenseKey` في user-secrets لم يعد يُقرأ. القسم القديم «DevExtreme بدل ApexCharts» أعلاه تاريخ فقط.
 - تحقق Playwright بالواجهة الحقيقية: لوحة بكل الأنواع (مؤشران بخط مصغّر، أشرطة أفقية، أعمدة زمنية، خط، دائري، مكدّس، خطوط
   متعددة، مقياس، قمع، خريطة شجرية، مبعثر) + تنبؤ على الخط: 10 رسوم SVG، 5 شروح، تلميح عند التحويم، نقر يضيف تصفية متقاطعة،
   `widgetToPptxInput` يعيد صورة لكل رسم، صفر حركات مع تقليل الحركة، بلا أخطاء وبلا تمرير أفقي. 225/225 اختبار.

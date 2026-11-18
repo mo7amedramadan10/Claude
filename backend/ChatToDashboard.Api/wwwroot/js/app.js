@@ -585,7 +585,7 @@ function applyTheme(name) {
 const WIDGET_TYPES = ['kpi', 'bar', 'line', 'pie', 'table', 'progress-table', 'trend-matrix', 'status-bar', 'radial-gauge', 'linear-gauge',
   // INTERACTIVE-HANDOFF.md §4.14/§5 additions — see their Card functions below.
   'radar', 'semi', 'dco', 'iconrank', 'ribbon', 'people', 'feed', 'goal', 'stages', 'bullet',
-  // رسوم DevExtreme الإضافية (jeem-dx.js): قمع، خريطة شجرية، مبعثر.
+  // رسوم إضافية (jeem-viz.js): قمع، خريطة شجرية، مبعثر.
   'funnel', 'treemap', 'scatter'];
 // Defense in depth: regardless of what the system prompt asked the model to do, a
 // chart never renders more than this many points — the overflow is folded into one
@@ -1743,7 +1743,7 @@ function loadKpiDeltas() {
 }
 function renderKpiDelta(slot, d) {
   if (!d || d.deltaPct == null || !isFinite(d.deltaPct)) { slot.remove(); return; }
-  // خط مصغّر لآخر ٨ أسابيع بجانب الرقم (يُرسم بـ DevExtreme Sparkline لو توفرت).
+  // خط مصغّر لآخر ٨ أسابيع بجانب الرقم (يرسمه jeem-viz.js).
   const card = slot.closest('.widget');
   if (Array.isArray(d.series) && d.series.length >= 3 && d.series.some(v => v) && card && !card.querySelector('.kpi-spark') && window.JEEM_VIZ?.ready()) {
     const spark = document.createElement('div');
@@ -2591,7 +2591,7 @@ function BulletCard(w) {
   return card;
 }
 
-// ---------- رسوم DevExtreme الإضافية: قمع / خريطة شجرية / مبعثر ----------
+// ---------- رسوم إضافية: قمع / خريطة شجرية / مبعثر ----------
 // كلها تقبل شكلها الأصلي (انظر WidgetShapeCatalog) أو تشتق ما يلزم من الشكل العام {rows,xKey,yKey}
 // كما تفعل الأنواع المخصصة الأخرى، فتغيير النوع من قائمة ⋮ لا يترك بطاقة فارغة.
 function FunnelCard(w) {
@@ -4076,8 +4076,6 @@ el('btn-manage-roles').addEventListener('click', () => openRolesModal(state.curr
 // PDF: the browser's own print-to-PDF, steered by the @media print rules above —
 // no server round trip, and it prints exactly what's on screen.
 el('btn-export-pdf').addEventListener('click', () => window.print());
-// ملاحظة: شريط النسخة التجريبية من DevExtreme (<dx-license>) يحمي نفسه بأنماط مضمّنة مفروضة ولا
-// يُخفى بالـ CSS ولا بأسلوب مضمّن — يختفي نهائيًا بتركيب مفتاح الترخيص (DevExtreme:LicenseKey).
 
 // PowerPoint: KPI values and tables travel as plain data so they land as native,
 // still-editable PowerPoint shapes; bar/line/pie charts are rendered as inline SVG by

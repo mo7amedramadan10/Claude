@@ -13,7 +13,7 @@ public class StagedBuildTests
     [InlineData("hbars", "bar")]
     [InlineData("donut", "pie")]
     [InlineData("area", "line")]
-    [InlineData("funnel", "funnel")] // صار نوعًا حقيقيًا (DevExtreme)
+    [InlineData("funnel", "funnel")] // صار نوعًا حقيقيًا (محرّك jeem-viz)
     [InlineData("bubble", "scatter")]
     [InlineData("hero", "kpi")]
     [InlineData(null, "table")]

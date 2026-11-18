@@ -537,6 +537,4 @@
 
   const api = { ready: () => true, mount, looksTemporal };
   window.JEEM_VIZ = api;
-  // الاسم القديم يبقى اسمًا بديلًا حتى لا يتعطل أي مستهلك ما زال يناديه.
-  window.JEEM_DX = api;
 })();

@@ -3137,7 +3137,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .mk-rib[tabindex]:focus-visible { stroke: var(--brand-blue); stroke-width: 2; }
 .wf-flow[tabindex]:focus-visible .wf-fp { stroke: var(--brand-blue); stroke-width: 3; }
 
-/* ---------- لوحات المحادثة: تخطيط أكثر كثافة مع رسوم DevExtreme (jeem-dx.js) ---------- */
+/* ---------- لوحات المحادثة: تخطيط أكثر كثافة مع رسوم محرّك jeem-viz.js ---------- */
 .dash-title h1 { font-size: var(--fs-xl); font-weight: 600; line-height: 1.75; color: var(--ink-2); }
 #dash .grid { gap: 12px; }
 #dash .widget { padding: 14px 16px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); gap: 8px; }
@@ -3147,8 +3147,6 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #dash .widget .chart-holder { height: 250px; min-height: 250px; position: relative; }
 #dash .widget .chart-holder.chart-holder-forecast { height: 290px; }
 #dash .widget.chart { min-height: 0; }
-/* تنبيه النسخة التجريبية من DevExtreme (بلا مفتاح) يبقى ظاهرًا لكن لا يعلو على القوائم */
-.dx-license { z-index: 1; }
 
 /* ---------- مظهر معاينة المعرض (JR) للوحة الحقيقية: رأس بهوية المشروع، شريط فلاتر كبطاقة، مؤشرات
    مضغوطة، شبكة 12 عمودًا بعرض لكل نوع، وسطر مصدر تحت عنوان كل رسم ---------- */
@@ -3232,7 +3230,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 
 /* الطباعة (تصدير PDF): يغلب قواعد container query أعلاه لأنها بنفس الخصوصية وهذا الملف آخر المحمَّلة */
 @media print {
-  html dx-license, html .dx-license, .widget-menu-btn, .kpi-spark, aside.sidebar, .topbar, .crumbs { display: none !important; visibility: hidden !important; height: 0 !important; }
+  .widget-menu-btn, .kpi-spark, aside.sidebar, .topbar, .crumbs { display: none !important; visibility: hidden !important; height: 0 !important; }
   .app, .main, #screen-chat { display: block !important; width: 100% !important; margin: 0 !important; }
   #dash-pane { container-type: normal; }
   #dash .grid { grid-template-columns: repeat(2, 1fr) !important; }
