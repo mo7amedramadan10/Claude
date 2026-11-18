@@ -3175,7 +3175,11 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #dash .widget-head-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 #dash .widget-head h3 { font-size: var(--fs-md); font-weight: 700; line-height: 1.4; }
 #dash .widget-src { margin: 0; font-size: 11px; line-height: 1.5; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* حدود البطاقة من رموز الهوية (--line الفاتح) لا من --grid في app.css التي تكون داكنة بلا data-theme="light"
+   (سبب الإطار الأسود الذي أبلغ عنه المستخدم) */
+#dash .widget { border: 1px solid var(--line); border-radius: var(--r-lg); }
 #dash .widget:hover { border-color: #D4DCE3; box-shadow: var(--shadow-2); }
+#dash #filter-bar .filter-clear-btn, #dash #filter-bar .filter-range input, #dash .xfilter-chip { border-color: var(--line); }
 /* بطاقة المؤشر: التسمية أعلى، الرقم كبير تحتها، ثم سطر التغيّر — محاذاة البداية لا الوسط */
 #dash .widget.kpi { justify-content: flex-start; align-items: stretch; min-height: 0; gap: 6px; }
 #dash .widget.kpi .widget-head h3 { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); }
