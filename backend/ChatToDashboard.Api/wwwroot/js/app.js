@@ -3303,10 +3303,8 @@ function interactiveEmptyStateHtml(d, missingSources) {
 // "استخدم هذا النموذج" for an interactive (RenderKind) template — creates the Active
 // dashboard directly (POST /api/history/from-template), skipping the AI chat build
 // pipeline entirely, then opens it so renderDashboard()'s branch above mounts its engine.
-async function useInteractiveTemplate(d) {
-  closeDashGallery();
-  setChatMode('dashboard');
-  showScreen('chat');
+async function useInteractiveTemplate(d, inPlace) {
+  if (!inPlace) { closeDashGallery(); setChatMode('dashboard'); showScreen('chat'); }
   el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
   let res, json;
   try {
@@ -3483,6 +3481,7 @@ function firstSentence(text, max) {
 }
 
 function renderDashboard() {
+  if (typeof ffTrackActive === 'function' && ffTrackActive()) ffTrackHead();
   const d = state.dashboard;
   // An "interactive" (RenderKind) dashboard never goes through the ordinary widget-grid
   // pipeline below — see mountInteractiveDashboard. None of the normal toolbar actions
@@ -4310,6 +4309,7 @@ function renderMessages() {
   el.messages.innerHTML = hint + items + typing;
   el.messages.scrollTop = el.messages.scrollHeight;
   renderSuggestions();
+  if (typeof ffTrackRenderMessages === 'function') ffTrackRenderMessages(); // «لوحات المتابعة» داخل تصميم حر تعرض الرسائل نفسها
 }
 el('messages').addEventListener('click', e => {
   const semLink = e.target.closest('[data-act="open-sem"]');
@@ -4549,6 +4549,7 @@ function galSetHost(kind) {
 async function galUseTemplate(d) {
   if (galHost.kind === 'ff') {
     closeFfGallery();
+    if (ffGalKind === 'track') { ffSetTemplate(ffTrackTemplateOf(d)); return; }
     const list = await ffLoadTemplates();
     const t = list.find(x => x.key === 'd:' + d.id) || { key: 'd:' + d.id, kind: 'dashboard', category: d.cat, icon: '📊', name: d.name, description: d.desc, sections: (d.widgets || []).map(w => ({ title: w.title, needsData: true, type: w.type })), total: (d.widgets || []).length, dataSections: (d.widgets || []).length, dashboard: true };
     ffSetTemplate(t);
@@ -7787,7 +7788,7 @@ function openHistoryEntry(id) {
     role: 'bot', text: entry.summary,
     speechWidgets: state.dashboard.widgets.map(w => ({ id: w.id, title: w.title })),
   });
-  showScreen('chat');
+  if (!(typeof ffTrackActive === 'function' && ffTrackActive())) showScreen('chat'); // داخل «لوحات المتابعة» تبقى اللوحة في تصميم حر
   renderMessages(); renderDashboard();
   if (state.dashboardIsActive && !state.dashboardDisabled) applyFilters();
 }
@@ -7970,7 +7971,7 @@ function updateCrumbs(name) {
 function showScreen(name) {
   // «لوحات المتابعة» داخل تصميم حر: أي انتقال لشاشة أخرى (بما فيها «المحادثة واللوحات» من القائمة) يعيد
   // #screen-chat إلى مكانها الأصلي أولًا حتى يعمل التبديل العادي عليها.
-  if (name !== 'freeform' && typeof ffTrackActive === 'function' && ffTrackActive()) { state.currentScreen = name; ffCloseTrack(); }
+  if (name !== 'freeform' && typeof ffTrackActive === 'function' && ffTrackActive()) ffTrackUnmount();
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
@@ -8777,43 +8778,92 @@ function dkbRenderDefaults() {
 // ======================= تصميم حر (FreeformController) =======================
 // المحادثة تنتج صفحة HTML كاملة (كـ artifacts) تُعرض في iframe معزول (sandbox بلا same-origin) مع إصدارات وتعديل كود ونشر.
 const FF = { design: null, html: '', versions: [], messages: [], viewing: null, busy: false, list: [], mobile: false, kind: null, template: undefined, templates: null };
-const FF_KINDS = { doc: { label: 'مستند', ph: 'مثال: مذكرة داخلية عن خطة الربع القادم بأقسام الأهداف والميزانية والجدول الزمني… أو: تقرير أداء المبيعات هذا الشهر من بياناتي' }, slides: { label: 'شرائح', ph: 'مثال: عرض تقديمي عن إطلاق منتج جديد في 10 شرائح: المشكلة، الحل، السوق، الخطة، الفريق' }, design: { label: 'تصميم', ph: 'مثال: صفحة هبوط لخدمة جديدة بقسم أعلى وميزات وشهادات ونموذج تواصل… أو: نموذج أولي لشاشة طلب إجازة' }, dashboard: { label: 'لوحة', ph: 'مثال: لوحة متابعة المبيعات بمؤشرات الإيراد والصفقات واتجاه شهري وتوزيع بالمنطقة من بياناتي' }, motion: { label: 'حركة', ph: 'مثال: مشهد متحرك 20 ثانية يشرح رحلة الطلب من الاستلام حتى التسليم بأربع خطوات' }, track: { label: 'لوحات المتابعة', ph: '' } };
+const FF_KINDS = { doc: { label: 'مستند', ph: 'مثال: مذكرة داخلية عن خطة الربع القادم بأقسام الأهداف والميزانية والجدول الزمني… أو: تقرير أداء المبيعات هذا الشهر من بياناتي' }, slides: { label: 'شرائح', ph: 'مثال: عرض تقديمي عن إطلاق منتج جديد في 10 شرائح: المشكلة، الحل، السوق، الخطة، الفريق' }, design: { label: 'تصميم', ph: 'مثال: صفحة هبوط لخدمة جديدة بقسم أعلى وميزات وشهادات ونموذج تواصل… أو: نموذج أولي لشاشة طلب إجازة' }, dashboard: { label: 'لوحة', ph: 'مثال: لوحة متابعة المبيعات بمؤشرات الإيراد والصفقات واتجاه شهري وتوزيع بالمنطقة من بياناتي' }, motion: { label: 'حركة', ph: 'مثال: مشهد متحرك 20 ثانية يشرح رحلة الطلب من الاستلام حتى التسليم بأربع خطوات' }, track: { label: 'لوحات المتابعة', ph: 'مثال: لوحة متابعة المبيعات بإجمالي الإيراد حسب المنطقة واتجاه شهري وأكبر 10 عملاء… أو اختر نموذجًا من المعرض واكتب ما تريد تركيزه' } };
 function ffSetKind(k) { FF.kind = k; const info = FF_KINDS[k]; el('ff-q').placeholder = info ? info.ph : ''; el('ff-head-desc').textContent = info ? `${info.label} جديد — اكتب طلبك` : 'اختر نوعًا من اللوحة ثم اكتب طلبك'; document.querySelectorAll('.ff-kind').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === k ? 'true' : 'false')); }
-document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', () => { if (b.dataset.kind === 'track') { ffOpenTrack(); return; } ffSetKind(b.dataset.kind); openFfGallery(b.dataset.kind); }));
+document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', () => { if (FF.track) ffTrackUnmount(); ffSetKind(b.dataset.kind); openFfGallery(b.dataset.kind); }));
 
 // ---------- «لوحات المتابعة» داخل تصميم حر ----------
-// بطلب المستخدم: شاشة المحادثة واللوحات نفسها (#screen-chat بكل أدواتها وحالتها) تُنقل بعقدة DOM واحدة إلى مضيف داخل
-// شاشة تصميم حر عند اختيار النوع، وتعود إلى مكانها الأصلي في .main عند الخروج أو الانتقال لأي شاشة أخرى — فلا تكرار
-// للمستمعين ولا للحالة. تبويب «الاستفسارات» لا ينتقل (يُخفى داخل المضيف بـ CSS، ويبقى في الشاشة الأصلية).
-// بند «المحادثة واللوحات» في القائمة الجانبية يبقى اختصارًا يفتح الشاشة الأصلية.
-let ffChatAnchor = null;
+// بطلب المستخدم: النوع السادس يعمل كباقي الأنواع تمامًا — النقر على البطاقة يفتح معرض النماذج (كتالوج لوحات المحادثة
+// كاملًا: العادية والتفاعلية + «بلا نموذج»)، والاختيار يُرفق شريحة فوق صندوق الكتابة، والإرسال يبني لوحة محادثة حقيقية
+// بالمسار نفسه (/api/chat أو /api/history/from-template) تُعرض في لوحة تصميم حر بشريط أدوات اللوحة. الآلية: عقدة
+// #dash-pane نفسها (بكل أدواتها ومستمعيها) تُنقل إلى #ff-body وتعود إلى #screen-chat عند الخروج — فالحالة واحدة،
+// وبند «المحادثة واللوحات» في القائمة يبقى اختصارًا يعرض اللوحة نفسها مع تبويب الاستفسارات.
+let ffDashAnchor = null;
 function ffTrackActive() { return !!FF.track; }
-function ffOpenTrack() {
-  const chat = el('screen-chat'); const body = el('ff-dash-host-body');
-  if (!chat || !body) return;
-  if (!FF.track) {
-    if (!ffChatAnchor) { ffChatAnchor = document.createComment('مكان #screen-chat الأصلي'); chat.parentNode.insertBefore(ffChatAnchor, chat); }
-    body.appendChild(chat);
-    chat.classList.add('in-ff', 'active');
-    FF.track = true;
-  }
-  if (state.chatMode === 'inquiry') setChatMode('dashboard');
-  el('screen-freeform').classList.add('ff-track-mode'); el('ff-dash-host').classList.remove('hidden');
-  el('dash-toolbar-wrap').classList.remove('hidden');
-  loadSources();
+function ffTrackMount() {
+  const pane = el('dash-pane'); const body = el('ff-body');
+  if (!pane || !body) return;
+  if (!ffDashAnchor) { ffDashAnchor = document.createComment('مكان #dash-pane الأصلي'); pane.parentNode.insertBefore(ffDashAnchor, pane); }
+  if (pane.parentNode !== body) body.appendChild(pane);
+  pane.classList.add('in-ff');
+  FF.track = true;
+  el('ff-start').classList.add('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
+  el('ff-pane').classList.add('ff-track'); el('ff-title').setAttribute('contenteditable', 'false');
+  if (state.chatMode !== 'dashboard') setChatMode('dashboard');
+  ffTrackHead(); ffTrackRenderMessages();
 }
-function ffCloseTrack() {
+function ffTrackUnmount() {
   if (!FF.track) return;
-  const chat = el('screen-chat');
-  chat.classList.remove('in-ff');
-  if (ffChatAnchor && ffChatAnchor.parentNode) ffChatAnchor.parentNode.insertBefore(chat, ffChatAnchor);
-  chat.classList.toggle('active', state.currentScreen === 'chat');
-  FF.track = false;
-  el('ff-dash-host').classList.add('hidden'); el('screen-freeform').classList.remove('ff-track-mode');
-  el('dash-toolbar-wrap').classList.toggle('hidden', state.currentScreen !== 'chat');
+  const pane = el('dash-pane');
+  pane.classList.remove('in-ff');
+  if (ffDashAnchor && ffDashAnchor.parentNode) ffDashAnchor.parentNode.insertBefore(pane, ffDashAnchor);
+  el('ff-pane').classList.remove('ff-track'); el('ff-title').setAttribute('contenteditable', 'true');
+  FF.track = false; FF.trackAttach = '';
 }
-el('ff-dash-back').addEventListener('click', () => { ffCloseTrack(); loadFreeformScreen(); });
-async function loadFreeformScreen() { if (FF.track) { ffOpenTrack(); return; } if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
+function ffTrackHead() {
+  const name = state.dashboard?.name || firstSentence(state.dashboard?.summary || '', 60) || 'لوحة متابعة';
+  el('ff-title').textContent = state.dashboard?.widgets?.length ? name : 'لوحة متابعة جديدة';
+  el('ff-meta').textContent = state.dashboard?.widgets?.length ? `لوحة متابعة · ${state.dashboard.widgets.length.toLocaleString('en-US')} عنصر · اطلب تعديلًا بالمحادثة` : 'اكتب طلبك في المحادثة';
+}
+// رسائل لوحة المحادثة (state.messages) تُعرض في شريط تصميم حر بالشكل نفسه؛ أول رسالة تحمل شريحة النموذج المختار
+function ffTrackRenderMessages() {
+  if (!FF.track) return;
+  const box = el('ff-messages'); let firstUser = true;
+  box.innerHTML = state.messages.map(m => {
+    const cls = m.role === 'user' ? 'user' : m.error ? 'err' : 'assistant';
+    const attach = m.role === 'user' && firstUser ? (FF.trackAttach || '') : ''; if (m.role === 'user') firstUser = false;
+    return `<div class="cc-msg ${cls}" style="cursor:default">${attach}${m.html || esc(m.text)}</div>`;
+  }).join('') + (state.loading ? `<div class="cc-msg assistant"><span class="typing">يبني اللوحة من بياناتك… قد يستغرق حتى دقيقة</span></div>` : '');
+  box.scrollTop = box.scrollHeight;
+}
+// نموذج من كتالوج اللوحات بصيغة شريحة المرفق (المفتاح chat:<id> لا يُحفظ في أي مكان — اللوحة تُحفظ في السجل كالمعتاد)
+function ffTrackTemplateOf(d) {
+  return { key: 'chat:' + d.id, kind: 'track', category: d.cat, icon: d.renderKind ? '🧩' : '📊', name: d.name, description: d.desc, dashId: d.id, renderKind: d.renderKind || null, total: (d.widgets || []).length, dataSections: (d.widgets || []).length };
+}
+function ffTrackItems() { return DASH_GALLERY.map(ffTrackTemplateOf); }
+// الإرسال في نوع «لوحات المتابعة»: أول رسالة تبني لوحة جديدة (من النموذج المرفق أو بلا نموذج)، وما بعدها متابعة على اللوحة نفسها
+async function ffTrackAsk(text) {
+  if (state.loading) return;
+  const fresh = !FF.track || !state.dashboard?.widgets?.length;
+  if (fresh && FF.template === undefined) { ffPushMsg('bot', 'اختر نموذج لوحة من المعرض أو «لوحة متابعة بلا نموذج» ثم اكتب طلبك.'); return; }
+  if (fresh) {
+    FF.trackAttach = ffAttachLineHtml(FF.template);
+    startBlankDashboard();
+    ffTrackMount();
+    ffRenderAttach(); ffTrackHead();
+    el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
+    try {
+      const t = FF.template;
+      if (t && t.renderKind) {
+        const d = DASH_GALLERY.find(x => x.id === t.dashId);
+        state.messages.push({ role: 'user', text }); state.loading = true; ffTrackRenderMessages();
+        const n = state.messages.length;
+        await useInteractiveTemplate(d, true); // openHistoryEntry يضيف رسالتي السجل (سؤال + ملخص) ويرسم اللوحة في مكانها
+        state.loading = false;
+        state.messages.splice(n - 1, 1); // رسالة المستخدم المؤقتة تُستبدل برسالة السجل التي حملت نص النموذج
+        if (state.messages[n - 1]?.role === 'user') state.messages[n - 1].text = text;
+        if (!state.dashboard?.widgets?.length) state.messages.push({ role: 'bot', text: 'تعذّر إنشاء اللوحة التفاعلية — راجع مصادر المشروع ثم حاول مرة أخرى.', error: true });
+        renderMessages();
+      } else {
+        await ask(text, text, t ? { kind: 'dashboard', key: t.dashId } : undefined);
+      }
+    } finally { el('ff-send').disabled = false; el('ff-status').textContent = ''; ffTrackHead(); ffRenderAttach(); }
+    return;
+  }
+  el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
+  try { await ask(text); } finally { el('ff-send').disabled = false; el('ff-status').textContent = ''; ffTrackHead(); }
+}
+async function loadFreeformScreen() { if (FF.track) { ffTrackMount(); return; } if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
 // حالة البداية = معرض كمعرض Artifacts في Claude: تبويبات (الكل/تصاميمي/مشترك معي)، بحث، تصفية بالنوع، شبكة/قائمة، وبطاقات بمعاينة مصغّرة حيّة
 // لكل تصميم سابق تُجلب صفحته كسولًا عند ظهورها. «فُتح قبل…» يُسجَّل محليًا لكل مشاهد (localStorage) وإلا يُعرض آخر تعديل.
 FF.gal = { tab: 'all', q: '', kind: '', list: false, htmlCache: {}, io: null };
@@ -8924,22 +8974,29 @@ function ffSketchHtml(t) {
 async function openFfGallery(kind) {
   await ffLoadTemplates();
   // نوع «لوحة»: نماذج كتالوج اللوحات تُعرض هنا ببطاقاتها ومعايناتها وعروضها التوضيحية الأصلية، فيلزم الكتالوج وجدواه
-  if (kind === 'dashboard') { if (!DASH_GALLERY.length) await loadTemplateCatalog(); if (!dashGalFeasibility) loadDashGalFeasibility().then(f => { if (f && ffGalKind === 'dashboard' && !el('ff-gallery-modal').classList.contains('hidden')) renderFfGalGrid(); }); }
+  if (kind === 'dashboard' || kind === 'track') { if (!DASH_GALLERY.length) await loadTemplateCatalog(); if (!dashGalFeasibility) loadDashGalFeasibility().then(f => { if (f && (ffGalKind === 'dashboard' || ffGalKind === 'track') && !el('ff-gallery-modal').classList.contains('hidden')) renderFfGalGrid(); }); }
   galSetHost('ff');
   ffGalKind = kind; ffGalCat = 'all'; ffGalQuery = ''; el('ffgal-search-input').value = '';
   const info = FF_KINDS[kind] || FF_KINDS.design;
   el('ffgal-title').textContent = `${info.label} جديد`; el('ffgal-desc').textContent = `اختر نموذج ${info.label} جاهزًا يُبنى عليه طلبك، أو ابدأ تصميمًا حرًّا بلا نموذج — يظهر اختيارك مرفقًا في المحادثة.`;
+  // نوع «لوحات المتابعة»: بطاقة «بلا نموذج» تصير لوحة فارغة، وبطاقتا الرفع لا تنطبقان (نتاجهما صفحات تصميم حر)
+  const track = kind === 'track';
+  el('ffgal-start-free').querySelector('b').textContent = track ? 'لوحة متابعة بلا نموذج' : 'تصميم حر بلا نموذج';
+  el('ffgal-start-free').querySelector('small').textContent = track ? 'اكتب سؤالك عن بياناتك وجيم يبني اللوحة من الصفر' : 'اكتب طلبك كما تريد وجيم يصمّم من الصفر بهوية مشروعك';
+  el('ffgal-start-import').classList.toggle('hidden', track); el('ffgal-start-page').classList.toggle('hidden', track);
+  el('ffgal-sub-note').textContent = track ? '· نماذج لوحات المحادثة: عادية وتفاعلية، تُبنى من بيانات مشروعك' : '· بنية جاهزة يُبنى عليها طلبك';
   renderFfGalCats(); renderFfGalGrid();
   el('ffgal-view-list').classList.remove('hidden'); el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-demo').classList.add('hidden');
   el('ff-gallery-modal').classList.remove('hidden');
 }
 function closeFfGallery() { el('ff-gallery-modal').classList.add('hidden'); }
-function ffGalItems() { return (FF.templates || []).filter(t => t.kind === ffGalKind); }
+function ffGalItems() { return ffGalKind === 'track' ? ffTrackItems() : (FF.templates || []).filter(t => t.kind === ffGalKind); }
 function renderFfGalCats() {
   const all = ffGalItems();
   // لنوع «لوحة» تُضاف تصنيفات كتالوج اللوحات (المشتريات، التجزئة، البنوك…) التي لا توجد في تصنيفات النماذج الثابتة
   const extraCats = ffGalKind === 'dashboard' ? DASH_GAL_CATS.filter(c => c[0] !== 'all' && !DK_CATS.some(d => d[0] === c[0])) : [];
-  el('ffgal-cats').innerHTML = [DK_CATS[0], ['uploaded', 'مرفوعة من ملف', 'file'], ...DK_CATS.slice(1), ...extraCats].map(([k, name, icon]) => {
+  const cats = ffGalKind === 'track' ? DASH_GAL_CATS : [DK_CATS[0], ['uploaded', 'مرفوعة من ملف', 'file'], ...DK_CATS.slice(1), ...extraCats];
+  el('ffgal-cats').innerHTML = cats.map(([k, name, icon]) => {
     const count = k === 'all' ? all.length : all.filter(t => t.category === k).length;
     if (!count && k !== 'all') return '';
     return `<button type="button" data-cat="${k}" aria-pressed="${k === ffGalCat}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}</span><em>${count}</em></button>`;
@@ -8949,7 +9006,7 @@ function renderFfGalCats() {
 function renderFfGalGrid() {
   const q = ffGalQuery.toLowerCase();
   const items = ffGalItems().filter(t => (ffGalCat === 'all' || t.category === ffGalCat) && (!q || (t.name + ' ' + t.description + ' ' + (t.sections || []).map(x => x.title).join(' ')).toLowerCase().includes(q)));
-  const catalogOf = t => t.dashboard ? DASH_GALLERY.find(d => 'd:' + d.id === t.key) : null;
+  const catalogOf = t => t.dashId ? DASH_GALLERY.find(d => d.id === t.dashId) : t.dashboard ? DASH_GALLERY.find(d => 'd:' + d.id === t.key) : null;
   el('ffgal-grid').innerHTML = items.map(t => { const d = catalogOf(t); return d ? `
     <button type="button" class="dash-card" data-dash="${esc(d.id)}">
       ${dashGalThumb(d)}
@@ -9035,19 +9092,19 @@ el('ff-gallery-modal').addEventListener('click', e => { if (e.target === el('ff-
 el('ffgal-search-input').addEventListener('input', () => { ffGalQuery = el('ffgal-search-input').value.trim(); renderFfGalGrid(); });
 el('ffgal-start-free').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(null); });
 // الاختيار: كائن نموذج، أو null = «تصميم حر بلا نموذج». يظهر كشريحة مرفق فوق صندوق الكتابة، وفي أول رسالة بالمحادثة.
-function ffSetTemplate(t) { FF.template = t; ffRenderAttach(); el('ff-q').focus(); el('ff-head-desc').textContent = t ? `${FF_KINDS[FF.kind]?.label || 'تصميم'} على نموذج «${t.name}» — اكتب طلبك` : `${FF_KINDS[FF.kind]?.label || 'تصميم'} حر بلا نموذج — اكتب طلبك`; }
+function ffSetTemplate(t) { FF.template = t; ffRenderAttach(); el('ff-q').focus(); el('ff-head-desc').textContent = t ? `${FF_KINDS[FF.kind]?.label || 'تصميم'} على نموذج «${t.name}» — اكتب طلبك` : FF.kind === 'track' ? 'لوحة متابعة بلا نموذج — اكتب سؤالك عن بياناتك' : `${FF_KINDS[FF.kind]?.label || 'تصميم'} حر بلا نموذج — اكتب طلبك`; }
 function ffRenderAttach() {
-  const box = el('ff-attach'); const locked = !!FF.design;
+  const box = el('ff-attach'); const locked = !!FF.design || (FF.kind === 'track' && !!FF.track && !!state.dashboard?.widgets?.length);
   if (FF.template === undefined && !locked) { box.classList.add('hidden'); box.innerHTML = ''; return; }
   const t = FF.template; const kindLabel = (FF_KINDS[FF.design ? FF.design.kind : FF.kind] || FF_KINDS.design).label;
   box.innerHTML = t
     ? `<span class="ff-chip tpl" role="button" tabindex="0" title="${locked ? 'النموذج الذي بُني عليه هذا التصميم' : 'اضغط لتغيير النموذج'}"><span class="ff-chip-ico">${esc(t.icon)}</span><span>📎 نموذج:</span><b>${esc(t.name)}</b><span class="muted">· ${esc(kindLabel)}</span>${locked ? '' : '<button type="button" class="ff-chip-x" aria-label="إزالة النموذج (تصميم حر)">✕</button>'}</span>`
-    : `<span class="ff-chip free" role="button" tabindex="0" title="${locked ? 'تصميم حر بلا نموذج' : 'اضغط لاختيار نموذج'}"><span class="ff-chip-ico">✦</span><b>تصميم حر بلا نموذج</b><span class="muted">· ${esc(kindLabel)}</span></span>`;
+    : `<span class="ff-chip free" role="button" tabindex="0" title="${locked ? 'تصميم حر بلا نموذج' : 'اضغط لاختيار نموذج'}"><span class="ff-chip-ico">✦</span><b>${FF.kind === 'track' ? 'لوحة متابعة بلا نموذج' : 'تصميم حر بلا نموذج'}</b><span class="muted">· ${esc(kindLabel)}</span></span>`;
   box.classList.remove('hidden');
   const chip = box.querySelector('.ff-chip');
   if (!locked) { chip.addEventListener('click', e => { if (e.target.closest('.ff-chip-x')) { ffSetTemplate(null); return; } openFfGallery(FF.kind || 'design'); }); chip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFfGallery(FF.kind || 'design'); } }); }
 }
-function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(t.name)}</b></span>` : '<span class="ff-msg-attach">✦ تصميم حر بلا نموذج</span>'; }
+function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(t.name)}</b></span>` : `<span class="ff-msg-attach">✦ ${FF.kind === 'track' ? 'لوحة متابعة' : 'تصميم حر'} بلا نموذج</span>`; }
 
 // ---------- تحديث البيانات: بلا موديل (إعادة تنفيذ الاستعلامات المسجَّلة) أو إعادة البناء بالموديل ----------
 el('ff-refresh').addEventListener('click', e => {
@@ -9213,6 +9270,7 @@ async function ffConvert(kind) {
   finally { FF.busy = false; el('ff-status').textContent = ''; ffRenderMessages(); ccSetLoading('ff-pane', null); }
 }
 async function ffOpen(id) {
+  ffTrackUnmount();
   const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return; ffMarkOpened(id);
   const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl; FF.dataChanged = !!d.dataChanged;
   FF.messages = (d.messages || []).map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
@@ -9260,6 +9318,7 @@ function ffRenderMessages() {
 }
 async function ffAsk(text) {
   if (FF.busy || !text.trim()) return;
+  if (!FF.design && (FF.kind === 'track' || FF.track)) return ffTrackAsk(text);
   ffPushMsg('user', text); FF.busy = true; FF.busyText = FF.design ? 'يعدّل الصفحة…' : 'يصمّم الصفحة… قد يستغرق حتى دقيقة'; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
   ccSetLoading('ff-pane', FF.design ? 'جارٍ تعديل الصفحة' : 'جارٍ بناء الصفحة', 'الموديل يعمل على طلبك وقد يستغرق حتى دقيقة — ستظهر النتيجة هنا فور اكتمالها.');
   try {
@@ -9278,7 +9337,7 @@ async function ffAsk(text) {
 }
 el('ff-form').addEventListener('submit', e => { e.preventDefault(); const t = el('ff-q').value.trim(); if (!t) return; el('ff-q').value = ''; ffAsk(t); });
 el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('ff-form').requestSubmit(); } });
-el('ff-new-btn').addEventListener('click', () => { FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
+el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
 el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(FF.html, '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
