@@ -3146,21 +3146,62 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* تنبيه النسخة التجريبية من DevExtreme (بلا مفتاح) يبقى ظاهرًا لكن لا يعلو على القوائم */
 .dx-license { z-index: 1; }
 
-/* شبكة اللوحة بحسب عرض منطقة اللوحة لا الشاشة (container query): 4 أعمدة عند الاتساع (رسمان جنبًا
-   إلى جنب، 4 مؤشرات في صف)، وعمودان عند التوسط (رسمان جنبًا إلى جنب، كل رسم عمود واحد)، وعمود واحد
-   على الضيّق. المتصفحات بلا دعم container queries تبقى على الشبكة التلقائية السابقة. */
+/* ---------- مظهر معاينة المعرض (JR) للوحة الحقيقية: رأس بهوية المشروع، شريط فلاتر كبطاقة، مؤشرات
+   مضغوطة، شبكة 12 عمودًا بعرض لكل نوع، وسطر مصدر تحت عنوان كل رسم ---------- */
+#dash .dash-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+#dash .dash-logo { flex: none; width: 56px; height: 56px; object-fit: contain; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); padding: 6px; }
+#dash .dash-kicker { font-size: var(--fs-xs); font-weight: 700; color: var(--blue-700); letter-spacing: .01em; }
+#dash .dash-title { gap: 4px; flex: 1; }
+#dash .dash-title h1 { font-size: var(--fs-2xl); font-weight: 700; line-height: 1.4; color: var(--ink); }
+#dash .dash-sub { margin: 0; font-size: var(--fs-sm); line-height: 1.7; color: var(--ink-2); max-width: 90ch; }
+#dash .dash-meta { margin-top: 4px; font-size: var(--fs-xs); }
+#dash .dash-live { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: var(--r-full); background: var(--ok-50, #E8F6EF); color: var(--ok, #16845F); font-weight: 600; }
+#dash .dash-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+/* التبويبات (لوحة متعددة الصفحات) بشكل أزرار داخل إطار كما في المعاينة */
+#dash .dash-tabs { gap: 4px; padding: 4px; margin-bottom: 12px; border: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); align-self: flex-start; width: fit-content; max-width: 100%; }
+#dash .dash-tabs button { height: 34px; padding: 0 16px; border-radius: 8px; color: var(--ink-2); font-size: var(--fs-sm); }
+#dash .dash-tabs button[aria-selected="true"] { background: var(--blue-50); color: var(--blue-700); font-weight: 700; }
+#dash .dash-tabs button[aria-selected="true"]::after { display: none; }
+/* شريط الفلاتر: بطاقة واحدة، تسمية صغيرة فوق رقائق أقصر */
+#dash #filter-bar.filters { gap: 8px 18px; padding: 10px 14px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+#dash #filter-bar .filter-ctl-label, #dash #filter-bar .filter-range > span:first-child { font-size: 11px; color: var(--ink-3); }
+#dash #filter-bar .filter-chip-row { gap: 4px; }
+#dash #filter-bar .chip { height: 26px; font-size: 11px; padding: 0 10px; }
+#dash #filter-bar .filter-range { padding: 2px 0; border: 0; background: none; }
+#dash #filter-bar .filter-range input { height: 26px; font-size: 11px; padding: 0 8px; }
+#dash #filter-bar .filter-clear-btn { height: 26px; padding: 0 10px; font-size: 11px; align-self: flex-end; }
+/* رأس البطاقة: العنوان وتحته سطر المصدر المختصر */
+#dash .widget-head { align-items: flex-start; }
+#dash .widget-head-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#dash .widget-head h3 { font-size: var(--fs-md); font-weight: 700; line-height: 1.4; }
+#dash .widget-src { margin: 0; font-size: 11px; line-height: 1.5; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+#dash .widget:hover { border-color: #D4DCE3; box-shadow: var(--shadow-2); }
+/* بطاقة المؤشر: التسمية أعلى، الرقم كبير تحتها، ثم سطر التغيّر — محاذاة البداية لا الوسط */
+#dash .widget.kpi { justify-content: flex-start; align-items: stretch; min-height: 0; gap: 6px; }
+#dash .widget.kpi .widget-head h3 { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); }
+#dash .widget.kpi .kpi-body { justify-content: flex-start; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+#dash .widget.kpi .kpi-body .value { font-size: 28px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+#dash .widget.kpi .kpi-label { font-size: 11px; color: var(--ink-3); max-width: none; }
+#dash .widget.kpi .kpi-delta { justify-content: flex-start; font-size: 11px; }
+#dash .widget.kpi .kpi-spark { width: 100%; height: 24px; align-self: stretch; }
+/* شبكة 12 عمودًا بعرض لكل نوع: مؤشر 3، رسم 6، جدول/عريض 12 — تتقلّص بحسب عرض منطقة اللوحة */
 #dash-pane { container-type: inline-size; container-name: dashpane; }
-@container dashpane (min-width: 1040px) {
-  #dash .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
+#dash .grid { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+#dash .widget { grid-column: span 6; }
+#dash .widget[data-size="small"] { grid-column: span 3; }
+/* صف المؤشرات: شبكة فرعية تملأ العرض، حتى 4 في الصف، وتلتف على الضيّق */
+#dash .kpi-row { grid-column: span 12; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+#dash .kpi-row .widget.kpi { grid-column: auto; }
+#dash .widget.table, #dash .widget[data-size="large"], #dash .widget[data-size="full"], #dash .widget.comparison-wrap { grid-column: span 12; }
 @container dashpane (min-width: 640px) and (max-width: 1039.98px) {
-  #dash .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #dash .widget.chart, #dash .widget.table, #dash .widget[data-size="wide"] { grid-column: span 1; }
-  #dash .widget[data-size="large"], #dash .widget[data-size="full"], #dash .widget.table[data-size="full"] { grid-column: 1 / -1; }
+  #dash .widget, #dash .widget[data-size] { grid-column: span 12; }
+  #dash .widget[data-size="small"] { grid-column: span 6; }
+  #dash .kpi-row .widget.kpi { grid-column: auto; }
 }
 @container dashpane (max-width: 639.98px) {
-  #dash .grid { grid-template-columns: minmax(0, 1fr); }
-  #dash .widget, #dash .widget[data-size] { grid-column: 1 / -1; }
+  #dash .widget, #dash .widget[data-size] { grid-column: span 12; }
+  #dash .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #dash .kpi-row .widget.kpi { grid-column: auto; }
 }
 /* التغيّر عن الفترة السابقة في بطاقة المؤشر */
 .kpi-delta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; justify-content: center; font-size: 12px; line-height: 1.5; }
@@ -3616,3 +3657,5 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-card-link:hover { background: var(--surface-2); border-color: var(--brand-blue); }
 .jeem-scope .ff-card-link.copied { font-size: 11px; width: auto; padding: 0 8px; white-space: nowrap; }
 .jeem-scope #ff-link.copied { color: var(--ok); }
+/* زر التنبؤ وزر المصدر في رأس البطاقة أصغر حتى لا يزاحما العنوان */
+#dash .forecast-btn { font-size: 11px; padding: 2px 8px; }

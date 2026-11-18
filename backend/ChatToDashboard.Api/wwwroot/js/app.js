@@ -495,6 +495,8 @@ const state = {
   // Set only while the open dashboard is an Active one (see openHistoryEntry): gates
   // edit/wizard controls for a Viewer and drives the disabled-state banner.
   dashboardIsActive: false, dashboardRole: null, dashboardDisabled: false, dashboardDisabledReason: '',
+  // هوية المشروع لرأس اللوحة (undefined = لم تُطلب بعد، null = لا هوية)
+  dashBrand: undefined,
   // When the widgets currently on screen last actually got their data — set on a fresh
   // chat answer, on applyFilters() (filter change or "🔄 تحديث"), or to a Draft history
   // entry's own CreatedAt when reopened (an Active one then overwrites it via the
@@ -757,9 +759,20 @@ function widgetShell(w, extraClass) {
 
   const head = document.createElement('div');
   head.className = 'widget-head';
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'widget-head-t';
   const title = document.createElement('h3');
   title.textContent = w.title || '';
-  head.appendChild(title);
+  titleWrap.appendChild(title);
+  // سطر مصدر مختصر تحت العنوان (كما في معاينة المعرض) — أول جملة من source؛ النص الكامل في نافذة ⓘ.
+  if (w.source && extraClass !== 'kpi') {
+    const src = document.createElement('p');
+    src.className = 'widget-src';
+    // اسم المخطط الداخلي proj_<id>. لا يعني المستخدم شيئًا فيُحذف من السطر المختصر فقط.
+    src.textContent = firstSentence(w.source.replace(/\bproj_[0-9a-f]{32}\./g, ''), 110);
+    titleWrap.appendChild(src);
+  }
+  head.appendChild(titleWrap);
 
   if (w.source) {
     const srcBtn = document.createElement('button');
@@ -3450,6 +3463,25 @@ async function mountInteractiveDashboard(d) {
   }
 }
 
+// هوية المشروع لرأس اللوحة — تُجلب مرة واحدة (undefined = لم تُطلب بعد، null = لا هوية) وتُبطَل عند
+// حفظ الهوية من منشئ العروض.
+function loadDashBrand() {
+  state.dashBrand = null;
+  fetch('/api/decks/brand').then(r => r.ok ? r.json() : null).then(d => {
+    state.dashBrand = d?.brand || null;
+    if (state.dashBrand && state.dashboard && !state.dashboard.renderKind) renderDashboard();
+  }).catch(() => { state.dashBrand = null; });
+}
+// أول جملة من نص (حتى أول نقطة أو فاصلة منقوطة) بحد أقصى من الأحرف — لعنوان لوحة بلا اسم.
+function firstSentence(text, max) {
+  const t = String(text || '').trim();
+  if (!t) return '';
+  const m = t.match(/^[^.؟!;]+?(?=[.؟!;]|$)/);
+  let first = (m ? m[0] : t).trim();
+  if (first.length > max) first = first.slice(0, max - 1).replace(/\s+\S*$/, '') + '…';
+  return first;
+}
+
 function renderDashboard() {
   const d = state.dashboard;
   // An "interactive" (RenderKind) dashboard never goes through the ordinary widget-grid
@@ -3529,12 +3561,23 @@ function renderDashboard() {
     state.dashboardIsActive && dashboardStatusBadgesHtml(),
   ].filter(Boolean);
   const metaHtml = metaBits.join('<span class="dot-sep"></span>');
+  // رأس اللوحة بهوية المشروع (الشعار والاسم من إعدادات الهوية نفسها التي يستخدمها منشئ العروض):
+  // سطر تمهيدي، عنوان قصير، الملخص كسطر فرعي، ثم سطر المصادر والتحديث. اللوحة بلا اسم محفوظ
+  // تأخذ أول جملة من الملخص عنوانًا. شارة «بيانات حيّة» حين يحمل أي عنصر استعلامًا قابلًا لإعادة التنفيذ.
+  const brand = state.dashBrand || {};
+  const titleText = d.name || firstSentence(d.summary, 80) || 'لوحة متابعة';
+  const subText = d.summary && d.summary !== titleText ? d.summary : '';
+  const live = !state.shareId && (d.widgets || []).some(w => w.query?.sql && !w.query.integrationId);
   el.dash.innerHTML = `<section class="dash-head">
+      ${brand.logo ? `<img class="dash-logo" src="${esc(brand.logo)}" alt="${esc(brand.name || 'الشعار')}">` : ''}
       <div class="dash-title">
-        <h1>${esc(d.name || d.summary)}</h1>
-        ${metaHtml ? `<div class="dash-meta">${metaHtml}</div>` : ''}
+        <span class="dash-kicker">لوحة متابعة${brand.name ? ` · ${esc(brand.name)}` : ''}</span>
+        <h1>${esc(titleText)}</h1>
+        ${subText ? `<p class="dash-sub">${esc(subText)}</p>` : ''}
+        ${metaHtml || live ? `<div class="dash-meta">${live ? '<span class="dash-live">بيانات حيّة من مصادر المشروع</span>' : ''}${live && metaHtml ? '<span class="dot-sep"></span>' : ''}${metaHtml}</div>` : ''}
       </div>
     </section>${dashboardDisabledBannerHtml()}`;
+  if (state.dashBrand === undefined) loadDashBrand();
 
   // A multi-page template build (see BuiltinDashboardsGenerated/ChatController's
   // reconciliation) tags each widget with the page/tab it belongs to — a free-form chat
@@ -3570,6 +3613,7 @@ function renderDashboard() {
   if (widgets.length) {
     const grid = document.createElement('div');
     grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
+    let kpiRow = null;
     widgets.forEach((w, i) => {
       const card = buildWidget(w);
       // Every freshly mounted card gets a quick settle-in fade (widget-mount, see its own
@@ -3602,7 +3646,15 @@ function renderDashboard() {
       if (revealNow && window.JR && window.JR.countUp) {
         card.querySelectorAll('.jr-countup').forEach(elx => window.JR.countUp(elx));
       }
-      grid.appendChild(card);
+      // المؤشرات المتتالية في صف خاص بها (كما في معاينة المعرض) حتى لا تتمدد بطاقة المؤشر إلى
+      // ارتفاع رسم مجاور في صف الشبكة نفسه؛ السحب والإفلات يعمل بمعرّف العنصر فلا يتأثر بالتجميع.
+      if (card.classList.contains('kpi')) {
+        if (!kpiRow) { kpiRow = document.createElement('div'); kpiRow.className = 'kpi-row'; grid.appendChild(kpiRow); }
+        kpiRow.appendChild(card);
+      } else {
+        kpiRow = null;
+        grid.appendChild(card);
+      }
     });
     el.dash.appendChild(grid);
     // Scoped strictly to the loop above — cleared immediately after so a widget built
@@ -3993,7 +4045,7 @@ function computeDashboardSources(widgets) {
   };
   (widgets || []).forEach(collect);
   return [...tables]
-    .map(t => state.tableLabels[t] || t)
+    .map(t => state.tableLabels[t] || t.replace(/\bproj_[0-9a-f]{32}\./, ''))
     .sort((a, b) => a.localeCompare(b, 'ar'));
 }
 // ---------- Part 2: Active-dashboard status badges (state + role) ----------
@@ -8590,7 +8642,7 @@ el('dkb-logo-file').addEventListener('change', async e => {
 });
 el('dkb-logo-clear').addEventListener('click', () => { dkbDraft.logo = null; el('dkb-logo-file').value = ''; dkbPreview(); });
 async function dkbApply(brand) {
-  DK.brand = brand; closeDeckBrandModal();
+  DK.brand = brand; state.dashBrand = undefined; closeDeckBrandModal();
   if (DK.spec) dkRender();
   if (!el('deck-gallery-modal').classList.contains('hidden')) renderDeckGalGrid();
 }
