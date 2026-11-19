@@ -331,6 +331,10 @@ app.MapGet("/docs/presentations-data.md", (IWebHostEnvironment env) =>
 app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
     .AllowAnonymous();
+// الرابط المقروء للوحة متابعة مشارَكة: /d/{اسم-المنظمة}/{اسم-اللوحة} — التطبيق نفسه في وضع المشاركة (bootSharedView).
+app.MapGet("/d/{org}/{slug}", (IWebHostEnvironment env) =>
+    Results.File(Path.Combine(env.WebRootPath, "index.html"), "text/html"))
+    .AllowAnonymous();
 
 // /o/{slug} (and anything else with no matching static file or API route) still serves the
 // same single-page app — app.js reads the slug from location.pathname itself (see

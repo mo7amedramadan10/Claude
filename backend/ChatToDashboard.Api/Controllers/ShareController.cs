@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using ChatToDashboard.Api.History;
+using ChatToDashboard.Api.Organizations;
 using ChatToDashboard.Api.Presentations;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Widgets;
@@ -30,9 +31,11 @@ public class ShareController : ControllerBase
     private readonly DashboardAccessService _access;
     private readonly WidgetQueryService _widgets;
     private readonly PermissionsService _permissions;
+    private readonly OrganizationStore _organizations;
 
-    public ShareController(ShareStore store, UserStore users, HistoryStore history, PresentationAssistantService assistant, DashboardAccessService access, WidgetQueryService widgets, PermissionsService permissions)
+    public ShareController(ShareStore store, UserStore users, HistoryStore history, PresentationAssistantService assistant, DashboardAccessService access, WidgetQueryService widgets, PermissionsService permissions, OrganizationStore organizations)
     {
+        _organizations = organizations;
         _store = store;
         _users = users;
         _history = history;
@@ -60,8 +63,31 @@ public class ShareController : ControllerBase
         if (dashboard is null || !dashboard.IsActive)
             return BadRequest(new { error = "يجب تفعيل اللوحة أولاً قبل مشاركتها." });
 
+        var orgId = User.FindFirstValue("OrganizationId");
+        var orgSlug = await OrgSlugAsync(orgId, ct);
+        // إعادة النشر: اللوحة نفسها لها رابط حيّ لصاحبها → تُحدَّث لقطته في مكانه ويبقى الرابط كما هو
+        var existing = await _store.FindByHistoryAsync(UserId, request.HistoryId, ct);
+        if (existing is not null && existing.IsLive && !string.IsNullOrWhiteSpace(existing.Slug))
+        {
+            await _store.UpdateSnapshotAsync(UserId, existing.Id, request.Question, request.Summary,
+                request.Widgets.ValueKind == System.Text.Json.JsonValueKind.Undefined ? "[]" : request.Widgets.GetRawText(),
+                request.Filters.ValueKind == System.Text.Json.JsonValueKind.Undefined ? "[]" : request.Filters.GetRawText(),
+                request.ActiveFilters.ValueKind == System.Text.Json.JsonValueKind.Undefined ? "{}" : request.ActiveFilters.GetRawText(), ct);
+            var refreshed = await _store.GetAsync(existing.Id, ct) ?? existing;
+            return Ok(new { refreshed.Id, refreshed.Slug, refreshed.HistoryId, url = refreshed.PublicPath(orgSlug), updated = true });
+        }
+        string? slug = null;
+        if (orgId is not null)
+        {
+            var requested = PresentationSlug.Normalize(string.IsNullOrWhiteSpace(request.Slug) ? request.Question : request.Slug);
+            if (requested.Length < 2) requested = "dashboard";
+            slug = requested;
+            for (var n = 2; await _store.SlugTakenAsync(orgId, slug, null, ct); n++) slug = $"{requested}-{n}";
+        }
+
         var entry = new SharedDashboard
         {
+            Slug = slug, OrganizationId = orgId, HistoryId = request.HistoryId,
             CreatedByUserId = UserId,
             Question = request.Question,
             Summary = request.Summary,
@@ -78,7 +104,32 @@ public class ShareController : ControllerBase
         };
 
         var saved = await _store.SaveAsync(entry, ct);
-        return Ok(saved);
+        return Ok(new { saved.Id, saved.Slug, saved.HistoryId, url = saved.PublicPath(orgSlug), updated = false });
+    }
+
+    private async Task<string?> OrgSlugAsync(string? organizationId, CancellationToken ct) =>
+        organizationId is null ? null : (await _organizations.FindByIdAsync(organizationId, ct))?.Slug;
+
+    /// <summary>روابط لوحات المستخدم الحيّة بمعرّف اللوحة المحفوظة — لشارات «منشور» وزر الرابط في «لوحات المتابعة».</summary>
+    [HttpGet("links")]
+    public async Task<IActionResult> Links(CancellationToken ct)
+    {
+        var orgSlug = await OrgSlugAsync(User.FindFirstValue("OrganizationId"), ct);
+        var list = await _store.ListAsync(UserId, ct);
+        return Ok(list.Where(e => e.IsLive && !string.IsNullOrWhiteSpace(e.HistoryId)).GroupBy(e => e.HistoryId!).Select(g => g.First())
+            .Select(e => new { e.Id, historyId = e.HistoryId, url = e.PublicPath(orgSlug) }));
+    }
+
+    /// <summary>الرابط المقروء العام /d/{org}/{slug} — يعيد ما يعيده GET بالمعرّف.</summary>
+    [HttpGet("by/{org}/{slug}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetBySlug(string org, string slug, CancellationToken ct)
+    {
+        var organization = await _organizations.FindBySlugAsync(org, ct);
+        if (organization is null) return NotFound(new { error = "الرابط غير موجود أو تم حذفه." });
+        var entry = await _store.GetBySlugAsync(organization.Id, slug, ct);
+        if (entry is null) return NotFound(new { error = "الرابط غير موجود أو تم حذفه." });
+        return await Get(entry.Id, ct);
     }
 
     /// <summary>
@@ -117,14 +168,19 @@ public class ShareController : ControllerBase
         {
             entry.Id, entry.Question, entry.Summary, entry.WidgetsJson, entry.FiltersJson, entry.ActiveFiltersJson, entry.CreatedAt, entry.ExpiresAt,
             creatorName = by?.DisplayName ?? by?.Username, // لرأس صفحة المشاركة («من فلان») كصفحة العرض المنشور
-            live,
+            live, entry.Slug, url = entry.PublicPath(await OrgSlugAsync(entry.OrganizationId, ct)),
         });
     }
 
     /// <summary>The current user's own published links, for management — includes each
     /// one's expiry/revoked state and view count.</summary>
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken ct) => Ok(await _store.ListAsync(UserId, ct));
+    public async Task<IActionResult> List(CancellationToken ct)
+    {
+        var orgSlug = await OrgSlugAsync(User.FindFirstValue("OrganizationId"), ct);
+        var list = await _store.ListAsync(UserId, ct);
+        return Ok(list.Select(e => new { e.Id, e.CreatedByUserId, e.Question, e.Summary, e.CreatedAt, e.ExpiresAt, e.RevokedAt, e.ViewCount, e.Slug, e.HistoryId, url = e.PublicPath(orgSlug) }));
+    }
 
     /// <summary>Manually disables a link before it expires — the creator only.</summary>
     [HttpPost("{id}/revoke")]

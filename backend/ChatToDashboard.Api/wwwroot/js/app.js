@@ -7414,7 +7414,8 @@ function saveToHistory(question, dashboard) {
 
 async function loadHistory() {
   const res = await fetch('/api/history');
-  state.history = res.ok ? await res.json() : [];
+  const list = res.ok ? await res.json().catch(() => []) : [];
+  state.history = Array.isArray(list) ? list : [];
   state.historyLoaded = true;
   renderHistory();
 }
@@ -8478,7 +8479,7 @@ el('share-create-confirm').addEventListener('click', async () => {
     });
     if (!res.ok) { const p = await res.json().catch(() => null); throw new Error(p?.error || `فشل إنشاء الرابط (${res.status})`); }
     const saved = await res.json();
-    el('share-link').value = `${location.origin}/?share=${saved.id}`;
+    el('share-link').value = location.origin + (saved.url || `/?share=${saved.id}`);
     el('share-compose').classList.add('hidden');
     el('share-link-box').classList.remove('hidden');
     el('share-link').select();
@@ -8533,7 +8534,7 @@ async function loadShareList() {
       const revokeBtn = status.cls === 'live'
         ? `<button class="icon-btn revoke-share-btn" data-revoke="${esc(s.id)}" title="إلغاء الرابط">🚫</button>` : '';
       const copyBtn = status.cls === 'live'
-        ? `<button class="icon-btn copy-share-btn" data-copy="${esc(s.id)}" title="نسخ الرابط">🔗</button>` : '';
+        ? `<button class="icon-btn copy-share-btn" data-copy="${esc(s.id)}" data-url="${esc(s.url || '')}" title="نسخ الرابط">🔗</button>` : '';
       return `<div class="file-row${status.cls === 'inactive' ? ' stale' : ''}" data-id="${esc(s.id)}">
           <div class="fr-main">
             <div class="fr-icon">🔗</div>
@@ -8558,7 +8559,7 @@ async function loadShareList() {
       await loadShareList();
     }));
     list.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', async () => {
-      const link = `${location.origin}/?share=${btn.dataset.copy}`;
+      const link = location.origin + (btn.dataset.url || `/?share=${btn.dataset.copy}`);
       try { await navigator.clipboard.writeText(link); } catch {}
       const original = btn.textContent; btn.textContent = '✓'; setTimeout(() => { btn.textContent = original; }, 1200);
     }));
@@ -8861,6 +8862,7 @@ function ffTrackMount() {
   el('ff-pane').classList.add('ff-track'); el('ff-title').setAttribute('contenteditable', 'false');
   if (state.chatMode !== 'dashboard') setChatMode('dashboard');
   ffTrackHead(); ffTrackRenderMessages();
+  if (!Object.keys(FF.trackLinks).length) ffTrackLoadLinks();
 }
 function ffTrackUnmount() {
   if (!FF.track) return;
@@ -8877,8 +8879,13 @@ function ffTrackSetEdit(on) {
   el('edit-toggle').querySelectorAll('.edit-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === (state.editMode ? 'edit' : 'view')));
   renderDashboard();
 }
-function ffTrackShareKey() { return state.currentHistoryId ? 'jeem.trackShare:' + state.currentHistoryId : null; }
-function ffTrackShareId() { const k = ffTrackShareKey(); if (!k) return null; try { return localStorage.getItem(k); } catch { return null; } }
+// روابط لوحات المستخدم الحيّة من الخادم (GET /api/share/links): {historyId → {id, url}} — تُحمَّل مع المعرض وعند التركيب
+FF.trackLinks = {};
+async function ffTrackLoadLinks() {
+  try { const r = await fetch('/api/share/links'); const list = r.ok ? await r.json() : []; FF.trackLinks = {}; list.forEach(l => { FF.trackLinks[l.historyId] = l; }); } catch {}
+  ffTrackSync();
+}
+function ffTrackShareUrl() { const l = state.currentHistoryId && FF.trackLinks[state.currentHistoryId]; return l ? location.origin + l.url : null; }
 // مزامنة الشريط مع حالة اللوحة: زر التعديل والشريط الأصفر، التراجع/الإعادة، الرابط ونص النشر، حالة الحفظ
 function ffTrackSync() {
   if (!FF.track) return;
@@ -8889,9 +8896,9 @@ function ffTrackSync() {
   el('ff-tk-undo').disabled = !state.editHistory.past.length; el('ff-tk-redo').disabled = !state.editHistory.future.length;
   el('ff-tk-save-status').textContent = el('autosave-status').textContent;
   el('ff-tk-mobile').setAttribute('aria-pressed', el('dash-pane').classList.contains('mobile') ? 'true' : 'false');
-  const sid = ffTrackShareId();
-  el('ff-tk-link').classList.toggle('hidden', !sid); if (sid) el('ff-tk-link').title = `رابط المشاركة: ${location.origin}/?share=${sid} — انقر لنسخه`;
-  el('ff-tk-publish').textContent = sid ? 'تحديث النشر' : 'نشر';
+  const url = ffTrackShareUrl();
+  el('ff-tk-link').classList.toggle('hidden', !url); if (url) el('ff-tk-link').title = `الرابط الدائم: ${url} — انقر لنسخه`;
+  el('ff-tk-publish').textContent = url ? 'تحديث النشر' : 'نشر';
 }
 el('ff-tk-edit').addEventListener('click', () => ffTrackSetEdit(!state.editMode));
 el('ff-tk-edit-done').addEventListener('click', () => ffTrackSetEdit(false));
@@ -8912,7 +8919,7 @@ el('ff-tk-convert').addEventListener('click', e => {
   panel.classList.toggle('hidden', !open); el('ff-tk-convert').setAttribute('aria-expanded', open ? 'true' : 'false');
 });
 el('ff-tk-convert-panel').addEventListener('click', e => e.stopPropagation());
-el('ff-tk-link').addEventListener('click', () => { const sid = ffTrackShareId(); if (sid) ffCopyLink(`${location.origin}/?share=${sid}`, el('ff-tk-link')); });
+el('ff-tk-link').addEventListener('click', () => { const url = ffTrackShareUrl(); if (url) ffCopyLink(url, el('ff-tk-link')); });
 el('ff-tk-publish').addEventListener('click', () => ffTrackPublish());
 // نشر بنقرة واحدة: تفعيل اللوحة إن لزم (رابط المشاركة يحتاج مالكًا) ثم رابط مشاركة بلا انتهاء؛ إعادة النشر تنشئ رابطًا بأحدث نسخة وتوقف القديم
 async function ffTrackPublish() {
@@ -8922,16 +8929,14 @@ async function ffTrackPublish() {
   const btn = el('ff-tk-publish'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'ينشر…';
   try {
     if (!state.dashboardIsActive) { await activateHistoryEntry(state.currentHistoryId); if (!state.dashboardIsActive) throw new Error('تعذّر تفعيل اللوحة.'); }
-    const old = ffTrackShareId();
     const lastQuestion = d.name || [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة متابعة';
     const res = await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: lastQuestion, summary: d.summary, widgets: d.widgets, filters: d.filters || [], activeFilters: state.activeFilters || {}, expiresAt: null, historyId: state.currentHistoryId }) });
     const saved = await res.json().catch(() => null);
     if (!res.ok || !saved?.id) throw new Error(saved?.error || `(${res.status})`);
-    try { localStorage.setItem(ffTrackShareKey(), saved.id); } catch {}
-    state.historyLoaded = false; // ليعاد تحميل بطاقات لوحات المتابعة بشارة النشر
-    if (old && old !== saved.id) fetch(`/api/share/${encodeURIComponent(old)}/revoke`, { method: 'POST' }).catch(() => {});
-    const url = `${location.origin}/?share=${saved.id}`;
-    state.messages.push({ role: 'bot', text: (old ? 'حُدّث النشر برابط جديد يحمل أحدث نسخة (الرابط السابق أُوقف): ' : 'نُشرت اللوحة — هذا رابطها (بلا انتهاء، ويظهر أيضًا في «روابط المشاركة»): ') + url, html: `${old ? 'حُدّث النشر برابط جديد يحمل أحدث نسخة (الرابط السابق أُوقف):' : 'نُشرت اللوحة — هذا رابطها (بلا انتهاء، ويظهر أيضًا في «روابط المشاركة»):'} <a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>` });
+    FF.trackLinks[state.currentHistoryId] = { id: saved.id, historyId: state.currentHistoryId, url: saved.url || `/?share=${saved.id}` };
+    const url = location.origin + FF.trackLinks[state.currentHistoryId].url;
+    const lead = saved.updated ? 'حُدّثت اللوحة المنشورة على رابطها الدائم نفسه (الأرقام حيّة عند كل فتح):' : 'نُشرت اللوحة — هذا رابطها الدائم (بلا انتهاء، حيّ عند كل فتح، ويظهر أيضًا في «روابط المشاركة»):';
+    state.messages.push({ role: 'bot', text: `${lead} ${url}`, html: `${lead} <a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>` });
     renderMessages(); renderDashboard();
   } catch (e) { state.messages.push({ role: 'bot', text: 'تعذّر النشر: ' + e.message, error: true }); renderMessages(); }
   finally { btn.disabled = false; btn.textContent = label; ffTrackSync(); }
@@ -9049,6 +9054,7 @@ async function ffShowStart() {
   try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
   // «لوحات المتابعة» المحفوظة (سجل لوحات المحادثة) تظهر هنا كبطاقات مثل باقي الأنواع، وتُفتح داخل المضيف
   if (!state.historyLoaded) { try { await loadHistory(); } catch {} }
+  await ffTrackLoadLinks();
   FF.list = FF.list.concat(ffTrackDesigns()).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
   ffSetKind(FF.kind);
   ffRenderGallery();
@@ -9056,9 +9062,9 @@ async function ffShowStart() {
 // لوحة محادثة محفوظة بصيغة بطاقة تصميم حر: المعرّف `h:<id>`، النوع track، والرابط = رابط المشاركة المسجَّل محليًا لها إن وُجد
 function ffTrackDesigns() {
   return (state.history || []).map(h => {
-    let sid = null; try { sid = localStorage.getItem('jeem.trackShare:' + h.id); } catch {}
+    const link = FF.trackLinks[h.id] || null;
     const created = h.createdAt ? (h.createdAt.endsWith('Z') ? h.createdAt : h.createdAt + 'Z') : null;
-    return { id: 'h:' + h.id, track: true, history: h, kind: 'track', title: h.question || firstSentence(h.summary || '', 60) || 'لوحة متابعة', updatedAt: created, createdByUserId: h.userId, publishedUrl: sid ? `/?share=${sid}` : null, publishedActive: sid ? true : undefined, widgets: parseWidgets(h.widgetsJson), renderKind: h.renderKind || null };
+    return { id: 'h:' + h.id, track: true, history: h, kind: 'track', title: h.question || firstSentence(h.summary || '', 60) || 'لوحة متابعة', updatedAt: created, createdByUserId: h.userId, publishedUrl: link ? link.url : null, publishedActive: link ? true : undefined, widgets: parseWidgets(h.widgetsJson), renderKind: h.renderKind || null };
   });
 }
 // فتح لوحة محفوظة داخل مضيف «لوحات المتابعة»: الحالة نفسها التي تعرضها شاشة المحادثة (openHistoryEntry) لكن داخل تصميم حر
@@ -10371,7 +10377,7 @@ el('api-token-copy-snippet').addEventListener('click', async () => {
 // A URL like /?share=<id> opens a read-only public view: no login, no chat, no sources —
 // just the published dashboard, fetched straight from the share endpoint and rendered
 // through the same renderDashboard() as everything else.
-async function bootSharedView(shareId) {
+async function bootSharedView(shareId, bySlugApi) {
   // A share is a frozen snapshot (Part 3) — state.shareId only marks "we're in the public
   // share view" (banner, read-only filter display); it no longer routes any live query.
   state.shareId = shareId;
@@ -10380,7 +10386,7 @@ async function bootSharedView(shareId) {
   document.querySelector('header').style.display = 'none';
   el('chat-rail').style.display = 'none';
   try {
-    const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
+    const res = await fetch(bySlugApi || `/api/share/${encodeURIComponent(shareId)}`);
     if (res.status === 410) {
       const payload = await res.json().catch(() => null);
       el('shared-banner-q').textContent = 'رابط غير نشط';
@@ -10395,6 +10401,7 @@ async function bootSharedView(shareId) {
     }
     if (!res.ok) throw new Error(res.status === 404 ? 'الرابط غير موجود أو تم حذفه.' : `تعذّر التحميل (${res.status})`);
     const shared = await res.json();
+    if (!shareId) { shareId = shared.id; state.shareId = shareId; }
     el('shared-banner-q').textContent = shared.question;
     document.title = `${shared.question} — لوحة مشاركة`;
     if (shared.creatorName) el('shared-banner-by').textContent = `من ${shared.creatorName}`;
@@ -13262,6 +13269,9 @@ async function bootEmbedView(pubId, startPage) {
   const params = new URLSearchParams(location.search);
   const shareId = params.get('share');
   if (shareId) { await bootSharedView(shareId); return; }
+  // الرابط المقروء للوحة متابعة مشارَكة: /d/{اسم-المنظمة}/{اسم-اللوحة} → يُحلّ إلى المعرّف ثم المسار نفسه
+  const dm = location.pathname.match(/^\/d\/([^/]+)\/([^/]+)\/?$/);
+  if (dm) { await bootSharedView(null, `/api/share/by/${encodeURIComponent(decodeURIComponent(dm[1]))}/${encodeURIComponent(decodeURIComponent(dm[2]))}`); return; }
   if (params.get('embed') === '1' && params.get('pub')) {
     await bootEmbedView(params.get('pub'), parseInt(params.get('p'), 10) || 0);
     return;

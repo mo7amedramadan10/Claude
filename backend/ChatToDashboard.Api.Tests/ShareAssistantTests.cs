@@ -32,3 +32,24 @@ public class ShareAssistantTests
         Assert.Contains("العنوان: x", text);
     }
 }
+
+/// <summary>الرابط المقروء للوحة المشارَكة /d/{org}/{slug} والاحتياطي بالمعرّف.</summary>
+public class SharePublicPathTests
+{
+    [Fact]
+    public void PublicPath_UsesSlugWhenAvailable()
+    {
+        var e = new ChatToDashboard.Api.Share.SharedDashboard { Id = "abc", Slug = "لوحة-الفرص" };
+        Assert.Equal("/d/ثقة/لوحة-الفرص", e.PublicPath("ثقة"));
+        Assert.Equal("/?share=abc", e.PublicPath(null));
+        Assert.Equal("/?share=abc", new ChatToDashboard.Api.Share.SharedDashboard { Id = "abc" }.PublicPath("ثقة"));
+    }
+
+    [Fact]
+    public void IsLive_RespectsRevokeAndExpiry()
+    {
+        Assert.True(new ChatToDashboard.Api.Share.SharedDashboard().IsLive);
+        Assert.False(new ChatToDashboard.Api.Share.SharedDashboard { RevokedAt = DateTime.UtcNow }.IsLive);
+        Assert.False(new ChatToDashboard.Api.Share.SharedDashboard { ExpiresAt = DateTime.UtcNow.AddMinutes(-1) }.IsLive);
+    }
+}

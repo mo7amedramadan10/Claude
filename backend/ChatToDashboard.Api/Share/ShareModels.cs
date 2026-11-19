@@ -38,6 +38,16 @@ public class SharedDashboard
     /// <summary>A simple open/view count, incremented on every successful (non-expired,
     /// non-revoked) anonymous GET — surfaced to the creator as a basic usage signal.</summary>
     public int ViewCount { get; set; }
+
+    /// <summary>الرابط المقروء /d/{اسم-المنظمة}/{اسم-اللوحة}: فريد داخل المنظمة، يُشتق من عنوان اللوحة عند النشر.</summary>
+    public string? Slug { get; set; }
+    public string? OrganizationId { get; set; }
+    /// <summary>اللوحة المحفوظة التي أُخذ منها الرابط — ليُحدَّث الرابط نفسه عند إعادة النشر بدل إنشاء رابط جديد.</summary>
+    public string? HistoryId { get; set; }
+
+    public bool IsLive => RevokedAt is null && (ExpiresAt is null || ExpiresAt >= DateTime.UtcNow);
+    /// <summary>المسار العام بلا ترميز ليبقى العربي مقروءًا عند النسخ؛ بلا اسم → الرابط القديم بالمعرّف.</summary>
+    public string PublicPath(string? orgSlug) => !string.IsNullOrWhiteSpace(Slug) && !string.IsNullOrWhiteSpace(orgSlug) ? $"/d/{orgSlug}/{Slug}" : $"/?share={Id}";
 }
 
 /// <summary>Body of POST /api/share — the frontend sends the widgets array verbatim.</summary>
@@ -71,4 +81,8 @@ public class CreateShareRequest
     /// ShareController.Create.</summary>
     [JsonPropertyName("historyId")]
     public string? HistoryId { get; set; }
+
+    /// <summary>اسم الرابط المقروء (اختياري؛ يُشتق من العنوان إن غاب).</summary>
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
 }

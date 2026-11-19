@@ -47,6 +47,9 @@ public class ShareStore
                      ("ExpiresAt", "DATETIME2"),
                      ("RevokedAt", "DATETIME2"),
                      ("ViewCount", "INT"),
+                     ("Slug", "NVARCHAR(100)"),
+                     ("OrganizationId", "NVARCHAR(64)"),
+                     ("HistoryId", "NVARCHAR(64)"),
                  })
         {
             try
@@ -74,9 +77,9 @@ public class ShareStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"INSERT INTO {Table} (Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
-            "FiltersJson, ActiveFiltersJson, CreatedAt, ExpiresAt, RevokedAt, ViewCount) " +
+            "FiltersJson, ActiveFiltersJson, CreatedAt, ExpiresAt, RevokedAt, ViewCount, Slug, OrganizationId, HistoryId) " +
             "VALUES (@Id, @CreatedByUserId, @Question, @Summary, @WidgetsJson, " +
-            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ExpiresAt, @RevokedAt, @ViewCount)",
+            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ExpiresAt, @RevokedAt, @ViewCount, @Slug, @OrganizationId, @HistoryId)",
             entry);
         return entry;
     }
@@ -93,9 +96,56 @@ public class ShareStore
         return await connection.QuerySingleOrDefaultAsync<SharedDashboard>(
             "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
             "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
-            "CreatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount " +
+            "CreatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, Slug, OrganizationId, HistoryId " +
             $"FROM {Table} WHERE Id = @id",
             new { id });
+    }
+
+    /// <summary>الرابط المقروء: اسم اللوحة داخل منظمة (بلا حساسية لحالة الأحرف).</summary>
+    public async Task<SharedDashboard?> GetBySlugAsync(string organizationId, string slug, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<SharedDashboard>(
+            "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
+            "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
+            "CreatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, Slug, OrganizationId, HistoryId " +
+            $"FROM {Table} WHERE OrganizationId = @organizationId AND LOWER(Slug) = LOWER(@slug) AND RevokedAt IS NULL",
+            new { organizationId, slug });
+    }
+
+    public async Task<bool> SlugTakenAsync(string organizationId, string slug, string? excludeId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var n = await connection.ExecuteScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {Table} WHERE OrganizationId = @organizationId AND LOWER(Slug) = LOWER(@slug) AND RevokedAt IS NULL AND (@excludeId IS NULL OR Id <> @excludeId)",
+            new { organizationId, slug, excludeId });
+        return n > 0;
+    }
+
+    /// <summary>رابط اللوحة المحفوظة الحالي (غير مُلغى) لصاحبه — ليُحدَّث في مكانه عند إعادة النشر.</summary>
+    public async Task<SharedDashboard?> FindByHistoryAsync(string userId, string historyId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.QueryFirstOrDefaultAsync<SharedDashboard>(
+            "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
+            "COALESCE(FiltersJson, '[]') AS FiltersJson, COALESCE(ActiveFiltersJson, '{}') AS ActiveFiltersJson, " +
+            "CreatedAt, ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, Slug, OrganizationId, HistoryId " +
+            $"FROM {Table} WHERE CreatedByUserId = @userId AND HistoryId = @historyId AND RevokedAt IS NULL ORDER BY CreatedAt DESC",
+            new { userId, historyId });
+    }
+
+    /// <summary>تحديث لقطة الرابط في مكانه (إعادة النشر على الرابط نفسه).</summary>
+    public async Task<bool> UpdateSnapshotAsync(string userId, string id, string question, string summary, string widgetsJson, string filtersJson, string activeFiltersJson, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var affected = await connection.ExecuteAsync(
+            $"UPDATE {Table} SET Question = @question, Summary = @summary, WidgetsJson = @widgetsJson, FiltersJson = @filtersJson, ActiveFiltersJson = @activeFiltersJson WHERE Id = @id AND CreatedByUserId = @userId",
+            new { id, userId, question, summary, widgetsJson, filtersJson, activeFiltersJson });
+        return affected > 0;
     }
 
     /// <summary>Bumps the view count by one — called only for a genuinely active (not
@@ -113,7 +163,7 @@ public class ShareStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<SharedDashboard>(
             "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, CreatedAt, " +
-            $"ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount FROM {Table} " +
+            $"ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, Slug, OrganizationId, HistoryId FROM {Table} " +
             "WHERE CreatedByUserId = @userId ORDER BY CreatedAt DESC",
             new { userId });
         return rows.ToList();
