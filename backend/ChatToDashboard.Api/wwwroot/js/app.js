@@ -910,8 +910,16 @@ function positionWidgetMenu(btn, menu) {
   // the menu fully visible regardless, even if that means it no longer hugs the button.
   top = Math.min(Math.max(top, margin), window.innerHeight - menuRect.height - margin);
   const isRtl = document.documentElement.getAttribute('dir') !== 'ltr';
+  // حدود القصّ الفعلية: اللوحة تعيش داخل حاوية تمرير (#dash-pane) تقصّ ما يخرج عنها، فالنافذة وحدها لا تكفي —
+  // آخر بطاقة في الصف كانت قائمتها تمتد خارج الحاوية وتُبتر (علّة أبلغ عنها المستخدم بصورة).
+  const clip = btn.closest('#dash-pane, .modal-body, [data-menu-clip]');
+  const clipRect = clip ? clip.getBoundingClientRect() : { left: 0, right: window.innerWidth };
+  const minLeft = Math.max(margin, clipRect.left + margin), maxRight = Math.min(window.innerWidth - margin, clipRect.right - margin);
   let left = isRtl ? btnRect.right - menuRect.width : btnRect.left;
-  left = Math.min(Math.max(left, margin), window.innerWidth - menuRect.width - margin);
+  // عند الخروج من الطرف تنعكس القائمة لتمتد في الاتجاه الآخر من الزر نفسه، ثم تُحصر داخل الحدود احتياطًا.
+  if (left < minLeft) left = btnRect.left;
+  if (left + menuRect.width > maxRight) left = btnRect.right - menuRect.width;
+  left = Math.min(Math.max(left, minLeft), maxRight - menuRect.width);
   menu.style.position = 'absolute';
   menu.style.insetInlineEnd = 'auto';
   menu.style.top = (top - parentRect.top) + 'px';
