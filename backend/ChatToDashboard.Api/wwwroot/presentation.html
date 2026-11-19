@@ -28,6 +28,8 @@
   .msg .big { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
   .msg .sub { color: #6b7280; }
   .hidden { display: none !important; }
+  #loading.frame-pending { position: absolute; inset: 0; z-index: 5; background: #f4f5f7; }
+  body { position: relative; }
   .brand b { color: #1f5fbf; font-weight: 700; }
   @media (max-width: 480px) { .bar .by, .brand { display: none; } .bar .logo img { height: 24px; } }
 </style>
@@ -42,10 +44,12 @@
     <span class="export hidden" id="export"><span class="lbl">تصدير:</span><a id="exp-pdf" href="#" target="_blank" rel="noopener">PDF</a><span class="sep">·</span><a id="exp-pptx" href="#">PowerPoint</a></span>
     <span class="brand">عرض مشارك عبر <b>جيم</b></span>
   </header>
+  <div class="msg" id="loading"><div id="loading-slot"></div></div>
   <div class="msg hidden" id="msg"><div><div class="big" id="msg-big"></div><div class="sub" id="msg-sub"></div></div></div>
   <iframe id="frame" class="hidden" title="محتوى العرض"
           sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads allow-popups-to-escape-sandbox"
           referrerpolicy="no-referrer"></iframe>
+<script src="/js/jeem-loader.js"></script>
 <script src="/js/jeem-assistant.js"></script>
 <script>
 (async () => {
@@ -55,7 +59,8 @@
     ? `/api/presentations/by/${encodeURIComponent(parts[0])}/${encodeURIComponent(parts[1])}`
     : `/api/presentations/${encodeURIComponent(parts[0] || '')}`;
   const $ = s => document.getElementById(s);
-  const show = (big, sub) => { $('msg').classList.remove('hidden'); $('msg-big').textContent = big; $('msg-sub').textContent = sub || ''; $('title').textContent = big; };
+  if (window.JEEM_LOADER) $('loading-slot').innerHTML = JEEM_LOADER.html({ title: 'جارٍ تحميل العرض…', size: 64 });
+  const show = (big, sub) => { $('loading').classList.add('hidden'); $('msg').classList.remove('hidden'); $('msg-big').textContent = big; $('msg-sub').textContent = sub || ''; $('title').textContent = big; };
   try {
     const res = await fetch(`${apiBase}/meta`);
     if (res.status === 410) {
@@ -71,7 +76,8 @@
     const src = `${apiBase}/content`;
     $('open').href = src; $('open').classList.remove('hidden');
     $('exp-pdf').href = `${src}?print=1`; $('exp-pptx').href = `${apiBase}/export/pptx`; $('export').classList.remove('hidden');
-    $('frame').src = src; $('frame').classList.remove('hidden');
+    $('frame').addEventListener('load', () => $('loading').classList.add('hidden'), { once: true });
+    $('frame').src = src; $('frame').classList.remove('hidden'); $('loading').style.top = (document.querySelector('header.bar')?.offsetHeight || 0) + 'px'; $('loading').classList.add('frame-pending');
     installBridge(apiBase);
     // مساعد «جيم»: زر عائم يشرح محتوى الملف كله ويناقشه (صوتًا أو كتابة) — خارج الإطار المعزول (js/jeem-assistant.js)
     if (window.JEEM_ASSISTANT) window.jeemAssistant = JEEM_ASSISTANT.mount({ apiBase, title: meta.title });

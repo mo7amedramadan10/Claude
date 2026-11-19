@@ -8854,7 +8854,10 @@ function ffTrackActive() { return !!FF.track; }
 // حالة الانتظار في اللوحة: داخل «لوحات المتابعة» طبقة الانتظار نفسها التي يعرضها تصميم حر (دوّار + عنوان + تلميح
 // فوق مساحة العمل) بدل هيكل الأعمدة الداكن الخاص بشاشة المحادثة؛ وفي شاشة المحادثة الهيكل كما هو.
 function dashLoadingHtml(title, hint) {
-  if (ffTrackActive()) { ccSetLoading('ff-pane', title || 'جارٍ بناء اللوحة من بياناتك', hint || 'الموديل يستعلم عن بياناتك ويبني العناصر — قد يستغرق حتى دقيقة، وستظهر اللوحة هنا فور اكتمالها.'); return '<div class="empty"></div>'; }
+  title = title || 'جارٍ بناء اللوحة من بياناتك'; hint = hint || 'الموديل يستعلم عن بياناتك ويبني العناصر — قد يستغرق حتى دقيقة، وستظهر اللوحة هنا فور اكتمالها.';
+  if (ffTrackActive()) { ccSetLoading('ff-pane', title, hint); return '<div class="empty"></div>'; }
+  // شاشة المحادثة: شعار جيم المتحرك في منتصف اللوحة (بدل هيكل الأعمدة الداكن القديم) — بطلب المستخدم للاتساق.
+  if (window.JEEM_LOADER) return `<div class="empty dash-wait"><div>${JEEM_LOADER.html({ title, hint, size: 72 })}</div></div>`;
   return `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
 }
 function dashLoadingDone() { if (ffTrackActive()) ccSetLoading('ff-pane', null); }
@@ -9491,12 +9494,15 @@ function ffRender() {
 }
 function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }
 // طبقة انتظار فوق مساحة العمل (تصميم حر / منشئ العروض) أثناء نداء الموديل أو تحديث البيانات. null يزيلها.
+// طبقة «جارٍ التحديث…» فوق اللوحة عند تطبيق الفلاتر: الشعار المتحرك نفسه بدل الدوّار.
+if (window.JEEM_LOADER) document.querySelectorAll('#dash-loading .jl-slot').forEach(sl => { sl.innerHTML = JEEM_LOADER.html({ size: 44 }); });
 function ccSetLoading(paneId, title, hint) {
   const pane = el(paneId); if (!pane) return;
   let ov = pane.querySelector(':scope > .cc-loading');
   if (!title) { if (ov) ov.remove(); return; }
   if (!ov) { ov = document.createElement('div'); ov.className = 'cc-loading'; ov.setAttribute('role', 'status'); ov.setAttribute('aria-live', 'polite'); pane.appendChild(ov); }
-  ov.innerHTML = `<div class="box"><div class="cc-spin" aria-hidden="true"></div><b>${esc(title)}</b>${hint ? `<small>${esc(hint)}</small>` : ''}</div>`;
+  // شعار جيم بأعمدته المتحركة (js/jeem-loader.js) بدل الدوّار العام — الاتساق نفسه في كل حالات الانتظار.
+  ov.innerHTML = `<div class="box">${window.JEEM_LOADER ? JEEM_LOADER.html({ size: 64 }) : '<div class="cc-spin" aria-hidden="true"></div>'}<b>${esc(title)}</b>${hint ? `<small>${esc(hint)}</small>` : ''}</div>`;
 }
 function ffRenderMessages() {
   const box = el('ff-messages');
@@ -10399,6 +10405,7 @@ async function bootSharedView(shareId, bySlugApi) {
   document.body.classList.add('is-shared'); // بلا قائمة جانبية ولا شريط علوي — كصفحة العرض المنشور
   document.querySelector('header').style.display = 'none';
   el('chat-rail').style.display = 'none';
+  if (window.JEEM_LOADER) el.dash.innerHTML = `<div class="empty dash-wait"><div>${JEEM_LOADER.html({ title: 'جارٍ تحميل اللوحة…', size: 72 })}</div></div>`;
   try {
     const res = await fetch(bySlugApi || `/api/share/${encodeURIComponent(shareId)}`);
     if (res.status === 410) {

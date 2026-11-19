@@ -165,6 +165,8 @@ nav.tabs{display:flex;gap:4px;margin-inline-start:8px}
   align-items:center;justify-content:center;flex-direction:column;gap:10px}
 .dash-loading-overlay.open{display:flex}
 .dash-loading-overlay .spinner{width:30px;height:30px;border-width:3px}
+.dash-loading-overlay .jl-slot{display:block}
+#dash .empty.dash-wait{min-height:260px}
 .dash-loading-overlay span{font-size:13px;color:var(--ink-2);font-weight:600}
 
 .rail-size-toggle{display:inline-flex;border:1px solid var(--grid);border-radius:9px;overflow:hidden}
