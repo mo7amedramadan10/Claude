@@ -1325,7 +1325,7 @@ new MutationObserver(() => { if (typeof ffTrackSync === 'function') ffTrackSync(
 function scheduleAutosave() {
   // A Viewer never edits — their applyFilters()-driven live refresh (see openHistoryEntry)
   // must not try to persist anything back, or it'd just fail against Update()'s role check.
-  if (!state.currentUser || !state.dashboard?.widgets?.length || state.dashboardRole === 'viewer') return;
+  if (state.shareId || !state.currentUser || !state.dashboard?.widgets?.length || state.dashboardRole === 'viewer') return;
   el('autosave-status').textContent = 'جارٍ الحفظ…';
   clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(doAutosave, 900);
@@ -1857,7 +1857,7 @@ function crossFilterId(table, field) { return 'xfilter:' + table + '::' + field;
 function isOverflowBucketLabel(label) { return typeof label === 'string' && /^\+\d+ .+أخرى$/.test(label); }
 
 function toggleCrossFilter(table, field, value, label) {
-  if (state.shareId || isOverflowBucketLabel(value)) return; // a frozen share has nothing to re-run
+  if ((state.shareId && !state.shareLive) || isOverflowBucketLabel(value)) return; // a frozen share has nothing to re-run
   const id = crossFilterId(table, field);
   const current = state.activeFilters[id] || [];
   pushUndo();
@@ -1878,7 +1878,7 @@ function toggleCrossFilter(table, field, value, label) {
 // value via the exact `labels` array the chart itself was built from. Mutates `options`
 // in place — call before `new ApexCharts(holder, options)`.
 function attachCrossFilterClick(options, holder, w, labels) {
-  if (state.shareId) return;
+  if (state.shareId && !state.shareLive) return;
   const target = resolveCrossFilterField(w);
   if (!target || !Array.isArray(labels) || !labels.length) return;
   holder.classList.add('chart-clickable');
@@ -3605,7 +3605,7 @@ function renderDashboard() {
   const titleText = d.name || firstSentence(d.summary, 80) || 'لوحة متابعة';
   const headEdit = state.editMode && editable && !state.shareId;
   const subText = d.summary && d.summary !== titleText ? d.summary : (headEdit ? (d.summary || '') : '');
-  const live = !state.shareId && (d.widgets || []).some(w => w.query?.sql && !w.query.integrationId);
+  const live = (!state.shareId || state.shareLive) && (d.widgets || []).some(w => w.query?.sql && !w.query.integrationId);
   el.dash.innerHTML = `<section class="dash-head">
       ${brand.logo ? `<img class="dash-logo" src="${esc(brand.logo)}" alt="${esc(brand.name || 'الشعار')}">` : ''}
       <div class="dash-title">
@@ -3640,7 +3640,7 @@ function renderDashboard() {
 
   // A share (Part 3) is a frozen snapshot — its filter bar is informational only (which
   // selection was active when it was published), never interactive.
-  if (state.shareId) {
+  if (state.shareId && !state.shareLive) {
     if (d.filters?.length) el.dash.appendChild(buildFilterBarReadOnly(d.filters));
   } else if (d.filters?.length || Object.keys(state.crossFilterDefs || {}).length) {
     el.dash.appendChild(buildFilterBar(d.filters || []));
@@ -3945,7 +3945,7 @@ async function applyFilters() {
   // A share is a frozen snapshot (Part 3) — nothing in it is ever re-run. Its filter
   // controls are read-only (buildFilterBarReadOnly) and it has no refresh button, so this
   // shouldn't normally be reachable in share view at all; the guard is defense in depth.
-  if (state.shareId) return;
+  if (state.shareId && !state.shareLive) return; // لقطة مجمّدة: لا شيء يُعاد تنفيذه؛ الرابط الحيّ يعمل بصلاحية صاحبه
   const mySeq = ++applyFiltersSeq;
   state.filtersLoading = true;
   updateFiltersLoadingUI();
@@ -3981,6 +3981,23 @@ async function applyFilters() {
         // permission, on every open/filter/refresh — same "index-only, never client-supplied
         // sql/table" endpoint shape as the share-scoped one above, just Owner- instead of
         // sharer-scoped and auth-required instead of anonymous.
+        if (state.shareId && state.shareLive) {
+          // رابط مشاركة حيّ: الفهرس فقط إلى /api/share/{id}/widgets/{i}/refresh — يُنفَّذ بصلاحية صاحب الرابط
+          const res = await fetch(`/api/share/${encodeURIComponent(state.shareId)}/widgets/${index}/refresh`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filters }),
+          });
+          if (mySeq !== applyFiltersSeq) return;
+          if (res.status === 409) { const payload = await res.json().catch(() => null); if (mySeq !== applyFiltersSeq) return; state.shareLive = false; state.filterRefreshWarning = payload?.reason || null; break; }
+          if (!res.ok) { if (attempt === 1) failed++; continue; }
+          const payload = await res.json();
+          if (mySeq !== applyFiltersSeq) return;
+          w.data = payload.data;
+          if ('xKey' in payload) w.xKey = payload.xKey;
+          if ('yKey' in payload) w.yKey = payload.yKey;
+          if ('source' in payload) w.source = payload.source;
+          break;
+        }
         if (state.dashboardIsActive && state.currentHistoryId) {
           const res = await fetch(`/api/history/${encodeURIComponent(state.currentHistoryId)}/widgets/${index}/refresh`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -4047,7 +4064,7 @@ async function applyFilters() {
 
   state.filterRefreshWarning = failed > 0
     ? (failed === 1 ? '⚠ تعذّر تحديث رسم واحد.' : `⚠ تعذّر تحديث ${failed} رسومات.`)
-    : null;
+    : (state.shareId && !state.shareLive ? state.filterRefreshWarning : null); // رابط مشاركة فقد حيويته يحتفظ بسبب 409
   state.filtersLoading = false;
   state.lastRefreshedAt = new Date();
   updateFiltersLoadingUI();
@@ -10388,11 +10405,27 @@ async function bootSharedView(shareId) {
       filters: JSON.parse(shared.filtersJson || '[]'),
     };
     state.activeFilters = JSON.parse(shared.activeFiltersJson || '{}');
+    state.lastRefreshedAt = shared.createdAt ? new Date(shared.createdAt + (String(shared.createdAt).endsWith('Z') ? '' : 'Z')) : null;
+    // رابط حيّ: الفلاتر تعمل وزر التحديث يعيد تنفيذ الاستعلامات بصلاحية صاحب الرابط، وتُحدَّث الأرقام عند كل فتح
+    state.shareLive = !!shared.live;
+    el('shared-refresh').classList.toggle('hidden', !state.shareLive);
+    if (state.shareLive) sharedSetRefreshNote('يحدّث الأرقام…');
   } catch (err) {
     el('shared-banner-q').textContent = err.message;
   }
   renderDashboard();
+  if (state.shareLive) { await applyFilters(); sharedSetRefreshNote(); }
 }
+function sharedSetRefreshNote(text) {
+  const n = el('shared-refresh-note'); if (!n) return;
+  el('shared-refresh').classList.toggle('hidden', !state.shareLive);
+  n.textContent = text || (state.shareLive ? formatUpdatedAt(state.lastRefreshedAt) : '');
+}
+el('shared-refresh').addEventListener('click', async () => {
+  if (!state.shareLive || state.filtersLoading) return;
+  const btn = el('shared-refresh'); btn.disabled = true; sharedSetRefreshNote('يحدّث الأرقام…');
+  try { await applyFilters(); } finally { btn.disabled = false; sharedSetRefreshNote(); }
+});
 
 // مساعد «جيم» على رابط المشاركة (الزر العائم نفسه الذي في صفحة العرض المنشور، js/jeem-assistant.js يُحمَّل عند الحاجة فقط)
 // على واجهة /api/share/{id}/assistant التي تجيب من لقطة اللوحة (الملخص والعناصر وبياناتها).

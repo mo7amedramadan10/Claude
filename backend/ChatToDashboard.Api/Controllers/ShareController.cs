@@ -1,6 +1,9 @@
 using System.Security.Claims;
+using System.Text.Json;
 using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Presentations;
+using ChatToDashboard.Api.Sources;
+using ChatToDashboard.Api.Widgets;
 using ChatToDashboard.Api.Share;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -24,13 +27,19 @@ public class ShareController : ControllerBase
     private readonly UserStore _users;
     private readonly HistoryStore _history;
     private readonly PresentationAssistantService _assistant;
+    private readonly DashboardAccessService _access;
+    private readonly WidgetQueryService _widgets;
+    private readonly PermissionsService _permissions;
 
-    public ShareController(ShareStore store, UserStore users, HistoryStore history, PresentationAssistantService assistant)
+    public ShareController(ShareStore store, UserStore users, HistoryStore history, PresentationAssistantService assistant, DashboardAccessService access, WidgetQueryService widgets, PermissionsService permissions)
     {
         _store = store;
         _users = users;
         _history = history;
         _assistant = assistant;
+        _access = access;
+        _widgets = widgets;
+        _permissions = permissions;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -101,10 +110,14 @@ public class ShareController : ControllerBase
 
         await _store.IncrementViewCountAsync(id, ct);
         var by = await _users.FindByIdAsync(entry.CreatedByUserId, ct);
+        // حيّة: الفلاتر والتحديث يعيدان تنفيذ الاستعلامات بصلاحية صاحب الرابط ما دام حسابه قائمًا وصلاحيته على البيانات صالحة
+        var live = by is not null && await _access.CheckEligibilityAsync(by, entry.WidgetsJson, ct) is null
+            && JsonHasQuery(entry.WidgetsJson);
         return Ok(new
         {
             entry.Id, entry.Question, entry.Summary, entry.WidgetsJson, entry.FiltersJson, entry.ActiveFiltersJson, entry.CreatedAt, entry.ExpiresAt,
             creatorName = by?.DisplayName ?? by?.Username, // لرأس صفحة المشاركة («من فلان») كصفحة العرض المنشور
+            live,
         });
     }
 
@@ -166,5 +179,62 @@ public class ShareController : ControllerBase
         {
             return StatusCode(502, new { error = "تعذّر الحصول على رد من المساعد الآن — حاول مرة أخرى.", detail = ex.Message });
         }
+    }
+
+    private static bool JsonHasQuery(string widgetsJson)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(widgetsJson ?? "[]");
+            return doc.RootElement.ValueKind == JsonValueKind.Array
+                && doc.RootElement.EnumerateArray().Any(w => w.TryGetProperty("query", out var q) && q.ValueKind == JsonValueKind.Object && q.TryGetProperty("table", out _));
+        }
+        catch (JsonException) { return false; }
+    }
+
+    /// <summary>
+    /// رابط المشاركة حيّ (طلب المستخدم: الفلاتر والتحديث تعمل في الصفحة نفسها): إعادة تنفيذ عنصر واحد من لقطة الرابط
+    /// بفهرسه فقط (لا جدول ولا SQL من العميل) مع الفلاتر المطلوبة، بصلاحية **صاحب الرابط** لا المشاهد المجهول —
+    /// بالشكل نفسه الذي تعمل به HistoryController.RefreshWidget للوحة النشطة. 409 إن فقد صاحب الرابط صلاحيته.
+    /// </summary>
+    [HttpPost("{id}/widgets/{index:int}/refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RefreshWidget(string id, int index, [FromBody] RefreshDashboardWidgetRequest request, CancellationToken ct)
+    {
+        var entry = await _store.GetAsync(id, ct);
+        if (entry is null || !IsLive(entry)) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        var owner = await _users.FindByIdAsync(entry.CreatedByUserId, ct);
+        if (owner is null) return Conflict(new { disabled = true, reason = "تعذّر العثور على صاحب الرابط — الأرقام المعروضة لقطة وقت المشاركة." });
+        var ineligible = await _access.CheckEligibilityAsync(owner, entry.WidgetsJson, ct);
+        if (ineligible is not null) return Conflict(new { disabled = true, reason = "صاحب الرابط لم تعد له صلاحية وصول صالحة للبيانات — الأرقام المعروضة لقطة وقت المشاركة." });
+        var selection = await _permissions.GetEffectiveSelectionAsync(owner, SourceSelection.AllEnabled(), ct);
+
+        JsonElement widget;
+        try
+        {
+            var widgets = JsonDocument.Parse(entry.WidgetsJson).RootElement;
+            if (index < 0 || index >= widgets.GetArrayLength()) return BadRequest(new { error = "عنصر غير موجود." });
+            widget = widgets[index];
+        }
+        catch (JsonException) { return BadRequest(new { error = "بيانات اللوحة تالفة." }); }
+        if (!widget.TryGetProperty("query", out var query) || query.ValueKind != JsonValueKind.Object)
+            return BadRequest(new { error = "هذا العنصر غير قابل بالتحديث." });
+        try
+        {
+            if (query.TryGetProperty("sql", out var sqlProp) && sqlProp.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(sqlProp.GetString()))
+            {
+                var table = query.TryGetProperty("table", out var t) ? t.GetString() ?? "" : "";
+                var result = await _widgets.ExecuteSqlFilterAsync(table, sqlProp.GetString()!, request.Filters, selection, ct);
+                return Ok(new { data = result.Data });
+            }
+            if (query.TryGetProperty("table", out var tableProp) && tableProp.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(tableProp.GetString()))
+            {
+                var wizardRequest = query.Deserialize<WidgetQueryRequest>() ?? throw new WidgetQueryValidationException("تعذّرت قراءة استعلام هذا العنصر.");
+                wizardRequest.Filters = request.Filters;
+                return Ok(await _widgets.ExecuteAsync(wizardRequest, selection, ct));
+            }
+        }
+        catch (WidgetQueryValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        return BadRequest(new { error = "هذا العنصر غير قابل بالتحديث." });
     }
 }
