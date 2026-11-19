@@ -1045,14 +1045,26 @@ tr:last-child td{border-bottom:0}
   text-decoration:underline;font-size:12px;padding:2px}
 
 /* ---------- shared read-only view ---------- */
-#shared-banner{display:flex;align-items:center;gap:12px;padding:11px 20px;
-  background:var(--accent-soft);border-bottom:1px solid #cfe1f8;color:var(--ink-2)}
+#shared-banner{display:flex;align-items:center;gap:12px;padding:8px 16px;min-height:44px;
+  background:#fff;border-bottom:1px solid #e3e6ea;color:#1f2430}
+#shared-banner .logo{display:inline-flex;align-items:center;flex-shrink:0;padding-inline-end:12px;border-inline-end:1px solid #e3e6ea}
+#shared-banner .logo img{height:28px;width:auto;display:block}
+#shared-banner .by{font-size:12.5px;color:#6b7280;white-space:nowrap}
+#shared-banner .brand{margin-inline-start:auto;font-size:12px;color:#9aa3ad;white-space:nowrap}
+#shared-banner .brand b{color:#1f5fbf;font-weight:700}
+@media (max-width:480px){#shared-banner .by,#shared-banner .brand{display:none}#shared-banner .logo img{height:24px}}
+/* رابط المشاركة: بلا قائمة جانبية ولا شريط علوي ولا شريط أدوات اللوحة — صفحة مشاهدة فقط كصفحة العرض المنشور */
+body.is-shared aside.sidebar,body.is-shared .topbar,body.is-shared #dash-toolbar,body.is-shared #chat-rail,body.is-shared #chat-fab{display:none !important}
+body.is-shared .app{display:block}
+body.is-shared .main,body.is-shared #screen-chat{margin:0 !important;width:100% !important;max-width:none !important}
+body.is-shared #screen-chat{height:calc(100vh - 45px)}
+body.is-shared #dash-pane{width:100%;max-width:none}
 /* An ID selector always beats a bare class selector regardless of source order, so plain
    ".hidden{display:none}" alone can never override the "display:flex" above — this element
    showed up on every screen, not just the share link, until it had its own hidden override. */
 #shared-banner.hidden{display:none}
-#shared-banner .q{font-weight:600;color:var(--ink)}
-#shared-banner a{margin-inline-start:auto;color:var(--accent);font-weight:600;text-decoration:none}
+#shared-banner .q{font-weight:700;font-size:16px;color:#1f2430;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 
 /* ---------- login ---------- */
 .login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;

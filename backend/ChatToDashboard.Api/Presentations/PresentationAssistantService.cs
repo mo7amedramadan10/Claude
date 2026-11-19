@@ -209,11 +209,45 @@ public sealed class PresentationAssistantService
 
     /// <summary>يسأل الموديل عن محتوى العرض. يرمي InvalidOperationException برسالة عربية إن لم يوجد مزوّد.</summary>
     public async Task<string> AskAsync(Presentation p, string question, IReadOnlyList<AssistantTurn> history, CancellationToken ct)
+        => await AskWithContextAsync(p.Title, await ContextAsync(p, ct), p.CreatedByUserId, question, history, ct);
+
+    /// <summary>
+    /// سياق لوحة متابعة مشارَكة (لقطة مجمّدة): الملخص ثم كل عنصر بعنوانه ونوعه وصفوف بياناته (حتى 60 صفًا) — بلا SQL.
+    /// </summary>
+    public static string DashboardContext(string title, string? summary, string widgetsJson)
+    {
+        var sb = new StringBuilder();
+        sb.Append("العنوان: ").AppendLine(title);
+        if (!string.IsNullOrWhiteSpace(summary)) sb.Append("الملخص: ").AppendLine(summary.Trim());
+        JsonArray? widgets = null;
+        try { widgets = JsonNode.Parse(widgetsJson ?? "[]") as JsonArray; } catch (JsonException) { }
+        var i = 0;
+        foreach (var w in widgets?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+        {
+            i++;
+            var wt = w["title"]?.GetValue<string>() ?? $"العنصر {i}"; var type = w["type"]?.GetValue<string>() ?? "";
+            sb.AppendLine().Append("## العنصر ").Append(i).Append(": ").Append(wt).Append(type.Length > 0 ? $" ({type})" : "").AppendLine();
+            if (w["page"] is JsonValue pg) sb.Append("التبويب: ").AppendLine(pg.ToString());
+            if (w["noData"]?.GetValue<bool>() == true) { sb.AppendLine("(بلا بيانات)"); continue; }
+            var data = w["data"];
+            if (data is JsonArray rows)
+            {
+                foreach (var row in rows.Take(60)) sb.Append("- ").AppendLine(row is JsonObject o ? string.Join(" | ", o.Select(kv => $"{kv.Key}: {Cell(kv.Value)}")) : Cell(row));
+                if (rows.Count > 60) sb.AppendLine($"… و{rows.Count - 60} صفًا أخرى");
+            }
+            else if (data is JsonObject obj) sb.AppendLine(string.Join(" | ", obj.Select(kv => $"{kv.Key}: {Cell(kv.Value)}")));
+            else if (data is not null) sb.AppendLine(Cell(data));
+        }
+        var text = sb.ToString();
+        return text.Length > MaxContextChars ? text[..MaxContextChars] + "\n…(اقتُطع باقي المحتوى)" : text;
+    }
+
+    /// <summary>النداء نفسه لأي مصدر سياق (عرض منشور أو لوحة مشارَكة)؛ الاستهلاك يُسجَّل باسم صاحب المحتوى.</summary>
+    public async Task<string> AskWithContextAsync(string title, string context, string ownerUserId, string question, IReadOnlyList<AssistantTurn> history, CancellationToken ct)
     {
         var llm = await _router.ResolveStagedAsync(ct) ?? throw new InvalidOperationException("مساعد العرض غير متاح الآن (لا يوجد مزوّد موديل مهيأ).");
-        var context = await ContextAsync(p, ct);
-        var owner = await _users.FindByIdAsync(p.CreatedByUserId, ct);
-        var sel = SourceSelection.AllEnabled(); sel.UserId = p.CreatedByUserId; sel.IsAdmin = owner?.Role == UserRoles.Admin;
+        var owner = await _users.FindByIdAsync(ownerUserId, ct);
+        var sel = SourceSelection.AllEnabled(); sel.UserId = ownerUserId; sel.IsAdmin = owner?.Role == UserRoles.Admin;
         var sources = await _tools.DescribeSourcesAsync(sel, ct);
         var user = new StringBuilder();
         user.AppendLine("# محتوى الملف").AppendLine(context).AppendLine();
@@ -224,7 +258,7 @@ public sealed class PresentationAssistantService
             user.AppendLine();
         }
         user.AppendLine("# سؤال المشاهد").AppendLine(Shorten(question.Trim(), MaxQuestionChars));
-        var call = new StagedCall($"[مساعد العرض] {Shorten(p.Title, 40)} — {Shorten(question, 40)}", SystemPrompt, user.ToString(), null, sources, 1, false, owner);
+        var call = new StagedCall($"[مساعد العرض] {Shorten(title, 40)} — {Shorten(question, 40)}", SystemPrompt, user.ToString(), null, sources, 1, false, owner);
         var res = await llm.RunStagedAsync(call, ct);
         var reply = res.Json["reply"]?.GetValue<string>();
         if (string.IsNullOrWhiteSpace(reply)) reply = string.IsNullOrWhiteSpace(res.Text) ? "لم أستطع صياغة رد — أعد السؤال بصيغة أخرى." : res.Text.Trim();

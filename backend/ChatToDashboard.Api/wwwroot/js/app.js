@@ -10359,6 +10359,7 @@ async function bootSharedView(shareId) {
   // share view" (banner, read-only filter display); it no longer routes any live query.
   state.shareId = shareId;
   el('shared-banner').classList.remove('hidden');
+  document.body.classList.add('is-shared'); // بلا قائمة جانبية ولا شريط علوي — كصفحة العرض المنشور
   document.querySelector('header').style.display = 'none';
   el('chat-rail').style.display = 'none';
   try {
@@ -10379,6 +10380,8 @@ async function bootSharedView(shareId) {
     const shared = await res.json();
     el('shared-banner-q').textContent = shared.question;
     document.title = `${shared.question} — لوحة مشاركة`;
+    if (shared.creatorName) el('shared-banner-by').textContent = `من ${shared.creatorName}`;
+    sharedMountAssistant(shareId, shared.question);
     state.dashboard = {
       summary: shared.summary,
       widgets: JSON.parse(shared.widgetsJson || '[]'),
@@ -10389,6 +10392,15 @@ async function bootSharedView(shareId) {
     el('shared-banner-q').textContent = err.message;
   }
   renderDashboard();
+}
+
+// مساعد «جيم» على رابط المشاركة (الزر العائم نفسه الذي في صفحة العرض المنشور، js/jeem-assistant.js يُحمَّل عند الحاجة فقط)
+// على واجهة /api/share/{id}/assistant التي تجيب من لقطة اللوحة (الملخص والعناصر وبياناتها).
+function sharedMountAssistant(shareId, title) {
+  const apiBase = `/api/share/${encodeURIComponent(shareId)}`;
+  const go = () => { if (window.JEEM_ASSISTANT) window.jeemAssistant = JEEM_ASSISTANT.mount({ apiBase, title }); };
+  if (window.JEEM_ASSISTANT) return go();
+  const sc = document.createElement('script'); sc.src = 'js/jeem-assistant.js'; sc.onload = go; document.body.appendChild(sc);
 }
 
 // ---------- auth ----------
