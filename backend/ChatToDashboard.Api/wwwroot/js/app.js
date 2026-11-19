@@ -1432,13 +1432,26 @@ function openPeriodEditor(w) {
 // table shapes, not the template's own suggested type (one of the newer progress-table/
 // trend-matrix/... types a template widget may have asked for), so the user picks whichever
 // of the wizard's supported shapes fits the real data they choose.
+// نوع العنصر محدد بالفعل في القالب، فيُحوَّل إلى شكل المعالج المقابل ويُتخطى سؤال «ماذا تريد أن تضيف؟» (طلب المستخدم)؛
+// نوع لا يقابله شكل في المعالج (مصفوفة اتجاه، مراحل…) يبقى على خطوة الاختيار.
+function wizardKindOfWidgetType(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'kpi' || t === 'number' || t === 'metric') return 'kpi';
+  if (['bar', 'column', 'stacked', 'stacked-bar', 'hbar', 'funnel', 'treemap', 'bullet'].includes(t)) return 'comparison';
+  if (['line', 'area', 'forecast', 'multi', 'multi-series', 'trend', 'spline'].includes(t)) return 'trend';
+  if (['pie', 'donut', 'doughnut', 'radial', 'radial-gauge'].includes(t)) return 'distribution';
+  if (t === 'table' || t === 'progress-table') return 'table';
+  return null;
+}
 function openFillPlaceholderWizard(w) {
-  state.wizard = { mode: 'fill-placeholder', targetId: w.id, step: 'kind', stack: [], kind: null, table: null,
+  const kind = wizardKindOfWidgetType(w.type);
+  state.wizard = { mode: 'fill-placeholder', targetId: w.id, step: kind ? 'loading' : 'kind', stack: [], kind, table: null,
     dimension: null, metric: null, dateColumn: null, timeRange: 'all', granularity: 'month',
     columns: [], columnsTouched: false, sort: 'desc', fields: null, gen: 0 };
   el('wizard-next').classList.add('hidden');
   el('wizard-modal').classList.remove('hidden');
   renderWizardStep();
+  if (kind) loadWizardFields(); // مباشرة إلى اختيار المصدر/الجدول بالنوع المحدد
 }
 
 // "اطلب من جيم" on a noData placeholder — pre-fills the normal chat box with a targeted
