@@ -2823,9 +2823,15 @@ function buildDashTabs(tabs, active) {
   tabs.forEach(name => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = name;
     btn.setAttribute('aria-selected', String(name === active));
-    btn.addEventListener('click', () => {
+    // في وضع التحرير اسم التبويب النشط قابل للكتابة مباشرة (كعناوين العناصر)؛ «عناصر أخرى» تبويب ضمني بلا اسم مخزَّن فلا يُعدَّل.
+    const editable = state.editMode && name === active && name !== 'عناصر أخرى' && !state.shareId;
+    if (editable) {
+      const span = document.createElement('span'); span.textContent = name; btn.appendChild(span);
+      makeInlineEditable(span, t => renameDashboardPage(name, t), null);
+    } else btn.textContent = name;
+    btn.addEventListener('click', e => {
+      if (e.target.dataset?.inlineEdit) return; // النقر على الاسم للتعديل لا يبدّل التبويب
       if (state.activeDashTab === name) return;
       state.activeDashTab = name;
       renderDashboard();
@@ -2833,6 +2839,15 @@ function buildDashTabs(tabs, active) {
     nav.appendChild(btn);
   });
   return nav;
+}
+// إعادة تسمية صفحة (تبويب): الاسم ليس كيانًا مستقلًا بل حقل page في كل عنصر من عناصرها، فيُحدَّث فيها جميعًا مع التراجع والحفظ التلقائي.
+function renameDashboardPage(oldName, newName) {
+  const d = state.dashboard; newName = (newName || '').trim();
+  if (!d || !newName || newName === oldName || newName === 'عناصر أخرى') { renderDashboard(); return; }
+  pushUndo();
+  d.widgets.forEach(w => { if (w.page === oldName) w.page = newName; });
+  if (state.activeDashTab === oldName) state.activeDashTab = newName;
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
 }
 
 // ---------- dashboard rendering ----------
