@@ -1269,6 +1269,8 @@ function reorderWidget(fromId, toId) {
   const fromIdx = widgets.findIndex(w => w.id === fromId);
   const toIdx = widgets.findIndex(w => w.id === toId);
   if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+  // المؤشرات تُعرض دائمًا في صفها أول اللوحة، فإسقاط مؤشر على رسم (أو العكس) لا يغيّر شيئًا ظاهرًا — يُتجاهل بلا تراجع.
+  if ((widgets[fromIdx].type === 'kpi') !== (widgets[toIdx].type === 'kpi')) return;
   pushUndo();
   const [moved] = widgets.splice(fromIdx, 1);
   widgets.splice(toIdx, 0, moved);
@@ -3343,7 +3345,7 @@ function interactiveEmptyStateHtml(d, missingSources) {
 // pipeline entirely, then opens it so renderDashboard()'s branch above mounts its engine.
 async function useInteractiveTemplate(d, inPlace) {
   if (!inPlace) { closeDashGallery(); setChatMode('dashboard'); showScreen('chat'); }
-  el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
+  el.dash.innerHTML = dashLoadingHtml('جارٍ إنشاء اللوحة من النموذج', 'تجهيز اللوحة التفاعلية ومطابقة مصادر بياناتك.');
   let res, json;
   try {
     res = await fetch('/api/history/from-template', {
@@ -3353,6 +3355,7 @@ async function useInteractiveTemplate(d, inPlace) {
     json = await res.json().catch(() => null);
   } catch { res = null; json = null; }
   if (!res || !res.ok || !json?.id) {
+    dashLoadingDone();
     el.dash.innerHTML = `<div class="empty"><div>
         <div class="big">تعذّر إنشاء اللوحة</div>
         <div>${esc(json?.error || 'حدث خطأ غير متوقع — حاول مرة أخرى.')}</div>
@@ -3411,14 +3414,15 @@ function applyInteractiveViewerGuard(isViewer) {
 async function mountInteractiveDashboard(d) {
   // دور المستخدم على اللوحة (وفي وضع التضمين من «اللوحات المنشورة» دائمًا «مشاهد»).
   applyInteractiveViewerGuard(state.dashboardRole === 'viewer');
-  el.dash.innerHTML = `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
-  if (!d.templateId) { el.dash.innerHTML = interactiveEmptyStateHtml(d, []); return; }
+  el.dash.innerHTML = dashLoadingHtml('جارٍ تحميل اللوحة التفاعلية', 'جلب بيانات المشروع للمحرك.');
+  if (!d.templateId) { dashLoadingDone(); el.dash.innerHTML = interactiveEmptyStateHtml(d, []); return; }
 
   let body;
   try {
     const res = await fetch(`/api/interactive/${encodeURIComponent(d.templateId)}/data`);
     body = res.ok ? await res.json() : null;
   } catch { body = null; }
+  dashLoadingDone();
 
   if (!body || !body.linked) {
     el.dash.innerHTML = interactiveEmptyStateHtml(d, body?.missingSources || []);
@@ -3527,6 +3531,8 @@ function renderDashMetaLine() {
 function renderDashboard() {
   if (typeof ffTrackActive === 'function' && ffTrackActive()) ffTrackHead();
   const d = state.dashboard;
+  // وصول لوحة (أو انتهاء الانتظار) يزيل طبقة الانتظار في «لوحات المتابعة»؛ اللوحة التفاعلية تزيلها بعد جلب بياناتها.
+  if (d && !d.renderKind) dashLoadingDone();
   // An "interactive" (RenderKind) dashboard never goes through the ordinary widget-grid
   // pipeline below — see mountInteractiveDashboard. None of the normal toolbar actions
   // (edit/undo/redo/add-widget/share/publish) apply to it yet (Phase 3 gives it its own
@@ -3580,8 +3586,9 @@ function renderDashboard() {
   pendingCharts = [];
 
   if (!d) {
+    if (!state.loading) dashLoadingDone();
     el.dash.innerHTML = state.loading
-      ? `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`
+      ? dashLoadingHtml()
       : `<div class="empty"><div>
            <div class="big">اسأل سؤالاً عن بياناتك</div>
            <div>مثال: «قارن الإيرادات بين المناطق» أو «أعطني تقريراً شاملاً»</div>
@@ -3645,10 +3652,11 @@ function renderDashboard() {
     const grid = document.createElement('div');
     grid.className = 'grid' + (state.editMode ? ' edit-mode' : '');
     let kpiRow = null;
-    // خارج وضع التحرير تُرسم مؤشرات الصفحة كلها (بما فيها الناقصة) في صف واحد أول اللوحة كما في معاينة
-    // المعرض، ثم بقية العناصر بترتيبها؛ في وضع التحرير يبقى الترتيب الحقيقي ليطابق السحب والإفلات.
+    // مؤشرات الصفحة كلها (بما فيها الناقصة) في صف واحد أول اللوحة كما في معاينة المعرض، ثم بقية العناصر
+    // بترتيبها — في العرض وفي التحرير سواء (كانت تُهيَّأ في العرض فقط فنزلت المؤشرات تحت الجدول عند التحرير).
+    // السحب والإفلات يعمل بمعرّف العنصر داخل كل مجموعة (مؤشر مع المؤشرات، وغيره مع غيره؛ انظر reorderWidget).
     const isKpiLike = w => w.type === 'kpi';
-    if (!state.editMode) widgets = [...widgets.filter(isKpiLike), ...widgets.filter(w => !isKpiLike(w))];
+    widgets = [...widgets.filter(isKpiLike), ...widgets.filter(w => !isKpiLike(w))];
     widgets.forEach((w, i) => {
       const card = buildWidget(w);
       // Every freshly mounted card gets a quick settle-in fade (widget-mount, see its own
@@ -8843,6 +8851,13 @@ document.querySelectorAll('.ff-kind').forEach(b => b.addEventListener('click', (
 // وبند «المحادثة واللوحات» في القائمة يبقى اختصارًا يعرض اللوحة نفسها مع تبويب الاستفسارات.
 let ffDashAnchor = null;
 function ffTrackActive() { return !!FF.track; }
+// حالة الانتظار في اللوحة: داخل «لوحات المتابعة» طبقة الانتظار نفسها التي يعرضها تصميم حر (دوّار + عنوان + تلميح
+// فوق مساحة العمل) بدل هيكل الأعمدة الداكن الخاص بشاشة المحادثة؛ وفي شاشة المحادثة الهيكل كما هو.
+function dashLoadingHtml(title, hint) {
+  if (ffTrackActive()) { ccSetLoading('ff-pane', title || 'جارٍ بناء اللوحة من بياناتك', hint || 'الموديل يستعلم عن بياناتك ويبني العناصر — قد يستغرق حتى دقيقة، وستظهر اللوحة هنا فور اكتمالها.'); return '<div class="empty"></div>'; }
+  return `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
+}
+function dashLoadingDone() { if (ffTrackActive()) ccSetLoading('ff-pane', null); }
 function ffTrackMount() {
   const pane = el('dash-pane'); const body = el('ff-body');
   if (!pane || !body) return;
