@@ -1,4 +1,5 @@
 using ChatToDashboard.Api.Export;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
@@ -13,7 +14,9 @@ namespace ChatToDashboard.Api.Controllers;
 [Route("api/export")]
 public class ExportController : ControllerBase
 {
+    // بلا دخول: تحويل خالص لما يرسله المتصفح (لا وصول لبيانات) — تستخدمه صفحة لوحة المتابعة المشارَكة العامة أيضًا.
     [HttpPost("pptx")]
+    [AllowAnonymous]
     public IActionResult Pptx([FromBody] PptxExportRequest request)
     {
         if (request.Widgets is null || request.Widgets.Count == 0)

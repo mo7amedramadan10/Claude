@@ -1,4 +1,6 @@
 using System.Text;
+using ChatToDashboard.Api.Decks;
+using ChatToDashboard.Api.Freeform;
 using ChatToDashboard.Api.Organizations;
 using ChatToDashboard.Api.Presentations;
 using ChatToDashboard.Api.Users;
@@ -28,9 +30,12 @@ public class PresentationsController : ControllerBase
     private readonly OrganizationStore _organizations;
     private readonly PresentationLiveDataService _live;
     private readonly PresentationAssistantService _assistant;
+    private readonly DeckStore _decks;
+    private readonly DeckBrandStore _brands;
 
-    public PresentationsController(PresentationStore store, PresentationDataStore data, PermissionsService permissions, OrganizationStore organizations, PresentationLiveDataService live, PresentationAssistantService assistant)
+    public PresentationsController(PresentationStore store, PresentationDataStore data, PermissionsService permissions, OrganizationStore organizations, PresentationLiveDataService live, PresentationAssistantService assistant, DeckStore decks, DeckBrandStore brands)
     {
+        _decks = decks; _brands = brands;
         _store = store;
         _data = data;
         _permissions = permissions;
@@ -142,6 +147,51 @@ public class PresentationsController : ControllerBase
         return p is null ? NotFound() : await Content(p.Id, ct);
     }
 
+    /// <summary>
+    /// تصدير PowerPoint من صفحة العرض المنشور (بلا دخول كالمحتوى): عرض من منشئ العروض → مواصفته المحفوظة بهويّة مشروعه؛
+    /// صفحة حرة أو مرفوعة → استخراج حتمي بـ <see cref="DeckImporter"/> (عناوين، نقاط، جداول، صور مضمّنة) ثم الشرائح نفسها.
+    /// </summary>
+    [HttpGet("{id}/export/pptx")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ExportPptx(string id, CancellationToken ct)
+    {
+        var p = await _store.GetAsync(id, ct);
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        DeckSpec? spec = null; DeckBrand? brand = null;
+        if (p.SourceKind == "deck" && !string.IsNullOrWhiteSpace(p.SourceId) && await _decks.GetByIdAsync(p.SourceId, ct) is { } deck)
+        {
+            try { spec = System.Text.Json.JsonSerializer.Deserialize<DeckSpec>(deck.SpecJson)?.Normalize(); } catch (System.Text.Json.JsonException) { }
+            if (deck.ProjectId is not null) brand = await _brands.GetAsync(deck.ProjectId, ct);
+        }
+        if (spec is null)
+        {
+            var html = await _store.GetHtmlAsync(id, ct) ?? "";
+            if (PresentationLiveDataService.IsLive(p) && await _live.GetAsync(p, force: false, ct) is { } live) html = PresentationLiveDataService.ApplyToHtml(html, p, live);
+            var doc = DeckImporter.Extract("page.html", Encoding.UTF8.GetBytes(html));
+            spec = DeckImporter.ToSpec(doc);
+            if (string.IsNullOrWhiteSpace(spec.Title) || spec.Title == "عرض مستورد") spec.Title = p.Title;
+        }
+        var slides = DeckPptxBuilder.SlidesFromSpec(spec);
+        if (slides.Count == 0) return BadRequest(new { error = "لا يوجد محتوى قابل للتصدير في هذه الصفحة." });
+        var bytes = DeckPptxBuilder.Build(new DeckPptxRequest { Title = spec.Title, Slides = slides, Brand = brand });
+        Response.Headers["Cache-Control"] = "no-store";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.presentationml.presentation", SafeFileName(p.Title) + ".pptx");
+    }
+
+    [HttpGet("by/{org}/{slug}/export/pptx")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ExportPptxBySlug(string org, string slug, CancellationToken ct)
+    {
+        var p = await FindBySlugAsync(org, slug, ct);
+        return p is null ? NotFound() : await ExportPptx(p.Id, ct);
+    }
+
+    private static string SafeFileName(string title)
+    {
+        var cleaned = new string((title ?? "").Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c).ToArray()).Trim();
+        return cleaned.Length == 0 ? "presentation" : cleaned;
+    }
+
     [HttpGet("by/{org}/{slug}/live-data")]
     [AllowAnonymous]
     public async Task<IActionResult> LiveDataBySlug(string org, string slug, CancellationToken ct)
@@ -230,6 +280,10 @@ public class PresentationsController : ControllerBase
         if (PresentationLiveDataService.IsLive(p) && await _live.GetAsync(p, force: false, ct) is { } live)
             html = PresentationLiveDataService.ApplyToHtml(html, p, live);
         await _store.IncrementViewCountAsync(id, ct);
+        // ?print=1: تصدير PDF من صفحة العرض — الصفحة نفسها في تبويب جديد تفتح نافذة الطباعة عند التحميل (Save as PDF)؛
+        // يبقى العزل كما هو (CSP sandbox مع allow-modals التي تسمح بـ print).
+        if (Request.Query["print"] == "1")
+            html = FreeformDataBlock.InsertBeforeBodyEnd(html, "<script id=\"jeem-print\">window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},700)});</script>");
         Response.Headers["Content-Security-Policy"] = SandboxCsp;
         Response.Headers["X-Content-Type-Options"] = "nosniff";
         Response.Headers["Referrer-Policy"] = "no-referrer";

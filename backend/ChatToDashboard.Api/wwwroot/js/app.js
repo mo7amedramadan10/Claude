@@ -4276,19 +4276,19 @@ async function widgetToPptxInput(w, card) {
   catch { return base; }
 }
 
-async function exportPptx() {
+async function exportPptx(sourceBtn) {
   const d = state.dashboard;
   if (!d?.widgets?.length) return;
-  const btn = el('btn-export-pptx');
+  const btn = sourceBtn || el('btn-export-pptx');
   // .btn-label بس (مش الزرار كله) — عشان الأيقونة ما تتمسحش لما النص يترجع زي ما كان
-  // (btn.textContent= كان بيشيل أي عنصر SVG جوه الزرار نهائيًا).
-  const label = btn.querySelector('.btn-label');
+  // (btn.textContent= كان بيشيل أي عنصر SVG جوه الزرار نهائيًا). زر صفحة المشاركة بلا أيقونة فنصّه هو التسمية.
+  const label = btn.querySelector('.btn-label') || btn;
   const original = label.textContent;
   btn.disabled = true; label.textContent = 'جارٍ التصدير…';
   try {
     const cards = [...document.querySelectorAll('#dash .grid > .widget')];
     const widgets = await Promise.all(d.widgets.map((w, i) => widgetToPptxInput(w, cards[i])));
-    const lastQuestion = [...state.messages].reverse().find(m => m.role === 'user')?.text;
+    const lastQuestion = d.name || el('shared-banner-q')?.textContent?.trim() || [...state.messages].reverse().find(m => m.role === 'user')?.text;
 
     const res = await fetch('/api/export/pptx', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -4307,7 +4307,10 @@ async function exportPptx() {
     btn.disabled = false; label.textContent = original;
   }
 }
-el('btn-export-pptx').addEventListener('click', exportPptx);
+el('btn-export-pptx').addEventListener('click', () => exportPptx());
+// تصدير من صفحة لوحة المتابعة المشارَكة (بلا دخول): PDF بنافذة الطباعة، وPowerPoint بالمسار نفسه
+el('shared-exp-pdf').addEventListener('click', () => window.print());
+el('shared-exp-pptx').addEventListener('click', () => exportPptx(el('shared-exp-pptx')));
 
 // ---------- chat ----------
 // طبقة المعنى: بعد بناء قالب، رسالة واحدة تلخّص العناصر التي حُسمت حتميًا لغياب مفاهيم

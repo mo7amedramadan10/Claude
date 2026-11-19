@@ -19,6 +19,10 @@
   .bar a { font-size: 12.5px; color: #1f5fbf; text-decoration: none; white-space: nowrap; }
   .bar a:hover { text-decoration: underline; }
   .brand { font-size: 12px; color: #9aa3ad; white-space: nowrap; }
+  .export { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; padding-inline-start: 12px; border-inline-start: 1px solid #e3e6ea; }
+  .export .lbl { color: #6b7280; } .export .sep { color: #c3c9d0; }
+  .export a { color: #1f5fbf; font-weight: 600; text-decoration: none; } .export a:hover { text-decoration: underline; }
+  @media (max-width: 480px) { .export .lbl { display: none; } }
   iframe { flex: 1; width: 100%; border: 0; background: #fff; }
   .msg { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
   .msg .big { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
@@ -34,6 +38,8 @@
     <h1 id="title">جارٍ التحميل…</h1>
     <span class="by" id="by"></span>
     <a id="open" href="#" target="_blank" rel="noopener" class="hidden">فتح في نافذة كاملة ↗</a>
+    <!-- تصدير لكل الأنواع: PDF = الصفحة نفسها بنافذة الطباعة (content?print=1)، PowerPoint = ملف يبنيه الخادم من المواصفة أو من محتوى الصفحة -->
+    <span class="export hidden" id="export"><span class="lbl">تصدير:</span><a id="exp-pdf" href="#" target="_blank" rel="noopener">PDF</a><span class="sep">·</span><a id="exp-pptx" href="#">PowerPoint</a></span>
     <span class="brand">عرض مشارك عبر <b>جيم</b></span>
   </header>
   <div class="msg hidden" id="msg"><div><div class="big" id="msg-big"></div><div class="sub" id="msg-sub"></div></div></div>
@@ -64,6 +70,7 @@
     if (meta.createdByName) $('by').textContent = `من ${meta.createdByName}`;
     const src = `${apiBase}/content`;
     $('open').href = src; $('open').classList.remove('hidden');
+    $('exp-pdf').href = `${src}?print=1`; $('exp-pptx').href = `${apiBase}/export/pptx`; $('export').classList.remove('hidden');
     $('frame').src = src; $('frame').classList.remove('hidden');
     installBridge(apiBase);
     // مساعد «جيم»: زر عائم يشرح محتوى الملف كله ويناقشه (صوتًا أو كتابة) — خارج الإطار المعزول (js/jeem-assistant.js)

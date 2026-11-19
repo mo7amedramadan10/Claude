@@ -34,6 +34,45 @@ public class DeckPptxRequest
 /// أدوات <see cref="PptxBuilder"/>: نص عربي RTL، جداول، صور الرسوم، ومؤشرات كصناديق.</summary>
 public static class DeckPptxBuilder
 {
+    /// <summary>
+    /// شرائح التصدير من مواصفة عرض بلا متصفح (تصدير PowerPoint من صفحة العرض المنشور): نفس تحويل الواجهة في
+    /// <c>dk-export</c> إلا الرسم البياني، فلا لقطة PNG هنا فيُصدَّر جدولًا بقيمه (تسمية/قيمة أو السلاسل أعمدة).
+    /// </summary>
+    public static List<DeckPptxSlideInput> SlidesFromSpec(DeckSpec spec)
+    {
+        var list = new List<DeckPptxSlideInput>();
+        foreach (var sl in spec.Slides)
+        {
+            var layout = string.IsNullOrWhiteSpace(sl.Layout) ? "bullets" : sl.Layout;
+            var o = new DeckPptxSlideInput { Title = sl.Title, Subtitle = sl.Subtitle, Notes = sl.Notes, Source = sl.Source, IsTitle = layout is "title" or "section" };
+            switch (layout)
+            {
+                case "chart" when sl.Chart is { } c:
+                    if (c.Series is { Count: > 0 } series)
+                    {
+                        o.Columns = new List<string> { "" }; o.Columns.AddRange(series.Select(x => x.Name ?? ""));
+                        o.Rows = c.Labels.Select((lab, i) => { var r = new List<string> { lab }; r.AddRange(series.Select(x => i < x.Values.Count ? Fmt(x.Values[i]) : "")); return r; }).ToList();
+                    }
+                    else
+                    {
+                        o.Columns = new List<string> { "", string.IsNullOrWhiteSpace(c.Unit) ? "القيمة" : c.Unit! };
+                        o.Rows = c.Labels.Select((lab, i) => new List<string> { lab, i < c.Values.Count ? Fmt(c.Values[i]) : "" }).ToList();
+                    }
+                    break;
+                case "table" when sl.Table is { } t: o.Columns = t.Columns; o.Rows = t.Rows; break;
+                case "kpis": o.Kpis = sl.Kpis ?? new(); break;
+                case "two-column": o.Bullets = (sl.Columns ?? new()).SelectMany(col => new[] { string.IsNullOrWhiteSpace(col.Title) ? "" : col.Title + ":" }.Concat((col.Bullets ?? new()).Select(b => "   " + b))).Where(x => x.Length > 0).ToList(); break;
+                case "quote": o.Bullets = new List<string> { sl.Quote ?? "" }; break;
+                case "tasks": o.Bullets = (sl.Tasks ?? new()).Select(t => (t.Done ? "☑ " : "☐ ") + t.T).ToList(); break;
+                case "image" when sl.Image is { } im && im.Src.StartsWith("data:", StringComparison.OrdinalIgnoreCase): o.Image = im.Src; o.Bullets = string.IsNullOrWhiteSpace(im.Caption) ? null : new List<string> { im.Caption }; break;
+                default: o.Bullets = sl.Bullets ?? new(); break;
+            }
+            list.Add(o);
+        }
+        return list;
+    }
+    private static string Fmt(double v) => v == Math.Floor(v) && Math.Abs(v) < 1e15 ? v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) : v.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
+
     public static byte[] Build(DeckPptxRequest request)
     {
         using var stream = new MemoryStream();
