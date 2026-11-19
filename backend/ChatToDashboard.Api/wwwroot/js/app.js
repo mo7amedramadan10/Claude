@@ -8911,6 +8911,7 @@ async function ffTrackPublish() {
     const saved = await res.json().catch(() => null);
     if (!res.ok || !saved?.id) throw new Error(saved?.error || `(${res.status})`);
     try { localStorage.setItem(ffTrackShareKey(), saved.id); } catch {}
+    state.historyLoaded = false; // ليعاد تحميل بطاقات لوحات المتابعة بشارة النشر
     if (old && old !== saved.id) fetch(`/api/share/${encodeURIComponent(old)}/revoke`, { method: 'POST' }).catch(() => {});
     const url = `${location.origin}/?share=${saved.id}`;
     state.messages.push({ role: 'bot', text: (old ? 'حُدّث النشر برابط جديد يحمل أحدث نسخة (الرابط السابق أُوقف): ' : 'نُشرت اللوحة — هذا رابطها (بلا انتهاء، ويظهر أيضًا في «روابط المشاركة»): ') + url, html: `${old ? 'حُدّث النشر برابط جديد يحمل أحدث نسخة (الرابط السابق أُوقف):' : 'نُشرت اللوحة — هذا رابطها (بلا انتهاء، ويظهر أيضًا في «روابط المشاركة»):'} <a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>` });
@@ -9029,8 +9030,32 @@ async function ffShowStart() {
   el('ff-title').textContent = 'تصميم حر'; el('ff-meta').textContent = 'اكتب طلبك في المحادثة';
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
   try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
+  // «لوحات المتابعة» المحفوظة (سجل لوحات المحادثة) تظهر هنا كبطاقات مثل باقي الأنواع، وتُفتح داخل المضيف
+  if (!state.historyLoaded) { try { await loadHistory(); } catch {} }
+  FF.list = FF.list.concat(ffTrackDesigns()).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
   ffSetKind(FF.kind);
   ffRenderGallery();
+}
+// لوحة محادثة محفوظة بصيغة بطاقة تصميم حر: المعرّف `h:<id>`، النوع track، والرابط = رابط المشاركة المسجَّل محليًا لها إن وُجد
+function ffTrackDesigns() {
+  return (state.history || []).map(h => {
+    let sid = null; try { sid = localStorage.getItem('jeem.trackShare:' + h.id); } catch {}
+    const created = h.createdAt ? (h.createdAt.endsWith('Z') ? h.createdAt : h.createdAt + 'Z') : null;
+    return { id: 'h:' + h.id, track: true, history: h, kind: 'track', title: h.question || firstSentence(h.summary || '', 60) || 'لوحة متابعة', updatedAt: created, createdByUserId: h.userId, publishedUrl: sid ? `/?share=${sid}` : null, publishedActive: sid ? true : undefined, widgets: parseWidgets(h.widgetsJson), renderKind: h.renderKind || null };
+  });
+}
+// فتح لوحة محفوظة داخل مضيف «لوحات المتابعة»: الحالة نفسها التي تعرضها شاشة المحادثة (openHistoryEntry) لكن داخل تصميم حر
+function ffOpenTrack(historyId) {
+  const h = (state.history || []).find(x => x.id === historyId); if (!h) return;
+  ffMarkOpened('h:' + historyId);
+  FF.design = null; FF.html = ''; FF.kind = 'track';
+  const tpl = h.templateId && !h.renderKind ? DASH_GALLERY.find(d => d.id === h.templateId) : h.renderKind ? DASH_GALLERY.find(d => d.id === h.templateId) : null;
+  FF.template = tpl ? ffTrackTemplateOf(tpl) : null;
+  FF.trackAttach = ffAttachLineHtml(FF.template);
+  startBlankDashboard();
+  ffTrackMount();
+  openHistoryEntry(historyId);
+  ffRenderAttach(); ffTrackHead();
 }
 function ffRenderGallery() {
   const box = el('ff-list'); const items = ffGalFiltered();
@@ -9040,16 +9065,20 @@ function ffRenderGallery() {
   box.dataset.empty = FF.list.length ? 'لا تصاميم تطابق التصفية.' : 'لا تصاميم بعد — اختر نوعًا من الأعلى واكتب طلبك.';
   el('ff-count').textContent = FF.list.length ? (items.length === FF.list.length ? `${FF.list.length.toLocaleString('en-US')} تصميم` : `${items.length.toLocaleString('en-US')} من ${FF.list.length.toLocaleString('en-US')}`) : '';
   box.innerHTML = items.map(d => { const k = FF_KINDS[d.kind] ? d.kind : 'design'; const opened = ffOpenedAt(d.id);
+    const art = d.track
+      ? `<div class="ff-card-art"><div class="ff-card-paper ff-card-dash">${dashGalThumb({ widgets: d.widgets, renderKind: d.renderKind })}</div></div>`
+      : `<div class="ff-card-art"><div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(d.title)}"></iframe></div></div>`;
     return `<article class="ff-card k-${k}" data-ff="${esc(d.id)}" role="button" tabindex="0" aria-label="${esc(d.title)}">
-      <div class="ff-card-art"><div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(d.title)}"></iframe></div></div>
+      ${art}
       <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(d.title)}</b><small>${opened ? 'فُتح ' + ffAgo(opened) : 'عُدِّل ' + ffAgo(d.updatedAt)}${d.publishedUrl ? (d.publishedActive === false ? ' · <span class="ff-pub off">منشور (الرابط موقوف)</span>' : ' · <span class="ff-pub">🔗 منشور</span>') : ''}</small></div>${d.publishedUrl ? `<button type="button" class="ff-card-link" data-ff-link="${esc(location.origin + d.publishedUrl)}" title="نسخ الرابط الدائم: ${esc(location.origin + d.publishedUrl)}" aria-label="نسخ رابط ${esc(d.title)}">🔗</button>` : ''}</div>
     </article>`; }).join('');
-  box.querySelectorAll('[data-ff]').forEach(c => { c.addEventListener('click', () => ffOpen(c.dataset.ff)); c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ffOpen(c.dataset.ff); } }); });
+  const openCard = id => id.startsWith('h:') ? ffOpenTrack(id.slice(2)) : ffOpen(id);
+  box.querySelectorAll('[data-ff]').forEach(c => { c.addEventListener('click', () => openCard(c.dataset.ff)); c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(c.dataset.ff); } }); });
   // زر نسخ الرابط الدائم على البطاقة: لا يفتح التصميم
   box.querySelectorAll('[data-ff-link]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); ffCopyLink(b.dataset.ffLink, b); }));
   ffScaleThumbs();
   if (!FF.gal.io) FF.gal.io = new IntersectionObserver(entries => entries.forEach(en => { if (en.isIntersecting) { FF.gal.io.unobserve(en.target); ffLoadThumb(en.target); } }), { root: el('ff-start'), rootMargin: '200px' });
-  if (!FF.gal.list) box.querySelectorAll('.ff-card').forEach(c => FF.gal.io.observe(c));
+  if (!FF.gal.list) box.querySelectorAll('.ff-card:not(.k-track)').forEach(c => FF.gal.io.observe(c));
 }
 /* نسخ الرابط الدائم للتصميم المنشور (لكل تصميم عرض واحد؛ إعادة النشر تحدّث الصفحة على الرابط نفسه) */
 async function ffCopyLink(url, btn) {

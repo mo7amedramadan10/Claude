@@ -3545,6 +3545,10 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-card.k-doc .ff-card-art { background: #E3EDFB; } .jeem-scope .ff-card.k-slides .ff-card-art { background: #FBEBDF; }
 .jeem-scope .ff-card.k-design .ff-card-art { background: #EEE7FB; } .jeem-scope .ff-card.k-dashboard .ff-card-art { background: #FBE4E4; }
 .jeem-scope .ff-card.k-motion .ff-card-art { background: #E2F5EE; }
+.jeem-scope .ff-card.k-track .ff-card-art { background: #E4F3FA; }
+.jeem-scope .ff-card-dash { display: flex; align-items: flex-start; padding: 10px; }
+.jeem-scope .ff-card-dash .dash-thumb { width: 100%; background: transparent; padding: 0; grid-auto-rows: 14px; gap: 3px; }
+.jeem-scope .ff-card-dash .dash-thumb-network { display: flex; align-items: center; justify-content: center; min-height: 90px; width: 100%; }
 .jeem-scope .ff-card-paper { position: absolute; inset: 14px 14px 0 14px; background: #fff; border-radius: 8px 8px 0 0; box-shadow: 0 2px 10px rgba(16, 32, 48, .10); overflow: hidden; }
 .jeem-scope .ff-thumb { position: absolute; top: 0; inset-inline-start: 0; width: 1100px; height: 760px; border: 0; pointer-events: none; transform-origin: top right; transform: scale(var(--ff-s, .2)); background: #fff; }
 [dir="ltr"] .jeem-scope .ff-thumb { transform-origin: top left; }
