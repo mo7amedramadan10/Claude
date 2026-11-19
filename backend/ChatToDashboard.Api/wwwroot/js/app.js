@@ -10440,7 +10440,7 @@ function sharedMountAssistant(shareId, title) {
   const apiBase = `/api/share/${encodeURIComponent(shareId)}`;
   const go = () => { if (window.JEEM_ASSISTANT) window.jeemAssistant = JEEM_ASSISTANT.mount({ apiBase, title }); };
   if (window.JEEM_ASSISTANT) return go();
-  const sc = document.createElement('script'); sc.src = 'js/jeem-assistant.js'; sc.onload = go; document.body.appendChild(sc);
+  const sc = document.createElement('script'); sc.src = '/js/jeem-assistant.js'; sc.onload = go; document.body.appendChild(sc);
 }
 
 // ---------- auth ----------

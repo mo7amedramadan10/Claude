@@ -273,7 +273,9 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 // before authentication runs, so the app shell always loads; every API call underneath
 // it still requires a session via the FallbackPolicy above.
 app.UseDefaultFiles();
-app.UseStaticFiles();
+// الملفات الثابتة تُعاد مصادقتها عند كل تحميل (ETag → 304 رخيصة) حتى لا يبقى المتصفح على نسخة قديمة من app.css/app.js
+// بعد نشر جديد — ظهر ذلك كصفحة مشاركة بقائمة جانبية وشريط قديم لأن app.css المخزَّن لم يحمل قواعد is-shared.
+app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache" });
 app.UseWebSockets();
 
 app.UseRouting();
@@ -332,8 +334,8 @@ app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
     Results.File(Path.Combine(env.WebRootPath, "presentation.html"), "text/html"))
     .AllowAnonymous();
 // الرابط المقروء للوحة متابعة مشارَكة: /d/{اسم-المنظمة}/{اسم-اللوحة} — التطبيق نفسه في وضع المشاركة (bootSharedView).
-app.MapGet("/d/{org}/{slug}", (IWebHostEnvironment env) =>
-    Results.File(Path.Combine(env.WebRootPath, "index.html"), "text/html"))
+// الصفحة تحت مسار بمقطعين فتُحوَّل مراجع index.html النسبية (css/ js/ img/) إلى مطلقة وإلا حلّها المتصفح تحت /d/{org}/.
+app.MapGet("/d/{org}/{slug}", (IWebHostEnvironment env) => Results.Content(SpaIndex.Html(env), "text/html; charset=utf-8", System.Text.Encoding.UTF8))
     .AllowAnonymous();
 
 // /o/{slug} (and anything else with no matching static file or API route) still serves the
@@ -343,7 +345,7 @@ app.MapGet("/d/{org}/{slug}", (IWebHostEnvironment env) =>
 // AllowAnonymous is required here — every endpoint requires a signed-in user by default
 // (FallbackPolicy above), which would otherwise 401 this before the signed-out visitor it's
 // actually for ever sees the login screen.
-app.MapFallbackToFile("index.html").AllowAnonymous();
+app.MapFallback((IWebHostEnvironment env) => Results.Content(SpaIndex.Html(env), "text/html; charset=utf-8", System.Text.Encoding.UTF8)).AllowAnonymous();
 
 // Initial load: fetch the enabled external systems into the shared schema. Failures are logged
 // but do not prevent startup — POST /api/data/refresh can retry once SQL is reachable.
@@ -637,3 +639,18 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+/// <summary>index.html بمراجع أصول مطلقة (css/ js/ img/ → /css/ /js/ /img/) لخدمته تحت مسارات عميقة مثل /d/{org}/{slug} و/o/{slug}.</summary>
+internal static class SpaIndex
+{
+    private static string? _cached; private static DateTime _stamp;
+    public static string Html(IWebHostEnvironment env)
+    {
+        var path = Path.Combine(env.WebRootPath, "index.html");
+        var stamp = File.GetLastWriteTimeUtc(path);
+        if (_cached is null || stamp != _stamp) { _cached = Rewrite(File.ReadAllText(path)); _stamp = stamp; }
+        return _cached;
+    }
+    public static string Rewrite(string html) =>
+        System.Text.RegularExpressions.Regex.Replace(html, @"(?<=\s(?:href|src)=\x22)(css|js|img|lib|vendor)/", "/$1/");
+}
