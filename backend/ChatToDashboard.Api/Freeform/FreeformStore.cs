@@ -24,6 +24,13 @@ public class FreeformDesign
     [JsonIgnore] public string? DataFingerprint { get; set; }
     /// <summary>تحديث البيانات تلقائيًا عند فتح التصميم إن تغيّرت بصمة المصدر.</summary>
     [JsonPropertyName("autoRefresh")] public bool AutoRefresh { get; set; }
+    /// <summary>المصادر التي اختارها المستخدم لبناء هذا التصميم (JSON بشكل SourceSelection: systems/files)؛ null = كل مصادر المشروع المتاحة له.
+    /// تُستخدم في كل بناء/تعديل/تحديث لاحق حتى لا يستعلم الموديل من مصدر لم يُختر.</summary>
+    [JsonIgnore] public string? SourcesJson { get; set; }
+    [JsonPropertyName("sources")] public Sources.SourceSelection? SourcesSelection
+    {
+        get { if (string.IsNullOrWhiteSpace(SourcesJson)) return null; try { return System.Text.Json.JsonSerializer.Deserialize<Sources.SourceSelection>(SourcesJson); } catch (System.Text.Json.JsonException) { return null; } }
+    }
     [JsonIgnore] public string Html { get; set; } = "";
     [JsonPropertyName("version")] public int Version { get; set; }
     [JsonPropertyName("presentationId")] public string? PresentationId { get; set; }
@@ -59,7 +66,7 @@ public class FreeformStore
     private volatile bool _schemaReady;
     public FreeformStore(DataStore db) => _db = db;
     private const string T = "[dbo].[FreeformDesigns]", V = "[dbo].[FreeformVersions]", M = "[dbo].[FreeformMessages]";
-    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, SourcesJson, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
     private const string Q = "[dbo].[FreeformQueries]";
     public static readonly string[] Kinds = { "doc", "slides", "design", "dashboard", "motion" };
     public static string NormalizeKind(string? k) => Kinds.Contains(k ?? "") ? k! : "design";
@@ -95,6 +102,7 @@ public class FreeformStore
                 IF COL_LENGTH('dbo.FreeformDesigns', 'DataRefreshedAt') IS NULL ALTER TABLE {T} ADD [DataRefreshedAt] DATETIME2 NULL;
                 IF COL_LENGTH('dbo.FreeformDesigns', 'DataFingerprint') IS NULL ALTER TABLE {T} ADD [DataFingerprint] NVARCHAR(100) NULL;
                 IF COL_LENGTH('dbo.FreeformDesigns', 'AutoRefresh') IS NULL ALTER TABLE {T} ADD [AutoRefresh] BIT NOT NULL DEFAULT 0;
+                IF COL_LENGTH('dbo.FreeformDesigns', 'SourcesJson') IS NULL ALTER TABLE {T} ADD [SourcesJson] NVARCHAR(MAX) NULL;
                 IF OBJECT_ID('dbo.FreeformQueries') IS NULL
                 CREATE TABLE {Q} ([DesignId] NVARCHAR(32) NOT NULL, [Key] NVARCHAR(16) NOT NULL, [Sql] NVARCHAR(MAX) NOT NULL, [Seq] INT NOT NULL, CONSTRAINT PK_FreeformQueries PRIMARY KEY ([DesignId], [Key]));
                 """;
@@ -104,13 +112,13 @@ public class FreeformStore
         finally { _schemaGate.Release(); }
     }
 
-    public async Task<FreeformDesign> CreateAsync(string? projectId, string? organizationId, string userId, string title, string html, string? prompt, string? kind = null, string? templateKey = null, CancellationToken ct = default)
+    public async Task<FreeformDesign> CreateAsync(string? projectId, string? organizationId, string userId, string title, string html, string? prompt, string? kind = null, string? templateKey = null, CancellationToken ct = default, string? sourcesJson = null)
     {
         await EnsureSchemaAsync(ct);
         var now = DateTime.UtcNow;
-        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = string.IsNullOrWhiteSpace(templateKey) ? null : templateKey.Trim(), Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
+        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = string.IsNullOrWhiteSpace(templateKey) ? null : templateKey.Trim(), SourcesJson = sourcesJson, Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
+        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @SourcesJson, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
         if (d.Version == 1) await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, 1, @html, @prompt, @size, @now)", new { id = d.Id, html, prompt = Trim(prompt), size = d.SizeBytes, now });
         return d;
     }
@@ -158,6 +166,14 @@ public class FreeformStore
         var seq = 0;
         foreach (var q in queries) await connection.ExecuteAsync($"INSERT INTO {Q} (DesignId, [Key], [Sql], Seq) VALUES (@id, @key, @sql, @seq)", new { id, key = q.Key, sql = q.Sql, seq = seq++ });
         await connection.ExecuteAsync($"UPDATE {T} SET QueryCount = @n, DataRefreshedAt = @at, DataFingerprint = @fp WHERE Id = @id", new { id, n = queries.Count, at = refreshedAt, fp = fingerprint });
+    }
+
+    /// <summary>يحفظ المصادر المختارة للتصميم (null = الكل).</summary>
+    public async Task SetSourcesAsync(string id, string? sourcesJson, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {T} SET SourcesJson = @sourcesJson WHERE Id = @id", new { id, sourcesJson });
     }
 
     public async Task SetAutoRefreshAsync(string id, bool on, CancellationToken ct = default)

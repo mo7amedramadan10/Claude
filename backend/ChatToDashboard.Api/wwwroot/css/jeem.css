@@ -3720,3 +3720,20 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope [data-inline-edit] { cursor: text; border-radius: 6px; outline: 1px dashed var(--brand-blue, #1E88E5); outline-offset: 2px; min-width: 2ch; }
 .jeem-scope [data-inline-edit]:focus { outline-style: solid; background: #F3F8FD; }
 .jeem-scope [data-inline-edit]:empty::before { content: attr(data-placeholder); color: var(--ink-3); }
+
+/* مصادر تصميم حر: شريحة «المصادر» بجوار شريحة النموذج، ولوحة اختيار تنبثق فوق صندوق الكتابة */
+.jeem-scope .ff-attach { display: flex; flex-wrap: wrap; gap: 6px; }
+.jeem-scope .ff-chip.src .ff-chip-ico { background: #E8F3EC; }
+.jeem-scope .ff-chip.src.narrow { border-color: #BFE0CB; background: #F1F9F4; }
+.jeem-scope .cc-composer .input-box { position: relative; }
+.jeem-scope .ff-src-panel { position: absolute; inset-inline-start: 10px; bottom: calc(100% - 4px); z-index: 40; width: 320px; max-width: calc(100vw - 32px); max-height: 60vh; overflow: auto; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(20, 40, 60, .14); }
+.jeem-scope .ff-src-panel .ff-src-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 8px; font-size: var(--fs-xs); color: var(--ink-3); }
+.jeem-scope .ff-src-panel .ff-src-head b { color: var(--ink); font-size: var(--fs-sm); }
+.jeem-scope .ff-src-panel .source-item { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: var(--fs-sm); }
+.jeem-scope .ff-src-panel .source-item:hover { background: var(--surface-2); }
+.jeem-scope .ff-src-panel .source-item.head { font-weight: 600; }
+.jeem-scope .ff-src-panel .source-item .note { margin-inline-start: auto; font-size: 11px; color: var(--ink-3); }
+.jeem-scope .ff-src-panel .nested { padding-inline-start: 20px; }
+.jeem-scope .ff-src-panel .nested-empty { padding: 6px 10px; font-size: var(--fs-xs); color: var(--ink-3); }
+.jeem-scope .ff-src-panel hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
+.jeem-scope .ff-src-panel .ff-src-foot { padding: 6px 6px 2px; font-size: 11px; color: var(--ink-3); line-height: 1.6; }
