@@ -9032,8 +9032,12 @@ const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0
 // الحقن قبل «آخر» </body> لا أوّله: صفحة قد تحمل «</body>» داخل نص JavaScript مقتبس (دالة تعيد بناء الملف مثلًا)،
 // والاستبدال الأعمى يضع سكربتات المنصة داخل سكربت الصفحة فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
 function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
-function ffSandboxHtml(html, withEditor, kind) {
+// مصغّرات المعرض ومعاينة النموذج: صفحة تنادي focus()/scrollIntoView()/location.hash داخل إطار (ولو بلا تفاعل) تجعل المتصفح يمرّر
+// الحاوية الأم لإظهار العنصر — فكان معرض تصميم حر «يرجع لأسفل وحده» كلما مرّر المستخدم لأعلى. تُعطَّل هذه الدوال داخل المصغّرة فقط.
+const FF_THUMB_QUIET = "<script id=\"ff-thumb-quiet\">(function(){var n=function(){};try{HTMLElement.prototype.focus=n;Element.prototype.scrollIntoView=n;Element.prototype.scrollIntoViewIfNeeded=n;window.scrollTo=n;window.scrollBy=n;window.focus=n;}catch(e){}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[autofocus]').forEach(function(a){a.removeAttribute('autofocus');});});})();</script>";
+function ffSandboxHtml(html, withEditor, kind, quiet) {
   if (!html) return html; let add = html.includes('ff-anchor-fix') ? '' : FF_ANCHOR_FIX;
+  if (quiet && !html.includes('ff-thumb-quiet')) { const i = html.search(/<head[^>]*>/i); if (i >= 0) { const j = html.indexOf('>', i) + 1; html = html.slice(0, j) + FF_THUMB_QUIET + html.slice(j); } else add = FF_THUMB_QUIET + add; }
   if (kind === 'slides' && !/jeem-slides\.js/.test(html)) add += '<script id="ff-slides-kit" src="/js/jeem-slides.js"></script>'; // شريط مصغّرات الشرائح (يُحقن عند النشر أيضًا)
   if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT; if (!add) return html; return ffInsertBeforeBodyEnd(html, add);
 }
@@ -9104,7 +9108,7 @@ async function ffLoadThumb(card) {
   const id = card.dataset.ff; const f = card.querySelector('.ff-thumb'); if (!f) return;
   let html = FF.gal.htmlCache[id];
   if (html == null) { try { const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); html = r.ok ? ((await r.json()).html || '') : ''; } catch { html = ''; } FF.gal.htmlCache[id] = html; }
-  if (html) f.srcdoc = ffSandboxHtml(html);
+  if (html) f.srcdoc = ffSandboxHtml(html, false, null, true);
 }
 document.querySelectorAll('.ff-tab').forEach(t => t.addEventListener('click', () => { FF.gal.tab = t.dataset.tab; ffRenderGallery(); }));
 el('ff-search').addEventListener('input', () => { FF.gal.q = el('ff-search').value; ffRenderGallery(); });
@@ -9235,7 +9239,7 @@ function openFfGalPreview(t) {
 function ffLiveInto(holder, t) {
   if (!holder || !window.JEEM_FF_DEMO) return;
   const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-scripts'); f.tabIndex = -1; f.title = `معاينة ${t.name}`; f.setAttribute('aria-hidden', 'true');
-  holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4)); f.srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t));
+  holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4)); f.srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t), false, null, true);
 }
 // معاينة تفاعلية كاملة ببيانات تجريبية — الصفحة في إطار معزول بحجمها الطبيعي مع شريط يوضّح أن الأرقام توضيحية
 function openFfGalDemo(t) {
