@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using ChatToDashboard.Api.Build;
 using ChatToDashboard.Api.Data;
 using ChatToDashboard.Api.Llm;
+using ChatToDashboard.Api.Models;
 using ChatToDashboard.Api.Semantics;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Templates;
@@ -39,6 +40,22 @@ public class WidgetRebuildRequest
     [JsonPropertyName("type")] public string? Type { get; set; }
     [JsonPropertyName("prompt")] public string? Prompt { get; set; }
     [JsonPropertyName("lang")] public string? Lang { get; set; }
+}
+
+/// <summary>بناء عدة عناصر دفعة واحدة من نافذة «إضافة عناصر»: كل عنصر إما نموذج عنصر جاهز (TemplateRef kind=widget)،
+/// أو مؤشر من مكتبة المؤشرات (kind=kpi بحقوله المعروضة)، أو عنصر حر بعنوانه ونوعه.</summary>
+public class WidgetBatchBuildRequest
+{
+    [JsonPropertyName("sources")] public SourceSelection? Sources { get; set; }
+    [JsonPropertyName("lang")] public string? Lang { get; set; }
+    [JsonPropertyName("items")] public List<WidgetBatchItem> Items { get; set; } = new();
+}
+public class WidgetBatchItem
+{
+    [JsonPropertyName("ref")] public TemplateRef? Ref { get; set; }
+    [JsonPropertyName("title")] public string Title { get; set; } = "";
+    [JsonPropertyName("type")] public string? Type { get; set; }
+    [JsonPropertyName("prompt")] public string? Prompt { get; set; }
 }
 
 /// <summary>
@@ -187,6 +204,62 @@ public class WidgetColumnsController : ControllerBase
     }
 
     /// <summary>يعيد بناء عنصر واحد (من قالبه إن عُرف، وإلا من عنوانه) بعد تصحيح المعاني.</summary>
+    /// <summary>بناء عدة عناصر معًا (حتى 12) بالمسار المرحلي لعنصر واحد، بالتوازي بحد 3؛ كل عنصر يعود مبنيًا أو بـ noData بسببه.</summary>
+    [HttpPost("batch")]
+    public async Task<IActionResult> Batch([FromBody] WidgetBatchBuildRequest request, CancellationToken ct)
+    {
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        if (user is null) return Unauthorized();
+        var items = request.Items ?? new List<WidgetBatchItem>();
+        if (items.Count == 0) return BadRequest(new { error = "لا عناصر." });
+        if (items.Count > 12) return BadRequest(new { error = "حتى 12 عنصرًا في المرة الواحدة." });
+        var selection = await _permissions.GetEffectiveSelectionAsync(user, request.Sources, ct);
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+
+        // مواصفة لكل عنصر (عنوان فريد داخل الدفعة لأن البنّاء يفهرس بالعنوان)
+        var specs = new List<BuiltinDashboardWidgetSpec>(); var errors = new string?[items.Count]; var titles = new string[items.Count];
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < items.Count; i++)
+        {
+            var it = items[i]; var title = (it.Title ?? "").Trim(); var type = string.IsNullOrWhiteSpace(it.Type) ? "kpi" : it.Type!.Trim(); string? prompt = it.Prompt; string? table = null, sql = null;
+            try
+            {
+                if (it.Ref is { Kind: TemplateKinds.Widget or TemplateKinds.Kpi } r)
+                {
+                    var (p, err, required) = await _templatePrompts.ResolveAsync(r, user, selection, ct);
+                    if (err is not null) { errors[i] = err; continue; }
+                    prompt = p;
+                    if (r.Kind == TemplateKinds.Widget && BuiltinTemplates.FindWidget(r.Key) is { } bw) { if (string.IsNullOrWhiteSpace(title)) title = bw.Title; if (string.IsNullOrWhiteSpace(it.Type)) type = bw.Category == "table" ? "table" : bw.Category == "chart" ? "bar" : "kpi"; }
+                    if (r.Kind == TemplateKinds.Kpi) { type = "kpi"; if (string.IsNullOrWhiteSpace(title)) title = r.KpiName ?? ""; if (required is { Count: > 0 }) { table = required[0].Table; sql = required[0].Sql; } }
+                }
+            }
+            catch (Exception ex) { errors[i] = ex.Message; continue; }
+            if (string.IsNullOrWhiteSpace(title)) { errors[i] = "عنوان العنصر مطلوب."; continue; }
+            if (!DashboardSpec.AllowedWidgetTypes.Contains(type)) type = "kpi";
+            var unique = title; var n = 2; while (!seen.Add(unique)) unique = $"{title} ({n++})";
+            titles[i] = unique;
+            specs.Add(new BuiltinDashboardWidgetSpec(type, unique, prompt, Table: table, Sql: sql));
+        }
+        var staged = new StagedBuildRequest("عناصر مضافة", "عناصر مختارة من نافذة «إضافة عناصر» تُبنى من بيانات المشروع.", specs, null,
+            new Dictionary<string, SchemaLibrary.SchemaMatchingService.MatchedWidget>(), context, request.Lang, user);
+
+        var results = new object?[items.Count]; var gate = new SemaphoreSlim(3);
+        await Task.WhenAll(Enumerable.Range(0, items.Count).Select(async i =>
+        {
+            if (errors[i] is not null || titles[i] is null) return;
+            await gate.WaitAsync(ct);
+            try
+            {
+                var widget = await _staged.BuildOneAsync(staged, titles[i], ct);
+                if (widget is null) errors[i] = "المزوّد الحالي لا يدعم البناء المرحلي لعنصر واحد."; else results[i] = widget;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex) { _logger.LogError(ex, "فشل بناء العنصر «{Title}»", titles[i]); errors[i] = "تعذّر بناء العنصر: " + ex.Message; }
+            finally { gate.Release(); }
+        }));
+        return Ok(new { items = Enumerable.Range(0, items.Count).Select(i => new { index = i, title = titles[i] ?? items[i].Title, widget = results[i], error = errors[i] }) });
+    }
+
     [HttpPost("rebuild")]
     public async Task<IActionResult> Rebuild([FromBody] WidgetRebuildRequest request, CancellationToken ct)
     {

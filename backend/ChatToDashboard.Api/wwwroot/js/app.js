@@ -1466,7 +1466,7 @@ function askForPlaceholderWidget(w) {
   el('q').scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
-function closeWizard() { el('wizard-modal').classList.add('hidden'); state.wizard = null; }
+function closeWizard() { el('wizard-modal').classList.add('hidden'); state.wizard = null; if (typeof awNextRaw === 'function') awNextRaw(); }
 el('wizard-close').addEventListener('click', closeWizard);
 el('wizard-modal').addEventListener('click', e => { if (e.target.id === 'wizard-modal') closeWizard(); });
 
@@ -4128,7 +4128,7 @@ el('btn-refresh').addEventListener('click', async () => {
   finally { btn.disabled = false; }
 });
 
-el('btn-add-widget').addEventListener('click', openWizard);
+el('btn-add-widget').addEventListener('click', openAddWidgetModal);
 
 // ---------- data sources (shown in the dash-head's .dash-meta line, next to آخر تحديث) ----------
 // Every widget built from a single query_data call carries query.table (see AnalyticsTools'
@@ -13404,3 +13404,115 @@ async function bootEmbedView(pubId, startPage) {
   // §4.23: رابط عميق إلى لوحة منشورة (#d=<معرّف النشر>&p=<الصفحة>) يفتح شاشتها مباشرة.
   if (/^#d=/.test(location.hash)) showScreen('published');
 })();
+
+// ---------- نافذة «إضافة عناصر» (اختيار متعدد) ----------
+// بطلب المستخدم: زر «+ إضافة عنصر» يفتح معرضًا بأسلوب معرض النماذج فيه ثلاثة أقسام — عناصر خام (أشكال المعالج: مقارنة/اتجاه/مؤشر/
+// توزيع/جدول، يضبطها المستخدم بنفسه)، عناصر جاهزة (نماذج العناصر TEMPLATES)، ومكتبة المؤشرات (KPI_LIB) — ويختار أكثر من
+// عنصر ثم «إضافة» فتُضاف معًا: الجاهزة والمؤشرات تُبنى دفعة واحدة في الخادم (/api/widgets/columns/batch، بالمسار المرحلي لعنصر
+// واحد بالتوازي) وتظهر فورًا كحوامل «جارٍ البناء…» ثم تُستبدل بالنتيجة؛ والخام تُفتح لها نوافذ المعالج واحدة تلو الأخرى.
+const AW = { cat: 'raw', q: '', sel: new Map(), kpiCat: '', kpiMt: '', shown: 60, queue: [] };
+const AW_CATS = [['raw', 'عناصر خام', 'plus'], ['ready', 'عناصر جاهزة', 'grid'], ['kpi', 'مكتبة المؤشرات', 'hash']];
+function awKey(kind, id) { return `${kind}:${id}`; }
+function awItems() {
+  const q = AW.q.trim().toLowerCase();
+  if (AW.cat === 'raw') return WIZARD_KINDS.filter(k => !q || k.label.includes(q)).map(k => ({ key: awKey('raw', k.kind), kind: 'raw', id: k.kind, title: k.label, desc: 'تختار المصدر والمقياس بنفسك في خطوات', icon: k.icon }));
+  if (AW.cat === 'ready') return TEMPLATES.filter(t => !q || t.title.toLowerCase().includes(q) || (t.desc || '').toLowerCase().includes(q)).map(t => ({ key: awKey('widget', t.id), kind: 'widget', id: t.id, title: t.title, desc: t.desc, icon: t.cat === 'kpi' ? '🔢' : t.cat === 'table' ? '📋' : '📊', type: t.cat === 'kpi' ? 'kpi' : t.cat === 'table' ? 'table' : 'bar' }));
+  if (!KPI_LIB) return [];
+  const out = [];
+  for (let i = 0; i < KPI_LIB.rows.length; i++) {
+    const r = KPI_LIB.rows[i]; if (KPI_ROW_OVERRIDES[i] === 'stopped' || KPI_CAT_OFF.has(r[0])) continue;
+    if (AW.kpiCat !== '' && String(r[0]) !== AW.kpiCat) continue;
+    if (AW.kpiMt !== '' && String(r[4]) !== AW.kpiMt) continue;
+    if (q && !kpiNorm(r[2] + ' ' + r[3]).includes(kpiNorm(q))) continue;
+    const c = KPI_LIB.cats[r[0]];
+    out.push({ key: awKey('kpi', i), kind: 'kpi', id: i, title: r[2], desc: `${r[3]} · ${c[0]}`, icon: '🔢', type: 'kpi', tag: KPI_LIB.mtypes[r[4]] });
+  }
+  return out;
+}
+function awCardHtml(it) {
+  const on = AW.sel.has(it.key);
+  return `<button type="button" class="dash-card aw-card k-${it.kind === 'widget' ? 'ready' : it.kind}" data-key="${esc(it.key)}" aria-pressed="${on}" title="${on ? 'إلغاء الاختيار' : 'اختيار'}">
+    <span class="aw-check" aria-hidden="true">✓</span><span class="aw-ico" aria-hidden="true">${it.icon}</span>
+    <h4>${esc(it.title)}</h4><p>${esc(it.desc || '')}</p>${it.tag ? `<span class="aw-tag">${esc(it.tag)}</span>` : ''}</button>`;
+}
+function awRenderCats() {
+  el('aw-cats').innerHTML = AW_CATS.map(([k, name, icon]) => {
+    const n = k === 'raw' ? WIZARD_KINDS.length : k === 'ready' ? TEMPLATES.length : (KPI_LIB ? KPI_LIB.rows.length : 0);
+    const picked = [...AW.sel.values()].filter(v => (k === 'ready' ? v.kind === 'widget' : v.kind === k)).length;
+    return `<button type="button" data-cat="${k}" aria-pressed="${k === AW.cat}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}${picked ? ` <b>(${picked})</b>` : ''}</span><em>${n.toLocaleString('en-US')}</em></button>`;
+  }).join('');
+  el('aw-cats').querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { AW.cat = b.dataset.cat; AW.shown = 60; awRenderCats(); awRenderGrid(); }));
+}
+function awRenderGrid() {
+  const items = awItems(); const grid = el('aw-grid');
+  const filters = el('aw-kpi-filters'); filters.classList.toggle('hidden', AW.cat !== 'kpi');
+  if (AW.cat === 'kpi' && KPI_LIB && !filters.innerHTML) {
+    const opt = (c, i) => `<option value="${i}">${esc(c[0])}</option>`;
+    filters.innerHTML = `<select id="aw-kpi-cat"><option value="">كل التصنيفات</option>${KPI_LIB.cats.map((c, i) => KPI_CAT_OFF.has(i) ? '' : opt(c, i)).join('')}</select>
+      <button type="button" class="chip is-on" data-mt="">الكل</button>${KPI_LIB.mtypes.map((m, i) => `<button type="button" class="chip" data-mt="${i}">${esc(m)}</button>`).join('')}`;
+    filters.querySelector('#aw-kpi-cat').addEventListener('change', e => { AW.kpiCat = e.target.value; AW.shown = 60; awRenderGrid(); });
+    filters.querySelectorAll('[data-mt]').forEach(ch => ch.addEventListener('click', () => { AW.kpiMt = ch.dataset.mt; filters.querySelectorAll('[data-mt]').forEach(x => x.classList.toggle('is-on', x === ch)); AW.shown = 60; awRenderGrid(); }));
+  }
+  const slice = items.slice(0, AW.shown);
+  grid.innerHTML = slice.map(awCardHtml).join('');
+  el('aw-empty').classList.toggle('hidden', items.length > 0);
+  const more = el('aw-more'); more.hidden = items.length <= AW.shown; more.textContent = `عرض المزيد (${(items.length - AW.shown).toLocaleString('en-US')} متبقٍ)`;
+  grid.querySelectorAll('.aw-card').forEach(card => card.addEventListener('click', () => {
+    const it = items.find(x => x.key === card.dataset.key); if (!it) return;
+    if (AW.sel.has(it.key)) AW.sel.delete(it.key); else AW.sel.set(it.key, it);
+    card.setAttribute('aria-pressed', String(AW.sel.has(it.key))); awRenderPicked(); awRenderCats();
+  }));
+}
+function awRenderPicked() {
+  const box = el('aw-picked'); const n = AW.sel.size;
+  box.innerHTML = n ? [...AW.sel.values()].map(it => `<span class="ff-chip"><span class="ff-chip-ico">${it.icon}</span><b>${esc(it.title)}</b><span class="ff-chip-x" data-x="${esc(it.key)}" role="button" aria-label="إزالة">✕</span></span>`).join('') : '<span>لم تختر شيئًا بعد — انقر على البطاقات لاختيار عنصر أو أكثر.</span>';
+  box.querySelectorAll('[data-x]').forEach(x => x.addEventListener('click', () => { AW.sel.delete(x.dataset.x); awRenderPicked(); awRenderCats(); awRenderGrid(); }));
+  const btn = el('aw-add'); btn.disabled = !n; btn.textContent = n ? `إضافة (${n})` : 'إضافة';
+}
+async function openAddWidgetModal() {
+  AW.sel = new Map(); AW.q = ''; AW.cat = 'raw'; AW.shown = 60; el('aw-search').value = ''; el('aw-kpi-filters').innerHTML = '';
+  if (!TEMPLATES.length) { try { await loadTemplateCatalog(); } catch { /* بلا نماذج */ } }
+  awRenderCats(); awRenderGrid(); awRenderPicked();
+  el('add-widget-modal').classList.remove('hidden');
+}
+function closeAddWidgetModal() { el('add-widget-modal').classList.add('hidden'); }
+el('aw-close').addEventListener('click', closeAddWidgetModal);
+el('add-widget-modal').addEventListener('click', e => { if (e.target.id === 'add-widget-modal') closeAddWidgetModal(); });
+el('aw-search').addEventListener('input', e => { AW.q = e.target.value; AW.shown = 60; awRenderGrid(); });
+el('aw-more').addEventListener('click', () => { AW.shown += 60; awRenderGrid(); });
+el('aw-add').addEventListener('click', () => { const items = [...AW.sel.values()]; closeAddWidgetModal(); awAddSelected(items); });
+
+// العناصر الخام: نافذة معالج لكل عنصر بالتتابع (closeWizard تنادي awNextRaw بعد كل واحدة)
+function awNextRaw() {
+  const next = AW.queue.shift(); if (!next) return;
+  state.wizard = { mode: 'add', step: 'loading', stack: [], kind: next.id, table: null, dimension: null, metric: null, dateColumn: null, timeRange: 'all', granularity: 'month', columns: [], columnsTouched: false, sort: 'desc', fields: null, gen: 0 };
+  el('wizard-next').classList.add('hidden'); el('wizard-modal').classList.remove('hidden'); renderWizardStep(); loadWizardFields();
+}
+async function awAddSelected(items) {
+  if (!items.length) return;
+  if (!state.dashboard) state.dashboard = { summary: 'لوحة معلومات', widgets: [] };
+  const built = items.filter(it => it.kind !== 'raw'); const raw = items.filter(it => it.kind === 'raw');
+  if (built.length) {
+    pushUndo();
+    // حوامل فورية تُستبدل بنتيجة البناء (أو تبقى noData بسبب صادق)
+    const placeholders = built.map(it => ({ id: 'w' + Math.random().toString(36).slice(2, 10), type: it.type || 'kpi', title: it.title, noData: true, missingReason: 'جارٍ البناء من بياناتك…', building: true, layout: { size: it.type === 'kpi' ? 'small' : it.type === 'table' ? 'full' : 'wide' } }));
+    state.dashboard.widgets.push(...placeholders); renderDashboard(); updateUndoRedoButtons();
+    const body = { sources: { systems: [...state.onSystems], files: [...state.onFiles] }, lang: state.lang, items: built.map(it => {
+      if (it.kind === 'kpi') { const r = KPI_LIB.rows[it.id], c = KPI_LIB.cats[r[0]]; const [t, sql] = r[5] || ['', '']; return { ref: { kind: 'kpi', key: String(it.id), kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiCategoryIndex: r[0], kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]], kpiTable: t, kpiSql: sql }, title: r[2], type: 'kpi' }; }
+      return { ref: { kind: 'widget', key: it.id }, title: it.title, type: it.type, prompt: it.desc };
+    }) };
+    try {
+      const res = await fetch('/api/widgets/columns/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || `(${res.status})`);
+      (payload.items || []).forEach(r => {
+        const ph = findWidget(placeholders[r.index]?.id); if (!ph) return;
+        delete ph.building;
+        if (r.widget && !r.widget.noData) { Object.assign(ph, r.widget, { id: ph.id, layout: ph.layout }); delete ph.noData; delete ph.missingReason; }
+        else ph.missingReason = r.widget?.missingReason || r.error || 'تعذّر بناء العنصر.';
+      });
+    } catch (e) { placeholders.forEach(ph => { const w = findWidget(ph.id); if (w) { delete w.building; w.missingReason = 'تعذّر البناء: ' + e.message; } }); }
+    renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+  }
+  AW.queue = raw; awNextRaw();
+}

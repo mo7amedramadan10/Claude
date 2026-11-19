@@ -10,7 +10,7 @@ namespace ChatToDashboard.Api.Models;
 /// </summary>
 public class DashboardSpec
 {
-    private static readonly HashSet<string> AllowedWidgetTypes =
+    internal static readonly HashSet<string> AllowedWidgetTypes =
         new(StringComparer.OrdinalIgnoreCase)
         {
             "kpi", "bar", "line", "pie", "table",

@@ -1786,6 +1786,39 @@
   </div>
 </div>
 
+<!-- نافذة «إضافة عناصر» (زر «+ إضافة عنصر» في وضع التحرير): معرض بأسلوب معرض النماذج — عناصر خام (أشكال المعالج)،
+     عناصر جاهزة (نماذج العناصر)، ومكتبة المؤشرات — باختيار متعدد ثم إضافة الكل معًا -->
+<div id="add-widget-modal" class="modal-overlay hidden">
+  <div class="modal dash-gallery-box" role="dialog" aria-labelledby="aw-title">
+    <div class="gal-head">
+      <div><h2 id="aw-title">إضافة عناصر</h2><p>اختر عنصرًا أو أكثر — عناصر خام تضبطها بنفسك، أو عناصر جاهزة ومؤشرات تُبنى من بياناتك.</p></div>
+      <label class="gal-search">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg>
+        <span class="sr-only">بحث في العناصر</span>
+        <input type="search" id="aw-search" placeholder="ابحث… مثال: رضا، الإيراد، churn">
+      </label>
+      <button type="button" class="btn btn-ghost btn-icon" id="aw-close" aria-label="إغلاق">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="gal-body">
+      <nav class="gal-cats" id="aw-cats" aria-label="أقسام العناصر"></nav>
+      <div class="gal-main">
+        <section class="gal-view" id="aw-view">
+          <div class="aw-filters hidden" id="aw-kpi-filters"></div>
+          <div class="gal-grid aw-grid" id="aw-grid"></div>
+          <p class="gal-empty hidden" id="aw-empty">لا توجد عناصر مطابقة.</p>
+          <button type="button" class="btn btn-ghost btn-sm" id="aw-more" hidden>عرض المزيد</button>
+        </section>
+      </div>
+    </div>
+    <div class="aw-foot">
+      <div class="aw-picked" id="aw-picked" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary" id="aw-add" disabled>إضافة</button>
+    </div>
+  </div>
+</div>
+
 <div id="wizard-modal" class="modal-overlay hidden">
   <div class="modal wizard-box">
     <div class="wizard-head">
