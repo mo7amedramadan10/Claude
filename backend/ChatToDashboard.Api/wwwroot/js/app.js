@@ -3518,6 +3518,12 @@ function firstSentence(text, max) {
   return first;
 }
 
+// سطر «مصادر البيانات · آخر تحديث» في شريط أدوات اللوحة (#dash-meta-line) وفي شريط الصفحة المشارَكة (#shared-sources)
+function renderDashMetaLine() {
+  const m = state.dashMeta || {}; const line = el('dash-meta-line'); const shared = el('shared-sources');
+  if (line) { line.innerHTML = m.metaHtml || ''; line.classList.toggle('hidden', !m.metaHtml); }
+  if (shared) { shared.textContent = m.sourceText || ''; shared.classList.toggle('hidden', !m.sourceText); }
+}
 function renderDashboard() {
   if (typeof ffTrackActive === 'function' && ffTrackActive()) ffTrackHead();
   const d = state.dashboard;
@@ -3598,28 +3604,11 @@ function renderDashboard() {
     state.dashboardIsActive && dashboardStatusBadgesHtml(),
   ].filter(Boolean);
   const metaHtml = metaBits.join('<span class="dot-sep"></span>');
-  // رأس اللوحة بهوية المشروع (الشعار والاسم من إعدادات الهوية نفسها التي يستخدمها منشئ العروض):
-  // سطر تمهيدي، عنوان قصير، الملخص كسطر فرعي، ثم سطر المصادر والتحديث. اللوحة بلا اسم محفوظ
-  // تأخذ أول جملة من الملخص عنوانًا. شارة «بيانات حيّة» حين يحمل أي عنصر استعلامًا قابلًا لإعادة التنفيذ.
-  const brand = state.dashBrand || {};
-  const titleText = d.name || firstSentence(d.summary, 80) || 'لوحة متابعة';
-  const headEdit = state.editMode && editable && !state.shareId;
-  const subText = d.summary && d.summary !== titleText ? d.summary : (headEdit ? (d.summary || '') : '');
-  const live = (!state.shareId || state.shareLive) && (d.widgets || []).some(w => w.query?.sql && !w.query.integrationId);
-  el.dash.innerHTML = `<section class="dash-head">
-      ${brand.logo ? `<img class="dash-logo" src="${esc(brand.logo)}" alt="${esc(brand.name || 'الشعار')}">` : ''}
-      <div class="dash-title">
-        <span class="dash-kicker">لوحة متابعة${brand.name ? ` · ${esc(brand.name)}` : ''}</span>
-        <h1 id="dash-head-title">${esc(titleText)}</h1>
-        ${subText || headEdit ? `<p class="dash-sub" id="dash-head-sub">${esc(subText)}</p>` : ''}
-        ${metaHtml || live ? `<div class="dash-meta">${live ? '<span class="dash-live">بيانات حيّة من مصادر المشروع</span>' : ''}${live && metaHtml ? '<span class="dot-sep"></span>' : ''}${metaHtml}</div>` : ''}
-      </div>
-    </section>${dashboardDisabledBannerHtml()}`;
-  if (state.dashBrand === undefined) loadDashBrand();
-  if (headEdit) {
-    makeInlineEditable(el('dash-head-title'), t => renameDashboard(t));
-    makeInlineEditable(el('dash-head-sub'), t => setDashboardSummary(t), null, 'أضف وصفًا للوحة…');
-  }
+  // بقرار المستخدم (2026-11-19) لا رأس داخل اللوحة (كان: شعار، عنوان، ملخص، مصادر، آخر تحديث)؛ المصادر وآخر تحديث تُعرض في الشريط
+  // العلوي للصفحة المشارَكة وفي رأس لوحة «لوحات المتابعة» وفي شريط أدوات اللوحة (dash-meta-line). العنوان يبقى في السجل والرأس.
+  state.dashMeta = { sourceText, updatedText, metaHtml };
+  el.dash.innerHTML = dashboardDisabledBannerHtml();
+  renderDashMetaLine();
 
   // A multi-page template build (see BuiltinDashboardsGenerated/ChatController's
   // reconciliation) tags each widget with the page/tab it belongs to — a free-form chat
@@ -8859,7 +8848,7 @@ function ffTrackMount() {
   pane.classList.add('in-ff');
   FF.track = true;
   el('ff-start').classList.add('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
-  el('ff-pane').classList.add('ff-track'); el('ff-title').setAttribute('contenteditable', 'false');
+  el('ff-pane').classList.add('ff-track'); el('ff-title').setAttribute('contenteditable', 'true'); el('ff-title').title = 'اضغط لتعديل اسم اللوحة';
   if (state.chatMode !== 'dashboard') setChatMode('dashboard');
   ffTrackHead(); ffTrackRenderMessages();
   if (!Object.keys(FF.trackLinks).length) ffTrackLoadLinks();
@@ -8959,7 +8948,8 @@ async function ffTrackConvert(kind) {
 function ffTrackHead() {
   const name = state.dashboard?.name || firstSentence(state.dashboard?.summary || '', 60) || 'لوحة متابعة';
   el('ff-title').textContent = state.dashboard?.widgets?.length ? name : 'لوحة متابعة جديدة';
-  el('ff-meta').textContent = state.dashboard?.widgets?.length ? `لوحة متابعة · ${state.dashboard.widgets.length.toLocaleString('en-US')} عنصر · اطلب تعديلًا بالمحادثة` : 'اكتب طلبك في المحادثة';
+  const src = state.dashboard?.widgets?.length ? computeDashboardSources(state.dashboard.widgets) : [];
+  el('ff-meta').textContent = state.dashboard?.widgets?.length ? `لوحة متابعة · ${state.dashboard.widgets.length.toLocaleString('en-US')} عنصر${src.length ? ` · مصادر البيانات: ${src.join('، ')}` : ''}${state.lastRefreshedAt ? ` · ${formatUpdatedAt(state.lastRefreshedAt)}` : ''}` : 'اكتب طلبك في المحادثة';
   ffTrackSync();
 }
 // رسائل لوحة المحادثة (state.messages) تُعرض في شريط تصميم حر بالشكل نفسه؛ أول رسالة تحمل شريحة النموذج المختار
@@ -9552,7 +9542,9 @@ el('ff-code-apply').addEventListener('click', async () => {
   FF.viewing = null; ffRender();
 });
 el('ff-title').addEventListener('blur', async () => {
-  const t = el('ff-title').textContent.trim(); if (!FF.design || !t || t === FF.design.title) return;
+  const t = el('ff-title').textContent.trim();
+  if (FF.track) { if (t && state.dashboard?.widgets?.length && t !== (state.dashboard.name || '')) renameDashboard(t); return; } // لوحة متابعة: العنوان هو اسم اللوحة
+  if (!FF.design || !t || t === FF.design.title) return;
   const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: t }) });
   if (r.ok) FF.design.title = t;
 });

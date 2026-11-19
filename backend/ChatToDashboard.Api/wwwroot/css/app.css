@@ -1050,6 +1050,10 @@ tr:last-child td{border-bottom:0}
 #shared-banner .logo{display:inline-flex;align-items:center;flex-shrink:0;padding-inline-end:12px;border-inline-end:1px solid #e3e6ea}
 #shared-banner .logo img{height:28px;width:auto;display:block}
 #shared-banner .by{font-size:12.5px;color:#6b7280;white-space:nowrap}
+#shared-banner #shared-sources{white-space:normal;max-width:40vw;overflow:hidden;text-overflow:ellipsis}
+#shared-banner #shared-sources.hidden{display:none}
+#dash-toolbar .dash-meta-line{font-size:12px;color:#6b7280;display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+#dash-toolbar .dash-meta-line.hidden{display:none}
 #shared-banner #shared-refresh{margin-inline-start:auto}
 #shared-banner #shared-refresh.hidden{display:none}
 #shared-banner #shared-refresh:not(.hidden)~.brand{margin-inline-start:0}
