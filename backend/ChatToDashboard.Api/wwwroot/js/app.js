@@ -763,6 +763,7 @@ function widgetShell(w, extraClass) {
   titleWrap.className = 'widget-head-t';
   const title = document.createElement('h3');
   title.textContent = w.title || '';
+  if (state.editMode && w.id && !state.shareId) makeInlineEditable(title, t => renameWidget(w.id, t), card);
   titleWrap.appendChild(title);
   // سطر مصدر مختصر تحت العنوان (كما في معاينة المعرض) — أول جملة من source؛ النص الكامل في نافذة ⓘ.
   if (w.source && extraClass !== 'kpi') {
@@ -1121,7 +1122,7 @@ async function rebuildWidgetFromTemplate() {
     const res = await fetch('/api/widgets/columns/rebuild', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sources: { systems: [...state.onSystems], files: [...state.onFiles] },
-        templateKey: state.dashboard?.templateKey || null, title: w.title, type: w.type || 'kpi', lang: state.lang }),
+        templateKey: state.dashboard?.templateKey || null, title: w.templateTitle || w.title, type: w.type || 'kpi', lang: state.lang }),
     });
     const payload = await res.json().catch(() => null);
     if (!res.ok || !payload?.widget) { widgetColsStatus(payload?.error || 'تعذّر إعادة البناء.', 'bad'); return; }
@@ -1274,6 +1275,40 @@ function reorderWidget(fromId, toId) {
   renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
 }
 
+// ---------- تعديل المسميات مباشرة في وضع التحرير ----------
+// عنوان أي عنصر، وعنوان اللوحة وملخصها، تصير قابلة للكتابة بالنقر (contenteditable) في وضع التحرير، وتُحفظ في
+// المواصفة مع التراجع/الإعادة والحفظ التلقائي. البطاقة قابلة للسحب فيُعطَّل السحب أثناء التركيز على النص.
+function makeInlineEditable(node, commit, card, placeholder) {
+  node.setAttribute('contenteditable', 'true'); node.setAttribute('spellcheck', 'false'); node.dataset.inlineEdit = '1';
+  node.title = 'انقر للتعديل، Enter للحفظ'; if (placeholder) node.dataset.placeholder = placeholder;
+  const orig = node.textContent;
+  node.addEventListener('focus', () => { if (card) card.draggable = false; });
+  node.addEventListener('mousedown', e => e.stopPropagation());
+  node.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); node.blur(); } if (e.key === 'Escape') { node.textContent = orig; node.blur(); } });
+  node.addEventListener('blur', () => { if (card) card.draggable = true; const t = node.textContent.trim(); if (t !== orig.trim()) commit(t); });
+}
+function renameWidget(id, title) {
+  const w = findWidget(id); if (!w || !title || w.title === title) return;
+  pushUndo();
+  if (!w.templateTitle) w.templateTitle = w.title; // عنوان القالب الأصلي يبقى لإعادة بناء العنصر من قالبه
+  w.title = title;
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+async function renameDashboard(name) {
+  const d = state.dashboard; if (!d || !name) return;
+  d.name = name; renderDashboard();
+  if (!state.currentHistoryId) return; // لوحة لم تُحفظ بعد: الاسم يُحفظ مع أول حفظ تلقائي عبر saveToHistory
+  try {
+    const res = await fetch(`/api/history/${encodeURIComponent(state.currentHistoryId)}/rename`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: name, summary: d.summary || '' }) });
+    if (res.ok) { const e = await res.json(); const idx = state.history.findIndex(h => h.id === e.id); if (idx !== -1) state.history[idx] = e; }
+  } catch {}
+}
+function setDashboardSummary(text) {
+  const d = state.dashboard; if (!d || (d.summary || '') === text) return;
+  pushUndo(); d.summary = text;
+  renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
+}
+
 el('edit-toggle').addEventListener('click', e => {
   const btn = e.target.closest('.edit-toggle-btn');
   if (!btn) return;
@@ -1286,6 +1321,7 @@ el('edit-toggle').addEventListener('click', e => {
 
 // ---------- autosave: updates the same history row instead of creating a new one per edit ----------
 let autosaveTimer = null;
+new MutationObserver(() => { if (typeof ffTrackSync === 'function') ffTrackSync(); }).observe(el('autosave-status'), { childList: true, characterData: true, subtree: true });
 function scheduleAutosave() {
   // A Viewer never edits — their applyFilters()-driven live refresh (see openHistoryEntry)
   // must not try to persist anything back, or it'd just fail against Update()'s role check.
@@ -2674,6 +2710,7 @@ function ComparisonCard(raw) {
     const h = document.createElement('h3');
     h.className = 'comparison-title';
     h.textContent = raw.title || '';
+    if (state.editMode && raw.id && !state.shareId) makeInlineEditable(h, t => renameWidget(raw.id, t), wrap);
     head.appendChild(h);
     wrap.appendChild(head);
     if (state.editMode && raw.id) {
@@ -2721,6 +2758,7 @@ function NoDataPlaceholderCard(w) {
   head.className = 'widget-head';
   const title = document.createElement('h3');
   title.textContent = w.title || '';
+  if (state.editMode && w.id && !state.shareId) makeInlineEditable(title, t => renameWidget(w.id, t), card);
   head.appendChild(title);
   const editable = !!state.currentUser && state.dashboardRole !== 'viewer';
   if (state.editMode && w.id) {
@@ -3565,18 +3603,23 @@ function renderDashboard() {
   // تأخذ أول جملة من الملخص عنوانًا. شارة «بيانات حيّة» حين يحمل أي عنصر استعلامًا قابلًا لإعادة التنفيذ.
   const brand = state.dashBrand || {};
   const titleText = d.name || firstSentence(d.summary, 80) || 'لوحة متابعة';
-  const subText = d.summary && d.summary !== titleText ? d.summary : '';
+  const headEdit = state.editMode && editable && !state.shareId;
+  const subText = d.summary && d.summary !== titleText ? d.summary : (headEdit ? (d.summary || '') : '');
   const live = !state.shareId && (d.widgets || []).some(w => w.query?.sql && !w.query.integrationId);
   el.dash.innerHTML = `<section class="dash-head">
       ${brand.logo ? `<img class="dash-logo" src="${esc(brand.logo)}" alt="${esc(brand.name || 'الشعار')}">` : ''}
       <div class="dash-title">
         <span class="dash-kicker">لوحة متابعة${brand.name ? ` · ${esc(brand.name)}` : ''}</span>
-        <h1>${esc(titleText)}</h1>
-        ${subText ? `<p class="dash-sub">${esc(subText)}</p>` : ''}
+        <h1 id="dash-head-title">${esc(titleText)}</h1>
+        ${subText || headEdit ? `<p class="dash-sub" id="dash-head-sub">${esc(subText)}</p>` : ''}
         ${metaHtml || live ? `<div class="dash-meta">${live ? '<span class="dash-live">بيانات حيّة من مصادر المشروع</span>' : ''}${live && metaHtml ? '<span class="dot-sep"></span>' : ''}${metaHtml}</div>` : ''}
       </div>
     </section>${dashboardDisabledBannerHtml()}`;
   if (state.dashBrand === undefined) loadDashBrand();
+  if (headEdit) {
+    makeInlineEditable(el('dash-head-title'), t => renameDashboard(t));
+    makeInlineEditable(el('dash-head-sub'), t => setDashboardSummary(t), null, 'أضف وصفًا للوحة…');
+  }
 
   // A multi-page template build (see BuiltinDashboardsGenerated/ChatController's
   // reconciliation) tags each widget with the page/tab it belongs to — a free-form chat
@@ -8808,12 +8851,93 @@ function ffTrackUnmount() {
   pane.classList.remove('in-ff');
   if (ffDashAnchor && ffDashAnchor.parentNode) ffDashAnchor.parentNode.insertBefore(pane, ffDashAnchor);
   el('ff-pane').classList.remove('ff-track'); el('ff-title').setAttribute('contenteditable', 'true');
+  el('ff-tk-edit-bar').classList.add('hidden'); pane.classList.remove('mobile');
   FF.track = false; FF.trackAttach = '';
+}
+// ---------- شريط «لوحات المتابعة» (نفس منطق أزرار تصميم حر) ----------
+function ffTrackSetEdit(on) {
+  state.editMode = !!on;
+  el('edit-toggle').querySelectorAll('.edit-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === (state.editMode ? 'edit' : 'view')));
+  renderDashboard();
+}
+function ffTrackShareKey() { return state.currentHistoryId ? 'jeem.trackShare:' + state.currentHistoryId : null; }
+function ffTrackShareId() { const k = ffTrackShareKey(); if (!k) return null; try { return localStorage.getItem(k); } catch { return null; } }
+// مزامنة الشريط مع حالة اللوحة: زر التعديل والشريط الأصفر، التراجع/الإعادة، الرابط ونص النشر، حالة الحفظ
+function ffTrackSync() {
+  if (!FF.track) return;
+  const d = state.dashboard; const has = !!d?.widgets?.length; const editable = !!state.currentUser && state.dashboardRole !== 'viewer' && !d?.renderKind;
+  el('ff-pane').querySelectorAll('.ff-track-actions button').forEach(b => { b.disabled = !has || state.loading; });
+  el('ff-tk-edit').disabled = !has || !editable || state.loading; el('ff-tk-edit').setAttribute('aria-pressed', state.editMode ? 'true' : 'false');
+  el('ff-tk-edit-bar').classList.toggle('hidden', !(has && editable && state.editMode));
+  el('ff-tk-undo').disabled = !state.editHistory.past.length; el('ff-tk-redo').disabled = !state.editHistory.future.length;
+  el('ff-tk-save-status').textContent = el('autosave-status').textContent;
+  el('ff-tk-mobile').setAttribute('aria-pressed', el('dash-pane').classList.contains('mobile') ? 'true' : 'false');
+  const sid = ffTrackShareId();
+  el('ff-tk-link').classList.toggle('hidden', !sid); if (sid) el('ff-tk-link').title = `رابط المشاركة: ${location.origin}/?share=${sid} — انقر لنسخه`;
+  el('ff-tk-publish').textContent = sid ? 'تحديث النشر' : 'نشر';
+}
+el('ff-tk-edit').addEventListener('click', () => ffTrackSetEdit(!state.editMode));
+el('ff-tk-edit-done').addEventListener('click', () => ffTrackSetEdit(false));
+el('ff-tk-add').addEventListener('click', () => el('btn-add-widget').click());
+el('ff-tk-undo').addEventListener('click', () => { undo(); ffTrackSync(); });
+el('ff-tk-redo').addEventListener('click', () => { redo(); ffTrackSync(); });
+el('ff-tk-mobile').addEventListener('click', () => { el('dash-pane').classList.toggle('mobile'); ffTrackSync(); });
+el('ff-tk-refresh').addEventListener('click', e => { e.stopPropagation(); const panel = el('ff-tk-refresh-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns(); panel.classList.toggle('hidden', !open); el('ff-tk-refresh').setAttribute('aria-expanded', open ? 'true' : 'false'); });
+el('ff-tk-refresh-panel').addEventListener('click', e => e.stopPropagation());
+el('ff-tk-refresh-fast').addEventListener('click', () => { el('ff-tk-refresh-panel').classList.add('hidden'); el('btn-refresh').click(); });
+el('ff-tk-refresh-rebuild').addEventListener('click', () => { el('ff-tk-refresh-panel').classList.add('hidden'); ffTrackAsk('أعد تنفيذ استعلامات كل العناصر بالبيانات الحالية وحدّث أرقامها دون تغيير عناصر اللوحة أو ترتيبها أو عناوينها.'); });
+el('ff-tk-convert').addEventListener('click', e => {
+  e.stopPropagation(); const panel = el('ff-tk-convert-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
+  if (open) {
+    panel.innerHTML = ['dashboard', 'doc', 'slides', 'design'].map(k => `<button type="button" class="dropdown-item" data-kind="${k}"><b>${esc(FF_KINDS[k].label)}</b><small class="muted"> — صفحة HTML حرة من هذه اللوحة</small></button>`).join('');
+    panel.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffTrackConvert(b.dataset.kind); }));
+  }
+  panel.classList.toggle('hidden', !open); el('ff-tk-convert').setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+el('ff-tk-convert-panel').addEventListener('click', e => e.stopPropagation());
+el('ff-tk-link').addEventListener('click', () => { const sid = ffTrackShareId(); if (sid) ffCopyLink(`${location.origin}/?share=${sid}`, el('ff-tk-link')); });
+el('ff-tk-publish').addEventListener('click', () => ffTrackPublish());
+// نشر بنقرة واحدة: تفعيل اللوحة إن لزم (رابط المشاركة يحتاج مالكًا) ثم رابط مشاركة بلا انتهاء؛ إعادة النشر تنشئ رابطًا بأحدث نسخة وتوقف القديم
+async function ffTrackPublish() {
+  const d = state.dashboard; if (!d?.widgets?.length || state.loading) return;
+  if (d.renderKind) { state.messages.push({ role: 'bot', text: 'اللوحات التفاعلية تُنشر من شاشة «اللوحات المنشورة» في الوقت الحالي.', error: true }); renderMessages(); return; }
+  if (!state.currentHistoryId) { state.messages.push({ role: 'bot', text: 'اللوحة لم تُحفظ بعد — انتظر لحظة ثم أعد المحاولة.', error: true }); renderMessages(); return; }
+  const btn = el('ff-tk-publish'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'ينشر…';
+  try {
+    if (!state.dashboardIsActive) { await activateHistoryEntry(state.currentHistoryId); if (!state.dashboardIsActive) throw new Error('تعذّر تفعيل اللوحة.'); }
+    const old = ffTrackShareId();
+    const lastQuestion = d.name || [...state.messages].reverse().find(m => m.role === 'user')?.text || 'لوحة متابعة';
+    const res = await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: lastQuestion, summary: d.summary, widgets: d.widgets, filters: d.filters || [], activeFilters: state.activeFilters || {}, expiresAt: null, historyId: state.currentHistoryId }) });
+    const saved = await res.json().catch(() => null);
+    if (!res.ok || !saved?.id) throw new Error(saved?.error || `(${res.status})`);
+    try { localStorage.setItem(ffTrackShareKey(), saved.id); } catch {}
+    if (old && old !== saved.id) fetch(`/api/share/${encodeURIComponent(old)}/revoke`, { method: 'POST' }).catch(() => {});
+    const url = `${location.origin}/?share=${saved.id}`;
+    state.messages.push({ role: 'bot', text: (old ? 'حُدّث النشر برابط جديد يحمل أحدث نسخة (الرابط السابق أُوقف): ' : 'نُشرت اللوحة — هذا رابطها (بلا انتهاء، ويظهر أيضًا في «روابط المشاركة»): ') + url, html: `${old ? 'حُدّث النشر برابط جديد يحمل أحدث نسخة (الرابط السابق أُوقف):' : 'نُشرت اللوحة — هذا رابطها (بلا انتهاء، ويظهر أيضًا في «روابط المشاركة»):'} <a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>` });
+    renderMessages(); renderDashboard();
+  } catch (e) { state.messages.push({ role: 'bot', text: 'تعذّر النشر: ' + e.message, error: true }); renderMessages(); }
+  finally { btn.disabled = false; btn.textContent = label; ffTrackSync(); }
+}
+// تحويل اللوحة إلى تصميم حر (صفحة HTML بالموديل من مواصفة اللوحة وبياناتها) — تصميم جديد يُفتح، واللوحة تبقى في السجل
+async function ffTrackConvert(kind) {
+  const d = state.dashboard; if (!d?.widgets?.length || FF.busy) return;
+  const to = FF_KINDS[kind].label; const title = d.name || firstSentence(d.summary || '', 60) || 'لوحة متابعة';
+  FF.busy = true; state.messages.push({ role: 'user', text: `حوّل هذه اللوحة إلى ${to} (صفحة HTML)` }); state.loading = true; renderMessages();
+  ccSetLoading('ff-pane', `جارٍ التحويل إلى ${to}`, 'الموديل يبني صفحة HTML من عناصر اللوحة وبياناتها — قد يستغرق حتى دقيقة.');
+  try {
+    const r = await fetch('/api/freeform/from-dashboard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, title, dashboard: { name: d.name || null, summary: d.summary, widgets: d.widgets } }) });
+    const res = await r.json().catch(() => ({})); if (!r.ok) throw new Error(res.error || `(${r.status})`);
+    state.loading = false; state.messages.pop(); renderMessages(); FF.busy = false;
+    FF.kind = kind; await ffOpen(res.design.id);
+    ffPushMsg('bot', `هذه نسخة ${to} من لوحة «${title}» — اللوحة الأصلية باقية كما هي في السجل و«لوحات المتابعة». ${res.reply || ''}`);
+  } catch (e) { state.loading = false; state.messages.push({ role: 'bot', text: 'تعذّر التحويل: ' + e.message, error: true }); renderMessages(); }
+  finally { FF.busy = false; state.loading = false; ccSetLoading('ff-pane', null); }
 }
 function ffTrackHead() {
   const name = state.dashboard?.name || firstSentence(state.dashboard?.summary || '', 60) || 'لوحة متابعة';
   el('ff-title').textContent = state.dashboard?.widgets?.length ? name : 'لوحة متابعة جديدة';
   el('ff-meta').textContent = state.dashboard?.widgets?.length ? `لوحة متابعة · ${state.dashboard.widgets.length.toLocaleString('en-US')} عنصر · اطلب تعديلًا بالمحادثة` : 'اكتب طلبك في المحادثة';
+  ffTrackSync();
 }
 // رسائل لوحة المحادثة (state.messages) تُعرض في شريط تصميم حر بالشكل نفسه؛ أول رسالة تحمل شريحة النموذج المختار
 function ffTrackRenderMessages() {

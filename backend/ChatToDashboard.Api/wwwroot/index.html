@@ -1147,6 +1147,25 @@
         <button type="button" id="ff-link" class="btn btn-sm btn-ghost hidden" title="الرابط الدائم لهذا التصميم — انقر لنسخه">🔗 الرابط</button>
         <button type="button" id="ff-publish" class="btn btn-sm">نشر</button>
       </div>
+      <!-- شريط «لوحات المتابعة»: نفس منطق أزرار تصميم حر (تعديل، جوال، تحديث البيانات، تحويل إلى، الرابط، نشر) على لوحة المحادثة
+           المستضافة؛ شريط اللوحة الأصلي (#dash-toolbar) يُخفى في هذا الوضع، والأزرار تنادي منطق اللوحة الموجود نفسه. -->
+      <div class="dk-actions ff-track-actions" id="ff-track-actions">
+        <button type="button" id="ff-tk-edit" class="btn btn-sm btn-ghost" aria-pressed="false" title="وضع التحرير: غيّر الحجم والنوع من قائمة ⋮، اسحب لإعادة الترتيب، وانقر على أي عنوان لتعديله">✏️ تعديل</button>
+        <button type="button" id="ff-tk-mobile" class="btn btn-sm btn-ghost" aria-pressed="false" title="معاينة اللوحة بعرض الجوال (390px)">📱 جوال</button>
+        <div class="dropdown" id="ff-tk-refresh-dropdown">
+          <button type="button" id="ff-tk-refresh" class="btn btn-sm btn-ghost" title="تحديث أرقام اللوحة من بيانات المشروع الحالية" aria-haspopup="true" aria-expanded="false">🔄 تحديث البيانات ▾</button>
+          <div id="ff-tk-refresh-panel" class="dropdown-panel hidden">
+            <button type="button" class="dropdown-item" id="ff-tk-refresh-fast"><b>تحديث البيانات</b><small class="muted"> — إعادة تنفيذ استعلام كل عنصر بلا موديل، مع الفلاتر الحالية</small></button>
+            <button type="button" class="dropdown-item" id="ff-tk-refresh-rebuild"><b>إعادة البناء بالبيانات الحالية</b><small class="muted"> — بالموديل، للعناصر التي كُتبت أرقامها حرفيًا</small></button>
+          </div>
+        </div>
+        <div class="dropdown" id="ff-tk-convert-dropdown">
+          <button type="button" id="ff-tk-convert" class="btn btn-sm btn-ghost" title="إنشاء صفحة HTML (تصميم حر) من هذه اللوحة — اللوحة الأصلية تبقى في السجل" aria-haspopup="true" aria-expanded="false">⇄ تحويل إلى ▾</button>
+          <div id="ff-tk-convert-panel" class="dropdown-panel hidden"></div>
+        </div>
+        <button type="button" id="ff-tk-link" class="btn btn-sm btn-ghost hidden" title="رابط المشاركة لهذه اللوحة — انقر لنسخه">🔗 الرابط</button>
+        <button type="button" id="ff-tk-publish" class="btn btn-sm" title="نشر اللوحة برابط يمكن مشاركته مع أي شخص (يفعّل اللوحة إن لم تكن مفعّلة)">نشر</button>
+      </div>
     </div>
     <div id="ff-body" class="ff-body">
       <!-- حالة البداية: نسخة من معرض Artifacts في Claude — عنوان، تبويبات (الكل/تصاميمي/مشترك معي)، بحث وتصفية بالنوع وتبديل العرض، بطاقات «اصنع شيئًا جديدًا»، ثم التصاميم السابقة بمعاينات مصغّرة -->
@@ -1193,6 +1212,15 @@
           <button type="button" id="ff-edit-save" class="btn btn-sm btn-primary" disabled>حفظ كإصدار جديد</button>
         </div>
         <iframe id="ff-preview" class="ff-preview" title="معاينة التصميم" sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
+      </div>
+      <!-- شريط وضع التحرير للوحة المتابعة المستضافة (الإضافة/التراجع/الإعادة تنادي أزرار شريط اللوحة الأصلي) -->
+      <div id="ff-tk-edit-bar" class="ff-edit-bar hidden" role="status">
+        <span>✏️ وضع التحرير: غيّر الحجم والنوع من قائمة ⋮ على كل عنصر، اسحب لإعادة الترتيب، وانقر على عنوان اللوحة أو أي عنصر لتعديله. <small class="muted" id="ff-tk-save-status"></small></span>
+        <span class="grow"></span>
+        <button type="button" id="ff-tk-add" class="btn btn-sm btn-ghost">＋ إضافة عنصر</button>
+        <button type="button" id="ff-tk-undo" class="btn btn-sm btn-ghost" title="تراجع">↶ تراجع</button>
+        <button type="button" id="ff-tk-redo" class="btn btn-sm btn-ghost" title="إعادة">↷ إعادة</button>
+        <button type="button" id="ff-tk-edit-done" class="btn btn-sm btn-primary">إنهاء التحرير</button>
       </div>
       <div id="ff-code-wrap" class="ff-code-wrap hidden">
         <textarea id="ff-code-text" spellcheck="false" dir="ltr" aria-label="كود الصفحة"></textarea>

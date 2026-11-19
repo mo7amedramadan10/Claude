@@ -18,6 +18,8 @@ public class FreeformGenerateRequest { public string Message { get; set; } = "";
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
 public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } }
+/// <summary>تحويل لوحة محادثة (مواصفتها كاملة بعناصرها وبياناتها) إلى تصميم حر من نوع معيّن — «لوحات المتابعة» داخل تصميم حر.</summary>
+public class FreeformFromDashboardRequest { public string Kind { get; set; } = "dashboard"; public string? Title { get; set; } public System.Text.Json.JsonElement Dashboard { get; set; } public string? Note { get; set; } }
 
 /// <summary>«تصميم حر»: صفحات HTML كاملة يكتبها الموديل من المحادثة (كـ artifacts) لكل مشروع — إصدارات، تعديل يدوي، نشر في «العروض التقديمية».</summary>
 [ApiController]
@@ -236,6 +238,63 @@ public class FreeformController : ControllerBase
         await _store.AddMessageAsync(design.Id, "user", $"تحويل «{src.Title}» من {fromLabel} إلى {toLabel}", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, sourceId = src.Id });
+    }
+
+    /// <summary>
+    /// تحويل لوحة متابعة (لوحة محادثة) إلى تصميم حر: نداء بناء واحد يتلقّى مواصفة اللوحة كاملة (الملخص، العناصر بعناوينها
+    /// وأنواعها وبياناتها وجمل SQL) ويُنتج صفحة HTML مستقلة من النوع المطلوب؛ اللوحة الأصلية تبقى في السجل كما هي.
+    /// </summary>
+    [HttpPost("from-dashboard")]
+    public async Task<IActionResult> FromDashboard([FromBody] FreeformFromDashboardRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var kind = FreeformStore.NormalizeKind(request.Kind);
+        if (request.Dashboard.ValueKind != System.Text.Json.JsonValueKind.Object) return BadRequest(new { error = "مواصفة اللوحة مطلوبة." });
+        var spec = DashboardSpecText(request.Dashboard, out var sqls);
+        if (string.IsNullOrWhiteSpace(spec)) return BadRequest(new { error = "اللوحة بلا عناصر." });
+        var toLabel = FreeformBuilder.KindLabel(kind);
+        var title = string.IsNullOrWhiteSpace(request.Title) ? "لوحة متابعة" : request.Title.Trim();
+        var message = $"حوّل لوحة المتابعة التالية إلى {toLabel} كاملة بصفحة HTML مستقلة: احتفظ بكل العناصر بعناوينها وأنواعها وأرقامها كما هي، وبالترتيب نفسه، وبهوية المشروع."
+            + (sqls.Count > 0 ? "\nكل عنصر له جملة SQL: نفّذها بأداة query_data لتقرأ أحدث الصفوف وتُسجَّل في JEEM_DATA، واقرأ الأرقام منها في جافاسكربت الصفحة لا حرفيًا." : "")
+            + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}")
+            + "\n\n# مواصفة اللوحة\n" + spec;
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct);
+        FreeformResult result;
+        try { result = await _builder.GenerateAsync(message, null, Array.Empty<FreeformMessage>(), context, brand, user, ct, kind); }
+        catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
+        if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل صفحة من التحويل — جرّب ثانية أو أضف ملاحظة." });
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{title} ({toLabel})", result.Html, message, kind, null, ct);
+        if (result.Queries is { Count: > 0 } qs) { var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, DateTime.UtcNow, fp, ct); }
+        await _store.AddMessageAsync(design.Id, "user", $"تحويل لوحة المتابعة «{title}» إلى {toLabel}", null, ct);
+        await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply });
+    }
+
+    /// <summary>نص موجز لمواصفة اللوحة يُرسل للموديل: الملخص ثم كل عنصر (العنوان، النوع، الحجم، SQL، والبيانات مقتطعة).</summary>
+    internal static string DashboardSpecText(System.Text.Json.JsonElement d, out List<string> sqls)
+    {
+        sqls = new List<string>(); var sb = new StringBuilder();
+        if (d.TryGetProperty("name", out var n) && n.ValueKind == System.Text.Json.JsonValueKind.String) sb.AppendLine($"العنوان: {n.GetString()}");
+        if (d.TryGetProperty("summary", out var sm) && sm.ValueKind == System.Text.Json.JsonValueKind.String) sb.AppendLine($"الملخص: {sm.GetString()}");
+        if (!d.TryGetProperty("widgets", out var ws) || ws.ValueKind != System.Text.Json.JsonValueKind.Array || ws.GetArrayLength() == 0) return "";
+        var i = 0;
+        foreach (var w in ws.EnumerateArray())
+        {
+            i++;
+            var title = w.TryGetProperty("title", out var t) ? t.GetString() : null;
+            var type = w.TryGetProperty("type", out var ty) ? ty.GetString() : null;
+            var size = w.TryGetProperty("layout", out var l) && l.ValueKind == System.Text.Json.JsonValueKind.Object && l.TryGetProperty("size", out var sz) ? sz.GetString() : null;
+            sb.AppendLine($"## العنصر {i}: {title} (النوع: {type}{(size is null ? "" : $"، الحجم: {size}")})");
+            if (w.TryGetProperty("page", out var pg) && pg.ValueKind == System.Text.Json.JsonValueKind.String) sb.AppendLine($"الصفحة/التبويب: {pg.GetString()}");
+            if (w.TryGetProperty("query", out var q) && q.ValueKind == System.Text.Json.JsonValueKind.Object && q.TryGetProperty("sql", out var sq) && sq.ValueKind == System.Text.Json.JsonValueKind.String && !string.IsNullOrWhiteSpace(sq.GetString()))
+            { sqls.Add(sq.GetString()!); sb.AppendLine($"SQL: {sq.GetString()}"); }
+            if (w.TryGetProperty("data", out var data) && data.ValueKind != System.Text.Json.JsonValueKind.Undefined && data.ValueKind != System.Text.Json.JsonValueKind.Null)
+            { var raw = data.GetRawText(); sb.AppendLine($"البيانات: {(raw.Length > 2500 ? raw[..2500] + "…(اقتُطع)" : raw)}"); }
+            if (w.TryGetProperty("noData", out var nd) && nd.ValueKind == System.Text.Json.JsonValueKind.True) sb.AppendLine("(بلا بيانات — اعرضه كعنصر فارغ بعنوانه)");
+        }
+        return sb.Length > 60_000 ? sb.ToString(0, 60_000) + "\n…(اقتُطع)" : sb.ToString();
     }
 
     /// <summary>توليد أو تعديل بالمحادثة. بلا <c>designId</c> يُنشأ تصميم جديد بعنوان من الطلب.</summary>

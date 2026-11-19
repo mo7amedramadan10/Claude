@@ -3706,4 +3706,13 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-card.k-track .ff-card-ico { background: #D6EEF8; color: #0B5C8F; }
 /* «لوحات المتابعة»: #dash-pane (بأدواته) يُستضاف داخل #ff-body؛ رأس لوحة تصميم حر يبقى بعنوان اللوحة وأزرار تصميم حر تُخفى */
 #ff-body > #dash-pane.in-ff { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; }
-#ff-pane.ff-track .cc-pane-head .dk-actions { display: none; }
+#ff-pane.ff-track .cc-pane-head .dk-actions:not(.ff-track-actions) { display: none; }
+.jeem-scope .ff-track-actions { display: none; }
+#ff-pane.ff-track .ff-track-actions { display: flex; }
+#dash-pane.in-ff #dash-toolbar { display: none; }
+#ff-body > #ff-tk-edit-bar { margin: 12px 20px 0; flex: none; }
+#ff-body > #dash-pane.in-ff.mobile { width: min(390px, 100%); align-self: center; margin: 12px auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+/* تعديل العناوين مباشرة في وضع التحرير (شاشة المحادثة ولوحات المتابعة معًا) */
+.jeem-scope [data-inline-edit] { cursor: text; border-radius: 6px; outline: 1px dashed var(--brand-blue, #1E88E5); outline-offset: 2px; min-width: 2ch; }
+.jeem-scope [data-inline-edit]:focus { outline-style: solid; background: #F3F8FD; }
+.jeem-scope [data-inline-edit]:empty::before { content: attr(data-placeholder); color: var(--ink-3); }
