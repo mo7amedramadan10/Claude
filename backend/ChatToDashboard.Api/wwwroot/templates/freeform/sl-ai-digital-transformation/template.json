@@ -1,0 +1,77 @@
+{
+  "key": "sl-ai-digital-transformation",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🤖",
+  "name": "التحول الرقمي بالذكاء الاصطناعي",
+  "nameEn": "AI Digital Transformation",
+  "description": "15 شريحة: غلاف، جدول أعمال، تحديات، حلول، إطار، تقنيات، تنفيذ، بيانات، دراسة حالة، فوائد، مخاطر، خاتمة",
+  "descriptionEn": "15 slides: cover, agenda, challenges, solutions, framework, process, data chart, case study, ROI, risks, CTA",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال والنظرة العامة",
+      "titleEn": "Agenda & Overview"
+    },
+    {
+      "title": "مقدمة في التحول الرقمي",
+      "titleEn": "Introduction To Digital Transformation",
+      "needsData": true
+    },
+    {
+      "title": "دور الذكاء الاصطناعي",
+      "titleEn": "Role of Artificial Intelligence"
+    },
+    {
+      "title": "تحديات الأعمال الحالية",
+      "titleEn": "Current Business Challenges"
+    },
+    {
+      "title": "الحلول المدعومة بالذكاء الاصطناعي",
+      "titleEn": "AI-Powered Solutions"
+    },
+    {
+      "title": "إطار التحول واستراتيجيته",
+      "titleEn": "Transformation Framework & Strategy"
+    },
+    {
+      "title": "التقنيات الرئيسية المعنية",
+      "titleEn": "Key Technologies Involved",
+      "needsData": true
+    },
+    {
+      "title": "عملية التنفيذ",
+      "titleEn": "Implementation Process"
+    },
+    {
+      "title": "تكامل البيانات والتحليلات (رسم)",
+      "titleEn": "Data & Analytics Integration (chart)",
+      "needsData": true
+    },
+    {
+      "title": "دراسة الحالة وقصة النجاح",
+      "titleEn": "Case Study & Success Story",
+      "needsData": true
+    },
+    {
+      "title": "الفوائد والعائد على الاستثمار",
+      "titleEn": "Benefits & ROI"
+    },
+    {
+      "title": "التحديات والحد من المخاطر",
+      "titleEn": "Challenges & Risk Mitigation"
+    },
+    {
+      "title": "النظرة المستقبلية والاتجاهات",
+      "titleEn": "Future Outlook & Trends"
+    },
+    {
+      "title": "الخاتمة والدعوة إلى العمل",
+      "titleEn": "Conclusion & Call to Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت من 15 شريحة: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في الشريحة العاشرة في كتلة JSON بالمعرّف chart-data (labels وpcts وbars)."
+}
