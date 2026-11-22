@@ -1,0 +1,83 @@
+{
+  "key": "sl-ai-business-plan",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🤖",
+  "name": "خطة عمل بالذكاء الاصطناعي",
+  "nameEn": "AI Business Plan",
+  "description": "16 شريحة لخطة عمل: غلاف وفهرس، المشكلة والحل، السوق والزخم ونموذج العمل، الفريق والمالية والطلب والختام",
+  "descriptionEn": "16 business-plan slides: cover, contents, problem, solution, market, traction, model, team, financials, ask, Q&A",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل الموضوع 01",
+      "titleEn": "Topic Divider 01"
+    },
+    {
+      "title": "المشكلة (أرقام)",
+      "titleEn": "The Problem (figures)",
+      "needsData": true
+    },
+    {
+      "title": "الحل",
+      "titleEn": "The Solution"
+    },
+    {
+      "title": "آلية العمل",
+      "titleEn": "How It Works"
+    },
+    {
+      "title": "فرصة السوق (رسم)",
+      "titleEn": "Market Opportunity (chart)",
+      "needsData": true
+    },
+    {
+      "title": "الزخم (أرقام)",
+      "titleEn": "Traction (figures)",
+      "needsData": true
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model"
+    },
+    {
+      "title": "الميزة التنافسية",
+      "titleEn": "Competitive Edge"
+    },
+    {
+      "title": "الفريق",
+      "titleEn": "The Team"
+    },
+    {
+      "title": "البيانات المالية (رسم)",
+      "titleEn": "Financials (chart)",
+      "needsData": true
+    },
+    {
+      "title": "الطلب التمويلي (رقم)",
+      "titleEn": "The Ask (figure)",
+      "needsData": true
+    },
+    {
+      "title": "استخدام التمويل (دائرتان)",
+      "titleEn": "Use of Funds (donuts)",
+      "needsData": true
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON بالمعرّفات chart-data وchart-data-2 (أعمدة) وchart-data-3 (دائرتان)، والأشكال الزخرفية SVG لا تُمس."
+}
