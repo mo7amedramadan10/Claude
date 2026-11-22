@@ -27,7 +27,7 @@ public class FreeformBuilder
     public FreeformBuilder(LlmRouter router, DataProfileService profiles, AnalyticsTools tools, ColumnSemanticsService semantics, ILogger<FreeformBuilder> logger)
     { _router = router; _profiles = profiles; _tools = tools; _semantics = semantics; _logger = logger; }
 
-    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design", FreeformTemplate? template = null)
+    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design", FreeformTemplate? template = null, string? lang = null)
     {
         var llm = await _router.ResolveStagedAsync(ct) ?? throw new InvalidOperationException("لا يوجد مزوّد موديل مهيأ — اضبط مفاتيح الموديلات من الإعدادات.");
         var profile = await _profiles.BuildAsync(context, ct);
@@ -38,7 +38,7 @@ public class FreeformBuilder
             await _semantics.EnsureAnalyzedAsync(context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
             profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.ProjectId, ct));
         }
-        var system = BuildSystemPrompt(brand, hasData, profileText, kind, template);
+        var system = BuildSystemPrompt(brand, hasData, profileText, kind, template, LanguageOf(lang, currentHtml));
         var userMsg = new StringBuilder();
         if (history.Count > 0)
         {
@@ -127,7 +127,20 @@ public class FreeformBuilder
             """,
     };
 
-    public static string BuildSystemPrompt(DeckBrand? brand, bool hasData, string profileText, string kind = "design", FreeformTemplate? template = null)
+    /// <summary>لغة الصفحة: المطلوبة صراحة للتصميم الجديد، وإلا المستنتجة من صفحة التصميم القائم (`lang="en"`/`dir="ltr"`)، وإلا العربية.</summary>
+    public static string LanguageOf(string? requested, string? currentHtml)
+    {
+        if (requested == "en" || requested == "ar") return requested;
+        if (!string.IsNullOrEmpty(currentHtml))
+        {
+            var head = currentHtml.Length > 600 ? currentHtml[..600] : currentHtml;
+            if (System.Text.RegularExpressions.Regex.IsMatch(head, "<html[^>]*\\blang=[\"']?en", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                || System.Text.RegularExpressions.Regex.IsMatch(head, "<html[^>]*\\bdir=[\"']?ltr", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return "en";
+        }
+        return "ar";
+    }
+
+    public static string BuildSystemPrompt(DeckBrand? brand, bool hasData, string profileText, string kind = "design", FreeformTemplate? template = null, string? lang = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("""
@@ -143,7 +156,12 @@ public class FreeformBuilder
             أعد JSON فقط: {"reply": "جملة أو اثنتان بالعربية عمّا صممته وما يمكن تعديله", "html": "<!doctype html>…", "usedData": true|false}
             """);
         sb.AppendLine(KindInstructions(kind));
-        if (template is not null) sb.AppendLine(FreeformTemplates.BriefFor(template));
+        if (lang == "en") sb.AppendLine("""
+            # لغة الصفحة: الإنجليزية
+            - اكتب كل نصوص الصفحة بالإنجليزية (العناوين، الفقرات، التسميات، الأزرار، نصوص الرسوم) و`<html lang="en" dir="ltr">` بتخطيط LTR وخط لاتيني واضح؛ لا تترك نصًا عربيًا في الصفحة.
+            - حقل `reply` في JSON يبقى بالعربية (رسالة للمستخدم داخل المنصة).
+            """);
+        if (template is not null) sb.AppendLine(FreeformTemplates.BriefFor(template, lang));
         if (brand is not null && !brand.IsEmpty)
         {
             sb.AppendLine("# هوية المشروع (التزم بها)");

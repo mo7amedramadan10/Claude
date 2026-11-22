@@ -3795,3 +3795,8 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 
 /* بطاقة نموذج صفحة جاهزة في معرض تصميم حر: معاينة حيّة مصغّرة مكان الرسم التخطيطي */
 #ff-gallery-modal .dash-card .ff-live-card { aspect-ratio: 16 / 10; border-radius: 10px 10px 0 0; }
+
+/* أزرار لغة النموذج (العربية/English) فوق «استخدم هذا النموذج» في معرض تصميم حر */
+.dash-gallery-box .ff-lang { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-xs); }
+.dash-gallery-box .ff-lang .chip { height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.dash-gallery-box .ff-lang .chip.is-on { background: var(--blue-50); border-color: var(--brand-blue); color: var(--blue-700); font-weight: 700; }

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Presentation — Corporate Blue</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Corporate Blue template (English, LTR mirror of the Arabic page): خمس شرائح 16:9 بنسق واحد (عنوان فرعي أزرق، عنوان كبير داكن، كتل زرقاء مائلة، صور بقصّ مائل).
+     كل نص قابل للتعديل من مساحة العمل؛ الصور أماكن محجوزة تُستبدل بصورة (ضع <img> مكان .photo-ph). */
+  :root { --navy: #0B3A8A; --blue: #2F7BFF; --ink: #2B2F33; --ink-2: #5F6670; --ink-3: #8A9199; --bg: #FFFFFF; --soft: #F3F4F6; --line: #E5E7EB; --font: 'Segoe UI', 'Inter', Tahoma, Arial, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .sub { color: var(--blue); font-size: 22px; font-weight: 500; margin: 0 0 6px; }
+  .title { font-size: 58px; font-weight: 800; line-height: 1.08; margin: 0; color: var(--ink); letter-spacing: -0.5px; }
+  .para { font-size: 18px; line-height: 1.75; color: var(--ink-2); margin: 24px 0 0; }
+  .num { color: var(--blue); font-size: 30px; font-weight: 800; }
+  .h4 { font-size: 22px; font-weight: 800; margin: 12px 0 8px; }
+  .small { font-size: 16px; line-height: 1.7; color: var(--ink-2); }
+  /* مكان الصورة المحجوز: نمط هندسي + نص إرشادي؛ استبدله بـ <img src="…" style="width:100%;height:100%;object-fit:cover"> */
+  .photo-ph { width: 100%; height: 100%; background: linear-gradient(135deg, #C9D6E8, #8FA6C7 60%, #6E86A8); position: relative; }
+  .photo-ph::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, rgb(255 255 255 / .12) 0 14px, transparent 14px 28px); }
+  .photo-ph::after { content: 'Image — replace with your own'; position: absolute; inset: auto auto 16px 16px; background: rgb(11 58 138 / .75); color: #fff; font-size: 13px; padding: 5px 10px; border-radius: 6px; }
+  .grad { background: linear-gradient(160deg, var(--blue), var(--navy)); color: #fff; }
+  .navy { background: var(--navy); color: #fff; }
+  .star { font-size: 44px; line-height: 1; }
+  /* ---- شريحة 1: أبرز الخلاصات ---- */
+  .s1 .head { position: absolute; top: 0; left: 0; width: 1280px; height: 380px; background: var(--soft); }
+  .s1 .text { position: absolute; top: 48px; left: 84px; width: 360px; }
+  .s1 .photo { position: absolute; top: 0; right: 340px; width: 430px; height: 380px; clip-path: polygon(100% 0, 0 0, 0 100%, calc(100% - 110px) 100%); }
+  .s1 .quote { position: absolute; top: 92px; right: 28px; width: 290px; height: 316px; padding: 34px 34px 28px; }
+  .s1 .quote p { font-size: 27px; line-height: 1.45; margin: 24px 0 0; font-weight: 500; }
+  .s1 .items { position: absolute; top: 440px; left: 84px; right: 84px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; }
+  /* ---- شريحة 2: خارطة الطريق ---- */
+  .s2 .text { position: absolute; top: 48px; left: 84px; width: 700px; }
+  .s2 .corner { position: absolute; top: 0; right: 0; width: 420px; height: 240px; clip-path: polygon(100% 0, 0 0, 0 100%, calc(100% - 30px) 100%); padding: 100px 60px 0 40px; font-size: 18px; line-height: 1.7; }
+  .s2 .band { position: absolute; top: 240px; left: 0; right: 0; height: 74px; display: flex; }
+  .s2 .band div { flex: 1; color: #fff; font-size: 24px; font-weight: 800; padding: 22px 0 0 84px; clip-path: polygon(100% 0, 0 0, calc(100% - 18px) 100%, 0 100%); margin-right: -14px; }
+  .s2 .band div:nth-child(1) { background: linear-gradient(270deg, #2F7BFF, #0B3A8A); } .s2 .band div:nth-child(2) { background: linear-gradient(270deg, #4C8EFF, #0F4AA8); } .s2 .band div:nth-child(3) { background: linear-gradient(270deg, #5E9BFF, #1E5BC6); } .s2 .band div:nth-child(4) { background: linear-gradient(270deg, #0B3A8A, #2F7BFF); }
+  .s2 .cols { position: absolute; top: 350px; left: 84px; right: 84px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; }
+  .s2 .ico { width: 56px; height: 56px; color: #B8BEC6; }
+  .s2 .foot { position: absolute; bottom: 0; left: 0; right: 0; height: 92px; background: var(--soft); display: flex; align-items: center; padding-left: 84px; gap: 20px; font-size: 18px; color: var(--ink-2); }
+  .s2 .foot .tag { position: absolute; right: 0; top: 0; height: 92px; width: 480px; clip-path: polygon(100% 0, 0 0, 0 100%, calc(100% - 26px) 100%); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  /* ---- شريحة 3: نموذج التشغيل ---- */
+  .s3 .text { position: absolute; top: 48px; left: 84px; width: 440px; }
+  .s3 .photo { position: absolute; bottom: 0; left: 0; width: 560px; height: 410px; clip-path: polygon(100% 0, 0 0, 0 100%, 100% 100%); }
+  .s3 .photo::after { content: ''; position: absolute; top: 0; right: 0; width: 70px; height: 100%; background: var(--blue); clip-path: polygon(100% 0, 0 0, calc(100% - 45px) 100%, 100% 100%); }
+  .s3 .panel { position: absolute; top: 0; right: 0; width: 540px; height: 720px; background: var(--soft); }
+  .s3 .stages { position: absolute; top: 70px; right: 40px; width: 640px; display: grid; grid-template-columns: 110px 26px 1fr; row-gap: 48px; column-gap: 18px; direction: ltr; }
+  .s3 .st { text-align: right; } .s3 .st b { display: block; font-size: 22px; } .s3 .st span { font-size: 19px; color: var(--ink-2); }
+  .s3 .bar { width: 26px; height: 92px; background: var(--line); } .s3 .bar.on { background: linear-gradient(180deg, var(--navy), var(--blue)); }
+  .s3 .desc { font-size: 17px; line-height: 1.7; color: var(--ink-2); padding-top: 4px; }
+  /* ---- شريحة 4: محرّكات النمو ---- */
+  .s4 .photo { position: absolute; top: 0; left: 0; width: 560px; height: 400px; clip-path: polygon(100% 0, 0 0, 0 100%, 100% 100%); }
+  .s4 .photo::after { content: ''; position: absolute; top: 40px; right: 0; width: 60px; height: 360px; background: var(--blue); clip-path: polygon(100% 0, 0 0, calc(100% - 30px) 100%, 100% 100%); }
+  .s4 .text { position: absolute; top: 48px; right: 84px; width: 560px; text-align: left; }
+  .s4 .cols { position: absolute; top: 440px; left: 84px; right: 84px; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .s4 .cols > div { padding: 0 24px; border-left: 1px solid var(--line); } .s4 .cols > div:first-child { border-left: 0; padding-left: 0; }
+  /* ---- شريحة 5: Performance Overview ---- */
+  .s5 .text { position: absolute; top: 48px; left: 84px; width: 680px; }
+  .s5 .chart { position: absolute; top: 260px; left: 84px; width: 680px; height: 410px; }
+  .s5 .side { position: absolute; top: 0; right: 0; width: 460px; height: 720px; background: var(--soft); padding: 100px 48px 0 40px; display: grid; row-gap: 46px; align-content: start; }
+  .s5 .side > div { display: grid; grid-template-columns: 64px 1fr; gap: 18px; align-items: start; }
+  .s5 .side svg { width: 56px; height: 56px; color: #B8BEC6; }
+  .s5 .side b { font-size: 22px; display: block; margin-bottom: 4px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); right: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .progress { position: fixed; top: 0; left: 0; height: 4px; background: var(--blue); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- Slide 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="head"></div>
+    <div class="text">
+      <p class="sub">Add subheading here</p>
+      <h1 class="title">Key<br>Takeaways</h1>
+      <p class="para">This is a sample text. Add your desired text here. This is a sample text that can be replaced with the actual content of this section.</p>
+    </div>
+    <div class="photo"><div class="photo-ph"></div></div>
+    <div class="quote grad"><div class="star">✦</div><p>“The next stage of growth starts with focused action today.”</p></div>
+    <div class="items">
+      <div><div class="num">01</div><div class="h4">Clearer Priorities</div><p class="small">This is a sample text. Add your desired text here.</p></div>
+      <div><div class="num">02</div><div class="h4">Stronger Alignment</div><p class="small">This is a sample text. Add your desired text here.</p></div>
+      <div><div class="num">03</div><div class="h4">Better Visibility</div><p class="small">This is a sample text. Add your desired text here.</p></div>
+      <div><div class="num">04</div><div class="h4">Sustainable Momentum</div><p class="small">This is a sample text. Add your desired text here.</p></div>
+    </div>
+  </div></section>
+
+  <!-- Slide 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="text"><p class="sub">Add subheading here</p><h1 class="title">Strategic Roadmap</h1></div>
+    <div class="corner navy">This is a sample text.<br>Add your text here.</div>
+    <div class="band"><div>Q1 2026</div><div>Q2 2027</div><div>Q3 2028</div><div>Q4 2029</div></div>
+    <div class="cols">
+      <div><svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.3L21 9l-5 4.2 1.6 6.8L12 16.6 6.4 20l1.6-6.8L3 9l6.6-.7z"/></svg><div class="h4">Align &amp;<br>Prepare</div><p class="small">This is a sample text. Add your text here.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 1-3-1-6 1-9z"/></svg><div class="h4">Launch<br>&amp; Activate</div><p class="small">This is a sample text. Add your text here.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 4a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"/></svg><div class="h4">Optimize<br>&amp; Expand</div><p class="small">This is a sample text. Add your text here.</p></div>
+      <div><svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12l5-5 5 5-5 5zm10 0l5-5 5 5-5 5z"/></svg><div class="h4">Accelerate<br>&amp; Integrate</div><p class="small">This is a sample text. Add your text here.</p></div>
+    </div>
+    <div class="foot"><span style="color:var(--blue);font-size:30px">✦</span><span>This is a sample text. Add your desired text here.</span><div class="tag navy">#addyourdesiredtexthere</div></div>
+  </div></section>
+
+  <!-- Slide 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="panel"></div>
+    <div class="text"><p class="sub">Add subheading here</p><h1 class="title">Operating<br>Model</h1></div>
+    <div class="photo"><div class="photo-ph"></div></div>
+    <div class="stages">
+      <div class="st"><b>Stage 1</b><span>DEFINE</span></div><div class="bar on"></div><div class="desc">This is a sample text. Add your text here. Add text here. This is a sample text that can be replaced with the content of this stage.</div>
+      <div class="st"><b>Stage 2</b><span>ALIGN</span></div><div class="bar"></div><div class="desc">This is a sample text. Add your text here. Add text here. This is a sample text that can be replaced with the content of this stage.</div>
+      <div class="st"><b>Stage 3</b><span>EXECUTE</span></div><div class="bar"></div><div class="desc">This is a sample text. Add your text here. Add text here. This is a sample text that can be replaced with the content of this stage.</div>
+      <div class="st"><b>Stage 4</b><span>REVIEW</span></div><div class="bar"></div><div class="desc">This is a sample text. Add your text here. Add text here. This is a sample text that can be replaced with the content of this stage.</div>
+    </div>
+  </div></section>
+
+  <!-- Slide 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="photo"><div class="photo-ph"></div></div>
+    <div class="text"><p class="sub">Add subheading here</p><h1 class="title">Business<br>Growth Drivers</h1><p class="para">This is a sample text. Add your desired text here. This is a sample text that can be replaced with the actual content of this section.</p></div>
+    <div class="cols">
+      <div><div class="num">01</div><div class="h4">Customer<br>Value</div><p class="small">This is a sample text. Add your text here.</p></div>
+      <div><div class="num">02</div><div class="h4">Commercial<br>Expansion</div><p class="small">This is a sample text. Add your text here.</p></div>
+      <div><div class="num">03</div><div class="h4">Operational<br>Excellence</div><p class="small">This is a sample text. Add your text here.</p></div>
+      <div><div class="num">04</div><div class="h4">Innovation<br>Capability</div><p class="small">This is a sample text. Add your text here.</p></div>
+    </div>
+  </div></section>
+
+  <!-- Slide 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="text"><p class="sub">Add subheading here</p><h1 class="title">Performance Overview</h1><p class="para">This is a sample text. Add your desired text here. This is a sample text that can be replaced with the actual content of this section.</p></div>
+    <div class="chart" id="chart"></div>
+    <div class="side">
+      <div><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 7a8 2 0 1 0 16 0 8 2 0 1 0-16 0zm0 4c0 1 4 2 8 2s8-1 8-2v3c0 1-4 2-8 2s-8-1-8-2zm0 5c0 1 4 2 8 2s8-1 8-2v3c0 1-4 2-8 2s-8-1-8-2z"/></svg><div><b>Revenue Growth</b><span class="small">This is a sample text. Add your desired text here.</span></div></div>
+      <div><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-3 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm6 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-6 6h6a3 3 0 0 1-6 0z"/></svg><div><b>Customer Engagement</b><span class="small">This is a sample text. Add your desired text here.</span></div></div>
+      <div><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 3a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><div><b>Operational Efficiency</b><span class="small">This is a sample text. Add your desired text here.</span></div></div>
+      <div><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 3h2v7.2l6-3.5 1 1.8-6 3.5 6 3.5-1 1.8-6-3.5V21h-2v-7.2l-6 3.5-1-1.8 6-3.5-6-3.5 1-1.8 6 3.5z"/></svg><div><b>Strategic Delivery</b><span class="small">This is a sample text. Add your desired text here.</span></div></div>
+    </div>
+  </div></section>
+
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 5</span><button type="button" id="next" aria-label="Next">›</button></div>
+
+<!-- Chart data for slide 5: edit the values here and the chart redraws automatically -->
+<script type="application/json" id="chart-data">{"labels":["Q1","Q2","Q3","Q4"],"series":[{"name":"Actual","color":"#0B3A8A","values":[62,48,34,28]},{"name":"Target","color":"#2F7BFF","values":[56,42,38,35]}]}</script>
+<script>
+(function () {
+  // ----- الرسم: أعمدة مجمّعة SVG من كتلة البيانات -----
+  function drawChart() {
+    var host = document.getElementById('chart'); if (!host) return;
+    var d; try { d = JSON.parse(document.getElementById('chart-data').textContent); } catch (e) { return; }
+    var W = 680, H = 410, pl = 50, pr = 10, pt = 20, pb = 40, iw = W - pl - pr, ih = H - pt - pb;
+    var max = 0; d.series.forEach(function (s) { s.values.forEach(function (v) { if (v > max) max = v; }); });
+    var top = Math.ceil(max / 10) * 10 || 10, n = d.labels.length, k = d.series.length, gw = iw / n, bw = Math.min(46, gw / (k + 1));
+    var g = '';
+    for (var t = 0; t <= top; t += top / 7) { var y = pt + ih - t / top * ih; g += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y + '" y2="' + y + '" stroke="#E5E7EB"/><text x="' + (pl - 8) + '" y="' + (y + 4) + '" font-size="12" fill="#8A9199" text-anchor="end">' + Math.round(t) + '</text>'; }
+    d.labels.forEach(function (lab, i) {
+      var col = i, x0 = pl + col * gw + (gw - bw * k) / 2; // first category on the left (LTR)
+      d.series.forEach(function (s, j) { var v = s.values[i] || 0, h = v / top * ih, x = x0 + j * bw, y = pt + ih - h;
+        g += '<rect x="' + x + '" y="' + y + '" width="' + (bw - 4) + '" height="' + h + '" fill="' + s.color + '"/><text x="' + (x + (bw - 4) / 2) + '" y="' + (y - 6) + '" font-size="15" font-weight="700" fill="' + s.color + '" text-anchor="middle">' + v + '</text>'; });
+      g += '<text x="' + (pl + col * gw + gw / 2) + '" y="' + (H - 14) + '" font-size="13" fill="#5F6670" text-anchor="middle">' + lab + '</text>';
+    });
+    host.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="100%" direction="ltr" style="font-family:inherit">' + g + '</svg>';
+  }
+  drawChart();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go(dx < 0 ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

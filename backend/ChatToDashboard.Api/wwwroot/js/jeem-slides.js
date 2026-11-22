@@ -23,7 +23,7 @@
     '#jeem-strip .js-th{flex:none;width:128px;height:72px;border-radius:6px;overflow:hidden;position:relative;background:#fff;border:2px solid transparent;cursor:pointer;padding:0}' +
     '#jeem-strip .js-th.on{border-color:#4FB3FF;box-shadow:0 0 0 2px rgba(79,179,255,.35)}#jeem-strip .js-th:focus-visible{outline:2px solid #fff}' +
     '#jeem-strip .js-th .js-n{position:absolute;bottom:3px;inset-inline-start:4px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:0 6px;border-radius:999px;line-height:16px}' +
-    '#jeem-strip .js-th .js-c{position:absolute;top:0;inset-inline-start:0;transform-origin:top right;pointer-events:none}html[dir=ltr] #jeem-strip .js-th .js-c{transform-origin:top left}' +
+    '#jeem-strip .js-th .js-c{position:absolute;top:0;left:0;transform-origin:top left;pointer-events:none}' + // مرساة فيزيائية (يسار) مع أصل التحويل نفسه فتصح المصغّرة في الصفحات RTL وLTR
     '#jeem-strip .js-tg{pointer-events:auto;position:absolute;bottom:100%;inset-inline-end:12px;background:rgba(15,23,32,.86);color:#fff;border:1px solid rgba(255,255,255,.2);border-bottom:0;border-radius:8px 8px 0 0;padding:4px 12px;font-size:12px;cursor:pointer}' +
     '#jeem-strip.hid .js-bar{display:none}#jeem-strip.hid .js-tg{border-radius:8px 8px 0 0;bottom:0;border-bottom:1px solid rgba(255,255,255,.2)}' +
     '#jeem-strip .js-cnt{font-size:12px;opacity:.8;white-space:nowrap}@media print{#jeem-strip{display:none!important}}@media (max-width:600px){#jeem-strip .js-th{width:96px;height:54px}}';
@@ -37,7 +37,7 @@
     var row = document.createElement('div'); row.className = 'js-row'; row.setAttribute('role', 'tablist');
     var cnt = document.createElement('span'); cnt.className = 'js-cnt';
     bar.appendChild(row); bar.appendChild(cnt); root.appendChild(tg); root.appendChild(bar); document.body.appendChild(root);
-    function setHidden(h) { hidden = h; root.classList.toggle('hid', h); tg.textContent = h ? '▴ إظهار المصغّرات' : '▾ إخفاء المصغّرات'; tg.setAttribute('aria-expanded', h ? 'false' : 'true'); try { localStorage.setItem('jeemStripHidden', h ? '1' : '0'); } catch (e) {} }
+    function setHidden(h) { hidden = h; root.classList.toggle('hid', h); tg.textContent = document.documentElement.dir === 'ltr' ? (h ? '▴ Show thumbnails' : '▾ Hide thumbnails') : (h ? '▴ إظهار المصغّرات' : '▾ إخفاء المصغّرات'); tg.setAttribute('aria-expanded', h ? 'false' : 'true'); try { localStorage.setItem('jeemStripHidden', h ? '1' : '0'); } catch (e) {} }
     tg.addEventListener('click', function () { setHidden(!hidden); });
     // ارتفاع الشريط المرئي يُعلن للصفحة في المتغيّر --jeem-strip-h على <html> حتى تحجز له مساحة (الشريط ثابت أسفل الصفحة ويغطي ما تحته).
     function announceHeight() { var h = hidden ? tg.getBoundingClientRect().height : root.getBoundingClientRect().height; try { document.documentElement.style.setProperty('--jeem-strip-h', Math.round(h) + 'px'); } catch (e) {} }

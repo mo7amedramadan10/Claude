@@ -5,7 +5,11 @@ namespace ChatToDashboard.Api.Freeform;
 
 /// <summary>قسم في نموذج تصميم حر: عنوانه، وهل يُملأ من بيانات المشروع.</summary>
 /// <summary>قسم في نموذج تصميم حر؛ <c>Type</c> اختياري (kpi/bar/line/donut/table/funnel/heat/interactive) لنماذج اللوحات المحوَّلة من كتالوج اللوحات.</summary>
-public sealed record FreeformTemplateSection([property: JsonPropertyName("title")] string Title, [property: JsonPropertyName("needsData")] bool NeedsData = false, [property: JsonPropertyName("type")] string? Type = null);
+public sealed record FreeformTemplateSection([property: JsonPropertyName("title")] string Title, [property: JsonPropertyName("needsData")] bool NeedsData = false, [property: JsonPropertyName("type")] string? Type = null)
+{
+    /// <summary>العنوان الإنجليزي (من <see cref="FreeformTemplateI18n"/>؛ null بلا ترجمة).</summary>
+    [JsonPropertyName("titleEn")] public string? TitleEn { get; init; }
+}
 
 /// <summary>
 /// نموذج جاهز لصفحة «تصميم حر» من نوع معيّن (مستند/شرائح/تصميم/لوحة/حركة). النموذج ليس HTML محفوظًا بل
@@ -31,6 +35,12 @@ public sealed class FreeformTemplate
     /// <summary>نموذج صفحة جاهزة: مسار ملف HTML كامل تحت wwwroot (مثل <c>templates/freeform/x.html</c>). «استخدم هذا النموذج» ينشئ
     /// التصميم من الملف فورًا بلا موديل ثم يُعدَّل نصيًا أو بالمحادثة؛ المعاينة في المعرض تعرض الصفحة نفسها.</summary>
     [JsonPropertyName("page")] public string? Page { get; init; }
+    /// <summary>النسخة الإنجليزية (LTR) من صفحة النموذج الجاهز إن وُجدت.</summary>
+    [JsonPropertyName("pageEn")] public string? PageEn { get; init; }
+    [JsonPropertyName("nameEn")] public string? NameEn => FreeformTemplateI18n.NameEn(Key);
+    [JsonPropertyName("descriptionEn")] public string? DescriptionEn => FreeformTemplateI18n.DescriptionEn(Key);
+    /// <summary>هل للنموذج ترجمة إنجليزية كاملة (اسم ووصف وكل الأقسام) فتُعرض معاينته بالإنجليزية.</summary>
+    [JsonPropertyName("hasEn")] public bool HasEn => NameEn is not null && Sections.Count > 0 && Sections.All(s => s.TitleEn is not null);
     [JsonPropertyName("sourceFile")] public string? SourceFile { get; init; }
     [JsonPropertyName("createdByUserId")] public string? CreatedByUserId { get; init; }
     [JsonPropertyName("createdAt")] public DateTime? CreatedAt { get; init; }
@@ -47,7 +57,7 @@ public static class FreeformTemplates
     private static FreeformTemplate T(string key, string kind, string cat, string icon, string name, string desc, string sketch, string brief, params FreeformTemplateSection[] sections)
         => new() { Key = key, Kind = kind, Category = cat, Icon = icon, Name = name, Description = desc, Sketch = sketch, Brief = brief, Sections = sections };
 
-    public static readonly IReadOnlyList<FreeformTemplate> All = new[]
+    public static readonly IReadOnlyList<FreeformTemplate> All = WithEnglish(new[]
     {
         // ---------- مستند ----------
         T("doc-memo", "doc", "mgmt", "📝", "مذكرة داخلية", "مذكرة رسمية بموضوع وخلفية وتوصية وإجراء مطلوب", "h/p/p/b/p",
@@ -89,7 +99,7 @@ public static class FreeformTemplates
         {
             Key = "sl-corporate-blue", Kind = "slides", Category = "mgmt", Icon = "🏢", Name = "الأزرق المؤسسي — عرض جاهز",
             Description = "خمس شرائح جاهزة بنسق مؤسسي أزرق (خلاصات، خارطة طريق، نموذج تشغيل، محرّكات نمو، أداء برسم) تُفتح فورًا وتُعدَّل نصيًا أو بالمحادثة",
-            Sketch = "s/s/s/s", Page = "templates/freeform/corporate-blue.html",
+            Sketch = "s/s/s/s", Page = "templates/freeform/corporate-blue.html", PageEn = "templates/freeform/corporate-blue.en.html",
             Brief = "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط (الألوان، الكتل المائلة، أماكن الصور .photo-ph، الشبكات) "
                   + "وغيّر النصوص والأرقام فقط ما لم يطلب المستخدم غير ذلك؛ أرقام الرسم في الشريحة الخامسة في كتلة JSON بالمعرّف chart-data فعدّلها هناك (من query_data إن طُلبت بيانات حقيقية). "
                   + "لإضافة شريحة انسخ أقرب شريحة بنيةً وأبقِ التنقّل كما هو.",
@@ -155,18 +165,35 @@ public static class FreeformTemplates
         T("mo-intro", "motion", "general", "✨", "مقدمة بالشعار", "ظهور الشعار والاسم والشعار النصي بحركة قصيرة", "a",
             "مقدمة 8–12 ثانية: ظهور شعار الجهة (<img data-jeem-logo>) ثم الاسم والشعار النصي بحركة أنيقة بألوان الهوية، مع إعادة.",
             S("المشهد")),
-    };
+    });
+
+    /// <summary>يلحق بكل قسم عنوانه الإنجليزي من جدول الترجمة (بالترتيب) لتعرضه المعاينة والصفحة التوضيحية بالإنجليزية.</summary>
+    private static IReadOnlyList<FreeformTemplate> WithEnglish(FreeformTemplate[] all)
+    {
+        for (var i = 0; i < all.Length; i++)
+        {
+            var t = all[i];
+            all[i] = new FreeformTemplate
+            {
+                Key = t.Key, Kind = t.Kind, Category = t.Category, Icon = t.Icon, Name = t.Name, Description = t.Description, Sketch = t.Sketch, Brief = t.Brief,
+                Page = t.Page, PageEn = t.PageEn,
+                Sections = t.Sections.Select((s, j) => s with { TitleEn = FreeformTemplateI18n.SectionEn(t.Key, j) }).ToList(),
+            };
+        }
+        return all;
+    }
 
     public static FreeformTemplate? Find(string? key) => string.IsNullOrWhiteSpace(key) ? null : All.FirstOrDefault(t => t.Key == key);
 
     /// <summary>الموجز الذي يُلحق بنظام الموديل عند اختيار نموذج: البنية المطلوبة بترتيبها وتعليمات الشكل.</summary>
-    public static string BriefFor(FreeformTemplate t)
+    public static string BriefFor(FreeformTemplate t, string? lang = null)
     {
+        var en = lang == "en";
         var sb = new StringBuilder();
-        sb.AppendLine($"# النموذج المختار: {t.Name} ({FreeformBuilder.KindLabel(t.Kind)})");
+        sb.AppendLine($"# النموذج المختار: {t.Name}{(en && t.NameEn is not null ? $" / {t.NameEn}" : "")} ({FreeformBuilder.KindLabel(t.Kind)})");
         sb.AppendLine(t.Description + ".");
-        sb.AppendLine("الأقسام المطلوبة بترتيبها (التزم بها وأضف ما يطلبه المستخدم):");
-        for (var i = 0; i < t.Sections.Count; i++) sb.AppendLine($"{i + 1}. {t.Sections[i].Title}{(t.Sections[i].NeedsData ? " — من بيانات المشروع عبر query_data إن وُجدت، وإلا توضيحية بشارة" : "")}");
+        sb.AppendLine(en ? "الأقسام المطلوبة بترتيبها (التزم بها وأضف ما يطلبه المستخدم؛ عناوينها في الصفحة بالإنجليزية):" : "الأقسام المطلوبة بترتيبها (التزم بها وأضف ما يطلبه المستخدم):");
+        for (var i = 0; i < t.Sections.Count; i++) sb.AppendLine($"{i + 1}. {t.Sections[i].Title}{(en && t.Sections[i].TitleEn is not null ? $" ({t.Sections[i].TitleEn})" : "")}{(t.Sections[i].NeedsData ? " — من بيانات المشروع عبر query_data إن وُجدت، وإلا توضيحية بشارة" : "")}");
         sb.AppendLine("تعليمات الشكل: " + t.Brief);
         if (!string.IsNullOrWhiteSpace(t.Content)) sb.AppendLine("# محتوى الملف المرفوع (مرجع البنية والمحتوى)").AppendLine(t.Content);
         return sb.ToString();

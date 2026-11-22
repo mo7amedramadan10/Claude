@@ -9218,6 +9218,21 @@ function ffKindChip(k) { const info = FF_KINDS[k]; return info ? `<span class="f
 // ---------- نماذج تصميم حر: معرض كمعرض «عرض جديد» يُفتح عند اختيار نوع، والنموذج المختار يُرفق في المحادثة ----------
 // التصنيفات نفسها (DK_CATS، تُعرَّف لاحقًا في الملف وتُقرأ عند التشغيل لا عند التحميل)
 let ffGalKind = 'design', ffGalCat = 'all', ffGalQuery = '';
+// لغة النموذج في المعرض (ar/en): تبدأ بلغة المنصة وتُغيَّر من أزرار العربية/English في المعاينة؛ تصل مع «استخدم» وأول بناء
+let ffGalLang = null;
+function ffLangDefault() { return state.lang === 'en' ? 'en' : 'ar'; }
+function ffGalLangNow() { return ffGalLang || ffLangDefault(); }
+// اسم/وصف/قسم النموذج بلغة المعرض (الإنجليزية إن كانت للنموذج ترجمة)
+function ffTplName(t, lang) { return (lang || ffGalLangNow()) === 'en' && t.nameEn ? t.nameEn : t.name; }
+function ffTplDesc(t, lang) { return (lang || ffGalLangNow()) === 'en' && t.descriptionEn ? t.descriptionEn : t.description; }
+function ffTplSection(x, lang) { return (lang || ffGalLangNow()) === 'en' && x.titleEn ? x.titleEn : x.title; }
+function ffLangToggleHtml(t) {
+  const cur = ffGalLangNow();
+  return `<div class="ff-lang" role="group" aria-label="لغة النموذج"><span class="muted">لغة النموذج:</span>
+    <button type="button" class="chip${cur === 'ar' ? ' is-on' : ''}" data-lang="ar">العربية</button>
+    <button type="button" class="chip${cur === 'en' ? ' is-on' : ''}" data-lang="en">English</button>
+    ${cur === 'en' && !t.hasEn && !t.pageEn ? '<small class="muted">المعاينة بالعربية، وتُبنى الصفحة بالإنجليزية</small>' : ''}</div>`;
+}
 async function ffLoadTemplates() { if (FF.templates) return FF.templates; try { const r = await fetch('/api/freeform/templates'); FF.templates = r.ok ? await r.json() : []; } catch { FF.templates = []; } return FF.templates; }
 // مصغّرة تخطيطية من Sketch النموذج: صفوف بـ / وكتل بـ , (h عنوان، p فقرة، b نقاط، k3 مؤشرات، c أعمدة، l خط، d دائري، t جدول، i صورة، f نموذج، g بطاقات، n تنقّل، s شريحة، a مشهد)
 function ffSketchHtml(t) {
@@ -9298,11 +9313,12 @@ function openFfGalPreview(t) {
     <div class="pv-grid">
       <div class="pv-thumb">${window.JEEM_FF_DEMO || t.page ? '<span class="ff-live" id="ffgal-pv-live"></span>' : ffSketchHtml(t)}</div>
       <div class="pv-info">
-        <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}${t.custom ? ' <span class="ff-kind-chip">مرفوع من ملف</span>' : ''}${t.dashboard ? ' <span class="ff-kind-chip">من كتالوج اللوحات</span>' : ''}</p>
+        <h3>${esc(t.icon)} ${esc(ffTplName(t))}</h3><p>${esc(ffTplDesc(t))}${t.custom ? ' <span class="ff-kind-chip">مرفوع من ملف</span>' : ''}${t.dashboard ? ' <span class="ff-kind-chip">من كتالوج اللوحات</span>' : ''}</p>
         <h4>الأقسام (${t.total.toLocaleString('en-US')})</h4>
-        <ol class="pv-list">${t.sections.map(x => `<li><span class="pv-ic">${x.needsData ? '📊' : '•'}</span>${esc(x.title)}${x.needsData ? ' <span class="muted">· من بياناتك</span>' : ''}</li>`).join('')}</ol>
+        <ol class="pv-list">${t.sections.map(x => `<li><span class="pv-ic">${x.needsData ? '📊' : '•'}</span>${esc(ffTplSection(x))}${x.needsData ? ' <span class="muted">· من بياناتك</span>' : ''}</li>`).join('')}</ol>
         <p class="muted" style="font-size:var(--fs-xs)">${esc(t.brief)}</p>
         <div class="pv-actions">
+          ${ffLangToggleHtml(t)}
           <button type="button" class="btn btn-primary" id="ffgal-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
           ${window.JEEM_FF_DEMO || t.page ? `<button type="button" class="btn btn-soft" id="ffgal-demo-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>${t.page ? 'معاينة الشرائح كاملة' : 'معاينة تفاعلية ببيانات تجريبية'}</button>` : ''}
           ${t.custom ? '<button type="button" class="btn btn-ghost btn-sm" id="ffgal-del-btn">🗑️ حذف النموذج</button>' : ''}
@@ -9311,6 +9327,7 @@ function openFfGalPreview(t) {
       </div>
     </div>`;
   el('ffgal-back-btn').addEventListener('click', () => { el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-list').classList.remove('hidden'); });
+  el('ffgal-view-preview').querySelectorAll('.ff-lang [data-lang]').forEach(b => b.addEventListener('click', () => { ffGalLang = b.dataset.lang; openFfGalPreview(t); }));
   el('ffgal-use-btn').addEventListener('click', () => ffUseTemplate(t));
   el('ffgal-demo-btn')?.addEventListener('click', () => openFfGalDemo(t));
   el('ffgal-del-btn')?.addEventListener('click', async () => {
@@ -9324,16 +9341,18 @@ function openFfGalPreview(t) {
 }
 // صفحة نموذج جاهز (ملف HTML في الخادم) بذاكرة؛ null لنموذج بلا صفحة
 const ffPageCache = {};
-async function ffTemplatePageHtml(t) {
+async function ffTemplatePageHtml(t, lang) {
   if (!t || !t.page) return null;
-  if (ffPageCache[t.key] === undefined) { try { const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/page`); ffPageCache[t.key] = r.ok ? await r.text() : ''; } catch { ffPageCache[t.key] = ''; } }
-  return ffPageCache[t.key] || null;
+  const l = lang || ffGalLangNow(); const ck = t.key + ':' + l;
+  if (ffPageCache[ck] === undefined) { try { const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/page?lang=${l}`); ffPageCache[ck] = r.ok ? await r.text() : ''; } catch { ffPageCache[ck] = ''; } }
+  return ffPageCache[ck] || null;
 }
 // «استخدم هذا النموذج»: نموذج صفحة جاهزة → تصميم جديد فورًا من الملف ويُفتح؛ غيره → يُرفق في المحادثة كما كان
 async function ffUseTemplate(t) {
-  if (!t || !t.page) { closeFfGallery(); ffSetTemplate(t); return; }
+  const lang = ffGalLangNow();
+  if (!t || !t.page) { closeFfGallery(); ffSetTemplate(t); FF.lang = lang; ffRenderAttach(); return; }
   try {
-    const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/use`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sources: FF.sources || undefined }) });
+    const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/use`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sources: FF.sources || undefined, lang }) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
     closeFfGallery(); FF.kind = t.kind; await ffOpen(d.design.id);
   } catch (e) { alert('تعذّر فتح النموذج: ' + e.message); }
@@ -9344,7 +9363,7 @@ function ffLiveInto(holder, t) {
   const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-scripts'); f.tabIndex = -1; f.title = `معاينة ${t.name}`; f.setAttribute('aria-hidden', 'true');
   holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4));
   if (t.page) ffTemplatePageHtml(t).then(html => { if (html) f.srcdoc = ffSandboxHtml(html, false, null, true); });
-  else f.srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t), false, null, true);
+  else f.srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t, ffGalLangNow()), false, null, true);
 }
 // معاينة تفاعلية كاملة ببيانات تجريبية — الصفحة في إطار معزول بحجمها الطبيعي مع شريط يوضّح أن الأرقام توضيحية
 function openFfGalDemo(t) {
@@ -9353,12 +9372,12 @@ function openFfGalDemo(t) {
     <div class="gal-demo-banner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
       ${t.page ? 'هذه هي الشرائح الجاهزة نفسها بنصوص توضيحية. اضغط «استخدم هذا النموذج» لتُفتح نسخة لك تعدّلها مباشرة أو بالمحادثة.' : 'بيانات تجريبية توضيحية فقط لعرض شكل النموذج وتفاعله — ليست من مشروعك. لبناء الصفحة الفعلية بهوية مشروعك وبياناته، اضغط «استخدم هذا النموذج» ثم اكتب طلبك.'}</div>
     <div class="gal-demo-top">
-      <div class="gal-demo-title"><h3>${esc(t.icon)} ${esc(t.name)}</h3><span class="muted" style="font-size:var(--fs-xs)">${(FF_KINDS[t.kind] || FF_KINDS.design).label} · ${t.total.toLocaleString('en-US')} أقسام${t.dataSections ? ` · ${t.dataSections.toLocaleString('en-US')} منها من بياناتك` : ''}</span></div>
+      <div class="gal-demo-title"><h3>${esc(t.icon)} ${esc(ffTplName(t))}</h3><span class="muted" style="font-size:var(--fs-xs)">${(FF_KINDS[t.kind] || FF_KINDS.design).label} · ${t.total.toLocaleString('en-US')} أقسام${t.dataSections ? ` · ${t.dataSections.toLocaleString('en-US')} منها من بياناتك` : ''}</span></div>
       <button type="button" class="btn btn-primary" id="ffgal-demo-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
     </div>
     <iframe class="ffgal-demo-frame" id="ffgal-demo-frame" title="معاينة تفاعلية: ${esc(t.name)}" sandbox="allow-scripts allow-modals"></iframe>`;
   if (t.page) ffTemplatePageHtml(t).then(html => { if (html) el('ffgal-demo-frame').srcdoc = ffSandboxHtml(html, false, t.kind); });
-  else el('ffgal-demo-frame').srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t), false, t.kind);
+  else el('ffgal-demo-frame').srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t, ffGalLangNow()), false, t.kind);
   el('ffgal-demo-back-btn').addEventListener('click', () => { el('ffgal-view-demo').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden'); });
   el('ffgal-demo-use-btn').addEventListener('click', () => ffUseTemplate(t));
   el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-demo').classList.remove('hidden');
@@ -9374,7 +9393,7 @@ function ffRenderAttach() {
   if (FF.template === undefined && !locked) { box.classList.add('hidden'); box.innerHTML = ''; return; }
   const t = FF.template; const kindLabel = (FF_KINDS[FF.design ? FF.design.kind : FF.kind] || FF_KINDS.design).label;
   box.innerHTML = t
-    ? `<span class="ff-chip tpl" role="button" tabindex="0" title="${locked ? 'النموذج الذي بُني عليه هذا التصميم' : 'اضغط لتغيير النموذج'}"><span class="ff-chip-ico">${esc(t.icon)}</span><span>📎 نموذج:</span><b>${esc(t.name)}</b><span class="muted">· ${esc(kindLabel)}</span>${locked ? '' : '<button type="button" class="ff-chip-x" aria-label="إزالة النموذج (تصميم حر)">✕</button>'}</span>`
+    ? `<span class="ff-chip tpl" role="button" tabindex="0" title="${locked ? 'النموذج الذي بُني عليه هذا التصميم' : 'اضغط لتغيير النموذج'}"><span class="ff-chip-ico">${esc(t.icon)}</span><span>📎 نموذج:</span><b>${esc(ffTplName(t, FF.lang))}</b><span class="muted">· ${esc(kindLabel)}${FF.lang === 'en' ? ' · English' : ''}</span>${locked ? '' : '<button type="button" class="ff-chip-x" aria-label="إزالة النموذج (تصميم حر)">✕</button>'}</span>`
     : `<span class="ff-chip free" role="button" tabindex="0" title="${locked ? 'تصميم حر بلا نموذج' : 'اضغط لاختيار نموذج'}"><span class="ff-chip-ico">✦</span><b>${FF.kind === 'track' ? 'لوحة متابعة بلا نموذج' : 'تصميم حر بلا نموذج'}</b><span class="muted">· ${esc(kindLabel)}</span></span>`;
   // شريحة المصادر: دائمًا قابلة للتغيير (تعديل تصميم مفتوح يلتزم بالاختيار الجديد ويحفظه)
   const sel = ffCurrentSources();
@@ -9442,7 +9461,7 @@ async function ffToggleSourcesPanel(force) {
 }
 el('ff-src-panel').addEventListener('click', e => e.stopPropagation());
 document.addEventListener('click', () => el('ff-src-panel')?.classList.add('hidden'));
-function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(t.name)}</b></span>` : `<span class="ff-msg-attach">✦ ${FF.kind === 'track' ? 'لوحة متابعة' : 'تصميم حر'} بلا نموذج</span>`; }
+function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(ffTplName(t, FF.lang))}</b>${FF.lang === 'en' ? ' · English' : ''}</span>` : `<span class="ff-msg-attach">✦ ${FF.kind === 'track' ? 'لوحة متابعة' : 'تصميم حر'} بلا نموذج</span>`; }
 
 // ---------- تحديث البيانات: بلا موديل (إعادة تنفيذ الاستعلامات المسجَّلة) أو إعادة البناء بالموديل ----------
 el('ff-refresh').addEventListener('click', e => {
@@ -9632,6 +9651,7 @@ async function ffOpen(id) {
   const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return; ffMarkOpened(id);
   const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl; FF.dataChanged = !!d.dataChanged;
   FF.messages = (d.messages || []).map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
+  FF.lang = /<html[^>]*\b(lang=["']?en|dir=["']?ltr)/i.test((FF.html || '').slice(0, 600)) ? 'en' : 'ar'; // لغة الصفحة من وسمها لتظهر في شريحة النموذج
   await ffLoadTemplates(); FF.template = FF.design.templateKey ? (FF.templates.find(t => t.key === FF.design.templateKey) || null) : null;
   FF.sources = FF.design.sources ? { systems: FF.design.sources.systems || [], files: FF.design.sources.files || [] } : null; await ffEnsureSources();
   const firstUser = FF.messages.find(m => m.role === 'user'); if (firstUser) firstUser.extraHtml = ffAttachLineHtml(FF.template) + ffSourcesLineHtml(FF.sources);
@@ -9686,7 +9706,7 @@ async function ffAsk(text) {
   try {
     if (!FF.design && (!FF.kind || FF.template === undefined)) { FF.busy = false; ffPushMsg('bot', 'اختر نوع المخرج أولًا من بطاقات «اصنع شيئًا جديدًا» (مستند، شرائح، تصميم، لوحة، حركة) ثم نموذجًا أو «تصميم حر بلا نموذج».'); el('ff-send').disabled = false; el('ff-status').textContent = ''; return; }
     if (!FF.design) FF.messages[FF.messages.length - 1].extraHtml = ffAttachLineHtml(FF.template) + ffSourcesLineHtml(FF.sources); // أول رسالة تحمل المرفق والمصادر ليظهر الاختيار في المحادثة
-    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, sources: FF.design ? undefined : FF.sources };
+    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, lang: FF.design ? undefined : (FF.lang || ffLangDefault()), sources: FF.design ? undefined : FF.sources };
     const r = await fetch('/api/freeform/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
@@ -9699,7 +9719,7 @@ async function ffAsk(text) {
 }
 el('ff-form').addEventListener('submit', e => { e.preventDefault(); const t = el('ff-q').value.trim(); if (!t) return; el('ff-q').value = ''; ffAsk(t); });
 el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('ff-form').requestSubmit(); } });
-el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
+el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.lang = null; ffGalLang = null; ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
 el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(FF.html, '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });

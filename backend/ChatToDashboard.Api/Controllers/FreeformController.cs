@@ -14,11 +14,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
-public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } public string? TemplateKey { get; set; } /// <summary>المصادر المختارة (systems/files)؛ null = لا تغيير (المحفوظة مع التصميم أو الكل).</summary>
+public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } public string? TemplateKey { get; set; } /// <summary>لغة الصفحة للتصميم الجديد: ar (افتراضي) أو en؛ لتصميم قائم تُستنتج من صفحته.</summary>
+    public string? Lang { get; set; } /// <summary>المصادر المختارة (systems/files)؛ null = لا تغيير (المحفوظة مع التصميم أو الكل).</summary>
     public Sources.SourceSelection? Sources { get; set; } }
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
-public class FreeformUsePageRequest { public string? Title { get; set; } public Sources.SourceSelection? Sources { get; set; } }
+public class FreeformUsePageRequest { public string? Title { get; set; } public Sources.SourceSelection? Sources { get; set; } /// <summary>لغة الصفحة: ar (افتراضي) أو en.</summary>
+    public string? Lang { get; set; } }
 public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } }
 /// <summary>تحويل لوحة محادثة (مواصفتها كاملة بعناصرها وبياناتها) إلى تصميم حر من نوع معيّن — «لوحات المتابعة» داخل تصميم حر.</summary>
 public class FreeformFromDashboardRequest { public string Kind { get; set; } = "dashboard"; public string? Title { get; set; } public System.Text.Json.JsonElement Dashboard { get; set; } public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } }
@@ -268,10 +270,12 @@ public class FreeformController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     /// <summary>ملف HTML لنموذج صفحة جاهزة من wwwroot (null إن لم يكن للنموذج صفحة أو الملف مفقود).</summary>
-    private async Task<string?> TemplatePageHtmlAsync(FreeformTemplate t, CancellationToken ct)
+    private async Task<string?> TemplatePageHtmlAsync(FreeformTemplate t, CancellationToken ct, string? lang = null)
     {
-        if (string.IsNullOrWhiteSpace(t.Page) || t.Page.Contains("..")) return null;
-        var file = _env.WebRootFileProvider.GetFileInfo(t.Page);
+        // الإنجليزية إن طُلبت ووُجد ملفها، وإلا العربية
+        var path = lang == "en" && !string.IsNullOrWhiteSpace(t.PageEn) ? t.PageEn : t.Page;
+        if (string.IsNullOrWhiteSpace(path) || path.Contains("..")) return null;
+        var file = _env.WebRootFileProvider.GetFileInfo(path);
         if (!file.Exists || file.IsDirectory) return null;
         using var reader = new StreamReader(file.CreateReadStream(), Encoding.UTF8);
         return await reader.ReadToEndAsync(ct);
@@ -279,11 +283,11 @@ public class FreeformController : ControllerBase
 
     /// <summary>صفحة نموذج جاهز كما هي (لمعاينة المعرض).</summary>
     [HttpGet("templates/{key}/page")]
-    public async Task<IActionResult> TemplatePage(string key, CancellationToken ct)
+    public async Task<IActionResult> TemplatePage(string key, [FromQuery] string? lang, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var t = FreeformTemplates.Find(key); if (t is null) return NotFound();
-        var html = await TemplatePageHtmlAsync(t, ct); if (html is null) return NotFound(new { error = "هذا النموذج بلا صفحة جاهزة." });
+        var html = await TemplatePageHtmlAsync(t, ct, lang); if (html is null) return NotFound(new { error = "هذا النموذج بلا صفحة جاهزة." });
         return Content(html, "text/html; charset=utf-8");
     }
 
@@ -294,8 +298,9 @@ public class FreeformController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
         var t = FreeformTemplates.Find(key); if (t is null) return NotFound();
-        var html = await TemplatePageHtmlAsync(t, ct); if (html is null) return BadRequest(new { error = "هذا النموذج بلا صفحة جاهزة." });
-        var title = string.IsNullOrWhiteSpace(request?.Title) ? t.Name.Split('—')[0].Trim() : request!.Title!.Trim();
+        var en = request?.Lang == "en";
+        var html = await TemplatePageHtmlAsync(t, ct, request?.Lang); if (html is null) return BadRequest(new { error = "هذا النموذج بلا صفحة جاهزة." });
+        var title = string.IsNullOrWhiteSpace(request?.Title) ? (en && t.NameEn is not null ? t.NameEn : t.Name).Split('—')[0].Trim() : request!.Title!.Trim();
         if (title.Length > 120) title = title[..120];
         var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, html, $"بدء من النموذج الجاهز «{t.Name}»", t.Kind, t.Key, ct, SourcesJsonOf(request?.Sources));
         await _store.AddMessageAsync(design.Id, "user", $"ابدأ من النموذج الجاهز «{t.Name}».", null, ct);
@@ -418,7 +423,7 @@ public class FreeformController : ControllerBase
         // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
         var template = await ResolveTemplateAsync(design?.TemplateKey ?? request.TemplateKey, selection.ProjectId, ct);
         if (template is not null && template.Kind != kind) template = null;
-        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template); }
+        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template, design is null ? request.Lang : null); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         int? version = null;
         if (design is null)

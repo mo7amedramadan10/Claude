@@ -20,6 +20,26 @@ public class FreeformTemplateTests
     }
 
     [Fact]
+    public void StaticTemplates_AllHaveEnglishNamesAndSections()
+    {
+        // كل نموذج ثابت له ترجمة كاملة (اسم ووصف وعناوين أقسامه بالترتيب) فتُعرض معاينته بالإنجليزية
+        foreach (var t in FreeformTemplates.All)
+        {
+            Assert.True(t.HasEn, $"نموذج بلا ترجمة إنجليزية كاملة: {t.Key}");
+            Assert.False(string.IsNullOrWhiteSpace(t.DescriptionEn), t.Key);
+        }
+        var en = FreeformTemplates.Find("sl-qbr")!;
+        Assert.Equal("Quarterly Business Review", en.NameEn);
+        Assert.Equal("Key Results", en.Sections[1].TitleEn);
+        Assert.Contains("(Key Results)", FreeformTemplates.BriefFor(en, "en"));
+        Assert.DoesNotContain("(Key Results)", FreeformTemplates.BriefFor(en));
+        Assert.Equal("en", FreeformBuilder.LanguageOf(null, "<!doctype html><html lang=\"en\" dir=\"ltr\"><head>"));
+        Assert.Equal("ar", FreeformBuilder.LanguageOf(null, "<!doctype html><html lang=\"ar\" dir=\"rtl\">"));
+        Assert.Equal("en", FreeformBuilder.LanguageOf("en", null));
+        Assert.Contains("لغة الصفحة: الإنجليزية", FreeformBuilder.BuildSystemPrompt(null, false, "", "doc", null, "en"));
+    }
+
+    [Fact]
     public void PageTemplates_PointToExistingFiles_WithSlidesAndNavigation()
     {
         // نموذج الصفحة الجاهزة: الملف موجود تحت wwwroot، فيه شرائح بعدد الأقسام ودالة التنقّل وشريط المصغّرات
@@ -33,6 +53,14 @@ public class FreeformTemplateTests
             Assert.DoesNotContain("..", t.Page!);
             var file = Path.Combine(dir!.FullName, "ChatToDashboard.Api", "wwwroot", t.Page!.Replace('/', Path.DirectorySeparatorChar));
             Assert.True(File.Exists(file), $"ملف النموذج مفقود: {t.Page}");
+            if (t.PageEn is not null)
+            {
+                var fileEn = Path.Combine(dir!.FullName, "ChatToDashboard.Api", "wwwroot", t.PageEn.Replace('/', Path.DirectorySeparatorChar));
+                Assert.True(File.Exists(fileEn), $"ملف النموذج الإنجليزي مفقود: {t.PageEn}");
+                var htmlEn = File.ReadAllText(fileEn);
+                Assert.Contains("<html lang=\"en\" dir=\"ltr\">", htmlEn);
+                Assert.Equal(t.Sections.Count, System.Text.RegularExpressions.Regex.Matches(htmlEn, "<section class=\"slide").Count);
+            }
             var html = File.ReadAllText(file);
             Assert.Equal(t.Sections.Count, System.Text.RegularExpressions.Regex.Matches(html, "<section class=\"slide").Count);
             Assert.Contains("window.goToSlide", html);
