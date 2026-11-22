@@ -1,0 +1,78 @@
+{
+  "key": "sl-ai-driven-change-management",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🤖",
+  "name": "إدارة التغيير بالذكاء الاصطناعي",
+  "nameEn": "AI-Driven Change Management",
+  "description": "15 شريحة لإدارة التغيير بالذكاء الاصطناعي: غلاف، فهرس، نموذج، أدوات، أثر، مؤشرات، مخاطر، جدول زمني، خطوات تالية",
+  "descriptionEn": "15 slides on AI-driven change management: cover, contents, model, tools, impact, KPIs, risks, roadmap, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "مقدمة في إدارة التغيير",
+      "titleEn": "Intro to Change Management"
+    },
+    {
+      "title": "لماذا يهم الذكاء الاصطناعي",
+      "titleEn": "Why AI Matters",
+      "needsData": true
+    },
+    {
+      "title": "تحدي التحول المؤسسي",
+      "titleEn": "The Challenge of Transformation"
+    },
+    {
+      "title": "نموذج إدارة التغيير المعزّز",
+      "titleEn": "AI-Enhanced Change Model"
+    },
+    {
+      "title": "قبل التبنّي وبعده",
+      "titleEn": "Before & After AI Adoption"
+    },
+    {
+      "title": "الأدوات والتقنيات المستخدمة",
+      "titleEn": "AI Tools in Use"
+    },
+    {
+      "title": "الأثر على القوى العاملة",
+      "titleEn": "Impact on Workforce"
+    },
+    {
+      "title": "إشراك الموظفين وخطة التواصل",
+      "titleEn": "Engagement & Communication Plan",
+      "needsData": true
+    },
+    {
+      "title": "دراسة حالة",
+      "titleEn": "Case Study"
+    },
+    {
+      "title": "مؤشرات الأداء (رسمان)",
+      "titleEn": "KPIs & Success Metrics (charts)",
+      "needsData": true
+    },
+    {
+      "title": "المخاطر والاعتبارات الأخلاقية",
+      "titleEn": "Risks & Ethical Concerns",
+      "needsData": true
+    },
+    {
+      "title": "الجدول الزمني وخارطة الطريق",
+      "titleEn": "Timeline & Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية ودعوة إلى العمل",
+      "titleEn": "Next Steps & Call To Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسمين في كتلتي JSON بالمعرّفين chart-data وchart-data-2، والصور في assets تبقى بمساراتها."
+}
