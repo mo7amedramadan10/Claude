@@ -28,6 +28,9 @@ public sealed class FreeformTemplate
     [JsonPropertyName("custom")] public bool Custom { get; init; }
     /// <summary>نموذج محوَّل من كتالوج لوحات المتابعة (مفتاحه <c>d:</c>) — انظر <see cref="FreeformDashboardTemplates"/>.</summary>
     [JsonPropertyName("dashboard")] public bool Dashboard { get; init; }
+    /// <summary>نموذج صفحة جاهزة: مسار ملف HTML كامل تحت wwwroot (مثل <c>templates/freeform/x.html</c>). «استخدم هذا النموذج» ينشئ
+    /// التصميم من الملف فورًا بلا موديل ثم يُعدَّل نصيًا أو بالمحادثة؛ المعاينة في المعرض تعرض الصفحة نفسها.</summary>
+    [JsonPropertyName("page")] public string? Page { get; init; }
     [JsonPropertyName("sourceFile")] public string? SourceFile { get; init; }
     [JsonPropertyName("createdByUserId")] public string? CreatedByUserId { get; init; }
     [JsonPropertyName("createdAt")] public DateTime? CreatedAt { get; init; }
@@ -82,6 +85,16 @@ public static class FreeformTemplates
         T("sl-training", "slides", "hr", "🎓", "مادة تدريبية", "أهداف التعلّم ومحتوى مقسّم ووحدات وتمرين وملخص", "s/s/s/s",
             "عرض تدريبي: أهداف التعلّم، محتوى في وحدات (شريحة لكل مفهوم بمثال)، شريحة تمرين تفاعلي بأسئلة اختيار من متعدد تُظهر الإجابة، وملخص.",
             S("الغلاف والأهداف"), S("الوحدة الأولى"), S("الوحدة الثانية"), S("الوحدة الثالثة"), S("تمرين تفاعلي"), S("الملخص")),
+        new()
+        {
+            Key = "sl-corporate-blue", Kind = "slides", Category = "mgmt", Icon = "🏢", Name = "الأزرق المؤسسي — عرض جاهز",
+            Description = "خمس شرائح جاهزة بنسق مؤسسي أزرق (خلاصات، خارطة طريق، نموذج تشغيل، محرّكات نمو، أداء برسم) تُفتح فورًا وتُعدَّل نصيًا أو بالمحادثة",
+            Sketch = "s/s/s/s", Page = "templates/freeform/corporate-blue.html",
+            Brief = "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط (الألوان، الكتل المائلة، أماكن الصور .photo-ph، الشبكات) "
+                  + "وغيّر النصوص والأرقام فقط ما لم يطلب المستخدم غير ذلك؛ أرقام الرسم في الشريحة الخامسة في كتلة JSON بالمعرّف chart-data فعدّلها هناك (من query_data إن طُلبت بيانات حقيقية). "
+                  + "لإضافة شريحة انسخ أقرب شريحة بنيةً وأبقِ التنقّل كما هو.",
+            Sections = new[] { S("أبرز الخلاصات"), S("خارطة الطريق الاستراتيجية"), S("نموذج التشغيل"), S("محرّكات نمو الأعمال"), S("نظرة على الأداء (رسم أعمدة)", true) },
+        },
         T("sl-status", "slides", "projects", "🚦", "تقرير حالة مشروع", "الحالة العامة والإنجاز والمخاطر والخطوات التالية", "s/s/s/s",
             "عرض حالة مختصر 6–8 شرائح: حالة عامة بلون الحالة (أيقونة + نص)، نسبة الإنجاز، إنجازات الفترة، مؤشرات من البيانات إن وُجدت، المخاطر والقضايا، والخطوات التالية.",
             S("الحالة العامة"), S("الإنجاز مقابل الخطة", true), S("إنجازات الفترة"), S("المخاطر والقضايا"), S("الخطوات التالية")),

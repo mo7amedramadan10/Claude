@@ -20,6 +20,29 @@ public class FreeformTemplateTests
     }
 
     [Fact]
+    public void PageTemplates_PointToExistingFiles_WithSlidesAndNavigation()
+    {
+        // نموذج الصفحة الجاهزة: الملف موجود تحت wwwroot، فيه شرائح بعدد الأقسام ودالة التنقّل وشريط المصغّرات
+        var pages = FreeformTemplates.All.Where(t => t.Page is not null).ToList();
+        Assert.Contains(pages, t => t.Key == "sl-corporate-blue");
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "ChatToDashboard.Api", "wwwroot"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+        foreach (var t in pages)
+        {
+            Assert.DoesNotContain("..", t.Page!);
+            var file = Path.Combine(dir!.FullName, "ChatToDashboard.Api", "wwwroot", t.Page!.Replace('/', Path.DirectorySeparatorChar));
+            Assert.True(File.Exists(file), $"ملف النموذج مفقود: {t.Page}");
+            var html = File.ReadAllText(file);
+            Assert.Equal(t.Sections.Count, System.Text.RegularExpressions.Regex.Matches(html, "<section class=\"slide").Count);
+            Assert.Contains("window.goToSlide", html);
+            Assert.Contains("/js/jeem-slides.js", html);
+            Assert.Contains("--jeem-strip-h", html);
+            Assert.Contains("النموذج المختار", FreeformTemplates.BriefFor(t));
+        }
+    }
+
+    [Fact]
     public void Brief_ListsSectionsInOrder_AndEntersSystemPrompt()
     {
         var t = FreeformTemplates.Find("doc-report")!;

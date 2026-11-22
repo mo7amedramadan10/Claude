@@ -9277,9 +9277,9 @@ function renderFfGalGrid() {
       </span>
     </button>` : `
     <button type="button" class="dash-card" data-tpl="${esc(t.key)}">
-      ${ffSketchHtml(t)}
+      ${t.page ? `<span class="ff-live ff-live-card" data-live="${esc(t.key)}"></span>` : ffSketchHtml(t)}
       <span class="dc-body">
-        <b>${esc(t.icon)} ${esc(t.name)}</b>
+        <b>${esc(t.icon)} ${esc(t.name)}${t.page ? ' <span class="badge badge-blue">جاهز</span>' : ''}</b>
         <small>${esc(t.description)}</small>
         <span class="dc-meta">
           <span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>${t.total.toLocaleString('en-US')} أقسام</span>
@@ -9289,13 +9289,14 @@ function renderFfGalGrid() {
     </button>`; }).join('');
   el('ffgal-empty').classList.toggle('hidden', items.length > 0);
   el('ffgal-grid').querySelectorAll('[data-tpl]').forEach(card => card.addEventListener('click', () => openFfGalPreview(items.find(x => x.key === card.dataset.tpl))));
+  el('ffgal-grid').querySelectorAll('[data-live]').forEach(h => ffLiveInto(h, items.find(x => x.key === h.dataset.live)));
   el('ffgal-grid').querySelectorAll('[data-dash]').forEach(card => card.addEventListener('click', () => { galSetHost('ff'); openDashGalPreview(DASH_GALLERY.find(d => d.id === card.dataset.dash)); }));
 }
 function openFfGalPreview(t) {
   el('ffgal-view-preview').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="ffgal-back-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>كل النماذج</span></button>
     <div class="pv-grid">
-      <div class="pv-thumb">${window.JEEM_FF_DEMO ? '<span class="ff-live" id="ffgal-pv-live"></span>' : ffSketchHtml(t)}</div>
+      <div class="pv-thumb">${window.JEEM_FF_DEMO || t.page ? '<span class="ff-live" id="ffgal-pv-live"></span>' : ffSketchHtml(t)}</div>
       <div class="pv-info">
         <h3>${esc(t.icon)} ${esc(t.name)}</h3><p>${esc(t.description)}${t.custom ? ' <span class="ff-kind-chip">مرفوع من ملف</span>' : ''}${t.dashboard ? ' <span class="ff-kind-chip">من كتالوج اللوحات</span>' : ''}</p>
         <h4>الأقسام (${t.total.toLocaleString('en-US')})</h4>
@@ -9303,14 +9304,14 @@ function openFfGalPreview(t) {
         <p class="muted" style="font-size:var(--fs-xs)">${esc(t.brief)}</p>
         <div class="pv-actions">
           <button type="button" class="btn btn-primary" id="ffgal-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
-          ${window.JEEM_FF_DEMO ? '<button type="button" class="btn btn-soft" id="ffgal-demo-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>معاينة تفاعلية ببيانات تجريبية</button>' : ''}
+          ${window.JEEM_FF_DEMO || t.page ? `<button type="button" class="btn btn-soft" id="ffgal-demo-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>${t.page ? 'معاينة الشرائح كاملة' : 'معاينة تفاعلية ببيانات تجريبية'}</button>` : ''}
           ${t.custom ? '<button type="button" class="btn btn-ghost btn-sm" id="ffgal-del-btn">🗑️ حذف النموذج</button>' : ''}
-          <span class="muted" style="font-size:var(--fs-xs)">يُرفق النموذج في المحادثة، ثم اكتب ما تريده بالتحديد ويُبنى عليه بهوية مشروعك.</span>
+          <span class="muted" style="font-size:var(--fs-xs)">${t.page ? 'نموذج جاهز: يُفتح فورًا كما هو بلا موديل، ثم تعدّل نصوصه مباشرة أو تطلب تغييرات بالمحادثة.' : 'يُرفق النموذج في المحادثة، ثم اكتب ما تريده بالتحديد ويُبنى عليه بهوية مشروعك.'}</span>
         </div>
       </div>
     </div>`;
   el('ffgal-back-btn').addEventListener('click', () => { el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-list').classList.remove('hidden'); });
-  el('ffgal-use-btn').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(t); });
+  el('ffgal-use-btn').addEventListener('click', () => ffUseTemplate(t));
   el('ffgal-demo-btn')?.addEventListener('click', () => openFfGalDemo(t));
   el('ffgal-del-btn')?.addEventListener('click', async () => {
     if (!confirm(`حذف النموذج «${t.name}»؟ التصاميم المبنية عليه لا تتأثر.`)) return;
@@ -9321,26 +9322,45 @@ function openFfGalPreview(t) {
   el('ffgal-view-list').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden'); el('ffgal-view-demo').classList.add('hidden');
   ffLiveInto(el('ffgal-pv-live'), t);
 }
-// الصفحة التوضيحية الحقيقية للنموذج مصغّرة داخل الورقة (بلا تفاعل) — من JEEM_FF_DEMO
+// صفحة نموذج جاهز (ملف HTML في الخادم) بذاكرة؛ null لنموذج بلا صفحة
+const ffPageCache = {};
+async function ffTemplatePageHtml(t) {
+  if (!t || !t.page) return null;
+  if (ffPageCache[t.key] === undefined) { try { const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/page`); ffPageCache[t.key] = r.ok ? await r.text() : ''; } catch { ffPageCache[t.key] = ''; } }
+  return ffPageCache[t.key] || null;
+}
+// «استخدم هذا النموذج»: نموذج صفحة جاهزة → تصميم جديد فورًا من الملف ويُفتح؛ غيره → يُرفق في المحادثة كما كان
+async function ffUseTemplate(t) {
+  if (!t || !t.page) { closeFfGallery(); ffSetTemplate(t); return; }
+  try {
+    const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/use`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sources: FF.sources || undefined }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    closeFfGallery(); FF.kind = t.kind; await ffOpen(d.design.id);
+  } catch (e) { alert('تعذّر فتح النموذج: ' + e.message); }
+}
+// الصفحة التوضيحية الحقيقية للنموذج مصغّرة داخل الورقة (بلا تفاعل) — من JEEM_FF_DEMO، أو صفحة النموذج الجاهز نفسها
 function ffLiveInto(holder, t) {
-  if (!holder || !window.JEEM_FF_DEMO) return;
+  if (!holder || !t || !(window.JEEM_FF_DEMO || t.page)) return;
   const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-scripts'); f.tabIndex = -1; f.title = `معاينة ${t.name}`; f.setAttribute('aria-hidden', 'true');
-  holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4)); f.srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t), false, null, true);
+  holder.appendChild(f); const w = holder.clientWidth || 420; holder.style.setProperty('--s', (w / 1100).toFixed(4));
+  if (t.page) ffTemplatePageHtml(t).then(html => { if (html) f.srcdoc = ffSandboxHtml(html, false, null, true); });
+  else f.srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t), false, null, true);
 }
 // معاينة تفاعلية كاملة ببيانات تجريبية — الصفحة في إطار معزول بحجمها الطبيعي مع شريط يوضّح أن الأرقام توضيحية
 function openFfGalDemo(t) {
   el('ffgal-view-demo').innerHTML = `
     <button type="button" class="btn btn-ghost btn-sm gal-back" id="ffgal-demo-back-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-left"/></svg><span>رجوع للمعاينة</span></button>
     <div class="gal-demo-banner"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg>
-      بيانات تجريبية توضيحية فقط لعرض شكل النموذج وتفاعله — ليست من مشروعك. لبناء الصفحة الفعلية بهوية مشروعك وبياناته، اضغط «استخدم هذا النموذج» ثم اكتب طلبك.</div>
+      ${t.page ? 'هذه هي الشرائح الجاهزة نفسها بنصوص توضيحية. اضغط «استخدم هذا النموذج» لتُفتح نسخة لك تعدّلها مباشرة أو بالمحادثة.' : 'بيانات تجريبية توضيحية فقط لعرض شكل النموذج وتفاعله — ليست من مشروعك. لبناء الصفحة الفعلية بهوية مشروعك وبياناته، اضغط «استخدم هذا النموذج» ثم اكتب طلبك.'}</div>
     <div class="gal-demo-top">
       <div class="gal-demo-title"><h3>${esc(t.icon)} ${esc(t.name)}</h3><span class="muted" style="font-size:var(--fs-xs)">${(FF_KINDS[t.kind] || FF_KINDS.design).label} · ${t.total.toLocaleString('en-US')} أقسام${t.dataSections ? ` · ${t.dataSections.toLocaleString('en-US')} منها من بياناتك` : ''}</span></div>
       <button type="button" class="btn btn-primary" id="ffgal-demo-use-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check"/></svg>استخدم هذا النموذج</button>
     </div>
     <iframe class="ffgal-demo-frame" id="ffgal-demo-frame" title="معاينة تفاعلية: ${esc(t.name)}" sandbox="allow-scripts allow-modals"></iframe>`;
-  el('ffgal-demo-frame').srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t), false, t.kind);
+  if (t.page) ffTemplatePageHtml(t).then(html => { if (html) el('ffgal-demo-frame').srcdoc = ffSandboxHtml(html, false, t.kind); });
+  else el('ffgal-demo-frame').srcdoc = ffSandboxHtml(JEEM_FF_DEMO.build(t), false, t.kind);
   el('ffgal-demo-back-btn').addEventListener('click', () => { el('ffgal-view-demo').classList.add('hidden'); el('ffgal-view-preview').classList.remove('hidden'); });
-  el('ffgal-demo-use-btn').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(t); });
+  el('ffgal-demo-use-btn').addEventListener('click', () => ffUseTemplate(t));
   el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-demo').classList.remove('hidden');
 }
 el('ffgal-close').addEventListener('click', closeFfGallery);

@@ -18,6 +18,7 @@ public class FreeformGenerateRequest { public string Message { get; set; } = "";
     public Sources.SourceSelection? Sources { get; set; } }
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
+public class FreeformUsePageRequest { public string? Title { get; set; } public Sources.SourceSelection? Sources { get; set; } }
 public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } }
 /// <summary>تحويل لوحة محادثة (مواصفتها كاملة بعناصرها وبياناتها) إلى تصميم حر من نوع معيّن — «لوحات المتابعة» داخل تصميم حر.</summary>
 public class FreeformFromDashboardRequest { public string Kind { get; set; } = "dashboard"; public string? Title { get; set; } public System.Text.Json.JsonElement Dashboard { get; set; } public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } }
@@ -41,8 +42,8 @@ public class FreeformController : ControllerBase
     private readonly PresentationLiveDataService _live;
 
     private readonly FreeformDashboardTemplates _dashTemplates;
-    public FreeformController(FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live, FreeformDashboardTemplates dashTemplates)
-    { _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; _live = live; _dashTemplates = dashTemplates; }
+    public FreeformController(IWebHostEnvironment env, FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live, FreeformDashboardTemplates dashTemplates)
+    { _env = env; _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; _live = live; _dashTemplates = dashTemplates; }
 
     /// <summary>المستخدم الحالي واختياره الفعلي للمصادر: <paramref name="requested"/> (من الطلب أو المحفوظ مع التصميم) مقيَّد بصلاحياته؛
     /// null = كل ما يحق له.</summary>
@@ -262,6 +263,45 @@ public class FreeformController : ControllerBase
         var t = await _templates.GetAsync(key, cur.Value.Selection.ProjectId, ct); if (t is null) return NotFound();
         if (t.CreatedByUserId != cur.Value.User.Id && cur.Value.User.Role != "Admin") return Forbid();
         await _templates.DeleteAsync(key, cur.Value.Selection.ProjectId, ct); return NoContent();
+    }
+
+    private readonly IWebHostEnvironment _env;
+
+    /// <summary>ملف HTML لنموذج صفحة جاهزة من wwwroot (null إن لم يكن للنموذج صفحة أو الملف مفقود).</summary>
+    private async Task<string?> TemplatePageHtmlAsync(FreeformTemplate t, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(t.Page) || t.Page.Contains("..")) return null;
+        var file = _env.WebRootFileProvider.GetFileInfo(t.Page);
+        if (!file.Exists || file.IsDirectory) return null;
+        using var reader = new StreamReader(file.CreateReadStream(), Encoding.UTF8);
+        return await reader.ReadToEndAsync(ct);
+    }
+
+    /// <summary>صفحة نموذج جاهز كما هي (لمعاينة المعرض).</summary>
+    [HttpGet("templates/{key}/page")]
+    public async Task<IActionResult> TemplatePage(string key, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var t = FreeformTemplates.Find(key); if (t is null) return NotFound();
+        var html = await TemplatePageHtmlAsync(t, ct); if (html is null) return NotFound(new { error = "هذا النموذج بلا صفحة جاهزة." });
+        return Content(html, "text/html; charset=utf-8");
+    }
+
+    /// <summary>«استخدم هذا النموذج» لنموذج صفحة جاهزة: تصميم جديد من ملف الصفحة فورًا بلا موديل، بنوع النموذج ومفتاحه، ثم يُعدَّل نصيًا أو بالمحادثة.</summary>
+    [HttpPost("templates/{key}/use")]
+    public async Task<IActionResult> UseTemplatePage(string key, [FromBody] FreeformUsePageRequest? request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var t = FreeformTemplates.Find(key); if (t is null) return NotFound();
+        var html = await TemplatePageHtmlAsync(t, ct); if (html is null) return BadRequest(new { error = "هذا النموذج بلا صفحة جاهزة." });
+        var title = string.IsNullOrWhiteSpace(request?.Title) ? t.Name.Split('—')[0].Trim() : request!.Title!.Trim();
+        if (title.Length > 120) title = title[..120];
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, html, $"بدء من النموذج الجاهز «{t.Name}»", t.Kind, t.Key, ct, SourcesJsonOf(request?.Sources));
+        await _store.AddMessageAsync(design.Id, "user", $"ابدأ من النموذج الجاهز «{t.Name}».", null, ct);
+        await _store.AddMessageAsync(design.Id, "assistant", $"فُتح النموذج «{t.Name}» بشرائحه الـ{t.Sections.Count} كما هو (بلا موديل). عدّل النصوص مباشرة من «✏️ تعديل النص»، أو اكتب هنا ما تريد تغييره (مثل: «املأ الشريحة الخامسة بأرقام المبيعات الفعلية»).", 1, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct);
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct) });
     }
 
     private async Task<FreeformTemplate?> ResolveTemplateAsync(string? key, string? projectId, CancellationToken ct)

@@ -3792,3 +3792,6 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #add-widget-modal .aw-peek-note { margin: 8px 0 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.5; border-top: 1px dashed var(--line); padding-top: 6px; }
 #add-widget-modal .dash-card.aw-card .aw-eye { display: none; position: absolute; top: 10px; inset-inline-start: 10px; width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); place-items: center; font-size: 14px; }
 @media (hover: none) { #add-widget-modal .dash-card.aw-card .aw-eye { display: grid; } #add-widget-modal .aw-peek { pointer-events: auto; } }
+
+/* بطاقة نموذج صفحة جاهزة في معرض تصميم حر: معاينة حيّة مصغّرة مكان الرسم التخطيطي */
+#ff-gallery-modal .dash-card .ff-live-card { aspect-ratio: 16 / 10; border-radius: 10px 10px 0 0; }
