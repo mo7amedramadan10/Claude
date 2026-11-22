@@ -8776,7 +8776,16 @@ const DKI_MODE_NOTE = {
   none: 'استخراج حتمي فقط: العناوين والنقاط والجداول والصور كما وردت، بلا أي نداء للموديل.',
 };
 function dkiDefaultMode(name) { return /\.html?$/i.test(name || '') ? 'understand' : 'none'; }
-function openDeckImportModal() { el('dki-file').value = ''; el('dki-title').value = ''; el('dki-error').classList.add('hidden'); el('dki-go').disabled = false; el('dki-go').textContent = 'استيراد'; el('dki-mode').value = 'understand'; el('dki-mode-note').textContent = DKI_MODE_NOTE.understand; el('deck-import-modal').classList.remove('hidden'); }
+// into = معرّف عرض مفتوح: الملف يُستورد إلى هذا العرض (استبدال/إلحاق) بدل إنشاء عرض جديد
+let dkiInto = null;
+function openDeckImportModal(into) {
+  dkiInto = into || null;
+  el('dki-file').value = ''; el('dki-title').value = ''; el('dki-error').classList.add('hidden'); el('dki-go').disabled = false; el('dki-go').textContent = 'استيراد'; el('dki-mode').value = 'understand'; el('dki-mode-note').textContent = DKI_MODE_NOTE.understand;
+  el('dki-title-wrap').classList.toggle('hidden', !!dkiInto); el('dki-apply-wrap').classList.toggle('hidden', !dkiInto); if (dkiInto) el('dki-apply').value = 'replace';
+  el('deck-import-modal').querySelector('h3').textContent = dkiInto ? 'استيراد إلى هذا العرض' : 'استيراد ملف موجود';
+  el('deck-import-modal').classList.remove('hidden');
+}
+el('dk-import-into').addEventListener('click', () => { if (!DK.deck) return; openDeckImportModal(DK.deck.id); });
 el('dki-mode').addEventListener('change', () => { el('dki-mode-note').textContent = DKI_MODE_NOTE[el('dki-mode').value] || ''; });
 el('dki-file').addEventListener('change', () => { const f = el('dki-file').files && el('dki-file').files[0]; if (f) { el('dki-mode').value = dkiDefaultMode(f.name); el('dki-mode-note').textContent = DKI_MODE_NOTE[el('dki-mode').value]; } });
 function closeDeckImportModal() { el('deck-import-modal').classList.add('hidden'); }
@@ -8790,12 +8799,22 @@ el('dki-go').addEventListener('click', async () => {
   if (!/\.(pptx|pdf|html?)$/i.test(f.name)) return err('الصيغة غير مدعومة — المدعوم: .pptx و.pdf و.html.');
   if (f.size > 25 * 1024 * 1024) return err('حجم الملف يتجاوز 25 ميغابايت.');
   const mode = el('dki-mode').value; const fd = new FormData(); fd.append('file', f); fd.append('mode', mode); fd.append('title', el('dki-title').value.trim());
+  const into = dkiInto; if (into) fd.append('apply', el('dki-apply').value);
   el('dki-go').disabled = true; el('dki-go').textContent = mode === 'understand' ? 'يقرأ المحتوى ويبني العرض…' : mode === 'refine' ? 'يستخرج ويحسّن…' : 'يستخرج…'; el('dki-error').classList.add('hidden');
   try {
-    const r = await fetch('/api/decks/import', { method: 'POST', body: fd });
+    const r = await fetch(into ? `/api/decks/${encodeURIComponent(into)}/import` : '/api/decks/import', { method: 'POST', body: fd });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
     closeDeckImportModal();
+    if (into) {
+      // العرض نفسه: تبقى الرسائل ورابط النشر، وتُستبدل الشرائح أو تُلحق
+      DK.deck = d.deck; DK.spec = d.spec; DK.index = d.apply === 'append' ? d.slidesBefore : 0; DK.dirty = false; DK.dataChanged = false; dkRender();
+      const kind = { pptx: 'PowerPoint', pdf: 'PDF', html: 'HTML' }[d.kind] || d.kind;
+      dkPushMsg('bot', (d.apply === 'append' ? `ألحقت ${d.slidesAdded} شريحة من ${kind} «${f.name}» بعد الشرائح الـ${d.slidesBefore} الحالية` : `استبدلت شرائح العرض الـ${d.slidesBefore} بـ${d.slidesAdded} شريحة من ${kind} «${f.name}»`)
+        + ` — العرض نفسه بهويته وقالبه.` + (d.published ? ' الرابط المنشور ما زال على النسخة السابقة: اضغط «تحديث النشر» ليظهر الجديد عليه.' : '')
+        + (d.warnings && d.warnings.length ? '\n\nملاحظات: ' + d.warnings.join(' · ') : ''));
+      return;
+    }
     DK.deck = d.deck; DK.spec = d.spec; DK.index = 0; DK.dirty = false; DK.messages = []; DK.publishedUrl = null;
     dkRender();
     const kind = { pptx: 'PowerPoint', pdf: 'PDF', html: 'HTML' }[d.kind] || d.kind;

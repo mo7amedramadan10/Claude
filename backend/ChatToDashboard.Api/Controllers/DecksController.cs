@@ -389,23 +389,19 @@ public class DecksController : ControllerBase
     }
 
     /// <summary>استيراد ملف PowerPoint/PDF/HTML موجود كعرض قابل للتعديل: استخراج حتمي ← شرائح ← (اختياريًا) تحسين الترتيب بالموديل.</summary>
-    [HttpPost("import")]
-    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
-    public async Task<IActionResult> Import([FromForm] IFormFile? file, [FromForm] bool refine, [FromForm] string? mode, [FromForm] string? title, CancellationToken ct)
+    /// <summary>قراءة الملف وتحويله إلى مواصفة (مشترك بين «استيراد ملف موجود» و«استيراد إلى هذا العرض»).</summary>
+    private async Task<(DeckSpec? Spec, ImportedDocument? Doc, List<string> Warnings, string? Mode, IActionResult? Error)> ImportSpecAsync(IFormFile? file, bool refine, string? mode, string? title, AppUser user, Sources.SourceSelection selection, CancellationToken ct)
     {
-        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var (user, selection) = cur.Value;
-        if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملفًا بصيغة .pptx أو .pdf أو .html." });
-        if (DeckImporter.KindOf(file.FileName) is null) return BadRequest(new { error = "الصيغة غير مدعومة — المدعوم: PowerPoint (.pptx) وPDF وصفحة HTML." });
-        if (file.Length > DeckImporter.MaxBytes) return BadRequest(new { error = $"حجم الملف يتجاوز {DeckImporter.MaxBytes / 1024 / 1024} ميغابايت." });
+        if (file is null || file.Length == 0) return (null, null, new(), null, BadRequest(new { error = "اختر ملفًا بصيغة .pptx أو .pdf أو .html." }));
+        if (DeckImporter.KindOf(file.FileName) is null) return (null, null, new(), null, BadRequest(new { error = "الصيغة غير مدعومة — المدعوم: PowerPoint (.pptx) وPDF وصفحة HTML." }));
+        if (file.Length > DeckImporter.MaxBytes) return (null, null, new(), null, BadRequest(new { error = $"حجم الملف يتجاوز {DeckImporter.MaxBytes / 1024 / 1024} ميغابايت." }));
         byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
         ImportedDocument doc;
         try { doc = DeckImporter.Extract(file.FileName, bytes); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة الملف: " + ex.Message }); }
+        catch (Exception ex) { return (null, null, new(), null, BadRequest(new { error = "تعذّرت قراءة الملف: " + ex.Message })); }
         mode = (mode ?? (refine ? "refine" : "none")).Trim().ToLowerInvariant();
-        if (doc.Pages.Count == 0 && !(mode == "understand" && doc.DataBlocks.Count > 0)) return BadRequest(new { error = "لم يُعثر على محتوى نصي في الملف.", warnings = doc.Warnings });
+        if (doc.Pages.Count == 0 && !(mode == "understand" && doc.DataBlocks.Count > 0)) return (null, null, new(), mode, BadRequest(new { error = "لم يُعثر على محتوى نصي في الملف.", warnings = doc.Warnings }));
         var spec = DeckImporter.ToSpec(doc);
         if (!string.IsNullOrWhiteSpace(title)) spec.Title = title.Trim();
         var warnings = new List<string>(doc.Warnings);
@@ -416,8 +412,48 @@ public class DecksController : ControllerBase
             spec = result; if (note is not null) warnings.Add(note);
             if (!string.IsNullOrWhiteSpace(title)) spec.Title = title.Trim();
         }
-        var deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, spec, null, ct);
-        return Ok(new { deck, spec, kind = doc.Kind, pagesRead = doc.Pages.Count, dataBlocks = doc.DataBlocks.Count, mode, warnings });
+        return (spec, doc, warnings, mode, null);
+    }
+
+    [HttpPost("import")]
+    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> Import([FromForm] IFormFile? file, [FromForm] bool refine, [FromForm] string? mode, [FromForm] string? title, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var (spec, doc, warnings, m, error) = await ImportSpecAsync(file, refine, mode, title, user, selection, ct);
+        if (error is not null) return error;
+        var deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, spec!, null, ct);
+        return Ok(new { deck, spec, kind = doc!.Kind, pagesRead = doc.Pages.Count, dataBlocks = doc.DataBlocks.Count, mode = m, warnings });
+    }
+
+    /// <summary>استيراد ملف إلى عرض موجود (طلب المستخدم: «أعدّل عرضًا موجودًا برفع عرض آخر»): <c>apply=replace</c> يستبدل شرائح العرض كلها
+    /// بالمستخرَج من الملف، و<c>apply=append</c> يلحقها بعد الحالية — مع الاحتفاظ بالمعرّف والعنوان والسمة والقالب ورابط النشر (يُطبَّق على
+    /// الرابط بـ«تحديث النشر»). بصمة البيانات تُصفَّر لأن الشرائح الجديدة بلا استعلامات.</summary>
+    [HttpPost("{id}/import")]
+    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> ImportInto(string id, [FromForm] IFormFile? file, [FromForm] bool refine, [FromForm] string? mode, [FromForm] string? apply, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var d = await _decks.GetAsync(id, selection.ProjectId, ct);
+        if (d is null) return NotFound(new { error = "العرض غير موجود." });
+        apply = (apply ?? "replace").Trim().ToLowerInvariant();
+        if (apply is not ("replace" or "append")) return BadRequest(new { error = "طريقة التطبيق غير معروفة (replace أو append)." });
+        var (imported, doc, warnings, m, error) = await ImportSpecAsync(file, refine, mode, null, user, selection, ct);
+        if (error is not null) return error;
+        var current = (JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json) ?? new DeckSpec()).Normalize();
+        var before = current.Slides.Count;
+        var slides = apply == "append" ? current.Slides.Concat(imported!.Slides).ToList() : imported!.Slides.ToList();
+        if (slides.Count > DeckSpec.MaxSlides) return BadRequest(new { error = $"العرض سيصير {slides.Count} شريحة والحد {DeckSpec.MaxSlides} — قلّل الملف أو استبدل بدل الإلحاق." });
+        var spec = new DeckSpec { Title = current.Title, Subtitle = current.Subtitle, Accent = current.Accent, Template = current.Template, TemplateMode = current.TemplateMode, Slides = slides };
+        spec.Normalize();
+        await _decks.UpdateSpecAsync(id, spec, ct);
+        await _decks.SetDataStateAsync(id, null, DateTime.UtcNow, ct);
+        var deck = await _decks.GetAsync(id, selection.ProjectId, ct);
+        return Ok(new { deck, spec, kind = doc!.Kind, pagesRead = doc.Pages.Count, mode = m, apply, slidesBefore = before, slidesAdded = imported.Slides.Count, warnings, published = d.PresentationId is not null });
     }
 
     /// <summary>ينشر العرض كصفحة HTML مستقلة في «العروض التقديمية» (أو يحدّث المنشور سابقًا على نفس الرابط).</summary>

@@ -762,8 +762,19 @@
     <p class="modal-note">يُستخرج المحتوى (العناوين، النقاط، الجداول، الصور، ورسوم PowerPoint البيانية) ويتحوّل إلى شرائح بهوية مشروعك، ثم تعدّله وتنشره كأي عرض. الحد 25 ميغابايت.</p>
     <label class="share-expiry-label">الملف <span class="muted">(.pptx أو .pdf أو .html)</span></label>
     <input type="file" id="dki-file" accept=".pptx,.pdf,.html,.htm,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,text/html">
+    <div id="dki-title-wrap">
     <label class="share-expiry-label">عنوان العرض <span class="muted">(اختياري — الافتراضي من الملف)</span></label>
     <input type="text" id="dki-title" placeholder="مثال: نتائج الربع الثالث" maxlength="200">
+    </div>
+    <!-- وضع «استيراد إلى هذا العرض»: كيف تُطبَّق الشرائح المستخرجة على العرض المفتوح -->
+    <div id="dki-apply-wrap" class="hidden">
+    <label class="share-expiry-label">طريقة التطبيق على العرض المفتوح</label>
+    <select id="dki-apply" class="pres-policy" style="width:100%">
+      <option value="replace">استبدال كل الشرائح الحالية بشرائح الملف</option>
+      <option value="append">إلحاق شرائح الملف بعد الشرائح الحالية</option>
+    </select>
+    <p class="model-switch-note">يبقى العرض نفسه: المعرّف والعنوان والهوية وقالب الشركة ورابط النشر. بعد الاستيراد اضغط «تحديث النشر» ليظهر على الرابط.</p>
+    </div>
     <label class="share-expiry-label">طريقة التحويل</label>
     <select id="dki-mode" class="pres-policy" style="width:100%">
       <option value="understand">فهم المحتوى بالذكاء الاصطناعي (مستحسن لصفحات HTML التفاعلية)</option>
@@ -1081,6 +1092,7 @@
         <button type="button" id="dk-publish" class="btn btn-sm">نشر</button>
         <button type="button" id="dk-export" class="btn btn-sm btn-ghost" title="تنزيل PowerPoint">PPTX</button>
         <button type="button" id="dk-print" class="btn btn-sm btn-ghost" title="طباعة أو حفظ PDF">PDF</button>
+        <button type="button" id="dk-import-into" class="btn btn-sm btn-ghost" title="استبدال شرائح هذا العرض أو إلحاقها من ملف PowerPoint أو PDF أو HTML — يبقى المعرّف والهوية ورابط النشر">📥 استيراد إلى هذا العرض</button>
         <span class="dk-sep"></span>
         <button type="button" id="dk-brand-btn" class="btn btn-sm btn-ghost dk-always" title="هوية المشروع: الشعار والألوان والخط — تُعمَّم على كل النماذج والعروض">🎨 الهوية</button>
         <button type="button" id="dk-tpl-toggle" class="btn btn-sm btn-ghost hidden" title="عرض شرائح هذا العرض على صفحات قالب الشركة أو بالشكل الافتراضي" aria-pressed="true">🏢 القالب: مفعّل</button>
