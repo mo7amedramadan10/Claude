@@ -1,0 +1,64 @@
+{
+  "key": "sl-aesthetic-geometry",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🎨",
+  "name": "هندسة جمالية",
+  "nameEn": "Aesthetic Geometry",
+  "description": "12 شريحة بزخارف هندسية: غلاف، جدول أعمال، من نحن، الرسالة، الرؤية، الخدمات، الفريق، الرئيس، محطات، جوائز، خاتمة",
+  "descriptionEn": "12 geometric slides: cover, agenda, about, mission, vision, services, team, CEO, milestones, awards, thank you",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "رسالتنا",
+      "titleEn": "Our Mission"
+    },
+    {
+      "title": "رؤيتنا",
+      "titleEn": "Our Vision"
+    },
+    {
+      "title": "الخدمات",
+      "titleEn": "Services"
+    },
+    {
+      "title": "فريقنا",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "الرئيس التنفيذي",
+      "titleEn": "Meet Our CEO"
+    },
+    {
+      "title": "المحطات البارزة (1–4)",
+      "titleEn": "Milestones (1–4)",
+      "needsData": true
+    },
+    {
+      "title": "المحطات البارزة (5–8)",
+      "titleEn": "Milestones (5–8)",
+      "needsData": true
+    },
+    {
+      "title": "الجوائز",
+      "titleEn": "Awards"
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف الهندسية (SVG بصنف deco) وغيّر النصوص والأرقام والسنوات وبيانات التواصل فقط؛ الصور في assets تبقى بمساراتها."
+}
