@@ -13474,22 +13474,32 @@ function awCardHtml(it) {
     <span class="aw-check" aria-hidden="true">✓</span><span class="aw-ico" aria-hidden="true">${it.icon}</span>
     <h4>${esc(it.title)}</h4><p>${esc(it.desc || '')}</p>${it.tag ? `<span class="aw-tag">${esc(it.tag)}</span>` : ''}</button>`;
 }
+// تصنيفات مكتبة المؤشرات تظهر فرعية تحت «مكتبة المؤشرات» في الشريط الجانبي (كتصنيفات معرض اللوحات) فيُختار التصنيف ثم المؤشر
+function awKpiCatCounts() {
+  const counts = new Map(); if (!KPI_LIB) return counts;
+  for (let i = 0; i < KPI_LIB.rows.length; i++) { const r = KPI_LIB.rows[i]; if (KPI_ROW_OVERRIDES[i] === 'stopped' || KPI_CAT_OFF.has(r[0])) continue; counts.set(r[0], (counts.get(r[0]) || 0) + 1); }
+  return counts;
+}
 function awRenderCats() {
+  const kpiCounts = awKpiCatCounts(); let kpiTotal = 0; kpiCounts.forEach(n => { kpiTotal += n; });
   el('aw-cats').innerHTML = AW_CATS.map(([k, name, icon]) => {
-    const n = k === 'raw' ? WIZARD_KINDS.length : k === 'ready' ? TEMPLATES.length : (KPI_LIB ? KPI_LIB.rows.length : 0);
+    const n = k === 'raw' ? WIZARD_KINDS.length : k === 'ready' ? TEMPLATES.length : kpiTotal;
     const picked = [...AW.sel.values()].filter(v => (k === 'ready' ? v.kind === 'widget' : v.kind === k)).length;
-    return `<button type="button" data-cat="${k}" aria-pressed="${k === AW.cat}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}${picked ? ` <b>(${picked})</b>` : ''}</span><em>${n.toLocaleString('en-US')}</em></button>`;
+    let html = `<button type="button" data-cat="${k}" aria-pressed="${k === AW.cat}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(name)}${picked ? ` <b>(${picked})</b>` : ''}</span><em>${n.toLocaleString('en-US')}</em></button>`;
+    if (k === 'kpi' && AW.cat === 'kpi' && KPI_LIB) {
+      const sub = (id, label, cnt) => `<button type="button" class="aw-sub" data-kpi-cat="${id}" aria-pressed="${AW.kpiCat === id}"><span>${esc(label)}</span><em>${cnt.toLocaleString('en-US')}</em></button>`;
+      html += `<div class="aw-subs">${sub('', 'كل التصنيفات', kpiTotal)}${KPI_LIB.cats.map((c, i) => kpiCounts.has(i) ? sub(String(i), c[0], kpiCounts.get(i)) : '').join('')}</div>`;
+    }
+    return html;
   }).join('');
   el('aw-cats').querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { AW.cat = b.dataset.cat; AW.shown = 60; awRenderCats(); awRenderGrid(); }));
+  el('aw-cats').querySelectorAll('[data-kpi-cat]').forEach(b => b.addEventListener('click', () => { AW.cat = 'kpi'; AW.kpiCat = b.dataset.kpiCat; AW.shown = 60; awRenderCats(); awRenderGrid(); }));
 }
 function awRenderGrid() {
   const items = awItems(); const grid = el('aw-grid');
   const filters = el('aw-kpi-filters'); filters.classList.toggle('hidden', AW.cat !== 'kpi');
   if (AW.cat === 'kpi' && KPI_LIB && !filters.innerHTML) {
-    const opt = (c, i) => `<option value="${i}">${esc(c[0])}</option>`;
-    filters.innerHTML = `<select id="aw-kpi-cat"><option value="">كل التصنيفات</option>${KPI_LIB.cats.map((c, i) => KPI_CAT_OFF.has(i) ? '' : opt(c, i)).join('')}</select>
-      <button type="button" class="chip is-on" data-mt="">الكل</button>${KPI_LIB.mtypes.map((m, i) => `<button type="button" class="chip" data-mt="${i}">${esc(m)}</button>`).join('')}`;
-    filters.querySelector('#aw-kpi-cat').addEventListener('change', e => { AW.kpiCat = e.target.value; AW.shown = 60; awRenderGrid(); });
+    filters.innerHTML = `<span class="aw-filters-label">نوع القياس:</span><button type="button" class="chip is-on" data-mt="">الكل</button>${KPI_LIB.mtypes.map((m, i) => `<button type="button" class="chip" data-mt="${i}">${esc(m)}</button>`).join('')}`;
     filters.querySelectorAll('[data-mt]').forEach(ch => ch.addEventListener('click', () => { AW.kpiMt = ch.dataset.mt; filters.querySelectorAll('[data-mt]').forEach(x => x.classList.toggle('is-on', x === ch)); AW.shown = 60; awRenderGrid(); }));
   }
   const slice = items.slice(0, AW.shown);

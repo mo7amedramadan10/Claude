@@ -3763,4 +3763,10 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* فلاتر مكتبة المؤشرات وزر «عرض المزيد» كانا يظهران في تبويبي «عناصر خام/جاهزة» (وبعدّاد سالب) لأن قاعدتي
    display أعلاه و.btn{display:inline-flex} أقوى من .hidden و[hidden] */
 #add-widget-modal .aw-filters.hidden, #add-widget-modal #aw-more[hidden] { display: none; }
+/* تصنيفات مكتبة المؤشرات فرعية تحت بندها في الشريط الجانبي */
+#add-widget-modal .aw-subs { display: flex; flex-direction: column; gap: 1px; margin: 2px 0 6px; padding-inline-start: 10px; border-inline-start: 2px solid var(--line-2); margin-inline-start: 18px; }
+#add-widget-modal .gal-cats button.aw-sub { height: 32px; font-size: var(--fs-xs); padding-inline: 8px; }
+#add-widget-modal .gal-cats button.aw-sub span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#add-widget-modal .aw-filters-label { font-size: var(--fs-xs); color: var(--ink-3); }
+@media (max-width: 760px) { #add-widget-modal .aw-subs { flex-direction: row; flex-wrap: nowrap; margin: 0; padding: 0; border: 0; } }
 @media (max-width: 640px) { #add-widget-modal .aw-foot { flex-wrap: wrap; } #add-widget-modal .aw-grid { grid-template-columns: 1fr 1fr; } }
