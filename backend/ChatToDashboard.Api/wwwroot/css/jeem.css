@@ -3770,3 +3770,9 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #add-widget-modal .aw-filters-label { font-size: var(--fs-xs); color: var(--ink-3); }
 @media (max-width: 760px) { #add-widget-modal .aw-subs { flex-direction: row; flex-wrap: nowrap; margin: 0; padding: 0; border: 0; } }
 @media (max-width: 640px) { #add-widget-modal .aw-foot { flex-wrap: wrap; } #add-widget-modal .aw-grid { grid-template-columns: 1fr 1fr; } }
+
+/* بطاقة عنصر قيد البناء بالموديل (نافذة «إضافة عناصر»): شعار جيم المتحرك بدل أزرار المصدر اليدوي */
+.jeem-scope .widget.widget-building { border-style: dashed; border-color: var(--brand-blue, #1f6feb); background: linear-gradient(180deg, #fff, #f5f9ff); }
+.jeem-scope .widget.widget-building .nodata-body { display: flex; align-items: center; justify-content: center; min-height: 120px; padding: 12px; }
+.jeem-scope .widget.widget-building .jl { text-align: center; }
+.jeem-scope .widget.widget-building .jl b { color: var(--blue-700, #1d4ed8); }

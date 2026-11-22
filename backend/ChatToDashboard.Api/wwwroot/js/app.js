@@ -2794,6 +2794,16 @@ function NoDataPlaceholderCard(w) {
 
   const body = document.createElement('div');
   body.className = 'nodata-body';
+  // عنصر قيد البناء بالموديل (من نافذة «إضافة عناصر»): شعار جيم يتحرك ونص يوضح أن الموديل يقرأ البيانات ويكتب الاستعلام —
+  // لا أزرار «اختر مصدرًا يدويًا» حتى تصل النتيجة (تُستبدل البطاقة بالعنصر المبني أو بسبب التعذّر)
+  if (w.building) {
+    card.classList.add('widget-building');
+    body.innerHTML = window.JEEM_LOADER
+      ? JEEM_LOADER.html({ title: 'جيم يبني هذا العنصر الآن…', hint: 'يقرأ بياناتك ويكتب الاستعلام بالموديل ثم ينفّذه — بضع ثوانٍ', size: 56 })
+      : `<p class="nodata-reason">جيم يبني هذا العنصر الآن من بياناتك…</p>`;
+    card.appendChild(body);
+    return card;
+  }
   body.innerHTML = `
     <svg class="icon icon-lg nodata-icon" aria-hidden="true"><use href="#i-database"/></svg>
     <p class="nodata-reason">${esc(w.missingReason || 'لم يتم العثور على مصدر بيانات مطابق لهذا العنصر.')}</p>
@@ -13560,6 +13570,8 @@ async function awAddSelected(items) {
         if (r.widget && !r.widget.noData) { Object.assign(ph, r.widget, { id: ph.id, layout: ph.layout }); delete ph.noData; delete ph.missingReason; }
         else ph.missingReason = r.widget?.missingReason || r.error || 'تعذّر بناء العنصر.';
       });
+      // حامل لم يعد له الخادم نتيجة لا يبقى «قيد البناء» إلى الأبد
+      placeholders.forEach(ph => { const w = findWidget(ph.id); if (w && w.building) { delete w.building; w.missingReason = 'لم يُعد الخادم نتيجة لهذا العنصر.'; } });
     } catch (e) { placeholders.forEach(ph => { const w = findWidget(ph.id); if (w) { delete w.building; w.missingReason = 'تعذّر البناء: ' + e.message; } }); }
     renderDashboard(); scheduleAutosave(); updateUndoRedoButtons();
   }
