@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>التدريب المؤسسي بالذكاء الاصطناعي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «التدريب المؤسسي بالذكاء الاصطناعي»: عشر شرائح بخلفيات كحلية وبيضاء متناوبة، ألواح بزوايا مدوّرة من جهة واحدة، أرقام كبيرة فوق دوائر داكنة، بطاقات إحصاءات، دوائر متداخلة SVG بالتدرّج، وخط زمني بسهم. الصور الفوتوغرافية (خلفية الغلاف وصورة المدرِّبة) في assets. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #080F39; --accent: #7B3FE4; --bg: #FFFFFF; --navy: #080F39; --purple: #7B3FE4; --teal: #12BBB2; --cyan: #0BB4D3; --lav: #D2B8F7; --lav-2: #D9DAEA; --gray: #5A5E6B; --circle: #252652; --circle-2: #1F2550; --tint: #F2EAFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* أنماط مشتركة */
+  .frame { font-family: var(--font); }
+  .ttl { position: absolute; margin: 0; font-size: 56px; font-weight: 700; line-height: 1.12; color: var(--navy); letter-spacing: -0.3px; }
+  .ttl.light { color: #fff; }
+  .ttl.ctr { inset-inline: 0; text-align: center; }
+  html[lang="ar"] .ttl { font-weight: 800; line-height: 1.25; }
+  .sub { position: absolute; margin: 0; font-size: 22px; font-weight: 400; color: var(--purple); line-height: 1.3; }
+  .sub.lav { color: var(--lav); }
+  .sub.ctr { inset-inline: 0; text-align: center; }
+  .h2 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.25; color: var(--navy); }
+  .p { margin: 0; font-size: 18px; font-weight: 400; line-height: 1.4; color: var(--gray); }
+  .light .h2, .dark .h2 { color: #fff; }
+  .light .p, .dark .p { color: var(--lav-2); }
+  .ic svg, .pic svg { width: 100%; height: 100%; }
+  /* قائمة مرقّمة بأرقام كبيرة فوق دوائر داكنة (الشريحتان 2 و10) */
+  .nl { position: absolute; margin: 0; padding: 0; list-style: none; width: 590px; }
+  .nl li { position: relative; height: 124px; padding-inline-start: 100px; padding-top: 4px; }
+  .nl .num { position: absolute; top: 0; inset-inline-start: 8px; font-size: 46px; font-weight: 700; line-height: 1; color: var(--lav); z-index: 1; }
+  .nl .num::before { content: ''; position: absolute; z-index: -1; width: 50px; height: 50px; border-radius: 50%; background: var(--circle); top: -8px; inset-inline-start: -8px; }
+  .nl.teal .num { color: #25C5BB; }
+  .nl .h2 { color: #fff; margin-bottom: 8px; }
+  .nl .p { color: var(--lav-2); font-size: 19px; }
+  /* رأس كحلي بزاوية سفلية مدوّرة (الشريحتان 7 و9) */
+  .hdr { position: absolute; top: 0; inset-inline-start: 0; height: 218px; background: var(--navy); border-end-end-radius: 52px; }
+  /* الشريط الزمردي السفلي (الشريحتان 3 و5) */
+  .bar { position: absolute; margin: 0; background: var(--teal); border-radius: 12px; color: var(--navy); font-size: 19px; line-height: 1.35; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px 70px; }
+  /* دائرة أيقونة بلون فاتح مزاحة خلف الأيقونة (الشريحتان 4 و7) */
+  .ic { position: absolute; width: 66px; height: 64px; }
+  .ic::before { content: ''; position: absolute; top: 0; inset-inline-start: 0; width: 54px; height: 54px; border-radius: 50%; background: var(--tint); }
+  .ic svg { position: absolute; inset-inline-start: 14px; top: 8px; width: 50px; height: 50px; }
+  .ic.pu { color: var(--purple); } .ic.bl { color: #2F5BC6; } .ic.bl::before { background: #E8EEFF; } .ic.tl { color: #16B5A8; } .ic.tl::before { background: #E3F7F5; }
+  /* الشعار (الشريحتان 1 و10) */
+  .logo { position: absolute; width: 52px; height: 52px; }
+  .logo-t { position: absolute; margin: 0; color: #fff; font-size: 17px; font-weight: 400; letter-spacing: 2.5px; text-transform: uppercase; line-height: 1.35; }
+  html[lang="ar"] .logo-t { letter-spacing: 0; font-size: 18px; }
+
+  /* 1) الغلاف */
+  .s1 { background: #070B12; }
+  .s1 .bgp { position: absolute; top: 0; inset-inline-end: 0; width: 720px; height: 720px; object-fit: cover; -webkit-mask-image: linear-gradient(to right, transparent, #000 28%); mask-image: linear-gradient(to right, transparent, #000 28%); }
+  html[dir="rtl"] .s1 .bgp { transform: scaleX(-1); }
+  .s1 .logo { top: 90px; inset-inline-start: 97px; }
+  .s1 .logo-t { top: 96px; inset-inline-start: 175px; }
+  .s1 .c1 { position: absolute; top: 246px; inset-inline-start: 98px; margin: 0; font-size: 54px; font-weight: 300; letter-spacing: 1px; line-height: 1.1; background: linear-gradient(90deg, #D9EDFF 0%, #B8C9FF 55%, #8E74F2 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .s1 .c2 { position: absolute; top: 312px; inset-inline-start: 94px; margin: 0; font-size: 86px; font-weight: 800; letter-spacing: 1px; line-height: 1.05; background: linear-gradient(90deg, #D9EDFF 0%, #A9B8FF 50%, #7A5CEE 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  html[dir="rtl"] .s1 .c1, html[dir="rtl"] .s1 .c2 { background-image: linear-gradient(270deg, #D9EDFF 0%, #B0C2FF 55%, #8366F0 100%); }
+  html[lang="ar"] .s1 .c1 { font-weight: 400; font-size: 50px; top: 240px; letter-spacing: 0; }
+  html[lang="ar"] .s1 .c2 { font-size: 76px; top: 302px; letter-spacing: 0; line-height: 1.2; }
+  .s1 .c3 { position: absolute; top: 420px; inset-inline-start: 98px; margin: 0; font-size: 32px; font-weight: 300; letter-spacing: 5px; color: #fff; line-height: 1.2; }
+  html[lang="ar"] .s1 .c3 { letter-spacing: 0; font-size: 30px; font-weight: 400; }
+  .s1 .c4 { position: absolute; top: 488px; inset-inline-start: 98px; margin: 0; font-size: 19px; color: #BFC2CC; }
+  .s1 .avatar { position: absolute; top: 585px; inset-inline-start: 92px; width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+  .s1 .name { position: absolute; top: 590px; inset-inline-start: 197px; margin: 0; font-size: 22px; font-weight: 700; color: #fff; }
+  .s1 .role { position: absolute; top: 626px; inset-inline-start: 197px; margin: 0; font-size: 19px; color: #F0F0F5; }
+
+  /* 2) الأجندة */
+  .s2 .panel { position: absolute; top: 0; inset-inline-end: 0; width: 708px; height: 720px; background: var(--navy); border-start-start-radius: 70px; }
+  .s2 .ttl { top: 64px; inset-inline-start: 98px; }
+  .s2 .sub { top: 268px; inset-inline-start: 98px; }
+  .s2 .lead { position: absolute; top: 414px; inset-inline-start: 98px; margin: 0; font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1.3; }
+  .s2 .bul { position: absolute; top: 492px; inset-inline-start: 98px; width: 400px; margin: 0; padding: 0; list-style: none; }
+  .s2 .bul li { position: relative; padding-inline-start: 32px; font-size: 18px; line-height: 1.4; color: var(--gray); margin-bottom: 12px; }
+  .s2 .bul li::before { content: '✦'; position: absolute; inset-inline-start: 0; top: 0; color: var(--purple); font-size: 18px; }
+  .s2 .nl { top: 78px; inset-inline-start: 625px; }
+
+  /* 3) لماذا يهم الذكاء الاصطناعي */
+  .s3 { background: var(--navy); }
+  .s3 .ttl { top: 62px; }
+  .s3 .sub { top: 138px; }
+  .s3 .card { position: absolute; top: 227px; width: 280px; height: 327px; background: #fff; border-radius: 16px; text-align: center; padding: 42px 30px 0; }
+  .s3 .card .big { margin: 0 0 30px; font-size: 62px; font-weight: 300; line-height: 1.1; color: var(--purple); }
+  .s3 .card .h2 { margin-bottom: 14px; }
+  .s3 .k1 { inset-inline-start: 51px; } .s3 .k2 { inset-inline-start: 350px; } .s3 .k3 { inset-inline-start: 650px; } .s3 .k4 { inset-inline-start: 949px; }
+  .s3 .bar { top: 580px; inset-inline-start: 51px; width: 1178px; height: 88px; }
+
+  /* 4) أساسيات الذكاء الاصطناعي */
+  .s4 { background: var(--navy); }
+  .s4 .panel { position: absolute; top: 255px; inset-inline-start: 0; width: 573px; height: 465px; background: #fff; border-start-end-radius: 46px; }
+  .s4 .ttl { top: 64px; inset-inline-start: 98px; }
+  .s4 .it { position: absolute; inset-inline-start: 88px; width: 420px; }
+  .s4 .it .ic { top: -4px; inset-inline-start: 0; }
+  .s4 .it .tx { margin-inline-start: 97px; }
+  .s4 .it .h2 { margin-bottom: 10px; }
+  .s4 .it .p { width: 310px; }
+  .s4 .i1 { top: 310px; } .s4 .i2 { top: 437px; } .s4 .i3 { top: 564px; }
+  .s4 .cir { position: absolute; border-radius: 50%; }
+  .s4 .c-big { top: 80px; inset-inline-start: 653px; width: 576px; height: 576px; background: #412594; border: 2px solid #7B3FE4; }
+  .s4 .c-mid { top: 230px; inset-inline-start: 729px; width: 424px; height: 424px; background: #3444BE; border: 2px solid #6A7BF5; }
+  .s4 .c-sm { top: 390px; inset-inline-start: 808px; width: 266px; height: 266px; background: #247EBA; border: 2px solid #19C2B8; }
+  .s4 .lbl { position: absolute; inset-inline-start: 653px; width: 576px; text-align: center; margin: 0; }
+  .s4 .lbl .h2 { color: #fff; margin-bottom: 8px; }
+  .s4 .lbl .p { color: #fff; }
+  .s4 .l1 { top: 142px; } .s4 .l2 { top: 302px; } .s4 .l3 { top: 490px; }
+
+  /* 5) الأقسام */
+  .s5 .ttl { top: 62px; }
+  .s5 .sub { top: 141px; }
+  .s5 .panel { position: absolute; top: 203px; inset-inline-start: 28px; width: 1224px; height: 540px; background: var(--navy); border-start-start-radius: 34px; border-start-end-radius: 34px; }
+  .s5 .it { position: absolute; width: 330px; }
+  .s5 .it .pic { position: absolute; top: 0; inset-inline-start: 0; width: 84px; height: 84px; border-radius: 50%; background: #3B3C6C; color: #E6DDFF; display: grid; place-items: center; }
+  .s5 .it .pic svg { width: 46px; height: 46px; }
+  .s5 .it .tx { margin-inline-start: 118px; padding-top: 10px; }
+  .s5 .it .h2 { color: #fff; margin-bottom: 8px; }
+  .s5 .it .p { color: var(--lav-2); width: 180px; }
+  .s5 .a1 { top: 262px; inset-inline-start: 112px; } .s5 .a2 { top: 262px; inset-inline-start: 487px; } .s5 .a3 { top: 262px; inset-inline-start: 861px; }
+  .s5 .a4 { top: 430px; inset-inline-start: 112px; } .s5 .a5 { top: 430px; inset-inline-start: 487px; } .s5 .a6 { top: 430px; inset-inline-start: 861px; }
+  .s5 .vl { position: absolute; top: 283px; width: 1px; height: 242px; background: #2A3060; }
+  .s5 .v1 { inset-inline-start: 437px; } .s5 .v2 { inset-inline-start: 820px; }
+  .s5 .hl { position: absolute; top: 397px; inset-inline-start: 115px; width: 1070px; height: 1px; background: #2A3060; }
+  .s5 .src { position: absolute; top: 575px; inset-inline-start: 112px; margin: 0; background: #fff; color: var(--navy); font-size: 13px; font-weight: 700; letter-spacing: .5px; padding: 8px 18px; border-radius: 8px; z-index: 1; }
+  .s5 .bar { top: 595px; inset-inline-start: 88px; width: 1104px; height: 82px; padding: 10px 30px; font-size: 18px; }
+
+  /* 6) التعاون */
+  .s6 .ttl { top: 62px; }
+  .s6 .sub { top: 141px; }
+  .s6 .card { position: absolute; top: 227px; width: 290px; height: 414px; background: var(--navy); border-radius: 16px; text-align: center; padding: 44px 28px 0; }
+  .s6 .card .pic { width: 124px; height: 124px; border-radius: 50%; background: var(--circle-2); color: var(--teal); margin: 0 auto 50px; display: grid; place-items: center; }
+  .s6 .card .pic svg { width: 56px; height: 56px; }
+  .s6 .card .h2 { color: #fff; text-transform: uppercase; margin-bottom: 18px; }
+  .s6 .card .p { color: var(--lav-2); }
+  .s6 .k1 { inset-inline-start: 46px; } .s6 .k2 { inset-inline-start: 346px; } .s6 .k3 { inset-inline-start: 645px; } .s6 .k4 { inset-inline-start: 944px; }
+
+  /* 7) مهارات المستقبل */
+  .s7 .hdr { width: 1260px; }
+  .s7 .ttl, .s9 .ttl { top: 64px; inset-inline-start: 98px; }
+  .s7 .sub, .s9 .sub { top: 141px; inset-inline-start: 98px; }
+  .s7 .it { position: absolute; width: 530px; }
+  .s7 .it .ic { top: -8px; inset-inline-start: 0; }
+  .s7 .it .tx { margin-inline-start: 94px; }
+  .s7 .it .h2 { margin-bottom: 10px; }
+  .s7 .it .p { width: 425px; }
+  .s7 .r1 { top: 270px; } .s7 .r2 { top: 423px; } .s7 .r3 { top: 578px; }
+  .s7 .cA { inset-inline-start: 86px; } .s7 .cB { inset-inline-start: 640px; }
+
+  /* 8) الحوكمة */
+  .s8 .ttl { top: 64px; inset-inline-start: 98px; }
+  .s8 .sub { top: 204px; inset-inline-start: 98px; }
+  .s8 .panel { position: absolute; top: 270px; inset-inline-start: 0; width: 1220px; height: 450px; background: var(--navy); border-start-end-radius: 60px; }
+  .s8 .col { position: absolute; top: 340px; width: 230px; }
+  .s8 .col .num { position: relative; z-index: 0; display: inline-block; margin: 0 0 54px 8px; font-size: 60px; font-weight: 700; line-height: 1; color: #25C5BB; }
+  .s8 .col .num::before { content: ''; position: absolute; z-index: -1; width: 56px; height: 56px; border-radius: 50%; background: #1C2250; top: -12px; inset-inline-start: -8px; }
+  .s8 .col .h2 { color: #fff; margin-bottom: 14px; }
+  .s8 .col .p { color: var(--lav-2); width: 210px; }
+  .s8 .g1 { inset-inline-start: 93px; } .s8 .g2 { inset-inline-start: 384px; } .s8 .g3 { inset-inline-start: 676px; } .s8 .g4 { inset-inline-start: 967px; }
+  .s8 .vl { position: absolute; top: 305px; width: 1px; height: 365px; background: #1A2150; }
+  .s8 .v1 { inset-inline-start: 345px; } .s8 .v2 { inset-inline-start: 637px; } .s8 .v3 { inset-inline-start: 929px; }
+
+  /* 9) خارطة الطريق */
+  .s9 .hdr { width: 1280px; }
+  .s9 .line { position: absolute; top: 396px; inset-inline-start: 0; width: 1205px; height: 5px; background: var(--cyan); }
+  .s9 .arrow { position: absolute; top: 389px; inset-inline-start: 1198px; width: 16px; height: 19px; background: var(--cyan); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  html[dir="rtl"] .s9 .arrow { transform: scaleX(-1); }
+  .s9 .dot { position: absolute; top: 385px; width: 26px; height: 26px; border-radius: 50%; background: var(--cyan); }
+  .s9 .d1 { inset-inline-start: 98px; } .s9 .d2 { inset-inline-start: 389px; } .s9 .d3 { inset-inline-start: 681px; } .s9 .d4 { inset-inline-start: 973px; }
+  .s9 .col { position: absolute; top: 284px; width: 230px; }
+  .s9 .col .yr { position: relative; z-index: 0; display: inline-block; margin: 0 0 78px 6px; font-size: 56px; font-weight: 700; line-height: 1; color: var(--navy); }
+  .s9 .col .yr::before { content: ''; position: absolute; z-index: -1; width: 60px; height: 60px; border-radius: 50%; background: #EDEDED; top: -8px; inset-inline-start: -10px; }
+  .s9 .col .h2 { text-transform: uppercase; margin-bottom: 20px; }
+  .s9 .col .p { width: 215px; }
+  .s9 .g1 { inset-inline-start: 98px; } .s9 .g2 { inset-inline-start: 390px; } .s9 .g3 { inset-inline-start: 682px; } .s9 .g4 { inset-inline-start: 974px; }
+
+  /* 10) الخلاصات */
+  .s10 { background: var(--navy); }
+  .s10 .ttl { top: 64px; inset-inline-start: 98px; }
+  .s10 .sub { top: 212px; inset-inline-start: 98px; }
+  .s10 .para { position: absolute; top: 293px; inset-inline-start: 98px; width: 400px; margin: 0; font-size: 18px; line-height: 1.42; color: var(--lav-2); }
+  .s10 .logo { top: 582px; inset-inline-start: 110px; }
+  .s10 .logo-t { top: 588px; inset-inline-start: 190px; }
+  .s10 .nl { top: 86px; inset-inline-start: 625px; }
+  .s10 .nl li { height: 122px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D9F3FF"/><stop offset=".55" stop-color="#C2CCFF"/><stop offset="1" stop-color="#8C6FF0"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <img class="bgp" alt="خطوط ضوئية زرقاء تشبه شبكة عصبية" src="/templates/freeform/sl-ai-corporate-training/assets/cover-bg.jpg">
+    <div class="logo"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="5" width="38" height="38" rx="13" fill="none" stroke="url(#lg)" stroke-width="7" transform="rotate(-8 24 24)"/></svg></div><p class="logo-t">ضع شعار<br>شركتك هنا</p>
+    <h1 class="c1">الذكاء الاصطناعي في</h1><h1 class="c2">التدريب المؤسسي</h1><p class="c3">قالب عرض تقديمي</p><p class="c4">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <img class="avatar" alt="صورة المدرِّبة" src="/templates/freeform/sl-ai-corporate-training/assets/trainer.jpg"><p class="name">إيميلي رودريغيز</p><p class="role">مدرِّبة</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="panel"></div>
+    <h1 class="ttl">الأجندة<br>وأهداف<br>التعلّم</h1><p class="sub">يمكنك إضافة عنوان فرعي هنا</p>
+    <p class="lead">بنهاية هذا التدريب،<br>ستكون قادرًا على:</p>
+    <ul class="bul"><li>هذا نص توضيحي. أضف النص المطلوب هنا.</li><li>أضف نصك. أضف النص المطلوب هنا. أضف نصك. هذا نص.</li><li>أضف النص المطلوب هنا.</li></ul>
+    <ol class="nl"><li><span class="num">01</span><h2 class="h2">أساسيات الذكاء الاصطناعي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">02</span><h2 class="h2">الذكاء الاصطناعي في بيئة العمل</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">03</span><h2 class="h2">التعاون بين الإنسان والذكاء الاصطناعي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">04</span><h2 class="h2">مهارات المستقبل وعقليته</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">05</span><h2 class="h2">الذكاء الاصطناعي المسؤول وتبنّيه</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li></ol>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl light ctr">لماذا يهمّ الذكاء الاصطناعي الآن</h1><p class="sub lav ctr">يمكنك إضافة عنوان فرعي هنا</p>
+    <div class="card k1"><p class="big">79%</p><h2 class="h2">أضف نصًا هنا</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card k2"><p class="big">$15.7T</p><h2 class="h2">أضف نصًا هنا</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card k3"><p class="big">78%</p><h2 class="h2">أضف نصًا هنا</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card k4"><p class="big">2.5X</p><h2 class="h2">أضف نصًا هنا</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <p class="bar">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي. أدخل نصك هنا.</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="panel"></div>
+    <h1 class="ttl light">فهم أساسيات<br>الذكاء الاصطناعي</h1>
+    <div class="it i1"><span class="ic pu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg></span><div class="tx"><h2 class="h2">الذكاء الاصطناعي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك.</p></div></div>
+    <div class="it i2"><span class="ic bl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 7.5A7.8 7.8 0 0 1 19.5 11v2"/><path d="M4.3 11a7.8 7.8 0 0 1 .5-2.5"/><path d="M7.2 20.5A10 10 0 0 1 4.3 13.5"/><path d="M12 6.6a4.6 4.6 0 0 0-4.6 4.6c0 3.2.9 6 2.6 8.4"/><path d="M16.6 11.2a4.6 4.6 0 0 0-1.4-3.3"/><path d="M12 11.2c0 3.4.9 6.4 2.6 9"/><path d="M16.6 14.4c0 1.9.3 3.7 1 5.3"/><path d="M9.6 11.2a2.4 2.4 0 0 1 4.8 0c0 2.6.6 5 1.6 7.2"/></svg></span><div class="tx"><h2 class="h2">تعلّم الآلة</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك.</p></div></div>
+    <div class="it i3"><span class="ic tl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4M5.3 5.3l2.8 2.8M15.9 15.9l2.8 2.8M18.7 5.3l-2.8 2.8M8.1 15.9l-2.8 2.8"/><path d="M12 8.5l1.2 2.3 2.3 1.2-2.3 1.2L12 15.5l-1.2-2.3-2.3-1.2 2.3-1.2z" fill="currentColor" stroke="none"/><circle cx="4" cy="19" r=".9" fill="currentColor" stroke="none"/><circle cx="20" cy="4.5" r=".9" fill="currentColor" stroke="none"/></svg></span><div class="tx"><h2 class="h2">الذكاء الاصطناعي التوليدي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك.</p></div></div>
+    <div class="cir c-big"></div><div class="cir c-mid"></div><div class="cir c-sm"></div>
+    <div class="lbl l1"><h2 class="h2">الذكاء الاصطناعي</h2><p class="p">أضف نصًا هنا</p></div>
+    <div class="lbl l2"><h2 class="h2">تعلّم الآلة</h2><p class="p">أضف نصًا هنا</p></div>
+    <div class="lbl l3"><h2 class="h2">الذكاء الاصطناعي التوليدي</h2><p class="p">أضف نصًا هنا</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl ctr">فهم أساسيات الذكاء الاصطناعي</h1><p class="sub ctr">يمكنك إضافة عنوان فرعي هنا</p>
+    <div class="panel"></div>
+    <div class="it a1"><span class="pic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 20.5a8.5 8.5 0 0 1 17 0V21h-17z"/></svg></span><div class="tx"><h2 class="h2">التسويق</h2><p class="p">هذا نص توضيحي هنا.</p></div></div>
+    <div class="it a2"><span class="pic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 20.5a8.5 8.5 0 0 1 17 0V21h-17z"/></svg></span><div class="tx"><h2 class="h2">الموارد البشرية</h2><p class="p">هذا نص توضيحي هنا.</p></div></div>
+    <div class="it a3"><span class="pic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 20.5a8.5 8.5 0 0 1 17 0V21h-17z"/></svg></span><div class="tx"><h2 class="h2">المالية</h2><p class="p">هذا نص توضيحي هنا.</p></div></div>
+    <div class="it a4"><span class="pic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 20.5a8.5 8.5 0 0 1 17 0V21h-17z"/></svg></span><div class="tx"><h2 class="h2">العمليات</h2><p class="p">هذا نص توضيحي هنا.</p></div></div>
+    <div class="it a5"><span class="pic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 20.5a8.5 8.5 0 0 1 17 0V21h-17z"/></svg></span><div class="tx"><h2 class="h2">المبيعات</h2><p class="p">هذا نص توضيحي هنا.</p></div></div>
+    <div class="it a6"><span class="pic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 20.5a8.5 8.5 0 0 1 17 0V21h-17z"/></svg></span><div class="tx"><h2 class="h2">خدمة العملاء</h2><p class="p">هذا نص توضيحي هنا.</p></div></div>
+    <div class="vl v1"></div><div class="vl v2"></div><div class="hl"></div>
+    <p class="src">المصدر:</p><p class="bar">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي. أدخل نصك هنا.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="ttl ctr">التعاون بين الإنسان والذكاء الاصطناعي</h1><p class="sub ctr">يمكنك إضافة عنوان فرعي هنا</p>
+    <div class="card k1"><div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg></div><h2 class="h2">الذكاء الاصطناعي يتلقّى</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card k2"><div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12A7.5 7.5 0 0 1 17.2 6.6"/><path d="M17.5 3v3.8h-3.8"/><path d="M19.5 12A7.5 7.5 0 0 1 6.8 17.4"/><path d="M6.5 21v-3.8h3.8"/></svg></div><h2 class="h2">أنت تقيّم</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card k3"><div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M12 2l-2.3 2.3M12 2l2.3 2.3M12 22l-2.3-2.3M12 22l2.3-2.3M12 7.5l-2 2M12 7.5l2 2M12 16.5l-2-2M12 16.5l2-2"/><g transform="rotate(60 12 12)"><path d="M12 2v20M12 2l-2.3 2.3M12 2l2.3 2.3M12 22l-2.3-2.3M12 22l2.3-2.3M12 7.5l-2 2M12 7.5l2 2M12 16.5l-2-2M12 16.5l2-2"/></g><g transform="rotate(120 12 12)"><path d="M12 2v20M12 2l-2.3 2.3M12 2l2.3 2.3M12 22l-2.3-2.3M12 22l2.3-2.3M12 7.5l-2 2M12 7.5l2 2M12 16.5l-2-2M12 16.5l2-2"/></g></svg></div><h2 class="h2">أنت تقرّر</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card k4"><div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 7.5A7.8 7.8 0 0 1 19.5 11v2"/><path d="M4.3 11a7.8 7.8 0 0 1 .5-2.5"/><path d="M7.2 20.5A10 10 0 0 1 4.3 13.5"/><path d="M12 6.6a4.6 4.6 0 0 0-4.6 4.6c0 3.2.9 6 2.6 8.4"/><path d="M16.6 11.2a4.6 4.6 0 0 0-1.4-3.3"/><path d="M12 11.2c0 3.4.9 6.4 2.6 9"/><path d="M16.6 14.4c0 1.9.3 3.7 1 5.3"/><path d="M9.6 11.2a2.4 2.4 0 0 1 4.8 0c0 2.6.6 5 1.6 7.2"/></svg></div><h2 class="h2">الذكاء الاصطناعي يسرّع</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="hdr"></div>
+    <h1 class="ttl light">مهارات المستقبل لعصر الذكاء الاصطناعي</h1><p class="sub lav">يمكنك إضافة عنوان فرعي هنا</p>
+    <div class="it r1 cA"><span class="ic pu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 19a4.5 4.5 0 0 1-.6-9 5.8 5.8 0 0 1 11.2-1.3A3.8 3.8 0 0 1 17.5 19H7z"/></svg></span><div class="tx"><h2 class="h2">الإلمام بالذكاء الاصطناعي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص.</p></div></div>
+    <div class="it r2 cA"><span class="ic pu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7.5l4.6 4L12 5l4.4 6.5L21 7.5l-2 11.5H5L3 7.5z"/><rect x="5" y="20" width="14" height="1.6" rx=".8"/></svg></span><div class="tx"><h2 class="h2">التفكير النقدي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص.</p></div></div>
+    <div class="it r3 cA"><span class="ic pu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/><path d="M4.5 11.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/></svg></span><div class="tx"><h2 class="h2">الطلاقة في البيانات</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص.</p></div></div>
+    <div class="it r1 cB"><span class="ic pu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.5 2c.6 3.4 5 5.2 5 10.2a5.5 5.5 0 0 1-11 0c0-2 .9-3.6 2.1-4.7 0 1.6.6 2.7 1.6 3.2-.3-3.4.6-6 2.3-8.7z"/></svg></span><div class="tx"><h2 class="h2">الإبداع</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي.</p></div></div>
+    <div class="it r2 cB"><span class="ic pu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 8h4.2l2.4 2.4 2.3-2.3a2.2 2.2 0 0 1 3.1 0l3.3 3.3 4.7-4.7V16l-3.2 1.2-2.4 2.4a2.2 2.2 0 0 1-3.1 0l-1.2-1.2-1.3 1.3a2.2 2.2 0 0 1-3.1 0L5 17 2 16V8zm8 6.2l3.7 3.7"/></svg></span><div class="tx"><h2 class="h2">القدرة على التكيّف</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي.</p></div></div>
+    <div class="it r3 cB"><span class="ic pu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 21.5v-3.2H7.6a1.6 1.6 0 0 1-1.6-1.6v-2.8L3.5 12.5l2.5-1.3V9.5a7 7 0 0 1 14 0c0 2.2-.9 4-2.3 5.3v6.7"/><circle cx="12.5" cy="9.5" r="2"/><circle cx="16" cy="12" r="1.3"/><path d="M12.5 6.3v1.2M12.5 11.5v1.2M9.3 9.5h1.2M14.5 9.5h1.2"/></svg></span><div class="tx"><h2 class="h2">سرعة التعلّم</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي.</p></div></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <h1 class="ttl">الذكاء الاصطناعي المسؤول<br>والحوكمة المؤسسية</h1><p class="sub">يمكنك إضافة عنوان فرعي هنا</p>
+    <div class="panel"></div>
+    <div class="col g1"><span class="num">01</span><h2 class="h2">الاستخدام الأخلاقي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص.</p></div>
+    <div class="col g2"><span class="num">02</span><h2 class="h2">الخصوصية والأمن</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص.</p></div>
+    <div class="col g3"><span class="num">03</span><h2 class="h2">المساءلة</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص.</p></div>
+    <div class="col g4"><span class="num">04</span><h2 class="h2">الامتثال</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص.</p></div>
+    <div class="vl v1"></div><div class="vl v2"></div><div class="vl v3"></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <div class="hdr"></div>
+    <h1 class="ttl light">خارطة طريق تبنّي الذكاء الاصطناعي</h1><p class="sub lav">يمكنك إضافة عنوان فرعي هنا</p>
+    <div class="line"></div><div class="arrow"></div><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div><div class="dot d4"></div>
+    <div class="col g1"><span class="yr">2021</span><h2 class="h2">الجاهزية</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="col g2"><span class="yr">2025</span><h2 class="h2">التجربة</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="col g3"><span class="yr">2030</span><h2 class="h2">التبنّي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="col g4"><span class="yr">2035</span><h2 class="h2">التحسين</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <h1 class="ttl light">أبرز الخلاصات<br>والخطوات التالية</h1><p class="sub lav">يمكنك إضافة عنوان فرعي هنا</p><p class="para">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص. هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك. هذا نص توضيحي.</p>
+    <div class="logo"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="5" width="38" height="38" rx="13" fill="none" stroke="url(#lg)" stroke-width="7" transform="rotate(-8 24 24)"/></svg></div><p class="logo-t">ضع شعار<br>شركتك هنا</p>
+    <ol class="nl teal"><li><span class="num">01</span><h2 class="h2">الذكاء الاصطناعي هنا</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">02</span><h2 class="h2">الذكاء الاصطناعي يعزّز</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">03</span><h2 class="h2">المهارات المناسبة</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">04</span><h2 class="h2">هذه تكفي</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li><li><span class="num">05</span><h2 class="h2">المسؤولية</h2><p class="p">هذا نص توضيحي. أضف النص المطلوب هنا.</p></li></ol>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 10</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

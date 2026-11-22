@@ -1,0 +1,55 @@
+{
+  "key": "sl-ai-corporate-training",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🤖",
+  "name": "التدريب المؤسسي بالذكاء الاصطناعي",
+  "nameEn": "AI Corporate Training",
+  "description": "عشر شرائح: غلاف، أجندة، إحصاءات، أساسيات الذكاء الاصطناعي، أقسام الشركة، التعاون، المهارات، الحوكمة، خارطة طريق، خلاصات",
+  "descriptionEn": "Ten slides: cover, agenda, stats, AI fundamentals, departments, collaboration, skills, governance, roadmap, takeaways",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الأجندة وأهداف التعلّم",
+      "titleEn": "Agenda & Learning Objectives"
+    },
+    {
+      "title": "لماذا يهمّ الذكاء الاصطناعي الآن (إحصاءات)",
+      "titleEn": "Why AI Matters Now (stats)",
+      "needsData": true
+    },
+    {
+      "title": "فهم أساسيات الذكاء الاصطناعي",
+      "titleEn": "Understanding AI Fundamentals"
+    },
+    {
+      "title": "الذكاء الاصطناعي في أقسام الشركة",
+      "titleEn": "AI Across Departments"
+    },
+    {
+      "title": "التعاون بين الإنسان والذكاء الاصطناعي",
+      "titleEn": "Human + AI Collaboration"
+    },
+    {
+      "title": "مهارات المستقبل لعصر الذكاء الاصطناعي",
+      "titleEn": "Future Skills for the AI Era"
+    },
+    {
+      "title": "الذكاء الاصطناعي المسؤول والحوكمة",
+      "titleEn": "Responsible AI & Governance"
+    },
+    {
+      "title": "خارطة طريق التبنّي (خط زمني)",
+      "titleEn": "AI Adoption Roadmap (timeline)",
+      "needsData": true
+    },
+    {
+      "title": "أبرز الخلاصات والخطوات التالية",
+      "titleEn": "Key Takeaways & Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والألوان وغيّر النصوص والأرقام فقط (الإحصاءات في الشريحة 3 والسنوات في الشريحة 9)؛ الصور في assets تبقى كما هي، والأيقونات SVG مضمّنة لا تُغيَّر."
+}
