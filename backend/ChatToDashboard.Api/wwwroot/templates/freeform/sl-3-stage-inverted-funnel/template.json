@@ -1,0 +1,29 @@
+{
+  "key": "sl-3-stage-inverted-funnel",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "🔻",
+  "name": "قمع مقلوب بثلاث مراحل",
+  "nameEn": "3-Stage Inverted Funnel",
+  "description": "أربع شرائح لقمع مقلوب ثلاثي المراحل: نظرة عامة ثم إبراز كل مرحلة على حدة",
+  "descriptionEn": "Four slides of a 3-stage inverted funnel: overview, then each stage highlighted",
+  "sections": [
+    {
+      "title": "القمع كاملًا",
+      "titleEn": "Full Funnel"
+    },
+    {
+      "title": "المرحلة الأولى (القاعدة)",
+      "titleEn": "Stage 1 (Base)"
+    },
+    {
+      "title": "المرحلة الثانية (الوسط)",
+      "titleEn": "Stage 2 (Middle)"
+    },
+    {
+      "title": "المرحلة الثالثة (القمة)",
+      "titleEn": "Stage 3 (Top)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ القمع رسم SVG والصنف on يحدد المرحلة والعنصر المُبرزين في كل شريحة."
+}
