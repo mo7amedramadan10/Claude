@@ -9539,22 +9539,42 @@ el('ffi-go').addEventListener('click', async () => {
   finally { el('ffi-go').disabled = false; el('ffi-go').textContent = 'رفع وتحويل إلى نموذج'; }
 });
 // ---------- رفع صفحة HTML كما هي: تصميم جديد بالملف حرفيًا (بلا موديل ولا نموذج) ----------
-el('ffgal-start-page').addEventListener('click', () => { el('ffp-kind-label').textContent = (FF_KINDS[ffGalKind] || FF_KINDS.design).label; el('ffp-file').value = ''; el('ffp-title').value = ''; el('ffp-error').classList.add('hidden'); el('ff-page-modal').classList.remove('hidden'); });
+// نافذة «رفع ملف كما هو»: وضعان — تصميم جديد من المعرض، أو استيراد إلى التصميم المفتوح (ffpInto = معرّفه) كإصدار جديد
+let ffpInto = null;
+function openFfPageModal(into) {
+  ffpInto = into || null;
+  el('ffp-heading').textContent = ffpInto ? 'استيراد ملف إلى هذا التصميم' : 'رفع ملف كما هو';
+  el('ffp-into-note').hidden = !ffpInto; el('ffp-new-note').hidden = !!ffpInto; el('ffp-title-wrap').hidden = !!ffpInto;
+  el('ffp-go').textContent = ffpInto ? 'استيراد كما هو' : 'رفع كما هي';
+  el('ffp-kind-label').textContent = (FF_KINDS[ffGalKind] || FF_KINDS.design).label; el('ffp-file').value = ''; el('ffp-title').value = ''; el('ffp-error').classList.add('hidden'); el('ff-page-modal').classList.remove('hidden');
+}
+el('ffgal-start-page').addEventListener('click', () => openFfPageModal(null));
+el('ff-import-into').addEventListener('click', () => { if (!FF.design || FF.busy) return; openFfPageModal(FF.design.id); });
 el('ffp-cancel').addEventListener('click', () => el('ff-page-modal').classList.add('hidden'));
 el('ff-page-modal').addEventListener('click', e => { if (e.target === el('ff-page-modal')) el('ff-page-modal').classList.add('hidden'); });
 el('ffp-go').addEventListener('click', async () => {
   const f = el('ffp-file').files[0]; const err = el('ffp-error'); err.classList.add('hidden');
   if (!f) { err.textContent = 'اختر ملف الصفحة أولًا.'; err.classList.remove('hidden'); return; }
   if (!/\.(html?|pptx)$/i.test(f.name)) { err.textContent = 'هذا الخيار لصفحات HTML وملفات PowerPoint (.pptx) فقط.'; err.classList.remove('hidden'); return; }
-  const fd = new FormData(); fd.append('file', f); fd.append('kind', ffGalKind); fd.append('title', el('ffp-title').value.trim());
+  const into = ffpInto && FF.design && FF.design.id === ffpInto ? ffpInto : null;
+  const fd = new FormData(); fd.append('file', f);
+  if (!into) { fd.append('kind', ffGalKind); fd.append('title', el('ffp-title').value.trim()); }
   el('ffp-go').disabled = true; el('ffp-go').textContent = /\.pptx$/i.test(f.name) ? 'يرسم الشرائح…' : 'يرفع…';
   try {
-    const r = await fetch('/api/freeform/import-page', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
+    const r = await fetch(into ? `/api/freeform/${encodeURIComponent(into)}/import-page` : '/api/freeform/import-page', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
-    el('ff-page-modal').classList.add('hidden'); closeFfGallery();
-    FF.kind = d.design.kind || ffGalKind; await ffOpen(d.design.id);
+    el('ff-page-modal').classList.add('hidden');
+    if (into) {
+      // إصدار جديد على التصميم نفسه: العنوان والرسائل ورابط النشر تبقى، والمعاينة تعرض الإصدار الجديد
+      FF.design = d.design || FF.design; FF.html = d.html || ''; FF.viewing = null; if (d.versions) FF.versions = d.versions; FF.dataChanged = false;
+      if (d.messages) FF.messages = d.messages.map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
+      else ffPushMsg('bot', `استُورد الملف «${f.name}» إلى هذا التصميم كإصدار ${d.version}${d.kindChanged ? ` وصار نوعه ${(FF_KINDS[FF.design.kind] || FF_KINDS.design).label}` : ''}${(d.notes || []).length ? ' — ' + d.notes.join('؛ ') : ''}.${d.published ? ' الرابط المنشور يعرض النسخة السابقة حتى تضغط «تحديث النشر».' : ''}`);
+      ffRender(); ffRenderMessages();
+    } else {
+      closeFfGallery(); FF.kind = d.design.kind || ffGalKind; await ffOpen(d.design.id);
+    }
   } catch (e) { err.textContent = 'تعذّر: ' + e.message; err.classList.remove('hidden'); }
-  finally { el('ffp-go').disabled = false; el('ffp-go').textContent = 'رفع كما هي'; }
+  finally { el('ffp-go').disabled = false; el('ffp-go').textContent = ffpInto ? 'استيراد كما هو' : 'رفع كما هي'; }
 });
 // ---------- تحويل تصميم إلى نوع آخر: نسخة جديدة بالنوع المطلوب، والأصل يبقى ----------
 el('ff-convert').addEventListener('click', e => {

@@ -159,24 +159,23 @@ public class FreeformController : ControllerBase
     /// <summary>رفع ملف ليصير تصميمًا <b>كما هو بلا أي تعديل</b> (لا موديل، لا نموذج): صفحة HTML تُحفظ حرفيًا، وملف PowerPoint يُرسم
     /// شريحةً شريحة SVG بالمحرّك الحتمي (<see cref="PptxPageBuilder"/>) في صفحة شرائح واحدة بالصور مضمّنة، ويُفرض نوع «شرائح».
     /// ثم يُفتح في المحرر ليُعدَّل نصيًا أو بالمحادثة أو يُنشر.</summary>
-    [HttpPost("import-page")]
-    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
-    public async Task<IActionResult> ImportPage([FromForm] IFormFile? file, [FromForm] string? kind, [FromForm] string? title, CancellationToken ct)
+    /// <summary>نتيجة قراءة ملف مرفوع «كما هو»: صفحة HTML حرفيًا أو ملف PowerPoint محوَّلًا إلى صفحة شرائح بلا موديل.</summary>
+    private sealed record PageFile(string Html, string Name, string? Kind, int Slides, List<string> Notes, bool IsHtml);
+
+    /// <summary>يقرأ ملف HTML/PPTX المرفوع ويعيد الصفحة الجاهزة، أو رسالة خطأ للمستخدم (مشترك بين إنشاء تصميم جديد والاستيراد إلى تصميم قائم).</summary>
+    private static async Task<(PageFile? page, string? error)> ReadPageFileAsync(IFormFile? file, string? title, CancellationToken ct)
     {
-        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var (user, selection) = cur.Value;
-        if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملفًا بصيغة .html أو .pptx." });
+        if (file is null || file.Length == 0) return (null, "اختر ملفًا بصيغة .html أو .pptx.");
         var isHtml = Regex.IsMatch(file.FileName, @"\.html?$", RegexOptions.IgnoreCase);
         var isPptx = Regex.IsMatch(file.FileName, @"\.pptx$", RegexOptions.IgnoreCase);
-        if (!isHtml && !isPptx) return BadRequest(new { error = "هذا الخيار لصفحات HTML وملفات PowerPoint (.pptx) فقط. لملفات PDF استخدم «رفع من ملف موجود»." });
-        if (file.Length > DeckImporter.MaxBytes) return BadRequest(new { error = $"حجم الملف يتجاوز {DeckImporter.MaxBytes / 1024 / 1024} ميغابايت." });
-        string html; string? name = string.IsNullOrWhiteSpace(title) ? null : title.Trim(); var notes = new List<string>(); int slides = 0;
+        if (!isHtml && !isPptx) return (null, "هذا الخيار لصفحات HTML وملفات PowerPoint (.pptx) فقط. لملفات PDF استخدم «رفع من ملف موجود».");
+        if (file.Length > DeckImporter.MaxBytes) return (null, $"حجم الملف يتجاوز {DeckImporter.MaxBytes / 1024 / 1024} ميغابايت.");
+        string html; string? name = string.IsNullOrWhiteSpace(title) ? null : title.Trim(); var notes = new List<string>(); int slides = 0; string? kind = null;
         if (isHtml)
         {
             using var reader = new StreamReader(file.OpenReadStream(), new UTF8Encoding(false), detectEncodingFromByteOrderMarks: true);
             html = await reader.ReadToEndAsync(ct);
-            if (string.IsNullOrWhiteSpace(html)) return BadRequest(new { error = "الملف فارغ." });
+            if (string.IsNullOrWhiteSpace(html)) return (null, "الملف فارغ.");
             name ??= TitleFromHtml(html) ?? Path.GetFileNameWithoutExtension(file.FileName);
         }
         else
@@ -186,20 +185,61 @@ public class FreeformController : ControllerBase
             PptxPageBuilder.Result built;
             try { built = PptxPageBuilder.Build(bytes, name); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة ملف PowerPoint: " + ex.Message }); }
+            catch (Exception ex) { return (null, "تعذّرت قراءة ملف PowerPoint: " + ex.Message); }
             html = built.Html; slides = built.SlideCount; kind = "slides";
             if (built.Unsupported.Count > 0) notes.Add($"{built.Unsupported.Count} صورة بصيغة EMF/WMF غير مدعومة تظهر بإطار «غير مدعومة»");
         }
-        if (Encoding.UTF8.GetByteCount(html) > FreeformStore.MaxHtmlBytes) return BadRequest(new { error = $"الصفحة الناتجة تتجاوز {FreeformStore.MaxHtmlBytes / 1024 / 1024} ميغابايت (صور كثيرة أو كبيرة). صغّر الصور في الملف ثم أعد الرفع." });
+        if (Encoding.UTF8.GetByteCount(html) > FreeformStore.MaxHtmlBytes) return (null, $"الصفحة الناتجة تتجاوز {FreeformStore.MaxHtmlBytes / 1024 / 1024} ميغابايت (صورها مضمّنة).");
         if (name.Length > 120) name = name[..120];
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, name, html, $"رفع الملف «{file.FileName}» كما هو", kind, null, ct);
+        return (new PageFile(html, name, kind, slides, notes, isHtml), null);
+    }
+
+    /// <summary>رفع صفحة HTML كما هي، أو ملف PowerPoint يُحوَّل حتميًا إلى صفحة شرائح — تصميم جديد بلا موديل.</summary>
+    [HttpPost("import-page")]
+    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> ImportPage([FromForm] IFormFile? file, [FromForm] string? kind, [FromForm] string? title, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var (page, error) = await ReadPageFileAsync(file, title, ct);
+        if (page is null) return BadRequest(new { error });
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, page.Name, page.Html, $"رفع الملف «{file!.FileName}» كما هو", page.Kind ?? kind, null, ct);
         await _store.AddMessageAsync(design.Id, "user", $"رفع الملف «{file.FileName}» كما هو بلا تعديل.", null, ct);
-        var reply = isHtml
-            ? "وُضعت الصفحة كما رُفعت حرفيًا (بلا أي تعديل من الموديل). يمكنك الآن تعديل نصها من مساحة العمل، أو طلب تعديلات بالمحادثة، أو نشرها."
-            : $"حُوِّل العرض إلى صفحة شرائح كما هو: {slides} شريحة مرسومة بمواضعها وخلفياتها وصورها الأصلية بلا موديل{(notes.Count > 0 ? " (" + string.Join("؛ ", notes) + ")" : "")}. يمكنك تعديل النص من مساحة العمل أو نشر العرض برابط.";
+        var reply = page.IsHtml
+            ? "وُضعت الصفحة كما رُفعت حرفيًا (بلا أي تعديل من الموديل). يمكنك الآن تعديل نصها من مساحة العمل، أو طلب تعديلات بالمحادثة، أو نشرها برابط."
+            : $"حُوِّل العرض إلى صفحة شرائح كما هو: {page.Slides} شريحة مرسومة بمواضعها وخلفياتها وصورها الأصلية بلا موديل{(page.Notes.Count > 0 ? " — " + string.Join("؛ ", page.Notes) : "")}. يمكنك تعديل النصوص من مساحة العمل أو نشره برابط.";
         await _store.AddMessageAsync(design.Id, "assistant", reply, 1, ct);
         var brand = await BrandAsync(selection.ProjectId, ct);
-        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct), slides, notes });
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct), slides = page.Slides, notes = page.Notes });
+    }
+
+    /// <summary>
+    /// استيراد ملف (HTML كما هو، أو PowerPoint محوَّلًا إلى صفحة شرائح) إلى تصميم قائم: إصدار جديد على المعرّف نفسه مع بقاء العنوان
+    /// والرسائل والمصادر ورابط النشر (الصفحة المنشورة تتغير عند «تحديث النشر» فقط). ملف PowerPoint يحوّل نوع التصميم إلى شرائح.
+    /// </summary>
+    [HttpPost("{id}/import-page")]
+    [RequestSizeLimit(DeckImporter.MaxBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DeckImporter.MaxBytes + 1024 * 1024)]
+    public async Task<IActionResult> ImportPageInto(string id, [FromForm] IFormFile? file, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var selection = cur.Value.Selection;
+        var d = await _store.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
+        var (page, error) = await ReadPageFileAsync(file, null, ct);
+        if (page is null) return BadRequest(new { error });
+        var kindChanged = page.Kind is not null && page.Kind != d.Kind;
+        if (kindChanged) await _store.SetKindAsync(id, page.Kind!, ct);
+        var v = await _store.AddVersionAsync(id, page.Html, $"استيراد الملف «{file!.FileName}» كما هو", null, ct);
+        await _store.AddMessageAsync(id, "user", $"استيراد الملف «{file.FileName}» إلى هذا التصميم كما هو.", null, ct);
+        var reply = page.IsHtml
+            ? $"استُبدلت صفحة التصميم بالملف المرفوع حرفيًا (الإصدار {v})؛ الإصدارات السابقة محفوظة ويمكن استعادتها من قائمة الإصدارات."
+            : $"استُبدلت صفحة التصميم بالعرض المرفوع كصفحة شرائح: {page.Slides} شريحة مرسومة كما هي بلا موديل (الإصدار {v}){(page.Notes.Count > 0 ? " — " + string.Join("؛ ", page.Notes) : "")}.";
+        if (d.PresentationId is not null) reply += " الرابط المنشور يعرض النسخة المنشورة السابقة حتى تضغط «تحديث النشر».";
+        await _store.AddMessageAsync(id, "assistant", reply, v, ct);
+        var design = await _store.GetAsync(id, selection.ProjectId, ct) ?? d;
+        var brand = await BrandAsync(selection.ProjectId, ct);
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), version = v, versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), slides = page.Slides, notes = page.Notes, kindChanged, published = d.PresentationId is not null });
     }
 
     /// <summary>عنوان الصفحة من <c>&lt;title&gt;</c> أو أول <c>&lt;h1&gt;</c> (بلا وسوم)، أو null.</summary>

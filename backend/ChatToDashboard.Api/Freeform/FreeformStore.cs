@@ -209,6 +209,14 @@ public class FreeformStore
         return await connection.QuerySingleOrDefaultAsync<string>($"SELECT Html FROM {V} WHERE DesignId = @id AND Version = @version", new { id, version });
     }
 
+    /// <summary>يغيّر نوع التصميم (مثلًا عند استيراد ملف PowerPoint إلى تصميم قائم فيصير صفحة شرائح).</summary>
+    public async Task SetKindAsync(string id, string kind, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {T} SET Kind = @kind, UpdatedAt = @now WHERE Id = @id", new { id, kind = NormalizeKind(kind), now = DateTime.UtcNow });
+    }
+
     public async Task SetTitleAsync(string id, string title, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

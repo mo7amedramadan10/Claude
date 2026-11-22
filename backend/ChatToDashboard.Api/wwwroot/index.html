@@ -742,12 +742,15 @@
 <!-- رفع صفحة HTML كما هي: تصير تصميمًا حرفيًا بلا موديل ولا نموذج -->
 <div id="ff-page-modal" class="modal-overlay hidden">
   <div class="modal share-modal-box">
-    <h3>رفع ملف كما هو</h3>
-    <p class="modal-note">صفحة HTML تُحفظ حرفيًا كما رُفعت وتُفتح بنوع <b id="ffp-kind-label">تصميم</b>؛ وملف PowerPoint تُرسم كل شريحة فيه كما هي (الخلفيات والأشكال والصور والنصوص في مواضعها) في صفحة شرائح بتنقّل وطباعة. بلا أي تعديل أو إعادة توليد؛ بعدها تعدّل النص مباشرة أو تطلب تعديلات بالمحادثة أو تنشر. الحد 25 ميغابايت.</p>
+    <h3 id="ffp-heading">رفع ملف كما هو</h3>
+    <p class="modal-note" id="ffp-into-note" hidden>يُستبدل محتوى التصميم المفتوح بالملف المرفوع كما هو كإصدار جديد، مع بقاء العنوان والرسائل والإصدارات السابقة (تُستعاد من قائمة الإصدارات). ملف PowerPoint يحوّل التصميم إلى صفحة شرائح. <b>الرابط المنشور لا يتغير إلا بـ«تحديث النشر».</b></p>
+    <p class="modal-note" id="ffp-new-note">صفحة HTML تُحفظ حرفيًا كما رُفعت وتُفتح بنوع <b id="ffp-kind-label">تصميم</b>؛ وملف PowerPoint تُرسم كل شريحة فيه كما هي (الخلفيات والأشكال والصور والنصوص في مواضعها) في صفحة شرائح بتنقّل وطباعة. بلا أي تعديل أو إعادة توليد؛ بعدها تعدّل النص مباشرة أو تطلب تعديلات بالمحادثة أو تنشر. الحد 25 ميغابايت.</p>
     <label class="share-expiry-label">الملف <span class="muted">(.html أو .pptx)</span></label>
     <input type="file" id="ffp-file" accept=".html,.htm,.pptx,text/html,application/vnd.openxmlformats-officedocument.presentationml.presentation">
-    <label class="share-expiry-label">العنوان <span class="muted">(اختياري — الافتراضي من عنوان الصفحة أو اسم الملف)</span></label>
-    <input type="text" id="ffp-title" placeholder="مثال: دور الإدارة في مشروع الخوارزمي" maxlength="120">
+    <div id="ffp-title-wrap">
+      <label class="share-expiry-label">العنوان <span class="muted">(اختياري — الافتراضي من عنوان الصفحة أو اسم الملف)</span></label>
+      <input type="text" id="ffp-title" placeholder="مثال: دور الإدارة في مشروع الخوارزمي" maxlength="120">
+    </div>
     <div id="ffp-error" class="model-switch-note bad hidden"></div>
     <div class="modal-actions">
       <button type="button" id="ffp-cancel">إلغاء</button>
@@ -1155,6 +1158,7 @@
         <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
         <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
         <button type="button" id="ff-download" class="btn btn-sm btn-ghost" title="تنزيل ملف HTML">تنزيل</button>
+        <button type="button" id="ff-import-into" class="btn btn-sm btn-ghost" title="استبدال صفحة هذا التصميم بملف HTML أو PowerPoint مرفوع كما هو (إصدار جديد على الرابط نفسه)">📥 استيراد إلى هذا التصميم</button>
         <button type="button" id="ff-stale" class="btn btn-sm ff-stale hidden" title="تغيّرت بيانات المصدر منذ آخر تحديث لهذا التصميم — اضغط للتحديث بلا موديل">⚠️ تغيّرت البيانات — حدّث</button>
         <div class="dropdown" id="ff-refresh-dropdown">
           <button type="button" id="ff-refresh" class="btn btn-sm btn-ghost" title="تحديث أرقام الصفحة من بيانات المشروع الحالية" aria-haspopup="true" aria-expanded="false">🔄 تحديث البيانات</button>
