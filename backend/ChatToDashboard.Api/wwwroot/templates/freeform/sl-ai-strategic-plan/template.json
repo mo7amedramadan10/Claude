@@ -1,0 +1,73 @@
+{
+  "key": "sl-ai-strategic-plan",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧠",
+  "name": "الخطة الاستراتيجية للذكاء الاصطناعي",
+  "nameEn": "AI Strategic Plan",
+  "description": "14 شريحة لخطة ذكاء اصطناعي: غلاف، ملخص، الوضع الراهن، الرؤية، الركائز، البيانات، التقنية، خارطة طريق، مخاطر، عائد",
+  "descriptionEn": "14 slides for an AI plan: cover, summary, current state, vision, pillars, data, tech, roadmap, risks, ROI",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "الوضع الراهن ودراسة الجدوى",
+      "titleEn": "Current State & Business Case",
+      "needsData": true
+    },
+    {
+      "title": "الرؤية والرسالة",
+      "titleEn": "AI Vision & Mission"
+    },
+    {
+      "title": "ركائز الاستراتيجية",
+      "titleEn": "Foundation Pillars"
+    },
+    {
+      "title": "حالات الاستخدام والمبادرات",
+      "titleEn": "Key AI Use Cases & Initiatives"
+    },
+    {
+      "title": "استراتيجية البيانات وحوكمتها",
+      "titleEn": "Data Strategy & Governance"
+    },
+    {
+      "title": "التقنية والبنية التحتية",
+      "titleEn": "Technology & Infrastructure"
+    },
+    {
+      "title": "المواهب والتنظيم",
+      "titleEn": "Talent & Organization"
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap & Timeline",
+      "needsData": true
+    },
+    {
+      "title": "المخاطر والتخفيف منها",
+      "titleEn": "Risks & Mitigation"
+    },
+    {
+      "title": "النتائج المتوقعة والعائد (رسم)",
+      "titleEn": "Expected Outcome & ROI (chart)",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "شكرًا وتواصلوا معنا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسم الخطي في شريحة النتائج في كتلة JSON بالمعرّف chart-data (labels وseries)."
+}
