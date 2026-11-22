@@ -1,0 +1,65 @@
+{
+  "key": "sl-ai-powered-growth",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🤖",
+  "name": "النمو المدعوم بالذكاء الاصطناعي",
+  "nameEn": "AI Powered Growth",
+  "description": "12 شريحة: غلاف، ملخص تنفيذي، لماذا يهمّ، التحديات، إطار الحلول، القدرات، خارطة طريق، الأثر، المقاييس، اقتباس، شكر",
+  "descriptionEn": "12 slides: cover, summary, why AI, challenges, framework, capabilities, roadmap, impact, metrics, quote, thanks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي (3 نسب)",
+      "titleEn": "Executive Summary (3 stats)",
+      "needsData": true
+    },
+    {
+      "title": "لماذا يهمّ الذكاء الاصطناعي",
+      "titleEn": "Why AI Matters"
+    },
+    {
+      "title": "التحديات الحالية",
+      "titleEn": "Current Challenges"
+    },
+    {
+      "title": "إطار حلول الذكاء الاصطناعي",
+      "titleEn": "AI Solution Framework"
+    },
+    {
+      "title": "القدرات الأساسية للنمو",
+      "titleEn": "AI Growth Key Capabilities"
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "الأثر على الأعمال",
+      "titleEn": "Business Impact",
+      "needsData": true
+    },
+    {
+      "title": "مقاييس النجاح (رسم أعمدة)",
+      "titleEn": "Success Metrics (bar chart)",
+      "needsData": true
+    },
+    {
+      "title": "لماذا تختار الذكاء الاصطناعي",
+      "titleEn": "Why Choose AI"
+    },
+    {
+      "title": "الرؤية المستقبلية / اقتباس",
+      "titleEn": "Future Vision / Quote"
+    },
+    {
+      "title": "الشكر والتواصل",
+      "titleEn": "Thanks & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في شريحة المقاييس في كتلة JSON بالمعرّف chart-data (فئات وثلاث سلاسل) ويُرسم بالسكربت المضمّن."
+}
