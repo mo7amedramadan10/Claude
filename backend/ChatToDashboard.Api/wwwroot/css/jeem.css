@@ -3760,4 +3760,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #add-widget-modal .aw-picked .ff-chip { cursor: default; }
 #add-widget-modal .aw-picked .ff-chip .ff-chip-x { cursor: pointer; margin-inline-start: 4px; }
 #add-widget-modal #aw-more { margin-top: 12px; }
+/* فلاتر مكتبة المؤشرات وزر «عرض المزيد» كانا يظهران في تبويبي «عناصر خام/جاهزة» (وبعدّاد سالب) لأن قاعدتي
+   display أعلاه و.btn{display:inline-flex} أقوى من .hidden و[hidden] */
+#add-widget-modal .aw-filters.hidden, #add-widget-modal #aw-more[hidden] { display: none; }
 @media (max-width: 640px) { #add-widget-modal .aw-foot { flex-wrap: wrap; } #add-widget-modal .aw-grid { grid-template-columns: 1fr 1fr; } }
