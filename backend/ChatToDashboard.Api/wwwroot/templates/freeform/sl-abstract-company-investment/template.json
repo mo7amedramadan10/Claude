@@ -1,0 +1,66 @@
+{
+  "key": "sl-abstract-company-investment",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💼",
+  "name": "استثمار الشركة (تجريدي)",
+  "nameEn": "Abstract Company Investment",
+  "description": "12 شريحة لعرض استثماري: غلاف، ملخص، مشكلة، حل، سوق، نموذج عمل، تمويل، فريق، تخارج، مخاطر، أسئلة، خاتمة",
+  "descriptionEn": "12 investor slides: cover, summary, problem, solution, market, model, funding, team, exit, risks, Q&A, close",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement"
+    },
+    {
+      "title": "الحل",
+      "titleEn": "Solution"
+    },
+    {
+      "title": "تحليل السوق (رسم)",
+      "titleEn": "Market Analysis (chart)",
+      "needsData": true
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model",
+      "needsData": true
+    },
+    {
+      "title": "متطلبات التمويل (جدول)",
+      "titleEn": "Funding Requirements (table)",
+      "needsData": true
+    },
+    {
+      "title": "الفريق",
+      "titleEn": "Team"
+    },
+    {
+      "title": "استراتيجية التخارج",
+      "titleEn": "Exit Strategy"
+    },
+    {
+      "title": "المخاطر والتخفيف (جدول)",
+      "titleEn": "Risks & Mitigation (table)",
+      "needsData": true
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Question and Answer"
+    },
+    {
+      "title": "الخطوة التالية",
+      "titleEn": "Next Step"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في كتلة JSON بالمعرّف chart-data، والصور في assets تبقى بمساراتها."
+}
