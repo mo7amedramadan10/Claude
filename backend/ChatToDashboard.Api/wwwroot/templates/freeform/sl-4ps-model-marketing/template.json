@@ -1,0 +1,33 @@
+{
+  "key": "sl-4ps-model-marketing",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🎯",
+  "name": "نموذج المزيج التسويقي 4Ps",
+  "nameEn": "4Ps Marketing Mix Model",
+  "description": "خمس شرائح لنموذج 4Ps: نظرة عامة ثم إبراز المنتج والسعر والترويج والمكان كلٌّ في شريحة",
+  "descriptionEn": "Five slides of the 4Ps marketing mix: overview, then Product, Price, Promotion and Place highlighted",
+  "sections": [
+    {
+      "title": "المزيج كاملًا",
+      "titleEn": "Full Marketing Mix"
+    },
+    {
+      "title": "المنتج",
+      "titleEn": "Product"
+    },
+    {
+      "title": "السعر",
+      "titleEn": "Price"
+    },
+    {
+      "title": "الترويج",
+      "titleEn": "Promotion"
+    },
+    {
+      "title": "المكان",
+      "titleEn": "Place"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الحلقة والإطارات رسم SVG والصنف on يحدد الربع والبطاقة والتسمية المُبرزة في كل شريحة."
+}

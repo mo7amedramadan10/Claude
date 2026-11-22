@@ -1,0 +1,17 @@
+{
+  "key": "sl-5-step-curved-future-roadmap",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "خارطة طريق منحنية بخمس خطوات",
+  "nameEn": "5-Step Curved Future Roadmap",
+  "description": "شريحة واحدة لخارطة طريق منحنية بخمس خطوات: مسار متدرّج ينتهي بسهم، دبابيس خريطة وبطاقات بترويسات ملوّنة",
+  "descriptionEn": "One slide of a 5-step curved roadmap: gradient path ending in an arrow, map pins and cards with colored headers",
+  "sections": [
+    {
+      "title": "خارطة الطريق بخمس خطوات",
+      "titleEn": "5-Step Roadmap"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ المسار والدبابيس رسم SVG واحد (.art) والبطاقات .c1–.c5 بترويسة h2 ونص p."
+}

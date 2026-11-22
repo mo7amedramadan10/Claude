@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4-Step AIDA Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «نموذج أيدا بأربع خطوات»: عنوان أعلى، قمع مسطّح SVG في المنتصف من أربع مراحل (أزرق، أخضر مزرق، أخضر، أحمر) كل مرحلة بشريط داكن أعلاها وحرف أبيض كبير، وعمودان من العناوين والنصوص عن يمينه ويساره. الصنف off يرمّد المرحلة والنص غير المُبرزين. */
+  :root { --font: 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #262626; --ink-2: #4A4A4A; --accent: #3081AC; --c1: #3081AC; --c1d: #2B759A; --c2: #5FB7A1; --c2d: #55A491; --c3: #8AB84B; --c3d: #7CA444; --c4: #D8543B; --c4d: #BF4B34; --g1: #D9D9D9; --g2: #F2F2F2; --g3: #BFBFBF; --gray-t: #C4C4C4; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 42px; inset-inline-start: 65px; margin: 0; font-size: 40px; font-weight: 300; line-height: 1.2; color: var(--ink); }
+  html[lang="ar"] .ttl { font-weight: 400; }
+  /* القمع المسطّح: متماثل حول منتصف الشريحة فلا يحتاج عكسًا */
+  .funnel { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  .funnel .d1 { fill: var(--c1d); } .funnel .b1 { fill: var(--c1); }
+  .funnel .d2 { fill: var(--c2d); } .funnel .b2 { fill: var(--c2); }
+  .funnel .d3 { fill: var(--c3d); } .funnel .b3 { fill: var(--c3); }
+  .funnel .d4 { fill: var(--c4d); } .funnel .b4 { fill: var(--c4); }
+  .funnel .offd { fill: var(--g1); } .funnel .offb { fill: var(--g2); }
+  /* الحروف البيضاء داخل المراحل */
+  .ltr { position: absolute; margin: 0; width: 120px; inset-inline-start: 579px; text-align: center; font-size: 75px; font-weight: 700; line-height: 1; color: #fff; }
+  .l1 { top: 197px; } .l2 { top: 318px; } .l3 { top: 439px; } .l4 { top: 562px; }
+  .ltr.off { color: var(--g3); }
+  /* العمودان: العناوين والنصوص */
+  .hd { position: absolute; margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+  .tx { position: absolute; margin: 0; font-size: 17px; line-height: 1.35; width: 250px; color: var(--ink-2); }
+  html[lang="ar"] .tx { line-height: 1.45; }
+  .colL .hd, .colL .tx { inset-inline-start: 105px; } .colR .hd, .colR .tx { inset-inline-start: 961px; }
+  .h1 { top: 172px; color: var(--c1); } .h2 { top: 294px; color: var(--c2); } .h3 { top: 416px; color: var(--c3); } .h4 { top: 540px; color: var(--c4); }
+  .t1 { top: 209px; } .t2 { top: 331px; } .t3 { top: 452px; } .t4 { top: 576px; }
+  .hd.off { color: var(--g3); } .tx.off { color: var(--gray-t); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">4-Step AIDA Model PowerPoint Template</h1>
+    <svg class="funnel" viewBox="0 0 1280 720" aria-hidden="true"><path class="d1" d="M373,153 h533 a8,8 0 0 1 8,8 v26 h-549 v-26 a8,8 0 0 1 8,-8 z"/><polygon class="b1" points="365,187 914,187 914,217 857,274 422,274 365,217"/><path class="d2" d="M422,274 h434 v39 h-434 z"/><polygon class="b2" points="422,313 856,313 856,338 798,396 480,396 422,338"/><path class="d3" d="M480,396 h318 v38 h-318 z"/><polygon class="b3" points="480,434 798,434 798,460 740,518 538,518 480,460"/><path class="d4" d="M538,518 h202 v38 h-202 z"/><polygon class="b4" points="538,556 740,556 740,585 680,645 598,645 538,585"/></svg>
+    <p class="ltr l1">A</p><p class="ltr l2">I</p><p class="ltr l3">D</p><p class="ltr l4">A</p>
+    <div class="colL"><h2 class="hd h1">Awareness</h2><p class="tx t1">This is a sample text. Insert your desired text here.</p><h2 class="hd h2">Interest</h2><p class="tx t2">This is a sample text. Insert your desired text here.</p><h2 class="hd h3">Desire</h2><p class="tx t3">This is a sample text. Insert your desired text here.</p><h2 class="hd h4">Action</h2><p class="tx t4">This is a sample text. Insert your desired text here.</p></div>
+    <div class="colR"><h2 class="hd h1">Awareness</h2><p class="tx t1">This is a sample text. Insert your desired text here.</p><h2 class="hd h2">Interest</h2><p class="tx t2">This is a sample text. Insert your desired text here.</p><h2 class="hd h3">Desire</h2><p class="tx t3">This is a sample text. Insert your desired text here.</p><h2 class="hd h4">Action</h2><p class="tx t4">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">4-Step AIDA Model PowerPoint Template</h1>
+    <svg class="funnel" viewBox="0 0 1280 720" aria-hidden="true"><path class="d1" d="M373,153 h533 a8,8 0 0 1 8,8 v26 h-549 v-26 a8,8 0 0 1 8,-8 z"/><polygon class="b1" points="365,187 914,187 914,217 857,274 422,274 365,217"/><path class="offd" d="M422,274 h434 v39 h-434 z"/><polygon class="offb" points="422,313 856,313 856,338 798,396 480,396 422,338"/><path class="offd" d="M480,396 h318 v38 h-318 z"/><polygon class="offb" points="480,434 798,434 798,460 740,518 538,518 480,460"/><path class="offd" d="M538,518 h202 v38 h-202 z"/><polygon class="offb" points="538,556 740,556 740,585 680,645 598,645 538,585"/></svg>
+    <p class="ltr l1">A</p><p class="ltr l2 off">I</p><p class="ltr l3 off">D</p><p class="ltr l4 off">A</p>
+    <div class="colL"><h2 class="hd h1">Awareness</h2><p class="tx t1">This is a sample text. Insert your desired text here.</p><h2 class="hd h2 off">Interest</h2><p class="tx t2 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h3 off">Desire</h2><p class="tx t3 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h4 off">Action</h2><p class="tx t4 off">This is a sample text. Insert your desired text here.</p></div>
+    <div class="colR"><h2 class="hd h1">Edit Text Here</h2><p class="tx t1">This is a sample text. Insert your desired text here.</p><h2 class="hd h2 off">Edit Text Here</h2><p class="tx t2 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h3 off">Edit Text Here</h2><p class="tx t3 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h4 off">Edit Text Here</h2><p class="tx t4 off">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">4-Step AIDA Model PowerPoint Template</h1>
+    <svg class="funnel" viewBox="0 0 1280 720" aria-hidden="true"><path class="offd" d="M373,153 h533 a8,8 0 0 1 8,8 v26 h-549 v-26 a8,8 0 0 1 8,-8 z"/><polygon class="offb" points="365,187 914,187 914,217 857,274 422,274 365,217"/><path class="d2" d="M422,274 h434 v39 h-434 z"/><polygon class="b2" points="422,313 856,313 856,338 798,396 480,396 422,338"/><path class="offd" d="M480,396 h318 v38 h-318 z"/><polygon class="offb" points="480,434 798,434 798,460 740,518 538,518 480,460"/><path class="offd" d="M538,518 h202 v38 h-202 z"/><polygon class="offb" points="538,556 740,556 740,585 680,645 598,645 538,585"/></svg>
+    <p class="ltr l1 off">A</p><p class="ltr l2">I</p><p class="ltr l3 off">D</p><p class="ltr l4 off">A</p>
+    <div class="colL"><h2 class="hd h1 off">Awareness</h2><p class="tx t1 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h2">Interest</h2><p class="tx t2">This is a sample text. Insert your desired text here.</p><h2 class="hd h3 off">Desire</h2><p class="tx t3 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h4 off">Action</h2><p class="tx t4 off">This is a sample text. Insert your desired text here.</p></div>
+    <div class="colR"><h2 class="hd h1 off">Edit Text Here</h2><p class="tx t1 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h2">Edit Text Here</h2><p class="tx t2">This is a sample text. Insert your desired text here.</p><h2 class="hd h3 off">Edit Text Here</h2><p class="tx t3 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h4 off">Edit Text Here</h2><p class="tx t4 off">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">4-Step AIDA Model PowerPoint Template</h1>
+    <svg class="funnel" viewBox="0 0 1280 720" aria-hidden="true"><path class="offd" d="M373,153 h533 a8,8 0 0 1 8,8 v26 h-549 v-26 a8,8 0 0 1 8,-8 z"/><polygon class="offb" points="365,187 914,187 914,217 857,274 422,274 365,217"/><path class="offd" d="M422,274 h434 v39 h-434 z"/><polygon class="offb" points="422,313 856,313 856,338 798,396 480,396 422,338"/><path class="d3" d="M480,396 h318 v38 h-318 z"/><polygon class="b3" points="480,434 798,434 798,460 740,518 538,518 480,460"/><path class="offd" d="M538,518 h202 v38 h-202 z"/><polygon class="offb" points="538,556 740,556 740,585 680,645 598,645 538,585"/></svg>
+    <p class="ltr l1 off">A</p><p class="ltr l2 off">I</p><p class="ltr l3">D</p><p class="ltr l4 off">A</p>
+    <div class="colL"><h2 class="hd h1 off">Awareness</h2><p class="tx t1 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h2 off">Interest</h2><p class="tx t2 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h3">Desire</h2><p class="tx t3">This is a sample text. Insert your desired text here.</p><h2 class="hd h4 off">Action</h2><p class="tx t4 off">This is a sample text. Insert your desired text here.</p></div>
+    <div class="colR"><h2 class="hd h1 off">Edit Text Here</h2><p class="tx t1 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h2 off">Edit Text Here</h2><p class="tx t2 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h3">Edit Text Here</h2><p class="tx t3">This is a sample text. Insert your desired text here.</p><h2 class="hd h4 off">Edit Text Here</h2><p class="tx t4 off">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">4-Step AIDA Model PowerPoint Template</h1>
+    <svg class="funnel" viewBox="0 0 1280 720" aria-hidden="true"><path class="offd" d="M373,153 h533 a8,8 0 0 1 8,8 v26 h-549 v-26 a8,8 0 0 1 8,-8 z"/><polygon class="offb" points="365,187 914,187 914,217 857,274 422,274 365,217"/><path class="offd" d="M422,274 h434 v39 h-434 z"/><polygon class="offb" points="422,313 856,313 856,338 798,396 480,396 422,338"/><path class="offd" d="M480,396 h318 v38 h-318 z"/><polygon class="offb" points="480,434 798,434 798,460 740,518 538,518 480,460"/><path class="d4" d="M538,518 h202 v38 h-202 z"/><polygon class="b4" points="538,556 740,556 740,585 680,645 598,645 538,585"/></svg>
+    <p class="ltr l1 off">A</p><p class="ltr l2 off">I</p><p class="ltr l3 off">D</p><p class="ltr l4">A</p>
+    <div class="colL"><h2 class="hd h1 off">Awareness</h2><p class="tx t1 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h2 off">Interest</h2><p class="tx t2 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h3 off">Desire</h2><p class="tx t3 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h4">Action</h2><p class="tx t4">This is a sample text. Insert your desired text here.</p></div>
+    <div class="colR"><h2 class="hd h1 off">Edit Text Here</h2><p class="tx t1 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h2 off">Edit Text Here</h2><p class="tx t2 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h3 off">Edit Text Here</h2><p class="tx t3 off">This is a sample text. Insert your desired text here.</p><h2 class="hd h4">Edit Text Here</h2><p class="tx t4">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 5</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

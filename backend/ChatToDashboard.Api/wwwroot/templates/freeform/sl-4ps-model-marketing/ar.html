@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نموذج المزيج التسويقي 4Ps</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «المزيج التسويقي 4Ps»: عنوان أعلى، حلقة SVG بأربعة أرباع ملوّنة حول دائرة مركزية، وأربع بطاقات بإطار يتبع قوس الحلقة وأيقونة دائرية وعنوان ونص. الصنف on يُبرز الربع والبطاقة والتسمية بلونهما، وبدونه يصيران رماديين. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #1B1B1B; --ink-2: #333333; --accent: #01B29E; --teal: #01B29E; --orange: #E77143; --slate: #546674; --blue: #018DC8; --gray: #F2F2F2; --gray-2: #D9D9D9; --gray-3: #BFBFBF; --gray-4: #7A7A7A; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 44px; inset-inline-start: 65px; margin: 0; font-size: 40px; font-weight: 300; line-height: 1.2; color: var(--ink); letter-spacing: -0.3px; }
+  html[lang="ar"] .ttl { font-weight: 400; letter-spacing: 0; }
+  /* الرسم الزخرفي (إطارات البطاقات وأرباع الحلقة) يُعكس في العربية */
+  .dg { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; pointer-events: none; }
+  html[dir="rtl"] .dg { transform: scaleX(-1); }
+  .q1, .c1, .l1 { --c: var(--teal); } .q2, .c2, .l2 { --c: var(--orange); } .q3, .c3, .l3 { --c: var(--slate); } .q4, .c4, .l4 { --c: var(--blue); }
+  .dg .seg { fill: var(--gray); stroke: var(--gray); stroke-width: 6; stroke-linejoin: round; }
+  .dg .ol { fill: none; stroke: var(--gray-3); stroke-width: 2; stroke-linejoin: round; }
+  .dg .q.on .seg { fill: var(--c); stroke: var(--c); }
+  .dg .q.on .ol { stroke: var(--c); }
+  /* الدائرة المركزية */
+  .core { position: absolute; top: 289px; inset-inline-start: 540px; width: 200px; height: 200px; border-radius: 50%; background: linear-gradient(180deg, #F2F2F2 0%, #DCDCDC 100%); box-shadow: 0 6px 14px rgb(0 0 0 / .28), 0 0 0 1px rgb(0 0 0 / .04); }
+  .core p { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; padding: 0 18px; text-align: center; font-size: 26px; font-weight: 800; line-height: 1.15; color: #111; }
+  html[lang="ar"] .core p { font-size: 25px; }
+  /* تسميات الأرباع: نص مائل 45° داخل الحلقة (في الأصل على قوس) */
+  .lbl { position: absolute; width: 230px; margin: 0; text-align: center; font-size: 26px; font-weight: 700; letter-spacing: 1px; line-height: 32px; color: #777; transform: rotate(var(--r)); }
+  .lbl.on { color: #fff; }
+  html[dir="rtl"] .lbl { transform: rotate(calc(-1 * var(--r))); letter-spacing: 0; font-size: 28px; }
+  .l1 { top: 260px; inset-inline-start: 412px; --r: -45deg; }
+  .l2 { top: 260px; inset-inline-end: 412px; --r: 45deg; }
+  .l3 { top: 486px; inset-inline-start: 412px; --r: 45deg; }
+  .l4 { top: 486px; inset-inline-end: 412px; --r: -45deg; }
+  /* البطاقات */
+  .card { position: absolute; width: 491px; height: 265px; }
+  .c1, .c3 { inset-inline-start: 66px; } .c2, .c4 { inset-inline-end: 66px; text-align: end; }
+  .c1, .c2 { top: 119px; } .c3, .c4 { top: 393px; }
+  .card .ic { position: absolute; width: 76px; height: 76px; border-radius: 50%; background: var(--gray-2); color: #7A7A7A; display: grid; place-items: center; }
+  .card .ic svg { width: 38px; height: 38px; }
+  .c1 .ic, .c3 .ic { inset-inline-start: 27px; } .c2 .ic, .c4 .ic { inset-inline-end: 28px; }
+  .c1 .ic, .c2 .ic { top: 0; } .c3 .ic, .c4 .ic { top: 189px; }
+  .card h2 { position: absolute; margin: 0; font-size: 24px; font-weight: 700; line-height: 1.2; color: var(--gray-4); }
+  .card p { position: absolute; margin: 0; width: 300px; font-size: 17px; line-height: 22px; color: var(--gray-4); white-space: pre-line; }
+  html[lang="ar"] .card p { font-size: 18px; }
+  .c1 h2, .c1 p, .c3 h2, .c3 p { inset-inline-start: 26px; } .c2 h2, .c2 p, .c4 h2, .c4 p { inset-inline-end: 32px; }
+  .c1 h2, .c2 h2 { top: 91px; } .c1 p, .c2 p { top: 133px; }
+  .c3 h2, .c4 h2 { top: 27px; } .c3 p, .c4 p { top: 69px; }
+  .card.on .ic { background: var(--c); color: #fff; }
+  .card.on h2 { color: var(--c); }
+  .card.on p { color: var(--ink-2); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب نموذج المزيج التسويقي 4Ps</h1>
+    <svg class="dg" viewBox="0 0 1280 720" aria-hidden="true"><g class="q q1 on"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q2 on" transform="matrix(-1 0 0 1 1280 0)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q3 on" transform="matrix(1 0 0 -1 0 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q4 on" transform="matrix(-1 0 0 -1 1280 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g></svg>
+    <div class="core"><p>المزيج التسويقي</p></div>
+    <p class="lbl l1 on">المنتج</p><p class="lbl l2 on">السعر</p><p class="lbl l3 on">الترويج</p><p class="lbl l4 on">المكان</p>
+    <div class="card c1 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="9.3" y="3" width="5.4" height="5.4" rx=".5"/><rect x="6.2" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="12.4" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="9.3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="15.6" y="15.6" width="5.4" height="5.4" rx=".5"/></svg></div><h2>المنتج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c2 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.2 8.6 18.4 5.2l.9 3.2-1.9.5-.4-1.3L8.3 10.3H6.2z"/><path fill-rule="evenodd" d="M2.5 10.6h18.4v8.6H2.5zm1.8 1.8v5h14.8v-5zm7.4.9a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2z"/></svg></div><h2>السعر</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c3 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g transform="rotate(-30 12 12)"><path d="M14 4.5v15l-6.2-4.1H4.5a1.2 1.2 0 0 1-1.2-1.2V9.8a1.2 1.2 0 0 1 1.2-1.2h3.3z"/><path d="M16 8.3a4.5 4.5 0 0 1 0 7.4v-2a2.5 2.5 0 0 0 0-3.4z"/><path d="M6.2 16.3h2.6l1 3.6H7.3z"/></g></svg></div><h2>الترويج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c4 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/><path d="M8.2 5.3c1.6.4 3 .3 3.4 1.5.5 1.3-1.6 1.7-1.3 3 .3 1.4 2.6 1 2.9 2.6.3 1.5-1.8 2.3-1.4 4 .2 1 .8 1.6.6 2.4C8.3 18 5.3 15.3 5.3 12c0-2.9 1.1-5.3 2.9-6.7zM15.5 6.5c1.8 1.1 3.2 3.2 3.2 5.5 0 1.4-.4 2.7-1.1 3.8-.8-.6-.5-1.6-1.4-2.1-1-.6-2.2.3-2.5-1.1-.3-1.3 1.3-1.6 1.2-2.9-.1-1.2-1.6-1.7-1.2-2.9.3-.6 1.2-.5 1.8-.3z"/></svg></div><h2>المكان</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب نموذج المزيج التسويقي 4Ps</h1>
+    <svg class="dg" viewBox="0 0 1280 720" aria-hidden="true"><g class="q q1 on"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q2" transform="matrix(-1 0 0 1 1280 0)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q3" transform="matrix(1 0 0 -1 0 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q4" transform="matrix(-1 0 0 -1 1280 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g></svg>
+    <div class="core"><p>المزيج التسويقي</p></div>
+    <p class="lbl l1 on">المنتج</p><p class="lbl l2">السعر</p><p class="lbl l3">الترويج</p><p class="lbl l4">المكان</p>
+    <div class="card c1 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="9.3" y="3" width="5.4" height="5.4" rx=".5"/><rect x="6.2" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="12.4" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="9.3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="15.6" y="15.6" width="5.4" height="5.4" rx=".5"/></svg></div><h2>المنتج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c2"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.2 8.6 18.4 5.2l.9 3.2-1.9.5-.4-1.3L8.3 10.3H6.2z"/><path fill-rule="evenodd" d="M2.5 10.6h18.4v8.6H2.5zm1.8 1.8v5h14.8v-5zm7.4.9a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2z"/></svg></div><h2>السعر</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c3"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g transform="rotate(-30 12 12)"><path d="M14 4.5v15l-6.2-4.1H4.5a1.2 1.2 0 0 1-1.2-1.2V9.8a1.2 1.2 0 0 1 1.2-1.2h3.3z"/><path d="M16 8.3a4.5 4.5 0 0 1 0 7.4v-2a2.5 2.5 0 0 0 0-3.4z"/><path d="M6.2 16.3h2.6l1 3.6H7.3z"/></g></svg></div><h2>الترويج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c4"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/><path d="M8.2 5.3c1.6.4 3 .3 3.4 1.5.5 1.3-1.6 1.7-1.3 3 .3 1.4 2.6 1 2.9 2.6.3 1.5-1.8 2.3-1.4 4 .2 1 .8 1.6.6 2.4C8.3 18 5.3 15.3 5.3 12c0-2.9 1.1-5.3 2.9-6.7zM15.5 6.5c1.8 1.1 3.2 3.2 3.2 5.5 0 1.4-.4 2.7-1.1 3.8-.8-.6-.5-1.6-1.4-2.1-1-.6-2.2.3-2.5-1.1-.3-1.3 1.3-1.6 1.2-2.9-.1-1.2-1.6-1.7-1.2-2.9.3-.6 1.2-.5 1.8-.3z"/></svg></div><h2>المكان</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">قالب نموذج المزيج التسويقي 4Ps</h1>
+    <svg class="dg" viewBox="0 0 1280 720" aria-hidden="true"><g class="q q1"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q2 on" transform="matrix(-1 0 0 1 1280 0)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q3" transform="matrix(1 0 0 -1 0 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q4" transform="matrix(-1 0 0 -1 1280 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g></svg>
+    <div class="core"><p>المزيج التسويقي</p></div>
+    <p class="lbl l1">المنتج</p><p class="lbl l2 on">السعر</p><p class="lbl l3">الترويج</p><p class="lbl l4">المكان</p>
+    <div class="card c1"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="9.3" y="3" width="5.4" height="5.4" rx=".5"/><rect x="6.2" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="12.4" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="9.3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="15.6" y="15.6" width="5.4" height="5.4" rx=".5"/></svg></div><h2>المنتج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c2 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.2 8.6 18.4 5.2l.9 3.2-1.9.5-.4-1.3L8.3 10.3H6.2z"/><path fill-rule="evenodd" d="M2.5 10.6h18.4v8.6H2.5zm1.8 1.8v5h14.8v-5zm7.4.9a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2z"/></svg></div><h2>السعر</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c3"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g transform="rotate(-30 12 12)"><path d="M14 4.5v15l-6.2-4.1H4.5a1.2 1.2 0 0 1-1.2-1.2V9.8a1.2 1.2 0 0 1 1.2-1.2h3.3z"/><path d="M16 8.3a4.5 4.5 0 0 1 0 7.4v-2a2.5 2.5 0 0 0 0-3.4z"/><path d="M6.2 16.3h2.6l1 3.6H7.3z"/></g></svg></div><h2>الترويج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c4"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/><path d="M8.2 5.3c1.6.4 3 .3 3.4 1.5.5 1.3-1.6 1.7-1.3 3 .3 1.4 2.6 1 2.9 2.6.3 1.5-1.8 2.3-1.4 4 .2 1 .8 1.6.6 2.4C8.3 18 5.3 15.3 5.3 12c0-2.9 1.1-5.3 2.9-6.7zM15.5 6.5c1.8 1.1 3.2 3.2 3.2 5.5 0 1.4-.4 2.7-1.1 3.8-.8-.6-.5-1.6-1.4-2.1-1-.6-2.2.3-2.5-1.1-.3-1.3 1.3-1.6 1.2-2.9-.1-1.2-1.6-1.7-1.2-2.9.3-.6 1.2-.5 1.8-.3z"/></svg></div><h2>المكان</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">قالب نموذج المزيج التسويقي 4Ps</h1>
+    <svg class="dg" viewBox="0 0 1280 720" aria-hidden="true"><g class="q q1"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q2" transform="matrix(-1 0 0 1 1280 0)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q3 on" transform="matrix(1 0 0 -1 0 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q4" transform="matrix(-1 0 0 -1 1280 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g></svg>
+    <div class="core"><p>المزيج التسويقي</p></div>
+    <p class="lbl l1">المنتج</p><p class="lbl l2">السعر</p><p class="lbl l3 on">الترويج</p><p class="lbl l4">المكان</p>
+    <div class="card c1"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="9.3" y="3" width="5.4" height="5.4" rx=".5"/><rect x="6.2" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="12.4" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="9.3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="15.6" y="15.6" width="5.4" height="5.4" rx=".5"/></svg></div><h2>المنتج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c2"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.2 8.6 18.4 5.2l.9 3.2-1.9.5-.4-1.3L8.3 10.3H6.2z"/><path fill-rule="evenodd" d="M2.5 10.6h18.4v8.6H2.5zm1.8 1.8v5h14.8v-5zm7.4.9a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2z"/></svg></div><h2>السعر</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c3 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g transform="rotate(-30 12 12)"><path d="M14 4.5v15l-6.2-4.1H4.5a1.2 1.2 0 0 1-1.2-1.2V9.8a1.2 1.2 0 0 1 1.2-1.2h3.3z"/><path d="M16 8.3a4.5 4.5 0 0 1 0 7.4v-2a2.5 2.5 0 0 0 0-3.4z"/><path d="M6.2 16.3h2.6l1 3.6H7.3z"/></g></svg></div><h2>الترويج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c4"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/><path d="M8.2 5.3c1.6.4 3 .3 3.4 1.5.5 1.3-1.6 1.7-1.3 3 .3 1.4 2.6 1 2.9 2.6.3 1.5-1.8 2.3-1.4 4 .2 1 .8 1.6.6 2.4C8.3 18 5.3 15.3 5.3 12c0-2.9 1.1-5.3 2.9-6.7zM15.5 6.5c1.8 1.1 3.2 3.2 3.2 5.5 0 1.4-.4 2.7-1.1 3.8-.8-.6-.5-1.6-1.4-2.1-1-.6-2.2.3-2.5-1.1-.3-1.3 1.3-1.6 1.2-2.9-.1-1.2-1.6-1.7-1.2-2.9.3-.6 1.2-.5 1.8-.3z"/></svg></div><h2>المكان</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">قالب نموذج المزيج التسويقي 4Ps</h1>
+    <svg class="dg" viewBox="0 0 1280 720" aria-hidden="true"><g class="q q1"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q2" transform="matrix(-1 0 0 1 1280 0)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q3" transform="matrix(1 0 0 -1 0 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g><g class="q q4 on" transform="matrix(-1 0 0 -1 1280 778)"><path class="ol" d="M77,156 H544.2 Q578.2,156 534.3,178 A236,236 0 0 0 404.1,383 H77 A10,10 0 0 1 67,373 V166 A10,10 0 0 1 77,156 Z"/><path class="seg" d="M420.2,380.0 A220,220 0 0 1 631.0,169.2 L631.0,271.3 A118,118 0 0 0 522.3,380.0 Z"/></g></svg>
+    <div class="core"><p>المزيج التسويقي</p></div>
+    <p class="lbl l1">المنتج</p><p class="lbl l2">السعر</p><p class="lbl l3">الترويج</p><p class="lbl l4 on">المكان</p>
+    <div class="card c1"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="9.3" y="3" width="5.4" height="5.4" rx=".5"/><rect x="6.2" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="12.4" y="9.3" width="5.4" height="5.4" rx=".5"/><rect x="3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="9.3" y="15.6" width="5.4" height="5.4" rx=".5"/><rect x="15.6" y="15.6" width="5.4" height="5.4" rx=".5"/></svg></div><h2>المنتج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c2"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.2 8.6 18.4 5.2l.9 3.2-1.9.5-.4-1.3L8.3 10.3H6.2z"/><path fill-rule="evenodd" d="M2.5 10.6h18.4v8.6H2.5zm1.8 1.8v5h14.8v-5zm7.4.9a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2z"/></svg></div><h2>السعر</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c3"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g transform="rotate(-30 12 12)"><path d="M14 4.5v15l-6.2-4.1H4.5a1.2 1.2 0 0 1-1.2-1.2V9.8a1.2 1.2 0 0 1 1.2-1.2h3.3z"/><path d="M16 8.3a4.5 4.5 0 0 1 0 7.4v-2a2.5 2.5 0 0 0 0-3.4z"/><path d="M6.2 16.3h2.6l1 3.6H7.3z"/></g></svg></div><h2>الترويج</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+    <div class="card c4 on"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/><path d="M8.2 5.3c1.6.4 3 .3 3.4 1.5.5 1.3-1.6 1.7-1.3 3 .3 1.4 2.6 1 2.9 2.6.3 1.5-1.8 2.3-1.4 4 .2 1 .8 1.6.6 2.4C8.3 18 5.3 15.3 5.3 12c0-2.9 1.1-5.3 2.9-6.7zM15.5 6.5c1.8 1.1 3.2 3.2 3.2 5.5 0 1.4-.4 2.7-1.1 3.8-.8-.6-.5-1.6-1.4-2.1-1-.6-2.2.3-2.5-1.1-.3-1.3 1.3-1.6 1.2-2.9-.1-1.2-1.6-1.7-1.2-2.9.3-.6 1.2-.5 1.8-.3z"/></svg></div><h2>المكان</h2><p>أضف النص المطلوب هنا.
+هذا نص توضيحي.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 5</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

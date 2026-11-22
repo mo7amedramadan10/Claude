@@ -1,0 +1,21 @@
+{
+  "key": "sl-5-level-process-model",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "📶",
+  "name": "نموذج عملية بخمسة مستويات",
+  "nameEn": "5-Level Process Model",
+  "description": "شريحتان لجدول عملية متدرّج بخمسة مستويات وأدوار: نسخة فاتحة ونسخة داكنة",
+  "descriptionEn": "Two slides of a five-level stepped process table with roles: light and dark versions",
+  "sections": [
+    {
+      "title": "النسخة الفاتحة",
+      "titleEn": "Light Version"
+    },
+    {
+      "title": "النسخة الداكنة",
+      "titleEn": "Dark Version"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الأعمدة k1–k5 والصفوف r1–r4 أصناف مواضع، والشريحة الثانية نسخة داكنة من الأولى."
+}

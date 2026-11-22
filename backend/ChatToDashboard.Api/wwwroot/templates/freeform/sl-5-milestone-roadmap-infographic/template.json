@@ -1,0 +1,21 @@
+{
+  "key": "sl-5-milestone-roadmap-infographic",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "🛣️",
+  "name": "خارطة طريق بخمس محطات",
+  "nameEn": "5-Milestone Roadmap Infographic",
+  "description": "شريحتان لخارطة طريق متعرّجة بست محطات وأيقونات: نسخة فاتحة ونسخة داكنة بالتخطيط نفسه",
+  "descriptionEn": "Two slides of a winding roadmap with six milestones and icons: a light and a dark version",
+  "sections": [
+    {
+      "title": "خارطة الطريق (فاتحة)",
+      "titleEn": "Roadmap (light)"
+    },
+    {
+      "title": "خارطة الطريق (داكنة)",
+      "titleEn": "Roadmap (dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الطريق رسم SVG مشترك (road-shape/road-center) والمحطات كتل .it1–.it6 وخطوط الربط .ln1–.ln6."
+}

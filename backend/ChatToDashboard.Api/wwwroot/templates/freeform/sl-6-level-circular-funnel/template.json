@@ -1,0 +1,41 @@
+{
+  "key": "sl-6-level-circular-funnel",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "🌀",
+  "name": "قمع دائري بستة مستويات",
+  "nameEn": "6-Level Circular Funnel",
+  "description": "سبع شرائح لقمع حلزوني من ست حلقات ملوّنة: نظرة عامة ثم إبراز كل مستوى وعنصره على حدة",
+  "descriptionEn": "Seven slides of a 6-ring spiral funnel: overview, then each level and its item highlighted",
+  "sections": [
+    {
+      "title": "القمع كاملًا",
+      "titleEn": "Full Funnel"
+    },
+    {
+      "title": "المستوى الأول (الأصفر)",
+      "titleEn": "Level 1 (Yellow)"
+    },
+    {
+      "title": "المستوى الثاني (البرتقالي)",
+      "titleEn": "Level 2 (Orange)"
+    },
+    {
+      "title": "المستوى الثالث (الأخضر)",
+      "titleEn": "Level 3 (Green)"
+    },
+    {
+      "title": "المستوى الرابع (الأزرق المخضرّ)",
+      "titleEn": "Level 4 (Teal)"
+    },
+    {
+      "title": "المستوى الخامس (الأزرق)",
+      "titleEn": "Level 5 (Blue)"
+    },
+    {
+      "title": "المستوى السادس (الكحلي)",
+      "titleEn": "Level 6 (Navy)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ القمع رسم SVG من ست حلقات، والصنف on على الحلقة والعنصر يحدد المستوى المُبرز في كل شريحة."
+}

@@ -1,0 +1,33 @@
+{
+  "key": "sl-4-business-strategy-perspectives",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🎯",
+  "name": "منظورات استراتيجية الأعمال",
+  "nameEn": "Business Strategy Perspectives",
+  "description": "خمس شرائح لأربعة منظورات استراتيجية حول دائرة مركزية: نظرة عامة ثم إبراز كل منظور على حدة",
+  "descriptionEn": "Five slides of four strategy perspectives around a central circle: overview, then each highlighted",
+  "sections": [
+    {
+      "title": "المنظورات الأربعة",
+      "titleEn": "All Four Perspectives"
+    },
+    {
+      "title": "منظور العملاء",
+      "titleEn": "Customer Perspective"
+    },
+    {
+      "title": "منظور العمليات الداخلية",
+      "titleEn": "Internal Processes Perspective"
+    },
+    {
+      "title": "المنظور المالي",
+      "titleEn": "Financial Perspective"
+    },
+    {
+      "title": "منظور التعلّم والنمو",
+      "titleEn": "Learning & Growth Perspective"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الأسهم والدائرة رسم SVG والصنف off يرمّد المنظورات غير المُبرزة في كل شريحة."
+}

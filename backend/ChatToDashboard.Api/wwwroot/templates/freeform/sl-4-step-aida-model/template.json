@@ -1,0 +1,33 @@
+{
+  "key": "sl-4-step-aida-model",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🔻",
+  "name": "نموذج أيدا بأربع خطوات",
+  "nameEn": "4-Step AIDA Model",
+  "description": "خمس شرائح لقمع أيدا الملوّن (الوعي، الاهتمام، الرغبة، الفعل) بعمودي نص: نظرة عامة ثم إبراز كل مرحلة",
+  "descriptionEn": "Five slides of a colored AIDA funnel (Awareness, Interest, Desire, Action) with text columns: overview, then each stage",
+  "sections": [
+    {
+      "title": "النموذج كاملًا",
+      "titleEn": "Full Model"
+    },
+    {
+      "title": "المرحلة الأولى: الوعي",
+      "titleEn": "Stage 1: Awareness"
+    },
+    {
+      "title": "المرحلة الثانية: الاهتمام",
+      "titleEn": "Stage 2: Interest"
+    },
+    {
+      "title": "المرحلة الثالثة: الرغبة",
+      "titleEn": "Stage 3: Desire"
+    },
+    {
+      "title": "المرحلة الرابعة: الفعل",
+      "titleEn": "Stage 4: Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ القمع رسم SVG والصنف off يرمّد المرحلة والعنوان والنص غير المُبرزين في كل شريحة."
+}

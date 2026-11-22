@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نموذج عملية بخمسة مستويات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «نموذج عملية بخمسة مستويات»: عنوان أعلى، عمود تسميات داكن وخمسة أعمدة برؤوس ملوّنة متصاعدة كالدرج مع دائرة مرقّمة، أربعة صفوف خلايا رمادية، وأسهم أدوار ملوّنة أسفل الأعمدة. الشريحة الثانية نسخة داكنة الخلفية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #1B1B1B; --ink-2: #3A3A3A; --accent: #72AFDB; --c1: #72AFDB; --c2: #F24F52; --c3: #FA772F; --c4: #906DD5; --c5: #8053B2; --cell: #F2F2F2; --label: #595959; --dark: #262626; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 44px; inset-inline-start: 65px; margin: 0; font-size: 40px; font-weight: 300; line-height: 1.2; color: var(--ink); letter-spacing: -0.3px; }
+  html[lang="ar"] .ttl { font-weight: 400; letter-spacing: 0; }
+  .frame.s2 { background: var(--dark); } .s2 .ttl { color: #fff; }
+  /* الأعمدة الخمسة: لون وموضع */
+  .k1 { --c: var(--c1); --x: 257px; } .ch.k1 { --c: #5DB6DE; } .k2 { --c: var(--c2); --x: 450px; } .k3 { --c: var(--c3); --x: 643px; } .k4 { --c: var(--c4); --x: 836px; } .k5 { --c: var(--c5); --x: 1029px; }
+  /* رأس العمود المتدرّج */
+  .hd { position: absolute; inset-inline-start: var(--x); width: 186px; top: var(--t); height: calc(307px - var(--t)); background: var(--c); }
+  .k1.hd { --t: 239px; } .k2.hd { --t: 211px; } .k3.hd { --t: 184px; } .k4.hd { --t: 156px; } .k5.hd { --t: 129px; }
+  .hd h2 { position: absolute; bottom: 13px; inset-inline: 0; margin: 0; text-align: center; color: #fff; font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .hd .num { position: absolute; top: -38px; inset-inline-start: 63px; width: 60px; height: 60px; border-radius: 50%; background: #fff; border: 3px solid var(--c); color: var(--c); font-size: 20px; font-weight: 700; display: grid; place-items: center; line-height: 1; }
+  /* الصفوف */
+  .r1 { --y: 313px; } .r2 { --y: 388px; } .r3 { --y: 463px; } .r4 { --y: 538px; }
+  .lb { position: absolute; top: var(--y); inset-inline-start: 64px; width: 186px; height: 68px; margin: 0; background: var(--label); color: #fff; font-size: 18px; line-height: 1.2; padding-inline-start: 11px; display: flex; align-items: center; }
+  .cell { position: absolute; top: var(--y); inset-inline-start: var(--x); width: 186px; height: 68px; margin: 0; background: var(--cell); color: var(--ink-2); font-size: 15px; line-height: 19px; padding: 0 15px; display: flex; align-items: center; }
+  /* أسهم الأدوار: مستطيل برأس مدبّب في جهة النهاية؛ يُعكس للعربية */
+  .ch { position: absolute; top: 613px; inset-inline-start: var(--x); width: 186px; height: 50px; margin: 0; background: var(--c); clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); color: #fff; font-size: 17px; font-weight: 700; line-height: 1.2; display: flex; align-items: center; justify-content: center; padding-inline-end: 12px; }
+  html[dir="rtl"] .ch { clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب جدول نموذج العملية المتنامية</h1>
+    <div class="hd k1"><span class="num">01</span><h2>عدّل النص</h2></div>
+    <div class="hd k2"><span class="num">02</span><h2>عدّل النص</h2></div>
+    <div class="hd k3"><span class="num">03</span><h2>عدّل النص</h2></div>
+    <div class="hd k4"><span class="num">04</span><h2>عدّل النص</h2></div>
+    <div class="hd k5"><span class="num">05</span><h2>عدّل النص</h2></div>
+    <p class="lb r1">عدّل النص هنا</p><p class="cell r1 k1">أضف النص المطلوب هنا.</p><p class="cell r1 k2">أضف النص المطلوب هنا.</p><p class="cell r1 k3">أضف النص المطلوب هنا.</p><p class="cell r1 k4">أضف النص المطلوب هنا.</p><p class="cell r1 k5">أضف النص المطلوب هنا.</p>
+    <p class="lb r2">عدّل النص هنا</p><p class="cell r2 k1">أضف النص المطلوب هنا.</p><p class="cell r2 k2">أضف النص المطلوب هنا.</p><p class="cell r2 k3">أضف النص المطلوب هنا.</p><p class="cell r2 k4">أضف النص المطلوب هنا.</p><p class="cell r2 k5">أضف النص المطلوب هنا.</p>
+    <p class="lb r3">عدّل النص هنا</p><p class="cell r3 k1">أضف النص المطلوب هنا.</p><p class="cell r3 k2">أضف النص المطلوب هنا.</p><p class="cell r3 k3">أضف النص المطلوب هنا.</p><p class="cell r3 k4">أضف النص المطلوب هنا.</p><p class="cell r3 k5">أضف النص المطلوب هنا.</p>
+    <p class="lb r4">عدّل النص هنا</p><p class="cell r4 k1">أضف النص المطلوب هنا.</p><p class="cell r4 k2">أضف النص المطلوب هنا.</p><p class="cell r4 k3">أضف النص المطلوب هنا.</p><p class="cell r4 k4">أضف النص المطلوب هنا.</p><p class="cell r4 k5">أضف النص المطلوب هنا.</p>
+    <p class="ch k1">عدّل الدور هنا</p><p class="ch k2">عدّل الدور هنا</p><p class="ch k3">عدّل الدور هنا</p><p class="ch k4">عدّل الدور هنا</p><p class="ch k5">عدّل الدور هنا</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب جدول نموذج العملية المتنامية</h1>
+    <div class="hd k1"><span class="num">01</span><h2>عدّل النص</h2></div>
+    <div class="hd k2"><span class="num">02</span><h2>عدّل النص</h2></div>
+    <div class="hd k3"><span class="num">03</span><h2>عدّل النص</h2></div>
+    <div class="hd k4"><span class="num">04</span><h2>عدّل النص</h2></div>
+    <div class="hd k5"><span class="num">05</span><h2>عدّل النص</h2></div>
+    <p class="lb r1">عدّل النص هنا</p><p class="cell r1 k1">أضف النص المطلوب هنا.</p><p class="cell r1 k2">أضف النص المطلوب هنا.</p><p class="cell r1 k3">أضف النص المطلوب هنا.</p><p class="cell r1 k4">أضف النص المطلوب هنا.</p><p class="cell r1 k5">أضف النص المطلوب هنا.</p>
+    <p class="lb r2">عدّل النص هنا</p><p class="cell r2 k1">أضف النص المطلوب هنا.</p><p class="cell r2 k2">أضف النص المطلوب هنا.</p><p class="cell r2 k3">أضف النص المطلوب هنا.</p><p class="cell r2 k4">أضف النص المطلوب هنا.</p><p class="cell r2 k5">أضف النص المطلوب هنا.</p>
+    <p class="lb r3">عدّل النص هنا</p><p class="cell r3 k1">أضف النص المطلوب هنا.</p><p class="cell r3 k2">أضف النص المطلوب هنا.</p><p class="cell r3 k3">أضف النص المطلوب هنا.</p><p class="cell r3 k4">أضف النص المطلوب هنا.</p><p class="cell r3 k5">أضف النص المطلوب هنا.</p>
+    <p class="lb r4">عدّل النص هنا</p><p class="cell r4 k1">أضف النص المطلوب هنا.</p><p class="cell r4 k2">أضف النص المطلوب هنا.</p><p class="cell r4 k3">أضف النص المطلوب هنا.</p><p class="cell r4 k4">أضف النص المطلوب هنا.</p><p class="cell r4 k5">أضف النص المطلوب هنا.</p>
+    <p class="ch k1">عدّل الدور هنا</p><p class="ch k2">عدّل الدور هنا</p><p class="ch k3">عدّل الدور هنا</p><p class="ch k4">عدّل الدور هنا</p><p class="ch k5">عدّل الدور هنا</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

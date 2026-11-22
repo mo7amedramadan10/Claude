@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خارطة طريق مستقبلية منحنية بخمس خطوات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «خارطة طريق مستقبلية منحنية بخمس خطوات»: مسار SVG من مقاطع متدرّجة ينتهي بسهم، دبابيس خريطة بظلال، وخمس بطاقات رمادية بترويسات ملوّنة (وردي إلى بنفسجي) وذيل مثلث. الرسم يُعكس أفقيًا في العربية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #1F1F1F; --ink-2: #2B2B2B; --accent: #7C6D8E; --pink: #A68791; --purple: #69628A; --card: #F2F2F2; --shadow: #A5A5A5; --c1: #A98891; --c2: #7D6F92; --c3: #8A768F; --c4: #73698B; --c5: #69628B; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 42px; inset-inline-start: 64px; margin: 0; font-size: 40px; font-weight: 400; line-height: 1.2; color: var(--ink); letter-spacing: -0.3px; white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 500; }
+  /* الرسم الزخرفي (المسار والسهم والدبابيس والخطوط المنقّطة) يملأ الإطار ويُعكس في العربية */
+  .art { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .art { transform: scaleX(-1); }
+  .art .sh { fill: var(--shadow); }
+  .art .dots { fill: none; stroke: #B49AA3; stroke-width: 3.2; stroke-linecap: round; stroke-dasharray: 0 8; }
+  /* البطاقات: ترويسة ملوّنة ونص متوسّط وذيل مثلث أسفل المنتصف */
+  .card { position: absolute; width: 163px; height: 167px; background: var(--card); border-radius: 8px; text-align: center; }
+  .card::after { content: ""; position: absolute; bottom: -12px; inset-inline: 0; margin-inline: auto; width: 0; height: 0; border-inline: 11px solid transparent; border-top: 12px solid var(--card); }
+  .card h2 { margin: 0; height: 33px; line-height: 33px; border-start-start-radius: 8px; border-start-end-radius: 8px; font-size: 18px; font-weight: 700; color: #FFFFFF; }
+  .card p { margin: 0; padding: 11px 14px 0; font-size: 16.5px; line-height: 22.5px; color: var(--ink-2); }
+  .c1 { top: 167px; inset-inline-start: 88px; } .c1 h2 { background: var(--c1); }
+  .c2 { top: 98px; inset-inline-start: 457px; } .c2 h2 { background: var(--c2); }
+  .c3 { top: 505px; inset-inline-start: 300px; } .c3 h2 { background: var(--c3); }
+  .c4 { top: 198px; inset-inline-start: 787px; } .c4 h2 { background: var(--c4); }
+  .c5 { top: 167px; inset-inline-start: 995px; } .c5 h2 { background: var(--c5); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="rg1" gradientUnits="userSpaceOnUse" x1="62" y1="0" x2="252" y2="0"><stop offset="0" stop-color="#A68791"/><stop offset="1" stop-color="#69628A"/></linearGradient><linearGradient id="rg2" gradientUnits="userSpaceOnUse" x1="268" y1="0" x2="484" y2="0"><stop offset="0" stop-color="#A68791"/><stop offset="1" stop-color="#69628A"/></linearGradient><linearGradient id="rg3" gradientUnits="userSpaceOnUse" x1="497" y1="0" x2="777" y2="0"><stop offset="0" stop-color="#A68791"/><stop offset="1" stop-color="#69628A"/></linearGradient><linearGradient id="rg4" gradientUnits="userSpaceOnUse" x1="623" y1="0" x2="838" y2="0"><stop offset="0" stop-color="#A68791"/><stop offset="1" stop-color="#69628A"/></linearGradient><linearGradient id="rg5" gradientUnits="userSpaceOnUse" x1="847" y1="0" x2="1216" y2="0"><stop offset="0" stop-color="#A68791"/><stop offset="1" stop-color="#69628A"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب خارطة طريق مستقبلية منحنية بخمس خطوات</h1>
+    <svg class="art" viewBox="0 0 1280 720" aria-hidden="true"><path d="M62.8,553.8 253.2,470.7 250.8,465.3 61.2,550.2Z" fill="url(#rg1)"/><path d="M268.8,464.4 485.2,388.3 482.8,381.7 267.2,459.6Z" fill="url(#rg2)"/><path d="M497.9,382.9 569.1,361.0 600.8,352.4 622.2,347.8 640.0,344.8 675.7,341.5 689.7,341.5 703.0,343.0 716.3,346.2 728.7,350.5 738.4,355.1 742.2,357.7 754.4,372.6 775.6,351.4 768.5,343.8 762.0,338.2 753.3,333.2 746.7,331.1 736.8,329.6 722.3,329.0 696.8,329.6 678.6,330.9 660.3,332.9 642.2,335.8 595.6,346.5 549.0,359.6 496.1,377.1Z" fill="url(#rg3)"/><path d="M739.4,399.4 733.0,409.2 721.5,424.3 694.2,455.9 678.4,471.5 656.7,485.8 651.2,490.0 646.1,495.1 640.2,502.7 635.5,510.7 631.9,518.9 629.3,527.2 627.7,535.4 627.0,544.0 627.4,553.2 629.2,562.8 631.8,569.4 635.8,576.0 638.5,579.2 644.5,584.3 650.6,588.1 662.2,593.5 679.2,599.9 684.5,601.3 691.9,602.1 743.1,603.8 760.7,603.5 774.9,602.4 790.0,600.2 808.6,596.6 829.3,590.8 839.2,553.4 825.8,556.5 799.0,563.9 776.9,567.3 755.8,568.6 719.8,568.3 692.4,566.7 669.7,557.3 665.4,554.8 663.5,552.9 662.3,548.6 661.7,544.0 662.5,532.6 665.5,522.7 669.9,514.9 674.9,509.8 696.9,492.8 704.6,485.0 716.9,470.9 745.8,434.4 754.9,421.1 767.8,400.0 779.1,384.8Z" fill="url(#rg4)"/><path d="M857,548 Q985,516 1108,467 L1121,444 L1216,456 L1088,534 L1095,515 Q975,555 847,592 Z" fill="url(#rg5)"/><path class="dots" d="M169,354V408 M383,478V500 M868,386L762,517 M1076,354V390"/><ellipse class="sh" cx="165" cy="474.5" rx="22" ry="5"/><path d="M165,415 c-11,0 -20,9 -20,20 c0,14 20,27 20,27 c0,0 20,-13 20,-27 c0,-11 -9,-20 -20,-20z" fill="var(--c1)"/><circle cx="165" cy="434" r="7.5" fill="#FFFFFF"/><ellipse class="sh" cx="538" cy="349.5" rx="22" ry="5"/><path d="M538,290 c-11,0 -20,9 -20,20 c0,14 20,27 20,27 c0,0 20,-13 20,-27 c0,-11 -9,-20 -20,-20z" fill="var(--c2)"/><circle cx="538" cy="309" r="7.5" fill="#FFFFFF"/><ellipse class="sh" cx="380" cy="466.5" rx="22" ry="5"/><path d="M380,407 c-11,0 -20,9 -20,20 c0,14 20,27 20,27 c0,0 20,-13 20,-27 c0,-11 -9,-20 -20,-20z" fill="var(--c3)"/><circle cx="380" cy="426" r="7.5" fill="#FFFFFF"/><ellipse class="sh" cx="730" cy="546.5" rx="22" ry="5"/><path d="M730,487 c-11,0 -20,9 -20,20 c0,14 20,27 20,27 c0,0 20,-13 20,-27 c0,-11 -9,-20 -20,-20z" fill="var(--c4)"/><circle cx="730" cy="506" r="7.5" fill="#FFFFFF"/><ellipse class="sh" cx="1075" cy="453.5" rx="22" ry="5"/><path d="M1075,394 c-11,0 -20,9 -20,20 c0,14 20,27 20,27 c0,0 20,-13 20,-27 c0,-11 -9,-20 -20,-20z" fill="var(--c5)"/><circle cx="1075" cy="413" r="7.5" fill="#FFFFFF"/></svg>
+    <div class="card c1"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card c2"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card c3"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card c4"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="card c5"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 1</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

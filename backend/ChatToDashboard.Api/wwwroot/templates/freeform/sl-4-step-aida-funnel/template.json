@@ -1,0 +1,33 @@
+{
+  "key": "sl-4-step-aida-funnel",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "🔽",
+  "name": "قمع أيدا بأربع خطوات",
+  "nameEn": "4-Step AIDA Funnel",
+  "description": "خمس شرائح لقمع أيدا (الوعي، الاهتمام، الرغبة، الفعل): نظرة عامة ثم إبراز كل مرحلة على حدة",
+  "descriptionEn": "Five slides of the AIDA funnel (Awareness, Interest, Desire, Action): overview, then each stage highlighted",
+  "sections": [
+    {
+      "title": "القمع كاملًا",
+      "titleEn": "Full Funnel"
+    },
+    {
+      "title": "المرحلة الأولى: الوعي",
+      "titleEn": "Stage 1: Awareness"
+    },
+    {
+      "title": "المرحلة الثانية: الاهتمام",
+      "titleEn": "Stage 2: Interest"
+    },
+    {
+      "title": "المرحلة الثالثة: الرغبة",
+      "titleEn": "Stage 3: Desire"
+    },
+    {
+      "title": "المرحلة الرابعة: الفعل",
+      "titleEn": "Stage 4: Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ القمع رسم SVG والصنف off يرمّد المرحلة والصف غير المُبرزين في كل شريحة."
+}

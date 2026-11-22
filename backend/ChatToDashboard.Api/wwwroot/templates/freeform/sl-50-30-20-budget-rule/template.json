@@ -1,0 +1,33 @@
+{
+  "key": "sl-50-30-20-budget-rule",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💰",
+  "name": "قاعدة الميزانية 50-30-20",
+  "nameEn": "50-30-20 Budget Rule",
+  "description": "أربع شرائح لحلقة الميزانية 50-30-20: نظرة عامة ثم إبراز الاحتياجات والرغبات والمدخرات",
+  "descriptionEn": "Four slides of the 50-30-20 budget donut: overview, then needs, wants and savings highlighted",
+  "sections": [
+    {
+      "title": "القاعدة كاملة",
+      "titleEn": "Full Rule",
+      "needsData": true
+    },
+    {
+      "title": "الاحتياجات (50٪)",
+      "titleEn": "Needs (50%)",
+      "needsData": true
+    },
+    {
+      "title": "الرغبات (30٪)",
+      "titleEn": "Wants (30%)",
+      "needsData": true
+    },
+    {
+      "title": "المدخرات (20٪)",
+      "titleEn": "Savings (20%)",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ نسب الحلقة في كتلة JSON بالمعرّف chart-data (values) وتُرسم بـ JS، والسمة data-on على الرسم والصنف off على العناصر يحددان القطاع المُبرز في كل شريحة."
+}

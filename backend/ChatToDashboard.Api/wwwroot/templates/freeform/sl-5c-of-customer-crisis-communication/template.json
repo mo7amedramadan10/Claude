@@ -1,0 +1,25 @@
+{
+  "key": "sl-5c-of-customer-crisis-communication",
+  "kind": "slides",
+  "category": "cx",
+  "icon": "📣",
+  "name": "العناصر الخمسة للتواصل في الأزمات",
+  "nameEn": "5C of Customer Crisis Communication",
+  "description": "ثلاث شرائح للعناصر الخمسة (الوضوح، التعاطف، الاتساق، المصداقية، التحكم): خماسي، بطاقات متسلسلة، معيّنات",
+  "descriptionEn": "Three slides of the 5C (clarity, compassion, consistency, credibility, control): pentagon, cards, diamonds",
+  "sections": [
+    {
+      "title": "الخماسي حول الدائرة",
+      "titleEn": "Pentagon Around the Core"
+    },
+    {
+      "title": "البطاقات المتسلسلة",
+      "titleEn": "Sequential Cards"
+    },
+    {
+      "title": "المعيّنات المتعرّجة",
+      "titleEn": "Zigzag Diamonds"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الخماسي والموصّل رسوم SVG، والألوان الخمسة في متغيّرات --c-* وتسميات العناصر مكررة في الشرائح الثلاث."
+}
