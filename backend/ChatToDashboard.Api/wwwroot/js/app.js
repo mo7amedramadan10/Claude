@@ -13465,7 +13465,7 @@ function awKey(kind, id) { return `${kind}:${id}`; }
 function awItems() {
   const q = AW.q.trim().toLowerCase();
   if (AW.cat === 'raw') return WIZARD_KINDS.filter(k => !q || k.label.includes(q)).map(k => ({ key: awKey('raw', k.kind), kind: 'raw', id: k.kind, title: k.label, desc: 'تختار المصدر والمقياس بنفسك في خطوات', icon: k.icon }));
-  if (AW.cat === 'ready') return TEMPLATES.filter(t => !q || t.title.toLowerCase().includes(q) || (t.desc || '').toLowerCase().includes(q)).map(t => ({ key: awKey('widget', t.id), kind: 'widget', id: t.id, title: t.title, desc: t.desc, icon: t.cat === 'kpi' ? '🔢' : t.cat === 'table' ? '📋' : '📊', type: t.cat === 'kpi' ? 'kpi' : t.cat === 'table' ? 'table' : 'bar' }));
+  if (AW.cat === 'ready') return TEMPLATES.filter(t => !q || t.title.toLowerCase().includes(q) || (t.desc || '').toLowerCase().includes(q)).map(t => ({ key: awKey('widget', t.id), kind: 'widget', id: t.id, title: t.title, desc: t.desc, icon: t.cat === 'kpi' ? '🔢' : t.cat === 'table' ? '📋' : '📊', type: t.cat === 'kpi' ? 'kpi' : t.cat === 'table' ? 'table' : 'bar', peek: awReadyShape(t) }));
   if (!KPI_LIB) return [];
   const out = [];
   for (let i = 0; i < KPI_LIB.rows.length; i++) {
@@ -13478,10 +13478,100 @@ function awItems() {
   }
   return out;
 }
+// ---------- معاينة شكل العنصر عند التحويم (نافذة «إضافة عناصر») ----------
+// شكل الرسم لعنصر جاهز من الكتالوج: الأيقونة ثم كلمات العنوان، لأن الكتالوج لا يحمل نوع الرسم صراحة
+function awReadyShape(t) {
+  const ic = (t.icon || '').toLowerCase(), ti = (t.title || '') + ' ' + (t.desc || '');
+  if (t.cat === 'kpi') return 'kpi';
+  if (t.cat === 'table' || /جدول/.test(ti)) return 'table';
+  if (ic === 'filter' || /قمع|مراحل/.test(ti)) return 'funnel';
+  if (ic === 'share' || /توزيع|دائري|حصة/.test(ti)) return 'pie';
+  if (ic === 'chart' || ic === 'calendar' || /نمو|اتجاه|شهري|خطي|سنوي|زمن/.test(ti)) return 'line';
+  return 'bar';
+}
+// رقم توضيحي بحسب نوع القياس في مكتبة المؤشرات
+function awSampleValue(mtype) {
+  switch (mtype) {
+    case 'نسبة': return { v: '72.4٪', d: '▲ 3.1 نقطة' };
+    case 'زمن / مدة': return { v: '4.2 يوم', d: '▼ 0.6 يوم' };
+    case 'قيمة مالية': return { v: '3.7M', d: '▲ 8.5٪', unit: 'ر.س' };
+    case 'درجة / مؤشر رأي': return { v: '8.6 / 10', d: '▲ 0.3' };
+    case 'عدد': return { v: '1,284', d: '▲ 12.0٪' };
+    default: return { v: '96.1', d: '◆ 0٪' };
+  }
+}
+// رسوم SVG صغيرة بأرقام توضيحية ثابتة، بألوان الهوية
+function awPeekSvg(shape) {
+  const c1 = 'var(--chart-1, #1f6feb)', c2 = 'var(--chart-2, #7cc4ff)', c3 = 'var(--chart-3, #f59e0b)', c4 = 'var(--chart-4, #10b981)', ln = 'var(--line, #e5e7eb)', ink = 'var(--ink-3, #6b7280)';
+  const W = 240, H = 110;
+  if (shape === 'bar') {
+    const vals = [86, 64, 52, 38, 24], labels = ['الرياض', 'جدة', 'الدمام', 'مكة', 'أبها'];
+    return `<svg viewBox="0 0 ${W} ${H}" direction="ltr">${vals.map((v, i) => { const y = 6 + i * 21, w = v * 1.6; return `<text x="${W - 4}" y="${y + 11}" font-size="9" fill="${ink}" text-anchor="end">${labels[i]}</text><rect x="${W - 44 - w}" y="${y}" width="${w}" height="14" rx="4" fill="${i ? c2 : c1}"/><text x="${W - 48 - w}" y="${y + 11}" font-size="9" fill="${ink}" text-anchor="end">${v}</text>`; }).join('')}</svg>`;
+  }
+  if (shape === 'line') {
+    const pts = [30, 42, 38, 55, 60, 72, 68, 84, 90, 98, 94, 105].map((v, i) => [12 + i * 19.5, H - 12 - v * 0.8]);
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    return `<svg viewBox="0 0 ${W} ${H}" direction="ltr">${[0, 1, 2].map(i => `<line x1="8" x2="${W - 8}" y1="${12 + i * 30}" y2="${12 + i * 30}" stroke="${ln}"/>`).join('')}<path d="${d} L${pts[11][0]} ${H - 8} L${pts[0][0]} ${H - 8} Z" fill="${c1}" opacity=".12"/><path d="${d}" fill="none" stroke="${c1}" stroke-width="2.2" stroke-linejoin="round"/>${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.6" fill="#fff" stroke="${c1}" stroke-width="1.6"/>`).join('')}</svg>`;
+  }
+  if (shape === 'pie') {
+    const parts = [[42, c1], [27, c2], [19, c3], [12, c4]], labels = ['مباشر', 'موزّعون', 'إلكتروني', 'أخرى']; let a = -Math.PI / 2; const cx = 60, cy = 55, r = 42, ri = 26;
+    const arcs = parts.map(([pc, col]) => { const a2 = a + pc / 100 * Math.PI * 2; const p = (ang, rad) => [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)]; const [x1, y1] = p(a, r), [x2, y2] = p(a2, r), [x3, y3] = p(a2, ri), [x4, y4] = p(a, ri); const big = pc > 50 ? 1 : 0; const d = `M${x1} ${y1} A${r} ${r} 0 ${big} 1 ${x2} ${y2} L${x3} ${y3} A${ri} ${ri} 0 ${big} 0 ${x4} ${y4} Z`; a = a2; return `<path d="${d}" fill="${col}"/>`; }).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" direction="ltr">${arcs}<text x="${cx}" y="${cy + 4}" font-size="11" font-weight="700" fill="#1f2430" text-anchor="middle">100٪</text>${parts.map(([pc, col], i) => `<rect x="${W - 14}" y="${18 + i * 20}" width="9" height="9" rx="2" fill="${col}"/><text x="${W - 20}" y="${26 + i * 20}" font-size="9" fill="${ink}" text-anchor="end">${labels[i]} · ${pc}٪</text>`).join('')}</svg>`;
+  }
+  if (shape === 'funnel') {
+    const st = [[100, 'عرض'], [74, 'تأهيل'], [48, 'تفاوض'], [26, 'إغلاق']];
+    return `<svg viewBox="0 0 ${W} ${H}" direction="ltr">${st.map(([v, l], i) => { const w = 150 * v / 100, x = (W - 60 - w) / 2; return `<rect x="${x}" y="${8 + i * 25}" width="${w}" height="18" rx="4" fill="${[c1, c2, c3, c4][i]}"/><text x="${W - 4}" y="${21 + i * 25}" font-size="9" fill="${ink}" text-anchor="end">${l} · ${v}٪</text>`; }).join('')}</svg>`;
+  }
+  if (shape === 'table') {
+    const rows = [['الصنف', 'الكمية', 'الإيراد'], ['أ-102', '240', '48,000'], ['ب-311', '180', '31,500'], ['ج-078', '95', '19,200']];
+    return `<svg viewBox="0 0 ${W} ${H}" direction="ltr"><rect x="4" y="6" width="${W - 8}" height="20" rx="4" fill="var(--surface-2, #f3f5f7)"/>${rows.map((r, i) => r.map((cell, j) => `<text x="${W - 12 - j * 78}" y="${20 + i * 24}" font-size="${i ? 10 : 9.5}" font-weight="${i ? 400 : 700}" fill="${i ? '#1f2430' : ink}" text-anchor="end">${cell}</text>`).join('') + (i ? `<line x1="4" x2="${W - 4}" y1="${28 + i * 24}" y2="${28 + i * 24}" stroke="${ln}"/>` : '')).join('')}</svg>`;
+  }
+  return '';
+}
+function awPeekHtml(it) {
+  let shape = it.kind === 'kpi' ? 'kpi' : it.kind === 'raw' ? ({ comparison: 'bar', trend: 'line', kpi: 'kpi', distribution: 'pie', table: 'table' })[it.id] || 'bar' : it.peek || it.type || 'bar';
+  const note = it.kind === 'kpi' ? 'أرقام توضيحية — القيمة الفعلية تُحسب من بياناتك بعد الإضافة' : it.kind === 'raw' ? 'تختار المصدر والمقياس بنفسك، وهذا الشكل الناتج' : 'أرقام توضيحية — يُبنى من بياناتك بعد الإضافة';
+  if (shape === 'kpi') {
+    const sv = awSampleValue(it.tag || '');
+    const spark = [40, 46, 44, 52, 58, 56, 64, 70].map((v, i) => [i * 12, 30 - v * 0.4]);
+    return `<div class="aw-peek-kpi"><small>${esc(it.title)}</small><b>${esc(sv.v)}${sv.unit ? ` <span>${esc(sv.unit)}</span>` : ''}</b><em class="${/▼/.test(sv.d) ? 'down' : 'up'}">${esc(sv.d)} <span>عن الفترة السابقة</span></em><svg viewBox="0 0 84 32" direction="ltr"><path d="${spark.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--ok, #10b981)" stroke-width="2"/></svg></div><p class="aw-peek-note">${note}</p>`;
+  }
+  return `<div class="aw-peek-chart"><small>${esc(it.title)}</small>${awPeekSvg(shape)}</div><p class="aw-peek-note">${note}</p>`;
+}
+// النافذة المنبثقة: تُعرض عند التحويم أو التركيز (لوحة المفاتيح)، وعلى شاشات اللمس بزر 👁 على البطاقة
+let awPeekTimer = null, awPeekKey = null;
+function awPeekEl() { let p = el('aw-peek'); if (!p) { p = document.createElement('div'); p.id = 'aw-peek'; p.className = 'aw-peek hidden'; p.setAttribute('role', 'tooltip'); el('add-widget-modal').querySelector('.dash-gallery-box').appendChild(p); } return p; }
+function awPeekShow(card, items) {
+  const it = items.find(x => x.key === card.dataset.key); if (!it) return;
+  const peek = awPeekEl(); awPeekKey = it.key; peek.innerHTML = awPeekHtml(it); peek.classList.remove('hidden');
+  // الموضع: بجوار البطاقة من جهة البداية (اليسار في RTL) إن وُجد متسع، وإلا من الجهة الأخرى، وإلا تحتها — داخل حدود النافذة
+  const box = el('add-widget-modal').querySelector('.dash-gallery-box').getBoundingClientRect(), r = card.getBoundingClientRect();
+  const pw = peek.offsetWidth, ph = peek.offsetHeight, gap = 8; let left, top = r.top - box.top;
+  if (r.left - box.left - pw - gap >= 0) left = r.left - box.left - pw - gap;
+  else if (box.right - r.right - pw - gap >= 0) left = r.right - box.left + gap;
+  else { left = Math.max(8, Math.min(r.left - box.left, box.width - pw - 8)); top = r.bottom - box.top + gap; }
+  if (top + ph > box.height - 8) top = Math.max(8, box.height - ph - 8);
+  peek.style.left = left + 'px'; peek.style.top = top + 'px';
+}
+function awPeekHide() { clearTimeout(awPeekTimer); awPeekTimer = null; awPeekKey = null; const p = el('aw-peek'); if (p) p.classList.add('hidden'); }
+function awBindPeek(grid, items) {
+  const touch = window.matchMedia && window.matchMedia('(hover: none)').matches;
+  grid.querySelectorAll('.aw-card').forEach(card => {
+    if (touch) {
+      const eye = card.querySelector('.aw-eye'); if (!eye) return;
+      eye.addEventListener('click', e => { e.stopPropagation(); if (awPeekKey === card.dataset.key) awPeekHide(); else awPeekShow(card, items); });
+      return;
+    }
+    const open = () => { clearTimeout(awPeekTimer); awPeekTimer = setTimeout(() => awPeekShow(card, items), 220); };
+    card.addEventListener('mouseenter', open); card.addEventListener('focus', open);
+    card.addEventListener('mouseleave', awPeekHide); card.addEventListener('blur', awPeekHide);
+  });
+  grid.closest('.gal-main')?.addEventListener('scroll', awPeekHide, { passive: true });
+}
 function awCardHtml(it) {
   const on = AW.sel.has(it.key);
   return `<button type="button" class="dash-card aw-card k-${it.kind === 'widget' ? 'ready' : it.kind}" data-key="${esc(it.key)}" aria-pressed="${on}" title="${on ? 'إلغاء الاختيار' : 'اختيار'}">
-    <span class="aw-check" aria-hidden="true">✓</span><span class="aw-ico" aria-hidden="true">${it.icon}</span>
+    <span class="aw-check" aria-hidden="true">✓</span><span class="aw-eye" role="button" aria-label="معاينة الشكل" title="معاينة الشكل">👁</span><span class="aw-ico" aria-hidden="true">${it.icon}</span>
     <h4>${esc(it.title)}</h4><p>${esc(it.desc || '')}</p>${it.tag ? `<span class="aw-tag">${esc(it.tag)}</span>` : ''}</button>`;
 }
 // تصنيفات مكتبة المؤشرات تظهر فرعية تحت «مكتبة المؤشرات» في الشريط الجانبي (كتصنيفات معرض اللوحات) فيُختار التصنيف ثم المؤشر
@@ -13516,7 +13606,9 @@ function awRenderGrid() {
   grid.innerHTML = slice.map(awCardHtml).join('');
   el('aw-empty').classList.toggle('hidden', items.length > 0);
   const more = el('aw-more'); more.hidden = items.length <= AW.shown; more.textContent = `عرض المزيد (${(items.length - AW.shown).toLocaleString('en-US')} متبقٍ)`;
-  grid.querySelectorAll('.aw-card').forEach(card => card.addEventListener('click', () => {
+  awPeekHide(); awBindPeek(grid, items);
+  grid.querySelectorAll('.aw-card').forEach(card => card.addEventListener('click', e => {
+    if (e.target.closest('.aw-eye')) return;
     const it = items.find(x => x.key === card.dataset.key); if (!it) return;
     if (AW.sel.has(it.key)) AW.sel.delete(it.key); else AW.sel.set(it.key, it);
     card.setAttribute('aria-pressed', String(AW.sel.has(it.key))); awRenderPicked(); awRenderCats();
@@ -13529,7 +13621,7 @@ function awRenderPicked() {
   const btn = el('aw-add'); btn.disabled = !n; btn.textContent = n ? `إضافة (${n})` : 'إضافة';
 }
 async function openAddWidgetModal() {
-  AW.sel = new Map(); AW.q = ''; AW.cat = 'raw'; AW.shown = 60; el('aw-search').value = ''; el('aw-kpi-filters').innerHTML = '';
+  AW.sel = new Map(); AW.q = ''; AW.cat = 'raw'; AW.shown = 60; el('aw-search').value = ''; el('aw-kpi-filters').innerHTML = ''; awPeekHide();
   if (!TEMPLATES.length) { try { await loadTemplateCatalog(); } catch { /* بلا نماذج */ } }
   awRenderCats(); awRenderGrid(); awRenderPicked();
   el('add-widget-modal').classList.remove('hidden');
