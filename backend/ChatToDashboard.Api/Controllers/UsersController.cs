@@ -29,11 +29,17 @@ public class UsersController : ControllerBase
         return Ok((await _users.ListByOrganizationAsync(organizationId, ct)).Select(UserStore.ToInfo));
     }
 
+    /// <summary>مستخدم عادي بشاشات محددة يحتاج شاشة واحدة على الأقل، وإلا لا يستطيع الدخول لأي شيء.</summary>
+    private static string? ScreensError(UserRequest request)
+        => request.Role != UserRoles.Admin && request.AllowedScreens is not null && (ScreenAccess.Normalize(request.AllowedScreens)?.Count ?? 0) == 0
+            ? "اختر شاشة واحدة على الأقل، أو «كل الشاشات»." : null;
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] UserRequest request, CancellationToken ct)
     {
         var error = ValidateRequest(request, isCreate: true);
         if (error is not null) return BadRequest(new { error });
+        if (ScreensError(request) is { } se) return BadRequest(new { error = se });
 
         var organizationId = OrganizationId;
         if (organizationId is null) return BadRequest(new { error = "الحساب غير مرتبط بأي منظمة." });
@@ -55,6 +61,7 @@ public class UsersController : ControllerBase
             // here — see the same note on Update below.
             AllowAllFiles = true,
             AllowedFilesJson = "[]",
+            AllowedScreensJson = request.Role == UserRoles.Admin ? null : ScreenAccess.Serialize(request.AllowedScreens),
             // New accounts join the creating admin's own organization — see the SaaS
             // hierarchy remarks on AppUser.OrganizationId. Never the platform owner by
             // default (IsPlatformOwner stays false); that's reserved for the seed account.
@@ -74,6 +81,7 @@ public class UsersController : ControllerBase
 
         var error = ValidateRequest(request, isCreate: false);
         if (error is not null) return BadRequest(new { error });
+        if (ScreensError(request) is { } se) return BadRequest(new { error = se });
 
         // Never allow the last remaining admin to demote or deactivate themselves by
         // accident — that would lock everyone out of user management. Scoped to this same
@@ -101,6 +109,8 @@ public class UsersController : ControllerBase
         // reopen a per-user file permission this screen no longer offers.
         user.AllowAllFiles = true;
         user.AllowedFilesJson = "[]";
+        // صلاحيات الشاشات: null = الكل؛ المسؤول دائمًا الكل
+        user.AllowedScreensJson = request.Role == UserRoles.Admin ? null : ScreenAccess.Serialize(request.AllowedScreens);
         if (request.AuthMethod == AuthMethods.Local && !string.IsNullOrWhiteSpace(request.Password))
             user.PasswordHash = PasswordHasher.Hash(request.Password);
         else if (request.AuthMethod == AuthMethods.ActiveDirectory)

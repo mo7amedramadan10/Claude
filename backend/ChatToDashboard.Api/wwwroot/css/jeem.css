@@ -3829,3 +3829,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* المشاهد: صندوق الكتابة معطَّل بنص يوضّح السبب */
 #screen-freeform.ff-readonly .cc-composer .input-box { background: #F3F5F7; }
 
+/* صلاحيات الشاشات: البنود غير المسموحة وأقسامها الفارغة لا تظهر */
+.screen-denied, .screen-denied-section { display: none !important; }
+#user-screens-preset { margin: 6px 0 8px; }
+

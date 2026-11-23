@@ -1914,6 +1914,16 @@
            user's file permissions live in one place instead of two. -->
       <p class="hint">صلاحيات الملفات بتتحدد من مستودع الملفات نفسه (زر 🔒 على كل ملف)، مش من هنا.</p>
 
+      <!-- صلاحيات الشاشات (ScreenAccess): للمستخدم العادي فقط؛ المسؤول يرى كل شيء. «تصميم حر فقط» = تصميم حر + الملفات -->
+      <div class="perm-block" id="user-screens-block">
+        <label class="chk-row"><input type="checkbox" id="user-allow-all-screens" checked> الوصول لكل الشاشات</label>
+        <button type="button" id="user-screens-preset" class="btn btn-ghost btn-sm">✎ تصميم حر فقط (مع الملفات)</button>
+        <div id="user-screens-wrap" class="hidden">
+          <div id="user-screens-list" class="perm-list"></div>
+          <p class="hint">يرى المستخدم الشاشات المحددة فقط في القائمة، ويرفض الخادم واجهات الشاشات الأخرى. بياناته تبقى بحسب صلاحيات الملفات والأنظمة أعلاه.</p>
+        </div>
+      </div>
+
       <div id="user-form-error" class="login-error hidden"></div>
       <div class="modal-actions">
         <button type="button" id="user-cancel">إلغاء</button>

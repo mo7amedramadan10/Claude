@@ -8075,7 +8075,30 @@ function updateCrumbs(name) {
   }).join('');
 }
 
+// ===== صلاحيات الشاشات (ScreenAccess في الخادم) =====
+// المستخدم العادي بقائمة allowedScreens يرى تلك الشاشات فقط؛ null = كل الشاشات، والمسؤول دائمًا الكل. الشاشات غير القابلة للتقييد
+// (شاشات الإدارة والمنصّة) تحميها صلاحية الدور أصلًا.
+const RESTRICTABLE_SCREENS = ['chat', 'published', 'analyst', 'decks', 'freeform', 'sources', 'repo', 'users', 'history', 'active', 'sharelinks', 'presentations', 'projects'];
+const FREEFORM_ONLY_SCREENS = ['freeform', 'repo'];
+function screenAllowed(name) {
+  const u = state.currentUser; if (!u || u.role === 'Admin' || !Array.isArray(u.allowedScreens)) return true;
+  return !RESTRICTABLE_SCREENS.includes(name) || u.allowedScreens.includes(name);
+}
+function firstAllowedScreen() { return RESTRICTABLE_SCREENS.find(screenAllowed) || 'chat'; }
+function applyScreenAccess() {
+  document.querySelectorAll('[data-screen]').forEach(b => b.classList.toggle('screen-denied', !screenAllowed(b.dataset.screen)));
+  // مجموعة في القائمة (رأس «المنظمة» وقائمتها) لم يبقَ فيها بند شاشة ظاهر تُخفى برأسها؛ مجموعة بلا بنود شاشات (الإدارة) لا تُمس
+  document.querySelectorAll('.sidebar .sb-label').forEach(lbl => {
+    const ul = lbl.nextElementSibling; if (!ul || !ul.matches('ul.nav')) return;
+    const links = [...ul.querySelectorAll('[data-screen]')].filter(a => !a.closest('.hidden') && !a.classList.contains('hidden'));
+    if (!links.length && !ul.querySelector('.screen-denied')) return;
+    const empty = links.every(a => a.classList.contains('screen-denied'));
+    lbl.classList.toggle('screen-denied-section', empty); ul.classList.toggle('screen-denied-section', empty);
+  });
+}
+
 function showScreen(name) {
+  if (!screenAllowed(name)) name = firstAllowedScreen();
   // «لوحات المتابعة» داخل تصميم حر: أي انتقال لشاشة أخرى (بما فيها «المحادثة واللوحات» من القائمة) يعيد
   // #screen-chat إلى مكانها الأصلي أولًا حتى يعمل التبديل العادي عليها.
   if (name !== 'freeform' && typeof ffTrackActive === 'function' && ffTrackActive()) ffTrackUnmount();
@@ -9131,7 +9154,7 @@ async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
   el('ff-title').textContent = 'تصميم حر'; el('ff-meta').textContent = 'اكتب طلبك في المحادثة';
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
-  try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
+  try { const r = await fetch('/api/freeform'); const j = r.ok ? await r.json() : []; FF.list = Array.isArray(j) ? j : []; } catch { FF.list = []; } // رد غير مصفوفة (رفض صلاحية مثلًا) لا يكسر المعرض
   // «لوحات المتابعة» المحفوظة (سجل لوحات المحادثة) تظهر هنا كبطاقات مثل باقي الأنواع، وتُفتح داخل المضيف
   if (!state.historyLoaded) { try { await loadHistory(); } catch {} }
   await ffTrackLoadLinks();
@@ -10840,6 +10863,7 @@ function renderCurrentUser() {
   // AppUser.IsPlatformOwner and OrganizationsController.
   el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
   el('platform-badge').classList.toggle('hidden', !u.isPlatformOwner);
+  applyScreenAccess();
   // محادثة Claude: يظهر البند فقط لمن تسمح له إعدادات الخادم (ClaudeCli:AllowedRoles).
   ccLoadStatus();
 }
@@ -12016,6 +12040,8 @@ async function startApp() {
   await loadFiles();
   await loadTemplateCatalog();
   loadCurrentProjectNav();
+  // مستخدم مقيَّد بشاشات لا تشمل الشاشة الافتراضية يبدأ من أول شاشة مسموحة (ولا تُعرض الجولة التعريفية العامة له)
+  if (!screenAllowed(state.currentScreen || 'chat')) { showScreen(firstAllowedScreen()); return; }
   maybeAutoStartTour();
 }
 
@@ -13417,7 +13443,7 @@ function renderUsers() {
       <td>${esc(u.displayName)}</td>
       <td>${u.authMethod === 'ActiveDirectory' ? 'Active Directory' : 'محلي'}</td>
       <td><span class="role-badge${u.role === 'Admin' ? ' admin' : ''}">${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'}</span></td>
-      <td>${u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`}</td>
+      <td>${u.allowAllSystems ? 'كل الأنظمة' : `${u.allowedSystems.length} نظام`}<br><small class="muted">${esc(screensSummary(u))}</small></td>
       <td><span class="status-dot${u.isActive ? '' : ' off'}"></span>${u.isActive ? 'نشط' : 'معطّل'}</td>
       <td>
         <button class="edit-btn" data-edit="${esc(u.id)}">تعديل</button>
@@ -13445,6 +13471,29 @@ function togglePermList(listId, allCheckboxId) {
 }
 
 el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
+const SCREEN_PICK_LABELS = { freeform: 'تصميم حر', repo: 'الملفات', chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', decks: 'منشئ العروض', sources: 'المصادر', users: 'الصلاحيات', history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة', presentations: 'العروض التقديمية', projects: 'المشاريع' };
+function renderUserScreens(list) {
+  renderPermChecklist('user-screens-list', Object.keys(SCREEN_PICK_LABELS), list || [], k => k, k => SCREEN_PICK_LABELS[k]);
+}
+function syncUserScreensUi() {
+  const admin = el('user-role').value === 'Admin';
+  el('user-screens-block').classList.toggle('hidden', admin); // المسؤول يرى كل الشاشات دائمًا
+  el('user-screens-wrap').classList.toggle('hidden', el('user-allow-all-screens').checked);
+}
+el('user-allow-all-screens').addEventListener('change', () => {
+  if (!el('user-allow-all-screens').checked && !el('user-screens-list').querySelector('input:checked')) renderUserScreens(FREEFORM_ONLY_SCREENS); // بداية معقولة
+  syncUserScreensUi();
+});
+el('user-role').addEventListener('change', syncUserScreensUi);
+// «تصميم حر فقط»: الشاشتان + إيقاف الأنظمة الخارجية المشتركة، فلا يرى إلا بياناته (ملفاته وما شورك معه)؛ يمكن إعادة أي نظام يدويًا بعدها
+el('user-screens-preset').addEventListener('click', () => {
+  el('user-allow-all-screens').checked = false; renderUserScreens(FREEFORM_ONLY_SCREENS); syncUserScreensUi();
+  el('user-allow-all-systems').checked = false; el('user-systems-list').querySelectorAll('input').forEach(i => { i.checked = false; }); togglePermList('user-systems-list', 'user-allow-all-systems');
+});
+function screensSummary(u) {
+  if (u.role === 'Admin' || !Array.isArray(u.allowedScreens)) return 'كل الشاشات';
+  return u.allowedScreens.map(k => SCREEN_PICK_LABELS[k] || k).join(' · ') || '—';
+}
 el('user-authmethod').addEventListener('change', () => {
   el('user-password-row').style.display = el('user-authmethod').value === 'Local' ? '' : 'none';
 });
@@ -13466,6 +13515,8 @@ function openUserModal(user) {
   el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
   renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name);
   togglePermList('user-systems-list', 'user-allow-all-systems');
+  const scr = user && Array.isArray(user.allowedScreens) ? user.allowedScreens : null;
+  el('user-allow-all-screens').checked = !scr; renderUserScreens(scr || []); syncUserScreensUi();
 
   el('user-modal').classList.remove('hidden');
 }
@@ -13486,6 +13537,8 @@ el('user-form').addEventListener('submit', async e => {
     isActive: el('user-active').checked,
     allowAllSystems: el('user-allow-all-systems').checked,
     allowedSystems: [...el('user-systems-list').querySelectorAll('input:checked')].map(i => i.value),
+    // null = كل الشاشات
+    allowedScreens: el('user-allow-all-screens').checked || el('user-role').value === 'Admin' ? null : [...el('user-screens-list').querySelectorAll('input:checked')].map(i => i.value),
     // File permissions are managed only from "مستودع الملفات" now — the server ignores
     // these two regardless (see UsersController), but omitting them keeps the request
     // honest about what this form actually controls.

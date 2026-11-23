@@ -49,6 +49,8 @@ public class UserStore
                      // SaaS hierarchy (Platform → Organization → Project) — see AppUser's remarks.
                      ("OrganizationId", "NVARCHAR(64)"),
                      ("IsPlatformOwner", "BIT"),
+                     // صلاحيات الشاشات (null = كل الشاشات) — انظر ScreenAccess.
+                     ("AllowedScreensJson", "NVARCHAR(MAX)"),
                  })
         {
             try
@@ -268,10 +270,10 @@ public class UserStore
         await connection.ExecuteAsync(
             $"INSERT INTO {Table} (Id, Username, DisplayName, PasswordHash, AuthMethod, Role, IsActive, " +
             "AllowAllSystems, AllowedSystemsJson, AllowAllFiles, AllowedFilesJson, CreatedAt, " +
-            "OrganizationId, IsPlatformOwner) " +
+            "OrganizationId, IsPlatformOwner, AllowedScreensJson) " +
             "VALUES (@Id, @Username, @DisplayName, @PasswordHash, @AuthMethod, @Role, @IsActive, " +
             "@AllowAllSystems, @AllowedSystemsJson, @AllowAllFiles, @AllowedFilesJson, @CreatedAt, " +
-            "@OrganizationId, @IsPlatformOwner)",
+            "@OrganizationId, @IsPlatformOwner, @AllowedScreensJson)",
             user);
         _logger.LogInformation("User {Username} created ({AuthMethod}, role {Role})", user.Username, user.AuthMethod, user.Role);
         return user;
@@ -285,7 +287,7 @@ public class UserStore
             $"UPDATE {Table} SET DisplayName = @DisplayName, PasswordHash = @PasswordHash, " +
             "AuthMethod = @AuthMethod, Role = @Role, IsActive = @IsActive, AllowAllSystems = @AllowAllSystems, " +
             "AllowedSystemsJson = @AllowedSystemsJson, AllowAllFiles = @AllowAllFiles, " +
-            "AllowedFilesJson = @AllowedFilesJson WHERE Id = @Id",
+            "AllowedFilesJson = @AllowedFilesJson, AllowedScreensJson = @AllowedScreensJson WHERE Id = @Id",
             user);
     }
 
@@ -310,6 +312,7 @@ public class UserStore
         CreatedAt = user.CreatedAt,
         OrganizationId = user.OrganizationId,
         IsPlatformOwner = user.IsPlatformOwner,
+        AllowedScreens = user.Role == UserRoles.Admin ? null : ScreenAccess.Parse(user.AllowedScreensJson),
     };
 
     private static List<string> Deserialize(string? json) =>

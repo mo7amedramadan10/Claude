@@ -49,6 +49,9 @@ public class AppUser
     /// A separate flag rather than a third Role value so every existing [Authorize(Roles =
     /// UserRoles.Admin)] endpoint keeps working unchanged for an org admin who isn't one.</summary>
     public bool IsPlatformOwner { get; set; }
+
+    /// <summary>الشاشات المسموحة لمستخدم عادي (JSON قائمة مفاتيح من <see cref="ScreenAccess.Screens"/>)؛ null = كل الشاشات. لا أثر له على المسؤول.</summary>
+    public string? AllowedScreensJson { get; set; }
 }
 
 /// <summary>What the client sees — never the password hash.</summary>
@@ -67,6 +70,8 @@ public class UserInfo
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
     [JsonPropertyName("organizationId")] public string? OrganizationId { get; set; }
     [JsonPropertyName("isPlatformOwner")] public bool IsPlatformOwner { get; set; }
+    /// <summary>null = كل الشاشات.</summary>
+    [JsonPropertyName("allowedScreens")] public List<string>? AllowedScreens { get; set; }
 }
 
 public class LoginRequest
@@ -93,4 +98,6 @@ public class UserRequest
     [JsonPropertyName("allowedSystems")] public List<string> AllowedSystems { get; set; } = new();
     [JsonPropertyName("allowAllFiles")] public bool AllowAllFiles { get; set; } = true;
     [JsonPropertyName("allowedFiles")] public List<string> AllowedFiles { get; set; } = new();
+    /// <summary>الشاشات المسموحة؛ null = كل الشاشات (يُتجاهل للمسؤول).</summary>
+    [JsonPropertyName("allowedScreens")] public List<string>? AllowedScreens { get; set; }
 }

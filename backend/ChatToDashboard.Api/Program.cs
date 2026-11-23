@@ -291,6 +291,25 @@ app.UseWebSockets();
 app.UseRouting();
 app.UseMcpSessionGate();
 app.UseAuthentication();
+// صلاحيات الشاشات (ScreenAccess): مستخدم عادي مقيَّد بشاشات لا يصل إلى واجهات لا تحتاجها أيٌّ من شاشاته — 403 برسالة.
+// يُقرأ المستخدم من القاعدة فقط للمسارات المقيَّدة، فلا كلفة على غيرها.
+app.Use(async (ctx, next) =>
+{
+    var path = ctx.Request.Path.Value ?? "";
+    if (ctx.User.Identity?.IsAuthenticated == true && ChatToDashboard.Api.Users.ScreenAccess.IsGated(path)
+        && ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } uid)
+    {
+        var u = await ctx.RequestServices.GetRequiredService<ChatToDashboard.Api.Users.UserStore>().FindByIdAsync(uid, ctx.RequestAborted);
+        if (u is not null && u.Role != ChatToDashboard.Api.Users.UserRoles.Admin
+            && !ChatToDashboard.Api.Users.ScreenAccess.IsApiAllowed(path, ChatToDashboard.Api.Users.ScreenAccess.Parse(u.AllowedScreensJson)))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsJsonAsync(new { error = "ليست لديك صلاحية على هذه الشاشة — راجع مسؤول المنظمة." });
+            return;
+        }
+    }
+    await next();
+});
 app.UseAuthorization();
 
 app.MapControllers();
