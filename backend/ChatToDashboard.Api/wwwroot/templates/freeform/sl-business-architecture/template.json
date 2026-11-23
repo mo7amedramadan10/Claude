@@ -1,0 +1,21 @@
+{
+  "key": "sl-business-architecture",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🏛️",
+  "name": "هندسة الأعمال",
+  "nameEn": "Business Architecture",
+  "description": "شريحتان (فاتحة وداكنة) لمراحل هندسة الأعمال الخمس على قوس فوق ثلاثة مكعبات: القدرات والقيمة والتنظيم",
+  "descriptionEn": "Two slides (light and dark): five business architecture stages on an arc above capability, value and org cubes",
+  "sections": [
+    {
+      "title": "هندسة الأعمال (فاتحة)",
+      "titleEn": "Business Architecture (Light)"
+    },
+    {
+      "title": "هندسة الأعمال (داكنة)",
+      "titleEn": "Business Architecture (Dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الرسم SVG واحد بإحداثيات الإطار، والشريحة الثانية نسخة داكنة بقاعدة .frame.s2."
+}

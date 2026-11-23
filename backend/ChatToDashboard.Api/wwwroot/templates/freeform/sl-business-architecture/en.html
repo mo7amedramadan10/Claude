@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «هندسة الأعمال»: رسم SVG واحد بحجم الإطار (القوس والفقاعات والمكعبات والتروس والهيكل التنظيمي) يُعكس أفقيًا في العربية، وفوقه النصوص والأيقونات بوسوم HTML. الشريحة الثانية (.frame.s2) هي النسخة الداكنة بالخلفية الزرقاء. */
+  :root { --font: 'Open Sans', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #000000; --accent: #345B9C; --bg: #FFFFFF; --label: #404040; --arc: #BFBFBF; --c-d: #6FAFED; --c-a: #345B9C; --c-r: #64B5A2; --c-t: #8AB84C; --c-m: #618135; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame.s2 { --ink: #FFFFFF; --label: #FFFFFF; --arc: #24466C; background: linear-gradient(135deg, #183559 0%, #132C4A 55%, #0E233B 100%); }
+  .ttl { position: absolute; top: 38px; inset-inline-start: 64px; margin: 0; font-size: 42px; font-weight: 400; line-height: 1.2; color: var(--ink); letter-spacing: -0.3px; }
+  html[lang="ar"] .ttl { font-weight: 500; letter-spacing: 0; }
+  /* الرسم كاملًا بإحداثيات الإطار؛ يُعكس في العربية */
+  .art { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .art { transform: scaleX(-1); }
+  .art .arc { fill: none; stroke: var(--arc); stroke-width: 3; }
+  .art .disc { fill: #fff; filter: url(#ba-sh); }
+  .art .gear { stroke: #fff; stroke-width: 1.5; fill-rule: evenodd; }
+  /* المراحل: عنوان فوق كل فقاعة */
+  .lbl { position: absolute; width: 220px; margin: 0; text-align: center; font-size: 20px; font-weight: 700; line-height: 24px; color: var(--label); letter-spacing: 0.2px; }
+  html[lang="ar"] .lbl { font-size: 23px; letter-spacing: 0; }
+  .lb-d { top: 477px; inset-inline-start: 154px; } .lb-a { top: 228px; inset-inline-start: 260px; } .lb-r { top: 114px; inset-inline-start: 530px; }
+  .lb-t { top: 228px; inset-inline-start: 795px; } .lb-m { top: 477px; inset-inline-start: 904px; }
+  /* الأيقونات داخل الدوائر البيضاء */
+  .ic { position: absolute; width: 72px; height: 72px; color: #3F3F3F; }
+  .ic svg { width: 100%; height: 100%; }
+  .ic .pale { stroke: none; }
+  .ic-d { top: 546px; inset-inline-start: 228px; } .ic-a { top: 294px; inset-inline-start: 334px; } .ic-r { top: 179px; inset-inline-start: 600px; }
+  .ic-t { top: 294px; inset-inline-start: 864px; } .ic-m { top: 546px; inset-inline-start: 979px; }
+  .hub { position: absolute; top: 364px; inset-inline-start: 500px; width: 280px; margin: 0; text-align: center; font-size: 29px; font-weight: 700; line-height: 38px; color: var(--ink); }
+  /* تسميات المكعبات */
+  .bx { position: absolute; width: 200px; margin: 0; text-align: center; font-size: 20px; font-weight: 400; line-height: 23px; color: #fff; }
+  html[lang="ar"] .bx { font-size: 21px; line-height: 25px; font-weight: 500; }
+  .bx-v { top: 516px; inset-inline-start: 540px; } .bx-c { top: 608px; inset-inline-start: 385px; } .bx-o { top: 608px; inset-inline-start: 692px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="ba-sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".28"/></filter><linearGradient id="ba-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".16"/></linearGradient><linearGradient id="ba-vt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3460A2"/><stop offset="1" stop-color="#26457A"/></linearGradient><linearGradient id="ba-lt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#456AAA"/><stop offset="1" stop-color="#7598D2"/></linearGradient><linearGradient id="ba-rt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#668C34"/><stop offset="1" stop-color="#86AE4C"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="art" viewBox="0 0 1280 720" aria-hidden="true"><path class="arc" d="M367 580 A273 273 0 0 1 913 580"/><circle cx="367" cy="580" r="6.5" fill="#1A7BD9"/><circle cx="445" cy="387" r="6.5" fill="#335E93"/><circle cx="640" cy="307" r="6.5" fill="#62B5A3"/><circle cx="832" cy="387" r="6.5" fill="#8BB64D"/><circle cx="913" cy="580" r="6.5" fill="#678C3E"/><path d="M342.0 582.0 L325.2 600.7 A64 64 0 1 1 325.2 563.3 Z" fill="var(--c-d)"/><path d="M342.0 582.0 L325.2 600.7 A64 64 0 1 1 325.2 563.3 Z" fill="url(#ba-ring)"/><circle class="disc" cx="264" cy="582" r="47"/><path d="M432.3 376.9 L407.6 381.8 A64 64 0 1 1 430.1 351.9 Z" fill="var(--c-a)"/><path d="M432.3 376.9 L407.6 381.8 A64 64 0 1 1 430.1 351.9 Z" fill="url(#ba-ring)"/><circle class="disc" cx="370" cy="330" r="47"/><path d="M638.7 293.0 L619.4 276.8 A64 64 0 1 1 656.8 275.5 Z" fill="var(--c-r)"/><path d="M638.7 293.0 L619.4 276.8 A64 64 0 1 1 656.8 275.5 Z" fill="url(#ba-ring)"/><circle class="disc" cx="636" cy="215" r="47"/><path d="M840.2 380.1 L841.1 355.0 A64 64 0 1 1 865.1 383.7 Z" fill="var(--c-t)"/><path d="M840.2 380.1 L841.1 355.0 A64 64 0 1 1 865.1 383.7 Z" fill="url(#ba-ring)"/><circle class="disc" cx="900" cy="330" r="47"/><path d="M937.0 582.0 L953.8 563.3 A64 64 0 1 1 953.8 600.7 Z" fill="var(--c-m)"/><path d="M937.0 582.0 L953.8 563.3 A64 64 0 1 1 953.8 600.7 Z" fill="url(#ba-ring)"/><circle class="disc" cx="1015" cy="582" r="47"/><polygon points="515,536 640,584 640,720 515,720" fill="#3359A0"/><polygon points="640,584 765,536 765,720 640,720" fill="#7699D3"/><polygon points="515,536 640,497 765,536 640,584" fill="url(#ba-vt)"/><polygon points="588,467 615,467 625,485 615,503 588,503 598,485" fill="#335D99" stroke="#fff" stroke-width="1.2"/><polygon points="624,467 651,467 661,485 651,503 624,503 634,485" fill="#335D99" stroke="#fff" stroke-width="1.2"/><polygon points="660,467 687,467 697,485 687,503 660,503 670,485" fill="#7F7F7F" stroke="#fff" stroke-width="1.2"/><polygon points="360,630 485,677 485,720 360,720" fill="#7699D3"/><polygon points="485,677 610,630 610,720 485,720" fill="#A3BBE1"/><polygon points="360,630 485,583 610,630 485,677" fill="url(#ba-lt)"/><polygon points="670,630 795,677 795,720 670,720" fill="#8CB74C"/><polygon points="795,677 920,630 920,720 795,720" fill="#BAD495"/><polygon points="670,630 795,583 920,630 795,677" fill="url(#ba-rt)"/><path class="gear" d="M484.1 552.6 L487.9 553.0 L487.9 557.0 L484.1 557.4 L482.8 560.4 L485.2 563.4 L482.4 566.2 L479.4 563.8 L476.4 565.1 L476.0 568.9 L472.0 568.9 L471.6 565.1 L468.6 563.8 L465.6 566.2 L462.8 563.4 L465.2 560.4 L463.9 557.4 L460.1 557.0 L460.1 553.0 L463.9 552.6 L465.2 549.6 L462.8 546.6 L465.6 543.8 L468.6 546.2 L471.6 544.9 L472.0 541.1 L476.0 541.1 L476.4 544.9 L479.4 546.2 L482.4 543.8 L485.2 546.6 L482.8 549.6 Z M468.7 555.0 a5.3 5.3 0 1 0 10.6 0 a5.3 5.3 0 1 0 -10.6 0 Z" fill="#6DAAE8"/><path class="gear" d="M469.0 578.2 L473.9 578.7 L473.9 583.3 L469.0 583.8 L467.8 587.3 L471.1 590.8 L468.2 594.2 L464.2 591.5 L461.0 593.4 L461.3 598.2 L456.9 599.0 L455.5 594.3 L451.9 593.7 L449.0 597.6 L445.1 595.3 L447.1 590.9 L444.7 588.1 L440.0 589.2 L438.4 585.0 L442.8 582.9 L442.8 579.1 L438.4 577.0 L440.0 572.8 L444.7 573.9 L447.1 571.1 L445.1 566.7 L449.0 564.4 L451.9 568.3 L455.5 567.7 L456.9 563.0 L461.3 563.8 L461.0 568.6 L464.2 570.5 L468.2 567.8 L471.1 571.2 L467.8 574.7 Z M449.2 581.0 a6.8 6.8 0 1 0 13.7 0 a6.8 6.8 0 1 0 -13.7 0 Z" fill="#6DAAE8"/><path class="gear" d="M513.2 586.5 L519.8 587.2 L519.8 592.8 L513.2 593.5 L511.7 597.9 L516.8 602.3 L513.4 606.9 L507.7 603.5 L503.9 606.2 L505.4 612.8 L500.0 614.5 L497.3 608.4 L492.7 608.4 L490.0 614.5 L484.6 612.8 L486.1 606.2 L482.3 603.5 L476.6 606.9 L473.2 602.3 L478.3 597.9 L476.8 593.5 L470.2 592.8 L470.2 587.2 L476.8 586.5 L478.3 582.1 L473.2 577.7 L476.6 573.1 L482.3 576.5 L486.1 573.8 L484.6 567.2 L490.0 565.5 L492.7 571.6 L497.3 571.6 L500.0 565.5 L505.4 567.2 L503.9 573.8 L507.7 576.5 L513.4 573.1 L516.8 577.7 L511.7 582.1 Z M485.5 590.0 a9.5 9.5 0 1 0 19.0 0 a9.5 9.5 0 1 0 -19.0 0 Z" fill="#7C7C7C"/><g stroke="#6D9A3C" stroke-width="4" fill="none"><path d="M797 533V586M762 561H832M762 559V587M832 559V587"/></g><g fill="#8CB849" stroke="#fff" stroke-width="1.5"><rect x="787" y="516" width="19" height="19"/><rect x="753" y="586" width="19" height="19"/><rect x="787" y="586" width="19" height="19"/><rect x="822" y="586" width="19" height="19"/></g></svg>
+    <h1 class="ttl">Business Architecture PowerPoint Template</h1>
+    <p class="lbl lb-d">DISCOVER</p><div class="ic ic-d"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#E8F1FA"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M29 15a9 9 0 0 0-5 16.4V35h10v-3.6A9 9 0 0 0 29 15z"/><path d="M25 38.5h8M26 42h6"/><path d="M29 7v3.5M18 12l2.4 2.4M40 12l-2.4 2.4M14 24h3.5M40.5 24H44"/></g></svg></div>
+    <p class="lbl lb-a">ANALYZE</p><div class="ic ic-a"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#E7EEF8"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M31 9l6 3.5-7.5 13-6-3.5z"/><path d="M33.5 10.5l1.5-2.6"/><path d="M26 25.5l-2 3.4"/><path d="M36 25a9.5 9.5 0 0 1-3 16"/><path d="M19 44h22M22 44v-3.5h16V44"/><path d="M25 35h8"/></g></svg></div>
+    <p class="lbl lb-r">RECOMMEND</p><div class="ic ic-r"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#BBDCD5"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="14" width="22" height="30" rx="2"/><path d="M27 14v-3h10v3"/><path d="M27 26h11M27 31h11M27 36h11"/><path d="M12 15l3-3 13 13-1 4-4-1z"/></g></svg></div>
+    <p class="lbl lb-m">MEASURE</p><div class="ic ic-m"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#C6D4B8"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 44h32"/><rect x="18" y="33" width="5" height="11"/><rect x="26" y="28" width="5" height="16"/><rect x="34" y="21" width="5" height="23"/><path d="M15 31l9-8 6 4 11-11"/><path d="M36 15.5h5.5V21"/></g></svg></div>
+    <p class="lbl lb-t">TRANSFORM</p><div class="ic ic-t"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#C9DCAE"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 27a11 11 0 0 1 19-7.5"/><path d="M38 13v7h-7"/><path d="M40 31a11 11 0 0 1-19 7.5"/><path d="M20 45v-7h7"/><path d="M24 22v8M21 27l3 3 3-3"/></g></svg></div>
+    <p class="hub">Business<br>Architecture</p>
+    <p class="bx bx-v">Value<br>Streams</p><p class="bx bx-c">Business<br>Capabilities</p><p class="bx bx-o">Organization<br>Map</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <svg class="art" viewBox="0 0 1280 720" aria-hidden="true"><path class="arc" d="M367 580 A273 273 0 0 1 913 580"/><circle cx="367" cy="580" r="6.5" fill="#1A7BD9"/><circle cx="445" cy="387" r="6.5" fill="#335E93"/><circle cx="640" cy="307" r="6.5" fill="#62B5A3"/><circle cx="832" cy="387" r="6.5" fill="#8BB64D"/><circle cx="913" cy="580" r="6.5" fill="#678C3E"/><path d="M342.0 582.0 L325.2 600.7 A64 64 0 1 1 325.2 563.3 Z" fill="var(--c-d)"/><path d="M342.0 582.0 L325.2 600.7 A64 64 0 1 1 325.2 563.3 Z" fill="url(#ba-ring)"/><circle class="disc" cx="264" cy="582" r="47"/><path d="M432.3 376.9 L407.6 381.8 A64 64 0 1 1 430.1 351.9 Z" fill="var(--c-a)"/><path d="M432.3 376.9 L407.6 381.8 A64 64 0 1 1 430.1 351.9 Z" fill="url(#ba-ring)"/><circle class="disc" cx="370" cy="330" r="47"/><path d="M638.7 293.0 L619.4 276.8 A64 64 0 1 1 656.8 275.5 Z" fill="var(--c-r)"/><path d="M638.7 293.0 L619.4 276.8 A64 64 0 1 1 656.8 275.5 Z" fill="url(#ba-ring)"/><circle class="disc" cx="636" cy="215" r="47"/><path d="M840.2 380.1 L841.1 355.0 A64 64 0 1 1 865.1 383.7 Z" fill="var(--c-t)"/><path d="M840.2 380.1 L841.1 355.0 A64 64 0 1 1 865.1 383.7 Z" fill="url(#ba-ring)"/><circle class="disc" cx="900" cy="330" r="47"/><path d="M937.0 582.0 L953.8 563.3 A64 64 0 1 1 953.8 600.7 Z" fill="var(--c-m)"/><path d="M937.0 582.0 L953.8 563.3 A64 64 0 1 1 953.8 600.7 Z" fill="url(#ba-ring)"/><circle class="disc" cx="1015" cy="582" r="47"/><polygon points="515,536 640,584 640,720 515,720" fill="#3359A0"/><polygon points="640,584 765,536 765,720 640,720" fill="#7699D3"/><polygon points="515,536 640,497 765,536 640,584" fill="url(#ba-vt)"/><polygon points="588,467 615,467 625,485 615,503 588,503 598,485" fill="#335D99" stroke="#fff" stroke-width="1.2"/><polygon points="624,467 651,467 661,485 651,503 624,503 634,485" fill="#335D99" stroke="#fff" stroke-width="1.2"/><polygon points="660,467 687,467 697,485 687,503 660,503 670,485" fill="#7F7F7F" stroke="#fff" stroke-width="1.2"/><polygon points="360,630 485,677 485,720 360,720" fill="#7699D3"/><polygon points="485,677 610,630 610,720 485,720" fill="#A3BBE1"/><polygon points="360,630 485,583 610,630 485,677" fill="url(#ba-lt)"/><polygon points="670,630 795,677 795,720 670,720" fill="#8CB74C"/><polygon points="795,677 920,630 920,720 795,720" fill="#BAD495"/><polygon points="670,630 795,583 920,630 795,677" fill="url(#ba-rt)"/><path class="gear" d="M484.1 552.6 L487.9 553.0 L487.9 557.0 L484.1 557.4 L482.8 560.4 L485.2 563.4 L482.4 566.2 L479.4 563.8 L476.4 565.1 L476.0 568.9 L472.0 568.9 L471.6 565.1 L468.6 563.8 L465.6 566.2 L462.8 563.4 L465.2 560.4 L463.9 557.4 L460.1 557.0 L460.1 553.0 L463.9 552.6 L465.2 549.6 L462.8 546.6 L465.6 543.8 L468.6 546.2 L471.6 544.9 L472.0 541.1 L476.0 541.1 L476.4 544.9 L479.4 546.2 L482.4 543.8 L485.2 546.6 L482.8 549.6 Z M468.7 555.0 a5.3 5.3 0 1 0 10.6 0 a5.3 5.3 0 1 0 -10.6 0 Z" fill="#6DAAE8"/><path class="gear" d="M469.0 578.2 L473.9 578.7 L473.9 583.3 L469.0 583.8 L467.8 587.3 L471.1 590.8 L468.2 594.2 L464.2 591.5 L461.0 593.4 L461.3 598.2 L456.9 599.0 L455.5 594.3 L451.9 593.7 L449.0 597.6 L445.1 595.3 L447.1 590.9 L444.7 588.1 L440.0 589.2 L438.4 585.0 L442.8 582.9 L442.8 579.1 L438.4 577.0 L440.0 572.8 L444.7 573.9 L447.1 571.1 L445.1 566.7 L449.0 564.4 L451.9 568.3 L455.5 567.7 L456.9 563.0 L461.3 563.8 L461.0 568.6 L464.2 570.5 L468.2 567.8 L471.1 571.2 L467.8 574.7 Z M449.2 581.0 a6.8 6.8 0 1 0 13.7 0 a6.8 6.8 0 1 0 -13.7 0 Z" fill="#6DAAE8"/><path class="gear" d="M513.2 586.5 L519.8 587.2 L519.8 592.8 L513.2 593.5 L511.7 597.9 L516.8 602.3 L513.4 606.9 L507.7 603.5 L503.9 606.2 L505.4 612.8 L500.0 614.5 L497.3 608.4 L492.7 608.4 L490.0 614.5 L484.6 612.8 L486.1 606.2 L482.3 603.5 L476.6 606.9 L473.2 602.3 L478.3 597.9 L476.8 593.5 L470.2 592.8 L470.2 587.2 L476.8 586.5 L478.3 582.1 L473.2 577.7 L476.6 573.1 L482.3 576.5 L486.1 573.8 L484.6 567.2 L490.0 565.5 L492.7 571.6 L497.3 571.6 L500.0 565.5 L505.4 567.2 L503.9 573.8 L507.7 576.5 L513.4 573.1 L516.8 577.7 L511.7 582.1 Z M485.5 590.0 a9.5 9.5 0 1 0 19.0 0 a9.5 9.5 0 1 0 -19.0 0 Z" fill="#7C7C7C"/><g stroke="#6D9A3C" stroke-width="4" fill="none"><path d="M797 533V586M762 561H832M762 559V587M832 559V587"/></g><g fill="#8CB849" stroke="#fff" stroke-width="1.5"><rect x="787" y="516" width="19" height="19"/><rect x="753" y="586" width="19" height="19"/><rect x="787" y="586" width="19" height="19"/><rect x="822" y="586" width="19" height="19"/></g></svg>
+    <h1 class="ttl">Business Architecture PowerPoint Template</h1>
+    <p class="lbl lb-d">DISCOVER</p><div class="ic ic-d"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#E8F1FA"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M29 15a9 9 0 0 0-5 16.4V35h10v-3.6A9 9 0 0 0 29 15z"/><path d="M25 38.5h8M26 42h6"/><path d="M29 7v3.5M18 12l2.4 2.4M40 12l-2.4 2.4M14 24h3.5M40.5 24H44"/></g></svg></div>
+    <p class="lbl lb-a">ANALYZE</p><div class="ic ic-a"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#E7EEF8"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M31 9l6 3.5-7.5 13-6-3.5z"/><path d="M33.5 10.5l1.5-2.6"/><path d="M26 25.5l-2 3.4"/><path d="M36 25a9.5 9.5 0 0 1-3 16"/><path d="M19 44h22M22 44v-3.5h16V44"/><path d="M25 35h8"/></g></svg></div>
+    <p class="lbl lb-r">RECOMMEND</p><div class="ic ic-r"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#BBDCD5"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="21" y="14" width="22" height="30" rx="2"/><path d="M27 14v-3h10v3"/><path d="M27 26h11M27 31h11M27 36h11"/><path d="M12 15l3-3 13 13-1 4-4-1z"/></g></svg></div>
+    <p class="lbl lb-m">MEASURE</p><div class="ic ic-m"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#C6D4B8"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 44h32"/><rect x="18" y="33" width="5" height="11"/><rect x="26" y="28" width="5" height="16"/><rect x="34" y="21" width="5" height="23"/><path d="M15 31l9-8 6 4 11-11"/><path d="M36 15.5h5.5V21"/></g></svg></div>
+    <p class="lbl lb-t">TRANSFORM</p><div class="ic ic-t"><svg viewBox="0 0 58 58" aria-hidden="true"><circle class="pale" cx="23" cy="23" r="15" fill="#C9DCAE"/><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 27a11 11 0 0 1 19-7.5"/><path d="M38 13v7h-7"/><path d="M40 31a11 11 0 0 1-19 7.5"/><path d="M20 45v-7h7"/><path d="M24 22v8M21 27l3 3 3-3"/></g></svg></div>
+    <p class="hub">Business<br>Architecture</p>
+    <p class="bx bx-v">Value<br>Streams</p><p class="bx bx-c">Business<br>Capabilities</p><p class="bx bx-o">Organization<br>Map</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
