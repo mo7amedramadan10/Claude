@@ -18,6 +18,8 @@ public class FreeformGenerateRequest { public string Message { get; set; } = "";
     public string? Lang { get; set; } /// <summary>المصادر المختارة (systems/files)؛ null = لا تغيير (المحفوظة مع التصميم أو الكل).</summary>
     public Sources.SourceSelection? Sources { get; set; } }
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
+/// <summary>إعدادات مشاركة تصميم: الوصول العام (private/project/org) ودوره، والمستخدمون بالاسم بأدوارهم.</summary>
+public class FreeformSharingRequest { public string? Scope { get; set; } public string? ScopeRole { get; set; } public List<FreeformShare> Users { get; set; } = new(); }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
 public class FreeformUsePageRequest { public string? Title { get; set; } public Sources.SourceSelection? Sources { get; set; } /// <summary>لغة الصفحة: ar (افتراضي) أو en.</summary>
     public string? Lang { get; set; } }
@@ -44,8 +46,9 @@ public class FreeformController : ControllerBase
     private readonly PresentationLiveDataService _live;
 
     private readonly FreeformDashboardTemplates _dashTemplates;
-    public FreeformController(IWebHostEnvironment env, FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live, FreeformDashboardTemplates dashTemplates)
-    { _env = env; _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; _live = live; _dashTemplates = dashTemplates; }
+    private readonly UserStore _users;
+    public FreeformController(UserStore users, IWebHostEnvironment env, FreeformStore store, FreeformBuilder builder, DeckBrandStore brands, DeckBrandFontStore fonts, PresentationStore presentations, OrganizationStore organizations, PermissionsService permissions, AnalyticsTools tools, FreeformTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live, FreeformDashboardTemplates dashTemplates)
+    { _users = users; _env = env; _store = store; _builder = builder; _brands = brands; _fonts = fonts; _presentations = presentations; _organizations = organizations; _permissions = permissions; _tools = tools; _templates = templates; _fingerprints = fingerprints; _live = live; _dashTemplates = dashTemplates; }
 
     /// <summary>المستخدم الحالي واختياره الفعلي للمصادر: <paramref name="requested"/> (من الطلب أو المحفوظ مع التصميم) مقيَّد بصلاحياته؛
     /// null = كل ما يحق له.</summary>
@@ -55,6 +58,25 @@ public class FreeformController : ControllerBase
         if (user is null) return null;
         return (user, await _permissions.GetEffectiveSelectionAsync(user, requested, ct));
     }
+
+    /// <summary>يحمّل التصميم ويتحقق من حق المستخدم فيه (<see cref="FreeformAccess"/>): <paramref name="need"/> = view | edit | owner.
+    /// التصميم غير المرئي له يُعاد 404 (لا يُكشف وجوده)، والمرئي بدور أقل من المطلوب 403 برسالة.</summary>
+    private async Task<(FreeformDesign? D, string? Access, IActionResult? Error)> LoadAsync(string id, AppUser user, Sources.SourceSelection selection, string need, CancellationToken ct)
+    {
+        var d = await _store.GetByIdAsync(id, ct);
+        if (d is null) return (null, null, NotFound(new { error = "التصميم غير موجود." }));
+        var access = FreeformAccess.Resolve(d, user.Id, user.OrganizationId, selection.ProjectId, user.Role == UserRoles.Admin, await _store.ShareRoleAsync(id, user.Id, ct));
+        if (access is null) return (null, null, NotFound(new { error = "التصميم غير موجود." }));
+        if (need == FreeformAccess.Edit && !FreeformAccess.CanEdit(access))
+            return (null, access, StatusCode(403, new { error = "هذا التصميم مشارك معك للعرض فقط — اطلب من صاحبه صلاحية التعديل." }));
+        if (need == FreeformAccess.Owner && access != FreeformAccess.Owner)
+            return (null, access, StatusCode(403, new { error = "هذا الإجراء لصاحب التصميم أو المسؤول." }));
+        return (d, access, null);
+    }
+
+    /// <summary>عمليات البيانات على تصميم تجري في مشروعه هو (قد يكون مشاركًا من مشروع آخر)، وبصلاحيات المستخدم نفسه على الملفات.</summary>
+    private static Sources.SourceSelection InDesignProject(Sources.SourceSelection selection, FreeformDesign d)
+    { if (d.ProjectId is not null) selection.ProjectId = d.ProjectId; return selection; }
 
     /// <summary>اختيار المصادر كما يُحفظ مع التصميم: null حين لم يُرسل شيء أو حين اختار المستخدم كل المصادر.</summary>
     internal static string? SourcesJsonOf(Sources.SourceSelection? s)
@@ -85,7 +107,13 @@ public class FreeformController : ControllerBase
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var list = await _store.ListAsync(cur.Value.Selection.ProjectId, ct);
+        var (me, sel) = cur.Value; var isAdmin = me.Role == UserRoles.Admin;
+        var list = await _store.ListVisibleAsync(me.OrganizationId, sel.ProjectId, me.Id, isAdmin, ct);
+        var myShares = await _store.ShareRolesForUserAsync(me.Id, ct);
+        var shareCounts = await _store.ShareCountsAsync(list.Select(d => d.Id), ct);
+        var owners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var uid in list.Select(d => d.CreatedByUserId).Where(u => !string.IsNullOrWhiteSpace(u)).Distinct(StringComparer.OrdinalIgnoreCase))
+            owners[uid] = (await _users.FindByIdAsync(uid, ct)) is { } u ? (string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName) : "";
         // الرابط الدائم لكل تصميم منشور (عرض واحد لكل تصميم؛ إعادة النشر تحدّثه على الرابط نفسه) — تحلّه القائمة مرة واحدة
         var presentations = await _presentations.ListAsync(cur.Value.User.OrganizationId, ct);
         var byId = presentations.ToDictionary(p => p.Id, p => p);
@@ -93,6 +121,9 @@ public class FreeformController : ControllerBase
         return Ok(list.Select(d => new
         {
             id = d.Id, projectId = d.ProjectId, organizationId = d.OrganizationId, createdByUserId = d.CreatedByUserId, title = d.Title, kind = d.Kind, templateKey = d.TemplateKey,
+            ownerName = owners.TryGetValue(d.CreatedByUserId ?? "", out var on) ? on : "",
+            access = FreeformAccess.Resolve(d, me.Id, me.OrganizationId, sel.ProjectId, isAdmin, myShares.TryGetValue(d.Id, out var sr) ? sr : null),
+            shareScope = d.ShareScope, shareScopeRole = d.ShareScopeRole, shareCount = shareCounts.TryGetValue(d.Id, out var sc) ? sc : 0,
             version = d.Version, presentationId = d.PresentationId, queryCount = d.QueryCount, dataRefreshedAt = d.DataRefreshedAt, autoRefresh = d.AutoRefresh, sizeBytes = d.SizeBytes, createdAt = d.CreatedAt, updatedAt = d.UpdatedAt,
             publishedUrl = d.PresentationId is not null && byId.TryGetValue(d.PresentationId, out var pres) ? pres.PublicPath(orgSlug) : null,
             publishedActive = d.PresentationId is not null && byId.TryGetValue(d.PresentationId, out var pa) && pa.IsActive,
@@ -103,27 +134,28 @@ public class FreeformController : ControllerBase
     public async Task<IActionResult> Get(string id, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _store.GetAsync(id, cur.Value.Selection.ProjectId, ct);
-        if (d is null) return NotFound(new { error = "التصميم غير موجود." });
-        var brand = await BrandAsync(cur.Value.Selection.ProjectId, ct);
+        var (d, access, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.View, ct); if (err is not null) return err;
+        var brand = await BrandAsync(d!.ProjectId, ct);
         // تغيّر بيانات المصدر منذ آخر تحديث؟ (بصمة الجداول المذكورة في الاستعلامات المسجَّلة مقابل المحفوظة)
         bool? dataChanged = null;
-        if (d.QueryCount > 0 && d.DataFingerprint is not null)
+        if (FreeformAccess.CanEdit(access) && d.QueryCount > 0 && d.DataFingerprint is not null)
         {
             var qs = await _store.QueriesAsync(id, ct);
-            var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), cur.Value.Selection.ProjectId, ct);
+            var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), d.ProjectId, ct);
             dataChanged = fp is not null && fp != d.DataFingerprint;
         }
-        return Ok(new { design = d, html = ApplyBrandAssets(d.Html, brand), versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), publishedUrl = await PublishedUrlAsync(d, ct), dataChanged });
+        return Ok(new { design = d, html = ApplyBrandAssets(d.Html, brand), versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), publishedUrl = await PublishedUrlAsync(d, ct), dataChanged, access,
+            ownerName = (await _users.FindByIdAsync(d.CreatedByUserId, ct)) is { } ou ? (string.IsNullOrWhiteSpace(ou.DisplayName) ? ou.Username : ou.DisplayName) : "",
+            shareCount = (await _store.SharesAsync(id, ct)).Count });
     }
 
     [HttpGet("{id}/versions/{version:int}")]
     public async Task<IActionResult> GetVersion(string id, int version, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _store.GetAsync(id, cur.Value.Selection.ProjectId, ct); if (d is null) return NotFound();
+        var (d, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.View, ct); if (err is not null) return err;
         var html = await _store.VersionHtmlAsync(id, version, ct); if (html is null) return NotFound(new { error = "الإصدار غير موجود." });
-        return Ok(new { version, html = ApplyBrandAssets(html, await BrandAsync(cur.Value.Selection.ProjectId, ct)) });
+        return Ok(new { version, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct)) });
     }
 
     /// <summary>كتالوج نماذج تصميم حر (اختياريًا لنوع واحد <c>?kind=doc</c>).</summary>
@@ -228,7 +260,8 @@ public class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var selection = cur.Value.Selection;
-        var d = await _store.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
+        var (d, _, err) = await LoadAsync(id, cur.Value.User, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
+        selection = InDesignProject(selection, d!);
         var (page, error) = await ReadPageFileAsync(file, null, ct);
         if (page is null) return BadRequest(new { error });
         var kindChanged = page.Kind is not null && page.Kind != d.Kind;
@@ -240,7 +273,7 @@ public class FreeformController : ControllerBase
             : $"استُبدلت صفحة التصميم بالعرض المرفوع كصفحة شرائح: {page.Slides} شريحة مرسومة كما هي بلا موديل (الإصدار {v}){(page.Notes.Count > 0 ? " — " + string.Join("؛ ", page.Notes) : "")}.";
         if (d.PresentationId is not null) reply += " الرابط المنشور يعرض النسخة المنشورة السابقة حتى تضغط «تحديث النشر».";
         await _store.AddMessageAsync(id, "assistant", reply, v, ct);
-        var design = await _store.GetAsync(id, selection.ProjectId, ct) ?? d;
+        var design = await _store.GetByIdAsync(id, ct) ?? d;
         var brand = await BrandAsync(selection.ProjectId, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), version = v, versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), slides = page.Slides, notes = page.Notes, kindChanged, published = d.PresentationId is not null });
     }
@@ -318,9 +351,9 @@ public class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
-        var src = await _store.GetAsync(id, selection.ProjectId, ct); if (src is null) return NotFound(new { error = "التصميم غير موجود." });
+        var (src, _, srcErr) = await LoadAsync(id, user, selection, FreeformAccess.View, ct); if (srcErr is not null) return srcErr;
         if (!FreeformStore.Kinds.Contains(request.Kind ?? "")) return BadRequest(new { error = "نوع غير معروف." });
-        if (request.Kind == src.Kind) return BadRequest(new { error = "التصميم من هذا النوع بالفعل." });
+        if (request.Kind == src!.Kind) return BadRequest(new { error = "التصميم من هذا النوع بالفعل." });
         if (string.IsNullOrWhiteSpace(src.Html)) return BadRequest(new { error = "التصميم بلا صفحة بعد." });
         var wantedSrc = request.Sources ?? StoredSources(src);
         if (wantedSrc is not null) selection = (await CurrentAsync(ct, wantedSrc))!.Value.Selection;
@@ -407,13 +440,14 @@ public class FreeformController : ControllerBase
         FreeformDesign? design = null; IReadOnlyList<FreeformMessage> history = Array.Empty<FreeformMessage>();
         if (!string.IsNullOrWhiteSpace(request.DesignId))
         {
-            design = await _store.GetAsync(request.DesignId, selection.ProjectId, ct);
-            if (design is null) return NotFound(new { error = "التصميم غير موجود." });
+            var (loaded, _, err) = await LoadAsync(request.DesignId, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
+            design = loaded!;
             history = await _store.MessagesAsync(design.Id, 16, ct);
         }
         // المصادر: المرسلة في الطلب تغلب، وإلا المحفوظة مع التصميم، وإلا كل ما يحق للمستخدم — مقيَّدة بصلاحياته دائمًا.
         var wanted = request.Sources ?? StoredSources(design);
         if (wanted is not null) selection = (await CurrentAsync(ct, wanted))!.Value.Selection;
+        if (design is not null) selection = InDesignProject(selection, design);
         var sourcesJson = SourcesJsonOf(request.Sources);
         var currentHtml = !string.IsNullOrWhiteSpace(request.Html) ? request.Html : design?.Html;
         var context = await _tools.DescribeSourcesAsync(selection, ct);
@@ -449,10 +483,11 @@ public class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
-        var d = await _store.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
+        var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         if (StoredSources(d) is { } storedSel) selection = (await CurrentAsync(ct, storedSel))!.Value.Selection; // المصادر المختارة للتصميم
+        selection = InDesignProject(selection, d!);
         var stored = await _store.QueriesAsync(id, ct);
-        if (stored.Count == 0) stored = FreeformDataBlock.Parse(d.Html); // تصميم قديم فيه كتلة بلا تسجيل في الجدول
+        if (stored.Count == 0) stored = FreeformDataBlock.Parse(d!.Html); // تصميم قديم فيه كتلة بلا تسجيل في الجدول
         if (stored.Count == 0) return BadRequest(new { error = "هذا التصميم بلا استعلامات مسجَّلة (بُني قبل عقد البيانات أو بلا بيانات). استخدم «إعادة البناء بالبيانات الحالية» بالموديل.", noQueries = true });
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var fresh = new List<FreeformQuery>(); var failed = new List<object>();
@@ -479,15 +514,15 @@ public class FreeformController : ControllerBase
     public async Task<IActionResult> Save(string id, [FromBody] FreeformSaveRequest request, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _store.GetAsync(id, cur.Value.Selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
+        var (d, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         int? version = null;
         if (request.AutoRefresh is { } ar) await _store.SetAutoRefreshAsync(id, ar, ct);
         // تغيير المصادر المختارة للتصميم من الواجهة (null مع ClearSources = العودة إلى كل المصادر)
-        if (request.Sources is not null || request.ClearSources == true) { var sj = request.ClearSources == true ? null : SourcesJsonOf(request.Sources); await _store.SetSourcesAsync(id, sj, ct); d.SourcesJson = sj; }
+        if (request.Sources is not null || request.ClearSources == true) { var sj = request.ClearSources == true ? null : SourcesJsonOf(request.Sources); await _store.SetSourcesAsync(id, sj, ct); d!.SourcesJson = sj; }
         if (!string.IsNullOrWhiteSpace(request.Html))
         {
             if (Encoding.UTF8.GetByteCount(request.Html) > FreeformStore.MaxHtmlBytes) return BadRequest(new { error = "الصفحة تتجاوز 4 ميغابايت." });
-            if (!string.Equals(request.Html, d.Html, StringComparison.Ordinal)) { version = await _store.AddVersionAsync(id, request.Html, request.Note ?? "تعديل يدوي للكود", request.Title?.Trim(), ct); await _store.AddMessageAsync(id, "assistant", "حُفظ تعديل يدوي للكود.", version, ct); }
+            if (!string.Equals(request.Html, d!.Html, StringComparison.Ordinal)) { version = await _store.AddVersionAsync(id, request.Html, request.Note ?? "تعديل يدوي للكود", request.Title?.Trim(), ct); await _store.AddMessageAsync(id, "assistant", "حُفظ تعديل يدوي للكود.", version, ct); }
         }
         if (version is null && !string.IsNullOrWhiteSpace(request.Title)) await _store.SetTitleAsync(id, request.Title.Trim(), ct);
         return Ok(new { version, versions = await _store.VersionsAsync(id, ct) });
@@ -497,21 +532,81 @@ public class FreeformController : ControllerBase
     public async Task<IActionResult> Restore(string id, int version, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _store.GetAsync(id, cur.Value.Selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
+        var (d, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         var html = await _store.VersionHtmlAsync(id, version, ct); if (html is null) return NotFound(new { error = "الإصدار غير موجود." });
         var v = await _store.AddVersionAsync(id, html, $"استعادة الإصدار {version}", null, ct);
         await _store.AddMessageAsync(id, "assistant", $"استُعيد الإصدار {version} كإصدار {v}.", v, ct);
-        return Ok(new { version = v, html = ApplyBrandAssets(html, await BrandAsync(cur.Value.Selection.ProjectId, ct)), versions = await _store.VersionsAsync(id, ct) });
+        return Ok(new { version = v, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct)), versions = await _store.VersionsAsync(id, ct) });
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _store.GetAsync(id, cur.Value.Selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
-        if (d.CreatedByUserId != cur.Value.User.Id && cur.Value.User.Role != UserRoles.Admin) return StatusCode(403, new { error = "الحذف لصاحب التصميم أو المسؤول." });
+        var (_, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.Owner, ct); if (err is not null) return err;
         await _store.DeleteAsync(id, ct);
         return NoContent();
+    }
+
+    /// <summary>إعدادات مشاركة التصميم (لكل من يراه؛ التعديل لصاحبه والمسؤول فقط).</summary>
+    [HttpGet("{id}/sharing")]
+    public async Task<IActionResult> GetSharing(string id, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (d, access, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.View, ct); if (err is not null) return err;
+        var users = new List<object>();
+        foreach (var sh in await _store.SharesAsync(id, ct))
+        {
+            var u = await _users.FindByIdAsync(sh.UserId, ct); if (u is null) continue;
+            users.Add(new { userId = u.Id, name = string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName, username = u.Username, role = FreeformAccess.NormalizeRole(sh.Role) });
+        }
+        var owner = await _users.FindByIdAsync(d!.CreatedByUserId, ct);
+        return Ok(new
+        {
+            scope = FreeformAccess.NormalizeScope(d.ShareScope), scopeRole = FreeformAccess.NormalizeRole(d.ShareScopeRole), users,
+            canManage = access == FreeformAccess.Owner, access,
+            owner = owner is null ? null : new { userId = owner.Id, name = string.IsNullOrWhiteSpace(owner.DisplayName) ? owner.Username : owner.DisplayName, username = owner.Username },
+        });
+    }
+
+    /// <summary>تغيير المشاركة: الوصول العام (خاص/المشروع/المنظمة) بدوره، ومستخدمون بالاسم من المنظمة نفسها (≤100) بأدوارهم.</summary>
+    [HttpPut("{id}/sharing")]
+    public async Task<IActionResult> SetSharing(string id, [FromBody] FreeformSharingRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var me = cur.Value.User;
+        var (d, _, err) = await LoadAsync(id, me, cur.Value.Selection, FreeformAccess.Owner, ct); if (err is not null) return err;
+        if (request.Scope is not null && !FreeformAccess.Scopes.Contains(request.Scope)) return BadRequest(new { error = "نطاق مشاركة غير معروف." });
+        var scope = FreeformAccess.NormalizeScope(request.Scope); var scopeRole = FreeformAccess.NormalizeRole(request.ScopeRole);
+        var users = (request.Users ?? new()).Where(x => !string.IsNullOrWhiteSpace(x.UserId)).GroupBy(x => x.UserId, StringComparer.OrdinalIgnoreCase).Select(g => g.Last()).ToList();
+        if (users.Count > 100) return BadRequest(new { error = "الحد الأقصى 100 مستخدم لكل تصميم." });
+        var clean = new List<FreeformShare>();
+        foreach (var x in users)
+        {
+            if (string.Equals(x.UserId, d!.CreatedByUserId, StringComparison.OrdinalIgnoreCase)) continue; // صاحبه لا يُشارَك معه
+            var u = await _users.FindByIdAsync(x.UserId, ct);
+            if (u is null || !u.IsActive || !string.Equals(u.OrganizationId, me.OrganizationId, StringComparison.Ordinal))
+                return BadRequest(new { error = "لا يمكن المشاركة إلا مع مستخدمين نشطين من منظمتك." });
+            clean.Add(new FreeformShare { UserId = u.Id, Role = FreeformAccess.NormalizeRole(x.Role) });
+        }
+        await _store.SetSharingAsync(id, scope, scopeRole, clean, ct);
+        return Ok(new { scope, scopeRole, count = clean.Count });
+    }
+
+    /// <summary>مستخدمو المنظمة النشطون لاختيار من يُشارَك معهم (بلا المستخدم نفسه)؛ <c>q</c> يبحث في الاسم واسم الدخول.</summary>
+    [HttpGet("share-candidates")]
+    public async Task<IActionResult> ShareCandidates([FromQuery] string? q, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var me = cur.Value.User; if (me.OrganizationId is null) return Ok(Array.Empty<object>());
+        var term = (q ?? "").Trim();
+        var list = (await _users.ListByOrganizationAsync(me.OrganizationId, ct))
+            .Where(u => u.IsActive && !string.Equals(u.Id, me.Id, StringComparison.OrdinalIgnoreCase))
+            .Where(u => term.Length == 0 || (u.DisplayName ?? "").Contains(term, StringComparison.OrdinalIgnoreCase) || u.Username.Contains(term, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(u => string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName, StringComparer.CurrentCulture)
+            .Take(50)
+            .Select(u => new { userId = u.Id, name = string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName, username = u.Username });
+        return Ok(list);
     }
 
     /// <summary>النشر في «العروض التقديمية» (أو تحديث المنشور سابقًا على نفس الرابط) بالصفحة كما هي مع شعار الهوية.</summary>
@@ -520,9 +615,9 @@ public class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
-        var d = await _store.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "التصميم غير موجود." });
-        if (string.IsNullOrWhiteSpace(d.Html)) return BadRequest(new { error = "لا توجد صفحة لنشرها بعد." });
-        var html = ApplyBrandAssets(d.Html, await BrandAsync(selection.ProjectId, ct));
+        var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
+        if (string.IsNullOrWhiteSpace(d!.Html)) return BadRequest(new { error = "لا توجد صفحة لنشرها بعد." });
+        var html = ApplyBrandAssets(d.Html, await BrandAsync(d.ProjectId, ct));
         if (d.Kind == "slides") html = FreeformDataBlock.EnsureSlidesKit(html);
         // صفحة ببيانات: تُربط بمصدرها فتُقدَّم بآخر الأرقام عند كل فتح (بيانات حيّة) ويضمَن فيها الجسر لتحديثها وهي مفتوحة.
         var hasData = d.QueryCount > 0 || FreeformDataBlock.HasBlock(d.Html);

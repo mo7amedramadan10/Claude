@@ -9167,13 +9167,14 @@ function ffRenderGallery() {
   el('ff-filter-btn').classList.toggle('active', !!FF.gal.kind);
   box.dataset.empty = FF.list.length ? 'لا تصاميم تطابق التصفية.' : 'لا تصاميم بعد — اختر نوعًا من الأعلى واكتب طلبك.';
   el('ff-count').textContent = FF.list.length ? (items.length === FF.list.length ? `${FF.list.length.toLocaleString('en-US')} تصميم` : `${items.length.toLocaleString('en-US')} من ${FF.list.length.toLocaleString('en-US')}`) : '';
+  const meId = state.currentUser ? state.currentUser.id : null;
   box.innerHTML = items.map(d => { const k = FF_KINDS[d.kind] ? d.kind : 'design'; const opened = ffOpenedAt(d.id);
     const art = d.track
       ? `<div class="ff-card-art"><div class="ff-card-paper ff-card-dash">${dashGalThumb({ widgets: d.widgets, renderKind: d.renderKind })}</div></div>`
       : `<div class="ff-card-art"><div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(d.title)}"></iframe></div></div>`;
     return `<article class="ff-card k-${k}" data-ff="${esc(d.id)}" role="button" tabindex="0" aria-label="${esc(d.title)}">
       ${art}
-      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(d.title)}</b><small>${opened ? 'فُتح ' + ffAgo(opened) : 'عُدِّل ' + ffAgo(d.updatedAt)}${d.publishedUrl ? (d.publishedActive === false ? ' · <span class="ff-pub off">منشور (الرابط موقوف)</span>' : ' · <span class="ff-pub">🔗 منشور</span>') : ''}</small></div>${d.publishedUrl ? `<button type="button" class="ff-card-link" data-ff-link="${esc(location.origin + d.publishedUrl)}" title="نسخ الرابط الدائم: ${esc(location.origin + d.publishedUrl)}" aria-label="نسخ رابط ${esc(d.title)}">🔗</button>` : ''}</div>
+      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(d.title)}</b><small>${opened ? 'فُتح ' + ffAgo(opened) : 'عُدِّل ' + ffAgo(d.updatedAt)}${d.track ? '' : ffShareBadgeHtml(d, meId)}${d.publishedUrl ? (d.publishedActive === false ? ' · <span class="ff-pub off">منشور (الرابط موقوف)</span>' : ' · <span class="ff-pub">🔗 منشور</span>') : ''}</small></div>${d.publishedUrl ? `<button type="button" class="ff-card-link" data-ff-link="${esc(location.origin + d.publishedUrl)}" title="نسخ الرابط الدائم: ${esc(location.origin + d.publishedUrl)}" aria-label="نسخ رابط ${esc(d.title)}">🔗</button>` : ''}</div>
     </article>`; }).join('');
   const openCard = id => id.startsWith('h:') ? ffOpenTrack(id.slice(2)) : ffOpen(id);
   box.querySelectorAll('[data-ff]').forEach(c => { c.addEventListener('click', () => openCard(c.dataset.ff)); c.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(c.dataset.ff); } }); });
@@ -9656,6 +9657,7 @@ async function ffOpen(id) {
   ffTrackUnmount();
   const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); if (!r.ok) return; ffMarkOpened(id);
   const d = await r.json(); FF.design = d.design; FF.html = d.html || ''; FF.versions = d.versions || []; FF.viewing = null; FF.publishedUrl = d.publishedUrl; FF.dataChanged = !!d.dataChanged;
+  FF.access = d.access || 'owner'; FF.ownerName = d.ownerName || ''; FF.shareCount = d.shareCount || 0;
   FF.messages = (d.messages || []).map(m => ({ role: m.role === 'user' ? 'user' : 'bot', text: m.text }));
   FF.lang = /<html[^>]*\b(lang=["']?en|dir=["']?ltr)/i.test((FF.html || '').slice(0, 600)) ? 'en' : 'ar'; // لغة الصفحة من وسمها لتظهر في شريحة النموذج
   await ffLoadTemplates(); FF.template = FF.design.templateKey ? (FF.templates.find(t => t.key === FF.design.templateKey) || null) : null;
@@ -9672,11 +9674,12 @@ function ffRender() {
   el('ff-start').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden'); el('ff-preview-wrap').classList.remove('hidden');
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
   el('ff-code').setAttribute('aria-pressed', 'false');
-  const d = FF.design; el('ff-title').textContent = d ? d.title : 'تصميم حر'; const kind = d ? d.kind : FF.kind;
+  const d = FF.design;
+  ffApplyAccess(); el('ff-title').textContent = d ? d.title : 'تصميم حر'; const kind = d ? d.kind : FF.kind;
   el('ff-present').classList.toggle('hidden', kind !== 'slides' && kind !== 'motion'); el('ff-replay').classList.toggle('hidden', kind !== 'motion'); el('ff-print').classList.toggle('hidden', kind !== 'doc' && kind !== 'slides');
   el('ff-preview-wrap').classList.toggle('doc', kind === 'doc'); el('ff-head-desc').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} — اطلب تعديلًا بالمحادثة`;
   const viewingOld = FF.viewing != null && FF.viewing !== d.version;
-  el('ff-meta').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} · ${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${FF.publishedUrl ? ' · منشور' : ''}${d && d.queryCount ? ` · بيانات حيّة (${d.queryCount} استعلام${d.dataRefreshedAt ? '، آخر تحديث ' + ffAgo(d.dataRefreshedAt) : ''})` : ''}${FF.sources ? ` · المصادر: ${ffSourcesLabel(FF.sources)}` : ''}`;
+  el('ff-meta').textContent = `${(FF_KINDS[kind] || FF_KINDS.design).label} · ${(FF.html.length / 1024).toFixed(0)} كيلوبايت · ${viewingOld ? `تعرض الإصدار ${FF.viewing} (الحالي ${d.version})` : `الإصدار ${d.version}`}${ffAccessMeta()}${FF.publishedUrl ? ' · منشور' : ''}${d && d.queryCount ? ` · بيانات حيّة (${d.queryCount} استعلام${d.dataRefreshedAt ? '، آخر تحديث ' + ffAgo(d.dataRefreshedAt) : ''})` : ''}${FF.sources ? ` · المصادر: ${ffSourcesLabel(FF.sources)}` : ''}`;
   el('ff-refresh').classList.toggle('no-queries', !(d && d.queryCount));
   el('ff-publish').textContent = FF.publishedUrl ? 'تحديث النشر' : 'نشر'; el('ff-publish').title = FF.publishedUrl ? 'إعادة نشر آخر إصدار على الرابط الدائم نفسه' : 'نشر الصفحة برابط عام';
   el('ff-link').classList.toggle('hidden', !FF.publishedUrl); if (FF.publishedUrl) el('ff-link').title = `الرابط الدائم: ${location.origin + FF.publishedUrl} — انقر لنسخه`;
@@ -9708,6 +9711,7 @@ async function ffAsk(text) {
   if (FF.busy || !text.trim()) return;
   if (el('screen-freeform').classList.contains('ff-chat-hidden')) ffSetChatHidden(false, false); // الرد يظهر في المحادثة
   if (!FF.design && (FF.kind === 'track' || FF.track)) return ffTrackAsk(text);
+  if (FF.design && FF.access === 'view') { ffPushMsg('err', 'هذا التصميم مشارك معك للعرض فقط — اطلب من صاحبه صلاحية التعديل، أو أنشئ نسخة لك من «⇄ تحويل إلى».'); return; }
   ffPushMsg('user', text); FF.busy = true; FF.busyText = FF.design ? 'يعدّل الصفحة…' : 'يصمّم الصفحة… قد يستغرق حتى دقيقة'; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
   ccSetLoading('ff-pane', FF.design ? 'جارٍ تعديل الصفحة' : 'جارٍ بناء الصفحة', 'الموديل يعمل على طلبك وقد يستغرق حتى دقيقة — ستظهر النتيجة هنا فور اكتمالها.');
   try {
@@ -9717,6 +9721,7 @@ async function ffAsk(text) {
     const r = await fetch('/api/freeform/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    if (!FF.design) { FF.access = 'owner'; FF.ownerName = ''; FF.shareCount = 0; } // تصميم جديد: صاحبه هو المستخدم
     FF.design = d.design; FF.versions = d.versions || FF.versions; FF.viewing = null;
     if (d.html) FF.html = d.html;
     FF.busy = false; ffPushMsg('bot', d.reply + (d.version ? ` (الإصدار ${d.version})` : '') + (d.usedData ? ' · استخدمت بيانات المشروع' : ''));
@@ -9726,7 +9731,7 @@ async function ffAsk(text) {
 }
 el('ff-form').addEventListener('submit', e => { e.preventDefault(); const t = el('ff-q').value.trim(); if (!t) return; el('ff-q').value = ''; ffAsk(t); });
 el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('ff-form').requestSubmit(); } });
-el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.lang = null; ffGalLang = null; ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
+el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.lang = null; ffGalLang = null; FF.access = null; ffApplyAccess(); ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
 el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(FF.html, '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
@@ -9743,6 +9748,99 @@ el('ff-restore').addEventListener('click', async () => {
   FF.design.version = d.version; FF.versions = d.versions; FF.html = d.html; FF.viewing = null; ffPushMsg('bot', `استُعيد الإصدار كإصدار ${d.version}.`); ffRender();
 });
 el('ff-mobile').addEventListener('click', () => { FF.mobile = !FF.mobile; ffRender(); });
+
+// ===== مشاركة تصميم حر داخل المنصة =====
+// الدور في التصميم المفتوح (FF.access من الخادم): owner (صاحبه أو المسؤول) | edit | view. المشاهد يرى ويتنقّل في الإصدارات وينسخ
+// بـ«تحويل إلى»، ولا يعدّل بالمحادثة ولا بالنص ولا يستورد ولا يحدّث البيانات ولا ينشر؛ والخادم يرفض ذلك أيضًا.
+const FF_ACCESS_LABEL = { owner: 'مالك', edit: 'تعديل', view: 'عرض فقط' };
+const FF_SCOPE_LABEL = { project: 'مشترك مع المشروع', org: 'مشترك مع المنظمة' };
+const FF_RO_IDS = ['ff-edit-text', 'ff-import-into', 'ff-refresh', 'ff-stale', 'ff-publish', 'ff-code', 'ff-restore'];
+function ffShareLabel(scope, count) {
+  const parts = []; if (FF_SCOPE_LABEL[scope]) parts.push(FF_SCOPE_LABEL[scope]);
+  if (count) parts.push(count === 1 ? 'مع شخص واحد' : count === 2 ? 'مع شخصين' : `مع ${count.toLocaleString('en-US')} أشخاص`);
+  return parts.length ? parts.join(' و') : '';
+}
+function ffShareBadgeHtml(d, meId) {
+  if (d.createdByUserId && d.createdByUserId !== meId) return ` · <span class="ff-shared-by">👥 من ${esc(d.ownerName || 'زميل')}${d.access === 'view' ? ' · عرض فقط' : d.access === 'edit' ? ' · تعديل' : ''}</span>`;
+  const label = ffShareLabel(d.shareScope, d.shareCount || 0);
+  return label ? ` · <span class="ff-shared">👥 ${esc(label)}</span>` : '';
+}
+function ffAccessMeta() {
+  if (!FF.design) return '';
+  if (FF.access && FF.access !== 'owner') return ` · مشترك معك من ${FF.ownerName || 'زميل'} (${FF_ACCESS_LABEL[FF.access]})`;
+  const label = ffShareLabel(FF.design.shareScope, FF.shareCount || 0);
+  return label ? ` · ${label}` : '';
+}
+function ffApplyAccess() {
+  const d = FF.design; const ro = !!(d && FF.access === 'view');
+  FF_RO_IDS.forEach(id => { const b = el(id); if (b) b.disabled = ro || (id !== 'ff-restore' && !d); });
+  el('ff-share').classList.toggle('hidden', !(d && FF.access === 'owner'));
+  el('ff-title').contentEditable = ro ? 'false' : 'true';
+  el('screen-freeform').classList.toggle('ff-readonly', ro);
+  const q = el('ff-q'); q.disabled = ro; el('ff-send').disabled = ro;
+  // النص الأصلي قد يكون فارغًا، فالفحص بوجود المفتاح لا بقيمته
+  if (ro) { if (!('ph' in q.dataset)) q.dataset.ph = q.placeholder; q.placeholder = 'هذا التصميم مشارك معك للعرض فقط — لا يمكن تعديله بالمحادثة.'; }
+  else if ('ph' in q.dataset) { q.placeholder = q.dataset.ph; delete q.dataset.ph; }
+}
+const FFS = { users: [], ownerId: null, timer: 0, results: [] };
+function ffsRenderUsers() {
+  el('ffs-users').innerHTML = FFS.users.length ? FFS.users.map((u, i) => `<li><span class="ffs-ava" aria-hidden="true">${esc((u.name || u.username || '?').trim().charAt(0))}</span>
+      <span class="ffs-name"><b>${esc(u.name || u.username)}</b><small class="muted">${esc(u.username || '')}</small></span>
+      <select data-ffs-role="${i}" aria-label="دور ${esc(u.name || u.username)}"><option value="view"${u.role === 'view' ? ' selected' : ''}>عرض فقط</option><option value="edit"${u.role === 'edit' ? ' selected' : ''}>تعديل</option></select>
+      <button type="button" class="ffs-remove" data-ffs-remove="${i}" aria-label="إزالة ${esc(u.name || u.username)}" title="إزالة">✕</button></li>`).join('')
+    : '<li class="ffs-empty muted">لم تُضف أحدًا بالاسم بعد.</li>';
+  el('ffs-users').querySelectorAll('[data-ffs-role]').forEach(s => s.addEventListener('change', () => { FFS.users[+s.dataset.ffsRole].role = s.value; }));
+  el('ffs-users').querySelectorAll('[data-ffs-remove]').forEach(b => b.addEventListener('click', () => { FFS.users.splice(+b.dataset.ffsRemove, 1); ffsRenderUsers(); el('ffs-search').focus(); }));
+}
+function ffsSyncScope() { el('ffs-scope-role').disabled = el('ffs-scope').value === 'private'; }
+async function ffsSearch() {
+  const q = el('ffs-search').value.trim(); const box = el('ffs-results');
+  let list = []; try { const r = await fetch(`/api/freeform/share-candidates?q=${encodeURIComponent(q)}`); list = r.ok ? await r.json() : []; } catch { list = []; }
+  const taken = new Set([...FFS.users.map(u => u.userId), FFS.ownerId]);
+  FFS.results = list.filter(u => !taken.has(u.userId)).slice(0, 8);
+  box.innerHTML = FFS.results.length ? FFS.results.map((u, i) => `<button type="button" role="option" class="ffs-result" data-ffs-pick="${i}"><b>${esc(u.name)}</b> <small class="muted">${esc(u.username)}</small></button>`).join('')
+    : `<div class="ffs-none muted">${q ? 'لا مستخدمين يطابقون البحث.' : 'لا مستخدمين آخرين في منظمتك.'}</div>`;
+  box.classList.remove('hidden');
+  box.querySelectorAll('[data-ffs-pick]').forEach(b => b.addEventListener('click', () => {
+    const u = FFS.results[+b.dataset.ffsPick]; FFS.users.push({ userId: u.userId, name: u.name, username: u.username, role: 'view' });
+    el('ffs-search').value = ''; box.classList.add('hidden'); ffsRenderUsers(); el('ffs-search').focus();
+  }));
+}
+async function openFfShare() {
+  if (!FF.design || FF.access !== 'owner') return;
+  el('ffs-error').classList.add('hidden'); el('ffs-results').classList.add('hidden'); el('ffs-search').value = '';
+  let d; try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/sharing`); d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); }
+  catch (e) { ffPushMsg('err', 'تعذّر فتح إعدادات المشاركة: ' + e.message); return; }
+  FFS.users = (d.users || []).map(u => ({ ...u })); FFS.ownerId = d.owner ? d.owner.userId : null;
+  el('ffs-heading').textContent = `مشاركة «${FF.design.title}»`;
+  el('ffs-owner').textContent = d.owner ? `المالك: ${d.owner.name}` : '';
+  el('ffs-scope').value = d.scope || 'private'; el('ffs-scope-role').value = d.scopeRole || 'view'; ffsSyncScope();
+  ffsRenderUsers(); el('ff-share-modal').classList.remove('hidden'); el('ffs-search').focus();
+}
+function closeFfShare() { el('ff-share-modal').classList.add('hidden'); el('ff-share')?.focus(); }
+el('ff-share').addEventListener('click', openFfShare);
+el('ffs-cancel').addEventListener('click', closeFfShare);
+el('ff-share-modal').addEventListener('click', e => { if (e.target === el('ff-share-modal')) closeFfShare(); });
+el('ff-share-modal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); if (!el('ffs-results').classList.contains('hidden')) el('ffs-results').classList.add('hidden'); else closeFfShare(); } });
+el('ffs-scope').addEventListener('change', ffsSyncScope);
+el('ffs-search').addEventListener('input', () => { clearTimeout(FFS.timer); FFS.timer = setTimeout(ffsSearch, 200); });
+// قائمة النتائج تُفتح بالكتابة أو بالنقر على الحقل (لا بالتركيز البرمجي عند فتح النافذة فتغطي قائمة الأشخاص)، وتُغلق بالنقر خارجها
+el('ffs-search').addEventListener('click', () => { clearTimeout(FFS.timer); FFS.timer = setTimeout(ffsSearch, 0); });
+el('ff-share-modal').addEventListener('mousedown', e => { if (!e.target.closest('.ffs-add')) el('ffs-results').classList.add('hidden'); });
+el('ffs-save').addEventListener('click', async () => {
+  if (!FF.design) return; const btn = el('ffs-save'); btn.disabled = true; el('ffs-error').classList.add('hidden');
+  const body = { scope: el('ffs-scope').value, scopeRole: el('ffs-scope-role').value, users: FFS.users.map(u => ({ userId: u.userId, role: u.role })) };
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/sharing`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.design.shareScope = d.scope; FF.design.shareScopeRole = d.scopeRole; FF.shareCount = d.count;
+    const i = FF.list.findIndex(x => x.id === FF.design.id); if (i >= 0) Object.assign(FF.list[i], { shareScope: d.scope, shareScopeRole: d.scopeRole, shareCount: d.count });
+    closeFfShare(); ffRender();
+    const label = ffShareLabel(d.scope, d.count);
+    ffPushMsg('bot', label ? `حُفظت المشاركة: ${label}${d.scope !== 'private' ? ` (${d.scopeRole === 'edit' ? 'تعديل' : 'عرض فقط'})` : ''}.` : 'التصميم الآن خاص بك وحدك.');
+  } catch (e) { el('ffs-error').textContent = 'تعذّر الحفظ: ' + e.message; el('ffs-error').classList.remove('hidden'); }
+  finally { btn.disabled = false; }
+});
 // إخفاء شريط المحادثة في تصميم حر لمساحة عمل أوسع؛ الاختيار يُحفظ لكل متصفح، وأي طلب للموديل من شريط الأدوات يُظهره ليُرى الرد
 function ffSetChatHidden(hidden, persist = true) {
   el('screen-freeform').classList.toggle('ff-chat-hidden', hidden);
