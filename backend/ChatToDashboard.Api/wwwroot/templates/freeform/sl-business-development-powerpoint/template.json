@@ -1,0 +1,70 @@
+{
+  "key": "sl-business-development-powerpoint",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "💼",
+  "name": "تطوير الأعمال",
+  "nameEn": "Business Development",
+  "description": "13 شريحة لتطوير الأعمال: ملخص، فرص السوق، العملاء، القيمة، النمو، مسار المبيعات، المنافسة، الخارطة، المقاييس",
+  "descriptionEn": "13 business development slides: summary, market, customers, value, growth, pipeline, competition, roadmap, metrics",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على الشركة",
+      "titleEn": "Company Overview"
+    },
+    {
+      "title": "تحليل فرص السوق",
+      "titleEn": "Market Opportunity Analysis",
+      "needsData": true
+    },
+    {
+      "title": "العملاء المستهدفون وفئاتهم",
+      "titleEn": "Target Customers & Segments"
+    },
+    {
+      "title": "القيمة المقدَّمة",
+      "titleEn": "Value Proposition"
+    },
+    {
+      "title": "استراتيجية النمو",
+      "titleEn": "Growth Strategy"
+    },
+    {
+      "title": "مسار تطوير الأعمال",
+      "titleEn": "Business Development Pipeline",
+      "needsData": true
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape"
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "مقاييس النجاح",
+      "titleEn": "Success Metrics",
+      "needsData": true
+    },
+    {
+      "title": "التوصيات",
+      "titleEn": "Recommendations"
+    },
+    {
+      "title": "أيقونات الأعمال",
+      "titleEn": "Business Icons"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ شبكة المربعات في شريحة مقاييس النجاح تُرسم من كتلة chart-data (عدد الخلايا لكل مجموعة)."
+}
