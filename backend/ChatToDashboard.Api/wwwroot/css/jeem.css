@@ -210,7 +210,6 @@
 /* شارة «مالك المنصّة» في الوضع المطوي: أيقونة التاج فقط وسط العمود بدل كتلة داكنة طويلة بهوامش العرض الكامل */
 .app.is-collapsed .sb-scroll { scrollbar-width: thin; }
 /* ذيل القائمة في الوضع المطوي: زر القراءة أيقونة فقط، وأزرار بطاقة المستخدم تحت بعضها بدل أن تتجاوز العرض */
-.app.is-collapsed #auto-read-toggle { padding: 6px; justify-content: center; }
 .app.is-collapsed .user-card { flex-direction: column; gap: 6px; padding: 6px 0; }
 #auto-read-toggle { display: flex; align-items: center; gap: 8px; }
 
@@ -3851,3 +3850,26 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-kchip.k-motion[aria-pressed="true"] { background: #0E7A5C; border-color: #0E7A5C; } .jeem-scope .ff-kchip.k-track[aria-pressed="true"] { background: #0B6E99; border-color: #0B6E99; }
 .jeem-scope .ff-kchip[aria-pressed="true"] .ff-kchip-ico { background: rgba(255,255,255,.92); }
 
+/* قائمة «إعداداتي» فوق بطاقة المستخدم (القراءة التلقائية، دليل الاستخدام، المظهر، اللغة) */
+.sb-foot { position: relative; }
+.us-panel { position: absolute; inset-inline: 0; bottom: calc(100% - 4px); z-index: 60; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: var(--shadow-3, 0 12px 32px rgba(16,24,40,.16)); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.us-panel.hidden { display: none; }
+.us-title { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-3); padding: 6px 10px 4px; }
+#user-settings-panel .us-item { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 6px 10px;
+  border-radius: 10px; font-size: var(--fs-sm); color: var(--ink); cursor: pointer; }
+#user-settings-panel .us-item.hidden { display: none; }
+#user-settings-panel .us-item:hover, #user-settings-panel .us-item:focus-visible { background: var(--bg); }
+#user-settings-panel .us-item:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: -2px; }
+#user-settings-panel .us-item > .icon, #user-settings-panel .us-ic, #user-settings-panel .ar-ic { width: 20px; text-align: center; flex: none; color: var(--ink-2); }
+#user-settings-panel .us-item .nav-text { display: inline !important; }
+#user-settings-panel #auto-read-toggle.active { color: var(--brand-blue); font-weight: 600; }
+#user-settings-panel #auto-read-toggle.active::after { content: "مفعّلة"; margin-inline-start: auto; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--blue-50, #E6F0FB); }
+#user-settings-panel .us-val { all: unset; box-sizing: border-box; margin-inline-start: auto; min-width: 40px; height: 28px; padding: 0 10px; border: 1px solid var(--line);
+  border-radius: 8px; display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--ink-2); background: var(--surface); cursor: pointer; }
+#user-settings-panel .us-val:hover { border-color: var(--brand-blue); }
+#user-settings-panel .us-val:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+#user-settings-btn[aria-expanded="true"] { background: var(--bg); color: var(--brand-blue); }
+
+#user-settings-btn { padding: 6px 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink-2); }
+#user-settings-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }

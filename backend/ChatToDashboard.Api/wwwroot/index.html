@@ -164,13 +164,18 @@
     </nav>
 
     <div class="sb-foot">
-      <button type="button" id="auto-read-toggle" class="nav-link hidden" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-headset"/></svg><span class="nav-text">قراءة تلقائية</span></button>
-      <button type="button" id="tour-btn" class="nav-link" title="دليل استخدام النظام"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg><span class="nav-text">دليل الاستخدام</span></button>
+      <!-- إعدادات المستخدم: القراءة التلقائية ودليل الاستخدام والمظهر واللغة في قائمة واحدة تُفتح من أيقونة الإعدادات بجوار الاسم -->
+      <div id="user-settings-panel" class="us-panel hidden" role="menu" aria-label="إعداداتي">
+        <div class="us-title">إعداداتي</div>
+        <button type="button" id="auto-read-toggle" class="us-item hidden" role="menuitemcheckbox" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد"><span class="ar-ic" aria-hidden="true">🔇</span><span class="nav-text">قراءة تلقائية</span></button>
+        <button type="button" id="tour-btn" class="us-item" role="menuitem" title="دليل استخدام النظام"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg><span>دليل الاستخدام</span></button>
+        <div class="us-item us-row" data-us-for="theme-toggle"><span class="us-ic" aria-hidden="true">◐</span><span>الوضع الليلي</span><button type="button" id="theme-toggle" class="us-val" role="menuitem" title="تبديل المظهر">🌙</button></div>
+        <div class="us-item us-row" data-us-for="lang-toggle"><span class="us-ic" aria-hidden="true">🌐</span><span>اللغة</span><button type="button" id="lang-toggle" class="us-val" role="menuitem" title="Switch to English">EN</button></div>
+      </div>
       <div class="user-card">
         <span class="avatar" id="current-user-avatar">?</span>
         <span class="meta"><strong id="current-user-name"></strong></span>
-        <button type="button" id="theme-toggle" class="btn btn-ghost btn-icon btn-sm" title="تبديل المظهر">🌙</button>
-        <button type="button" id="lang-toggle" class="btn btn-ghost btn-icon btn-sm" title="Switch to English">EN</button>
+        <button type="button" id="user-settings-btn" class="btn btn-ghost btn-icon btn-sm" title="إعداداتي" aria-label="إعداداتي" aria-haspopup="menu" aria-expanded="false" aria-controls="user-settings-panel"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg></button>
         <button type="button" id="logout-btn" class="btn btn-ghost btn-icon btn-sm" title="خروج" aria-label="خروج"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-logout"/></svg></button>
       </div>
     </div>

@@ -11360,6 +11360,32 @@ el('login-form').addEventListener('submit', async e => {
   }
 });
 
+// ---------- قائمة «إعداداتي» بجوار اسم المستخدم ----------
+// تُفتح فوق بطاقة المستخدم بعرض الذيل؛ وفي القائمة المطوية (عرضها أيقونات) تُثبَّت بجوار الشريط الجانبي بموضع محسوب لأن الشريط يقص ما يخرج عنه.
+function usSetOpen(open) {
+  const panel = el('user-settings-panel'), btn = el('user-settings-btn');
+  panel.classList.toggle('hidden', !open); btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  panel.style.cssText = '';
+  if (!open) return;
+  if (document.querySelector('.app.is-collapsed')) {
+    const r = btn.getBoundingClientRect(), side = btn.closest('.sidebar').getBoundingClientRect(), rtl = getComputedStyle(document.documentElement).direction === 'rtl';
+    panel.style.position = 'fixed'; panel.style.bottom = Math.max(8, innerHeight - r.bottom) + 'px'; panel.style.width = '240px';
+    if (rtl) panel.style.right = (innerWidth - side.left + 8) + 'px'; else panel.style.left = (side.right + 8) + 'px';
+  }
+  (panel.querySelector('.us-item:not(.hidden) button, button.us-item:not(.hidden)') || panel).focus?.();
+}
+el('user-settings-btn').addEventListener('click', e => { e.stopPropagation(); usSetOpen(el('user-settings-panel').classList.contains('hidden')); });
+el('user-settings-panel').addEventListener('click', e => {
+  e.stopPropagation();
+  // الصف كله قابل للنقر: النقر على «المظهر»/«اللغة» يشغّل زره
+  const row = e.target.closest('.us-row');
+  if (row && !e.target.closest('button')) el(row.dataset.usFor).click();
+});
+document.addEventListener('click', () => { if (!el('user-settings-panel').classList.contains('hidden')) usSetOpen(false); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !el('user-settings-panel').classList.contains('hidden')) { usSetOpen(false); el('user-settings-btn').focus(); }
+});
+
 el('logout-btn').addEventListener('click', async () => {
   await fetch('/api/auth/logout', { method: 'POST' });
   location.href = '/';
@@ -12016,7 +12042,7 @@ function positionTourPopover(targetEl, pop) {
   pop.style.left = `${left}px`;
 }
 
-el('tour-btn').addEventListener('click', startTour);
+el('tour-btn').addEventListener('click', () => { usSetOpen(false); startTour(); });
 el('tour-dim').addEventListener('click', endTour);
 
 /// Once per user per browser, a little while after their first successful login or
