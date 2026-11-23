@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHAMP Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «نموذج تشامب»: الشريحة الأولى أربعة أعمدة (رمادي مزرق، أزرق، برتقالي، أخضر) في كل منها حرف أبيض كبير وشريط داكن بالاسم وأيقونة وفقرتان؛ الثانية أربعة صفوف بدائرة أيقونة داكنة وشريط بالاسم ومربع داكن بالحرف ونص. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #000000; --accent: #3598DB; --bg: #FFFFFF; --c1: #44546B; --c1d: #333E50; --c2: #3598DB; --c2d: #1F74AD; --c3: #ED7D31; --c3d: #C55B11; --c4: #70AD46; --c4d: #548235; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 38px; inset-inline-start: 64px; margin: 0; font-size: 42px; font-weight: 400; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 500; top: 34px; }
+  .k1 { --c: var(--c1); --cd: var(--c1d); } .k2 { --c: var(--c2); --cd: var(--c2d); }
+  .k3 { --c: var(--c3); --cd: var(--c3d); } .k4 { --c: var(--c4); --cd: var(--c4d); }
+  .ico { color: #fff; } .ico svg { width: 100%; height: 100%; }
+  /* الأيقونات غير المتماثلة تنعكس في العربية */
+  html[dir="rtl"] .ico.m svg { transform: scaleX(-1); }
+  /* الحروف اللاتينية الكبيرة بخط الأصل في اللغتين */
+  .col .big, .row .sq { font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif; }
+  /* الشريحة 1: أعمدة */
+  .col { position: absolute; top: 114px; width: 285px; height: 550px; background: var(--c); color: #fff; }
+  .col.k1 { inset-inline-start: 63px; } .col.k2 { inset-inline-start: 352px; } .col.k3 { inset-inline-start: 642px; } .col.k4 { inset-inline-start: 931px; }
+  .col .big { position: absolute; top: 0; inset-inline-start: 0; width: 100%; height: 186px; margin: 0; display: flex; align-items: center; justify-content: center; font-size: 106px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
+  .col .band { position: absolute; top: 186px; inset-inline-start: 0; width: 100%; height: 53px; margin: 0; background: var(--cd); display: flex; align-items: center; justify-content: center; font-size: 21px; font-weight: 400; }
+  .col .ico { position: absolute; top: 269px; inset-inline-start: 100px; width: 85px; height: 85px; }
+  .col .tx { position: absolute; top: 375px; inset-inline-start: 30px; width: 228px; }
+  .col p { margin: 0 0 23px; font-size: 17px; line-height: 23px; }
+  /* الشريحة 2: صفوف */
+  .row { position: absolute; height: 121px; inset-inline-start: 0; width: 1280px; color: #fff; }
+  .row.k1 { top: 124px; } .row.k2 { top: 257px; } .row.k3 { top: 391px; } .row.k4 { top: 524px; }
+  .row .lb { position: absolute; top: 0; inset-inline-start: 115px; width: 338px; height: 100%; background: var(--c); }
+  .row .cir { position: absolute; top: -2px; inset-inline-start: 53px; width: 125px; height: 125px; border-radius: 50%; background: var(--cd); display: grid; place-items: center; }
+  .row .cir .ico { width: 50px; height: 50px; }
+  .row h2 { position: absolute; top: 0; inset-inline-start: 216px; height: 100%; margin: 0; display: flex; align-items: center; font-size: 21px; font-weight: 400; }
+  .row .rb { position: absolute; top: 0; inset-inline-start: 459px; width: 757px; height: 100%; background: var(--c); }
+  .row .sq { position: absolute; top: 0; inset-inline-start: 459px; width: 154px; height: 100%; margin: 0; background: var(--cd); display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: 700; line-height: 1; }
+  .row p { position: absolute; top: 0; inset-inline-start: 664px; width: 472px; height: 100%; margin: 0; display: flex; align-items: center; font-size: 17px; line-height: 23px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">CHAMP Model PowerPoint Template</h1>
+    <div class="col k1"><p class="big">Ch</p><h2 class="band">CHALLENGES</h2><div class="ico m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15.2" cy="3.4" r="2" fill="currentColor" stroke="none"/><path stroke-width="2.6" d="M13.6 7.4 10.6 12.2"/><path stroke-width="1.9" d="M13.4 7.6 17.6 8.2 20 10.2M12.6 8.3 8.8 7.6 6.8 9.6"/><path stroke-width="2.2" d="M10.6 12.2 15.6 12.6 19.6 14M10.6 12.2 6.4 14.2 3.6 12.8"/><path stroke-width="1.6" d="M6.6 16.4H14M7.4 16.4V22.4M13.2 16.4V20.4M7.4 22.4H9.4"/></svg></div><div class="tx"><p>Insert your desired text here. This is a sample text.</p><p>Insert your desired text here. Insert your desired text here.</p></div></div>
+    <div class="col k2"><p class="big">A</p><h2 class="band">AUTHORITY</h2><div class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.6 2.2 6.8V8.4h19.6V6.8zM12 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><rect x="3" y="9.4" width="18" height="1.2"/><rect x="4.2" y="11.2" width="1.6" height="7.4"/><rect x="7.4" y="11.2" width="1.6" height="7.4"/><rect x="10.6" y="11.2" width="1.6" height="7.4"/><rect x="13.8" y="11.2" width="1.6" height="7.4"/><rect x="17" y="11.2" width="1.6" height="7.4"/><rect x="3" y="19.2" width="18" height="1.4"/><rect x="1.6" y="21.2" width="20.8" height="1.6"/></svg></div><div class="tx"><p>Insert your desired text here. This is a sample text.</p><p>Insert your desired text here. Insert your desired text here.</p></div></div>
+    <div class="col k3"><p class="big">M</p><h2 class="band">MONEY</h2><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M9.4 2.6h5.2l1.2 4.4H8.2z"/><path d="M5.6 9h5.2l1.2 4.4H4.4zM13.2 9h5.2l1.2 4.4h-7.6z"/><path d="M2 15.4h5.2l1.2 4.4H.8zM9.4 15.4h5.2l1.2 4.4H8.2zM16.8 15.4H22l1.2 4.4h-7.6z"/><path d="M.8 21.4h22.4"/></svg></div><div class="tx"><p>Insert your desired text here. This is a sample text.</p><p>Insert your desired text here. Insert your desired text here.</p></div></div>
+    <div class="col k4"><p class="big">P</p><h2 class="band">PRIORITIZATION</h2><div class="ico m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6.4 20.6A7.6 7.6 0 0 1 6.4 4.6" stroke-linecap="round"/><path d="M3.6 3.4 7.2 4.4 5.6 7.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="10.4" y="2.4" width="11" height="5" rx=".5"/><rect x="10.4" y="9.6" width="11" height="5" rx=".5"/><rect x="10.4" y="16.8" width="11" height="5" rx=".5"/></svg></div><div class="tx"><p>Insert your desired text here. This is a sample text.</p><p>Insert your desired text here. Insert your desired text here.</p></div></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">CHAMP Model PowerPoint Template</h1>
+    <div class="row k1"><div class="lb"></div><div class="cir"><div class="ico m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15.2" cy="3.4" r="2" fill="currentColor" stroke="none"/><path stroke-width="2.6" d="M13.6 7.4 10.6 12.2"/><path stroke-width="1.9" d="M13.4 7.6 17.6 8.2 20 10.2M12.6 8.3 8.8 7.6 6.8 9.6"/><path stroke-width="2.2" d="M10.6 12.2 15.6 12.6 19.6 14M10.6 12.2 6.4 14.2 3.6 12.8"/><path stroke-width="1.6" d="M6.6 16.4H14M7.4 16.4V22.4M13.2 16.4V20.4M7.4 22.4H9.4"/></svg></div></div><h2>CHALLENGES</h2><div class="rb"></div><p class="sq">Ch</p><p>Insert your desired text here. This is a sample text. Insert your desired text here. Insert your desired text here.</p></div>
+    <div class="row k2"><div class="lb"></div><div class="cir"><div class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.6 2.2 6.8V8.4h19.6V6.8zM12 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><rect x="3" y="9.4" width="18" height="1.2"/><rect x="4.2" y="11.2" width="1.6" height="7.4"/><rect x="7.4" y="11.2" width="1.6" height="7.4"/><rect x="10.6" y="11.2" width="1.6" height="7.4"/><rect x="13.8" y="11.2" width="1.6" height="7.4"/><rect x="17" y="11.2" width="1.6" height="7.4"/><rect x="3" y="19.2" width="18" height="1.4"/><rect x="1.6" y="21.2" width="20.8" height="1.6"/></svg></div></div><h2>AUTHORITY</h2><div class="rb"></div><p class="sq">A</p><p>Insert your desired text here. This is a sample text. Insert your desired text here. Insert your desired text here.</p></div>
+    <div class="row k3"><div class="lb"></div><div class="cir"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M9.4 2.6h5.2l1.2 4.4H8.2z"/><path d="M5.6 9h5.2l1.2 4.4H4.4zM13.2 9h5.2l1.2 4.4h-7.6z"/><path d="M2 15.4h5.2l1.2 4.4H.8zM9.4 15.4h5.2l1.2 4.4H8.2zM16.8 15.4H22l1.2 4.4h-7.6z"/><path d="M.8 21.4h22.4"/></svg></div></div><h2>MONEY</h2><div class="rb"></div><p class="sq">M</p><p>Insert your desired text here. This is a sample text. Insert your desired text here. Insert your desired text here.</p></div>
+    <div class="row k4"><div class="lb"></div><div class="cir"><div class="ico m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6.4 20.6A7.6 7.6 0 0 1 6.4 4.6" stroke-linecap="round"/><path d="M3.6 3.4 7.2 4.4 5.6 7.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="10.4" y="2.4" width="11" height="5" rx=".5"/><rect x="10.4" y="9.6" width="11" height="5" rx=".5"/><rect x="10.4" y="16.8" width="11" height="5" rx=".5"/></svg></div></div><h2>PRIORITIZATION</h2><div class="rb"></div><p class="sq">P</p><p>Insert your desired text here. This is a sample text. Insert your desired text here. Insert your desired text here.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

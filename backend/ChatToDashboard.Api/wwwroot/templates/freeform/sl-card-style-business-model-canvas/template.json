@@ -1,0 +1,21 @@
+{
+  "key": "sl-card-style-business-model-canvas",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧩",
+  "name": "مخطط نموذج العمل ببطاقات",
+  "nameEn": "Card-Style Business Model Canvas",
+  "description": "شريحتان لمخطط نموذج العمل بتسع بطاقات ملوّنة: نسخة فاتحة ونسخة داكنة",
+  "descriptionEn": "Two Business Model Canvas slides with nine colored cards: light and dark versions",
+  "sections": [
+    {
+      "title": "المخطط (فاتح)",
+      "titleEn": "Canvas (Light)"
+    },
+    {
+      "title": "المخطط (داكن)",
+      "titleEn": "Canvas (Dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والبطاقات التسع وألوانها وغيّر النصوص فقط؛ الشريحة الثانية نسخة داكنة من الأولى."
+}

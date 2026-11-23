@@ -1,0 +1,21 @@
+{
+  "key": "sl-capability-statement",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "بيان القدرات",
+  "nameEn": "Capability Statement",
+  "description": "شريحتان لبيان قدرات الشركة: من نحن، التواصل، الكفاءات الأساسية، الأداء السابق وأبرز العملاء",
+  "descriptionEn": "Two capability statement slides: about us, contact, core competencies, past performance, clients",
+  "sections": [
+    {
+      "title": "بيان القدرات (فاتح)",
+      "titleEn": "Capability Statement (Light)"
+    },
+    {
+      "title": "بيان القدرات (كحلي)",
+      "titleEn": "Capability Statement (Navy)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال المائلة وغيّر النصوص فقط (اسم الشركة، من نحن، بيانات التواصل، الكفاءات، الأداء السابق، العملاء)؛ الشريحة الثانية نسخة بخلفية سفلية كحلية."
+}

@@ -1,0 +1,21 @@
+{
+  "key": "sl-champ-model",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "🏆",
+  "name": "نموذج تشامب لتأهيل العملاء",
+  "nameEn": "CHAMP Model",
+  "description": "شريحتان لنموذج تشامب: التحديات والصلاحية والمال والأولويات في أعمدة ثم في صفوف",
+  "descriptionEn": "Two CHAMP slides: Challenges, Authority, Money and Prioritization as columns, then as rows",
+  "sections": [
+    {
+      "title": "أعمدة النموذج الأربعة",
+      "titleEn": "Four Columns"
+    },
+    {
+      "title": "صفوف النموذج الأربعة",
+      "titleEn": "Four Rows"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والألوان الأربعة وغيّر النصوص فقط؛ الحروف الكبيرة (Ch, A, M, P) اختصار النموذج."
+}
