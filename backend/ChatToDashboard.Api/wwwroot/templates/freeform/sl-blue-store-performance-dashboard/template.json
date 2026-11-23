@@ -1,0 +1,28 @@
+{
+  "key": "sl-blue-store-performance-dashboard",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "🏬",
+  "name": "لوحة أداء المتجر الزرقاء",
+  "nameEn": "Blue Store Performance Dashboard",
+  "description": "ثلاث لوحات بيع بالتجزئة: مؤشرات المبيعات، المبيعات حسب المنطقة والمتاجر ومعدل التحويل، والاستراتيجية والمخزون",
+  "descriptionEn": "Three retail dashboards: sales KPIs, sales by geography, stores and conversion, and strategy and inventory",
+  "sections": [
+    {
+      "title": "مؤشرات أداء المبيعات",
+      "titleEn": "Sales KPIs",
+      "needsData": true
+    },
+    {
+      "title": "المبيعات حسب المنطقة والمتاجر ومعدل التحويل",
+      "titleEn": "Sales by Geo, Key Stores & Conversion",
+      "needsData": true
+    },
+    {
+      "title": "الاستراتيجية: المبيعات والمخزون",
+      "titleEn": "Strategy: Sales & Inventory",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط ومحرك الرسوم، وغيّر النصوص والأرقام فقط؛ قيم الرسوم وتسمياتها في كتل JSON بالمعرّفات chart-data إلى chart-data-14، والمؤشرات والجدول نصوص HTML."
+}

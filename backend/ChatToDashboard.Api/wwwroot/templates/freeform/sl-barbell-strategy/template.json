@@ -1,0 +1,26 @@
+{
+  "key": "sl-barbell-strategy",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "🏋️",
+  "name": "استراتيجية الباربل",
+  "nameEn": "Barbell Strategy",
+  "description": "ثلاث شرائح لاستراتيجية الباربل: طرفا المحفظة، وتوزيع الاستثمار على المناطق الثلاث، والطرفان المتطرفان",
+  "descriptionEn": "Three barbell strategy slides: the two portfolio ends, allocation across three zones, and the extremes",
+  "sections": [
+    {
+      "title": "الباربل: متحفّظ مقابل مجازف",
+      "titleEn": "Barbell: Conservative vs. Aggressive"
+    },
+    {
+      "title": "توزيع الاستثمار على المناطق",
+      "titleEn": "Investment Allocation by Zone",
+      "needsData": true
+    },
+    {
+      "title": "الطرفان المتطرفان",
+      "titleEn": "The Two Extremes"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط ورسم الباربل SVG، وغيّر النصوص والنسب المئوية فقط."
+}
