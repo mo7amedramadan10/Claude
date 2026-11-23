@@ -1,0 +1,87 @@
+{
+  "key": "sl-business-strategy-planning",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "استراتيجية الأعمال والتخطيط",
+  "nameEn": "Business Strategy & Planning",
+  "description": "سبع عشرة شريحة: نظرة تنفيذية، إطار استراتيجي، تحليل رباعي، خرائط طريق، جداول زمنية، السوق المستهدف وتقرير الأعمال",
+  "descriptionEn": "17 slides: executive overview, framework, SWOT, roadmaps, timelines, target market, business report",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة تنفيذية عامة",
+      "titleEn": "Executive Overview",
+      "needsData": true
+    },
+    {
+      "title": "الإطار الاستراتيجي",
+      "titleEn": "Strategic Framework"
+    },
+    {
+      "title": "التحليل الرباعي",
+      "titleEn": "SWOT Analysis"
+    },
+    {
+      "title": "الجدول الزمني لتطوير السوق",
+      "titleEn": "Market Dev. Timeline"
+    },
+    {
+      "title": "خارطة النمو",
+      "titleEn": "Growth Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق الأعمال",
+      "titleEn": "Business Roadmap"
+    },
+    {
+      "title": "فاصل الفصل",
+      "titleEn": "Chapter Separator"
+    },
+    {
+      "title": "مخطط الدرج بأربع خطوات",
+      "titleEn": "4-Item Step Stair Diagram",
+      "needsData": true
+    },
+    {
+      "title": "المربعات الاستراتيجية",
+      "titleEn": "Strategic Quadrants"
+    },
+    {
+      "title": "أولويات الأعمال",
+      "titleEn": "Business Priorities",
+      "needsData": true
+    },
+    {
+      "title": "جدول زمني رأسي (1)",
+      "titleEn": "Vertical Timeline (1)"
+    },
+    {
+      "title": "جدول زمني رأسي (2)",
+      "titleEn": "Vertical Timeline (2)"
+    },
+    {
+      "title": "السوق المستهدف",
+      "titleEn": "Target Market",
+      "needsData": true
+    },
+    {
+      "title": "شريحة تقرير الأعمال",
+      "titleEn": "Business Report Slide",
+      "needsData": true
+    },
+    {
+      "title": "مبادئ جبل الجليد",
+      "titleEn": "The Iceberg Principles"
+    },
+    {
+      "title": "الختام والتواصل",
+      "titleEn": "Closing & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والإحداثيات وغيّر النصوص والأرقام فقط؛ أجزاء الرسم الحلقي في شريحة تقرير الأعمال تُرسم من كتلة chart-data (التسمية والقيمة لكل جزء)."
+}
