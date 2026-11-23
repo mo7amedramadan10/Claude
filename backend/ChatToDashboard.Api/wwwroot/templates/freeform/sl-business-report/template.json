@@ -1,0 +1,92 @@
+{
+  "key": "sl-business-report",
+  "kind": "slides",
+  "category": "general",
+  "icon": "📘",
+  "name": "عرض تقرير أعمال",
+  "nameEn": "Business Report Presentation",
+  "description": "تسع عشرة شريحة زرقاء بصور: غلاف وجدول أعمال ونصوص ومؤشرات وحصة سوقية وقمع وSWOT ومقارنة منتجات وتواصل",
+  "descriptionEn": "19 blue photo slides: cover, agenda, text layouts, KPIs, market share, funnel, SWOT, product comparison, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال (ستة بنود)",
+      "titleEn": "Agenda (6 items)"
+    },
+    {
+      "title": "جدول الأعمال (ثلاثة بنود)",
+      "titleEn": "Agenda (3 items)"
+    },
+    {
+      "title": "عنوان ونص مع صور أبراج",
+      "titleEn": "Title & Text with Towers"
+    },
+    {
+      "title": "صورة عريضة مع عنوان أيمن",
+      "titleEn": "Wide Photo, Title Right"
+    },
+    {
+      "title": "صورة عريضة مع عنوان أيسر",
+      "titleEn": "Wide Photo, Title Left"
+    },
+    {
+      "title": "عنوان ونص مع صورة جانبية",
+      "titleEn": "Title & Text with Side Photo"
+    },
+    {
+      "title": "صورة جانبية مع عنوان ونص",
+      "titleEn": "Side Photo with Title & Text"
+    },
+    {
+      "title": "عمودان بصورتين",
+      "titleEn": "Two Columns with Photos"
+    },
+    {
+      "title": "ثلاثة أعمدة بصور",
+      "titleEn": "Three Columns with Photos"
+    },
+    {
+      "title": "آراء العملاء",
+      "titleEn": "Testimonials"
+    },
+    {
+      "title": "أربعة مؤشرات أداء",
+      "titleEn": "4-Item KPI",
+      "needsData": true
+    },
+    {
+      "title": "الحصة السوقية (رسم)",
+      "titleEn": "Market Share (chart)",
+      "needsData": true
+    },
+    {
+      "title": "قمع المبيعات",
+      "titleEn": "Sales Funnel"
+    },
+    {
+      "title": "المخطط الدائري الخماسي",
+      "titleEn": "5 Segment Circular Diagram"
+    },
+    {
+      "title": "التحليل الرباعي",
+      "titleEn": "SWOT Analysis"
+    },
+    {
+      "title": "هرم الأحجية",
+      "titleEn": "Puzzle Pyramid"
+    },
+    {
+      "title": "مقارنة المنتجات (مصفوفة)",
+      "titleEn": "Product Comparison (matrix)",
+      "needsData": true
+    },
+    {
+      "title": "التواصل",
+      "titleEn": "Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أعمدة الحصة السوقية في كتلة chart-data (labels/values/max) ودرجات مقارنة المنتجات في كتلة chart-data-2 (rows: لكل معيار درجة كل منتج من 1 إلى 10)."
+}
