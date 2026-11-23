@@ -9706,6 +9706,7 @@ function ffRenderMessages() {
 }
 async function ffAsk(text) {
   if (FF.busy || !text.trim()) return;
+  if (el('screen-freeform').classList.contains('ff-chat-hidden')) ffSetChatHidden(false, false); // الرد يظهر في المحادثة
   if (!FF.design && (FF.kind === 'track' || FF.track)) return ffTrackAsk(text);
   ffPushMsg('user', text); FF.busy = true; FF.busyText = FF.design ? 'يعدّل الصفحة…' : 'يصمّم الصفحة… قد يستغرق حتى دقيقة'; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
   ccSetLoading('ff-pane', FF.design ? 'جارٍ تعديل الصفحة' : 'جارٍ بناء الصفحة', 'الموديل يعمل على طلبك وقد يستغرق حتى دقيقة — ستظهر النتيجة هنا فور اكتمالها.');
@@ -9750,6 +9751,18 @@ el('ff-restore').addEventListener('click', async () => {
   FF.design.version = d.version; FF.versions = d.versions; FF.html = d.html; FF.viewing = null; ffPushMsg('bot', `استُعيد الإصدار كإصدار ${d.version}.`); ffRender();
 });
 el('ff-mobile').addEventListener('click', () => { FF.mobile = !FF.mobile; ffRender(); });
+// إخفاء شريط المحادثة في تصميم حر لمساحة عمل أوسع؛ الاختيار يُحفظ لكل متصفح، وأي طلب للموديل من شريط الأدوات يُظهره ليُرى الرد
+function ffSetChatHidden(hidden, persist = true) {
+  el('screen-freeform').classList.toggle('ff-chat-hidden', hidden);
+  const b = el('ff-chat-toggle'); const label = hidden ? 'إظهار المحادثة' : 'إخفاء المحادثة';
+  b.setAttribute('aria-pressed', hidden ? 'true' : 'false'); b.title = hidden ? 'إظهار شريط المحادثة' : 'إخفاء المحادثة لمساحة عمل أوسع';
+  b.querySelector('.btn-label').textContent = label; b.setAttribute('aria-label', label);
+  if (persist) { try { localStorage.setItem('ffChatHidden', hidden ? '1' : '0'); } catch {} }
+  if (!hidden) setTimeout(() => el('ff-q')?.focus({ preventScroll: true }), 0);
+  if (typeof ffScaleThumbs === 'function') requestAnimationFrame(() => ffScaleThumbs());
+}
+el('ff-chat-toggle').addEventListener('click', () => ffSetChatHidden(!el('screen-freeform').classList.contains('ff-chat-hidden')));
+try { if (localStorage.getItem('ffChatHidden') === '1') ffSetChatHidden(true, false); } catch {}
 el('ff-code').addEventListener('click', () => {
   const show = el('ff-code-wrap').classList.contains('hidden');
   el('ff-code-wrap').classList.toggle('hidden', !show); el('ff-preview-wrap').classList.toggle('hidden', show); el('ff-code').setAttribute('aria-pressed', show ? 'true' : 'false');

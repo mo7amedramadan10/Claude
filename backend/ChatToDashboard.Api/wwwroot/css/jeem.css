@@ -3800,3 +3800,10 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .dash-gallery-box .ff-lang { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-xs); }
 .dash-gallery-box .ff-lang .chip { height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
 .dash-gallery-box .ff-lang .chip.is-on { background: var(--blue-50); border-color: var(--brand-blue); color: var(--blue-700); font-weight: 700; }
+
+/* إخفاء شريط المحادثة في تصميم حر: مساحة العمل تأخذ العرض (والارتفاع على الجوال) كاملًا */
+#screen-freeform.ff-chat-hidden #ff-rail { display: none; }
+#screen-freeform .cc-pane-head .ff-chat-toggle { flex: none; gap: 6px; }
+#screen-freeform.ff-chat-hidden .ff-chat-toggle { background: var(--blue-50); color: var(--blue-700); border-color: var(--brand-blue); }
+@media (max-width: 520px) { #screen-freeform .ff-chat-toggle .btn-label { display: none; } }
+
