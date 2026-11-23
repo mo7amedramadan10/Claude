@@ -1,0 +1,33 @@
+{
+  "key": "sl-aida-funnel-slide",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🔻",
+  "name": "شريحة قمع أيدا",
+  "nameEn": "AIDA Funnel Slide",
+  "description": "خمس شرائح لقمع أيدا بأربع مراحل: نظرة عامة ثم إبراز الانتباه والاهتمام والرغبة والفعل",
+  "descriptionEn": "Five slides of a 4-stage AIDA funnel: overview, then Awareness, Interest, Desire and Action highlighted",
+  "sections": [
+    {
+      "title": "القمع كاملًا",
+      "titleEn": "Full Funnel"
+    },
+    {
+      "title": "الانتباه",
+      "titleEn": "Awareness"
+    },
+    {
+      "title": "الاهتمام",
+      "titleEn": "Interest"
+    },
+    {
+      "title": "الرغبة",
+      "titleEn": "Desire"
+    },
+    {
+      "title": "الفعل",
+      "titleEn": "Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ القمع رسم SVG والصنفان on/off على الأشرطة والتسميات والحروف يحددان المرحلة المُبرزة في كل شريحة."
+}

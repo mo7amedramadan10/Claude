@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>شريحة قمع أيدا</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «شريحة قمع AIDA»: عنوان أعلى، قمع مقلوب SVG في المنتصف (قطاع رمادي فاتح وأربعة أشرطة هلالية بأطراف مدوّرة وأسهم خضراء متدرّجة)، وتسمية HTML فوق كل شريط، وأربعة حروف كبيرة بنص توضيحي حول القمع. الصنف off يُطفئ المرحلة بالرمادي. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #262626; --ink-2: #2B2B2B; --muted: #828282; --muted-2: #7F7F7F; --muted-3: #BFBFBF; --band-off: #D9D9D9; --body: #F2F2F2; --navy: #0E4E95; --blue: #1878DE; --sky: #34A3F5; --light: #7FCBFC; --accent: #1878DE; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 41px; font-weight: 400; line-height: 1.2; color: var(--ink); letter-spacing: -0.2px; white-space: nowrap; }
+  /* القمع: رسم SVG بإحداثيات الإطار نفسها (متماثل أفقيًا فلا يحتاج عكسًا) */
+  .funnel { position: absolute; top: 120px; inset-inline-start: 400px; width: 480px; height: 540px; }
+  .funnel .body { fill: var(--body); }
+  .funnel .band { fill: var(--band-off); }
+  .funnel .b1.on { fill: var(--navy); } .funnel .b2.on { fill: var(--blue); } .funnel .b3.on { fill: var(--sky); } .funnel .b4.on { fill: var(--light); }
+  .funnel .ar { fill: url(#aida-g-top); } .funnel .ar-b { fill: url(#aida-g-bottom); }
+  /* تسميات الأشرطة: نص HTML فوق كل شريط */
+  .lb { position: absolute; inset-inline-start: 440px; width: 400px; margin: 0; text-align: center; font-size: 22px; font-weight: 700; line-height: 26px; color: var(--muted-2); letter-spacing: .2px; }
+  .lb.on { color: #fff; }
+  .lb1 { top: 225px; } .lb2 { top: 320px; } .lb3 { top: 417px; } .lb4 { top: 517px; }
+  /* الحروف الكبيرة والنصوص التوضيحية */
+  .ltr { position: absolute; margin: 0; font-size: 68px; font-weight: 700; line-height: 1; color: var(--muted-3); }
+  .ltr.l1.on { color: var(--navy); } .ltr.l2.on { color: var(--blue); } .ltr.l3.on { color: var(--sky); } .ltr.l4.on { color: var(--light); }
+  html[lang="ar"] .ltr { font-weight: 800; }
+  .tx { position: absolute; margin: 0; width: 250px; font-size: 17px; line-height: 23px; color: var(--muted); }
+  .tx.on { color: var(--ink-2); }
+  .l1 { top: 203px; inset-inline-start: 318px; } .t1 { top: 279px; inset-inline-start: 120px; text-align: end; }
+  .l2 { top: 311px; inset-inline-start: 889px; } .t2 { top: 387px; inset-inline-start: 890px; text-align: start; }
+  .l3 { top: 392px; inset-inline-start: 395px; } .t3 { top: 470px; inset-inline-start: 196px; text-align: end; }
+  .l4 { top: 489px; inset-inline-start: 790px; } .t4 { top: 564px; inset-inline-start: 791px; text-align: start; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="aida-g-top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF4E6"/><stop offset=".45" stop-color="#A9DB9F"/><stop offset="1" stop-color="#5FBA4A"/></linearGradient><linearGradient id="aida-g-bottom" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B9DDD6"/><stop offset=".55" stop-color="#86CAA0"/><stop offset="1" stop-color="#5AB650"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب قمع أيدا التسويقي</h1>
+    <svg class="funnel" viewBox="400 120 480 540" aria-hidden="true"><path class="body" d="M479.2,197.0 A550,550 0 0 1 800.8,197.0 L680.7,590 L599.3,590 Z"/><path class="band b1 on" d="M449,258 Q640,158 831,258 A30,30 0 0 1 831,318 Q640,220 449,318 A30,30 0 0 1 449,258 Z"/><path class="band b2 on" d="M490,344 Q640,262 790,344 A28,28 0 0 1 790,400 Q640,330 490,400 A28,28 0 0 1 490,344 Z"/><path class="band b3 on" d="M534,430 Q640,368 746,430 A27,27 0 0 1 746,484 Q640,436 534,484 A27,27 0 0 1 534,430 Z"/><path class="band b4 on" d="M580,514 Q640,480 700,514 A27,27 0 0 1 700,568 Q640,548 580,568 A27,27 0 0 1 580,514 Z"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(640 143)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(506 166) rotate(-30)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(774 166) rotate(30)"/><polygon class="ar-b" points="629,591 651,591 651,621 664,621 640,645 616,621 629,621"/></svg>
+    <p class="lb lb1 on">الانتباه</p>
+    <p class="lb lb2 on">الاهتمام</p>
+    <p class="lb lb3 on">الرغبة</p>
+    <p class="lb lb4 on">الفعل</p>
+    <p class="ltr l1 on">A</p><p class="tx t1 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l2 on">I</p><p class="tx t2 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l3 on">D</p><p class="tx t3 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l4 on">A</p><p class="tx t4 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب قمع أيدا التسويقي</h1>
+    <svg class="funnel" viewBox="400 120 480 540" aria-hidden="true"><path class="body" d="M479.2,197.0 A550,550 0 0 1 800.8,197.0 L680.7,590 L599.3,590 Z"/><path class="band b1 on" d="M449,258 Q640,158 831,258 A30,30 0 0 1 831,318 Q640,220 449,318 A30,30 0 0 1 449,258 Z"/><path class="band b2 off" d="M490,344 Q640,262 790,344 A28,28 0 0 1 790,400 Q640,330 490,400 A28,28 0 0 1 490,344 Z"/><path class="band b3 off" d="M534,430 Q640,368 746,430 A27,27 0 0 1 746,484 Q640,436 534,484 A27,27 0 0 1 534,430 Z"/><path class="band b4 off" d="M580,514 Q640,480 700,514 A27,27 0 0 1 700,568 Q640,548 580,568 A27,27 0 0 1 580,514 Z"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(640 143)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(506 166) rotate(-30)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(774 166) rotate(30)"/><polygon class="ar-b" points="629,591 651,591 651,621 664,621 640,645 616,621 629,621"/></svg>
+    <p class="lb lb1 on">الانتباه</p>
+    <p class="lb lb2 off">الاهتمام</p>
+    <p class="lb lb3 off">الرغبة</p>
+    <p class="lb lb4 off">الفعل</p>
+    <p class="ltr l1 on">A</p><p class="tx t1 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l2 off">I</p><p class="tx t2 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l3 off">D</p><p class="tx t3 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l4 off">A</p><p class="tx t4 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">قالب قمع أيدا التسويقي</h1>
+    <svg class="funnel" viewBox="400 120 480 540" aria-hidden="true"><path class="body" d="M479.2,197.0 A550,550 0 0 1 800.8,197.0 L680.7,590 L599.3,590 Z"/><path class="band b1 off" d="M449,258 Q640,158 831,258 A30,30 0 0 1 831,318 Q640,220 449,318 A30,30 0 0 1 449,258 Z"/><path class="band b2 on" d="M490,344 Q640,262 790,344 A28,28 0 0 1 790,400 Q640,330 490,400 A28,28 0 0 1 490,344 Z"/><path class="band b3 off" d="M534,430 Q640,368 746,430 A27,27 0 0 1 746,484 Q640,436 534,484 A27,27 0 0 1 534,430 Z"/><path class="band b4 off" d="M580,514 Q640,480 700,514 A27,27 0 0 1 700,568 Q640,548 580,568 A27,27 0 0 1 580,514 Z"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(640 143)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(506 166) rotate(-30)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(774 166) rotate(30)"/><polygon class="ar-b" points="629,591 651,591 651,621 664,621 640,645 616,621 629,621"/></svg>
+    <p class="lb lb1 off">الانتباه</p>
+    <p class="lb lb2 on">الاهتمام</p>
+    <p class="lb lb3 off">الرغبة</p>
+    <p class="lb lb4 off">الفعل</p>
+    <p class="ltr l1 off">A</p><p class="tx t1 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l2 on">I</p><p class="tx t2 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l3 off">D</p><p class="tx t3 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l4 off">A</p><p class="tx t4 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">قالب قمع أيدا التسويقي</h1>
+    <svg class="funnel" viewBox="400 120 480 540" aria-hidden="true"><path class="body" d="M479.2,197.0 A550,550 0 0 1 800.8,197.0 L680.7,590 L599.3,590 Z"/><path class="band b1 off" d="M449,258 Q640,158 831,258 A30,30 0 0 1 831,318 Q640,220 449,318 A30,30 0 0 1 449,258 Z"/><path class="band b2 off" d="M490,344 Q640,262 790,344 A28,28 0 0 1 790,400 Q640,330 490,400 A28,28 0 0 1 490,344 Z"/><path class="band b3 on" d="M534,430 Q640,368 746,430 A27,27 0 0 1 746,484 Q640,436 534,484 A27,27 0 0 1 534,430 Z"/><path class="band b4 off" d="M580,514 Q640,480 700,514 A27,27 0 0 1 700,568 Q640,548 580,568 A27,27 0 0 1 580,514 Z"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(640 143)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(506 166) rotate(-30)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(774 166) rotate(30)"/><polygon class="ar-b" points="629,591 651,591 651,621 664,621 640,645 616,621 629,621"/></svg>
+    <p class="lb lb1 off">الانتباه</p>
+    <p class="lb lb2 off">الاهتمام</p>
+    <p class="lb lb3 on">الرغبة</p>
+    <p class="lb lb4 off">الفعل</p>
+    <p class="ltr l1 off">A</p><p class="tx t1 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l2 off">I</p><p class="tx t2 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l3 on">D</p><p class="tx t3 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l4 off">A</p><p class="tx t4 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">قالب قمع أيدا التسويقي</h1>
+    <svg class="funnel" viewBox="400 120 480 540" aria-hidden="true"><path class="body" d="M479.2,197.0 A550,550 0 0 1 800.8,197.0 L680.7,590 L599.3,590 Z"/><path class="band b1 off" d="M449,258 Q640,158 831,258 A30,30 0 0 1 831,318 Q640,220 449,318 A30,30 0 0 1 449,258 Z"/><path class="band b2 off" d="M490,344 Q640,262 790,344 A28,28 0 0 1 790,400 Q640,330 490,400 A28,28 0 0 1 490,344 Z"/><path class="band b3 off" d="M534,430 Q640,368 746,430 A27,27 0 0 1 746,484 Q640,436 534,484 A27,27 0 0 1 534,430 Z"/><path class="band b4 on" d="M580,514 Q640,480 700,514 A27,27 0 0 1 700,568 Q640,548 580,568 A27,27 0 0 1 580,514 Z"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(640 143)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(506 166) rotate(-30)"/><polygon class="ar" points="0,17 10,3 4,3 4,-17 -4,-17 -4,3 -10,3" transform="translate(774 166) rotate(30)"/><polygon class="ar-b" points="629,591 651,591 651,621 664,621 640,645 616,621 629,621"/></svg>
+    <p class="lb lb1 off">الانتباه</p>
+    <p class="lb lb2 off">الاهتمام</p>
+    <p class="lb lb3 off">الرغبة</p>
+    <p class="lb lb4 on">الفعل</p>
+    <p class="ltr l1 off">A</p><p class="tx t1 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l2 off">I</p><p class="tx t2 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l3 off">D</p><p class="tx t3 off">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="ltr l4 on">A</p><p class="tx t4 on">هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 5</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

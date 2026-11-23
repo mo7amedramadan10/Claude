@@ -1,0 +1,50 @@
+{
+  "key": "sl-ai-training",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🤖",
+  "name": "عرض التدريب على الذكاء الاصطناعي",
+  "nameEn": "AI Training Presentation",
+  "description": "تسع شرائح: غلاف، محتويات، تعريف، أنواع الذكاء الاصطناعي، ثلاث شرائح تفصيل، تطور زمني، والبدء",
+  "descriptionEn": "Nine slides: cover, contents, definition, AI types, three detail slides, evolution timeline, get started",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "ما هو الذكاء الاصطناعي",
+      "titleEn": "What Is Artificial Intelligence"
+    },
+    {
+      "title": "أنواع الذكاء الاصطناعي",
+      "titleEn": "Types of AI"
+    },
+    {
+      "title": "الذكاء الاصطناعي الوكيل",
+      "titleEn": "Agentic AI"
+    },
+    {
+      "title": "الذكاء الاصطناعي التوليدي",
+      "titleEn": "Generative AI"
+    },
+    {
+      "title": "الذكاء الاصطناعي الفائق",
+      "titleEn": "Super AI"
+    },
+    {
+      "title": "تطور الذكاء الاصطناعي (خط زمني)",
+      "titleEn": "The Evolution of AI (timeline)",
+      "needsData": true
+    },
+    {
+      "title": "ابدأ مع الذكاء الاصطناعي",
+      "titleEn": "Get Started With AI"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط (الخلفية المتدرّجة، زخارف الدوائر الإلكترونية، الشرائح المرقّمة، البطاقات، الحلقات الزمنية) وغيّر النصوص والسنوات فقط؛ الرسوم التوضيحية صور ثابتة في assets لا تُستبدل."
+}

@@ -1,0 +1,86 @@
+{
+  "key": "sl-ai-transformation-roadmap",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "خارطة طريق التحول بالذكاء الاصطناعي",
+  "nameEn": "AI Transformation Roadmap",
+  "description": "17 شريحة لخارطة التحول بالذكاء الاصطناعي: الرؤية والنضج والأولويات والجدول الزمني والحوكمة والمؤشرات",
+  "descriptionEn": "17 AI transformation roadmap slides: vision, maturity, priorities, timeline, governance and KPIs",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "مسوّغات التغيير",
+      "titleEn": "The Case for Change",
+      "needsData": true
+    },
+    {
+      "title": "تقييم نضج الذكاء الاصطناعي الحالي",
+      "titleEn": "Current State AI Maturity Assessment"
+    },
+    {
+      "title": "رؤية الذكاء الاصطناعي والمبادئ الأساسية",
+      "titleEn": "AI Vision Statement & Core Principles"
+    },
+    {
+      "title": "الركائز الاستراتيجية ونتائج الأعمال",
+      "titleEn": "Strategic Pillars & Desired Business Outcomes",
+      "needsData": true
+    },
+    {
+      "title": "حالات الاستخدام ذات الأولوية وخريطة الأثر",
+      "titleEn": "Prioritized AI Use Cases & Impact Mapping"
+    },
+    {
+      "title": "خارطة طريق التحول المرحلي (جانت)",
+      "titleEn": "The Phased Transformation Roadmap (Gantt)",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق التحول المرحلي (خط زمني)",
+      "titleEn": "The Phased Transformation Roadmap (Timeline)"
+    },
+    {
+      "title": "استراتيجية البيانات والبنية التحتية",
+      "titleEn": "Data & Infrastructure Strategy"
+    },
+    {
+      "title": "استراتيجية المواهب والمهارات والثقافة",
+      "titleEn": "Talent, Skills & Culture Strategy"
+    },
+    {
+      "title": "مخاطر الحوكمة",
+      "titleEn": "Governance Risks"
+    },
+    {
+      "title": "إطار الذكاء الاصطناعي الأخلاقي",
+      "titleEn": "Ethical AI Framework"
+    },
+    {
+      "title": "مؤشرات أداء الذكاء الاصطناعي ومتابعتها",
+      "titleEn": "AI KPIs and Tracking",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "AI Transformation Next Steps"
+    },
+    {
+      "title": "شكرًا وتواصلوا معنا",
+      "titleEn": "Thank You / Connect With Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON بالمعرّفات chart-data وchart-data-2 وchart-data-3، والأشكال الزخرفية SVG/CSS لا تُمس."
+}
