@@ -1,0 +1,138 @@
+{
+  "key": "sl-business-case-study",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "💼",
+  "name": "دراسة حالة أعمال",
+  "nameEn": "Business Case Study",
+  "description": "31 شريحة لعرض دراسة حالة: المشكلة والحل، تحليل القطاع والشركة، البدائل، التوصية، المخاطر، خطة التنفيذ",
+  "descriptionEn": "31 case-study slides: problem & solution, industry and company analysis, options, recommendation, risks, rollout plan",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "المشكلة والحل",
+      "titleEn": "Problem & Solution"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary"
+    },
+    {
+      "title": "فاصل: نبذة تاريخية",
+      "titleEn": "Divider: Brief History"
+    },
+    {
+      "title": "نقاط العمل الرئيسة",
+      "titleEn": "Business Key Points"
+    },
+    {
+      "title": "التحديات الرئيسة",
+      "titleEn": "Key Challenges"
+    },
+    {
+      "title": "فاصل: تحليل القطاع",
+      "titleEn": "Divider: Industry Analysis"
+    },
+    {
+      "title": "محاور قسم تحليل القطاع",
+      "titleEn": "Industry Analysis Section"
+    },
+    {
+      "title": "تحليل البيئة الكلية (قوى بورتر الخمس)",
+      "titleEn": "Macro Environment (Five Forces)"
+    },
+    {
+      "title": "الأداء المالي",
+      "titleEn": "Financial Performance",
+      "needsData": true
+    },
+    {
+      "title": "فاصل: تحليل الشركة",
+      "titleEn": "Divider: Company Analysis"
+    },
+    {
+      "title": "محاور قسم تحليل الشركة",
+      "titleEn": "Company Analysis Section"
+    },
+    {
+      "title": "عامل النجاح الرئيس (جدول)",
+      "titleEn": "Key Success Factor (table)"
+    },
+    {
+      "title": "تحليل نقاط القوة والضعف والفرص والتهديدات",
+      "titleEn": "SWOT Analysis"
+    },
+    {
+      "title": "فاصل: البدائل",
+      "titleEn": "Divider: Alternatives"
+    },
+    {
+      "title": "محاور قسم البدائل",
+      "titleEn": "Alternatives Section"
+    },
+    {
+      "title": "القضية الرئيسة ومعايير القرار",
+      "titleEn": "Key Issue / Decision Criteria"
+    },
+    {
+      "title": "الخيار الأول: المزايا والعيوب",
+      "titleEn": "Option 1: Pros & Cons"
+    },
+    {
+      "title": "الخيار الثاني: المزايا والعيوب",
+      "titleEn": "Option 2: Pros & Cons"
+    },
+    {
+      "title": "الخيار الثالث: المزايا والعيوب",
+      "titleEn": "Option 3: Pros & Cons"
+    },
+    {
+      "title": "مصفوفة القضايا والحلول",
+      "titleEn": "Issues & Solutions Matrix"
+    },
+    {
+      "title": "التوصية",
+      "titleEn": "Recommendation"
+    },
+    {
+      "title": "فاصل: التنفيذ",
+      "titleEn": "Divider: Implementation"
+    },
+    {
+      "title": "محاور قسم التنفيذ",
+      "titleEn": "Implementation Section"
+    },
+    {
+      "title": "الحد من المخاطر",
+      "titleEn": "Risk Mitigation"
+    },
+    {
+      "title": "الجدول الزمني: المدى القصير والمتوسط",
+      "titleEn": "Timeline: Short & Mid Term"
+    },
+    {
+      "title": "الجدول الزمني: المدى الطويل",
+      "titleEn": "Timeline: Long Term"
+    },
+    {
+      "title": "خطة التواصل مع أصحاب المصلحة",
+      "titleEn": "Stakeholder Communication Plan"
+    },
+    {
+      "title": "الخلاصة",
+      "titleEn": "Recap"
+    },
+    {
+      "title": "الشكر",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت من 31 شريحة: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص فقط؛ فواصل الأقسام صورة + شريط شبه شفاف (.sec)، ومصفوفة الحلول جدول تحدد علاماته الخلايا ذات الدائرة."
+}
