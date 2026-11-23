@@ -1,0 +1,77 @@
+{
+  "key": "sl-business-process-outsourcing",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🤝",
+  "name": "الإسناد الخارجي لعمليات الأعمال",
+  "nameEn": "Business Process Outsourcing",
+  "description": "خمس عشرة شريحة للإسناد الخارجي: الدوافع، النطاق، نموذج التشغيل، الحوكمة، المخاطر، وخارطة الانتقال",
+  "descriptionEn": "15 BPO slides: drivers, scope, operating model, governance and KPIs, risk matrix and transition roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "ما هو الإسناد الخارجي (أرقام رئيسية)",
+      "titleEn": "What Is BPO (Key Figures)",
+      "needsData": true
+    },
+    {
+      "title": "لماذا تلجأ المؤسسات إلى الإسناد الخارجي",
+      "titleEn": "Why Organizations Outsource",
+      "needsData": true
+    },
+    {
+      "title": "العمليات ضمن النطاق",
+      "titleEn": "Processes in Scope"
+    },
+    {
+      "title": "الوضع الحالي مقابل الوضع المستقبلي",
+      "titleEn": "Current State vs. Future State"
+    },
+    {
+      "title": "تدفق العمليات من البداية إلى النهاية",
+      "titleEn": "End-to-End Process Flow"
+    },
+    {
+      "title": "نموذج تشغيل الإسناد الخارجي",
+      "titleEn": "BPO Operating Model",
+      "needsData": true
+    },
+    {
+      "title": "نموذج تقديم الخدمات",
+      "titleEn": "Service Delivery Model"
+    },
+    {
+      "title": "الحوكمة ومؤشرات الأداء",
+      "titleEn": "Governance and KPIs",
+      "needsData": true
+    },
+    {
+      "title": "روافع خلق القيمة",
+      "titleEn": "Value Creation Levers"
+    },
+    {
+      "title": "المخاطر وسبل الحد منها",
+      "titleEn": "Risk & Mitigation"
+    },
+    {
+      "title": "الانتقال وخارطة الطريق في أربع خطوات",
+      "titleEn": "4-Step Transition & Roadmap"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخرفة المائلة، وغيّر النصوص والأرقام فقط (الأرقام الرئيسية في الشريحة 3، والنسبة المركزية في 4، ونسب نموذج التشغيل في 8، ومؤشرات الحوكمة في 10)؛ ألوان مصفوفة المخاطر ثابتة بدلالتها مع وسيلة الإيضاح."
+}
