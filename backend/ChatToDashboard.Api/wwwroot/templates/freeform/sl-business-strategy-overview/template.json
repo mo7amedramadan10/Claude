@@ -1,0 +1,63 @@
+{
+  "key": "sl-business-strategy-overview",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "نظرة عامة على استراتيجية الأعمال",
+  "nameEn": "Business Strategy Overview",
+  "description": "اثنتا عشرة شريحة: غلاف، جدول أعمال، ملخص، سياق، تحدٍّ، أهداف، قيمة، ركائز، مبادرات، مؤشرات، خارطة طريق",
+  "descriptionEn": "Twelve slides: cover, agenda, summary, context, challenge, objectives, value, pillars, initiatives, KPIs, roadmap, steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary"
+    },
+    {
+      "title": "سياق الأعمال",
+      "titleEn": "Business Context"
+    },
+    {
+      "title": "التحدي الاستراتيجي",
+      "titleEn": "Strategic Challenge",
+      "needsData": true
+    },
+    {
+      "title": "الأهداف الاستراتيجية",
+      "titleEn": "Strategic Objectives"
+    },
+    {
+      "title": "عرض القيمة",
+      "titleEn": "Value Proposition"
+    },
+    {
+      "title": "الركائز الاستراتيجية",
+      "titleEn": "Strategic Pillars"
+    },
+    {
+      "title": "المبادرات الرئيسية (مخطط زمني)",
+      "titleEn": "Key Initiatives (Timeline)"
+    },
+    {
+      "title": "مؤشرات الأداء ومقاييس النجاح",
+      "titleEn": "KPIs & Success Metrics",
+      "needsData": true
+    },
+    {
+      "title": "خارطة الطريق والجدول الزمني",
+      "titleEn": "Roadmap & Timeline"
+    },
+    {
+      "title": "الخطوات التالية والحوكمة",
+      "titleEn": "Next Steps & Governance"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أعمدة الأشهر في كتلة chart-data ونسبة الحلقة في chart-data-2."
+}
