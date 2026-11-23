@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Meeting Slide Template</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «شريحة اجتماع عمل»: خلفية مشهد اجتماع (صورة من الأصل بلا نصوص، تُعكس في العربية)، عنوان بكلمتين بلونين، عنوان فرعي، خط أزرق، فقرة، وثلاثة بنود جدول أعمال في صناديق رمادية. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #2B2B2B; --ink-2: #3A3A3A; --accent: #71B8F4; --box: #F2F2F2; --box-line: #D3D3D3; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .scene { position: absolute; inset: 0; width: 1280px; height: 720px; object-fit: cover; }
+  html[dir="rtl"] .scene { transform: scaleX(-1); }
+  .ttl { position: absolute; top: 47px; inset-inline-start: 66px; margin: 0; font-size: 52px; font-weight: 700; line-height: 1.3; color: var(--ink); white-space: nowrap; }
+  .ttl em { font-style: normal; color: var(--accent); }
+  .sub { position: absolute; top: 117px; inset-inline-start: 67px; margin: 0; font-size: 30px; font-weight: 400; line-height: 1.3; color: var(--ink-2); }
+  .bar { position: absolute; top: 178px; inset-inline-start: 64px; width: 204px; height: 6px; border-radius: 3px; background: var(--accent); }
+  .txt { position: absolute; top: 207px; inset-inline-start: 67px; width: 490px; margin: 0; font-size: 17px; line-height: 1.4; color: #444; }
+  .ag { position: absolute; inset-inline-start: 67px; width: 318px; height: 47px; margin: 0; border: 1px solid var(--box-line); border-radius: 8px; background: var(--box); display: flex; align-items: center; padding-inline-start: 19px; font-size: 22px; font-weight: 700; color: var(--ink-2); }
+  .ag1 { top: 301px; } .ag2 { top: 376px; } .ag3 { top: 451px; }
+  html[lang="ar"] .ttl { top: 42px; font-size: 54px; line-height: 1.45; }
+  html[lang="ar"] .sub { top: 118px; font-size: 29px; }
+  html[lang="ar"] .txt { font-size: 17px; line-height: 1.5; top: 202px; }
+  html[lang="ar"] .ag { font-size: 21px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <img class="scene" src="/templates/freeform/sl-business-meeting-slide/assets/scene.jpg" alt="Illustration of a team discussing around a meeting table">
+    <h1 class="ttl">BUSINESS <em>MEETING</em></h1>
+    <p class="sub">SLIDE TEMPLATE</p>
+    <span class="bar" aria-hidden="true"></span>
+    <p class="txt">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p>
+    <p class="ag ag1">Agenda Item 01</p>
+    <p class="ag ag2">Agenda Item 02</p>
+    <p class="ag ag3">Agenda Item 03</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 1</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

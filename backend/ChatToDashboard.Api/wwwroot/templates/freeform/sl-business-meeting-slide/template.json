@@ -1,0 +1,17 @@
+{
+  "key": "sl-business-meeting-slide",
+  "kind": "slides",
+  "category": "general",
+  "icon": "📋",
+  "name": "شريحة اجتماع عمل",
+  "nameEn": "Business Meeting Slide",
+  "description": "شريحة واحدة بعنوان الاجتماع وفقرة تعريفية وثلاثة بنود جدول أعمال بجوار مشهد فريق عمل",
+  "descriptionEn": "One slide with a meeting title, intro text and three agenda items beside a team scene",
+  "sections": [
+    {
+      "title": "اجتماع العمل وجدول الأعمال",
+      "titleEn": "Business Meeting Agenda"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وصورة الخلفية وغيّر النصوص فقط؛ يمكن تغيير نصوص بنود جدول الأعمال الثلاثة مع إبقاء عددها وصناديقها."
+}

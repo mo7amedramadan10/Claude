@@ -1,0 +1,23 @@
+{
+  "key": "sl-business-kpi-slide",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📟",
+  "name": "شريحة مؤشرات أداء الأعمال",
+  "nameEn": "Business KPI Slide",
+  "description": "لوحة مؤشرات بشريحتين فاتحة وداكنة: عدّاد، رسم أعمدة مجمّعة، وثلاث بطاقات مؤشرات",
+  "descriptionEn": "KPI dashboard in light and dark slides: gauge, clustered bar chart and three KPI cards",
+  "sections": [
+    {
+      "title": "لوحة المؤشرات (فاتحة)",
+      "titleEn": "KPI Dashboard (Light)",
+      "needsData": true
+    },
+    {
+      "title": "لوحة المؤشرات (داكنة)",
+      "titleEn": "KPI Dashboard (Dark)",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ إبرة العدّاد من كتلتي gauge-data وgauge-data-2 (min/max/value) مع تحديث نص القيمة والحدّين، وأعمدة الرسم من كتلتي chart-data وchart-data-2 (الفئات وقيم السلاسل الثلاث)."
+}

@@ -1,0 +1,65 @@
+{
+  "key": "sl-business-growth",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📈",
+  "name": "استراتيجية نمو الأعمال",
+  "nameEn": "Business Growth Strategy",
+  "description": "12 شريحة: غلاف، ملخص، الشركة، فرص السوق، التحديات، الحلول، الاستراتيجية، المالية، الجدول الزمني، النتائج، الخطوات، شكر",
+  "descriptionEn": "12 slides: cover, summary, company, market, challenges, solutions, strategy, finance, timeline, results, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على الشركة",
+      "titleEn": "Company Overview",
+      "needsData": true
+    },
+    {
+      "title": "فرص السوق",
+      "titleEn": "Market Opportunity"
+    },
+    {
+      "title": "تحديات الأعمال",
+      "titleEn": "Business Challenges"
+    },
+    {
+      "title": "حلولنا",
+      "titleEn": "Our Solutions"
+    },
+    {
+      "title": "استراتيجية النمو",
+      "titleEn": "Growth Strategy"
+    },
+    {
+      "title": "نظرة مالية عامة",
+      "titleEn": "Financial Overview",
+      "needsData": true
+    },
+    {
+      "title": "الجدول الزمني للمشروع",
+      "titleEn": "Project Timeline"
+    },
+    {
+      "title": "النتائج الرئيسية",
+      "titleEn": "Key Results",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال الزخرفية والصور وغيّر النصوص والأرقام فقط (مؤشرات الملخص والنتائج، سنة التأسيس، وأرقام النظرة المالية ونسب نموها)."
+}

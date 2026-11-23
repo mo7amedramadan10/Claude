@@ -1,0 +1,17 @@
+{
+  "key": "sl-business-meeting",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🤝",
+  "name": "اجتماع عمل",
+  "nameEn": "Business Meeting",
+  "description": "شريحة واحدة بمشهد قاعة اجتماعات وعنوان وثلاث بطاقات بأيقونات لنقاط الاجتماع",
+  "descriptionEn": "One slide with a meeting-room scene, a title and three icon cards for meeting points",
+  "sections": [
+    {
+      "title": "اجتماع عمل: ثلاث نقاط",
+      "titleEn": "Business Meeting: Three Points"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وصورة الخلفية وغيّر النصوص فقط (العنوان والعنوان الفرعي ورأس كل بطاقة ونصها)."
+}
