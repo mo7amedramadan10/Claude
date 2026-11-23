@@ -1121,10 +1121,7 @@
       <span class="ai-ava"><img src="img/logo-mark.svg" alt=""></span>
       <div class="grow"><h2>تصميم حر</h2><p id="ff-head-desc">اختر نوعًا من اللوحة ثم اكتب طلبك</p></div>
       <button type="button" id="ff-new-btn" class="btn btn-ghost btn-sm" title="تصميم جديد"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>جديد</button>
-      <div class="dropdown" id="ff-list-dropdown">
-        <button type="button" id="ff-list-btn" class="btn btn-ghost btn-sm" title="تصاميم المشروع المحفوظة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg>التصاميم</button>
-        <div id="ff-list-panel" class="dropdown-panel hidden"></div>
-      </div>
+      <button type="button" id="ff-chat-hide" class="btn btn-ghost btn-sm" aria-controls="ff-rail" title="إخفاء المحادثة لمساحة عمل أوسع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg>إخفاء المحادثة</button>
     </div>
     <div id="ff-messages" class="cc-messages"></div>
     <form id="ff-form" class="composer cc-composer">
@@ -1194,8 +1191,8 @@
         <button type="button" id="ff-tk-link" class="btn btn-sm btn-ghost hidden" title="رابط المشاركة لهذه اللوحة — انقر لنسخه">🔗 الرابط</button>
         <button type="button" id="ff-tk-publish" class="btn btn-sm" title="نشر اللوحة برابط يمكن مشاركته مع أي شخص (يفعّل اللوحة إن لم تكن مفعّلة)">نشر</button>
       </div>
-      <!-- إخفاء/إظهار شريط المحادثة لمساحة عمل أوسع؛ خارج مجموعتَي الأزرار فيبقى ظاهرًا دائمًا وفي جهة المحادثة -->
-      <button type="button" id="ff-chat-toggle" class="btn btn-sm btn-ghost ff-chat-toggle" aria-controls="ff-rail" aria-pressed="false" aria-label="إخفاء المحادثة" title="إخفاء المحادثة لمساحة عمل أوسع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg><span class="btn-label">إخفاء المحادثة</span></button>
+      <!-- إظهار شريط المحادثة بعد إخفائه (زر الإخفاء نفسه في رأس المحادثة) -->
+      <button type="button" id="ff-chat-toggle" class="btn btn-sm ff-chat-toggle hidden" aria-controls="ff-rail" aria-label="إظهار المحادثة" title="إظهار شريط المحادثة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-sidebar"/></svg><span class="btn-label">إظهار المحادثة</span></button>
     </div>
     <div id="ff-body" class="ff-body">
       <!-- حالة البداية: نسخة من معرض Artifacts في Claude — عنوان، تبويبات (الكل/تصاميمي/مشترك معي)، بحث وتصفية بالنوع وتبديل العرض، بطاقات «اصنع شيئًا جديدًا»، ثم التصاميم السابقة بمعاينات مصغّرة -->

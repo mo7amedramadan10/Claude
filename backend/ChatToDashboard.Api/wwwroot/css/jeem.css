@@ -3657,16 +3657,11 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
    للشريط (الطرف الأيسر من النافذة في RTL)، و.dropdown-panel العادية تمتد من الزر إلى الخارج فتُقطع عند حافة
    النافذة، وبنودها nowrap فتظهر الأسماء مبتورة (علّة أبلغ عنها المستخدم). الحل كقائمة محادثات الاستفسارات:
    تمتد إلى داخل الشريط (inset-inline-end:0) بعرض ثابت يتسع للأسماء، وتلتف الأسماء الطويلة، مع تمرير رأسي. */
-#ff-list-panel.dropdown-panel, #dk-list-panel.dropdown-panel {
+#dk-list-panel.dropdown-panel {
   inset-inline-start: auto; inset-inline-end: 0; width: min(340px, calc(100vw - 32px)); min-width: 0;
   max-height: min(60vh, 480px); overflow-y: auto;
 }
-#ff-list-panel.dropdown-panel.hidden, #dk-list-panel.dropdown-panel.hidden { display: none; }
-#ff-list-panel .dropdown-item {
-  display: block; height: auto; min-height: 34px; padding: 7px 10px; white-space: normal; line-height: 1.45;
-  overflow-wrap: anywhere; text-align: start;
-}
-#ff-list-panel .dropdown-item small { display: block; font-weight: 400; }
+#dk-list-panel.dropdown-panel.hidden { display: none; }
 
 /* تصميم حر — الرابط الدائم للتصاميم المنشورة: شارة في البطاقة وزر نسخ لا يفتح التصميم */
 .jeem-scope .ff-card-foot .ff-pub { color: var(--brand-blue); font-weight: 600; }
@@ -3804,6 +3799,7 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* إخفاء شريط المحادثة في تصميم حر: مساحة العمل تأخذ العرض (والارتفاع على الجوال) كاملًا */
 #screen-freeform.ff-chat-hidden #ff-rail { display: none; }
 #screen-freeform .cc-pane-head .ff-chat-toggle { flex: none; gap: 6px; }
-#screen-freeform.ff-chat-hidden .ff-chat-toggle { background: var(--blue-50); color: var(--blue-700); border-color: var(--brand-blue); }
+#screen-freeform .ff-chat-toggle { background: var(--blue-50); color: var(--blue-700); border-color: var(--brand-blue); }
+#screen-freeform .ff-chat-toggle.hidden { display: none; }
 @media (max-width: 520px) { #screen-freeform .ff-chat-toggle .btn-label { display: none; } }
 

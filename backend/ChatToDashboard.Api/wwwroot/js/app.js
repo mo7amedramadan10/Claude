@@ -9730,14 +9730,6 @@ el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.design =
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
 el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(FF.html, '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
-el('ff-list-btn').addEventListener('click', async () => {
-  const panel = el('ff-list-panel'); if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
-  try { const r = await fetch('/api/freeform'); FF.list = r.ok ? await r.json() : []; } catch { FF.list = []; }
-  panel.innerHTML = FF.list.length ? FF.list.map(d => `<button type="button" class="dropdown-item" data-ff="${esc(d.id)}">${esc(d.title)} <small class="muted">· إصدار ${d.version}</small></button>`).join('') : '<div class="dropdown-item muted">لا تصاميم محفوظة</div>';
-  panel.querySelectorAll('[data-ff]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffOpen(b.dataset.ff); }));
-  panel.classList.remove('hidden');
-});
-document.addEventListener('click', e => { if (!e.target.closest('#ff-list-dropdown')) el('ff-list-panel').classList.add('hidden'); });
 el('ff-version').addEventListener('change', async () => {
   const v = +el('ff-version').value; if (!FF.design) return;
   if (v === FF.design.version) { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`); const d = await r.json(); FF.html = d.html; FF.viewing = null; ffRender(); return; }
@@ -9754,14 +9746,14 @@ el('ff-mobile').addEventListener('click', () => { FF.mobile = !FF.mobile; ffRend
 // إخفاء شريط المحادثة في تصميم حر لمساحة عمل أوسع؛ الاختيار يُحفظ لكل متصفح، وأي طلب للموديل من شريط الأدوات يُظهره ليُرى الرد
 function ffSetChatHidden(hidden, persist = true) {
   el('screen-freeform').classList.toggle('ff-chat-hidden', hidden);
-  const b = el('ff-chat-toggle'); const label = hidden ? 'إظهار المحادثة' : 'إخفاء المحادثة';
-  b.setAttribute('aria-pressed', hidden ? 'true' : 'false'); b.title = hidden ? 'إظهار شريط المحادثة' : 'إخفاء المحادثة لمساحة عمل أوسع';
-  b.querySelector('.btn-label').textContent = label; b.setAttribute('aria-label', label);
+  el('ff-chat-toggle').classList.toggle('hidden', !hidden); // زر الإظهار في شريط مساحة العمل لا يظهر إلا والمحادثة مخفية
   if (persist) { try { localStorage.setItem('ffChatHidden', hidden ? '1' : '0'); } catch {} }
-  if (!hidden) setTimeout(() => el('ff-q')?.focus({ preventScroll: true }), 0);
+  if (hidden) setTimeout(() => el('ff-chat-toggle').focus({ preventScroll: true }), 0);
+  else setTimeout(() => el('ff-q')?.focus({ preventScroll: true }), 0);
   if (typeof ffScaleThumbs === 'function') requestAnimationFrame(() => ffScaleThumbs());
 }
-el('ff-chat-toggle').addEventListener('click', () => ffSetChatHidden(!el('screen-freeform').classList.contains('ff-chat-hidden')));
+el('ff-chat-hide').addEventListener('click', () => ffSetChatHidden(true));
+el('ff-chat-toggle').addEventListener('click', () => ffSetChatHidden(false));
 try { if (localStorage.getItem('ffChatHidden') === '1') ffSetChatHidden(true, false); } catch {}
 el('ff-code').addEventListener('click', () => {
   const show = el('ff-code-wrap').classList.contains('hidden');
