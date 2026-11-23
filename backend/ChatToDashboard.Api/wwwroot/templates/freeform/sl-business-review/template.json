@@ -1,0 +1,161 @@
+{
+  "key": "sl-business-review",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📈",
+  "name": "مراجعة الأعمال السنوية",
+  "nameEn": "Business Review 2015",
+  "description": "إحدى وثلاثون شريحة: غلاف وفهرس وأربعة محاور بفواصل مصوّرة ولوحات 2×2 وشرائح رسوم تفصيلية",
+  "descriptionEn": "31 slides: cover, contents, four themes with photo dividers, 2×2 dashboards and detailed chart slides",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "المحتويات",
+      "titleEn": "Contents"
+    },
+    {
+      "title": "فاصل: أبرز ملامح البرنامج التشغيلي",
+      "titleEn": "Divider: Operational Program Highlights"
+    },
+    {
+      "title": "لوحة تنفيذ البرنامج",
+      "titleEn": "Program Execution Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "لوحة المواءمة الاستراتيجية",
+      "titleEn": "Strategic Alignment Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "لوحة تطوير الأعمال",
+      "titleEn": "Business Development Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "لوحة إدارة الموارد",
+      "titleEn": "Resource Management Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "فاصل: تنفيذ البرنامج",
+      "titleEn": "Divider: Program Execution"
+    },
+    {
+      "title": "أعمدة متداخلة بثلاث سلاسل",
+      "titleEn": "Overlapping Columns (3 Series)",
+      "needsData": true
+    },
+    {
+      "title": "أعمدة مكدّسة مع نقاط",
+      "titleEn": "Stacked Columns with Bullets",
+      "needsData": true
+    },
+    {
+      "title": "مقارنة سلسلتين",
+      "titleEn": "Two-Series Comparison",
+      "needsData": true
+    },
+    {
+      "title": "أعمدة مكدّسة مع شريط أيقونات",
+      "titleEn": "Stacked Columns with Icon Band",
+      "needsData": true
+    },
+    {
+      "title": "رسمان جنبًا إلى جنب (تنفيذ)",
+      "titleEn": "Two Charts Side by Side (Execution)",
+      "needsData": true
+    },
+    {
+      "title": "فاصل: المواءمة الاستراتيجية",
+      "titleEn": "Divider: Strategic Alignment"
+    },
+    {
+      "title": "أشرطة أفقية بخمس فئات",
+      "titleEn": "Five-Category Horizontal Bars",
+      "needsData": true
+    },
+    {
+      "title": "مساحات مكدّسة",
+      "titleEn": "Stacked Area Chart",
+      "needsData": true
+    },
+    {
+      "title": "أعمدة بخمس سلاسل وقيم",
+      "titleEn": "Five-Series Columns with Values",
+      "needsData": true
+    },
+    {
+      "title": "أعمدة مكدّسة مع ثلاث أيقونات",
+      "titleEn": "Stacked Columns with Three Icons",
+      "needsData": true
+    },
+    {
+      "title": "رسمان جنبًا إلى جنب (مواءمة)",
+      "titleEn": "Two Charts Side by Side (Alignment)",
+      "needsData": true
+    },
+    {
+      "title": "فاصل: تطوير الأعمال",
+      "titleEn": "Divider: Business Development"
+    },
+    {
+      "title": "أشرطة نسبية مع مؤشرات",
+      "titleEn": "100% Bars with Markers",
+      "needsData": true
+    },
+    {
+      "title": "رسم خطي بست فئات",
+      "titleEn": "Six-Category Line Chart",
+      "needsData": true
+    },
+    {
+      "title": "رسم الحجم والأسعار",
+      "titleEn": "Volume and Price Chart",
+      "needsData": true
+    },
+    {
+      "title": "رسم الشموع",
+      "titleEn": "Candlestick Chart",
+      "needsData": true
+    },
+    {
+      "title": "رسمان جنبًا إلى جنب (تطوير)",
+      "titleEn": "Two Charts Side by Side (Development)",
+      "needsData": true
+    },
+    {
+      "title": "فاصل: إدارة الموارد",
+      "titleEn": "Divider: Resource Management"
+    },
+    {
+      "title": "أعمدة مكدّسة مع مؤشرين",
+      "titleEn": "Stacked Columns with Two KPIs",
+      "needsData": true
+    },
+    {
+      "title": "أربع حلقات ربعية",
+      "titleEn": "Four Quarterly Donuts",
+      "needsData": true
+    },
+    {
+      "title": "رسم مساحات متداخلة",
+      "titleEn": "Overlapping Area Chart",
+      "needsData": true
+    },
+    {
+      "title": "أشرطة أفقية مع مربعين",
+      "titleEn": "Horizontal Bars with Two Tiles",
+      "needsData": true
+    },
+    {
+      "title": "رسمان جنبًا إلى جنب (موارد)",
+      "titleEn": "Two Charts Side by Side (Resources)",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام كل الرسوم في كتلة JSON بالمعرّف chart-data (المفتاح = data-c للحاوية)، والقيم في الفقاعات ومؤشرات $…b نصوص HTML تُعدَّل مباشرة."
+}
