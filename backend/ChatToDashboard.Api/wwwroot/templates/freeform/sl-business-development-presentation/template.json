@@ -1,0 +1,73 @@
+{
+  "key": "sl-business-development-presentation",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "📈",
+  "name": "عرض تطوير الأعمال",
+  "nameEn": "Business Development",
+  "description": "أربع عشرة شريحة: غلاف، ملخص، الشركة، المشكلة والحل، الخدمات، السوق، المنافسة، الإيرادات، الخطة، المالية، الفريق",
+  "descriptionEn": "14 slides: cover, summary, company, problem & solution, services, market, competition, revenue, plan, team",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "تعريف بالشركة",
+      "titleEn": "Company Introduction"
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement"
+    },
+    {
+      "title": "نظرة عامة على الحل",
+      "titleEn": "Solution Overview"
+    },
+    {
+      "title": "عرض الخدمات",
+      "titleEn": "Service Showcase"
+    },
+    {
+      "title": "تحليل السوق (رسم)",
+      "titleEn": "Market Analysis (chart)",
+      "needsData": true
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape"
+    },
+    {
+      "title": "نموذج العمل (رسم حلقي)",
+      "titleEn": "Business Model (donut)",
+      "needsData": true
+    },
+    {
+      "title": "استراتيجية الدخول إلى السوق",
+      "titleEn": "Go-to-Market Strategy"
+    },
+    {
+      "title": "خارطة طريق التطوير",
+      "titleEn": "Development Roadmap"
+    },
+    {
+      "title": "التوقعات المالية (رسم)",
+      "titleEn": "Financial Projections (chart)",
+      "needsData": true
+    },
+    {
+      "title": "نظرة على الفريق",
+      "titleEn": "Team Overview"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Get in Touch"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON بالمعرّفات chart-data (أعمدة سوق) وchart-data-2 (حلقة الإيرادات) وchart-data-3 (منحنيات التوقعات)."
+}
