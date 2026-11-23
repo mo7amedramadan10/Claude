@@ -1,0 +1,77 @@
+{
+  "key": "sl-annual-tax-planning-review",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "🧾",
+  "name": "مراجعة التخطيط الضريبي السنوي",
+  "nameEn": "Annual Tax Planning Review",
+  "description": "15 شريحة: غلاف، جدول أعمال، ملخص، نظرة مالية، الالتزامات، الاستراتيجية، الوفورات، الامتثال، المخاطر، الخطة",
+  "descriptionEn": "15 slides: cover, agenda, summary, financials, liability, strategy, savings, compliance, risk, planning",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "النظرة المالية العامة (جدول)",
+      "titleEn": "Financial Overview (table)",
+      "needsData": true
+    },
+    {
+      "title": "الالتزامات الضريبية (أشرطة)",
+      "titleEn": "Tax Liability Overview (bars)",
+      "needsData": true
+    },
+    {
+      "title": "مراجعة الاستراتيجية الضريبية",
+      "titleEn": "Tax Strategy Review"
+    },
+    {
+      "title": "الوفورات الضريبية المحققة",
+      "titleEn": "Tax Savings Achieved",
+      "needsData": true
+    },
+    {
+      "title": "الامتثال والمستجدات التنظيمية",
+      "titleEn": "Compliance and Regulatory Updates"
+    },
+    {
+      "title": "تحليل المخاطر الضريبية",
+      "titleEn": "Tax Risk Analysis"
+    },
+    {
+      "title": "فرص العام المقبل",
+      "titleEn": "Opportunities for Next Year"
+    },
+    {
+      "title": "التعديلات الموصى بها",
+      "titleEn": "Recommended Adjustments"
+    },
+    {
+      "title": "تخطيط العام المقبل (الأرباع)",
+      "titleEn": "Next Year Planning (quarters)"
+    },
+    {
+      "title": "أبرز الخلاصات",
+      "titleEn": "Key Takeaways"
+    },
+    {
+      "title": "الأسئلة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ أطوال أشرطة الالتزامات الضريبية وقيمها في كتلة chart-data (values وlabels وmax)."
+}
