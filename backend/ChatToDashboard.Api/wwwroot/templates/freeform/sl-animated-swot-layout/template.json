@@ -1,0 +1,33 @@
+{
+  "key": "sl-animated-swot-layout",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🌿",
+  "name": "تخطيط سوات المتحرك",
+  "nameEn": "Animated SWOT Layout",
+  "description": "خمس شرائح: غلاف بكلمة سوات متدرّجة، ثم شريحة لكل من القوة والضعف والفرص والتهديدات بعمودي نص",
+  "descriptionEn": "Five slides: gradient SWOT cover, then one slide each for strengths, weaknesses, opportunities and threats",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نقاط القوة",
+      "titleEn": "Strengths"
+    },
+    {
+      "title": "نقاط الضعف",
+      "titleEn": "Weaknesses"
+    },
+    {
+      "title": "الفرص",
+      "titleEn": "Opportunities"
+    },
+    {
+      "title": "التهديدات",
+      "titleEn": "Threats"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الحروف والعناوين نص متدرّج (background-clip:text) والموجتان والأغصان SVG زخرفية ثابتة."
+}

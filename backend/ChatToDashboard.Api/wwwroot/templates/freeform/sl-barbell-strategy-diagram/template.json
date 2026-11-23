@@ -1,0 +1,21 @@
+{
+  "key": "sl-barbell-strategy-diagram",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "🏋️",
+  "name": "مخطط استراتيجية بار الأثقال",
+  "nameEn": "Barbell Strategy Diagram",
+  "description": "شريحتان (فاتحة وداكنة) لبار أثقال بثلاثة أقراص في كل طرف وستة عناصر نصية موصولة بها",
+  "descriptionEn": "Two slides (light and dark): a barbell with three plates per side linked to six text items",
+  "sections": [
+    {
+      "title": "المخطط (خلفية فاتحة)",
+      "titleEn": "Diagram (Light)"
+    },
+    {
+      "title": "المخطط (خلفية داكنة)",
+      "titleEn": "Diagram (Dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ بار الأثقال والخطوط الموصّلة رسم SVG ثابت، والعناصر الستة بالترتيب: الأزرق ثم البرتقالي ثم الأصفر في كل جانب."
+}

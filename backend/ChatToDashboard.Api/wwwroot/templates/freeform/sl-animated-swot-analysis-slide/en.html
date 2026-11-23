@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animated SWOT Analysis Slide</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «شريحة تحليل سوات المتحركة»: غلاف برتقالي بحزم مائلة على شكل X ودائرة وسطى، شريحة نظرة عامة بمربع برتقالي مقطوع الزوايا وأربع دوائر ذهبية بأيقونات وعناوين، وأربع شرائح تفصيلية: دائرة ذهبية كبيرة داخل هالة وقرص وردي، شريط عنوان، وبطاقة برتقالية متدرجة للنص. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #2B2B2B; --accent: #E65B3B; --orange: #E65B3B; --orange-2: #CC4A2D; --gold: #D0921D; --gold-2: #EAB450; --pink: #FAE4DE; --pink-2: #FDF8F6; --gray: #F2F2F2; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* ---- الغلاف (الشريحة 1) ---- */
+  .s1 { background: linear-gradient(180deg, #E55B37 0%, #DB5230 60%, #BE3F1F 100%); }
+  .cv-x { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  .cv-x .lay { fill: url(#cvbg); }
+  .cv-x .lay.l { filter: url(#cvsl); } .cv-x .lay.r { filter: url(#cvsr); }
+  .cv-glow { position: absolute; top: 60px; inset-inline-start: 340px; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgb(255 140 110 / .45) 0%, rgb(255 140 110 / 0) 65%); }
+  .cv-circle { position: absolute; top: 180px; inset-inline-start: 460px; width: 360px; height: 360px; border-radius: 50%; background: linear-gradient(225deg, #E9725A 0%, #E35C3B 60%, #E35A38 100%); box-shadow: 0 10px 34px rgb(90 20 5 / .35); display: grid; place-items: center; }
+  .cv-ttl { margin: 0; font-size: 78px; font-weight: 700; color: #fff; letter-spacing: -1px; line-height: 1; }
+  html[lang="ar"] .cv-ttl { font-weight: 800; letter-spacing: 0; }
+  /* ---- الشعار الذهبي أعلى الشرائح 2–6 ---- */
+  .banner { position: absolute; top: 0; inset-inline-start: 418px; width: 444px; height: 90px; background: linear-gradient(180deg, #EAB54B 0%, #DDA032 55%, #CF8F1A 100%); clip-path: polygon(0 0, 100% 0, calc(100% - 34px) 100%, 34px 100%); display: grid; place-items: center; }
+  .bn-ttl { margin: 0; font-size: 56px; font-weight: 700; color: #fff; line-height: 1; letter-spacing: -0.5px; }
+  html[lang="ar"] .bn-ttl { font-weight: 800; letter-spacing: 0; }
+  /* ---- الدوائر الذهبية والأيقونات ---- */
+  .gc { position: absolute; border-radius: 50%; background: linear-gradient(180deg, #EBB652 0%, #CD8B1A 100%); color: #fff; display: grid; place-items: center; }
+  .gc svg { width: 54%; height: 54%; fill: none; stroke: currentColor; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+  /* ---- الشريحة 2: نظرة عامة ---- */
+  .ring { position: absolute; top: -52px; inset-inline-start: 193px; width: 894px; height: 894px; border-radius: 50%; background: var(--pink); clip-path: inset(142px 0 0 0); }
+  .ring2 { position: absolute; top: 40px; inset-inline-start: 285px; width: 710px; height: 710px; border-radius: 50%; background: var(--pink-2); clip-path: inset(50px 0 0 0); }
+  .pin { position: absolute; top: 298px; inset-inline-start: 540px; width: 200px; height: 200px; }
+  .pin .sq { fill: #E66545; } .pin .wedge { fill: #E3593A; }
+  .s2 .gc { width: 88px; height: 88px; }
+  .s2 .gc1 { top: 249px; inset-inline-start: 492px; } .s2 .gc2 { top: 249px; inset-inline-start: 700px; }
+  .s2 .gc3 { top: 456px; inset-inline-start: 492px; } .s2 .gc4 { top: 456px; inset-inline-start: 700px; }
+  .lb { position: absolute; margin: 0; font-size: 24px; font-weight: 700; color: var(--ink); line-height: 30px; white-space: nowrap; }
+  .lb1, .lb3 { inset-inline-end: 687px; text-align: end; } .lb2, .lb4 { inset-inline-start: 690px; }
+  .lb1, .lb2 { top: 203px; } .lb3, .lb4 { top: 561px; }
+  /* ---- الشرائح 3–6: التفصيل ---- */
+  .gray { position: absolute; top: 90px; inset-inline-start: 0; width: 1280px; height: 630px; background: var(--gray); }
+  .sliver { width: 88px; height: 88px; inset-inline-start: -85px; } .sv1 { top: 83px; } .sv2 { top: 643px; }
+  .disc { position: absolute; top: 203px; inset-inline-start: 1px; width: 404px; height: 404px; border-radius: 50%; background: linear-gradient(45deg, #F8D5CB 0%, #F5E2DC 50%, #F0ECEA 100%); }
+  html[dir="rtl"] .disc { background: linear-gradient(-45deg, #F8D5CB 0%, #F5E2DC 50%, #F0ECEA 100%); }
+  .chev { position: absolute; top: 218px; inset-inline-start: 0; width: 120px; height: 374px; }
+  html[dir="rtl"] .chev { transform: scaleX(-1); }  /* السهم يشير نحو جهة النهاية فينعكس للعربية */
+  .halo { position: absolute; top: 301px; inset-inline-start: 99px; width: 208px; height: 208px; border-radius: 50%; background: #EFEFEF; box-shadow: 0 0 0 3px rgb(255 255 255 / .75); }
+  .lbar { position: absolute; top: 338px; inset-inline-start: 280px; width: 280px; height: 134px; background: linear-gradient(90deg, #F3F3F3 0%, #FAFAFA 45%, #FCFCFC 100%); }
+  html[dir="rtl"] .lbar { background: linear-gradient(270deg, #F3F3F3 0%, #FAFAFA 45%, #FCFCFC 100%); }
+  .lbar h2 { position: absolute; top: 0; inset-inline-start: 30px; margin: 0; line-height: 134px; font-size: 35px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  /* الأصل يصغّر العناوين الطويلة لتبقى داخل الشريط */
+  .lbar h2.lb-m { font-size: 28px; } .lbar h2.lb-s { font-size: 24px; }
+  html[lang="ar"] .lbar h2, html[lang="ar"] .lbar h2.lb-m, html[lang="ar"] .lbar h2.lb-s { font-size: 34px; }
+  .gcbig { top: 325px; inset-inline-start: 123px; width: 160px; height: 160px; }
+  .gcbig svg { width: 92px; height: 92px; }
+  .card { position: absolute; top: 156px; inset-inline-start: 560px; width: 740px; height: 506px; border-start-start-radius: 28px; border-end-start-radius: 28px; background: linear-gradient(45deg, #E35736 0%, #E9775A 50%, #F0A08A 100%); padding: 72px 74px 40px; color: #fff; }
+  html[dir="rtl"] .card { background: linear-gradient(315deg, #E35736 0%, #E9775A 50%, #F0A08A 100%); }
+  .card h3 { margin: 0 0 18px; font-size: 30px; font-weight: 700; line-height: 1.2; }
+  .card p { margin: 0 0 36px; max-width: 592px; font-size: 20px; line-height: 1.27; font-weight: 400; }
+  html[lang="ar"] .card p { line-height: 1.5; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="cvbg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="720"><stop offset="0" stop-color="#E55B37"/><stop offset=".6" stop-color="#DB5230"/><stop offset="1" stop-color="#BE3F1F"/></linearGradient><filter id="cvsl" x="-20%" y="-5%" width="140%" height="110%"><feDropShadow dx="16" dy="0" stdDeviation="22" flood-color="#6E1A06" flood-opacity=".5"/></filter><filter id="cvsr" x="-20%" y="-5%" width="140%" height="110%"><feDropShadow dx="-16" dy="0" stdDeviation="22" flood-color="#6E1A06" flood-opacity=".5"/></filter><mask id="pinm" maskUnits="userSpaceOnUse" x="540" y="298" width="200" height="200"><rect x="540" y="298" width="200" height="200" fill="#fff"/><circle cx="536" cy="293" r="54" fill="#000"/><circle cx="744" cy="293" r="54" fill="#000"/><circle cx="536" cy="500" r="54" fill="#000"/><circle cx="744" cy="500" r="54" fill="#000"/></mask></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="cv-x" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="lay l" points="-60,0 290,0 432,360 290,720 -60,720"/><polygon class="lay r" points="1340,0 990,0 848,360 990,720 1340,720"/><polygon class="lay l" points="-60,0 175,0 320,360 175,720 -60,720"/><polygon class="lay r" points="1340,0 1105,0 960,360 1105,720 1340,720"/><polygon class="lay l" points="-60,0 60,0 208,360 60,720 -60,720"/><polygon class="lay r" points="1340,0 1220,0 1072,360 1220,720 1340,720"/></svg>
+    <div class="cv-glow"></div>
+    <div class="cv-circle"><h1 class="cv-ttl">SWOT</h1></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="ring"></div><div class="ring2"></div>
+    <div class="banner"><h1 class="bn-ttl">SWOT</h1></div>
+    <svg class="pin" viewBox="540 298 200 200" aria-hidden="true"><g mask="url(#pinm)"><rect class="sq" x="540" y="298" width="200" height="200"/><polygon class="wedge" points="595,298 685,298 640,372"/><polygon class="wedge" points="595,498 685,498 640,424"/><polygon class="wedge" points="540,352 540,444 612,398"/><polygon class="wedge" points="740,352 740,444 668,398"/></g></svg>
+    <div class="gc gc1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.2" r="2.4"/><circle cx="5.6" cy="9" r="1.9"/><circle cx="18.4" cy="9" r="1.9"/><path d="M7.4 17.5v-1.8a4.6 4.6 0 0 1 9.2 0v1.8z"/><path d="M1.8 17.5v-1.4a3.6 3.6 0 0 1 5.4-3.1"/><path d="M22.2 17.5v-1.4a3.6 3.6 0 0 0-5.4-3.1"/></svg></div><div class="gc gc2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2.8h6a1.3 1.3 0 0 1 1.3 1.3v6.2a1 1 0 0 1-1 1H8.7a1 1 0 0 1-1-1V4.1A1.3 1.3 0 0 1 9 2.8z"/><path d="M6.5 12.6h11v1.6a.8.8 0 0 1-.8.8H7.3a.8.8 0 0 1-.8-.8z"/><path d="M5.3 8.6v4M18.7 8.6v4M4.6 8.6h1.4M18 8.6h1.4"/><path d="M12 15v3.6"/><path d="M7.4 20.2l4.6-1.6 4.6 1.6M12 18.6v1.8"/><circle cx="7.2" cy="21" r=".7"/><circle cx="16.8" cy="21" r=".7"/><circle cx="12" cy="21.2" r=".7"/></svg></div><div class="gc gc3"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 3.5h11v17h-11z"/><path d="M8.5 5.2l8-1.7v17l-8-1.7z"/><circle cx="13.8" cy="12" r=".7"/><path d="M4 20.5h17"/></svg></div><div class="gc gc4"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 3.5v17h17"/><rect x="6" y="7" width="3" height="11"/><rect x="10.5" y="10" width="3" height="8"/><rect x="15" y="13" width="3" height="5"/><path d="M11 5l8.5 8.5"/><path d="M19.5 9v4.5H15"/></svg></div>
+    <h2 class="lb lb1">STRENGTHS</h2><h2 class="lb lb2">WEAKNESSES</h2><h2 class="lb lb3">OPPORTUNITIES</h2><h2 class="lb lb4">THREATS</h2>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="gray"></div>
+    <div class="banner"><h1 class="bn-ttl">SWOT</h1></div>
+    <div class="gc sliver sv1"></div><div class="gc sliver sv2"></div>
+    <div class="disc"></div><svg class="chev" viewBox="0 0 120 374" aria-hidden="true"><polygon points="0,0 118,118 118,256 0,374" fill="#E65B3B"/><polygon points="0,137 118,165 118,209 0,237" fill="#fff" opacity=".1"/><polygon points="0,160 118,180 118,194 0,214" fill="#fff" opacity=".06"/></svg>
+    <div class="lbar"><h2>STRENGTHS</h2></div>
+    <div class="halo"></div><div class="gc gcbig"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.2" r="2.4"/><circle cx="5.6" cy="9" r="1.9"/><circle cx="18.4" cy="9" r="1.9"/><path d="M7.4 17.5v-1.8a4.6 4.6 0 0 1 9.2 0v1.8z"/><path d="M1.8 17.5v-1.4a3.6 3.6 0 0 1 5.4-3.1"/><path d="M22.2 17.5v-1.4a3.6 3.6 0 0 0-5.4-3.1"/></svg></div>
+    <div class="card"><h3>Placeholder</h3><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="gray"></div>
+    <div class="banner"><h1 class="bn-ttl">SWOT</h1></div>
+    <div class="gc sliver sv1"></div><div class="gc sliver sv2"></div>
+    <div class="disc"></div><svg class="chev" viewBox="0 0 120 374" aria-hidden="true"><polygon points="0,0 118,118 118,256 0,374" fill="#E65B3B"/><polygon points="0,137 118,165 118,209 0,237" fill="#fff" opacity=".1"/><polygon points="0,160 118,180 118,194 0,214" fill="#fff" opacity=".06"/></svg>
+    <div class="lbar"><h2 class="lb-m">WEAKNESSES</h2></div>
+    <div class="halo"></div><div class="gc gcbig"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2.8h6a1.3 1.3 0 0 1 1.3 1.3v6.2a1 1 0 0 1-1 1H8.7a1 1 0 0 1-1-1V4.1A1.3 1.3 0 0 1 9 2.8z"/><path d="M6.5 12.6h11v1.6a.8.8 0 0 1-.8.8H7.3a.8.8 0 0 1-.8-.8z"/><path d="M5.3 8.6v4M18.7 8.6v4M4.6 8.6h1.4M18 8.6h1.4"/><path d="M12 15v3.6"/><path d="M7.4 20.2l4.6-1.6 4.6 1.6M12 18.6v1.8"/><circle cx="7.2" cy="21" r=".7"/><circle cx="16.8" cy="21" r=".7"/><circle cx="12" cy="21.2" r=".7"/></svg></div>
+    <div class="card"><h3>Placeholder</h3><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="gray"></div>
+    <div class="banner"><h1 class="bn-ttl">SWOT</h1></div>
+    <div class="gc sliver sv2"></div>
+    <div class="disc"></div><svg class="chev" viewBox="0 0 120 374" aria-hidden="true"><polygon points="0,0 118,118 118,256 0,374" fill="#E65B3B"/><polygon points="0,137 118,165 118,209 0,237" fill="#fff" opacity=".1"/><polygon points="0,160 118,180 118,194 0,214" fill="#fff" opacity=".06"/></svg>
+    <div class="lbar"><h2 class="lb-s">OPPORTUNITIES</h2></div>
+    <div class="halo"></div><div class="gc gcbig"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 3.5h11v17h-11z"/><path d="M8.5 5.2l8-1.7v17l-8-1.7z"/><circle cx="13.8" cy="12" r=".7"/><path d="M4 20.5h17"/></svg></div>
+    <div class="card"><h3>Placeholder</h3><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="gray"></div>
+    <div class="banner"><h1 class="bn-ttl">SWOT</h1></div>
+    <div class="gc sliver sv1"></div><div class="gc sliver sv2"></div>
+    <div class="disc"></div><svg class="chev" viewBox="0 0 120 374" aria-hidden="true"><polygon points="0,0 118,118 118,256 0,374" fill="#E65B3B"/><polygon points="0,137 118,165 118,209 0,237" fill="#fff" opacity=".1"/><polygon points="0,160 118,180 118,194 0,214" fill="#fff" opacity=".06"/></svg>
+    <div class="lbar"><h2>THREATS</h2></div>
+    <div class="halo"></div><div class="gc gcbig"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 3.5v17h17"/><rect x="6" y="7" width="3" height="11"/><rect x="10.5" y="10" width="3" height="8"/><rect x="15" y="13" width="3" height="5"/><path d="M11 5l8.5 8.5"/><path d="M19.5 9v4.5H15"/></svg></div>
+    <div class="card"><h3>Placeholder</h3><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 6</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

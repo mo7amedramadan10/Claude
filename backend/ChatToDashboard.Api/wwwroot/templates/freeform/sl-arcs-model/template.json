@@ -1,0 +1,29 @@
+{
+  "key": "sl-arcs-model",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🎯",
+  "name": "نموذج آركس للدافعية",
+  "nameEn": "ARCS Motivation Model",
+  "description": "أربع شرائح لنموذج آركس (الانتباه، الصلة، الثقة، الرضا): أعمدة، صفوف، مربعات على خط، وبتلات متقاطعة",
+  "descriptionEn": "Four slides of the ARCS model (Attention, Relevance, Confidence, Satisfaction): columns, rows, squares, petals",
+  "sections": [
+    {
+      "title": "الأعمدة الأربعة",
+      "titleEn": "Four Columns"
+    },
+    {
+      "title": "الصفوف الأربعة",
+      "titleEn": "Four Rows"
+    },
+    {
+      "title": "المربعات على خط",
+      "titleEn": "Squares on a Line"
+    },
+    {
+      "title": "البتلات حول دافعية الطالب",
+      "titleEn": "Petals around Student Motivation"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ ألوان العناصر الأربعة متغيّرات CSS، والبتلات والموصّلات SVG في الشريحة الرابعة."
+}

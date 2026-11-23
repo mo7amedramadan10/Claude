@@ -1,0 +1,37 @@
+{
+  "key": "sl-animated-swot-analysis-slide",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🔶",
+  "name": "شريحة تحليل سوات المتحركة",
+  "nameEn": "Animated SWOT Analysis Slide",
+  "description": "ست شرائح: غلاف، نظرة عامة على العناصر الأربعة، ثم شريحة لكل من القوة والضعف والفرص والتهديدات",
+  "descriptionEn": "Six slides: cover, overview of the four elements, then one slide each for S, W, O and T",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة على سوات",
+      "titleEn": "SWOT Overview"
+    },
+    {
+      "title": "نقاط القوة",
+      "titleEn": "Strengths"
+    },
+    {
+      "title": "نقاط الضعف",
+      "titleEn": "Weaknesses"
+    },
+    {
+      "title": "الفرص",
+      "titleEn": "Opportunities"
+    },
+    {
+      "title": "التهديدات",
+      "titleEn": "Threats"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الأشكال (المربع الدوّار، الدوائر الذهبية، السهم والبطاقة) CSS وSVG ثابتة والأيقونات SVG مضمّنة."
+}

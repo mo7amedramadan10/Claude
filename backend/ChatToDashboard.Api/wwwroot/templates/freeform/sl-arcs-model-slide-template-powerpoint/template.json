@@ -1,0 +1,33 @@
+{
+  "key": "sl-arcs-model-slide-template-powerpoint",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🎯",
+  "name": "شريحة نموذج آركس",
+  "nameEn": "ARCS Model Slide",
+  "description": "خمس شرائح لنموذج آركس التحفيزي: الأعمدة الأربعة معًا ثم إبراز الانتباه والصلة والثقة والرضا تباعًا",
+  "descriptionEn": "Five ARCS model slides: all four columns, then Attention, Relevance, Confidence and Satisfaction highlighted",
+  "sections": [
+    {
+      "title": "نموذج آركس كاملًا",
+      "titleEn": "Full ARCS Model"
+    },
+    {
+      "title": "الانتباه",
+      "titleEn": "Attention"
+    },
+    {
+      "title": "الصلة",
+      "titleEn": "Relevance"
+    },
+    {
+      "title": "الثقة",
+      "titleEn": "Confidence"
+    },
+    {
+      "title": "الرضا",
+      "titleEn": "Satisfaction"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الصنف on على العمود يحدد العمود الملوّن في كل شريحة والباقي رمادي."
+}
