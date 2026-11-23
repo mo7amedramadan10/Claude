@@ -1,0 +1,33 @@
+{
+  "key": "sl-aqal-model",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "نموذج أكوال",
+  "nameEn": "AQAL Model",
+  "description": "خمس شرائح لنموذج أكوال رباعي الأرباع: نظرة عامة ثم إبراز كل ربع (القصدي، السلوكي، الأنظمة، الثقافي)",
+  "descriptionEn": "Five slides of the four-quadrant AQAL model: overview, then each quadrant highlighted",
+  "sections": [
+    {
+      "title": "الأرباع الأربعة",
+      "titleEn": "All Four Quadrants"
+    },
+    {
+      "title": "الربع القصدي",
+      "titleEn": "Intentional Quadrant"
+    },
+    {
+      "title": "الربع السلوكي",
+      "titleEn": "Behavioral Quadrant"
+    },
+    {
+      "title": "ربع الأنظمة",
+      "titleEn": "Systems Quadrant"
+    },
+    {
+      "title": "الربع الثقافي",
+      "titleEn": "Cultural Quadrant"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الأرباع كتل CSS بالصنف off للمُرمَّد في كل شريحة، والأيقونات SVG مضمّنة."
+}
