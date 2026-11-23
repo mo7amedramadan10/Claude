@@ -1,0 +1,70 @@
+{
+  "key": "sl-altius-business",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏙️",
+  "name": "ألتيوس — عرض أعمال",
+  "nameEn": "Altius Business Presentation",
+  "description": "13 شريحة: غلاف، نبذة، عن الشركة، التاريخ، الرسالة، الرؤية، الخدمات، الفريق، الأعمال، القيم، مالية، مبيعات، شكر",
+  "descriptionEn": "13 slides: cover, overview, about, history, mission, vision, services, team, portfolio, values, finance, sales, thanks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نبذة عن الشركة",
+      "titleEn": "Company Overview"
+    },
+    {
+      "title": "عن شركتنا (مؤشران)",
+      "titleEn": "About Our Company (2 KPIs)",
+      "needsData": true
+    },
+    {
+      "title": "تاريخ الشركة",
+      "titleEn": "Company History"
+    },
+    {
+      "title": "الرسالة (مؤشران)",
+      "titleEn": "Mission (2 KPIs)",
+      "needsData": true
+    },
+    {
+      "title": "الرؤية",
+      "titleEn": "Vision"
+    },
+    {
+      "title": "الخدمات",
+      "titleEn": "Services"
+    },
+    {
+      "title": "الفريق",
+      "titleEn": "Team"
+    },
+    {
+      "title": "معرض الأعمال",
+      "titleEn": "Portfolio"
+    },
+    {
+      "title": "القيم الأساسية (رقم)",
+      "titleEn": "Core Values (figure)",
+      "needsData": true
+    },
+    {
+      "title": "حقائق مالية (4 مؤشرات)",
+      "titleEn": "Financial Facts (4 KPIs)",
+      "needsData": true
+    },
+    {
+      "title": "المبيعات والإيرادات (رسم)",
+      "titleEn": "Sales & Revenue (chart)",
+      "needsData": true
+    },
+    {
+      "title": "شكرًا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في كتلة JSON بالمعرّف chart-data، والغلاف يضم مصغّرتين لشريحتي «الفريق» و«عن الشركة» تتبعان نصوصهما."
+}

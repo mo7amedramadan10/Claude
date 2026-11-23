@@ -1,0 +1,75 @@
+{
+  "key": "sl-animated-business-case-and-roi-analysis",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💹",
+  "name": "دراسة الجدوى والعائد على الاستثمار",
+  "nameEn": "Business Case & ROI Analysis",
+  "description": "ملخص تنفيذي، تكلفة التقاعس، النطاق، الخيارات، العائد، التوزيع، التكلفة، السيناريوهات، الحساسية، التمويل، الحوكمة",
+  "descriptionEn": "Summary, cost of inaction, scope, options, ROI, breakdown, TCO, scenarios, sensitivity, funding gates, governance",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "تكلفة التقاعس",
+      "titleEn": "Cost of Inaction",
+      "needsData": true
+    },
+    {
+      "title": "نطاق المشروع",
+      "titleEn": "Scope Universe"
+    },
+    {
+      "title": "ساحة القرار",
+      "titleEn": "Decision Arena",
+      "needsData": true
+    },
+    {
+      "title": "تحوّل العمليات",
+      "titleEn": "Process Transformation",
+      "needsData": true
+    },
+    {
+      "title": "تحقيق العائد",
+      "titleEn": "ROI Delivery",
+      "needsData": true
+    },
+    {
+      "title": "توزيع الاستثمار",
+      "titleEn": "Investment Breakdown",
+      "needsData": true
+    },
+    {
+      "title": "إجمالي تكلفة الملكية",
+      "titleEn": "Total Cost of Ownership",
+      "needsData": true
+    },
+    {
+      "title": "تخطيط السيناريوهات",
+      "titleEn": "Scenario Planning",
+      "needsData": true
+    },
+    {
+      "title": "تحليل الحساسية",
+      "titleEn": "NPV Sensitivity Analysis",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق بوابات التمويل",
+      "titleEn": "Funding Gate Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "الحوكمة",
+      "titleEn": "Governance"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أشرطة الدرجة الموزونة وأعمدة إجمالي تكلفة الملكية تُرسم من كتلتي chart-data وchart-data-2، والباقي أشكال CSS/SVG ثابتة."
+}

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ألتيوس — عرض أعمال</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «ألتيوس للأعمال»: غلاف بشريط قطري أزرق ومصغّرتين لشريحتين، ثم شرائح نبذة/عن الشركة/التاريخ/الرسالة/الرؤية/الخدمات/الفريق/الأعمال/القيم/حقائق مالية/مبيعات برسم أعمدة، وشريحة شكر. الصور في assets، والرسم يُبنى من كتلة chart-data. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #222222; --ink-2: #3A3A3A; --navy: #152376; --blue: #2B48E6; --blue-2: #1B2FC9; --accent: #2B48E6; --gray: #F2F2F2; --muted: #6B6B6B; --line: #D9D9D9; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .pg { position: absolute; inset: 0; }
+  p, h1, h2, h3 { margin: 0; }
+  .abs { position: absolute; }
+  /* عنوان الشريحة: جزء غامق + لاحقة «شريحة» خفيفة (تسبق العنوان في العربية) */
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; display: flex; gap: .28em; align-items: baseline; font-size: 44px; font-weight: 700; line-height: 1.15; color: var(--navy); white-space: nowrap; }
+  .ttl .sfx { font-weight: 400; }
+  html[dir="rtl"] .ttl .sfx { order: -1; }
+  .ttl .hl { color: var(--blue); }
+  .lead { position: absolute; font-size: 24px; font-weight: 700; line-height: 1.42; color: var(--navy); }
+  .txt { position: absolute; font-size: 17px; line-height: 1.45; color: var(--ink-2); }
+  .hr { position: absolute; height: 1px; background: var(--line); }
+  .card { position: absolute; border-radius: 16px; background: var(--gray); color: var(--ink); }
+  .card.blue { background: linear-gradient(135deg, #3556F5 0%, #1B2FC9 100%); color: #fff; }
+  .card.blue h3, .card.blue p { color: #fff; }
+  .ic-circle { flex: none; border-radius: 50%; background: linear-gradient(160deg, #3F5FF6, #1C31CF); color: #fff; display: grid; place-items: center; }
+  .ic-circle svg { width: 50%; height: 50%; }
+  .item { position: absolute; display: flex; gap: 24px; align-items: flex-start; }
+  .item .ic-circle { width: 100px; height: 100px; font-size: 36px; font-weight: 700; }
+  .item h3 { font-size: 22px; font-weight: 700; line-height: 1.3; color: var(--ink); margin-bottom: 6px; }
+  .item p { font-size: 17px; line-height: 1.4; color: var(--ink-2); width: 175px; }
+  /* الأشكال القطرية الزرقاء (الغلاف، عن الشركة، الشكر) — تنعكس للعربية */
+  .diag, .diag2 { position: absolute; top: 0; inset-inline-start: 760px; width: 520px; height: 720px; }
+  .diag { clip-path: polygon(63.5% 0, 100% 0, 100% 100%, 0 100%); background: linear-gradient(165deg, #3657F3 0%, #2238D8 45%, #0D1C8A 100%); }
+  .diag2 { clip-path: polygon(100% 58%, 100% 100%, 66% 100%); background: linear-gradient(180deg, #152AB8, #0A1670); opacity: .75; }
+  html[dir="rtl"] .diag, html[dir="rtl"] .diag2, html[dir="rtl"] .glass1, html[dir="rtl"] .glass, html[dir="rtl"] .glass13, html[dir="rtl"] .fillet { transform: scaleX(-1); }
+  .dots { position: absolute; background-image: radial-gradient(circle, var(--dc) 2.3px, transparent 2.9px); background-size: 22px 22px; }
+  .dots-w { --dc: #fff; top: 29px; inset-inline-end: 40px; width: 88px; height: 88px; }
+  .dots-c { --dc: #5FD3E8; top: 424px; inset-inline-start: 624px; width: 112px; height: 134px; background-size: 22.5px 22.5px; }
+  /* الغلاف وشريحة الشكر */
+  .logo { position: absolute; top: 62px; inset-inline-start: 65px; display: flex; gap: 24px; align-items: center; }
+  .logo svg { width: 58px; height: 58px; color: var(--blue); }
+  .logo p { font-size: 18px; letter-spacing: 3px; line-height: 1.35; color: var(--navy); font-weight: 500; }
+  .big { position: absolute; top: 264px; inset-inline-start: 62px; font-size: 146px; font-weight: 800; line-height: 1; letter-spacing: -2px; color: var(--blue); white-space: nowrap; }
+  html[lang="ar"] .big { font-size: 118px; letter-spacing: 0; top: 250px; }
+  .bars { position: absolute; top: 427px; inset-inline-start: 65px; display: flex; gap: 8px; }
+  .bars i { display: block; height: 7px; border-radius: 4px; background: var(--blue); }
+  .bars i:nth-child(1) { width: 66px; } .bars i:nth-child(2) { width: 20px; } .bars i:nth-child(3) { width: 218px; background: #B7C0F3; }
+  .sub { position: absolute; top: 464px; inset-inline-start: 65px; font-size: 26px; letter-spacing: 1.2px; color: #555; white-space: nowrap; }
+  html[lang="ar"] .sub { letter-spacing: 0; }
+  .presenter { position: absolute; top: 614px; inset-inline-start: 65px; display: flex; gap: 24px; align-items: center; }
+  .presenter .av { width: 50px; height: 50px; border-radius: 50%; background: #EEF0F5; color: #8A93C9; display: grid; place-items: center; }
+  .presenter .av svg { width: 24px; height: 24px; }
+  .presenter .pn { font-size: 22px; font-weight: 700; color: #111; }
+  .presenter .pp { font-size: 18px; color: #666; margin-top: 2px; }
+  .glass1 { position: absolute; top: 85px; inset-inline-start: 840px; width: 290px; height: 265px; clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); background: linear-gradient(180deg, #EEF1FC, #BFCBF8); }
+  .mini { position: absolute; background: #fff; border-radius: 14px; padding: 6px; box-shadow: 0 14px 34px rgb(0 0 0 / .28); overflow: hidden; }
+  .mini .pg { position: absolute; top: 6px; inset-inline-start: 6px; width: 1280px; height: 720px; background: #fff; transform-origin: top left; }
+  html[dir="rtl"] .mini .pg { transform-origin: top right; }
+  .mini .sfx { display: none; }
+  .mini-team { top: 123px; inset-inline-start: 663px; width: 390px; height: 222px; }
+  .mini-team .pg { transform: scale(.2953); }
+  .mini-about { top: 360px; inset-inline-start: 740px; width: 460px; height: 260px; }
+  .mini-about .pg { transform: scale(.35); }
+  .thanks .big { top: 300px; font-size: 93px; letter-spacing: -1px; }
+  html[lang="ar"] .thanks .big { font-size: 96px; letter-spacing: 0; top: 282px; }
+  .thanks .sub { font-size: 27px; letter-spacing: 1.2px; }
+  .thanks .dots-c { width: 135px; height: 134px; inset-inline-start: 626px; }
+  .glass13 { position: absolute; top: 158px; inset-inline-start: 748px; width: 370px; height: 246px; }
+  /* 2 — نبذة عن الشركة */
+  .ov .band { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 240px; background: var(--blue); }
+  .ov .ttl { color: #fff; }
+  .ov .ov-lead { position: absolute; top: 123px; inset-inline-start: 64px; width: 560px; font-size: 20px; line-height: 1.4; color: #fff; }
+  .ov .ring { position: absolute; top: -4px; inset-inline-start: 761px; width: 450px; height: 450px; border-radius: 50%; background: #1B35C9; }
+  .fillet { position: absolute; top: 240px; width: 40px; height: 40px; }
+  .fillet.fl { inset-inline-start: 720px; background: radial-gradient(circle at 0 100%, transparent 39px, var(--blue) 40px); }
+  .fillet.fr { inset-inline-start: 1210px; background: radial-gradient(circle at 100% 100%, transparent 39px, var(--blue) 40px); }
+  .ov .ov-photo { position: absolute; top: 92px; inset-inline-start: 837px; width: 296px; height: 296px; border-radius: 50%; object-fit: cover; }
+  .ov .ov-name { position: absolute; top: 478px; inset-inline-start: 830px; width: 310px; text-align: center; font-size: 32px; font-weight: 700; color: var(--navy); }
+  .ov .ov-role { position: absolute; top: 522px; inset-inline-start: 830px; width: 310px; text-align: center; font-size: 18px; color: #777; }
+  .ov .ov-line { top: 557px; inset-inline-start: 830px; width: 310px; }
+  .ov .ov-small { position: absolute; top: 578px; inset-inline-start: 870px; width: 230px; text-align: center; font-size: 17px; line-height: 1.5; color: #777; }
+  .ov .quote { position: absolute; top: 352px; inset-inline-start: 65px; width: 86px; height: 70px; color: var(--blue); }
+  .ov .vline { position: absolute; top: 330px; inset-inline-start: 193px; width: 1.5px; height: 270px; background: #CFCFCF; }
+  .ov .q1, .ov .q2 { position: absolute; inset-inline-start: 228px; width: 460px; font-size: 18px; line-height: 1.4; color: var(--ink-2); }
+  .ov .q1 { top: 330px; } .ov .q2 { top: 455px; }
+  .ov .ov-ph { position: absolute; top: 572px; inset-inline-start: 228px; font-size: 18px; font-weight: 700; color: var(--navy); }
+  /* 3 — عن الشركة */
+  .about .diag { background: linear-gradient(165deg, #3C5CF4 0%, #2A48E4 55%, #1F3BD6 100%); }
+  .about .diag2 { clip-path: polygon(80% 0, 100% 0, 100% 100%, 38% 100%); background: linear-gradient(170deg, #1D33C9, #0C1B86); opacity: 1; }
+  .about .ab-p1 { top: 118px; inset-inline-start: 64px; width: 590px; }
+  .about .ab-p2 { top: 216px; inset-inline-start: 64px; width: 590px; }
+  .about .kpi { top: 308px; width: 210px; height: 157px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .about .k1 { inset-inline-start: 65px; } .about .k2 { inset-inline-start: 295px; }
+  .about .kpi .v { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: 1px; }
+  .about .kpi .l { font-size: 18px; margin-top: 10px; }
+  .about .i1 { top: 530px; inset-inline-start: 65px; } .about .i2 { top: 530px; inset-inline-start: 408px; }
+  .about .city { position: absolute; top: 38px; inset-inline-start: 650px; width: 530px; height: 397px; object-fit: cover; clip-path: polygon(34% 0, 100% 0, 68% 100%, 0 100%); }
+  html[dir="rtl"] .about .city { clip-path: polygon(0 0, 66% 0, 100% 100%, 32% 100%); }
+  .glass { position: absolute; top: 330px; inset-inline-start: 780px; width: 295px; height: 185px; clip-path: polygon(23% 0, 100% 0, 77% 100%, 0 100%); background: linear-gradient(135deg, rgb(255 255 255 / .55), rgb(150 170 255 / .35)); }
+  .about .dots-w { top: 565px; inset-inline-start: 905px; inset-inline-end: auto; }
+  /* 4 — تاريخ الشركة */
+  .hist .hist-photo { position: absolute; top: 0; inset-inline-start: 755px; width: 525px; height: 455px; object-fit: cover; border-end-start-radius: 24px; }
+  .hist .h-p { top: 182px; inset-inline-start: 64px; width: 590px; }
+  .hist .h-lead { top: 400px; inset-inline-start: 64px; width: 170px; font-size: 26px; line-height: 1.25; }
+  .hc { width: 287px; height: 255px; padding: 30px 36px; }
+  .hc .ic-circle { width: 54px; height: 54px; }
+  .hc h3 { margin: 20px 0 8px; font-size: 22px; font-weight: 700; }
+  .hc p { font-size: 17px; line-height: 1.4; width: 200px; color: var(--ink-2); }
+  .hc.blue .ic-circle { background: #fff; color: var(--blue); }
+  .hist .c0 { top: 118px; inset-inline-start: 690px; } .hist .c1 { top: 400px; inset-inline-start: 287px; }
+  .hist .c2 { top: 400px; inset-inline-start: 608px; } .hist .c3 { top: 400px; inset-inline-start: 929px; }
+  /* 5 — الرسالة */
+  .mis .m-lead { top: 125px; inset-inline-start: 64px; width: 320px; }
+  .mis .m-p { top: 318px; inset-inline-start: 64px; width: 320px; }
+  .mc { width: 275px; height: 327px; padding: 38px 39px; }
+  .mc .v { font-size: 44px; font-weight: 700; line-height: 1.1; color: var(--blue); letter-spacing: 1px; }
+  .mc.blue .v { color: #fff; }
+  .mc h3 { margin: 16px 0 8px; font-size: 20px; font-weight: 700; }
+  .mc .t { font-size: 19px; line-height: 1.4; width: 200px; color: var(--ink-2); }
+  .mis .mc1 { top: 65px; inset-inline-start: 444px; } .mis .mc2 { top: 213px; inset-inline-start: 763px; }
+  .mis .m-photo1 { position: absolute; top: 65px; inset-inline-start: 763px; width: 390px; height: 222px; object-fit: cover; border-radius: 16px; }
+  .mis .m-photo2 { position: absolute; top: 393px; inset-inline-start: 823px; width: 457px; height: 327px; object-fit: cover; }
+  .mis .n1 { top: 530px; inset-inline-start: 65px; } .mis .n2 { top: 530px; inset-inline-start: 408px; }
+  /* 6 — الرؤية */
+  .vis .v-panel { position: absolute; top: 65px; inset-inline-start: 565px; width: 715px; height: 655px; background: var(--gray); border-start-start-radius: 24px; }
+  .vis .v-lead { top: 180px; inset-inline-start: 64px; width: 215px; }
+  .vis .v-p { top: 333px; inset-inline-start: 64px; width: 215px; }
+  .vis .v-photo { position: absolute; top: 178px; inset-inline-start: 330px; width: 430px; height: 458px; object-fit: cover; border-radius: 18px; }
+  .vc { position: absolute; inset-inline-start: 786px; width: 430px; height: 144px; border-radius: 16px; background: #fff; display: flex; align-items: center; padding: 0 36px; gap: 40px; color: var(--ink); }
+  .vc.blue { background: linear-gradient(135deg, #3556F5 0%, #1B2FC9 100%); color: #fff; }
+  .vc .vi { flex: none; width: 70px; height: 70px; color: var(--blue); }
+  .vc.blue .vi { color: #fff; }
+  .vc .vi svg { width: 70px; height: 70px; }
+  .vc h3 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .vc p { font-size: 17px; line-height: 1.4; width: 240px; color: var(--ink-2); }
+  .vc.blue p { color: #fff; }
+  .vis .vc1 { top: 178px; } .vis .vc2 { top: 336px; } .vis .vc3 { top: 494px; }
+  /* 7 — الخدمات */
+  .svc .sv-band { position: absolute; top: 345px; inset-inline-start: 0; width: 1280px; height: 375px; background: #656BD3; }
+  .svc .sv-photo { position: absolute; top: 541px; inset-inline-start: 0; width: 1280px; height: 179px; object-fit: cover; }
+  html[dir="rtl"] .svc .sv-photo { transform: scaleX(-1); }
+  .sc { width: 275px; height: 392px; padding: 40px 36px; }
+  .sc .si { width: 82px; height: 72px; color: var(--navy); }
+  .sc.blue .si { color: #fff; }
+  .sc .si svg { width: 82px; height: 72px; }
+  .sc h3 { margin: 34px 0 10px; font-size: 22px; font-weight: 700; }
+  .sc p { font-size: 19px; line-height: 1.35; width: 200px; color: var(--ink-2); }
+  .svc .s0 { top: 148px; inset-inline-start: 65px; } .svc .s1 { top: 148px; inset-inline-start: 357px; }
+  .svc .s2 { top: 148px; inset-inline-start: 649px; } .svc .s3 { top: 148px; inset-inline-start: 941px; }
+  .svc .sv-foot { position: absolute; top: 596px; inset-inline-start: 240px; width: 800px; text-align: center; font-size: 17px; line-height: 1.5; color: #fff; }
+  /* 8 — الفريق */
+  .team .mem { position: absolute; top: 155px; width: 263px; text-align: center; }
+  .team .mem img { display: block; width: 263px; height: 321px; object-fit: cover; }
+  .team .mem .des { margin-top: 26px; font-size: 21px; color: #666; }
+  .team .mem .nm { margin-top: 8px; font-size: 28px; font-weight: 700; color: var(--navy); }
+  .team .mem .sm { margin: 12px auto 0; width: 235px; font-size: 17.5px; line-height: 1.4; color: var(--ink-2); }
+  .team .m1 { inset-inline-start: 65px; } .team .m2 { inset-inline-start: 358px; } .team .m3 { inset-inline-start: 652px; } .team .m4 { inset-inline-start: 945px; }
+  /* 9 — الأعمال */
+  .pf .pf-lead { top: 418px; inset-inline-start: 64px; width: 280px; }
+  .pf .pf-p { top: 527px; inset-inline-start: 64px; width: 350px; }
+  .pf img { position: absolute; object-fit: cover; border-radius: 12px; }
+  .pf .pa { top: 127px; inset-inline-start: 492px; width: 170px; height: 158px; }
+  .pf .pb { top: 127px; inset-inline-start: 674px; width: 326px; height: 328px; }
+  .pf .pc { top: 238px; inset-inline-start: 1013px; width: 203px; height: 343px; }
+  .pf .pd { top: 466px; inset-inline-start: 475px; width: 398px; height: 182px; }
+  .pf .pf-ic { position: absolute; top: 466px; inset-inline-start: 884px; width: 116px; height: 116px; border-radius: 12px; background: var(--blue); color: #fff; display: grid; place-items: center; }
+  .pf .pf-ic svg { width: 56px; height: 56px; }
+  /* 10 — القيم */
+  .cv .cv-lead { top: 128px; inset-inline-start: 64px; width: 275px; }
+  .cv .cv-h1 { top: 258px; inset-inline-start: 64px; width: 272px; }
+  .cv .cv-big { position: absolute; top: 268px; inset-inline-start: 64px; font-size: 56px; font-weight: 700; line-height: 1.2; color: var(--blue); letter-spacing: 1px; }
+  .cv .cv-h2 { top: 350px; inset-inline-start: 64px; width: 272px; }
+  .cv .cv-p1 { top: 386px; inset-inline-start: 64px; width: 272px; }
+  .cv .cv-p2 { top: 510px; inset-inline-start: 64px; width: 272px; }
+  .cv .cv-photo { position: absolute; top: 113px; inset-inline-start: 368px; width: 435px; height: 607px; object-fit: cover; border-start-start-radius: 18px; border-start-end-radius: 18px; }
+  .cv-item { position: absolute; inset-inline-start: 830px; display: flex; gap: 42px; align-items: flex-start; }
+  .cv-item .ic-circle { width: 85px; height: 85px; }
+  .cv-item .tx { width: 262px; margin-top: -6px; }
+  .cv-item h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+  .cv-item p { font-size: 17px; line-height: 1.4; color: var(--ink-2); }
+  .cv .r1 { top: 143px; } .cv .r2 { top: 314px; } .cv .r3 { top: 485px; }
+  .cv .cv-s { inset-inline-start: 957px; width: 262px; } .cv .s1 { top: 283px; } .cv .s2 { top: 455px; } .cv .s3 { top: 626px; }
+  /* 11 — حقائق مالية */
+  .fin .fn-photo { position: absolute; top: 130px; inset-inline-start: 0; width: 435px; height: 590px; object-fit: cover; border-start-end-radius: 20px; }
+  .fin .fn-lead { top: 128px; inset-inline-start: 489px; width: 275px; }
+  .fin .fn-h1 { top: 243px; inset-inline-start: 489px; width: 272px; }
+  .fin .fn-p1 { top: 268px; inset-inline-start: 489px; width: 272px; }
+  .fin .fn-p2 { top: 393px; inset-inline-start: 489px; width: 272px; }
+  .fin .fn-lead2 { top: 135px; inset-inline-start: 820px; width: 260px; }
+  .fin .fn-h2 { top: 246px; inset-inline-start: 820px; width: 398px; }
+  .fc { width: 186px; height: 180px; padding: 34px 28px; }
+  .fc .v { font-size: 36px; font-weight: 700; line-height: 1.1; color: var(--blue); letter-spacing: 1px; }
+  .fc.blue .v { color: #fff; }
+  .fc .t { margin-top: 14px; font-size: 14px; line-height: 1.4; color: var(--ink-2); }
+  .fin .f1 { top: 277px; inset-inline-start: 820px; } .fin .f2 { top: 277px; inset-inline-start: 1028px; }
+  .fin .f3 { top: 470px; inset-inline-start: 820px; } .fin .f4 { top: 470px; inset-inline-start: 1028px; }
+  /* 12 — المبيعات والإيرادات */
+  .sr .sr-lead { top: 155px; inset-inline-start: 64px; width: 310px; }
+  .kp { position: absolute; width: 165px; }
+  .kp .v { font-size: 34px; font-weight: 700; line-height: 1.15; color: var(--blue); letter-spacing: 1px; }
+  .kp .n { margin-top: 8px; font-size: 18px; font-weight: 700; color: var(--ink); }
+  .kp .t { margin-top: 6px; width: 140px; font-size: 14px; line-height: 1.35; color: var(--ink-2); }
+  .sr .kp1 { top: 372px; inset-inline-start: 64px; } .sr .kp2 { top: 372px; inset-inline-start: 237px; } .sr .kp3 { top: 517px; inset-inline-start: 64px; }
+  .sr .sr-photo { position: absolute; top: 155px; inset-inline-start: 430px; width: 285px; height: 497px; object-fit: cover; border-radius: 16px; }
+  .sr .sr-p { top: 155px; inset-inline-start: 763px; width: 455px; }
+  .sr .chart { position: absolute; top: 270px; inset-inline-start: 763px; width: 455px; height: 400px; }
+  .sr .chart text { font-family: var(--font); font-size: 15px; fill: #555; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BCC6F4" stop-opacity=".9"/><stop offset="1" stop-color="#E2E7FF" stop-opacity=".35"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><div class="pg cover"><div class="diag"></div><div class="diag2"></div><div class="dots dots-w"></div><div class="dots dots-c"></div><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5c4-1.4 9-1.4 13 0 1.4 4 1.4 9.5 0 14-4 1.4-9 1.4-13 0-1.4-4.5-1.4-10 0-14z" transform="rotate(-10 12 12)"/></svg><p>ضع شعار<br>شركتك هنا</p></div><div class="bars"><i></i><i></i><i></i></div><div class="presenter"><div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><div><p class="pn">اسم مقدّم العرض</p><p class="pp">عنوان نائب</p></div></div><div class="glass1"></div><h1 class="big">ألتيوس</h1><p class="sub">قالب عرض تقديمي للأعمال</p><div class="mini mini-team" aria-hidden="true"><div class="pg team"><h1 class="ttl"><span>تعرّف على فريقنا</span><span class="sfx">شريحة</span></h1><div class="mem m1"><img class="" src="/templates/freeform/sl-altius-business/assets/p1.jpg" alt="عضو الفريق الأول"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="mem m2"><img class="" src="/templates/freeform/sl-altius-business/assets/p2.jpg" alt="عضو الفريق الثاني"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="mem m3"><img class="" src="/templates/freeform/sl-altius-business/assets/p3.jpg" alt="عضو الفريق الثالث"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="mem m4"><img class="" src="/templates/freeform/sl-altius-business/assets/p4.jpg" alt="عضو الفريق الرابع"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></div><div class="mini mini-about" aria-hidden="true"><div class="pg about"><div class="diag"></div><div class="diag2"></div><img class="city" src="/templates/freeform/sl-altius-business/assets/city.jpg" alt="منظر جوي لمدينة ليلًا"><div class="glass"></div><div class="dots dots-w"></div><h1 class="ttl"><span>نبذة عن</span><span class="hl">شركتنا</span></h1><p class="txt ab-p1">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p><p class="txt ab-p2">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="card blue kpi k1"><p class="v">33%</p><p class="l">نمو المستخدمين</p></div><div class="card blue kpi k2"><p class="v">$165K</p><p class="l">الإيرادات</p></div><div class="item i1"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 7 4h10l4 5.5L12 20z"/><path d="M3 9.5h18M9 9.5l3 10.5 3-10.5M7 4l2 5.5M17 4l-2 5.5"/></svg></div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="item i2"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10.5 21v-3h3v3"/></svg></div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></div></div></div></div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><div class="pg ov"><div class="band"></div><div class="ring"></div><div class="fillet fl"></div><div class="fillet fr"></div><h1 class="ttl"><span>نبذة عن الشركة</span></h1><p class="ov-lead">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><img class="ov-photo" src="/templates/freeform/sl-altius-business/assets/founder.jpg" alt="صورة الشريك المؤسس"><p class="ov-name">الاسم</p><p class="ov-role">الشركاء المؤسسون</p><div class="hr ov-line"></div><p class="ov-small">هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="quote"><svg viewBox="0 0 90 70" fill="currentColor" aria-hidden="true"><path d="M0 36v-16A20 20 0 0 1 20 0h8v12h-8a8 8 0 0 0-8 8v6h18v34a10 10 0 0 1-10 10H10A10 10 0 0 1 0 60z"/><path d="M50 36v-16A20 20 0 0 1 70 0h8v12h-8a8 8 0 0 0-8 8v6h18v34a10 10 0 0 1-10 10H60a10 10 0 0 1-10-10z"/></svg></div><div class="vline"></div><p class="q1">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p><p class="q2">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="ov-ph">عنوان نائب</p></div></div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><div class="pg about"><div class="diag"></div><div class="diag2"></div><img class="city" src="/templates/freeform/sl-altius-business/assets/city.jpg" alt="منظر جوي لمدينة ليلًا"><div class="glass"></div><div class="dots dots-w"></div><h1 class="ttl"><span>نبذة عن</span><span class="hl">شركتنا</span></h1><p class="txt ab-p1">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p><p class="txt ab-p2">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="card blue kpi k1"><p class="v">33%</p><p class="l">نمو المستخدمين</p></div><div class="card blue kpi k2"><p class="v">$165K</p><p class="l">الإيرادات</p></div><div class="item i1"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 7 4h10l4 5.5L12 20z"/><path d="M3 9.5h18M9 9.5l3 10.5 3-10.5M7 4l2 5.5M17 4l-2 5.5"/></svg></div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="item i2"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10.5 21v-3h3v3"/></svg></div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></div></div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><div class="pg hist"><img class="hist-photo" src="/templates/freeform/sl-altius-business/assets/hist.jpg" alt="واجهة مبنى زجاجي حديث"><h1 class="ttl"><span>تاريخ شركتنا</span><span class="sfx">شريحة</span></h1><p class="txt h-p">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p><p class="lead h-lead">هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="card hc c0"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.4 10.9c.6.5.9 1.3.9 2.1h5c0-.8.3-1.6.9-2.1A6 6 0 0 0 12 3z"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="card hc c1"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 12h18M12 11v3"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="card hc c2 blue"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M6 18v-6M11 18V6M16 18v-9M20 18V3"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="card hc c3"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="3"/><circle cx="5" cy="9" r="2"/><circle cx="19" cy="9" r="2"/><path d="M7 19v-2a5 5 0 0 1 10 0v2M1.5 17v-1.5a3.5 3.5 0 0 1 4-3.4M22.5 17v-1.5a3.5 3.5 0 0 0-4-3.4"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><div class="pg mis"><h1 class="ttl"><span>رسالتنا</span></h1><p class="lead m-lead">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="txt m-p">أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص المطلوب هنا.</p><div class="card mc mc1"><p class="v">$75M</p><h3>عنوان نائب</h3><p class="t">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><img class="m-photo1" src="/templates/freeform/sl-altius-business/assets/tower.jpg" alt="برج بواجهة بيضاء وزرقاء"><img class="m-photo2" src="/templates/freeform/sl-altius-business/assets/gray.jpg" alt="مبنى حديث بتدرّج رمادي"><div class="card mc mc2 blue"><p class="v">60K</p><h3>عنوان نائب</h3><p class="t">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="item n1"><div class="ic-circle">01</div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="item n2"><div class="ic-circle">02</div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></div></div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6"><div class="pg vis"><div class="v-panel"></div><h1 class="ttl"><span>رؤيتنا</span><span class="sfx">شريحة</span></h1><p class="lead v-lead">هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="txt v-p">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><img class="v-photo" src="/templates/freeform/sl-altius-business/assets/towers.jpg" alt="أبراج زجاجية من الأسفل"><div class="vc vc1 blue"><div class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5H3zM5 9v8M9.5 9v8M14.5 9v8M19 9v8M3 17h18M3 20h18"/></svg></div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="vc vc2"><div class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="3"/><circle cx="5" cy="9" r="2"/><circle cx="19" cy="9" r="2"/><path d="M7 19v-2a5 5 0 0 1 10 0v2M1.5 17v-1.5a3.5 3.5 0 0 1 4-3.4M22.5 17v-1.5a3.5 3.5 0 0 0-4-3.4"/></svg></div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="vc vc3"><div class="vi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M9 21h6M12 6h7l2 2-2 2h-7M12 13H5l-2 2 2 2h7"/></svg></div><div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></div></div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><div class="pg svc"><div class="sv-band"></div><img class="sv-photo" src="/templates/freeform/sl-altius-business/assets/band.jpg" alt=""><h1 class="ttl"><span>خدماتنا</span><span class="sfx">شريحة</span></h1><div class="card sc s0"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12v14H5zM5 4a2 2 0 1 0 0 4M8 8h4v4H8zM8 14h5"/><path d="M15 12l4-4 2 2-4 4h-2z"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="card sc s1 blue"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9h6v12M9 21V5h7v16M16 21v-9h5v9M3 21h18M5 12h2M5 15h2M5 18h2M11 8h3M11 11h3M11 14h3M11 17h3M18 15h1M18 18h1"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="card sc s2"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h8M7 21V7M4 7h16l-1 3h-2l-1-3M7 4v3M18 7v6M16 13h4v3h-4zM7 10l-3-3M7 13l-3-3M7 16l-3-3M7 19l-3-3"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="card sc s3"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 16V9l5-4h6l3 5v6H2z"/><path d="M16 11h4l2 3v2h-6zM7 5l6 6M2 12h5"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></div><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><p class="sv-foot">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p></div></div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><div class="pg team"><h1 class="ttl"><span>تعرّف على فريقنا</span><span class="sfx">شريحة</span></h1><div class="mem m1"><img class="" src="/templates/freeform/sl-altius-business/assets/p1.jpg" alt="عضو الفريق الأول"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="mem m2"><img class="" src="/templates/freeform/sl-altius-business/assets/p2.jpg" alt="عضو الفريق الثاني"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="mem m3"><img class="" src="/templates/freeform/sl-altius-business/assets/p3.jpg" alt="عضو الفريق الثالث"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="mem m4"><img class="" src="/templates/freeform/sl-altius-business/assets/p4.jpg" alt="عضو الفريق الرابع"><p class="des">المسمّى الوظيفي</p><p class="nm">الاسم</p><p class="sm">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><div class="pg pf"><h1 class="ttl"><span>معرض الأعمال</span><span class="sfx">شريحة</span></h1><p class="lead pf-lead">هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="txt pf-p">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><img class="pa" src="/templates/freeform/sl-altius-business/assets/pf-a.jpg" alt="أبراج زجاجية من الأسفل"><img class="pb" src="/templates/freeform/sl-altius-business/assets/pf-b.jpg" alt="برج بواجهة بيضاء وزرقاء"><img class="pc" src="/templates/freeform/sl-altius-business/assets/pf-c.jpg" alt="زاوية مبنى حديث تحت سماء صافية"><img class="pd" src="/templates/freeform/sl-altius-business/assets/pf-d.jpg" alt="زاوية مبنى حديث تحت سماء صافية"><div class="pf-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9h6v12M9 21V5h7v16M16 21v-9h5v9M3 21h18M5 12h2M5 15h2M5 18h2M11 8h3M11 11h3M11 14h3M11 17h3M18 15h1M18 18h1"/></svg></div></div></div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><div class="pg cv"><h1 class="ttl"><span>القيم الأساسية</span><span class="sfx">شريحة</span></h1><p class="lead cv-lead">هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="hr cv-h1"></div><p class="cv-big">$102+</p><div class="hr cv-h2"></div><p class="txt cv-p1">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="txt cv-p2">هذا نص توضيحي. أضف النص المطلوب هنا.</p><img class="cv-photo" src="/templates/freeform/sl-altius-business/assets/corner.jpg" alt="زاوية مبنى حديث تحت سماء صافية"><div class="cv-item r1"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 7 4h10l4 5.5L12 20z"/><path d="M3 9.5h18M9 9.5l3 10.5 3-10.5M7 4l2 5.5M17 4l-2 5.5"/></svg></div><div class="tx"><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="hr cv-s s1"></div><div class="cv-item r2"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5H3zM5 9v8M9.5 9v8M14.5 9v8M19 9v8M3 17h18M3 20h18"/></svg></div><div class="tx"><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="hr cv-s s2"></div><div class="cv-item r3"><div class="ic-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10.5 21v-3h3v3"/></svg></div><div class="tx"><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div><div class="hr cv-s s3"></div></div></div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><div class="pg fin"><h1 class="ttl"><span>حقائق مالية</span><span class="sfx">شريحة</span></h1><img class="fn-photo" src="/templates/freeform/sl-altius-business/assets/dark.jpg" alt="برج زجاجي داكن من الأسفل"><p class="lead fn-lead">هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="hr fn-h1"></div><p class="txt fn-p1">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="txt fn-p2">هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="lead fn-lead2">أضف النص المطلوب هنا.</p><div class="hr fn-h2"></div><div class="card fc f1"><p class="v">+38%</p><p class="t">أضف النص المطلوب هنا.</p></div><div class="card fc f2"><p class="v">$68K</p><p class="t">أضف النص المطلوب هنا.</p></div><div class="card fc f3"><p class="v">+22%</p><p class="t">أضف النص المطلوب هنا.</p></div><div class="card fc f4 blue"><p class="v">+1.5M</p><p class="t">أضف النص المطلوب هنا.</p></div></div></div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><div class="pg sr"><h1 class="ttl"><span>المبيعات والإيرادات</span><span class="sfx">شريحة</span></h1><p class="lead sr-lead">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="kp kp1"><p class="v">$25M</p><p class="n">إجمالي الإيرادات</p><p class="t">أضف النص المطلوب هنا.</p></div><div class="kp kp2"><p class="v">$15M</p><p class="n">إجمالي المصروفات</p><p class="t">أضف النص المطلوب هنا.</p></div><div class="kp kp3"><p class="v">15.1K</p><p class="n">إجمالي العملاء</p><p class="t">أضف النص المطلوب هنا.</p></div><img class="sr-photo" src="/templates/freeform/sl-altius-business/assets/white.jpg" alt="برج أبيض بنوافذ متكررة"><p class="txt sr-p">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><svg class="chart" id="chart" viewBox="0 0 455 400" role="img" aria-label="رسم أعمدة للإيرادات والمصروفات من 2022 إلى 2025"></svg></div></div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13"><div class="pg cover thanks"><div class="diag"></div><div class="diag2"></div><div class="dots dots-w"></div><div class="dots dots-c"></div><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5c4-1.4 9-1.4 13 0 1.4 4 1.4 9.5 0 14-4 1.4-9 1.4-13 0-1.4-4.5-1.4-10 0-14z" transform="rotate(-10 12 12)"/></svg><p>ضع شعار<br>شركتك هنا</p></div><div class="bars"><i></i><i></i><i></i></div><div class="presenter"><div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><div><p class="pn">اسم مقدّم العرض</p><p class="pp">عنوان نائب</p></div></div><svg class="glass13" viewBox="0 0 370 246" aria-hidden="true"><polygon points="103,3 366,3 266,243 3,243" fill="url(#gl)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg><h1 class="big">شكرًا لكم</h1><p class="sub">عدّل نصك هنا</p></div></div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 13</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script type="application/json" id="chart-data">{"categories": ["2022", "2023", "2024", "2025"], "max": 50, "step": 5, "series": [{"name": "الإيرادات", "color": "#2B45E0", "values": [34, 42, 46, 45]}, {"name": "المصروفات", "color": "#1A2A6C", "values": [23, 17, 27, 26]}]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // رسم الأعمدة المجمّعة في شريحة «المبيعات والإيرادات» من كتلة chart-data؛ الفئة الأولى في جهة البداية
+  function drawChart() {
+    var svg = document.getElementById('chart'), blk = document.getElementById('chart-data'); if (!svg || !blk) return;
+    var d = JSON.parse(blk.textContent), W = 455, top = 17, base = 360, axis = 38, bw = 26;
+    var ns = 'http://www.w3.org/2000/svg';
+    function mk(t, a, txt) { var e = document.createElementNS(ns, t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
+    function X(x) { return RTL ? W - x : x; }
+    for (var v = 0; v <= d.max; v += d.step) {
+      var y = base - v / d.max * (base - top);
+      mk('text', { x: X(axis - 14), y: y + 5, 'text-anchor': RTL ? 'start' : 'end' }, String(v));
+    }
+    mk('line', { x1: X(axis), x2: X(W), y1: base + .5, y2: base + .5, stroke: '#D9D9D9', 'stroke-width': 1 });
+    var n = d.categories.length, gw = (W - axis) / n;
+    d.categories.forEach(function (c, i) {
+      var cx = axis + gw * i + gw / 2;
+      d.series.forEach(function (s, j) {
+        var h = s.values[i] / d.max * (base - top), x0 = cx + (j - 1) * bw, x1 = x0 + bw;
+        mk('rect', { x: Math.min(X(x0), X(x1)), y: base - h, width: bw, height: h, fill: s.color });
+      });
+      mk('text', { x: X(cx), y: base + 24, 'text-anchor': 'middle' }, c);
+    });
+  }
+  drawChart();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

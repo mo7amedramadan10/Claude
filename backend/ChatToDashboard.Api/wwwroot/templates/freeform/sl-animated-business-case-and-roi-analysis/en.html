@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Case & ROI Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «دراسة الجدوى وتحليل العائد على الاستثمار»: 13 شريحة بخلفية كحلية (#163B8C) وبطاقات زرقاء (#4E86FF) وبيضاء؛ الرسوم SVG تُرسم من كتل chart-data وchart-data-2، والباقي أشكال CSS/SVG بإحداثيات مطلقة داخل الإطار 1280×720. */
+  :root { --font: 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #1F2328; --ink-2: #3A3F47; --muted: #6B7280; --accent: #4E86FF; --navy: #163B8C; --blue-2: #355FCF; --blue-3: #20377D; --sky: #A6CAFF; --sky-2: #9EC5FE; --bg: #163B8C; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame { color: #fff; }
+  .frame > *, .s2 .prob > *, .s2 .kpi > *, .s2 .inv > *, .s2 .gauge > *, .s3 .q > *, .s3 .side > *, .s5 .panel > *, .s7 .panel > *, .s9 .row > *, .s10 .col > *, .s11 .bar > *, .s11 .g > *, .s12 .ph > *, .s13 .gc > * { position: absolute; }
+  .ttl { top: 48px; inset-inline-start: 80px; margin: 0; font-size: 50px; font-weight: 700; line-height: 1.2; color: #fff; }
+  .frame p, .frame h1, .frame h2, .frame h3 { margin: 0; }
+  .wh { background: #fff; color: var(--ink); }
+  .card { background: var(--accent); }
+  /* الشريحة 1: الغلاف */
+  .s1 .deco { inset: 0; clip-path: polygon(54% 0, 100% 0, 100% 82%); background: repeating-linear-gradient(45deg, rgb(0 0 0 / .12) 0 7px, rgb(0 0 0 / .04) 7px 60px, rgb(0 0 0 / 0) 60px 118px); }
+  html[dir="rtl"] .s1 .deco { transform: scaleX(-1); }
+  .s1 .logo { top: 112px; inset-inline-start: 120px; width: 56px; height: 58px; color: #A9C9FF; }
+  .s1 .co { top: 120px; inset-inline-start: 202px; font-size: 18px; letter-spacing: 2.5px; line-height: 1.3; text-transform: uppercase; }
+  html[lang="ar"] .s1 .co { letter-spacing: 0; font-size: 20px; }
+  .s1 .t1 { top: 270px; inset-inline-start: 118px; font-size: 92px; font-weight: 800; line-height: 1; letter-spacing: -1px; text-transform: uppercase; white-space: nowrap; }
+  html[lang="ar"] .s1 .t1 { font-size: 78px; letter-spacing: 0; }
+  .s1 .t2 { top: 378px; inset-inline-start: 120px; font-size: 68px; font-weight: 300; line-height: 1; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+  html[lang="ar"] .s1 .t2 { font-size: 50px; font-weight: 400; }
+  .s1 .p { top: 544px; inset-inline-start: 120px; width: 745px; font-size: 20px; line-height: 1.3; color: #D5DEF5; }
+  /* الشريحة 2: الملخص التنفيذي */
+  .s2 .prob { top: 155px; inset-inline-start: 65px; width: 757px; height: 175px; }
+  .s2 .ico { width: 44px; height: 44px; background: #fff; color: var(--accent); display: grid; place-items: center; }
+  .s2 .ico svg { width: 26px; height: 26px; }
+  .s2 .prob .ico { top: 13px; inset-inline-start: 32px; }
+  .s2 .prob h2 { top: 75px; inset-inline-start: 32px; font-size: 26px; font-weight: 400; letter-spacing: 4px; line-height: 1.25; width: 170px; text-transform: uppercase; }
+  html[lang="ar"] .s2 .prob h2 { letter-spacing: 0; font-weight: 700; }
+  .s2 .prob .big { top: 52px; inset-inline-start: 222px; font-size: 24px; line-height: 1.2; white-space: nowrap; }
+  .s2 .prob .big b { font-weight: 700; }
+  .s2 .prob .sm { top: 100px; inset-inline-start: 222px; font-size: 14px; color: #E6EEFF; white-space: nowrap; }
+  .s2 .kpi { width: 367px; height: 160px; }
+  .s2 .k1 { top: 345px; inset-inline-start: 65px; } .s2 .k2 { top: 345px; inset-inline-start: 453px; }
+  .s2 .k3 { top: 520px; inset-inline-start: 65px; } .s2 .k4 { top: 520px; inset-inline-start: 453px; }
+  .s2 .kpi .v { top: 30px; inset-inline-start: 34px; font-size: 46px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+  .s2 .kpi .l { top: 108px; inset-inline-start: 34px; font-size: 22px; color: var(--ink-2); text-transform: uppercase; white-space: nowrap; }
+  html[lang="ar"] .s2 .kpi .l { font-size: 21px; }
+  .s2 .inv { top: 155px; inset-inline-start: 835px; width: 380px; height: 525px; }
+  .s2 .inv .ico { top: 20px; inset-inline-start: 27px; background: var(--accent); color: #fff; }
+  .s2 .inv h2 { top: 80px; inset-inline-start: 27px; font-size: 26px; font-weight: 700; text-transform: uppercase; }
+  .s2 .inv .p { top: 128px; inset-inline-start: 27px; width: 300px; font-size: 18px; line-height: 1.25; color: var(--muted); }
+  .s2 .mini { top: 223px; width: 102px; height: 63px; background: var(--accent); color: #fff; text-align: center; padding-top: 9px; }
+  .s2 .mini b { display: block; font-size: 22px; line-height: 1.1; }
+  .s2 .mini span { display: block; font-size: 14px; color: #DCE7FF; }
+  .s2 .m1 { inset-inline-start: 20px; } .s2 .m2 { inset-inline-start: 134px; } .s2 .m3 { inset-inline-start: 246px; }
+  .s2 .gauge { top: 297px; inset-inline-start: 18px; width: 330px; height: 193px; background: var(--accent); color: #fff; }
+  .s2 .gauge svg { position: absolute; inset: 0; width: 330px; height: 193px; }
+  .s2 .gauge .go { top: 90px; inset-inline-start: 0; width: 100%; text-align: center; font-size: 46px; font-weight: 300; line-height: 1; }
+  html[lang="ar"] .s2 .gauge .go { font-size: 38px; font-weight: 500; top: 94px; }
+  .s2 .gauge .dc { top: 145px; inset-inline-start: 0; width: 100%; text-align: center; font-size: 15px; letter-spacing: 2px; color: #D5E3FF; text-transform: uppercase; }
+  html[lang="ar"] .s2 .gauge .dc { letter-spacing: 0; }
+  /* الشريحة 3: تكلفة التقاعس */
+  .s3 .hd { top: 165px; width: 200px; font-size: 20px; font-weight: 700; line-height: 1.25; text-transform: uppercase; }
+  .s3 .h1 { inset-inline-start: 80px; } .s3 .h2 { inset-inline-start: 300px; } .s3 .h3 { inset-inline-start: 500px; } .s3 .h4 { inset-inline-start: 702px; }
+  .s3 .rule { top: 233px; inset-inline-start: 75px; width: 806px; height: 2px; background: #fff; }
+  .s3 .ln { inset-inline-start: 75px; width: 837px; height: 1px; background: rgb(255 255 255 / .35); }
+  .s3 .q { width: 201px; }
+  .s3 .q1 { top: 265px; inset-inline-start: 75px; height: 88px; } .s3 .q2 { top: 333px; inset-inline-start: 277px; height: 95px; }
+  .s3 .q3 { top: 416px; inset-inline-start: 478px; height: 111px; } .s3 .q4 { top: 527px; inset-inline-start: 680px; height: 121px; }
+  .s3 .q .n { top: 12px; inset-inline-end: 16px; font-size: 18px; color: var(--ink-2); }
+  .s3 .q .v { bottom: 14px; inset-inline-start: 24px; font-size: 30px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .s3 .plus { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 26px; line-height: 32px; text-align: center; font-weight: 300; }
+  .s3 .p1 { top: 338px; inset-inline-start: 258px; } .s3 .p2 { top: 410px; inset-inline-start: 460px; } .s3 .p3 { top: 511px; inset-inline-start: 662px; }
+  .s3 .side { top: 148px; inset-inline-start: 913px; width: 292px; height: 502px; }
+  .s3 .side h2 { top: 112px; inset-inline-start: 32px; width: 240px; font-size: 24px; font-weight: 700; line-height: 1.3; text-transform: uppercase; }
+  .s3 .side p { top: 188px; inset-inline-start: 32px; width: 225px; font-size: 17px; line-height: 1.35; color: #DCE7FF; }
+  .s3 .side .big { top: 414px; inset-inline-start: 32px; font-size: 58px; font-weight: 700; line-height: 1; }
+  /* الشريحة 4: نطاق المشروع */
+  .s4 { background: var(--accent); }
+  .s4 .lead { top: 70px; inset-inline-start: 843px; width: 370px; font-size: 20px; line-height: 1.25; }
+  .s4 .lg { inset-inline-start: 80px; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+  .s4 .lg i { display: inline-block; width: 18px; height: 18px; border-radius: 50%; }
+  .s4 .lg1 { top: 150px; } .s4 .lg1 i { background: var(--blue-2); }
+  .s4 .lg2 { top: 183px; } .s4 .lg2 i { background: #fff; }
+  .s4 .lg3 { top: 226px; } .s4 .lg3 i { border: 1.5px dashed #fff; }
+  .s4 .orbit { inset: 0; width: 1280px; height: 720px; }
+  .s4 .core { top: 292px; inset-inline-start: 525px; width: 230px; height: 230px; border-radius: 50%; background: var(--blue-2); display: grid; place-items: center; text-align: center; font-size: 28px; font-weight: 700; line-height: 1.3; text-transform: uppercase; }
+  .s4 .dom { width: 180px; height: 180px; border-radius: 50%; border: 1.5px dashed #fff; background: var(--accent); display: grid; place-items: center; text-align: center; font-size: 20px; line-height: 1.25; padding: 0 20px; }
+  .s4 .d1 { top: 362px; inset-inline-start: 110px; } .s4 .d2 { top: 228px; inset-inline-start: 973px; } .s4 .d3 { top: 458px; inset-inline-start: 976px; }
+  /* الشريحة 5: ساحة القرار */
+  .s5 { background: radial-gradient(ellipse 60% 65% at 50% 42%, #3A64D4 0%, #2C52BE 40%, #1B3F9A 80%, #163B8C 100%); }
+  .s5 .grid { top: 100px; inset-inline-start: 100px; width: 1080px; height: 470px; background-image: linear-gradient(rgb(255 255 255 / .09) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .09) 1px, transparent 1px); background-size: 150px 70px; background-position: 75px 20px; }
+  .s5 .ttl { top: 604px; font-size: 50px; }
+  .s5 .bub { border-radius: 50%; background: var(--accent); display: grid; place-content: center; text-align: center; }
+  .s5 .bub b { display: block; font-weight: 700; line-height: 1.2; }
+  .s5 .bub span { display: block; color: #E6EEFF; line-height: 1.2; }
+  .s5 .ba { top: 373px; inset-inline-start: 184px; width: 126px; height: 126px; } .s5 .ba b { font-size: 24px; } .s5 .ba span { font-size: 20px; }
+  .s5 .bb { top: 305px; inset-inline-start: 376px; width: 104px; height: 104px; } .s5 .bb b { font-size: 20px; } .s5 .bb span { font-size: 16px; }
+  .s5 .bc { top: 172px; inset-inline-start: 704px; width: 126px; height: 126px; opacity: .55; padding-top: 18px; } .s5 .bc b { font-size: 24px; } .s5 .bc span { font-size: 20px; }
+  .s5 .bc svg { position: absolute; top: 12px; inset-inline-start: 52px; width: 22px; height: 22px; color: #fff; }
+  .s5 .bd { top: 204px; inset-inline-start: 960px; width: 196px; height: 196px; } .s5 .bd b { font-size: 32px; } .s5 .bd span { font-size: 24px; }
+  .s5 .panel { top: 437px; inset-inline-start: 720px; width: 457px; height: 145px; }
+  .s5 .panel h2 { top: 78px; inset-inline-start: 25px; font-size: 22px; font-weight: 700; line-height: 1.2; color: var(--ink); }
+  html[lang="ar"] .s5 .panel h2 { top: 56px; width: 120px; }
+  .s5 .panel svg { position: absolute; top: 12px; inset-inline-start: 148px; width: 300px; height: 125px; }
+  .s5 .panel .lab { font-size: 15px; fill: var(--ink-2); }
+  .s5 .tot { top: 616px; inset-inline-end: 100px; font-size: 20px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+  /* الشريحة 6: تحوّل العمليات */
+  .s6 .ttl { inset-inline-start: 0; width: 100%; text-align: center; top: 68px; font-size: 46px; }
+  .s6 .beams { inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .s6 .beams { transform: scaleX(-1); }
+  .s6 .c { top: 185px; width: 140px; height: 140px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-size: 28px; font-weight: 700; }
+  .s6 .c1 { inset-inline-start: 302px; } .s6 .c2 { inset-inline-start: 499px; } .s6 .c3 { inset-inline-start: 666px; } .s6 .c4 { inset-inline-start: 863px; }
+  .s6 .big { width: 240px; text-align: center; font-size: 48px; font-weight: 700; line-height: 1; }
+  .s6 .lab { width: 240px; text-align: center; font-size: 20px; color: #B9C9F2; }
+  .s6 .v1 { top: 462px; inset-inline-start: 63px; } .s6 .v2 { top: 474px; inset-inline-start: 380px; } .s6 .v3 { top: 474px; inset-inline-start: 685px; } .s6 .v4 { top: 462px; inset-inline-start: 993px; }
+  .s6 .l1 { top: 553px; inset-inline-start: 65px; } .s6 .l2 { top: 563px; inset-inline-start: 380px; } .s6 .l3 { top: 563px; inset-inline-start: 683px; } .s6 .l4 { top: 553px; inset-inline-start: 1000px; }
+  .s6 .tf { top: 290px; inset-inline-start: 1018px; width: 220px; text-align: center; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; transform: rotate(55deg); white-space: nowrap; }
+  html[dir="rtl"] .s6 .tf { transform: rotate(-55deg); letter-spacing: 0; }
+  /* الشريحة 7: تحقيق العائد */
+  .s7 .ttl { top: 604px; font-size: 50px; }
+  .s7 .li { inset-inline-start: 82px; width: 165px; font-size: 20px; line-height: 1.2; }
+  .s7 .li1 { top: 157px; } .s7 .li2 { top: 275px; } .s7 .li3 { top: 388px; } .s7 .li4 { top: 505px; }
+  .s7 .panel { top: 50px; inset-inline-start: 555px; width: 495px; height: 605px; background: linear-gradient(180deg, #C9D3E8 0%, #F6F7FB 60%, #E8ECF6 100%); color: #2B3A6B; }
+  .s7 .panel .band { inset-inline-start: 0; width: 100%; height: 145px; background: var(--sky-2); }
+  .s7 .panel .b1 { top: 0; } .s7 .panel .b2 { top: 495px; height: 110px; }
+  .s7 .panel h2 { inset-inline-start: 32px; font-size: 20px; font-weight: 700; }
+  .s7 .panel .sub { top: 58px; inset-inline-start: 32px; font-size: 19px; color: #4A5A8A; }
+  .s7 .panel .amt { inset-inline-end: 38px; font-size: 35px; font-weight: 700; line-height: 1; }
+  .s7 .panel .h1 { top: 32px; } .s7 .panel .a1 { top: 32px; } .s7 .panel .h2 { top: 546px; } .s7 .panel .a2 { top: 536px; }
+  .s7 .links { inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .s7 .links { transform: scaleX(-1); }
+  .s7 .bx { width: 182px; height: 56px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 12.5px; line-height: 1.3; display: flex; align-items: center; text-align: start; padding: 0 20px; }
+  .s7 .bx.r4 { width: 210px; }
+  /* الشريحة 8: توزيع الاستثمار */
+  .s8 .left { top: 0; inset-inline-start: 0; width: 676px; height: 720px; background: #1F3B8F; }
+  .s8 .right { top: 0; inset-inline-start: 676px; width: 604px; height: 720px; background: linear-gradient(180deg, #DEE2ED 0%, #F4F5F9 60%, #ECEEF5 100%); color: #2B3A6B; }
+  .s8 .mnt { top: 0; inset-inline-start: 0; width: 676px; height: 720px; }
+  html[dir="rtl"] .s8 .mnt { transform: scaleX(-1); }
+  .s8 .ttl { top: 60px; line-height: 1.25; }
+  .s8 .card { top: 267px; inset-inline-start: 178px; width: 227px; height: 133px; border-radius: 10px; background: #fff; color: var(--ink-2); text-align: center; padding-top: 20px; }
+  .s8 .card b { display: block; font-size: 36px; font-weight: 400; line-height: 1.1; }
+  .s8 .card span { display: block; font-size: 16px; line-height: 1.3; color: var(--muted); padding: 8px 42px 0; }
+  .s8 .qq { top: 643px; font-size: 38px; font-weight: 300; }
+  .s8 .q1 { inset-inline-start: 62px; } .s8 .q2 { inset-inline-start: 408px; }
+  .s8 .rh { top: 62px; inset-inline-end: 52px; font-size: 36px; font-weight: 300; color: #3A4A7A; }
+  .s8 .rt { top: 114px; inset-inline-end: 55px; font-size: 18px; color: #3A4A7A; }
+  .s8 .bub { border-radius: 50%; color: #fff; display: grid; place-content: center; text-align: center; }
+  .s8 .bub b { display: block; font-weight: 300; line-height: 1.1; }
+  .s8 .bub span { display: block; line-height: 1.3; padding-top: 4px; }
+  .s8 .u1 { top: 142px; inset-inline-start: 718px; width: 216px; height: 216px; background: var(--accent); } .s8 .u1 b { font-size: 36px; } .s8 .u1 span { font-size: 15px; }
+  .s8 .u6 { top: 432px; inset-inline-start: 685px; width: 276px; height: 276px; background: var(--accent); } .s8 .u6 b { font-size: 48px; } .s8 .u6 span { font-size: 18px; }
+  .s8 .u7 { top: 410px; inset-inline-start: 963px; width: 310px; height: 310px; background: #325CD4; } .s8 .u7 b { font-size: 48px; } .s8 .u7 span { font-size: 18px; }
+  .s8 .u3 { top: 218px; inset-inline-start: 1096px; width: 184px; height: 184px; background: var(--sky); color: #3A4A7A; } .s8 .u3 b { font-size: 32px; } .s8 .u3 span { font-size: 15px; }
+  .s8 .u2 { top: 232px; inset-inline-start: 978px; width: 120px; height: 120px; background: var(--accent); } .s8 .u2 b { font-size: 24px; } .s8 .u2 span { font-size: 12px; }
+  .s8 .u4 { top: 331px; inset-inline-start: 675px; width: 124px; height: 124px; background: var(--blue-2); } .s8 .u4 b { font-size: 24px; } .s8 .u4 span { font-size: 12px; }
+  .s8 .u5 { top: 316px; inset-inline-start: 867px; width: 158px; height: 158px; background: #9DC5FF; color: #2B3A6B; } .s8 .u5 b { font-size: 32px; } .s8 .u5 span { font-size: 15px; }
+  /* الشريحة 9: إجمالي تكلفة الملكية */
+  .s9 .sea { top: 305px; inset-inline-start: 0; width: 1280px; height: 415px; background: var(--accent); }
+  .s9 .cap { inset-inline-start: 93px; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; }
+  html[lang="ar"] .s9 .cap { letter-spacing: 0; }
+  .s9 .sum { inset-inline-start: 250px; font-size: 40px; font-weight: 300; line-height: 1; }
+  .s9 .c1 { top: 78px; } .s9 .s1 { top: 70px; } .s9 .c2 { top: 615px; } .s9 .s2 { top: 607px; }
+  .s9 .row { inset-inline-start: 80px; width: 290px; height: 47px; border-radius: 3px; }
+  .s9 .row p { top: 9px; inset-inline-start: 23px; width: 108px; font-size: 12px; line-height: 1.25; color: var(--ink); }
+  .s9 .row span { top: 10px; inset-inline-start: 205px; font-size: 22px; color: var(--accent); }
+  .s9 .berg { inset: 0; width: 1280px; height: 720px; }
+  .s9 .pct { inset-inline-start: 583px; width: 115px; height: 62px; border-radius: 3px; display: grid; place-items: center; font-size: 34px; color: var(--accent); }
+  .s9 .pc1 { top: 225px; } .s9 .pc2 { top: 323px; }
+  .s9 .chart { top: 78px; inset-inline-start: 872px; width: 356px; height: 440px; }
+  .s9 .tco { top: 108px; inset-inline-end: 68px; font-size: 24px; font-weight: 300; text-transform: uppercase; }
+  .s9 .ttl { top: 590px; inset-inline-start: auto; inset-inline-end: 55px; font-size: 50px; }
+  /* الشريحة 10: تخطيط السيناريوهات */
+  .s10 .col { top: 148px; width: 211px; height: 502px; }
+  .s10 .col h2 { top: 18px; inset-inline-start: 20px; width: 170px; font-size: 20px; font-weight: 700; line-height: 1.25; text-transform: uppercase; }
+  .s10 .col i { top: 74px; inset-inline-start: 20px; width: 171px; height: 1px; background: #A9C9FF; }
+  .s10 .col p { top: 88px; inset-inline-start: 20px; width: 158px; font-size: 17px; line-height: 1.35; color: #EAF1FF; }
+  .s10 .half { inset-inline-start: 13px; width: 184px; height: 92px; border-radius: 184px 184px 0 0; background: #fff; display: grid; place-items: center; font-size: 32px; padding-top: 18px; }
+  .s10 .half.dk { background: var(--blue-3); color: #fff; }
+  .s10 .h1 { top: 207px; } .s10 .h2 { top: 302px; } .s10 .h3 { top: 399px; }
+  .s10 .co1 { inset-inline-start: 78px; } .s10 .co2 { inset-inline-start: 309px; } .s10 .co3 { inset-inline-start: 540px; } .s10 .co4 { inset-inline-start: 771px; } .s10 .co5 { inset-inline-start: 1002px; }
+  /* الشريحة 11: تحليل الحساسية */
+  .s11 .bar { top: 148px; inset-inline-start: 77px; width: 988px; height: 54px; border-radius: 6px; }
+  .s11 .bar span { top: 0; line-height: 54px; font-size: 20px; color: var(--ink-2); white-space: nowrap; }
+  .s11 .bar .x1 { inset-inline-start: 28px; } .s11 .bar .x2 { inset-inline-start: 270px; } .s11 .bar .x3 { inset-inline-start: 530px; } .s11 .bar .x4 { inset-inline-start: 796px; }
+  .s11 .axis { top: 428px; inset-inline-start: 270px; width: 935px; height: 5px; background: #fff; }
+  .s11 .g { top: 240px; width: 196px; height: 382px; background: #fff; border-start-end-radius: 196px; border-end-end-radius: 196px; }
+  .s11 .g1 { inset-inline-start: 77px; } .s11 .g2 { inset-inline-start: 342px; } .s11 .g3 { inset-inline-start: 606px; } .s11 .g4 { inset-inline-start: 871px; }
+  .s11 .up { inset-inline-start: 0; bottom: 191px; background: var(--blue-2); border-start-end-radius: 999px; }
+  .s11 .dn { inset-inline-start: 0; top: 191px; background: var(--accent); border-end-end-radius: 999px; }
+  .s11 .g .v { inset-inline-start: 28px; font-size: 26px; color: #fff; line-height: 1; }
+  .s11 .g .vu { top: 139px; } .s11 .g .vd { top: 211px; }
+  .s11 .sw { inset-inline-start: 1085px; font-size: 48px; font-weight: 300; line-height: 1; }
+  .s11 .swl { inset-inline-start: 1123px; font-size: 18px; letter-spacing: 1.5px; color: #DCE7FF; text-transform: uppercase; }
+  html[lang="ar"] .s11 .swl { letter-spacing: 0; }
+  .s11 .sw1 { top: 270px; } .s11 .sl1 { top: 328px; } .s11 .sl2 { top: 520px; } .s11 .sw2 { top: 560px; }
+  /* الشريحة 12: خارطة طريق بوابات التمويل */
+  .s12 .ph { color: #fff; }
+  .s12 .ph small { top: 20px; inset-inline-start: 18px; font-size: 14px; color: #14235C; }
+  .s12 .ph span { inset-inline-end: 30px; font-size: 36px; font-weight: 300; line-height: 1; }
+  .s12 .p1 { top: 148px; inset-inline-start: 412px; width: 456px; height: 100px; background: var(--accent); } .s12 .p1 span { top: 32px; }
+  .s12 .p2 { top: 250px; inset-inline-start: 437px; width: 406px; height: 99px; background: #4277E7; } .s12 .p2 span { top: 30px; }
+  .s12 .p3 { top: 350px; inset-inline-start: 462px; width: 356px; height: 97px; background: #3D70DD; } .s12 .p3 span { top: 30px; }
+  .s12 .p4 { top: 449px; inset-inline-start: 487px; width: 306px; height: 100px; background: #3869D2; } .s12 .p4 span { top: 32px; }
+  .s12 .p5 { top: 551px; inset-inline-start: 511px; width: 258px; height: 100px; background: #3360C7; } .s12 .p5 span { top: 32px; }
+  .s12 .ln { inset-inline-start: 78px; width: 1127px; height: 2px; background: #fff; }
+  .s12 .gate { inset-inline-start: 78px; width: 79px; height: 32px; background: #CBD6E8; color: var(--ink-2); font-size: 14px; letter-spacing: 1px; text-align: center; line-height: 32px; text-transform: uppercase; white-space: nowrap; }
+  html[lang="ar"] .s12 .gate { letter-spacing: 0; }
+  .s12 .amt { inset-inline-start: 80px; font-size: 26px; font-weight: 700; line-height: 1; }
+  .s12 .rh { inset-inline-end: 75px; font-size: 20px; font-weight: 700; text-transform: uppercase; text-align: end; }
+  .s12 .rp { inset-inline-end: 75px; font-size: 17px; color: #D8E4FF; text-align: end; }
+  /* الشريحة 13: الحوكمة */
+  .s13 .vt { top: 332px; inset-inline-start: -144px; width: 520px; height: 60px; text-align: center; font-size: 64px; font-weight: 700; line-height: 60px; letter-spacing: 0; text-transform: uppercase; transform: rotate(-90deg); white-space: nowrap; }
+  html[dir="rtl"] .s13 .vt { transform: rotate(90deg); letter-spacing: 0; }
+  .s13 .hd { background: var(--accent); border-radius: 50% 50% 0 0 / 100% 100% 0 0; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.25; text-transform: uppercase; }
+  .s13 .hd1 { top: 61px; inset-inline-start: 269px; width: 326px; height: 92px; font-size: 18px; padding-top: 6px; }
+  .s13 .hd2 { top: 154px; inset-inline-start: 252px; width: 360px; height: 124px; font-size: 23px; padding-top: 8px; }
+  .s13 .hd3 { top: 278px; inset-inline-start: 227px; width: 410px; height: 169px; font-size: 26px; padding-top: 10px; }
+  .s13 .hd4 { top: 448px; inset-inline-start: 227px; width: 412px; height: 210px; font-size: 31px; padding-top: 40px; }
+  .s13 .pill { height: 33px; border-radius: 4px; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 14px; text-transform: uppercase; white-space: nowrap; }
+  .s13 .pm { inset-inline-start: 742px; width: 113px; background: var(--blue-2); }
+  .s13 .pm svg { width: 18px; height: 18px; flex: none; }
+  .s13 .pf { inset-inline-start: 868px; width: 219px; background: var(--accent); gap: 14px; }
+  .s13 .pf b { font-weight: 500; }
+  .s13 .pf span { font-size: 13px; color: #DCE7FF; text-transform: none; }
+  .s13 .gc { inset-inline-start: 741px; width: 456px; height: 95px; border-radius: 4px; }
+  .s13 .gc .k { top: 16px; font-size: 16px; color: var(--muted); text-transform: uppercase; }
+  .s13 .gc .k1 { inset-inline-start: 30px; } .s13 .gc .k2 { inset-inline-start: 224px; }
+  .s13 .gc .nm { top: 40px; inset-inline-start: 30px; font-size: 18px; font-weight: 700; color: #3A4A6B; }
+  .s13 .gc .dd { top: 38px; inset-inline-start: 222px; width: 215px; font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ink-2); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4E86FF" stop-opacity=".12"/><stop offset=".55" stop-color="#4E86FF" stop-opacity=".6"/><stop offset="1" stop-color="#5A8FFF" stop-opacity="1"/></linearGradient><radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#93B6FF"/><stop offset=".7" stop-color="#7FA8FF"/><stop offset="1" stop-color="#4E86FF" stop-opacity="0"/></radialGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="deco"></div>
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5c3-.7 7-.7 10 0 1.8.4 3 1.6 3.4 3.4.7 3 .7 7 0 10-.4 1.8-1.6 3-3.4 3.4-3 .7-7 .7-10 0-1.8-.4-3-1.6-3.4-3.4-.7-3-.7-7 0-10C4 5.1 5.2 3.9 7 3.5z"/></svg></div>
+    <p class="co">Your Company<br>Logo Here</p>
+    <h1 class="t1">Business Case</h1>
+    <h2 class="t2">&amp; ROI Analysis</h2>
+    <p class="p">Add text here. Insert your desired text here. This is a simple text. Add text here. Insert your desired text here. This is a simple text. Add text here. Insert your desired text here. This is a simple text. Insert your desired text here.</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">Executive Summary</h1>
+    <div class="prob card"><div class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 21v-7.2C8.2 13.5 6 11.1 6 8.2V5.5c2.9 0 5.3 2.2 5.8 5.1V8.4C11.3 5.9 13 3.7 15.6 3H18v2.7c0 2.9-2.2 5.3-5 5.6V21h-2z"/><path d="M4 22h16v-1.5H4z"/></svg></div><h2>The Problem</h2><p class="big"><b>$2.99M</b> Loses on Equipment Meintenance</p><p class="sm">This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <div class="kpi k1 wh"><b class="v">$4.2M</b><span class="l">Net Present Value</span></div>
+    <div class="kpi k2 wh"><b class="v">15.4%</b><span class="l">Internal Rate of Return</span></div>
+    <div class="kpi k3 wh"><b class="v">3.2 yrs</b><span class="l">Discounted Payback</span></div>
+    <div class="kpi k4 wh"><b class="v">138%</b><span class="l">5-Year ROI</span></div>
+    <div class="inv wh"><div class="ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 21v-7.2C8.2 13.5 6 11.1 6 8.2V5.5c2.9 0 5.3 2.2 5.8 5.1V8.4C11.3 5.9 13 3.7 15.6 3H18v2.7c0 2.9-2.2 5.3-5 5.6V21h-2z"/><path d="M4 22h16v-1.5H4z"/></svg></div><h2>Investment Case</h2><p class="p">This is a sample text. Insert your desired text here. This is a sample text.</p>
+      <div class="mini m1"><b>$1.4M</b><span>Total Ask</span></div>
+      <div class="mini m2"><b>4</b><span>Stages</span></div>
+      <div class="mini m3"><b>5 mo</b><span>To Value</span></div>
+      <div class="gauge"><svg viewBox="0 0 330 193" aria-hidden="true"><path d="M27.0,162.0 A138,138 0 0 1 104.5,38.0 L120.3,70.3 A102,102 0 0 0 63.0,162.0 Z" fill="none" stroke="#fff" stroke-width="2"/><path d="M104.5,38.0 A138,138 0 0 1 229.8,40.2 L212.9,71.9 A102,102 0 0 0 120.3,70.3 Z" fill="#A9C9FF"/><path d="M229.8,40.2 A138,138 0 0 1 303.0,162.0 L267.0,162.0 A102,102 0 0 0 212.9,71.9 Z" fill="#163B8C"/></svg><p class="go">GO</p><p class="dc">Decision Call</p></div>
+    </div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">Cost of Inaction</h1>
+    <h2 class="hd h1">Error Rework<br>&amp; Write-offs</h2>
+    <h2 class="hd h2">SLA Penalties<br>&amp; Expediting</h2>
+    <h2 class="hd h3">Overtime &amp;<br>Temp Staffing</h2>
+    <h2 class="hd h4">Delivery<br>Issues Costs</h2>
+    <div class="rule"></div>
+    <div class="ln" style="top:270px"></div>
+    <div class="ln" style="top:328px"></div>
+    <div class="ln" style="top:372px"></div>
+    <div class="ln" style="top:418px"></div>
+    <div class="ln" style="top:466px"></div>
+    <div class="ln" style="top:512px"></div>
+    <div class="ln" style="top:558px"></div>
+    <div class="ln" style="top:605px"></div>
+    <div class="ln" style="top:650px"></div>
+    <div class="q q1 wh"><span class="n">Q1</span><b class="v">-$400K</b></div>
+    <div class="q q2 wh"><span class="n">Q2</span><b class="v">-$405K</b></div>
+    <div class="q q3 wh"><span class="n">Q3</span><b class="v">-$500K</b></div>
+    <div class="q q4 wh"><span class="n">Q4</span><b class="v">-$550K</b></div>
+    <div class="plus p1">+</div>
+    <div class="plus p2">+</div>
+    <div class="plus p3">+</div>
+    <div class="side card"><h2>Year-One Cost of Inaction</h2><p>$X.XM over five years as volume grows and error costs compound.</p><b class="big">$1.85M</b></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">Scope Universe</h1>
+    <p class="lead">Core initiative with orbiting capability domains, exclusions are explicit.</p>
+    <div class="lg lg1"><i></i><span>Core</span></div>
+    <div class="lg lg2"><i></i><span>Domains</span></div>
+    <div class="lg lg3"><i></i><span>Excluded</span></div>
+    <svg class="orbit" viewBox="0 0 1280 720" aria-hidden="true"><ellipse cx="640" cy="425" rx="440" ry="265" fill="none" stroke="#fff" stroke-width="1.2"/><ellipse cx="638" cy="421" rx="290" ry="212" fill="url(#glow)"/></svg>
+    <div class="core"><span>Project<br>XYZ</span></div>
+    <div class="dom d1"><span>CRM Replacement</span></div>
+    <div class="dom d2"><span>Warehouse Automation</span></div>
+    <div class="dom d3"><span>Finance ERP Re-platform</span></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="grid"></div>
+    <h1 class="ttl">Decision Arena</h1>
+    <div class="bub ba"><b>$0.1M</b><span>Option A</span></div>
+    <div class="bub bb"><b>$0.7M</b><span>Option B</span></div>
+    <div class="bub bc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.6 2.5h2.8l.4 2.3a7 7 0 0 1 1.8 1l2.2-.8 1.4 2.4-1.8 1.5a7 7 0 0 1 0 2.2l1.8 1.5-1.4 2.4-2.2-.8a7 7 0 0 1-1.8 1l-.4 2.3h-2.8l-.4-2.3a7 7 0 0 1-1.8-1l-2.2.8-1.4-2.4 1.8-1.5a7 7 0 0 1 0-2.2L4.8 7.4l1.4-2.4 2.2.8a7 7 0 0 1 1.8-1zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/></svg><b>$2.4M</b><span>Option C</span></div>
+    <div class="bub bd"><b>$3.4M</b><span>Option D</span></div>
+    <div class="panel wh"><h2>Weighted<br>Score</h2><svg id="score-chart" viewBox="0 0 300 125" aria-hidden="true"></svg></div>
+    <p class="tot">Total 5-yr Cost ⟶</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="ttl">Process Transformation</h1>
+    <svg class="beams" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="307,243 422,275 301,572 105,442" fill="url(#beam)"/><polygon points="506,269 634,275 621,550 392,499" fill="url(#beam)"/><polygon points="672,275 787,269 911,499 685,550" fill="url(#beam)"/><polygon points="890,307 1005,237 1199,442 998,572" fill="url(#beam)"/></svg>
+    <div class="c c1">11</div>
+    <div class="c c2">55%</div>
+    <div class="c c3">8.2%</div>
+    <div class="c c4">6 d</div>
+    <b class="big v1">1</b>
+    <span class="lab l1">KPI 1</span>
+    <b class="big v2">12%</b>
+    <span class="lab l2">KPI 2</span>
+    <b class="big v3">0.8%</b>
+    <span class="lab l3">KPI 3</span>
+    <b class="big v4">1.1 d</b>
+    <span class="lab l4">Improved KPI</span>
+    <p class="tf">Today ⟶ Future</p>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <h1 class="ttl">ROI Delivery</h1>
+    <p class="li li1">This is a sample text. Add text here.</p>
+    <p class="li li2">This is a sample text. Add text here.</p>
+    <p class="li li3">This is a sample text. Add text here.</p>
+    <p class="li li4">This is a sample text. Add text here.</p>
+    <div class="panel"><div class="band b1"></div><div class="band b2"></div><h2 class="h1">Project XYZ</h2><p class="sub">Phased over 24 months</p><b class="amt a1">$2.4M</b><h2 class="h2">Net Present Value</h2><b class="amt a2">$3.8M</b></div>
+    <svg class="links" viewBox="0 0 1280 720" aria-hidden="true"><path d="M563,208 C563,237 442,237 442,267 M563,208 C563,237 683,237 683,267 M803,208 C803,237 683,237 683,267 M803,208 C803,237 923,237 923,267 M1044,208 C1044,237 923,237 923,267 M1044,208 C1044,237 1163,237 1163,267 M442,323 C442,353 563,353 563,383 M683,323 C683,353 563,353 563,383 M683,323 C683,353 803,353 803,383 M923,323 C923,353 803,353 803,383 M923,323 C923,353 1044,353 1044,383 M1163,323 C1163,353 1044,353 1044,383 M563,439 C563,469 550,469 550,499 M803,439 C803,469 791,469 791,499 M1044,439 C1044,469 1031,469 1031,499" fill="none" stroke="#7FA8FF" stroke-width="1.3"/></svg>
+    <div class="bx" style="top:152px;inset-inline-start:472px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:152px;inset-inline-start:712px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:152px;inset-inline-start:953px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:267px;inset-inline-start:351px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:267px;inset-inline-start:592px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:267px;inset-inline-start:832px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:267px;inset-inline-start:1072px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:383px;inset-inline-start:472px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:383px;inset-inline-start:712px">This is a sample text. Add text here.</div>
+    <div class="bx" style="top:383px;inset-inline-start:953px">This is a sample text. Add text here.</div>
+    <div class="bx r4" style="top:499px;inset-inline-start:459px">This is a sample text. Add text here.</div>
+    <div class="bx r4" style="top:499px;inset-inline-start:700px">This is a sample text. Add text here.</div>
+    <div class="bx r4" style="top:499px;inset-inline-start:940px">This is a sample text. Add text here.</div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="left"></div>
+    <div class="right"></div>
+    <svg class="mnt" viewBox="0 0 676 720" aria-hidden="true"><polygon points="0,268 95,237 390,520 575,570 676,612 676,720 0,720" fill="#4E86FF"/><path d="M291,420 L291,720" stroke="#3F73E6" stroke-width="2"/></svg>
+    <h1 class="ttl">Investment<br>Breakdown</h1>
+    <div class="card"><b>60%</b><span>This is a sample text. Add text here.</span></div>
+    <span class="qq q1">Q1 – Q4</span>
+    <span class="qq q2">Q5 – Q8</span>
+    <h2 class="rh">Allocation by Category</h2>
+    <p class="rt">Total : $26M</p>
+    <div class="bub u1"><b>3.68M</b><span>Add text here.</span></div>
+    <div class="bub u6"><b>6.43M</b><span>Add text here.</span></div>
+    <div class="bub u7"><b>8.61M</b><span>Add text here.</span></div>
+    <div class="bub u3"><b>2.93M</b><span>Add text here.</span></div>
+    <div class="bub u2"><b>1.1M</b><span>Add text here.</span></div>
+    <div class="bub u4"><b>1.1M</b><span>Add text here.</span></div>
+    <div class="bub u5"><b>2.1M</b><span>Add text here.</span></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <div class="sea"></div>
+    <span class="cap c1">Visible</span><span class="sum s1">1.67M</span>
+    <div class="row wh" style="top:133px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <div class="row wh" style="top:187px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <div class="row wh" style="top:241px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <div class="row wh" style="top:320px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <div class="row wh" style="top:375px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <div class="row wh" style="top:430px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <div class="row wh" style="top:485px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <div class="row wh" style="top:540px"><p>This is a sample text. Add text here.</p><span>$123K</span></div>
+    <span class="cap c2">Hidden</span><span class="sum s2">1.29M</span>
+    <svg class="berg" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="405,305 520,165 560,150 615,40 650,120 700,95 760,160 790,145 875,305" fill="#DDE4F5" fill-opacity=".38"/><polygon points="560,150 615,40 650,120 640,305 520,305" fill="#fff" fill-opacity=".12"/><polygon points="700,95 760,160 790,145 875,305 700,305" fill="#000" fill-opacity=".06"/><polygon points="405,305 875,305 760,420 700,520 650,575 560,470 470,400" fill="#DDE4F5" fill-opacity=".22"/><polygon points="520,305 640,305 650,575 560,470" fill="#fff" fill-opacity=".1"/><polygon points="700,305 875,305 760,420 700,520" fill="#000" fill-opacity=".05"/></svg>
+    <div class="pct pc1 wh">56%</div>
+    <div class="pct pc2 wh">44%</div>
+    <svg class="chart" id="tco-chart" viewBox="0 0 356 440" aria-hidden="true"></svg>
+    <span class="tco">5-Year TCO</span>
+    <h1 class="ttl">Total Cost Of Ownership</h1>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <h1 class="ttl">Scenario Planning</h1>
+    <div class="col co1 card"><h2>Adoption<br>Rate</h2><i></i><p>This is a sample text. Add text here.</p><div class="half h1"></div><div class="half h2 dk">68%</div><div class="half h3"></div></div>
+    <div class="col co2 card"><h2>Value<br>per Order</h2><i></i><p>This is a sample text. Add text here.</p><div class="half h1 dk">$14.2</div><div class="half h2"></div><div class="half h3"></div></div>
+    <div class="col co3 card"><h2>Cost<br>Inflation</h2><i></i><p>This is a sample text. Add text here.</p><div class="half h1"></div><div class="half h2"></div><div class="half h3 dk">5.1%</div></div>
+    <div class="col co4 card"><h2>Time to<br>Go-Live</h2><i></i><p>This is a sample text. Add text here.</p><div class="half h1"></div><div class="half h2 dk">10mo</div><div class="half h3"></div></div>
+    <div class="col co5 card"><h2>Discount<br>Rate</h2><i></i><p>This is a sample text. Add text here.</p><div class="half h1 dk">9%</div><div class="half h2"></div><div class="half h3"></div></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <h1 class="ttl">NPV Sensitivity Analysis</h1>
+    <div class="bar wh"><span class="x1">Adoption Rate</span><span class="x2">Pricing Realization</span><span class="x3">Timeline Slip</span><span class="x4">Implement. Cost</span></div>
+    <div class="axis"></div>
+    <div class="g g1"><div class="up" style="width:156px;height:154px"></div><div class="dn" style="width:140px;height:140px"></div><span class="v vu">11M</span><span class="v vd">9M</span></div>
+    <div class="g g2"><div class="up" style="width:142px;height:142px"></div><div class="dn" style="width:124px;height:124px"></div><span class="v vu">8M</span><span class="v vd">7M</span></div>
+    <div class="g g3"><div class="up" style="width:125px;height:125px"></div><div class="dn" style="width:114px;height:114px"></div><span class="v vu">7M</span><span class="v vd">4M</span></div>
+    <div class="g g4"><div class="up" style="width:120px;height:120px"></div><div class="dn" style="width:100px;height:100px"></div><span class="v vu">1.1M</span><span class="v vd">1M</span></div>
+    <b class="sw sw1">-15%</b>
+    <span class="swl sl1">Swing</span>
+    <span class="swl sl2">Swing</span>
+    <b class="sw sw2">+15%</b>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <h1 class="ttl">Funding Gate Roadmap</h1>
+    <div class="ph p1"><small>M1-M4</small><span>Discovery</span></div>
+    <div class="ph p2"><small>M4-M10</small><span>Build</span></div>
+    <div class="ph p3"><small>M10-M15</small><span>Pilot</span></div>
+    <div class="ph p4"><small>M15-M20</small><span>Scale</span></div>
+    <div class="ph p5"><small>M23</small><span>Operate</span></div>
+    <div class="ln" style="top:247px"></div>
+    <div class="ln" style="top:348px"></div>
+    <div class="ln" style="top:448px"></div>
+    <div class="ln" style="top:548px"></div>
+    <div class="gate" style="top:249px">Gate 1</div>
+    <b class="amt" style="top:296px">$ 0.3M</b>
+    <h2 class="rh" style="top:263px">Add Text Here</h2>
+    <p class="rp" style="top:290px">This is a sample text.</p>
+    <div class="gate" style="top:350px">Gate 2</div>
+    <b class="amt" style="top:397px">$1.3M</b>
+    <h2 class="rh" style="top:364px">Add Text Here</h2>
+    <p class="rp" style="top:391px">This is a sample text.</p>
+    <div class="gate" style="top:450px">Gate 3</div>
+    <b class="amt" style="top:497px">$ 0.6M</b>
+    <h2 class="rh" style="top:464px">Add Text Here</h2>
+    <p class="rp" style="top:491px">This is a sample text.</p>
+    <div class="gate" style="top:550px">Gate 4</div>
+    <b class="amt" style="top:597px">$ 0.2M/yr</b>
+    <h2 class="rh" style="top:564px">Add Text Here</h2>
+    <p class="rp" style="top:591px">This is a sample text.</p>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <h1 class="vt">Governance</h1>
+    <div class="hd hd1"><span>Add<br>Text Here</span></div>
+    <div class="hd hd2"><span>Add<br>Text Here</span></div>
+    <div class="hd hd3"><span>Add<br>Text Here</span></div>
+    <div class="hd hd4"><span>Add<br>Text Here</span></div>
+    <div class="pill pm" style="top:50px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Monthly</span></div>
+    <div class="pill pf" style="top:50px"><b>Forum</b><span>This is a sample text.</span></div>
+    <div class="gc wh" style="top:92px"><span class="k k1">Owner</span><b class="nm">COO</b><span class="k k2">Decides</span><p class="dd">Add text here. This is a sample text. Add text here.</p></div>
+    <div class="pill pm" style="top:207px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Monthly</span></div>
+    <div class="pill pf" style="top:207px"><b>Forum</b><span>This is a sample text.</span></div>
+    <div class="gc wh" style="top:249px"><span class="k k1">Owner</span><b class="nm">CFO</b><span class="k k2">Decides</span><p class="dd">Add text here. This is a sample text. Add text here.</p></div>
+    <div class="pill pm" style="top:364px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Monthly</span></div>
+    <div class="pill pf" style="top:364px"><b>Forum</b><span>This is a sample text.</span></div>
+    <div class="gc wh" style="top:406px"><span class="k k1">Owner</span><b class="nm">CPO</b><span class="k k2">Decides</span><p class="dd">Add text here. This is a sample text. Add text here.</p></div>
+    <div class="pill pm" style="top:521px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Monthly</span></div>
+    <div class="pill pf" style="top:521px"><b>Forum</b><span>This is a sample text.</span></div>
+    <div class="gc wh" style="top:563px"><span class="k k1">Owner</span><b class="nm">COO</b><span class="k k2">Decides</span><p class="dd">Add text here. This is a sample text. Add text here.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 13</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"labels": ["Option A", "Option B", "Option C", "Option D"], "values": [44, 66, 100, 87], "marked": 2}</script>
+<script type="application/json" id="chart-data-2">{"visible": [56, 16, 0, 0, 0], "hidden": [21, 16, 11, 8, 5]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // الشريحة 5: أشرطة الدرجة الموزونة (الفئة الأولى في الأعلى؛ الأشرطة تنطلق من جهة البداية)
+  function drawScore() {
+    var el = document.getElementById('score-chart'); if (!el) return;
+    var d = JSON.parse(document.getElementById('chart-data').textContent), max = Math.max.apply(null, d.values), out = '';
+    d.labels.forEach(function (lab, i) {
+      var y = 15 + i * 30, w = Math.round(d.values[i] / max * 183), lx = RTL ? 300 - 0 : 67, bx = RTL ? 300 - 67 - w : 67;
+      out += '<text class="lab" x="' + (RTL ? 236 : 62) + '" y="' + (y + 17) + '" text-anchor="' + (RTL ? 'start' : 'end') + '">' + lab + '</text>';
+      out += '<rect x="' + bx + '" y="' + y + '" width="' + w + '" height="24" fill="#4E86FF"/>';
+      if (i === d.marked) out += '<g transform="translate(' + (RTL ? bx + 6 : bx + w - 26) + ' ' + (y + 2) + ') scale(.85)" fill="#fff"><path d="M10.6 2.5h2.8l.4 2.3a7 7 0 0 1 1.8 1l2.2-.8 1.4 2.4-1.8 1.5a7 7 0 0 1 0 2.2l1.8 1.5-1.4 2.4-2.2-.8a7 7 0 0 1-1.8 1l-.4 2.3h-2.8l-.4-2.3a7 7 0 0 1-1.8-1l-2.2.8-1.4-2.4 1.8-1.5a7 7 0 0 1 0-2.2L4.8 7.4l1.4-2.4 2.2.8a7 7 0 0 1 1.8-1zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/></g>';
+    });
+    el.innerHTML = out;
+  }
+  // الشريحة 9: أعمدة التكلفة الظاهرة فوق خط الماء والمخفية تحته (الأول في جهة البداية)
+  function drawTco() {
+    var el = document.getElementById('tco-chart'); if (!el) return;
+    var d = JSON.parse(document.getElementById('chart-data-2').textContent), water = 227, k = 3.54, b0 = 30, out = '';
+    for (var gx = 21; gx <= 356; gx += 45) out += '<line x1="' + gx + '" y1="0" x2="' + gx + '" y2="440" stroke="#fff" stroke-opacity=".18"/>';
+    for (var gy = 0; gy <= 440; gy += 45) out += '<line x1="0" y1="' + gy + '" x2="356" y2="' + gy + '" stroke="#fff" stroke-opacity=".18"/>';
+    d.visible.forEach(function (v, i) {
+      var x = RTL ? 356 - 21 - 45 - i * 63.5 : 21 + i * 63.5, h = d.hidden[i];
+      // الارتفاع = قاعدة ثابتة لتتسع التسمية + تناسب مع القيمة
+      var hv = b0 + v * k, hh = b0 + h * k;
+      if (v) { out += '<rect x="' + x + '" y="' + (water - hv) + '" width="45" height="' + hv + '" fill="#4E86FF"/>';
+        out += '<text x="0" y="0" transform="translate(' + (x + 27) + ' ' + (water - hv / 2) + ') rotate(90)" text-anchor="middle" fill="#fff" font-size="15">' + v + '%</text>'; }
+      out += '<rect x="' + x + '" y="' + water + '" width="45" height="' + hh + '" fill="#355FCF"/>';
+      out += '<text x="0" y="0" transform="translate(' + (x + 27) + ' ' + (water + hh / 2) + ') rotate(90)" text-anchor="middle" fill="#fff" font-size="15">' + h + '%</text>';
+    });
+    el.innerHTML = out;
+  }
+  drawScore(); drawTco();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
