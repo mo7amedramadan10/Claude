@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دراسات حالة الأعمال</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «دراسات حالة الأعمال»: غلاف وفهرس وفاصل قسم، ثم الملخص التنفيذي، الخلفية، المشكلة، بحث السوق، المنافسين، الأهداف، الحل، خارطة التنفيذ، النتائج، الفوائد، آراء أصحاب المصلحة، الخاتمة، الأسئلة، والشكر. الأشكال في svg.deco تنعكس للعربية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #1A3040; --navy: #1A3040; --accent: #C0D360; --green: #C0D360; --lb: #ADD1D9; --dgreen: #3A7D44; --txt: #141414; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عام */
+  .deco { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .deco, html[dir="rtl"] .chev { transform: scaleX(-1); }
+  .frame > *:not(.deco) { position: absolute; margin: 0; }
+  .frame p, .frame h1, .frame h2 { margin: 0; }
+  .co { font-size: 18px; letter-spacing: 4px; line-height: 1; color: var(--txt); white-space: nowrap; }
+  html[lang="ar"] .co { letter-spacing: 0; font-size: 19px; }
+  .ttl { top: 112px; inset-inline-start: 36px; font-size: 42px; font-weight: 700; line-height: 1.25; color: var(--navy); white-space: nowrap; letter-spacing: .5px; }
+  .ttl .lt { font-weight: 300; }
+  html[lang="ar"] .ttl { font-weight: 800; font-size: 42px; }
+  .tx { font-size: 17.6px; line-height: 23px; color: var(--txt); }
+  html[lang="ar"] .tx { font-size: 18px; }
+  .st { font-size: 22.5px; line-height: 29px; font-weight: 700; color: var(--txt); }
+  html[lang="ar"] .st { font-size: 22px; }
+  .num { font-size: 27px; font-weight: 300; line-height: 1; color: var(--txt); }
+  .vl { width: 1px; background: #3A3F45; }
+  .kv { font-size: 36px; font-weight: 700; line-height: 1; color: var(--navy); white-space: nowrap; margin-top: 2px; }
+  .kv sup { font-size: 24px; vertical-align: 9px; margin-inline-end: 1px; }
+  .up { width: 24px; height: 24px; color: #8DB542; }
+  .chev { width: 20px; height: 20px; color: var(--navy); }
+  .kb { height: 6px; }
+  .kb::before { content: ''; position: absolute; top: 0; inset-inline-start: 0; width: 91px; height: 6px; background: var(--lb); }
+  .kb::after { content: ''; position: absolute; top: 3px; inset-inline-start: 91px; inset-inline-end: 0; height: 1px; background: #1A3040; }
+  .kb.w::after { background: #fff; } .kb.n::before { background: var(--navy); } .kb.g::before { background: var(--green); }
+  .logo { display: flex; align-items: center; gap: 24px; color: #fff; }
+  .logo .lg-mark { width: 54px; height: 58px; color: var(--green); flex: none; }
+  .logo span { font-size: 17px; line-height: 24px; letter-spacing: 3.5px; width: 200px; padding-top: 9px; }
+  html[lang="ar"] .logo span { letter-spacing: 0; font-size: 18px; }
+  .hp { font-size: 20px; line-height: 25px; font-weight: 700; color: var(--navy); }
+  .hh { font-size: 20.5px; font-weight: 700; line-height: 1; color: var(--navy); white-space: nowrap; }
+  html[lang="ar"] .hp, html[lang="ar"] .hh { font-size: 21px; }
+
+  /* 1 الغلاف */
+  .s1 .h1a { top: 226px; inset-inline-start: 70px; font-size: 70px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+  .s1 .h1b { top: 300px; inset-inline-start: 68px; font-size: 86px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+  .s1 .gl { top: 435px; inset-inline-start: 72px; width: 122px; height: 3px; background: var(--green); }
+  .s1 .sub { top: 474px; inset-inline-start: 71px; font-size: 30px; letter-spacing: 4.2px; line-height: 1.2; white-space: nowrap; }
+  .s1 .date { top: 606px; inset-inline-start: 72px; font-size: 20px; font-weight: 700; letter-spacing: 7px; color: var(--green); white-space: nowrap; }
+  html[lang="ar"] .s1 .sub, html[lang="ar"] .s1 .date { letter-spacing: 0; }
+  html[lang="ar"] .s1 .date { font-size: 24px; }
+
+  /* 2 الفهرس */
+  .s2 .co { color: var(--lb); }
+  .s2 .toc { top: 140px; inset-inline-start: 57px; font-size: 62px; font-weight: 700; line-height: 76px; color: var(--navy); width: 460px; }
+  .s2 .lead { top: 574px; inset-inline-start: 67px; font-size: 22.8px; line-height: 29px; color: var(--txt); }
+  html[lang="ar"] .s2 .lead { font-size: 22px; }
+  .row { inset-inline-start: 580px; width: 640px; height: 84px; display: flex; align-items: center; }
+  .row::before { content: ''; position: absolute; bottom: 0; inset-inline-start: 0; width: 90px; height: 7px; background: var(--lb); }
+  .row::after { content: ''; position: absolute; bottom: 3px; inset-inline-start: 90px; inset-inline-end: 0; height: 1px; background: var(--navy); }
+  .row .chev { position: absolute; inset-inline-start: 31px; top: 20px; width: 36px; height: 34px; }
+  .row b { position: absolute; inset-inline-start: 92px; top: 19px; font-size: 26px; line-height: 30px; color: var(--navy); white-space: nowrap; }
+  html[lang="ar"] .row b { font-size: 26px; }
+  .row i { position: absolute; inset-inline-end: 10px; top: 13px; font-style: normal; font-size: 40px; font-weight: 300; line-height: 1; color: var(--navy); }
+
+  /* 3 فاصل القسم */
+  .s3 .tt { top: 343px; inset-inline-start: 70px; font-size: 57px; font-weight: 700; line-height: 70px; width: 520px; }
+  .s3 .lead { top: 535px; inset-inline-start: 72px; font-size: 25px; line-height: 31px; }
+  html[lang="ar"] .s3 .lead { font-size: 25px; }
+  .s3 .big { top: 464px; inset-inline-end: 66px; font-family: Arial, Helvetica, sans-serif; font-size: 209px; font-weight: 700; line-height: 1; color: transparent; -webkit-text-stroke: 2.5px var(--green); letter-spacing: -4px; }
+
+  /* 4 الملخص التنفيذي */
+  .s4 .st { width: 360px; }
+  .card { width: 356px; height: 242px; }
+  .card .kv, .card .up, .card .kb, .card .tx { position: absolute; }
+  .c1 { background: var(--navy); clip-path: polygon(0 0, calc(100% - 41px) 0, 100% 41px, 100% calc(100% - 41px), calc(100% - 41px) 100%, 0 100%); }
+  .c2 { background: #DEEDF0; clip-path: polygon(39px 0, 100% 0, 100% 100%, 39px 100%, 0 calc(100% - 39px), 0 39px); }
+  .c3 { background: #D9E2EE; } .c4 { background: #ADD1D9; }
+  .c3 { clip-path: polygon(0 0, calc(100% - 41px) 0, 100% 41px, 100% calc(100% - 41px), calc(100% - 41px) 100%, 0 100%); }
+  .c4 { clip-path: polygon(39px 0, 100% 0, 100% 100%, 39px 100%, 0 calc(100% - 39px), 0 39px); }
+  html[dir="rtl"] .c1, html[dir="rtl"] .c3 { clip-path: polygon(41px 0, 100% 0, 100% 100%, 41px 100%, 0 calc(100% - 41px), 0 41px); }
+  html[dir="rtl"] .c2, html[dir="rtl"] .c4 { clip-path: polygon(0 0, calc(100% - 39px) 0, 100% 39px, 100% calc(100% - 39px), calc(100% - 39px) 100%, 0 100%); }
+  .c1 .kv, .c1 .tx { color: #fff; }
+
+  /* 5 الخلفية */
+  .s5 .ttl { line-height: 52px; }
+  .s5 .kv, .s5 .tx.w { color: #fff; }
+
+  /* 6 المشكلة */
+  .s6 .qo { top: 219px; inset-inline-start: 53px; width: 44px; height: 34px; color: #9DB7C7; }
+  html[dir="rtl"] .s6 .qo { transform: scaleX(-1); }
+  .s6 .ps { top: 254px; inset-inline-start: 124px; font-size: 29.7px; line-height: 39px; font-weight: 700; color: #fff; }
+  html[lang="ar"] .s6 .ps { font-size: 30px; }
+  .pc { top: 395px; width: 273px; height: 250px; border-top: 4px solid var(--navy); background: linear-gradient(to bottom left, #B4C6E0 0%, #FFFFFF 62%); text-align: center; }
+  html[dir="rtl"] .pc { background: linear-gradient(to bottom right, #B4C6E0 0%, #FFFFFF 62%); }
+  .pc .n { position: absolute; top: 28px; inset-inline-start: 0; width: 100%; font-size: 32px; font-weight: 300; line-height: 1; color: var(--navy); }
+  .pc .hp { position: absolute; top: 103px; inset-inline-start: 0; width: 100%; }
+  .pc .tx { position: absolute; top: 172px; inset-inline-start: 24px; width: 225px; }
+
+  /* 7 بحث السوق */
+  .s7 .mv { font-size: 34px; font-weight: 700; line-height: 1; white-space: nowrap; }
+  .s7 .hp.w, .s7 .tx.w { color: #fff; }
+  .s7 .b3 { width: 180px; }
+
+  /* 8 المنافسون */
+  .s8 .ch { font-size: 20.5px; font-weight: 700; line-height: 1; color: var(--navy); white-space: nowrap; }
+  html[lang="ar"] .s8 .ch { font-size: 20px; }
+  .s8 .ch.w { color: #fff; }
+  .s8 .tx { width: 200px; }
+
+  /* 9 الأهداف */
+  .s9 .st2 { top: 194px; inset-inline-start: 44px; font-size: 24.7px; line-height: 32px; font-weight: 700; color: var(--navy); }
+  html[lang="ar"] .s9 .st2 { font-size: 25px; }
+  .gv { font-size: 50px; font-weight: 300; line-height: 1; color: var(--navy); white-space: nowrap; }
+  .gb { font-size: 17px; line-height: 23px; font-weight: 700; color: var(--txt); width: 280px; }
+  html[lang="ar"] .gb { font-size: 18px; }
+  .s9 .on .hh, .s9 .on.gb, .s9 .tx.w, .s9 .hh.w { color: #fff; }
+  .s9 .gv.g { color: var(--green); }
+  .s9 .tx { width: 270px; }
+
+  /* 10 الحل */
+  .box { top: 178px; width: 387px; height: 213px; border: 3px solid #141414; background: #fff; }
+  .box h2 { margin: 0; height: 52px; display: grid; place-items: center; font-size: 23.7px; font-weight: 700; color: var(--navy); }
+  html[lang="ar"] .box h2 { font-size: 24px; }
+  .box > span { position: absolute; }
+  .box .chev, .box .tx { position: absolute; }
+  .box .chev { width: 18px; height: 18px; }
+  .s10 .hp { white-space: nowrap; }
+
+  /* 11 خارطة التنفيذ */
+  .yr { font-size: 17px; letter-spacing: 4px; line-height: 1; color: var(--txt); }
+  html[lang="ar"] .yr { letter-spacing: 0; font-size: 19px; }
+  .q { font-size: 41px; font-weight: 300; line-height: 1; color: var(--navy); }
+  .s11 .chev, .s13 .chev { width: 18px; height: 18px; }
+  .s11 .tb { width: 190px; }
+
+  /* 12 النتائج */
+  .s12 .st.w, .s12 .tx.w { color: #fff; }
+  .s12 .num.g, .s16 .num.g { color: var(--green); }
+  .s12 .vl { background: #C8CDD2; }
+
+  /* 13 الفوائد */
+  .ck { width: 38px; height: 38px; border-radius: 50%; background: var(--navy); display: grid; place-items: center; }
+  .ck.l { background: var(--lb); }
+  .ck svg { width: 26px; height: 26px; }
+  .s13 .tx3 { width: 212px; }
+  .s13 .tb { width: 170px; }
+
+  /* 14 آراء أصحاب المصلحة */
+  .s14 .qf { width: 34px; height: 26px; color: var(--green); }
+  html[dir="rtl"] .s14 .qf { transform: scaleX(-1); }
+  .s14 .st { width: 330px; }
+  .nm { font-size: 18.5px; line-height: 23px; color: var(--txt); text-transform: uppercase; }
+  html[lang="ar"] .nm { font-size: 18px; }
+
+  /* 15 الخاتمة */
+  .s15 .vl { background: #D5D8DB; }
+  .sh { font-size: 19px; line-height: 25px; font-weight: 700; color: var(--navy); text-align: end; width: 200px; }
+  html[lang="ar"] .sh { font-size: 20px; }
+  .sh.w { color: #fff; }
+
+  /* 16 الأسئلة */
+  .s16 .qa { top: 192px; inset-inline-start: 60px; font-size: 158px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+  .s16 .qq { top: 396px; inset-inline-start: 72px; font-size: 30px; font-weight: 700; line-height: 1.2; letter-spacing: .5px; white-space: nowrap; }
+  html[lang="ar"] .s16 .qq { font-size: 32px; letter-spacing: 0; }
+  html[lang="ar"] .s16 .qa { font-size: 88px; top: 228px; }
+  .s16 .lead, .s17 .lead { font-size: 19.5px; line-height: 25px; color: #fff; letter-spacing: .4px; }
+  html[lang="ar"] .s16 .lead, html[lang="ar"] .s17 .lead { font-size: 20px; letter-spacing: 0; }
+  .s16 .logo { gap: 30px; } .s17 .logo { gap: 38px; }
+  .s16 .hp, .s16 .tx, .s17 .hh, .s17 .tx { color: #fff; }
+
+  /* 17 الشكر */
+  .s17 .ty { font-size: 68px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+  .s17 .ty.g { color: var(--green); }
+  .s17 .ic { width: 36px; height: 38px; color: #fff; }
+  .bgd { position: absolute; inset: 0; background: linear-gradient(90deg, #193040 4%, #1B3546 28%, #1B3546 46%, #193040 58%); }
+  .s3 .bgd { background: linear-gradient(90deg, #19303E 0%, #1D3748 42%, #1F3447 56%, #24364C 75%, #25374F 100%); }
+  .s1, .s3, .s16, .s17 { color: #fff; }
+  .s17 { background: #193040; }
+  html[dir="rtl"] .bgd { transform: scaleX(-1); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gpiece" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#617F8D"/><stop offset="1" stop-color="#1C3343"/></linearGradient><linearGradient id="ggr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#26363A"/><stop offset=".75" stop-color="#C0D360"/></linearGradient><linearGradient id="ggr2" x1="0" y1="0" x2="1" y2="0"><stop offset=".25" stop-color="#C0D360"/><stop offset="1" stop-color="#1E3038"/></linearGradient><linearGradient id="gcard" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#AFC3DE"/><stop offset=".55" stop-color="#FFFFFF"/></linearGradient><linearGradient id="gshade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#193040"/><stop offset=".45" stop-color="#1B3546"/><stop offset="1" stop-color="#1A3445"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><i class="bgd"></i>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="556,0 662,0 662,128" fill="#C0D360"/><polygon points="665,132 836,132 1140,492 945,720 643,720 835,492 790,436" fill="#ADD1D9"/><polygon points="531,132 665,132 852,360 789,436" fill="url(#gpiece)"/><polygon points="1177,494 1280,494 1280,607 1266,607" fill="url(#ggr)"/><polygon points="1266,607 1280,607 1280,720 1172,720" fill="#C0D360"/></svg>
+    <div class="logo" style="top:87px; inset-inline-start:961px;"><svg class="lg-mark" viewBox="0 0 56 60" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M7 6C20 0 40 1 52 7c4 14 4 32-2 47-15 6-32 7-46 2C0 42 1 21 7 6zm9 10c-2 9-2 20 1 29 9 2 19 2 28-1 3-9 3-19 1-28-10-3-20-3-30 0z"/></svg><span>شعار شركتك هنا</span></div>
+    <h1 class="h1a">دراسات حالة</h1><h1 class="h1b">الأعمال</h1><i class="gl"></i>
+    <p class="sub">قالب عرض تقديمي</p><p class="date">أدرج التاريخ هنا</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <p class="co" style="top:100px; inset-inline-start:63px;">اسم شركتك هنا</p>
+    <h1 class="toc">جدول المحتويات</h1>
+    <div class="row" style="top:146px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg><b>عنوان نائب</b><i>01</i></div>
+    <div class="row" style="top:248px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg><b>عنوان نائب</b><i>02</i></div>
+    <div class="row" style="top:359px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg><b>عنوان نائب</b><i>03</i></div>
+    <div class="row" style="top:461px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg><b>عنوان نائب</b><i>04</i></div>
+    <div class="row" style="top:570px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg><b>عنوان نائب</b><i>05</i></div>
+    <p class="lead">أدرج عبارتك الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><i class="bgd"></i>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><g transform="matrix(1 0 0 -1 0 720)"><polygon points="556,0 662,0 662,128" fill="#C0D360"/><polygon points="665,132 836,132 1140,492 945,720 643,720 835,492 790,436" fill="#ADD1D9"/><polygon points="531,132 665,132 852,360 789,436" fill="url(#gpiece)"/><polygon points="1177,494 1280,494 1280,607 1266,607" fill="url(#ggr)"/><polygon points="1266,607 1280,607 1280,720 1172,720" fill="#C0D360"/></g></svg>
+    <div class="logo" style="top:83px; inset-inline-start:62px;"><svg class="lg-mark" viewBox="0 0 56 60" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M7 6C20 0 40 1 52 7c4 14 4 32-2 47-15 6-32 7-46 2C0 42 1 21 7 6zm9 10c-2 9-2 20 1 29 9 2 19 2 28-1 3-9 3-19 1-28-10-3-20-3-30 0z"/></svg><span>شعار شركتك هنا</span></div>
+    <h1 class="tt">عنوان الموضوع النائب</h1><p class="lead">أدرج عبارتك الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p><p class="big">01</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1112,0 1280,0 1280,300 1222,300 1222,240 1266,187" fill="#C0D360"/><polygon points="1222,240 1266,187 1280,187 1280,300 1222,300" fill="url(#ggr)"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> الملخص التنفيذي</h1>
+    <p class="st" style="top:228px; inset-inline-start:37px;">أدرج عبارتك الرئيسية هنا. عبارة موجزة عن موضوعك.</p>
+    <p class="tx" style="top:337px; inset-inline-start:37px; width:370px;">أدرج العبارة المطلوبة هنا. هذا نص توضيحي.</p>
+    <p class="num" style="top:427px; inset-inline-start:37px;">01</p><i class="vl" style="top:423px; inset-inline-start:81px; width:1px;height:54px;"></i><p class="tx" style="top:426px; inset-inline-start:105px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="num" style="top:528px; inset-inline-start:37px;">02</p><i class="vl" style="top:524px; inset-inline-start:81px; width:1px;height:54px;"></i><p class="tx" style="top:527px; inset-inline-start:105px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <div class="card c1" style="top:181px; inset-inline-start:493px;"><p class="kv" style="top:52px; inset-inline-start:34px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:61px; inset-inline-start:250px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb w" style="top:106px; inset-inline-start:34px; width:248px;"></i><p class="tx" style="top:129px; inset-inline-start:34px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="card c2" style="top:181px; inset-inline-start:867px;"><p class="kv" style="top:60px; inset-inline-start:63px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:69px; inset-inline-start:279px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:116px; inset-inline-start:63px; width:248px;"></i><p class="tx" style="top:139px; inset-inline-start:63px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="card c3" style="top:436px; inset-inline-start:493px;"><p class="kv" style="top:59px; inset-inline-start:34px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:68px; inset-inline-start:250px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:114px; inset-inline-start:34px; width:248px;"></i><p class="tx" style="top:137px; inset-inline-start:34px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="card c4" style="top:436px; inset-inline-start:867px;"><p class="kv" style="top:59px; inset-inline-start:63px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:68px; inset-inline-start:279px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb n" style="top:114px; inset-inline-start:63px; width:248px;"></i><p class="tx" style="top:137px; inset-inline-start:63px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="0,425 1045,425 1133,530 1133,720 990,720 910,625 0,625" fill="#1A3040"/><polygon points="1133,425 1239,425 1146,538 1280,702 1280,720 1133,720" fill="#C0D360"/><polygon points="1133,425 1239,425 1146,538 1133,530" fill="url(#ggr2)"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> خلفية الشركة<br>وسياقها</h1>
+    <p class="st" style="top:250px; inset-inline-start:37px; width:460px;">أدرج عبارتك الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p>
+    <p class="tx" style="top:337px; inset-inline-start:37px; width:320px;">أدرج العبارة المطلوبة هنا. هذا نص توضيحي.</p>
+    <p class="num" style="top:257px; inset-inline-start:534px;">01</p><i class="vl" style="top:253px; inset-inline-start:579px; width:1px;height:54px;"></i><p class="tx" style="top:326px; inset-inline-start:527px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="num" style="top:257px; inset-inline-start:829px;">02</p><i class="vl" style="top:253px; inset-inline-start:873px; width:1px;height:54px;"></i><p class="tx" style="top:326px; inset-inline-start:822px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="kv" style="top:461px; inset-inline-start:44px;"><bdi dir="ltr">$5.3B</bdi></p><span class="up" style="top:466px; inset-inline-start:258px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb w" style="top:514px; inset-inline-start:43px; width:248px;"></i><p class="tx w" style="top:536px; inset-inline-start:44px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="kv" style="top:461px; inset-inline-start:391px;"><bdi dir="ltr"><sup>+</sup>97.3%</bdi></p><span class="up" style="top:466px; inset-inline-start:605px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb w" style="top:514px; inset-inline-start:390px; width:248px;"></i><p class="tx w" style="top:536px; inset-inline-start:391px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="kv" style="top:461px; inset-inline-start:731px;"><bdi dir="ltr"><sup>+</sup>500</bdi></p><span class="up" style="top:466px; inset-inline-start:945px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb w" style="top:514px; inset-inline-start:730px; width:248px;"></i><p class="tx w" style="top:536px; inset-inline-start:731px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1026,0 1133,0 1133,128" fill="#C0D360"/><polygon points="1133,115 1133,198 1063,198" fill="#ADD1D9"/><polygon points="1133,0 1225,0 1280,66 1280,198 1190,198 1133,125" fill="#1A3040"/><rect x="36" y="198" width="1244" height="173" fill="#1A3040"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> بيان المشكلة</h1><svg class="qo" viewBox="0 0 48 36" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 34V20C3 9 8 3 18 1l1 4c-6 2-9 6-9 12h9v17zM27 34V20c0-11 5-17 15-19l1 4c-6 2-9 6-9 12h9v17z"/></svg>
+    <p class="ps">أدرج بيان المشكلة الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p>
+    <div class="pc" style="top:395px; inset-inline-start:39px;"><p class="n">01</p><p class="hp">عنوان<br>نائب</p><p class="tx">أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="pc" style="top:395px; inset-inline-start:341px;"><p class="n">02</p><p class="hp">عنوان<br>نائب</p><p class="tx">أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="pc" style="top:395px; inset-inline-start:647px;"><p class="n">03</p><p class="hp">عنوان<br>نائب</p><p class="tx">أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="pc" style="top:395px; inset-inline-start:949px;"><p class="n">04</p><p class="hp">عنوان<br>نائب</p><p class="tx">أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1026,0 1133,0 1133,128" fill="#C0D360"/><polygon points="1133,115 1133,198 1063,198" fill="#ADD1D9"/><polygon points="1133,0 1225,0 1280,66 1280,198 1190,198 1133,125" fill="#1A3040"/><rect x="361" y="216" width="37" height="214" fill="#ADD1D9"/><rect x="361" y="216" width="37" height="129" fill="#1A3040"/><polygon points="358,430 572,430 632,490 632,720 358,720" fill="#ADD1D9"/><rect x="664" y="216" width="37" height="214" fill="#1A3040"/><rect x="664" y="216" width="37" height="147" fill="#C0D360"/><polygon points="661,430 875,430 935,490 935,720 661,720" fill="#1A3040"/><rect x="966" y="216" width="37" height="214" fill="#3A7D44"/><rect x="966" y="216" width="37" height="75" fill="#C0D360"/><polygon points="963,430 1177,430 1237,490 1237,720 963,720" fill="#3A7D44"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> بحث السوق</h1>
+    <p class="kv" style="top:302px; inset-inline-start:36px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:308px; inset-inline-start:250px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:356px; inset-inline-start:35px; width:248px;"></i><p class="tx" style="top:380px; inset-inline-start:36px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="kv" style="top:468px; inset-inline-start:36px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:474px; inset-inline-start:250px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:522px; inset-inline-start:35px; width:248px;"></i><p class="tx" style="top:546px; inset-inline-start:36px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="mv" style="top:238px; inset-inline-start:412px;color:#1A3040;"><bdi dir="ltr">4M</bdi></p><p class="tx" style="top:282px; inset-inline-start:412px;">أدرج النص هنا.</p><p class="mv" style="top:341px; inset-inline-start:412px;color:#1A3040;"><bdi dir="ltr">16M</bdi></p><p class="tx" style="top:383px; inset-inline-start:412px;">أدرج النص هنا.</p><p class="hp" style="top:498px; inset-inline-start:400px;">عنوان<br>نائب</p><p class="tx b3" style="top:569px; inset-inline-start:397px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+    <p class="mv" style="top:238px; inset-inline-start:720px;color:#C0D360;"><bdi dir="ltr">4M</bdi></p><p class="tx" style="top:282px; inset-inline-start:720px;">أدرج النص هنا.</p><p class="mv" style="top:341px; inset-inline-start:720px;color:#1A3040;"><bdi dir="ltr">16M</bdi></p><p class="tx" style="top:383px; inset-inline-start:720px;">أدرج النص هنا.</p><p class="hp w" style="top:498px; inset-inline-start:703px;">عنوان<br>نائب</p><p class="tx b3 w" style="top:569px; inset-inline-start:700px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+    <p class="mv" style="top:238px; inset-inline-start:1033px;color:#C0D360;"><bdi dir="ltr">4M</bdi></p><p class="tx" style="top:282px; inset-inline-start:1033px;">أدرج النص هنا.</p><p class="mv" style="top:341px; inset-inline-start:1033px;color:#3A7D44;"><bdi dir="ltr">16M</bdi></p><p class="tx" style="top:383px; inset-inline-start:1033px;">أدرج النص هنا.</p><p class="hp w" style="top:498px; inset-inline-start:1005px;">عنوان<br>نائب</p><p class="tx b3 w" style="top:569px; inset-inline-start:1002px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="0" y="261" width="1280" height="83" fill="#DCE5EE"/><rect x="0" y="434" width="1280" height="83" fill="#DCE5EE"/><rect x="0" y="601" width="1280" height="83" fill="#DCE5EE"/><polygon points="243,178 426,178 476,228 476,684 243,684" fill="#1A3040"/><rect x="243" y="261" width="233" height="83" fill="#697C8D"/><rect x="243" y="434" width="233" height="83" fill="#697C8D"/><rect x="243" y="601" width="233" height="83" fill="#697C8D"/><polygon points="492,178 675,178 725,228 725,684 492,684" fill="#DEEAF3"/><rect x="492" y="261" width="233" height="83" fill="#CEDCE9"/><rect x="492" y="434" width="233" height="83" fill="#CEDCE9"/><rect x="492" y="601" width="233" height="83" fill="#CEDCE9"/><polygon points="740,178 923,178 973,228 973,684 740,684" fill="#DEEAF3"/><rect x="740" y="261" width="233" height="83" fill="#CEDCE9"/><rect x="740" y="434" width="233" height="83" fill="#CEDCE9"/><rect x="740" y="601" width="233" height="83" fill="#CEDCE9"/><polygon points="988,178 1171,178 1221,228 1221,684 988,684" fill="#DEEAF3"/><rect x="988" y="261" width="233" height="83" fill="#CEDCE9"/><rect x="988" y="434" width="233" height="83" fill="#CEDCE9"/><rect x="988" y="601" width="233" height="83" fill="#CEDCE9"/><circle cx="359" cy="302.5" r="14.5" fill="#C0D360"/><path d="M351 302.5h16M359 294.5v16" stroke="#5C6E7C" stroke-width="2.6"/><circle cx="608" cy="302.5" r="14.5" fill="#C0D360"/><path d="M600 302.5h16M608 294.5v16" stroke="#E9F1CC" stroke-width="2.6"/><circle cx="855" cy="302.5" r="14.5" fill="#33627F"/><path d="M847 302.5h16" stroke="#C9D9E6" stroke-width="2.6"/><circle cx="1104" cy="302.5" r="14.5" fill="#C0D360"/><path d="M1096 302.5h16M1104 294.5v16" stroke="#E9F1CC" stroke-width="2.6"/><circle cx="359" cy="389.0" r="14.5" fill="#C0D360"/><path d="M351 389.0h16M359 381.0v16" stroke="#1A3040" stroke-width="2.6"/><circle cx="608" cy="389.0" r="14.5" fill="#33627F"/><path d="M600 389.0h16" stroke="#C9D9E6" stroke-width="2.6"/><circle cx="855" cy="389.0" r="14.5" fill="#C0D360"/><path d="M847 389.0h16M855 381.0v16" stroke="#E9F1CC" stroke-width="2.6"/><circle cx="1104" cy="389.0" r="14.5" fill="#33627F"/><path d="M1096 389.0h16" stroke="#C9D9E6" stroke-width="2.6"/><circle cx="359" cy="475.5" r="14.5" fill="#C0D360"/><path d="M351 475.5h16M359 467.5v16" stroke="#5C6E7C" stroke-width="2.6"/><circle cx="608" cy="475.5" r="14.5" fill="#33627F"/><path d="M600 475.5h16" stroke="#C9D9E6" stroke-width="2.6"/><circle cx="855" cy="475.5" r="14.5" fill="#C0D360"/><path d="M847 475.5h16M855 467.5v16" stroke="#E9F1CC" stroke-width="2.6"/><circle cx="1104" cy="475.5" r="14.5" fill="#33627F"/><path d="M1096 475.5h16" stroke="#C9D9E6" stroke-width="2.6"/><circle cx="359" cy="559.0" r="14.5" fill="#C0D360"/><path d="M351 559.0h16M359 551.0v16" stroke="#1A3040" stroke-width="2.6"/><circle cx="608" cy="559.0" r="14.5" fill="#33627F"/><path d="M600 559.0h16" stroke="#C9D9E6" stroke-width="2.6"/><circle cx="855" cy="559.0" r="14.5" fill="#C0D360"/><path d="M847 559.0h16M855 551.0v16" stroke="#E9F1CC" stroke-width="2.6"/><circle cx="1104" cy="559.0" r="14.5" fill="#C0D360"/><path d="M1096 559.0h16M1104 551.0v16" stroke="#E9F1CC" stroke-width="2.6"/><circle cx="359" cy="642.5" r="14.5" fill="#C0D360"/><path d="M351 642.5h16M359 634.5v16" stroke="#5C6E7C" stroke-width="2.6"/><circle cx="608" cy="642.5" r="14.5" fill="#C0D360"/><path d="M600 642.5h16M608 634.5v16" stroke="#E9F1CC" stroke-width="2.6"/><circle cx="855" cy="642.5" r="14.5" fill="#33627F"/><path d="M847 642.5h16" stroke="#C9D9E6" stroke-width="2.6"/><circle cx="1104" cy="642.5" r="14.5" fill="#C0D360"/><path d="M1096 642.5h16M1104 634.5v16" stroke="#E9F1CC" stroke-width="2.6"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> المشهد التنافسي</h1>
+    <p class="ch" style="top:208px; inset-inline-start:36px;">العنوان هنا</p><p class="ch w" style="top:208px; inset-inline-start:262px;">شركتك</p><p class="ch" style="top:208px; inset-inline-start:514px;">المنافس 1</p><p class="ch" style="top:208px; inset-inline-start:762px;">المنافس 2</p><p class="ch" style="top:208px; inset-inline-start:1010px;">المنافس 3</p>
+    <p class="tx" style="top:279px; inset-inline-start:32px;">أدرج النص<br>المطلوب هنا.</p>
+    <p class="tx" style="top:366px; inset-inline-start:32px;">أدرج النص<br>المطلوب هنا.</p>
+    <p class="tx" style="top:452px; inset-inline-start:32px;">أدرج النص<br>المطلوب هنا.</p>
+    <p class="tx" style="top:536px; inset-inline-start:32px;">أدرج النص<br>المطلوب هنا.</p>
+    <p class="tx" style="top:619px; inset-inline-start:32px;">أدرج النص<br>المطلوب هنا.</p>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="0" y="526" width="1280" height="129" fill="#DCE4ED"/><polygon points="640,296 950,296 950,603 898,655 640,655" fill="#1A3040"/><polygon points="895,0 1058,0 1058,195 1045,183" fill="#C0D360"/><polygon points="1045,183 1058,183 1058,298 952,298" fill="url(#ggr)"/><polygon points="1058,0 1200,0 1280,97 1280,298 1145,298 1058,195" fill="#1A3040"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> الأهداف والغايات الاستراتيجية</h1><p class="st2">أدرج عبارتك الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p><i class="kb" style="top:289px; inset-inline-start:35px; width:295px;"></i>
+    <p class="hh" style="top:336px; inset-inline-start:36px;">العنوان هنا</p><p class="gv" style="top:377px; inset-inline-start:35px;"><bdi dir="ltr">93.7%</bdi></p><p class="gb" style="top:451px; inset-inline-start:36px;">أدرج عبارتك الرئيسية هنا. هذا نص توضيحي.</p><p class="tx" style="top:559px; inset-inline-start:35px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="hh" style="top:336px; inset-inline-start:343px;">العنوان هنا</p><p class="gv" style="top:377px; inset-inline-start:342px;"><bdi dir="ltr">3x</bdi></p><p class="gb" style="top:451px; inset-inline-start:343px;">أدرج عبارتك الرئيسية هنا. هذا نص توضيحي.</p><p class="tx" style="top:559px; inset-inline-start:342px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="hh w" style="top:336px; inset-inline-start:660px;">العنوان هنا</p><p class="gv g" style="top:377px; inset-inline-start:659px;"><bdi dir="ltr">325%</bdi></p><p class="gb on" style="top:451px; inset-inline-start:660px;">أدرج عبارتك الرئيسية هنا. هذا نص توضيحي.</p><p class="tx w" style="top:559px; inset-inline-start:659px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="hh" style="top:336px; inset-inline-start:980px;">العنوان هنا</p><p class="gv" style="top:377px; inset-inline-start:979px;"><bdi dir="ltr">$4.5B</bdi></p><p class="gb" style="top:451px; inset-inline-start:980px;">أدرج عبارتك الرئيسية هنا. هذا نص توضيحي.</p><p class="tx" style="top:559px; inset-inline-start:979px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> الحل المقترح والمنهجية</h1>
+    <div class="box" style="top:178px; inset-inline-start:35px;"><h2 style="background:#1A3040; color:#fff;">العنوان هنا</h2><span style="top:80px; inset-inline-start:19px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx" style="top:73px; inset-inline-start:58px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><span style="top:148px; inset-inline-start:19px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx" style="top:141px; inset-inline-start:58px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="box" style="top:178px; inset-inline-start:447px;"><h2 style="background:#ADD1D9; color:#1A3040;">العنوان هنا</h2><span style="top:80px; inset-inline-start:19px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx" style="top:73px; inset-inline-start:58px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><span style="top:148px; inset-inline-start:19px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx" style="top:141px; inset-inline-start:58px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="box" style="top:178px; inset-inline-start:859px;"><h2 style="background:#C0D360; color:#1A3040;">العنوان هنا</h2><span style="top:80px; inset-inline-start:19px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx" style="top:73px; inset-inline-start:58px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><span style="top:148px; inset-inline-start:19px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx" style="top:141px; inset-inline-start:58px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <p class="hp" style="top:440px; inset-inline-start:36px;">عنوان نائب</p><p class="gv" style="top:484px; inset-inline-start:35px;"><bdi dir="ltr">8.5</bdi></p><i class="kb" style="top:556px; inset-inline-start:35px; width:236px;"></i><p class="tx" style="top:594px; inset-inline-start:36px; width:230px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+    <p class="hp" style="top:440px; inset-inline-start:344px;">عنوان نائب</p><p class="gv" style="top:484px; inset-inline-start:343px;"><bdi dir="ltr">7%</bdi></p><i class="kb" style="top:556px; inset-inline-start:343px; width:236px;"></i><p class="tx" style="top:594px; inset-inline-start:344px; width:230px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+    <p class="hp" style="top:440px; inset-inline-start:649px;">عنوان نائب</p><p class="gv" style="top:484px; inset-inline-start:648px;"><bdi dir="ltr">300+</bdi></p><i class="kb" style="top:556px; inset-inline-start:648px; width:236px;"></i><p class="tx" style="top:594px; inset-inline-start:649px; width:230px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+    <p class="hp" style="top:440px; inset-inline-start:957px;">عنوان نائب</p><p class="gv" style="top:484px; inset-inline-start:956px;"><bdi dir="ltr">4.5K+</bdi></p><i class="kb" style="top:556px; inset-inline-start:956px; width:236px;"></i><p class="tx" style="top:594px; inset-inline-start:957px; width:230px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1026,0 1133,0 1133,128" fill="#C0D360"/><polygon points="1133,115 1133,198 1063,198" fill="#ADD1D9"/><polygon points="1133,0 1225,0 1280,66 1280,198 1190,198 1133,125" fill="#1A3040"/><rect x="35" y="381" width="91" height="6" fill="#ADD1D9"/><polyline points="126,384 306,384 338,346" fill="none" stroke="#1A3040" stroke-width="1"/><rect x="350" y="336" width="91" height="6" fill="#ADD1D9"/><polyline points="441,339 621,339 653,301" fill="none" stroke="#1A3040" stroke-width="1"/><rect x="660" y="286" width="91" height="6" fill="#ADD1D9"/><polyline points="751,289 931,289 963,251" fill="none" stroke="#1A3040" stroke-width="1"/><rect x="977" y="237" width="91" height="6" fill="#ADD1D9"/><polyline points="1068,240 1248,240 1280,202" fill="none" stroke="#1A3040" stroke-width="1"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> خارطة طريق التنفيذ</h1>
+    <p class="yr" style="top:296px; inset-inline-start:36px;">السنة</p><p class="q" style="top:324px; inset-inline-start:35px;">Q1</p><p class="tx" style="top:412px; inset-inline-start:36px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><span style="top:500px; inset-inline-start:37px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:487px; inset-inline-start:75px;">أدرج النص المطلوب هنا.</p><span style="top:568px; inset-inline-start:37px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:555px; inset-inline-start:75px;">أدرج النص المطلوب هنا.</p><span style="top:645px; inset-inline-start:37px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:632px; inset-inline-start:75px;">أدرج النص المطلوب هنا.</p>
+    <p class="yr" style="top:251px; inset-inline-start:351px;">السنة</p><p class="q" style="top:279px; inset-inline-start:350px;">Q2</p><p class="tx" style="top:366px; inset-inline-start:351px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><span style="top:454px; inset-inline-start:352px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:441px; inset-inline-start:390px;">أدرج النص المطلوب هنا.</p><span style="top:522px; inset-inline-start:352px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:509px; inset-inline-start:390px;">أدرج النص المطلوب هنا.</p><span style="top:599px; inset-inline-start:352px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:586px; inset-inline-start:390px;">أدرج النص المطلوب هنا.</p>
+    <p class="yr" style="top:201px; inset-inline-start:661px;">السنة</p><p class="q" style="top:229px; inset-inline-start:660px;">Q3</p><p class="tx" style="top:312px; inset-inline-start:661px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><span style="top:400px; inset-inline-start:662px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:387px; inset-inline-start:700px;">أدرج النص المطلوب هنا.</p><span style="top:468px; inset-inline-start:662px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:455px; inset-inline-start:700px;">أدرج النص المطلوب هنا.</p><span style="top:545px; inset-inline-start:662px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:532px; inset-inline-start:700px;">أدرج النص المطلوب هنا.</p>
+    <p class="yr" style="top:152px; inset-inline-start:978px;">السنة</p><p class="q" style="top:180px; inset-inline-start:977px;">Q4</p><p class="tx" style="top:263px; inset-inline-start:978px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><span style="top:351px; inset-inline-start:979px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:338px; inset-inline-start:1017px;">أدرج النص المطلوب هنا.</p><span style="top:419px; inset-inline-start:979px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:406px; inset-inline-start:1017px;">أدرج النص المطلوب هنا.</p><span style="top:496px; inset-inline-start:979px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:483px; inset-inline-start:1017px;">أدرج النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="737,0 875,0 919,53 782,53" fill="#C0D360"/><polygon points="945,0 1280,0 1280,720 711,720 711,297 775,297 986,48" fill="#1A3040"/><polygon points="876,0 945,0 986,48 775,297 711,297 918,50" fill="#ADD1D9"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> النتائج والأثر</h1>
+    <p class="kv" style="top:237px; inset-inline-start:36px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:241px; inset-inline-start:295px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:289px; inset-inline-start:35px; width:296px;"></i><p class="tx" style="top:312px; inset-inline-start:36px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="kv" style="top:237px; inset-inline-start:384px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:241px; inset-inline-start:643px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:289px; inset-inline-start:383px; width:296px;"></i><p class="tx" style="top:312px; inset-inline-start:384px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="kv" style="top:437px; inset-inline-start:36px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:441px; inset-inline-start:295px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:489px; inset-inline-start:35px; width:296px;"></i><p class="tx" style="top:512px; inset-inline-start:36px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="kv" style="top:437px; inset-inline-start:384px;"><bdi dir="ltr"><sup>+</sup>18.5%</bdi></p><span class="up" style="top:441px; inset-inline-start:643px;"><svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21 21 3M8 3h13v13"/></svg></span><i class="kb" style="top:489px; inset-inline-start:383px; width:296px;"></i><p class="tx" style="top:512px; inset-inline-start:384px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="st w" style="top:262px; inset-inline-start:847px; width:360px;">أدرج عبارتك الرئيسية هنا. عبارة موجزة عن موضوعك.</p><p class="tx w" style="top:371px; inset-inline-start:847px; width:370px;">أدرج العبارة المطلوبة هنا. هذا نص توضيحي.</p>
+    <p class="num g" style="top:461px; inset-inline-start:846px;">01</p><i class="vl" style="top:456px; inset-inline-start:891px; width:1px;height:54px;"></i><p class="tx w" style="top:460px; inset-inline-start:915px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="num g" style="top:562px; inset-inline-start:846px;">02</p><i class="vl" style="top:557px; inset-inline-start:891px; width:1px;height:54px;"></i><p class="tx w" style="top:561px; inset-inline-start:915px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1026,0 1133,0 1133,128" fill="#C0D360"/><polygon points="1133,115 1133,198 1063,198" fill="#ADD1D9"/><polygon points="1133,0 1225,0 1280,66 1280,198 1190,198 1133,125" fill="#1A3040"/><path d="M85 215H254" stroke="#1A3040" stroke-width="1.2"/><path d="M248 210l6 5-6 5" fill="none" stroke="#1A3040" stroke-width="1.2"/><rect x="44" y="420" width="207" height="1.2" fill="#1A3040"/><path d="M326 215H495" stroke="#1A3040" stroke-width="1.2"/><path d="M489 210l6 5-6 5" fill="none" stroke="#1A3040" stroke-width="1.2"/><rect x="285" y="420" width="207" height="1.2" fill="#1A3040"/><path d="M568 215H737" stroke="#1A3040" stroke-width="1.2"/><path d="M731 210l6 5-6 5" fill="none" stroke="#1A3040" stroke-width="1.2"/><rect x="527" y="420" width="207" height="1.2" fill="#1A3040"/><path d="M810 215H979" stroke="#1A3040" stroke-width="1.2"/><path d="M973 210l6 5-6 5" fill="none" stroke="#1A3040" stroke-width="1.2"/><rect x="769" y="420" width="207" height="1.2" fill="#1A3040"/><path d="M1052 215H1221" stroke="#1A3040" stroke-width="1.2"/><path d="M1215 210l6 5-6 5" fill="none" stroke="#1A3040" stroke-width="1.2"/><rect x="1011" y="420" width="207" height="1.2" fill="#1A3040"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> الفوائد النوعية</h1>
+    <span class="ck" style="top:196px; inset-inline-start:41px;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></span><p class="hp" style="top:259px; inset-inline-start:44px;">عنوان<br>نائب</p><p class="tx tx3" style="top:327px; inset-inline-start:43px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p><span style="top:465px; inset-inline-start:44px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:459px; inset-inline-start:84px;">أدرج النص المطلوب هنا.</p><span style="top:550px; inset-inline-start:44px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:544px; inset-inline-start:84px;">أدرج النص المطلوب هنا.</p>
+    <span class="ck l" style="top:196px; inset-inline-start:282px;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></span><p class="hp" style="top:259px; inset-inline-start:285px;">عنوان<br>نائب</p><p class="tx tx3" style="top:327px; inset-inline-start:284px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p><span style="top:465px; inset-inline-start:285px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:459px; inset-inline-start:325px;">أدرج النص المطلوب هنا.</p><span style="top:550px; inset-inline-start:285px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:544px; inset-inline-start:325px;">أدرج النص المطلوب هنا.</p>
+    <span class="ck" style="top:196px; inset-inline-start:524px;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></span><p class="hp" style="top:259px; inset-inline-start:527px;">عنوان<br>نائب</p><p class="tx tx3" style="top:327px; inset-inline-start:526px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p><span style="top:465px; inset-inline-start:527px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:459px; inset-inline-start:567px;">أدرج النص المطلوب هنا.</p><span style="top:550px; inset-inline-start:527px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:544px; inset-inline-start:567px;">أدرج النص المطلوب هنا.</p>
+    <span class="ck l" style="top:196px; inset-inline-start:766px;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></span><p class="hp" style="top:259px; inset-inline-start:769px;">عنوان<br>نائب</p><p class="tx tx3" style="top:327px; inset-inline-start:768px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p><span style="top:465px; inset-inline-start:769px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:459px; inset-inline-start:809px;">أدرج النص المطلوب هنا.</p><span style="top:550px; inset-inline-start:769px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:544px; inset-inline-start:809px;">أدرج النص المطلوب هنا.</p>
+    <span class="ck" style="top:196px; inset-inline-start:1008px;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></span><p class="hp" style="top:259px; inset-inline-start:1011px;">عنوان<br>نائب</p><p class="tx tx3" style="top:327px; inset-inline-start:1010px;">أدرج النص المطلوب هنا. هذا نص توضيحي.</p><span style="top:465px; inset-inline-start:1011px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:459px; inset-inline-start:1051px;">أدرج النص المطلوب هنا.</p><span style="top:550px; inset-inline-start:1011px;"><svg class="chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 3.5h5l7.2 8.5L7 20.5H2l7.2-8.5zM10.8 3.5h5L23 12l-7.2 8.5h-5L18 12z"/></svg></span><p class="tx tb" style="top:544px; inset-inline-start:1051px;">أدرج النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><g transform="translate(922 0) scale(1.39) translate(-1022 0)"><polygon points="1026,0 1133,0 1133,128" fill="#C0D360"/><polygon points="1133,115 1133,198 1063,198" fill="#ADD1D9"/><polygon points="1133,0 1225,0 1280,66 1280,198 1190,198 1133,125" fill="#1A3040"/></g><path d="M35 178V545H352 M103 275H417 V643L385 683" fill="none" stroke="#1A3040" stroke-width="1"/><rect x="452" y="275" width="381" height="270" fill="url(#gcard)"/><path d="M451 178V545H768 M519 275H833 V643L801 683" fill="none" stroke="#1A3040" stroke-width="1"/><path d="M863 178V545H1180 M931 275H1245 V643L1213 683" fill="none" stroke="#1A3040" stroke-width="1"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> آراء أصحاب المصلحة</h1>
+    <span style="top:258px; inset-inline-start:57px;"><svg class="qf" viewBox="0 0 40 30" fill="currentColor" aria-hidden="true"><path d="M2 28V17C2 8 6 2 14 0l2 4c-4 2-6 5-6 9h6v15zM22 28V17c0-9 4-15 12-17l2 4c-4 2-6 5-6 9h6v15z"/></svg></span><p class="st" style="top:322px; inset-inline-start:63px;">أدرج عبارتك الرئيسية هنا. عبارة موجزة عن موضوعك.</p><p class="tx" style="top:430px; inset-inline-start:63px; width:320px;">أدرج العبارة المطلوبة هنا. هذا نص توضيحي.</p><p class="nm" style="top:570px; inset-inline-start:63px;"><b>اسم الشخص</b><br>المنصب هنا</p>
+    <span style="top:258px; inset-inline-start:473px;"><svg class="qf" viewBox="0 0 40 30" fill="currentColor" aria-hidden="true"><path d="M2 28V17C2 8 6 2 14 0l2 4c-4 2-6 5-6 9h6v15zM22 28V17c0-9 4-15 12-17l2 4c-4 2-6 5-6 9h6v15z"/></svg></span><p class="st" style="top:322px; inset-inline-start:479px;">أدرج عبارتك الرئيسية هنا. عبارة موجزة عن موضوعك.</p><p class="tx" style="top:430px; inset-inline-start:479px; width:320px;">أدرج العبارة المطلوبة هنا. هذا نص توضيحي.</p><p class="nm" style="top:570px; inset-inline-start:479px;"><b>اسم الشخص</b><br>المنصب هنا</p>
+    <span style="top:258px; inset-inline-start:885px;"><svg class="qf" viewBox="0 0 40 30" fill="currentColor" aria-hidden="true"><path d="M2 28V17C2 8 6 2 14 0l2 4c-4 2-6 5-6 9h6v15zM22 28V17c0-9 4-15 12-17l2 4c-4 2-6 5-6 9h6v15z"/></svg></span><p class="st" style="top:322px; inset-inline-start:891px;">أدرج عبارتك الرئيسية هنا. عبارة موجزة عن موضوعك.</p><p class="tx" style="top:430px; inset-inline-start:891px; width:320px;">أدرج العبارة المطلوبة هنا. هذا نص توضيحي.</p><p class="nm" style="top:570px; inset-inline-start:891px;"><b>اسم الشخص</b><br>المنصب هنا</p>
+  </div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><g transform="matrix(1 0 0 -1 0 720)"><polygon points="1026,0 1133,0 1133,128" fill="#C0D360"/><polygon points="1133,115 1133,198 1063,198" fill="#ADD1D9"/><polygon points="1133,0 1225,0 1280,66 1280,198 1190,198 1133,125" fill="#1A3040"/></g><polygon points="744,204 959,204 959,318 704,318 704,244" fill="#ADD1D9"/><rect x="825" y="280" width="174" height="14" fill="#1A3040"/><polygon points="623,325 838,325 838,439 583,439 583,365" fill="#1A3040"/><rect x="704" y="401" width="174" height="14" fill="#ADD1D9"/><polygon points="502,446 717,446 717,560 462,560 462,486" fill="#ADD1D9"/><rect x="583" y="522" width="174" height="14" fill="#1A3040"/><polygon points="381,567 596,567 596,681 341,681 341,607" fill="#1A3040"/><rect x="462" y="643" width="174" height="14" fill="#ADD1D9"/></svg>
+    <p class="co" style="top:74px; inset-inline-start:42px;">اسم شركتك هنا</p>
+    <h1 class="ttl"><span class="lt">شريحة</span> الخاتمة والآفاق المستقبلية</h1>
+    <p class="st" style="top:209px; inset-inline-start:42px; width:360px;">أدرج عبارتك الرئيسية هنا. عبارة موجزة عن موضوعك.</p><p class="tx" style="top:321px; inset-inline-start:42px; width:320px;">أدرج العبارة المطلوبة هنا. هذا نص توضيحي.</p>
+    <p class="num" style="top:413px; inset-inline-start:41px;">01</p><i class="vl" style="top:408px; inset-inline-start:86px; width:1px;height:54px;"></i><p class="tx" style="top:411px; inset-inline-start:110px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="num" style="top:514px; inset-inline-start:41px;">02</p><i class="vl" style="top:509px; inset-inline-start:86px; width:1px;height:54px;"></i><p class="tx" style="top:512px; inset-inline-start:110px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="sh" style="top:217px; inset-inline-start:742px;">عنوان<br>نائب</p><p class="tx" style="top:221px; inset-inline-start:981px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="sh w" style="top:338px; inset-inline-start:621px;">عنوان<br>نائب</p><p class="tx" style="top:342px; inset-inline-start:862px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="sh" style="top:459px; inset-inline-start:500px;">عنوان<br>نائب</p><p class="tx" style="top:463px; inset-inline-start:744px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="sh w" style="top:580px; inset-inline-start:379px;">عنوان<br>نائب</p><p class="tx" style="top:584px; inset-inline-start:623px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 16 -->
+  <section class="slide"><div class="frame s16"><i class="bgd"></i>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="365,0 449,0 864,480 661,720 509,720 738,447" fill="#ADD1D9"/><polygon points="664,360 738,447 509,720 360,720" fill="url(#gpiece)"/><polygon points="1280,597 1280,720 1178,720" fill="#C0D360"/></svg>
+    <div class="logo" style="top:52px; inset-inline-start:60px;"><svg class="lg-mark" viewBox="0 0 56 60" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M7 6C20 0 40 1 52 7c4 14 4 32-2 47-15 6-32 7-46 2C0 42 1 21 7 6zm9 10c-2 9-2 20 1 29 9 2 19 2 28-1 3-9 3-19 1-28-10-3-20-3-30 0z"/></svg><span>شعار شركتك هنا</span></div>
+    <h1 class="qa">أسئلة وأجوبة</h1><p class="qq">هل لديكم أي أسئلة؟</p><p class="lead" style="top:467px; inset-inline-start:72px;">أدرج النص المطلوب هنا. هذا نص توضيحي.<br>عبارة موجزة عن موضوعك.</p>
+    <p class="num g" style="top:126px; inset-inline-start:895px;">01</p><p class="hp" style="top:122px; inset-inline-start:975px;">عنوان نائب</p><p class="tx" style="top:159px; inset-inline-start:975px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><i class="kb w g" style="top:253px; inset-inline-start:885px; width:334px;"></i>
+    <p class="num g" style="top:311px; inset-inline-start:895px;">02</p><p class="hp" style="top:307px; inset-inline-start:975px;">عنوان نائب</p><p class="tx" style="top:344px; inset-inline-start:975px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><i class="kb w g" style="top:438px; inset-inline-start:885px; width:334px;"></i>
+    <p class="num g" style="top:500px; inset-inline-start:895px;">03</p><p class="hp" style="top:496px; inset-inline-start:975px;">عنوان نائب</p><p class="tx" style="top:533px; inset-inline-start:975px;">أدرج النص المطلوب هنا.<br>هذا نص توضيحي.</p><i class="kb w g" style="top:627px; inset-inline-start:885px; width:334px;"></i>
+  </div></section>
+  <!-- 17 -->
+  <section class="slide"><div class="frame s17">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="0,0 362,0 643,330 470,538 0,538" fill="url(#gshade)"/><polygon points="581,0 665,0 864,237 446,720 361,720 667,357 643,330 750,203" fill="#ADD1D9"/><polygon points="362,0 581,0 750,203 643,330" fill="url(#gpiece)"/><polygon points="1280,597 1280,720 1178,720" fill="#C0D360"/></svg>
+    <div class="logo" style="top:580px; inset-inline-start:52px;"><svg class="lg-mark" viewBox="0 0 56 60" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M7 6C20 0 40 1 52 7c4 14 4 32-2 47-15 6-32 7-46 2C0 42 1 21 7 6zm9 10c-2 9-2 20 1 29 9 2 19 2 28-1 3-9 3-19 1-28-10-3-20-3-30 0z"/></svg><span>شعار شركتك هنا</span></div>
+    <h1 class="ty g" style="top:178px; inset-inline-start:34px;">شكرًا لكم</h1><h1 class="ty" style="top:266px; inset-inline-start:34px;">تواصلوا معنا</h1><p class="lead" style="top:398px; inset-inline-start:46px;">أدرج النص المطلوب هنا. هذا نص توضيحي.<br>عبارة موجزة عن موضوعك.</p>
+    <span class="ic" style="top:80px; inset-inline-start:885px;"><svg viewBox="0 0 36 38" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 15 18 4l16 11v21H2z"/><path d="M2 15l16 12 16-12"/><path d="M8 19V8h20v11"/><path d="M12 12h12M12 16h12"/></svg></span><i class="kb w" style="top:145px; inset-inline-start:885px; width:296px;"></i><p class="hh" style="top:182px; inset-inline-start:891px;">البريد الإلكتروني</p><p class="tx" style="top:214px; inset-inline-start:891px;">أدرج النص المطلوب هنا.</p>
+    <span class="ic" style="top:290px; inset-inline-start:885px;"><svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="18" r="16"/><ellipse cx="18" cy="18" rx="7" ry="16"/><path d="M2 18h32M5 9h26M5 27h26"/></svg></span><i class="kb w" style="top:351px; inset-inline-start:885px; width:296px;"></i><p class="hh" style="top:384px; inset-inline-start:891px;">الموقع الإلكتروني</p><p class="tx" style="top:416px; inset-inline-start:891px;">أدرج النص المطلوب هنا.</p>
+    <span class="ic" style="top:494px; inset-inline-start:885px;"><svg viewBox="0 0 36 36" fill="currentColor" aria-hidden="true"><path d="M8 4l5 7-3 4c2 4 5 7 9 9l4-3 7 5-3 5C16 31 5 20 4 8z"/><path d="M20 3a14 14 0 0 1 13 13h-3A11 11 0 0 0 20 6zm0 6a8 8 0 0 1 7 7h-3a5 5 0 0 0-4-4z"/></svg></span><i class="kb w" style="top:552px; inset-inline-start:885px; width:296px;"></i><p class="hh" style="top:587px; inset-inline-start:884px;">التواصل</p><p class="tx" style="top:619px; inset-inline-start:884px;">أدرج النص المطلوب هنا.</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 17</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

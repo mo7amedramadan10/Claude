@@ -1,0 +1,87 @@
+{
+  "key": "sl-business-case-studies",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📁",
+  "name": "دراسات حالة الأعمال",
+  "nameEn": "Business Case Studies",
+  "description": "17 شريحة لدراسة حالة: الملخص، الخلفية، المشكلة، السوق، المنافسون، الأهداف، الحل، التنفيذ، النتائج، الخاتمة",
+  "descriptionEn": "17 case-study slides: summary, background, problem, market, competitors, goals, solution, roadmap, results",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل القسم",
+      "titleEn": "Section Divider"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "خلفية الشركة وسياقها",
+      "titleEn": "Company Background & Context",
+      "needsData": true
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement"
+    },
+    {
+      "title": "بحث السوق",
+      "titleEn": "Market Research",
+      "needsData": true
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape"
+    },
+    {
+      "title": "الأهداف والغايات الاستراتيجية",
+      "titleEn": "Strategic Objectives & Goals",
+      "needsData": true
+    },
+    {
+      "title": "الحل المقترح والمنهجية",
+      "titleEn": "Proposed Solution & Methodology",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "النتائج والأثر",
+      "titleEn": "Results & Impact",
+      "needsData": true
+    },
+    {
+      "title": "الفوائد النوعية",
+      "titleEn": "Qualitative Benefits"
+    },
+    {
+      "title": "آراء أصحاب المصلحة",
+      "titleEn": "Stakeholder Feedback"
+    },
+    {
+      "title": "الخاتمة والآفاق المستقبلية",
+      "titleEn": "Conclusion & Future Outlook"
+    },
+    {
+      "title": "الأسئلة والأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "الشكر والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال الزخرفية (svg.deco) وغيّر النصوص والأرقام فقط؛ علامات +/− في جدول المنافسين دوائر داخل SVG الشريحة."
+}
