@@ -1,0 +1,65 @@
+{
+  "key": "sl-brand-identity",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🎨",
+  "name": "هوية العلامة التجارية",
+  "nameEn": "Brand Identity",
+  "description": "دليل هوية في 13 شريحة: غلاف وفهرس وشعارات ورسالة واستخدام الشعار والألوان والأيقونات والخطوط والصور ونماذج التطبيق",
+  "descriptionEn": "13-slide brand guide: cover, contents, brandmarks, mission, logo usage, colors, icons, typeface, imagery, mockups",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "شعارات العلامة",
+      "titleEn": "Brandmarks"
+    },
+    {
+      "title": "رسالتنا",
+      "titleEn": "Our Mission"
+    },
+    {
+      "title": "دليل استخدام الشعار",
+      "titleEn": "Logo Usage Guide"
+    },
+    {
+      "title": "دليل الألوان",
+      "titleEn": "Color Guide"
+    },
+    {
+      "title": "الأيقونات",
+      "titleEn": "Iconography"
+    },
+    {
+      "title": "أيقونات التطبيق",
+      "titleEn": "App Icons"
+    },
+    {
+      "title": "الخطوط",
+      "titleEn": "Typeface"
+    },
+    {
+      "title": "لوحة الإلهام البصري",
+      "titleEn": "Imagery Moodboard"
+    },
+    {
+      "title": "نماذج تطبيق العلامة (الخطاب)",
+      "titleEn": "Brand Mockups (Letter)"
+    },
+    {
+      "title": "نماذج تطبيق العلامة (صور)",
+      "titleEn": "Brand Mockups (Photos)"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والألوان وغيّر النصوص فقط؛ الشعار رسم SVG مشترك يمكن استبداله بشعار الشركة، والصور في مجلد assets تبقى كما هي ما لم يُطلب تغييرها."
+}

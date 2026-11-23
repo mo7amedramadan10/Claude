@@ -1,0 +1,21 @@
+{
+  "key": "sl-brand-architecture",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🏷️",
+  "name": "هيكلية العلامة التجارية",
+  "nameEn": "Brand Architecture",
+  "description": "شريحتان (فاتحة وداكنة) لمخطط شجري بأربعة أنماط لهيكلية العلامة، لكل نمط بطاقة وبندان فرعيان",
+  "descriptionEn": "Two slides (light and dark) of a tree chart with four brand architecture types, each with two sub-items",
+  "sections": [
+    {
+      "title": "هيكلية العلامة (فاتحة)",
+      "titleEn": "Brand Architecture (Light)"
+    },
+    {
+      "title": "هيكلية العلامة (داكنة)",
+      "titleEn": "Brand Architecture (Dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والألوان وغيّر النصوص فقط؛ الشريحة الثانية نسخة داكنة من الأولى بالمحتوى نفسه."
+}
