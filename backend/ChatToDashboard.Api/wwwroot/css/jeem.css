@@ -3535,7 +3535,6 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-search:focus-within { background: var(--surface-2); color: var(--ink); }
 .jeem-scope .ff-search input { all: unset; width: 0; transition: width .2s; font-size: var(--fs-sm); color: var(--ink); }
 .jeem-scope .ff-search:focus-within input, .jeem-scope .ff-search.open input { width: 160px; }
-.jeem-scope .ff-filter-item[aria-checked="true"] { font-weight: 600; color: var(--brand-blue); }
 
 .jeem-scope .ff-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
 .jeem-scope .ff-cards:empty::before { content: attr(data-empty); grid-column: 1 / -1; color: var(--ink-3); font-size: 14px; padding: 28px 16px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
@@ -3562,7 +3561,8 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-card-foot b { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jeem-scope .ff-card-foot small { font-size: 12px; color: var(--ink-3); line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* عرض القائمة: صف لكل تصميم بلا معاينة */
-.jeem-scope .ff-cards.list { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+/* overflow: clip لا hidden: الحاوية ذات overflow غير المرئي تفقد حدها الأدنى في شبكة #ff-start فتنضغط الصفوف إلى ارتفاع شبه معدوم (علّة «عرض كقائمة») */
+.jeem-scope .ff-cards.list { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: clip; }
 .jeem-scope .ff-cards.list .ff-card { border: 0; border-radius: 0; border-bottom: 1px solid var(--line); grid-template-rows: auto; transform: none; box-shadow: none; }
 .jeem-scope .ff-cards.list .ff-card:last-child { border-bottom: 0; }
 .jeem-scope .ff-cards.list .ff-card:hover { background: var(--surface-2); }
@@ -3832,4 +3832,27 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* صلاحيات الشاشات: البنود غير المسموحة وأقسامها الفارغة لا تظهر */
 .screen-denied, .screen-denied-section { display: none !important; }
 #user-screens-preset { margin: 6px 0 8px; }
+
+/* رقائق أنواع التصميم في رأس «تصاميمك السابقة»: صف كامل تحت التبويبات، يمرَّر أفقيًا على الجوال داخل نفسه */
+.jeem-scope .ff-recent-head .ff-kind-chips { flex-basis: 100%; }
+.jeem-scope .ff-kind-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px; min-width: 0; }
+.jeem-scope .ff-kind-chips::-webkit-scrollbar { display: none; }
+.jeem-scope .ff-kind-chips.hidden { display: none; }
+.jeem-scope .ff-kchip { all: unset; box-sizing: border-box; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px 0 10px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--ink-2); transition: background .15s, border-color .15s, color .15s; }
+.jeem-scope .ff-kchip:hover { border-color: var(--line-3, var(--ink-3)); color: var(--ink); }
+.jeem-scope .ff-kchip:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+.jeem-scope .ff-kchip .n { font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--surface-2); color: var(--ink-3); }
+.jeem-scope .ff-kchip-ico { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; background: var(--surface-2); }
+.jeem-scope .ff-kchip-ico .ff-ico { width: 15px; height: 15px; }
+.jeem-scope .ff-kchip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.jeem-scope .ff-kchip[aria-pressed="true"] .n { background: rgba(255,255,255,.18); color: #fff; }
+/* ألوان الأنواع كبطاقات «اصنع شيئًا جديدًا» */
+.jeem-scope .ff-kchip.k-doc .ff-kchip-ico { background: #CFE0FA; color: #2A5BD7; } .jeem-scope .ff-kchip.k-slides .ff-kchip-ico { background: #F6DCC4; color: #9A4A15; }
+.jeem-scope .ff-kchip.k-design .ff-kchip-ico { background: #E3D7FA; color: #6A3FC9; } .jeem-scope .ff-kchip.k-dashboard .ff-kchip-ico { background: #F8CFCF; color: #B3261E; }
+.jeem-scope .ff-kchip.k-motion .ff-kchip-ico { background: #CFEFE5; color: #0E7A5C; } .jeem-scope .ff-kchip.k-track .ff-kchip-ico { background: #CDE9F6; color: #0B6E99; }
+.jeem-scope .ff-kchip.k-doc[aria-pressed="true"] { background: #2A5BD7; border-color: #2A5BD7; } .jeem-scope .ff-kchip.k-slides[aria-pressed="true"] { background: #9A4A15; border-color: #9A4A15; }
+.jeem-scope .ff-kchip.k-design[aria-pressed="true"] { background: #6A3FC9; border-color: #6A3FC9; } .jeem-scope .ff-kchip.k-dashboard[aria-pressed="true"] { background: #B3261E; border-color: #B3261E; }
+.jeem-scope .ff-kchip.k-motion[aria-pressed="true"] { background: #0E7A5C; border-color: #0E7A5C; } .jeem-scope .ff-kchip.k-track[aria-pressed="true"] { background: #0B6E99; border-color: #0B6E99; }
+.jeem-scope .ff-kchip[aria-pressed="true"] .ff-kchip-ico { background: rgba(255,255,255,.92); }
 

@@ -115,10 +115,6 @@
     </div>
 
     <nav class="sb-scroll">
-      <div class="platform-badge hidden" id="platform-badge">
-        <span class="org-avatar">👑</span>
-        <span class="org-meta"><strong>مالك المنصّة</strong><span>كل المنظمات المشتركة</span></span>
-      </div>
       <div class="sb-label"><span>المنظمة</span></div>
       <ul class="nav">
         <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span></button></li>
@@ -1254,12 +1250,10 @@
           </div>
           <div class="ff-tools">
             <label class="ff-search" id="ff-search-wrap"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">بحث في التصاميم</span><input type="search" id="ff-search" placeholder="بحث"></label>
-            <div class="dropdown" id="ff-filter-dropdown">
-              <button type="button" id="ff-filter-btn" class="ff-tool" title="تصفية بالنوع" aria-haspopup="true" aria-expanded="false"><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sr-only">تصفية بالنوع</span></button>
-              <div id="ff-filter-panel" class="dropdown-panel hidden"></div>
-            </div>
             <button type="button" id="ff-view-btn" class="ff-tool" aria-pressed="false" title="عرض كقائمة"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-list"/></svg><span class="sr-only">تبديل بين الشبكة والقائمة</span></button>
           </div>
+          <!-- تصفية بنوع التصميم: رقائق ظاهرة بأيقونة النوع وعدد تصاميمه (بحسب التبويب والبحث) بدل القائمة المنسدلة -->
+          <div class="ff-kind-chips" id="ff-kind-chips" role="group" aria-label="تصفية بنوع التصميم"></div>
         </div>
         <div id="ff-list" class="ff-cards" aria-live="polite"></div>
       </div>

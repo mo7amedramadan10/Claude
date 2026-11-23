@@ -9126,10 +9126,22 @@ function ffAgo(iso) {
   if (mo < 12) return 'قبل ' + ar(mo, 'شهر', 'شهرين', 'أشهر', 'شهرًا'); const y = Math.floor(mo / 12); return 'قبل ' + ar(y, 'سنة', 'سنتين', 'سنوات', 'سنة');
 }
 function ffKindIcon(k) { const n = document.querySelector(`.ff-kind[data-kind="${FF_KINDS[k] ? k : 'design'}"] .ff-ico`); return n ? n.outerHTML : ''; }
-function ffGalFiltered() {
+// التبويب والبحث (بلا النوع) — أساس عدّادات رقائق الأنواع
+function ffGalBase() {
   const me = state.currentUser ? state.currentUser.id : null; const q = FF.gal.q.trim().toLowerCase();
   return FF.list.filter(d => (FF.gal.tab === 'all' || (FF.gal.tab === 'published' ? !!d.publishedUrl : FF.gal.tab === 'mine' ? d.createdByUserId === me : d.createdByUserId !== me))
-    && (!FF.gal.kind || (d.kind || 'design') === FF.gal.kind) && (!q || (d.title || '').toLowerCase().includes(q)));
+    && (!q || (d.title || '').toLowerCase().includes(q)));
+}
+function ffGalFiltered() { return ffGalBase().filter(d => !FF.gal.kind || (d.kind || 'design') === FF.gal.kind); }
+// رقائق الأنواع: «الكل» ثم كل نوع له تصاميم في التبويب الحالي (والنوع المختار يبقى ظاهرًا ولو صار عدده صفرًا ليُلغى اختياره)
+function ffRenderKindChips() {
+  const base = ffGalBase(); const counts = {}; base.forEach(d => { const k = FF_KINDS[d.kind] ? d.kind : 'design'; counts[k] = (counts[k] || 0) + 1; });
+  const kinds = Object.keys(FF_KINDS).filter(k => counts[k] || FF.gal.kind === k);
+  const chip = (k, label, n, ico) => `<button type="button" class="ff-kchip${k ? ' k-' + k : ''}" data-kind="${k}" aria-pressed="${(FF.gal.kind || '') === k ? 'true' : 'false'}">${ico}<span>${esc(label)}</span><b class="n">${n.toLocaleString('en-US')}</b></button>`;
+  const box = el('ff-kind-chips');
+  box.innerHTML = chip('', 'كل الأنواع', base.length, '') + kinds.map(k => chip(k, FF_KINDS[k].label, counts[k] || 0, `<span class="ff-kchip-ico" aria-hidden="true">${ffKindIcon(k)}</span>`)).join('');
+  box.classList.toggle('hidden', !FF.list.length);
+  box.querySelectorAll('.ff-kchip').forEach(b => b.addEventListener('click', () => { FF.gal.kind = b.dataset.kind; ffRenderGallery(); }));
 }
 // صفحات المعاينة داخل iframe بـ srcdoc: الرابط الداخلي `#قسم` يُحلّ على عنوان الصفحة الأم (about:srcdoc يرث أصلها) فينتقل الإطار
 // إلى المنصة نفسها. نحقن قبل العرض اعتراضًا يحوّل روابط الأجزاء إلى تمرير داخل الوثيقة. الصفحة المحفوظة/المنشورة لا تُمس.
@@ -9187,7 +9199,7 @@ function ffRenderGallery() {
   const box = el('ff-list'); const items = ffGalFiltered();
   document.querySelectorAll('.ff-tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === FF.gal.tab ? 'true' : 'false'));
   box.classList.toggle('list', FF.gal.list); el('ff-view-btn').setAttribute('aria-pressed', FF.gal.list ? 'true' : 'false'); el('ff-view-btn').title = FF.gal.list ? 'عرض كشبكة' : 'عرض كقائمة';
-  el('ff-filter-btn').classList.toggle('active', !!FF.gal.kind);
+  ffRenderKindChips();
   box.dataset.empty = FF.list.length ? 'لا تصاميم تطابق التصفية.' : 'لا تصاميم بعد — اختر نوعًا من الأعلى واكتب طلبك.';
   el('ff-count').textContent = FF.list.length ? (items.length === FF.list.length ? `${FF.list.length.toLocaleString('en-US')} تصميم` : `${items.length.toLocaleString('en-US')} من ${FF.list.length.toLocaleString('en-US')}`) : '';
   const meId = state.currentUser ? state.currentUser.id : null;
@@ -9225,17 +9237,6 @@ el('ff-search').addEventListener('input', () => { FF.gal.q = el('ff-search').val
 el('ff-search-wrap').addEventListener('click', () => { el('ff-search-wrap').classList.add('open'); el('ff-search').focus(); });
 el('ff-search').addEventListener('blur', () => { if (!el('ff-search').value) el('ff-search-wrap').classList.remove('open'); });
 el('ff-view-btn').addEventListener('click', () => { FF.gal.list = !FF.gal.list; try { localStorage.setItem('ffGalView', FF.gal.list ? 'list' : 'grid'); } catch {} ffRenderGallery(); });
-el('ff-filter-btn').addEventListener('click', e => {
-  e.stopPropagation(); // الإغلاق العام للقوائم المنسدلة (closeAllDropdowns) مربوط على نقر المستند
-  const panel = el('ff-filter-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
-  if (open) {
-    panel.innerHTML = [['', 'كل الأنواع'], ...Object.entries(FF_KINDS).map(([k, v]) => [k, v.label])].map(([k, l]) => `<button type="button" class="dropdown-item ff-filter-item" role="menuitemradio" data-kind="${k}" aria-checked="${FF.gal.kind === k ? 'true' : 'false'}">${l}</button>`).join('');
-    panel.querySelectorAll('.ff-filter-item').forEach(b => b.addEventListener('click', () => { FF.gal.kind = b.dataset.kind; panel.classList.add('hidden'); el('ff-filter-btn').setAttribute('aria-expanded', 'false'); ffRenderGallery(); }));
-  }
-  panel.classList.toggle('hidden', !open); el('ff-filter-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
-});
-document.addEventListener('click', () => el('ff-filter-btn').setAttribute('aria-expanded', 'false'));
-el('ff-filter-panel').addEventListener('click', e => e.stopPropagation());
 window.addEventListener('resize', () => { if (!el('ff-start').classList.contains('hidden')) ffScaleThumbs(); });
 function ffKindChip(k) { const info = FF_KINDS[k]; return info ? `<span class="ff-kind-chip">${esc(info.label)}</span>` : ''; }
 
@@ -10862,7 +10863,6 @@ function renderCurrentUser() {
   // Platform owner (us) sees every organization, not just their own — see
   // AppUser.IsPlatformOwner and OrganizationsController.
   el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
-  el('platform-badge').classList.toggle('hidden', !u.isPlatformOwner);
   applyScreenAccess();
   // محادثة Claude: يظهر البند فقط لمن تسمح له إعدادات الخادم (ClaudeCli:AllowedRoles).
   ccLoadStatus();
