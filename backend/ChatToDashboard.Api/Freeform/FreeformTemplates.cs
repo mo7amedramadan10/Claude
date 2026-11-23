@@ -37,8 +37,9 @@ public sealed class FreeformTemplate
     [JsonPropertyName("page")] public string? Page { get; init; }
     /// <summary>النسخة الإنجليزية (LTR) من صفحة النموذج الجاهز إن وُجدت.</summary>
     [JsonPropertyName("pageEn")] public string? PageEn { get; init; }
-    [JsonPropertyName("nameEn")] public string? NameEn => FreeformTemplateI18n.NameEn(Key);
-    [JsonPropertyName("descriptionEn")] public string? DescriptionEn => FreeformTemplateI18n.DescriptionEn(Key);
+    /// <summary>الاسم والوصف بالإنجليزية: من جدول <see cref="FreeformTemplateI18n"/> للنماذج الثابتة، ومن <c>template.json</c> لنماذج المجلدات.</summary>
+    [JsonPropertyName("nameEn")] public string? NameEn { get; init; }
+    [JsonPropertyName("descriptionEn")] public string? DescriptionEn { get; init; }
     /// <summary>هل للنموذج ترجمة إنجليزية كاملة (اسم ووصف وكل الأقسام) فتُعرض معاينته بالإنجليزية.</summary>
     [JsonPropertyName("hasEn")] public bool HasEn => NameEn is not null && Sections.Count > 0 && Sections.All(s => s.TitleEn is not null);
     [JsonPropertyName("sourceFile")] public string? SourceFile { get; init; }
@@ -57,7 +58,8 @@ public static class FreeformTemplates
     private static FreeformTemplate T(string key, string kind, string cat, string icon, string name, string desc, string sketch, string brief, params FreeformTemplateSection[] sections)
         => new() { Key = key, Kind = kind, Category = cat, Icon = icon, Name = name, Description = desc, Sketch = sketch, Brief = brief, Sections = sections };
 
-    public static readonly IReadOnlyList<FreeformTemplate> All = WithEnglish(new[]
+    /// <summary>النماذج المكتوبة في الكود.</summary>
+    public static readonly IReadOnlyList<FreeformTemplate> Builtin = WithEnglish(new[]
     {
         // ---------- مستند ----------
         T("doc-memo", "doc", "mgmt", "📝", "مذكرة داخلية", "مذكرة رسمية بموضوع وخلفية وتوصية وإجراء مطلوب", "h/p/p/b/p",
@@ -177,10 +179,23 @@ public static class FreeformTemplates
             {
                 Key = t.Key, Kind = t.Kind, Category = t.Category, Icon = t.Icon, Name = t.Name, Description = t.Description, Sketch = t.Sketch, Brief = t.Brief,
                 Page = t.Page, PageEn = t.PageEn,
+                NameEn = FreeformTemplateI18n.NameEn(t.Key), DescriptionEn = FreeformTemplateI18n.DescriptionEn(t.Key),
                 Sections = t.Sections.Select((s, j) => s with { TitleEn = FreeformTemplateI18n.SectionEn(t.Key, j) }).ToList(),
             };
         }
         return all;
+    }
+
+    private static volatile IReadOnlyList<FreeformTemplate> _all = Builtin;
+
+    /// <summary>كل النماذج: المكتوبة في الكود ثم نماذج المجلدات (<see cref="FreeformFolderTemplates"/>) المسجَّلة عند الإقلاع.</summary>
+    public static IReadOnlyList<FreeformTemplate> All => _all;
+
+    /// <summary>يسجّل نماذج المجلدات بعد الثابتة؛ المفتاح المكرر مع نموذج ثابت يُتجاهل (الثابت يغلب).</summary>
+    public static void RegisterFolderTemplates(IEnumerable<FreeformTemplate> folder)
+    {
+        var keys = Builtin.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
+        _all = Builtin.Concat(folder.Where(t => keys.Add(t.Key))).ToList();
     }
 
     public static FreeformTemplate? Find(string? key) => string.IsNullOrWhiteSpace(key) ? null : All.FirstOrDefault(t => t.Key == key);

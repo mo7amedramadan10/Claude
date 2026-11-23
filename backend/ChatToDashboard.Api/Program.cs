@@ -250,6 +250,16 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Integrations.IntegrationDelive
 
 var app = builder.Build();
 
+// نماذج تصميم حر الجاهزة المسلَّمة مجلداتٍ تحت wwwroot/templates/freeform/<key>/ (template.json + ar.html + en.html + assets/):
+// تُقرأ مرة وتُسجَّل في الكتالوج بلا تعديل كود؛ المجلد المخالف يُتخطّى بسببه.
+{
+    var folderTemplates = ChatToDashboard.Api.Freeform.FreeformFolderTemplates.Load(app.Environment.WebRootPath);
+    ChatToDashboard.Api.Freeform.FreeformTemplates.RegisterFolderTemplates(folderTemplates.Templates);
+    app.Logger.LogInformation("Freeform folder templates: {Count} loaded, {Rejected} rejected", folderTemplates.Templates.Count, folderTemplates.Rejected.Count);
+    foreach (var (folder, reason) in folderTemplates.Rejected)
+        app.Logger.LogWarning("Freeform folder template '{Folder}' skipped: {Reason}", folder, reason);
+}
+
 // This is a JSON API consumed by the SPA's own fetch calls (see the 401/403 auth events
 // above) — every response from it needs to stay JSON, including an unhandled exception.
 // Without this, an exception thrown outside a controller action's own try/catch (or from

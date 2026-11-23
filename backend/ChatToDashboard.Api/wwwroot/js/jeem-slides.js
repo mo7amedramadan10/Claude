@@ -17,7 +17,7 @@
     if (cls) { list.forEach(function (s, k) { s.classList.toggle(cls, k === i); }); try { window.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } })); } catch (e) {} if (!isVisible(list[i])) list[i].scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); return; }
     list[i].scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
   }
-  var css = '#jeem-strip{position:fixed;inset-inline:0;bottom:0;z-index:2147483000;font-family:inherit;direction:rtl;pointer-events:none}' +
+  var css = '#jeem-strip{position:fixed;inset-inline:0;bottom:0;z-index:2147483000;font-family:inherit;direction:' + (document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl') + ';pointer-events:none}' +
     '#jeem-strip .js-bar{pointer-events:auto;background:rgba(15,23,32,.86);backdrop-filter:blur(6px);color:#fff;border-top:1px solid rgba(255,255,255,.15);padding:8px 12px 10px;display:flex;align-items:center;gap:10px}' +
     '#jeem-strip .js-row{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;flex:1;scrollbar-width:thin;padding:2px}' +
     '#jeem-strip .js-th{flex:none;width:128px;height:72px;border-radius:6px;overflow:hidden;position:relative;background:#fff;border:2px solid transparent;cursor:pointer;padding:0}' +
@@ -45,11 +45,13 @@
     var _setHidden = setHidden; setHidden = function (h) { _setHidden(h); setTimeout(announceHeight, 0); };
     var thumbs = [];
     function slideSize(el) { var r = el.getBoundingClientRect(); if (r.width > 50 && r.height > 50) return { w: r.width, h: r.height }; var v = list.filter(isVisible)[0]; if (v) { var rv = v.getBoundingClientRect(); if (rv.width > 50) return { w: rv.width, h: rv.height }; } return { w: innerWidth, h: Math.max(innerHeight, innerWidth * 9 / 16) }; }
+    // عرض الشريحة الظاهرة كما هو (flex/grid يوسّط إطار الشريحة الثابت)؛ فرض block كان يزيح المحتوى في المصغّرة
+    function slideDisplay() { var v = list.filter(isVisible)[0]; var d = v ? getComputedStyle(v).display : 'block'; return !d || d === 'none' || d === 'contents' ? 'block' : d; }
     function renderThumb(k) {
       var th = thumbs[k]; var s = list[k]; var size = slideSize(s); var scale = 128 / size.w;
       var clone = s.cloneNode(true); clone.removeAttribute('id'); clone.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); }); clone.querySelectorAll('script,video,iframe').forEach(function (x) { x.parentNode.removeChild(x); });
       clone.className = s.className; clone.setAttribute('aria-hidden', 'true');
-      var cs = clone.style; cs.setProperty('display', 'block', 'important'); cs.setProperty('position', 'static', 'important'); cs.setProperty('opacity', '1', 'important'); cs.setProperty('visibility', 'visible', 'important'); cs.setProperty('transform', 'none', 'important'); cs.setProperty('transition', 'none', 'important'); cs.setProperty('animation', 'none', 'important'); cs.setProperty('width', size.w + 'px', 'important'); cs.setProperty('height', size.h + 'px', 'important'); cs.setProperty('margin', '0', 'important'); cs.setProperty('inset', 'auto', 'important'); cs.setProperty('overflow', 'hidden', 'important');
+      var cs = clone.style; cs.setProperty('display', slideDisplay(), 'important'); cs.setProperty('position', 'static', 'important'); cs.setProperty('opacity', '1', 'important'); cs.setProperty('visibility', 'visible', 'important'); cs.setProperty('transform', 'none', 'important'); cs.setProperty('transition', 'none', 'important'); cs.setProperty('animation', 'none', 'important'); cs.setProperty('width', size.w + 'px', 'important'); cs.setProperty('height', size.h + 'px', 'important'); cs.setProperty('margin', '0', 'important'); cs.setProperty('inset', 'auto', 'important'); cs.setProperty('overflow', 'hidden', 'important');
       var wrap = th.querySelector('.js-c') || document.createElement('div'); wrap.className = 'js-c'; wrap.innerHTML = ''; wrap.style.width = size.w + 'px'; wrap.style.height = size.h + 'px'; wrap.style.transform = 'scale(' + scale + ')'; wrap.appendChild(clone);
       if (!wrap.parentNode) th.insertBefore(wrap, th.firstChild);
       th.style.height = Math.round(128 * size.h / size.w) + 'px';

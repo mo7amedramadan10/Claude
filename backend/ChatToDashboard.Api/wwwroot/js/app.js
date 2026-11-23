@@ -9120,7 +9120,7 @@ const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0
 function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
 // مصغّرات المعرض ومعاينة النموذج: صفحة تنادي focus()/scrollIntoView()/location.hash داخل إطار (ولو بلا تفاعل) تجعل المتصفح يمرّر
 // الحاوية الأم لإظهار العنصر — فكان معرض تصميم حر «يرجع لأسفل وحده» كلما مرّر المستخدم لأعلى. تُعطَّل هذه الدوال داخل المصغّرة فقط.
-const FF_THUMB_QUIET = "<script id=\"ff-thumb-quiet\">(function(){var n=function(){};try{HTMLElement.prototype.focus=n;Element.prototype.scrollIntoView=n;Element.prototype.scrollIntoViewIfNeeded=n;window.scrollTo=n;window.scrollBy=n;window.focus=n;}catch(e){}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[autofocus]').forEach(function(a){a.removeAttribute('autofocus');});});})();</script>";
+const FF_THUMB_QUIET = "<style id=\"ff-thumb-quiet-css\">#jeem-strip{display:none!important}html{--jeem-strip-h:0px!important}</style><script id=\"ff-thumb-quiet\">(function(){var n=function(){};try{HTMLElement.prototype.focus=n;Element.prototype.scrollIntoView=n;Element.prototype.scrollIntoViewIfNeeded=n;window.scrollTo=n;window.scrollBy=n;window.focus=n;}catch(e){}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[autofocus]').forEach(function(a){a.removeAttribute('autofocus');});});})();</script>";
 function ffSandboxHtml(html, withEditor, kind, quiet) {
   if (!html) return html; let add = html.includes('ff-anchor-fix') ? '' : FF_ANCHOR_FIX;
   if (quiet && !html.includes('ff-thumb-quiet')) { const i = html.search(/<head[^>]*>/i); if (i >= 0) { const j = html.indexOf('>', i) + 1; html = html.slice(0, j) + FF_THUMB_QUIET + html.slice(j); } else add = FF_THUMB_QUIET + add; }
@@ -9304,7 +9304,13 @@ function renderFfGalGrid() {
     </button>`; }).join('');
   el('ffgal-empty').classList.toggle('hidden', items.length > 0);
   el('ffgal-grid').querySelectorAll('[data-tpl]').forEach(card => card.addEventListener('click', () => openFfGalPreview(items.find(x => x.key === card.dataset.tpl))));
-  el('ffgal-grid').querySelectorAll('[data-live]').forEach(h => ffLiveInto(h, items.find(x => x.key === h.dataset.live)));
+  // معاينات النماذج الجاهزة كسولة: كل إطار يُحمَّل عند اقتراب بطاقته من الظهور (عشرات النماذج بصورها لا تُحمَّل دفعة واحدة)
+  const liveHolders = [...el('ffgal-grid').querySelectorAll('[data-live]')];
+  const fill = h => { if (!h.dataset.loaded) { h.dataset.loaded = '1'; ffLiveInto(h, items.find(x => x.key === h.dataset.live)); } };
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); fill(e.target); } }), { rootMargin: '300px 0px' });
+    liveHolders.forEach(h => io.observe(h));
+  } else liveHolders.forEach(fill);
   el('ffgal-grid').querySelectorAll('[data-dash]').forEach(card => card.addEventListener('click', () => { galSetHost('ff'); openDashGalPreview(DASH_GALLERY.find(d => d.id === card.dataset.dash)); }));
 }
 function openFfGalPreview(t) {
