@@ -208,8 +208,6 @@
 .app.is-collapsed .isolation { justify-content: center; padding: 12px 0; }
 .app.is-collapsed .user-card { justify-content: center; }
 /* شارة «مالك المنصّة» في الوضع المطوي: أيقونة التاج فقط وسط العمود بدل كتلة داكنة طويلة بهوامش العرض الكامل */
-.app.is-collapsed .platform-badge { justify-content: center; padding: 6px; margin: 0 8px 8px; }
-.app.is-collapsed .platform-badge .org-meta { display: none; }
 .app.is-collapsed .sb-scroll { scrollbar-width: thin; }
 /* ذيل القائمة في الوضع المطوي: زر القراءة أيقونة فقط، وأزرار بطاقة المستخدم تحت بعضها بدل أن تتجاوز العرض */
 .app.is-collapsed #auto-read-toggle { padding: 6px; justify-content: center; }
@@ -946,9 +944,6 @@ form#form.composer.hidden { display: none; }
 .new-card strong { font-size: var(--fs-md); font-weight: 700; }
 
 /* شارة المنصّة في الشريط الجانبي (للمالك فقط) */
-.platform-badge { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: var(--r-md); background: var(--brand-gray); color: #fff; margin: 0 16px 12px; }
-.platform-badge .org-avatar { background: rgba(255,255,255,.14); }
-.platform-badge .org-meta span { color: #C9C9C5; }
 
 /* اسم المشروع في القائمة الجانبية + الصفحات الأربع تحته (المحادثة واللوحات/المصادر/
    الصلاحيات/الملفات) — مطابقةً لشجرة المشاريع في تصميم جيم. */
