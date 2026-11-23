@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bottom-up Strategic Planning SWOT</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «التخطيط الاستراتيجي التصاعدي»: حلقة SWOT رباعية (فيروزي، كهرماني، أزرق، أحمر) حول دائرة بيضاء، دوائر حروف بارزة، خطّا فصل رماديان متقاطعان، وأربع بطاقات عنوان بدائرة أيقونة وقائمة نقاط بعلامة صح. الصنف on يلوّن الربع والصنف off يجعله رماديًا. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #262626; --tx: #333333; --accent: #2BCFB7; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 39px; inset-inline-start: 64px; margin: 0; font-size: 41.8px; font-weight: 400; line-height: 1.3; color: var(--ink); white-space: nowrap; letter-spacing: -.2px; }
+  html[lang="ar"] .ttl { font-size: 38px; font-weight: 500; top: 34px; }
+  /* خطّا الفصل المتقاطعان */
+  .sep { position: absolute; background: #D9D9D9; filter: blur(1.6px); }
+  .sep.h { top: 384px; inset-inline-start: 130px; width: 985px; height: 5px; background: linear-gradient(90deg, rgb(217 217 217 / 0), #D6D6D6 25%, #D6D6D6 75%, rgb(217 217 217 / 0)); }
+  .sep.v { top: 140px; inset-inline-start: 627px; width: 5px; height: 532px; background: linear-gradient(180deg, rgb(217 217 217 / 0), #D6D6D6 25%, #D6D6D6 75%, rgb(217 217 217 / 0)); }
+  /* الحلقة الرباعية */
+  .ring { position: absolute; top: 220px; inset-inline-start: 462px; width: 334px; height: 334px; }
+  html[dir="rtl"] .ring { transform: scaleX(-1); }
+  .core { position: absolute; top: 279px; inset-inline-start: 521px; width: 216px; height: 216px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F6F6F6 55%, #DDDDDD 100%); box-shadow: 0 8px 18px rgb(0 0 0 / .28); text-align: center; }
+  .core b { display: block; margin-top: 60px; font-size: 50px; line-height: 58px; font-weight: 700; color: var(--ink); letter-spacing: .5px; }
+  .core span { display: block; margin-top: 6px; font-size: 23px; line-height: 30px; color: var(--tx); }
+  html[lang="ar"] .core b { font-weight: 800; font-size: 50px; margin-top: 56px; line-height: 64px; }
+  html[lang="ar"] .core span { margin-top: -2px; }
+  /* دوائر الحروف */
+  .lc { position: absolute; width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; font-size: 42px; font-weight: 700; line-height: 1; box-shadow: 0 6px 10px rgb(0 0 0 / .3); }
+  html[lang="ar"] .lc { font-size: 40px; font-weight: 800; padding-bottom: 6px; }
+  .lc.on { background: linear-gradient(180deg, var(--l) 0%, var(--d) 100%); color: var(--lt); }
+  .lc.off { background: linear-gradient(180deg, #F7F7F7 0%, #CFCFCF 100%); color: #A6A6A6; }
+  .lc.q-s { top: 236px; inset-inline-start: 469px; } .lc.q-w { top: 236px; inset-inline-start: 707px; }
+  .lc.q-o { top: 459px; inset-inline-start: 469px; } .lc.q-t { top: 459px; inset-inline-start: 707px; }
+  /* بطاقات العنوان: شريط متدرّج + دائرة أيقونة */
+  .pill { position: absolute; width: 263px; height: 51px; border-radius: 26px; display: flex; align-items: center; margin: 0; font-size: 25.5px; font-weight: 700; line-height: 1; white-space: nowrap; }
+  html[lang="ar"] .pill { font-size: 25px; font-weight: 800; padding-top: 6px; }
+  .pill.on { background: linear-gradient(90deg, var(--d), var(--l)); color: #fff; }
+  html[dir="rtl"] .pill.on { background: linear-gradient(270deg, var(--d), var(--l)); }
+  .pill.off { background: linear-gradient(90deg, #D4D4D4, #F3F3F3); color: #A6A6A6; }
+  html[dir="rtl"] .pill.off { background: linear-gradient(270deg, #D4D4D4, #F3F3F3); }
+  .pill.ps { inset-inline-start: 120px; padding-inline-start: 37px; }
+  .pill.pe { inset-inline-start: 897px; justify-content: flex-end; padding-inline-end: 37px; }
+  .ic { position: absolute; width: 86px; height: 86px; border-radius: 50%; display: grid; place-items: center; }
+  .ic.on { background: linear-gradient(180deg, var(--l), var(--d)); }
+  .ic.off { background: linear-gradient(180deg, #E6E6E6, #BDBDBD); }
+  .ic i { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #FFFFFF, #EFEFEF); display: grid; place-items: center; box-shadow: inset 0 -2px 4px rgb(0 0 0 / .08); color: #6B6B6B; }
+  .ic.off i { color: #B5B5B5; }
+  .ic svg { width: 36px; height: 36px; }
+  .ic.cs { inset-inline-start: 63px; } .ic.ce { inset-inline-start: 1131px; }
+  .top { top: 113px; } .pill.top { top: 130px; }
+  .bot { top: 573px; } .pill.bot { top: 591px; }
+  /* قوائم النقاط */
+  .ls { position: absolute; margin: 0; padding: 0; list-style: none; }
+  .ls li { display: flex; align-items: center; gap: 11px; height: 27.7px; font-size: 17.5px; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .ls li { font-size: 18px; }
+  .ls li i { flex: none; width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .ls.on li i { background: linear-gradient(180deg, var(--l), var(--d)); }
+  .ls.off li i { background: linear-gradient(180deg, #EBEBEB, #C9C9C9); }
+  .ls li i svg { width: 13px; height: 13px; }
+  .ls.ps { inset-inline-start: 139px; } .ls.pe { inset-inline-start: 917px; }
+  .ls.top { top: 214px; } .ls.bot { top: 452px; }
+  .q-s { --d: #1E9F8C; --l: #2BCDB5; --lt: #16685C; }
+  .q-w { --d: #C3870F; --l: #F4AC1C; --lt: #8A5A08; }
+  .q-o { --d: #1B6F8E; --l: #22A0CF; --lt: #135C7C; }
+  .q-t { --d: #D62C13; --l: #EC6352; --lt: #8F1B0E; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">Bottom-up Strategic Planning SWOT PowerPoint Template</h1>
+    <div class="sep h"></div><div class="sep v"></div>
+    <svg class="ring" viewBox="0 0 334 334" aria-hidden="true"><path d="M167,167 V0 A167,167 0 0 0 0,167 Z" fill="#2BCFB7"/><path d="M167,167 H334 A167,167 0 0 0 167,0 Z" fill="#F6AF19"/><path d="M167,167 H0 A167,167 0 0 0 167,334 Z" fill="#2299CB"/><path d="M167,167 V334 A167,167 0 0 0 334,167 Z" fill="#EF5B48"/></svg>
+    <div class="core"><b>SWOT</b><span>Analysis</span></div>
+    <div class="lc on q-s">S</div>
+    <div class="lc on q-w">W</div>
+    <div class="lc on q-o">O</div>
+    <div class="lc on q-t">T</div>
+    <p class="pill on ps top q-s">Strengths</p><div class="ic on cs top q-s"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.6" r="2.3"/><circle cx="6" cy="9.8" r="1.9"/><circle cx="18" cy="9.8" r="1.9"/><path d="M8 17c0-2.4 1.8-4.2 4-4.2s4 1.8 4 4.2"/><path d="M2.6 16.6c0-2 1.5-3.4 3.4-3.4.9 0 1.6.3 2.2.7"/><path d="M21.4 16.6c0-2-1.5-3.4-3.4-3.4-.9 0-1.6.3-2.2.7"/></svg></i></div><ul class="ls on ps top q-s"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill on pe top q-w">Weaknesses</p><div class="ic on ce top q-w"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 3.5h7v8h-7z"/><path d="M6.5 11.5h11v2.2h-11z"/><path d="M5.5 8v3.5M18.5 8v3.5M12 13.7v4.3M7.5 20.5l4.5-2.5 4.5 2.5M12 18v2.5"/><circle cx="7.5" cy="21" r=".6"/><circle cx="16.5" cy="21" r=".6"/><circle cx="12" cy="21" r=".6"/></svg></i></div><ul class="ls on pe top q-w"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill on ps bot q-o">Opportunities</p><div class="ic on cs bot q-o"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V3.5h11V21"/><path d="M6 3.5l7 2v17l-7-1.5"/><path d="M4 21h16"/><circle cx="11.2" cy="13" r=".5"/></svg></i></div><ul class="ls on ps bot q-o"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill on pe bot q-t">Threats</p><div class="ic on ce bot q-t"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="6" y="6" width="3" height="13"/><rect x="11" y="10" width="3" height="9"/><rect x="16" y="14" width="3" height="5"/><path d="M15.5 4.5l4 4M19.5 5.5v3h-3"/></svg></i></div><ul class="ls on pe bot q-t"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">Bottom-up Strategic Planning SWOT PowerPoint Template</h1>
+    <div class="sep h"></div><div class="sep v"></div>
+    <svg class="ring" viewBox="0 0 334 334" aria-hidden="true"><path d="M167,167 V0 A167,167 0 0 0 0,167 Z" fill="#2BCFB7"/><path d="M167,167 H334 A167,167 0 0 0 167,0 Z" fill="#D9D9D9"/><path d="M167,167 H0 A167,167 0 0 0 167,334 Z" fill="#DCDCDC"/><path d="M167,167 V334 A167,167 0 0 0 334,167 Z" fill="#F0F0F0"/></svg>
+    <div class="core"><b>SWOT</b><span>Analysis</span></div>
+    <div class="lc on q-s">S</div>
+    <div class="lc off q-w">W</div>
+    <div class="lc off q-o">O</div>
+    <div class="lc off q-t">T</div>
+    <p class="pill on ps top q-s">Strengths</p><div class="ic on cs top q-s"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.6" r="2.3"/><circle cx="6" cy="9.8" r="1.9"/><circle cx="18" cy="9.8" r="1.9"/><path d="M8 17c0-2.4 1.8-4.2 4-4.2s4 1.8 4 4.2"/><path d="M2.6 16.6c0-2 1.5-3.4 3.4-3.4.9 0 1.6.3 2.2.7"/><path d="M21.4 16.6c0-2-1.5-3.4-3.4-3.4-.9 0-1.6.3-2.2.7"/></svg></i></div><ul class="ls on ps top q-s"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off pe top q-w">Weaknesses</p><div class="ic off ce top q-w"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 3.5h7v8h-7z"/><path d="M6.5 11.5h11v2.2h-11z"/><path d="M5.5 8v3.5M18.5 8v3.5M12 13.7v4.3M7.5 20.5l4.5-2.5 4.5 2.5M12 18v2.5"/><circle cx="7.5" cy="21" r=".6"/><circle cx="16.5" cy="21" r=".6"/><circle cx="12" cy="21" r=".6"/></svg></i></div><ul class="ls off pe top q-w"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off ps bot q-o">Opportunities</p><div class="ic off cs bot q-o"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V3.5h11V21"/><path d="M6 3.5l7 2v17l-7-1.5"/><path d="M4 21h16"/><circle cx="11.2" cy="13" r=".5"/></svg></i></div><ul class="ls off ps bot q-o"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off pe bot q-t">Threats</p><div class="ic off ce bot q-t"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="6" y="6" width="3" height="13"/><rect x="11" y="10" width="3" height="9"/><rect x="16" y="14" width="3" height="5"/><path d="M15.5 4.5l4 4M19.5 5.5v3h-3"/></svg></i></div><ul class="ls off pe bot q-t"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">Bottom-up Strategic Planning SWOT PowerPoint Template</h1>
+    <div class="sep h"></div><div class="sep v"></div>
+    <svg class="ring" viewBox="0 0 334 334" aria-hidden="true"><path d="M167,167 V0 A167,167 0 0 0 0,167 Z" fill="#E9E9E9"/><path d="M167,167 H334 A167,167 0 0 0 167,0 Z" fill="#F6AF19"/><path d="M167,167 H0 A167,167 0 0 0 167,334 Z" fill="#DCDCDC"/><path d="M167,167 V334 A167,167 0 0 0 334,167 Z" fill="#F0F0F0"/></svg>
+    <div class="core"><b>SWOT</b><span>Analysis</span></div>
+    <div class="lc off q-s">S</div>
+    <div class="lc on q-w">W</div>
+    <div class="lc off q-o">O</div>
+    <div class="lc off q-t">T</div>
+    <p class="pill off ps top q-s">Strengths</p><div class="ic off cs top q-s"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.6" r="2.3"/><circle cx="6" cy="9.8" r="1.9"/><circle cx="18" cy="9.8" r="1.9"/><path d="M8 17c0-2.4 1.8-4.2 4-4.2s4 1.8 4 4.2"/><path d="M2.6 16.6c0-2 1.5-3.4 3.4-3.4.9 0 1.6.3 2.2.7"/><path d="M21.4 16.6c0-2-1.5-3.4-3.4-3.4-.9 0-1.6.3-2.2.7"/></svg></i></div><ul class="ls off ps top q-s"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill on pe top q-w">Weaknesses</p><div class="ic on ce top q-w"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 3.5h7v8h-7z"/><path d="M6.5 11.5h11v2.2h-11z"/><path d="M5.5 8v3.5M18.5 8v3.5M12 13.7v4.3M7.5 20.5l4.5-2.5 4.5 2.5M12 18v2.5"/><circle cx="7.5" cy="21" r=".6"/><circle cx="16.5" cy="21" r=".6"/><circle cx="12" cy="21" r=".6"/></svg></i></div><ul class="ls on pe top q-w"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off ps bot q-o">Opportunities</p><div class="ic off cs bot q-o"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V3.5h11V21"/><path d="M6 3.5l7 2v17l-7-1.5"/><path d="M4 21h16"/><circle cx="11.2" cy="13" r=".5"/></svg></i></div><ul class="ls off ps bot q-o"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off pe bot q-t">Threats</p><div class="ic off ce bot q-t"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="6" y="6" width="3" height="13"/><rect x="11" y="10" width="3" height="9"/><rect x="16" y="14" width="3" height="5"/><path d="M15.5 4.5l4 4M19.5 5.5v3h-3"/></svg></i></div><ul class="ls off pe bot q-t"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">Bottom-up Strategic Planning SWOT PowerPoint Template</h1>
+    <div class="sep h"></div><div class="sep v"></div>
+    <svg class="ring" viewBox="0 0 334 334" aria-hidden="true"><path d="M167,167 V0 A167,167 0 0 0 0,167 Z" fill="#E9E9E9"/><path d="M167,167 H334 A167,167 0 0 0 167,0 Z" fill="#D9D9D9"/><path d="M167,167 H0 A167,167 0 0 0 167,334 Z" fill="#2299CB"/><path d="M167,167 V334 A167,167 0 0 0 334,167 Z" fill="#F0F0F0"/></svg>
+    <div class="core"><b>SWOT</b><span>Analysis</span></div>
+    <div class="lc off q-s">S</div>
+    <div class="lc off q-w">W</div>
+    <div class="lc on q-o">O</div>
+    <div class="lc off q-t">T</div>
+    <p class="pill off ps top q-s">Strengths</p><div class="ic off cs top q-s"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.6" r="2.3"/><circle cx="6" cy="9.8" r="1.9"/><circle cx="18" cy="9.8" r="1.9"/><path d="M8 17c0-2.4 1.8-4.2 4-4.2s4 1.8 4 4.2"/><path d="M2.6 16.6c0-2 1.5-3.4 3.4-3.4.9 0 1.6.3 2.2.7"/><path d="M21.4 16.6c0-2-1.5-3.4-3.4-3.4-.9 0-1.6.3-2.2.7"/></svg></i></div><ul class="ls off ps top q-s"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off pe top q-w">Weaknesses</p><div class="ic off ce top q-w"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 3.5h7v8h-7z"/><path d="M6.5 11.5h11v2.2h-11z"/><path d="M5.5 8v3.5M18.5 8v3.5M12 13.7v4.3M7.5 20.5l4.5-2.5 4.5 2.5M12 18v2.5"/><circle cx="7.5" cy="21" r=".6"/><circle cx="16.5" cy="21" r=".6"/><circle cx="12" cy="21" r=".6"/></svg></i></div><ul class="ls off pe top q-w"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill on ps bot q-o">Opportunities</p><div class="ic on cs bot q-o"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V3.5h11V21"/><path d="M6 3.5l7 2v17l-7-1.5"/><path d="M4 21h16"/><circle cx="11.2" cy="13" r=".5"/></svg></i></div><ul class="ls on ps bot q-o"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off pe bot q-t">Threats</p><div class="ic off ce bot q-t"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="6" y="6" width="3" height="13"/><rect x="11" y="10" width="3" height="9"/><rect x="16" y="14" width="3" height="5"/><path d="M15.5 4.5l4 4M19.5 5.5v3h-3"/></svg></i></div><ul class="ls off pe bot q-t"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">Bottom-up Strategic Planning SWOT PowerPoint Template</h1>
+    <div class="sep h"></div><div class="sep v"></div>
+    <svg class="ring" viewBox="0 0 334 334" aria-hidden="true"><path d="M167,167 V0 A167,167 0 0 0 0,167 Z" fill="#E9E9E9"/><path d="M167,167 H334 A167,167 0 0 0 167,0 Z" fill="#D9D9D9"/><path d="M167,167 H0 A167,167 0 0 0 167,334 Z" fill="#DCDCDC"/><path d="M167,167 V334 A167,167 0 0 0 334,167 Z" fill="#EF5B48"/></svg>
+    <div class="core"><b>SWOT</b><span>Analysis</span></div>
+    <div class="lc off q-s">S</div>
+    <div class="lc off q-w">W</div>
+    <div class="lc off q-o">O</div>
+    <div class="lc on q-t">T</div>
+    <p class="pill off ps top q-s">Strengths</p><div class="ic off cs top q-s"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.6" r="2.3"/><circle cx="6" cy="9.8" r="1.9"/><circle cx="18" cy="9.8" r="1.9"/><path d="M8 17c0-2.4 1.8-4.2 4-4.2s4 1.8 4 4.2"/><path d="M2.6 16.6c0-2 1.5-3.4 3.4-3.4.9 0 1.6.3 2.2.7"/><path d="M21.4 16.6c0-2-1.5-3.4-3.4-3.4-.9 0-1.6.3-2.2.7"/></svg></i></div><ul class="ls off ps top q-s"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off pe top q-w">Weaknesses</p><div class="ic off ce top q-w"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 3.5h7v8h-7z"/><path d="M6.5 11.5h11v2.2h-11z"/><path d="M5.5 8v3.5M18.5 8v3.5M12 13.7v4.3M7.5 20.5l4.5-2.5 4.5 2.5M12 18v2.5"/><circle cx="7.5" cy="21" r=".6"/><circle cx="16.5" cy="21" r=".6"/><circle cx="12" cy="21" r=".6"/></svg></i></div><ul class="ls off pe top q-w"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill off ps bot q-o">Opportunities</p><div class="ic off cs bot q-o"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V3.5h11V21"/><path d="M6 3.5l7 2v17l-7-1.5"/><path d="M4 21h16"/><circle cx="11.2" cy="13" r=".5"/></svg></i></div><ul class="ls off ps bot q-o"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+    <p class="pill on pe bot q-t">Threats</p><div class="ic on ce bot q-t"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="6" y="6" width="3" height="13"/><rect x="11" y="10" width="3" height="9"/><rect x="16" y="14" width="3" height="5"/><path d="M15.5 4.5l4 4M19.5 5.5v3h-3"/></svg></i></div><ul class="ls on pe bot q-t"><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>This is a sample text</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Placeholder</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg></i>Sample Text</li></ul>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 5</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{
+  "key": "sl-blue-white-business",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "أعمال بالأزرق والأبيض",
+  "nameEn": "Blue & White Business",
+  "description": "إحدى عشرة شريحة لعرض شركة: غلاف، ترحيب، مقدمة، نبذة، رؤية ورسالة، خدمات، الفريق، المشاريع، الأعمال، التواصل",
+  "descriptionEn": "Eleven company slides: cover, welcome, intro, about, vision & mission, services, team, projects, portfolio, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "مرحبًا بكم",
+      "titleEn": "Welcome Slide"
+    },
+    {
+      "title": "مقدمة",
+      "titleEn": "Introduction"
+    },
+    {
+      "title": "نبذة عن شركتنا",
+      "titleEn": "About Our Company",
+      "needsData": true
+    },
+    {
+      "title": "رؤيتنا ورسالتنا",
+      "titleEn": "Our Vision & Mission"
+    },
+    {
+      "title": "خدمات شركتنا",
+      "titleEn": "Our Company Services"
+    },
+    {
+      "title": "ماذا نقدّم",
+      "titleEn": "What We Do"
+    },
+    {
+      "title": "تعرّف على فريقنا",
+      "titleEn": "Meet Our Team"
+    },
+    {
+      "title": "مشاريع مميزة",
+      "titleEn": "Featured Projects"
+    },
+    {
+      "title": "معرض أعمالنا",
+      "titleEn": "Our Portfolio"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط (ومنها نسبة 56% في شريحة النبذة)."
+}

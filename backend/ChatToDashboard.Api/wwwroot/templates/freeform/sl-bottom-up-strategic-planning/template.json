@@ -1,0 +1,33 @@
+{
+  "key": "sl-bottom-up-strategic-planning",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "تخطيط استراتيجي تصاعدي (سوات)",
+  "nameEn": "Bottom-up Strategic Planning SWOT",
+  "description": "خمس شرائح لتحليل سوات بحلقة رباعية: نظرة عامة ثم إبراز القوة والضعف والفرص والتهديدات كلٌّ على حدة",
+  "descriptionEn": "Five SWOT slides with a four-part ring: overview, then strengths, weaknesses, opportunities and threats each highlighted",
+  "sections": [
+    {
+      "title": "تحليل سوات كاملًا",
+      "titleEn": "Full SWOT Analysis"
+    },
+    {
+      "title": "نقاط القوة",
+      "titleEn": "Strengths"
+    },
+    {
+      "title": "نقاط الضعف",
+      "titleEn": "Weaknesses"
+    },
+    {
+      "title": "الفرص",
+      "titleEn": "Opportunities"
+    },
+    {
+      "title": "التهديدات",
+      "titleEn": "Threats"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الحلقة رسم SVG، والصنفان on/off يحددان الربع المُبرز في كل شريحة."
+}
