@@ -10396,7 +10396,7 @@ if (SpeechRecognitionCtor) {
 el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.atts = []; ffRenderFiles(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.lang = null; ffGalLang = null; FF.access = null; ffApplyAccess(); ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
-el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(FF.html, '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
+el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(ffWithRuntimeKits(FF.html, FF.design?.kind), '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
 el('ff-version').addEventListener('change', async () => {
   const v = +el('ff-version').value; if (!FF.design) return;
   if (v === FF.design.version) { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`); const d = await r.json(); FF.html = d.html; FF.viewing = null; ffRender(); return; }
@@ -11206,7 +11206,17 @@ el('ff-title').addEventListener('blur', async () => {
 // القابلة للتعديل إلى عرض فقط. نجعل الروابط الجذرية مطلقة إلى أصل المنصة ونضيف معرّف التصميم (meta jeem-design) ليستخدم
 // jeem-page.js المخزن المحلي نفسه الذي تستخدمه مساحة العمل (jeem.ff.<id>:<key>) فتتشارك النافذة والمعاينة البيانات حتى النشر؛
 // وبعد النشر تحمل الوسم معرّف العرض (data-presentation) فتنادي النافذة بيانات العرض المنشور مباشرة (أصل المنصة + كوكي المستخدم).
+// الصفحة المحفوظة لا تحمل سكربتات المنصة التي تحتاجها (الحفظ من وضع التعديل يحذفها، والموديل لا يضيفها): بلوكات البيانات تحتاج
+// محرّك الرسوم وراسمها، والشرائح شريط المصغّرات. المعاينة تحقنها في ffSandboxHtml والنشر في الخادم؛ وهذه للنسخ الأخرى من الصفحة
+// («فتح في نافذة»، التنزيل، PDF) — وبدونها تظهر الرسوم المضافة في المحرر فارغة فيها.
+function ffWithRuntimeKits(html, kind) {
+  let add = '';
+  if (kind === 'slides' && /class=["'][^"']*\bslide\b/i.test(html) && !/jeem-slides\.js/.test(html)) add += '<script src="/js/jeem-slides.js"></script>';
+  if (/data-jeem-(chart|value)\b/.test(html) && !/jeem-blocks\.js/.test(html)) add += '<script src="/js/jeem-viz.js"></script><script src="/js/jeem-blocks.js"></script>';
+  return add ? ffInsertBeforeBodyEnd(html, add) : html;
+}
 function ffStandaloneHtml(html) {
+  html = ffWithRuntimeKits(html, FF.design?.kind);
   let out = html.replace(/(\s(?:src|href)=["'])\/(?!\/)/gi, `$1${location.origin}/`);
   if (FF.design && !/name=["']jeem-design["']/i.test(out)) {
     const tag = `<meta name="jeem-design" content="${esc(FF.design.id)}"${FF.design.presentationId ? ` data-presentation="${esc(FF.design.presentationId)}"` : ''}>`;
@@ -11216,7 +11226,7 @@ function ffStandaloneHtml(html) {
   return out;
 }
 el('ff-open').addEventListener('click', () => { if (!FF.html) return; const blob = new Blob([ffStandaloneHtml(FF.html)], { type: 'text/html' }); const url = URL.createObjectURL(blob); window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000); });
-el('ff-download').addEventListener('click', () => { if (!FF.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([FF.html], { type: 'text/html' })); a.download = (FF.design ? FF.design.title : 'design') + '.html'; document.body.appendChild(a); a.click(); a.remove(); });
+el('ff-download').addEventListener('click', () => { if (!FF.html) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ffStandaloneHtml(FF.html)], { type: 'text/html' })); a.download = (FF.design ? FF.design.title : 'design') + '.html'; document.body.appendChild(a); a.click(); a.remove(); });
 el('ff-link').addEventListener('click', () => { if (FF.publishedUrl) ffCopyLink(location.origin + FF.publishedUrl, el('ff-link')); });
 el('ff-publish').addEventListener('click', async () => {
   if (!FF.design) return; el('ff-publish').disabled = true;
