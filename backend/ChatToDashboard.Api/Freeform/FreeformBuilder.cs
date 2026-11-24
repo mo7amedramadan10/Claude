@@ -261,6 +261,14 @@ public class FreeformBuilder
                   `DOMContentLoaded` وأيضًا في `document.addEventListener('jeem:data', render)`: الصفحة المنشورة تتلقى بيانات حيّة من المنصة
                   وهي مفتوحة (تحدّث `JEEM_DATA` ثم تبث هذا الحدث) فتتحدّث الأرقام بلا إعادة تحميل. ضمّن `<script src="/js/jeem-page.js"></script>` قبل سكربتاتك.
                 - أرقام لا تأتي من الاستعلامات (توضيحية) تبقى بشارة «توضيحية» كما سبق.
+                # بلوكات البيانات القياسية (الطريقة المفضّلة للرسوم والأرقام من البيانات)
+                - لا ترسم الرسوم البيانية بنفسك (لا SVG ولا Canvas يدويًا). ضع بلوك رسم تملؤه المنصة بمحرّكها وبألوان القالب:
+                  `<div data-jeem-chart='{"q":"q3","type":"bar","x":"<عمود التسميات>","y":"<عمود القيم>","title":"عنوان الرسم"}' style="height:280px"></div>`
+                  الأنواع: bar | line | pie | donut | funnel | treemap | scatter؛ و"y" مصفوفة أعمدة لسلاسل متعددة (bar/line، "stacked": true)،
+                  و"fmt": number | compact | currency | percent، و"unit" اختياري. "q" مفتاح نتيجة query_data وأسماء الأعمدة كما في صفوفها.
+                - لرقم مفرد من البيانات داخل النص أو بطاقة مؤشر: `<span data-jeem-value="q2.<العمود>" data-fmt="compact">—</span>`
+                  (اختياري: data-agg="sum|avg|min|max|count" على كل الصفوف، أو data-row="0" لصف بعينه).
+                - البلوكات تتحدّث وحدها مع تحديث البيانات وفي الصفحة المنشورة، فلا تحتاج render() خاصة بها. اجعل للبلوك ارتفاعًا مناسبًا داخل التصميم.
                 """);
         }
         return sb.ToString();

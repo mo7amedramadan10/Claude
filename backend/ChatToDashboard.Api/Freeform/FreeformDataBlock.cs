@@ -83,6 +83,13 @@ public static class FreeformDataBlock
     }
 
     /// <summary>لصفحات «شرائح»: يضمن وجود سكربت شريط المصغّرات <c>/js/jeem-slides.js</c> قبل <c>&lt;/body&gt;</c> (عند النشر).</summary>
+    /// <summary>صفحة فيها بلوكات بيانات (<c>data-jeem-chart</c>/<c>data-jeem-value</c>) تحتاج محرّك الرسوم وراسم البلوكات عند النشر.</summary>
+    public static string EnsureBlocksKit(string html)
+    {
+        if (string.IsNullOrEmpty(html) || !Regex.IsMatch(html, @"data-jeem-(chart|value)\b", RegexOptions.IgnoreCase) || Regex.IsMatch(html, @"jeem-blocks\.js", RegexOptions.IgnoreCase)) return html;
+        return InsertBeforeBodyEnd(html, "<script src=\"/js/jeem-viz.js\"></script><script src=\"/js/jeem-blocks.js\"></script>");
+    }
+
     public static string EnsureSlidesKit(string html)
     {
         if (string.IsNullOrEmpty(html) || Regex.IsMatch(html, @"jeem-slides\.js", RegexOptions.IgnoreCase)) return html;

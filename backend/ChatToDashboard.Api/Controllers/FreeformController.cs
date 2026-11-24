@@ -715,6 +715,7 @@ public class FreeformController : ControllerBase
         if (string.IsNullOrWhiteSpace(d!.Html)) return BadRequest(new { error = "لا توجد صفحة لنشرها بعد." });
         var html = ApplyBrandAssets(d.Html, await BrandAsync(d.ProjectId, ct, d.IdentityId));
         if (d.Kind == "slides") html = FreeformDataBlock.EnsureSlidesKit(html);
+        html = FreeformDataBlock.EnsureBlocksKit(html);
         // صفحة ببيانات: تُربط بمصدرها فتُقدَّم بآخر الأرقام عند كل فتح (بيانات حيّة) ويضمَن فيها الجسر لتحديثها وهي مفتوحة.
         var hasData = d.QueryCount > 0 || FreeformDataBlock.HasBlock(d.Html);
         if (hasData) html = FreeformDataBlock.EnsurePageBridge(html);
