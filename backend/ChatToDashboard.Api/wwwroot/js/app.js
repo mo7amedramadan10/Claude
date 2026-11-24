@@ -9740,14 +9740,20 @@ function ffRenderMessages() {
 async function ffAsk(text) {
   if (FF.busy || !text.trim()) return;
   if (el('screen-freeform').classList.contains('ff-chat-hidden')) ffSetChatHidden(false, false); // الرد يظهر في المحادثة
-  if (!FF.design && (FF.kind === 'track' || FF.track)) return ffTrackAsk(text);
+  if (!FF.design && (FF.kind === 'track' || FF.track)) {
+    if (FF.atts.some(a => a.status === 'uploading')) { ffPushMsg('bot', 'انتظر حتى يكتمل رفع الملفات ثم أرسل.'); return; }
+    FF.atts = []; ffRenderFiles(); // ملفات البيانات صارت مصادر للوحة؛ لا شيء آخر يُرسل
+    return ffTrackAsk(text);
+  }
   if (FF.design && FF.access === 'view') { ffPushMsg('err', 'هذا التصميم مشارك معك للعرض فقط — اطلب من صاحبه صلاحية التعديل، أو أنشئ نسخة لك من «⇄ تحويل إلى».'); return; }
-  ffPushMsg('user', text); FF.busy = true; FF.busyText = FF.design ? 'يعدّل الصفحة…' : 'يصمّم الصفحة… قد يستغرق حتى دقيقة'; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
+  if (FF.atts.some(a => a.status === 'uploading')) { ffPushMsg('bot', 'انتظر حتى يكتمل رفع المرفقات ثم أرسل.'); return; }
+  const atts = ffTakeAttachments();
+  ffPushMsg('user', text, ffAttachmentsLineHtml(atts)); FF.busy = true; FF.busyText = FF.design ? 'يعدّل الصفحة…' : 'يصمّم الصفحة… قد يستغرق حتى دقيقة'; ffRenderMessages(); el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
   ccSetLoading('ff-pane', FF.design ? 'جارٍ تعديل الصفحة' : 'جارٍ بناء الصفحة', 'الموديل يعمل على طلبك وقد يستغرق حتى دقيقة — ستظهر النتيجة هنا فور اكتمالها.');
   try {
     if (!FF.design && (!FF.kind || FF.template === undefined)) { FF.busy = false; ffPushMsg('bot', 'اختر نوع المخرج أولًا من بطاقات «اصنع شيئًا جديدًا» (مستند، شرائح، تصميم، لوحة، حركة) ثم نموذجًا أو «تصميم حر بلا نموذج».'); el('ff-send').disabled = false; el('ff-status').textContent = ''; return; }
-    if (!FF.design) FF.messages[FF.messages.length - 1].extraHtml = ffAttachLineHtml(FF.template) + ffSourcesLineHtml(FF.sources); // أول رسالة تحمل المرفق والمصادر ليظهر الاختيار في المحادثة
-    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, lang: FF.design ? undefined : (FF.lang || ffLangDefault()), sources: FF.design ? undefined : FF.sources };
+    if (!FF.design) FF.messages[FF.messages.length - 1].extraHtml = ffAttachLineHtml(FF.template) + ffSourcesLineHtml(FF.sources) + ffAttachmentsLineHtml(atts); // أول رسالة تحمل المرفق والمصادر ليظهر الاختيار في المحادثة
+    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, lang: FF.design ? undefined : (FF.lang || ffLangDefault()), sources: FF.design ? undefined : FF.sources, attachments: atts.length ? atts : undefined };
     const r = await fetch('/api/freeform/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
@@ -9761,7 +9767,103 @@ async function ffAsk(text) {
 }
 el('ff-form').addEventListener('submit', e => { e.preventDefault(); const t = el('ff-q').value.trim(); if (!t) return; el('ff-q').value = ''; ffAsk(t); });
 el('ff-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el('ff-form').requestSubmit(); } });
-el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.lang = null; ffGalLang = null; FF.access = null; ffApplyAccess(); ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
+
+// ===== مرفقات محادثة تصميم حر والإملاء الصوتي =====
+// الصور تُرفع وتعود برابط عام يضعه الموديل في الصفحة؛ المستندات (PDF/PowerPoint/Word/HTML/نص) يُستخرج نصها حتميًا ويُرسل مع الطلب
+// مرجعًا؛ ملفات البيانات (Excel/CSV) تُحفظ في «الملفات» بالمسار المعتاد وتصير مصدرًا يستعلم عنه الموديل. في «لوحات المتابعة» البيانات فقط.
+FF.atts = [];
+const FF_DATA_EXT = /\.(csv|xlsx|xls)$/i;
+const FF_ATT_ICON = { image: '🖼️', doc: '📄', data: '📊' };
+function ffAttKind(f) { return /^image\//.test(f.type) ? 'image' : FF_DATA_EXT.test(f.name) ? 'data' : 'doc'; }
+function ffTakeAttachments() {
+  const ready = FF.atts.filter(a => a.status === 'ready').map(a => ({ kind: a.kind, name: a.name, text: a.text, url: a.url, table: a.table, width: a.width, height: a.height }));
+  FF.atts = FF.atts.filter(a => a.status === 'error' ? false : a.status !== 'ready'); ffRenderFiles();
+  return ready;
+}
+function ffAttachmentsLineHtml(atts) {
+  return atts && atts.length ? `<span class="ff-msg-attach">📎 ${atts.map(a => `${FF_ATT_ICON[a.kind] || '📄'} <b>${esc(a.name)}</b>`).join('، ')}</span>` : '';
+}
+function ffRenderFiles() {
+  const box = el('ff-files');
+  box.classList.toggle('hidden', !FF.atts.length);
+  box.innerHTML = FF.atts.map((a, i) => `<span class="ff-file ${a.status}" title="${esc(a.status === 'error' ? a.error : a.note || a.name)}">
+      ${a.kind === 'image' && a.preview ? `<img src="${esc(a.preview)}" alt="">` : `<span class="ff-file-ico" aria-hidden="true">${FF_ATT_ICON[a.kind]}</span>`}
+      <span class="ff-file-t"><b>${esc(a.name)}</b><small>${a.status === 'uploading' ? 'جارٍ الرفع…' : a.status === 'error' ? '⚠️ ' + esc(a.error) : esc(a.note || '')}</small></span>
+      <button type="button" class="ff-file-x" data-ff-file-x="${i}" aria-label="إزالة ${esc(a.name)}" title="إزالة">✕</button></span>`).join('');
+  box.querySelectorAll('[data-ff-file-x]').forEach(b => b.addEventListener('click', () => { const a = FF.atts[+b.dataset.ffFileX]; if (a?.preview) URL.revokeObjectURL(a.preview); FF.atts.splice(+b.dataset.ffFileX, 1); ffRenderFiles(); el('ff-q').focus(); }));
+}
+async function ffUploadAttachment(a, file) {
+  try {
+    if (a.kind === 'data') {
+      const fd = new FormData(); fd.append('files', file);
+      const r = await fetch('/api/repository/upload', { method: 'POST', body: fd }); const list = await r.json().catch(() => []);
+      const p = Array.isArray(list) ? list[0] : null;
+      if (!r.ok || !p || p.error || !p.token) throw new Error((p && p.error) || (list && list.error) || `(${r.status})`);
+      const s = await fetch('/api/repository/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: p.token, displayName: file.name.replace(/\.[^.]+$/, ''), description: 'مرفق من محادثة تصميم حر', category: 'مرفقات تصميم حر' }) });
+      const saved = await s.json().catch(() => ({}));
+      if (!s.ok) throw new Error(saved.error || `(${s.status})`);
+      a.table = saved.tableName || saved.displayName || file.name; a.note = `حُفظ في «الملفات»${p.rowCount ? ` · ${p.rowCount.toLocaleString('en-US')} صف` : ''}`;
+      await loadSources().catch(() => {});
+      if (!ffTrackSourcesMode() && FF.sources && saved.id && !FF.sources.files.includes(saved.id)) ffSetSources({ systems: FF.sources.systems, files: [...FF.sources.files, saved.id] });
+      if (typeof dashGalFeasibility !== 'undefined') dashGalFeasibility = null;
+    } else {
+      const fd = new FormData(); fd.append('file', file);
+      const r = await fetch('/api/freeform/attachments', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || `(${r.status})`);
+      if (d.kind === 'image') {
+        a.kind = 'image'; a.url = d.url;
+        if (a.preview) await new Promise(res => { const im = new Image(); im.onload = () => { a.width = im.naturalWidth; a.height = im.naturalHeight; res(); }; im.onerror = res; im.src = a.preview; });
+        a.note = 'صورة تُوضع في الصفحة';
+      } else { a.text = d.text; a.note = `مرجع · ${(d.chars || 0).toLocaleString('en-US')} حرف`; }
+    }
+    a.status = 'ready';
+  } catch (e) { a.status = 'error'; a.error = e.message || 'تعذّر الرفع'; }
+  ffRenderFiles();
+}
+function ffAttachFiles(files) {
+  const track = !FF.design && (FF.kind === 'track' || FF.track);
+  for (const file of files) {
+    if (FF.atts.length >= 10) { ffPushMsg('bot', 'الحد 10 مرفقات في الرسالة الواحدة.'); break; }
+    const kind = ffAttKind(file);
+    const a = { kind, name: file.name, status: 'uploading', preview: kind === 'image' ? URL.createObjectURL(file) : null };
+    if (track && kind !== 'data') { a.status = 'error'; a.error = 'لوحات المتابعة تُبنى من ملفات البيانات (Excel/CSV) فقط'; FF.atts.push(a); continue; }
+    FF.atts.push(a); ffUploadAttachment(a, file);
+  }
+  ffRenderFiles();
+}
+el('ff-file-input').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) ffAttachFiles(f); });
+el('ff-attach-btn').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el('ff-file-input').click(); } });
+// السحب والإفلات على صندوق الكتابة، واللصق (صورة من الحافظة)
+(() => {
+  const box = el('ff-form').querySelector('.input-box');
+  box.addEventListener('dragover', e => { if ([...(e.dataTransfer?.types || [])].includes('Files') && !el('ff-q').disabled) { e.preventDefault(); box.classList.add('ff-drop'); } });
+  box.addEventListener('dragleave', () => box.classList.remove('ff-drop'));
+  box.addEventListener('drop', e => { box.classList.remove('ff-drop'); if (!e.dataTransfer?.files?.length || el('ff-q').disabled) return; e.preventDefault(); ffAttachFiles([...e.dataTransfer.files]); });
+  el('ff-q').addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])]; if (f.length) { e.preventDefault(); ffAttachFiles(f); } });
+})();
+// الإملاء الصوتي: يكتب في صندوق الطلب ويبقى قابلًا للتعديل قبل الإرسال؛ يستمر عبر التوقفات حتى يُضغط الزر ثانية
+if (SpeechRecognitionCtor) {
+  const mic = el('ff-mic'); mic.classList.remove('hidden');
+  let rec = null, on = false, base = '';
+  const stop = () => { on = false; mic.classList.remove('listening'); mic.setAttribute('aria-pressed', 'false'); mic.title = 'اكتب بصوتك'; try { rec?.stop(); } catch {} };
+  mic.addEventListener('click', () => {
+    if (on) { stop(); return; }
+    rec = new SpeechRecognitionCtor(); rec.lang = document.documentElement.lang === 'en' ? 'en-US' : 'ar-SA'; rec.interimResults = true; rec.continuous = true;
+    on = true; mic.classList.add('listening'); mic.setAttribute('aria-pressed', 'true'); mic.title = 'إيقاف الاستماع';
+    const q = el('ff-q'); base = q.value ? q.value.replace(/\s*$/, ' ') : '';
+    let session = base;
+    rec.addEventListener('result', ev => { let t = ''; for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; q.value = session + t; });
+    rec.addEventListener('error', ev => {
+      if (ev.error === 'no-speech') return;
+      stop(); if (ev.error === 'aborted') return;
+      ffPushMsg('err', ({ 'not-allowed': 'محتاج إذن استخدام الميكروفون من المتصفح.', 'audio-capture': 'مفيش ميكروفون متاح.' })[ev.error] || 'تعذّر التعرف على الصوت: ' + ev.error);
+    });
+    rec.addEventListener('end', () => { if (!on) return; session = el('ff-q').value; try { rec.start(); } catch { stop(); } });
+    try { rec.start(); } catch { stop(); }
+  });
+  el('ff-form').addEventListener('submit', () => { if (on) stop(); }, true);
+}
+el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.atts = []; ffRenderFiles(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.lang = null; ffGalLang = null; FF.access = null; ffApplyAccess(); ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
 el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(FF.html, '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
@@ -9808,6 +9910,7 @@ function ffApplyAccess() {
   el('ff-title').contentEditable = ro ? 'false' : 'true';
   el('screen-freeform').classList.toggle('ff-readonly', ro);
   const q = el('ff-q'); q.disabled = ro; el('ff-send').disabled = ro;
+  el('ff-file-input').disabled = ro; el('ff-attach-btn').classList.toggle('is-disabled', ro); el('ff-mic').disabled = ro;
   // النص الأصلي قد يكون فارغًا، فالفحص بوجود المفتاح لا بقيمته
   if (ro) { if (!('ph' in q.dataset)) q.dataset.ph = q.placeholder; q.placeholder = 'هذا التصميم مشارك معك للعرض فقط — لا يمكن تعديله بالمحادثة.'; }
   else if ('ph' in q.dataset) { q.placeholder = q.dataset.ph; delete q.dataset.ph; }

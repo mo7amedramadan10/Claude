@@ -3903,3 +3903,25 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 :root[data-theme="dark"] .jeem-scope .ff-kchip[aria-pressed="true"] .ff-kchip-ico { background: rgba(255, 255, 255, .92); }
 /* الشعار: كلمة «جيم» بلون النص الفاتح على الخلفية الداكنة (العلامة الزرقاء كما هي) */
 :root[data-theme="dark"] img[src$="logo-lockup.svg"] { content: url("../img/logo-lockup-dark.svg"); }
+
+/* مرفقات محادثة تصميم حر: شرائح الملفات فوق صندوق الكتابة، وزرّا الإرفاق والإملاء */
+.jeem-scope .ff-files { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 0; }
+.jeem-scope .ff-files.hidden { display: none; }
+.jeem-scope .ff-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 4px 4px 4px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: var(--fs-xs); min-width: 0; }
+.jeem-scope .ff-file img { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; flex: none; }
+.jeem-scope .ff-file-ico { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 6px; background: var(--surface); font-size: 16px; flex: none; }
+.jeem-scope .ff-file-t { display: flex; flex-direction: column; min-width: 0; }
+.jeem-scope .ff-file-t b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.jeem-scope .ff-file-t small { color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.jeem-scope .ff-file.uploading { opacity: .75; }
+.jeem-scope .ff-file.error { border-color: var(--danger); background: var(--danger-50); }
+.jeem-scope .ff-file.error small { color: var(--danger); }
+.jeem-scope .ff-file-x { all: unset; cursor: pointer; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; color: var(--ink-3); flex: none; }
+.jeem-scope .ff-file-x:hover { background: var(--surface); color: var(--ink); }
+.jeem-scope .ff-file-x:focus-visible { outline: 2px solid var(--brand-blue); }
+#ff-form .input-tools .attach-btn { cursor: pointer; }
+#ff-form .attach-btn.is-disabled { opacity: .4; pointer-events: none; }
+#ff-form #ff-mic.listening { color: var(--danger); background: var(--danger-50); }
+#ff-form .input-box.ff-drop { outline: 2px dashed var(--brand-blue); outline-offset: -4px; }
+@media (prefers-reduced-motion: no-preference) { #ff-form #ff-mic.listening { animation: ff-mic-pulse 1.4s ease-in-out infinite; } }
+@keyframes ff-mic-pulse { 50% { box-shadow: 0 0 0 4px var(--danger-50); } }

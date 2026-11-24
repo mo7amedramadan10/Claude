@@ -16,7 +16,8 @@ namespace ChatToDashboard.Api.Controllers;
 
 public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } public string? TemplateKey { get; set; } /// <summary>لغة الصفحة للتصميم الجديد: ar (افتراضي) أو en؛ لتصميم قائم تُستنتج من صفحته.</summary>
     public string? Lang { get; set; } /// <summary>المصادر المختارة (systems/files)؛ null = لا تغيير (المحفوظة مع التصميم أو الكل).</summary>
-    public Sources.SourceSelection? Sources { get; set; } }
+    public Sources.SourceSelection? Sources { get; set; } /// <summary>مرفقات هذه الرسالة (نصوص مستخرجة، صور، ملفات بيانات محفوظة).</summary>
+    public List<FreeformAttachment>? Attachments { get; set; } }
 public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
 /// <summary>إعدادات مشاركة تصميم: الوصول العام (private/project/org) ودوره، والمستخدمون بالاسم بأدوارهم.</summary>
 public class FreeformSharingRequest { public string? Scope { get; set; } public string? ScopeRole { get; set; } public List<FreeformShare> Users { get; set; } = new(); }
@@ -430,6 +431,47 @@ public class FreeformController : ControllerBase
         return sb.Length > 60_000 ? sb.ToString(0, 60_000) + "\n…(اقتُطع)" : sb.ToString();
     }
 
+    /// <summary>مرفقات رسالة المحادثة (بلا موديل): صورة → تُخزَّن وتعاد برابط عام يضعه الموديل في الصفحة؛ ملف مرجعي
+    /// (PDF/PowerPoint/Word/HTML/نص) → يُعاد نصه المستخرج ليُرسل مع الطلب. ملفات البيانات (Excel/CSV) لا تمر من هنا بل من رفع «الملفات».</summary>
+    [HttpPost("attachments")]
+    [RequestSizeLimit(30 * 1024 * 1024)]
+    public async Task<IActionResult> Attach([FromForm] IFormFile? file, [FromServices] FreeformAssetStore assets, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملفًا." });
+        if (file.Length > 25 * 1024 * 1024) return BadRequest(new { error = "الملف أكبر من 25MB." });
+        var (user, selection) = cur.Value;
+        byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
+        var name = Path.GetFileName(file.FileName);
+        var imageType = FreeformAttachmentText.ImageType(bytes);
+        if (imageType is not null)
+        {
+            if (bytes.Length > FreeformAssetStore.MaxBytes) return BadRequest(new { error = "الصورة أكبر من 5MB." });
+            var id = await assets.AddAsync(selection.ProjectId, user.Id, name, imageType, bytes, ct);
+            return Ok(new { kind = "image", name, url = $"/api/freeform/assets/{id}" });
+        }
+        var ext = Path.GetExtension(name).ToLowerInvariant();
+        if (!FreeformAttachmentText.DocExtensions.Contains(ext))
+            return BadRequest(new { error = "نوع غير مدعوم هنا: الصور (PNG/JPG/GIF/WebP)، والمستندات (PDF/PowerPoint/Word/HTML/نص)، وملفات البيانات (Excel/CSV)." });
+        string text;
+        try { text = FreeformAttachmentText.ExtractText(name, bytes); }
+        catch (Exception) { return BadRequest(new { error = $"تعذّرت قراءة «{name}» — تأكد أنه ملف سليم." }); }
+        if (string.IsNullOrWhiteSpace(text)) return BadRequest(new { error = $"لم أجد نصًا يمكن قراءته في «{name}» (قد يكون صورًا ممسوحة)." });
+        return Ok(new { kind = "doc", name, text, chars = text.Length });
+    }
+
+    /// <summary>صورة مرفقة بلا دخول (الصفحة في إطار معزول وفي الرابط المنشور)؛ المعرّف عشوائي 24 hex.</summary>
+    [HttpGet("assets/{id}")]
+    [AllowAnonymous]
+    [ResponseCache(Duration = 86400 * 30, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> Asset(string id, [FromServices] FreeformAssetStore assets, CancellationToken ct)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(id, "^[0-9a-f]{24}$")) return NotFound();
+        var a = await assets.GetAsync(id, ct); if (a is null) return NotFound();
+        Response.Headers["Access-Control-Allow-Origin"] = "*"; Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(a.Value.Bytes, a.Value.ContentType);
+    }
+
     /// <summary>توليد أو تعديل بالمحادثة. بلا <c>designId</c> يُنشأ تصميم جديد بعنوان من الطلب.</summary>
     [HttpPost("generate")]
     public async Task<IActionResult> Generate([FromBody] FreeformGenerateRequest request, CancellationToken ct)
@@ -457,7 +499,7 @@ public class FreeformController : ControllerBase
         // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
         var template = await ResolveTemplateAsync(design?.TemplateKey ?? request.TemplateKey, selection.ProjectId, ct);
         if (template is not null && template.Kind != kind) template = null;
-        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template, design is null ? request.Lang : null); }
+        try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template, design is null ? request.Lang : null, request.Attachments); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         int? version = null;
         if (design is null)
