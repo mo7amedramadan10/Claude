@@ -9290,6 +9290,25 @@ function ffNavKit() {
     (box ? [box] : btns).forEach(function (x) { x.setAttribute('data-ff-navhide', '1'); });
     var st = document.createElement('style'); st.id = 'ff-nav-style'; st.textContent = '[data-ff-navhide]{display:none!important}'; document.head.appendChild(st);
   }
+  // نص يفيض خارج الشريحة أو يُقصّ داخل حاوية بـ overflow مخفي (بعد تعديل جعله أطول من مساحته): مقتطفات حتى 5
+  function overflowItems(slide) {
+    if (!slide) return [];
+    var sr = slide.getBoundingClientRect(), k = (sr.width / (slide.offsetWidth || 1)) || 1, tol = 3 * k, out = [], seen = [];
+    var tw = document.createTreeWalker(slide, NodeFilter.SHOW_TEXT), node;
+    while ((node = tw.nextNode()) && out.length < 5) {
+      var tx = node.textContent.trim(); if (tx.length <= 3 || /^[\d\s.,:٪%#٠-٩-]+$/.test(tx)) continue; // الأرقام الزخرفية الكبيرة («01») مقصوصة عمدًا في بعض القوالب
+      var host = node.parentElement; if (!host || seen.indexOf(host) >= 0) continue;
+      var rg = document.createRange(); rg.selectNodeContents(node); var rects = [].slice.call(rg.getClientRects()).filter(function (r) { return r.width > 0 && r.height > 0; });
+      if (!rects.length) continue;
+      var bad = rects.some(function (r) { return r.bottom > sr.bottom + tol || r.top < sr.top - tol || r.right > sr.right + tol || r.left < sr.left - tol; });
+      for (var a = host; !bad && a && a !== slide; a = a.parentElement) {
+        var cs = getComputedStyle(a); if (cs.overflow === 'visible' && cs.overflowY === 'visible' && cs.overflowX === 'visible') continue;
+        var ar = a.getBoundingClientRect(); bad = rects.some(function (r) { return r.bottom > ar.bottom + tol || r.right > ar.right + tol || r.left < ar.left - tol || r.top < ar.top - tol; });
+      }
+      if (bad) { seen.push(host); out.push((host.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40)); }
+    }
+    return out;
+  }
   function start() {
     var list = slides(); if (!list.length) return;
     hideNav(list);
@@ -9298,7 +9317,9 @@ function ffNavKit() {
     try { new MutationObserver(report).observe(document.body, { attributes: true, attributeFilter: ['class', 'style', 'hidden'], subtree: true }); } catch (e) {}
     window.addEventListener('jeem:slide', function () { setTimeout(report, 30); }); window.addEventListener('scroll', report, { passive: true });
     window.addEventListener('message', function (e) {
-      var m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== parent || m.type !== 'nav') return;
+      var m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== parent) return;
+      if (m.type === 'check-overflow') { var ci = current(list); parent.postMessage({ jeemEdit: 1, type: 'overflow', i: ci, items: overflowItems(list[ci]) }, '*'); return; }
+      if (m.type !== 'nav') return;
       var i = typeof m.index === 'number' ? m.index : current(list) + (m.dir || 0); go(list, i); setTimeout(report, 60);
     });
     report();
@@ -9897,7 +9918,13 @@ window.addEventListener('message', async e => {
   const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
   if (m.type === 'dirty' || m.type === 'img-dirty') { if (m.type === 'dirty') FF.edit.dirty = m.count || 1; else FF.edit.imgDirty = m.count || 1; ffEditCountText(); return; }
   if (m.type === 'img-pick') { ffImgOpen(m); return; }
-  if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; if (FF.navRestore != null && n >= 2 && FF.navRestore !== i && FF.navRestore < n) { const to = FF.navRestore; FF.navRestore = null; e.source.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*'); return; } FF.navRestore = null; FF.nav = { i, n }; ffRenderScope(); el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
+  if (m.type === 'overflow') {
+    const items = (m.items || []).filter(Boolean); if (!items.length) return; const n = (+m.i || 0) + 1;
+    ffPushMsg('bot', `⚠️ النص في الشريحة ${n} أطول من مساحتها فيفيض أو يُقصّ (${items.slice(0, 3).map(t => `«${t}»`).join('، ')}${items.length > 3 ? '…' : ''}).`,
+      `<button type="button" class="ff-undo-msg ff-shorten-msg" data-i="${+m.i || 0}">✂️ اختصره</button>`);
+    return;
+  }
+  if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; if (FF.navRestore != null && n >= 2 && FF.navRestore !== i && FF.navRestore < n) { const to = FF.navRestore; FF.navRestore = null; e.source.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*'); return; } FF.navRestore = null; FF.nav = { i, n }; ffRenderScope(); if (FF.overflowCheck) { FF.overflowCheck = false; const src = e.source; setTimeout(() => src.postMessage({ jeemEdit: 1, type: 'check-overflow' }, '*'), 600); } el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
   if (m.type === 'html' && FF.edit.pending && m.purpose !== 'ask') {
     FF.edit.pending = null; const html = m.html || '';
     try {
@@ -10145,8 +10172,9 @@ async function ffAsk(text, opts) {
     FF.design = d.design; FF.versions = d.versions || FF.versions; FF.viewing = null;
     if (d.html) FF.html = d.html;
     FF.busy = false;
+    if (d.version && d.changed !== false) FF.overflowCheck = true;
     const prevV = (FF.versions || []).map(v => v.version).filter(v => d.version && v < d.version).sort((a, b) => b - a)[0];
-    ffPushMsg('bot', d.reply + (d.version ? ` (الإصدار ${d.version})` : '') + (d.usedData ? ' · استخدمت بيانات المشروع' : '') + (d.scope && d.scope !== 'all' && d.changed === false ? ' — لم يتغيّر شيء في الصفحة.' : ''),
+    ffPushMsg('bot', d.reply + (d.version ? ` (الإصدار ${d.version})` : '') + (d.usedData ? ' · استخدمت بيانات المشروع' : '') + (d.scope && d.scope !== 'all' && d.changed === false ? ' — لم يتغيّر شيء في الصفحة.' : '') + (d.slideCount ? `\n⚠️ عدد الشرائح تغيّر من ${d.slideCount.before} إلى ${d.slideCount.after} — إن لم تطلب ذلك اضغط «تراجع».` : ''),
       d.version && prevV && d.changed !== false ? `<button type="button" class="ff-undo-msg" data-undo="${prevV}" data-from="${d.version}">↶ تراجع عن هذا التعديل</button>` : '');
     ffRender();
   } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التصميم: ' + e.message); }
@@ -10319,6 +10347,11 @@ function ffRenderScope() {
   box.classList.toggle('wide', !(slides && FF.scopeChoice === 'slide'));
 }
 el('ff-scope-sel').addEventListener('change', () => { FF.scopeChoice = el('ff-scope-sel').value; ffRenderScope(); });
+el('ff-messages').addEventListener('click', e => {
+  const b = e.target.closest('.ff-shorten-msg'); if (!b || !FF.design || FF.busy) return;
+  const i = +b.dataset.i || 0; FF.messages.forEach(m => { if (m.extraHtml && m.extraHtml.includes('ff-shorten-msg')) m.extraHtml = ''; });
+  ffAsk('اختصر نصوص هذه الشريحة حتى تتسع كلها داخل مساحتها بلا فيض ولا قص، محافظًا على المعنى والأرقام وتصميم القالب كما هو.', { scope: { kind: 'slide', index: i }, display: `✂️ اختصر نصوص الشريحة ${i + 1} لتتسع داخلها` });
+});
 // زر «تراجع عن هذا التعديل» في رد المحادثة: يستعيد الإصدار السابق كإصدار جديد
 el('ff-messages').addEventListener('click', async e => {
   const b = e.target.closest('.ff-undo-msg'); if (!b || !FF.design || FF.busy) return;

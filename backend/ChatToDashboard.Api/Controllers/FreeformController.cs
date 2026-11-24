@@ -539,6 +539,13 @@ public class FreeformController : ControllerBase
         }
         // «اطلب من جيم» على عنصر محدد يعلّمه بـ data-jeem-target؛ لا تبقى العلامة في الصفحة المحفوظة إن نسيها الموديل
         if (result.Html is not null) result = result with { Html = Regex.Replace(result.Html, @"\s+data-jeem-target(\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+))?", "") };
+        // «العرض كله»: تنبيه إن تغيّر عدد الشرائح (حذف/إضافة لم يُطلب غالبًا) — الواجهة تعرضه مع زر التراجع
+        object? slideCount = null;
+        if (design is not null && scopeKind is not ("slide" or "element") && result.Html is not null && !string.IsNullOrWhiteSpace(currentHtml))
+        {
+            var before = FreeformScope.FindSlides(currentHtml).Count; var after = FreeformScope.FindSlides(result.Html).Count;
+            if (before >= 2 && before != after) slideCount = new { before, after };
+        }
         int? version = null;
         if (design is null)
         {
@@ -554,7 +561,7 @@ public class FreeformController : ControllerBase
         if (result.Html is not null && result.Queries is { Count: > 0 } qs) { var now = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, now, fp, ct); design.QueryCount = qs.Count; design.DataRefreshedAt = now; design.DataFingerprint = fp; }
         await _store.AddMessageAsync(design.Id, "user", request.Message, null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, version, ct);
-        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, version, usedData = result.UsedData, versions = await _store.VersionsAsync(design.Id, ct), scope = scopeKind ?? "all", changed = result.Html is not null });
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, version, usedData = result.UsedData, versions = await _store.VersionsAsync(design.Id, ct), scope = scopeKind ?? "all", changed = result.Html is not null, slideCount });
     }
 
     /// <summary>تحديث بيانات الصفحة بلا موديل: إعادة تنفيذ الاستعلامات المسجَّلة واستبدال كتلة <c>jeem-data</c> كإصدار جديد.</summary>
