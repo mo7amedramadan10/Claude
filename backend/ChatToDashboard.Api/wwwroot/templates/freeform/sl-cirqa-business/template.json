@@ -1,0 +1,67 @@
+{
+  "key": "sl-cirqa-business",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "سيركا للأعمال",
+  "nameEn": "CIRQA Business",
+  "description": "ثلاث عشرة شريحة أعمال بهوية فيروزية: غلاف وأجندة وفصول وركائز ومخطط زمني ومقاييس أداء وفريق وشكر",
+  "descriptionEn": "Thirteen teal business slides: cover, agenda, chapters, pillars, timeline, metrics, team and thank-you",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "نظرة عامة على الشركة",
+      "titleEn": "Company Overview"
+    },
+    {
+      "title": "الفصل الأول",
+      "titleEn": "Chapter One"
+    },
+    {
+      "title": "الركائز الثلاث",
+      "titleEn": "Three Pillars"
+    },
+    {
+      "title": "الفصل الثاني",
+      "titleEn": "Chapter Two"
+    },
+    {
+      "title": "المخطط الزمني",
+      "titleEn": "Timeline"
+    },
+    {
+      "title": "فرص الأعمال",
+      "titleEn": "Business Opportunities"
+    },
+    {
+      "title": "عوامل النجاح",
+      "titleEn": "Success Factors"
+    },
+    {
+      "title": "مقاييس الأداء (رسم)",
+      "titleEn": "Performance Metrics (chart)",
+      "needsData": true
+    },
+    {
+      "title": "مقارنة الأداء (رسم)",
+      "titleEn": "Performance Comparison (chart)",
+      "needsData": true
+    },
+    {
+      "title": "فريقنا",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشرطة المتدرّجة وغيّر النصوص والأرقام فقط؛ أرقام الرسم المكدّس في كتلة chart-data ورسم المساحات في chart-data-2."
+}

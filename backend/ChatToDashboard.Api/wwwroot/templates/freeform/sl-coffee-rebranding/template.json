@@ -1,0 +1,17 @@
+{
+  "key": "sl-coffee-rebranding",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "☕",
+  "name": "إعادة تصميم علامة قهوة",
+  "nameEn": "Coffee Rebranding",
+  "description": "شريحة واحدة تعرض الهوية النهائية للعلامة في ست صور: التغليف والحساب والموقع والكوب وبطاقة العمل والمنشور",
+  "descriptionEn": "One slide showcasing the final brand in six photos: packaging, Instagram, website, mug, card and post",
+  "sections": [
+    {
+      "title": "العرض النهائي للعلامة التجارية",
+      "titleEn": "Final Brand Showcase"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط (العنوان والتسميات الثلاث)؛ الصور الست مقصوصة من الأصل ويمكن استبدال مساراتها بصور العلامة."
+}

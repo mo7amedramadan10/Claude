@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>إعادة تصميم علامة قهوة</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «إعادة تصميم علامة قهوة»: ست صور فوتوغرافية في صفين (الصف العلوي بتسميات تحته)، ثم شريط بنّي داكن بعنوان أبيض بخط مذيّل. في العربية ينعكس ترتيب الصور مع تسمياتها. */
+  :root { --font: 'Amiri', 'Times New Roman', serif; --ink: #2E2A25; --accent: #3C1F11; --brown: #3C1F11; --sand: #DCCCBD; --sand-2: #D6C8BC; --rule: #B3A08F; --bg: #DCCCBD; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* الصور بإحداثيات الأصل؛ inset-inline-start يعكس ترتيبها في العربية */
+  .s1 .ph { position: absolute; margin: 0; display: block; object-fit: cover; }
+  .s1 .p1 { top: 0; inset-inline-start: 0; width: 427px; height: 340px; }
+  .s1 .p2 { top: 0; inset-inline-start: 428px; width: 292px; height: 340px; }
+  .s1 .p3 { top: 0; inset-inline-start: 720px; width: 560px; height: 340px; }
+  .s1 .p4 { top: 365px; inset-inline-start: 0; width: 427px; height: 222px; }
+  .s1 .p5 { top: 365px; inset-inline-start: 428px; width: 391px; height: 222px; }
+  .s1 .p6 { top: 365px; inset-inline-start: 820px; width: 460px; height: 222px; }
+  /* فاصل رأسي رفيع بين الصور كما في الأصل */
+  .s1 .vr { position: absolute; width: 1px; background: rgb(60 40 25 / .25); }
+  .s1 .vr1 { top: 0; height: 365px; inset-inline-start: 427px; }
+  .s1 .vr2 { top: 365px; height: 222px; inset-inline-start: 427px; }
+  .s1 .vr3 { top: 365px; height: 222px; inset-inline-start: 819px; }
+  /* شريط التسميات أسفل الصف العلوي */
+  .s1 .band { position: absolute; top: 340px; inset-inline-start: 0; width: 1280px; height: 25px; background: linear-gradient(to bottom, var(--sand), #DCCCBC 85%, var(--rule)); }
+  .s1 .band-a { position: absolute; top: 340px; inset-inline-start: 0; width: 427px; height: 23px; background: var(--sand-2); }
+  .s1 .cap { position: absolute; top: 340px; width: 260px; height: 23px; margin: 0; display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 400; letter-spacing: 0.6px; color: var(--ink); text-transform: uppercase; white-space: nowrap; }
+  html[lang="ar"] .s1 .cap { font-size: 16px; letter-spacing: 0; font-weight: 700; }
+  .s1 .c1 { inset-inline-start: 82px; } .s1 .c2 { inset-inline-start: 458px; } .s1 .c3 { inset-inline-start: 856px; }
+  /* الشريط البنّي والعنوان */
+  .s1 .foot { position: absolute; top: 587px; inset-inline-start: 0; width: 1280px; height: 133px; background: var(--brown); }
+  .s1 .ttl { position: absolute; top: 611px; inset-inline-start: 0; width: 1280px; margin: 0; text-align: center; font-size: 60px; font-weight: 700; line-height: 80px; color: #FFFFFF; letter-spacing: -0.3px; }
+  html[lang="ar"] .s1 .ttl { font-size: 58px; line-height: 80px; top: 607px; letter-spacing: 0; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <img class="ph p1" src="/templates/freeform/sl-coffee-rebranding/assets/packaging.jpg" alt="كيس قهوة بالهوية الجديدة">
+    <img class="ph p2" src="/templates/freeform/sl-coffee-rebranding/assets/instagram.jpg" alt="هاتف يعرض حساب العلامة على إنستغرام">
+    <img class="ph p3" src="/templates/freeform/sl-coffee-rebranding/assets/website.jpg" alt="حاسوب محمول يعرض الصفحة الرئيسية للموقع">
+    <div class="band" aria-hidden="true"></div><div class="band-a" aria-hidden="true"></div>
+    <p class="cap c1">التغليف</p><p class="cap c2">حساب إنستغرام</p><p class="cap c3">الصفحة الرئيسية للموقع</p>
+    <img class="ph p4" src="/templates/freeform/sl-coffee-rebranding/assets/mug.jpg" alt="كوب قهوة بشعار العلامة">
+    <img class="ph p5" src="/templates/freeform/sl-coffee-rebranding/assets/business-card.jpg" alt="بطاقتا عمل بالهوية الجديدة">
+    <img class="ph p6" src="/templates/freeform/sl-coffee-rebranding/assets/social-post.jpg" alt="منشور ترويجي للعلامة">
+    <span class="vr vr1" aria-hidden="true"></span><span class="vr vr2" aria-hidden="true"></span><span class="vr vr3" aria-hidden="true"></span>
+    <div class="foot" aria-hidden="true"></div>
+    <h1 class="ttl">العرض النهائي للعلامة التجارية</h1>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 1</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

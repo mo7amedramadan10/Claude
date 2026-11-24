@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+# نموذج «تموضع العلامة التجارية»: أربعة مربعات ملوّنة متلاصقة (2×2) بأرقام وأيقونات، ونص لكل خطوة على جانبي المربعات
+# فوق خط سفلي بلون الخطوة. الشريحة الأولى تعرض الخطوات ملوّنة، والأربع التالية تُبرز خطوة واحدة وتجعل الباقي رماديًا.
+KEY = 'sl-brand-positioning'
+TITLE = {'ar': 'تموضع العلامة التجارية', 'en': 'Brand Positioning'}
+COMMENT = 'نموذج «تموضع العلامة التجارية»: عنوان أعلى بين خطين رماديين، وشبكة 2×2 من المربعات بزاويتين مدوّرتين متقابلتين، ونص كل خطوة بجانب مربعها فوق خط بلونها. الصنف off يجعل الخطوة رمادية.'
+VARS = '--ink: #000000; --accent: #4585A9; --bg: #FFFFFF; --c1: #4585A9; --c2: #419D84; --c3: #9FB956; --c4: #EC9D26; --off-bg: #F2F2F2; --off-num: #B7B7B7; --off-ic: #9B9B9B; --off-tx: #737373; --off-ln: #F1F1F1; --sep: #F2F2F2;'
+
+FONTS = {'ar': '<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">',
+         'en': '<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">'}
+FONT_STACK = {'ar': "'Tajawal', 'Segoe UI', Tahoma, sans-serif", 'en': "'Open Sans', 'Segoe UI', Tahoma, Arial, sans-serif"}
+
+STYLE = """  .ttl { position: absolute; top: 42px; inset-inline-start: 64px; margin: 0; font-size: 40px; font-weight: 400; line-height: 1.2; color: var(--ink); letter-spacing: -0.4px; }
+  html[lang="ar"] .ttl { font-weight: 500; letter-spacing: 0; }
+  .sep { position: absolute; inset-inline-start: 65px; width: 1151px; height: 2px; background: var(--sep); }
+  .sep.a { top: 127px; } .sep.b { top: 659px; }
+  /* المربعات: لكل مربع زاويتان مدوّرتان متقابلتان */
+  .tile { position: absolute; width: 250px; height: 227px; color: #fff; background: var(--c); }
+  .tile .num { position: absolute; top: 184px; font-size: 32px; line-height: 1; font-weight: 400; }
+  .tile .ic { position: absolute; width: 100px; height: 100px; }
+  .tile .ic svg { width: 100%; height: 100%; }
+  .tile .ic svg * { vector-effect: non-scaling-stroke; stroke-width: 2.2px; }
+  .t1 { top: 161px; inset-inline-start: 384px; border-start-end-radius: 40px; border-end-start-radius: 40px; }
+  .t2 { top: 161px; inset-inline-start: 647px; border-start-start-radius: 40px; border-end-end-radius: 40px; }
+  .t3 { top: 400px; inset-inline-start: 384px; border-start-start-radius: 40px; border-end-end-radius: 40px; }
+  .t4 { top: 400px; inset-inline-start: 647px; border-start-end-radius: 40px; border-end-start-radius: 40px; }
+  .t1 .num, .t2 .num { top: 23px; } .t3 .num, .t4 .num { top: 172px; }
+  .t1 .num, .t3 .num { inset-inline-start: 23px; } .t2 .num, .t4 .num { inset-inline-end: 21px; }
+  .t1 .ic { top: 64px; inset-inline-start: 76px; } .t2 .ic { top: 64px; inset-inline-start: 81px; }
+  .t3 .ic { top: 63px; inset-inline-start: 74px; } .t4 .ic { top: 63px; inset-inline-start: 74px; }
+  /* نصوص الخطوات: مثبّتة من الأسفل فوق الخط */
+  .lb { position: absolute; display: flex; flex-direction: column; justify-content: flex-end; width: 235px; margin: 0; font-size: 31px; font-weight: 400; line-height: 38px; color: var(--c); letter-spacing: -0.3px; }
+  html[lang="ar"] .lb { font-weight: 500; line-height: 44px; letter-spacing: 0; font-size: 34px; }
+  .l1 { top: 170px; height: 199px; inset-inline-start: 65px; }
+  .l2 { top: 170px; height: 199px; inset-inline-end: 64px; text-align: end; }
+  .l3 { top: 410px; height: 195px; inset-inline-start: 65px; }
+  .l4 { top: 410px; height: 195px; inset-inline-end: 64px; text-align: end; }
+  .ln { position: absolute; width: 319px; height: 3px; background: var(--c); }
+  .n1 { top: 385px; inset-inline-start: 65px; } .n2 { top: 385px; inset-inline-start: 897px; }
+  .n3 { top: 624px; inset-inline-start: 65px; } .n4 { top: 624px; inset-inline-start: 897px; }
+  .k1 { --c: var(--c1); } .k2 { --c: var(--c2); } .k3 { --c: var(--c3); } .k4 { --c: var(--c4); }
+  /* الخطوة غير المُبرزة */
+  .tile.off { background: var(--off-bg); } .tile.off .num { color: var(--off-num); } .tile.off .ic { color: var(--off-ic); }
+  html[lang="ar"] .tile .num { font-size: 36px; }
+  .lb.off { color: var(--off-tx); } .ln.off { background: var(--off-ln); }"""
+
+_S = 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"'
+ICONS = {
+    # جمهور مستهدف: شخص داخل عدسة مكبّرة وشخصان جانبيان
+    1: '<svg viewBox="6 2 86 86" aria-hidden="true" %s><circle cx="48" cy="38" r="16"/><circle cx="48" cy="33" r="5.5"/><path d="M38 49.5c2-4.5 5.6-7 10-7s8 2.5 10 7"/><path d="M59.5 49.5l3.5 3.5"/><rect x="62" y="53" width="8" height="22" rx="4" transform="rotate(-45 66 64)"/><circle cx="22" cy="33" r="5"/><path d="M11 55v-3c0-5.5 5-9.5 11-9.5 3 0 5.5 1 7.3 2.6"/><circle cx="74" cy="33" r="5"/><path d="M85 55v-3c0-5.5-5-9.5-11-9.5-2.2 0-4.2.5-5.8 1.5"/><path d="M33 66v-4c0-3 1.5-5.5 4-7"/></svg>' % _S,
+    # بطاقة سعر بخيط
+    2: '<svg viewBox="21 13 66 70" aria-hidden="true" %s><path d="M38 28l22 1 22 25a3 3 0 0 1 0 4L61 79a3 3 0 0 1-4 0L35 54l-1-22a3 3 0 0 1 4-4z"/><circle cx="45" cy="38" r="3.5"/><path d="M45 34.5c-2-6-1-14-7-15s-9 4-12 2"/></svg>' % _S,
+    # مستند بزاوية مطوية وأسطر
+    3: '<svg viewBox="0 0 100 100" aria-hidden="true" %s><path d="M22 5h35l19 19v71H22z"/><path d="M57 5v19h19"/><path d="M34 34h30M34 43h30M34 52h30M34 61h30M34 70h30M34 79h30"/></svg>' % _S,
+    # شاشة بعلامة صح
+    4: '<svg viewBox="0 0 100 100" aria-hidden="true" %s><rect x="3" y="12" width="94" height="66" rx="3"/><rect x="10" y="19" width="80" height="52"/><path d="M41 45l7 6 12-12"/><path d="M50 78v11M32 90h36"/></svg>' % _S,
+}
+
+
+def slide(hl):  # hl: رقم الخطوة المُبرزة، أو 0 لإظهار الخطوات كلها ملوّنة
+    off = lambda n: ' off' if hl and n != hl else ''
+    h = '\n    <h1 class="ttl">§TTL§</h1>\n    <div class="sep a"></div><div class="sep b"></div>'
+    for n in range(1, 5):
+        h += ('\n    <div class="tile t%d k%d%s"><span class="num">§N%d§</span><div class="ic">%s</div></div>' % (n, n, off(n), n, ICONS[n])
+              + '\n    <p class="lb l%d k%d%s"><span>§L%d§</span></p><div class="ln n%d k%d%s"></div>' % (n, n, off(n), n, n, n, off(n)))
+    return h + '\n  '
+
+
+SLIDES = [slide(0), slide(1), slide(2), slide(3), slide(4)]
+
+STR = {
+    'ar': {'TTL': 'قالب تموضع العلامة التجارية',
+           'N1': '01', 'N2': '02', 'N3': '03', 'N4': '04',
+           'L1': 'حدّد جمهورك المستهدف', 'L2': 'أبرِز ما يميّز علامتك التجارية',
+           'L3': 'صُغ بيانًا لتموضع العلامة التجارية', 'L4': 'اختبر بيانك'},
+    'en': {'TTL': 'Brand Positioning PowerPoint Template',
+           'N1': '01', 'N2': '02', 'N3': '03', 'N4': '04',
+           'L1': 'IDENTIFY YOUR TARGET AUDIENCE', 'L2': 'EMPHASIZE WHAT MAKES YOUR BRAND UNIQUE',
+           'L3': 'CURATE A BRAND POSITIONING STATEMENT', 'L4': 'TEST YOUR STATEMENT'},
+}
+
+TEMPLATE = {
+    'key': KEY, 'kind': 'slides', 'category': 'marketing', 'icon': '🎯',
+    'name': 'تموضع العلامة التجارية', 'nameEn': 'Brand Positioning',
+    'description': 'خمس شرائح لخطوات تموضع العلامة الأربع: نظرة عامة ملوّنة ثم إبراز كل خطوة على حدة',
+    'descriptionEn': 'Five slides of the four brand positioning steps: colored overview, then each step highlighted',
+    'sections': [
+        {'title': 'الخطوات الأربع', 'titleEn': 'Four Steps'},
+        {'title': 'تحديد الجمهور المستهدف', 'titleEn': 'Identify Target Audience'},
+        {'title': 'إبراز ما يميّز العلامة', 'titleEn': 'Emphasize Brand Uniqueness'},
+        {'title': 'صياغة بيان التموضع', 'titleEn': 'Curate Positioning Statement'},
+        {'title': 'اختبار البيان', 'titleEn': 'Test Your Statement'},
+    ],
+    'brief': 'صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الصنف off يجعل الخطوة رمادية في شرائح الإبراز، وألوان الخطوات في المتغيّرات --c1..--c4.',
+}

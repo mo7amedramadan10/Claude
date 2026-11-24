@@ -1,0 +1,170 @@
+G001	7	sl-6-level-circular-funnel|6-level-circular-funnel-powerpoint-template|7
+G002	12	sl-abstract-company-investment|abstract-company-investment-powerpoint-template|12
+G003	12	sl-aesthetic-geometry|aesthetic-geometry-powerpoint-template|12
+G004	16	sl-ai-business-plan|ai-business-plan-powerpoint-template|16
+G005	10	sl-ai-corporate-training|ai-corporate-training-powerpoint-template|10
+G006	15	sl-ai-digital-transformation|ai-digital-transformation-powerpoint-template|15
+G007	15	sl-ai-driven-change-management|ai-driven-change-management-powerpoint-template|15
+G008	12	sl-ai-powered-growth|ai-powered-growth-powerpoint-template|12
+G009	14	sl-ai-strategic-plan|ai-strategic-plan-powerpoint-template|14
+G010	9	sl-ai-training|ai-training-presentation-template|9
+G011	17	sl-ai-transformation-roadmap|ai-transformation-roadmap-powerpoint-template|17
+G012	5	sl-aida-funnel-slide|aida-funnel-slide-powerpoint-template|5
+G013	13	sl-altius-business|altius-business-presentation-template|13
+G014	13	sl-animated-business-case-and-roi-analysis|animated-business-case-and-roi-analysis|13
+G015	11	sl-animated-swot-analysis-slide|animated-swot-analysis-slide-template|6 ; sl-animated-swot-layout|animated-swot-layout-powerpoint-template|5
+G016	15	sl-annual-tax-planning-review|annual-tax-planning-review-powerpoint-template|15
+G017	16	sl-aqal-model|aqal-model-powerpoint-template|5 ; sl-arcs-model|arcs-model-powerpoint-template|4 ; sl-arcs-model-slide-template-powerpoint|arcs-model-slide-template-powerpoint|5 ; sl-barbell-strategy-diagram|barbell-strategy-diagram-powerpoint-template|2
+G018	6	sl-barbell-strategy|barbell-strategy-powerpoint-template|3 ; sl-blue-store-performance-dashboard|blue-store-performance-dashboard-powerpoint-template|3
+G019	16	sl-blue-white-business|blue-white-business-powerpoint-template|11 ; sl-bottom-up-strategic-planning|bottom-up-strategic-planning-powerpoint-template|5
+G020	15	sl-brand-architecture|brand-architecture-powerpoint-template|2 ; sl-brand-identity|brand-identity-powerpoint-template|13
+G021	7	sl-brand-positioning|brand-positioning-powerpoint-template|5 ; sl-business-architecture|business-architecture-powerpoint-template|2
+G022	17	sl-business-case-studies|business-case-studies-powerpoint-template|17
+G023	31	sl-business-case-study|business-case-study-powerpoint-template|31
+G024	13	sl-business-development-powerpoint|business-development-powerpoint-template|13
+G025	14	sl-business-development-presentation|business-development-presentation-template|14
+G026	16	sl-business-growth|business-growth-powerpoint-template|12 ; sl-business-kpi-slide|business-kpi-slide-powerpoint-template|2 ; sl-business-meeting|business-meeting-powerpoint-template|1 ; sl-business-meeting-slide|business-meeting-slide-powerpoint-template|1
+G027	42	sl-business-plan|business-plan-powerpoint-templates|42
+G028	15	sl-business-process-outsourcing|business-process-outsourcing-powerpoint-template|15
+G029	19	sl-business-report|business-report-presentation-template|19
+G030	31	sl-business-review|business-review-powerpoint-template|31
+G031	12	sl-business-strategy-overview|business-strategy-overview-powerpoint-template|12
+G032	17	sl-business-strategy-planning|business-strategy-planning-powerpoint-template|17
+G033	6	sl-capability-statement|capability-statement-presentation-template|2 ; sl-card-style-business-model-canvas|card-style-business-model-canvas-powerpoint-template|2 ; sl-champ-model|champ-model-powerpoint-template|2
+G034	17	sl-circles-company-profile|circles-company-profile-powerpoint-template|17
+G035	13	sl-cirqa-business|cirqa-business-powerpoint-template|13
+G036	14	sl-client-onboarding|client-onboarding-powerpoint-template|13 ; sl-coffee-rebranding|coffee-rebranding-powerpoint-template|1
+G037	10	sl-company-introduction|company-introduction-powerpoint-template|10
+G038	16	sl-competitor-analysis|competitor-analysis-powerpoint-template|13 ; sl-conflict-management-infographic-slide|conflict-management-infographic-slide-template|1 ; sl-conflict-of-interest-slide-template-powerpoint|conflict-of-interest-slide-template-powerpoint|2
+G039	14	sl-consulting-case-study|consulting-case-study-powerpoint-template|14
+G040	15	sl-corporate-ai-training|corporate-ai-training-powerpoint-template|15
+G041	10	sl-corporate-annual-meeting|corporate-annual-meeting-powerpoint-template|10
+G042	15	sl-corporate-identity|corporate-identity-powerpoint-template|15
+G043	19	sl-corporate-innovation-lab-proposal|corporate-innovation-lab-proposal-powerpoint-template|19
+G044	12	sl-corporate-pro|corporate-pro-powerpoint-template|12
+G045	12	sl-corporate-strategy-planning|corporate-strategy-planning-powerpoint-template|12
+G046	14	sl-corporate-tax-planning|corporate-tax-planning-powerpoint-template|14
+G047	10	sl-corporate-training|corporate-training-powerpoint-template|10
+G048	12	sl-corporate-vision|corporate-vision-powerpoint-template|12
+G049	12	sl-corporate-wellness|corporate-wellness-presentation-template|12
+G050	19	sl-creative-business-pitch-deck|creative-business-pitch-deck-powerpoint-template|19
+G051	12	sl-creative-business-powerpoint|creative-business-powerpoint-presentation-template|12
+G052	9	sl-creative-company-profile|creative-company-profile-presentation-template|9
+G053	15	sl-crowdfunding-campaign-plan|crowdfunding-campaign-plan-powerpoint-template|15
+G054	13	sl-crowdfunding-media-kit|crowdfunding-media-kit-powerpoint-template|13
+G055	15	sl-crowdfunding-pitch-deck|crowdfunding-pitch-deck-powerpoint-template|15
+G056	12	sl-cyber-security-research|cyber-security-research-powerpoint-template|12
+G057	17	sl-cybersecurity-assessment|cybersecurity-assessment-powerpoint-template|17
+G058	8	sl-dark-company-presentation|dark-company-presentation-powerpoint-template|8
+G059	16	sl-data-consultancy-services|data-consultancy-services-powerpoint-template|15 ; sl-data-lineage|data-lineage-powerpoint-template|1
+G060	7	sl-data-strategy-roadmap|data-strategy-roadmap-powerpoint-template|2 ; sl-decide-model-framework|decide-model-framework-powerpoint-template|3 ; sl-decision-grade-analysis-model|decision-grade-analysis-model-powerpoint-template|2
+G061	14	sl-decision-making-under-uncertainty|decision-making-under-uncertainty-powerpoint-template|14
+G062	13	sl-decor-store|decor-store-powerpoint-template|13
+G063	14	sl-delphi-method|delphi-method-powerpoint-template|4 ; sl-digital-agency-portfolio|digital-agency-portfolio-powerpoint-template|10
+G064	15	sl-digital-transformation-business-process-management|digital-transformation-business-process-management-powerpoint-template|13 ; sl-dmadv-model|dmadv-model-powerpoint-template|2
+G065	17	sl-employee-performance-review|employee-performance-review-powerpoint-template|17
+G066	12	sl-enterprise-business-architecture|enterprise-business-architecture-powerpoint-template|1 ; sl-enterprise-business|enterprise-business-powerpoint-template|11
+G067	18	sl-evidence-based-insights|evidence-based-insights-powerpoint-template|18
+G068	16	sl-facts-options-risks-benefits-model|facts-options-risks-benefits-model-powerpoint-template|3 ; sl-failed-project-post-mortem|failed-project-post-mortem-powerpoint-template|13
+G069	14	sl-field-service-management|field-service-management-powerpoint-templates|14
+G070	11	sl-financial-report-powerpoint|financial-report-powerpoint-presentation-template|11
+G071	16	sl-fintech-innovation|fintech-innovation-powerpoint-template|16
+G072	14	sl-formal-company-profile|formal-company-profile-powerpoint-template|13 ; sl-formal-executive-briefing|formal-executive-briefing-powerpoint-template|1
+G073	13	sl-global-business-strategy|global-business-strategy-powerpoint-template|13
+G074	15	sl-global-expansion-plan|global-expansion-plan-powerpoint-template|15
+G075	12	sl-global-shipping|global-shipping-powerpoint-template|12
+G076	15	sl-golf-tournament-proposal|golf-tournament-proposal-powerpoint-template|9 ; sl-governance-framework-cycle-diagram|governance-framework-cycle-diagram-powerpoint-template|5 ; sl-grade-methodology-approach|grade-methodology-approach-powerpoint-template|1
+G077	6	sl-heinrichs-safety-triangle|heinrichs-safety-triangle-powerpoint-template|6
+G078	19	sl-high-stakes-pitch-deck|high-stakes-pitch-deck-powerpoint-template|19
+G079	12	sl-industrial-engineering|industrial-engineering-powerpoint-template|12
+G080	12	sl-insurance-agency|insurance-agency-powerpoint-template|12
+G081	16	sl-intellectual-property-protection-strategy|intellectual-property-protection-strategy-powerpoint-template|16
+G082	13	sl-investment-opportunity-assessment|investment-opportunity-assessment-powerpoint-template|13
+G083	21	sl-investor-presentation|investor-presentation-powerpoint-template|21
+G084	18	sl-investors-relations-overview|investors-relations-overview-powerpoint-template|18
+G085	14	sl-key-customer-onboarding|key-customer-onboarding-powerpoint-template|14
+G086	11	sl-kpi-categories|kpi-categories-powerpoint-template|5 ; sl-ladder-of-inference-model|ladder-of-inference-model-powerpoint-template|6
+G087	16	sl-lean-construction|lean-construction-powerpoint-template|16
+G088	12	sl-light-blue-corporate|light-blue-corporate-powerpoint-template|12
+G089	8	sl-light-company-presentation|light-company-presentation-powerpoint-template|8
+G090	14	sl-light-geometry-aesthetic|light-geometry-aesthetic-powerpoint-template|12 ; sl-lightweight-store-performance-dashboard|lightweight-store-performance-dashboard-powerpoint-template|2
+G091	14	sl-lightweight-tam-sam-som|lightweight-tam-sam-som-powerpoint-template|4 ; sl-logo|logo-presentation-template|10
+G092	19	sl-management-consulting|management-consulting-powerpoint-template|19
+G093	13	sl-management-report|management-report-powerpoint-template|13
+G094	13	sl-management-review|management-review-presentation-template|13
+G095	14	sl-market-positioning|market-positioning-powerpoint-template|14
+G096	6	sl-marketing-funnel-infographic|marketing-funnel-infographic-powerpoint-template|6
+G097	33	sl-marketing-plan|marketing-plan-presentation-template|33
+G098	18	sl-marketing-promotion-campaign|marketing-promotion-campaign-powerpoint-template|18
+G099	4	sl-mckinsey-scr-framework|mckinsey-scr-framework-powerpoint-template|4
+G100	17	sl-merger-and-acquisition|merger-and-acquisition-powerpoint-template|17
+G101	13	sl-microbusiness|microbusiness-powerpoint-template|13
+G102	12	sl-minimal-style-business|minimal-style-business-powerpoint-template|12
+G103	12	sl-modern-business|modern-business-presentation-template|12
+G104	13	sl-modern-executive|modern-executive-powerpoint-template|12 ; sl-modern-pitch-deck|modern-pitch-deck-powerpoint-template|1
+G105	13	sl-nanotech-company-profile|nanotech-company-profile-powerpoint-template|13
+G106	15	sl-negotiation|negotiation-presentation-template|15
+G107	11	sl-neurotech|neurotech-powerpoint-template|11
+G108	13	sl-new-product-launch-powerpoint|new-product-launch-powerpoint-presentation-template|10 ; sl-nice-workforce-framework-circular-diagram|nice-workforce-framework-circular-diagram-powerpoint-template|1 ; sl-nist-framework-diagram|nist-framework-diagram-presentation-template|2
+G109	14	sl-notary-company-profile|notary-company-profile-powerpoint-template|10 ; sl-now-vs-future|now-vs-future-powerpoint-template|4
+G110	19	sl-nutraceutical|nutraceutical-powerpoint-template|19
+G111	5	sl-ogsm-model|ogsm-model-powerpoint-template|3 ; sl-ohmae-3c-model|ohmae-3c-model-powerpoint-template|1 ; sl-one-slide-marketing-plan|one-slide-marketing-plan-powerpoint-template|1
+G112	17	sl-operational-excellence|operational-excellence-presentation-template|17
+G113	13	sl-operational-report|operational-report-powerpoint-template|13
+G114	13	sl-orbit-product-powerpoint|orbit-product-powerpoint-presentation-template|13
+G115	14	sl-organic-business|organic-business-powerpoint-template|14
+G116	10	sl-osar-model|osar-model-powerpoint-template|3 ; sl-paip-notes-model|paip-notes-model-powerpoint-template|3 ; sl-pediatric-occupational-therapy-soap|pediatric-occupational-therapy-soap-powerpoint-template|4
+G117	18	sl-performance-improvement|performance-improvement-powerpoint-template|18
+G118	14	sl-pest-analysis|pest-analysis-presentation-template|5 ; sl-pie-notes-model|pie-notes-model-powerpoint-template|3 ; sl-plane-metaphor-strategic-direction|plane-metaphor-strategic-direction-powerpoint-template|2 ; sl-principle-based-management-triangle|principle-based-management-triangle-powerpoint-template|2 ; sl-product-launch-roadmap-slide|product-launch-roadmap-slide-template|2
+G119	11	sl-product-training|product-training-presentation-template|11
+G120	16	sl-professional-annual-report|professional-annual-report-presentation-template|16
+G121	14	sl-professional-business-presentation|professional-business-presentation-powerpoint-template|14
+G122	11	sl-professional-company-profile|professional-company-profile-presentation-template|11
+G123	10	sl-professional-report|professional-report-powerpoint-template|10
+G124	9	sl-professional-sales-proposal|professional-sales-proposal-powerpoint-template|9
+G125	12	sl-project-introduction|project-introduction-powerpoint-template|12
+G126	5	sl-project-perspectives|project-perspectives-powerpoint-template|5
+G127	15	sl-project-presentation|project-presentation-powerpoint-template|15
+G128	14	sl-project-proposal-powerpoint|project-proposal-powerpoint-presentation-template|14
+G129	16	sl-project-team-structure|project-team-structure-powerpoint-template|3 ; sl-project-update|project-update-powerpoint-template|13
+G130	15	sl-purple-white-company|purple-white-company-powerpoint-template|12 ; sl-purpose-scope-decision-framing|purpose-scope-decision-framing-powerpoint-template|3
+G131	3	sl-qrqc-model|qrqc-model-powerpoint-template|3
+G132	14	sl-quarterly-management-review|quarterly-management-review-powerpoint-template|14
+G133	11	sl-radical-candor-model|radical-candor-model-powerpoint-template|6 ; sl-rasci-raci|rasci-raci-powerpoint-template|4 ; sl-rebranding-strategy|rebranding-strategy-powerpoint-template|1
+G134	15	sl-relocation-services|relocation-services-powerpoint-template|15
+G135	9	sl-research-onion|research-onion-powerpoint-template|7 ; sl-responsibility-map|responsibility-map-powerpoint-template|2
+G136	17	sl-restaurant-company-profile|restaurant-company-profile-presentation-template|17
+G137	13	sl-reverse-logistics|reverse-logistics-presentation-template|10 ; sl-rostows-development-stages|rostows-development-stages-powerpoint-template|2 ; sl-rostows-model-of-economic-growth|rostows-model-of-economic-growth-powerpoint-template|1
+G138	12	sl-saas-company|saas-company-powerpoint-template|12
+G139	19	sl-sales-playbook|sales-playbook-presentation-slide-deck|19
+G140	13	sl-sales-rep-presentation|sales-rep-presentation-powerpoint-template|13
+G141	13	sl-scaling-startup-process|scaling-startup-process-powerpoint-template|10 ; sl-scan-here-qr-code|scan-here-qr-code-powerpoint-template|3
+G142	12	sl-sculpted-geometry|sculpted-geometry-powerpoint-template|12
+G143	13	sl-service-brief|service-brief-powerpoint-template|13
+G144	4	sl-simple-brand-strategy-canvas|simple-brand-strategy-canvas-powerpoint-template|4
+G145	14	sl-simple-business-powerpoint|simple-business-powerpoint-presentation-template|14
+G146	20	sl-small-business-company-profile-presentation|small-business-company-profile-presentation-powerpoint-template|20
+G147	13	sl-soap-notes-model|soap-notes-model-powerpoint-template|3 ; sl-social-media-marketing-agency|social-media-marketing-agency-powerpoint-template|10
+G148	12	sl-social-media-marketing|social-media-marketing-presentation-template|12
+G149	12	sl-soft-squares|soft-squares-powerpoint-template|10 ; sl-source-method-model|source-method-model-powerpoint-template|2
+G150	15	sl-stakeholder-presentation|stakeholder-presentation-powerpoint-template|15
+G151	15	sl-startup-fundraising-pitch-deck|startup-fundraising-pitch-deck-powerpoint-template|15
+G152	15	sl-startup-profile|startup-profile-powerpoint-template|15
+G153	2	sl-store-dashboard|store-dashboard-powerpoint-template|2
+G154	16	sl-strategic-alliance|strategic-alliance-powerpoint-template|16
+G155	13	sl-strategic-overview|strategic-overview-powerpoint-template|13
+G156	14	sl-strategic-portfolio-management-kit|strategic-portfolio-management-kit-powerpoint-template|12 ; sl-strategic-roadmap-slide|strategic-roadmap-slide-powerpoint-template|1 ; sl-strategic-vision-strategy-scorecard-template-powerpoint|strategic-vision-strategy-scorecard-template-powerpoint|1
+G157	13	sl-stratum-business|stratum-business-powerpoint-template|13
+G158	15	sl-survey|survey-presentation-template|15
+G159	12	sl-sustainability-report|sustainability-report-powerpoint-template|12
+G160	11	sl-swot-tows|swot-tows-powerpoint-template|5 ; sl-togaf-adm|togaf-adm-powerpoint-template|6
+G161	10	sl-tombstone-presentation|tombstone-presentation-powerpoint-template|10
+G162	11	sl-universal-purpose-business|universal-purpose-business-powerpoint-template|11
+G163	14	sl-vibrant-company-profile|vibrant-company-profile-slides|12 ; sl-vision-slide|vision-slide-powerpoint-template|2
+G164	5	sl-vision-strategy-scorecard|vision-strategy-scorecard-powerpoint-template|5
+G165	14	sl-vision-strategy-transformation|vision-strategy-transformation-powerpoint-template|14
+G166	15	sl-visual-corporate-profile|visual-corporate-profile-powerpoint-template|13 ; sl-vmost-analysis|vmost-analysis-powerpoint-template|2
+G167	12	sl-vmost-framework|vmost-framework-powerpoint-template|2 ; sl-vmost-model|vmost-model-powerpoint-template|2 ; sl-vmost-pyramid|vmost-pyramid-powerpoint-template|6 ; sl-waterfall-project-management|waterfall-project-management-powerpoint-template|2
+G168	12	sl-website-performance|website-performance-powerpoint-template|12
+G169	13	sl-wellness-brand-product-presentation|wellness-brand-product-presentation-powerpoint-template|13
+G170	15	sl-who-we-are|who-we-are-powerpoint-template|15

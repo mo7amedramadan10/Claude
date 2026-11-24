@@ -1,0 +1,525 @@
+# -*- coding: utf-8 -*-
+# نموذج «عرض تطوير الأعمال»: أربع عشرة شريحة بالأزرق المؤسسي والبنفسجي الفاتح: غلاف بصورة، ملخص تنفيذي بمؤشرات،
+# تعريف بالشركة، بيان المشكلة، الحل، عرض الخدمات، تحليل السوق برسم أعمدة، المنافسة، نموذج العمل برسم حلقي،
+# استراتيجية الدخول إلى السوق، خارطة الطريق، التوقعات المالية برسم خطي، الفريق، والختام.
+KEY = 'sl-business-development-presentation'
+TITLE = {'ar': 'عرض تطوير الأعمال', 'en': 'Business Development Presentation'}
+COMMENT = 'نموذج «عرض تطوير الأعمال»: إطار 1280×720 بإحداثيات مطلقة منطقية؛ الأزرق --accent للعناوين الفرعية والكتل، والبنفسجي الفاتح --lav للبطاقات، والكحلي --navy للعناوين الداخلية. الرسوم الثلاثة SVG من كتل chart-data وchart-data-2 وchart-data-3.'
+VARS = '--ink:#000000; --accent:#4F67C9; --title:#2F4496; --lav:#DCE1F4; --navy:#152F52; --gray-bg:#F2F2F2; --body:#595959; --muted:#7F7F7F; --role:#6B7ECF; --cyan:#5FCBF3; --sky:#BDD5EE; --bg:#FFFFFF;'
+
+FONTS = {'en': '<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600;1,700&display=swap" rel="stylesheet">'}
+FONT_STACK = {'en': "'Open Sans', 'Segoe UI', Arial, sans-serif"}
+
+STYLE = r"""  .frame { color: var(--ink); }
+  .frame h1, .frame h2, .frame h3, .frame p { margin: 0; }
+  .abs { position: absolute; }
+  .frame.s2, .frame.s5, .frame.s8, .frame.s13 { background: var(--gray-bg); }
+  /* العنوان الفرعي والعنوان الرئيس المشتركان */
+  .sub { position: absolute; top: 60px; inset-inline-start: 83px; font-size: 17px; line-height: 20px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+  .ttl { position: absolute; top: 103px; inset-inline-start: 83px; font-size: 50px; line-height: 55px; font-weight: 700; color: #000; letter-spacing: -.4px; }
+  .sub.r, .ttl.r { inset-inline-start: 679px; }
+  .tx { font-size: 17.5px; line-height: 23px; color: var(--body); }
+  .ic { color: var(--accent); }
+  .ic svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .chart text { direction: ltr; }
+  .chart text { font-family: var(--font); font-size: 13px; fill: var(--body); }
+  .lgd { position: absolute; display: flex; gap: 18px; font-size: 14px; color: var(--body); align-items: center; white-space: nowrap; }
+  .lgd span { display: inline-flex; align-items: center; gap: 6px; }
+  .lgd i { width: 9px; height: 9px; display: inline-block; }
+  /* الشعار */
+  .logo { position: absolute; top: 63px; display: flex; align-items: center; gap: 18px; }
+  .logo svg { width: 44px; height: 46px; flex: none; }
+  .logo p { font-size: 16px; line-height: 24px; letter-spacing: 2.2px; color: #1A1A1A; }
+  html[lang="ar"] .logo p { letter-spacing: 0; font-weight: 500; font-size: 18px; }
+  html[dir="rtl"] .logo svg { transform: scaleX(-1); }
+
+  /* 1) الغلاف */
+  .s1 .band { top: 400px; inset-inline-start: 0; width: 1280px; height: 320px; background: var(--accent); }
+  .s1 .wpan { top: 0; inset-inline-start: 0; width: 1280px; height: 582px; background: #fff; border-end-start-radius: 92px; }
+  .s1 .photo { top: 0; inset-inline-end: 0; width: 460px; height: 720px; object-fit: cover; }
+  html[dir="rtl"] .s1 .photo, html[dir="rtl"] .s2 .photo, html[dir="rtl"] .s11 .photo { transform: scaleX(-1); }
+  .s1 .logo { inset-inline-start: 117px; }
+  .s1 .big { position: absolute; top: 314px; inset-inline-start: 111px; font-size: 77px; line-height: 86px; font-weight: 700; color: var(--title); letter-spacing: -1.5px; }
+  .s1 .pt { position: absolute; top: 512px; inset-inline-start: 113px; font-size: 30px; line-height: 36px; letter-spacing: 6.3px; color: #404040; font-weight: 400; }
+  .s1 .tag { position: absolute; top: 625px; inset-inline-start: 110px; font-size: 31px; line-height: 38px; font-style: italic; color: #fff; }
+  html[lang="ar"] .s1 .big { font-size: 84px; letter-spacing: 0; font-weight: 800; line-height: 92px; top: 300px; }
+  html[lang="ar"] .s1 .pt { letter-spacing: 1px; font-size: 31px; }
+  html[lang="ar"] .s1 .tag { font-style: normal; }
+
+  /* 2) الملخص التنفيذي */
+  .s2 .lav { top: 400px; inset-inline-start: 1013px; width: 267px; height: 320px; background: var(--lav); border-start-end-radius: 52px; }
+  .s2 .photo { top: 51px; inset-inline-start: 681px; width: 548px; height: 617px; object-fit: cover; border-radius: 30px; }
+  .s2 .sq { top: 105px; inset-inline-start: 663px; width: 77px; height: 87px; background: var(--accent); border-radius: 10px; }
+  .s2 .wpan { top: 400px; inset-inline-start: 0; width: 930px; height: 320px; background: #fff; border-start-end-radius: 72px; }
+  .s2 .bar { top: 398px; inset-inline-start: 82px; width: 563px; height: 7px; background: var(--accent); border-radius: 4px; }
+  .s2 .intro { position: absolute; top: 257px; inset-inline-start: 83px; width: 490px; }
+  .s2 .st { position: absolute; top: 445px; height: 217px; width: 200px; }
+  .s2 .st + .st { border-inline-start: 1px solid #E3E3E3; }
+  .s2 .st .ic { position: absolute; top: 2px; inset-inline-start: var(--o); width: 54px; height: 50px; }
+  .s2 .st h2 { position: absolute; top: 74px; inset-inline-start: var(--o); font-size: 40px; line-height: 44px; font-weight: 700; color: #000; letter-spacing: -.5px; white-space: nowrap; }
+  .s2 .st p { position: absolute; top: 131px; inset-inline-start: var(--o); width: 150px; font-size: 18px; line-height: 23px; color: var(--body); }
+  .s2 .st1 { inset-inline-start: 83px; --o: 0px; border: 0; } .s2 .st2 { inset-inline-start: 262px; --o: 36px; }
+  .s2 .st3 { inset-inline-start: 469px; --o: 43px; } .s2 .st4 { inset-inline-start: 681px; --o: 46px; }
+
+  /* 3) تعريف بالشركة */
+  .s3 .tagl { position: absolute; top: 236px; inset-inline-start: 83px; font-size: 18px; line-height: 24px; font-style: italic; color: var(--body); }
+  html[lang="ar"] .s3 .tagl { font-style: normal; }
+  .s3 .vm { position: absolute; inset-inline-start: 83px; width: 514px; border-top: 4px solid var(--accent); }
+  .s3 .vm h2 { margin-top: 14px; font-size: 22px; line-height: 26px; font-weight: 700; color: var(--accent); }
+  .s3 .vm p { margin-top: 14px; width: 500px; }
+  .s3 .vm1 { top: 335px; } .s3 .vm2 { top: 514px; }
+  .s3 .vm2 p { margin-top: 18px; }
+  .s3 .card { top: 33px; inset-inline-start: 674px; width: 577px; height: 655px; border: 2px solid var(--accent); border-radius: 30px; background: #fff; }
+  .s3 .cv { position: absolute; top: 76px; inset-inline-start: 717px; font-size: 30px; line-height: 40px; font-weight: 700; color: #182D4A; }
+  .s3 .cvp { position: absolute; top: 124px; inset-inline-start: 717px; }
+  .s3 .row { position: absolute; inset-inline-start: 709px; width: 501px; height: 104px; }
+  .s3 .row .n { position: absolute; top: 0; inset-inline-start: 0; width: 104px; height: 104px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 30px; font-weight: 700; display: flex; align-items: center; padding-inline-start: 28px; }
+  .s3 .row .pill { position: absolute; top: 0; inset-inline-start: 79px; width: 422px; height: 104px; border-radius: 52px; background: var(--lav); display: flex; align-items: center; justify-content: flex-end; padding-inline-end: 50px; font-size: 25px; color: #182D4A; text-transform: uppercase; }
+  html[lang="ar"] .s3 .row .pill { font-weight: 500; font-size: 26px; }
+
+  /* 4) بيان المشكلة */
+  .s4 .rt { position: absolute; top: 78px; inset-inline-start: 778px; width: 412px; }
+  .s4 .back { top: 247px; inset-inline-start: 208px; width: 838px; height: 473px; background: var(--accent); border-radius: 30px 30px 0 0; }
+  .s4 .cd { position: absolute; top: 279px; width: 296px; height: 409px; background: var(--lav); border-start-start-radius: 22px; border-start-end-radius: 22px; }
+  .s4 .cd1 { inset-inline-start: 35px; } .s4 .cd2 { inset-inline-start: 340px; } .s4 .cd3 { inset-inline-start: 644px; } .s4 .cd4 { inset-inline-start: 949px; }
+  .num { position: absolute; width: 64px; height: 64px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 18px; font-weight: 700; display: grid; place-items: center; }
+  .s4 .cd .num { top: 14px; inset-inline-end: 24px; }
+  .s4 .cd .ic { position: absolute; top: 52px; inset-inline-start: 38px; width: 100px; height: 92px; color: var(--navy); }
+  .s4 .cd h2 { position: absolute; top: 193px; inset-inline-start: 39px; width: 230px; font-size: 25px; line-height: 30px; font-weight: 700; color: var(--navy); }
+  .s4 .cd p { position: absolute; top: 275px; inset-inline-start: 39px; width: 220px; font-size: 18px; line-height: 23px; color: var(--body); }
+
+  /* 5) نظرة عامة على الحل */
+  .s5 .cd { position: absolute; top: 205px; width: 386px; height: 482px; background: #fff; border-radius: 20px; }
+  .s5 .cd1 { inset-inline-start: 43px; } .s5 .cd2 { inset-inline-start: 447px; } .s5 .cd3 { inset-inline-start: 853px; }
+  .s5 .cd .hd { position: absolute; top: 0; inset-inline-start: 0; width: 386px; height: 140px; background: var(--lav); border-radius: 20px; }
+  .s5 .cd .big { position: absolute; top: 22px; inset-inline-start: 43px; font-size: 80px; line-height: 92px; font-weight: 700; color: var(--navy); letter-spacing: -2px; }
+  .s5 .cd .ic { position: absolute; top: 175px; inset-inline-start: 48px; width: 80px; height: 80px; color: #000; }
+  .s5 .cd h2 { position: absolute; top: 284px; inset-inline-start: 41px; font-size: 36px; line-height: 44px; font-weight: 700; color: #262626; }
+  .s5 .cd p { position: absolute; top: 350px; inset-inline-start: 41px; width: 310px; font-size: 18px; line-height: 23px; color: var(--muted); }
+  .s5 .cd2 .ic { width: 100px; top: 168px; inset-inline-start: 40px; }
+  html[lang="ar"] .s5 .cd .big { top: 34px; }
+  .s5 .cd .ln { position: absolute; top: 478px; inset-inline-start: 55px; width: 277px; height: 7px; border-radius: 4px; background: var(--accent); }
+
+  /* 6) عرض الخدمات */
+  .s6 .tr { top: 0; inset-inline-start: 1013px; width: 267px; height: 158px; background: var(--lav); border-end-start-radius: 60px; }
+  .s6 .bt { top: 415px; inset-inline-start: 0; width: 1280px; height: 305px; background: var(--lav); border-radius: 60px 60px 0 0; }
+  .s6 .card { top: 237px; inset-inline-start: 45px; width: 1190px; height: 370px; background: #fff; border: 2px solid var(--accent); border-radius: 20px; }
+  .tbl { position: absolute; border-collapse: collapse; }
+  .tbl th, .tbl td { text-align: start; padding: 0; padding-inline-start: 20px; vertical-align: middle; }
+  .s6 .tbl { top: 278px; inset-inline-start: 86px; width: 1113px; }
+  .s6 .tbl th { height: 65px; background: var(--lav); font-size: 20px; font-weight: 700; color: #1A1C24; }
+  .s6 .tbl td { height: 60px; font-size: 18px; color: var(--body); }
+  .s6 .tbl tr:nth-child(2) td { padding-top: 0; }
+  .s6 .tbl .c1 { width: 327px; } .s6 .tbl .c2 { width: 291px; }
+  .s6 .dt { position: absolute; top: 632px; inset-inline-start: 97px; font-size: 31px; line-height: 40px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .s6 .dp { position: absolute; top: 638px; inset-inline-start: 315px; width: 875px; }
+
+  /* 7) تحليل السوق */
+  .s7 .rp { top: 0; inset-inline-start: 573px; width: 707px; height: 720px; background: var(--gray-bg); }
+  .s7 .intro { position: absolute; top: 227px; inset-inline-start: 83px; width: 440px; }
+  .s7 .blk { top: 355px; inset-inline-start: 0; width: 615px; height: 365px; background: var(--accent); border-start-end-radius: 62px; }
+  .s7 .vl { top: 383px; inset-inline-start: 308px; width: 1px; height: 307px; background: rgb(255 255 255 / .22); }
+  .s7 .hl { top: 543px; inset-inline-start: 59px; width: 498px; height: 1px; background: rgb(255 255 255 / .22); }
+  .s7 .kv { position: absolute; color: #fff; }
+  .s7 .kv h2 { font-size: 40px; line-height: 46px; font-weight: 700; letter-spacing: -.5px; }
+  .s7 .kv p { margin-top: 8px; font-size: 18px; line-height: 23px; width: 190px; }
+  .s7 .k1 { top: 404px; inset-inline-start: 83px; } .s7 .k2 { top: 404px; inset-inline-start: 378px; }
+  .s7 .k3 { top: 575px; inset-inline-start: 83px; } .s7 .k4 { top: 575px; inset-inline-start: 378px; }
+  .s7 .k4 p { width: 160px; }
+  .s7 .mg { position: absolute; top: 76px; inset-inline-start: 667px; font-size: 30px; line-height: 40px; font-weight: 700; color: #182D4A; }
+  .s7 .mgp { position: absolute; top: 124px; inset-inline-start: 667px; }
+  .s7 .chart { position: absolute; top: 180px; inset-inline-start: 640px; width: 610px; height: 510px; }
+  .s7 .lgd { top: 660px; inset-inline-start: 890px; font-size: 14px; }
+
+  /* 8) المشهد التنافسي */
+  .s8 .rt { position: absolute; top: 78px; inset-inline-start: 906px; width: 300px; }
+  .s8 .wp { top: 243px; inset-inline-start: 0; width: 1280px; height: 477px; background: #fff; border-radius: 72px 72px 0 0; }
+  .s8 .tbl { top: 278px; inset-inline-start: 86px; width: 1113px; }
+  .s8 .tbl th { height: 59px; background: var(--accent); color: #fff; font-size: 20px; font-weight: 700; }
+  .s8 .tbl td { height: 59px; font-size: 20px; color: var(--body); }
+  .s8 .tbl td.c1 { color: #1F2D45; }
+  .s8 .tbl .c1 { width: 278px; } .s8 .tbl .c2 { width: 255px; } .s8 .tbl .c3 { width: 241px; }
+  .s8 .note { top: 611px; inset-inline-start: 71px; width: 1138px; height: 83px; background: var(--accent); border-radius: 10px; }
+  .s8 .note p { position: absolute; top: 16px; inset-inline-start: 43px; width: 1010px; font-size: 18px; line-height: 23px; color: #fff; }
+
+  /* 9) نموذج العمل */
+  .s9 .lp { top: 0; inset-inline-start: 0; width: 610px; height: 720px; background: var(--gray-bg); }
+  .s9 .tab { top: 0; inset-inline-start: 576px; width: 77px; height: 52px; background: var(--accent); border-radius: 0 0 10px 10px; }
+  .s9 .rm { position: absolute; top: 76px; inset-inline-start: 78px; font-size: 30px; line-height: 40px; font-weight: 700; color: #182D4A; }
+  .s9 .rmp { position: absolute; top: 124px; inset-inline-start: 78px; }
+  .s9 .chart { position: absolute; top: 180px; inset-inline-start: 90px; width: 430px; height: 425px; }
+  .s9 .chart text { font-size: 22px; font-weight: 700; fill: #fff; }
+  .s9 .lgd { top: 653px; inset-inline-start: 75px; gap: 17px; }
+  .s9 .sec { position: absolute; inset-inline-start: 679px; width: 514px; border-top: 4px solid var(--accent); }
+  .s9 .sec h2 { margin-top: 14px; font-size: 23px; line-height: 28px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+  .s9 .sec p { margin-top: 9px; width: 500px; }
+  .s9 .sec1 { top: 265px; } .s9 .sec2 { top: 442px; }
+  .s9 .sec ul { margin: 11px 0 0; padding: 0; list-style: none; width: 490px; }
+  .s9 .sec li { position: relative; padding-inline-start: 30px; font-size: 17.5px; line-height: 23px; color: var(--body); }
+  .s9 .sec li::before { content: "*"; position: absolute; inset-inline-start: 0; top: -1px; color: var(--accent); font-weight: 700; }
+
+  /* 10) استراتيجية الدخول إلى السوق */
+  .s10 .tr { top: 0; inset-inline-start: 862px; width: 418px; height: 131px; background: var(--lav); border-end-start-radius: 70px; }
+  .s10 .bt { top: 661px; inset-inline-start: 0; width: 1280px; height: 59px; background: var(--lav); border-radius: 40px 40px 0 0; }
+  .s10 .intro { position: absolute; top: 210px; inset-inline-start: 83px; width: 500px; }
+  .s10 .cd { position: absolute; top: 324px; width: 270px; height: 298px; background: #F1F1F1; border-radius: 16px; }
+  .s10 .cd1 { inset-inline-start: 67px; } .s10 .cd2 { inset-inline-start: 358px; } .s10 .cd3 { inset-inline-start: 651px; top: 244px; height: 378px; background: var(--accent); } .s10 .cd4 { inset-inline-start: 939px; }
+  .s10 .cd h2 { position: absolute; top: 67px; inset-inline-start: 34px; font-size: 25px; line-height: 30px; font-weight: 700; color: var(--navy); text-transform: uppercase; }
+  .s10 .cd p { position: absolute; top: 121px; inset-inline-start: 34px; width: 205px; font-size: 18px; line-height: 23.3px; color: var(--body); }
+  .s10 .cd3 h2 { top: 147px; color: #fff; } .s10 .cd3 p { top: 201px; color: #fff; }
+  .s10 .pin { position: absolute; top: 590px; width: 56px; height: 62px; }
+  .s10 .pin svg { position: absolute; inset: 0; width: 56px; height: 62px; }
+  .s10 .pin b { position: absolute; top: 15px; inset-inline-start: 0; width: 56px; text-align: center; font-size: 18px; font-weight: 700; color: var(--accent); }
+  .s10 .p1 { inset-inline-start: 174px; } .s10 .p2 { inset-inline-start: 464px; } .s10 .p3 { inset-inline-start: 758px; } .s10 .p4 { inset-inline-start: 1046px; }
+
+  /* 11) خارطة الطريق */
+  .s11 .photo { top: 51px; inset-inline-start: 63px; width: 547px; height: 617px; object-fit: cover; border-radius: 34px; }
+  .s11 .intro { position: absolute; top: 253px; inset-inline-start: 679px; width: 500px; }
+  .s11 .cd { position: absolute; top: 399px; width: 296px; height: 295px; background: var(--lav); border-radius: 30px; }
+  .s11 .cd1 { inset-inline-start: 35px; } .s11 .cd2 { inset-inline-start: 340px; } .s11 .cd3 { inset-inline-start: 644px; } .s11 .cd4 { inset-inline-start: 949px; }
+  .s11 .cd .num { top: -23px; inset-inline-start: 26px; }
+  .s11 .cd .ic { position: absolute; top: 83px; inset-inline-start: 34px; width: 70px; height: 70px; color: #000; }
+  .s11 .cd h2 { position: absolute; top: 167px; inset-inline-start: 30px; font-size: 26px; line-height: 34px; font-weight: 700; color: var(--navy); }
+  .s11 .cd p { position: absolute; top: 210px; inset-inline-start: 30px; width: 240px; font-size: 18px; line-height: 23px; color: var(--body); }
+
+  /* 12) التوقعات المالية */
+  .s12 .gp { top: 252px; inset-inline-start: 0; width: 1280px; height: 468px; background: var(--gray-bg); }
+  .s12 .rt { position: absolute; top: 99px; inset-inline-start: 794px; width: 396px; }
+  .s12 .bx { position: absolute; top: 199px; width: 373px; height: 131px; background: var(--lav); border-radius: 16px; }
+  .s12 .bx1 { inset-inline-start: 72px; } .s12 .bx2 { inset-inline-start: 454px; } .s12 .bx3 { inset-inline-start: 835px; }
+  .s12 .bx h2 { position: absolute; top: 39px; inset-inline-start: 32px; font-size: 40px; line-height: 50px; font-weight: 700; color: var(--navy); letter-spacing: -2.4px; }
+  .s12 .bx p { position: absolute; top: 29px; inset-inline-start: 189px; width: 165px; font-size: 18px; line-height: 23px; color: var(--body); }
+  .s12 .chart { position: absolute; top: 340px; inset-inline-start: 60px; width: 1150px; height: 340px; }
+
+  /* 13) الفريق */
+  .s13 .tr { top: 0; inset-inline-start: 1013px; width: 267px; height: 158px; background: var(--cyan); border-end-start-radius: 60px; }
+  .s13 .cd { position: absolute; top: 247px; width: 296px; height: 473px; background: #fff; border-start-start-radius: 18px; border-start-end-radius: 18px; overflow: hidden; }
+  .s13 .cd1 { inset-inline-start: 35px; } .s13 .cd2 { inset-inline-start: 340px; } .s13 .cd3 { inset-inline-start: 644px; } .s13 .cd4 { inset-inline-start: 948px; width: 297px; }
+  .s13 .cd img { position: absolute; top: 0; inset-inline-start: 0; width: 100%; height: 271px; object-fit: cover; }
+  .s13 .cd h2 { position: absolute; top: 309px; inset-inline-start: 40px; font-size: 26px; line-height: 34px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .s13 .cd h3 { position: absolute; top: 350px; inset-inline-start: 40px; font-size: 18px; line-height: 24px; font-weight: 700; color: var(--role); letter-spacing: .3px; white-space: nowrap; }
+  .s13 .cd p { position: absolute; top: 392px; inset-inline-start: 40px; width: 240px; font-size: 18px; line-height: 23px; color: var(--body); }
+
+  /* 14) الختام */
+  .s14 .band { top: 400px; inset-inline-start: 0; width: 1280px; height: 320px; background: var(--accent); }
+  .s14 .wpan { top: 0; inset-inline-start: 0; width: 1280px; height: 582px; background: var(--gray-bg); border-end-start-radius: 92px; }
+  .s14 .tr { top: 0; inset-inline-start: 1070px; width: 210px; height: 278px; background: var(--lav); border-end-start-radius: 70px; }
+  .s14 .logo { inset-inline-start: 82px; }
+  .s14 .chip { position: absolute; top: 215px; inset-inline-start: 62px; width: 390px; height: 62px; border-radius: 10px; background: linear-gradient(to right, var(--lav) 0%, var(--lav) 25%, #fff 72%); }
+  html[dir="rtl"] .s14 .chip { background: linear-gradient(to left, var(--lav) 0%, var(--lav) 25%, #fff 72%); }
+  .s14 .chip h2 { position: absolute; top: 11px; inset-inline-start: 30px; font-size: 30px; line-height: 40px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .s14 .big { position: absolute; top: 309px; inset-inline-start: 82px; font-size: 66px; line-height: 79px; font-weight: 700; color: #000; letter-spacing: -.6px; }
+  .s14 .ct { position: absolute; top: 636px; display: flex; align-items: center; gap: 18px; color: #fff; font-size: 24px; line-height: 38px; font-weight: 700; font-style: italic; white-space: nowrap; }
+  html[lang="ar"] .s14 .ct { font-style: normal; }
+  .s14 .ct svg { width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; flex: none; }
+  .s14 .ct1 { inset-inline-start: 72px; } .s14 .ct2 { inset-inline-start: 457px; }
+
+  /* العربية: أوزان العناوين */
+  html[lang="ar"] .ttl { font-weight: 800; letter-spacing: 0; font-size: 50px; }
+  html[lang="ar"] .sub { letter-spacing: 0; }
+  html[lang="ar"] .s12 .bx h2 { letter-spacing: -1px; }"""
+
+# ---------- الأيقونات (خطوط SVG) ----------
+I = {
+    'logo': '<svg viewBox="0 0 44 46" aria-hidden="true"><path d="M9 6 C20 2 33 3 39 7 C43 15 42 30 38 38 C27 43 15 44 7 40 C3 30 3 16 9 6 Z" fill="none" stroke="#4F67C9" stroke-width="6" stroke-linejoin="round"/></svg>',
+    'chest': '<svg viewBox="0 0 56 50"><path d="M7 22h42v22H7z"/><path d="M7 22c0-8 6-13 21-13s21 5 21 13"/><path d="M7 30h42"/><rect x="24" y="27" width="8" height="8" rx="1"/><circle cx="18" cy="17" r="2.5"/><circle cx="25" cy="14" r="2.5"/><circle cx="32" cy="15" r="2.5"/><circle cx="39" cy="18" r="2.5"/><path d="M4 9l2 2M6 9l-2 2M52 8v4M50 10h4M47 3v3M45.5 4.5h3"/></svg>',
+    'star': '<svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="21"/><path d="M25 13l3.6 7.6 8.2 1-6 5.7 1.6 8.2L25 31.4l-7.4 4.1 1.6-8.2-6-5.7 8.2-1z"/></svg>',
+    'mega': '<svg viewBox="0 0 50 50"><circle cx="12" cy="11" r="5"/><path d="M5 45V27c0-4 3-7 7-7h6l7-4"/><path d="M12 45V33"/><path d="M25 12l14-6v22l-14-6z"/><path d="M39 14h4v6h-4"/></svg>',
+    'cal': '<svg viewBox="0 0 50 50"><rect x="6" y="9" width="38" height="36" rx="2"/><path d="M6 18h38M14 5v8M36 5v8M13 25h24v14H13zM21 25v14M29 25v14M13 32h24"/></svg>',
+    'pen': '<svg viewBox="0 0 100 92"><path d="M2 76c4-10 9-12 9-6s-4 10 0 9 6-12 10-11-2 9 2 9 6-6 10-7"/><path d="M48 64l6-22 32-30 10 10-30 32z"/><path d="M48 64l12-12"/><circle cx="62" cy="50" r="3"/><path d="M80 6l12 12M90 4l6 6-4 4"/><path d="M40 72l50-12"/></svg>',
+    'note': '<svg viewBox="0 0 100 92"><path d="M10 18l26 4-10 52-20-4z"/><path d="M30 28h46v42l-10 10H30z"/><path d="M66 80V70h10"/><path d="M58 8c6 0 10 4 10 10l-6 4 2 6-14 0 2-6-6-4c0-6 6-10 12-10z"/><path d="M50 30l-12 18"/></svg>',
+    'tray': '<svg viewBox="0 0 100 92"><path d="M34 32H16L6 46v36h88V46L84 32H66"/><path d="M6 46h22l4 10h36l4-10h22"/><circle cx="52" cy="22" r="17"/><path d="M44 22l6 6 11-12"/></svg>',
+    'notes': '<svg viewBox="0 0 100 92"><path d="M48 6h30v30H50z"/><path d="M4 36h30v30H6z"/><path d="M38 48h30v30H38z"/><path d="M58 50h30v30H58z"/><path d="M30 64h22v24H30z"/></svg>',
+    'jacket': '<svg viewBox="0 0 80 80"><path d="M28 8h24l14 6 4 50-14 4H24L10 64l4-50z"/><path d="M28 8l12 22 12-22"/><path d="M40 30v38"/><path d="M28 8l-4 16 8 6-4 4M52 8l4 16-8 6 4 4"/><circle cx="44" cy="44" r="1.5"/><circle cx="44" cy="54" r="1.5"/><path d="M18 40v24M62 40v24"/></svg>',
+    'hand': '<svg viewBox="0 0 92 80"><path d="M2 24l8-8 12 12-8 8z"/><path d="M90 24l-8-8-12 12 8 8z"/><path d="M22 28l14-6 10 4 12-4 12 6"/><path d="M14 36l12 14c3 3 6 3 8 0l2-2 4 4c3 3 7 1 6-3l4 4c3 2 7 0 6-4 3 2 6 0 5-3l-17-17"/><path d="M46 26l-10 10c-3 3 1 7 4 5l8-6"/><path d="M26 50l4 4M32 46l4 4"/></svg>',
+    'chat': '<svg viewBox="0 0 80 84"><rect x="4" y="2" width="72" height="30" rx="4"/><path d="M34 32l6 6 6-6"/><path d="M14 12h52M18 18h44M14 24h52"/><circle cx="20" cy="54" r="7"/><circle cx="40" cy="58" r="7"/><circle cx="60" cy="54" r="7"/><path d="M6 78c0-8 6-14 14-14 4 0 7 1 9 3M74 78c0-8-6-14-14-14-4 0-7 1-9 3M26 82c0-8 6-14 14-14s14 6 14 14"/></svg>',
+    'award': '<svg viewBox="0 0 70 70"><path d="M35 2l6 4 7-1 3 6 6 3-1 7 4 6-4 6 1 7-6 3-3 6-7-1-6 4-6-4-7 1-3-6-6-3 1-7-4-6 4-6-1-7 6-3 3-6 7 1z"/><circle cx="35" cy="26" r="13"/><path d="M35 18l2.4 5 5.4.6-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.6z"/><path d="M22 48l-6 18 8-4 4 8 5-16M48 48l6 18-8-4-4 8-5-16"/></svg>',
+    'pie': '<svg viewBox="0 0 70 70"><circle cx="35" cy="35" r="32"/><path d="M35 3v32h32M35 35L12 58M35 35l-30-8"/><path d="M42 8c10 2 18 10 20 20H42z"/></svg>',
+    'line': '<svg viewBox="0 0 70 70"><path d="M8 2v60h60"/><path d="M4 8l4-6 4 6M62 58l6 4-6 4"/><path d="M8 52h2M16 62v-3M24 62v-3M32 62v-3M40 62v-3M48 62v-3M56 62v-3"/><circle cx="20" cy="40" r="4"/><circle cx="34" cy="28" r="4"/><circle cx="44" cy="36" r="4"/><circle cx="58" cy="22" r="4"/><path d="M23 37l8-6M37 30l4 4M47 33l8-8"/></svg>',
+    'scale': '<svg viewBox="0 0 70 70"><circle cx="35" cy="8" r="4"/><path d="M35 12v44M10 16h50M24 58h22v6H24z"/><path d="M14 16L4 36h20zM56 16L46 36h20z"/><path d="M4 36c0 6 20 6 20 0M46 36c0 6 20 6 20 0"/></svg>',
+    'mail': '<svg viewBox="0 0 30 30"><rect x="2" y="7" width="26" height="17"/><path d="M2 7l13 10 13-10"/><path d="M2 24l9-8M28 24l-9-8"/></svg>',
+    'phone': '<svg viewBox="0 0 30 30"><path d="M8 3l5 6-3 3c1 3 4 6 7 7l3-3 6 5-3 4C12 25 4 16 4 6z"/><path d="M18 4c4 1 7 4 8 8M18 8c2 1 3 2 4 4"/></svg>',
+}
+
+PIN = '<svg viewBox="0 0 56 62" aria-hidden="true"><circle cx="28" cy="27" r="27" fill="#fff"/><path d="M28 59 L13 40 A20 20 0 1 1 43 40 Z" fill="#152F52"/></svg>'
+
+
+def head(right=False):
+    r = ' r' if right else ''
+    return '<p class="sub%s">§SUB§</p>' % r
+
+
+def ic(name, cls='ic'):
+    return '<div class="%s">%s</div>' % (cls, I[name])
+
+
+S1 = ('<div class="abs band"></div><div class="abs wpan"></div>'
+      '<img class="abs photo" src="/templates/freeform/sl-business-development-presentation/assets/cover.jpg" alt="§ALT1§">'
+      '<div class="logo">' + I['logo'] + '<p>§LOGO§</p></div>'
+      '<h1 class="big">§C_T§</h1><p class="pt">§C_PT§</p><p class="tag">§C_TAG§</p>')
+
+S2 = ('<div class="abs lav"></div>'
+      '<img class="abs photo" src="/templates/freeform/sl-business-development-presentation/assets/meeting.jpg" alt="§ALT2§">'
+      '<div class="abs sq"></div><div class="abs wpan"></div><div class="abs bar"></div>'
+      + head() + '<h1 class="ttl">§S2T§</h1><p class="tx intro">§P3L§</p>'
+      + ''.join('<div class="st st%d">%s<h2>§S2V%d§</h2><p>§S2L%d§</p></div>' % (i, ic(n), i, i)
+                for i, n in ((1, 'chest'), (2, 'star'), (3, 'mega'), (4, 'cal'))))
+
+S3 = (head() + '<h1 class="ttl">§S3T§</h1><p class="tagl">§S3TAG§</p>'
+      '<div class="vm vm1"><h2>§VIS§</h2><p class="tx">§P3L§</p></div>'
+      '<div class="vm vm2"><h2>§MIS§</h2><p class="tx">§P3L§</p></div>'
+      '<div class="abs card"></div><h2 class="cv">§CV§</h2><p class="tx cvp">§P1L§</p>'
+      + ''.join('<div class="row" style="top:%dpx"><span class="n">0%d</span><span class="pill">§CV%d§</span></div>' % (t, i, i)
+                for i, t in ((1, 193), (2, 309), (3, 426), (4, 542))))
+
+S4 = (head() + '<h1 class="ttl">§S4T§</h1><p class="tx rt">§S4R§</p><div class="abs back"></div>'
+      + ''.join('<div class="cd cd%d"><span class="num">0%d</span>%s<h2>§S4H§</h2><p>§S4P§</p></div>' % (i, i, ic(n), )
+                for i, n in ((1, 'pen'), (2, 'note'), (3, 'tray'), (4, 'notes'))))
+
+S5 = (head() + '<h1 class="ttl">§S5T§</h1>'
+      + ''.join('<div class="cd cd%d"><div class="hd"></div><span class="big">0%d</span>%s<h2>§S5H%d§</h2><p>§S5P§</p><div class="ln"></div></div>' % (i, i, ic(n), i)
+                for i, n in ((1, 'jacket'), (2, 'hand'), (3, 'chat'))))
+
+S6 = ('<div class="abs tr"></div><div class="abs bt"></div><div class="abs card"></div>'
+      + head() + '<h1 class="ttl">§S6T§</h1>'
+      '<table class="tbl"><thead><tr><th class="c1">§S6H1§</th><th class="c2">§S6H2§</th><th>§S6H3§</th></tr></thead><tbody>'
+      + ''.join('<tr><td class="c1">§S6R%dA§</td><td class="c2">§S6R%dB§</td><td>§S6R%dC§</td></tr>' % (i, i, i) for i in range(1, 5))
+      + '</tbody></table><h2 class="dt">§S6D§</h2><p class="tx dp">§S6DP§</p>')
+
+S7 = ('<div class="abs rp"></div>' + head() + '<h1 class="ttl">§S7T§</h1><p class="tx intro">§S7P§</p>'
+      '<div class="abs blk"></div><div class="abs vl"></div><div class="abs hl"></div>'
+      + ''.join('<div class="kv k%d"><h2>§S7V%d§</h2><p>§S7L%d§</p></div>' % (i, i, i) for i in range(1, 5))
+      + '<h2 class="mg">§S7G§</h2><p class="tx mgp">§P1L§</p>'
+      '<svg class="chart" id="c7" viewBox="0 0 610 510" aria-hidden="true"></svg>'
+      '<div class="lgd"><span><i style="background:#4F67C9"></i>§S7LG§</span></div>')
+
+S8 = (head() + '<h1 class="ttl">§S8T§</h1><p class="tx rt">§S8R§</p><div class="abs wp"></div>'
+      '<table class="tbl"><thead><tr><th class="c1">§S8H1§</th><th class="c2">§S8H2§</th><th class="c3">§S8H3§</th><th>§S8H4§</th></tr></thead><tbody>'
+      + ''.join('<tr><td class="c1">§S8R%d§</td><td class="c2">§HIGH§</td><td class="c3">§ATH§</td><td>§ATH§</td></tr>' % i for i in range(1, 5))
+      + '</tbody></table><div class="abs note"><p>§S8N§</p></div>')
+
+S9 = ('<div class="abs lp"></div><div class="abs tab"></div>'
+      '<h2 class="rm">§S9M§</h2><p class="tx rmp">§P1L§</p>'
+      '<svg class="chart" id="c9" viewBox="0 0 430 425" aria-hidden="true"></svg>'
+      '<div class="lgd"><span><i style="background:#4F67C9"></i>§S9L1§</span><span><i style="background:#95A4DF"></i>§S9L2§</span>'
+      '<span><i style="background:#212E6B"></i>§S9L3§</span><span><i style="background:#5DCEB0"></i>§S9L4§</span></div>'
+      + head(True) + '<h1 class="ttl r">§S9T§</h1>'
+      '<div class="sec sec1"><h2>§S9H1§</h2><p class="tx">§P3L§</p></div>'
+      '<div class="sec sec2"><h2>§S9H2§</h2><p class="tx">§S9P2§</p><ul><li>§S9B1§</li><li>§S9B2§</li><li>§S9B3§</li></ul></div>')
+
+S10 = ('<div class="abs tr"></div><div class="abs bt"></div>' + head() + '<h1 class="ttl">§S10T§</h1><p class="tx intro">§P3L§</p>'
+       + ''.join('<div class="cd cd%d"><h2>§S10H%d§</h2><p>§S10P§</p></div>' % (i, i) for i in range(1, 5))
+       + ''.join('<div class="pin p%d">%s<b>%d</b></div>' % (i, PIN, i) for i in range(1, 5)))
+
+S11 = ('<img class="abs photo" src="/templates/freeform/sl-business-development-presentation/assets/roadmap.jpg" alt="§ALT11§">'
+       + head(True) + '<h1 class="ttl r">§S11T§</h1><p class="tx intro">§P3L§</p>'
+       + ''.join('<div class="cd cd%d"><span class="num">§Q%d§</span>%s<h2>§S11H%d§</h2><p>§S11P§</p></div>' % (i, i, ic(n), i)
+                 for i, n in ((1, 'award'), (2, 'pie'), (3, 'line'), (4, 'scale'))))
+
+S12 = ('<div class="abs gp"></div>' + head() + '<h1 class="ttl">§S12T§</h1><p class="tx rt">§S12R§</p>'
+       + ''.join('<div class="bx bx%d"><h2>§S12V%d§</h2><p>§P1L§</p></div>' % (i, i) for i in range(1, 4))
+       + '<svg class="chart" id="c12" viewBox="0 0 1150 340" aria-hidden="true"></svg>')
+
+S13 = ('<div class="abs tr"></div>' + head() + '<h1 class="ttl">§S13T§</h1>'
+       + ''.join('<div class="cd cd%d"><img src="/templates/freeform/sl-business-development-presentation/assets/team%d.jpg" alt="§N%d§"><h2>§N%d§</h2><h3>§R%d§</h3><p>§S11P§</p></div>' % (i, i, i, i, i)
+                 for i in range(1, 5)))
+
+S14 = ('<div class="abs band"></div><div class="abs wpan"></div><div class="abs tr"></div>'
+       '<div class="logo">' + I['logo'] + '<p>§LOGO§</p></div>'
+       '<div class="chip"><h2>§S14C§</h2></div><h1 class="big">§S14T§</h1>'
+       '<div class="ct ct1">' + I['mail'] + '<span>§S14E§</span></div>'
+       '<div class="ct ct2">' + I['phone'] + '<span dir="ltr">+1 (234) 567 8901</span></div>')
+
+SLIDES = [S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12, S13, S14]
+
+JSON_BLOCKS = {
+    'chart-data': {
+        'ar': {'labels': ['2025', '2026', '2027', '2028', '2029', '2030', '2031'], 'series': 'حجم السوق (مليار $)', 'color': '#4F67C9',
+               'values': [1445, 1539, 1656, 1787, 1926, 2080, 2243], 'min': 1200, 'max': 2400, 'step': 200},
+        'en': {'labels': ['2025', '2026', '2027', '2028', '2029', '2030', '2031'], 'series': 'Market Size ($B)', 'color': '#4F67C9',
+               'values': [1445, 1539, 1656, 1787, 1926, 2080, 2243], 'min': 1200, 'max': 2400, 'step': 200},
+    },
+    'chart-data-2': {
+        'ar': {'labels': ['الخدمات المتكررة', 'حلول المشاريع', 'الاستشارات', 'الشراكات'], 'values': [48, 27, 15, 10],
+               'colors': ['#4F67C9', '#95A4DF', '#212E6B', '#5DCEB0']},
+        'en': {'labels': ['Recurring Services', 'Project Solutions', 'Advisory', 'Partnership'], 'values': [48, 27, 15, 10],
+               'colors': ['#4F67C9', '#95A4DF', '#212E6B', '#5DCEB0']},
+    },
+    'chart-data-3': {
+        'labels': ['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037'], 'max': 16, 'step': 2,
+        'series': [
+            {'color': '#4F67C9', 'values': [2.4, 3.1, 4.0, 3.6, 5.2, 6.8, 6.1, 8.6, 11.2, 10.4, 14.0, 12.0]},
+            {'color': '#2F4499', 'values': [1.6, 2.2, 2.0, 2.7, 2.5, 3.9, 3.4, 4.6, 5.1, 6.4, 5.9, 8.6]},
+            {'color': '#A6E85A', 'values': [0.3, 0.4, 1.0, 0.2, 1.5, 1.1, 1.3, 2.3, 4.1, 2.0, 5.5, 7.2]},
+        ],
+    },
+}
+
+EXTRA_SCRIPT = r"""  function J(id) { return JSON.parse(document.getElementById(id).textContent); }
+  function fx(x, W) { return RTL ? W - x : x; }  // انعكاس أفقي للعربية
+  function n(v) { return Number(v).toLocaleString('en-US'); }
+  // الشريحة 7: أعمدة رأسية بمحور واحد
+  (function () {
+    var d = J('chart-data'), svg = document.getElementById('c7'), W = 610, s = '';
+    var x0 = 76, x1 = 582, y0 = 438, yt = 17, unit = (y0 - yt) / (d.max - d.min), step = (x1 - x0) / d.labels.length;
+    for (var v = d.min; v <= d.max; v += d.step) {
+      var y = y0 - (v - d.min) * unit;
+      s += '<line x1="' + fx(x0, W) + '" x2="' + fx(x1, W) + '" y1="' + y + '" y2="' + y + '" stroke="#D9D9D9" stroke-width="1"' + (v === d.min ? '' : ' stroke-dasharray="6 4"') + '/>';
+      s += '<text x="' + fx(63, W) + '" y="' + (y + 5) + '" text-anchor="' + (RTL ? 'start' : 'end') + '">' + n(v) + '</text>';
+    }
+    d.values.forEach(function (val, i) {
+      var cx = fx(x0 + step * (i + .5), W), h = (val - d.min) * unit;
+      s += '<rect x="' + (cx - 22) + '" y="' + (y0 - h) + '" width="44" height="' + h + '" fill="' + d.color + '"/>';
+      s += '<text x="' + cx + '" y="' + (y0 + 25) + '" text-anchor="middle">' + d.labels[i] + '</text>';
+    });
+    svg.innerHTML = s;
+  })();
+  // الشريحة 9: رسم حلقي يبدأ من الأعلى باتجاه القراءة
+  (function () {
+    var d = J('chart-data-2'), svg = document.getElementById('c9'), cx = 215, cy = 212, R = 210, r = 95, s = '', acc = 0, tot = 0;
+    d.values.forEach(function (v) { tot += v; });
+    function pt(a, rad) { var t = (a - 90) * Math.PI / 180; return [cx + rad * Math.cos(t) * (RTL ? -1 : 1), cy + rad * Math.sin(t)]; }
+    d.values.forEach(function (v, i) {
+      var a0 = acc / tot * 360, a1 = (acc + v) / tot * 360, big = a1 - a0 > 180 ? 1 : 0, sw = RTL ? 0 : 1, sw2 = RTL ? 1 : 0;
+      var p0 = pt(a0, R), p1 = pt(a1, R), q1 = pt(a1, r), q0 = pt(a0, r), m = pt((a0 + a1) / 2, 152);
+      s += '<path d="M' + p0 + ' A' + R + ',' + R + ' 0 ' + big + ' ' + sw + ' ' + p1 + ' L' + q1 + ' A' + r + ',' + r + ' 0 ' + big + ' ' + sw2 + ' ' + q0 + 'Z" fill="' + d.colors[i] + '"/>';
+      s += '<text x="' + m[0] + '" y="' + (m[1] + 8) + '" text-anchor="middle">' + v + '%</text>';
+      acc += v;
+    });
+    svg.innerHTML = s;
+  })();
+  // الشريحة 12: منحنيات ناعمة لثلاث سلاسل بمحور واحد
+  (function () {
+    var d = J('chart-data-3'), svg = document.getElementById('c12'), W = 1150, s = '';
+    var x0 = 53, x1 = 1134, y0 = 300, yt = 11, unit = (y0 - yt) / d.max, step = (x1 - x0) / d.labels.length;
+    for (var v = 0; v <= d.max; v += d.step) {
+      var y = y0 - v * unit;
+      s += '<line x1="' + fx(x0, W) + '" x2="' + fx(x1, W) + '" y1="' + y + '" y2="' + y + '" stroke="#D0D0D0" stroke-width="1"' + (v === 0 ? '' : ' stroke-dasharray="6 4"') + '/>';
+      s += '<text x="' + fx(39, W) + '" y="' + (y + 5) + '" text-anchor="' + (RTL ? 'start' : 'end') + '">' + v + '</text>';
+    }
+    for (var i = 0; i <= d.labels.length; i++) { var tx = fx(x0 + step * i, W); s += '<line x1="' + tx + '" x2="' + tx + '" y1="' + y0 + '" y2="' + (y0 + 6) + '" stroke="#D0D0D0"/>'; }
+    d.labels.forEach(function (l, i) { s += '<text x="' + fx(x0 + step * (i + .5), W) + '" y="' + (y0 + 26) + '" text-anchor="middle">' + l + '</text>'; });
+    d.series.forEach(function (sr) {
+      var p = sr.values.map(function (val, i) { return [fx(x0 + step * (i + .5), W), y0 - val * unit]; }), dd = 'M' + p[0];
+      for (var k = 0; k < p.length - 1; k++) {
+        var a = p[k - 1] || p[k], b = p[k], c = p[k + 1], e = p[k + 2] || c;
+        dd += ' C' + (b[0] + (c[0] - a[0]) / 6) + ',' + (b[1] + (c[1] - a[1]) / 6) + ' ' + (c[0] - (e[0] - b[0]) / 6) + ',' + (c[1] - (e[1] - b[1]) / 6) + ' ' + c;
+      }
+      s += '<path d="' + dd + '" fill="none" stroke="' + sr.color + '" stroke-width="4" stroke-linecap="round"/>';
+    });
+    svg.innerHTML = s;
+  })();"""
+
+P3_EN = 'This is a sample text. Add your desired text here. This is a sample text. Add your desired text here. This is a sample text. Add your desired text here.'
+P3_AR = 'هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.'
+
+STR = {
+    'en': {
+        'LOGO': 'YOUR COMPANY<br>LOGO HERE', 'SUB': 'ADD A SUBHEADING HERE', 'P3L': P3_EN, 'P1L': 'This is a sample text. Add your desired text here.',
+        'ALT1': 'Business professional in a suit', 'ALT2': 'Team meeting around a table', 'ALT11': 'Two colleagues reviewing work',
+        'C_T': 'BUSINESS<br>DEVELOPMENT', 'C_PT': 'PRESENTATION TEMPLATE', 'C_TAG': 'Driving growth through strategic opportunities',
+        'S2T': 'Executive<br>Summary',
+        'S2V1': '+28%', 'S2L1': 'Target Revenue<br>Growth', 'S2V2': '12', 'S2L2': 'New Strategic<br>Opportunities',
+        'S2V3': '3', 'S2L3': 'Priority Market<br>Segments', 'S2V4': '18 Mo.', 'S2L4': 'Growth<br>Horizon',
+        'S3T': 'Company<br>Introduction', 'S3TAG': 'Add company tagline here', 'VIS': 'VISION', 'MIS': 'MISSION', 'CV': 'Core Values',
+        'CV1': 'INNOVATION', 'CV2': 'INTEGRITY', 'CV3': 'COLLABORATION', 'CV4': 'CUSTOMER FOCUS',
+        'S4T': 'Problem Statement', 'S4R': 'This is a sample text. Add your desired text here. Add your text here. This is a sample text. Add your desired text here. This is a sample text.',
+        'S4H': 'Add Problem Statement Here', 'S4P': 'This is a sample text. Add your desired text here. This is a sample text.',
+        'S5T': 'Solution Overview', 'S5H1': 'Identity', 'S5H2': 'Engage', 'S5H3': 'Convert',
+        'S5P': 'This is a sample text. Add your desired text here. This is a sample text. This is a sample text.',
+        'S6T': 'Service Showcase', 'S6H1': 'Offering', 'S6H2': 'Primary Value', 'S6H3': 'Key Benefit',
+        'S6R1A': 'Growth Advisory', 'S6R1B': 'Strategic direction', 'S6R1C': 'This is a sample text. Add your desired text here.',
+        'S6R2A': 'Market Expansion', 'S6R2B': 'New opportunities', 'S6R2C': 'Add text here. This is a sample text.',
+        'S6R3A': 'Sales Enablement', 'S6R3B': 'Commercial support', 'S6R3C': 'Add your desired text here. Add text here.',
+        'S6R4A': 'Partnership Development', 'S6R4B': 'Strategic connections', 'S6R4C': 'This is a sample text. Add your text here.',
+        'S6D': 'Designed to:', 'S6DP': 'This is a sample text. Add your desired text here. Add your text here. This is a sample text. Add your desired text here. This is a sample text. Add your desired text here.',
+        'S7T': 'Market Analysis', 'S7P': 'This is a sample text. Add your desired text here. Add your desired text here. This is a sample text. This is a sample text. Add text here.',
+        'S7V1': '$4.8B', 'S7L1': 'Total Addressable<br>Market', 'S7V2': '$1.6B', 'S7L2': 'Serviceable<br>Market',
+        'S7V3': '$420M', 'S7L3': 'Initial Target<br>Segment', 'S7V4': '7.62%', 'S7L4': '2025–2031<br>CAGR',
+        'S7G': 'Market Growth', 'S7LG': 'Market Size ($B)',
+        'S8T': 'Competitive Landscape', 'S8R': 'This is a sample text. Add your desired text here. Add your text here. This is a sample text.',
+        'S8H1': 'Criteria', 'S8H2': 'Our Business', 'S8H3': 'Provider A', 'S8H4': 'Provider B',
+        'S8R1': 'Market Coverage', 'S8R2': 'Solution Flexibility', 'S8R3': 'Customer Support', 'S8R4': 'Partnership Model',
+        'HIGH': 'High', 'ATH': 'Add text here',
+        'S8N': 'This is a sample text. Add your desired text here. Add your text here. This is a sample text. This is a sample text. Add your desired text here. Add your text here. This is a sample text. This is a sample text. Add your desired text here.',
+        'S9M': 'Revenue Mix', 'S9L1': 'Recurring Services', 'S9L2': 'Project Solutions', 'S9L3': 'Advisory', 'S9L4': 'Partnership',
+        'S9T': 'Business Model', 'S9H1': 'CREATING MULTIPLE PATHS TO REVENUE', 'S9H2': 'REVENUE STREAMS',
+        'S9P2': 'This is a sample text. Add your desired text here. This is a sample text. Add your desired text here. Add text here.',
+        'S9B1': 'This is a sample text. Add your desired text here. This is a sample text.', 'S9B2': 'Add your desired text here. Add text here.', 'S9B3': 'Add text here. This is a sample text.',
+        'S10T': 'Go-to-Market Strategy', 'S10H1': 'REACH', 'S10H2': 'ENGAGE', 'S10H3': 'CONVERT', 'S10H4': 'EXPAND',
+        'S10P': 'This is a sample text. Add your desired text here. This is a sample text. Add text here.',
+        'S11T': 'Development<br>Roadmap', 'Q1': 'Q1', 'Q2': 'Q2', 'Q3': 'Q3', 'Q4': 'Q4',
+        'S11H1': 'Foundation', 'S11H2': 'Expansion', 'S11H3': 'Scale', 'S11H4': 'Acceleration', 'S11P': 'Add your desired text<br>here. This is a sample text.',
+        'S12T': 'Financial Projections', 'S12R': 'This is a sample text. Add your desired text here. Add your text here. This is a sample text.',
+        'S12V1': '$7.8M', 'S12V2': '$4.2M', 'S12V3': '$6.6M',
+        'S13T': 'Team Overview', 'N1': 'Alex Morgan', 'N2': 'Sarah Mitchell', 'N3': 'Daniel Carter', 'N4': 'Emily Parker',
+        'R1': 'Chief Executive Officer', 'R2': 'Commercial Director', 'R3': 'Market Strategy Lead', 'R4': 'Operations Director',
+        'S14C': 'Get in touch', 'S14T': 'Let’s Build the Next<br>Growth Opportunity.', 'S14E': 'Insert your email here',
+    },
+    'ar': {
+        'LOGO': 'شعار شركتك<br>هنا', 'SUB': 'أضف عنوانًا فرعيًا هنا', 'P3L': P3_AR, 'P1L': 'هذا نص توضيحي. أضف النص المطلوب هنا.',
+        'ALT1': 'رجل أعمال ببدلة رسمية', 'ALT2': 'اجتماع فريق حول طاولة', 'ALT11': 'زميلان يراجعان العمل',
+        'C_T': 'تطوير<br>الأعمال', 'C_PT': 'قالب عرض تقديمي', 'C_TAG': 'دفع النمو عبر الفرص الاستراتيجية',
+        'S2T': 'الملخص<br>التنفيذي',
+        'S2V1': '+28%', 'S2L1': 'نمو الإيرادات المستهدف', 'S2V2': '12', 'S2L2': 'فرص استراتيجية جديدة',
+        'S2V3': '3', 'S2L3': 'شرائح سوقية ذات أولوية', 'S2V4': '18 شهرًا', 'S2L4': 'أفق النمو',
+        'S3T': 'تعريف<br>بالشركة', 'S3TAG': 'أضف العبارة التعريفية للشركة هنا', 'VIS': 'الرؤية', 'MIS': 'الرسالة', 'CV': 'القيم الجوهرية',
+        'CV1': 'الابتكار', 'CV2': 'النزاهة', 'CV3': 'التعاون', 'CV4': 'التركيز على العميل',
+        'S4T': 'بيان المشكلة', 'S4R': 'هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.',
+        'S4H': 'أضف بيان المشكلة هنا', 'S4P': 'هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.',
+        'S5T': 'نظرة عامة على الحل', 'S5H1': 'الهوية', 'S5H2': 'التفاعل', 'S5H3': 'التحويل',
+        'S5P': 'هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. هذا نص توضيحي.',
+        'S6T': 'عرض الخدمات', 'S6H1': 'الخدمة', 'S6H2': 'القيمة الأساسية', 'S6H3': 'الفائدة الرئيسية',
+        'S6R1A': 'استشارات النمو', 'S6R1B': 'التوجيه الاستراتيجي', 'S6R1C': 'هذا نص توضيحي. أضف النص المطلوب هنا.',
+        'S6R2A': 'التوسع في الأسواق', 'S6R2B': 'فرص جديدة', 'S6R2C': 'أضف النص هنا. هذا نص توضيحي.',
+        'S6R3A': 'تمكين المبيعات', 'S6R3B': 'الدعم التجاري', 'S6R3C': 'أضف النص المطلوب هنا. أضف النص هنا.',
+        'S6R4A': 'تطوير الشراكات', 'S6R4B': 'روابط استراتيجية', 'S6R4C': 'هذا نص توضيحي. أضف نصك هنا.',
+        'S6D': 'مصمَّم من أجل:', 'S6DP': 'هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.',
+        'S7T': 'تحليل السوق', 'S7P': 'هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص المطلوب هنا. هذا نص توضيحي. هذا نص توضيحي. أضف النص هنا.',
+        'S7V1': '$4.8B', 'S7L1': 'إجمالي السوق المستهدف', 'S7V2': '$1.6B', 'S7L2': 'السوق القابل للخدمة',
+        'S7V3': '$420M', 'S7L3': 'الشريحة المستهدفة الأولية', 'S7V4': '7.62%', 'S7L4': 'معدل النمو السنوي المركب 2025–2031',
+        'S7G': 'نمو السوق', 'S7LG': 'حجم السوق (مليار $)',
+        'S8T': 'المشهد التنافسي', 'S8R': 'هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي.',
+        'S8H1': 'المعيار', 'S8H2': 'أعمالنا', 'S8H3': 'المزوّد أ', 'S8H4': 'المزوّد ب',
+        'S8R1': 'التغطية السوقية', 'S8R2': 'مرونة الحلول', 'S8R3': 'دعم العملاء', 'S8R4': 'نموذج الشراكة',
+        'HIGH': 'مرتفع', 'ATH': 'أضف النص هنا',
+        'S8N': 'هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي. هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي. هذا نص توضيحي. أضف النص المطلوب هنا.',
+        'S9M': 'مزيج الإيرادات', 'S9L1': 'الخدمات المتكررة', 'S9L2': 'حلول المشاريع', 'S9L3': 'الاستشارات', 'S9L4': 'الشراكات',
+        'S9T': 'نموذج العمل', 'S9H1': 'بناء مسارات متعددة للإيرادات', 'S9H2': 'مصادر الإيرادات',
+        'S9P2': 'هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا.',
+        'S9B1': 'هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.', 'S9B2': 'أضف النص المطلوب هنا. أضف النص هنا.', 'S9B3': 'أضف النص هنا. هذا نص توضيحي.',
+        'S10T': 'استراتيجية الدخول إلى السوق', 'S10H1': 'الوصول', 'S10H2': 'التفاعل', 'S10H3': 'التحويل', 'S10H4': 'التوسع',
+        'S10P': 'هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص هنا.',
+        'S11T': 'خارطة طريق<br>التطوير', 'Q1': 'ر1', 'Q2': 'ر2', 'Q3': 'ر3', 'Q4': 'ر4',
+        'S11H1': 'التأسيس', 'S11H2': 'الانتشار', 'S11H3': 'التوسّع', 'S11H4': 'التسارع', 'S11P': 'أضف النص المطلوب هنا. هذا نص توضيحي.',
+        'S12T': 'التوقعات المالية', 'S12R': 'هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي.',
+        'S12V1': '$7.8M', 'S12V2': '$4.2M', 'S12V3': '$6.6M',
+        'S13T': 'نظرة على الفريق', 'N1': 'أليكس مورغان', 'N2': 'سارة ميتشل', 'N3': 'دانيال كارتر', 'N4': 'إميلي باركر',
+        'R1': 'الرئيس التنفيذي', 'R2': 'المدير التجاري', 'R3': 'قائد استراتيجية السوق', 'R4': 'مدير العمليات',
+        'S14C': 'تواصل معنا', 'S14T': 'لنبنِ معًا فرصة<br>النمو القادمة.', 'S14E': 'أدخل بريدك الإلكتروني هنا',
+    },
+}
+
+TEMPLATE = {
+    'key': KEY, 'kind': 'slides', 'category': 'sales', 'icon': '📈',
+    'name': 'عرض تطوير الأعمال', 'nameEn': 'Business Development',
+    'description': 'أربع عشرة شريحة: غلاف، ملخص، الشركة، المشكلة والحل، الخدمات، السوق، المنافسة، الإيرادات، الخطة، المالية، الفريق',
+    'descriptionEn': '14 slides: cover, summary, company, problem & solution, services, market, competition, revenue, plan, team',
+    'sections': [
+        {'title': 'الغلاف', 'titleEn': 'Cover'},
+        {'title': 'الملخص التنفيذي', 'titleEn': 'Executive Summary', 'needsData': True},
+        {'title': 'تعريف بالشركة', 'titleEn': 'Company Introduction'},
+        {'title': 'بيان المشكلة', 'titleEn': 'Problem Statement'},
+        {'title': 'نظرة عامة على الحل', 'titleEn': 'Solution Overview'},
+        {'title': 'عرض الخدمات', 'titleEn': 'Service Showcase'},
+        {'title': 'تحليل السوق (رسم)', 'titleEn': 'Market Analysis (chart)', 'needsData': True},
+        {'title': 'المشهد التنافسي', 'titleEn': 'Competitive Landscape'},
+        {'title': 'نموذج العمل (رسم حلقي)', 'titleEn': 'Business Model (donut)', 'needsData': True},
+        {'title': 'استراتيجية الدخول إلى السوق', 'titleEn': 'Go-to-Market Strategy'},
+        {'title': 'خارطة طريق التطوير', 'titleEn': 'Development Roadmap'},
+        {'title': 'التوقعات المالية (رسم)', 'titleEn': 'Financial Projections (chart)', 'needsData': True},
+        {'title': 'نظرة على الفريق', 'titleEn': 'Team Overview'},
+        {'title': 'تواصل معنا', 'titleEn': 'Get in Touch'},
+    ],
+    'brief': 'صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON بالمعرّفات chart-data (أعمدة سوق) وchart-data-2 (حلقة الإيرادات) وchart-data-3 (منحنيات التوقعات).',
+}
