@@ -504,6 +504,8 @@ public class FreeformController : ControllerBase
         if (template is not null && template.Kind != kind) template = null;
         try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template, design is null ? request.Lang : null, request.Attachments); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
+        // «اطلب من جيم» على عنصر محدد يعلّمه بـ data-jeem-target؛ لا تبقى العلامة في الصفحة المحفوظة إن نسيها الموديل
+        if (result.Html is not null) result = result with { Html = Regex.Replace(result.Html, @"\s+data-jeem-target(\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+))?", "") };
         int? version = null;
         if (design is null)
         {

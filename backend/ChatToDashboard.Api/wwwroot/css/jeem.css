@@ -3997,3 +3997,62 @@ html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scale
 #ff-idm-modal .danger { color: var(--danger, #B42318); }
 @media (max-width: 520px) { .jeem-scope .ffid-title { display: none; } }
 .jeem-scope .ff-id-bar.hidden, .jeem-scope .ffid-map.hidden { display: none; }
+
+/* ---- أدوات التصميم في وضع التعديل: الشريط العائم ولوحة الخصائص ---- */
+.jeem-scope .ff-preview-wrap { position: relative; }
+.jeem-scope .ff-dtools { position: absolute; z-index: 6; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 30, 45, .16); max-width: calc(100% - 24px); }
+.jeem-scope .ff-preview-wrap:has(.ff-slide-nav:not(.hidden)) .ff-dtools { bottom: 70px; }
+.jeem-scope .ff-preview-wrap:has(.ff-slide-nav:not(.hidden)) .ff-insp { bottom: 128px; }
+.jeem-scope .ff-dtools.hidden { display: none; }
+.jeem-scope .ffd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 36px; height: 36px; padding: 0 6px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); cursor: pointer; font: 600 16px/1 var(--font, inherit); }
+.jeem-scope .ffd-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.jeem-scope .ffd-btn:focus-visible { outline: 2px solid var(--brand, #2A78D6); outline-offset: 1px; }
+.jeem-scope .ffd-btn[aria-pressed="true"] { background: color-mix(in srgb, var(--brand, #2A78D6) 14%, transparent); color: var(--brand, #2A78D6); }
+.jeem-scope .ffd-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.jeem-scope .ffd-caret { font-size: 10px; color: var(--ink-3); }
+.jeem-scope .ffd-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.jeem-scope .ffd-shapes { position: relative; }
+.jeem-scope .ffd-menu { position: absolute; bottom: calc(100% + 8px); inset-inline-start: 0; z-index: 7; display: flex; flex-direction: column; min-width: 140px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(15, 30, 45, .16); }
+.jeem-scope .ffd-menu.hidden { display: none; }
+.jeem-scope .ffd-menu button { text-align: start; padding: 7px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); cursor: pointer; font: inherit; font-size: var(--fs-sm); }
+.jeem-scope .ffd-menu button:hover, .jeem-scope .ffd-menu button:focus-visible { background: color-mix(in srgb, var(--ink) 7%, transparent); outline: none; }
+.jeem-scope .ffd-ask input { width: 190px; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: color-mix(in srgb, var(--ink) 4%, var(--surface)); color: var(--ink); font: inherit; font-size: var(--fs-sm); }
+.jeem-scope .ffd-ask input:focus { outline: 2px solid var(--brand, #2A78D6); outline-offset: 0; background: var(--surface); }
+.jeem-scope .ff-insp { position: absolute; z-index: 6; top: 64px; bottom: 80px; inset-inline-end: 22px; width: 280px; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(15, 30, 45, .14); font-size: var(--fs-sm); color: var(--ink); }
+.jeem-scope .ff-insp.hidden { display: none; }
+.jeem-scope .ffi-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.jeem-scope .ffi-head .grow { flex: 1; }
+.jeem-scope .ffi-head button { width: 28px; height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-2); cursor: pointer; }
+.jeem-scope .ffi-head button:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.jeem-scope .ffi-head button:disabled { opacity: .35; cursor: default; }
+.jeem-scope .ff-insp section { padding: 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.jeem-scope .ff-insp h4 { margin: 0 0 2px; font-size: var(--fs-sm); font-weight: 700; }
+.jeem-scope .ffi-row { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 8px; }
+.jeem-scope .ffi-l { color: var(--ink-2); }
+.jeem-scope .ffi-c { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.jeem-scope .ffi-sub { color: var(--ink-2); }
+.jeem-scope .ff-insp input[type="number"], .jeem-scope .ff-insp select { width: 100%; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid transparent; border-radius: 7px; background: color-mix(in srgb, var(--ink) 5%, var(--surface)); color: var(--ink); font: inherit; }
+.jeem-scope .ff-insp input:focus, .jeem-scope .ff-insp select:focus { outline: 2px solid var(--brand, #2A78D6); outline-offset: 0; }
+.jeem-scope .ffi-num { position: relative; flex: 1; display: flex; min-width: 0; }
+.jeem-scope .ffi-num span { position: absolute; inset-inline-end: 8px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; font-size: 12px; }
+.jeem-scope .ffi-op { flex: 0 0 72px; }
+.jeem-scope .ff-insp input[type="range"] { flex: 1; min-width: 0; accent-color: var(--brand, #2A78D6); }
+.jeem-scope .ffi-color { flex: 1; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; border-radius: 7px; background: color-mix(in srgb, var(--ink) 5%, var(--surface)); cursor: pointer; min-width: 0; }
+.jeem-scope .ffi-color input { width: 20px; height: 20px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; }
+.jeem-scope .ffi-color span { font-feature-settings: "tnum" 1; direction: ltr; }
+.jeem-scope .ffi-x { width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-3); cursor: pointer; }
+.jeem-scope .ffi-seg { flex: 1; display: flex; padding: 2px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 5%, var(--surface)); }
+.jeem-scope .ffi-seg button { flex: 1; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-2); cursor: pointer; font: inherit; font-size: 12px; }
+.jeem-scope .ffi-seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(15, 30, 45, .14); font-weight: 700; }
+.jeem-scope .ffi-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.jeem-scope .ffi-cols label { display: flex; align-items: center; gap: 6px; padding-inline-start: 8px; border-radius: 7px; background: color-mix(in srgb, var(--ink) 5%, var(--surface)); color: var(--ink-3); }
+.jeem-scope .ffi-cols input { background: transparent !important; }
+.jeem-scope .ff-insp input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand, #2A78D6); }
+@media (max-width: 640px) {
+  .jeem-scope .ff-insp { position: fixed; z-index: 60; top: auto; bottom: 0; inset-inline: 0; width: auto; max-height: 55vh; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 28px rgba(15, 30, 45, .22); }
+  .jeem-scope .ffd-ask input { width: 110px; }
+  .jeem-scope .ff-dtools { bottom: 10px; }
+  .jeem-scope .ffd-btn { min-width: 32px; height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { .jeem-scope .ff-dtools, .jeem-scope .ff-insp { transition: none; } }
+.jeem-scope .ff-preview-wrap > .ff-edit-bar { position: relative; z-index: 7; }
