@@ -3626,15 +3626,18 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 /* تصميم حر: أيقونة النوع داخل قائمة «تحويل إلى» */
 .jeem-scope #ff-convert-panel .dropdown-item { display: flex; align-items: center; gap: 8px; }
 .jeem-scope #ff-convert-panel .ff-ico { width: 18px; height: 18px; }
-.jeem-scope #ff-refresh-panel { min-width: 320px; }
-.jeem-scope #ff-refresh-panel .dropdown-item { display: block; white-space: normal; text-align: start; }
+.jeem-scope #ff-refresh-panel { min-width: 300px; max-width: min(360px, calc(100vw - 32px)); }
+/* بنود بعنوان وشرح في سطرين: الارتفاع الثابت 34px لـ .dropdown-item كان يقصّ الشرح فيتداخل مع البند التالي */
+.jeem-scope #ff-refresh-panel .dropdown-item { display: block; height: auto; padding: 8px 10px; white-space: normal; text-align: start; line-height: 1.45; }
+.jeem-scope #ff-refresh-panel .dropdown-item b { display: block; font-size: 13px; font-weight: 700; color: var(--ink); }
+.jeem-scope #ff-refresh-panel .dropdown-item small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; }
 .jeem-scope #ff-refresh-panel .dropdown-item:disabled { opacity: .5; cursor: not-allowed; }
 
 /* شارة «تغيّرت البيانات» في شريط أدوات تصميم حر ومنشئ العروض + خيار التحديث التلقائي في القائمة */
 .jeem-scope .ff-stale { background: #FFF4CC; border: 1px solid #F2D77A; color: #5A4300; font-weight: 600; }
 .jeem-scope .ff-stale:hover { background: #FFEBA8; }
 .jeem-scope .ff-stale.hidden { display: none; }
-.jeem-scope .ff-auto-label { display: flex; align-items: center; gap: 6px; cursor: pointer; border-top: 1px solid var(--line-2); margin-top: 4px; padding-top: 8px; }
+.jeem-scope .ff-auto-label { display: flex !important; align-items: flex-start; gap: 8px; cursor: pointer; border-top: 1px solid var(--line-2); margin-top: 4px; padding-top: 8px; }
 .jeem-scope #dk-auto-refresh.hidden { display: none; }
 
 /* صندوق الكتابة في محادثات منشئ العروض/تصميم حر/Claude: ظل ناعم كصندوق Claude، وزر إرسال زاهر بأيقونة لكل الأزرار بصنف .send */
@@ -4146,3 +4149,7 @@ body.ff-full-on { overflow: hidden; }
 .jeem-scope .ff-insp .ffi-wide.primary { border-style: solid; background: var(--brand-blue); color: #fff; font-weight: 600; }
 .jeem-scope .ff-insp .ffi-bind .ffi-sub { margin-bottom: 8px; line-height: 1.6; }
 #ff-data-modal .hidden { display: none !important; }
+/* الجوال: زر «تحديث البيانات» قرب حافة الشاشة فتخرج القائمة منها؛ نثبّتها بعرض الشاشة تحت الزر (top:auto = موضعها الطبيعي بعد الزر) */
+@media (max-width: 640px) {
+  .jeem-scope #ff-refresh-panel { position: fixed; top: auto; inset-inline-start: auto; inset-inline-end: auto; left: 16px; right: 16px; max-width: none; min-width: 0; margin-top: 6px; }
+}

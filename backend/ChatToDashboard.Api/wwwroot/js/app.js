@@ -9935,7 +9935,7 @@ el('ff-refresh').addEventListener('click', e => {
   panel.classList.toggle('hidden', !open); el('ff-refresh').setAttribute('aria-expanded', open ? 'true' : 'false');
   // متاح لكل الأنواع: فوري بلا موديل إن وُجدت استعلامات مسجَّلة، وإلا إعادة بناء بالموديل هذه المرة فقط (تسجّل استعلاماتها فتصير التالية فورية)
   const hasQ = !!FF.design.queryCount; el('ff-refresh-fast').disabled = false;
-  el('ff-refresh-fast').querySelector('small').textContent = hasQ ? ' — إعادة تنفيذ الاستعلامات المحفوظة بلا موديل (ثوانٍ)' : ' — لا استعلامات محفوظة بعد؛ هذه المرة بالموديل ثم تصير التحديثات التالية فورية';
+  el('ff-refresh-fast').querySelector('small').textContent = hasQ ? 'إعادة تنفيذ الاستعلامات المحفوظة بلا موديل (ثوانٍ)' : 'لا استعلامات محفوظة بعد؛ هذه المرة بالموديل ثم تصير التحديثات التالية فورية';
   el('ff-auto-refresh').checked = !!FF.design.autoRefresh; el('ff-auto-refresh').disabled = false;
 });
 el('ff-refresh-panel').addEventListener('click', e => e.stopPropagation());
