@@ -9460,6 +9460,7 @@ function ffSandboxHtml(html, withEditor, kind, quiet) {
   if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT + FF_DESIGN_KIT + FF_IMG_KIT + FF_NAV_KIT; if (!add) return html; return ffInsertBeforeBodyEnd(html, add);
 }
 async function ffShowStart() {
+  if (typeof ffRenderScope === 'function') setTimeout(ffRenderScope, 0);
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
   el('ff-title').textContent = 'تصميم حر'; el('ff-meta').textContent = 'اكتب طلبك في المحادثة';
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = true; });
@@ -9896,7 +9897,7 @@ window.addEventListener('message', async e => {
   const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
   if (m.type === 'dirty' || m.type === 'img-dirty') { if (m.type === 'dirty') FF.edit.dirty = m.count || 1; else FF.edit.imgDirty = m.count || 1; ffEditCountText(); return; }
   if (m.type === 'img-pick') { ffImgOpen(m); return; }
-  if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
+  if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; if (FF.navRestore != null && n >= 2 && FF.navRestore !== i && FF.navRestore < n) { const to = FF.navRestore; FF.navRestore = null; e.source.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*'); return; } FF.navRestore = null; FF.nav = { i, n }; ffRenderScope(); el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
   if (m.type === 'html' && FF.edit.pending && m.purpose !== 'ask') {
     FF.edit.pending = null; const html = m.html || '';
     try {
@@ -10099,6 +10100,7 @@ function ffRender() {
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
   el('ff-slide-nav').classList.add('hidden');
+  FF.navRestore = FF.nav && FF.nav.n >= 2 && FF.navDesign === (FF.design && FF.design.id) ? FF.nav.i : null; FF.navDesign = FF.design && FF.design.id; FF.nav = { i: 0, n: 0 }; ffRenderScope();
   el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true, kind) || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
 }
 function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }
@@ -10135,14 +10137,17 @@ async function ffAsk(text, opts) {
   try {
     if (!FF.design && (!FF.kind || FF.template === undefined)) { FF.busy = false; ffPushMsg('bot', 'اختر نوع المخرج أولًا من بطاقات «اصنع شيئًا جديدًا» (مستند، شرائح، تصميم، لوحة، حركة) ثم نموذجًا أو «تصميم حر بلا نموذج».'); el('ff-send').disabled = false; el('ff-status').textContent = ''; return; }
     if (!FF.design) FF.messages[FF.messages.length - 1].extraHtml = ffAttachLineHtml(FF.template) + ffSourcesLineHtml(FF.sources) + ffAttachmentsLineHtml(atts); // أول رسالة تحمل المرفق والمصادر ليظهر الاختيار في المحادثة
-    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: opts?.html ? opts.html : FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, lang: FF.design ? undefined : (FF.lang || ffLangDefault()), sources: FF.design ? undefined : FF.sources, attachments: atts.length ? atts : undefined };
+    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: opts?.html ? opts.html : FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, lang: FF.design ? undefined : (FF.lang || ffLangDefault()), sources: FF.design ? undefined : FF.sources, attachments: atts.length ? atts : undefined, scope: FF.design ? (opts?.scope || ffCurrentScope()) : undefined };
     const r = await fetch('/api/freeform/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
     if (!FF.design) { FF.access = 'owner'; FF.ownerName = ''; FF.shareCount = 0; } // تصميم جديد: صاحبه هو المستخدم
     FF.design = d.design; FF.versions = d.versions || FF.versions; FF.viewing = null;
     if (d.html) FF.html = d.html;
-    FF.busy = false; ffPushMsg('bot', d.reply + (d.version ? ` (الإصدار ${d.version})` : '') + (d.usedData ? ' · استخدمت بيانات المشروع' : ''));
+    FF.busy = false;
+    const prevV = (FF.versions || []).map(v => v.version).filter(v => d.version && v < d.version).sort((a, b) => b - a)[0];
+    ffPushMsg('bot', d.reply + (d.version ? ` (الإصدار ${d.version})` : '') + (d.usedData ? ' · استخدمت بيانات المشروع' : '') + (d.scope && d.scope !== 'all' && d.changed === false ? ' — لم يتغيّر شيء في الصفحة.' : ''),
+      d.version && prevV && d.changed !== false ? `<button type="button" class="ff-undo-msg" data-undo="${prevV}" data-from="${d.version}">↶ تراجع عن هذا التعديل</button>` : '');
     ffRender();
   } catch (e) { FF.busy = false; ffPushMsg('err', 'تعذّر التصميم: ' + e.message); }
   finally { FF.busy = false; el('ff-send').disabled = false; el('ff-status').textContent = ''; ffRenderMessages();  ccSetLoading('ff-pane', null); }
@@ -10297,6 +10302,35 @@ function ffApplyAccess() {
   if (ro) { if (!('ph' in q.dataset)) q.dataset.ph = q.placeholder; q.placeholder = 'هذا التصميم مشارك معك للعرض فقط — لا يمكن تعديله بالمحادثة.'; }
   else if ('ph' in q.dataset) { q.placeholder = q.dataset.ph; delete q.dataset.ph; }
 }
+// ---- نطاق التعديل بالمحادثة: الشريحة الحالية / العرض كله (العنصر المحدد من «اطلب من جيم» في شريط الأدوات) ----
+FF.nav = { i: 0, n: 0 }; FF.scopeChoice = 'slide';
+function ffCurrentScope() {
+  if (FF.scopeChoice === 'slide' && FF.nav.n >= 2) return { kind: 'slide', index: FF.nav.i };
+  return { kind: 'all' };
+}
+function ffRenderScope() {
+  const box = el('ff-scope'); if (!box) return;
+  const show = !!FF.design && !FF.track && FF.access !== 'view';
+  box.classList.toggle('hidden', !show); if (!show) return;
+  const slides = FF.nav.n >= 2;
+  el('ff-scope-sel').innerHTML = (slides ? `<option value="slide">الشريحة الحالية (${(FF.nav.i + 1).toLocaleString('en-US')} من ${FF.nav.n.toLocaleString('en-US')})</option>` : '') + '<option value="all">العرض كله</option>';
+  el('ff-scope-sel').value = slides && FF.scopeChoice === 'slide' ? 'slide' : 'all';
+  el('ff-scope-hint').textContent = slides && FF.scopeChoice === 'slide' ? 'لن تتغيّر باقي الشرائح ولا تصميم القالب' : 'قد يُعدَّل أي جزء من الصفحة';
+  box.classList.toggle('wide', !(slides && FF.scopeChoice === 'slide'));
+}
+el('ff-scope-sel').addEventListener('change', () => { FF.scopeChoice = el('ff-scope-sel').value; ffRenderScope(); });
+// زر «تراجع عن هذا التعديل» في رد المحادثة: يستعيد الإصدار السابق كإصدار جديد
+el('ff-messages').addEventListener('click', async e => {
+  const b = e.target.closest('.ff-undo-msg'); if (!b || !FF.design || FF.busy) return;
+  b.disabled = true; b.textContent = 'يتراجع…';
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/restore/${encodeURIComponent(b.dataset.undo)}`, { method: 'POST' });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.html = d.html || FF.html; FF.versions = d.versions || FF.versions; if (d.version) FF.design.version = d.version; FF.viewing = null;
+    FF.messages.forEach(m => { if (m.extraHtml && m.extraHtml.includes(`data-from="${b.dataset.from}"`)) m.extraHtml = ''; });
+    ffPushMsg('bot', `تراجعت عن التعديل: عادت الصفحة كما كانت في الإصدار ${b.dataset.undo} (حُفظت كإصدار ${d.version}).`); ffRender();
+  } catch (err) { b.disabled = false; b.textContent = '↶ تراجع عن هذا التعديل'; ffPushMsg('err', 'تعذّر التراجع: ' + err.message); }
+});
 // ---- أدوات التصميم ولوحة الخصائص (الأم) ----
 const FFD = { info: null, insp: true };
 function ffdPost(m) { const w = el('ff-preview').contentWindow; if (w) w.postMessage(Object.assign({ jeemEdit: 1, type: 'd-op' }, m), '*'); }
@@ -10376,8 +10410,8 @@ window.addEventListener('message', e => {
   if (m.type === 'd-dirty') { FF.edit.designDirty = m.count || 0; ffEditCountText(); return; }
   if (m.type === 'html' && m.purpose === 'ask' && FFD.ask) {
     const a = FFD.ask; FFD.ask = null; ffEditSetMode(false, true);
-    const msg = a.label ? `${a.text}\n\n(طبّق هذا الطلب على العنصر المعلَّم بالسمة data-jeem-target="1" فقط — ${a.label} — وأبقِ باقي الصفحة كما هي تمامًا، واحذف السمة من الناتج.)` : a.text;
-    ffAsk(msg, { html: m.html, display: a.label ? `${a.text} — على «${a.label}» المحدد` : a.text });
+    // العنصر المحدد نطاقٌ مستقل: الخادم يرسل للموديل هذا العنصر وحده ويركّبه مكانه؛ بلا تحديد يُطبَّق نطاق المحادثة الحالي
+    ffAsk(a.text, { html: m.html, display: a.label ? `${a.text} — على «${a.label}» المحدد` : a.text, scope: a.label ? { kind: 'element' } : undefined });
   }
 });
 // ===== هوية العرض في تصميم حر: مكتبة هويات + إعادة تلوين الصفحة وخطها وشعارها في المتصفح بلا موديل =====

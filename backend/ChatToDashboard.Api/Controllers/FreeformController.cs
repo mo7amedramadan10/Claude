@@ -17,7 +17,8 @@ namespace ChatToDashboard.Api.Controllers;
 public class FreeformGenerateRequest { public string Message { get; set; } = ""; public string? DesignId { get; set; } public string? Html { get; set; } public string? Kind { get; set; } public string? TemplateKey { get; set; } /// <summary>لغة الصفحة للتصميم الجديد: ar (افتراضي) أو en؛ لتصميم قائم تُستنتج من صفحته.</summary>
     public string? Lang { get; set; } /// <summary>المصادر المختارة (systems/files)؛ null = لا تغيير (المحفوظة مع التصميم أو الكل).</summary>
     public Sources.SourceSelection? Sources { get; set; } /// <summary>مرفقات هذه الرسالة (نصوص مستخرجة، صور، ملفات بيانات محفوظة).</summary>
-    public List<FreeformAttachment>? Attachments { get; set; } }
+    public List<FreeformAttachment>? Attachments { get; set; } /// <summary>نطاق التعديل لتصميم قائم: slide (شريحة بعينها) أو element (العنصر المعلَّم بـ data-jeem-target في Html)؛ null/all = الصفحة كلها.</summary>
+    public FreeformScopeRequest? Scope { get; set; } }
 public class FreeformSaveRequest { public string? IdentityId { get; set; } public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
 /// <summary>إعدادات مشاركة تصميم: الوصول العام (private/project/org) ودوره، والمستخدمون بالاسم بأدوارهم.</summary>
 public class FreeformSharingRequest { public string? Scope { get; set; } public string? ScopeRole { get; set; } public List<FreeformShare> Users { get; set; } = new(); }
@@ -502,8 +503,40 @@ public class FreeformController : ControllerBase
         // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
         var template = await ResolveTemplateAsync(design?.TemplateKey ?? request.TemplateKey, selection.ProjectId, ct);
         if (template is not null && template.Kind != kind) template = null;
+        var scopeKind = design is not null && !string.IsNullOrWhiteSpace(currentHtml) ? request.Scope?.Kind?.Trim().ToLowerInvariant() : null;
+        if (scopeKind is "slide" or "element")
+        {
+            // تعديل جزء واحد: الموديل لا يرى إلا الشريحة/العنصر، والجزء العائد يُركَّب مكانه فتبقى بقية الصفحة حرفيًا كما هي
+            FreeformScope.Range? range; string label;
+            if (scopeKind == "slide")
+            {
+                var slides = FreeformScope.FindSlides(currentHtml!); var i = request.Scope!.Index ?? -1;
+                if (slides.Count == 0) return BadRequest(new { error = "هذه الصفحة ليست شرائح — اختر نطاق «العرض كله» أو حدّد عنصرًا من «✏️ تعديل»." });
+                if (i < 0 || i >= slides.Count) return BadRequest(new { error = $"الشريحة {i + 1} غير موجودة (عدد الشرائح {slides.Count})." });
+                range = slides[i]; label = $"الشريحة {i + 1} من {slides.Count}";
+            }
+            else
+            {
+                range = FreeformScope.FindMarked(currentHtml!); label = "العنصر المحدد";
+                if (range is null) return BadRequest(new { error = "لم يُعثر على العنصر المحدد — حدّده من جديد في «✏️ تعديل»." });
+            }
+            var original = currentHtml![range.Value.Start..range.Value.End];
+            FreeformFragmentResult fr;
+            try { fr = await _builder.GenerateFragmentAsync(request.Message, currentHtml!, original, label, history, context, brand, user, ct, kind, template, request.Attachments); }
+            catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
+            string? newHtml = null;
+            if (fr.Fragment is not null && fr.Fragment != original)
+            {
+                newHtml = FreeformScope.StripLogoSrc(FreeformScope.Splice(currentHtml!, range.Value, fr.Fragment));
+                if (fr.Queries.Count > FreeformDataBlock.Parse(currentHtml).Count) newHtml = FreeformDataBlock.Inject(newHtml, fr.Queries, DateTime.UtcNow);
+            }
+            result = new FreeformResult(fr.Reply, newHtml, fr.UsedData, fr.Queries.Count > 0 ? fr.Queries : null);
+        }
+        else
+        {
         try { result = await _builder.GenerateAsync(request.Message, currentHtml, history, context, brand, user, ct, kind, template, design is null ? request.Lang : null, request.Attachments); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
+        }
         // «اطلب من جيم» على عنصر محدد يعلّمه بـ data-jeem-target؛ لا تبقى العلامة في الصفحة المحفوظة إن نسيها الموديل
         if (result.Html is not null) result = result with { Html = Regex.Replace(result.Html, @"\s+data-jeem-target(\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+))?", "") };
         int? version = null;
@@ -521,7 +554,7 @@ public class FreeformController : ControllerBase
         if (result.Html is not null && result.Queries is { Count: > 0 } qs) { var now = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, now, fp, ct); design.QueryCount = qs.Count; design.DataRefreshedAt = now; design.DataFingerprint = fp; }
         await _store.AddMessageAsync(design.Id, "user", request.Message, null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, version, ct);
-        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, version, usedData = result.UsedData, versions = await _store.VersionsAsync(design.Id, ct) });
+        return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, version, usedData = result.UsedData, versions = await _store.VersionsAsync(design.Id, ct), scope = scopeKind ?? "all", changed = result.Html is not null });
     }
 
     /// <summary>تحديث بيانات الصفحة بلا موديل: إعادة تنفيذ الاستعلامات المسجَّلة واستبدال كتلة <c>jeem-data</c> كإصدار جديد.</summary>

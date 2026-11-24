@@ -11,6 +11,8 @@ using ChatToDashboard.Api.Users;
 namespace ChatToDashboard.Api.Freeform;
 
 public sealed record FreeformResult(string Reply, string? Html, bool UsedData, IReadOnlyList<FreeformQuery>? Queries = null);
+/// <summary>نتيجة تعديل جزء واحد: <c>Fragment</c> null = لا تعديل (سؤال توضيح أو رفض بعد محاولتين).</summary>
+public sealed record FreeformFragmentResult(string Reply, string? Fragment, bool UsedData, IReadOnlyList<FreeformQuery> Queries, string? Rejected);
 
 /// <summary>يكتب صفحة HTML كاملة من طلب حر (كما تفعل artifacts) داخل المنصة: الموديل يرى ملف تعريف بيانات المشروع ويستطيع
 /// الاستعلام بـ <c>query_data</c> لتضمين أرقام حقيقية، ويلتزم بهوية المشروع (ألوان/خطوط) وجسر <c>jeem-page.js</c> للأجزاء القابلة
@@ -74,6 +76,76 @@ public class FreeformBuilder
         if (html is not null && recorded.Count > 0) html = FreeformDataBlock.Inject(html, recorded, DateTime.UtcNow);
         if (html is not null && html.Length > FreeformStore.MaxHtmlBytes) html = html[..FreeformStore.MaxHtmlBytes];
         return new FreeformResult(reply, html, (res.Json["usedData"]?.GetValue<bool>() ?? false) || recorded.Count > queries.Count, recorded);
+    }
+
+    /// <summary>قيود وضع تعديل جزء: تُلحق بنظام الموديل بعد قواعد الصفحة وتغلبها (لا إعادة للصفحة كاملة).</summary>
+    internal static string FragmentRules(string scopeLabel) => $$"""
+
+        # وضع تعديل جزء واحد — قيود صارمة تغلب أي تعليمات سابقة
+        - نطاق هذا الطلب: {{scopeLabel}} فقط. ستتلقى هذا الجزء وحده، فأعده هو وحده معدَّلًا في الحقل "fragment" — لا الصفحة كاملة ولا أي جزء آخر.
+        - حافظ على القالب: لا تضف <style> ولا <script> ولا <link>، ولا تغيّر الوسم الجذر ولا أصنافه، ولا تضف سمات style تغيّر الألوان أو الخطوط أو التخطيط أو المقاسات.
+        - استخدم فقط الأصناف (classes) الموجودة في هذا الجزء أو في أنماط الصفحة المرفقة؛ لا تخترع أصنافًا جديدة.
+        - المسموح: تغيير النصوص والأرقام والصور، وإضافة أو حذف بنود من النوع الموجود نفسه (بطاقة، سطر جدول، نقطة) بنسخ بنيتها كما هي.
+        - حافظ على لغة الجزء واتجاهه، ولا تغيّر الصور أو الشعار إلا بطلب صريح.
+        - لا تخترع أرقامًا: الرقم من البيانات (query_data) أو من كلام المستخدم، وإلا ضع «—» واذكر ذلك في الرد.
+        - إن كان الطلب غامضًا (أي رقم؟ أي بطاقة؟) أو لا يخص هذا الجزء، فلا تعدّل شيئًا: اجعل "fragment" فارغًا واسأل في "reply".
+        - "reply": سطر أو سطران بالعربية تذكر فيهما ما غيّرته تحديدًا (مثل: غيّرت العنوان وأرقام البطاقتين 2 و3).
+        أعد JSON فقط بالشكل: {"reply": "...", "fragment": "<…الجزء المعدَّل كاملًا…>", "usedData": false}
+        """;
+
+    /// <summary>تعديل جزء واحد من الصفحة (شريحة أو عنصر): الموديل يرى الجزء وأنماط الصفحة للقراءة فقط ويعيد الجزء وحده، ويُتحقق منه
+    /// (<see cref="FreeformScope.CheckFragment"/>) مع محاولة ثانية واحدة بسبب الرفض. بقية الصفحة لا تصل إلى الموديل أصلًا.</summary>
+    public async Task<FreeformFragmentResult> GenerateFragmentAsync(string message, string fullHtml, string fragment, string scopeLabel, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design", FreeformTemplate? template = null, IReadOnlyList<FreeformAttachment>? attachments = null)
+    {
+        var llm = await _router.ResolveStagedAsync(ct) ?? throw new InvalidOperationException("لا يوجد مزوّد موديل مهيأ — اضبط مفاتيح الموديلات من الإعدادات.");
+        var profile = await _profiles.BuildAsync(context, ct);
+        var hasData = profile.Tables.Count > 0; var profileText = "";
+        if (hasData)
+        {
+            await _semantics.EnsureAnalyzedAsync(context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
+            profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.ProjectId, ct));
+        }
+        var system = BuildSystemPrompt(brand, hasData, profileText, kind, template, LanguageOf(null, fullHtml)) + FragmentRules(scopeLabel);
+        var known = FreeformScope.KnownClasses(fullHtml);
+        var baseMsg = new StringBuilder();
+        if (history.Count > 0)
+        {
+            baseMsg.AppendLine("# المحادثة السابقة (للسياق)");
+            foreach (var h in history.TakeLast(6)) baseMsg.AppendLine($"{(h.Role == "user" ? "المستخدم" : "أنت")}: {Shorten(h.Text, 400)}");
+            baseMsg.AppendLine();
+        }
+        var css = FreeformScope.PageCss(fullHtml);
+        if (css.Length > 0) baseMsg.AppendLine("# أنماط الصفحة (للقراءة فقط — لا تعدّلها ولا تكرّرها)").AppendLine(css).AppendLine();
+        baseMsg.AppendLine($"# الجزء المطلوب تعديله ({scopeLabel})").AppendLine(fragment.Length > 120_000 ? fragment[..120_000] : fragment).AppendLine();
+        baseMsg.Append(FreeformAttachmentText.Build(attachments));
+        baseMsg.AppendLine("# الطلب").AppendLine(message.Trim());
+        var tools = hasData ? _tools.BuildTools(context).Where(t => t.Name == "query_data").ToList() : null;
+        var existing = FreeformDataBlock.Parse(fullHtml); var recorded = new List<FreeformQuery>(existing); var gate = new object();
+        AnalyticsTools.ToolObserver.Value = (name, input, result, isError) =>
+        {
+            if (name != "query_data" || isError) return result;
+            var sql = input["sql"]?.GetValue<string>(); if (string.IsNullOrWhiteSpace(sql)) return result;
+            JsonNode? parsed; try { parsed = JsonNode.Parse(result); } catch (JsonException) { return result; }
+            string key; lock (gate) { key = FreeformDataBlock.NextKey(recorded); recorded.Add(new FreeformQuery(key, sql.Trim(), parsed)); }
+            return result + $"\n\n[مفتاح هذه النتيجة في الصفحة: JEEM_DATA.{key}]";
+        };
+        try
+        {
+            string? feedback = null; string reply = ""; var usedData = false;
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                var msg = baseMsg.ToString() + (feedback is null ? "" : $"\n# رُفض ردك السابق\n{feedback}\nأعد الجزء نفسه ملتزمًا بالقيود.\n");
+                var res = await llm.RunStagedAsync(new StagedCall($"[تصميم حر/{scopeLabel}] {Shorten(message, 40)}", system, msg, tools, context, MaxIterations, false, user), ct);
+                reply = res.Json["reply"]?.GetValue<string>() ?? "";
+                usedData |= res.Json["usedData"]?.GetValue<bool>() ?? false;
+                var raw = res.Json["fragment"]?.GetValue<string>() ?? res.Json["html"]?.GetValue<string>();
+                var (frag, error) = FreeformScope.CheckFragment(fragment, raw, known);
+                if (error is null) return new FreeformFragmentResult(string.IsNullOrWhiteSpace(reply) ? (frag is null ? "لم أعدّل شيئًا — وضّح المطلوب." : "عدّلت الجزء المطلوب.") : reply, frag, usedData || recorded.Count > existing.Count, recorded, null);
+                feedback = error;
+            }
+            return new FreeformFragmentResult("لم أستطع التعديل دون تغيير تصميم القالب، فلم أغيّر شيئًا. السبب: " + feedback, null, false, recorded, feedback);
+        }
+        finally { AnalyticsTools.ToolObserver.Value = null; }
     }
 
     /// <summary>HTML من رد الموديل: حقل <c>html</c> في JSON، وإلا أول وثيقة <c>&lt;!doctype&gt;/&lt;html&gt;</c> في النص.</summary>
