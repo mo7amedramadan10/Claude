@@ -4083,3 +4083,9 @@ html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scale
   #screen-freeform .ff-preview-wrap:not(.hidden) { min-height: 78vh; }
   #screen-freeform .ff-start { max-height: none; overflow: visible; }
 }
+/* معاينة الصورة في نافذة «تغيير الصورة» بارتفاع ثابت: صورة بلا مصدر (مكان فارغ) كانت تمدّ النافذة إلى ~660px */
+#ff-img-modal .ffim-preview img { height: 165px; aspect-ratio: auto; }
+@media (max-width: 560px) { #ff-img-modal .ffim-preview img { height: 150px; } }
+/* التعديل بملء الشاشة */
+.jeem-scope .ff-preview-wrap.ff-full { position: fixed; inset: 0; z-index: 70; min-height: 0; padding: 12px 16px 68px; background: var(--plane); }
+body.ff-full-on { overflow: hidden; }

@@ -9828,7 +9828,7 @@ el('ff-refresh-rebuild').addEventListener('click', () => { el('ff-refresh-panel'
 // ---------- تعديل النص مباشرة من مساحة العمل: وضع ✏️ على إطار المعاينة، والحفظ إصدار جديد عبر PUT ----------
 FF.edit = { on: false, dirty: 0, imgDirty: 0, designDirty: 0, pending: null };
 function ffEditSetMode(on, silent) {
-  FF.edit.on = on; FF.edit.dirty = 0; FF.edit.imgDirty = 0; FF.edit.designDirty = 0; if (!on) el('ff-img-modal').classList.add('hidden'); ffdShow(on);
+  FF.edit.on = on; FF.edit.dirty = 0; FF.edit.imgDirty = 0; FF.edit.designDirty = 0; if (!on) el('ff-img-modal').classList.add('hidden'); ffdShow(on); if (!on) ffEditFull(false);
   el('ff-edit-text').setAttribute('aria-pressed', on ? 'true' : 'false'); el('ff-edit-bar').classList.toggle('hidden', !on); el('ff-preview-wrap').classList.toggle('editing', on);
   el('ff-edit-save').disabled = true; el('ff-edit-count').textContent = 'لا تعديلات بعد';
   const w = el('ff-preview').contentWindow; if (w && !silent) w.postMessage({ jeemEdit: 1, type: on ? 'enable' : 'disable' }, '*');
@@ -9836,6 +9836,17 @@ function ffEditSetMode(on, silent) {
 el('ff-edit-text').addEventListener('click', () => { if (!FF.design) return; if (FF.edit.on) { ffEditCancel(); return; } if (FFID.open) ffidClose(true); ffEditSetMode(true); });
 function ffEditCancel() { if ((FF.edit.dirty || FF.edit.imgDirty || FF.edit.designDirty) && !confirm('إلغاء التعديلات غير المحفوظة؟')) return; ffEditSetMode(false, true); ffRender(); }
 el('ff-edit-cancel').addEventListener('click', ffEditCancel);
+// التعديل بملء الشاشة: مساحة المعاينة (بشريط التعديل والأدوات ولوحة الخصائص وتنقّل الشرائح) تغطي الشاشة كلها (صنف ff-full)، ويُطلب ملء الشاشة
+// للصفحة كلها لا للمعاينة وحدها — وإلا لا تظهر النوافذ (تغيير الصورة، الهوية) لأنها خارج العنصر المعروض بملء الشاشة.
+function ffEditFull(on) {
+  const w = el('ff-preview-wrap'); if (!w) return; const was = w.classList.contains('ff-full'); if (on === was) return;
+  w.classList.toggle('ff-full', on); document.body.classList.toggle('ff-full-on', on);
+  const b = el('ff-edit-full'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.textContent = on ? '⤡ خروج من ملء الشاشة' : '⛶ ملء الشاشة';
+  try { if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch {}
+}
+el('ff-edit-full').addEventListener('click', () => ffEditFull(!el('ff-preview-wrap').classList.contains('ff-full')));
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && el('ff-preview-wrap').classList.contains('ff-full')) ffEditFull(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('ff-preview-wrap').classList.contains('ff-full') && !document.fullscreenElement && !document.querySelector('.modal-overlay:not(.hidden)')) ffEditFull(false); });
 el('ff-edit-save').addEventListener('click', () => { const w = el('ff-preview').contentWindow; if (!w) return; el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now(); w.postMessage({ jeemEdit: 1, type: 'get' }, '*'); });
 // جسر بيانات العرض داخل معاينة المحرر: الصفحة المعروضة قد تضمّن jeem-page.js وتنادي jeem.store/jeem.viewer بـ postMessage
 // (كما تفعل داخل صفحة المشاهدة). تصميم منشور → نفس واجهة بيانات العرض المنشور فيتشارك المحرر والمشاهدون البيانات نفسها؛
@@ -9917,7 +9928,7 @@ function ffImgDesignImages() {
 function ffImgRenderRecent() {
   const list = ffImgDesignImages(); el('ffim-recent-wrap').classList.toggle('hidden', !list.length);
   el('ffim-recent').innerHTML = list.map(u => `<button type="button" class="ffim-thumb${u === FFIM.url ? ' on' : ''}" role="option" aria-selected="${u === FFIM.url}" data-url="${esc(u)}" title="استخدم هذه الصورة"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('');
-  el('ffim-recent').querySelectorAll('.ffim-thumb').forEach(b => b.addEventListener('click', () => { FFIM.url = b.dataset.url; el('ffim-current').src = FFIM.url; el('ffim-status').textContent = 'اخترت صورة من التصميم.'; ffImgRenderRecent(); }));
+  el('ffim-recent').querySelectorAll('.ffim-thumb').forEach(b => b.addEventListener('click', () => { FFIM.url = b.dataset.url; el('ffim-current').src = FFIM.url; el('ffim-current').classList.remove('empty'); el('ffim-status').textContent = 'اخترت صورة من التصميم.'; ffImgRenderRecent(); }));
 }
 function ffImgOpen(m) {
   FFIM.pick = m; FFIM.url = null; FFIM.opener = document.activeElement;
