@@ -9155,7 +9155,7 @@ const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('c
 // عدّة تعديل النص المباشر داخل إطار المعاينة (تُحقن مع صفحة التصميم المفتوحة فقط، خاملة حتى يُفعَّل الوضع من الشريط):
 // الأم ترسل {jeemEdit:1,type:enable|disable|get}، والإطار يجعل العنصر النصي المنقور قابلًا للتحرير ويعيد {type:dirty|html}.
 // قبل الإرجاع يُنظَّف كل أثر للعدّة (السمات والأنماط والسكربتات المحقونة) فتبقى الصفحة المحفوظة كما لو كُتبت يدويًا.
-const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop()}}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
+const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,LIVE='button,[role=button],input,select,textarea,summary,#jeem-strip',TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(e.closest&&e.closest(LIVE))return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop()}}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done],[data-ff-img-kind]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done');x.removeAttribute('data-ff-img-kind')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
 // الحقن قبل «آخر» </body> لا أوّله: صفحة قد تحمل «</body>» داخل نص JavaScript مقتبس (دالة تعيد بناء الملف مثلًا)،
 // والاستبدال الأعمى يضع سكربتات المنصة داخل سكربت الصفحة فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
 function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
@@ -9174,8 +9174,22 @@ function ffImgKit() {
   function post(m) { m.jeemEdit = 1; parent.postMessage(m, '*'); }
   function bgUrl(e) { var b = getComputedStyle(e).backgroundImage || ''; var m = b.match(/url\(["']?([^"')]+)["']?\)/); return m ? m[1] : null; }
   function hasOwnText(e) { for (var i = 0; i < e.childNodes.length; i++) { var n = e.childNodes[i]; if (n.nodeType === 3 && n.textContent.trim()) return true; } return false; }
+  var LIVE = 'button,[role=button],input,select,textarea,summary,#jeem-strip';
+  function cls(e) { return typeof e.className === 'string' ? e.className : ''; }
+  // مكان الشعار في النماذج: حاوية بأيقونة SVG ونص «شعار شركتك هنا» (أو صنف logo/lg)، وقد يكون النص شقيقًا للأيقونة (.logo + .logo-t)
+  function logoSlot(t) {
+    for (var e = t, d = 0; e && e !== document.body && d < 3; e = e.parentElement, d++) {
+      var c = cls(e), txt = (e.textContent || '').trim();
+      if (/(^|\s)(logo|lg)(\s|$)/i.test(c) && (e.querySelector('svg') || txt)) return e;
+      if (/(^|\s)logo-t(\s|$)/i.test(c)) { var sib = e.previousElementSibling || e.nextElementSibling; return sib && /(^|\s)logo(\s|$)/i.test(cls(sib)) ? sib : e; }
+      if (e.querySelector(':scope > svg') && /شعار|logo/i.test(txt) && txt.length <= 40) return e;
+    }
+    return null;
+  }
   function find(t) {
     if (!t || t.nodeType !== 1 || t === document.body || t === document.documentElement) return null;
+    if (t.closest(LIVE)) return null; // أزرار التنقّل والحقول تعمل كما هي في وضع التعديل
+    var lg = logoSlot(t); if (lg && !lg.querySelector('img')) return { el: lg, kind: 'logo' };
     var ph = t.closest('.photo-ph,[data-jeem-photo]'); if (ph && !ph.querySelector('img')) return { el: ph, kind: 'ph' };
     if (t.tagName === 'IMG') return { el: t, kind: 'img' };
     if (t.tagName === 'image') return { el: t, kind: 'svgimg' }; // صورة داخل SVG (صفحات PowerPoint المرفوعة كما هي)
@@ -9186,17 +9200,19 @@ function ffImgKit() {
   function info(f) {
     var e = f.el, cs = getComputedStyle(e), r = e.getBoundingClientRect();
     if (!e.getAttribute('data-ff-img-id')) e.setAttribute('data-ff-img-id', 'i' + (++seq));
+    e.setAttribute('data-ff-img-kind', f.kind);
     var src = f.kind === 'img' ? (e.currentSrc || e.src) : f.kind === 'svgimg' ? (e.getAttribute('href') || e.getAttribute('xlink:href')) : f.kind === 'bg' ? bgUrl(e) : null;
     var fit = f.kind === 'img' ? (cs.objectFit === 'contain' ? 'contain' : 'cover') : f.kind === 'bg' ? (/contain/.test(cs.backgroundSize) ? 'contain' : 'cover') : 'cover';
     var pos = f.kind === 'img' ? cs.objectPosition : f.kind === 'bg' ? cs.backgroundPosition : '50% 50%';
-    return { type: 'img-pick', id: e.getAttribute('data-ff-img-id'), kind: f.kind, src: src, fit: fit, pos: pos, alt: e.getAttribute('alt') || '', w: Math.round(r.width), h: Math.round(r.height) };
+    var uw = e.offsetWidth || r.width, uh = e.offsetHeight || r.height; // مقاس التصميم نفسه لا المقاس بعد تصغير الشريحة
+    return { type: 'img-pick', id: e.getAttribute('data-ff-img-id'), kind: f.kind, src: src, fit: fit, pos: pos, alt: e.getAttribute('alt') || '', w: Math.round(uw), h: Math.round(uh) };
   }
   function clearHover() { if (hover) hover.removeAttribute('data-ff-img-hover'); hover = null; badge.style.display = 'none'; }
   function onMove(e) {
     if (!on) return; var f = find(e.target);
     if (!f) { clearHover(); return; }
     if (hover !== f.el) { clearHover(); hover = f.el; hover.setAttribute('data-ff-img-hover', '1'); var p = document.querySelector('[data-ff-hover]'); if (p) p.removeAttribute('data-ff-hover'); }
-    var r = f.el.getBoundingClientRect(); badge.style.display = 'block';
+    var r = f.el.getBoundingClientRect(); badge.textContent = f.kind === 'logo' ? '🖼️ اضغط لإضافة شعارك' : '🖼️ اضغط لتغيير الصورة'; badge.style.display = 'block';
     badge.style.left = Math.max(6, Math.min(window.innerWidth - badge.offsetWidth - 6, r.left + r.width / 2 - badge.offsetWidth / 2)) + 'px';
     badge.style.top = Math.max(6, Math.min(window.innerHeight - 30, r.top + 8)) + 'px';
   }
@@ -9206,6 +9222,16 @@ function ffImgKit() {
     var fit = m.fit === 'contain' ? 'contain' : 'cover', pos = m.pos || '50% 50%';
     if (e.tagName === 'IMG') { e.removeAttribute('srcset'); e.removeAttribute('sizes'); if (m.url) e.src = m.url; e.style.objectFit = fit; e.style.objectPosition = pos; e.alt = m.alt || ''; var pic = e.parentElement; if (pic && pic.tagName === 'PICTURE') pic.querySelectorAll('source').forEach(function (s) { s.remove(); }); }
     else if (e.tagName === 'image') { if (m.url) { e.setAttribute('href', m.url); e.removeAttribute('xlink:href'); } e.setAttribute('preserveAspectRatio', fit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'); }
+    else if (e.getAttribute('data-ff-img-kind') === 'logo') {
+      // الشعار يحلّ محل الأيقونة بارتفاعها مع الإبقاء على نسبة أبعاده، ويُزال نص «شعار شركتك هنا» من الحاوية أو شقيقها
+      if (!m.url) return; var mark = e.querySelector('svg'); var sc = e.offsetHeight ? e.getBoundingClientRect().height / e.offsetHeight : 1; var h = mark ? Math.max(24, Math.round(mark.getBoundingClientRect().height / (sc || 1))) : 56; // مقاس قبل تصغير الشريحة
+      var img2 = document.createElement('img'); img2.src = m.url; img2.alt = m.alt || 'شعار'; img2.style.cssText = 'display:block;height:' + h + 'px;width:auto;max-width:100%;object-fit:contain';
+      var hint = function (x) { return x && x.nodeType === 1 && /شعار|logo/i.test(x.textContent || '') && !x.querySelector('img'); };
+      [].slice.call(e.querySelectorAll('p,span,small,div')).forEach(function (x) { if (hint(x) && !x.querySelector('svg')) x.remove(); });
+      [e.previousElementSibling, e.nextElementSibling].forEach(function (x) { if (x && /(^|\s)logo-t(\s|$)/i.test(cls(x))) x.remove(); });
+      if (mark) mark.replaceWith(img2); else { e.innerHTML = ''; e.appendChild(img2); }
+      e.removeAttribute('data-ff-img-id'); e.removeAttribute('data-ff-img-kind');
+    }
     else if (e.matches('.photo-ph,[data-jeem-photo]')) {
       if (!m.url) return; e.innerHTML = ''; e.style.padding = '0'; e.style.overflow = 'hidden';
       var img = document.createElement('img'); img.src = m.url; img.alt = m.alt || ''; img.style.cssText = 'display:block;width:100%;height:100%;object-fit:' + fit + ';object-position:' + pos;
@@ -9687,9 +9713,10 @@ function ffImgRenderRecent() {
 }
 function ffImgOpen(m) {
   FFIM.pick = m; FFIM.url = null; FFIM.opener = document.activeElement;
+  el('ffim-heading').textContent = m.kind === 'logo' ? 'إضافة الشعار' : 'تغيير الصورة';
   const cur = el('ffim-current');
   if (m.src && !/^javascript:/i.test(m.src)) { cur.src = m.src; cur.classList.remove('empty'); } else { cur.removeAttribute('src'); cur.classList.add('empty'); }
-  el('ffim-size').innerHTML = m.w && m.h ? `مقاس الإطار في الصفحة: <bdi dir="ltr">${+m.w}×${+m.h}</bdi>` + (m.kind === 'ph' ? ' · مكان صورة فارغ' : '') : '';
+  el('ffim-size').innerHTML = m.w && m.h ? `مقاس الإطار في الصفحة: <bdi dir="ltr">${+m.w}×${+m.h}</bdi>` + (m.kind === 'ph' ? ' · مكان صورة فارغ' : m.kind === 'logo' ? ' · مكان الشعار' : '') : '';
   document.querySelector(`input[name="ffim-fit"][value="${m.fit === 'contain' ? 'contain' : 'cover'}"]`).checked = true;
   const pos = el('ffim-pos'); const norm = ffImgNormPos(m.pos); pos.value = [...pos.options].some(o => o.value === norm) ? norm : '50% 50%';
   el('ffim-alt').value = m.alt || ''; el('ffim-status').textContent = ''; el('ffim-error').classList.add('hidden'); el('ffim-file').value = '';
@@ -9727,7 +9754,7 @@ el('ff-img-modal').addEventListener('click', e => { if (e.target === el('ff-img-
 el('ff-img-modal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ffImgClose(); } });
 el('ffim-apply').addEventListener('click', () => {
   const m = FFIM.pick; if (!m || FFIM.busy) return;
-  if (m.kind === 'ph' && !FFIM.url) { ffImgError('اختر صورة أولًا — هذا مكان صورة فارغ.'); return; }
+  if ((m.kind === 'ph' || m.kind === 'logo') && !FFIM.url) { ffImgError(m.kind === 'logo' ? 'اختر صورة الشعار أولًا.' : 'اختر صورة أولًا — هذا مكان صورة فارغ.'); return; }
   const fit = document.querySelector('input[name="ffim-fit"]:checked').value;
   const w = el('ff-preview').contentWindow; if (w) w.postMessage({ jeemEdit: 1, type: 'img-set', id: m.id, url: FFIM.url, fit, pos: el('ffim-pos').value, alt: el('ffim-alt').value.trim() }, '*');
   ffImgClose();
