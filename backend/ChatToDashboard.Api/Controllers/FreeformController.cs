@@ -18,7 +18,7 @@ public class FreeformGenerateRequest { public string Message { get; set; } = "";
     public string? Lang { get; set; } /// <summary>المصادر المختارة (systems/files)؛ null = لا تغيير (المحفوظة مع التصميم أو الكل).</summary>
     public Sources.SourceSelection? Sources { get; set; } /// <summary>مرفقات هذه الرسالة (نصوص مستخرجة، صور، ملفات بيانات محفوظة).</summary>
     public List<FreeformAttachment>? Attachments { get; set; } }
-public class FreeformSaveRequest { public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
+public class FreeformSaveRequest { public string? IdentityId { get; set; } public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
 /// <summary>إعدادات مشاركة تصميم: الوصول العام (private/project/org) ودوره، والمستخدمون بالاسم بأدوارهم.</summary>
 public class FreeformSharingRequest { public string? Scope { get; set; } public string? ScopeRole { get; set; } public List<FreeformShare> Users { get; set; } = new(); }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
@@ -88,9 +88,12 @@ public class FreeformController : ControllerBase
     }
     private static Sources.SourceSelection? StoredSources(FreeformDesign? d) => d?.SourcesSelection;
 
-    private async Task<DeckBrand?> BrandAsync(string? projectId, CancellationToken ct)
+    /// <summary>هوية التصميم: هوية المكتبة المختارة له (<paramref name="identityId"/>) إن وُجدت في مشروعه، وإلا الهوية الافتراضية للمشروع.</summary>
+    private async Task<DeckBrand?> BrandAsync(string? projectId, CancellationToken ct, string? identityId = null)
     {
-        var b = await _brands.GetAsync(projectId, ct); var fonts = await _fonts.ListAsync(projectId, ct);
+        DeckBrand? b = null;
+        if (!string.IsNullOrWhiteSpace(identityId)) b = (await HttpContext.RequestServices.GetRequiredService<BrandIdentityStore>().GetAsync(projectId, identityId, ct))?.Brand;
+        b ??= await _brands.GetAsync(projectId, ct); var fonts = await _fonts.ListAsync(projectId, ct);
         if (b is null && fonts.Count == 0) return null;
         b ??= new DeckBrand(); b.FontFaces = fonts; return b;
     }
@@ -136,7 +139,7 @@ public class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (d, access, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.View, ct); if (err is not null) return err;
-        var brand = await BrandAsync(d!.ProjectId, ct);
+        var brand = await BrandAsync(d!.ProjectId, ct, d.IdentityId);
         // تغيّر بيانات المصدر منذ آخر تحديث؟ (بصمة الجداول المذكورة في الاستعلامات المسجَّلة مقابل المحفوظة)
         bool? dataChanged = null;
         if (FreeformAccess.CanEdit(access) && d.QueryCount > 0 && d.DataFingerprint is not null)
@@ -156,7 +159,7 @@ public class FreeformController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (d, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.View, ct); if (err is not null) return err;
         var html = await _store.VersionHtmlAsync(id, version, ct); if (html is null) return NotFound(new { error = "الإصدار غير موجود." });
-        return Ok(new { version, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct)) });
+        return Ok(new { version, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct, d.IdentityId)) });
     }
 
     /// <summary>كتالوج نماذج تصميم حر (اختياريًا لنوع واحد <c>?kind=doc</c>).</summary>
@@ -275,7 +278,7 @@ public class FreeformController : ControllerBase
         if (d.PresentationId is not null) reply += " الرابط المنشور يعرض النسخة المنشورة السابقة حتى تضغط «تحديث النشر».";
         await _store.AddMessageAsync(id, "assistant", reply, v, ct);
         var design = await _store.GetByIdAsync(id, ct) ?? d;
-        var brand = await BrandAsync(selection.ProjectId, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct, design.IdentityId);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), version = v, versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), slides = page.Slides, notes = page.Notes, kindChanged, published = d.PresentationId is not null });
     }
 
@@ -362,7 +365,7 @@ public class FreeformController : ControllerBase
         var message = $"حوّل الصفحة الحالية (وهي {fromLabel}) إلى {toLabel} كاملة: احتفظ بكل المحتوى والنصوص والأرقام والجداول والهوية البصرية نفسها، وأعد تنظيمه وفق بنية «{toLabel}» الموضحة في التعليمات."
             + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}");
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct, src.IdentityId);
         FreeformResult result;
         try { result = await _builder.GenerateAsync(message, src.Html, Array.Empty<FreeformMessage>(), context, brand, user, ct, request.Kind!); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
@@ -493,7 +496,7 @@ public class FreeformController : ControllerBase
         var sourcesJson = SourcesJsonOf(request.Sources);
         var currentHtml = !string.IsNullOrWhiteSpace(request.Html) ? request.Html : design?.Html;
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct, design?.IdentityId);
         FreeformResult result;
         var kind = FreeformStore.NormalizeKind(design?.Kind ?? request.Kind);
         // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
@@ -547,7 +550,7 @@ public class FreeformController : ControllerBase
         await _store.SetQueriesAsync(id, fresh, now, await _fingerprints.ComputeAsync(fresh.Select(q => q.Sql), selection.ProjectId, ct), ct);
         if (d.PresentationId is not null) _live.Invalidate(d.PresentationId);
         await _store.AddMessageAsync(id, "assistant", failed.Count == 0 ? $"حُدِّثت البيانات من {stored.Count} استعلامًا." : $"حُدِّثت البيانات من {stored.Count - failed.Count} استعلامًا وفشل {failed.Count}.", version, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct, d!.IdentityId);
         return Ok(new { version, html = ApplyBrandAssets(html, brand), refreshedAt = now, ok = stored.Count - failed.Count, failed, versions = await _store.VersionsAsync(id, ct) });
     }
 
@@ -561,13 +564,22 @@ public class FreeformController : ControllerBase
         if (request.AutoRefresh is { } ar) await _store.SetAutoRefreshAsync(id, ar, ct);
         // تغيير المصادر المختارة للتصميم من الواجهة (null مع ClearSources = العودة إلى كل المصادر)
         if (request.Sources is not null || request.ClearSources == true) { var sj = request.ClearSources == true ? null : SourcesJsonOf(request.Sources); await _store.SetSourcesAsync(id, sj, ct); d!.SourcesJson = sj; }
+        // اختيار هوية من مكتبة الهويات ("" = الافتراضية). تُتحقق أنها في مشروع التصميم.
+        if (request.IdentityId is { } iid)
+        {
+            iid = iid.Trim();
+            if (iid.Length > 0 && await HttpContext.RequestServices.GetRequiredService<BrandIdentityStore>().GetAsync(d!.ProjectId, iid, ct) is null) return BadRequest(new { error = "الهوية غير موجودة في مشروع التصميم." });
+            var v2 = iid.Length == 0 ? null : iid; await _store.SetIdentityAsync(id, v2, ct); d!.IdentityId = v2;
+        }
         if (!string.IsNullOrWhiteSpace(request.Html))
         {
             if (Encoding.UTF8.GetByteCount(request.Html) > FreeformStore.MaxHtmlBytes) return BadRequest(new { error = "الصفحة تتجاوز 4 ميغابايت." });
             if (!string.Equals(request.Html, d!.Html, StringComparison.Ordinal)) { version = await _store.AddVersionAsync(id, request.Html, request.Note ?? "تعديل يدوي للكود", request.Title?.Trim(), ct); await _store.AddMessageAsync(id, "assistant", "حُفظ تعديل يدوي للكود.", version, ct); }
         }
         if (version is null && !string.IsNullOrWhiteSpace(request.Title)) await _store.SetTitleAsync(id, request.Title.Trim(), ct);
-        return Ok(new { version, versions = await _store.VersionsAsync(id, ct) });
+        // مع تغيير الهوية تُعاد الصفحة بشعارها الجديد (`data-jeem-logo`) حتى تعرضها الواجهة فورًا
+        string? html = request.IdentityId is not null ? ApplyBrandAssets((await _store.GetByIdAsync(id, ct))?.Html ?? "", await BrandAsync(d!.ProjectId, ct, d.IdentityId)) : null;
+        return Ok(new { version, versions = await _store.VersionsAsync(id, ct), identityId = d!.IdentityId, html });
     }
 
     [HttpPost("{id}/restore/{version:int}")]
@@ -578,7 +590,7 @@ public class FreeformController : ControllerBase
         var html = await _store.VersionHtmlAsync(id, version, ct); if (html is null) return NotFound(new { error = "الإصدار غير موجود." });
         var v = await _store.AddVersionAsync(id, html, $"استعادة الإصدار {version}", null, ct);
         await _store.AddMessageAsync(id, "assistant", $"استُعيد الإصدار {version} كإصدار {v}.", v, ct);
-        return Ok(new { version = v, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct)), versions = await _store.VersionsAsync(id, ct) });
+        return Ok(new { version = v, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct, d.IdentityId)), versions = await _store.VersionsAsync(id, ct) });
     }
 
     [HttpDelete("{id}")]
@@ -659,7 +671,7 @@ public class FreeformController : ControllerBase
         var (user, selection) = cur.Value;
         var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         if (string.IsNullOrWhiteSpace(d!.Html)) return BadRequest(new { error = "لا توجد صفحة لنشرها بعد." });
-        var html = ApplyBrandAssets(d.Html, await BrandAsync(d.ProjectId, ct));
+        var html = ApplyBrandAssets(d.Html, await BrandAsync(d.ProjectId, ct, d.IdentityId));
         if (d.Kind == "slides") html = FreeformDataBlock.EnsureSlidesKit(html);
         // صفحة ببيانات: تُربط بمصدرها فتُقدَّم بآخر الأرقام عند كل فتح (بيانات حيّة) ويضمَن فيها الجسر لتحديثها وهي مفتوحة.
         var hasData = d.QueryCount > 0 || FreeformDataBlock.HasBlock(d.Html);

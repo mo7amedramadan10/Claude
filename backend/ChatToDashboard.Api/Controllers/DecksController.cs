@@ -95,6 +95,65 @@ public class DecksController : ControllerBase
         return NoContent();
     }
 
+    // ---- مكتبة الهويات: هويات مسمّاة إضافية تُختار لتصميم بعينه في «تصميم حر» (الافتراضية تبقى في brand) ----
+    public class BrandIdentityRequest { public string? Name { get; set; } public DeckBrand? Brand { get; set; } }
+
+    [HttpGet("brand/identities")]
+    public async Task<IActionResult> ListIdentities([FromServices] BrandIdentityStore identities, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var pid = cur.Value.Selection.ProjectId;
+        var fonts = await _fonts.ListAsync(pid, ct);
+        var def = await _brands.GetAsync(pid, ct) ?? new DeckBrand();
+        var items = new List<object> { new { id = "", name = string.IsNullOrWhiteSpace(def.Name) ? "الهوية الافتراضية" : def.Name, isDefault = true, brand = def } };
+        items.AddRange((await identities.ListAsync(pid, ct)).Select(i => (object)new { id = i.Id, name = i.Name, isDefault = false, brand = i.Brand, updatedAt = i.UpdatedAt }));
+        return Ok(new { items, fonts = DeckBrand.Fonts, uploadedFonts = fonts, maxLogoBytes = DeckBrand.MaxLogoBytes, max = BrandIdentityStore.MaxPerProject, canEdit = await CanEditBrandAsync(cur.Value.User, pid, ct) });
+    }
+
+    private async Task<(DeckBrand? Brand, string? Name, IActionResult? Error)> ValidIdentityAsync(BrandIdentityRequest request, string? projectId, CancellationToken ct)
+    {
+        var name = request.Name?.Trim();
+        if (string.IsNullOrEmpty(name)) return (null, null, BadRequest(new { error = "اكتب اسمًا للهوية." }));
+        if (name.Length > 120) name = name[..120];
+        var brand = request.Brand ?? new DeckBrand();
+        var uploaded = await _fonts.ListAsync(projectId, ct);
+        if (brand.Validate(uploaded.Select(f => f.Family)) is { } err) return (null, null, BadRequest(new { error = err }));
+        if (brand.Primary is null && brand.Secondary is null && brand.Accent is null && brand.Font is null && brand.Logo is null) return (null, null, BadRequest(new { error = "حدّد لونًا أو خطًا أو شعارًا واحدًا على الأقل للهوية." }));
+        return (brand, name, null);
+    }
+
+    [HttpPost("brand/identities")]
+    public async Task<IActionResult> AddIdentity([FromServices] BrandIdentityStore identities, [FromBody] BrandIdentityRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var pid = cur.Value.Selection.ProjectId;
+        if (!await CanEditBrandAsync(cur.Value.User, pid, ct)) return StatusCode(403, new { error = "إضافة الهويات للمسؤول أو مالك/محرّر المشروع فقط." });
+        if (await identities.CountAsync(pid, ct) >= BrandIdentityStore.MaxPerProject) return BadRequest(new { error = $"الحد {BrandIdentityStore.MaxPerProject} هوية للمشروع — احذف هوية لا تحتاجها." });
+        var (brand, name, err) = await ValidIdentityAsync(request, pid, ct); if (err is not null) return err;
+        var it = await identities.AddAsync(pid, cur.Value.User.OrganizationId, cur.Value.User.Id, name!, brand!, ct);
+        return Ok(new { id = it.Id, name = it.Name, isDefault = false, brand = it.Brand, updatedAt = it.UpdatedAt });
+    }
+
+    [HttpPut("brand/identities/{id}")]
+    public async Task<IActionResult> UpdateIdentity(string id, [FromServices] BrandIdentityStore identities, [FromBody] BrandIdentityRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var pid = cur.Value.Selection.ProjectId;
+        if (!await CanEditBrandAsync(cur.Value.User, pid, ct)) return StatusCode(403, new { error = "تعديل الهويات للمسؤول أو مالك/محرّر المشروع فقط." });
+        var (brand, name, err) = await ValidIdentityAsync(request, pid, ct); if (err is not null) return err;
+        if (!await identities.UpdateAsync(pid, id, name!, brand!, ct)) return NotFound(new { error = "الهوية غير موجودة." });
+        return Ok(new { id, name, isDefault = false, brand, updatedAt = DateTime.UtcNow });
+    }
+
+    [HttpDelete("brand/identities/{id}")]
+    public async Task<IActionResult> DeleteIdentity(string id, [FromServices] BrandIdentityStore identities, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var pid = cur.Value.Selection.ProjectId;
+        if (!await CanEditBrandAsync(cur.Value.User, pid, ct)) return StatusCode(403, new { error = "حذف الهويات للمسؤول أو مالك/محرّر المشروع فقط." });
+        return await identities.DeleteAsync(pid, id, ct) ? NoContent() : NotFound(new { error = "الهوية غير موجودة." });
+    }
+
     /// <summary>الهوية مع خطوطها المرفوعة (@font-face) — null بلا هوية؛ إن وُجدت خطوط بلا هوية تُعاد هوية فارغة تحملها.</summary>
     private async Task<DeckBrand?> BrandWithFontsAsync(string? projectId, CancellationToken ct)
     {

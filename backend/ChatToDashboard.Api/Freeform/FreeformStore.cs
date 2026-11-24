@@ -32,6 +32,8 @@ public class FreeformDesign
         get { if (string.IsNullOrWhiteSpace(SourcesJson)) return null; try { return System.Text.Json.JsonSerializer.Deserialize<Sources.SourceSelection>(SourcesJson); } catch (System.Text.Json.JsonException) { return null; } }
     }
     [JsonIgnore] public string Html { get; set; } = "";
+    /// <summary>هوية المكتبة المختارة لهذا التصميم (<see cref="Decks.BrandIdentityStore"/>)؛ null = الهوية الافتراضية للمشروع. تحدد شعار `data-jeem-logo` وهوية البناء.</summary>
+    [JsonPropertyName("identityId")] public string? IdentityId { get; set; }
     /// <summary>الوصول العام للتصميم: private (صاحبه ومن شاركه معهم بالاسم) | project (كل من مشروعه الحالي مشروع التصميم) | org (كل المنظمة).
     /// التصاميم القائمة قبل المشاركة تأخذ project بالتعديل (سلوكها السابق)، والجديدة private.</summary>
     [JsonPropertyName("shareScope")] public string ShareScope { get; set; } = FreeformAccess.Private;
@@ -78,7 +80,7 @@ public class FreeformStore
     private volatile bool _schemaReady;
     public FreeformStore(DataStore db) => _db = db;
     private const string T = "[dbo].[FreeformDesigns]", V = "[dbo].[FreeformVersions]", M = "[dbo].[FreeformMessages]";
-    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, SourcesJson, ShareScope, ShareScopeRole, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, SourcesJson, IdentityId, ShareScope, ShareScopeRole, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
     private const string Q = "[dbo].[FreeformQueries]";
     private const string S = "[dbo].[FreeformShares]";
     public static readonly string[] Kinds = { "doc", "slides", "design", "dashboard", "motion" };
@@ -116,6 +118,7 @@ public class FreeformStore
                 IF COL_LENGTH('dbo.FreeformDesigns', 'DataFingerprint') IS NULL ALTER TABLE {T} ADD [DataFingerprint] NVARCHAR(100) NULL;
                 IF COL_LENGTH('dbo.FreeformDesigns', 'AutoRefresh') IS NULL ALTER TABLE {T} ADD [AutoRefresh] BIT NOT NULL DEFAULT 0;
                 IF COL_LENGTH('dbo.FreeformDesigns', 'SourcesJson') IS NULL ALTER TABLE {T} ADD [SourcesJson] NVARCHAR(MAX) NULL;
+                IF COL_LENGTH('dbo.FreeformDesigns', 'IdentityId') IS NULL ALTER TABLE {T} ADD [IdentityId] NVARCHAR(32) NULL;
                 IF COL_LENGTH('dbo.FreeformDesigns', 'ShareScope') IS NULL ALTER TABLE {T} ADD [ShareScope] NVARCHAR(16) NOT NULL CONSTRAINT DF_FreeformDesigns_ShareScope DEFAULT 'project';
                 IF COL_LENGTH('dbo.FreeformDesigns', 'ShareScopeRole') IS NULL ALTER TABLE {T} ADD [ShareScopeRole] NVARCHAR(8) NOT NULL CONSTRAINT DF_FreeformDesigns_ShareScopeRole DEFAULT 'edit';
                 IF OBJECT_ID('dbo.FreeformShares') IS NULL
@@ -136,7 +139,7 @@ public class FreeformStore
         var now = DateTime.UtcNow;
         var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = string.IsNullOrWhiteSpace(templateKey) ? null : templateKey.Trim(), SourcesJson = sourcesJson, Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @SourcesJson, @ShareScope, @ShareScopeRole, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
+        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @SourcesJson, @IdentityId, @ShareScope, @ShareScopeRole, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
         if (d.Version == 1) await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, 1, @html, @prompt, @size, @now)", new { id = d.Id, html, prompt = Trim(prompt), size = d.SizeBytes, now });
         return d;
     }
@@ -255,6 +258,13 @@ public class FreeformStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"UPDATE {T} SET SourcesJson = @sourcesJson WHERE Id = @id", new { id, sourcesJson });
+    }
+
+    public async Task SetIdentityAsync(string id, string? identityId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {T} SET IdentityId = @identityId WHERE Id = @id", new { id, identityId });
     }
 
     public async Task SetAutoRefreshAsync(string id, bool on, CancellationToken ct = default)

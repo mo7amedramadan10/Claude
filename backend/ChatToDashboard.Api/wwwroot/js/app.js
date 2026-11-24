@@ -9678,7 +9678,7 @@ function ffEditSetMode(on, silent) {
   el('ff-edit-save').disabled = true; el('ff-edit-count').textContent = 'لا تعديلات بعد';
   const w = el('ff-preview').contentWindow; if (w && !silent) w.postMessage({ jeemEdit: 1, type: on ? 'enable' : 'disable' }, '*');
 }
-el('ff-edit-text').addEventListener('click', () => { if (!FF.design) return; if (FF.edit.on) { ffEditCancel(); return; } ffEditSetMode(true); });
+el('ff-edit-text').addEventListener('click', () => { if (!FF.design) return; if (FF.edit.on) { ffEditCancel(); return; } if (FFID.open) ffidClose(true); ffEditSetMode(true); });
 function ffEditCancel() { if (FF.edit.dirty && !confirm('إلغاء التعديلات غير المحفوظة؟')) return; ffEditSetMode(false, true); ffRender(); }
 el('ff-edit-cancel').addEventListener('click', ffEditCancel);
 el('ff-edit-save').addEventListener('click', () => { const w = el('ff-preview').contentWindow; if (!w) return; el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now(); w.postMessage({ jeemEdit: 1, type: 'get' }, '*'); });
@@ -9909,6 +9909,7 @@ function ffRender() {
   if (FF.design && FF.gal) delete FF.gal.htmlCache[FF.design.id]; // المعاينة المصغّرة تُجلب من جديد بعد التعديل
   ffRenderAttach(); // بعد البناء تثبت الشريحة (بلا ✕) لأن النموذج صار جزءًا من التصميم
   ffEditSetMode(false, true);
+  if (FFID.open) { FFID.open = false; FFID.html = ''; el('ff-id-bar').classList.add('hidden'); el('ff-identity').setAttribute('aria-pressed', 'false'); }
   el('ff-start').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden'); el('ff-preview-wrap').classList.remove('hidden');
   el('ff-pane').querySelectorAll('.dk-actions button, .dk-actions select').forEach(b => { b.disabled = false; });
   el('ff-code').setAttribute('aria-pressed', 'false');
@@ -10095,7 +10096,7 @@ el('ff-mobile').addEventListener('click', () => { FF.mobile = !FF.mobile; ffRend
 // بـ«تحويل إلى»، ولا يعدّل بالمحادثة ولا بالنص ولا يستورد ولا يحدّث البيانات ولا ينشر؛ والخادم يرفض ذلك أيضًا.
 const FF_ACCESS_LABEL = { owner: 'مالك', edit: 'تعديل', view: 'عرض فقط' };
 const FF_SCOPE_LABEL = { project: 'مشترك مع المشروع', org: 'مشترك مع المنظمة' };
-const FF_RO_IDS = ['ff-edit-text', 'ff-import-into', 'ff-refresh', 'ff-stale', 'ff-publish', 'ff-code', 'ff-restore'];
+const FF_RO_IDS = ['ff-edit-text', 'ff-identity', 'ff-import-into', 'ff-refresh', 'ff-stale', 'ff-publish', 'ff-code', 'ff-restore'];
 function ffShareLabel(scope, count) {
   const parts = []; if (FF_SCOPE_LABEL[scope]) parts.push(FF_SCOPE_LABEL[scope]);
   if (count) parts.push(count === 1 ? 'مع شخص واحد' : count === 2 ? 'مع شخصين' : `مع ${count.toLocaleString('en-US')} أشخاص`);
@@ -10124,6 +10125,314 @@ function ffApplyAccess() {
   if (ro) { if (!('ph' in q.dataset)) q.dataset.ph = q.placeholder; q.placeholder = 'هذا التصميم مشارك معك للعرض فقط — لا يمكن تعديله بالمحادثة.'; }
   else if ('ph' in q.dataset) { q.placeholder = q.dataset.ph; delete q.dataset.ph; }
 }
+// ===== هوية العرض في تصميم حر: مكتبة هويات + إعادة تلوين الصفحة وخطها وشعارها في المتصفح بلا موديل =====
+// الألوان: تُجمع ألوان الصفحة من قواعد CSS وسمات style وسمات SVG (fill/stroke/stop-color…) والنصوص المقتبسة في السكربتات،
+// وتُجمَّع الملوّنة منها عائلاتٍ بتقارب درجة اللون؛ أكبر ثلاث عائلات تُربط بأساسي/ثانوي/إبراز الهوية (قابلة للتغيير)،
+// ويحتفظ كل لون بفاتحيّته وتشبّعه نسبةً إلى ممثل عائلته فتبقى الدرجات الفاتحة فاتحة والداكنة داكنة. الرمادي والأبيض والأسود لا تتغير.
+const FFID = { items: null, fonts: [], uploaded: [], canEdit: false, max: 30, sel: null, map: {}, families: [], base: '', html: '', open: false };
+const FFID_ROLES = { primary: 'أساسي', secondary: 'ثانوي', accent: 'إبراز', keep: 'بلا تغيير' };
+const FFID_COLOR_RE = /(?<!url\(\s*['"]?)#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])|\brgba?\([^()]*\)/g;
+const FFID_ATTRS = ['fill', 'stroke', 'stop-color', 'color', 'flood-color', 'lighting-color'];
+
+function ffidParse(str) {
+  const s = String(str).trim(); let m = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(s);
+  if (m) {
+    let h = m[1]; if (h.length <= 4) h = h.split('').map(c => c + c).join('');
+    return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16), a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1, fmt: 'hex' };
+  }
+  m = /^rgba?\(\s*([\d.]+)(%?)\s*[,\s]\s*([\d.]+)(%?)\s*[,\s]\s*([\d.]+)(%?)\s*(?:[,/]\s*([\d.]+)(%?)\s*)?\)$/i.exec(s);
+  if (!m) return null;
+  const ch = (v, p) => Math.max(0, Math.min(255, p ? +v * 2.55 : +v));
+  return { r: ch(m[1], m[2]), g: ch(m[3], m[4]), b: ch(m[5], m[6]), a: m[7] == null ? 1 : Math.max(0, Math.min(1, m[8] ? +m[7] / 100 : +m[7])), fmt: 'rgb' };
+}
+function ffidHsl({ r, g, b }) {
+  r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+  if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return { h, s, l };
+}
+function ffidRgbOf({ h, s, l }) {
+  h = ((h % 360) + 360) % 360 / 360; if (s === 0) { const v = Math.round(l * 255); return { r: v, g: v, b: v }; }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return { r: Math.round(f(h + 1 / 3) * 255), g: Math.round(f(h) * 255), b: Math.round(f(h - 1 / 3) * 255) };
+}
+function ffidHex(c) { return '#' + [c.r, c.g, c.b].map(v => Math.round(v).toString(16).padStart(2, '0')).join(''); }
+function ffidKey(c) { return ffidHex(c); }
+function ffidChromatic(hsl) { return hsl.s >= 0.18 && hsl.l > 0.08 && hsl.l < 0.95; }
+function ffidHueDist(a, b) { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; }
+function ffidClamp(v, a = 0, b = 1) { return Math.max(a, Math.min(b, v)); }
+
+/** يمر على كل مواضع الألوان في الوثيقة ويستبدل كل لون بما تعيده fn (أو يبقيه إن أعادت null). */
+function ffidWalkColors(doc, fn) {
+  const rep = str => str.replace(FFID_COLOR_RE, m => { const c = ffidParse(m); if (!c) return m; const out = fn(c, m); return out == null ? m : out; });
+  const css = t => t.replace(/\{([^{}]*)\}/g, (m, body) => '{' + rep(body) + '}');
+  doc.querySelectorAll('style').forEach(st => { if (st.id === 'jeem-identity-font') return; const t = st.textContent, n = css(t); if (n !== t) st.textContent = n; });
+  doc.querySelectorAll('[style]').forEach(e => { const t = e.getAttribute('style'), n = rep(t); if (n !== t) e.setAttribute('style', n); });
+  doc.querySelectorAll(FFID_ATTRS.map(a => `[${a}]`).join(',')).forEach(e => FFID_ATTRS.forEach(a => {
+    const v = e.getAttribute(a); if (!v || /^\s*url\(/i.test(v)) return; const n = rep(v); if (n !== v) e.setAttribute(a, n);
+  }));
+  doc.querySelectorAll('script:not([src])').forEach(sc => {
+    if (sc.id === 'jeem-data' || sc.id === 'jeem-data-rt') return;
+    const t = sc.textContent, n = t.replace(/(['"])(#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4}))\1/g, (m, q, hex) => { const c = ffidParse(hex); if (!c) return m; const out = fn(c, hex); return out == null ? m : q + out + q; });
+    if (n !== t) sc.textContent = n;
+  });
+}
+/** عائلات الألوان الملوّنة في الصفحة مرتبة بعدد مرات الاستخدام: [{rep:{h,s,l}, hex, count, members:[hex]}]. */
+function ffidRolesOf(doc) {
+  try { return JSON.parse(doc.querySelector('meta[name="jeem-identity"]')?.getAttribute('data-roles') || '{}') || {}; } catch { return {}; }
+}
+function ffidFamilies(doc) {
+  const counts = new Map(); const roles = ffidRolesOf(doc);
+  ffidWalkColors(doc, c => { const k = ffidKey(c); counts.set(k, (counts.get(k) || 0) + 1); return null; });
+  const colors = [...counts].map(([hex, n]) => ({ hex, n, hsl: ffidHsl(ffidParse(hex)) })).filter(c => ffidChromatic(c.hsl)).sort((a, b) => b.n - a.n);
+  const fams = [];
+  // صفحة طُبّقت عليها هوية سابقًا تحمل دور كل لون (data-roles): العائلات تُبنى بالدور أولًا حتى لا يندمج أساسي وثانوي متقاربا الدرجة
+  colors.forEach(c => {
+    const role = roles[c.hex]; if (!role) return;
+    const f = fams.find(f => f.role === role);
+    if (f) { f.count += c.n; f.members.push(c.hex); } else fams.push({ rep: c.hsl, hex: c.hex, count: c.n, members: [c.hex], role });
+  });
+  colors.forEach(c => {
+    if (roles[c.hex]) return;
+    const f = fams.find(f => !f.role && ffidHueDist(f.rep.h, c.hsl.h) < 25);
+    if (f) { f.count += c.n; f.members.push(c.hex); } else fams.push({ rep: c.hsl, hex: c.hex, count: c.n, members: [c.hex] });
+  });
+  return fams.sort((a, b) => b.count - a.count);
+}
+/** الدور الافتراضي لكل عائلة: الأولى أساسي، الثانية ثانوي، الثالثة إبراز، والباقي يتبع أقرب الثلاث درجةً. */
+function ffidDefaultMap(fams) {
+  const map = {}; const roles = ['primary', 'secondary', 'accent'];
+  const known = fams.filter(f => f.role); known.forEach(f => { map[f.hex] = f.role; });
+  const free = roles.filter(r => !known.some(f => f.role === r));
+  fams.forEach((f, i) => {
+    if (f.role) return;
+    if (known.length) { map[f.hex] = free.shift() || 'keep'; return; } // ألوان جديدة أُضيفت بعد آخر هوية
+    if (i < 3) { map[f.hex] = roles[i]; return; }
+    let best = 0, bd = 999; fams.slice(0, 3).forEach((t, j) => { const d = ffidHueDist(t.rep.h, f.rep.h); if (d < bd) { bd = d; best = j; } });
+    map[f.hex] = roles[best];
+  });
+  return map;
+}
+/** ألوان الهوية الثلاثة بعد استكمال الناقص: الثانوي من الأساسي أدكن، والإبراز من الثانوي. */
+function ffidTargets(brand) {
+  const p = brand.primary ? ffidHsl(ffidParse(brand.primary)) : null; if (!p) return null;
+  const s = brand.secondary ? ffidHsl(ffidParse(brand.secondary)) : { h: p.h, s: p.s, l: ffidClamp(p.l * 0.6) };
+  const a = brand.accent ? ffidHsl(ffidParse(brand.accent)) : s;
+  return { primary: p, secondary: s, accent: a };
+}
+function ffidQuoteFont(f) { return /^[\w-]+$/.test(f) ? f : `'${f.replace(/'/g, '')}'`; }
+/** يضيف خط الهوية أول قائمة font-family (ويزيل خط هوية سابقة أضفناه نحن). قيم var(…) تُترك لأنها تتبع متغيّر الخط. */
+function ffidFontList(value, font, prior) {
+  let v = value.trim(); if (/^var\(/i.test(v) || /^(inherit|initial|unset|revert)$/i.test(v)) return value;
+  if (prior) v = v.replace(new RegExp(`^\\s*(['"]?)${prior.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\1\\s*,\\s*`, 'i'), '');
+  if (font && !new RegExp(`^\\s*(['"]?)${font.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\1\\s*(,|$)`, 'i').test(v)) v = `${ffidQuoteFont(font)}, ${v}`;
+  return v;
+}
+function ffidApplyFont(doc, brand, prior) {
+  const font = brand.font || null; if (!font && !prior) return;
+  const fix = t => t.replace(/(font-family\s*:\s*)([^;{}!]+)/gi, (m, k, v) => k + ffidFontList(v, font, prior) + (/\s$/.test(v) ? ' ' : ''))
+    .replace(/(--[\w-]*font[\w-]*\s*:\s*)([^;{}!]+)/gi, (m, k, v) => /['",]|serif|sans|mono/i.test(v) ? k + ffidFontList(v, font, prior) + (/\s$/.test(v) ? ' ' : '') : m);
+  doc.querySelectorAll('style').forEach(st => { if (st.id === 'jeem-identity-font') return; const t = st.textContent, n = fix(t); if (n !== t) st.textContent = n; });
+  doc.querySelectorAll('[style]').forEach(e => { const t = e.getAttribute('style'), n = fix(t); if (n !== t) e.setAttribute('style', n); });
+  doc.querySelectorAll('[font-family]').forEach(e => e.setAttribute('font-family', ffidFontList(e.getAttribute('font-family'), font, prior)));
+  doc.getElementById('jeem-identity-font')?.remove();
+  if (!font) return;
+  const faces = (brand.fontFaces || FFID.uploaded || []).filter(f => f.family === font);
+  const st = doc.createElement('style'); st.id = 'jeem-identity-font';
+  st.textContent = faces.length
+    ? faces.map(f => `@font-face{font-family:'${f.family.replace(/'/g, '')}';src:url('${f.url}') format('${f.format}');font-weight:${f.weight};font-style:${f.style};font-display:swap}`).join('\n')
+    : `@import url('https://fonts.googleapis.com/css2?family=${encodeURIComponent(font).replace(/%20/g, '+')}:wght@300;400;500;600;700;800&display=swap');`;
+  doc.head.insertBefore(st, doc.head.firstChild);
+}
+/** أماكن الشعار في النماذج (أيقونة + «شعار شركتك هنا» أو صنف logo/lg) تصير `<img data-jeem-logo>` يملؤها الخادم بشعار هوية التصميم. */
+function ffidApplyLogo(doc, brand) {
+  const logo = brand.logo || null; let n = 0;
+  doc.querySelectorAll('img[data-jeem-logo]').forEach(img => { if (logo) img.setAttribute('src', logo); n++; });
+  if (!logo) return n;
+  const cls = e => typeof e.className === 'string' ? e.className : (e.getAttribute('class') || '');
+  const slots = new Set();
+  doc.querySelectorAll('[class]').forEach(e => { if (/(^|\s)(logo|lg)(\s|$)/i.test(cls(e)) && e.querySelector('svg') && !e.querySelector('img')) slots.add(e); });
+  doc.querySelectorAll('body *').forEach(e => { if (slots.has(e) || e.querySelector('img')) return; const svg = e.querySelector(':scope > svg'); const txt = (e.textContent || '').trim(); if (svg && /شعار|logo/i.test(txt) && txt.length <= 40) slots.add(e); });
+  slots.forEach(slot => {
+    if ([...slots].some(o => o !== slot && o.contains(slot))) return; // الحاوية الأعلى تكفي
+    const svg = slot.querySelector('svg'); const h = parseFloat(svg?.getAttribute('height')) || (svg?.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number)[3] || 40;
+    const img = doc.createElement('img'); img.setAttribute('data-jeem-logo', ''); img.setAttribute('alt', brand.name ? `شعار ${brand.name}` : 'الشعار'); img.setAttribute('src', logo);
+    img.setAttribute('style', `height:${Math.round(Math.max(24, Math.min(h, 120)))}px;width:auto;max-width:100%;object-fit:contain;display:block`);
+    if (svg) svg.replaceWith(img); else slot.insertBefore(img, slot.firstChild);
+    [...slot.childNodes].forEach(c => { if (c !== img && (c.nodeType === 3 || (c.nodeType === 1 && !c.contains(img) && /شعار|logo/i.test(c.textContent || '') && (c.textContent || '').trim().length <= 40))) c.remove(); });
+    const sib = slot.nextElementSibling || slot.previousElementSibling; if (sib && /(^|\s)logo-t(\s|$)/i.test(cls(sib))) sib.remove();
+    n++;
+  });
+  return n;
+}
+/** يعيد الصفحة بهوية أخرى. map: {hexممثل العائلة: primary|secondary|accent|keep}. يعيد {html, families, recolored, logos}. */
+function ffRebrand(html, brand, map) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const fams = ffidFamilies(doc); const tg = ffidTargets(brand || {}); map = map || ffidDefaultMap(fams);
+  const meta = doc.querySelector('meta[name="jeem-identity"]'); const prior = meta?.getAttribute('data-font') || null;
+  let recolored = 0; const newRoles = {};
+  if (tg && fams.length) {
+    const famOf = new Map(); fams.forEach(f => f.members.forEach(h => famOf.set(h, f)));
+    ffidWalkColors(doc, (c, raw) => {
+      const f = famOf.get(ffidKey(c)); if (!f) return null; const role = map[f.hex] || 'keep'; if (role === 'keep' || !tg[role]) return null;
+      const R = f.rep, T = tg[role], hsl = ffidHsl(c);
+      const s = R.s > 0.01 ? ffidClamp(hsl.s * T.s / R.s) : T.s;
+      const l = hsl.l >= R.l ? T.l + (hsl.l - R.l) * (1 - T.l) / Math.max(1e-3, 1 - R.l) : T.l * hsl.l / Math.max(1e-3, R.l);
+      const rgb = ffidRgbOf({ h: T.h + (hsl.h - R.h), s, l: ffidClamp(l) }); recolored++; newRoles[ffidHex(rgb)] = role;
+      if (c.fmt === 'rgb') return c.a < 1 ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${+c.a.toFixed(3)})` : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+      return ffidHex(rgb) + (c.a < 1 ? Math.round(c.a * 255).toString(16).padStart(2, '0') : '');
+    });
+  }
+  ffidApplyFont(doc, brand || {}, prior);
+  const logos = ffidApplyLogo(doc, brand || {});
+  let mt = doc.querySelector('meta[name="jeem-identity"]'); if (!mt) { mt = doc.createElement('meta'); mt.setAttribute('name', 'jeem-identity'); doc.head.appendChild(mt); }
+  mt.setAttribute('content', brand?.id || 'default'); if (Object.keys(newRoles).length) mt.setAttribute('data-roles', JSON.stringify(newRoles)); if (brand?.font) mt.setAttribute('data-font', brand.font); else mt.removeAttribute('data-font');
+  const dt = /^\s*<!doctype/i.test(html) ? '<!DOCTYPE html>\n' : '';
+  return { html: dt + doc.documentElement.outerHTML, families: fams, map, recolored, logos };
+}
+
+// ---- الواجهة ----
+async function ffidLoad() {
+  const r = await fetch('/api/decks/brand/identities'); const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `(${r.status})`);
+  FFID.items = d.items || []; FFID.fonts = d.fonts || []; FFID.uploaded = d.uploadedFonts || []; FFID.canEdit = !!d.canEdit; FFID.max = d.max || 30;
+}
+function ffidSwatches(b) { return ['primary', 'secondary', 'accent'].map(k => `<i style="background:${esc(b[k] || 'transparent')}"${b[k] ? '' : ' class="none"'}></i>`).join(''); }
+function ffidRenderList() {
+  const cur = FF.design?.identityId || '';
+  el('ffid-list').innerHTML = (FFID.items || []).map(it => `<button type="button" class="ffid-item" role="radio" aria-checked="${FFID.sel === it.id}" data-ffid="${esc(it.id)}">
+      <span class="ffid-sw" aria-hidden="true">${ffidSwatches(it.brand || {})}</span>${it.brand?.logo ? `<img src="${esc(it.brand.logo)}" alt="" class="ffid-logo">` : ''}
+      <span class="ffid-name">${esc(it.name)}</span>${it.id === cur ? '<small class="ffid-cur">الحالية</small>' : ''}</button>`).join('');
+  el('ffid-list').querySelectorAll('[data-ffid]').forEach(b => b.addEventListener('click', () => ffidSelect(b.dataset.ffid)));
+  el('ffid-new').classList.toggle('hidden', !FFID.canEdit || (FFID.items || []).length > FFID.max);
+  el('ffid-edit').classList.toggle('hidden', !FFID.canEdit || FFID.sel == null);
+}
+function ffidRenderMap(res) {
+  const box = el('ffid-map'); const fams = (res?.families || []).slice(0, 6);
+  if (!fams.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  box.classList.remove('hidden');
+  box.innerHTML = `<span class="ffid-map-t">ألوان العرض ←</span>` + fams.map(f => `<label class="ffid-fam"><i style="background:${esc(f.hex)}" aria-hidden="true"></i><span class="sr-only">اللون ${esc(f.hex)}</span>
+      <select data-fam="${esc(f.hex)}" aria-label="ما يصير إليه اللون ${esc(f.hex)}">${Object.entries(FFID_ROLES).map(([k, v]) => `<option value="${k}"${FFID.map[f.hex] === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>`).join('');
+  box.querySelectorAll('select[data-fam]').forEach(s => s.addEventListener('change', () => { FFID.map[s.dataset.fam] = s.value; ffidPreview(); }));
+}
+function ffidBrandOf(id) { const it = (FFID.items || []).find(i => i.id === id); return it ? { ...(it.brand || {}), id: it.id || 'default', fontFaces: FFID.uploaded } : null; }
+function ffidPreview() {
+  const brand = ffidBrandOf(FFID.sel); if (!brand) return;
+  const res = ffRebrand(FFID.base, brand, FFID.map); FFID.html = res.html;
+  const parts = [];
+  if (!brand.primary) parts.push('هذه الهوية بلا لون أساسي فلا تتغير الألوان');
+  else parts.push(res.families.length ? `أُعيد تلوين ${res.recolored.toLocaleString('en-US')} موضع لون` : 'لم تُكتشف ألوان قابلة للتغيير في الصفحة');
+  if (brand.font) parts.push(`الخط ${brand.font}`);
+  if (brand.logo) parts.push(res.logos ? `الشعار في ${res.logos.toLocaleString('en-US')} موضع` : 'لا مكان للشعار في الصفحة — أضفه من «✏️ تعديل»');
+  el('ffid-status').textContent = 'معاينة: ' + parts.join(' · ') + '.';
+  el('ffid-apply').disabled = false;
+  el('ff-preview').srcdoc = ffSandboxHtml(res.html, true, FF.design?.kind);
+  return res;
+}
+function ffidSelect(id) {
+  FFID.sel = id; const brand = ffidBrandOf(id);
+  const doc = new DOMParser().parseFromString(FFID.base, 'text/html'); const fams = ffidFamilies(doc);
+  FFID.map = ffidDefaultMap(fams); ffidRenderList();
+  const res = ffidPreview(); ffidRenderMap(brand?.primary ? res : null);
+}
+async function ffidOpen() {
+  if (!FF.design) return;
+  if (FF.edit && FF.edit.on) ffEditSetMode(false);
+  FFID.open = true; FFID.sel = null; FFID.map = {}; FFID.base = FF.html; FFID.html = '';
+  el('ff-id-bar').classList.remove('hidden'); el('ff-identity').setAttribute('aria-pressed', 'true');
+  el('ffid-apply').disabled = true; el('ffid-map').classList.add('hidden');
+  el('ffid-status').textContent = 'اختر هوية لمعاينة العرض بها — لا يُحفظ شيء حتى تضغط «تطبيق».';
+  el('ffid-list').innerHTML = '<small class="muted">يحمّل الهويات…</small>';
+  try { await ffidLoad(); ffidRenderList(); el('ffid-list').querySelector('[data-ffid]')?.focus(); }
+  catch (e) { el('ffid-list').innerHTML = `<small class="ffid-err">تعذّر تحميل الهويات: ${esc(e.message)}</small>`; }
+}
+function ffidClose(rerender) {
+  if (!FFID.open) return; FFID.open = false;
+  el('ff-id-bar').classList.add('hidden'); el('ff-identity').setAttribute('aria-pressed', 'false');
+  if (rerender && FFID.html) el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true, FF.design?.kind);
+  FFID.html = '';
+}
+el('ff-identity').addEventListener('click', () => FFID.open ? ffidClose(true) : ffidOpen());
+el('ffid-cancel').addEventListener('click', () => { ffidClose(true); el('ff-identity').focus(); });
+el('ff-id-bar').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ffidClose(true); el('ff-identity').focus(); } });
+el('ffid-apply').addEventListener('click', async () => {
+  if (!FFID.html || !FF.design) return; const it = (FFID.items || []).find(i => i.id === FFID.sel); if (!it) return;
+  const btn = el('ffid-apply'); btn.disabled = true; btn.textContent = 'يحفظ…';
+  try {
+    // الشعار لا يُخزَّن داخل الصفحة: `data-jeem-logo` يملؤه الخادم بشعار هوية التصميم عند العرض والنشر
+    const doc = new DOMParser().parseFromString(FFID.html, 'text/html'); doc.querySelectorAll('img[data-jeem-logo]').forEach(i => i.removeAttribute('src'));
+    const html = (/^\s*<!doctype/i.test(FFID.html) ? '<!DOCTYPE html>\n' : '') + doc.documentElement.outerHTML;
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, identityId: it.id, note: `تطبيق الهوية «${it.name}»` }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FF.design.identityId = d.identityId ?? (it.id || null); FF.html = d.html || FFID.html; FF.viewing = null;
+    if (d.versions) FF.versions = d.versions; if (d.version) FF.design.version = d.version;
+    FFID.open = false; el('ff-id-bar').classList.add('hidden'); el('ff-identity').setAttribute('aria-pressed', 'false');
+    ffRender(); ffPushMsg('bot', `طُبّقت الهوية «${it.name}» على العرض${d.version ? ` (الإصدار ${d.version})` : ''}. الإصدار السابق محفوظ ويمكن استعادته من قائمة الإصدارات${FF.publishedUrl ? '، والرابط المنشور يتحدّث بعد «تحديث النشر»' : ''}.`);
+  } catch (e) { el('ffid-status').textContent = 'تعذّر الحفظ: ' + e.message; btn.disabled = false; }
+  finally { btn.textContent = 'تطبيق كإصدار جديد'; }
+});
+
+// ---- محرّر الهوية ----
+const FFIDM = { id: null, logo: null };
+function ffidmPreview() {
+  const p = el('ffidm-primary').value, s = el('ffidm-secondary').value, a = el('ffidm-accent').value, f = el('ffidm-font').value;
+  el('ffidm-preview').innerHTML = `<div style="font-family:${f ? ffidQuoteFont(f) + ',' : ''}inherit;background:${p};color:#fff;padding:12px 14px;border-radius:10px 10px 0 0;display:flex;align-items:center;gap:10px">${FFIDM.logo ? `<img src="${esc(FFIDM.logo)}" alt="" style="height:28px;background:#fff;border-radius:4px;padding:2px">` : ''}<b>${esc(el('ffidm-name').value || 'عنوان الشريحة')}</b></div>
+    <div style="font-family:${f ? ffidQuoteFont(f) + ',' : ''}inherit;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:10px 14px;display:flex;gap:10px;align-items:center"><span style="color:${s};font-weight:700">نص بلون ثانوي</span><span style="background:${a};color:#fff;padding:2px 10px;border-radius:999px;font-size:12px">إبراز</span></div>`;
+}
+function ffidmOpen(id) {
+  const it = id == null ? null : (FFID.items || []).find(i => i.id === id); const b = it?.brand || {};
+  FFIDM.id = it ? it.id : null; FFIDM.logo = b.logo || null;
+  el('ffidm-heading').textContent = it ? (it.id ? 'تعديل الهوية' : 'تعديل الهوية الافتراضية') : 'هوية جديدة';
+  el('ffidm-note').textContent = it && !it.id ? 'هذه هوية المشروع الافتراضية: تعديلها يسري أيضًا على منشئ العروض وكل التصاميم التي لم تُختر لها هوية أخرى.' : 'تُحفظ في مكتبة هويات المشروع وتُستخدم لأي تصميم.';
+  el('ffidm-name').value = it ? it.name : ''; el('ffidm-name').required = !(it && !it.id);
+  el('ffidm-primary').value = b.primary || '#0B5CAD'; el('ffidm-secondary').value = b.secondary || '#0A2540'; el('ffidm-accent').value = b.accent || '#F2A900';
+  const fams = [...new Set([...(FFID.uploaded || []).map(f => f.family)])];
+  el('ffidm-font').innerHTML = '<option value="">بلا تغيير للخط</option>' + (fams.length ? `<optgroup label="خطوط الشركة (مرفوعة)">${fams.map(f => `<option>${esc(f)}</option>`).join('')}</optgroup>` : '') + `<optgroup label="خطوط حرة (Google Fonts)">${(FFID.fonts || []).map(f => `<option>${esc(f)}</option>`).join('')}</optgroup>`;
+  el('ffidm-font').value = b.font || '';
+  el('ffidm-logo-img').src = FFIDM.logo || ''; el('ffidm-logo-img').classList.toggle('hidden', !FFIDM.logo); el('ffidm-logo-clear').classList.toggle('hidden', !FFIDM.logo);
+  el('ffidm-delete').classList.toggle('hidden', !(it && it.id)); el('ffidm-error').classList.add('hidden');
+  ffidmPreview(); el('ff-idm-modal').classList.remove('hidden'); el('ffidm-name').focus();
+}
+function ffidmClose() { el('ff-idm-modal').classList.add('hidden'); (FFID.open ? el('ffid-new') : el('ff-identity'))?.focus(); }
+['ffidm-primary', 'ffidm-secondary', 'ffidm-accent', 'ffidm-font', 'ffidm-name'].forEach(id => el(id).addEventListener('input', ffidmPreview));
+el('ffidm-logo-file').addEventListener('change', () => {
+  const f = el('ffidm-logo-file').files[0]; el('ffidm-logo-file').value = ''; if (!f) return;
+  if (f.size > 400 * 1024) { el('ffidm-error').textContent = 'حجم الشعار يتجاوز 400 كيلوبايت — صغّر الصورة.'; el('ffidm-error').classList.remove('hidden'); return; }
+  const rd = new FileReader(); rd.onload = () => { FFIDM.logo = rd.result; el('ffidm-logo-img').src = rd.result; el('ffidm-logo-img').classList.remove('hidden'); el('ffidm-logo-clear').classList.remove('hidden'); el('ffidm-error').classList.add('hidden'); ffidmPreview(); }; rd.readAsDataURL(f);
+});
+el('ffidm-logo-clear').addEventListener('click', () => { FFIDM.logo = null; el('ffidm-logo-img').classList.add('hidden'); el('ffidm-logo-clear').classList.add('hidden'); ffidmPreview(); });
+el('ffidm-cancel').addEventListener('click', ffidmClose);
+el('ff-idm-modal').addEventListener('click', e => { if (e.target === el('ff-idm-modal')) ffidmClose(); });
+el('ff-idm-modal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ffidmClose(); } });
+el('ffid-new').addEventListener('click', () => ffidmOpen(null));
+el('ffid-edit').addEventListener('click', () => { if (FFID.sel != null) ffidmOpen(FFID.sel); });
+el('ffidm-form').addEventListener('submit', async e => {
+  e.preventDefault(); const err = el('ffidm-error'); err.classList.add('hidden');
+  const isDefault = FFIDM.id === '';
+  const old = isDefault ? ((FFID.items || []).find(i => i.id === '')?.brand || {}) : {};
+  const brand = { ...old, primary: el('ffidm-primary').value.toUpperCase(), secondary: el('ffidm-secondary').value.toUpperCase(), accent: el('ffidm-accent').value.toUpperCase(), font: el('ffidm-font').value || null, logo: FFIDM.logo };
+  delete brand.fontFaces; delete brand.updatedAt;
+  if (isDefault && el('ffidm-name').value.trim()) brand.name = el('ffidm-name').value.trim();
+  const btn = el('ffidm-save'); btn.disabled = true;
+  try {
+    const url = isDefault ? '/api/decks/brand' : FFIDM.id ? `/api/decks/brand/identities/${encodeURIComponent(FFIDM.id)}` : '/api/decks/brand/identities';
+    const body = isDefault ? brand : { name: el('ffidm-name').value.trim(), brand };
+    const r = await fetch(url, { method: isDefault || FFIDM.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    if (isDefault) state.dashBrand = undefined; // رأس اللوحات يعيد جلب الهوية الافتراضية
+    const keep = isDefault ? '' : (FFIDM.id || d.id);
+    await ffidLoad(); el('ff-idm-modal').classList.add('hidden');
+    if (FFID.open) ffidSelect(keep); el('ffid-list').querySelector(`[data-ffid="${CSS.escape(keep)}"]`)?.focus();
+  } catch (x) { err.textContent = x.message; err.classList.remove('hidden'); }
+  finally { btn.disabled = false; }
+});
+el('ffidm-delete').addEventListener('click', async () => {
+  if (!FFIDM.id || !confirm('حذف هذه الهوية من مكتبة المشروع؟ التصاميم التي طُبّقت عليها تحتفظ بألوانها، وشعارها يعود لشعار الهوية الافتراضية.')) return;
+  const r = await fetch(`/api/decks/brand/identities/${encodeURIComponent(FFIDM.id)}`, { method: 'DELETE' });
+  if (!r.ok) { const d = await r.json().catch(() => ({})); el('ffidm-error').textContent = d.error || `(${r.status})`; el('ffidm-error').classList.remove('hidden'); return; }
+  await ffidLoad(); el('ff-idm-modal').classList.add('hidden'); FFID.sel = null; FFID.html = ''; el('ffid-apply').disabled = true;
+  if (FFID.open) { ffidRenderList(); ffidRenderMap(null); el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true, FF.design?.kind); el('ffid-status').textContent = 'حُذفت الهوية. اختر هوية لمعاينة العرض بها.'; }
+});
 const FFS = { users: [], ownerId: null, timer: 0, results: [] };
 function ffsRenderUsers() {
   el('ffs-users').innerHTML = FFS.users.length ? FFS.users.map((u, i) => `<li><span class="ffs-ava" aria-hidden="true">${esc((u.name || u.username || '?').trim().charAt(0))}</span>

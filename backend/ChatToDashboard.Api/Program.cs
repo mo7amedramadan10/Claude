@@ -87,6 +87,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Presentations.PresentationData
 // منشئ العروض (مستوى المشروع): مواصفة JSON + بناء بالموديل + نشر في العروض التقديمية — Decks/
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBrandStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Decks.BrandIdentityStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBrandFontStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBrandTemplateStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBuilder>();

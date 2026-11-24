@@ -3960,3 +3960,40 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-nav-count { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); min-width: 64px; text-align: center; font-feature-settings: "tnum" 1; direction: ltr; }
 .jeem-scope .ff-nav-ch { font-size: 18px; line-height: 1; }
 html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scaleX(-1); }
+
+/* ---- هوية العرض في تصميم حر (🎨 الهوية) ---- */
+.jeem-scope .ff-id-bar { flex: 1 0 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(15, 30, 45, .06); font-size: var(--fs-sm); min-width: 0; }
+.jeem-scope .ffid-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.jeem-scope .ffid-row .grow { flex: 1; }
+.jeem-scope .ffid-title { white-space: nowrap; }
+.jeem-scope .ffid-list { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; padding: 2px; scrollbar-width: thin; }
+.jeem-scope .ffid-item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; font: inherit; }
+.jeem-scope .ffid-item:hover { border-color: var(--ink-3); }
+.jeem-scope .ffid-item[aria-checked="true"] { border-color: var(--brand, #0B5CAD); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand, #0B5CAD) 25%, transparent); font-weight: 700; }
+.jeem-scope .ffid-item:focus-visible { outline: 2px solid var(--brand, #0B5CAD); outline-offset: 2px; }
+.jeem-scope .ffid-sw { display: inline-flex; }
+.jeem-scope .ffid-sw i, .jeem-scope .ffid-fam i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .12); display: inline-block; }
+.jeem-scope .ffid-sw i + i { margin-inline-start: -4px; }
+.jeem-scope .ffid-sw i.none { background: repeating-linear-gradient(45deg, var(--line) 0 2px, transparent 2px 4px) !important; }
+.jeem-scope .ffid-logo { height: 18px; max-width: 48px; object-fit: contain; }
+.jeem-scope .ffid-cur { font-size: 11px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; font-weight: 400; }
+.jeem-scope .ffid-map { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 8px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 4%, var(--surface)); }
+.jeem-scope .ffid-map-t { color: var(--ink-3); }
+.jeem-scope .ffid-fam { display: inline-flex; align-items: center; gap: 4px; }
+.jeem-scope .ffid-fam select { font: inherit; padding: 2px 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.jeem-scope .ffid-err, .jeem-scope .ffidm-error { color: var(--danger, #B42318); }
+#ff-idm-modal .ffidm-box { width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; }
+#ff-idm-modal .ffidm-form { display: flex; flex-direction: column; gap: 10px; }
+#ff-idm-modal .ffidm-form > label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); }
+#ff-idm-modal .ffidm-form input[type="text"], #ff-idm-modal .ffidm-form select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+#ff-idm-modal .ffidm-colors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#ff-idm-modal .ffidm-colors label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); }
+#ff-idm-modal .ffidm-colors input { width: 100%; height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--surface); }
+#ff-idm-modal .ffidm-logo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--fs-sm); }
+#ff-idm-modal .ffidm-logo img { height: 36px; max-width: 120px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: #fff; }
+#ff-idm-modal .ffidm-upload { cursor: pointer; }
+#ff-idm-modal .modal-actions { display: flex; align-items: center; gap: 8px; }
+#ff-idm-modal .modal-actions .grow { flex: 1; }
+#ff-idm-modal .danger { color: var(--danger, #B42318); }
+@media (max-width: 520px) { .jeem-scope .ffid-title { display: none; } }
+.jeem-scope .ff-id-bar.hidden, .jeem-scope .ffid-map.hidden { display: none; }

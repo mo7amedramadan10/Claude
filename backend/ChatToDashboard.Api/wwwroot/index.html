@@ -796,6 +796,36 @@
     </div>
   </div>
 </div>
+<!-- محرّر هوية من مكتبة الهويات (تصميم حر): اسم، شعار، ثلاثة ألوان، خط -->
+<div id="ff-idm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffidm-heading">
+  <div class="modal ffidm-box">
+    <h3 id="ffidm-heading">هوية جديدة</h3>
+    <p class="modal-note" id="ffidm-note">تُحفظ في مكتبة هويات المشروع وتُستخدم لأي تصميم. الهوية الافتراضية هي هوية المشروع في «منشئ العروض».</p>
+    <form id="ffidm-form" class="ffidm-form">
+      <label>اسم الهوية<input type="text" id="ffidm-name" maxlength="120" required placeholder="مثال: شركة ثقة — العلامة الفرعية"></label>
+      <div class="ffidm-colors">
+        <label>أساسي<input type="color" id="ffidm-primary" value="#0B5CAD"></label>
+        <label>ثانوي<input type="color" id="ffidm-secondary" value="#0A2540"></label>
+        <label>إبراز<input type="color" id="ffidm-accent" value="#F2A900"></label>
+      </div>
+      <label>الخط<select id="ffidm-font"></select></label>
+      <div class="ffidm-logo">
+        <span>الشعار</span>
+        <img id="ffidm-logo-img" alt="" class="hidden">
+        <label class="btn btn-sm btn-ghost ffidm-upload">رفع شعار<input type="file" id="ffidm-logo-file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden></label>
+        <button type="button" id="ffidm-logo-clear" class="btn btn-sm btn-ghost hidden">إزالة</button>
+      </div>
+      <div class="ffidm-preview" id="ffidm-preview" aria-hidden="true"></div>
+      <p id="ffidm-error" class="ffidm-error hidden" role="alert"></p>
+      <div class="modal-actions">
+        <button type="button" id="ffidm-delete" class="btn btn-sm btn-ghost danger hidden">حذف الهوية</button>
+        <span class="grow"></span>
+        <button type="button" id="ffidm-cancel" class="btn btn-sm btn-ghost">إلغاء</button>
+        <button type="submit" id="ffidm-save" class="btn btn-sm btn-primary">حفظ الهوية</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div id="ff-share-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffs-heading">
   <div class="modal share-modal-box ffs-box">
     <h3 id="ffs-heading">مشاركة التصميم</h3>
@@ -1226,6 +1256,7 @@
         <button type="button" id="ff-replay" class="btn btn-sm btn-ghost hidden" title="إعادة تشغيل الحركة">↻ إعادة</button>
         <button type="button" id="ff-print" class="btn btn-sm btn-ghost hidden" title="طباعة أو حفظ PDF">PDF</button>
         <button type="button" id="ff-edit-text" class="btn btn-sm btn-ghost" aria-pressed="false" title="تعديل النصوص والصور مباشرة على الصفحة بالنقر عليها">✏️ تعديل</button>
+        <button type="button" id="ff-identity" class="btn btn-sm btn-ghost" aria-pressed="false" aria-controls="ff-id-bar" title="تغيير هوية العرض: ألوان الشركة وخطها وشعارها من مكتبة الهويات">🎨 الهوية</button>
         <button type="button" id="ff-mobile" class="btn btn-sm btn-ghost" aria-pressed="false" title="معاينة بعرض جوال 390px">📱 جوال</button>
         <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
         <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
@@ -1311,6 +1342,22 @@
           <span class="grow"></span>
           <button type="button" id="ff-edit-cancel" class="btn btn-sm btn-ghost">إلغاء</button>
           <button type="button" id="ff-edit-save" class="btn btn-sm btn-primary" disabled>حفظ كإصدار جديد</button>
+        </div>
+        <!-- شريط هوية العرض: اختيار هوية من مكتبة الهويات يعيد تلوين الصفحة وخطّها وشعارها في المتصفح بلا موديل، ثم يُحفظ كإصدار جديد -->
+        <div id="ff-id-bar" class="ff-id-bar hidden" role="region" aria-label="هوية العرض">
+          <div class="ffid-row">
+            <b class="ffid-title">🎨 هوية العرض</b>
+            <div id="ffid-list" class="ffid-list" role="radiogroup" aria-label="الهويات المتاحة"></div>
+            <button type="button" id="ffid-new" class="btn btn-sm btn-ghost">+ هوية جديدة</button>
+          </div>
+          <div id="ffid-map" class="ffid-map hidden"></div>
+          <div class="ffid-row ffid-actions">
+            <small id="ffid-status" class="muted" aria-live="polite">اختر هوية لمعاينة العرض بها — لا يُحفظ شيء حتى تضغط «تطبيق».</small>
+            <span class="grow"></span>
+            <button type="button" id="ffid-edit" class="btn btn-sm btn-ghost hidden">✎ تعديل الهوية</button>
+            <button type="button" id="ffid-cancel" class="btn btn-sm btn-ghost">إلغاء</button>
+            <button type="button" id="ffid-apply" class="btn btn-sm btn-primary" disabled>تطبيق كإصدار جديد</button>
+          </div>
         </div>
         <iframe id="ff-preview" class="ff-preview" title="معاينة التصميم" sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
         <!-- التنقّل بين الشرائح خارج الصفحة: أزرار تنقّل الصفحة نفسها تُخفى في المعاينة فتبقى كل نصوصها وأزرارها قابلة للتعديل -->
