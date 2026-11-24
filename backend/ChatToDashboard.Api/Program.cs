@@ -366,7 +366,7 @@ app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
     .AllowAnonymous();
 // الرابط المقروء للوحة متابعة مشارَكة: /d/{اسم-المنظمة}/{اسم-اللوحة} — التطبيق نفسه في وضع المشاركة (bootSharedView).
 // الصفحة تحت مسار بمقطعين فتُحوَّل مراجع index.html النسبية (css/ js/ img/) إلى مطلقة وإلا حلّها المتصفح تحت /d/{org}/.
-app.MapGet("/d/{org}/{slug}", (IWebHostEnvironment env) => Results.Content(SpaIndex.Html(env), "text/html; charset=utf-8", System.Text.Encoding.UTF8))
+app.MapGet("/d/{org}/{slug}", (HttpContext ctx, IWebHostEnvironment env) => SpaIndex.Result(ctx, env))
     .AllowAnonymous();
 
 // /o/{slug} (and anything else with no matching static file or API route) still serves the
@@ -376,7 +376,7 @@ app.MapGet("/d/{org}/{slug}", (IWebHostEnvironment env) => Results.Content(SpaIn
 // AllowAnonymous is required here — every endpoint requires a signed-in user by default
 // (FallbackPolicy above), which would otherwise 401 this before the signed-out visitor it's
 // actually for ever sees the login screen.
-app.MapFallback((IWebHostEnvironment env) => Results.Content(SpaIndex.Html(env), "text/html; charset=utf-8", System.Text.Encoding.UTF8)).AllowAnonymous();
+app.MapFallback((HttpContext ctx, IWebHostEnvironment env) => SpaIndex.Result(ctx, env)).AllowAnonymous();
 
 // Initial load: fetch the enabled external systems into the shared schema. Failures are logged
 // but do not prevent startup — POST /api/data/refresh can retry once SQL is reachable.
@@ -681,6 +681,15 @@ internal static class SpaIndex
         var stamp = File.GetLastWriteTimeUtc(path);
         if (_cached is null || stamp != _stamp) { _cached = Rewrite(File.ReadAllText(path)); _stamp = stamp; }
         return _cached;
+    }
+    /// <summary>
+    /// الصفحة نفسها بترويسة «أعد التحقق دائمًا» كالملفات الثابتة؛ بدونها قد يعيد المتصفح نسخة قديمة من index.html
+    /// تحت /o/{slug} مع app.js جديد، فتنقص عناصر يطلبها الكود ويتوقف (مثلًا معاينة تصميم حر تبقى بيضاء).
+    /// </summary>
+    public static IResult Result(HttpContext ctx, IWebHostEnvironment env)
+    {
+        ctx.Response.Headers.CacheControl = "no-cache";
+        return Results.Content(Html(env), "text/html; charset=utf-8", System.Text.Encoding.UTF8);
     }
     public static string Rewrite(string html) =>
         System.Text.RegularExpressions.Regex.Replace(html, @"(?<=\s(?:href|src)=\x22)(css|js|img|lib|vendor)/", "/$1/");
