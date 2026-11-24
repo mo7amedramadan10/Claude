@@ -7,7 +7,7 @@
 (function () {
   'use strict';
   if (window.__jeemBlocks) return; window.__jeemBlocks = true;
-  var CSS = '[data-jeem-replaced]{display:none!important}[data-jeem-chart]{display:flex;flex-direction:column;min-height:180px;min-width:0}'
+  var CSS = '[data-jeem-replaced]{display:none!important}.jb-table{flex:1;min-height:0;overflow:auto}.jb-table table{width:100%;border-collapse:collapse;font-size:13px}.jb-table th{text-align:start;font-weight:700;padding:7px 9px;border-bottom:2px solid rgba(0,0,0,.12);position:sticky;top:0;background:inherit}.jb-table td{padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.07)}.jb-table td.n{font-variant-numeric:tabular-nums;white-space:nowrap}[data-jeem-chart]{display:flex;flex-direction:column;min-height:180px;min-width:0}'
     + '[data-jeem-chart]>.jb-title{font-weight:700;font-size:.95em;margin:0 0 6px}'
     + '[data-jeem-chart]>.jb-plot{flex:1 1 auto;min-height:160px;position:relative}'
     + '[data-jeem-chart]>.jb-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;border:1.5px dashed currentColor;border-radius:10px;opacity:.55;font-size:.85em}'
@@ -73,7 +73,7 @@
     var r = rows.slice(0, limit), x = col(rows, cfg.x, false);
     var ys = Array.isArray(cfg.y) ? cfg.y : [cfg.y]; ys = ys.map(function (y) { return col(rows, y, true); });
     if (ys.length > 1 && (type === 'bar' || type === 'line'))
-      return { kind: 'multi', type: type, stacked: !!cfg.stacked, categories: r.map(function (o) { return o[x]; }), series: ys.map(function (y) { return { name: y, data: r.map(function (o) { return toNum(o[y]); }) }; }) };
+      return { kind: 'multi', type: type, stacked: !!cfg.stacked, categories: r.map(function (o) { return o[x]; }), series: ys.map(function (y) { return { name: (cfg.labels && cfg.labels[y]) || y, data: r.map(function (o) { return toNum(o[y]); }) }; }) };
     var y = ys[0], labels = r.map(function (o) { return o[x]; }), values = r.map(function (o) { return toNum(o[y]); });
     if (type === 'pie' || type === 'donut') {
       if (labels.length > 8) { var rest = values.slice(7).reduce(function (a, b) { return a + b; }, 0); labels = labels.slice(0, 7).concat(['أخرى']); values = values.slice(0, 7).concat([rest]); }
@@ -83,6 +83,18 @@
     if (type === 'treemap') return { kind: 'treemap', rows: r.map(function (o) { return { label: o[x], value: toNum(o[y]) }; }) };
     if (type === 'scatter') { var y2 = col(rows, cfg.y2 || (Array.isArray(cfg.y) ? cfg.y[1] : null), true); return { kind: 'scatter', xTitle: y, yTitle: y2, rows: r.map(function (o) { return { x: toNum(o[y]), y: toNum(o[y2]), label: o[x] }; }) }; }
     return { kind: type === 'line' ? 'line' : 'bar', labels: labels, values: values, horizontal: cfg.horizontal };
+  }
+
+  // جدول من النتيجة: الأعمدة من "cols" (بالترتيب) وإلا كل أعمدة الصف الأول، حتى "limit" صفًا (30)، والأرقام منسّقة
+  function tableOf(cfg, rows) {
+    var cols = Array.isArray(cfg.cols) && cfg.cols.length ? cfg.cols.map(function (c) { return col(rows, c, false); }) : Object.keys(rows[0] || {});
+    var names = cfg.labels || {}, limit = Math.max(1, Math.min(200, +cfg.limit || 30));
+    var w = document.createElement('div'); w.className = 'jb-table';
+    var t = document.createElement('table'), hr = t.createTHead().insertRow();
+    cols.forEach(function (c) { var th = document.createElement('th'); th.textContent = names[c] || c; hr.appendChild(th); });
+    var b = t.createTBody();
+    rows.slice(0, limit).forEach(function (o) { var tr = b.insertRow(); cols.forEach(function (c) { var td = tr.insertCell(), v = o[c]; var num = typeof v === 'number' || isNumeric(v); td.textContent = v == null ? '—' : num ? fmtNum(v, cfg.fmt || 'number', cfg.unit) : String(v); if (num) td.className = 'n'; }); });
+    w.appendChild(t); return w;
   }
 
   function renderChart(el) {
@@ -97,6 +109,7 @@
       e.textContent = !cfg.q ? 'رسم غير مربوط ببيانات بعد' : !rows ? 'لا توجد نتيجة للاستعلام ' + cfg.q + ' — حدّث البيانات' : 'الاستعلام بلا صفوف';
       el.appendChild(e); return;
     }
+    if (String(cfg.type).toLowerCase() === 'table') { el.appendChild(tableOf(cfg, rows)); return; }
     var plot = document.createElement('div'); plot.className = 'jb-plot'; el.appendChild(plot);
     applyTheme(plot, el, cfg);
     try { el.__jb = window.JEEM_VIZ.mount(plot, specOf(cfg, rows), { fmt: function (v) { return fmtNum(v, cfg.fmt, cfg.unit); } }); }
@@ -119,7 +132,7 @@
     [].forEach.call(document.querySelectorAll('[data-jeem-chart]'), function (el) { if (!el.closest('#jeem-strip')) renderChart(el); });
     [].forEach.call(document.querySelectorAll('[data-jeem-value]'), renderValue);
   }
-  window.JEEM_BLOCKS = { render: renderAll, renderChart: renderChart, renderValue: renderValue, spec: specOf, format: fmtNum };
+  window.JEEM_BLOCKS = { render: renderAll, renderChart: renderChart, renderValue: renderValue, spec: specOf, table: tableOf, format: fmtNum };
   if (document.getElementById('app-shell')) return; // داخل المنصة نفسها: الواجهة البرمجية فقط (معاينة نافذة «رسمة من بياناتي»)
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderAll); else renderAll();
   document.addEventListener('jeem:data', renderAll);

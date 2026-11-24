@@ -47,7 +47,7 @@ public partial class FreeformController
         if (StoredSources(d) is { } storedSel) selection = (await CurrentAsync(ct, storedSel))!.Value.Selection;
         selection = InDesignProject(selection, d!);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        string sql; string? x = null, y = null; string? widgetType = null, title = null;
+        string sql; string? x = null, y = null; string? widgetType = null, title = null; JsonNode? widgetMeta = null;
         if (!string.IsNullOrWhiteSpace(request.HistoryId))
         {
             // عنصر من لوحة محفوظة يحق للمستخدم رؤيتها (القائمة نفسها مفلترة بالصلاحيات)
@@ -57,6 +57,9 @@ public partial class FreeformController
             var wsql = w?["query"]?["sql"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(wsql)) return BadRequest(new { error = "هذا العنصر بلا استعلام محفوظ." });
             sql = wsql; widgetType = w!["type"]?.GetValue<string>(); title = w["title"]?.GetValue<string>();
+            // شكل العنصر كما في اللوحة («كما في اللوحة» في الواجهة): المفاتيح والسلاسل والتكديس ونص المركز
+            widgetMeta = new JsonObject { ["xKey"] = w["xKey"]?.DeepClone(), ["yKey"] = w["yKey"]?.DeepClone(), ["series"] = w["series"]?.DeepClone(),
+                ["stacked"] = w["stacked"]?.DeepClone(), ["areaFill"] = w["areaFill"]?.DeepClone(), ["centerLabel"] = w["centerLabel"]?.DeepClone() };
         }
         else
         {
@@ -83,6 +86,6 @@ public partial class FreeformController
             await _store.SetQueriesAsync(id, stored, d!.DataRefreshedAt ?? DateTime.UtcNow, await _fingerprints.ComputeAsync(stored.Select(q => q.Sql), selection.ProjectId, ct), ct);
             if (d.PresentationId is not null) _live.Invalidate(d.PresentationId);
         }
-        return Ok(new { key, sql = sql.Trim(), result, rows, rowCount = rows.Count, columns, x, y, widgetType, title });
+        return Ok(new { key, sql = sql.Trim(), result, rows, rowCount = rows.Count, columns, x, y, widgetType, title, widget = widgetMeta });
     }
 }

@@ -4128,7 +4128,14 @@ body.ff-full-on { overflow: hidden; }
 #ff-data-modal .ffdm-value b { font-size: 48px; line-height: 1.1; color: var(--brand-blue); }
 #ff-data-modal .ffdm-empty { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--ink-3); font-size: var(--fs-sm); padding: 16px; }
 #ff-data-modal .ffdm-empty.bad { color: var(--danger, #B42318); }
-#ff-data-modal .ffdm-dash-list { display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow-y: auto; }
+#ff-data-modal .ffdm-dash-list { display: flex; flex-direction: column; gap: 6px; max-height: 230px; overflow-y: auto; }
+#ff-data-modal .ffdm-dash-head { margin: 10px 0 6px; font-size: var(--fs-sm); font-weight: 700; color: var(--ink-2, var(--ink)); }
+#ff-data-modal label.ffdm-wi { flex-direction: row; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-weight: 400; color: var(--ink); font-size: var(--fs-sm); cursor: pointer; }
+#ff-data-modal label.ffdm-wi:hover { border-color: var(--brand-blue); }
+#ff-data-modal label.ffdm-wi.on { border-color: var(--brand-blue); background: color-mix(in srgb, var(--brand-blue) 8%, var(--surface)); }
+#ff-data-modal .ffdm-wi .t { flex: 1; min-width: 0; }
+#ff-data-modal .ffdm-wi .k { flex: none; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 7%, var(--surface)); color: var(--ink-3); }
+#ff-data-modal .ffdm-preview .jb-table { max-height: 240px; }
 #ff-data-modal .ffdm-dash { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
 #ff-data-modal .ffdm-dash label { flex-direction: row; align-items: center; gap: 6px; font-weight: 400; color: var(--ink); font-size: var(--fs-sm); }
 #ff-data-modal .modal-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }

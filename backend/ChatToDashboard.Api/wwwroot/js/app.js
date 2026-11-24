@@ -10447,8 +10447,28 @@ function ffApplyAccess() {
 // المصدر: جدول + مقياس + تقسيم (استعلام حتمي يبنيه الخادم) أو عنصر من لوحة محفوظة. المعاينة بنتيجة حقيقية (preview لا تُسجَّل)،
 // والإدراج يسجّل الاستعلام في التصميم ويضع بلوك data-jeem-chart/value في الشريحة الحالية؛ وضع «replace» يغيّر مصدر بلوك محدد.
 const FFDM = { cat: null, catFor: null, mode: 'table', type: 'bar', pick: null, last: null, timer: 0, seq: 0, replace: false, busy: false };
-const FFDM_TYPES = [['bar', 'أعمدة'], ['line', 'خط'], ['donut', 'حلقة'], ['funnel', 'قمع'], ['treemap', 'شجرية'], ['value', 'رقم واحد']];
+const FFDM_TYPES = [['asis', 'كما في اللوحة'], ['bar', 'أعمدة'], ['line', 'خط'], ['donut', 'حلقة'], ['funnel', 'قمع'], ['treemap', 'شجرية'], ['value', 'رقم واحد']];
 const FFDM_AGG = { sum: 'إجمالي', avg: 'متوسط', count: 'عدد السجلات', count_distinct: 'عدد القيم المميزة', max: 'أعلى', min: 'أدنى' };
+const FFDM_WTYPE_AR = { kpi: 'مؤشر', bar: 'أعمدة', line: 'خط', area: 'مساحة', pie: 'دائري', donut: 'حلقة', funnel: 'قمع', treemap: 'شجرية', scatter: 'مبعثر', table: 'جدول', 'progress-table': 'جدول تقدّم', forecast: 'تنبؤ', 'radial-gauge': 'مقياس', stages: 'مراحل' };
+// «كما في اللوحة»: يحوّل عنصر اللوحة المحفوظة (نوعه ومفاتيحه وسلاسله) إلى مواصفة بلوك تُرسم بمحرّك اللوحات نفسه (jeem-viz) فيظهر كما هو
+function ffdmAsIs(d) {
+  const t = String(d.widgetType || '').toLowerCase(), w = d.widget || {}, rows = d.rows || [], cols = d.columns || [];
+  const num = c => rows.some(o => typeof o[c] === 'number'); const has = c => c && cols.includes(c);
+  const x = has(w.xKey) ? w.xKey : (cols.find(c => !num(c)) || cols[0]);
+  const series = Array.isArray(w.series) ? w.series.filter(s => has(s?.key)) : [];
+  const y = series.length > 1 ? series.map(s => s.key) : (series[0]?.key || (has(w.yKey) ? w.yKey : (cols.find(c => num(c) && c !== x) || cols[cols.length - 1])));
+  const labels = {}; series.forEach(s => { if (s.label) labels[s.key] = s.label; });
+  const base = { x, y, title: el('ffdm-title').value.trim() || d.title || '', fmt: 'compact' };
+  if (Object.keys(labels).length) base.labels = labels;
+  if (w.stacked) base.stacked = true;
+  if (w.centerLabel) base.centerLabel = w.centerLabel;
+  if (/kpi|stat|metric|number/.test(t)) return { ...base, type: 'value', exact: true };
+  if (/table/.test(t)) return { ...base, type: 'table', exact: true };
+  const map = { bar: 'bar', column: 'bar', hbar: 'bar', line: 'line', area: 'line', forecast: 'line', pie: 'pie', donut: 'donut', funnel: 'funnel', treemap: 'treemap', scatter: 'scatter', bubble: 'scatter' };
+  const k = Object.keys(map).find(m => t === m || t.startsWith(m));
+  if (k) return { ...base, type: map[k], exact: true };
+  return { ...base, type: /radial|gauge/.test(t) ? 'donut' : /stage|funnel/.test(t) ? 'funnel' : 'bar', exact: false };
+}
 function ffdmTypeOfWidget(t) { t = String(t || ''); return /line|area|forecast|trend/.test(t) ? 'line' : /pie|donut|radial/.test(t) ? 'donut' : /funnel/.test(t) ? 'funnel' : /treemap/.test(t) ? 'treemap' : /kpi|stat|metric/.test(t) ? 'value' : 'bar'; }
 function ffdmTable() { return (FFDM.cat?.tables || []).find(t => t.table === el('ffdm-table').value); }
 function ffdmRenderForm() {
@@ -10473,7 +10493,8 @@ function ffdmRenderTypes() {
   const dim = FFDM.mode === 'dash' ? true : !!el('ffdm-dim').value;
   if (!dim) FFDM.type = 'value'; else if (FFDM.type === 'value' && FFDM.mode !== 'dash') FFDM.type = 'bar';
   if (FFDM.bind === 'value') FFDM.type = 'value'; else if (FFDM.bind === 'chart' && FFDM.type === 'value') FFDM.type = 'bar';
-  el('ffdm-types').innerHTML = FFDM_TYPES.map(([k, l]) => { const ok = (FFDM.bind ? (k === 'value') === (FFDM.bind === 'value') : true) && (FFDM.mode === 'dash' || (k === 'value') !== dim); return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
+  if (FFDM.mode !== 'dash' && FFDM.type === 'asis') FFDM.type = dim ? 'bar' : 'value';
+  el('ffdm-types').innerHTML = FFDM_TYPES.filter(([k]) => k !== 'asis' || (FFDM.mode === 'dash' && FFDM.bind !== 'value')).map(([k, l]) => { const ok = k === 'asis' ? true : (FFDM.bind ? (k === 'value') === (FFDM.bind === 'value') : true) && (FFDM.mode === 'dash' || (k === 'value') !== dim); return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
   el('ffdm-types').querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => { FFDM.type = b.dataset.t; ffdmRenderTypes(); ffdmShowPreview(); }));
 }
 function ffdmAutoTitle() {
@@ -10492,6 +10513,7 @@ function ffdmCols(r) { // أعمدة التسمية والقيمة من النت
   return { x: r.x || cols.find(c => !num(c)) || cols[0], y: r.y || cols.find(c => num(c)) || cols[cols.length - 1] };
 }
 function ffdmCfg(r, key) {
+  if (FFDM.type === 'asis') { const c = ffdmAsIs(r); delete c.exact; return { ...c, q: key || '_preview' }; }
   const { x, y } = ffdmCols(r); const title = el('ffdm-title').value.trim() || ffdmAutoTitle();
   return { q: key || '_preview', type: FFDM.type, x, y, title, fmt: 'compact' };
 }
@@ -10505,38 +10527,52 @@ function ffdmWait(on, title, hint) {
 function ffdmQueue() { clearTimeout(FFDM.timer); el('ffdm-title').placeholder = ffdmAutoTitle() || 'عنوان الرسمة'; FFDM.timer = setTimeout(ffdmPreview, 350); }
 async function ffdmPreview() {
   const body = ffdmRequest(true); el('ffdm-ok').disabled = true;
-  if (!body) { el('ffdm-preview').innerHTML = '<div class="ffdm-empty">اختر مصدر البيانات.</div>'; return; }
+  if (!body) { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; el('ffdm-preview').innerHTML = `<div class="ffdm-empty">${FFDM.mode === 'dash' ? 'اختر عنصرًا من اللوحة.' : 'اختر مصدر البيانات.'}</div>`; return; }
   const seq = ++FFDM.seq; el('ffdm-status').textContent = ''; ffdmWait(true, 'يحضر بياناتك…', 'ينفّذ الاستعلام على بياناتك الفعلية');
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({})); if (seq !== FFDM.seq) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
-    ffdmWait(false); FFDM.last = d; if (FFDM.mode === 'dash' && d.widgetType && !FFDM.typeTouched) { FFDM.type = ffdmTypeOfWidget(d.widgetType); ffdmRenderTypes(); }
-    const bindBad = FFDM.bind === 'chart' && FFDM.type === 'value';
-    el('ffdm-status').textContent = bindBad ? 'الرسمة تحتاج «التقسيم حسب» — اختر عمودًا.' : `${(d.rowCount || 0).toLocaleString('en-US')} صف من بياناتك الفعلية`; el('ffdm-ok').disabled = !(d.rowCount > 0) || bindBad;
+    ffdmWait(false); FFDM.last = d; if (FFDM.mode === 'dash' && d.widgetType && !FFDM.typeTouched) { FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes(); }
+    const asis = FFDM.type === 'asis' ? ffdmAsIs(d) : null;
+    const bindBad = FFDM.bind === 'chart' && (FFDM.type === 'value' || asis?.type === 'value');
+    el('ffdm-status').textContent = bindBad ? (asis ? 'هذا العنصر رقم واحد في اللوحة — اختر طريقة عرض رسمة لاستبدال رسمة القالب.' : 'الرسمة تحتاج «التقسيم حسب» — اختر عمودًا.')
+      : `${(d.rowCount || 0).toLocaleString('en-US')} صف من بياناتك الفعلية` + (asis && !asis.exact ? ` · نوع «${FFDM_WTYPE_AR[String(d.widgetType).toLowerCase()] || d.widgetType}» يُعرض بأقرب شكل مدعوم` : ''); el('ffdm-ok').disabled = !(d.rowCount > 0) || bindBad;
     ffdmShowPreview();
   } catch (e) { if (seq !== FFDM.seq) return; ffdmWait(false); FFDM.last = null; el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">${esc(e.message)}</div>`; el('ffdm-status').textContent = ''; }
 }
 function ffdmShowPreview() {
   const d = FFDM.last, box = el('ffdm-preview'); if (!d) return; box.innerHTML = '';
   const cfg = ffdmCfg(d); const rows = d.rows || [];
-  if (FFDM.type === 'value') { const v = rows[0] ? rows[0][cfg.y] : null; box.innerHTML = `<div class="ffdm-value"><b>${esc(window.JEEM_BLOCKS ? JEEM_BLOCKS.format(v, 'compact') : String(v ?? '—'))}</b><span>${esc(cfg.title)}</span></div>`; return; }
+  if (cfg.type === 'table') { if (cfg.title) { const t = document.createElement('div'); t.className = 'ffdm-ptitle'; t.textContent = cfg.title; box.appendChild(t); } box.appendChild(JEEM_BLOCKS.table(cfg, rows)); return; }
+  if (FFDM.type === 'value' || cfg.type === 'value') { const v = rows[0] ? rows[0][cfg.y] : null; box.innerHTML = `<div class="ffdm-value"><b>${esc(window.JEEM_BLOCKS ? JEEM_BLOCKS.format(v, 'compact') : String(v ?? '—'))}</b><span>${esc(cfg.title)}</span></div>`; return; }
   if (cfg.title) { const t = document.createElement('div'); t.className = 'ffdm-ptitle'; t.textContent = cfg.title; box.appendChild(t); }
   const plot = document.createElement('div'); plot.className = 'ffdm-plot'; box.appendChild(plot);
   try { JEEM_VIZ.mount(plot, JEEM_BLOCKS.spec(cfg, rows), { fmt: v => JEEM_BLOCKS.format(v, 'compact') }); } catch (e) { plot.textContent = 'تعذّر الرسم: ' + e.message; }
 }
 function ffdmSetMode(mode) {
   FFDM.mode = mode; FFDM.last = null;
+  ++FFDM.seq; ffdmWait(false); el('ffdm-preview').innerHTML = ''; el('ffdm-status').textContent = ''; el('ffdm-ok').disabled = true; // لا تبقى معاينة التبويب الآخر
   el('ffdm-tab-table').setAttribute('aria-selected', mode === 'table'); el('ffdm-tab-dash').setAttribute('aria-selected', mode === 'dash');
   el('ffdm-pane-table').classList.toggle('hidden', mode !== 'table'); el('ffdm-pane-dash').classList.toggle('hidden', mode !== 'dash');
   ffdmRenderTypes(); ffdmQueue();
 }
 function ffdmRenderDash() {
-  const ds = FFDM.cat?.dashboards || [];
-  el('ffdm-dash-list').innerHTML = ds.length ? ds.map(h => `<div class="ffdm-dash"><b>${esc(h.title)}</b>${h.widgets.map(w => `<label><input type="radio" name="ffdm-w" value="${esc(h.historyId)}|${w.index}"> ${esc(w.title)} <small class="muted">${esc(w.type)}</small></label>`).join('')}</div>`).join('')
-    : '<div class="ffdm-empty">لا توجد لوحات محفوظة بعناصر مبنية من بياناتك بعد.</div>';
+  const ds = FFDM.cat?.dashboards || [], pick = el('ffdm-dash-pick');
+  pick.disabled = !ds.length;
+  if (!ds.length) { pick.innerHTML = ''; el('ffdm-dash-list').innerHTML = '<div class="ffdm-empty">لا توجد لوحات محفوظة بعناصر مبنية من بياناتك بعد.</div>'; return; }
+  const cur = ds.some(h => h.historyId === pick.value) ? pick.value : ds[0].historyId;
+  pick.innerHTML = ds.map(h => `<option value="${esc(h.historyId)}">${esc(h.title.length > 70 ? h.title.slice(0, 70) + '…' : h.title)} (${h.widgets.length.toLocaleString('en-US')})</option>`).join('');
+  pick.value = cur; ffdmRenderDashItems();
+}
+// عناصر اللوحة المختارة كبطاقات اختيار: العنوان ونوعه كما في اللوحة
+function ffdmRenderDashItems() {
+  const h = (FFDM.cat?.dashboards || []).find(x => x.historyId === el('ffdm-dash-pick').value); if (!h) return;
+  el('ffdm-dash-list').innerHTML = h.widgets.map(w => { const on = FFDM.pick?.historyId === h.historyId && FFDM.pick.index === w.index;
+    return `<label class="ffdm-wi${on ? ' on' : ''}"><input type="radio" name="ffdm-w" value="${esc(h.historyId)}|${w.index}"${on ? ' checked' : ''}><span class="t">${esc(w.title)}</span><span class="k">${esc(FFDM_WTYPE_AR[String(w.type).toLowerCase()] || w.type)}</span></label>`; }).join('');
   el('ffdm-dash-list').querySelectorAll('input[name="ffdm-w"]').forEach(r => r.addEventListener('change', () => {
-    const [historyId, index] = r.value.split('|'); const h = ds.find(x => x.historyId === historyId); const w = h?.widgets.find(x => String(x.index) === index);
-    FFDM.pick = { historyId, index: +index, title: w?.title || '' }; FFDM.typeTouched = false; FFDM.type = ffdmTypeOfWidget(w?.type); ffdmRenderTypes(); ffdmQueue();
+    const [historyId, index] = r.value.split('|'); const w = h.widgets.find(x => String(x.index) === index);
+    el('ffdm-dash-list').querySelectorAll('.ffdm-wi').forEach(l => l.classList.toggle('on', l.contains(r)));
+    FFDM.pick = { historyId, index: +index, title: w?.title || '' }; FFDM.typeTouched = false; FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes(); ffdmQueue();
   }));
 }
 async function ffdmOpen(replace) {
@@ -10564,6 +10600,7 @@ function ffdmClose() { el('ff-data-modal').classList.add('hidden'); el('ffd-char
 el('ffd-chart').addEventListener('click', () => ffdmOpen(false));
 el('ffdm-tab-table').addEventListener('click', () => ffdmSetMode('table'));
 el('ffdm-tab-dash').addEventListener('click', () => ffdmSetMode('dash'));
+el('ffdm-dash-pick').addEventListener('change', ffdmRenderDashItems);
 el('ffdm-table').addEventListener('change', () => { ffdmRenderForm(); ffdmBindPreset(); ffdmRenderTypes(); ffdmQueue(); });
 ['ffdm-agg', 'ffdm-measure', 'ffdm-dim', 'ffdm-grain'].forEach(id => el(id).addEventListener('change', () => { if (id === 'ffdm-agg') ffdmRenderForm(); if (id === 'ffdm-dim') el('ffdm-grain-wrap').classList.toggle('hidden', el('ffdm-dim').selectedOptions[0]?.dataset.kind !== 'date'); ffdmRenderTypes(); ffdmQueue(); }));
 el('ffdm-title').addEventListener('input', () => { clearTimeout(FFDM.timer); FFDM.timer = setTimeout(ffdmShowPreview, 250); });
@@ -10580,7 +10617,7 @@ el('ffdm-ok').addEventListener('click', async () => {
     const cfg = ffdmCfg(d, d.key); const entry = { key: d.key, sql: d.sql, result: d.result };
     if (FFDM.bind) {
       ffdPost(FFDM.bind === 'value' ? { op: 'bind', kind: 'value', ref: `${d.key}.${cfg.y}`, fmt: FFD.info?.bind?.fmt || 'compact', entry } : { op: 'bind', kind: 'chart', cfg, entry });
-    } else if (FFDM.type === 'value') {
+    } else if (FFDM.type === 'value' || cfg.type === 'value') {
       const m = FFDM.replace && FFD.info?.value ? { op: 'value-cfg', ref: `${d.key}.${cfg.y}`, fmt: 'compact', agg: '', entry } : { op: 'insert', kind: 'value', ref: `${d.key}.${cfg.y}`, fmt: 'compact', title: cfg.title, entry };
       ffdPost(m);
     } else ffdPost(FFDM.replace && FFD.info?.chart ? { op: 'chart-cfg', cfg, entry } : { op: 'insert', kind: 'chart', cfg, entry });
@@ -10644,7 +10681,7 @@ function ffdRenderInsp() {
     <button type="button" data-a="close" title="إغلاق" aria-label="إغلاق لوحة الخصائص">✕</button></div>`;
   if (i.chart) {
     const c = i.chart, cols = i.chartCols || [], opt = (v, cur) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`;
-    h += `<section><h4>البيانات</h4>${ffdRow('النوع', `<select data-c="type" aria-label="نوع الرسمة">${FFDM_TYPES.filter(t => t[0] !== 'value').map(([k, l]) => `<option value="${k}"${c.type === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+    h += `<section><h4>البيانات</h4>${ffdRow('النوع', `<select data-c="type" aria-label="نوع الرسمة">${FFDM_TYPES.filter(t => t[0] !== 'value' && t[0] !== 'asis').concat([['table', 'جدول']]).map(([k, l]) => `<option value="${k}"${c.type === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
       ${cols.length ? ffdRow('التسميات', `<select data-c="x" aria-label="عمود التسميات">${cols.map(v => opt(v, c.x)).join('')}</select>`) + ffdRow('القيم', `<select data-c="y" aria-label="عمود القيم">${cols.map(v => opt(v, Array.isArray(c.y) ? c.y[0] : c.y)).join('')}</select>`) : '<div class="ffi-sub">لا توجد نتيجة لهذا الاستعلام بعد — حدّث البيانات أو غيّر المصدر.</div>'}
       ${ffdRow('العنوان', `<input type="text" data-c="title" value="${esc(c.title || '')}" aria-label="عنوان الرسمة" class="ffi-text">`)}
       ${ffdRow('التنسيق', `<select data-c="fmt" aria-label="تنسيق الأرقام">${[['compact', 'مختصر (3.7M)'], ['number', 'رقم كامل'], ['currency', 'عملة'], ['percent', 'نسبة']].map(([k, l]) => `<option value="${k}"${(c.fmt || 'compact') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}

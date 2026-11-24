@@ -16,7 +16,7 @@ public static class FreeformBlockValidator
     private static readonly Regex ChartAttr = new(@"\bdata-jeem-chart\s*=\s*(?:'(?<v>[^']*)'|""(?<v>[^""]*)"")", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex ValueAttr = new(@"\bdata-jeem-value\s*=\s*(?:'(?<v>[^']*)'|""(?<v>[^""]*)"")", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex Scripts = new(@"<script\b[^>]*>[\s\S]*?</script\s*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    public static readonly HashSet<string> ChartTypes = new(StringComparer.OrdinalIgnoreCase) { "bar", "line", "pie", "donut", "funnel", "treemap", "scatter" };
+    public static readonly HashSet<string> ChartTypes = new(StringComparer.OrdinalIgnoreCase) { "bar", "line", "pie", "donut", "funnel", "treemap", "scatter", "table" };
 
     /// <summary>عدد البلوكات في HTML (رسوم + قيم).</summary>
     public static int CountBlocks(string? html) => string.IsNullOrEmpty(html) ? 0 : ChartAttr.Matches(Scripts.Replace(html, "")).Count + ValueAttr.Matches(Scripts.Replace(html, "")).Count;
