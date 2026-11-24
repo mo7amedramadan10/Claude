@@ -9157,7 +9157,7 @@ const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('c
 // عدّة تعديل النص المباشر داخل إطار المعاينة (تُحقن مع صفحة التصميم المفتوحة فقط، خاملة حتى يُفعَّل الوضع من الشريط):
 // الأم ترسل {jeemEdit:1,type:enable|disable|get}، والإطار يجعل العنصر النصي المنقور قابلًا للتحرير ويعيد {type:dirty|html}.
 // قبل الإرجاع يُنظَّف كل أثر للعدّة (السمات والأنماط والسكربتات المحقونة) فتبقى الصفحة المحفوظة كما لو كُتبت يدويًا.
-const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,LIVE='input,select,textarea,#jeem-strip',TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(e.closest&&e.closest(LIVE))return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop();return}if(cur&&(e.key===' '||e.key==='Enter')&&cur.closest('button,[role=button],a,summary')){e.preventDefault();e.stopPropagation();if(e.key===' ')document.execCommand('insertText',false,' ');return}if(cur&&/^(Arrow|PageUp|PageDown|Home|End| $)/.test(e.key))e.stopPropagation()}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(keep){disable();var clone=document.documentElement.cloneNode(true);clone.querySelectorAll('[data-jeem-chart]').forEach(function(x){x.innerHTML=''});clone.querySelectorAll('[data-ff-sel]').forEach(function(x){x.removeAttribute('data-ff-sel')});if(!keep)clone.querySelectorAll('[data-jeem-target]').forEach(function(x){x.removeAttribute('data-jeem-target')});['#ff-viz-kit','#ff-blocks-kit','#jeem-blocks-css','#ff-edit-kit','#ff-design-kit','#ff-design-style','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-nav-kit','#ff-nav-style','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done],[data-ff-img-kind],[data-ff-navhide]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done');x.removeAttribute('data-ff-img-kind');x.removeAttribute('data-ff-navhide')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize(m.keepTarget),purpose:m.purpose})})})()<\/script>";
+const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,LIVE='input,select,textarea,#jeem-strip,[data-jeem-chart],[data-jeem-value]',TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(e.closest&&e.closest(LIVE))return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop();return}if(cur&&(e.key===' '||e.key==='Enter')&&cur.closest('button,[role=button],a,summary')){e.preventDefault();e.stopPropagation();if(e.key===' ')document.execCommand('insertText',false,' ');return}if(cur&&/^(Arrow|PageUp|PageDown|Home|End| $)/.test(e.key))e.stopPropagation()}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(keep){disable();var clone=document.documentElement.cloneNode(true);clone.querySelectorAll('[data-jeem-chart]').forEach(function(x){x.innerHTML=''});clone.querySelectorAll('[data-ff-sel]').forEach(function(x){x.removeAttribute('data-ff-sel')});if(!keep)clone.querySelectorAll('[data-jeem-target]').forEach(function(x){x.removeAttribute('data-jeem-target')});['#ff-viz-kit','#ff-blocks-kit','#jeem-blocks-css','#ff-edit-kit','#ff-design-kit','#ff-design-style','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-nav-kit','#ff-nav-style','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done],[data-ff-img-kind],[data-ff-navhide]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done');x.removeAttribute('data-ff-img-kind');x.removeAttribute('data-ff-navhide')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize(m.keepTarget),purpose:m.purpose})})})()<\/script>";
 // الحقن قبل «آخر» </body> لا أوّله: صفحة قد تحمل «</body>» داخل نص JavaScript مقتبس (دالة تعيد بناء الملف مثلًا)،
 // والاستبدال الأعمى يضع سكربتات المنصة داخل سكربت الصفحة فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
 function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
@@ -9358,6 +9358,10 @@ function ffDesignKit() {
       s: { width: sel.style.width ? px(sel.style.width) : '', height: sel.style.height ? px(sel.style.height) : '', padding: px(cs.paddingTop), margin: px(cs.marginTop), fill: hex(cs.backgroundColor), opacity: Math.round(parseFloat(cs.opacity) * 100), radius: px(cs.borderTopLeftRadius),
         borderStyle: cs.borderTopStyle === 'none' || px(cs.borderTopWidth) === 0 ? 'none' : cs.borderTopStyle, borderColor: hex(cs.borderTopColor) || '#d9dcd6', borderWidth: px(cs.borderTopWidth), color: hex(cs.color), fontSize: px(cs.fontSize), fontWeight: cs.fontWeight, textAlign: cs.textAlign },
       table: tableInfo(sel.closest('table')) };
+    var cb = sel.closest('[data-jeem-chart]');
+    if (cb) { try { out.chart = JSON.parse(cb.getAttribute('data-jeem-chart') || '{}'); } catch (e2) { out.chart = {}; } var dd = (window.JEEM_DATA || {})[out.chart.q]; out.chartCols = dd && dd.rows && dd.rows[0] ? Object.keys(dd.rows[0]) : []; out.label = 'رسمة من البيانات'; }
+    var vb = sel.closest('[data-jeem-value]') || sel.querySelector('[data-jeem-value]');
+    if (vb && !cb) { out.value = { ref: vb.getAttribute('data-jeem-value') || '', fmt: vb.getAttribute('data-fmt') || '', agg: vb.getAttribute('data-agg') || '' }; var vd = (window.JEEM_DATA || {})[out.value.ref.split('.')[0]]; out.valueCols = vd && vd.rows && vd.rows[0] ? Object.keys(vd.rows[0]) : []; }
     if (ed) sel.setAttribute('data-ff-editing', '1'); if (hv) sel.setAttribute('data-ff-hover', '1'); return out;
   }
   function select(e) {
@@ -9377,12 +9381,42 @@ function ffDesignKit() {
       var b = t.createTBody(); for (var r = 0; r < 3; r++) { var tr = b.insertRow(); for (var c = 0; c < 3; c++) { var td = tr.insertCell(); td.textContent = '—'; td.style.cssText = 'border:1px solid #D9DCD6;padding:8px 10px'; } }
       return t;
     },
+    chart: function (m) { var e = document.createElement('div'); e.setAttribute('data-jeem-chart', JSON.stringify(m.cfg || {})); e.style.cssText = 'width:560px;height:320px;max-width:100%;box-sizing:border-box'; return e; },
+    value: function (m) {
+      var e = document.createElement('div'); e.style.cssText = 'min-width:160px;text-align:center';
+      var v = document.createElement('div'); v.setAttribute('data-jeem-value', m.ref || ''); if (m.fmt) v.setAttribute('data-fmt', m.fmt); v.style.cssText = 'font-size:48px;font-weight:800;line-height:1.15'; v.textContent = '—';
+      var l = document.createElement('div'); l.style.cssText = 'font-size:18px;opacity:.8'; l.textContent = m.title || '';
+      e.appendChild(v); e.appendChild(l); return e;
+    },
     shape: function (k) {
       var e = document.createElement('div'); e.setAttribute('data-jeem-shape', k || 'rect');
       var css = { rect: 'width:200px;height:120px;border-radius:8px', circle: 'width:140px;height:140px;border-radius:50%', line: 'width:240px;height:4px;border-radius:2px', triangle: 'width:160px;height:140px;clip-path:polygon(50% 0,100% 100%,0 100%)', arrow: 'width:220px;height:90px;clip-path:polygon(0 30%,65% 30%,65% 0,100% 50%,65% 100%,65% 70%,0 70%)' }[k] || '';
       e.style.cssText = css + ';background:#2A78D6'; return e;
     }
   };
+  // ---- بلوكات البيانات: إضافة نتيجة استعلام لكتلة JEEM_DATA في الصفحة (تُحفظ معها) وتحميل الراسم عند الحاجة ----
+  var RT = "(function(){var b=JSON.parse(document.getElementById('jeem-data').textContent);var d={};for(var k in b.queries){var q=b.queries[k];var r=q.result||{};d[k]={sql:q.sql,rows:r.rows||[],rowCount:r.rowCount||0}}window.JEEM_DATA=d;window.JEEM_DATA_META={refreshedAt:b.refreshedAt}})()";
+  function addData(entry) {
+    var ds = document.getElementById('jeem-data'), b = null;
+    if (ds) { try { b = JSON.parse(ds.textContent); } catch (e) { b = null; } }
+    if (!b) b = { refreshedAt: new Date().toISOString(), queries: {} };
+    b.queries = b.queries || {}; b.queries[entry.key] = { sql: entry.sql, result: entry.result };
+    var json = JSON.stringify(b).replace(/<\//g, '<\\/');
+    if (ds) ds.textContent = json;
+    else {
+      ds = document.createElement('script'); ds.type = 'application/json'; ds.id = 'jeem-data'; ds.textContent = json;
+      document.head.insertBefore(ds, document.head.firstChild);
+      var rt = document.createElement('script'); rt.id = 'jeem-data-rt'; rt.textContent = RT; document.head.insertBefore(rt, ds.nextSibling);
+    }
+    var r = entry.result || {}; window.JEEM_DATA = window.JEEM_DATA || {};
+    window.JEEM_DATA[entry.key] = { sql: entry.sql, rows: r.rows || [], rowCount: r.rowCount || (r.rows || []).length };
+  }
+  function ensureBlocks(cb) {
+    if (window.JEEM_BLOCKS && window.JEEM_VIZ) { cb(); return; }
+    function add(id, src, next) { if (document.getElementById(id)) { setTimeout(next, 300); return; } var sc = document.createElement('script'); sc.id = id; sc.src = src; sc.onload = next; sc.onerror = next; document.body.appendChild(sc); }
+    add('ff-viz-kit', '/js/jeem-viz.js', function () { add('ff-blocks-kit', '/js/jeem-blocks.js', cb); });
+  }
+  function renderBlock(b) { ensureBlocks(function () { if (!window.JEEM_BLOCKS) return; if (b.hasAttribute('data-jeem-chart')) window.JEEM_BLOCKS.renderChart(b); else window.JEEM_BLOCKS.renderValue(b); }); }
   function visibleSlide() {
     var best = null, area = 0, vw = innerWidth, vh = innerHeight;
     document.querySelectorAll('section.slide,.slide').forEach(function (s) { if (s.closest('#jeem-strip')) return; var r = s.getBoundingClientRect(); var a = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)); if (a > area) { area = a; best = s; } });
@@ -9400,7 +9434,9 @@ function ffDesignKit() {
       e.style.margin = '16px 0'; window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - innerHeight / 3 });
     }
     undo.push(function () { if (e.parentNode) e.parentNode.removeChild(e); select(null); });
+    if (shape && shape.entry) addData(shape.entry); // قبل التحديد: لوحة الخصائص تقرأ أعمدة النتيجة من JEEM_DATA
     select(e); changed();
+    if (shape && shape.entry) { var blk = e.matches('[data-jeem-chart]') ? e : e.querySelector('[data-jeem-value]'); if (blk) renderBlock(blk); }
   }
   function tableOp(m) {
     var t = sel && sel.closest('table'); if (!t) return; snap(t);
@@ -9433,7 +9469,7 @@ function ffDesignKit() {
     if (tr.parentNode) tr.parentNode.removeChild(tr); return nr;
   }
   function op(m) {
-    if (m.op === 'insert') return insert(m.kind, m.shape);
+    if (m.op === 'insert') return insert(m.kind, m.kind === 'shape' ? m.shape : m);
     if (m.op === 'undo') { var f = undo.pop(); if (f) { f(); dirty = Math.max(0, dirty - 1); post({ type: 'd-dirty', count: dirty }); if (sel && !document.contains(sel)) select(null); else post(info()); } return; }
     if (m.op === 'deselect') return select(null);
     if (!sel) return;
@@ -9442,12 +9478,23 @@ function ffDesignKit() {
     if (m.op === 'delete') { var e = sel, p = e.parentNode, nx = e.nextSibling; p.removeChild(e); undo.push(function () { p.insertBefore(e, nx); select(e); }); select(null); changed(); return; }
     if (m.op === 'duplicate') { var c = sel.cloneNode(true); c.removeAttribute('data-ff-sel'); c.removeAttribute('id'); if (c.hasAttribute('data-jeem-free')) { c.style.left = (px(sel.style.left) + 24) + 'px'; c.style.top = (px(sel.style.top) + 24) + 'px'; } sel.parentNode.insertBefore(c, sel.nextSibling); undo.push(function () { if (c.parentNode) c.parentNode.removeChild(c); }); select(c); changed(); return; }
     if (m.op === 'table') return tableOp(m);
+    if (m.op === 'chart-cfg' || m.op === 'value-cfg') {
+      var blk = m.op === 'chart-cfg' ? sel.closest('[data-jeem-chart]') : (sel.closest('[data-jeem-value]') || sel.querySelector('[data-jeem-value]'));
+      if (!blk) return;
+      var attrs = ['data-jeem-chart', 'data-jeem-value', 'data-fmt', 'data-agg'], old = attrs.map(function (a) { return blk.getAttribute(a); });
+      undo.push(function () { attrs.forEach(function (a, k) { if (old[k] == null) blk.removeAttribute(a); else blk.setAttribute(a, old[k]); }); renderBlock(blk); post(info()); });
+      if (m.entry) addData(m.entry);
+      if (m.op === 'chart-cfg') blk.setAttribute('data-jeem-chart', JSON.stringify(m.cfg || {}));
+      else { if (m.ref != null) blk.setAttribute('data-jeem-value', m.ref); ['fmt', 'agg'].forEach(function (k) { if (m[k] === '' ) blk.removeAttribute('data-' + k); else if (m[k] != null) blk.setAttribute('data-' + k, m[k]); }); }
+      renderBlock(blk); changed(); post(info()); return;
+    }
     if (m.op === 'mark') { var o = document.querySelector('[data-jeem-target]'); if (o) o.removeAttribute('data-jeem-target'); sel.setAttribute('data-jeem-target', '1'); }
   }
   function editingNow() { var a = document.activeElement; return a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); }
   function onDown(e) {
     if (!on || e.button !== 0) return; var t = e.target; if (t.nodeType !== 1 || t.closest(LIVE)) return;
     if (t === document.body || t === document.documentElement) { select(null); return; }
+    var blkSel = t.closest('[data-jeem-chart]'); if (blkSel) t = blkSel;
     if (sel !== t && !(sel && sel.contains(t) && sel.hasAttribute('data-jeem-free'))) select(t);
     var free = t.closest('[data-jeem-free]');
     if (free && !free.isContentEditable) { var r = free.getBoundingClientRect(); drag = { el: free, x: e.clientX, y: e.clientY, l: px(free.style.left), t: px(free.style.top), k: (r.width / (free.offsetWidth || 1)) || 1, moved: false }; }
@@ -10331,6 +10378,130 @@ function ffApplyAccess() {
   if (ro) { if (!('ph' in q.dataset)) q.dataset.ph = q.placeholder; q.placeholder = 'هذا التصميم مشارك معك للعرض فقط — لا يمكن تعديله بالمحادثة.'; }
   else if ('ph' in q.dataset) { q.placeholder = q.dataset.ph; delete q.dataset.ph; }
 }
+// ---- «📊 رسمة من بياناتي»: نافذة بناء رسمة/رقم من بيانات المشروع الفعلية (بلا موديل) ----
+// المصدر: جدول + مقياس + تقسيم (استعلام حتمي يبنيه الخادم) أو عنصر من لوحة محفوظة. المعاينة بنتيجة حقيقية (preview لا تُسجَّل)،
+// والإدراج يسجّل الاستعلام في التصميم ويضع بلوك data-jeem-chart/value في الشريحة الحالية؛ وضع «replace» يغيّر مصدر بلوك محدد.
+const FFDM = { cat: null, catFor: null, mode: 'table', type: 'bar', pick: null, last: null, timer: 0, seq: 0, replace: false, busy: false };
+const FFDM_TYPES = [['bar', 'أعمدة'], ['line', 'خط'], ['donut', 'حلقة'], ['funnel', 'قمع'], ['treemap', 'شجرية'], ['value', 'رقم واحد']];
+const FFDM_AGG = { sum: 'إجمالي', avg: 'متوسط', count: 'عدد السجلات', count_distinct: 'عدد القيم المميزة', max: 'أعلى', min: 'أدنى' };
+function ffdmTypeOfWidget(t) { t = String(t || ''); return /line|area|forecast|trend/.test(t) ? 'line' : /pie|donut|radial/.test(t) ? 'donut' : /funnel/.test(t) ? 'funnel' : /treemap/.test(t) ? 'treemap' : /kpi|stat|metric/.test(t) ? 'value' : 'bar'; }
+function ffdmTable() { return (FFDM.cat?.tables || []).find(t => t.table === el('ffdm-table').value); }
+function ffdmRenderForm() {
+  const t = ffdmTable(); const cols = t ? t.columns : [];
+  const agg = el('ffdm-agg').value, keepM = el('ffdm-measure').value, keepD = el('ffdm-dim').value;
+  const mCols = cols.filter(c => agg === 'count' || agg === 'count_distinct' || c.kind === 'number');
+  el('ffdm-measure').innerHTML = (agg === 'count' ? '<option value="">كل السجلات</option>' : '') + mCols.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+  if ([...el('ffdm-measure').options].some(o => o.value === keepM)) el('ffdm-measure').value = keepM;
+  el('ffdm-dim').innerHTML = '<option value="">بلا تقسيم — رقم واحد</option>' + cols.filter(c => c.kind !== 'number').map(c => `<option value="${esc(c.name)}" data-kind="${c.kind}">${esc(c.name)}${c.kind === 'date' ? ' (تاريخ)' : ''}</option>`).join('');
+  if ([...el('ffdm-dim').options].some(o => o.value === keepD)) el('ffdm-dim').value = keepD;
+  el('ffdm-grain-wrap').classList.toggle('hidden', el('ffdm-dim').selectedOptions[0]?.dataset.kind !== 'date');
+}
+function ffdmHasDim() { return FFDM.mode === 'dash' ? FFDM.type !== 'value' : !!el('ffdm-dim').value; }
+function ffdmRenderTypes() {
+  const dim = FFDM.mode === 'dash' ? true : !!el('ffdm-dim').value;
+  if (!dim) FFDM.type = 'value'; else if (FFDM.type === 'value' && FFDM.mode !== 'dash') FFDM.type = 'bar';
+  el('ffdm-types').innerHTML = FFDM_TYPES.map(([k, l]) => { const ok = FFDM.mode === 'dash' || (k === 'value') !== dim; return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
+  el('ffdm-types').querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => { FFDM.type = b.dataset.t; ffdmRenderTypes(); ffdmShowPreview(); }));
+}
+function ffdmAutoTitle() {
+  if (FFDM.mode === 'dash') return FFDM.pick?.title || '';
+  const agg = el('ffdm-agg').value, m = el('ffdm-measure').value, d = el('ffdm-dim').value;
+  return `${FFDM_AGG[agg] || ''}${m && agg !== 'count' ? ' ' + m : ''}${d ? ' حسب ' + d : ''}`.trim();
+}
+function ffdmRequest(preview) {
+  const base = { preview };
+  if (FFDM.mode === 'dash') return FFDM.pick ? { ...base, historyId: FFDM.pick.historyId, widgetIndex: FFDM.pick.index } : null;
+  if (!el('ffdm-table').value) return null;
+  return { ...base, table: el('ffdm-table').value, agg: el('ffdm-agg').value, measure: el('ffdm-measure').value || null, dimension: el('ffdm-dim').value || null, grain: el('ffdm-grain').value };
+}
+function ffdmCols(r) { // أعمدة التسمية والقيمة من النتيجة (للعنصر المنسوخ من لوحة)
+  const rows = r.rows || [], cols = r.columns || []; const num = c => rows.some(o => typeof o[c] === 'number');
+  return { x: r.x || cols.find(c => !num(c)) || cols[0], y: r.y || cols.find(c => num(c)) || cols[cols.length - 1] };
+}
+function ffdmCfg(r, key) {
+  const { x, y } = ffdmCols(r); const title = el('ffdm-title').value.trim() || ffdmAutoTitle();
+  return { q: key || '_preview', type: FFDM.type, x, y, title, fmt: 'compact' };
+}
+function ffdmQueue() { clearTimeout(FFDM.timer); el('ffdm-title').placeholder = ffdmAutoTitle() || 'عنوان الرسمة'; FFDM.timer = setTimeout(ffdmPreview, 350); }
+async function ffdmPreview() {
+  const body = ffdmRequest(true); el('ffdm-ok').disabled = true;
+  if (!body) { el('ffdm-preview').innerHTML = '<div class="ffdm-empty">اختر مصدر البيانات.</div>'; return; }
+  const seq = ++FFDM.seq; el('ffdm-status').textContent = 'يحضر البيانات…';
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({})); if (seq !== FFDM.seq) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    FFDM.last = d; if (FFDM.mode === 'dash' && d.widgetType && !FFDM.typeTouched) { FFDM.type = ffdmTypeOfWidget(d.widgetType); ffdmRenderTypes(); }
+    el('ffdm-status').textContent = `${(d.rowCount || 0).toLocaleString('en-US')} صف من بياناتك الفعلية`; el('ffdm-ok').disabled = !(d.rowCount > 0);
+    ffdmShowPreview();
+  } catch (e) { if (seq !== FFDM.seq) return; FFDM.last = null; el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">${esc(e.message)}</div>`; el('ffdm-status').textContent = ''; }
+}
+function ffdmShowPreview() {
+  const d = FFDM.last, box = el('ffdm-preview'); if (!d) return; box.innerHTML = '';
+  const cfg = ffdmCfg(d); const rows = d.rows || [];
+  if (FFDM.type === 'value') { const v = rows[0] ? rows[0][cfg.y] : null; box.innerHTML = `<div class="ffdm-value"><b>${esc(window.JEEM_BLOCKS ? JEEM_BLOCKS.format(v, 'compact') : String(v ?? '—'))}</b><span>${esc(cfg.title)}</span></div>`; return; }
+  if (cfg.title) { const t = document.createElement('div'); t.className = 'ffdm-ptitle'; t.textContent = cfg.title; box.appendChild(t); }
+  const plot = document.createElement('div'); plot.className = 'ffdm-plot'; box.appendChild(plot);
+  try { JEEM_VIZ.mount(plot, JEEM_BLOCKS.spec(cfg, rows), { fmt: v => JEEM_BLOCKS.format(v, 'compact') }); } catch (e) { plot.textContent = 'تعذّر الرسم: ' + e.message; }
+}
+function ffdmSetMode(mode) {
+  FFDM.mode = mode; FFDM.last = null;
+  el('ffdm-tab-table').setAttribute('aria-selected', mode === 'table'); el('ffdm-tab-dash').setAttribute('aria-selected', mode === 'dash');
+  el('ffdm-pane-table').classList.toggle('hidden', mode !== 'table'); el('ffdm-pane-dash').classList.toggle('hidden', mode !== 'dash');
+  ffdmRenderTypes(); ffdmQueue();
+}
+function ffdmRenderDash() {
+  const ds = FFDM.cat?.dashboards || [];
+  el('ffdm-dash-list').innerHTML = ds.length ? ds.map(h => `<div class="ffdm-dash"><b>${esc(h.title)}</b>${h.widgets.map(w => `<label><input type="radio" name="ffdm-w" value="${esc(h.historyId)}|${w.index}"> ${esc(w.title)} <small class="muted">${esc(w.type)}</small></label>`).join('')}</div>`).join('')
+    : '<div class="ffdm-empty">لا توجد لوحات محفوظة بعناصر مبنية من بياناتك بعد.</div>';
+  el('ffdm-dash-list').querySelectorAll('input[name="ffdm-w"]').forEach(r => r.addEventListener('change', () => {
+    const [historyId, index] = r.value.split('|'); const h = ds.find(x => x.historyId === historyId); const w = h?.widgets.find(x => String(x.index) === index);
+    FFDM.pick = { historyId, index: +index, title: w?.title || '' }; FFDM.typeTouched = false; FFDM.type = ffdmTypeOfWidget(w?.type); ffdmRenderTypes(); ffdmQueue();
+  }));
+}
+async function ffdmOpen(replace) {
+  if (!FF.design) return;
+  FFDM.replace = !!replace; FFDM.pick = null; FFDM.last = null; FFDM.typeTouched = false; FFDM.type = replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
+  el('ffdm-heading').textContent = replace ? '📊 تغيير بيانات الرسمة' : '📊 رسمة من بياناتي';
+  el('ffdm-ok').textContent = replace ? 'تطبيق على الرسمة' : 'إدراج في الشريحة'; el('ffdm-title').value = replace ? (FFD.info?.chart?.title || '') : '';
+  el('ffdm-preview').innerHTML = '<div class="ffdm-empty">يحمّل بياناتك…</div>'; el('ffdm-status').textContent = '';
+  el('ff-data-modal').classList.remove('hidden');
+  try {
+    if (FFDM.catFor !== FF.design.id) {
+      const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/catalog`); const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || `(${r.status})`); FFDM.cat = d; FFDM.catFor = FF.design.id;
+    }
+    const ts = FFDM.cat.tables || [];
+    if (!ts.length && !(FFDM.cat.dashboards || []).length) { el('ffdm-preview').innerHTML = '<div class="ffdm-empty">لا توجد بيانات متاحة لهذا التصميم — ارفع ملفًا من «الملفات» أو اختر مصادر التصميم.</div>'; return; }
+    el('ffdm-table').innerHTML = ts.map(t => `<option value="${esc(t.table)}">${esc(t.name)} (${(t.rows >= 0 ? t.rows : 0).toLocaleString('en-US')} صف)</option>`).join('');
+    ffdmRenderForm(); ffdmRenderDash(); ffdmSetMode(ts.length ? 'table' : 'dash'); el('ffdm-table').focus();
+  } catch (e) { el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">تعذّر تحميل البيانات: ${esc(e.message)}</div>`; }
+}
+function ffdmClose() { el('ff-data-modal').classList.add('hidden'); el('ffd-chart')?.focus(); }
+el('ffd-chart').addEventListener('click', () => ffdmOpen(false));
+el('ffdm-tab-table').addEventListener('click', () => ffdmSetMode('table'));
+el('ffdm-tab-dash').addEventListener('click', () => ffdmSetMode('dash'));
+el('ffdm-table').addEventListener('change', () => { ffdmRenderForm(); ffdmRenderTypes(); ffdmQueue(); });
+['ffdm-agg', 'ffdm-measure', 'ffdm-dim', 'ffdm-grain'].forEach(id => el(id).addEventListener('change', () => { if (id === 'ffdm-agg') ffdmRenderForm(); if (id === 'ffdm-dim') el('ffdm-grain-wrap').classList.toggle('hidden', el('ffdm-dim').selectedOptions[0]?.dataset.kind !== 'date'); ffdmRenderTypes(); ffdmQueue(); }));
+el('ffdm-title').addEventListener('input', () => { clearTimeout(FFDM.timer); FFDM.timer = setTimeout(ffdmShowPreview, 250); });
+el('ffdm-types').addEventListener('click', e => { if (e.target.closest('[data-t]')) FFDM.typeTouched = true; });
+el('ffdm-cancel').addEventListener('click', ffdmClose);
+el('ff-data-modal').addEventListener('click', e => { if (e.target === el('ff-data-modal')) ffdmClose(); });
+el('ff-data-modal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ffdmClose(); } });
+el('ffdm-ok').addEventListener('click', async () => {
+  const body = ffdmRequest(false); if (!body || FFDM.busy) return;
+  FFDM.busy = true; el('ffdm-ok').disabled = true; el('ffdm-status').textContent = 'يسجّل الاستعلام في التصميم…';
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    const cfg = ffdmCfg(d, d.key); const entry = { key: d.key, sql: d.sql, result: d.result };
+    if (FFDM.type === 'value') {
+      const m = FFDM.replace && FFD.info?.value ? { op: 'value-cfg', ref: `${d.key}.${cfg.y}`, fmt: 'compact', agg: '', entry } : { op: 'insert', kind: 'value', ref: `${d.key}.${cfg.y}`, fmt: 'compact', title: cfg.title, entry };
+      ffdPost(m);
+    } else ffdPost(FFDM.replace && FFD.info?.chart ? { op: 'chart-cfg', cfg, entry } : { op: 'insert', kind: 'chart', cfg, entry });
+    el('ff-data-modal').classList.add('hidden');
+  } catch (e) { el('ffdm-status').textContent = 'تعذّر: ' + e.message; el('ffdm-ok').disabled = false; }
+  finally { FFDM.busy = false; }
+});
 // ---- نطاق التعديل بالمحادثة: الشريحة الحالية / العرض كله (العنصر المحدد من «اطلب من جيم» في شريط الأدوات) ----
 FF.nav = { i: 0, n: 0 }; FF.scopeChoice = 'slide';
 function ffCurrentScope() {
@@ -10385,6 +10556,21 @@ function ffdRenderInsp() {
     <button type="button" data-a="duplicate" title="تكرار" aria-label="تكرار العنصر">⧉</button>
     <button type="button" data-a="delete" title="حذف (Delete)" aria-label="حذف العنصر">🗑</button>
     <button type="button" data-a="close" title="إغلاق" aria-label="إغلاق لوحة الخصائص">✕</button></div>`;
+  if (i.chart) {
+    const c = i.chart, cols = i.chartCols || [], opt = (v, cur) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`;
+    h += `<section><h4>البيانات</h4>${ffdRow('النوع', `<select data-c="type" aria-label="نوع الرسمة">${FFDM_TYPES.filter(t => t[0] !== 'value').map(([k, l]) => `<option value="${k}"${c.type === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+      ${cols.length ? ffdRow('التسميات', `<select data-c="x" aria-label="عمود التسميات">${cols.map(v => opt(v, c.x)).join('')}</select>`) + ffdRow('القيم', `<select data-c="y" aria-label="عمود القيم">${cols.map(v => opt(v, Array.isArray(c.y) ? c.y[0] : c.y)).join('')}</select>`) : '<div class="ffi-sub">لا توجد نتيجة لهذا الاستعلام بعد — حدّث البيانات أو غيّر المصدر.</div>'}
+      ${ffdRow('العنوان', `<input type="text" data-c="title" value="${esc(c.title || '')}" aria-label="عنوان الرسمة" class="ffi-text">`)}
+      ${ffdRow('التنسيق', `<select data-c="fmt" aria-label="تنسيق الأرقام">${[['compact', 'مختصر (3.7M)'], ['number', 'رقم كامل'], ['currency', 'عملة'], ['percent', 'نسبة']].map(([k, l]) => `<option value="${k}"${(c.fmt || 'compact') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+      <button type="button" class="ffi-wide" data-a="data-source">📊 تغيير مصدر البيانات…</button></section>`;
+  }
+  if (i.value) {
+    const v = i.value, cols = i.valueCols || [];
+    h += `<section><h4>القيمة من البيانات</h4>${cols.length ? ffdRow('العمود', `<select data-v="col" aria-label="العمود">${cols.map(c => `<option value="${esc(c)}"${v.ref.split('.').slice(1).join('.') === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>`) : ''}
+      ${ffdRow('التجميع', `<select data-v="agg" aria-label="تجميع الصفوف">${[['', 'الصف الأول'], ['sum', 'مجموع الصفوف'], ['avg', 'متوسط'], ['max', 'أعلى'], ['min', 'أدنى'], ['count', 'عدد الصفوف']].map(([k, l]) => `<option value="${k}"${v.agg === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+      ${ffdRow('التنسيق', `<select data-v="fmt" aria-label="تنسيق الرقم">${[['compact', 'مختصر'], ['number', 'رقم كامل'], ['currency', 'عملة'], ['percent', 'نسبة']].map(([k, l]) => `<option value="${k}"${(v.fmt || 'compact') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+      <button type="button" class="ffi-wide" data-a="data-source">📊 تغيير مصدر البيانات…</button></section>`;
+  }
   if (i.table) {
     const t = i.table;
     h += `<section><h4>جدول</h4>${ffdRow('الأعمدة', `<input type="number" min="1" max="20" data-t="cols" value="${t.cols}" aria-label="عدد الأعمدة">`)}${ffdRow('الصفوف', `<input type="number" min="1" max="60" data-t="rows" value="${t.rows}" aria-label="عدد الصفوف">`)}
@@ -10416,8 +10602,16 @@ function ffdRenderInsp() {
   }));
   box.querySelectorAll('[data-t]').forEach(inp => inp.addEventListener('change', () => ffdPost({ op: 'table', action: inp.dataset.t, value: inp.type === 'checkbox' ? inp.checked : +inp.value })));
   box.querySelectorAll('[data-w]').forEach(inp => inp.addEventListener('change', () => ffdPost({ op: 'table', action: 'width', index: +inp.dataset.w, value: +inp.value })));
+  box.querySelectorAll('[data-c]').forEach(inp => inp.addEventListener('change', () => {
+    const cfg = { ...(i.chart || {}) }; cfg[inp.dataset.c] = inp.value; ffdPost({ op: 'chart-cfg', cfg });
+  }));
+  box.querySelectorAll('[data-v]').forEach(inp => inp.addEventListener('change', () => {
+    const v = i.value; const q = v.ref.split('.')[0];
+    if (inp.dataset.v === 'col') ffdPost({ op: 'value-cfg', ref: `${q}.${inp.value}` }); else ffdPost({ op: 'value-cfg', [inp.dataset.v]: inp.value });
+  }));
   box.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => {
     const a = b.dataset.a;
+    if (a === 'data-source') { ffdmOpen(true); return; }
     if (a === 'close') { if (matchMedia('(max-width: 640px)').matches) { FFD.insp = false; el('ffd-insp-btn').setAttribute('aria-pressed', 'false'); ffdRenderInsp(); } else ffdPost({ op: 'deselect' }); return; }
     if (a === 'nofill') { ffdPost({ op: 'style', props: { 'background-color': 'transparent', 'background-image': 'none' } }); return; }
     ffdPost({ op: a });

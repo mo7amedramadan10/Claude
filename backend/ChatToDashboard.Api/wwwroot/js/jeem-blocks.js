@@ -120,6 +120,7 @@
     [].forEach.call(document.querySelectorAll('[data-jeem-value]'), renderValue);
   }
   window.JEEM_BLOCKS = { render: renderAll, renderChart: renderChart, renderValue: renderValue, spec: specOf, format: fmtNum };
+  if (document.getElementById('app-shell')) return; // داخل المنصة نفسها: الواجهة البرمجية فقط (معاينة نافذة «رسمة من بياناتي»)
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderAll); else renderAll();
   document.addEventListener('jeem:data', renderAll);
   window.addEventListener('load', function () { if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderAll); });

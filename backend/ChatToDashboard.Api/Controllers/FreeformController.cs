@@ -33,7 +33,7 @@ public class FreeformFromDashboardRequest { public string Kind { get; set; } = "
 [ApiController]
 [Route("api/freeform")]
 [Authorize]
-public class FreeformController : ControllerBase
+public partial class FreeformController : ControllerBase
 {
     private readonly FreeformStore _store;
     private readonly FreeformBuilder _builder;
