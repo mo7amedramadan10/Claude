@@ -3773,15 +3773,15 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #add-widget-modal .dash-gallery-box { position: relative; }
 #add-widget-modal .aw-peek { position: absolute; z-index: 30; width: 272px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-3, 0 12px 32px rgb(15 25 35 / .18)); padding: 12px; pointer-events: none; }
 #add-widget-modal .aw-peek.hidden { display: none; }
-#add-widget-modal .aw-peek small { display: block; font-size: 11px; color: var(--ink-3); margin-bottom: 6px; }
-#add-widget-modal .aw-peek svg { width: 100%; height: auto; display: block; }
-#add-widget-modal .aw-peek-kpi b { display: block; font-size: 26px; font-weight: 800; color: var(--ink); line-height: 1.1; }
-#add-widget-modal .aw-peek-kpi b span { font-size: 13px; font-weight: 500; color: var(--ink-3); }
-#add-widget-modal .aw-peek-kpi em { display: block; font-style: normal; font-size: 12px; margin: 6px 0 4px; color: var(--ok, #10b981); }
-#add-widget-modal .aw-peek-kpi em.down { color: var(--danger, #dc2626); }
-#add-widget-modal .aw-peek-kpi em span { color: var(--ink-3); }
-#add-widget-modal .aw-peek-kpi svg { width: 84px; }
-#add-widget-modal .aw-peek-note { margin: 8px 0 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.5; border-top: 1px dashed var(--line); padding-top: 6px; }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek small { display: block; font-size: 11px; color: var(--ink-3); margin-bottom: 6px; }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek svg { width: 100%; height: auto; display: block; }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek-kpi b { display: block; font-size: 26px; font-weight: 800; color: var(--ink); line-height: 1.1; }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek-kpi b span { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek-kpi em { display: block; font-style: normal; font-size: 12px; margin: 6px 0 4px; color: var(--ok, #10b981); }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek-kpi em.down { color: var(--danger, #dc2626); }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek-kpi em span { color: var(--ink-3); }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek-kpi svg { width: 84px; }
+:is(#add-widget-modal, #ff-data-modal) .aw-peek-note { margin: 8px 0 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.5; border-top: 1px dashed var(--line); padding-top: 6px; }
 #add-widget-modal .dash-card.aw-card .aw-eye { display: none; position: absolute; top: 10px; inset-inline-start: 10px; width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); place-items: center; font-size: 14px; }
 @media (hover: none) { #add-widget-modal .dash-card.aw-card .aw-eye { display: grid; } #add-widget-modal .aw-peek { pointer-events: auto; } }
 
@@ -4110,7 +4110,7 @@ body.ff-full-on { overflow: hidden; }
 #ff-data-modal .ffdm-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; }
 #ff-data-modal .ffdm-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 #ff-data-modal .ffdm-form label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); flex: 1; min-width: 0; }
-#ff-data-modal .ffdm-form select, #ff-data-modal .ffdm-form input[type="text"] { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 400; font-size: var(--fs-sm); }
+#ff-data-modal .ffdm-form select, #ff-data-modal .ffdm-form input[type="text"], #ff-data-modal .ffdm-form input[type="search"] { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 400; font-size: var(--fs-sm); }
 #ff-data-modal .ffdm-row { display: flex; gap: 10px; }
 #ff-data-modal .ffdm-types { border: 0; padding: 0; margin: 0; }
 #ff-data-modal .ffdm-types legend { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); margin-bottom: 4px; padding: 0; }
@@ -4153,3 +4153,13 @@ body.ff-full-on { overflow: hidden; }
 @media (max-width: 640px) {
   .jeem-scope #ff-refresh-panel { position: fixed; top: auto; inset-inline-start: auto; inset-inline-end: auto; left: 16px; right: 16px; max-width: none; min-width: 0; margin-top: 6px; }
 }
+
+/* «من المكتبة» في نافذة بيانات تصميم حر: شكل العنصر بأرقام توضيحية ثم زر البناء من البيانات */
+#ff-data-modal #ffdm-lib-kinds { margin-bottom: 10px; }
+#ff-data-modal #ffdm-lib-list { max-height: 260px; margin-top: 8px; }
+#ff-data-modal #ffdm-lib-more { align-self: flex-start; margin-top: 6px; }
+#ff-data-modal .ffdm-lib-pre { display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: min(300px, 100%); margin: auto; text-align: start; }
+#ff-data-modal .ffdm-lib-pre .aw-peek-chart, #ff-data-modal .ffdm-lib-pre .aw-peek-kpi { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); }
+#ff-data-modal .ffdm-lib-pre .aw-peek-chart svg { width: 100%; height: auto; display: block; }
+#ff-data-modal .ffdm-lib-pre .aw-peek-chart small, #ff-data-modal .ffdm-lib-pre .aw-peek-kpi small { display: block; font-size: 11px; color: var(--ink-3); margin-bottom: 6px; }
+#ff-data-modal .ffdm-lib-pre small.muted { font-size: 11.5px; line-height: 1.6; }

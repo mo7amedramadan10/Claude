@@ -10450,7 +10450,8 @@ function ffApplyAccess() {
 // والإدراج يسجّل الاستعلام في التصميم ويضع بلوك data-jeem-chart/value في الشريحة الحالية؛ وضع «replace» يغيّر مصدر بلوك محدد.
 // ألوان اللوحات في المنصة (رموز --chart-1..4 في tokens.css للوضع الفاتح) — «ألوان اللوحة» تثبّتها في الرسمة فلا تتبع ألوان العرض ولا الهوية
 const FFDM_DASH_PAL = ['#127DBD', '#00BAB3', '#6E62B0', '#28B6E6'];
-const FFDM = { pal: 'page', pagePal: null, cat: null, catFor: null, mode: 'table', type: 'bar', pick: null, last: null, timer: 0, seq: 0, replace: false, busy: false };
+const FFDM = { lib: null, libKind: 'ready', libQ: '', libCat: '', libShown: 60, libBusy: false, pal: 'page', pagePal: null, cat: null, catFor: null, mode: 'table', type: 'bar', pick: null, last: null, timer: 0, seq: 0, replace: false, busy: false };
+function ffdmW() { return FFDM.mode === 'dash' || FFDM.mode === 'lib'; } // عنصر جاهز البنية (لوحة محفوظة أو مبني من المكتبة): «كما في اللوحة» متاح
 const FFDM_TYPES = [['asis', 'كما في اللوحة'], ['bar', 'أعمدة'], ['line', 'خط'], ['donut', 'حلقة'], ['funnel', 'قمع'], ['treemap', 'شجرية'], ['value', 'رقم واحد']];
 const FFDM_AGG = { sum: 'إجمالي', avg: 'متوسط', count: 'عدد السجلات', count_distinct: 'عدد القيم المميزة', max: 'أعلى', min: 'أدنى' };
 const FFDM_WTYPE_AR = { kpi: 'مؤشر', bar: 'أعمدة', line: 'خط', area: 'مساحة', pie: 'دائري', donut: 'حلقة', funnel: 'قمع', treemap: 'شجرية', scatter: 'مبعثر', table: 'جدول', 'progress-table': 'جدول تقدّم', forecast: 'تنبؤ', 'radial-gauge': 'مقياس', stages: 'مراحل' };
@@ -10485,7 +10486,7 @@ function ffdmRenderForm() {
   if ([...el('ffdm-dim').options].some(o => o.value === keepD)) el('ffdm-dim').value = keepD;
   el('ffdm-grain-wrap').classList.toggle('hidden', el('ffdm-dim').selectedOptions[0]?.dataset.kind !== 'date');
 }
-function ffdmHasDim() { return FFDM.mode === 'dash' ? FFDM.type !== 'value' : !!el('ffdm-dim').value; }
+function ffdmHasDim() { return ffdmW() ? FFDM.type !== 'value' : !!el('ffdm-dim').value; }
 // الربط: الرقم بلا تقسيم دائمًا (قائمة التقسيم معطّلة)، والرسمة تبدأ بأول تقسيم متاح ولا تقبل «رقم واحد»
 function ffdmBindPreset() {
   const dim = el('ffdm-dim'); dim.disabled = FFDM.bind === 'value';
@@ -10494,21 +10495,23 @@ function ffdmBindPreset() {
   el('ffdm-grain-wrap').classList.toggle('hidden', dim.selectedOptions[0]?.dataset.kind !== 'date');
 }
 function ffdmRenderTypes() {
-  const dim = FFDM.mode === 'dash' ? true : !!el('ffdm-dim').value;
-  if (!dim) FFDM.type = 'value'; else if (FFDM.type === 'value' && FFDM.mode !== 'dash') FFDM.type = 'bar';
+  const dim = ffdmW() ? true : !!el('ffdm-dim').value;
+  if (!dim) FFDM.type = 'value'; else if (FFDM.type === 'value' && !ffdmW()) FFDM.type = 'bar';
   if (FFDM.bind === 'value') FFDM.type = 'value'; else if (FFDM.bind === 'chart' && FFDM.type === 'value') FFDM.type = 'bar';
-  if (FFDM.mode !== 'dash' && FFDM.type === 'asis') FFDM.type = dim ? 'bar' : 'value';
-  el('ffdm-types').innerHTML = FFDM_TYPES.filter(([k]) => k !== 'asis' || (FFDM.mode === 'dash' && FFDM.bind !== 'value')).map(([k, l]) => { const ok = k === 'asis' ? true : (FFDM.bind ? (k === 'value') === (FFDM.bind === 'value') : true) && (FFDM.mode === 'dash' || (k === 'value') !== dim); return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
+  if (!ffdmW() && FFDM.type === 'asis') FFDM.type = dim ? 'bar' : 'value';
+  el('ffdm-types').innerHTML = FFDM_TYPES.filter(([k]) => k !== 'asis' || (ffdmW() && FFDM.bind !== 'value')).map(([k, l]) => { const ok = k === 'asis' ? true : (FFDM.bind ? (k === 'value') === (FFDM.bind === 'value') : true) && (ffdmW() || (k === 'value') !== dim); return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
   el('ffdm-types').querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => { FFDM.type = b.dataset.t; ffdmRenderTypes(); ffdmShowPreview(); }));
   if (el('ffdm-colors-wrap')) ffdmRenderPal();
 }
 function ffdmAutoTitle() {
-  if (FFDM.mode === 'dash') return FFDM.pick?.title || '';
+  if (FFDM.mode === 'lib') return FFDM.lib?.title || '';
+  if (ffdmW()) return FFDM.pick?.title || '';
   const agg = el('ffdm-agg').value, m = el('ffdm-measure').value, d = el('ffdm-dim').value;
   return `${FFDM_AGG[agg] || ''}${m && agg !== 'count' ? ' ' + m : ''}${d ? ' حسب ' + d : ''}`.trim();
 }
 function ffdmRequest(preview) {
   const base = { preview };
+  if (FFDM.mode === 'lib') return FFDM.lib?.buildId ? { ...base, buildId: FFDM.lib.buildId } : null;
   if (FFDM.mode === 'dash') return FFDM.pick ? { ...base, historyId: FFDM.pick.historyId, widgetIndex: FFDM.pick.index } : null;
   if (!el('ffdm-table').value) return null;
   return { ...base, table: el('ffdm-table').value, agg: el('ffdm-agg').value, measure: el('ffdm-measure').value || null, dimension: el('ffdm-dim').value || null, grain: el('ffdm-grain').value };
@@ -10540,12 +10543,13 @@ function ffdmWait(on, title, hint) {
 function ffdmQueue() { clearTimeout(FFDM.timer); el('ffdm-title').placeholder = ffdmAutoTitle() || 'عنوان الرسمة'; FFDM.timer = setTimeout(ffdmPreview, 350); }
 async function ffdmPreview() {
   const body = ffdmRequest(true); el('ffdm-ok').disabled = true;
-  if (!body) { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; el('ffdm-preview').innerHTML = `<div class="ffdm-empty">${FFDM.mode === 'dash' ? 'اختر عنصرًا من اللوحة.' : 'اختر مصدر البيانات.'}</div>`; return; }
+  if (!body && FFDM.mode === 'lib') { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; ffdmLibPreBuild(); return; }
+  if (!body) { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; el('ffdm-preview').innerHTML = `<div class="ffdm-empty">${ffdmW() ? 'اختر عنصرًا من اللوحة.' : 'اختر مصدر البيانات.'}</div>`; return; }
   const seq = ++FFDM.seq; el('ffdm-status').textContent = ''; ffdmWait(true, 'يحضر بياناتك…', 'ينفّذ الاستعلام على بياناتك الفعلية');
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({})); if (seq !== FFDM.seq) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
-    ffdmWait(false); FFDM.last = d; if (FFDM.mode === 'dash' && d.widgetType && !FFDM.typeTouched) { FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes(); }
+    ffdmWait(false); FFDM.last = d; if (ffdmW() && d.widgetType && !FFDM.typeTouched) { FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes(); }
     const asis = FFDM.type === 'asis' ? ffdmAsIs(d) : null;
     const bindBad = FFDM.bind === 'chart' && (FFDM.type === 'value' || asis?.type === 'value');
     el('ffdm-status').textContent = bindBad ? (asis ? 'هذا العنصر رقم واحد في اللوحة — اختر طريقة عرض رسمة لاستبدال رسمة القالب.' : 'الرسمة تحتاج «التقسيم حسب» — اختر عمودًا.')
@@ -10566,8 +10570,8 @@ function ffdmShowPreview() {
 function ffdmSetMode(mode) {
   FFDM.mode = mode; FFDM.last = null;
   ++FFDM.seq; ffdmWait(false); el('ffdm-preview').innerHTML = ''; el('ffdm-status').textContent = ''; el('ffdm-ok').disabled = true; // لا تبقى معاينة التبويب الآخر
-  el('ffdm-tab-table').setAttribute('aria-selected', mode === 'table'); el('ffdm-tab-dash').setAttribute('aria-selected', mode === 'dash');
-  el('ffdm-pane-table').classList.toggle('hidden', mode !== 'table'); el('ffdm-pane-dash').classList.toggle('hidden', mode !== 'dash');
+  ['table', 'dash', 'lib'].forEach(m => { el('ffdm-tab-' + m).setAttribute('aria-selected', mode === m); el('ffdm-pane-' + m).classList.toggle('hidden', mode !== m); });
+  if (mode === 'lib') ffdmRenderLib();
   ffdmRenderTypes(); ffdmQueue();
 }
 function ffdmRenderDash() {
@@ -10593,7 +10597,7 @@ async function ffdmOpen(replace) {
   if (!FF.design) return;
   // replace: تغيير مصدر بلوك قائم؛ 'bind': ربط رسمة/رقم ثابت من القالب (FFDM.bind = chart|value)؛ وإلا إدراج جديد
   FFDM.bind = replace === 'bind' ? (FFD.info?.bind?.kind || null) : null; if (replace === 'bind' && !FFDM.bind) return;
-  FFDM.replace = !!replace && !FFDM.bind; FFDM.pick = null; FFDM.last = null; FFDM.typeTouched = false;
+  FFDM.replace = !!replace && !FFDM.bind; FFDM.pick = null; FFDM.lib = null; FFDM.last = null; FFDM.typeTouched = false;
   FFDM.pal = FFDM.replace && FFD.info?.chart?.palette === 'dashboard' ? 'dashboard' : 'page'; FFDM.pagePal = null; ffdmRenderPal();
   ffdPost({ op: 'palette', bind: FFDM.bind });
   FFDM.type = FFDM.bind ? (FFDM.bind === 'value' ? 'value' : 'bar') : replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
@@ -10616,6 +10620,7 @@ function ffdmClose() { el('ff-data-modal').classList.add('hidden'); el('ffd-char
 el('ffd-chart').addEventListener('click', () => ffdmOpen(false));
 el('ffdm-tab-table').addEventListener('click', () => ffdmSetMode('table'));
 el('ffdm-tab-dash').addEventListener('click', () => ffdmSetMode('dash'));
+el('ffdm-tab-lib').addEventListener('click', async () => { if (!TEMPLATES.length) { try { await loadTemplateCatalog(); } catch { /* بلا نماذج */ } } ffdmSetMode('lib'); });
 el('ffdm-dash-pick').addEventListener('change', ffdmRenderDashItems);
 el('ffdm-colors').addEventListener('click', e => { const b = e.target.closest('[data-pal]'); if (!b) return; FFDM.pal = b.dataset.pal; ffdmRenderPal(); ffdmShowPreview(); });
 el('ffdm-table').addEventListener('change', () => { ffdmRenderForm(); ffdmBindPreset(); ffdmRenderTypes(); ffdmQueue(); });
@@ -10642,6 +10647,68 @@ el('ffdm-ok').addEventListener('click', async () => {
   } catch (e) { el('ffdm-status').textContent = 'تعذّر: ' + e.message; el('ffdm-ok').disabled = false; }
   finally { FFDM.busy = false; }
 });
+
+// ---- «من المكتبة»: عناصر جاهزة ومكتبة المؤشرات كما في «إضافة عناصر» باللوحة. العنصر وصفٌ بلا أعمدة، فيُبنى على بيانات التصميم
+// بنداء موديل واحد (data/build: يكتب الاستعلام على أعمدتك وينفّذه) — بزر صريح لا تلقائيًا، ثم يُعاين ويُدرج كعنصر لوحة («كما في اللوحة»).
+// العناصر الخام لا تحتاج موديلًا: هي نفسها «من جدول»، فبطاقتها تنقل إليه بطريقة العرض المناسبة.
+const FFDM_RAW_TYPE = { comparison: 'bar', trend: 'line', kpi: 'value', distribution: 'donut', table: 'bar' };
+function ffdmLibItems() { return awItems({ cat: FFDM.libKind, q: FFDM.libQ, kpiCat: FFDM.libCat, kpiMt: '' }); }
+function ffdmRenderLib() {
+  el('ffdm-lib-kinds').querySelectorAll('[data-lk]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.lk === FFDM.libKind)));
+  const kw = el('ffdm-lib-kcat-wrap'); kw.classList.toggle('hidden', FFDM.libKind !== 'kpi' || !KPI_LIB);
+  if (FFDM.libKind === 'kpi' && KPI_LIB && !el('ffdm-lib-kcat').options.length) {
+    const counts = awKpiCatCounts(); let total = 0; counts.forEach(n => { total += n; });
+    el('ffdm-lib-kcat').innerHTML = `<option value="">كل التصنيفات (${total.toLocaleString('en-US')})</option>` + KPI_LIB.cats.map((c, i) => counts.has(i) ? `<option value="${i}">${esc(c[0])} (${counts.get(i).toLocaleString('en-US')})</option>` : '').join('');
+  }
+  const items = ffdmLibItems(), list = el('ffdm-lib-list');
+  const tag = it => it.kind === 'raw' ? 'من جدول' : it.kind === 'kpi' ? (it.tag || 'مؤشر') : (FFDM_WTYPE_AR[it.peek === 'pie' ? 'donut' : it.peek] || 'رسمة');
+  list.innerHTML = items.length ? items.slice(0, FFDM.libShown).map(it => { const on = FFDM.lib?.key === it.key;
+    return `<label class="ffdm-wi${on ? ' on' : ''}" title="${esc(it.desc || '')}"><input type="radio" name="ffdm-lib" value="${esc(it.key)}"${on ? ' checked' : ''}><span class="t">${esc(it.icon)} ${esc(it.title)}</span><span class="k">${esc(tag(it))}</span></label>`; }).join('')
+    : `<div class="ffdm-empty">${FFDM.libKind === 'kpi' && !KPI_LIB ? 'مكتبة المؤشرات غير محمّلة.' : 'لا نتائج.'}</div>`;
+  const more = el('ffdm-lib-more'); more.classList.toggle('hidden', items.length <= FFDM.libShown); more.textContent = `عرض المزيد (${(items.length - FFDM.libShown).toLocaleString('en-US')} متبقٍ)`;
+  list.querySelectorAll('input[name="ffdm-lib"]').forEach(r => r.addEventListener('change', () => {
+    const it = items.find(x => x.key === r.value); if (!it) return;
+    list.querySelectorAll('.ffdm-wi').forEach(l => l.classList.toggle('on', l.contains(r)));
+    if (it.kind === 'raw') { ffdmLibRaw(it); return; }
+    FFDM.lib = { ...it, buildId: null }; FFDM.typeTouched = false; FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes(); el('ffdm-title').placeholder = it.title; ffdmPreview();
+  }));
+}
+// عنصر خام = «من جدول» بطريقة العرض المقابلة وأول عمود مناسب للتقسيم
+function ffdmLibRaw(it) {
+  const type = FFDM_RAW_TYPE[it.id] || 'bar'; ffdmSetMode('table');
+  const dim = el('ffdm-dim'); const opts = [...dim.options];
+  if (!FFDM.bind) {
+    if (type === 'value') dim.value = '';
+    else { const pick = (it.id === 'trend' ? opts.find(o => o.dataset.kind === 'date') : opts.find(o => o.value && o.dataset.kind !== 'date')) || opts.find(o => o.value); if (pick) dim.value = pick.value; }
+    el('ffdm-grain-wrap').classList.toggle('hidden', dim.selectedOptions[0]?.dataset.kind !== 'date');
+  }
+  FFDM.type = type; ffdmRenderTypes(); ffdmQueue();
+  el('ffdm-status').textContent = `«${it.title}»: اختر الجدول والمقياس — بلا موديل.`;
+}
+// قبل البناء: شكل العنصر بأرقام توضيحية + زر البناء، مع توضيح أنه نداء موديل واحد
+function ffdmLibPreBuild() {
+  const box = el('ffdm-preview'), it = FFDM.lib; el('ffdm-ok').disabled = true;
+  if (!it) { box.innerHTML = '<div class="ffdm-empty">اختر عنصرًا من المكتبة.</div>'; return; }
+  box.innerHTML = `<div class="ffdm-lib-pre">${awPeekHtml(it)}<button type="button" id="ffdm-lib-build" class="btn btn-sm btn-primary">🪄 ابنِه من بياناتي</button><small class="muted">العنصر وصف بلا أعمدة، فيكتب جيم استعلامه على أعمدتك بنداء موديل واحد (ثوانٍ)، ثم تعاينه بأرقامك قبل الإدراج.</small>${it.error ? `<div class="ffdm-empty bad">${esc(it.error)}</div>` : ''}</div>`;
+  el('ffdm-lib-build').addEventListener('click', ffdmLibBuild);
+}
+async function ffdmLibBuild() {
+  const it = FFDM.lib; if (!it || FFDM.libBusy) return;
+  FFDM.libBusy = true; const seq = ++FFDM.seq; el('ffdm-ok').disabled = true; el('ffdm-status').textContent = '';
+  ffdmWait(true, 'جيم يبني العنصر من بياناتك…', 'يكتب الاستعلام على أعمدتك ثم ينفّذه');
+  try {
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/build`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...awItemBody(it), lang: state.lang }) });
+    const d = await r.json().catch(() => ({})); if (FFDM.lib !== it) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    if (!d.buildId) throw new Error(d.reason || 'تعذّر بناء هذا العنصر من بياناتك.');
+    it.buildId = d.buildId; it.error = null; FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes();
+    if (seq === FFDM.seq) ffdmPreview();
+  } catch (e) { if (FFDM.lib !== it) return; it.error = e.message; ffdmWait(false); ffdmLibPreBuild(); }
+  finally { FFDM.libBusy = false; }
+}
+el('ffdm-lib-kinds').addEventListener('click', e => { const b = e.target.closest('[data-lk]'); if (!b) return; FFDM.libKind = b.dataset.lk; FFDM.libShown = 60; ffdmRenderLib(); });
+el('ffdm-lib-q').addEventListener('input', e => { FFDM.libQ = e.target.value; FFDM.libShown = 60; ffdmRenderLib(); });
+el('ffdm-lib-kcat').addEventListener('change', e => { FFDM.libCat = e.target.value; FFDM.libShown = 60; ffdmRenderLib(); });
+el('ffdm-lib-more').addEventListener('click', () => { FFDM.libShown += 60; ffdmRenderLib(); });
 // ---- نطاق التعديل بالمحادثة: الشريحة الحالية / العرض كله (العنصر المحدد من «اطلب من جيم» في شريط الأدوات) ----
 FF.nav = { i: 0, n: 0 }; FF.scopeChoice = 'slide';
 function ffCurrentScope() {
@@ -15003,16 +15070,16 @@ async function bootEmbedView(pubId, startPage) {
 const AW = { cat: 'raw', q: '', sel: new Map(), kpiCat: '', kpiMt: '', shown: 60, queue: [] };
 const AW_CATS = [['raw', 'عناصر خام', 'plus'], ['ready', 'عناصر جاهزة', 'grid'], ['kpi', 'مكتبة المؤشرات', 'hash']];
 function awKey(kind, id) { return `${kind}:${id}`; }
-function awItems() {
-  const q = AW.q.trim().toLowerCase();
-  if (AW.cat === 'raw') return WIZARD_KINDS.filter(k => !q || k.label.includes(q)).map(k => ({ key: awKey('raw', k.kind), kind: 'raw', id: k.kind, title: k.label, desc: 'تختار المصدر والمقياس بنفسك في خطوات', icon: k.icon }));
-  if (AW.cat === 'ready') return TEMPLATES.filter(t => !q || t.title.toLowerCase().includes(q) || (t.desc || '').toLowerCase().includes(q)).map(t => ({ key: awKey('widget', t.id), kind: 'widget', id: t.id, title: t.title, desc: t.desc, icon: t.cat === 'kpi' ? '🔢' : t.cat === 'table' ? '📋' : '📊', type: t.cat === 'kpi' ? 'kpi' : t.cat === 'table' ? 'table' : 'bar', peek: awReadyShape(t) }));
+function awItems(o = AW) {
+  const q = (o.q || '').trim().toLowerCase(), cat = o.cat;
+  if (cat === 'raw') return WIZARD_KINDS.filter(k => !q || k.label.includes(q)).map(k => ({ key: awKey('raw', k.kind), kind: 'raw', id: k.kind, title: k.label, desc: 'تختار المصدر والمقياس بنفسك في خطوات', icon: k.icon }));
+  if (cat === 'ready') return TEMPLATES.filter(t => !q || t.title.toLowerCase().includes(q) || (t.desc || '').toLowerCase().includes(q)).map(t => ({ key: awKey('widget', t.id), kind: 'widget', id: t.id, title: t.title, desc: t.desc, icon: t.cat === 'kpi' ? '🔢' : t.cat === 'table' ? '📋' : '📊', type: t.cat === 'kpi' ? 'kpi' : t.cat === 'table' ? 'table' : 'bar', peek: awReadyShape(t) }));
   if (!KPI_LIB) return [];
   const out = [];
   for (let i = 0; i < KPI_LIB.rows.length; i++) {
     const r = KPI_LIB.rows[i]; if (KPI_ROW_OVERRIDES[i] === 'stopped' || KPI_CAT_OFF.has(r[0])) continue;
-    if (AW.kpiCat !== '' && String(r[0]) !== AW.kpiCat) continue;
-    if (AW.kpiMt !== '' && String(r[4]) !== AW.kpiMt) continue;
+    if ((o.kpiCat || '') !== '' && String(r[0]) !== o.kpiCat) continue;
+    if ((o.kpiMt || '') !== '' && String(r[4]) !== o.kpiMt) continue;
     if (q && !kpiNorm(r[2] + ' ' + r[3]).includes(kpiNorm(q))) continue;
     const c = KPI_LIB.cats[r[0]];
     out.push({ key: awKey('kpi', i), kind: 'kpi', id: i, title: r[2], desc: `${r[3]} · ${c[0]}`, icon: '🔢', type: 'kpi', tag: KPI_LIB.mtypes[r[4]] });
@@ -15180,6 +15247,11 @@ function awNextRaw() {
   state.wizard = { mode: 'add', step: 'loading', stack: [], kind: next.id, table: null, dimension: null, metric: null, dateColumn: null, timeRange: 'all', granularity: 'month', columns: [], columnsTouched: false, sort: 'desc', fields: null, gen: 0 };
   el('wizard-next').classList.add('hidden'); el('wizard-modal').classList.remove('hidden'); renderWizardStep(); loadWizardFields();
 }
+// جسم بناء عنصر من «عناصر جاهزة» أو «مكتبة المؤشرات» (مشترك بين «إضافة عناصر» في اللوحة و«من المكتبة» في تصميم حر)
+function awItemBody(it) {
+  if (it.kind === 'kpi') { const r = KPI_LIB.rows[it.id], c = KPI_LIB.cats[r[0]]; const [t, sql] = r[5] || ['', '']; return { ref: { kind: 'kpi', key: String(it.id), kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiCategoryIndex: r[0], kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]], kpiTable: t, kpiSql: sql }, title: r[2], type: 'kpi' }; }
+  return { ref: { kind: 'widget', key: it.id }, title: it.title, type: it.type, prompt: it.desc };
+}
 async function awAddSelected(items) {
   if (!items.length) return;
   if (!state.dashboard) state.dashboard = { summary: 'لوحة معلومات', widgets: [] };
@@ -15189,10 +15261,7 @@ async function awAddSelected(items) {
     // حوامل فورية تُستبدل بنتيجة البناء (أو تبقى noData بسبب صادق)
     const placeholders = built.map(it => ({ id: 'w' + Math.random().toString(36).slice(2, 10), type: it.type || 'kpi', title: it.title, noData: true, missingReason: 'جارٍ البناء من بياناتك…', building: true, layout: { size: it.type === 'kpi' ? 'small' : it.type === 'table' ? 'full' : 'wide' } }));
     state.dashboard.widgets.push(...placeholders); renderDashboard(); updateUndoRedoButtons();
-    const body = { sources: { systems: [...state.onSystems], files: [...state.onFiles] }, lang: state.lang, items: built.map(it => {
-      if (it.kind === 'kpi') { const r = KPI_LIB.rows[it.id], c = KPI_LIB.cats[r[0]]; const [t, sql] = r[5] || ['', '']; return { ref: { kind: 'kpi', key: String(it.id), kpiName: r[2], kpiNameEn: r[3], kpiCategory: c[0], kpiCategoryIndex: r[0], kpiMeasureType: r[4], kpiMeasureTypeLabel: KPI_LIB.mtypes[r[4]], kpiTable: t, kpiSql: sql }, title: r[2], type: 'kpi' }; }
-      return { ref: { kind: 'widget', key: it.id }, title: it.title, type: it.type, prompt: it.desc };
-    }) };
+    const body = { sources: { systems: [...state.onSystems], files: [...state.onFiles] }, lang: state.lang, items: built.map(awItemBody) };
     try {
       const res = await fetch('/api/widgets/columns/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const payload = await res.json().catch(() => null);

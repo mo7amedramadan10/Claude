@@ -15,6 +15,8 @@ public class FreeformDataQueryRequest
     public int? Limit { get; set; }
     /// <summary>عنصر من لوحة محفوظة بدل البناء من الأعمدة.</summary>
     public string? HistoryId { get; set; }
+    /// <summary>عنصر بُني بـ data/build (معرّف في ذاكرة الخادم).</summary>
+    public string? BuildId { get; set; }
     public int? WidgetIndex { get; set; }
     /// <summary>true = معاينة فقط بلا تسجيل الاستعلام في التصميم.</summary>
     public bool Preview { get; set; }

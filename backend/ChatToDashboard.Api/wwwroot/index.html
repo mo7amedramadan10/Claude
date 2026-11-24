@@ -805,6 +805,7 @@
     <div class="ffdm-tabs" role="tablist" aria-label="مصدر الرسمة">
       <button type="button" role="tab" id="ffdm-tab-table" aria-selected="true" aria-controls="ffdm-pane-table">من جدول</button>
       <button type="button" role="tab" id="ffdm-tab-dash" aria-selected="false" aria-controls="ffdm-pane-dash">من لوحة محفوظة</button>
+      <button type="button" role="tab" id="ffdm-tab-lib" aria-selected="false" aria-controls="ffdm-pane-lib">من المكتبة</button>
     </div>
     <div class="ffdm-grid">
       <div class="ffdm-form">
@@ -816,6 +817,12 @@
           <div class="ffdm-row"><label>التقسيم حسب<select id="ffdm-dim"></select></label><label id="ffdm-grain-wrap" class="hidden">الفترة<select id="ffdm-grain"><option value="day">يوم</option><option value="month" selected>شهر</option><option value="quarter">ربع</option><option value="year">سنة</option></select></label></div>
         </div>
         <div id="ffdm-pane-dash" role="tabpanel" class="hidden"><label>اللوحة<select id="ffdm-dash-pick"></select></label><div class="ffdm-dash-head">عناصر اللوحة</div><div id="ffdm-dash-list" class="ffdm-dash-list" role="radiogroup" aria-label="عناصر اللوحة"></div></div>
+        <div id="ffdm-pane-lib" role="tabpanel" class="hidden">
+          <div id="ffdm-lib-kinds" class="ffdm-chips" role="radiogroup" aria-label="قسم المكتبة"><button type="button" role="radio" data-lk="ready" aria-checked="true">عناصر جاهزة</button><button type="button" role="radio" data-lk="kpi" aria-checked="false">مكتبة المؤشرات</button><button type="button" role="radio" data-lk="raw" aria-checked="false">عناصر خام</button></div>
+          <div class="ffdm-row"><label>بحث<input type="search" id="ffdm-lib-q" placeholder="ابحث… مثال: رضا، الإيراد، churn"></label><label id="ffdm-lib-kcat-wrap" class="hidden">التصنيف<select id="ffdm-lib-kcat"></select></label></div>
+          <div id="ffdm-lib-list" class="ffdm-dash-list" role="radiogroup" aria-label="عناصر المكتبة"></div>
+          <button type="button" id="ffdm-lib-more" class="btn btn-sm btn-ghost hidden"></button>
+        </div>
         <fieldset class="ffdm-types"><legend>طريقة العرض</legend><div id="ffdm-types" class="ffdm-chips" role="radiogroup" aria-label="طريقة العرض"></div></fieldset>
         <fieldset class="ffdm-types" id="ffdm-colors-wrap"><legend>الألوان</legend><div id="ffdm-colors" class="ffdm-chips" role="radiogroup" aria-label="ألوان الرسمة"><button type="button" role="radio" data-pal="page" aria-checked="true">ألوان العرض</button><button type="button" role="radio" data-pal="dashboard" aria-checked="false">ألوان اللوحة</button></div></fieldset>
         <label>العنوان<input type="text" id="ffdm-title" maxlength="120" placeholder="عنوان الرسمة"></label>

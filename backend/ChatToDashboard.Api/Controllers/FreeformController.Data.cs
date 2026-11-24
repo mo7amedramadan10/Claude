@@ -3,6 +3,9 @@ using System.Text.Json.Nodes;
 using ChatToDashboard.Api.Build;
 using ChatToDashboard.Api.Freeform;
 using ChatToDashboard.Api.History;
+using ChatToDashboard.Api.Models;
+using ChatToDashboard.Api.Templates;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
@@ -48,7 +51,18 @@ public partial class FreeformController
         selection = InDesignProject(selection, d!);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         string sql; string? x = null, y = null; string? widgetType = null, title = null; JsonNode? widgetMeta = null;
-        if (!string.IsNullOrWhiteSpace(request.HistoryId))
+        if (!string.IsNullOrWhiteSpace(request.BuildId))
+        {
+            // عنصر بُني للتو من «عناصر جاهزة/مكتبة المؤشرات» (data/build): SQL من ذاكرة الخادم لا من المتصفح
+            if (!BuiltWidgets.TryGetValue(BuildKey(user.Id, id, request.BuildId), out JsonNode? bw) || bw is null)
+                return BadRequest(new { error = "انتهت صلاحية العنصر المبني — ابنِه من جديد." });
+            var bsql = bw["query"]?["sql"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(bsql)) return BadRequest(new { error = "هذا العنصر بلا استعلام." });
+            sql = bsql; widgetType = bw["type"]?.GetValue<string>(); title = bw["title"]?.GetValue<string>();
+            widgetMeta = new JsonObject { ["xKey"] = bw["xKey"]?.DeepClone(), ["yKey"] = bw["yKey"]?.DeepClone(), ["series"] = bw["series"]?.DeepClone(),
+                ["stacked"] = bw["stacked"]?.DeepClone(), ["areaFill"] = bw["areaFill"]?.DeepClone(), ["centerLabel"] = bw["centerLabel"]?.DeepClone() };
+        }
+        else if (!string.IsNullOrWhiteSpace(request.HistoryId))
         {
             // عنصر من لوحة محفوظة يحق للمستخدم رؤيتها (القائمة نفسها مفلترة بالصلاحيات)
             var h = (await history.ListAsync(user.Id, selection.ProjectId, 200, ct)).FirstOrDefault(e => e.Id == request.HistoryId);
@@ -88,4 +102,57 @@ public partial class FreeformController
         }
         return Ok(new { key, sql = sql.Trim(), result, rows, rowCount = rows.Count, columns, x, y, widgetType, title, widget = widgetMeta });
     }
+
+    // العناصر المبنية بالموديل تُحفظ في الذاكرة 30 دقيقة بمفتاح المستخدم والتصميم: الإدراج يشير إليها بمعرّف فلا يُقبل SQL من المتصفح
+    private static readonly MemoryCache BuiltWidgets = new(new MemoryCacheOptions { SizeLimit = 2000 });
+    private static string BuildKey(string userId, string designId, string buildId) => $"{userId}|{designId}|{buildId}";
+
+    /// <summary>«من المكتبة»: يبني عنصرًا واحدًا من «عناصر جاهزة» أو «مكتبة المؤشرات» على بيانات التصميم بالمسار المرحلي لعنصر واحد
+    /// (نداء موديل واحد يكتب الاستعلام على أعمدة المستخدم ثم ينفّذه)، ويعيد معرّفًا يُدرج به عبر data/query بلا نداء ثانٍ.</summary>
+    [HttpPost("{id}/data/build")]
+    public async Task<IActionResult> DataBuild(string id, [FromBody] FreeformDataBuildRequest request, [FromServices] StagedTemplateBuilder staged,
+        [FromServices] TemplatePromptService prompts, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
+        if (StoredSources(d) is { } storedSel) selection = (await CurrentAsync(ct, storedSel))!.Value.Selection;
+        selection = InDesignProject(selection, d!);
+        var title = (request.Title ?? "").Trim(); var type = string.IsNullOrWhiteSpace(request.Type) ? "bar" : request.Type!.Trim();
+        string? prompt = request.Prompt, table = null, sql = null;
+        if (request.Ref is { Kind: TemplateKinds.Widget or TemplateKinds.Kpi } r)
+        {
+            var (p, perr, required) = await prompts.ResolveAsync(r, user, selection, ct);
+            if (perr is not null) return BadRequest(new { error = perr });
+            prompt = p;
+            if (r.Kind == TemplateKinds.Widget && BuiltinTemplates.FindWidget(r.Key) is { } tw && string.IsNullOrWhiteSpace(title)) title = tw.Title;
+            if (r.Kind == TemplateKinds.Kpi) { type = "kpi"; if (string.IsNullOrWhiteSpace(title)) title = r.KpiName ?? ""; if (required is { Count: > 0 }) { table = required[0].Table; sql = required[0].Sql; } }
+        }
+        if (string.IsNullOrWhiteSpace(title)) return BadRequest(new { error = "عنوان العنصر مطلوب." });
+        if (!DashboardSpec.AllowedWidgetTypes.Contains(type)) type = "bar";
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var spec = new BuiltinDashboardWidgetSpec(type, title, prompt, Table: table, Sql: sql);
+        var req = new StagedBuildRequest("عنصر لتصميم حر", $"عنصر واحد بعنوان «{title}» يُدرج في صفحة تصميم حر من بيانات المشروع.", new[] { spec }, null,
+            new Dictionary<string, SchemaLibrary.SchemaMatchingService.MatchedWidget>(), context, request.Lang, user);
+        DashboardWidget? widget;
+        try { widget = await staged.BuildOneAsync(req, title, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { return StatusCode(502, new { error = "تعذّر بناء العنصر: " + ex.Message }); }
+        if (widget is null) return BadRequest(new { error = "المزوّد الحالي لا يدعم بناء عنصر واحد." });
+        if (widget.NoData || string.IsNullOrWhiteSpace(widget.Query?.Sql))
+            return Ok(new { buildId = (string?)null, title = widget.Title, type = widget.Type, reason = widget.MissingReason ?? "تعذّر بناء هذا العنصر من بياناتك." });
+        var node = JsonSerializer.SerializeToNode(widget)!;
+        var buildId = System.Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12)).ToLowerInvariant();
+        BuiltWidgets.Set(BuildKey(user.Id, id, buildId), node, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30) });
+        return Ok(new { buildId, title = widget.Title, type = widget.Type });
+    }
+}
+
+public class FreeformDataBuildRequest
+{
+    [System.Text.Json.Serialization.JsonPropertyName("ref")] public TemplateRef? Ref { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("title")] public string? Title { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("type")] public string? Type { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("prompt")] public string? Prompt { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("lang")] public string? Lang { get; set; }
 }
