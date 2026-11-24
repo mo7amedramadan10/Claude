@@ -4132,4 +4132,6 @@ body.ff-full-on { overflow: hidden; }
 @media (max-width: 680px) { #ff-data-modal .ffdm-grid { grid-template-columns: minmax(0, 1fr); } #ff-data-modal .ffdm-row { flex-direction: column; } }
 .jeem-scope .ff-insp .ffi-text { width: 100%; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid transparent; border-radius: 7px; background: color-mix(in srgb, var(--ink) 5%, var(--surface)); color: var(--ink); font: inherit; }
 .jeem-scope .ff-insp .ffi-wide { width: 100%; padding: 7px 10px; border: 1px dashed var(--brand-blue); border-radius: 8px; background: transparent; color: var(--brand-blue); font: inherit; cursor: pointer; }
+.jeem-scope .ff-insp .ffi-wide.primary { border-style: solid; background: var(--brand-blue); color: #fff; font-weight: 600; }
+.jeem-scope .ff-insp .ffi-bind .ffi-sub { margin-bottom: 8px; line-height: 1.6; }
 #ff-data-modal .hidden { display: none !important; }

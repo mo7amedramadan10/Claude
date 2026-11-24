@@ -9349,6 +9349,65 @@ function ffDesignKit() {
     if (first) for (var j = 0; j < first.cells.length; j++) widths.push(Math.round(first.cells[j].getBoundingClientRect().width / tw * 100));
     return { rows: rows, cols: cols, widths: widths, header: !!(t.tHead && t.tHead.rows.length) };
   }
+  // ---- ربط رسوم وأرقام القالب الموجودة ببيانات المستخدم ----
+  var CHART_CLS = /(^|[\s_-])(chart|graph|plot|donut|pie|gauge|bars)([\s_-]|$)/i;
+  // معامل تصغير القالب (إطار ثابت يُصغَّر بـ transform): من أقرب عنصر HTML له عرض تخطيطي، فالمقاس يُعاد بوحدات CSS الأصلية
+  function scaleOf(e) { var a = e; while (a && !(a.offsetWidth > 0)) a = a.parentElement; return a ? (a.getBoundingClientRect().width / a.offsetWidth) || 1 : 1; }
+  function sizeOf(e) { var r = e.getBoundingClientRect(), k = scaleOf(e); return { w: r.width / k, h: r.height / k, r: r, k: k }; }
+  function chartHost(e) {
+    var s = slideOf(e), sr = s && s.getBoundingClientRect(), sa = sr ? sr.width * sr.height : innerWidth * innerHeight; // مساحة الشاشة الفعلية للمقارنة
+    for (var i = 0, c = e; c && i < 5 && c !== s && c !== document.body; i++, c = c.parentElement) {
+      if (c.hasAttribute && (c.hasAttribute('data-jeem-chart') || c.hasAttribute('data-jeem-replaced'))) return null;
+      var tag = (c.tagName || '').toLowerCase(), cls = typeof c.className === 'string' ? c.className : (c.getAttribute && c.getAttribute('class')) || '';
+      if (/(^|\s)deco(\s|$)/.test(cls)) return null;
+      var z = sizeOf(c); if (z.w < 90 || z.h < 60 || z.r.width * z.r.height > sa * 0.8) continue;
+      if (tag === 'canvas') return c;
+      if (CHART_CLS.test(cls)) return c;
+      if (tag === 'svg' && c.querySelectorAll('rect,path,circle,polyline,line,polygon').length >= 3 && c.querySelectorAll('text').length >= 1) return c;
+    }
+    return null;
+  }
+  var UNIT_RX = /(ر\.?\s?س\.?|ريال|SAR|USD|EGP|ألف|مليون|مليار)/g;
+  function numHost(e) {
+    if (!e || e.children.length || e.closest('[data-jeem-chart],[data-jeem-value]')) return null;
+    var t = (e.textContent || '').trim(); if (!t || t.length > 24) return null;
+    var core = t.replace(UNIT_RX, '').replace(/[\s$€£¥٪%+\-−~≈]/g, '').replace(/[KMBkmb]$/, '');
+    return /^[\d٠-٩]+([.,٫٬][\d٠-٩]+)*$/.test(core) ? e : null;
+  }
+  function fmtOf(t) { return /[%٪]/.test(t) ? 'percent' : /ر\.?\s?س|ريال|SAR/.test(t) ? 'currency' : 'compact'; }
+  // رمز العملة كما في القالب: «$3.5B» ← بادئة، و«3.5B$» ← لاحقة
+  function symOf(t) { t = (t || '').trim(); var m = /^([$€£¥])/.exec(t); if (m) return { prefix: m[1] }; m = /([$€£¥])$/.exec(t); return m ? { unit: m[1] } : {}; }
+  function colorsOf(e) {
+    var out = [], seen = {};
+    e.querySelectorAll('rect,path,circle,polygon').forEach(function (n) { if (out.length >= 4) return; var c = hex(getComputedStyle(n).fill); if (!c || seen[c]) return; var v = parseInt(c.slice(1), 16), r = v >> 16, g = (v >> 8) & 255, b = v & 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (mx - mn < 30) return; seen[c] = 1; out.push(c); });
+    return out;
+  }
+  function bind(m) {
+    if (m.entry) addData(m.entry);
+    if (m.kind === 'value') {
+      var n = numHost(sel); if (!n) return;
+      var BA = ['data-jeem-value', 'data-fmt', 'data-agg', 'data-prefix', 'data-unit'], oldText = n.textContent, oldA = BA.map(function (a) { return n.getAttribute(a); }), sym = symOf(oldText);
+      n.setAttribute('data-jeem-value', m.ref || ''); n.setAttribute('data-fmt', m.fmt || fmtOf(oldText)); n.removeAttribute('data-agg');
+      if (sym.prefix) n.setAttribute('data-prefix', sym.prefix); if (sym.unit) n.setAttribute('data-unit', sym.unit);
+      undo.push(function () { BA.forEach(function (a, k) { if (oldA[k] == null) n.removeAttribute(a); else n.setAttribute(a, oldA[k]); }); n.textContent = oldText; select(n); });
+      renderBlock(n); select(n); changed(); return;
+    }
+    var h = chartHost(sel); if (!h) return;
+    var z = sizeOf(h), cfg = Object.assign({}, m.cfg || {}), cols = colorsOf(h); if (cols.length >= 2 && !cfg.colors) cfg.colors = cols;
+    var b = document.createElement('div'); b.setAttribute('data-jeem-chart', JSON.stringify(cfg)); b.style.boxSizing = 'border-box';
+    var s = slideOf(h), host = h.parentElement, oldStyle = h.getAttribute('style');
+    if (s && host) {
+      // في الشريحة: البلوك حر داخل حاوية الأصل نفسها (الإطار المصغَّر) وبإحداثياته، فيتبع تصغير القالب ويُسحب
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      var pr = host.getBoundingClientRect(), pk = scaleOf(host);
+      b.setAttribute('data-jeem-free', ''); b.style.cssText += ';position:absolute;z-index:5;left:' + Math.round((z.r.left - pr.left) / pk) + 'px;top:' + Math.round((z.r.top - pr.top) / pk) + 'px;width:' + Math.round(z.w) + 'px;height:' + Math.round(z.h) + 'px';
+      host.appendChild(b);
+    } else { b.style.cssText += ';width:' + Math.round(z.w) + 'px;max-width:100%;height:' + Math.round(z.h) + 'px'; h.parentNode.insertBefore(b, h.nextSibling); }
+    // الأصل يُخفى لا يُحذف: سكربت القالب قد يرسم فيه عند التحميل
+    h.setAttribute('data-jeem-replaced', ''); h.style.setProperty('display', 'none', 'important');
+    undo.push(function () { if (b.parentNode) b.parentNode.removeChild(b); h.removeAttribute('data-jeem-replaced'); if (oldStyle == null) h.removeAttribute('style'); else h.setAttribute('style', oldStyle); select(h); });
+    select(b); changed(); renderBlock(b);
+  }
   function info() {
     if (!sel) return { type: 'd-sel', none: true };
     // إبراز تحرير النص (خلفية وإطار مؤقتان) لا يُقرأ كخاصية للعنصر
@@ -9361,7 +9420,12 @@ function ffDesignKit() {
     var cb = sel.closest('[data-jeem-chart]');
     if (cb) { try { out.chart = JSON.parse(cb.getAttribute('data-jeem-chart') || '{}'); } catch (e2) { out.chart = {}; } var dd = (window.JEEM_DATA || {})[out.chart.q]; out.chartCols = dd && dd.rows && dd.rows[0] ? Object.keys(dd.rows[0]) : []; out.label = 'رسمة من البيانات'; }
     var vb = sel.closest('[data-jeem-value]') || sel.querySelector('[data-jeem-value]');
-    if (vb && !cb) { out.value = { ref: vb.getAttribute('data-jeem-value') || '', fmt: vb.getAttribute('data-fmt') || '', agg: vb.getAttribute('data-agg') || '' }; var vd = (window.JEEM_DATA || {})[out.value.ref.split('.')[0]]; out.valueCols = vd && vd.rows && vd.rows[0] ? Object.keys(vd.rows[0]) : []; }
+    if (vb && !cb) { out.value = { ref: vb.getAttribute('data-jeem-value') || '', fmt: vb.getAttribute('data-fmt') || '', agg: vb.getAttribute('data-agg') || '', prefix: vb.getAttribute('data-prefix') || '', unit: vb.getAttribute('data-unit') || '' }; var vd = (window.JEEM_DATA || {})[out.value.ref.split('.')[0]]; out.valueCols = vd && vd.rows && vd.rows[0] ? Object.keys(vd.rows[0]) : []; }
+    if (!cb && !vb) {
+      var nh = numHost(sel), ch = nh ? null : chartHost(sel);
+      if (nh) out.bind = { kind: 'value', text: (nh.textContent || '').trim(), fmt: fmtOf(nh.textContent || '') };
+      else if (ch) out.bind = { kind: 'chart', w: Math.round(sizeOf(ch).w), h: Math.round(sizeOf(ch).h) };
+    }
     if (ed) sel.setAttribute('data-ff-editing', '1'); if (hv) sel.setAttribute('data-ff-hover', '1'); return out;
   }
   function select(e) {
@@ -9481,13 +9545,14 @@ function ffDesignKit() {
     if (m.op === 'chart-cfg' || m.op === 'value-cfg') {
       var blk = m.op === 'chart-cfg' ? sel.closest('[data-jeem-chart]') : (sel.closest('[data-jeem-value]') || sel.querySelector('[data-jeem-value]'));
       if (!blk) return;
-      var attrs = ['data-jeem-chart', 'data-jeem-value', 'data-fmt', 'data-agg'], old = attrs.map(function (a) { return blk.getAttribute(a); });
+      var attrs = ['data-jeem-chart', 'data-jeem-value', 'data-fmt', 'data-agg', 'data-prefix', 'data-unit'], old = attrs.map(function (a) { return blk.getAttribute(a); });
       undo.push(function () { attrs.forEach(function (a, k) { if (old[k] == null) blk.removeAttribute(a); else blk.setAttribute(a, old[k]); }); renderBlock(blk); post(info()); });
       if (m.entry) addData(m.entry);
       if (m.op === 'chart-cfg') blk.setAttribute('data-jeem-chart', JSON.stringify(m.cfg || {}));
-      else { if (m.ref != null) blk.setAttribute('data-jeem-value', m.ref); ['fmt', 'agg'].forEach(function (k) { if (m[k] === '' ) blk.removeAttribute('data-' + k); else if (m[k] != null) blk.setAttribute('data-' + k, m[k]); }); }
+      else { if (m.ref != null) blk.setAttribute('data-jeem-value', m.ref); ['fmt', 'agg', 'prefix', 'unit'].forEach(function (k) { if (m[k] === '' ) blk.removeAttribute('data-' + k); else if (m[k] != null) blk.setAttribute('data-' + k, m[k]); }); }
       renderBlock(blk); changed(); post(info()); return;
     }
+    if (m.op === 'bind') return bind(m);
     if (m.op === 'mark') { var o = document.querySelector('[data-jeem-target]'); if (o) o.removeAttribute('data-jeem-target'); sel.setAttribute('data-jeem-target', '1'); }
   }
   function editingNow() { var a = document.activeElement; return a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); }
@@ -10397,10 +10462,18 @@ function ffdmRenderForm() {
   el('ffdm-grain-wrap').classList.toggle('hidden', el('ffdm-dim').selectedOptions[0]?.dataset.kind !== 'date');
 }
 function ffdmHasDim() { return FFDM.mode === 'dash' ? FFDM.type !== 'value' : !!el('ffdm-dim').value; }
+// الربط: الرقم بلا تقسيم دائمًا (قائمة التقسيم معطّلة)، والرسمة تبدأ بأول تقسيم متاح ولا تقبل «رقم واحد»
+function ffdmBindPreset() {
+  const dim = el('ffdm-dim'); dim.disabled = FFDM.bind === 'value';
+  if (FFDM.bind === 'value') dim.value = '';
+  else if (FFDM.bind === 'chart' && !dim.value && dim.options.length > 1) dim.value = dim.options[1].value;
+  el('ffdm-grain-wrap').classList.toggle('hidden', dim.selectedOptions[0]?.dataset.kind !== 'date');
+}
 function ffdmRenderTypes() {
   const dim = FFDM.mode === 'dash' ? true : !!el('ffdm-dim').value;
   if (!dim) FFDM.type = 'value'; else if (FFDM.type === 'value' && FFDM.mode !== 'dash') FFDM.type = 'bar';
-  el('ffdm-types').innerHTML = FFDM_TYPES.map(([k, l]) => { const ok = FFDM.mode === 'dash' || (k === 'value') !== dim; return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
+  if (FFDM.bind === 'value') FFDM.type = 'value'; else if (FFDM.bind === 'chart' && FFDM.type === 'value') FFDM.type = 'bar';
+  el('ffdm-types').innerHTML = FFDM_TYPES.map(([k, l]) => { const ok = (FFDM.bind ? (k === 'value') === (FFDM.bind === 'value') : true) && (FFDM.mode === 'dash' || (k === 'value') !== dim); return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
   el('ffdm-types').querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => { FFDM.type = b.dataset.t; ffdmRenderTypes(); ffdmShowPreview(); }));
 }
 function ffdmAutoTitle() {
@@ -10431,7 +10504,8 @@ async function ffdmPreview() {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({})); if (seq !== FFDM.seq) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
     FFDM.last = d; if (FFDM.mode === 'dash' && d.widgetType && !FFDM.typeTouched) { FFDM.type = ffdmTypeOfWidget(d.widgetType); ffdmRenderTypes(); }
-    el('ffdm-status').textContent = `${(d.rowCount || 0).toLocaleString('en-US')} صف من بياناتك الفعلية`; el('ffdm-ok').disabled = !(d.rowCount > 0);
+    const bindBad = FFDM.bind === 'chart' && FFDM.type === 'value';
+    el('ffdm-status').textContent = bindBad ? 'الرسمة تحتاج «التقسيم حسب» — اختر عمودًا.' : `${(d.rowCount || 0).toLocaleString('en-US')} صف من بياناتك الفعلية`; el('ffdm-ok').disabled = !(d.rowCount > 0) || bindBad;
     ffdmShowPreview();
   } catch (e) { if (seq !== FFDM.seq) return; FFDM.last = null; el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">${esc(e.message)}</div>`; el('ffdm-status').textContent = ''; }
 }
@@ -10460,9 +10534,12 @@ function ffdmRenderDash() {
 }
 async function ffdmOpen(replace) {
   if (!FF.design) return;
-  FFDM.replace = !!replace; FFDM.pick = null; FFDM.last = null; FFDM.typeTouched = false; FFDM.type = replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
-  el('ffdm-heading').textContent = replace ? '📊 تغيير بيانات الرسمة' : '📊 رسمة من بياناتي';
-  el('ffdm-ok').textContent = replace ? 'تطبيق على الرسمة' : 'إدراج في الشريحة'; el('ffdm-title').value = replace ? (FFD.info?.chart?.title || '') : '';
+  // replace: تغيير مصدر بلوك قائم؛ 'bind': ربط رسمة/رقم ثابت من القالب (FFDM.bind = chart|value)؛ وإلا إدراج جديد
+  FFDM.bind = replace === 'bind' ? (FFD.info?.bind?.kind || null) : null; if (replace === 'bind' && !FFDM.bind) return;
+  FFDM.replace = !!replace && !FFDM.bind; FFDM.pick = null; FFDM.last = null; FFDM.typeTouched = false;
+  FFDM.type = FFDM.bind ? (FFDM.bind === 'value' ? 'value' : 'bar') : replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
+  el('ffdm-heading').textContent = FFDM.bind === 'value' ? '🔗 ربط الرقم ببياناتي' : FFDM.bind ? '🔗 ربط الرسمة ببياناتي' : replace ? '📊 تغيير بيانات الرسمة' : '📊 رسمة من بياناتي';
+  el('ffdm-ok').textContent = FFDM.bind ? 'ربط' : replace ? 'تطبيق على الرسمة' : 'إدراج في الشريحة'; el('ffdm-title').value = FFDM.replace ? (FFD.info?.chart?.title || '') : '';
   el('ffdm-preview').innerHTML = '<div class="ffdm-empty">يحمّل بياناتك…</div>'; el('ffdm-status').textContent = '';
   el('ff-data-modal').classList.remove('hidden');
   try {
@@ -10473,14 +10550,14 @@ async function ffdmOpen(replace) {
     const ts = FFDM.cat.tables || [];
     if (!ts.length && !(FFDM.cat.dashboards || []).length) { el('ffdm-preview').innerHTML = '<div class="ffdm-empty">لا توجد بيانات متاحة لهذا التصميم — ارفع ملفًا من «الملفات» أو اختر مصادر التصميم.</div>'; return; }
     el('ffdm-table').innerHTML = ts.map(t => `<option value="${esc(t.table)}">${esc(t.name)} (${(t.rows >= 0 ? t.rows : 0).toLocaleString('en-US')} صف)</option>`).join('');
-    ffdmRenderForm(); ffdmRenderDash(); ffdmSetMode(ts.length ? 'table' : 'dash'); el('ffdm-table').focus();
+    ffdmRenderForm(); ffdmBindPreset(); ffdmRenderDash(); ffdmSetMode(ts.length ? 'table' : 'dash'); el('ffdm-table').focus();
   } catch (e) { el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">تعذّر تحميل البيانات: ${esc(e.message)}</div>`; }
 }
 function ffdmClose() { el('ff-data-modal').classList.add('hidden'); el('ffd-chart')?.focus(); }
 el('ffd-chart').addEventListener('click', () => ffdmOpen(false));
 el('ffdm-tab-table').addEventListener('click', () => ffdmSetMode('table'));
 el('ffdm-tab-dash').addEventListener('click', () => ffdmSetMode('dash'));
-el('ffdm-table').addEventListener('change', () => { ffdmRenderForm(); ffdmRenderTypes(); ffdmQueue(); });
+el('ffdm-table').addEventListener('change', () => { ffdmRenderForm(); ffdmBindPreset(); ffdmRenderTypes(); ffdmQueue(); });
 ['ffdm-agg', 'ffdm-measure', 'ffdm-dim', 'ffdm-grain'].forEach(id => el(id).addEventListener('change', () => { if (id === 'ffdm-agg') ffdmRenderForm(); if (id === 'ffdm-dim') el('ffdm-grain-wrap').classList.toggle('hidden', el('ffdm-dim').selectedOptions[0]?.dataset.kind !== 'date'); ffdmRenderTypes(); ffdmQueue(); }));
 el('ffdm-title').addEventListener('input', () => { clearTimeout(FFDM.timer); FFDM.timer = setTimeout(ffdmShowPreview, 250); });
 el('ffdm-types').addEventListener('click', e => { if (e.target.closest('[data-t]')) FFDM.typeTouched = true; });
@@ -10494,7 +10571,9 @@ el('ffdm-ok').addEventListener('click', async () => {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
     const cfg = ffdmCfg(d, d.key); const entry = { key: d.key, sql: d.sql, result: d.result };
-    if (FFDM.type === 'value') {
+    if (FFDM.bind) {
+      ffdPost(FFDM.bind === 'value' ? { op: 'bind', kind: 'value', ref: `${d.key}.${cfg.y}`, fmt: FFD.info?.bind?.fmt || 'compact', entry } : { op: 'bind', kind: 'chart', cfg, entry });
+    } else if (FFDM.type === 'value') {
       const m = FFDM.replace && FFD.info?.value ? { op: 'value-cfg', ref: `${d.key}.${cfg.y}`, fmt: 'compact', agg: '', entry } : { op: 'insert', kind: 'value', ref: `${d.key}.${cfg.y}`, fmt: 'compact', title: cfg.title, entry };
       ffdPost(m);
     } else ffdPost(FFDM.replace && FFD.info?.chart ? { op: 'chart-cfg', cfg, entry } : { op: 'insert', kind: 'chart', cfg, entry });
@@ -10564,11 +10643,18 @@ function ffdRenderInsp() {
       ${ffdRow('التنسيق', `<select data-c="fmt" aria-label="تنسيق الأرقام">${[['compact', 'مختصر (3.7M)'], ['number', 'رقم كامل'], ['currency', 'عملة'], ['percent', 'نسبة']].map(([k, l]) => `<option value="${k}"${(c.fmt || 'compact') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
       <button type="button" class="ffi-wide" data-a="data-source">📊 تغيير مصدر البيانات…</button></section>`;
   }
+  if (i.bind) {
+    const isV = i.bind.kind === 'value';
+    h += `<section class="ffi-bind"><h4>ربط ببياناتك</h4><div class="ffi-sub">${isV ? `هذا الرقم «${esc(i.bind.text)}» مكتوب ثابتًا في القالب. اربطه ببياناتك فيتحدّث مع «تحديث البيانات» وفي الرابط المنشور.` : 'هذه رسمة ثابتة من القالب. اربطها ببياناتك فتُرسم في مكانها وبألوانها من أرقامك الفعلية (الأصل يُخفى ويعود بالتراجع).'}</div>
+      <button type="button" class="ffi-wide primary" data-a="data-bind">🔗 ${isV ? 'اربط هذا الرقم ببياناتي' : 'اربط هذه الرسمة ببياناتي'}…</button></section>`;
+  }
   if (i.value) {
     const v = i.value, cols = i.valueCols || [];
     h += `<section><h4>القيمة من البيانات</h4>${cols.length ? ffdRow('العمود', `<select data-v="col" aria-label="العمود">${cols.map(c => `<option value="${esc(c)}"${v.ref.split('.').slice(1).join('.') === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>`) : ''}
       ${ffdRow('التجميع', `<select data-v="agg" aria-label="تجميع الصفوف">${[['', 'الصف الأول'], ['sum', 'مجموع الصفوف'], ['avg', 'متوسط'], ['max', 'أعلى'], ['min', 'أدنى'], ['count', 'عدد الصفوف']].map(([k, l]) => `<option value="${k}"${v.agg === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
       ${ffdRow('التنسيق', `<select data-v="fmt" aria-label="تنسيق الرقم">${[['compact', 'مختصر'], ['number', 'رقم كامل'], ['currency', 'عملة'], ['percent', 'نسبة']].map(([k, l]) => `<option value="${k}"${(v.fmt || 'compact') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+      ${ffdRow('قبل الرقم', `<input type="text" data-v="prefix" maxlength="6" value="${esc(v.prefix || '')}" placeholder="مثل $" aria-label="رمز قبل الرقم" class="ffi-text">`)}
+      ${ffdRow('بعد الرقم', `<input type="text" data-v="unit" maxlength="12" value="${esc(v.unit || '')}" placeholder="مثل ر.س" aria-label="وحدة بعد الرقم" class="ffi-text">`)}
       <button type="button" class="ffi-wide" data-a="data-source">📊 تغيير مصدر البيانات…</button></section>`;
   }
   if (i.table) {
@@ -10607,11 +10693,12 @@ function ffdRenderInsp() {
   }));
   box.querySelectorAll('[data-v]').forEach(inp => inp.addEventListener('change', () => {
     const v = i.value; const q = v.ref.split('.')[0];
-    if (inp.dataset.v === 'col') ffdPost({ op: 'value-cfg', ref: `${q}.${inp.value}` }); else ffdPost({ op: 'value-cfg', [inp.dataset.v]: inp.value });
+    if (inp.dataset.v === 'col') ffdPost({ op: 'value-cfg', ref: `${q}.${inp.value}` }); else ffdPost({ op: 'value-cfg', [inp.dataset.v]: inp.value.trim() });
   }));
   box.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => {
     const a = b.dataset.a;
     if (a === 'data-source') { ffdmOpen(true); return; }
+    if (a === 'data-bind') { ffdmOpen('bind'); return; }
     if (a === 'close') { if (matchMedia('(max-width: 640px)').matches) { FFD.insp = false; el('ffd-insp-btn').setAttribute('aria-pressed', 'false'); ffdRenderInsp(); } else ffdPost({ op: 'deselect' }); return; }
     if (a === 'nofill') { ffdPost({ op: 'style', props: { 'background-color': 'transparent', 'background-image': 'none' } }); return; }
     ffdPost({ op: a });
@@ -10688,6 +10775,11 @@ function ffidWalkColors(doc, fn) {
   doc.querySelectorAll(FFID_ATTRS.map(a => `[${a}]`).join(',')).forEach(e => FFID_ATTRS.forEach(a => {
     const v = e.getAttribute(a); if (!v || /^\s*url\(/i.test(v)) return; const n = rep(v); if (n !== v) e.setAttribute(a, n);
   }));
+  // ألوان رسوم البيانات المربوطة (مأخوذة من القالب) في مواصفة data-jeem-chart
+  doc.querySelectorAll('[data-jeem-chart]').forEach(e => {
+    const t = e.getAttribute('data-jeem-chart') || '', n = t.replace(/"(#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))"/g, (m, hex) => { const c = ffidParse(hex); if (!c) return m; const out = fn(c, hex); return out == null ? m : '"' + out + '"'; });
+    if (n !== t) e.setAttribute('data-jeem-chart', n);
+  });
   doc.querySelectorAll('script:not([src])').forEach(sc => {
     if (sc.id === 'jeem-data' || sc.id === 'jeem-data-rt') return;
     const t = sc.textContent, n = t.replace(/(['"])(#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4}))\1/g, (m, q, hex) => { const c = ffidParse(hex); if (!c) return m; const out = fn(c, hex); return out == null ? m : q + out + q; });

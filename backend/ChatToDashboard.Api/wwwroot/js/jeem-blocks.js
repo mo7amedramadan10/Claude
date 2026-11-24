@@ -1,7 +1,7 @@
 /* جيم — بلوكات البيانات داخل صفحات «تصميم حر» (تُحقن في المعاينة وعند النشر متى وُجدت في الصفحة):
    - رسم: <div data-jeem-chart='{"q":"q3","type":"bar","x":"المنطقة","y":"الإيراد","title":"…"}'></div>
      الأنواع: bar | line | pie | donut | funnel | treemap | scatter؛ و"y" مصفوفة أعمدة = سلاسل متعددة (bar/line، "stacked": true).
-   - قيمة: <span data-jeem-value="q2.الإجمالي" data-fmt="currency|percent|number|compact" data-agg="sum|avg|min|max|count" data-row="0">—</span>
+   - قيمة: <span data-jeem-value="q2.الإجمالي" data-fmt="currency|percent|number|compact" data-prefix="$" data-unit="…" data-agg="sum|avg|min|max|count" data-row="0">—</span>
    الأرقام من window.JEEM_DATA (نتائج الاستعلامات المسجَّلة) لا من الموديل، فتتحدّث مع «تحديث البيانات» والصفحة المنشورة الحيّة
    (حدث jeem:data). الرسم بمحرّك المنصة نفسه (jeem-viz.js) بألوان القالب: data-colors أو متغيّرات الصفحة (--primary/--accent…). */
 (function () {
@@ -111,7 +111,7 @@
     if (agg === 'count') v = rows.length;
     else if (agg) { var nums = rows.map(function (o) { return toNum(o[c]); }); v = agg === 'sum' ? nums.reduce(function (a, b) { return a + b; }, 0) : agg === 'avg' ? nums.reduce(function (a, b) { return a + b; }, 0) / nums.length : agg === 'min' ? Math.min.apply(null, nums) : agg === 'max' ? Math.max.apply(null, nums) : nums[0]; }
     else { var row = rows[Math.max(0, Math.min(rows.length - 1, +(el.getAttribute('data-row') || 0)))]; v = row[c]; }
-    var f = el.getAttribute('data-fmt'); el.textContent = (isNumeric(v) || typeof v === 'number') ? fmtNum(v, f || 'number', el.getAttribute('data-unit')) : String(v == null ? '—' : v);
+    var f = el.getAttribute('data-fmt'); el.textContent = (isNumeric(v) || typeof v === 'number') ? (el.getAttribute('data-prefix') || '') + fmtNum(v, f || 'number', el.getAttribute('data-unit')) : String(v == null ? '—' : v);
   }
 
   function renderAll() {

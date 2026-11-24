@@ -66,7 +66,7 @@ public class FreeformBuilder
             var sql = input["sql"]?.GetValue<string>(); if (string.IsNullOrWhiteSpace(sql)) return result;
             JsonNode? parsed; try { parsed = JsonNode.Parse(result); } catch (JsonException) { return result; }
             string key; lock (gate) { key = FreeformDataBlock.NextKey(recorded); recorded.Add(new FreeformQuery(key, sql.Trim(), parsed)); }
-            return result + $"\n\n[مفتاح هذه النتيجة في الصفحة: JEEM_DATA.{key} — اقرأ الصفوف من JEEM_DATA.{key}.rows في جافاسكربت الصفحة ولا تكتب الأرقام حرفيًا]";
+            return result + $"\n\n[مفتاح هذه النتيجة في الصفحة: {key} — للرسوم والأرقام استخدمه في بلوك data-jeem-chart/data-jeem-value (\"q\":\"{key}\")، أو اقرأ JEEM_DATA.{key}.rows في جافاسكربت الصفحة؛ لا تكتب الأرقام حرفيًا]";
         };
         StagedResult res;
         try { res = await llm.RunStagedAsync(call, ct); }
@@ -74,6 +74,8 @@ public class FreeformBuilder
         var html = ExtractHtml(res.Json, res.Text);
         var reply = res.Json["reply"]?.GetValue<string>() ?? (html is null ? "لم أستطع إنتاج صفحة من هذا الطلب — وضّح أكثر." : "جاهزة.");
         if (html is not null && recorded.Count > 0) html = FreeformDataBlock.Inject(html, recorded, DateTime.UtcNow);
+        var blockProblems = html is null ? new List<string>() : FreeformBlockValidator.Validate(html, recorded.Count > 0 ? recorded : FreeformDataBlock.Parse(html));
+        if (blockProblems.Count > 0) reply = (reply + "\n⚠️ بلوكات بيانات تحتاج مراجعة (ستظهر فارغة بسببها): " + string.Join(" ", blockProblems.Take(3))).Trim();
         if (html is not null && html.Length > FreeformStore.MaxHtmlBytes) html = html[..FreeformStore.MaxHtmlBytes];
         return new FreeformResult(reply, html, (res.Json["usedData"]?.GetValue<bool>() ?? false) || recorded.Count > queries.Count, recorded);
     }
@@ -86,6 +88,9 @@ public class FreeformBuilder
         - حافظ على القالب: لا تضف <style> ولا <script> ولا <link>، ولا تغيّر الوسم الجذر ولا أصنافه، ولا تضف سمات style تغيّر الألوان أو الخطوط أو التخطيط أو المقاسات.
         - استخدم فقط الأصناف (classes) الموجودة في هذا الجزء أو في أنماط الصفحة المرفقة؛ لا تخترع أصنافًا جديدة.
         - المسموح: تغيير النصوص والأرقام والصور، وإضافة أو حذف بنود من النوع الموجود نفسه (بطاقة، سطر جدول، نقطة) بنسخ بنيتها كما هي.
+        - إضافة رسمة أو رقم من البيانات (أو استبدال رسمة ثابتة بها) مسموحة فقط ببلوك data-jeem-chart / data-jeem-value كما في قسم «بلوكات البيانات»
+          لا بـ SVG يدوي، ويجوز على البلوك سمة style للمقاس والموضع فقط (width/height/position/top/left/inset-inline-start). "q" يجب أن يكون
+          مفتاح نتيجة مسجَّلة (المذكورة أدناه أو الناتجة من query_data في هذا الطلب) وأعمدته من صفوفها حرفيًا — يُتحقق من ذلك آليًا.
         - حافظ على لغة الجزء واتجاهه، ولا تغيّر الصور أو الشعار إلا بطلب صريح.
         - لا تخترع أرقامًا: الرقم من البيانات (query_data) أو من كلام المستخدم، وإلا ضع «—» واذكر ذلك في الرد.
         - إن كان الطلب غامضًا (أي رقم؟ أي بطاقة؟) أو لا يخص هذا الجزء، فلا تعدّل شيئًا: اجعل "fragment" فارغًا واسأل في "reply".
@@ -116,6 +121,7 @@ public class FreeformBuilder
         }
         var css = FreeformScope.PageCss(fullHtml);
         if (css.Length > 0) baseMsg.AppendLine("# أنماط الصفحة (للقراءة فقط — لا تعدّلها ولا تكرّرها)").AppendLine(css).AppendLine();
+        if (hasData) baseMsg.Append(FreeformBlockValidator.Describe(FreeformDataBlock.Parse(fullHtml)));
         baseMsg.AppendLine($"# الجزء المطلوب تعديله ({scopeLabel})").AppendLine(fragment.Length > 120_000 ? fragment[..120_000] : fragment).AppendLine();
         baseMsg.Append(FreeformAttachmentText.Build(attachments));
         baseMsg.AppendLine("# الطلب").AppendLine(message.Trim());
@@ -127,7 +133,7 @@ public class FreeformBuilder
             var sql = input["sql"]?.GetValue<string>(); if (string.IsNullOrWhiteSpace(sql)) return result;
             JsonNode? parsed; try { parsed = JsonNode.Parse(result); } catch (JsonException) { return result; }
             string key; lock (gate) { key = FreeformDataBlock.NextKey(recorded); recorded.Add(new FreeformQuery(key, sql.Trim(), parsed)); }
-            return result + $"\n\n[مفتاح هذه النتيجة في الصفحة: JEEM_DATA.{key}]";
+            return result + $"\n\n[مفتاح هذه النتيجة في الصفحة: {key} — استخدمه في بلوك data-jeem-chart/data-jeem-value (\"q\":\"{key}\")]";
         };
         try
         {
@@ -140,6 +146,13 @@ public class FreeformBuilder
                 usedData |= res.Json["usedData"]?.GetValue<bool>() ?? false;
                 var raw = res.Json["fragment"]?.GetValue<string>() ?? res.Json["html"]?.GetValue<string>();
                 var (frag, error) = FreeformScope.CheckFragment(fragment, raw, known);
+                if (error is null && frag is not null)
+                {
+                    // بلوكات البيانات: المفتاح والأعمدة يجب أن تطابق نتيجة مسجَّلة؛ محاولة ثانية بالسبب، ثم يُقبل الجزء مع تنبيه
+                    var probs = FreeformBlockValidator.Validate(frag, recorded);
+                    if (probs.Count > 0 && attempt == 0) { feedback = "بلوكات بيانات غير صالحة:\n- " + string.Join("\n- ", probs); continue; }
+                    if (probs.Count > 0) reply = (reply + "\n⚠️ تنبيه: " + string.Join(" ", probs.Take(3))).Trim();
+                }
                 if (error is null) return new FreeformFragmentResult(string.IsNullOrWhiteSpace(reply) ? (frag is null ? "لم أعدّل شيئًا — وضّح المطلوب." : "عدّلت الجزء المطلوب.") : reply, frag, usedData || recorded.Count > existing.Count, recorded, null);
                 feedback = error;
             }
