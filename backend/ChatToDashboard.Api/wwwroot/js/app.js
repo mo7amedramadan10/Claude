@@ -10543,19 +10543,26 @@ function ffdmWait(on, title, hint) {
 function ffdmQueue() { clearTimeout(FFDM.timer); el('ffdm-title').placeholder = ffdmAutoTitle() || 'عنوان الرسمة'; FFDM.timer = setTimeout(ffdmPreview, 350); }
 async function ffdmPreview() {
   const body = ffdmRequest(true); el('ffdm-ok').disabled = true;
-  if (!body && FFDM.mode === 'lib') { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; ffdmLibPreBuild(); return; }
-  if (!body) { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; el('ffdm-preview').innerHTML = `<div class="ffdm-empty">${ffdmW() ? 'اختر عنصرًا من اللوحة.' : 'اختر مصدر البيانات.'}</div>`; return; }
-  const seq = ++FFDM.seq; el('ffdm-status').textContent = ''; ffdmWait(true, 'يحضر بياناتك…', 'ينفّذ الاستعلام على بياناتك الفعلية');
+  if (!body && FFDM.mode === 'lib') { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn'); ffdmLibPreBuild(); return; }
+  if (!body) { ++FFDM.seq; ffdmWait(false); FFDM.last = null; el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn'); el('ffdm-preview').innerHTML = `<div class="ffdm-empty">${ffdmW() ? 'اختر عنصرًا من اللوحة.' : 'اختر مصدر البيانات.'}</div>`; return; }
+  const seq = ++FFDM.seq; el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn'); ffdmWait(true, 'يحضر بياناتك…', 'ينفّذ الاستعلام على بياناتك الفعلية');
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({})); if (seq !== FFDM.seq) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
     ffdmWait(false); FFDM.last = d; if (ffdmW() && d.widgetType && !FFDM.typeTouched) { FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes(); }
     const asis = FFDM.type === 'asis' ? ffdmAsIs(d) : null;
     const bindBad = FFDM.bind === 'chart' && (FFDM.type === 'value' || asis?.type === 'value');
-    el('ffdm-status').textContent = bindBad ? (asis ? 'هذا العنصر رقم واحد في اللوحة — اختر طريقة عرض رسمة لاستبدال رسمة القالب.' : 'الرسمة تحتاج «التقسيم حسب» — اختر عمودًا.')
+    const single = (d.rowCount || 0) <= 1 && FFDM.bind === 'chart';
+    el('ffdm-status').classList.toggle('warn', bindBad || single);
+    el('ffdm-status').textContent = bindBad ? (asis ? (FFDM.mode === 'lib' ? '⚠️ «ربط» معطّل: هذا العنصر رقم واحد ولا يحل محل رسمة — ابنِه اتجاهًا عبر الزمن (الزر في المعاينة) أو اختر عنصرًا آخر.' : '⚠️ «ربط» معطّل: هذا العنصر رقم واحد في اللوحة ولا يحل محل رسمة — اختر عنصرًا آخر أو «من جدول» بتقسيم.') : '⚠️ «ربط» معطّل: الرسمة تحتاج «التقسيم حسب» — اختر عمودًا.')
+      : single ? '⚠️ النتيجة صف واحد فقط، فستظهر الرسمة بقيمة واحدة.'
       : `${(d.rowCount || 0).toLocaleString('en-US')} صف من بياناتك الفعلية` + (asis && !asis.exact ? ` · نوع «${FFDM_WTYPE_AR[String(d.widgetType).toLowerCase()] || d.widgetType}» يُعرض بأقرب شكل مدعوم` : ''); el('ffdm-ok').disabled = !(d.rowCount > 0) || bindBad;
     ffdmShowPreview();
-  } catch (e) { if (seq !== FFDM.seq) return; ffdmWait(false); FFDM.last = null; el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">${esc(e.message)}</div>`; el('ffdm-status').textContent = ''; }
+    if (FFDM.mode === 'lib' && FFDM.lib?.kind === 'kpi' && FFDM.bind === 'chart' && (bindBad || single) && !FFDM.lib.trend) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-sm btn-primary ffdm-fix'; b.textContent = '📈 ابنِه اتجاهًا عبر الزمن';
+      b.addEventListener('click', () => ffdmLibBuild(true)); el('ffdm-preview').appendChild(b);
+    }
+  } catch (e) { if (seq !== FFDM.seq) return; ffdmWait(false); FFDM.last = null; el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">${esc(e.message)}</div>`; el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn'); }
 }
 function ffdmShowPreview() {
   const d = FFDM.last, box = el('ffdm-preview'); if (!d) return; box.innerHTML = '';
@@ -10569,7 +10576,7 @@ function ffdmShowPreview() {
 }
 function ffdmSetMode(mode) {
   FFDM.mode = mode; FFDM.last = null;
-  ++FFDM.seq; ffdmWait(false); el('ffdm-preview').innerHTML = ''; el('ffdm-status').textContent = ''; el('ffdm-ok').disabled = true; // لا تبقى معاينة التبويب الآخر
+  ++FFDM.seq; ffdmWait(false); el('ffdm-preview').innerHTML = ''; el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn'); el('ffdm-ok').disabled = true; // لا تبقى معاينة التبويب الآخر
   ['table', 'dash', 'lib'].forEach(m => { el('ffdm-tab-' + m).setAttribute('aria-selected', mode === m); el('ffdm-pane-' + m).classList.toggle('hidden', mode !== m); });
   if (mode === 'lib') ffdmRenderLib();
   ffdmRenderTypes(); ffdmQueue();
@@ -10603,7 +10610,7 @@ async function ffdmOpen(replace) {
   FFDM.type = FFDM.bind ? (FFDM.bind === 'value' ? 'value' : 'bar') : replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
   el('ffdm-heading').textContent = FFDM.bind === 'value' ? '🔗 ربط الرقم ببياناتي' : FFDM.bind ? '🔗 ربط الرسمة ببياناتي' : replace ? '📊 تغيير بيانات الرسمة' : '📊 رسمة من بياناتي';
   el('ffdm-ok').textContent = FFDM.bind ? 'ربط' : replace ? 'تطبيق على الرسمة' : 'إدراج في الشريحة'; el('ffdm-title').value = FFDM.replace ? (FFD.info?.chart?.title || '') : '';
-  el('ffdm-preview').innerHTML = ''; ffdmWait(true, 'يحمّل مصادر بياناتك…'); el('ffdm-status').textContent = '';
+  el('ffdm-preview').innerHTML = ''; ffdmWait(true, 'يحمّل مصادر بياناتك…'); el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn');
   el('ff-data-modal').classList.remove('hidden');
   try {
     if (FFDM.catFor !== FF.design.id) {
@@ -10689,18 +10696,19 @@ function ffdmLibRaw(it) {
 function ffdmLibPreBuild() {
   const box = el('ffdm-preview'), it = FFDM.lib; el('ffdm-ok').disabled = true;
   if (!it) { box.innerHTML = '<div class="ffdm-empty">اختر عنصرًا من المكتبة.</div>'; return; }
-  box.innerHTML = `<div class="ffdm-lib-pre">${awPeekHtml(it)}<button type="button" id="ffdm-lib-build" class="btn btn-sm btn-primary">🪄 ابنِه من بياناتي</button><small class="muted">العنصر وصف بلا أعمدة، فيكتب جيم استعلامه على أعمدتك بنداء موديل واحد (ثوانٍ)، ثم تعاينه بأرقامك قبل الإدراج.</small>${it.error ? `<div class="ffdm-empty bad">${esc(it.error)}</div>` : ''}</div>`;
+  box.innerHTML = `<div class="ffdm-lib-pre">${awPeekHtml(it)}<button type="button" id="ffdm-lib-build" class="btn btn-sm btn-primary">🪄 ابنِه من بياناتي</button><small class="muted">${FFDM.bind === 'chart' && it.kind === 'kpi' ? 'سيحل محل رسمة القالب، فيُبنى المؤشر <b>اتجاهًا شهريًا</b> لا رقمًا واحدًا. ' : ''}العنصر وصف بلا أعمدة، فيكتب جيم استعلامه على أعمدتك بنداء موديل واحد (ثوانٍ)، ثم تعاينه بأرقامك قبل الإدراج.</small>${it.error ? `<div class="ffdm-empty bad">${esc(it.error)}</div>` : ''}</div>`;
   el('ffdm-lib-build').addEventListener('click', ffdmLibBuild);
 }
-async function ffdmLibBuild() {
+async function ffdmLibBuild(trend) {
   const it = FFDM.lib; if (!it || FFDM.libBusy) return;
-  FFDM.libBusy = true; const seq = ++FFDM.seq; el('ffdm-ok').disabled = true; el('ffdm-status').textContent = '';
-  ffdmWait(true, 'جيم يبني العنصر من بياناتك…', 'يكتب الاستعلام على أعمدتك ثم ينفّذه');
+  if (typeof trend !== 'boolean') trend = FFDM.bind === 'chart' && it.kind === 'kpi'; // رسمة القالب لا يحل محلها رقم واحد
+  FFDM.libBusy = true; const seq = ++FFDM.seq; el('ffdm-ok').disabled = true; el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn');
+  ffdmWait(true, trend ? 'جيم يبني المؤشر اتجاهًا عبر الزمن…' : 'جيم يبني العنصر من بياناتك…', 'يكتب الاستعلام على أعمدتك ثم ينفّذه');
   try {
-    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/build`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...awItemBody(it), lang: state.lang }) });
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/build`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...awItemBody(it), lang: state.lang, trend }) });
     const d = await r.json().catch(() => ({})); if (FFDM.lib !== it) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
     if (!d.buildId) throw new Error(d.reason || 'تعذّر بناء هذا العنصر من بياناتك.');
-    it.buildId = d.buildId; it.error = null; FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes();
+    it.buildId = d.buildId; it.error = null; it.trend = trend; FFDM.type = FFDM.bind === 'value' ? 'value' : 'asis'; ffdmRenderTypes();
     if (seq === FFDM.seq) ffdmPreview();
   } catch (e) { if (FFDM.lib !== it) return; it.error = e.message; ffdmWait(false); ffdmLibPreBuild(); }
   finally { FFDM.libBusy = false; }

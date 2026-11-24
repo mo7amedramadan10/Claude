@@ -126,9 +126,15 @@ public partial class FreeformController
             if (perr is not null) return BadRequest(new { error = perr });
             prompt = p;
             if (r.Kind == TemplateKinds.Widget && BuiltinTemplates.FindWidget(r.Key) is { } tw && string.IsNullOrWhiteSpace(title)) title = tw.Title;
-            if (r.Kind == TemplateKinds.Kpi) { type = "kpi"; if (string.IsNullOrWhiteSpace(title)) title = r.KpiName ?? ""; if (required is { Count: > 0 }) { table = required[0].Table; sql = required[0].Sql; } }
+            if (r.Kind == TemplateKinds.Kpi) { type = "kpi"; if (string.IsNullOrWhiteSpace(title)) title = r.KpiName ?? ""; if (required is { Count: > 0 }) { table = required[0].Table; sql = request.Trend ? null : required[0].Sql; } }
         }
         if (string.IsNullOrWhiteSpace(title)) return BadRequest(new { error = "عنوان العنصر مطلوب." });
+        // ربط رسمة قالب بمؤشر: الرقم الواحد لا يحل محل رسمة، فيُطلب المؤشر نفسه سلسلةً زمنية (مسودة SQL المكتبة للرقم الواحد لا تُمرَّر)
+        if (request.Trend)
+        {
+            type = "line";
+            prompt = (prompt ?? "").TrimEnd() + "\n\nاعرض هذا المؤشر اتجاهًا عبر الزمن لا رقمًا واحدًا: قيمته لكل شهر (آخر 12 شهرًا متاحة) من عمود التاريخ الأنسب، بعمود للفترة وعمود للقيمة؛ لأنه سيحل محل رسمة في الصفحة.";
+        }
         if (!DashboardSpec.AllowedWidgetTypes.Contains(type)) type = "bar";
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var spec = new BuiltinDashboardWidgetSpec(type, title, prompt, Table: table, Sql: sql);
@@ -155,4 +161,6 @@ public class FreeformDataBuildRequest
     [System.Text.Json.Serialization.JsonPropertyName("type")] public string? Type { get; set; }
     [System.Text.Json.Serialization.JsonPropertyName("prompt")] public string? Prompt { get; set; }
     [System.Text.Json.Serialization.JsonPropertyName("lang")] public string? Lang { get; set; }
+    /// <summary>ابنِ المؤشر سلسلة زمنية (شهرية) بدل رقم واحد — لربطه مكان رسمة.</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("trend")] public bool Trend { get; set; }
 }

@@ -4163,3 +4163,7 @@ body.ff-full-on { overflow: hidden; }
 #ff-data-modal .ffdm-lib-pre .aw-peek-chart svg { width: 100%; height: auto; display: block; }
 #ff-data-modal .ffdm-lib-pre .aw-peek-chart small, #ff-data-modal .ffdm-lib-pre .aw-peek-kpi small { display: block; font-size: 11px; color: var(--ink-3); margin-bottom: 6px; }
 #ff-data-modal .ffdm-lib-pre small.muted { font-size: 11.5px; line-height: 1.6; }
+
+/* سبب تعطيل «ربط/إدراج» ظاهر لا سطر رمادي صغير، وزر الحل داخل المعاينة */
+#ff-data-modal #ffdm-status.warn { display: block; color: var(--ink); background: color-mix(in srgb, var(--warn, #f59e0b) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn, #f59e0b) 45%, var(--surface)); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 1.6; margin-top: 8px; }
+#ff-data-modal .ffdm-preview .ffdm-fix { align-self: center; margin-top: 10px; }
