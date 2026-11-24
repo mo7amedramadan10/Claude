@@ -566,14 +566,20 @@ const THEMES = {
 // chartConfig() on every rebuild instead).
 let THEME = THEMES[document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'];
 
+// زر «الوضع الليلي» في قائمة «إعداداتي» مفتاح تشغيل/إيقاف بنص صريح (لا رمز وحده)
+function syncThemeToggle(name) {
+  const btn = el('theme-toggle'); if (!btn) return;
+  const on = name === 'dark';
+  btn.textContent = on ? 'مفعّل' : 'معطّل';
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.title = on ? 'التبديل للوضع الفاتح' : 'التبديل للوضع الليلي';
+}
 function applyTheme(name) {
   name = name === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', name);
   THEME = THEMES[name];
   try { localStorage.setItem('chatToDashboardTheme', name); } catch {}
-  const btn = el('theme-toggle');
-  btn.textContent = name === 'light' ? '🌙' : '☀️';
-  btn.title = name === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
+  syncThemeToggle(name);
   // Existing charts were painted with the old theme's colors baked into their SVG —
   // rebuild the dashboard so anything already on screen reflects the new theme too.
   if (state.dashboard) renderDashboard();
@@ -11397,9 +11403,7 @@ el('theme-toggle').addEventListener('click', () => {
 // Sync the button's icon/title with whatever the head script already set on <html>,
 // without triggering a dashboard rebuild (nothing is rendered yet at boot).
 (() => {
-  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-  el('theme-toggle').textContent = current === 'light' ? '🌙' : '☀️';
-  el('theme-toggle').title = current === 'light' ? 'التبديل للوضع الداكن' : 'التبديل للوضع الفاتح';
+  syncThemeToggle(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
 })();
 
 // Language switch reloads the page rather than re-rendering in place — every screen (chat,

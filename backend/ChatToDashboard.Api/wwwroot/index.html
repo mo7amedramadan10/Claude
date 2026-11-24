@@ -18,8 +18,8 @@
 (function () {
   try {
     var t = localStorage.getItem('chatToDashboardTheme');
-    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
-  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+    document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
   try {
     var lang = localStorage.getItem('chatToDashboardLang') === 'en' ? 'en' : 'ar';
     document.documentElement.setAttribute('lang', lang);
@@ -169,7 +169,7 @@
         <div class="us-title">إعداداتي</div>
         <button type="button" id="auto-read-toggle" class="us-item hidden" role="menuitemcheckbox" title="تشغيل/إيقاف القراءة الصوتية التلقائية لردود المساعد"><span class="ar-ic" aria-hidden="true">🔇</span><span class="nav-text">قراءة تلقائية</span></button>
         <button type="button" id="tour-btn" class="us-item" role="menuitem" title="دليل استخدام النظام"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info"/></svg><span>دليل الاستخدام</span></button>
-        <div class="us-item us-row" data-us-for="theme-toggle"><span class="us-ic" aria-hidden="true">◐</span><span>الوضع الليلي</span><button type="button" id="theme-toggle" class="us-val" role="menuitem" title="تبديل المظهر">🌙</button></div>
+        <div class="us-item us-row" data-us-for="theme-toggle"><span class="us-ic" aria-hidden="true">🌙</span><span>الوضع الليلي</span><button type="button" id="theme-toggle" class="us-val" role="menuitemcheckbox" aria-pressed="false" title="التبديل للوضع الليلي">معطّل</button></div>
         <div class="us-item us-row" data-us-for="lang-toggle"><span class="us-ic" aria-hidden="true">🌐</span><span>اللغة</span><button type="button" id="lang-toggle" class="us-val" role="menuitem" title="Switch to English">EN</button></div>
       </div>
       <div class="user-card">

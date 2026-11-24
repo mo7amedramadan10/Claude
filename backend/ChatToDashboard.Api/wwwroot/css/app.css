@@ -794,8 +794,8 @@ tr:last-child td{border-bottom:0}
 .fr-text{min-width:0;flex:1}
 .fr-line1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .fr-name{font-weight:600;font-size:14px}
-.link-sheet-pick{font-size:11px;padding:2px 6px;border-radius:8px;border:1px solid #cfd9e6;background:#fff;color:#1f5fbf;max-width:180px}
-.link-badge{font-size:10px;padding:2px 8px;border-radius:9px;background:rgba(42,120,214,.12);color:#1f5fbf;white-space:nowrap}.link-badge.bad{background:rgba(217,74,74,.12);color:#b23b3b}.upload-btn.link-btn{background:#fff;color:#1f5fbf;border:1px solid #cfd9e6;margin-inline-start:8px;padding:9px 16px;text-decoration:none;font-weight:600;cursor:pointer}.upload-btn.link-btn:hover{background:#f2f7fd;border-color:#9fbbe0}
+.link-sheet-pick{font-size:11px;padding:2px 6px;border-radius:8px;border:1px solid #cfd9e6;background:var(--surface);color:#1f5fbf;max-width:180px}
+.link-badge{font-size:10px;padding:2px 8px;border-radius:9px;background:rgba(42,120,214,.12);color:#1f5fbf;white-space:nowrap}.link-badge.bad{background:rgba(217,74,74,.12);color:#b23b3b}.upload-btn.link-btn{background:var(--surface);color:#1f5fbf;border:1px solid #cfd9e6;margin-inline-start:8px;padding:9px 16px;text-decoration:none;font-weight:600;cursor:pointer}.upload-btn.link-btn:hover{background:#f2f7fd;border-color:#9fbbe0}
 .badge-stale{font-size:10px;padding:2px 8px;border-radius:9px;background:rgba(242,184,75,.16);color:#c98a1f}
 .fr-line2{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -971,9 +971,9 @@ tr:last-child td{border-bottom:0}
      printout came out as pages 1-2 of widgets followed by a page of the repository screen,
      then settings). */
   body, .screen.active, #screen-chat, #dash-pane{height:auto !important;overflow:visible !important;
-    display:block !important;padding:0 !important;margin:0 !important;background:#fff !important;color:#000 !important}
-  #summary{box-shadow:none;background:#fff;border-color:#ccc;color:#000}
-  .widget{box-shadow:none;border:1px solid #ccc;break-inside:avoid;background:#fff;color:#000}
+    display:block !important;padding:0 !important;margin:0 !important;background:var(--surface) !important;color:#000 !important}
+  #summary{box-shadow:none;background:var(--surface);border-color:#ccc;color:#000}
+  .widget{box-shadow:none;border:1px solid #ccc;break-inside:avoid;background:var(--surface);color:#000}
   .widget h3{color:#555}
   .kpi .value{color:#000;text-shadow:none}
   /* Exactly 3 widgets per printed page — 2 side by side on top, the 3rd spanning the full
@@ -1048,7 +1048,7 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- shared read-only view ---------- */
 #shared-banner{display:flex;align-items:center;gap:12px;padding:8px 16px;min-height:44px;
-  background:#fff;border-bottom:1px solid #e3e6ea;color:#1f2430}
+  background:var(--surface);border-bottom:1px solid #e3e6ea;color:#1f2430}
 #shared-banner .logo{display:inline-flex;align-items:center;flex-shrink:0;padding-inline-end:12px;border-inline-end:1px solid #e3e6ea}
 #shared-banner .logo img{height:28px;width:auto;display:block}
 #shared-banner .by{font-size:12.5px;color:#6b7280;white-space:nowrap}
@@ -1288,12 +1288,12 @@ body.is-shared #dash-pane{width:100%;max-width:none}
 /* طبقة المعنى (ب): نافذة معاني الأعمدة وشارة الجدوى في المعرض */
 .sem-modal-box{max-width:620px}
 .sem-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:min(60vh,460px);overflow-y:auto}
-.sem-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,2fr);gap:6px 12px;align-items:center;padding:8px 10px;border:1px solid var(--grid);border-radius:10px;background:#fff}
+.sem-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,2fr);gap:6px 12px;align-items:center;padding:8px 10px;border:1px solid var(--grid);border-radius:10px;background:var(--surface)}
 .sem-col{display:flex;flex-direction:column;min-width:0}
 .sem-col b{font-size:13px;overflow-wrap:anywhere}
 .sem-col small{font-size:11px;color:var(--muted)}
 .sem-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-.sem-pick select{flex:1;min-width:150px;padding:6px 8px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px;background:#fff}
+.sem-pick select{flex:1;min-width:150px;padding:6px 8px;border:1px solid var(--grid);border-radius:8px;font-size:12.5px;background:var(--surface)}
 .sem-note,.sem-map{grid-column:1 / -1;font-size:11.5px;color:var(--muted)}
 .sem-map{display:flex;flex-wrap:wrap;gap:6px}
 .sem-map span{padding:2px 8px;border-radius:8px;background:rgba(0,0,0,.04)}

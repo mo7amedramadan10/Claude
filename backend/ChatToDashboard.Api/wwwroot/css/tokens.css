@@ -76,3 +76,52 @@
   --chat-w: 400px;
   --ease: cubic-bezier(.2, .7, .2, 1);
 }
+
+/* ==========================================================
+   الوضع الليلي — القيم نفسها مقلوبة الأسطح والنصوص، مع تفتيح ألوان الهوية والحالات قليلًا لتحافظ على
+   التباين (نص خافت ≥ 4.5:1 على --surface). يُفعَّل بـ data-theme="dark" على <html> من قائمة «إعداداتي»؛
+   الافتراضي فاتح. ألوان الحالة تبقى محجوزة ودلالتها كما هي.
+   ========================================================== */
+:root[data-theme="dark"] { color-scheme: dark; }
+:root[data-theme="dark"] .jeem-scope {
+  --brand-blue:   #4AA8E3;
+  --brand-cyan:   #5CCBF0;
+  --brand-teal:   #22CFC7;
+  --brand-purple: #9C90E0;
+  --brand-mint:   #9DD5CA;
+  --brand-gray:   #2A3038;
+
+  --blue-700: #7CC2EE;
+  --blue-600: #5FB3E8;
+  --blue-100: #183A52;
+  --blue-50:  #142C3D;
+  --cyan-100: #14404D;
+  --cyan-50:  #11323D;
+  --teal-50:  #0F302E;
+  --purple-50:#25223B;
+
+  --ink:        #E6E9ED;
+  --ink-2:      #B7BEC6;
+  --ink-3:      #8E97A1;
+  --ink-inv:    #0F1317;
+
+  --bg:         #0F1317;
+  --surface:    #181D23;
+  --surface-2:  #1E242B;
+  --line:       #2B323A;
+  --line-2:     #232930;
+
+  --ok:      #3DC18A;  --ok-50:   #12301F;
+  --warn:    #E2A944;  --warn-50: #33280F;
+  --danger:  #F0726B;  --danger-50:#3A1C1B;
+
+  --chart-1: #4AA8E3;
+  --chart-2: #22CFC7;
+  --chart-3: #9C90E0;
+  --chart-4: #5CCBF0;
+  --chart-grid: #232930;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, .35), 0 6px 18px rgba(0, 0, 0, .35);
+  --shadow-3: 0 12px 40px rgba(0, 0, 0, .55);
+}
