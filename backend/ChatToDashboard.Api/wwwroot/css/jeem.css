@@ -3925,3 +3925,29 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #ff-form .input-box.ff-drop { outline: 2px dashed var(--brand-blue); outline-offset: -4px; }
 @media (prefers-reduced-motion: no-preference) { #ff-form #ff-mic.listening { animation: ff-mic-pulse 1.4s ease-in-out infinite; } }
 @keyframes ff-mic-pulse { 50% { box-shadow: 0 0 0 4px var(--danger-50); } }
+
+/* نافذة تغيير الصورة في وضع التعديل (تصميم حر) */
+#ff-img-modal .ffim-box { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+#ff-img-modal .ffim-main { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 14px; margin: 8px 0 12px; }
+#ff-img-modal .ffim-preview { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+#ff-img-modal .ffim-preview img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 10px; border: 1px solid var(--line); background: repeating-conic-gradient(var(--surface-2) 0 25%, var(--surface) 0 50%) 0 0 / 16px 16px; }
+#ff-img-modal .ffim-preview img.empty { visibility: hidden; }
+#ff-img-modal .ffim-preview figcaption { font-size: var(--fs-xs); }
+#ff-img-modal .ffim-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+#ff-img-modal .ffim-drop { display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center; text-align: center; padding: 18px 12px; border: 2px dashed var(--line); border-radius: 12px; cursor: pointer; background: var(--surface-2); }
+#ff-img-modal .ffim-drop:hover, #ff-img-modal .ffim-drop.over, #ff-img-modal .ffim-drop:focus-visible { border-color: var(--brand-blue); background: var(--blue-50); outline: none; }
+#ff-img-modal .ffim-drop small { font-size: var(--fs-xs); }
+#ff-img-modal .ffim-status { font-size: var(--fs-xs); min-height: 1em; }
+#ff-img-modal .ffim-label { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+#ff-img-modal .ffim-recent { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; max-height: 150px; overflow-y: auto; }
+#ff-img-modal .ffim-thumb { all: unset; box-sizing: border-box; cursor: pointer; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid transparent; background: var(--surface-2); }
+#ff-img-modal .ffim-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#ff-img-modal .ffim-thumb.on { border-color: var(--brand-blue); }
+#ff-img-modal .ffim-thumb:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 1px; }
+#ff-img-modal .ffim-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+#ff-img-modal .ffim-fit { grid-column: 1 / -1; border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-sm); }
+#ff-img-modal .ffim-fit legend { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); margin-bottom: 4px; padding: 0; }
+#ff-img-modal .ffim-pos, #ff-img-modal .ffim-alt { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); }
+#ff-img-modal .ffim-pos select, #ff-img-modal .ffim-alt input { width: 100%; font-weight: 400; }
+@media (max-width: 560px) { #ff-img-modal .ffim-main, #ff-img-modal .ffim-opts { grid-template-columns: minmax(0, 1fr); } #ff-img-modal .ffim-preview img { aspect-ratio: 16 / 9; } }
+#ff-img-modal .ffim-alt input { min-height: 42px; }

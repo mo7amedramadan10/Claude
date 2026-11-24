@@ -9155,18 +9155,79 @@ const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('c
 // عدّة تعديل النص المباشر داخل إطار المعاينة (تُحقن مع صفحة التصميم المفتوحة فقط، خاملة حتى يُفعَّل الوضع من الشريط):
 // الأم ترسل {jeemEdit:1,type:enable|disable|get}، والإطار يجعل العنصر النصي المنقور قابلًا للتحرير ويعيد {type:dirty|html}.
 // قبل الإرجاع يُنظَّف كل أثر للعدّة (السمات والأنماط والسكربتات المحقونة) فتبقى الصفحة المحفوظة كما لو كُتبت يدويًا.
-const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop()}}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
+const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop()}}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
 // الحقن قبل «آخر» </body> لا أوّله: صفحة قد تحمل «</body>» داخل نص JavaScript مقتبس (دالة تعيد بناء الملف مثلًا)،
 // والاستبدال الأعمى يضع سكربتات المنصة داخل سكربت الصفحة فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
 function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
 // مصغّرات المعرض ومعاينة النموذج: صفحة تنادي focus()/scrollIntoView()/location.hash داخل إطار (ولو بلا تفاعل) تجعل المتصفح يمرّر
 // الحاوية الأم لإظهار العنصر — فكان معرض تصميم حر «يرجع لأسفل وحده» كلما مرّر المستخدم لأعلى. تُعطَّل هذه الدوال داخل المصغّرة فقط.
 const FF_THUMB_QUIET = "<style id=\"ff-thumb-quiet-css\">#jeem-strip{display:none!important}html{--jeem-strip-h:0px!important}</style><script id=\"ff-thumb-quiet\">(function(){var n=function(){};try{HTMLElement.prototype.focus=n;Element.prototype.scrollIntoView=n;Element.prototype.scrollIntoViewIfNeeded=n;window.scrollTo=n;window.scrollBy=n;window.focus=n;}catch(e){}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[autofocus]').forEach(function(a){a.removeAttribute('autofocus');});});})();</script>";
+// طبقة الصور في وضع التعديل (تُحقن مع FF_EDIT_KIT في المعاينة فقط): النقر على صورة <img> أو عنصر بخلفية صورة أو مكان صورة فارغ
+// (.photo-ph / [data-jeem-photo]) يرسل للأم {type:'img-pick'} بخصائصها الحالية، والأم تعيد {type:'img-set'} بالرابط والملء والتركيز والوصف.
+// معالج النقر على window في طور الالتقاط فيسبق معالج النصوص (على document) ويمنعه، فلا يتحول ما حول الصورة إلى نص قابل للتحرير.
+function ffImgKit() {
+  var on = false, seq = 0, dirty = 0, hover = null;
+  var st = document.createElement('style'); st.id = 'ff-img-style';
+  st.textContent = 'body.ff-edit-on [data-ff-img-hover]{outline:2px solid #E0A100!important;outline-offset:2px;cursor:pointer!important}'
+    + '#ff-img-badge{position:fixed;z-index:2147483647;pointer-events:none;padding:4px 10px;border-radius:999px;background:#1F2933;color:#fff;font:600 12px/1.6 system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:nowrap;display:none}';
+  var badge = document.createElement('div'); badge.id = 'ff-img-badge'; badge.textContent = '🖼️ اضغط لتغيير الصورة';
+  function post(m) { m.jeemEdit = 1; parent.postMessage(m, '*'); }
+  function bgUrl(e) { var b = getComputedStyle(e).backgroundImage || ''; var m = b.match(/url\(["']?([^"')]+)["']?\)/); return m ? m[1] : null; }
+  function hasOwnText(e) { for (var i = 0; i < e.childNodes.length; i++) { var n = e.childNodes[i]; if (n.nodeType === 3 && n.textContent.trim()) return true; } return false; }
+  function find(t) {
+    if (!t || t.nodeType !== 1 || t === document.body || t === document.documentElement) return null;
+    var ph = t.closest('.photo-ph,[data-jeem-photo]'); if (ph && !ph.querySelector('img')) return { el: ph, kind: 'ph' };
+    if (t.tagName === 'IMG') return { el: t, kind: 'img' };
+    if (t.tagName === 'image') return { el: t, kind: 'svgimg' }; // صورة داخل SVG (صفحات PowerPoint المرفوعة كما هي)
+    if (hasOwnText(t)) return null; // النقر على نص فوق خلفية مصوّرة يبقى لتعديل النص
+    for (var e = t, d = 0; e && e !== document.body && d < 4; e = e.parentElement, d++) if (bgUrl(e)) return { el: e, kind: 'bg' };
+    return null;
+  }
+  function info(f) {
+    var e = f.el, cs = getComputedStyle(e), r = e.getBoundingClientRect();
+    if (!e.getAttribute('data-ff-img-id')) e.setAttribute('data-ff-img-id', 'i' + (++seq));
+    var src = f.kind === 'img' ? (e.currentSrc || e.src) : f.kind === 'svgimg' ? (e.getAttribute('href') || e.getAttribute('xlink:href')) : f.kind === 'bg' ? bgUrl(e) : null;
+    var fit = f.kind === 'img' ? (cs.objectFit === 'contain' ? 'contain' : 'cover') : f.kind === 'bg' ? (/contain/.test(cs.backgroundSize) ? 'contain' : 'cover') : 'cover';
+    var pos = f.kind === 'img' ? cs.objectPosition : f.kind === 'bg' ? cs.backgroundPosition : '50% 50%';
+    return { type: 'img-pick', id: e.getAttribute('data-ff-img-id'), kind: f.kind, src: src, fit: fit, pos: pos, alt: e.getAttribute('alt') || '', w: Math.round(r.width), h: Math.round(r.height) };
+  }
+  function clearHover() { if (hover) hover.removeAttribute('data-ff-img-hover'); hover = null; badge.style.display = 'none'; }
+  function onMove(e) {
+    if (!on) return; var f = find(e.target);
+    if (!f) { clearHover(); return; }
+    if (hover !== f.el) { clearHover(); hover = f.el; hover.setAttribute('data-ff-img-hover', '1'); var p = document.querySelector('[data-ff-hover]'); if (p) p.removeAttribute('data-ff-hover'); }
+    var r = f.el.getBoundingClientRect(); badge.style.display = 'block';
+    badge.style.left = Math.max(6, Math.min(window.innerWidth - badge.offsetWidth - 6, r.left + r.width / 2 - badge.offsetWidth / 2)) + 'px';
+    badge.style.top = Math.max(6, Math.min(window.innerHeight - 30, r.top + 8)) + 'px';
+  }
+  function onClick(e) { if (!on) return; var f = find(e.target); if (!f) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); post(info(f)); }
+  function apply(m) {
+    var e = document.querySelector('[data-ff-img-id="' + m.id + '"]'); if (!e) return;
+    var fit = m.fit === 'contain' ? 'contain' : 'cover', pos = m.pos || '50% 50%';
+    if (e.tagName === 'IMG') { e.removeAttribute('srcset'); e.removeAttribute('sizes'); if (m.url) e.src = m.url; e.style.objectFit = fit; e.style.objectPosition = pos; e.alt = m.alt || ''; var pic = e.parentElement; if (pic && pic.tagName === 'PICTURE') pic.querySelectorAll('source').forEach(function (s) { s.remove(); }); }
+    else if (e.tagName === 'image') { if (m.url) { e.setAttribute('href', m.url); e.removeAttribute('xlink:href'); } e.setAttribute('preserveAspectRatio', fit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'); }
+    else if (e.matches('.photo-ph,[data-jeem-photo]')) {
+      if (!m.url) return; e.innerHTML = ''; e.style.padding = '0'; e.style.overflow = 'hidden';
+      var img = document.createElement('img'); img.src = m.url; img.alt = m.alt || ''; img.style.cssText = 'display:block;width:100%;height:100%;object-fit:' + fit + ';object-position:' + pos;
+      e.appendChild(img); e.removeAttribute('data-ff-img-id');
+    }
+    else { if (m.url) e.style.backgroundImage = 'url("' + m.url.replace(/"/g, '%22') + '")'; e.style.backgroundSize = fit; e.style.backgroundPosition = pos; e.style.backgroundRepeat = 'no-repeat'; if (m.alt) { e.setAttribute('role', 'img'); e.setAttribute('aria-label', m.alt); } }
+    if (!e.hasAttribute('data-ff-img-done')) { e.setAttribute('data-ff-img-done', '1'); dirty++; }
+    post({ type: 'img-dirty', count: dirty });
+  }
+  function enable() { on = true; dirty = 0; document.head.appendChild(st); document.body.appendChild(badge); window.addEventListener('click', onClick, true); document.addEventListener('mouseover', onMove, true); window.addEventListener('scroll', clearHover, true); }
+  function disable() { on = false; clearHover(); if (st.parentNode) st.remove(); if (badge.parentNode) badge.remove(); window.removeEventListener('click', onClick, true); document.removeEventListener('mouseover', onMove, true); window.removeEventListener('scroll', clearHover, true); }
+  window.addEventListener('message', function (e) {
+    var m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== parent) return;
+    if (m.type === 'enable') enable(); else if (m.type === 'disable' || m.type === 'get') disable(); else if (m.type === 'img-set') apply(m);
+  });
+}
+const FF_IMG_KIT = '<script id="ff-img-kit">(' + ffImgKit.toString() + ')()<\/script>';
 function ffSandboxHtml(html, withEditor, kind, quiet) {
   if (!html) return html; let add = html.includes('ff-anchor-fix') ? '' : FF_ANCHOR_FIX;
   if (quiet && !html.includes('ff-thumb-quiet')) { const i = html.search(/<head[^>]*>/i); if (i >= 0) { const j = html.indexOf('>', i) + 1; html = html.slice(0, j) + FF_THUMB_QUIET + html.slice(j); } else add = FF_THUMB_QUIET + add; }
   if (kind === 'slides' && !/jeem-slides\.js/.test(html)) add += '<script id="ff-slides-kit" src="/js/jeem-slides.js"></script>'; // شريط مصغّرات الشرائح (يُحقن عند النشر أيضًا)
-  if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT; if (!add) return html; return ffInsertBeforeBodyEnd(html, add);
+  if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT + FF_IMG_KIT; if (!add) return html; return ffInsertBeforeBodyEnd(html, add);
 }
 async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
@@ -9535,9 +9596,9 @@ el('ff-auto-refresh').addEventListener('change', async () => {
 el('ff-refresh-rebuild').addEventListener('click', () => { el('ff-refresh-panel').classList.add('hidden'); if (!FF.design) return; ffAsk(FF_REBUILD_MSG); });
 
 // ---------- تعديل النص مباشرة من مساحة العمل: وضع ✏️ على إطار المعاينة، والحفظ إصدار جديد عبر PUT ----------
-FF.edit = { on: false, dirty: 0, pending: null };
+FF.edit = { on: false, dirty: 0, imgDirty: 0, pending: null };
 function ffEditSetMode(on, silent) {
-  FF.edit.on = on; FF.edit.dirty = 0;
+  FF.edit.on = on; FF.edit.dirty = 0; FF.edit.imgDirty = 0; if (!on) el('ff-img-modal').classList.add('hidden');
   el('ff-edit-text').setAttribute('aria-pressed', on ? 'true' : 'false'); el('ff-edit-bar').classList.toggle('hidden', !on); el('ff-preview-wrap').classList.toggle('editing', on);
   el('ff-edit-save').disabled = true; el('ff-edit-count').textContent = 'لا تعديلات بعد';
   const w = el('ff-preview').contentWindow; if (w && !silent) w.postMessage({ jeemEdit: 1, type: on ? 'enable' : 'disable' }, '*');
@@ -9592,17 +9653,84 @@ window.addEventListener('message', async e => {
 });
 window.addEventListener('message', async e => {
   const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
-  if (m.type === 'dirty') { FF.edit.dirty = m.count || 1; el('ff-edit-save').disabled = false; el('ff-edit-count').textContent = FF.edit.dirty === 1 ? 'عنصر واحد معدَّل' : `${FF.edit.dirty.toLocaleString('en-US')} عناصر معدَّلة`; return; }
+  if (m.type === 'dirty' || m.type === 'img-dirty') { if (m.type === 'dirty') FF.edit.dirty = m.count || 1; else FF.edit.imgDirty = m.count || 1; ffEditCountText(); return; }
+  if (m.type === 'img-pick') { ffImgOpen(m); return; }
   if (m.type === 'html' && FF.edit.pending) {
     FF.edit.pending = null; const html = m.html || '';
     try {
-      const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, note: 'تعديل نصي مباشر من مساحة العمل' }) });
+      const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, note: FF.edit.imgDirty ? (FF.edit.dirty ? 'تعديل نصوص وصور مباشر من مساحة العمل' : 'تغيير صور مباشر من مساحة العمل') : 'تعديل نصي مباشر من مساحة العمل' }) });
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
       FF.html = html; FF.viewing = null; if (d.versions) FF.versions = d.versions; if (d.version) FF.design.version = d.version;
-      ffEditSetMode(false, true); ffRender(); ffPushMsg('bot', `حُفظ تعديلك النصي المباشر${d.version ? ` (الإصدار ${d.version})` : ''}.`);
+      ffEditSetMode(false, true); ffRender(); ffPushMsg('bot', `حُفظ تعديلك المباشر${d.version ? ` (الإصدار ${d.version})` : ''}.`);
     } catch (err) { ffPushMsg('err', 'تعذّر حفظ التعديل: ' + err.message); el('ff-edit-save').disabled = false; }
     finally { el('ff-edit-save').textContent = 'حفظ كإصدار جديد'; }
   }
+});
+
+// ---------- تغيير الصور من وضع التعديل: نافذة الاختيار في المنصة، والتطبيق داخل الإطار عبر img-set ----------
+function ffEditCountText() {
+  const n = FF.edit.dirty + FF.edit.imgDirty; el('ff-edit-save').disabled = !n;
+  const parts = []; if (FF.edit.dirty) parts.push(FF.edit.dirty === 1 ? 'نص واحد' : `${FF.edit.dirty.toLocaleString('en-US')} نصوص`); if (FF.edit.imgDirty) parts.push(FF.edit.imgDirty === 1 ? 'صورة واحدة' : `${FF.edit.imgDirty.toLocaleString('en-US')} صور`);
+  el('ff-edit-count').textContent = n ? `معدَّل: ${parts.join(' و')}` : 'لا تعديلات بعد';
+}
+const FFIM = { pick: null, url: null, recent: [], busy: false, opener: null };
+// صور التصميم الحالي (أصولنا المرفوعة وصور النماذج) + ما رُفع في هذه الجلسة — لإعادة استخدام صورة في أكثر من شريحة
+function ffImgDesignImages() {
+  const found = new Set(FFIM.recent);
+  for (const m of (FF.html || '').matchAll(/(?:src|href)=["'](\/(?:api\/freeform\/assets\/[0-9a-f]{24}|templates\/freeform\/[\w.\/-]+\.(?:png|jpe?g|gif|webp)))["']|url\(["']?(\/(?:api\/freeform\/assets\/[0-9a-f]{24}|templates\/freeform\/[\w.\/-]+\.(?:png|jpe?g|gif|webp)))["']?\)/gi)) found.add(m[1] || m[2]);
+  return [...found].slice(0, 30);
+}
+function ffImgRenderRecent() {
+  const list = ffImgDesignImages(); el('ffim-recent-wrap').classList.toggle('hidden', !list.length);
+  el('ffim-recent').innerHTML = list.map(u => `<button type="button" class="ffim-thumb${u === FFIM.url ? ' on' : ''}" role="option" aria-selected="${u === FFIM.url}" data-url="${esc(u)}" title="استخدم هذه الصورة"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('');
+  el('ffim-recent').querySelectorAll('.ffim-thumb').forEach(b => b.addEventListener('click', () => { FFIM.url = b.dataset.url; el('ffim-current').src = FFIM.url; el('ffim-status').textContent = 'اخترت صورة من التصميم.'; ffImgRenderRecent(); }));
+}
+function ffImgOpen(m) {
+  FFIM.pick = m; FFIM.url = null; FFIM.opener = document.activeElement;
+  const cur = el('ffim-current');
+  if (m.src && !/^javascript:/i.test(m.src)) { cur.src = m.src; cur.classList.remove('empty'); } else { cur.removeAttribute('src'); cur.classList.add('empty'); }
+  el('ffim-size').innerHTML = m.w && m.h ? `مقاس الإطار في الصفحة: <bdi dir="ltr">${+m.w}×${+m.h}</bdi>` + (m.kind === 'ph' ? ' · مكان صورة فارغ' : '') : '';
+  document.querySelector(`input[name="ffim-fit"][value="${m.fit === 'contain' ? 'contain' : 'cover'}"]`).checked = true;
+  const pos = el('ffim-pos'); const norm = ffImgNormPos(m.pos); pos.value = [...pos.options].some(o => o.value === norm) ? norm : '50% 50%';
+  el('ffim-alt').value = m.alt || ''; el('ffim-status').textContent = ''; el('ffim-error').classList.add('hidden'); el('ffim-file').value = '';
+  ffImgRenderRecent();
+  el('ff-img-modal').classList.remove('hidden'); el('ffim-drop').focus();
+}
+function ffImgNormPos(p) {
+  const t = String(p || '').trim().split(/\s+/).map(x => ({ left: '0%', right: '100%', top: '0%', bottom: '100%', center: '50%' }[x] || x));
+  return t.length === 1 ? `${t[0]} 50%` : t.slice(0, 2).join(' ');
+}
+function ffImgClose() { el('ff-img-modal').classList.add('hidden'); FFIM.pick = null; if (FFIM.opener && FFIM.opener.focus) FFIM.opener.focus(); }
+async function ffImgUpload(file) {
+  if (!file) return;
+  if (!/^image\/(png|jpeg|gif|webp)$/.test(file.type)) { ffImgError('الصيغة غير مدعومة — استخدم PNG أو JPG أو GIF أو WebP.'); return; }
+  if (file.size > 5 * 1024 * 1024) { ffImgError('الصورة أكبر من 5MB.'); return; }
+  FFIM.busy = true; el('ffim-apply').disabled = true; el('ffim-status').textContent = 'جارٍ رفع الصورة…'; el('ffim-error').classList.add('hidden');
+  try {
+    const fd = new FormData(); fd.append('file', file);
+    const r = await fetch('/api/freeform/attachments', { method: 'POST', body: fd }); const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.kind !== 'image') throw new Error(d.error || `(${r.status})`);
+    FFIM.url = d.url; FFIM.recent.unshift(d.url); el('ffim-current').src = d.url; el('ffim-current').classList.remove('empty');
+    el('ffim-status').textContent = `رُفعت «${file.name}».`; if (!el('ffim-alt').value) el('ffim-alt').value = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+    ffImgRenderRecent();
+  } catch (e) { ffImgError('تعذّر رفع الصورة: ' + e.message); el('ffim-status').textContent = ''; }
+  finally { FFIM.busy = false; el('ffim-apply').disabled = false; }
+}
+function ffImgError(t) { const b = el('ffim-error'); b.textContent = t; b.classList.remove('hidden'); }
+el('ffim-file').addEventListener('change', e => ffImgUpload(e.target.files[0]));
+el('ffim-drop').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el('ffim-file').click(); } });
+el('ffim-drop').addEventListener('dragover', e => { e.preventDefault(); el('ffim-drop').classList.add('over'); });
+el('ffim-drop').addEventListener('dragleave', () => el('ffim-drop').classList.remove('over'));
+el('ffim-drop').addEventListener('drop', e => { e.preventDefault(); el('ffim-drop').classList.remove('over'); ffImgUpload(e.dataTransfer?.files?.[0]); });
+el('ffim-cancel').addEventListener('click', ffImgClose);
+el('ff-img-modal').addEventListener('click', e => { if (e.target === el('ff-img-modal')) ffImgClose(); });
+el('ff-img-modal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ffImgClose(); } });
+el('ffim-apply').addEventListener('click', () => {
+  const m = FFIM.pick; if (!m || FFIM.busy) return;
+  if (m.kind === 'ph' && !FFIM.url) { ffImgError('اختر صورة أولًا — هذا مكان صورة فارغ.'); return; }
+  const fit = document.querySelector('input[name="ffim-fit"]:checked').value;
+  const w = el('ff-preview').contentWindow; if (w) w.postMessage({ jeemEdit: 1, type: 'img-set', id: m.id, url: FFIM.url, fit, pos: el('ffim-pos').value, alt: el('ffim-alt').value.trim() }, '*');
+  ffImgClose();
 });
 
 // ---------- رفع ملف موجود → نموذج مخصص (FreeformTemplateStore) ----------

@@ -761,6 +761,41 @@
 </div>
 
 <!-- مشاركة تصميم حر داخل المنصة: وصول عام (خاص/المشروع/المنظمة) بدور، ومستخدمون بالاسم بأدوارهم. يختلف عن «نشر» (رابط عام للعالم) -->
+<!-- تغيير صورة داخل تصميم حر من وضع التعديل: رفع صورة أو اختيار صورة مستخدمة في التصميم، وطريقة الملء والتركيز والوصف البديل -->
+<div id="ff-img-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffim-heading">
+  <div class="modal share-modal-box ffim-box">
+    <h3 id="ffim-heading">تغيير الصورة</h3>
+    <div class="ffim-main">
+      <figure class="ffim-preview"><img id="ffim-current" alt=""><figcaption id="ffim-size" class="muted"></figcaption></figure>
+      <div class="ffim-side">
+        <label id="ffim-drop" class="ffim-drop" tabindex="0">
+          <input type="file" id="ffim-file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+          <b>⬆️ ارفع صورة من جهازك</b><small class="muted">أو اسحبها وأفلتها هنا · PNG أو JPG أو GIF أو WebP حتى 5MB</small>
+        </label>
+        <div id="ffim-status" class="muted ffim-status" role="status"></div>
+        <div id="ffim-recent-wrap" class="hidden"><div class="ffim-label">أو اختر صورة مستخدمة في هذا التصميم</div><div id="ffim-recent" class="ffim-recent" role="listbox" aria-label="صور التصميم"></div></div>
+      </div>
+    </div>
+    <div class="ffim-opts">
+      <fieldset class="ffim-fit"><legend>طريقة الملء</legend>
+        <label><input type="radio" name="ffim-fit" value="cover" checked> ملء الإطار (قص الزيادة)</label>
+        <label><input type="radio" name="ffim-fit" value="contain"> احتواء (الصورة كاملة)</label>
+      </fieldset>
+      <label class="ffim-pos">مكان التركيز
+        <select id="ffim-pos">
+          <option value="50% 50%">الوسط</option><option value="50% 0%">أعلى</option><option value="50% 100%">أسفل</option>
+          <option value="100% 50%">يمين</option><option value="0% 50%">يسار</option>
+        </select>
+      </label>
+      <label class="ffim-alt">وصف الصورة (لقارئ الشاشة)<input type="text" id="ffim-alt" maxlength="200" placeholder="مثال: فريق العمل في الاجتماع السنوي"></label>
+    </div>
+    <div id="ffim-error" class="model-switch-note bad hidden"></div>
+    <div class="modal-actions">
+      <button type="button" id="ffim-cancel">إلغاء</button>
+      <button type="button" id="ffim-apply" class="btn btn-primary">تطبيق</button>
+    </div>
+  </div>
+</div>
 <div id="ff-share-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffs-heading">
   <div class="modal share-modal-box ffs-box">
     <h3 id="ffs-heading">مشاركة التصميم</h3>
@@ -1190,7 +1225,7 @@
         <button type="button" id="ff-present" class="btn btn-sm btn-ghost hidden" title="عرض ملء الشاشة">⛶ ملء الشاشة</button>
         <button type="button" id="ff-replay" class="btn btn-sm btn-ghost hidden" title="إعادة تشغيل الحركة">↻ إعادة</button>
         <button type="button" id="ff-print" class="btn btn-sm btn-ghost hidden" title="طباعة أو حفظ PDF">PDF</button>
-        <button type="button" id="ff-edit-text" class="btn btn-sm btn-ghost" aria-pressed="false" title="تعديل النصوص مباشرة على الصفحة بالنقر عليها">✏️ تعديل النص</button>
+        <button type="button" id="ff-edit-text" class="btn btn-sm btn-ghost" aria-pressed="false" title="تعديل النصوص والصور مباشرة على الصفحة بالنقر عليها">✏️ تعديل</button>
         <button type="button" id="ff-mobile" class="btn btn-sm btn-ghost" aria-pressed="false" title="معاينة بعرض جوال 390px">📱 جوال</button>
         <button type="button" id="ff-code" class="btn btn-sm btn-ghost" aria-pressed="false" title="عرض الكود وتعديله يدويًا">&lt;/&gt; الكود</button>
         <button type="button" id="ff-open" class="btn btn-sm btn-ghost" title="فتح الصفحة في نافذة جديدة">فتح</button>
@@ -1272,7 +1307,7 @@
       <div id="ff-preview-wrap" class="ff-preview-wrap hidden">
         <!-- شريط وضع تعديل النص المباشر: يظهر فوق المعاينة عند تفعيل ✏️ -->
         <div id="ff-edit-bar" class="ff-edit-bar hidden" role="status">
-          <span>✏️ وضع تعديل النص: اضغط أي نص في الصفحة وعدّله، ثم احفظ. <small class="muted" id="ff-edit-count">لا تعديلات بعد</small></span>
+          <span>✏️ وضع التعديل: اضغط أي نص لتعديله أو أي صورة لتغييرها، ثم احفظ. <small class="muted" id="ff-edit-count">لا تعديلات بعد</small></span>
           <span class="grow"></span>
           <button type="button" id="ff-edit-cancel" class="btn btn-sm btn-ghost">إلغاء</button>
           <button type="button" id="ff-edit-save" class="btn btn-sm btn-primary" disabled>حفظ كإصدار جديد</button>
