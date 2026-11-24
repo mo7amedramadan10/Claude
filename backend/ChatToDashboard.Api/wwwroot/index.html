@@ -1313,6 +1313,12 @@
           <button type="button" id="ff-edit-save" class="btn btn-sm btn-primary" disabled>حفظ كإصدار جديد</button>
         </div>
         <iframe id="ff-preview" class="ff-preview" title="معاينة التصميم" sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
+        <!-- التنقّل بين الشرائح خارج الصفحة: أزرار تنقّل الصفحة نفسها تُخفى في المعاينة فتبقى كل نصوصها وأزرارها قابلة للتعديل -->
+        <div id="ff-slide-nav" class="ff-slide-nav hidden" role="group" aria-label="التنقّل بين الشرائح">
+          <button type="button" id="ff-nav-prev" class="btn btn-sm btn-ghost"><span class="ff-nav-ch" aria-hidden="true">→</span> السابقة</button>
+          <span id="ff-nav-count" class="ff-nav-count" aria-live="polite"></span>
+          <button type="button" id="ff-nav-next" class="btn btn-sm btn-ghost">التالية <span class="ff-nav-ch" aria-hidden="true">←</span></button>
+        </div>
       </div>
       <!-- شريط وضع التحرير للوحة المتابعة المستضافة (الإضافة/التراجع/الإعادة تنادي أزرار شريط اللوحة الأصلي) -->
       <div id="ff-tk-edit-bar" class="ff-edit-bar hidden" role="status">

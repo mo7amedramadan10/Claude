@@ -9155,7 +9155,7 @@ const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('c
 // عدّة تعديل النص المباشر داخل إطار المعاينة (تُحقن مع صفحة التصميم المفتوحة فقط، خاملة حتى يُفعَّل الوضع من الشريط):
 // الأم ترسل {jeemEdit:1,type:enable|disable|get}، والإطار يجعل العنصر النصي المنقور قابلًا للتحرير ويعيد {type:dirty|html}.
 // قبل الإرجاع يُنظَّف كل أثر للعدّة (السمات والأنماط والسكربتات المحقونة) فتبقى الصفحة المحفوظة كما لو كُتبت يدويًا.
-const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,LIVE='button,[role=button],input,select,textarea,summary,#jeem-strip',TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(e.closest&&e.closest(LIVE))return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop()}}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done],[data-ff-img-kind]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done');x.removeAttribute('data-ff-img-kind')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
+const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,LIVE='input,select,textarea,#jeem-strip',TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(e.closest&&e.closest(LIVE))return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop();return}if(cur&&(e.key===' '||e.key==='Enter')&&cur.closest('button,[role=button],a,summary')){e.preventDefault();e.stopPropagation();if(e.key===' ')document.execCommand('insertText',false,' ');return}if(cur&&/^(Arrow|PageUp|PageDown|Home|End| $)/.test(e.key))e.stopPropagation()}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(){disable();var clone=document.documentElement.cloneNode(true);['#ff-edit-kit','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-nav-kit','#ff-nav-style','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done],[data-ff-img-kind],[data-ff-navhide]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done');x.removeAttribute('data-ff-img-kind');x.removeAttribute('data-ff-navhide')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize()})})})()<\/script>";
 // الحقن قبل «آخر» </body> لا أوّله: صفحة قد تحمل «</body>» داخل نص JavaScript مقتبس (دالة تعيد بناء الملف مثلًا)،
 // والاستبدال الأعمى يضع سكربتات المنصة داخل سكربت الصفحة فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
 function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
@@ -9174,7 +9174,7 @@ function ffImgKit() {
   function post(m) { m.jeemEdit = 1; parent.postMessage(m, '*'); }
   function bgUrl(e) { var b = getComputedStyle(e).backgroundImage || ''; var m = b.match(/url\(["']?([^"')]+)["']?\)/); return m ? m[1] : null; }
   function hasOwnText(e) { for (var i = 0; i < e.childNodes.length; i++) { var n = e.childNodes[i]; if (n.nodeType === 3 && n.textContent.trim()) return true; } return false; }
-  var LIVE = 'button,[role=button],input,select,textarea,summary,#jeem-strip';
+  var LIVE = 'input,select,textarea,#jeem-strip';
   function cls(e) { return typeof e.className === 'string' ? e.className : ''; }
   // مكان الشعار في النماذج: حاوية بأيقونة SVG ونص «شعار شركتك هنا» (أو صنف logo/lg)، وقد يكون النص شقيقًا للأيقونة (.logo + .logo-t)
   function logoSlot(t) {
@@ -9188,7 +9188,7 @@ function ffImgKit() {
   }
   function find(t) {
     if (!t || t.nodeType !== 1 || t === document.body || t === document.documentElement) return null;
-    if (t.closest(LIVE)) return null; // أزرار التنقّل والحقول تعمل كما هي في وضع التعديل
+    if (t.closest(LIVE)) return null; // حقول الإدخال وشريط المصغّرات تعمل كما هي
     var lg = logoSlot(t); if (lg && !lg.querySelector('img')) return { el: lg, kind: 'logo' };
     var ph = t.closest('.photo-ph,[data-jeem-photo]'); if (ph && !ph.querySelector('img')) return { el: ph, kind: 'ph' };
     if (t.tagName === 'IMG') return { el: t, kind: 'img' };
@@ -9249,11 +9249,60 @@ function ffImgKit() {
   });
 }
 const FF_IMG_KIT = '<script id="ff-img-kit">(' + ffImgKit.toString() + ')()<\/script>';
+// التنقّل بين الشرائح من المنصة (معاينة المحرر فقط): تُخفى أزرار تنقّل الصفحة نفسها (خارج الشرائح، بأسماء السابق/التالي أو أسهمها)
+// فلا يتداخل التنقّل مع تعديل النصوص والأزرار، وتُعلَن الحالة {type:'nav-state', i, n} للأم وتُنفَّذ أوامرها {type:'nav', dir|index}.
+// العرض المنشور لا يُمس: أزرار الصفحة تبقى فيه كما هي.
+function ffNavKit() {
+  var ACTIVE = /^(on|active|current|is-active|show|visible|selected)$/;
+  var NAV = /(^|[\s_-])(prev|previous|next|back|forward|arrow|chev)|السابق|التالي|^[\s‹›❮❯←→<>«»]+$/i;
+  function slides() { var s = [].slice.call(document.querySelectorAll('section.slide, .slide, [data-slide]')).filter(function (x) { return !x.closest('#jeem-strip') && !(x.parentElement && x.parentElement.closest('section.slide, .slide, [data-slide]')); }); return s.length >= 2 ? s : []; }
+  function activeClass(list) { for (var i = 0; i < list.length; i++) { var cl = list[i].classList; for (var j = 0; j < cl.length; j++) if (ACTIVE.test(cl[j])) return cl[j]; } return null; }
+  function current(list) {
+    var c = activeClass(list); if (c) for (var i = 0; i < list.length; i++) if (list[i].classList.contains(c)) return i;
+    var best = 0, area = 0; list.forEach(function (s, k) { var r = s.getBoundingClientRect(); var v = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)); if (v > area) { area = v; best = k; } });
+    return best;
+  }
+  function go(list, i) {
+    i = Math.max(0, Math.min(list.length - 1, i));
+    if (typeof window.goToSlide === 'function') { try { window.goToSlide(i); return; } catch (e) {} }
+    var c = activeClass(list);
+    if (c) { list.forEach(function (s, k) { s.classList.toggle(c, k === i); }); try { window.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } })); } catch (e) {} return; }
+    list[i].scrollIntoView({ block: 'start' });
+  }
+  function hideNav(list) {
+    var inSlide = function (el) { return list.some(function (s) { return s.contains(el); }); };
+    var btns = [].slice.call(document.querySelectorAll('button,a,[role=button]')).filter(function (b) {
+      if (inSlide(b) || b.closest('#jeem-strip')) return false;
+      var label = [b.id, typeof b.className === 'string' ? b.className : '', b.getAttribute('aria-label') || '', b.getAttribute('title') || '', (b.textContent || '').trim()].join(' ');
+      return NAV.test(label) || NAV.test((b.textContent || '').trim());
+    });
+    if (!btns.length) return;
+    var box = null;
+    if (btns.length >= 2) { box = btns[0].parentElement; while (box && box !== document.body && !box.contains(btns[1])) box = box.parentElement; if (!box || box === document.body || box === document.documentElement || list.some(function (s) { return box.contains(s); })) box = null; }
+    (box ? [box] : btns).forEach(function (x) { x.setAttribute('data-ff-navhide', '1'); });
+    var st = document.createElement('style'); st.id = 'ff-nav-style'; st.textContent = '[data-ff-navhide]{display:none!important}'; document.head.appendChild(st);
+  }
+  function start() {
+    var list = slides(); if (!list.length) return;
+    hideNav(list);
+    var last = '';
+    function report() { var i = current(list), key = i + '/' + list.length; if (key === last) return; last = key; parent.postMessage({ jeemEdit: 1, type: 'nav-state', i: i, n: list.length }, '*'); }
+    try { new MutationObserver(report).observe(document.body, { attributes: true, attributeFilter: ['class', 'style', 'hidden'], subtree: true }); } catch (e) {}
+    window.addEventListener('jeem:slide', function () { setTimeout(report, 30); }); window.addEventListener('scroll', report, { passive: true });
+    window.addEventListener('message', function (e) {
+      var m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== parent || m.type !== 'nav') return;
+      var i = typeof m.index === 'number' ? m.index : current(list) + (m.dir || 0); go(list, i); setTimeout(report, 60);
+    });
+    report();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(start, 60); }); else setTimeout(start, 60);
+}
+const FF_NAV_KIT = '<script id="ff-nav-kit">(' + ffNavKit.toString() + ')()<\/script>';
 function ffSandboxHtml(html, withEditor, kind, quiet) {
   if (!html) return html; let add = html.includes('ff-anchor-fix') ? '' : FF_ANCHOR_FIX;
   if (quiet && !html.includes('ff-thumb-quiet')) { const i = html.search(/<head[^>]*>/i); if (i >= 0) { const j = html.indexOf('>', i) + 1; html = html.slice(0, j) + FF_THUMB_QUIET + html.slice(j); } else add = FF_THUMB_QUIET + add; }
   if (kind === 'slides' && !/jeem-slides\.js/.test(html)) add += '<script id="ff-slides-kit" src="/js/jeem-slides.js"></script>'; // شريط مصغّرات الشرائح (يُحقن عند النشر أيضًا)
-  if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT + FF_IMG_KIT; if (!add) return html; return ffInsertBeforeBodyEnd(html, add);
+  if (withEditor && !html.includes('ff-edit-kit')) add += FF_EDIT_KIT + FF_IMG_KIT + FF_NAV_KIT; if (!add) return html; return ffInsertBeforeBodyEnd(html, add);
 }
 async function ffShowStart() {
   el('ff-start').classList.remove('hidden'); el('ff-preview-wrap').classList.add('hidden'); el('ff-code-wrap').classList.add('hidden');
@@ -9681,6 +9730,7 @@ window.addEventListener('message', async e => {
   const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
   if (m.type === 'dirty' || m.type === 'img-dirty') { if (m.type === 'dirty') FF.edit.dirty = m.count || 1; else FF.edit.imgDirty = m.count || 1; ffEditCountText(); return; }
   if (m.type === 'img-pick') { ffImgOpen(m); return; }
+  if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
   if (m.type === 'html' && FF.edit.pending) {
     FF.edit.pending = null; const html = m.html || '';
     try {
@@ -9693,6 +9743,9 @@ window.addEventListener('message', async e => {
   }
 });
 
+function ffNav(dir) { const w = el('ff-preview').contentWindow; if (w) w.postMessage({ jeemEdit: 1, type: 'nav', dir }, '*'); }
+el('ff-nav-prev').addEventListener('click', () => ffNav(-1));
+el('ff-nav-next').addEventListener('click', () => ffNav(1));
 // ---------- تغيير الصور من وضع التعديل: نافذة الاختيار في المنصة، والتطبيق داخل الإطار عبر img-set ----------
 function ffEditCountText() {
   const n = FF.edit.dirty + FF.edit.imgDirty; el('ff-edit-save').disabled = !n;
@@ -9872,6 +9925,7 @@ function ffRender() {
   el('ff-version').innerHTML = (FF.versions || []).map(v => `<option value="${v.version}"${(FF.viewing ?? d.version) === v.version ? ' selected' : ''}>إصدار ${v.version} — ${esc((v.prompt || '').slice(0, 40) || 'بلا وصف')}</option>`).join('');
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
+  el('ff-slide-nav').classList.add('hidden');
   el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true, kind) || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
 }
 function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }

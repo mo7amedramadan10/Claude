@@ -3951,3 +3951,12 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 #ff-img-modal .ffim-pos select, #ff-img-modal .ffim-alt input { width: 100%; font-weight: 400; }
 @media (max-width: 560px) { #ff-img-modal .ffim-main, #ff-img-modal .ffim-opts { grid-template-columns: minmax(0, 1fr); } #ff-img-modal .ffim-preview img { aspect-ratio: 16 / 9; } }
 #ff-img-modal .ffim-alt input { min-height: 42px; }
+
+/* التنقّل بين الشرائح من المنصة تحت المعاينة (بدل أزرار الصفحة المخفية في المحرر) */
+.jeem-scope .ff-slide-nav { flex: 1 0 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.jeem-scope .ff-slide-nav.hidden { display: none; }
+.jeem-scope .ff-slide-nav .btn { border: 1px solid var(--line); background: var(--surface); min-width: 96px; justify-content: center; }
+.jeem-scope .ff-slide-nav .btn:disabled { opacity: .45; cursor: default; }
+.jeem-scope .ff-nav-count { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); min-width: 64px; text-align: center; font-feature-settings: "tnum" 1; direction: ltr; }
+.jeem-scope .ff-nav-ch { font-size: 18px; line-height: 1; }
+html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scaleX(-1); }
