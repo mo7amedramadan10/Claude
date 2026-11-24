@@ -11,11 +11,19 @@
   function activeClass(list) { for (var i = 0; i < list.length; i++) { var cl = list[i].classList; for (var j = 0; j < cl.length; j++) if (ACTIVE.test(cl[j])) return cl[j]; } return null; }
   function isVisible(el) { var r = el.getBoundingClientRect(); var cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0' && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; }
   function currentIndex(list) { var cls = activeClass(list); if (cls) { for (var i = 0; i < list.length; i++) if (list[i].classList.contains(cls)) return i; } var best = -1, bestArea = 0; for (var k = 0; k < list.length; k++) { var r = list[k].getBoundingClientRect(); var vis = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) * Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)); if (vis > bestArea) { bestArea = vis; best = k; } } return best; }
+  // التمرير داخل الصفحة نفسها فقط: scrollIntoView داخل إطار يمرّر كل الصفحات الأم أيضًا (فكانت صفحة المنصة «ترجع لتحت وحدها»)
+  function reveal(el) {
+    var b = reduced ? 'auto' : 'smooth';
+    for (var p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+      var oy = getComputedStyle(p).overflowY; if (/(auto|scroll)/.test(oy) && p.scrollHeight > p.clientHeight) { p.scrollBy({ top: el.getBoundingClientRect().top - p.getBoundingClientRect().top, behavior: b }); return; }
+    }
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: b });
+  }
   function goTo(list, i) {
     if (typeof window.goToSlide === 'function') { try { window.goToSlide(i); return; } catch (e) {} }
     var cls = activeClass(list);
-    if (cls) { list.forEach(function (s, k) { s.classList.toggle(cls, k === i); }); try { window.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } })); } catch (e) {} if (!isVisible(list[i])) list[i].scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); return; }
-    list[i].scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    if (cls) { list.forEach(function (s, k) { s.classList.toggle(cls, k === i); }); try { window.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } })); } catch (e) {} if (!isVisible(list[i])) reveal(list[i]); return; }
+    reveal(list[i]);
   }
   var css = '#jeem-strip{position:fixed;inset-inline:0;bottom:0;z-index:2147483000;font-family:inherit;direction:' + (document.documentElement.dir === 'ltr' ? 'ltr' : 'rtl') + ';pointer-events:none}' +
     '#jeem-strip .js-bar{pointer-events:auto;background:rgba(15,23,32,.86);backdrop-filter:blur(6px);color:#fff;border-top:1px solid rgba(255,255,255,.15);padding:8px 12px 10px;display:flex;align-items:center;gap:10px}' +
@@ -62,7 +70,7 @@
       th.addEventListener('click', function () { goTo(list, k); setTimeout(mark, 60); });
       row.appendChild(th); thumbs.push(th); renderThumb(k);
     });
-    function mark() { var i = currentIndex(list); thumbs.forEach(function (t, k) { t.classList.toggle('on', k === i); t.setAttribute('aria-selected', k === i ? 'true' : 'false'); }); cnt.textContent = (i + 1) + ' / ' + list.length; var on = thumbs[i]; if (on && on.scrollIntoView) try { on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }); } catch (e) {} }
+    function mark() { var i = currentIndex(list); thumbs.forEach(function (t, k) { t.classList.toggle('on', k === i); t.setAttribute('aria-selected', k === i ? 'true' : 'false'); }); cnt.textContent = (i + 1) + ' / ' + list.length; var on = thumbs[i], sc = on && on.parentElement; if (sc) try { var a = on.getBoundingClientRect(), c = sc.getBoundingClientRect(); var dx = (a.left + a.width / 2) - (c.left + c.width / 2); if (Math.abs(dx) > 2) sc.scrollBy({ left: dx, behavior: reduced ? 'auto' : 'smooth' }); } catch (e) {} } // تمرير الشريط أفقيًا فقط بلا scrollIntoView
     var pending = null; function rerender() { clearTimeout(pending); pending = setTimeout(function () { list.forEach(function (_, k) { renderThumb(k); }); mark(); }, 250); }
     try { new MutationObserver(function (ms) { var touched = false; ms.forEach(function (m) { if (m.type === 'attributes') { if (m.attributeName === 'class') mark(); } else touched = true; }); if (touched) rerender(); }).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true, childList: true, characterData: true }); } catch (e) {}
     window.addEventListener('scroll', mark, { passive: true }); window.addEventListener('resize', rerender);

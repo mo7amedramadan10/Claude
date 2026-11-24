@@ -8954,7 +8954,7 @@ function dashLoadingHtml(title, hint) {
   if (window.JEEM_LOADER) return `<div class="empty dash-wait"><div>${JEEM_LOADER.html({ title, hint, size: 72 })}</div></div>`;
   return `<div class="grid skeleton">${'<div class="widget"><div class="bar"></div></div>'.repeat(4)}</div>`;
 }
-function dashLoadingDone() { if (ffTrackActive()) ccSetLoading('ff-pane', null); }
+function dashLoadingDone() { if (ffTrackActive() && !FF.trackBusy) ccSetLoading('ff-pane', null); }
 function ffTrackMount() {
   const pane = el('dash-pane'); const body = el('ff-body');
   if (!pane || !body) return;
@@ -9113,7 +9113,9 @@ async function ffTrackAsk(text) {
     return;
   }
   el('ff-send').disabled = true; el('ff-status').textContent = 'يعمل…';
-  try { await ask(text); } finally { el('ff-send').disabled = false; el('ff-status').textContent = ''; ffTrackHead(); }
+  // طبقة الانتظار تغطي اللوحة حتى يكتمل التعديل فلا يُعدَّل فيها شيء أثناءه (renderDashboard لا يزيلها ما دام FF.trackBusy)
+  FF.trackBusy = true; ccSetLoading('ff-pane', 'جارٍ تعديل اللوحة', 'الموديل يعمل على طلبك ويستعلم عن بياناتك — ستظهر اللوحة المعدَّلة هنا فور اكتمالها.');
+  try { await ask(text); } finally { FF.trackBusy = false; ccSetLoading('ff-pane', null); el('ff-send').disabled = false; el('ff-status').textContent = ''; ffTrackHead(); }
 }
 async function loadFreeformScreen() { if (FF.track) { ffTrackMount(); return; } if (FF.design) ffRender(); else await ffShowStart(); ffRenderMessages(); }
 // حالة البداية = معرض كمعرض Artifacts في Claude: تبويبات (الكل/تصاميمي/مشترك معي)، بحث، تصفية بالنوع، شبكة/قائمة، وبطاقات بمعاينة مصغّرة حيّة
@@ -9219,6 +9221,12 @@ function ffImgKit() {
   function onClick(e) { if (!on) return; var f = find(e.target); if (!f) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); post(info(f)); }
   function apply(m) {
     var e = document.querySelector('[data-ff-img-id="' + m.id + '"]'); if (!e) return;
+    if (m.remove) {
+      // حذف الصورة: <img>/<image> يُزال (مع <picture> الحاوي)، والخلفية المصوّرة تصير بلا صورة
+      if (e.tagName === 'IMG' || e.tagName === 'image') { var rm = e.parentElement && e.parentElement.tagName === 'PICTURE' ? e.parentElement : e; rm.remove(); }
+      else { e.style.backgroundImage = 'none'; e.removeAttribute('role'); e.removeAttribute('aria-label'); e.setAttribute('data-ff-img-done', '1'); }
+      dirty++; post({ type: 'img-dirty', count: dirty }); return;
+    }
     var fit = m.fit === 'contain' ? 'contain' : 'cover', pos = m.pos || '50% 50%';
     if (e.tagName === 'IMG') { e.removeAttribute('srcset'); e.removeAttribute('sizes'); if (m.url) e.src = m.url; e.style.objectFit = fit; e.style.objectPosition = pos; e.alt = m.alt || ''; var pic = e.parentElement; if (pic && pic.tagName === 'PICTURE') pic.querySelectorAll('source').forEach(function (s) { s.remove(); }); }
     else if (e.tagName === 'image') { if (m.url) { e.setAttribute('href', m.url); e.removeAttribute('xlink:href'); } e.setAttribute('preserveAspectRatio', fit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'); }
@@ -9267,7 +9275,7 @@ function ffNavKit() {
     if (typeof window.goToSlide === 'function') { try { window.goToSlide(i); return; } catch (e) {} }
     var c = activeClass(list);
     if (c) { list.forEach(function (s, k) { s.classList.toggle(c, k === i); }); try { window.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } })); } catch (e) {} return; }
-    list[i].scrollIntoView({ block: 'start' });
+    window.scrollTo({ top: list[i].getBoundingClientRect().top + window.scrollY }); // scrollIntoView يمرّر صفحة المنصة الأم أيضًا
   }
   function hideNav(list) {
     var inSlide = function (el) { return list.some(function (s) { return s.contains(el); }); };
@@ -9368,7 +9376,7 @@ function ffDesignKit() {
     } else {
       var anchor = sel; while (anchor && anchor.parentElement && !/^(BODY|MAIN|ARTICLE|SECTION)$/.test(anchor.parentElement.tagName)) anchor = anchor.parentElement;
       if (anchor && anchor.parentElement) anchor.parentElement.insertBefore(e, anchor.nextSibling); else (document.querySelector('main') || document.body).appendChild(e);
-      e.style.margin = '16px 0'; e.scrollIntoView({ block: 'center' });
+      e.style.margin = '16px 0'; window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - innerHeight / 3 });
     }
     undo.push(function () { if (e.parentNode) e.parentNode.removeChild(e); select(null); });
     select(e); changed();
@@ -9914,6 +9922,7 @@ function ffImgRenderRecent() {
 function ffImgOpen(m) {
   FFIM.pick = m; FFIM.url = null; FFIM.opener = document.activeElement;
   el('ffim-heading').textContent = m.kind === 'logo' ? 'إضافة الشعار' : 'تغيير الصورة';
+  el('ffim-remove').classList.toggle('hidden', m.kind === 'ph' || m.kind === 'logo'); // مكان فارغ لا صورة فيه تُحذف
   const cur = el('ffim-current');
   if (m.src && !/^javascript:/i.test(m.src)) { cur.src = m.src; cur.classList.remove('empty'); } else { cur.removeAttribute('src'); cur.classList.add('empty'); }
   el('ffim-size').innerHTML = m.w && m.h ? `مقاس الإطار في الصفحة: <bdi dir="ltr">${+m.w}×${+m.h}</bdi>` + (m.kind === 'ph' ? ' · مكان صورة فارغ' : m.kind === 'logo' ? ' · مكان الشعار' : '') : '';
@@ -9950,6 +9959,11 @@ el('ffim-drop').addEventListener('dragover', e => { e.preventDefault(); el('ffim
 el('ffim-drop').addEventListener('dragleave', () => el('ffim-drop').classList.remove('over'));
 el('ffim-drop').addEventListener('drop', e => { e.preventDefault(); el('ffim-drop').classList.remove('over'); ffImgUpload(e.dataTransfer?.files?.[0]); });
 el('ffim-cancel').addEventListener('click', ffImgClose);
+el('ffim-remove').addEventListener('click', () => {
+  const m = FFIM.pick; if (!m || FFIM.busy) return;
+  const w = el('ff-preview').contentWindow; if (w) w.postMessage({ jeemEdit: 1, type: 'img-set', id: m.id, remove: true }, '*');
+  ffImgClose();
+});
 el('ff-img-modal').addEventListener('click', e => { if (e.target === el('ff-img-modal')) ffImgClose(); });
 el('ff-img-modal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ffImgClose(); } });
 el('ffim-apply').addEventListener('click', () => {

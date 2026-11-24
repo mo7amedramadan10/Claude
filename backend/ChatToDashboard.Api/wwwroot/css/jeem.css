@@ -4001,8 +4001,9 @@ html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scale
 /* ---- أدوات التصميم في وضع التعديل: الشريط العائم ولوحة الخصائص ---- */
 .jeem-scope .ff-preview-wrap { position: relative; }
 .jeem-scope .ff-dtools { position: absolute; z-index: 6; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 30, 45, .16); max-width: calc(100% - 24px); }
-.jeem-scope .ff-preview-wrap:has(.ff-slide-nav:not(.hidden)) .ff-dtools { bottom: 70px; }
-.jeem-scope .ff-preview-wrap:has(.ff-slide-nav:not(.hidden)) .ff-insp { bottom: 128px; }
+/* في وضع التعديل يُحجز تحت المعاينة (وشريط الشرائح) مكان الشريط العائم فلا يغطي أسفل الصفحة */
+.jeem-scope .ff-preview-wrap.editing { padding-bottom: 68px; }
+.jeem-scope .ff-preview-wrap.editing .ff-dtools { bottom: 12px; }
 .jeem-scope .ff-dtools.hidden { display: none; }
 .jeem-scope .ffd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 36px; height: 36px; padding: 0 6px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); cursor: pointer; font: 600 16px/1 var(--font, inherit); }
 .jeem-scope .ffd-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
@@ -4051,8 +4052,34 @@ html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scale
 @media (max-width: 640px) {
   .jeem-scope .ff-insp { position: fixed; z-index: 60; top: auto; bottom: 0; inset-inline: 0; width: auto; max-height: 55vh; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 28px rgba(15, 30, 45, .22); }
   .jeem-scope .ffd-ask input { width: 110px; }
-  .jeem-scope .ff-dtools { bottom: 10px; }
+  .jeem-scope .ff-preview-wrap.editing { padding-bottom: 60px; }
+  .jeem-scope .ff-preview-wrap.editing .ff-dtools { bottom: 8px; }
   .jeem-scope .ffd-btn { min-width: 32px; height: 32px; }
 }
 @media (prefers-reduced-motion: reduce) { .jeem-scope .ff-dtools, .jeem-scope .ff-insp { transition: none; } }
 .jeem-scope .ff-preview-wrap > .ff-edit-bar { position: relative; z-index: 7; }
+#ff-img-modal .modal-actions { display: flex; align-items: center; gap: 8px; }
+#ff-img-modal .modal-actions .grow { flex: 1; }
+#ff-img-modal .ffim-remove { color: var(--danger, #B42318); border: 1px solid color-mix(in srgb, var(--danger, #B42318) 35%, transparent); background: transparent; border-radius: 8px; padding: 6px 12px; cursor: pointer; font: inherit; }
+#ff-img-modal .ffim-remove:hover { background: color-mix(in srgb, var(--danger, #B42318) 8%, transparent); }
+#ff-img-modal .ffim-remove.hidden { display: none; }
+/* مساحة المعاينة عمود مرن: أشرطة التعديل والهوية فوقها تأخذ ارتفاعها والإطار يتقلص بدلها — كانت تزيد ارتفاع الصفحة كلها فتصير الصفحة
+   قابلة للتمرير، وأي تمرير داخل الإطار (شريط المصغّرات) يجرّها لأسفل فلا يصل المستخدم إلى «جديد» */
+/* على الجوال تبقى الصفحة تتمرّر كالمعتاد (مساحة المعاينة صغيرة جدًا تحت شريط الأدوات)؛ إصلاح jeem-slides يمنع القفز هناك */
+@media (min-width: 641px) {
+  .jeem-scope .ff-preview-wrap { flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: flex-start; overflow-x: hidden; overflow-y: auto; }
+  .jeem-scope .ff-preview-wrap > .ff-edit-bar, .jeem-scope .ff-preview-wrap > .ff-id-bar { flex: none; width: 100%; }
+  .jeem-scope .ff-preview-wrap > .ff-preview { flex: 1 1 0; height: auto; min-height: 120px; }
+  .jeem-scope .ff-preview-wrap.mobile > .ff-preview { flex: 1 1 0; }
+  .jeem-scope .ff-preview-wrap > .ff-slide-nav { flex: none; }
+}
+/* تصميم حر على الجوال: رأس مساحة العمل بأزراره يأخذ معظم 60٪ من الشاشة فكانت المعاينة ~80px وشريط الشرائح يفيض فوق المحادثة.
+   الشاشة تصير بارتفاعها الطبيعي وتتمرّر الصفحة: المعاينة بارتفاع مقروء ثم المحادثة تحتها. */
+@media (max-width: 640px) {
+  #screen-freeform.active { height: auto; min-height: calc(100vh - var(--topbar-h, 68px)); }
+  #screen-freeform .cc-pane { flex: none; }
+  #screen-freeform .cc-rail { height: auto; min-height: 60vh; }
+  #screen-freeform .ff-body { flex: none; }
+  #screen-freeform .ff-preview-wrap:not(.hidden) { min-height: 78vh; }
+  #screen-freeform .ff-start { max-height: none; overflow: visible; }
+}
