@@ -132,7 +132,7 @@
     [].forEach.call(document.querySelectorAll('[data-jeem-chart]'), function (el) { if (!el.closest('#jeem-strip')) renderChart(el); });
     [].forEach.call(document.querySelectorAll('[data-jeem-value]'), renderValue);
   }
-  window.JEEM_BLOCKS = { render: renderAll, renderChart: renderChart, renderValue: renderValue, spec: specOf, table: tableOf, format: fmtNum };
+  window.JEEM_BLOCKS = { render: renderAll, renderChart: renderChart, renderValue: renderValue, spec: specOf, table: tableOf, format: fmtNum, palette: function (el, cfg) { return palette(el || document.body, cfg || {}); } };
   if (document.getElementById('app-shell')) return; // داخل المنصة نفسها: الواجهة البرمجية فقط (معاينة نافذة «رسمة من بياناتي»)
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderAll); else renderAll();
   document.addEventListener('jeem:data', renderAll);

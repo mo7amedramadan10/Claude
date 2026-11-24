@@ -9535,6 +9535,8 @@ function ffDesignKit() {
   function op(m) {
     if (m.op === 'insert') return insert(m.kind, m.kind === 'shape' ? m.shape : m);
     if (m.op === 'undo') { var f = undo.pop(); if (f) { f(); dirty = Math.max(0, dirty - 1); post({ type: 'd-dirty', count: dirty }); if (sel && !document.contains(sel)) select(null); else post(info()); } return; }
+    if (m.op === 'palette') { var ph = m.bind === 'chart' && sel ? chartHost(sel) : null, hc = ph ? colorsOf(ph) : [];
+      ensureBlocks(function () { post({ type: 'd-palette', colors: hc.length >= 2 ? hc : (window.JEEM_BLOCKS ? window.JEEM_BLOCKS.palette((sel && slideOf(sel)) || visibleSlide() || document.body) : []) }); }); return; }
     if (m.op === 'deselect') return select(null);
     if (!sel) return;
     if (m.op === 'style') { pushStyle(sel); for (var k in m.props) { var v = m.props[k]; if (v === '' || v == null) sel.style.removeProperty(k); else sel.style.setProperty(k, v); } changed(); post(info()); return; }
@@ -10446,7 +10448,9 @@ function ffApplyAccess() {
 // ---- «📊 رسمة من بياناتي»: نافذة بناء رسمة/رقم من بيانات المشروع الفعلية (بلا موديل) ----
 // المصدر: جدول + مقياس + تقسيم (استعلام حتمي يبنيه الخادم) أو عنصر من لوحة محفوظة. المعاينة بنتيجة حقيقية (preview لا تُسجَّل)،
 // والإدراج يسجّل الاستعلام في التصميم ويضع بلوك data-jeem-chart/value في الشريحة الحالية؛ وضع «replace» يغيّر مصدر بلوك محدد.
-const FFDM = { cat: null, catFor: null, mode: 'table', type: 'bar', pick: null, last: null, timer: 0, seq: 0, replace: false, busy: false };
+// ألوان اللوحات في المنصة (رموز --chart-1..4 في tokens.css للوضع الفاتح) — «ألوان اللوحة» تثبّتها في الرسمة فلا تتبع ألوان العرض ولا الهوية
+const FFDM_DASH_PAL = ['#127DBD', '#00BAB3', '#6E62B0', '#28B6E6'];
+const FFDM = { pal: 'page', pagePal: null, cat: null, catFor: null, mode: 'table', type: 'bar', pick: null, last: null, timer: 0, seq: 0, replace: false, busy: false };
 const FFDM_TYPES = [['asis', 'كما في اللوحة'], ['bar', 'أعمدة'], ['line', 'خط'], ['donut', 'حلقة'], ['funnel', 'قمع'], ['treemap', 'شجرية'], ['value', 'رقم واحد']];
 const FFDM_AGG = { sum: 'إجمالي', avg: 'متوسط', count: 'عدد السجلات', count_distinct: 'عدد القيم المميزة', max: 'أعلى', min: 'أدنى' };
 const FFDM_WTYPE_AR = { kpi: 'مؤشر', bar: 'أعمدة', line: 'خط', area: 'مساحة', pie: 'دائري', donut: 'حلقة', funnel: 'قمع', treemap: 'شجرية', scatter: 'مبعثر', table: 'جدول', 'progress-table': 'جدول تقدّم', forecast: 'تنبؤ', 'radial-gauge': 'مقياس', stages: 'مراحل' };
@@ -10496,6 +10500,7 @@ function ffdmRenderTypes() {
   if (FFDM.mode !== 'dash' && FFDM.type === 'asis') FFDM.type = dim ? 'bar' : 'value';
   el('ffdm-types').innerHTML = FFDM_TYPES.filter(([k]) => k !== 'asis' || (FFDM.mode === 'dash' && FFDM.bind !== 'value')).map(([k, l]) => { const ok = k === 'asis' ? true : (FFDM.bind ? (k === 'value') === (FFDM.bind === 'value') : true) && (FFDM.mode === 'dash' || (k === 'value') !== dim); return `<button type="button" role="radio" aria-checked="${FFDM.type === k}" data-t="${k}"${ok ? '' : ' disabled'}>${l}</button>`; }).join('');
   el('ffdm-types').querySelectorAll('[data-t]').forEach(b => b.addEventListener('click', () => { FFDM.type = b.dataset.t; ffdmRenderTypes(); ffdmShowPreview(); }));
+  if (el('ffdm-colors-wrap')) ffdmRenderPal();
 }
 function ffdmAutoTitle() {
   if (FFDM.mode === 'dash') return FFDM.pick?.title || '';
@@ -10513,9 +10518,17 @@ function ffdmCols(r) { // أعمدة التسمية والقيمة من النت
   return { x: r.x || cols.find(c => !num(c)) || cols[0], y: r.y || cols.find(c => num(c)) || cols[cols.length - 1] };
 }
 function ffdmCfg(r, key) {
-  if (FFDM.type === 'asis') { const c = ffdmAsIs(r); delete c.exact; return { ...c, q: key || '_preview' }; }
-  const { x, y } = ffdmCols(r); const title = el('ffdm-title').value.trim() || ffdmAutoTitle();
-  return { q: key || '_preview', type: FFDM.type, x, y, title, fmt: 'compact' };
+  let c;
+  if (FFDM.type === 'asis') { c = ffdmAsIs(r); delete c.exact; c.q = key || '_preview'; }
+  else { const { x, y } = ffdmCols(r); c = { q: key || '_preview', type: FFDM.type, x, y, title: el('ffdm-title').value.trim() || ffdmAutoTitle(), fmt: 'compact' }; }
+  if (FFDM.pal === 'dashboard') { c.colors = FFDM_DASH_PAL.slice(); c.palette = 'dashboard'; }
+  return c;
+}
+// ألوان المعاينة: ألوان اللوحة ثابتة، وألوان العرض كما يحسبها محرّك البلوكات داخل الصفحة (أو رسمة القالب عند الربط)
+function ffdmPreviewPal(cfg) { return cfg.colors || FFDM.pagePal || null; }
+function ffdmRenderPal() {
+  el('ffdm-colors').querySelectorAll('[data-pal]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.pal === FFDM.pal)));
+  el('ffdm-colors-wrap').classList.toggle('hidden', FFDM.bind === 'value' || FFDM.type === 'value');
 }
 // مؤشّر الانتظار داخل منطقة المعاينة (شعار جيم المتحرك فوق الرسمة السابقة باهتةً) بدل سطر حالة صغير
 function ffdmWait(on, title, hint) {
@@ -10547,6 +10560,7 @@ function ffdmShowPreview() {
   if (FFDM.type === 'value' || cfg.type === 'value') { const v = rows[0] ? rows[0][cfg.y] : null; box.innerHTML = `<div class="ffdm-value"><b>${esc(window.JEEM_BLOCKS ? JEEM_BLOCKS.format(v, 'compact') : String(v ?? '—'))}</b><span>${esc(cfg.title)}</span></div>`; return; }
   if (cfg.title) { const t = document.createElement('div'); t.className = 'ffdm-ptitle'; t.textContent = cfg.title; box.appendChild(t); }
   const plot = document.createElement('div'); plot.className = 'ffdm-plot'; box.appendChild(plot);
+  (ffdmPreviewPal(cfg) || []).slice(0, 4).forEach((c, k) => plot.style.setProperty('--chart-' + (k + 1), c));
   try { JEEM_VIZ.mount(plot, JEEM_BLOCKS.spec(cfg, rows), { fmt: v => JEEM_BLOCKS.format(v, 'compact') }); } catch (e) { plot.textContent = 'تعذّر الرسم: ' + e.message; }
 }
 function ffdmSetMode(mode) {
@@ -10580,6 +10594,8 @@ async function ffdmOpen(replace) {
   // replace: تغيير مصدر بلوك قائم؛ 'bind': ربط رسمة/رقم ثابت من القالب (FFDM.bind = chart|value)؛ وإلا إدراج جديد
   FFDM.bind = replace === 'bind' ? (FFD.info?.bind?.kind || null) : null; if (replace === 'bind' && !FFDM.bind) return;
   FFDM.replace = !!replace && !FFDM.bind; FFDM.pick = null; FFDM.last = null; FFDM.typeTouched = false;
+  FFDM.pal = FFDM.replace && FFD.info?.chart?.palette === 'dashboard' ? 'dashboard' : 'page'; FFDM.pagePal = null; ffdmRenderPal();
+  ffdPost({ op: 'palette', bind: FFDM.bind });
   FFDM.type = FFDM.bind ? (FFDM.bind === 'value' ? 'value' : 'bar') : replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
   el('ffdm-heading').textContent = FFDM.bind === 'value' ? '🔗 ربط الرقم ببياناتي' : FFDM.bind ? '🔗 ربط الرسمة ببياناتي' : replace ? '📊 تغيير بيانات الرسمة' : '📊 رسمة من بياناتي';
   el('ffdm-ok').textContent = FFDM.bind ? 'ربط' : replace ? 'تطبيق على الرسمة' : 'إدراج في الشريحة'; el('ffdm-title').value = FFDM.replace ? (FFD.info?.chart?.title || '') : '';
@@ -10601,6 +10617,7 @@ el('ffd-chart').addEventListener('click', () => ffdmOpen(false));
 el('ffdm-tab-table').addEventListener('click', () => ffdmSetMode('table'));
 el('ffdm-tab-dash').addEventListener('click', () => ffdmSetMode('dash'));
 el('ffdm-dash-pick').addEventListener('change', ffdmRenderDashItems);
+el('ffdm-colors').addEventListener('click', e => { const b = e.target.closest('[data-pal]'); if (!b) return; FFDM.pal = b.dataset.pal; ffdmRenderPal(); ffdmShowPreview(); });
 el('ffdm-table').addEventListener('change', () => { ffdmRenderForm(); ffdmBindPreset(); ffdmRenderTypes(); ffdmQueue(); });
 ['ffdm-agg', 'ffdm-measure', 'ffdm-dim', 'ffdm-grain'].forEach(id => el(id).addEventListener('change', () => { if (id === 'ffdm-agg') ffdmRenderForm(); if (id === 'ffdm-dim') el('ffdm-grain-wrap').classList.toggle('hidden', el('ffdm-dim').selectedOptions[0]?.dataset.kind !== 'date'); ffdmRenderTypes(); ffdmQueue(); }));
 el('ffdm-title').addEventListener('input', () => { clearTimeout(FFDM.timer); FFDM.timer = setTimeout(ffdmShowPreview, 250); });
@@ -10684,6 +10701,7 @@ function ffdRenderInsp() {
     h += `<section><h4>البيانات</h4>${ffdRow('النوع', `<select data-c="type" aria-label="نوع الرسمة">${FFDM_TYPES.filter(t => t[0] !== 'value' && t[0] !== 'asis').concat([['table', 'جدول']]).map(([k, l]) => `<option value="${k}"${c.type === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
       ${cols.length ? ffdRow('التسميات', `<select data-c="x" aria-label="عمود التسميات">${cols.map(v => opt(v, c.x)).join('')}</select>`) + ffdRow('القيم', `<select data-c="y" aria-label="عمود القيم">${cols.map(v => opt(v, Array.isArray(c.y) ? c.y[0] : c.y)).join('')}</select>`) : '<div class="ffi-sub">لا توجد نتيجة لهذا الاستعلام بعد — حدّث البيانات أو غيّر المصدر.</div>'}
       ${ffdRow('العنوان', `<input type="text" data-c="title" value="${esc(c.title || '')}" aria-label="عنوان الرسمة" class="ffi-text">`)}
+      ${c.type !== 'table' ? ffdRow('الألوان', `<select data-cpal aria-label="ألوان الرسمة"><option value="page"${c.palette !== 'dashboard' ? ' selected' : ''}>ألوان العرض</option><option value="dashboard"${c.palette === 'dashboard' ? ' selected' : ''}>ألوان اللوحة</option></select>`) : ''}
       ${ffdRow('التنسيق', `<select data-c="fmt" aria-label="تنسيق الأرقام">${[['compact', 'مختصر (3.7M)'], ['number', 'رقم كامل'], ['currency', 'عملة'], ['percent', 'نسبة']].map(([k, l]) => `<option value="${k}"${(c.fmt || 'compact') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
       <button type="button" class="ffi-wide" data-a="data-source">📊 تغيير مصدر البيانات…</button></section>`;
   }
@@ -10735,6 +10753,11 @@ function ffdRenderInsp() {
   box.querySelectorAll('[data-c]').forEach(inp => inp.addEventListener('change', () => {
     const cfg = { ...(i.chart || {}) }; cfg[inp.dataset.c] = inp.value; ffdPost({ op: 'chart-cfg', cfg });
   }));
+  box.querySelector('[data-cpal]')?.addEventListener('change', e => {
+    const cfg = { ...(i.chart || {}) };
+    if (e.target.value === 'dashboard') { cfg.colors = FFDM_DASH_PAL.slice(); cfg.palette = 'dashboard'; } else { delete cfg.colors; delete cfg.palette; }
+    ffdPost({ op: 'chart-cfg', cfg });
+  });
   box.querySelectorAll('[data-v]').forEach(inp => inp.addEventListener('change', () => {
     const v = i.value; const q = v.ref.split('.')[0];
     if (inp.dataset.v === 'col') ffdPost({ op: 'value-cfg', ref: `${q}.${inp.value}` }); else ffdPost({ op: 'value-cfg', [inp.dataset.v]: inp.value.trim() });
@@ -10766,6 +10789,7 @@ el('ffd-ask').addEventListener('submit', e => {
 window.addEventListener('message', e => {
   const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
   if (m.type === 'd-sel') { FFD.info = m.none ? null : m; ffdRenderInsp(); return; }
+  if (m.type === 'd-palette') { FFDM.pagePal = Array.isArray(m.colors) && m.colors.length ? m.colors : null; if (!el('ff-data-modal').classList.contains('hidden')) ffdmShowPreview(); return; }
   if (m.type === 'd-dirty') { FF.edit.designDirty = m.count || 0; ffEditCountText(); return; }
   if (m.type === 'html' && m.purpose === 'ask' && FFD.ask) {
     const a = FFD.ask; FFD.ask = null; ffEditSetMode(false, true);
@@ -10821,7 +10845,8 @@ function ffidWalkColors(doc, fn) {
   }));
   // ألوان رسوم البيانات المربوطة (مأخوذة من القالب) في مواصفة data-jeem-chart
   doc.querySelectorAll('[data-jeem-chart]').forEach(e => {
-    const t = e.getAttribute('data-jeem-chart') || '', n = t.replace(/"(#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))"/g, (m, hex) => { const c = ffidParse(hex); if (!c) return m; const out = fn(c, hex); return out == null ? m : '"' + out + '"'; });
+    const t = e.getAttribute('data-jeem-chart') || ''; if (/"palette"\s*:\s*"dashboard"/.test(t)) return; // ألوان اللوحة اختيار ثابت لا تغيّره الهوية
+    const n = t.replace(/"(#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))"/g, (m, hex) => { const c = ffidParse(hex); if (!c) return m; const out = fn(c, hex); return out == null ? m : '"' + out + '"'; });
     if (n !== t) e.setAttribute('data-jeem-chart', n);
   });
   doc.querySelectorAll('script:not([src])').forEach(sc => {
