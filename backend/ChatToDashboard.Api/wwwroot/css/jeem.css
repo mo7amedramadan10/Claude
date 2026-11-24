@@ -4117,7 +4117,11 @@ body.ff-full-on { overflow: hidden; }
 #ff-data-modal .ffdm-chips button:disabled { opacity: .4; cursor: default; }
 #ff-data-modal .ffdm-side { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 #ff-data-modal .ffdm-label { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); }
-#ff-data-modal .ffdm-preview { min-height: 280px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; background: var(--surface); }
+#ff-data-modal .ffdm-preview { min-height: 280px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; background: var(--surface); position: relative; }
+#ff-data-modal .ffdm-preview.busy > :not(.ffdm-wait) { opacity: .25; transition: opacity .15s; }
+#ff-data-modal .ffdm-wait { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: color-mix(in srgb, var(--surface) 55%, transparent); }
+#ff-data-modal .ffdm-wait .jl b { font-size: 15px; color: var(--ink); }
+#ff-data-modal .ffdm-wait .jl small { color: var(--ink-3); }
 #ff-data-modal .ffdm-ptitle { font-weight: 700; font-size: var(--fs-sm); margin-bottom: 6px; }
 #ff-data-modal .ffdm-plot { flex: 1; min-height: 240px; position: relative; }
 #ff-data-modal .ffdm-value { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }

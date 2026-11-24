@@ -10495,19 +10495,26 @@ function ffdmCfg(r, key) {
   const { x, y } = ffdmCols(r); const title = el('ffdm-title').value.trim() || ffdmAutoTitle();
   return { q: key || '_preview', type: FFDM.type, x, y, title, fmt: 'compact' };
 }
+// مؤشّر الانتظار داخل منطقة المعاينة (شعار جيم المتحرك فوق الرسمة السابقة باهتةً) بدل سطر حالة صغير
+function ffdmWait(on, title, hint) {
+  const box = el('ffdm-preview'); box.querySelector('.ffdm-wait')?.remove(); box.classList.toggle('busy', !!on);
+  if (!on) return;
+  const w = document.createElement('div'); w.className = 'ffdm-wait';
+  w.innerHTML = window.JEEM_LOADER ? JEEM_LOADER.html({ title, hint, size: 48 }) : `<b>${esc(title)}</b>`; box.appendChild(w);
+}
 function ffdmQueue() { clearTimeout(FFDM.timer); el('ffdm-title').placeholder = ffdmAutoTitle() || 'عنوان الرسمة'; FFDM.timer = setTimeout(ffdmPreview, 350); }
 async function ffdmPreview() {
   const body = ffdmRequest(true); el('ffdm-ok').disabled = true;
   if (!body) { el('ffdm-preview').innerHTML = '<div class="ffdm-empty">اختر مصدر البيانات.</div>'; return; }
-  const seq = ++FFDM.seq; el('ffdm-status').textContent = 'يحضر البيانات…';
+  const seq = ++FFDM.seq; el('ffdm-status').textContent = ''; ffdmWait(true, 'يحضر بياناتك…', 'ينفّذ الاستعلام على بياناتك الفعلية');
   try {
     const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/data/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({})); if (seq !== FFDM.seq) return; if (!r.ok) throw new Error(d.error || `(${r.status})`);
-    FFDM.last = d; if (FFDM.mode === 'dash' && d.widgetType && !FFDM.typeTouched) { FFDM.type = ffdmTypeOfWidget(d.widgetType); ffdmRenderTypes(); }
+    ffdmWait(false); FFDM.last = d; if (FFDM.mode === 'dash' && d.widgetType && !FFDM.typeTouched) { FFDM.type = ffdmTypeOfWidget(d.widgetType); ffdmRenderTypes(); }
     const bindBad = FFDM.bind === 'chart' && FFDM.type === 'value';
     el('ffdm-status').textContent = bindBad ? 'الرسمة تحتاج «التقسيم حسب» — اختر عمودًا.' : `${(d.rowCount || 0).toLocaleString('en-US')} صف من بياناتك الفعلية`; el('ffdm-ok').disabled = !(d.rowCount > 0) || bindBad;
     ffdmShowPreview();
-  } catch (e) { if (seq !== FFDM.seq) return; FFDM.last = null; el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">${esc(e.message)}</div>`; el('ffdm-status').textContent = ''; }
+  } catch (e) { if (seq !== FFDM.seq) return; ffdmWait(false); FFDM.last = null; el('ffdm-preview').innerHTML = `<div class="ffdm-empty bad">${esc(e.message)}</div>`; el('ffdm-status').textContent = ''; }
 }
 function ffdmShowPreview() {
   const d = FFDM.last, box = el('ffdm-preview'); if (!d) return; box.innerHTML = '';
@@ -10540,7 +10547,7 @@ async function ffdmOpen(replace) {
   FFDM.type = FFDM.bind ? (FFDM.bind === 'value' ? 'value' : 'bar') : replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
   el('ffdm-heading').textContent = FFDM.bind === 'value' ? '🔗 ربط الرقم ببياناتي' : FFDM.bind ? '🔗 ربط الرسمة ببياناتي' : replace ? '📊 تغيير بيانات الرسمة' : '📊 رسمة من بياناتي';
   el('ffdm-ok').textContent = FFDM.bind ? 'ربط' : replace ? 'تطبيق على الرسمة' : 'إدراج في الشريحة'; el('ffdm-title').value = FFDM.replace ? (FFD.info?.chart?.title || '') : '';
-  el('ffdm-preview').innerHTML = '<div class="ffdm-empty">يحمّل بياناتك…</div>'; el('ffdm-status').textContent = '';
+  el('ffdm-preview').innerHTML = ''; ffdmWait(true, 'يحمّل مصادر بياناتك…'); el('ffdm-status').textContent = '';
   el('ff-data-modal').classList.remove('hidden');
   try {
     if (FFDM.catFor !== FF.design.id) {
