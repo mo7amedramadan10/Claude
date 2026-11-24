@@ -45,3 +45,22 @@ public class FreeformBlockValidatorTests
         Assert.Contains("data-jeem-chart", FreeformBuilder.FragmentRules("الشريحة 1 من 3"));
     }
 }
+
+public class FreeformSourceReferenceTests
+{
+    [Fact]
+    public void Prompt_ExplainsSourcesAndChartReplacement()
+    {
+        var withData = FreeformBuilder.BuildSystemPrompt(null, true, "## الجدول proj_1.opp (المصدر: Opportunities)", "slides", null, "ar");
+        Assert.Contains("ملف المصدر", withData); Assert.Contains("لا تطلب منه إرسال الملف", withData); Assert.Contains("data-jeem-replaced", withData);
+        var noData = FreeformBuilder.BuildSystemPrompt(null, false, "", "slides", null, "ar");
+        Assert.Contains("لا توجد مصادر بيانات متاحة", noData); Assert.DoesNotContain("data-jeem-replaced", noData);
+    }
+
+    [Fact]
+    public void ChartElements_ListsTemplateChartsOnly()
+    {
+        const string html = """<section class="slide"><svg class="deco" viewBox="0 0 9 9"></svg><svg class="chart" id="c12" viewBox="0 0 640 310"></svg><canvas id="cv"></canvas><svg class="chart" id="old" data-jeem-replaced></svg><div class="chart" data-jeem-chart='{"q":"q1"}'></div><svg viewBox="0 0 24 24"></svg><script>var x='<svg class="chart" id="no">';</script></section>""";
+        Assert.Equal(new[] { "svg#c12.chart", "canvas#cv" }, FreeformScope.ChartElements(html));
+    }
+}

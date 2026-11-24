@@ -121,6 +121,28 @@ public static class FreeformScope
         return (s, null);
     }
 
+    private static readonly Regex ChartTag = new(@"<(svg|canvas|div)\b([^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex ChartCls = new(@"(^|[\s_-])(chart|graph|plot|donut|pie|gauge)([\s_-]|$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>وصف رسوم القالب في جزء (svg/canvas بأصناف رسم، أو canvas): «svg#c12.chart» — ليعرف الموديل ما المقصود بـ«الرسومات الموجودة».
+    /// يُستبعد ما سبق استبداله (data-jeem-replaced) وبلوكات البيانات والزخارف (deco).</summary>
+    public static List<string> ChartElements(string html)
+    {
+        var list = new List<string>();
+        foreach (Match m in ChartTag.Matches(Mask(html)))
+        {
+            var attrs = m.Groups[2].Value; var tag = m.Groups[1].Value.ToLowerInvariant();
+            if (attrs.Contains("data-jeem-replaced") || attrs.Contains("data-jeem-chart")) continue;
+            var cls = Regex.Match(attrs, @"\bclass\s*=\s*[""']([^""']*)[""']").Groups[1].Value;
+            if (Regex.IsMatch(cls, @"(^|\s)deco(\s|$)")) continue;
+            if (tag != "canvas" && !ChartCls.IsMatch(cls)) continue;
+            var id = Regex.Match(attrs, @"\bid\s*=\s*[""']([^""']*)[""']").Groups[1].Value;
+            list.Add(tag + (id.Length > 0 ? "#" + id : "") + string.Concat(cls.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(c => "." + c)));
+            if (list.Count >= 12) break;
+        }
+        return list;
+    }
+
     public static string Splice(string html, Range r, string fragment) => html[..r.Start] + fragment + html[r.End..];
 
     /// <summary>لا يُخزَّن الشعار داخل الصفحة: `data-jeem-logo` يملؤه الخادم عند العرض والنشر.</summary>

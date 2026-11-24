@@ -122,6 +122,9 @@ public class FreeformBuilder
         var css = FreeformScope.PageCss(fullHtml);
         if (css.Length > 0) baseMsg.AppendLine("# أنماط الصفحة (للقراءة فقط — لا تعدّلها ولا تكرّرها)").AppendLine(css).AppendLine();
         if (hasData) baseMsg.Append(FreeformBlockValidator.Describe(FreeformDataBlock.Parse(fullHtml)));
+        var charts = FreeformScope.ChartElements(fragment);
+        if (charts.Count > 0) baseMsg.AppendLine("# الرسوم الموجودة في هذا الجزء (يرسمها سكربت القالب — للاستبدال اتبع «استبدال رسمة موجودة في القالب»)")
+            .AppendLine(string.Join("\n", charts.Select(c => "- " + c))).AppendLine();
         baseMsg.AppendLine($"# الجزء المطلوب تعديله ({scopeLabel})").AppendLine(fragment.Length > 120_000 ? fragment[..120_000] : fragment).AppendLine();
         baseMsg.Append(FreeformAttachmentText.Build(attachments));
         baseMsg.AppendLine("# الطلب").AppendLine(message.Trim());
@@ -263,6 +266,7 @@ public class FreeformBuilder
         if (hasData)
         {
             sb.AppendLine().AppendLine("# بيانات المشروع المتاحة عبر query_data").AppendLine(profileText);
+            sb.AppendLine(SourcesNote);
             sb.AppendLine("""
                 # عقد البيانات الحيّة (إلزامي عند استخدام query_data)
                 - كل نتيجة من query_data تُحفظ تلقائيًا في الصفحة تحت مفتاح يُذكر في ذيل النتيجة (مثل JEEM_DATA.q1)، ويعرّفه المتصفح
@@ -283,9 +287,33 @@ public class FreeformBuilder
                   (اختياري: data-agg="sum|avg|min|max|count" على كل الصفوف، أو data-row="0" لصف بعينه).
                 - البلوكات تتحدّث وحدها مع تحديث البيانات وفي الصفحة المنشورة، فلا تحتاج render() خاصة بها. اجعل للبلوك ارتفاعًا مناسبًا داخل التصميم.
                 """);
+            sb.AppendLine(ReplaceChartRule);
         }
+        else sb.AppendLine().AppendLine(NoDataNote);
         return sb.ToString();
     }
+
+    /// <summary>«المصدر» في كلام المستخدم = الجداول المختارة للتصميم (لا مرفق في الرسالة) — بدونها طلب الموديل من المستخدم «إرسال الملف».</summary>
+    internal const string SourcesNote = """
+        # مصادر البيانات المختارة
+        - الجداول أعلاه هي مصادر البيانات التي اختارها المستخدم لهذا التصميم (من «🗄️ المصادر»). حين يقول «المصدر» أو «ملف المصدر» أو «الملف المرفق»
+          أو «البيانات» أو «الإكسل» فهو يقصدها، وهي متاحة لك الآن عبر query_data. لا تطلب منه إرسال الملف أو لصق محتواه — استعلم منها مباشرة.
+        """;
+
+    internal const string NoDataNote = """
+        # لا توجد مصادر بيانات متاحة لهذا التصميم
+        - إن طلب المستخدم رسومًا أو أرقامًا من «المصدر» أو «الملف»، فلا تخترعها: أخبره أن المصادر المختارة لهذا التصميم فارغة أو غير متاحة لحسابه،
+          واقترح اختيارها من «🗄️ المصادر» أسفل المحادثة أو رفع الملف من «الملفات»، ولا تعدّل الصفحة.
+        """;
+
+    /// <summary>استبدال رسمة قالب يرسمها سكربت الصفحة: إخفاء الأصل لا حذفه (السكربت يبحث عنه بالمعرّف) وبلوك بالأصناف نفسها بعده.</summary>
+    internal const string ReplaceChartRule = """
+        # استبدال رسمة موجودة في القالب ببيانات المستخدم
+        - رسوم القوالب غالبًا <svg>/<canvas> فارغة في المصدر يرسمها سكربت الصفحة عند التحميل (من كتل مثل chart-data). لا تحذف عنصرها ولا تعدّل السكربت
+          ولا كتلة chart-data. أضف إلى العنصر الأصلي السمة data-jeem-replaced (تخفيه المنصة)، وضع بعده مباشرة بلوك
+          <div class="<أصناف الأصل نفسها>" data-jeem-chart='{…}'></div> ليأخذ موضعه ومقاسه من أنماط القالب، بمواصفة من نتيجة query_data.
+        - أرقام البطاقات المجاورة للرسمة (مؤشرات) تُربط بـ data-jeem-value على العنصر نفسه بدل كتابة الرقم.
+        """;
 
     private static string Shorten(string s, int n) => s.Length > n ? s[..n] + "…" : s;
 }

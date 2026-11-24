@@ -7,7 +7,7 @@
 (function () {
   'use strict';
   if (window.__jeemBlocks) return; window.__jeemBlocks = true;
-  var CSS = '[data-jeem-chart]{display:flex;flex-direction:column;min-height:180px;min-width:0}'
+  var CSS = '[data-jeem-replaced]{display:none!important}[data-jeem-chart]{display:flex;flex-direction:column;min-height:180px;min-width:0}'
     + '[data-jeem-chart]>.jb-title{font-weight:700;font-size:.95em;margin:0 0 6px}'
     + '[data-jeem-chart]>.jb-plot{flex:1 1 auto;min-height:160px;position:relative}'
     + '[data-jeem-chart]>.jb-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;border:1.5px dashed currentColor;border-radius:10px;opacity:.55;font-size:.85em}'
