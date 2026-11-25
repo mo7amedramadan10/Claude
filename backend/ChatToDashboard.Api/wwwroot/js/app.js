@@ -10937,6 +10937,7 @@ function ffslExtract(html, i, scope) {
         const sec = src.cloneNode(true);
         if (!scope) return done(resolve, { html: sec.outerHTML, css: '', fonts: [] });
         const tag = Date.now().toString(36).slice(-5), P = 'x' + tag + '-', JX = 'jx' + tag;
+        ffslCarryDefs(doc, sec);
         ffslRename(sec, P); sec.classList.add(JX);
         const fonts = [...doc.querySelectorAll('link[rel~="stylesheet"][href]')].map(l => l.href).filter(h => /fonts\.googleapis/.test(h));
         let css = '';
@@ -10947,6 +10948,24 @@ function ffslExtract(html, i, scope) {
     }, 700));
     f.srcdoc = html; document.body.appendChild(f);
   });
+}
+// تعريفات SVG المشتركة (تدرّجات، أنماط، قصّ، رموز…) التي تضعها بعض النماذج خارج الشرائح وتشير إليها الشرائح بـ url(#…) أو href="#…":
+// تُنسخ داخل الشريحة المستوردة (قبل إعادة التسمية فتأخذ البادئة نفسها) وإلا ظهرت الأشكال بلا تعبئتها (قمع بلا تدرّجاته مثلًا).
+function ffslCarryDefs(doc, sec) {
+  const refsIn = txt => [...String(txt).matchAll(/url\(\s*['"]?#([\w-]+)|href\s*=\s*["']#([\w-]+)/g)].map(m => m[1] || m[2]);
+  let css = ''; for (const sh of doc.styleSheets) { try { for (const r of sh.cssRules) css += r.cssText + '\n'; } catch { /* ورقة من أصل آخر */ } }
+  const SVGNS = 'http://www.w3.org/2000/svg', seen = new Set(), out = [];
+  const queue = [...refsIn(sec.outerHTML), ...refsIn(css)];
+  while (queue.length) {
+    const id = queue.shift(); if (seen.has(id)) continue; seen.add(id);
+    if (sec.querySelector('#' + CSS.escape(id))) continue;
+    const e = doc.getElementById(id); if (!e || e.namespaceURI !== SVGNS || e.tagName.toLowerCase() === 'svg' || sec.contains(e)) continue;
+    const c = e.cloneNode(true); out.push(c); queue.push(...refsIn(c.outerHTML));
+  }
+  if (!out.length) return;
+  const svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('style', 'position:absolute;width:0;height:0;overflow:hidden'); svg.setAttribute('data-jeem-defs', '');
+  const defs = document.createElementNS(SVGNS, 'defs'); out.forEach(c => defs.appendChild(c)); svg.appendChild(defs); sec.insertBefore(svg, sec.firstChild);
 }
 function ffslRename(root, P) {
   const refAttrs = ['for', 'aria-labelledby', 'aria-describedby', 'aria-controls'];
