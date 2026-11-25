@@ -89,7 +89,29 @@
    ونرد بنفس المعرّف. الأنواع: get / set / list / viewer / data (البيانات الحيّة). */
 function installBridge(apiBase) {
   const frame = document.getElementById('frame');
+  // معرّف زائر مجهول ثابت في هذا المتصفح: يرى به الزائر سجلاته التي أدخلها (سياسة إدخال عامة) ويعدّلها، ولا يرى سجلات غيره.
+  let anon = null;
+  try { anon = localStorage.getItem('jeem.anon'); if (!/^[0-9a-f]{32}$/.test(anon || '')) { anon = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem('jeem.anon', anon); } } catch { anon = null; }
+  // سجلات الإدخال (jeem.records): نفس المسارات تحت رابط العرض.
+  async function records(type, p) {
+    const col = p && p.collection;
+    if (typeof col !== 'string' || !col) throw Object.assign(new Error('اسم المجموعة مطلوب'), { code: 'bad_collection', status: 400 });
+    const base = `${apiBase}/records/${encodeURIComponent(col)}`;
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, anon ? { 'X-Jeem-Anon': anon } : {});
+    let r;
+    if (type === 'rec-list') {
+      const q = new URLSearchParams();
+      if (p.limit) q.set('limit', p.limit); if (p.order) q.set('order', p.order); if (p.after) q.set('after', p.after); if (p.mine) q.set('mine', 'true');
+      r = await fetch(base + (q.toString() ? '?' + q : ''), { headers, cache: 'no-store' });
+    } else if (type === 'rec-add') r = await fetch(base, { method: 'POST', headers, body: JSON.stringify({ data: p.data }) });
+    else if (type === 'rec-update') r = await fetch(`${base}/${encodeURIComponent(p.id)}`, { method: 'PUT', headers, body: JSON.stringify({ data: p.data, replace: !!p.replace }) });
+    else if (type === 'rec-remove') r = await fetch(`${base}/${encodeURIComponent(p.id)}`, { method: 'DELETE', headers });
+    else throw Object.assign(new Error('نوع غير معروف'), { code: 'bad_type', status: 400 });
+    if (!r.ok) throw await err(r);
+    return r.status === 204 ? { ok: true } : r.json();
+  }
   async function handle(type, payload) {
+    if (typeof type === 'string' && type.startsWith('rec-')) return records(type, payload);
     const key = payload && payload.key;
     const okKey = typeof key === 'string' && /^[\w.-]{1,100}$/.test(key);
     if (type === 'viewer') return (await fetch(`${apiBase}/access`)).json();

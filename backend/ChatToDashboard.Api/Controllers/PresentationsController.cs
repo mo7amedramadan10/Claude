@@ -430,7 +430,14 @@ public class PresentationsController : ControllerBase
         if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         var canEdit = CanWriteData(user, p);
-        return Ok(new { presentationId = p.Id, signedIn = user is not null, name = user?.DisplayName, canEdit, p.EditPolicy });
+        // صفحة من «تصميم حر»: سياسة سجلات الإدخال (jeem.records) ومن يستطيع الإضافة الآن.
+        object? records = null;
+        if (await RecordsDesignAsync(p, ct) is { } d)
+        {
+            var v = await RecordsViewerAsync(user, d, ct);
+            records = new { policy = FreeformRecordPolicy.Normalize(d.RecordsPolicy), canAdd = FreeformRecordAccess.CanAdd(v, d) is null, seesAll = FreeformRecordAccess.SeesAll(v, d) };
+        }
+        return Ok(new { presentationId = p.Id, signedIn = user is not null, name = user?.DisplayName, canEdit, p.EditPolicy, records });
     }
 
     [HttpGet("{id}/data")]
@@ -504,6 +511,75 @@ public class PresentationsController : ControllerBase
         await _data.DeleteAsync(id, key, ct);
         return NoContent();
     }
+
+    // ---------- سجلات الإدخال (jeem.records) في الرابط المنشور لصفحة من «تصميم حر» ----------
+    // السجلات مخزَّنة بمعرّف التصميم لا العرض، فالمحرر والرابط يتشاركانها. السياسة من التصميم: members (افتراضيًا) أو public.
+
+    private async Task<FreeformDesign?> RecordsDesignAsync(Presentation p, CancellationToken ct) =>
+        p.SourceKind == PresentationLiveDataService.KindFreeform && !string.IsNullOrEmpty(p.SourceId)
+            ? await HttpContext.RequestServices.GetRequiredService<FreeformStore>().GetByIdAsync(p.SourceId!, ct) : null;
+
+    private async Task<FreeformRecordAccess.Viewer> RecordsViewerAsync(AppUser? user, FreeformDesign d, CancellationToken ct)
+    {
+        var anon = FreeformRecordAccess.NormalizeAnon(Request.Headers["X-Jeem-Anon"].ToString());
+        if (user is null) return new FreeformRecordAccess.Viewer(null, null, anon, false, false);
+        var sameOrg = string.Equals(user.OrganizationId, d.OrganizationId, StringComparison.Ordinal);
+        var manager = sameOrg && (user.Id == d.CreatedByUserId || user.Role == UserRoles.Admin
+            || await HttpContext.RequestServices.GetRequiredService<FreeformStore>().ShareRoleAsync(d.Id, user.Id, ct) == FreeformAccess.Edit);
+        return new FreeformRecordAccess.Viewer(user.Id, user.OrganizationId, null, manager, false);
+    }
+
+    private async Task<IActionResult> RecordsCoreAsync(Func<Task<Presentation?>> find, Func<FreeformRecordsService, FreeformDesign, FreeformRecordAccess.Viewer, string?, Task<IActionResult>> run, CancellationToken ct)
+    {
+        var p = await find();
+        if (p is null || !p.IsActive) return NotFound(new { error = "الرابط غير موجود أو غير نشط." });
+        var d = await RecordsDesignAsync(p, ct);
+        if (d is null) return BadRequest(new { error = "سجلات الإدخال متاحة لصفحات «تصميم حر» المنشورة فقط.", code = "no_records" });
+        var user = await _permissions.GetCurrentUserAsync(User, ct);
+        var v = await RecordsViewerAsync(user, d, ct);
+        Response.Headers["Cache-Control"] = "no-store";
+        return await run(HttpContext.RequestServices.GetRequiredService<FreeformRecordsService>(), d, v, user is null ? null : (string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName));
+    }
+
+    [HttpGet("{id}/records/{collection}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordList(string id, string collection, [FromQuery] int? limit, [FromQuery] string? order, [FromQuery] long? after, [FromQuery] bool mine, CancellationToken ct) =>
+        RecordsCoreAsync(() => _store.GetAsync(id, ct), (s, d, v, _) => s.ListAsync(d, v, collection, limit, order, after, mine, ct), ct);
+
+    [HttpGet("by/{org}/{slug}/records/{collection}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordListBySlug(string org, string slug, string collection, [FromQuery] int? limit, [FromQuery] string? order, [FromQuery] long? after, [FromQuery] bool mine, CancellationToken ct) =>
+        RecordsCoreAsync(() => FindBySlugAsync(org, slug, ct), (s, d, v, _) => s.ListAsync(d, v, collection, limit, order, after, mine, ct), ct);
+
+    [HttpPost("{id}/records/{collection}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordAdd(string id, string collection, [FromBody] Controllers.FreeformRecordWriteRequest request, CancellationToken ct) =>
+        RecordsCoreAsync(() => _store.GetAsync(id, ct), (s, d, v, name) => s.AddAsync(d, v, collection, request.Data, name, HttpContext.Connection.RemoteIpAddress?.ToString(), ct), ct);
+
+    [HttpPost("by/{org}/{slug}/records/{collection}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordAddBySlug(string org, string slug, string collection, [FromBody] Controllers.FreeformRecordWriteRequest request, CancellationToken ct) =>
+        RecordsCoreAsync(() => FindBySlugAsync(org, slug, ct), (s, d, v, name) => s.AddAsync(d, v, collection, request.Data, name, HttpContext.Connection.RemoteIpAddress?.ToString(), ct), ct);
+
+    [HttpPut("{id}/records/{collection}/{rowId:long}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordUpdate(string id, string collection, long rowId, [FromBody] Controllers.FreeformRecordWriteRequest request, CancellationToken ct) =>
+        RecordsCoreAsync(() => _store.GetAsync(id, ct), (s, d, v, name) => s.UpdateAsync(d, v, collection, rowId, request.Data, request.Replace, name, ct), ct);
+
+    [HttpPut("by/{org}/{slug}/records/{collection}/{rowId:long}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordUpdateBySlug(string org, string slug, string collection, long rowId, [FromBody] Controllers.FreeformRecordWriteRequest request, CancellationToken ct) =>
+        RecordsCoreAsync(() => FindBySlugAsync(org, slug, ct), (s, d, v, name) => s.UpdateAsync(d, v, collection, rowId, request.Data, request.Replace, name, ct), ct);
+
+    [HttpDelete("{id}/records/{collection}/{rowId:long}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordDelete(string id, string collection, long rowId, CancellationToken ct) =>
+        RecordsCoreAsync(() => _store.GetAsync(id, ct), (s, d, v, _) => s.DeleteAsync(d, v, collection, rowId, ct), ct);
+
+    [HttpDelete("by/{org}/{slug}/records/{collection}/{rowId:long}")]
+    [AllowAnonymous]
+    public Task<IActionResult> RecordDeleteBySlug(string org, string slug, string collection, long rowId, CancellationToken ct) =>
+        RecordsCoreAsync(() => FindBySlugAsync(org, slug, ct), (s, d, v, _) => s.DeleteAsync(d, v, collection, rowId, ct), ct);
 
     /// <summary>سياسة الكتابة: anyone = أي من يفتح الرابط (حتى بلا دخول)؛ members = مسجَّل من نفس المنظمة؛ owner = صاحبه/المسؤول.</summary>
     internal static bool CanWriteData(AppUser? user, Presentation p) => p.EditPolicy switch

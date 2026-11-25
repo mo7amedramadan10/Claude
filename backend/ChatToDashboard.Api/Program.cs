@@ -93,6 +93,8 @@ builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBrandTemplateStore>(
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckBuilder>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Decks.DeckImporter>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformRecordStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformRecordsService>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformBuilder>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformTemplateStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Freeform.FreeformAssetStore>();

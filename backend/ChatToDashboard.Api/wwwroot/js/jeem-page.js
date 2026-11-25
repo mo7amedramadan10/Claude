@@ -8,7 +8,12 @@
    البيانات الحيّة (صفحة منشورة من «تصميم حر» أو «منشئ العروض» ببيانات): jeem.data.load() تجلب آخر نتائج الاستعلامات
    من المنصة وتحدّث window.JEEM_DATA وتبث حدث document «jeem:data» {detail:{changed, refreshedAt, data, spec}}؛
    jeem.data.get(key) → {sql, rows, rowCount}؛ jeem.data.watch(fn, ms) استطلاع دوري (افتراضيًا كل 60 ثانية) يستدعي fn عند التغيّر.
-   الاستطلاع يبدأ تلقائيًا داخل المنصة لصفحة فيها JEEM_DATA أو عرض (deck-spec). الصفحة تعيد الرسم في مستمع «jeem:data». */
+   الاستطلاع يبدأ تلقائيًا داخل المنصة لصفحة فيها JEEM_DATA أو عرض (deck-spec). الصفحة تعيد الرسم في مستمع «jeem:data».
+   سجلات الإدخال (نماذج، طلبات، استبيانات): const r = jeem.records('الطلبات'); await r.add({الاسم:'…', العدد:3}) → السجل
+   {id, data, createdAt, createdBy, mine, canChange}؛ r.list({limit, order:'desc', after, mine}) → {items, total, hasMore, next}؛
+   r.update(id, {حقل: قيمة}) يدمج الحقول (null يحذف حقلًا)؛ r.remove(id)؛ r.watch(fn, ms) يستدعي fn(items) عند التغيّر.
+   كل إضافة صف مستقل فلا تعارض بين المُدخلين، والسجلات تُحفظ في المنصة (المحرر والرابط المنشور يتشاركانها)؛
+   من يُدخل في الرابط المنشور يحدده صاحب التصميم (أعضاء المنظمة افتراضيًا، أو أي شخص). */
 (function () {
   'use strict';
   if (window.jeem && window.jeem.__page) return;
@@ -52,10 +57,41 @@
     if (type === 'viewer') return call('/access');
     if (type === 'data') return call('/live-data', { cache: 'no-store' });
     if (type === 'list') return call('/data');
+    if (type.startsWith('rec-')) return recordsVia((path, init) => call(path, init), type, payload);
     if (!okKey) throw Object.assign(new Error('مفتاح غير صالح'), { code: 'bad_key', status: 400 });
     if (type === 'get') return call('/data/' + encodeURIComponent(key), { cache: 'no-store' });
     if (type === 'set') return call('/data/' + encodeURIComponent(key), { method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value: payload.value === undefined ? null : payload.value, version: typeof payload.version === 'number' ? payload.version : null }) });
+    throw Object.assign(new Error('نوع غير معروف: ' + type), { code: 'bad_type', status: 400 });
+  }
+  // سجلات الإدخال على واجهة المنصة: نفس المسارات تحت /api/presentations/{id} و/api/freeform/{id}.
+  function recordsVia(call, type, p) {
+    const col = p && p.collection;
+    if (typeof col !== 'string' || !col) throw Object.assign(new Error('اسم المجموعة مطلوب'), { code: 'bad_collection', status: 400 });
+    const base = '/records/' + encodeURIComponent(col);
+    const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (type === 'rec-list') {
+      const q = new URLSearchParams();
+      if (p.limit) q.set('limit', p.limit); if (p.order) q.set('order', p.order); if (p.after) q.set('after', p.after); if (p.mine) q.set('mine', 'true');
+      return call(base + (q.toString() ? '?' + q : ''), { cache: 'no-store' });
+    }
+    if (type === 'rec-add') return call(base, json('POST', { data: p.data }));
+    if (type === 'rec-update') return call(base + '/' + encodeURIComponent(p.id), json('PUT', { data: p.data, replace: !!p.replace }));
+    if (type === 'rec-remove') return call(base + '/' + encodeURIComponent(p.id), { method: 'DELETE' }).catch(e => { if (e instanceof SyntaxError) return { ok: true }; throw e; });
+    throw Object.assign(new Error('نوع غير معروف: ' + type), { code: 'bad_type', status: 400 });
+  }
+  // سجلات خارج المنصة تمامًا (ملف محلي أثناء التأليف): مصفوفة في localStorage بالعقد نفسه.
+  function localRecords(ns, type, p) {
+    const k = ns + 'records:' + p.collection;
+    const all = JSON.parse(localStorage.getItem(k) || '[]');
+    const save = () => localStorage.setItem(k, JSON.stringify(all));
+    const now = new Date().toISOString();
+    if (type === 'rec-list') { let items = all.slice(); if (p.order === 'desc') items.reverse(); if (p.after) items = items.filter(r => p.order === 'desc' ? r.id < p.after : r.id > p.after); const take = Math.min(p.limit || 200, 1000); return { items: items.slice(0, take), total: all.length, hasMore: items.length > take, onlyOwn: false, local: true }; }
+    if (type === 'rec-add') { const r = { id: (all.length ? all[all.length - 1].id : 0) + 1, data: p.data || {}, createdAt: now, updatedAt: now, createdBy: null, mine: true, canChange: true }; all.push(r); save(); return r; }
+    const r = all.find(x => String(x.id) === String(p.id));
+    if (!r) throw Object.assign(new Error('السجل غير موجود.'), { code: 'not_found', status: 404 });
+    if (type === 'rec-update') { r.data = p.replace ? (p.data || {}) : Object.assign({}, r.data, p.data); for (const f in r.data) if (r.data[f] === null) delete r.data[f]; r.updatedAt = now; save(); return r; }
+    if (type === 'rec-remove') { all.splice(all.indexOf(r), 1); save(); return { ok: true }; }
     throw Object.assign(new Error('نوع غير معروف: ' + type), { code: 'bad_type', status: 400 });
   }
   // بديل محلي خارج المنصة: نفس العقد على localStorage (مفيد أثناء التأليف).
@@ -68,6 +104,8 @@
     // فتتشارك النافذة ومساحة العمل والرابط العام البيانات نفسها.
     const presentationId = designMeta && designMeta.getAttribute('data-presentation');
     // أصل المنصة من مصدر هذا السكربت (داخل blob: لا تُحل الروابط النسبية حتى في fetch).
+    // السجلات مخزَّنة بمعرّف التصميم: النافذة تنادي واجهة التصميم مباشرة (منشورًا أو لا) فترى ما يراه المحرر.
+    if (designId && type.startsWith('rec-')) return viaApi(platformOrigin() + '/api/freeform/' + encodeURIComponent(designId), type, payload);
     if (presentationId) return viaApi(platformOrigin() + '/api/presentations/' + encodeURIComponent(presentationId), type, payload);
     const ns = designId ? 'jeem.ff.' + designId + ':' : 'jeem.store.' + (location.pathname || 'page') + ':';
     try {
@@ -76,6 +114,7 @@
       if (type === 'list') return Promise.resolve({ keys: Object.keys(localStorage).filter(k => k.startsWith(ns)).map(k => ({ key: k.slice(ns.length) })) });
       if (type === 'viewer') return Promise.resolve({ signedIn: false, canEdit: true, name: null, editPolicy: 'anyone', local: true });
       if (type === 'data') return Promise.resolve({ live: false, local: true });
+      if (type.startsWith('rec-')) return Promise.resolve(localRecords(ns, type, payload));
     } catch (e) { return Promise.reject(e); }
     return Promise.reject(new Error('نوع غير معروف: ' + type));
   }
@@ -125,7 +164,27 @@
     },
     autoInterval: 60000,
   };
-  window.jeem = Object.assign(window.jeem || {}, { __page: true, inViewer, store, viewer: () => call('viewer', {}), onChange, data });
+  // ---- سجلات الإدخال ----
+  function records(name) {
+    if (typeof name !== 'string' || !/^[\p{L}\p{N}_.-]{1,60}$/u.test(name)) throw Object.assign(new Error('اسم مجموعة غير صالح: حروف وأرقام وشرطات حتى 60 حرفًا.'), { code: 'bad_collection' });
+    const req = (type, extra) => call(type, Object.assign({ collection: name }, extra));
+    const api = {
+      name,
+      add(fields) { if (!fields || typeof fields !== 'object' || Array.isArray(fields)) return Promise.reject(Object.assign(new Error('السجل يجب أن يكون كائنًا بحقول.'), { code: 'bad_record' })); return req('rec-add', { data: fields }); },
+      list(opts) { return req('rec-list', Object.assign({}, opts || {})); },
+      async all(opts) { const out = []; let after = null; for (let i = 0; i < 50; i++) { const r = await req('rec-list', Object.assign({ limit: 1000 }, opts || {}, after ? { after } : {})); out.push(...(r.items || [])); if (!r.hasMore) break; after = r.next; } return out; },
+      update(id, fields, opts) { return req('rec-update', { id, data: fields || {}, replace: !!(opts && opts.replace) }); },
+      remove(id) { return req('rec-remove', { id }); },
+      watch(fn, intervalMs) {
+        let last = null;
+        const tick = async () => { try { const r = await req('rec-list', { limit: 1000 }); const sig = JSON.stringify((r.items || []).map(x => [x.id, x.updatedAt])) + r.total; if (sig !== last) { const first = last === null; last = sig; if (!first && fn) fn(r.items || [], r); } } catch (e) { /* تجاهل مؤقت */ } };
+        tick(); const timer = setInterval(tick, Math.max(10000, intervalMs || 20000));
+        return () => clearInterval(timer);
+      },
+    };
+    return api;
+  }
+  window.jeem = Object.assign(window.jeem || {}, { __page: true, inViewer, store, viewer: () => call('viewer', {}), onChange, data, records });
   // داخل المنصة: صفحة فيها بيانات (JEEM_DATA أو deck-spec) تستطلع التغيّر تلقائيًا ما لم تعطّله بـ jeem.data.autoInterval = 0.
   if (inViewer) setTimeout(() => { if (data.autoInterval > 0 && (window.JEEM_DATA || document.getElementById('deck-spec'))) data.watch(null, data.autoInterval); }, 0);
   document.dispatchEvent(new CustomEvent('jeem:ready', { detail: { inViewer } }));

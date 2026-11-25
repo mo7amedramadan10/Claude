@@ -47,3 +47,25 @@ jeem.data.autoInterval = 0;          // قبل تحميل jeem-page.js: يعطّ
 > اجعل قسم «المهام» قابلًا للتعديل، واحفظ بياناته بـ `jeem.store.set('tasks', data)` واقرأها عند التحميل بـ
 > `jeem.store.get('tasks')`، مع تضمين `<script src="/js/jeem-page.js"></script>` قبل كود الصفحة. اعرض زر حفظ
 > ورسالة عند التعارض (`e.code === 'conflict'`)، وعطّل التعديل إن كانت `(await jeem.viewer()).canEdit` خاطئة.
+
+## سجلات الإدخال: `jeem.records` (لصفحات «تصميم حر»)
+
+حين تجمع الصفحة إدخالات من أشخاص كثيرين (طلبات، استبيان، حضور)، استخدم السجلات لا `jeem.store`: كل إدخال صف مستقل
+فلا يتعارض المُدخلون، والبيانات تُحفظ في المنصة من المعاينة ومن الرابط المنشور معًا.
+
+```js
+const requests = jeem.records('الطلبات');            // اسم المجموعة: حروف وأرقام وشرطات حتى 60 حرفًا
+const rec = await requests.add({ 'الاسم': 'سارة', 'المبنى': 'أ', 'الأولوية': 'عالية' });
+// rec = { id, data, createdAt, createdBy, mine, canChange }
+const page = await requests.list({ order: 'desc', limit: 200 });   // { items, total, hasMore, next, onlyOwn }
+const everything = await requests.all();                           // كل الصفحات
+await requests.update(rec.id, { 'الحالة': 'مغلق' });               // دمج حقول (null يحذف الحقل)
+await requests.remove(rec.id);
+const stop = requests.watch(items => render(items));               // استطلاع كل 20 ثانية
+```
+
+- **من يُدخل في الرابط المنشور**: يحدده صاحب التصميم من «📝 السجلات»: أعضاء المنظمة بعد تسجيل الدخول (الافتراضي) أو أي شخص
+  معه الرابط. الأخطاء بـ `code`: `sign_in_required` (401)، `forbidden` (403)، `rate_limited`/429 (حد الإدخالات)، `not_found`.
+- **من يرى ماذا**: أعضاء المنظمة يرون كل السجلات؛ الزائر في الوضع العام يرى ما أدخله هو فقط (`onlyOwn: true`).
+- **الحدود**: السجل كائن بحقول بسيطة (≤100 حقل، ≤32KB)، ≤20 مجموعة و≤50,000 سجل لكل تصميم. استخدم أسماء حقول ثابتة وواضحة:
+  ستصير أعمدة عندما تُستخدم السجلات مصدرًا للوحات المتابعة.

@@ -9992,6 +9992,8 @@ function ffLocalStoreKey(key) { return `jeem.ff.${FF.design ? FF.design.id : 'ne
 async function ffBridgeHandle(type, payload, readOnly) {
   const key = payload && payload.key; const okKey = typeof key === 'string' && /^[\w.-]{1,100}$/.test(key);
   const bad = (message, code, status, version) => Object.assign(new Error(message), { code, status, version });
+  // سجلات الإدخال (jeem.records) مخزَّنة بمعرّف التصميم في المنصة دائمًا (منشورًا أو لا) — المعاينة والرابط المنشور يتشاركانها.
+  if (typeof type === 'string' && type.startsWith('rec-')) return ffRecordsCall(type, payload || {}, readOnly, bad);
   const pid = !readOnly && FF.design && FF.design.presentationId;
   if (pid) {
     const base = `/api/presentations/${encodeURIComponent(pid)}`;
@@ -10020,6 +10022,22 @@ async function ffBridgeHandle(type, payload, readOnly) {
     return { version: next.version, updatedAt: next.updatedAt };
   }
   throw bad('نوع غير معروف', 'bad_type', 400);
+}
+async function ffRecordsCall(type, p, readOnly, bad) {
+  if (!FF.design) throw bad('احفظ التصميم أولًا لتُحفظ سجلاته.', 'not_found', 404);
+  if (readOnly && type !== 'rec-list') throw bad('عرض فقط', 'forbidden', 403);
+  const col = p.collection; if (typeof col !== 'string' || !col) throw bad('اسم المجموعة مطلوب', 'bad_collection', 400);
+  const base = `/api/freeform/${encodeURIComponent(FF.design.id)}/records/${encodeURIComponent(col)}`;
+  const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  let r;
+  if (type === 'rec-list') { const q = new URLSearchParams(); if (p.limit) q.set('limit', p.limit); if (p.order) q.set('order', p.order); if (p.after) q.set('after', p.after); if (p.mine) q.set('mine', 'true'); r = await fetch(base + (q.toString() ? '?' + q : ''), { cache: 'no-store' }); }
+  else if (type === 'rec-add') r = await fetch(base, json('POST', { data: p.data }));
+  else if (type === 'rec-update') r = await fetch(`${base}/${encodeURIComponent(p.id)}`, json('PUT', { data: p.data, replace: !!p.replace }));
+  else if (type === 'rec-remove') r = await fetch(`${base}/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
+  else throw bad('نوع غير معروف', 'bad_type', 400);
+  if (!r.ok) { const b = await r.json().catch(() => ({})); throw bad(b.error || `خطأ (${r.status})`, r.status === 401 ? 'sign_in_required' : r.status === 403 ? 'forbidden' : r.status === 404 ? 'not_found' : r.status === 429 ? 'rate_limited' : 'error', r.status); }
+  if (type === 'rec-add' || type === 'rec-update' || type === 'rec-remove') ffRecordsChanged();
+  return r.status === 204 ? { ok: true } : r.json();
 }
 window.addEventListener('message', async e => {
   const m = e.data; if (!m || m.jeem !== 1 || !m.id || !e.source) return;
@@ -10437,6 +10455,7 @@ function ffApplyAccess() {
   const d = FF.design; const ro = !!(d && FF.access === 'view');
   FF_RO_IDS.forEach(id => { const b = el(id); if (b) b.disabled = ro || (id !== 'ff-restore' && !d); });
   el('ff-share').classList.toggle('hidden', !(d && FF.access === 'owner'));
+  el('ff-records').disabled = !d; if (d && FFR.countFor !== d.id) { FFR.countFor = d.id; ffrCount(); }
   el('ff-title').contentEditable = ro ? 'false' : 'true';
   el('screen-freeform').classList.toggle('ff-readonly', ro);
   const q = el('ff-q'); q.disabled = ro; el('ff-send').disabled = ro;
@@ -11185,6 +11204,85 @@ el('ffidm-delete').addEventListener('click', async () => {
   if (!r.ok) { const d = await r.json().catch(() => ({})); el('ffidm-error').textContent = d.error || `(${r.status})`; el('ffidm-error').classList.remove('hidden'); return; }
   await ffidLoad(); el('ff-idm-modal').classList.add('hidden'); FFID.sel = null; FFID.html = ''; el('ffid-apply').disabled = true;
   if (FFID.open) { ffidRenderList(); ffidRenderMap(null); el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true, FF.design?.kind); el('ffid-status').textContent = 'حُذفت الهوية. اختر هوية لمعاينة العرض بها.'; }
+});
+// ---- سجلات الإدخال (jeem.records): نافذة «📝 السجلات» — المجموعات، جدول السجلات، الحذف، تصدير CSV، وسياسة الإدخال في الرابط المنشور ----
+const FFR = { open: false, info: null, col: null, data: null, timer: 0 };
+function ffRecordsChanged() { clearTimeout(FFR.timer); FFR.timer = setTimeout(() => { if (FFR.open) ffrLoad(true); else ffrCount(); }, 400); }
+async function ffrCount() {
+  const b = el('ff-records-count'); if (!FF.design) { b.classList.add('hidden'); return; }
+  try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records`); if (!r.ok) throw 0; const d = await r.json(); const n = (d.collections || []).reduce((a, c) => a + (c.count || 0), 0); b.textContent = n ? n.toLocaleString('ar-EG') : ''; b.classList.toggle('hidden', !n); }
+  catch { b.classList.add('hidden'); }
+}
+function ffrDate(v) { const d = new Date(v); return isNaN(d) ? String(v || '') : d.toLocaleString(state.lang === 'en' ? 'en-GB' : 'ar-EG', { dateStyle: 'short', timeStyle: 'short' }); }
+function ffrValue(v) { if (v == null) return ''; if (typeof v === 'object') return JSON.stringify(v); return String(v); }
+function ffrRenderCols() {
+  const cols = (FFR.info && FFR.info.collections) || [];
+  el('ffr-cols').innerHTML = cols.map(c => `<button type="button" role="tab" class="ffr-col${c.name === FFR.col ? ' on' : ''}" aria-selected="${c.name === FFR.col}" data-ffr-col="${esc(c.name)}">${esc(c.name)} <small>${(c.count || 0).toLocaleString('ar-EG')}</small></button>`).join('');
+  el('ffr-cols').querySelectorAll('[data-ffr-col]').forEach(b => b.addEventListener('click', () => { FFR.col = b.dataset.ffrCol; ffrRenderCols(); ffrLoadRows(); }));
+}
+function ffrRenderRows() {
+  const box = el('ffr-body'); const cols = (FFR.info && FFR.info.collections) || [];
+  if (!cols.length) { box.innerHTML = `<div class="ffr-empty"><b>لا سجلات بعد.</b><p class="muted">عندما تحفظ الصفحة إدخالات المستخدمين بـ <code>jeem.records('اسم')</code> تظهر هنا. اطلب من جيم في المحادثة مثلًا: «اجعل النموذج يحفظ كل طلب في سجلات الطلبات».</p></div>`; return; }
+  const d = FFR.data; if (!d) { box.innerHTML = '<p class="muted">جارٍ التحميل…</p>'; return; }
+  const items = d.items || []; const fields = [];
+  items.forEach(r => Object.keys(r.data || {}).forEach(k => { if (!fields.includes(k)) fields.push(k); }));
+  if (!items.length) { box.innerHTML = '<p class="muted">لا سجلات في هذه المجموعة.</p>'; return; }
+  box.innerHTML = `<div class="ffr-meta muted">${d.total.toLocaleString('ar-EG')} سجل${d.total > items.length ? ` — يُعرض أحدث ${items.length.toLocaleString('ar-EG')}` : ''}</div>
+    <div class="ffr-table-wrap"><table class="ffr-table"><thead><tr><th scope="col">#</th>${fields.map(f => `<th scope="col">${esc(f)}</th>`).join('')}<th scope="col">أدخله</th><th scope="col">التاريخ</th><th scope="col"><span class="sr-only">إجراءات</span></th></tr></thead>
+    <tbody>${items.map(r => `<tr><td>${r.id}</td>${fields.map(f => `<td>${esc(ffrValue((r.data || {})[f]))}</td>`).join('')}<td>${esc(r.createdBy || 'زائر')}</td><td title="${esc(r.createdAt)}">${esc(ffrDate(r.createdAt))}</td>
+      <td>${r.canChange ? `<button type="button" class="ffr-del" data-ffr-del="${r.id}" aria-label="حذف السجل ${r.id}" title="حذف">🗑</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+  box.querySelectorAll('[data-ffr-del]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('حذف هذا السجل نهائيًا؟')) return;
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records/${encodeURIComponent(FFR.col)}/${b.dataset.ffrDel}`, { method: 'DELETE' });
+    if (!r.ok) { const x = await r.json().catch(() => ({})); ffrError(x.error || `(${r.status})`); return; }
+    ffrLoad(true); ffRefreshPreviewRecords();
+  }));
+}
+function ffrError(msg) { const e = el('ffr-error'); e.textContent = msg || ''; e.classList.toggle('hidden', !msg); }
+async function ffrLoadRows() {
+  FFR.data = null; ffrRenderRows(); if (!FFR.col) return;
+  try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records/${encodeURIComponent(FFR.col)}?order=desc&limit=500`); const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); FFR.data = d; }
+  catch (e) { ffrError('تعذّر تحميل السجلات: ' + e.message); FFR.data = { items: [], total: 0 }; }
+  ffrRenderRows();
+}
+async function ffrLoad(keepCol) {
+  ffrError('');
+  try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records`); const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); FFR.info = d; }
+  catch (e) { ffrError('تعذّر تحميل السجلات: ' + e.message); return; }
+  const cols = FFR.info.collections || [];
+  if (!keepCol || !cols.some(c => c.name === FFR.col)) FFR.col = cols.length ? cols[0].name : null;
+  const isOwner = FF.access === 'owner';
+  el('ffr-policy').value = FFR.info.policy || 'members'; el('ffr-policy').disabled = !isOwner; ffrPolicyNote();
+  el('ffr-export').classList.toggle('hidden', !(FFR.info.manager && FFR.col));
+  const n = cols.reduce((a, c) => a + (c.count || 0), 0); const b = el('ff-records-count'); b.textContent = n ? n.toLocaleString('ar-EG') : ''; b.classList.toggle('hidden', !n);
+  ffrRenderCols(); await ffrLoadRows();
+}
+function ffrPolicyNote() {
+  const pub = el('ffr-policy').value === 'public';
+  el('ffr-policy-note').textContent = (pub ? 'أي زائر يُدخل بلا تسجيل دخول (حد 60 إدخالًا لكل زائر كل 10 دقائق)، ويرى ما أدخله هو فقط؛ أعضاء المنظمة يرون كل السجلات.'
+    : 'يُطلب تسجيل الدخول بحساب من منظمتك قبل الإدخال.') + (FF.access === 'owner' ? '' : ' — يغيّرها صاحب التصميم.');
+}
+function ffRefreshPreviewRecords() { /* الصفحة تستطلع سجلاتها بنفسها (watch)؛ لا حاجة لإعادة رسم المعاينة */ }
+async function openFfRecords() {
+  if (!FF.design) return; FFR.open = true; FFR.info = null; FFR.data = null; ffrError('');
+  el('ffr-heading').textContent = `سجلات الإدخال — «${FF.design.title}»`; el('ffr-cols').innerHTML = ''; el('ffr-body').innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+  el('ff-rec-modal').classList.remove('hidden'); el('ffr-close').focus(); await ffrLoad(false);
+}
+function closeFfRecords() { FFR.open = false; el('ff-rec-modal').classList.add('hidden'); el('ff-records')?.focus(); }
+el('ff-records').addEventListener('click', openFfRecords);
+el('ffr-close').addEventListener('click', closeFfRecords);
+el('ffr-reload').addEventListener('click', () => ffrLoad(true));
+el('ff-rec-modal').addEventListener('click', e => { if (e.target === el('ff-rec-modal')) closeFfRecords(); });
+// على المستند لا النافذة: بعد نافذة التأكيد (confirm) يعود التركيز إلى body فلا يصل Escape إلى النافذة
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && FFR.open) { e.stopPropagation(); closeFfRecords(); } });
+el('ffr-export').addEventListener('click', () => { if (FF.design && FFR.col) window.location.href = `/api/freeform/${encodeURIComponent(FF.design.id)}/records/${encodeURIComponent(FFR.col)}/export.csv`; });
+el('ffr-policy').addEventListener('change', async () => {
+  const policy = el('ffr-policy').value; ffrPolicyNote();
+  if (policy === 'public' && !confirm('فتح الإدخال لأي شخص معه الرابط؟ يستطيع أي زائر إضافة سجلات بلا تسجيل دخول (بحد للإدخالات).')) { el('ffr-policy').value = FFR.info.policy; ffrPolicyNote(); return; }
+  const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records-policy`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy }) });
+  if (!r.ok) { const x = await r.json().catch(() => ({})); ffrError(x.error || `(${r.status})`); el('ffr-policy').value = FFR.info.policy; ffrPolicyNote(); return; }
+  FFR.info.policy = policy; FF.design.recordsPolicy = policy; ffrError('');
+  ffPushMsg('bot', policy === 'public' ? '🌐 صار الإدخال في الرابط المنشور متاحًا لأي شخص معه الرابط (بحد للإدخالات).' : '🏢 صار الإدخال في الرابط المنشور لأعضاء المنظمة فقط.');
 });
 const FFS = { users: [], ownerId: null, timer: 0, results: [] };
 function ffsRenderUsers() {

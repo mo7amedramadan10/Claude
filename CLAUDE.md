@@ -1895,3 +1895,36 @@ naming policy تلقائية في السيريلايزر.
   إنجليزية، حفظ اللغة بعد إعادة التحميل، لوحة المفاتيح على التبويبات، صفر صور مكسورة وصفر أخطاء JS وبلا تمرير أفقي، وصفر حركات مع تقليل الحركة.
   **التوجيه على الخادم الحقيقي لم يُجرَّب هنا** (يحتاج SQL Server) — `dotnet build` ناجح.
 
+
+## تصاميم حر كمصدر بيانات: سجلات الإدخال `jeem.records` (2026-11-25) — المرحلة 1 ✅
+
+- **الطلب**: صفحات تصميم حر التي فيها إدخال (نماذج، طلبات، استبيانات) تصير مصدر بيانات تُبنى عليه لوحات المتابعة. **قرار المستخدم**:
+  الإدخال في الرابط المنشور لأعضاء المنظمة افتراضيًا، ويُفتح للعامة لكل تصميم وحده. الخطة: (1) مخزن سجلات وواجهة الصفحة ✅،
+  (2) جدول SQL في مخطط المشروع يظهر في «المصادر» وطبقة المعنى ولوحة عليه، (3) تعليم الموديل + قوالب إدخال + «اعمل لوحة من بيانات هذا التصميم».
+- **لماذا لا `jeem.store`**: قيمة واحدة لكل مفتاح (≤256KB) فيتعارض المُدخلون المتزامنون، وقبل النشر في localStorage المتصفح فقط.
+- **المخزن** `Freeform/FreeformRecordStore.cs`: جدول `dbo.FreeformRecords(Id IDENTITY, DesignId, Collection, Json, CreatedByUserId, CreatedByName,
+  AnonId, CreatedAt, UpdatedAt, UpdatedByName)` بفهرس (DesignId, Collection, Id). **بمعرّف التصميم لا العرض** فالمحرر والنافذة والرابط المنشور
+  يتشاركونها منذ البداية. الحدود: مجموعة `[حروف أي لغة/أرقام/_.-]{1,60}`، ≤20 مجموعة و≤50,000 سجل لكل تصميم، السجل كائن JSON ≤32KB و≤100 حقل.
+  `Merge` للتعديل الجزئي (null يحذف الحقل). تُحذف مع التصميم.
+- **السياسة**: عمود `FreeformDesigns.RecordsPolicy` (`members` افتراضيًا للقائم والجديد، أو `public`)، `PUT /api/freeform/{id}/records-policy` لصاحبه.
+  **القواعد** `FreeformRecordAccess` (نقية، مختبَرة): داخل المنصة يُدخل كل من يرى التصميم؛ في الرابط: members = مسجَّل من منظمة التصميم (وإلا 401/403)،
+  public = أي أحد. القراءة: العضو والمدير يريان الكل، والزائر سجلاته فقط (بمعرّفه المجهول). التعديل/الحذف: صاحب السجل أو المدير (من يملك تعديل
+  التصميم: صاحبه، المسؤول، مشاركة بالتعديل). **الزائر المجهول**: `presentation.html` يولّد `jeem.anon` (32 hex في localStorage) ويرسله بترويسة
+  `X-Jeem-Anon` (`NormalizeAnon` يقبل 16–64 hex/شرطة). حد الإدخال (`FreeformRecordsService`، `RateLimiter` المساعد): 60/10 دقائق للزائر، 300 للمسجَّل،
+  3000/ساعة للتصميم → 429.
+- **API**: داخل المنصة `GET /api/freeform/{id}/records` (المجموعات بأعدادها + السياسة + `manager`)، `GET|POST …/records/{collection}`
+  (`?limit≤1000&order=desc&after=&mine=true` → `{items, total, hasMore, next, onlyOwn}`)، `PUT|DELETE …/records/{collection}/{rowId}` (`{data, replace}`)،
+  `GET …/records/{collection}/export.csv` (للمدير، UTF-8 بـBOM، أعمدة = اتحاد الحقول + أدخله/التاريخ). والرابط المنشور بالمسارات نفسها تحت
+  `/api/presentations/{id}` و`by/{org}/{slug}` (`[AllowAnonymous]`، يحلّ التصميم من `SourceKind=freeform`/`SourceId`، وإلا 400 `no_records`)؛
+  `/access` صار يعيد `records {policy, canAdd, seesAll}`. الحقل في كل سجل: `{id, data, createdAt, createdBy, updatedAt, mine, canChange}`.
+- **الجسر** (`jeem-page.js`): `jeem.records(name)` → `add(fields)`, `list({limit, order, after, mine})`, `all()` (يجمع الصفحات), `update(id, fields, {replace})`,
+  `remove(id)`, `watch(fn, ms)` (استطلاع ≥10 ث). رسائل `rec-list/rec-add/rec-update/rec-remove` تجيبها: `presentation.html` (بالترويسة المجهولة)،
+  ومعاينة المحرر `ffRecordsCall` في app.js (واجهة التصميم دائمًا، منشورًا أو لا؛ المصغّرات قراءة فقط)، والنافذة المستقلة (`meta jeem-design` → واجهة
+  التصميم مباشرة)، وخارج المنصة مصفوفة في localStorage بالعقد نفسه.
+- **الواجهة**: زر «📝 السجلات» في شريط أدوات التصميم بعدّاد (`#ff-records-count`) يفتح `ff-rec-modal`: سياسة الإدخال (لصاحبه، مع تأكيد قبل الفتح للعامة
+  ورسالة في المحادثة)، رقائق المجموعات بأعدادها، جدول أحدث 500 سجل بالحقول والمُدخِل والتاريخ وحذف لمن يحق له، تحديث، وتنزيل CSV. حالة فارغة
+  تشرح `jeem.records` وما يُطلب من جيم. Escape على المستند (بعد `confirm` يعود التركيز إلى body).
+- تحقق: `FreeformRecordsTests` (السياسة الافتراضية والعامة، الرؤية، الملكية بالمستخدم والمعرّف المجهول، التحقق، الدمج، CSV) 271/271. Playwright (1400 و390)
+  بخادم وهمي بالقواعد نفسها: صفحة نموذج تضيف سجلين من المعاينة وتعرضهما، العدّاد ٢، النافذة بالمجموعة والجدول وCSV، الحذف، تغيير السياسة يرسل PUT،
+  Escape يغلق؛ الرابط المنشور لزائر: members → «sign_in_required» داخل الصفحة، public → الإضافة بترويسة `X-Jeem-Anon` و«طلباتك فقط»؛ بلا أخطاء JS وبلا
+  تمرير أفقي. **على SQL Server والرابط الحقيقي لم يُجرَّب هنا.**
