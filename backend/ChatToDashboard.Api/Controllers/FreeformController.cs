@@ -393,21 +393,52 @@ public partial class FreeformController : ControllerBase
         if (string.IsNullOrWhiteSpace(spec)) return BadRequest(new { error = "اللوحة بلا عناصر." });
         var toLabel = FreeformBuilder.KindLabel(kind);
         var title = string.IsNullOrWhiteSpace(request.Title) ? "لوحة متابعة" : request.Title.Trim();
-        var message = $"حوّل لوحة المتابعة التالية إلى {toLabel} كاملة بصفحة HTML مستقلة: احتفظ بكل العناصر بعناوينها وأنواعها وأرقامها كما هي، وبالترتيب نفسه، وبهوية المشروع."
-            + (sqls.Count > 0 ? "\nكل عنصر له جملة SQL: نفّذها بأداة query_data لتقرأ أحدث الصفوف وتُسجَّل في JEEM_DATA، واقرأ الأرقام منها في جافاسكربت الصفحة لا حرفيًا." : "")
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        // رسوم حيّة: استعلام كل عنصر يُنفَّذ هنا ويُسجَّل نتيجةً في JEEM_DATA، والموديل يضع بلوكه الجاهز كما هو (كـ«رسمة من بياناتي ← كما في اللوحة»)
+        var (seeds, blocks) = await DashboardBlocksAsync(request.Dashboard, context, ct);
+        var message = $"حوّل لوحة المتابعة التالية إلى {toLabel} كاملة بصفحة HTML مستقلة: احتفظ بكل العناصر بعناوينها وأنواعها، وبالترتيب نفسه، وبهوية المشروع."
+            + (blocks.Count > 0 ? "\n# رسوم وأرقام حيّة جاهزة — إلزامي\nالعناصر التالية رسومها وأرقامها تُرسم من بيانات المشروع الحقيقية وتتحدّث تلقائيًا. ضع وسم كل عنصر **كما هو حرفيًا** "
+                + "في موضعه داخل بطاقة/شريحة تكتب أنت عنوانها بعنوان العنصر (الوسم بلا عنوان)، وأعطِ حاويته ارتفاعًا مناسبًا. لا ترسم لها SVG ولا Canvas ولا تكتب أرقامها، ولا تنفّذ استعلاماتها بـ query_data (نُفّذت ومسجَّلة):\n"
+                + string.Join("\n", blocks.Select((b, i) => $"- «{b.Title}»: {b.Markup}")) : "")
+            + (sqls.Count > blocks.Count ? "\nعناصر أخرى لها جملة SQL بلا وسم جاهز: نفّذها بأداة query_data وضع لها بلوك data-jeem-chart/data-jeem-value بمفتاح نتيجتها." : "")
             + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}")
             + "\n\n# مواصفة اللوحة\n" + spec;
-        var context = await _tools.DescribeSourcesAsync(selection, ct);
         var brand = await BrandAsync(selection.ProjectId, ct);
         FreeformResult result;
-        try { result = await _builder.GenerateAsync(message, null, Array.Empty<FreeformMessage>(), context, brand, user, ct, kind); }
+        try { result = await _builder.GenerateAsync(message, null, Array.Empty<FreeformMessage>(), context, brand, user, ct, kind, seedQueries: seeds); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل صفحة من التحويل — جرّب ثانية أو أضف ملاحظة." });
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{title} ({toLabel})", result.Html, message, kind, null, ct, SourcesJsonOf(request.Sources));
+        var (fixedHtml, added) = FreeformDashboardBlocks.EnsureBlocks(result.Html, blocks);
+        if (added > 0) result = result with { Html = fixedHtml, Reply = (result.Reply + $"\nأُضيفت {added} رسوم حيّة لم تُوضع في الصفحة في {(kind == "slides" ? "شرائح" : "أقسام")} مستقلة في آخرها.").Trim() };
+        if (blocks.Count > 0) result = result with { Reply = (result.Reply + $"\n📊 {blocks.Count} رسوم وأرقام مربوطة ببياناتك الحقيقية وتتحدّث من «🔄 تحديث البيانات» وفي الرابط المنشور.").Trim() };
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{title} ({toLabel})", result.Html!, message, kind, null, ct, SourcesJsonOf(request.Sources));
         if (result.Queries is { Count: > 0 } qs) { var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, DateTime.UtcNow, fp, ct); }
         await _store.AddMessageAsync(design.Id, "user", $"تحويل لوحة المتابعة «{title}» إلى {toLabel}", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply });
+    }
+
+    /// <summary>ينفّذ استعلام كل عنصر في اللوحة (بصلاحيات المستخدم ومصادره) ويعيد النتائج مفاتيحَ q1, q2… ووسم البلوك الجاهز لكل عنصر نجح.
+    /// العنصر بلا استعلام أو الفاشل يُترك للموديل كما كان.</summary>
+    private async Task<(List<FreeformQuery> Seeds, List<FreeformDashboardBlocks.Block> Blocks)> DashboardBlocksAsync(System.Text.Json.JsonElement dashboard, AnalyticsTools.SourceContext context, CancellationToken ct)
+    {
+        var seeds = new List<FreeformQuery>(); var blocks = new List<FreeformDashboardBlocks.Block>();
+        if (!dashboard.TryGetProperty("widgets", out var ws) || ws.ValueKind != System.Text.Json.JsonValueKind.Array) return (seeds, blocks);
+        foreach (var w in ws.EnumerateArray().Take(40))
+        {
+            if (w.ValueKind != System.Text.Json.JsonValueKind.Object || !w.TryGetProperty("query", out var q) || q.ValueKind != System.Text.Json.JsonValueKind.Object
+                || !q.TryGetProperty("sql", out var sq) || sq.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(sq.GetString())) continue;
+            var sql = sq.GetString()!.Trim();
+            var (res, isError) = await _tools.RunReadOnlyQueryAsync(sql, context, ct);
+            if (isError) continue;
+            System.Text.Json.Nodes.JsonNode? node; try { node = System.Text.Json.Nodes.JsonNode.Parse(res); } catch (System.Text.Json.JsonException) { continue; }
+            var rows = node?["rows"] as System.Text.Json.Nodes.JsonArray; if (rows is null || rows.Count == 0) continue;
+            var key = FreeformDataBlock.NextKey(seeds);
+            seeds.Add(new FreeformQuery(key, sql, node));
+            var title = w.TryGetProperty("title", out var t) && t.ValueKind == System.Text.Json.JsonValueKind.String ? t.GetString() ?? "" : "";
+            blocks.Add(new FreeformDashboardBlocks.Block(key, title, FreeformDashboardBlocks.Markup(w, key, rows)));
+        }
+        return (seeds, blocks);
     }
 
     /// <summary>نص موجز لمواصفة اللوحة يُرسل للموديل: الملخص ثم كل عنصر (العنوان، النوع، الحجم، SQL، والبيانات مقتطعة).</summary>

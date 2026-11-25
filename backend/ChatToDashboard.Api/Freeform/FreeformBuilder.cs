@@ -29,7 +29,7 @@ public class FreeformBuilder
     public FreeformBuilder(LlmRouter router, DataProfileService profiles, AnalyticsTools tools, ColumnSemanticsService semantics, ILogger<FreeformBuilder> logger)
     { _router = router; _profiles = profiles; _tools = tools; _semantics = semantics; _logger = logger; }
 
-    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design", FreeformTemplate? template = null, string? lang = null, IReadOnlyList<FreeformAttachment>? attachments = null)
+    public async Task<FreeformResult> GenerateAsync(string message, string? currentHtml, IReadOnlyList<FreeformMessage> history, AnalyticsTools.SourceContext context, DeckBrand? brand, AppUser? user, CancellationToken ct, string kind = "design", FreeformTemplate? template = null, string? lang = null, IReadOnlyList<FreeformAttachment>? attachments = null, IReadOnlyList<FreeformQuery>? seedQueries = null)
     {
         var llm = await _router.ResolveStagedAsync(ct) ?? throw new InvalidOperationException("لا يوجد مزوّد موديل مهيأ — اضبط مفاتيح الموديلات من الإعدادات.");
         var profile = await _profiles.BuildAsync(context, ct);
@@ -59,7 +59,7 @@ public class FreeformBuilder
         var tools = hasData ? _tools.BuildTools(context).Where(t => t.Name == "query_data").ToList() : null;
         var call = new StagedCall($"[تصميم حر/{KindLabel(kind)}] {Shorten(message, 40)}", system, userMsg.ToString(), tools, context, MaxIterations, false, user);
         // تسجيل كل استعلام ينفّذه الموديل مع نتيجته (مراقب محيطي على حلقة الأدوات)، وإلحاق مفتاحه بالرد ليقرأه من JEEM_DATA
-        var queries = FreeformDataBlock.Parse(currentHtml); var recorded = new List<FreeformQuery>(queries); var gate = new object();
+        var queries = FreeformDataBlock.Parse(currentHtml); if (seedQueries is { Count: > 0 }) queries = queries.Concat(seedQueries).ToList(); var recorded = new List<FreeformQuery>(queries); var gate = new object();
         AnalyticsTools.ToolObserver.Value = (name, input, result, isError) =>
         {
             if (name != "query_data" || isError) return result;
