@@ -8112,6 +8112,9 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
   el('dash-toolbar-wrap').classList.toggle('hidden', name !== 'chat');
+  // أيقونات السجل واللوحات النشطة وروابط المشاركة في الشريط العلوي تخص «المحادثة واللوحات» وحدها (وشاشاتها الثلاث نفسها).
+  const tnav = document.querySelector('.topbar-nav-group');
+  if (tnav) tnav.style.display = ['chat', 'history', 'active', 'sharelinks'].includes(name) ? '' : 'none';
   // §4.23: مغادرة «اللوحات المنشورة» توقف وضع العرض وتزيل رابطها العميق؛ دخولها يحمّلها.
   if (name !== 'published') window.JEEM_PUBLISHED?.leave();
   state.currentScreen = name;
