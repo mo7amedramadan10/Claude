@@ -32,8 +32,8 @@
   var RTL = (document.documentElement.dir || getComputedStyle(document.documentElement).direction) === 'rtl';
   var reduce = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
   var T = EN
-    ? { play: 'Play', pause: 'Pause', replay: 'Replay', loop: 'Loop', scene: 'Scene', of: 'of', seek: 'Timeline', reduced: 'Reduced motion: scenes are shown complete — use the timeline or arrow keys', ctl: 'Animation controls' }
-    : { play: 'تشغيل', pause: 'إيقاف', replay: 'إعادة', loop: 'تكرار', scene: 'المشهد', of: 'من', seek: 'شريط الزمن', reduced: 'تقليل الحركة مفعّل: المشاهد تُعرض مكتملة — تنقّل بشريط الزمن أو الأسهم', ctl: 'التحكم في الحركة' };
+    ? { play: 'Play', pause: 'Pause', replay: 'Replay', loop: 'Loop', once: 'Play once', loopTip: 'Repeat from the start when it ends', onceTip: 'Stop at the last scene when it ends', scene: 'Scene', of: 'of', seek: 'Timeline', reduced: 'Reduced motion: scenes are shown complete — use the timeline or arrow keys', ctl: 'Animation controls' }
+    : { play: 'تشغيل', pause: 'إيقاف', replay: 'إعادة', loop: 'تكرار', once: 'مرة واحدة', loopTip: 'تعود من البداية كلما انتهت — اضغط لتتوقف عند آخر مشهد', onceTip: 'تتوقف عند آخر مشهد حين تنتهي — اضغط لتتكرر', scene: 'المشهد', of: 'من', seek: 'شريط الزمن', reduced: 'تقليل الحركة مفعّل: المشاهد تُعرض مكتملة — تنقّل بشريط الزمن أو الأسهم', ctl: 'التحكم في الحركة' };
 
   // ---------- الأنماط: تُحقن أول <head> فتغلب أنماط الصفحة عند التساوي فقط فيما ليس جوهريًا؛ إظهار المشهد نفسه مفروض ----------
   var css = document.createElement('style'); css.id = 'jeem-motion-css';
@@ -57,6 +57,8 @@
     '.jm-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px auto 0;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.92);border:1px solid rgba(0,0,0,.08);box-shadow:0 2px 10px rgba(0,0,0,.06);font:500 13px/1.2 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;color:#1f2a37;box-sizing:border-box}',
     '.jm-bar button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:7px 14px;cursor:pointer;background:#e8eef5;color:#1f2a37}',
     '.jm-bar button.jm-main{background:#2A78D6;color:#fff;min-width:84px}',
+    '.jm-bar button.jm-loop{white-space:nowrap}',
+    '.jm-bar button.jm-loop[aria-pressed=false]{background:#fff;color:#1f2a37;box-shadow:inset 0 0 0 1.5px #2A78D6}',
     '.jm-bar button:focus-visible,.jm-bar input:focus-visible{outline:2px solid #2A78D6;outline-offset:2px}',
     '.jm-bar input[type=range]{flex:1 1 160px;min-width:120px;accent-color:#2A78D6}',
     '.jm-bar label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}',
@@ -126,20 +128,32 @@
     // ---------- شريط التحكم ----------
     var bar = document.createElement('div'); bar.className = 'jm-bar' + (embedded ? ' jm-mini' : ''); bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', T.ctl);
     if (embedded) {
-      bar.innerHTML = '<button type="button" class="jm-main" data-jm="play"></button><button type="button" data-jm="replay">' + T.replay + '</button><span class="jm-label" data-jm="label" aria-live="polite"></span>';
+      bar.innerHTML = '<button type="button" class="jm-main" data-jm="play"></button><button type="button" data-jm="replay">' + T.replay + '</button><button type="button" class="jm-loop" data-jm="loop"></button><span class="jm-label" data-jm="label" aria-live="polite"></span>';
       host.appendChild(bar);
     } else {
       bar.id = 'jm-controls';
       bar.innerHTML = '<button type="button" class="jm-main" data-jm="play" id="jm-play"></button><button type="button" data-jm="replay" id="jm-replay">' + T.replay + '</button>'
+        + '<button type="button" class="jm-loop" data-jm="loop" id="jm-loop"></button>'
         + '<input type="range" data-jm="seek" id="jm-seek" min="0" max="' + Math.round(total * 10) + '" step="1" value="0" aria-label="' + T.seek + '">'
-        + '<label><input type="checkbox" data-jm="loop" id="jm-loop"> ' + T.loop + '</label><span class="jm-label" data-jm="label" id="jm-label" aria-live="polite"></span>'
+        + '<span class="jm-label" data-jm="label" id="jm-label" aria-live="polite"></span>'
         + '<span class="jm-note" data-jm="note" id="jm-note" hidden>' + T.reduced + '</span>';
       root.insertAdjacentElement('afterend', bar);
     }
     var q = function (k) { return bar.querySelector('[data-jm="' + k + '"]'); };
-    var btnPlay = q('play'), seek = q('seek'), loopBox = q('loop'), label = q('label'), note = q('note');
-    if (loopBox) loopBox.checked = root.getAttribute('data-loop') !== 'false';
-    function looping() { return loopBox ? loopBox.checked : (host.getAttribute('data-loop') !== 'false'); }
+    var btnPlay = q('play'), seek = q('seek'), btnLoop = q('loop'), label = q('label'), note = q('note');
+    // التكرار: مخزَّن في data-loop (على المسرح في الصفحة، وعلى البلوك في المُضمَّن) فيُحفظ مع الصفحة إن غُيِّر في وضع التعديل
+    var loopEl = embedded ? host : root, loopOn = loopEl.getAttribute('data-loop') !== 'false';
+    function looping() { return loopOn; }
+    function showLoop() {
+      btnLoop.textContent = loopOn ? '🔁 ' + T.loop : '1× ' + T.once;
+      btnLoop.setAttribute('aria-pressed', loopOn ? 'true' : 'false'); btnLoop.title = loopOn ? T.loopTip : T.onceTip;
+    }
+    function setLoop(v, fromUser) {
+      var old = loopEl.getAttribute('data-loop'); loopOn = !!v; loopEl.setAttribute('data-loop', loopOn ? 'true' : 'false'); showLoop();
+      if (fromUser) try { document.dispatchEvent(new CustomEvent('jeem:motion-loop', { detail: { el: loopEl, old: old, loop: loopOn } })); } catch (e) {}
+    }
+    showLoop();
+    btnLoop.addEventListener('click', function () { setLoop(!loopOn, true); });
     function autoplay() { return !embedded || host.getAttribute('data-autoplay') !== 'false'; }
 
     // المقاس: الصفحة تلائم الشريط بعرض المسرح؛ المُضمَّن يُصغَّر المسرح (بمقاسه الأصلي) ليلائم البلوك ويتوسّطه
@@ -218,7 +232,8 @@
       play: function () { setPlaying(true); }, pause: function () { setPlaying(false); },
       seek: function (s) { t = Math.max(0, Math.min(total - 0.001, +s || 0)); apply(); },
       goTo: goTo, fit: fit,
-      update: function () { fit(); restart(); },
+      update: function () { loopOn = loopEl.getAttribute('data-loop') !== 'false'; showLoop(); fit(); restart(); },
+      setLoop: function (v) { setLoop(v, false); },
       check: function (force) {
         var ed = editing() ? '1' : '';
         if (force || bar.dataset.edit !== ed) {
