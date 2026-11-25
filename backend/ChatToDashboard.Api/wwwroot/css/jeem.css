@@ -4269,7 +4269,9 @@ body.ff-full-on { overflow: hidden; }
 #ff-motion-modal .ffmo-m.warn { color: var(--warn, #B45309); }
 #ff-motion-modal .ffmo-empty { padding: 24px 12px; text-align: center; color: var(--ink-3); }
 #ff-motion-modal .ffmo-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
-#ff-motion-modal .ffmo-replace { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); cursor: pointer; }
+#ff-motion-modal .ffmo-place { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0; padding: 0; border: 0; font-size: var(--fs-sm); min-width: 0; }
+#ff-motion-modal .ffmo-place legend { float: inline-start; padding: 0; margin-inline-end: 4px; font-weight: 700; }
+#ff-motion-modal .ffmo-place label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 #ff-motion-modal .ffmo-status { flex: 1 1 160px; min-height: 20px; font-size: var(--fs-sm); }
 #ff-insp .ffi-check { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { #ff-motion-modal .ffmo-card { transition: none; } }
@@ -4284,4 +4286,4 @@ body.ff-full-on { overflow: hidden; }
 #ff-motion-modal .ffmo-or { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; font-size: 12px; color: var(--ink-3); }
 #ff-motion-modal .ffmo-or::before, #ff-motion-modal .ffmo-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 @media (max-width: 520px) { #ff-motion-modal .ffmo-ask-row { flex-direction: column; } }
-#ff-motion-modal .ffmo-replace[hidden], #ff-motion-modal .ffmo-wait[hidden] { display: none; }
+#ff-motion-modal .ffmo-place label[hidden], #ff-motion-modal .ffmo-wait[hidden] { display: none; }

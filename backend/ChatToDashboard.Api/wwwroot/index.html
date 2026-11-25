@@ -929,7 +929,11 @@
     <input id="ffmo-q" class="ffmo-q" type="search" placeholder="ابحث بالعنوان…" autocomplete="off">
     <div id="ffmo-body" class="ffmo-body"></div>
     <div class="ffmo-foot">
-      <label id="ffmo-replace-wrap" class="ffmo-replace" hidden><input type="checkbox" id="ffmo-replace" checked> <span id="ffmo-replace-label">ضعها مكان العنصر المحدد</span></label>
+      <fieldset id="ffmo-place" class="ffmo-place"><legend>مكان الحركة</legend>
+        <label><input type="radio" name="ffmo-place" value="inline" checked> داخل الشريحة الحالية</label>
+        <label id="ffmo-place-slot-wrap" hidden><input type="radio" name="ffmo-place" value="slot"> <span id="ffmo-place-slot">مكان العنصر المحدد</span></label>
+        <label id="ffmo-place-slide-wrap"><input type="radio" name="ffmo-place" value="slide"> شريحة مستقلة كاملة بعد الحالية</label>
+      </fieldset>
       <span id="ffmo-status" class="ffmo-status muted" role="status"></span>
       <button type="button" id="ffmo-insert" class="btn btn-primary" disabled>إدراج في الشريحة</button>
     </div>

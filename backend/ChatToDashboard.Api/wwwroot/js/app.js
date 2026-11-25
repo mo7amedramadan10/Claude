@@ -9444,7 +9444,7 @@ function ffDesignKit() {
     if (me && me === sel) {
       var meta = {}; try { meta = JSON.parse(me.getAttribute('data-jeem-motion-embed') || '{}'); } catch (e3) { meta = {}; }
       var stg = me.querySelector(':scope>[data-jeem-motion]');
-      out.motion = { title: meta.title || '', id: meta.id || null, scenes: stg ? stg.querySelectorAll(':scope>.jm-scene').length : 0, autoplay: me.getAttribute('data-autoplay') !== 'false', loop: me.getAttribute('data-loop') !== 'false', controls: me.getAttribute('data-controls') !== 'false' };
+      out.motion = { full: me.hasAttribute('data-jeem-slide-motion'), title: meta.title || '', id: meta.id || null, scenes: stg ? stg.querySelectorAll(':scope>.jm-scene').length : 0, autoplay: me.getAttribute('data-autoplay') !== 'false', loop: me.getAttribute('data-loop') !== 'false', controls: me.getAttribute('data-controls') !== 'false' };
       out.label = 'حركة';
     }
     out.slot = !me && slotOf(sel) ? true : false;
@@ -9495,6 +9495,7 @@ function ffDesignKit() {
     var list = topSlides(), cur = visibleSlide() || list[list.length - 1]; if (!cur) { post({ type: 'slide-added', error: 'لا توجد شرائح في هذه الصفحة.' }); return; }
     var node;
     if (m.mode === 'blank') node = blankFrom(cur);
+    else if (m.mode === 'motion') { node = motionSlide(cur, m); if (!node) { post({ type: 'slide-added', error: 'تعذّرت قراءة الحركة.' }); return; } }
     else if (m.mode === 'dup') { var src = list[m.index] || cur; node = cleanSlide(src.cloneNode(true)); [].slice.call(node.querySelectorAll('[id]')).forEach(function (e) { if (document.getElementById(e.id)) e.id = e.id + '-' + Date.now().toString(36).slice(-3); }); }
     else {
       var box = document.createElement('div'); box.innerHTML = m.html || ''; node = box.firstElementChild; if (!node) { post({ type: 'slide-added', error: 'تعذّرت قراءة الشريحة.' }); return; }
@@ -9510,8 +9511,22 @@ function ffDesignKit() {
       if (node.querySelector('.frame') && !cur.querySelector('.frame')) node.setAttribute('data-jeem-fit', '');
     }
     cur.parentNode.insertBefore(node, cur.nextSibling);
+    if (m.mode === 'motion') { var mh = node.querySelector('.frame') || node; if (getComputedStyle(mh).position === 'static') mh.style.position = 'relative'; if (mh === node && !node.style.minHeight) node.style.minHeight = 'min(56.25vw, 100vh)'; }
     changed();
     post({ type: 'slide-added', index: topSlides().indexOf(node) });
+  }
+  // شريحة مستقلة كاملة للحركة: غلاف الشريحة الظاهرة نفسه (القسم وإطاره) فارغًا، والحركة تملؤه كله
+  function motionSlide(cur, m) {
+    var tpl = document.createElement('template'); tpl.innerHTML = m.html || ''; var b = tpl.content.firstElementChild; if (!b) return null;
+    if (m.css) { var cs = document.createElement('style'); cs.id = 'jeem-motion-css-' + (m.scope || Date.now().toString(36)); cs.textContent = m.css; document.head.appendChild(cs); }
+    (m.fonts || []).forEach(function (h) { if (!document.querySelector('link[href="' + h.replace(/"/g, '') + '"]')) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; document.head.appendChild(l); } });
+    var c = cleanSlide(cur.cloneNode(true)), host = c.querySelector('.frame') || c;
+    while (host.firstChild) host.removeChild(host.firstChild);
+    [].slice.call(c.querySelectorAll('[id]')).forEach(function (e) { if (document.getElementById(e.id)) e.id = e.id + '-' + Date.now().toString(36).slice(-3); });
+    b.setAttribute('data-jeem-slide-motion', '');
+    b.style.cssText += ';position:absolute;inset:0;width:100%;height:100%;border-radius:0;z-index:1';
+    host.appendChild(b);
+    return c;
   }
   // حذف الشريحة الظاهرة: تُحذف من الصفحة ثم تحفظ الأم إصدارًا جديدًا (سكربت القالب يحتفظ بقائمة شرائحه فلا بد من إعادة التحميل)
   function slideRemove() {
@@ -11163,11 +11178,12 @@ function ffslInsert(payload, note) {
   if (FFSL.busy) return; FFSL.busy = true; FF.edit.slideNote = note;
   el('ffsl-status').textContent = 'جارٍ إضافة الشريحة…';
   ffdPost(Object.assign({ op: 'slide-add' }, payload));
-  setTimeout(() => { if (FFSL.busy) { FFSL.busy = false; FF.edit.slideNote = null; el('ffsl-status').textContent = 'لم تستجب الصفحة — أعد المحاولة.'; } }, 8000);
+  setTimeout(() => { if (FFSL.busy) { FFSL.busy = false; FF.edit.slideNote = null; if (FFSL.motion) { FFSL.motion = false; ffPushMsg('err', 'لم تستجب الصفحة — أعد المحاولة.'); } else el('ffsl-status').textContent = 'لم تستجب الصفحة — أعد المحاولة.'; } }, 8000);
 }
 function ffslAdded(m) {
   FFSL.busy = false;
-  if (m.error || m.index == null || m.index < 0) { FF.edit.slideNote = null; el('ffsl-status').textContent = m.error || 'تعذّرت إضافة الشريحة.'; return; }
+  const viaMotion = FFSL.motion; FFSL.motion = false;
+  if (m.error || m.index == null || m.index < 0) { FF.edit.slideNote = null; const msg = m.error || 'تعذّرت إضافة الشريحة.'; if (viaMotion) ffPushMsg('err', msg); else el('ffsl-status').textContent = msg; return; }
   closeFfSlideModal(); FF.navTarget = m.index; // ffRender يضبط الاستعادة منه بعد الحفظ
   el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now();
   el('ff-preview').contentWindow.postMessage({ jeemEdit: 1, type: 'get' }, '*');
@@ -11237,9 +11253,11 @@ async function openFfMotionModal() {
   if (!FF.design || !FF.edit.on) return;
   const gen = ++FFMO.gen; FFMO.sel = null; FFMO.q = ''; el('ffmo-q').value = ''; if (!FFMO.busy) { el('ffmo-prompt').value = ''; el('ffmo-gen').disabled = false; }
   const slot = !!(FFD.info && FFD.info.slot) || !!(FFD.info && FFD.info.motion);
-  el('ffmo-replace-wrap').hidden = !slot;
-  el('ffmo-replace-label').textContent = FFD.info && FFD.info.motion ? 'استبدل الحركة المحددة بها' : `ضعها مكان «${FFD.info ? FFD.info.label : 'العنصر'}» المحدد (يُخفى ويعود بالتراجع)`;
-  el('ffmo-replace').checked = true;
+  // مكان الحركة: داخل الشريحة الحالية، أو مكان العنصر المحدد، أو شريحة مستقلة كاملة (لصفحة شرائح فقط)
+  const slides = !!(FF.design && (FF.design.kind === 'slides' || (FF.nav && FF.nav.n >= 2)));
+  el('ffmo-place-slot-wrap').hidden = !slot; el('ffmo-place-slide-wrap').hidden = !slides;
+  el('ffmo-place-slot').textContent = FFD.info && FFD.info.motion ? 'استبدال الحركة المحددة' : `مكان «${FFD.info ? FFD.info.label : 'العنصر'}» المحدد`;
+  document.querySelector(`input[name="ffmo-place"][value="${slot ? 'slot' : 'inline'}"]`).checked = true;
   el('ffmo-status').textContent = ''; el('ffmo-insert').disabled = true;
   el('ff-motion-modal').classList.remove('hidden'); el('ffmo-body').innerHTML = '<p class="muted">جارٍ تحميل تصاميم الحركة…</p>'; el('ffmo-q').focus();
   let list = [];
@@ -11284,10 +11302,16 @@ async function ffmoInsert() {
   try {
     const { html, version } = await ffmoHtml(d.id);
     const x = ffmoExtract(html, { id: d.id, version, title: d.title });
-    ffdPost({ op: 'motion', html: x.html, css: x.css, fonts: x.fonts, scope: x.scope, replace: !el('ffmo-replace-wrap').hidden && el('ffmo-replace').checked });
+    ffmoPlaceInsert(x, ffmoPlace(), d.title);
     closeFfMotionModal(); el('ffd-motion').focus();
   } catch (e) { el('ffmo-status').textContent = e.message || 'تعذّر تجهيز الحركة.'; el('ffmo-insert').disabled = false; }
   finally { FFMO.busy = false; }
+}
+function ffmoPlace() { const r = document.querySelector('input[name="ffmo-place"]:checked'); const v = r ? r.value : 'inline'; return (v === 'slot' && el('ffmo-place-slot-wrap').hidden) || (v === 'slide' && el('ffmo-place-slide-wrap').hidden) ? 'inline' : v; }
+// الإدراج بحسب المكان: شريحة مستقلة تمر بمسار «إضافة شريحة» (تُحفظ فورًا إصدارًا وتُعرض)، وغيرها بلوك داخل الشريحة يُحفظ مع باقي التعديلات
+function ffmoPlaceInsert(x, place, title) {
+  if (place === 'slide') { FFSL.motion = true; ffslInsert({ mode: 'motion', html: x.html, css: x.css, fonts: x.fonts, scope: x.scope }, `أُضيفت حركة «${title || 'حركة'}» شريحةً مستقلة`); return; }
+  ffdPost({ op: 'motion', html: x.html, css: x.css, fonts: x.fonts, scope: x.scope, replace: place === 'slot' });
 }
 // «اطلب من جيم حركة لهذه الشريحة»: محتوى الشريحة من الإطار ← بناء «حركة» على الخادم (يُحفظ تصميمًا مستقلًا) ← الإدراج كالاختيار من القائمة
 function ffmoSlideInfo() {
@@ -11295,7 +11319,7 @@ function ffmoSlideInfo() {
 }
 async function ffmoGenerate(e) {
   e.preventDefault(); if (FFMO.busy || !FF.design) return;
-  const design = FF.design, replace = !el('ffmo-replace-wrap').hidden && el('ffmo-replace').checked, prompt = el('ffmo-prompt').value.trim();
+  const design = FF.design, place = ffmoPlace(), replace = place === 'slot', prompt = el('ffmo-prompt').value.trim();
   FFMO.busy = true; el('ffmo-gen').disabled = true; el('ffmo-insert').disabled = true; el('ffmo-status').textContent = '';
   const wait = el('ffmo-wait'); wait.hidden = false;
   wait.innerHTML = (window.JEEM_LOADER ? JEEM_LOADER.html({ size: 40 }) : '') + '<span><b>جيم يبني الحركة من محتوى الشريحة…</b><br><span class="muted">يكتب المشاهد ويتحقق منها — نحو دقيقة. يمكنك إغلاق النافذة؛ تُدرج الحركة عند اكتمالها.</span></span>';
@@ -11311,9 +11335,9 @@ async function ffmoGenerate(e) {
     const x = ffmoExtract(j.html, { id: j.design.id, version: j.design.version, title: j.design.title });
     const warn = /⚠️[^\n]*/.exec(j.reply || '');
     if (FF.design !== design || !FF.edit.on) { ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» ولم تُدرج لأن وضع التعديل أُغلق — تجدها في نافذة 🎬 ضمن تصاميم الحركة.`); return; }
-    ffdPost({ op: 'motion', html: x.html, css: x.css, fonts: x.fonts, scope: x.scope, replace });
+    ffmoPlaceInsert(x, place, j.design.title);
     if (!el('ff-motion-modal').classList.contains('hidden')) { closeFfMotionModal(); el('ffd-motion').focus(); }
-    ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» (${x.scenes.toLocaleString('ar-EG')} ${x.scenes > 2 && x.scenes < 11 ? 'مشاهد' : 'مشهد'}) وأُدرجت في الشريحة — اضغط «حفظ كإصدار جديد» لتثبيتها. الحركة محفوظة أيضًا في تصاميمك من نوع «حركة» لتعدّلها أو تعيد استخدامها.${warn ? '\n' + warn[0] : ''}`);
+    ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» (${x.scenes.toLocaleString('ar-EG')} ${x.scenes > 2 && x.scenes < 11 ? 'مشاهد' : 'مشهد'}) ${place === 'slide' ? 'وأُضيفت شريحةً مستقلة بعد الشريحة الحالية (تُحفظ تلقائيًا)' : 'وأُدرجت في الشريحة — اضغط «حفظ كإصدار جديد» لتثبيتها'}. الحركة محفوظة أيضًا في تصاميمك من نوع «حركة» لتعدّلها أو تعيد استخدامها.${warn ? '\n' + warn[0] : ''}`);
   } catch (err) {
     if (!el('ff-motion-modal').classList.contains('hidden')) el('ffmo-status').textContent = err.message || 'تعذّر بناء الحركة.'; else ffPushMsg('err', 'تعذّر بناء الحركة: ' + (err.message || ''));
   } finally {
@@ -11368,7 +11392,7 @@ function ffdRenderInsp() {
   if (i.motion) {
     const mo = i.motion, ck = (k, l) => `<label class="ffi-check"><input type="checkbox" data-mo="${k}"${mo[k] ? ' checked' : ''}> ${l}</label>`;
     h += `<section><h4>الحركة</h4><div class="ffi-sub">${mo.title ? `من تصميم «${esc(mo.title)}» · ` : ''}${mo.scenes.toLocaleString('ar-EG')} ${mo.scenes > 2 && mo.scenes < 11 ? 'مشاهد' : 'مشهد'}. في وضع التعديل تقف وتظهر مكتملة؛ تعمل وحدها كلما ظهرت الشريحة.</div>
-      ${ck('autoplay', 'تشغيل تلقائي عند ظهور الشريحة')}${ck('loop', 'تكرار')}${ck('controls', 'أزرار التحكم عند التحويم')}
+      ${mo.full ? '<div class="ffi-sub">تملأ الشريحة كاملة.</div>' : ''}${ck('autoplay', 'تشغيل تلقائي عند ظهور الشريحة')}${ck('loop', 'تكرار')}${ck('controls', 'أزرار التحكم عند التحويم')}
       <button type="button" class="ffi-wide" data-a="motion-replace">🎬 استبدال بحركة أخرى…</button></section>`;
   }
   if (i.bind) {
@@ -11392,7 +11416,7 @@ function ffdRenderInsp() {
       ${ffdRow('صف عناوين', `<input type="checkbox" data-t="header"${t.header ? ' checked' : ''} aria-label="صف عناوين">`)}</section>`;
   }
   // بلوك داخل SVG شريحة PowerPoint: مقاسه وموضعه من إطار الرسم الأصلي (foreignObject) فلا تخطيط يُعدَّل
-  if (!i.inSvg) h += `<section><h4>التخطيط</h4>${ffdRow('العرض', ffdNum('width', s.width, { u: 'px', label: 'العرض' }, 'min="0" placeholder="تلقائي"'))}${ffdRow('الارتفاع', ffdNum('height', s.height, { u: 'px', label: 'الارتفاع' }, 'min="0" placeholder="تلقائي"'))}
+  if (!i.inSvg && !(i.motion && i.motion.full)) h += `<section><h4>التخطيط</h4>${ffdRow('العرض', ffdNum('width', s.width, { u: 'px', label: 'العرض' }, 'min="0" placeholder="تلقائي"'))}${ffdRow('الارتفاع', ffdNum('height', s.height, { u: 'px', label: 'الارتفاع' }, 'min="0" placeholder="تلقائي"'))}
     ${ffdRow('الحشوة', ffdNum('padding', s.padding, { u: 'px', label: 'الحشوة' }, 'min="0"'))}${ffdRow('الهامش', ffdNum('margin', s.margin, { u: 'px', label: 'الهامش' }))}</section>`;
   if (i.text) h += `<section><h4>النص</h4>${ffdRow('اللون', ffdColor('color', s.color, 'لون النص'))}${ffdRow('الحجم', ffdNum('font-size', s.fontSize, { u: 'px', label: 'حجم الخط' }, 'min="6" max="300"'))}
     ${ffdRow('الوزن', `<select data-p="font-weight" aria-label="وزن الخط">${[['300', 'خفيف'], ['400', 'عادي'], ['500', 'متوسط'], ['600', 'شبه عريض'], ['700', 'عريض'], ['800', 'أعرض']].map(([v, l]) => `<option value="${v}"${String(s.fontWeight) === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
