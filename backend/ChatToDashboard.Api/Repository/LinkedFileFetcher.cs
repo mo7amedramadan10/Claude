@@ -27,6 +27,7 @@ public sealed class LinkedFileFetcher
     /// <summary>نوع المصدر للعرض: <c>google</c> / <c>onedrive</c> / <c>sharepoint</c> / <c>dropbox</c> / <c>url</c>.</summary>
     public static string ProviderOf(string url)
     {
+        if (url.StartsWith(Freeform.FreeformRecordTableService.Scheme, StringComparison.OrdinalIgnoreCase)) return "design";
         if (GoogleSheetRx.IsMatch(url)) return "google";
         var host = SafeHost(url);
         if (host.EndsWith("sharepoint.com", StringComparison.OrdinalIgnoreCase)) return "sharepoint";

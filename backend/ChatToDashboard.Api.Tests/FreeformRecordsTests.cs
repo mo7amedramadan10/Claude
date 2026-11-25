@@ -87,8 +87,43 @@ public class FreeformRecordsTests
             new() { Id = 2, Json = """{"الاسم":"علي","العدد":3}""", CreatedByName = null, CreatedAt = new DateTime(2026, 11, 25, 10, 0, 0) },
         };
         var lines = FreeformRecordsService.ToCsv(rows).TrimEnd().Split(Environment.NewLine);
-        Assert.Equal("id,الاسم,ملاحظة,العدد,أدخله,تاريخ الإدخال", lines[0]);
+        Assert.Equal("رقم السجل,الاسم,ملاحظة,العدد,أدخله,تاريخ الإدخال", lines[0]);
         Assert.Equal("1,سارة,\"أ, ب\",,سارة,2026-11-25 09:00:00", lines[1]);
         Assert.Equal("2,علي,,3,,2026-11-25 10:00:00", lines[2]);
+    }
+}
+
+/// <summary>المرحلة 2: السجلات جدول مصدر — رابط المصدر الداخلي، الاسم، والأنواع المستنتجة للأعمدة.</summary>
+public class FreeformRecordTableTests
+{
+    [Fact]
+    public void SourceUrl_RoundTrips_WithArabicCollection_AndProviderIsDesign()
+    {
+        var url = FreeformRecordTableService.SourceUrlOf("abc123", "طلبات الصيانة");
+        Assert.StartsWith("jeem-design://abc123/", url);
+        Assert.Equal(("abc123", "طلبات الصيانة"), FreeformRecordTableService.Parse(url)!.Value);
+        Assert.Null(FreeformRecordTableService.Parse("https://docs.google.com/x"));
+        Assert.Null(FreeformRecordTableService.Parse("jeem-design://abc/"));
+        Assert.Equal("design", ChatToDashboard.Api.Repository.LinkedFileFetcher.ProviderOf(url));
+        Assert.Equal("سجلات: الطلبات — نموذج الصيانة", FreeformRecordTableService.DisplayNameOf("نموذج الصيانة", "الطلبات"));
+    }
+
+    [Fact]
+    public void BuildUpload_InfersNumberAndDate_FlattensNested_AndKeepsEntryColumns()
+    {
+        var rows = new List<FreeformRecord>
+        {
+            new() { Id = 7, Json = """{"الاسم":"سارة","العدد":3,"الوسوم":["أ","ب"],"عاجل":true}""", CreatedByName = "سارة", CreatedAt = new DateTime(2026, 11, 25, 9, 0, 0) },
+            new() { Id = 8, Json = """{"الاسم":"علي","العدد":5.5}""", CreatedByName = "زائر", CreatedAt = new DateTime(2026, 11, 26, 10, 0, 0) },
+        };
+        var up = FreeformRecordTableService.BuildUpload(rows, "الطلبات");
+        Assert.Equal("csv", up.Kind);
+        var t = up.Table!;
+        Assert.Equal(new[] { "رقم السجل", "الاسم", "العدد", "الوسوم", "عاجل", "أدخله", "تاريخ الإدخال" }, t.Columns.Cast<System.Data.DataColumn>().Select(c => c.ColumnName));
+        Assert.Equal(2, t.Rows.Count);
+        Assert.NotEqual(typeof(string), t.Columns["العدد"]!.DataType);
+        Assert.Equal(typeof(DateTime), t.Columns["تاريخ الإدخال"]!.DataType);
+        Assert.Equal("[\"أ\",\"ب\"]", t.Rows[0]["الوسوم"]);
+        Assert.Equal(0xEF, up.Content[0]); // CSV بـ BOM للتنزيل
     }
 }

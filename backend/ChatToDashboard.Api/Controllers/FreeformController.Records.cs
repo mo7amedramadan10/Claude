@@ -7,6 +7,7 @@ namespace ChatToDashboard.Api.Controllers;
 /// <summary>إدخال سجل أو تعديله: الحقول كائن JSON؛ replace=true يستبدل السجل كله بدل دمج الحقول.</summary>
 public class FreeformRecordWriteRequest { public JsonElement Data { get; set; } public bool Replace { get; set; } }
 public class FreeformRecordsPolicyRequest { public string? Policy { get; set; } }
+public class FreeformRecordsSourceRequest { public bool On { get; set; } }
 
 /// <summary>سجلات الإدخال (<c>jeem.records</c>) داخل المنصة: المحرر ومن يرى التصميم. نفس البيانات التي يكتبها الرابط المنشور.</summary>
 public partial class FreeformController
@@ -39,6 +40,33 @@ public partial class FreeformController
         if (!FreeformRecordPolicy.IsValid(request.Policy)) return BadRequest(new { error = "سياسة غير معروفة: members أو public." });
         await _store.SetRecordsPolicyAsync(id, request.Policy!, ct);
         return Ok(new { policy = request.Policy });
+    }
+
+    /// <summary>تشغيل/إيقاف بناء مجموعات السجلات جداولَ في «المصادر» — لمن يملك تعديل التصميم. التشغيل يبني الجداول فورًا.</summary>
+    [HttpPut("{id}/records-source")]
+    public async Task<IActionResult> SetRecordsSource(string id, [FromBody] FreeformRecordsSourceRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (d, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.Edit, ct); if (err is not null) return err;
+        await _store.SetRecordsAsSourceAsync(id, request.On, ct);
+        var tables = HttpContext.RequestServices.GetRequiredService<FreeformRecordTableService>();
+        var built = new List<object>();
+        if (request.On)
+            foreach (var c in await HttpContext.RequestServices.GetRequiredService<FreeformRecordStore>().CollectionsAsync(id, ct))
+                if (await tables.SyncAsync(id, c.Name, ct) is { } f) built.Add(new { collection = c.Name, fileId = f.Id, f.DisplayName, f.TableName, rows = f.RowCount });
+        return Ok(new { asSource = request.On, tables = built });
+    }
+
+    /// <summary>بناء جدول مجموعة الآن (بدل انتظار الإدخال التالي) — لمن يملك تعديل التصميم.</summary>
+    [HttpPost("{id}/records/{collection}/sync")]
+    public async Task<IActionResult> RecordSync(string id, string collection, CancellationToken ct)
+    {
+        var (d, v, _, err) = await RecordsContextAsync(id, ct); if (err is not null) return err;
+        if (!v!.Manager) return StatusCode(403, new { error = "المزامنة لمن يملك تعديل التصميم." });
+        if (!FreeformRecordStore.IsValidCollection(collection)) return BadRequest(new { error = "اسم مجموعة غير صالح." });
+        var f = await HttpContext.RequestServices.GetRequiredService<FreeformRecordTableService>().SyncAsync(id, collection, ct);
+        if (f is null) return BadRequest(new { error = "لا سجلات في هذه المجموعة بعد." });
+        return Ok(new { collection, fileId = f.Id, f.DisplayName, f.TableName, rows = f.RowCount, columns = f.ColumnCount, f.LastSyncedAt });
     }
 
     [HttpGet("{id}/records/{collection}")]

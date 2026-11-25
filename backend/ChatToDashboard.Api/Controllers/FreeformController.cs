@@ -641,6 +641,7 @@ public partial class FreeformController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (_, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.Owner, ct); if (err is not null) return err;
         await _store.DeleteAsync(id, ct);
+        await HttpContext.RequestServices.GetRequiredService<FreeformRecordTableService>().UnlinkDesignAsync(id, ct);
         await HttpContext.RequestServices.GetRequiredService<FreeformRecordStore>().DeleteDesignAsync(id, ct);
         return NoContent();
     }

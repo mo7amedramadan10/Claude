@@ -6874,7 +6874,7 @@ function renderRepo() {
             <div class="fr-line1">
               <span class="fr-name">${esc(f.displayName)}</span>
               <span class="cat-badge">${esc(f.category || 'عام')}</span>
-              ${f.sourceUrl ? `<span class="link-badge${f.syncError ? ' bad' : ''}" title="${esc(f.syncError ? 'فشلت آخر مزامنة: ' + f.syncError : 'مرتبط برابط · آخر مزامنة ' + (f.lastSyncedAt ? relTime(f.lastSyncedAt) : '—'))}">${f.syncError ? '⚠️' : '🔗'} ${esc(LINK_PROVIDER_LABEL[f.sourceProvider] || 'رابط')}${f.lastSyncedAt ? ` · ${esc(relTime(f.lastSyncedAt))}` : ''}</span>` : ''}
+              ${f.sourceUrl ? `<span class="link-badge${f.syncError ? ' bad' : ''}${f.sourceProvider === 'design' ? ' design' : ''}" title="${esc(f.syncError ? 'فشلت آخر مزامنة: ' + f.syncError : (f.sourceProvider === 'design' ? 'سجلات أدخلتها صفحة تصميم حر — يتحدّث تلقائيًا بعد كل إدخال · آخر تحديث ' : 'مرتبط برابط · آخر مزامنة ') + (f.lastSyncedAt ? relTime(f.lastSyncedAt) : '—'))}">${f.syncError ? '⚠️' : f.sourceProvider === 'design' ? '📝' : '🔗'} ${esc(LINK_PROVIDER_LABEL[f.sourceProvider] || 'رابط')}${f.lastSyncedAt ? ` · ${esc(relTime(f.lastSyncedAt))}` : ''}</span>` : ''}
               ${f.sourceUrl && (f.sourceSheets || []).length > 1 ? `<select class="link-sheet-pick" data-id="${esc(f.id)}" title="الورقة المقروءة من الملف — التغيير يزامن فورًا">${f.sourceSheets.map((n, i) => `<option value="${esc(n)}"${(f.sourceSheet ? n === f.sourceSheet : i === 0) ? ' selected' : ''}>📑 ${esc(n)}</option>`).join('')}</select>` : (f.sourceUrl && f.sourceSheet ? `<span class="cat-badge" title="الورقة المقروءة">📑 ${esc(f.sourceSheet)}</span>` : '')}
               ${staleBadge}
             </div>
@@ -6887,7 +6887,7 @@ function renderRepo() {
         <div class="col-access">${access}</div>
         <div class="col-actions">
           <a class="icon-btn dl" href="/api/repository/files/${esc(f.id)}/download" title="تنزيل الملف">⬇️</a>
-          ${f.sourceUrl ? `<button class="icon-btn sync-btn" data-id="${esc(f.id)}" title="مزامنة من الرابط الآن">🔄</button>` : `<button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>`}
+          ${f.sourceUrl ? `<button class="icon-btn sync-btn" data-id="${esc(f.id)}" title="${f.sourceProvider === 'design' ? 'إعادة البناء من سجلات التصميم الآن' : 'مزامنة من الرابط الآن'}">🔄</button>` : `<button class="icon-btn upd" data-id="${esc(f.id)}" title="تحديث البيانات">🔄</button>`}
           <button class="icon-btn cfg" data-id="${esc(f.id)}" title="التفاصيل">✏️</button>
           ${permBtn}
           <button class="icon-btn rel-btn" data-id="${esc(f.id)}" title="الملفات المرتبطة">🔗</button>
@@ -6981,7 +6981,7 @@ function linkToast(msg, ms, bad) {
   t.classList.remove('is-on'); void t.offsetWidth; t.classList.add('is-on');
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), ms || 2800);
 }
-const LINK_PROVIDER_LABEL = { google: 'Google Sheets', onedrive: 'OneDrive', sharepoint: 'SharePoint', dropbox: 'Dropbox', url: 'رابط' };
+const LINK_PROVIDER_LABEL = { google: 'Google Sheets', onedrive: 'OneDrive', sharepoint: 'SharePoint', dropbox: 'Dropbox', url: 'رابط', design: 'من تصميم حر' };
 el('btn-open-link-modal').addEventListener('click', () => { el('link-form').reset(); el('link-error').classList.add('hidden'); el('link-modal').classList.remove('hidden'); el('link-url').focus(); });
 el('link-cancel').addEventListener('click', () => el('link-modal').classList.add('hidden'));
 el('link-modal').addEventListener('click', e => { if (e.target === el('link-modal')) el('link-modal').classList.add('hidden'); });
@@ -11218,7 +11218,7 @@ function ffrValue(v) { if (v == null) return ''; if (typeof v === 'object') retu
 function ffrRenderCols() {
   const cols = (FFR.info && FFR.info.collections) || [];
   el('ffr-cols').innerHTML = cols.map(c => `<button type="button" role="tab" class="ffr-col${c.name === FFR.col ? ' on' : ''}" aria-selected="${c.name === FFR.col}" data-ffr-col="${esc(c.name)}">${esc(c.name)} <small>${(c.count || 0).toLocaleString('ar-EG')}</small></button>`).join('');
-  el('ffr-cols').querySelectorAll('[data-ffr-col]').forEach(b => b.addEventListener('click', () => { FFR.col = b.dataset.ffrCol; ffrRenderCols(); ffrLoadRows(); }));
+  el('ffr-cols').querySelectorAll('[data-ffr-col]').forEach(b => b.addEventListener('click', () => { FFR.col = b.dataset.ffrCol; ffrRenderCols(); ffrRenderSource(); ffrLoadRows(); }));
 }
 function ffrRenderRows() {
   const box = el('ffr-body'); const cols = (FFR.info && FFR.info.collections) || [];
@@ -11255,7 +11255,32 @@ async function ffrLoad(keepCol) {
   el('ffr-policy').value = FFR.info.policy || 'members'; el('ffr-policy').disabled = !isOwner; ffrPolicyNote();
   el('ffr-export').classList.toggle('hidden', !(FFR.info.manager && FFR.col));
   const n = cols.reduce((a, c) => a + (c.count || 0), 0); const b = el('ff-records-count'); b.textContent = n ? n.toLocaleString('ar-EG') : ''; b.classList.toggle('hidden', !n);
-  ffrRenderCols(); await ffrLoadRows();
+  ffrRenderCols(); ffrRenderSource(); await ffrLoadRows();
+}
+// المرحلة 2: كل مجموعة تُبنى جدولًا في «المصادر» (ملف مرتبط بالتصميم) — الحالة والمزامنة والتشغيل/الإيقاف.
+function ffrRenderSource() {
+  const box = el('ffr-source'); const info = FFR.info || {}; const cols = info.collections || [];
+  if (!cols.length || !info.seesAll) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const t = (info.tables || []).find(x => x.collection === FFR.col);
+  const on = info.asSource !== false; const can = !!info.manager;
+  box.innerHTML = `<label class="ffr-src-toggle"><input type="checkbox" id="ffr-src-on"${on ? ' checked' : ''}${can ? '' : ' disabled'}> <span><b>استخدم السجلات مصدر بيانات</b><small class="muted">كل مجموعة تصير جدولًا في «المصادر» يتحدّث تلقائيًا بعد كل إدخال، فتُبنى عليه لوحات المتابعة والرسوم.</small></span></label>
+    ${on ? `<div class="ffr-src-line">${t ? `🗄️ <b>${esc(t.displayName)}</b> <span class="muted">· ${(t.rows || 0).toLocaleString('ar-EG')} صف · ${(t.columns || 0).toLocaleString('ar-EG')} عمود${t.lastSyncedAt ? ' · حُدِّث ' + esc(relTime(t.lastSyncedAt)) : ''}</span>${t.syncError ? ` <span class="bad">⚠️ ${esc(t.syncError)}</span>` : ''}`
+      : '<span class="muted">⏳ لم يُبنَ جدول هذه المجموعة بعد — يُبنى بعد الإدخال التالي، أو اضغط «مزامنة الآن».</span>'}
+      ${can && FFR.col ? '<button type="button" id="ffr-src-sync" class="btn btn-sm btn-ghost">🔄 مزامنة الآن</button>' : ''}</div>` : ''}`;
+  el('ffr-src-on').addEventListener('change', async e => {
+    const want = e.target.checked; e.target.disabled = true;
+    try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records-source`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: want }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || r.status);
+      ffPushMsg('bot', want ? `🗄️ صارت سجلات هذا التصميم مصدر بيانات في «المصادر»${(d.tables || []).length ? ': ' + d.tables.map(x => `«${x.displayName}»`).join('، ') : ''}.` : 'أُوقف تحديث جداول السجلات في «المصادر» (الجداول الحالية تبقى لقطة أخيرة).');
+      dashGalFeasibility = null; loadSources().catch(() => {}); await ffrLoad(true); }
+    catch (x) { ffrError('تعذّر الحفظ: ' + x.message); e.target.checked = !want; e.target.disabled = false; }
+  });
+  const sb = el('ffr-src-sync');
+  if (sb) sb.addEventListener('click', async () => {
+    sb.disabled = true; sb.textContent = 'يبني…';
+    try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records/${encodeURIComponent(FFR.col)}/sync`, { method: 'POST' }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || r.status); dashGalFeasibility = null; loadSources().catch(() => {}); await ffrLoad(true); }
+    catch (x) { ffrError('تعذّرت المزامنة: ' + x.message); sb.disabled = false; sb.textContent = '🔄 مزامنة الآن'; }
+  });
 }
 function ffrPolicyNote() {
   const pub = el('ffr-policy').value === 'public';

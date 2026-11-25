@@ -554,6 +554,14 @@ public class RepositoryStore
             new { fileId, sourceUrl, syncedAt, error = error is { Length: > 1000 } ? error[..1000] : error, sheet = string.IsNullOrWhiteSpace(sheet) ? null : sheet.Trim(), sheetsJson = sheets is null ? null : System.Text.Json.JsonSerializer.Serialize(sheets) });
     }
 
+    /// <summary>الملفات المرتبطة بمصدر داخلي يبدأ بالبادئة (مثل <c>jeem-design://&lt;id&gt;/</c> لجداول سجلات تصميم حر).</summary>
+    public async Task<IReadOnlyList<RepositoryFile>> FindBySourcePrefixAsync(string prefix, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return (await connection.QueryAsync<RepositoryFile>($"SELECT {SelectColumns} FROM {CatalogueTable} WHERE SourceUrl LIKE @p", new { p = prefix.Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]") + "%" })).ToList();
+    }
+
     public async Task<RepositoryFile?> FindAsync(string fileId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

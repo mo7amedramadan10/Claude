@@ -41,6 +41,8 @@ public class FreeformDesign
     [JsonPropertyName("shareScopeRole")] public string ShareScopeRole { get; set; } = FreeformAccess.View;
     /// <summary>من يُدخل سجلات (<c>jeem.records</c>) في الرابط المنشور: members (افتراضيًا) أو public (<see cref="FreeformRecordPolicy"/>).</summary>
     [JsonPropertyName("recordsPolicy")] public string RecordsPolicy { get; set; } = FreeformRecordPolicy.Members;
+    /// <summary>هل تُبنى مجموعات السجلات جداولَ مصدر في «المصادر» (<see cref="FreeformRecordTableService"/>)؟ افتراضيًا نعم.</summary>
+    [JsonPropertyName("recordsAsSource")] public bool RecordsAsSource { get; set; } = true;
     [JsonPropertyName("version")] public int Version { get; set; }
     [JsonPropertyName("presentationId")] public string? PresentationId { get; set; }
     [JsonPropertyName("sizeBytes")] public int SizeBytes { get; set; }
@@ -82,7 +84,7 @@ public class FreeformStore
     private volatile bool _schemaReady;
     public FreeformStore(DataStore db) => _db = db;
     private const string T = "[dbo].[FreeformDesigns]", V = "[dbo].[FreeformVersions]", M = "[dbo].[FreeformMessages]";
-    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, SourcesJson, IdentityId, ShareScope, ShareScopeRole, RecordsPolicy, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, SourcesJson, IdentityId, ShareScope, ShareScopeRole, RecordsPolicy, RecordsAsSource, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
     private const string Q = "[dbo].[FreeformQueries]";
     private const string S = "[dbo].[FreeformShares]";
     public static readonly string[] Kinds = { "doc", "slides", "design", "dashboard", "motion" };
@@ -124,6 +126,7 @@ public class FreeformStore
                 IF COL_LENGTH('dbo.FreeformDesigns', 'ShareScope') IS NULL ALTER TABLE {T} ADD [ShareScope] NVARCHAR(16) NOT NULL CONSTRAINT DF_FreeformDesigns_ShareScope DEFAULT 'project';
                 IF COL_LENGTH('dbo.FreeformDesigns', 'ShareScopeRole') IS NULL ALTER TABLE {T} ADD [ShareScopeRole] NVARCHAR(8) NOT NULL CONSTRAINT DF_FreeformDesigns_ShareScopeRole DEFAULT 'edit';
                 IF COL_LENGTH('dbo.FreeformDesigns', 'RecordsPolicy') IS NULL ALTER TABLE {T} ADD [RecordsPolicy] NVARCHAR(16) NOT NULL CONSTRAINT DF_FreeformDesigns_RecordsPolicy DEFAULT 'members';
+                IF COL_LENGTH('dbo.FreeformDesigns', 'RecordsAsSource') IS NULL ALTER TABLE {T} ADD [RecordsAsSource] BIT NOT NULL CONSTRAINT DF_FreeformDesigns_RecordsAsSource DEFAULT 1;
                 IF OBJECT_ID('dbo.FreeformShares') IS NULL
                 CREATE TABLE {S} ([DesignId] NVARCHAR(32) NOT NULL, [UserId] NVARCHAR(200) NOT NULL, [Role] NVARCHAR(8) NOT NULL, [CreatedAt] DATETIME2 NOT NULL, CONSTRAINT PK_FreeformShares PRIMARY KEY ([DesignId], [UserId]));
                 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_FreeformShares_User') CREATE INDEX IX_FreeformShares_User ON {S} ([UserId]);
@@ -142,7 +145,7 @@ public class FreeformStore
         var now = DateTime.UtcNow;
         var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = string.IsNullOrWhiteSpace(templateKey) ? null : templateKey.Trim(), SourcesJson = sourcesJson, Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @SourcesJson, @IdentityId, @ShareScope, @ShareScopeRole, @RecordsPolicy, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
+        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @SourcesJson, @IdentityId, @ShareScope, @ShareScopeRole, @RecordsPolicy, @RecordsAsSource, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
         if (d.Version == 1) await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, 1, @html, @prompt, @size, @now)", new { id = d.Id, html, prompt = Trim(prompt), size = d.SizeBytes, now });
         return d;
     }
@@ -268,6 +271,13 @@ public class FreeformStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"UPDATE {T} SET RecordsPolicy = @policy WHERE Id = @id", new { id, policy = FreeformRecordPolicy.Normalize(policy) });
+    }
+
+    public async Task SetRecordsAsSourceAsync(string id, bool on, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {T} SET RecordsAsSource = @on WHERE Id = @id", new { id, on });
     }
 
     public async Task SetIdentityAsync(string id, string? identityId, CancellationToken ct = default)

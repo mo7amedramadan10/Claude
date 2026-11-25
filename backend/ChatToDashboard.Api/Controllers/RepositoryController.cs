@@ -201,6 +201,16 @@ public class RepositoryController : ControllerBase
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)) return NotFound(new { error = "الملف غير موجود." });
         var file = await _store.FindAsync(id, ct);
+        // جدول سجلات تصميم حر: يُعاد بناؤه من السجلات لا من رابط خارجي.
+        if (Freeform.FreeformRecordTableService.Parse(file?.SourceUrl) is { } rec)
+        {
+            var before0 = await _store.GetColumnsAsync(id, ct);
+            var rf = await HttpContext.RequestServices.GetRequiredService<Freeform.FreeformRecordTableService>().SyncAsync(rec.DesignId, rec.Collection, ct);
+            if (rf is null) return BadRequest(new { error = "لا سجلات في هذه المجموعة بعد، أو حُذف التصميم.", keptOld = true });
+            var after0 = await _store.GetColumnsAsync(id, ct);
+            var add0 = after0.Except(before0, StringComparer.OrdinalIgnoreCase).ToList(); var rem0 = before0.Except(after0, StringComparer.OrdinalIgnoreCase).ToList();
+            return Ok(new { file = rf, rows = rf.RowCount, columns = rf.ColumnCount, addedColumns = add0, removedColumns = rem0, schemaChanged = add0.Count > 0 || rem0.Count > 0 });
+        }
         if (file?.SourceUrl is null) return BadRequest(new { error = "هذا الملف غير مرتبط برابط. استخدم «تحديث البيانات» لرفع نسخة جديدة." });
         var before = await _store.GetColumnsAsync(id, ct);
         var sheet = string.IsNullOrWhiteSpace(request?.Sheet) ? file.SourceSheet : request!.Sheet!.Trim();
