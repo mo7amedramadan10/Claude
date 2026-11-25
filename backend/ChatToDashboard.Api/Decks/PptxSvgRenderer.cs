@@ -22,6 +22,10 @@ public sealed class PptxSvgRenderer : IDisposable
     public Func<ImagePart, string> MediaUrl { get; set; }
     /// <summary>اختياري: عنوان بديل لصورة غير مدعومة في المتصفح (EMF/WMF) حوّلها المتصل مسبقًا؛ null = المكان المعلَّم «غير مدعومة».</summary>
     public Func<ImagePart, string?>? UnsupportedUrl { get; set; }
+    /// <summary>اختياري: الأماكن المحجوزة الفارغة في الشرائح تُرسم بنص مطالبتها (من التخطيط، وإلا نص افتراضي) نصًّا حقيقيًا قابلًا
+    /// للتعديل لا باهتًا — لنماذج المنصة المولَّدة من PowerPoint حتى تبقى أماكن الكتابة (العنوان، الفرعي، النص) كما في القالب.
+    /// "ar"/"en" لغة النص الافتراضي؛ null = السلوك المعتاد (الفارغ لا يُرسم كما يعرضه PowerPoint).</summary>
+    public string? SlidePromptLang { get; set; }
     public double Width { get; }
     public double Height { get; }
     public IReadOnlyList<SlideLayoutPart> Layouts { get; }
@@ -71,7 +75,7 @@ public sealed class PptxSvgRenderer : IDisposable
         public required OpenXmlPart Part;                    // لحل r:embed
         public OpenXmlPart? LayoutPart; public OpenXmlPart? MasterPart;
         public XElement? Layout; public XElement? Master;
-        public bool ShowPrompts; public bool IsLayoutOrMaster;
+        public bool ShowPrompts; public bool IsLayoutOrMaster; public string? SlidePromptLang;
         public StringBuilder Defs = new(); public int DefId;
     }
 
@@ -82,7 +86,7 @@ public sealed class PptxSvgRenderer : IDisposable
         var ctx = new Ctx
         {
             Scheme = ThemeColors(theme), ClrMap = ClrMap(master), Part = (OpenXmlPart?)slidePart ?? (OpenXmlPart?)layoutPart ?? masterPart,
-            LayoutPart = layoutPart, MasterPart = masterPart, Layout = layout, Master = master, ShowPrompts = showPrompts, IsLayoutOrMaster = slidePart is null,
+            LayoutPart = layoutPart, MasterPart = masterPart, Layout = layout, Master = master, ShowPrompts = showPrompts, IsLayoutOrMaster = slidePart is null, SlidePromptLang = slidePart is null ? null : SlidePromptLang,
         };
         if (theme is not null)
         {
@@ -664,12 +668,23 @@ public sealed class PptxSvgRenderer : IDisposable
     {
         var paras = txBody.Elements(A + "p").ToList();
         var hasText = paras.Any(p => p.Elements().Any(e => (e.Name.LocalName is "r" or "fld") && !string.IsNullOrEmpty(e.Element(A + "t")?.Value)));
-        var isPrompt = false;
+        var isPrompt = false; var slidePrompt = false;
         if (!hasText)
         {
-            if (ph is null || !ctx.ShowPrompts) return "";
-            // على التخطيط: نص المطالبة (إن وُجد) باهتًا، وإلا نصًّا افتراضيًا بحسب النوع
-            isPrompt = true;
+            var phT = ph?.Attribute("type")?.Value;
+            if (ph is not null && ctx.SlidePromptLang is not null && phT is not ("dt" or "ftr" or "sldNum" or "pic" or "chart" or "tbl" or "media" or "clipArt" or "dgm" or "obj"))
+            {
+                // في الشريحة (وضع النماذج): نص مطالبة التخطيط إن وُجد وإلا الافتراضي، بلا بهتان، فيبقى مكان الكتابة ظاهرًا ويُعدَّل
+                slidePrompt = true;
+                var lp = inhLayout?.Element(P + "txBody")?.Elements(A + "p").Where(p => p.Elements(A + "r").Any(r => !string.IsNullOrWhiteSpace(r.Element(A + "t")?.Value))).ToList();
+                if (lp is { Count: > 0 }) paras = lp.Select(p => new XElement(p)).ToList();
+            }
+            else
+            {
+                if (ph is null || !ctx.ShowPrompts) return "";
+                // على التخطيط: نص المطالبة (إن وُجد) باهتًا، وإلا نصًّا افتراضيًا بحسب النوع
+                isPrompt = true;
+            }
         }
         var bodyPr = txBody.Element(A + "bodyPr") ?? inhLayout?.Element(P + "txBody")?.Element(A + "bodyPr") ?? inhMaster?.Element(P + "txBody")?.Element(A + "bodyPr");
         double lIns = Ins(bodyPr, "lIns", 91440), rIns = Ins(bodyPr, "rIns", 91440), tIns = Ins(bodyPr, "tIns", 45720), bIns = Ins(bodyPr, "bIns", 45720);
@@ -680,8 +695,12 @@ public sealed class PptxSvgRenderer : IDisposable
         sb.Append(CultureInfo.InvariantCulture, $"<foreignObject x=\"{F(absolute ? t.X : 0)}\" y=\"{F(absolute ? t.Y : 0)}\" width=\"{F(t.W)}\" height=\"{F(t.H)}\"><div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"box-sizing:border-box;width:{F(t.W)}px;height:{F(t.H)}px;padding:{F(tIns)}px {F(rIns)}px {F(bIns)}px {F(lIns)}px;display:flex;flex-direction:column;justify-content:{justify};overflow:hidden;{(isPrompt ? "opacity:.45;" : "")}\">");
         var lstStyle = txBody.Element(A + "lstStyle");
         var phType = ph?.Attribute("type")?.Value ?? (ph is null ? null : "body");
-        if (isPrompt && !paras.Any(p => p.Elements(A + "r").Any()))
-            paras = new List<XElement> { new(A + "p", new XElement(A + "r", new XElement(A + "t", phType is "title" or "ctrTitle" ? "عنوان الشريحة" : phType is "subTitle" ? "عنوان فرعي" : phType is "pic" ? "" : phType is "dt" or "ftr" or "sldNum" ? "" : "نص"))) };
+        if ((isPrompt || slidePrompt) && !paras.Any(p => p.Elements(A + "r").Any()))
+        {
+            var en = slidePrompt && ctx.SlidePromptLang == "en";
+            var dflt = phType is "title" or "ctrTitle" ? (en ? "Slide title" : "عنوان الشريحة") : phType is "subTitle" ? (en ? "Subtitle" : "عنوان فرعي") : phType is "pic" ? "" : phType is "dt" or "ftr" or "sldNum" ? "" : (en ? "Text" : "نص");
+            paras = new List<XElement> { new(A + "p", new XElement(A + "r", new XElement(A + "t", dflt))) };
+        }
         foreach (var p in paras)
         {
             var pPr = p.Element(A + "pPr"); var lvl = int.Parse(pPr?.Attribute("lvl")?.Value ?? "0");

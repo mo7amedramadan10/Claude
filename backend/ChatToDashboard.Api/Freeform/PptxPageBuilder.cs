@@ -18,9 +18,9 @@ public static class PptxPageBuilder
     public static Result Build(byte[] pptx, string title) => Build(pptx, title, null);
 
     /// <summary>كالسابق مع محلّل صور اختياري: نماذج المجلدات تحيل الصور إلى ملفات في <c>assets/</c> بدل data URL حتى تبقى الصفحة صغيرة.</summary>
-    public static Result Build(byte[] pptx, string title, Func<DocumentFormat.OpenXml.Packaging.ImagePart, string>? mediaUrl, Func<DocumentFormat.OpenXml.Packaging.ImagePart, string?>? unsupportedUrl = null, string lang = "ar")
+    public static Result Build(byte[] pptx, string title, Func<DocumentFormat.OpenXml.Packaging.ImagePart, string>? mediaUrl, Func<DocumentFormat.OpenXml.Packaging.ImagePart, string?>? unsupportedUrl = null, string lang = "ar", bool slidePrompts = false)
     {
-        using var r = new PptxSvgRenderer(pptx, mediaUrl ?? PptxSvgRenderer.DataUrl) { UnsupportedUrl = unsupportedUrl };
+        using var r = new PptxSvgRenderer(pptx, mediaUrl ?? PptxSvgRenderer.DataUrl) { UnsupportedUrl = unsupportedUrl, SlidePromptLang = slidePrompts ? lang : null };
         if (r.Slides.Count == 0) throw new InvalidOperationException("الملف بلا شرائح.");
         var sb = new StringBuilder();
         var ratio = (r.Height / r.Width).ToString("0.####", CultureInfo.InvariantCulture);

@@ -31,6 +31,7 @@ public class ThiqahTemplateTests
             Assert.DoesNotContain("غير مدعومة", html);           // صور EMF حُوّلت PNG
             Assert.DoesNotContain(">رسم بياني<", html);           // الرسوم البيانية مرسومة لا أماكن محجوزة
             Assert.Contains("window.goToSlide", html);
+            Assert.Contains(dir == "rtl" ? "عنوان العرض" : "Headline", html);   // أماكن الكتابة الفارغة بنص مطالبة التخطيط
             foreach (Match m in Regex.Matches(html, "/templates/freeform/sl-thiqah-corporate/assets/([0-9a-f]+\\.png)"))
                 Assert.True(File.Exists(Path.Combine(root, "templates", "freeform", "sl-thiqah-corporate", "assets", m.Groups[1].Value)), m.Value);
         }
@@ -48,5 +49,18 @@ public class ThiqahTemplateTests
         var bars = r.RenderSlide(13);          // الشريحة 14: أعمدة وأشرطة
         Assert.DoesNotContain("رسم بياني", bars);
         Assert.Contains("Category 1", bars);
+    }
+
+    [Fact]
+    public void EmptySlidePlaceholders_RenderLayoutPrompt_OnlyWhenRequested()
+    {
+        const string path = "/tmp/claude-0/-home-user-Claude/da72bb5f-6107-5fbc-b2dd-f8387c2e28b5/scratchpad/thq/ar.pptx";
+        if (!File.Exists(path)) return;
+        var bytes = File.ReadAllBytes(path);
+        using (var plain = new PptxSvgRenderer(bytes)) Assert.DoesNotContain("عنوان العرض", plain.RenderSlide(0));   // السلوك المعتاد: الفارغ لا يُرسم
+        using var r = new PptxSvgRenderer(bytes) { SlidePromptLang = "ar" };
+        var cover = r.RenderSlide(0);
+        Assert.Contains("عنوان العرض", cover);
+        Assert.DoesNotContain("opacity:.45", cover);   // نص حقيقي لا باهت
     }
 }
