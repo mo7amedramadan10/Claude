@@ -17,6 +17,8 @@ public class Project
     public string Name { get; set; } = "";
     public string Slug { get; set; } = "";
     public DateTime CreatedAt { get; set; }
+    /// <summary>نوع الكيان (<see cref="EntityType"/>)؛ null = النوع الافتراضي للمنظمة.</summary>
+    public string? TypeId { get; set; }
 }
 
 public class ProjectInfo
@@ -26,11 +28,14 @@ public class ProjectInfo
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("slug")] public string Slug { get; set; } = "";
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
+    /// <summary>نوع الكيان الفعلي (الافتراضي إن لم يُحدَّد).</summary>
+    [JsonPropertyName("typeId")] public string? TypeId { get; set; }
 }
 
 public class ProjectRequest
 {
     [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("typeId")] public string? TypeId { get; set; }
 }
 
 /// <summary>One row of <c>ProjectRoles</c>: a named user's role on one project — unlike

@@ -117,7 +117,7 @@
     <nav class="sb-scroll">
       <div class="sb-label"><span>المنظمة</span></div>
       <ul class="nav">
-        <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span></button></li>
+        <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text" id="nav-entities-text">المشاريع</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="presentations"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">العروض التقديمية</span><span class="badge hidden" id="presentations-badge">0</span></button></li>
         <li class="hidden" id="nav-claude-chat"><button type="button" class="nav-link tab" data-screen="claude-chat"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">محادثة Claude</span></button></li>
       </ul>
@@ -398,18 +398,20 @@
   </div>
 </div>
 
-<div id="screen-projects" class="screen">
+<!-- شاشة الكيانات (مشاريع/أقسام/إدارات…): نصوصها تُضبط من أنواع الكيانات في renderProjects، فهي مستثناة من الاستبدال الآلي -->
+<div id="screen-projects" class="screen" data-ent-skip>
   <div class="page">
     <section class="page-head">
       <div>
-        <h1>مشاريع <span id="projects-org-name">المنظمة</span></h1>
-        <p>كل مشروع له محادثته الخاصة ولوحاته ومصادره — اضغط على مشروع لفتح مساحة عمله.</p>
+        <h1><span id="projects-title-word">مشاريع</span> <span id="projects-org-name">المنظمة</span></h1>
+        <p id="projects-desc">كل مشروع له محادثته الخاصة ولوحاته ومصادره — اضغط على مشروع لفتح مساحة عمله.</p>
       </div>
-      <button type="button" class="btn btn-primary hidden" id="new-project-btn-top"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg>مشروع جديد</button>
+      <div class="proj-head-actions"><button type="button" class="btn btn-ghost hidden" id="entity-types-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg>أنواع الكيانات</button>
+      <button type="button" class="btn btn-primary hidden" id="new-project-btn-top"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg><span id="new-project-btn-text">مشروع جديد</span></button></div>
     </section>
 
     <section class="org-hero cols-4" id="projects-hero">
-      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg>المشاريع</span><span class="stat-value num" id="proj-stat-projects">0</span><span class="stat-foot">في هذه المنظمة</span></div>
+      <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-layers"/></svg><span id="proj-stat-word">المشاريع</span></span><span class="stat-value num" id="proj-stat-projects">0</span><span class="stat-foot">في هذه المنظمة</span></div>
       <div id="proj-stat-users-box"><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg>الأعضاء</span><span class="stat-value num" id="proj-stat-users">0</span><span class="stat-foot">مستخدمون في المنظمة</span></div>
       <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg>المصادر</span><span class="stat-value num" id="proj-stat-sources">0</span><span class="stat-foot">مصدر بيانات متاح</span></div>
       <div><span class="stat-label"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-dashboard"/></svg>اللوحات</span><span class="stat-value num" id="proj-stat-dashboards">0</span><span class="stat-foot">لوحة محفوظة لك</span></div>
@@ -420,7 +422,7 @@
       <span class="grow"></span>
       <div class="segmented" id="projects-filter" role="group" aria-label="تصفية المشاريع">
         <button type="button" class="active" data-filter="all" aria-pressed="true">الكل</button>
-        <button type="button" data-filter="mine" aria-pressed="false">مشاريعي</button>
+        <button type="button" data-filter="mine" aria-pressed="false" id="projects-filter-mine">مشاريعي</button>
       </div>
     </section>
 
@@ -494,7 +496,7 @@
   </div>
 </div>
 
-<div id="new-org-modal" class="modal-overlay hidden">
+<div id="new-org-modal" class="modal-overlay hidden" data-ent-skip>
   <div class="modal">
     <h3>منظمة جديدة</h3>
     <p class="modal-note">هيتعمل لها مشروع افتراضي تلقائيًا باسم «المشروع الرئيسي».</p>
@@ -751,7 +753,7 @@
     <input type="file" id="ffp-file" accept=".html,.htm,.pptx,text/html,application/vnd.openxmlformats-officedocument.presentationml.presentation">
     <div id="ffp-title-wrap">
       <label class="share-expiry-label">العنوان <span class="muted">(اختياري — الافتراضي من عنوان الصفحة أو اسم الملف)</span></label>
-      <input type="text" id="ffp-title" placeholder="مثال: دور الإدارة في مشروع الخوارزمي" maxlength="120">
+      <input type="text" id="ffp-title" data-ent-skip placeholder="مثال: دور الإدارة في مشروع الخوارزمي" maxlength="120">
     </div>
     <div id="ffp-error" class="model-switch-note bad hidden"></div>
     <div class="modal-actions">
@@ -1000,17 +1002,39 @@
   </div>
 </div>
 
-<div id="new-project-modal" class="modal-overlay hidden">
+<!-- إضافة كيان أو تعديل اسمه ونوعه (مشروع/قسم/إدارة…) — العنوان والتسمية من النوع المختار -->
+<div id="new-project-modal" class="modal-overlay hidden" data-ent-skip>
   <div class="modal">
-    <h3>مشروع جديد</h3>
+    <h3 id="new-project-title">مشروع جديد</h3>
     <form id="new-project-form">
-      <div class="field"><label for="new-project-name">اسم المشروع</label><input id="new-project-name" type="text" required placeholder="مثال: منصة المبيعات"></div>
+      <input type="hidden" id="new-project-id">
+      <div class="field" id="new-project-type-wrap"><label for="new-project-type">النوع</label><select id="new-project-type"></select></div>
+      <div class="field"><label for="new-project-name" id="new-project-name-label">اسم المشروع</label><input id="new-project-name" type="text" required maxlength="200" placeholder="مثال: منصة المبيعات"></div>
       <div id="new-project-error" class="roles-error hidden"></div>
       <div class="modal-actions">
         <button type="button" id="new-project-cancel">إلغاء</button>
         <button type="submit" id="new-project-save">إنشاء</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- أنواع الكيانات في المنظمة (للمسؤول): الاسم مفردًا وجمعًا والجنس والأيقونة، والافتراضي يأخذه كل كيان بلا نوع -->
+<div id="entity-types-modal" class="modal-overlay hidden" data-ent-skip role="dialog" aria-modal="true" aria-labelledby="et-title">
+  <div class="modal et-modal">
+    <h3 id="et-title">أنواع الكيانات</h3>
+    <p class="modal-note">الكيان هو ما تُنظَّم تحته المحادثة واللوحات والتصاميم والملفات والصلاحيات. سمِّه كما تسمّيه جهتك (مشروع، قسم، إدارة، فريق…)،
+      ويمكن أن تجمع المنظمة أكثر من نوع. الاسم يظهر في القائمة الجانبية وكل الشاشات بحسب نوع الكيان الذي تعمل فيه.</p>
+    <div id="et-list" class="et-list"></div>
+    <div class="roles-section-title">إضافة نوع</div>
+    <div class="et-presets" id="et-presets" role="group" aria-label="أنواع جاهزة"></div>
+    <form id="et-add" class="et-add">
+      <input id="et-add-s" type="text" maxlength="40" placeholder="المفرد: قسم" aria-label="الاسم مفردًا" required>
+      <input id="et-add-p" type="text" maxlength="40" placeholder="الجمع: أقسام" aria-label="الاسم جمعًا">
+      <button type="submit" class="btn btn-primary btn-sm">إضافة</button>
+    </form>
+    <div id="et-error" class="roles-error hidden"></div>
+    <div class="modal-actions"><button type="button" id="et-close">إغلاق</button></div>
   </div>
 </div>
 
@@ -1342,7 +1366,7 @@
         <!-- نطاق التعديل بالمحادثة لتصميم قائم: الشريحة الحالية (افتراضيًا لصفحة شرائح) أو العنصر المحدد أو العرض كله — الموديل لا يرى إلا النطاق -->
         <div id="ff-scope" class="ff-scope hidden"><label for="ff-scope-sel">🎯 نطاق التعديل</label><select id="ff-scope-sel"></select><small id="ff-scope-hint" class="muted"></small></div>
         <label for="ff-q" class="visually-hidden">الطلب</label>
-        <textarea id="ff-q" rows="3" placeholder="مثال: صفحة تعريفية بمشروع مركز الاتصال فيها الأهداف والفريق والجدول الزمني وقائمة مهام قابلة للتعديل… أو: خلّي الألوان أغمق وضيف قسم للمخاطر"></textarea>
+        <textarea id="ff-q" data-ent-skip rows="3" placeholder="مثال: صفحة تعريفية بمشروع مركز الاتصال فيها الأهداف والفريق والجدول الزمني وقائمة مهام قابلة للتعديل… أو: خلّي الألوان أغمق وضيف قسم للمخاطر"></textarea>
         <div class="input-tools">
           <label class="attach-btn" id="ff-attach-btn" title="إرفاق ملفات: صور، PDF، PowerPoint، Word، Excel/CSV…" tabindex="0" role="button" aria-label="إرفاق ملفات">
             <svg class="icon icon-sm" aria-hidden="true"><use href="#i-clip"/></svg>

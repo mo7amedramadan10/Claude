@@ -8187,6 +8187,101 @@ el('current-project-link').addEventListener('click', e => {
 
 // المشروع الحي الوحيد فعليًا اليوم هو أول مشروع بالمنظمة (نفس التعريف المستخدم في
 // renderProjects لصفحة "المشاريع") — اسمه وحرفه الأول هما اللي بيظهروا هنا.
+// ===== الكيانات وأنواعها (مشروع / قسم / إدارة …) =====
+// الكيان هو ما تُنظَّم تحته مساحة العمل (المحادثة، اللوحات، التصاميم، الملفات، الصلاحيات)، ولكل منظمة أنواعها (/api/projects → types).
+// ENT.cur = كلمات نوع الكيان الحالي (لـ«القسم الحالي» و«بيانات قسمك»…)، وENT.all = كلمات المجموعة في شاشة الكيانات: نوع واحد ← اسمه،
+// وأكثر من نوع ← «كيان/كيانات». النصوص الثابتة المكتوبة بكلمة «مشروع» تُستبدل آليًا بعبارات محددة تعني الكيان فقط (entReplace)،
+// لأن الكلمة نفسها تعني أيضًا «مشروع عمل» في محتوى النماذج («حالة المشاريع»)؛ ومحتوى اللوحات والمعاينات التوضيحية مستثنى.
+const ENT_DEFAULT = { singular: 'مشروع', plural: 'مشاريع', feminine: false, icon: 'layers' };
+const ENT = { types: [], cur: ENT_DEFAULT, all: ENT_DEFAULT, currentId: null };
+function entWords(t) {
+  t = t || ENT_DEFAULT;
+  const def = w => w.startsWith('ال') ? w : 'ال' + w;
+  const stem = w => w.endsWith('ة') ? w.slice(0, -1) + 'ت' : w;
+  const adj = a => t.feminine ? a + 'ة' : a;
+  return { s: t.singular, p: t.plural, defS: def(t.singular), defP: def(t.plural), stemS: stem(t.singular), adj, dem: t.feminine ? 'هذه' : 'هذا', fem: !!t.feminine, icon: t.icon || 'layers' };
+}
+function entType(id) { return ENT.types.find(t => t.id === id) || ENT.types.find(t => t.isDefault) || ENT.types[0] || ENT_DEFAULT; }
+function entIsDefaultWords(t) { return !t || (t.singular === 'مشروع' && t.plural === 'مشاريع' && !t.feminine); }
+// العبارات التي تعني الكيان فقط — لا «مشروع» المفردة وحدها (قد تكون محتوى)
+function entReplace(text, t) {
+  if (!text || entIsDefaultWords(t) || !/مشروع|مشاري/.test(text)) return text;
+  const w = entWords(t);
+  return text
+    .replace(/هذا المشروع/g, `${w.dem} ${w.defS}`)
+    .replace(/المشروع (الحالي|الجديد|النشط|الافتراضي|الرئيسي)(?![\u0621-\u064A])/g, (m, a) => `${w.defS} ${w.adj(a)}`)
+    .replace(/مشروع (جديد|افتراضي)(?![\u0621-\u064A])/g, (m, a) => `${w.s} ${w.adj(a)}`)
+    .replace(/مشروعك/g, w.stemS + 'ك')
+    .replace(/(بيانات|مصادر|هوية|أعضاء|عضو|عروض|تصاميم|مالك|مالكو|مالكي|محرّر|محرر|ملفات|صلاحيات|مستوى|اسم|لوحات|سجل|مساحة عمل|كل أعضاء) المشروع/g, (m, a) => `${a} ${w.defS}`)
+    .replace(/(مع|على|في|من|إلى|داخل) المشروع/g, (m, a) => `${a} ${w.defS}`)
+    .replace(/للمشروع/g, 'لل' + w.s)
+    .replace(/بالمشروع/g, 'بال' + w.s)
+    .replace(/^المشروع:/, w.defS + ':');
+}
+const ENT_SKIP = '[data-ent-skip], #dash, #gal-view-demo, #ffgal-view-demo, script, style, textarea';
+const entOrig = new WeakMap();   // عقدة نص ← {orig, out}
+const entAttrOrig = new WeakMap(); // عنصر ← {attr: {orig, out}}
+function entTextNode(n) {
+  const p = n.parentElement; if (!p || p.closest(ENT_SKIP)) return;
+  const rec = entOrig.get(n);
+  const orig = rec && n.nodeValue === rec.out ? rec.orig : n.nodeValue;
+  if (!/مشروع|مشاري/.test(orig)) return;
+  const out = entReplace(orig, ENT.cur);
+  entOrig.set(n, { orig, out });
+  if (n.nodeValue !== out) n.nodeValue = out;
+}
+function entAttrs(e) {
+  if (e.closest(ENT_SKIP)) return;
+  let rec = entAttrOrig.get(e);
+  for (const a of ['title', 'placeholder', 'aria-label']) {
+    const v = e.getAttribute(a); if (v == null) continue;
+    const r = rec && rec[a];
+    const orig = r && v === r.out ? r.orig : v;
+    if (!/مشروع|مشاري/.test(orig)) continue;
+    const out = entReplace(orig, ENT.cur);
+    rec = rec || {}; rec[a] = { orig, out }; entAttrOrig.set(e, rec);
+    if (v !== out) e.setAttribute(a, out);
+  }
+}
+function entApplyTree(root) {
+  if (document.documentElement.getAttribute('lang') === 'en' || !root) return;
+  if (root.nodeType === 3) { entTextNode(root); return; }
+  if (root.nodeType !== 1) return;
+  entAttrs(root);
+  root.querySelectorAll('[title],[placeholder],[aria-label]').forEach(entAttrs);
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) entTextNode(n);
+}
+let entObserver = null;
+function entStartObserver() {
+  if (entObserver || document.documentElement.getAttribute('lang') === 'en') return;
+  entObserver = new MutationObserver(muts => {
+    if (entIsDefaultWords(ENT.cur)) return;
+    for (const m of muts) {
+      if (m.type === 'childList') m.addedNodes.forEach(entApplyTree);
+      else if (m.type === 'characterData') entTextNode(m.target);
+      else if (m.type === 'attributes') entAttrs(m.target);
+    }
+  });
+  entObserver.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] });
+}
+// يضبط الأنواع ونوع الكيان الحالي من رد /api/projects ثم يعيد كتابة كل النصوص (وإرجاعها لأصلها إن عاد النوع «مشروع»)
+function entSetTypes(types, projects, currentTypeId) {
+  ENT.types = Array.isArray(types) ? types : [];
+  ENT.currentId = currentTypeId || null;
+  ENT.cur = entType(currentTypeId);
+  // كلمات المجموعة: كل الكيانات من نوع واحد ← اسمه، وإلا «كيان/كيانات»
+  const used = [...new Set((projects || []).map(p => entType(p.typeId)))];
+  ENT.all = used.length > 1 ? { singular: 'كيان', plural: 'كيانات', feminine: false, icon: 'layers' } : (used[0] || ENT.cur);
+  const wa = entWords(ENT.all);
+  SCREEN_LABELS.projects = wa.defP;
+  const nav = el('nav-entities-text'); if (nav) { nav.textContent = wa.defP; nav.closest('.nav-link')?.setAttribute('title', wa.defP); }
+  const ic = document.querySelector('#current-project-item .proj-dot'); if (ic) ic.title = ENT.cur.singular;
+  entStartObserver();
+  entApplyTree(document.body);
+  updateCrumbs(state.currentScreen);
+}
+
 async function loadCurrentProjectNav() {
   try {
     const res = await fetch('/api/projects');
@@ -8199,6 +8294,7 @@ async function loadCurrentProjectNav() {
       el('current-project-name').textContent = project.name;
       el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
     }
+    entSetTypes(data.types, data.projects, project?.typeId);
     updateCrumbs(state.currentScreen);
   } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
 }
@@ -15505,11 +15601,28 @@ el('tpladm-editor-modal').addEventListener('click', e => { if (e.target.id === '
 
 const state_projects = { all: [], rolesByProject: {}, filter: 'all', search: '' };
 
-function openNewProjectModal() {
+// إضافة كيان أو تعديله: النوع من أنواع المنظمة (الافتراضي مختار مبدئيًا)، والعنوان والتسمية يتبعان النوع المختار
+function openNewProjectModal(edit) {
+  const p = edit && edit.id ? edit : null;
   el('new-project-error').classList.add('hidden');
-  el('new-project-name').value = '';
+  el('new-project-id').value = p ? p.id : '';
+  el('new-project-name').value = p ? p.name : '';
+  const types = ENT.types.length ? ENT.types : [{ id: '', ...ENT_DEFAULT, isDefault: true }];
+  el('new-project-type').innerHTML = types.map(t => `<option value="${esc(t.id)}">${esc(t.singular)}</option>`).join('');
+  el('new-project-type').value = p ? (p.typeId || '') : (types.find(t => t.isDefault) || types[0]).id;
+  el('new-project-type-wrap').classList.toggle('hidden', types.length < 2 && !p);
+  el('new-project-save').textContent = p ? 'حفظ' : 'إنشاء';
+  newProjectSyncLabels();
   el('new-project-modal').classList.remove('hidden');
+  el('new-project-name').focus();
 }
+function newProjectSyncLabels() {
+  const w = entWords(entType(el('new-project-type').value));
+  const editing = !!el('new-project-id').value;
+  el('new-project-title').textContent = editing ? `تعديل ${w.defS}` : `${w.s} ${w.adj('جديد')}`;
+  el('new-project-name-label').textContent = `اسم ${w.defS}`;
+}
+el('new-project-type').addEventListener('change', newProjectSyncLabels);
 
 async function loadProjects() {
   const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
@@ -15518,6 +15631,8 @@ async function loadProjects() {
   const data = await res.json();
   el('projects-org-name').textContent = data.organization.name;
   state_projects.all = data.projects;
+  entSetTypes(data.types, data.projects, ENT.currentId || data.projects?.[0]?.typeId);
+  entSyncProjectsScreen();
 
   // صف الإحصاءات أعلى الصفحة — كله أرقام حقيقية من endpoints موجودة فعلًا، مفيش فيها أي
   // رقم مُلفّق: المصادر والمشروعات من نفس الاستجابة، اللوحات من سجل المستخدم، والأعضاء من
@@ -15548,7 +15663,20 @@ async function loadProjects() {
   }
 
   el('new-project-btn-top').classList.toggle('hidden', !isAdmin);
+  el('entity-types-btn').classList.toggle('hidden', !isAdmin);
   renderProjects();
+}
+// نصوص شاشة الكيانات بكلمات المجموعة (نوع واحد ← اسمه؛ أنواع متعددة ← «كيانات»)
+function entSyncProjectsScreen() {
+  const w = entWords(ENT.all);
+  el('projects-title-word').textContent = w.p;
+  el('projects-desc').textContent = `لكل ${w.s} محادثته ولوحاته وتصاميمه ومصادره وأعضاؤه — اضغط على ${w.s} لفتح مساحة عمله.`;
+  el('new-project-btn-text').textContent = ENT.types.length > 1 ? 'جديد' : `${w.s} ${w.adj('جديد')}`;
+  el('proj-stat-word').textContent = w.defP;
+  el('projects-search').placeholder = `ابحث في ${w.defP}`;
+  el('projects-filter').setAttribute('aria-label', `تصفية ${w.defP}`);
+  el('projects-filter-mine').textContent = w.p + 'ي';
+  el('projects-empty-note').textContent = `لا توجد ${w.p} مطابقة.`;
 }
 
 // أول مشروع (الافتراضي، المُنشأ تلقائيًا مع المنظمة) هو الوحيد المرتبط فعليًا بمساحة
@@ -15568,8 +15696,9 @@ function renderProjects() {
     projects = projects.filter(p => (state_projects.rolesByProject[p.id] || []).some(r => r.userId === myId));
   }
 
-  const cards = projects.map(p => {
+  const card = p => {
     const isLive = p.id === liveProjectId;
+    const tw = entWords(entType(p.typeId));
     const roles = state_projects.rolesByProject[p.id];
     const myRole = roles?.find(r => r.userId === myId)?.role;
     const badge = myRole ? `<span class="proj-role-badge">${esc(ROLE_LABELS[myRole] || myRole)}</span>` : '';
@@ -15580,17 +15709,24 @@ function renderProjects() {
     <a href="#" class="proj-card ${isLive ? 'is-live' : 'is-pending'}" data-project="${esc(p.id)}" data-live="${isLive}">
       ${badge}
       <div class="top">
-        <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg></span>
-        <div><h3>${esc(p.name)}</h3><p class="desc">${isLive ? 'مساحة العمل النشطة الآن' : 'سيُربط بمساحة عمل خاصة قريبًا'}</p></div>
-        ${isAdmin ? `<button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="أعضاء المشروع" aria-label="أعضاء المشروع"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button>` : ''}
+        <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-${esc(tw.icon)}"/></svg></span>
+        <div><h3>${esc(p.name)}</h3><p class="desc"><span class="proj-type-chip">${esc(tw.s)}</span> ${isLive ? 'مساحة العمل النشطة الآن' : 'سيُربط بمساحة عمل خاصة قريبًا'}</p></div>
+        ${isAdmin ? `<span class="proj-card-acts"><button type="button" class="btn btn-ghost btn-sm btn-icon" data-edit-project="${esc(p.id)}" title="تعديل الاسم والنوع" aria-label="تعديل ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="أعضاء ${esc(tw.defS)}" aria-label="أعضاء ${esc(tw.defS)}: ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button></span>` : ''}
       </div>
       ${statsLine}
     </a>`;
-  }).join('');
+  };
+  // أنواع متعددة ← مجموعات بعنوان كل نوع وعدده (بترتيب الأنواع)؛ نوع واحد ← شبكة واحدة كما كانت
+  const groups = ENT.types.length > 1
+    ? ENT.types.map(t => ({ t, items: projects.filter(p => entType(p.typeId).id === t.id) })).filter(g => g.items.length)
+    : [{ t: null, items: projects }];
+  const wa = entWords(ENT.all);
   const newCard = isAdmin
-    ? '<button type="button" class="new-card" id="new-project-card"><span class="plus"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><strong>مشروع جديد</strong></button>'
+    ? `<button type="button" class="new-card" id="new-project-card"><span class="plus"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><strong>${esc(ENT.types.length > 1 ? 'إضافة جديد' : wa.s + ' ' + wa.adj('جديد'))}</strong></button>`
     : '';
-  el('projects-grid').innerHTML = cards + newCard;
+  el('projects-grid').innerHTML = groups.map(g => (g.t
+    ? `<h2 class="proj-group-head"><span class="proj-ic sm"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${esc(g.t.icon || 'layers')}"/></svg></span>${esc(entWords(g.t).defP)} <span class="n">${g.items.length.toLocaleString('en-US')}</span></h2>`
+    : '') + g.items.map(card).join('')).join('') + newCard;
   el('projects-empty-note').classList.toggle('hidden', projects.length > 0);
   el('projects-toolbar').classList.toggle('hidden', state_projects.all.length === 0);
   document.getElementById('projects-filter').classList.toggle('hidden', !isAdmin);
@@ -15599,10 +15735,12 @@ function renderProjects() {
     card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); }));
   el('projects-grid').querySelectorAll('[data-members]').forEach(btn =>
     btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openProjectRolesModal(btn.dataset.members, btn.dataset.pname); }));
-  el('new-project-card')?.addEventListener('click', openNewProjectModal);
+  el('projects-grid').querySelectorAll('[data-edit-project]').forEach(btn =>
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openNewProjectModal(state_projects.all.find(p => p.id === btn.dataset.editProject)); }));
+  el('new-project-card')?.addEventListener('click', () => openNewProjectModal());
 }
 
-el('new-project-btn-top').addEventListener('click', openNewProjectModal);
+el('new-project-btn-top').addEventListener('click', () => openNewProjectModal());
 el('projects-search').addEventListener('input', e => { state_projects.search = e.target.value; renderProjects(); });
 document.getElementById('projects-filter').addEventListener('click', e => {
   const btn = e.target.closest('button[data-filter]');
@@ -15621,15 +15759,17 @@ el('new-project-form').addEventListener('submit', async e => {
   const name = el('new-project-name').value.trim();
   if (!name) return;
   const btn = el('new-project-save');
+  const id = el('new-project-id').value; const typeId = el('new-project-type').value || null;
   btn.disabled = true;
   try {
-    const res = await fetch('/api/projects', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    const res = await fetch(id ? `/api/projects/${encodeURIComponent(id)}` : '/api/projects', {
+      method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, typeId }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'تعذّر إنشاء المشروع.');
+    if (!res.ok) throw new Error(data.error || 'تعذّر الحفظ.');
     el('new-project-modal').classList.add('hidden');
-    loadProjects();
+    await loadProjects();
+    loadCurrentProjectNav(); // الاسم أو النوع قد تغيّر للكيان الحالي
   } catch (err) {
     el('new-project-error').textContent = err.message;
     el('new-project-error').classList.remove('hidden');
@@ -15637,6 +15777,90 @@ el('new-project-form').addEventListener('submit', async e => {
     btn.disabled = false;
   }
 });
+
+
+// ---------- أنواع الكيانات (للمسؤول): /api/entity-types ----------
+const ET_PRESETS = [['قسم', 'أقسام'], ['إدارة', 'إدارات'], ['فريق', 'فرق'], ['وحدة', 'وحدات'], ['برنامج', 'برامج'], ['فرع', 'فروع'], ['مبادرة', 'مبادرات'], ['مشروع', 'مشاريع']];
+const ET_ICON_LABELS = { layers: 'طبقات', briefcase: 'حقيبة', users: 'أشخاص', grid: 'شبكة', target: 'هدف', server: 'خادم', dashboard: 'لوحة', shield: 'درع', chart: 'رسم', star: 'نجمة', pin: 'دبوس', calendar: 'تقويم' };
+const ET = { types: [], icons: [], usage: {} };
+async function openEntityTypesModal() {
+  el('et-error').classList.add('hidden');
+  el('entity-types-modal').classList.remove('hidden');
+  await etLoad();
+  el('et-add-s').focus();
+}
+function closeEntityTypesModal() { el('entity-types-modal').classList.add('hidden'); el('entity-types-btn').focus(); }
+async function etLoad() {
+  try {
+    const r = await fetch('/api/entity-types'); const d = await r.json(); if (!r.ok) throw new Error(d.error || 'تعذّر التحميل.');
+    ET.types = d.types || []; ET.icons = d.icons || Object.keys(ET_ICON_LABELS); ET.usage = d.usage || {};
+  } catch (e) { etError(e.message); }
+  etRender();
+}
+function etError(msg) { el('et-error').textContent = msg; el('et-error').classList.toggle('hidden', !msg); }
+function etRender() {
+  const have = new Set(ET.types.map(t => t.singular));
+  el('et-presets').innerHTML = ET_PRESETS.filter(([s]) => !have.has(s)).map(([s, p]) => `<button type="button" class="et-chip" data-s="${esc(s)}" data-p="${esc(p)}">+ ${esc(s)}</button>`).join('');
+  el('et-list').innerHTML = ET.types.map(t => {
+    const n = ET.usage[t.id] || 0;
+    return `<div class="et-row" data-id="${esc(t.id)}">
+      <label class="et-ico-pick" title="الأيقونة"><span class="proj-ic sm"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${esc(t.icon)}"/></svg></span>
+        <select data-f="icon" aria-label="أيقونة ${esc(t.singular)}">${ET.icons.map(i => `<option value="${esc(i)}"${i === t.icon ? ' selected' : ''}>${esc(ET_ICON_LABELS[i] || i)}</option>`).join('')}</select></label>
+      <input data-f="singular" value="${esc(t.singular)}" maxlength="40" aria-label="المفرد">
+      <input data-f="plural" value="${esc(t.plural)}" maxlength="40" aria-label="الجمع">
+      <label class="et-check"><input type="checkbox" data-f="feminine"${t.feminine ? ' checked' : ''}> مؤنث</label>
+      <label class="et-check"><input type="radio" name="et-default" data-f="isDefault"${t.isDefault ? ' checked' : ''}> افتراضي</label>
+      <span class="et-usage">${n ? `${n.toLocaleString('en-US')} مستخدَم` : 'غير مستخدَم'}</span>
+      <button type="button" class="btn btn-ghost btn-sm btn-icon" data-del title="${t.isDefault ? 'لا يُحذف الافتراضي' : n ? 'مستخدَم — غيّر نوع كياناته أولًا' : 'حذف النوع'}" aria-label="حذف ${esc(t.singular)}"${t.isDefault || n ? ' disabled' : ''}><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button>
+    </div>`;
+  }).join('');
+  el('et-list').querySelectorAll('.et-row').forEach(row => {
+    const id = row.dataset.id;
+    row.querySelectorAll('[data-f]').forEach(f => f.addEventListener('change', () => {
+      const cur = ET.types.find(x => x.id === id) || {};
+      if ((f.dataset.f === 'singular' || f.dataset.f === 'plural' || f.dataset.f === 'icon') && f.value.trim() === cur[f.dataset.f]) return;
+      const body = {};
+      if (f.dataset.f === 'feminine') body.feminine = f.checked;
+      else if (f.dataset.f === 'isDefault') body.isDefault = true;
+      else body[f.dataset.f] = f.value;
+      etSave(id, body);
+    }));
+    row.querySelector('[data-del]').addEventListener('click', () => etDelete(id));
+  });
+  el('et-presets').querySelectorAll('.et-chip').forEach(b => b.addEventListener('click', () => etAdd(b.dataset.s, b.dataset.p)));
+}
+async function etAfterChange() { await etLoad(); await loadCurrentProjectNav(); if (state.currentScreen === 'projects') loadProjects(); }
+async function etSave(id, body) {
+  etError('');
+  try {
+    const r = await fetch(`/api/entity-types/${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'تعذّر الحفظ.');
+  } catch (e) { etError(e.message); }
+  await etAfterChange();
+}
+async function etAdd(singular, plural) {
+  etError('');
+  try {
+    const r = await fetch('/api/entity-types', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ singular, plural }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'تعذّرت الإضافة.');
+    el('et-add-s').value = ''; el('et-add-p').value = '';
+  } catch (e) { etError(e.message); }
+  await etAfterChange();
+}
+async function etDelete(id) {
+  const t = ET.types.find(x => x.id === id); if (!t || !confirm(`حذف النوع «${t.singular}»؟`)) return;
+  etError('');
+  try {
+    const r = await fetch(`/api/entity-types/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || 'تعذّر الحذف.'); }
+  } catch (e) { etError(e.message); }
+  await etAfterChange();
+}
+el('entity-types-btn').addEventListener('click', openEntityTypesModal);
+el('et-close').addEventListener('click', closeEntityTypesModal);
+el('entity-types-modal').addEventListener('click', e => { if (e.target === el('entity-types-modal')) closeEntityTypesModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el('entity-types-modal').classList.contains('hidden')) { e.stopPropagation(); closeEntityTypesModal(); } });
+el('et-add').addEventListener('submit', e => { e.preventDefault(); const s = el('et-add-s').value.trim(); if (s) etAdd(s, el('et-add-p').value.trim()); });
 
 // ---------- project members (Owner/Editor/Viewer roles on a project) ----------
 async function openProjectRolesModal(projectId, projectName) {

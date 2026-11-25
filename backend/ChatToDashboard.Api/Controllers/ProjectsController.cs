@@ -19,9 +19,11 @@ public class ProjectsController : ControllerBase
     private readonly ProjectStore _projects;
     private readonly OrganizationStore _organizations;
     private readonly UserStore _users;
+    private readonly EntityTypeStore _types;
 
-    public ProjectsController(ProjectStore projects, OrganizationStore organizations, UserStore users)
+    public ProjectsController(ProjectStore projects, OrganizationStore organizations, UserStore users, EntityTypeStore types)
     {
+        _types = types;
         _projects = projects;
         _organizations = organizations;
         _users = users;
@@ -50,13 +52,13 @@ public class ProjectsController : ControllerBase
         var projects = IsAdmin
             ? await _projects.ListByOrganizationAsync(organizationId, ct)
             : await _projects.ListForUserAsync(UserId, organizationId, ct);
+        // أنواع الكيانات (مشروع/قسم/إدارة…) ونوع كل كيان الفعلي — الواجهة تعرض الأسماء بها
+        var types = await _types.ListAsync(organizationId, ct);
         return Ok(new
         {
             organization = new { id = org.Id, name = org.Name, slug = org.Slug },
-            projects = projects.Select(p => new ProjectInfo
-            {
-                Id = p.Id, OrganizationId = p.OrganizationId, Name = p.Name, Slug = p.Slug, CreatedAt = p.CreatedAt,
-            }),
+            types,
+            projects = projects.Select(p => Info(p, types)),
         });
     }
 
@@ -66,14 +68,36 @@ public class ProjectsController : ControllerBase
     {
         var organizationId = OrganizationId;
         if (organizationId is null) return NotFound(new { error = "الحساب غير مرتبط بأي منظمة." });
-        if (string.IsNullOrWhiteSpace(request.Name)) return BadRequest(new { error = "اسم المشروع مطلوب." });
+        if (string.IsNullOrWhiteSpace(request.Name)) return BadRequest(new { error = "الاسم مطلوب." });
+        var types = await _types.ListAsync(organizationId, ct);
+        if (request.TypeId is not null && types.All(t => t.Id != request.TypeId)) return BadRequest(new { error = "النوع غير موجود." });
 
-        var project = await _projects.CreateAsync(organizationId, request.Name.Trim(), ct);
-        return Ok(new ProjectInfo
-        {
-            Id = project.Id, OrganizationId = project.OrganizationId, Name = project.Name, Slug = project.Slug, CreatedAt = project.CreatedAt,
-        });
+        var project = await _projects.CreateAsync(organizationId, request.Name.Trim(), ct, request.TypeId);
+        return Ok(Info(project, types));
     }
+
+    /// <summary>تعديل اسم الكيان ونوعه (المسؤول فقط).</summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Update(string id, [FromBody] ProjectRequest request, CancellationToken ct)
+    {
+        var project = await _projects.FindByIdAsync(id, ct);
+        if (project is null || project.OrganizationId != OrganizationId) return NotFound(new { error = "غير موجود." });
+        var name = string.IsNullOrWhiteSpace(request.Name) ? project.Name : request.Name.Trim();
+        if (name.Length > 200) return BadRequest(new { error = "الاسم أطول من 200 حرف." });
+        var types = await _types.ListAsync(project.OrganizationId, ct);
+        var typeId = request.TypeId ?? project.TypeId;
+        if (typeId is not null && types.All(t => t.Id != typeId)) return BadRequest(new { error = "النوع غير موجود." });
+        await _projects.UpdateAsync(id, name, typeId, ct);
+        project.Name = name; project.TypeId = typeId;
+        return Ok(Info(project, types));
+    }
+
+    private static ProjectInfo Info(Project p, IReadOnlyList<EntityType> types) => new()
+    {
+        Id = p.Id, OrganizationId = p.OrganizationId, Name = p.Name, Slug = p.Slug, CreatedAt = p.CreatedAt,
+        TypeId = EntityTypeStore.Resolve(types, p.TypeId)?.Id,
+    };
 
     /// <summary>The Owner/Editor/Viewer assignments on one project — for the management UI.
     /// Org Admin only (a project has no non-Admin "owner" the way a dashboard does).</summary>

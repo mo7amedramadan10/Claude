@@ -40,6 +40,7 @@ public class ProjectStore
         await AddColumnIfMissingAsync(connection, "Name", sqlServer: "NVARCHAR(200)", ct);
         await AddColumnIfMissingAsync(connection, "Slug", sqlServer: "NVARCHAR(200)", ct);
         await AddColumnIfMissingAsync(connection, "CreatedAt", sqlServer: "DATETIME2", ct);
+        await AddColumnIfMissingAsync(connection, "TypeId", sqlServer: "NVARCHAR(64)", ct);
 
         // Owner/Editor/Viewer roles on a project — mirrors DashboardRoles' shape (see its
         // own remarks), except Owner lives here too since a Project has no OwnerId column.
@@ -125,7 +126,7 @@ public class ProjectStore
         return project?.Id;
     }
 
-    public async Task<Project> CreateAsync(string organizationId, string name, CancellationToken ct = default)
+    public async Task<Project> CreateAsync(string organizationId, string name, CancellationToken ct = default, string? typeId = null)
     {
         await EnsureSchemaAsync(ct);
         var project = new Project
@@ -135,14 +136,31 @@ public class ProjectStore
             Name = name,
             Slug = await UniqueSlugAsync(organizationId, name, ct),
             CreatedAt = DateTime.UtcNow,
+            TypeId = typeId,
         };
 
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
-            $"INSERT INTO {Table} (Id, OrganizationId, Name, Slug, CreatedAt) " +
-            "VALUES (@Id, @OrganizationId, @Name, @Slug, @CreatedAt)",
+            $"INSERT INTO {Table} (Id, OrganizationId, Name, Slug, CreatedAt, TypeId) " +
+            "VALUES (@Id, @OrganizationId, @Name, @Slug, @CreatedAt, @TypeId)",
             project);
         return project;
+    }
+
+    /// <summary>تعديل اسم الكيان و/أو نوعه (الاسم المختصر للرابط لا يتغيّر حتى لا تنكسر الروابط القائمة).</summary>
+    public async Task UpdateAsync(string id, string name, string? typeId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"UPDATE {Table} SET Name = @name, TypeId = @typeId WHERE Id = @id", new { id, name, typeId });
+    }
+
+    /// <summary>عدد كيانات المنظمة بهذا النوع صراحة — حذف نوع مستخدَم مرفوض.</summary>
+    public async Task<int> CountByTypeAsync(string organizationId, string typeId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM {Table} WHERE OrganizationId = @organizationId AND TypeId = @typeId", new { organizationId, typeId });
     }
 
     public async Task<IReadOnlyList<ProjectRoleEntry>> ListRolesAsync(string projectId, CancellationToken ct = default)
