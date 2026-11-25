@@ -57,6 +57,9 @@ a { color: inherit; }
 .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
 h1 { font-size: clamp(34px, 4.6vw, 58px); line-height: 1.25; margin: 18px 0 16px; font-weight: 700; letter-spacing: -.01em; }
 h1 em { font-style: normal; background: linear-gradient(90deg, var(--blue), var(--teal)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* عبارة المنصة: السين = السؤال، والجيم = الجواب */
+.motto { margin: 0 0 18px; padding-inline-start: 14px; border-inline-start: 4px solid var(--teal); font-size: clamp(19px, 2vw, 24px); font-weight: 700; line-height: 1.5; color: var(--ink); }
+.motto b { background: linear-gradient(90deg, var(--blue), var(--teal)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lead { font-size: clamp(17px, 1.6vw, 20px); color: var(--ink-2); margin: 0 0 28px; max-width: 34em; }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; }
 .hero-art { position: relative; }
@@ -90,6 +93,17 @@ h2 { font-size: clamp(28px, 3.2vw, 40px); line-height: 1.3; margin: 8px 0 12px; 
 .step .n { width: 40px; height: 40px; border-radius: 12px; background: var(--blue); color: #fff; font-weight: 700; display: grid; place-items: center; margin-bottom: 14px; }
 .step h3 { margin: 0 0 6px; font-size: 20px; }
 .step p { margin: 0; color: var(--ink-2); font-size: 16px; }
+
+/* دورة العمل */
+.flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr) 44px minmax(0, 1fr); align-items: stretch; }
+.fstep { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--k); border-radius: var(--r); padding: 26px; }
+.fstep .fic { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: color-mix(in srgb, var(--k) 12%, var(--surface)); margin-bottom: 12px; }
+.fstep .fn { display: block; font-size: 13px; font-weight: 700; color: var(--k); margin-bottom: 4px; }
+.fstep h3 { margin: 0 0 6px; font-size: 19px; }
+.fstep p { margin: 0; color: var(--ink-2); font-size: 16px; }
+#flow { padding-top: 0; }
+.farrow { display: grid; place-items: center; color: var(--teal); font-size: 26px; font-weight: 700; }
+.flow-note { text-align: center; margin: 26px auto 0; max-width: 40em; color: var(--ink-2); font-size: 17px; }
 
 /* المنتجات */
 .products { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -173,6 +187,10 @@ footer img { height: 26px; }
   .ptab small { display: none; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nav { display: none; }
+  /* دورة العمل عمودية: الأسهم تشير لأسفل */
+  .flow { grid-template-columns: minmax(0, 1fr); }
+  .farrow { height: 40px; }
+  .farrow .arrow, [dir="rtl"] .farrow .arrow { transform: rotate(90deg); }
 }
 @media (max-width: 760px) {
   section { padding: 60px 0; }
@@ -222,6 +240,7 @@ footer img { height: 26px; }
       <div>
         <span class="eyebrow" data-i="eyebrow">منصة واحدة لكل مخرجات بياناتك</span>
         <h1 data-i-html="heroTitle">من بياناتك إلى قرارك… <em>في دقائق</em></h1>
+        <p class="motto" data-i-html="motto">عليك <b>السين</b>، وعلينا <b>الجيم</b></p>
         <p class="lead" data-i="heroLead">اصنع المستندات والعروض واللوحات والصفحات من بيانات جهتك الحقيقية: اختر النوع، وابدأ من قالب جاهز، واطلب ما تريد بالعربية — والنتيجة بأرقامك وبهوية جهتك.</p>
         <div class="cta">
           <a class="btn btn-primary" href="/app"><span data-i="login">تسجيل الدخول</span> <span class="arrow" aria-hidden="true">→</span></a>
@@ -266,6 +285,25 @@ footer img { height: 26px; }
         <div class="step reveal"><div class="n">2</div><h3 data-i="s2t">اختر القالب</h3><p data-i="s2d">من معرض قوالب جاهزة لكل نوع، مع معاينة تفاعلية قبل الاستخدام، أو ابدأ من ملفك أو من الصفر.</p></div>
         <div class="step reveal"><div class="n">3</div><h3 data-i="s3t">اطلب بالعربية</h3><p data-i="s3d">صِف ما تريد، فيبنيه جيم من بياناتك الحقيقية بهوية جهتك، ثم عدّله بنفسك أو انشره برابط.</p></div>
       </div>
+    </div>
+  </section>
+
+  <!-- دورة العمل: من صفحة تجمع البيانات إلى لوحة ثم إلى عرض -->
+  <section id="flow">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="flKicker">دورة العمل</span>
+        <h2 data-i="flTitle">من صفحة تجمع البيانات… إلى لوحة… إلى عرض</h2>
+        <p data-i="flLead">المخرجات في جيم متصلة ببعضها: ما تجمعه صفحة يصير مصدرًا للوحة، واللوحة تصير عرضًا تقديميًا بالأرقام نفسها.</p>
+      </div>
+      <ol class="flow reveal">
+        <li class="fstep" style="--k: var(--k-design)"><span class="fic" aria-hidden="true">🎨</span><span class="fn" data-i="f1n">الخطوة 1 · تصميم</span><h3 data-i="f1t">صفحة تجمع البيانات</h3><p data-i="f1d">نموذج طلب أو استبيان أو سجل متابعة يُنشر برابط، وكل إدخال يُحفظ في المنصة مباشرة.</p></li>
+        <li class="farrow" aria-hidden="true"><span class="arrow">→</span></li>
+        <li class="fstep" style="--k: var(--k-track)"><span class="fic" aria-hidden="true">📈</span><span class="fn" data-i="f2n">الخطوة 2 · لوحة متابعة</span><h3 data-i="f2t">لوحة من هذه البيانات</h3><p data-i="f2d">بنقرة «اعمل لوحة متابعة منه» تصير الإدخالات جدولًا تُبنى عليه مؤشرات ورسوم بالفلاتر.</p></li>
+        <li class="farrow" aria-hidden="true"><span class="arrow">→</span></li>
+        <li class="fstep" style="--k: var(--k-slides)"><span class="fic" aria-hidden="true">🖥️</span><span class="fn" data-i="f3n">الخطوة 3 · عرض تقديمي</span><h3 data-i="f3t">عرض من اللوحة</h3><p data-i="f3d">«تحويل إلى» شرائح من القالب الذي تختاره، برسوم مربوطة بالبيانات الحقيقية لا صور ثابتة.</p></li>
+      </ol>
+      <p class="flow-note reveal" data-i="flNote">🔄 ومع كل إدخال جديد يكفي «تحديث البيانات» لتتحدّث اللوحة والعرض — بلا إعادة بناء.</p>
     </div>
   </section>
 
@@ -385,7 +423,7 @@ footer img { height: 26px; }
   var T = {
     ar: {
       title: 'جيم — من بياناتك إلى قرارك', skip: 'تخطَّ إلى المحتوى', navLabel: 'أقسام الصفحة', navProducts: 'المنتجات', navHow: 'كيف يعمل', navWhy: 'ما يميّزنا', navGov: 'الحوكمة',
-      langLabel: 'اللغة', login: 'تسجيل الدخول', eyebrow: 'منصة واحدة لكل مخرجات بياناتك', heroTitle: 'من بياناتك إلى قرارك… <em>في دقائق</em>',
+      langLabel: 'اللغة', login: 'تسجيل الدخول', eyebrow: 'منصة واحدة لكل مخرجات بياناتك', heroTitle: 'من بياناتك إلى قرارك… <em>في دقائق</em>', motto: 'عليك <b>السين</b>، وعلينا <b>الجيم</b>',
       heroLead: 'اصنع المستندات والعروض واللوحات والصفحات من بيانات جهتك الحقيقية: اختر النوع، وابدأ من قالب جاهز، واطلب ما تريد بالعربية — والنتيجة بأرقامك وبهوية جهتك.',
       exploreProducts: 'استعرض المنتجات', chip1: '6 منتجات', chip2: 'أكثر من 320 قالبًا جاهزًا', chip3: 'عربي وإنجليزي', chip4: 'أرقام من بياناتك',
       heroAlt1: 'شريحة من عرض تقديمي أنشأته جيم', heroAlt2: 'لوحة مؤشرات بأرقام توضيحية',
@@ -397,6 +435,12 @@ footer img { height: 26px; }
       s1t: 'اختر النوع', s1d: 'مستند، أو عرض شرائح، أو تصميم، أو لوحة، أو مشهد متحرك، أو لوحة متابعة.',
       s2t: 'اختر القالب', s2d: 'من معرض قوالب جاهزة لكل نوع، مع معاينة تفاعلية قبل الاستخدام، أو ابدأ من ملفك أو من الصفر.',
       s3t: 'اطلب بالعربية', s3d: 'صِف ما تريد، فيبنيه جيم من بياناتك الحقيقية بهوية جهتك، ثم عدّله بنفسك أو انشره برابط.',
+      flKicker: 'دورة العمل', flTitle: 'من صفحة تجمع البيانات… إلى لوحة… إلى عرض',
+      flLead: 'المخرجات في جيم متصلة ببعضها: ما تجمعه صفحة يصير مصدرًا للوحة، واللوحة تصير عرضًا تقديميًا بالأرقام نفسها.',
+      f1n: 'الخطوة 1 · تصميم', f1t: 'صفحة تجمع البيانات', f1d: 'نموذج طلب أو استبيان أو سجل متابعة يُنشر برابط، وكل إدخال يُحفظ في المنصة مباشرة.',
+      f2n: 'الخطوة 2 · لوحة متابعة', f2t: 'لوحة من هذه البيانات', f2d: 'بنقرة «اعمل لوحة متابعة منه» تصير الإدخالات جدولًا تُبنى عليه مؤشرات ورسوم بالفلاتر.',
+      f3n: 'الخطوة 3 · عرض تقديمي', f3t: 'عرض من اللوحة', f3d: '«تحويل إلى» شرائح من القالب الذي تختاره، برسوم مربوطة بالبيانات الحقيقية لا صور ثابتة.',
+      flNote: '🔄 ومع كل إدخال جديد يكفي «تحديث البيانات» لتتحدّث اللوحة والعرض — بلا إعادة بناء.',
       prKicker: 'المنتجات', prTitle: 'ستة منتجات… ولكل منها قوالبه الجاهزة', prLead: 'كل نوع في «تصميم حر» منتج متكامل بمعرض قوالب خاص به، يبدأ منه فريقك في ثوانٍ.', prTabs: 'المنتجات',
       exLabel: 'مثال:', shotAlt: 'لقطة من منتج',
       p_doc: { n: 'المستندات', s: 'تقارير ومذكرات جاهزة للطباعة', v: 'تقارير ومذكرات ومحاضر بصفحات A4 منسّقة بترويسة وفهرس، وبأرقام من بياناتك، جاهزة للطباعة والتصدير بصيغة PDF.', ex: 'تقرير الأداء الشهري للإدارة، أو مذكرة عرض قرار.', t: '6 قوالب', f: ['تقرير أداء دوري', 'مذكرة داخلية', 'محضر اجتماع', 'مقترح وعرض سعر', 'سياسة أو إجراء', 'ملخص صفحة واحدة'] },
@@ -429,7 +473,7 @@ footer img { height: 26px; }
     },
     en: {
       title: 'Jeem — From your data to your decision', skip: 'Skip to content', navLabel: 'Page sections', navProducts: 'Products', navHow: 'How it works', navWhy: 'Why Jeem', navGov: 'Governance',
-      langLabel: 'Language', login: 'Sign in', eyebrow: 'One platform for everything your data produces', heroTitle: 'From your data to your decision… <em>in minutes</em>',
+      langLabel: 'Language', login: 'Sign in', eyebrow: 'One platform for everything your data produces', heroTitle: 'From your data to your decision… <em>in minutes</em>', motto: 'You bring the <b>question</b>, we bring the <b>answer</b>',
       heroLead: 'Create documents, presentations, dashboards and pages from your organization’s real data: pick a type, start from a ready template and describe what you need — in your numbers and your brand.',
       exploreProducts: 'Explore the products', chip1: '6 products', chip2: '320+ ready templates', chip3: 'Arabic & English', chip4: 'Numbers from your data',
       heroAlt1: 'A presentation slide created with Jeem', heroAlt2: 'A KPI dashboard with sample figures',
@@ -441,6 +485,12 @@ footer img { height: 26px; }
       s1t: 'Pick a type', s1d: 'A document, a slide deck, a design, a dashboard, an animation or a follow-up dashboard.',
       s2t: 'Pick a template', s2d: 'From a gallery of ready templates for each type, with an interactive preview — or start from your own file or from scratch.',
       s3t: 'Ask in plain language', s3d: 'Describe what you need; Jeem builds it from your real data in your brand. Then edit it yourself or publish it as a link.',
+      flKicker: 'The workflow', flTitle: 'From a page that collects data… to a dashboard… to a presentation',
+      flLead: 'Everything you make in Jeem connects: what a page collects becomes a dashboard’s source, and the dashboard becomes a deck with the same numbers.',
+      f1n: 'Step 1 · Design', f1t: 'A page that collects data', f1d: 'A request form, survey or tracking log published as a link — every entry is saved straight to the platform.',
+      f2n: 'Step 2 · Dashboard', f2t: 'A dashboard on that data', f2d: 'One click on “Build a dashboard from it” turns the entries into a table with KPIs, charts and filters.',
+      f3n: 'Step 3 · Presentation', f3t: 'A deck from the dashboard', f3d: '“Convert to” slides from the template you pick, with charts bound to the real data — not static images.',
+      flNote: '🔄 As new entries arrive, “Refresh data” updates the dashboard and the deck — no rebuilding.',
       prKicker: 'Products', prTitle: 'Six products — each with its own ready templates', prLead: 'Every Freeform type is a complete product with its own template gallery, so your team starts in seconds.', prTabs: 'Products',
       exLabel: 'Example:', shotAlt: 'Product screenshot',
       p_doc: { n: 'Documents', s: 'Print-ready reports and memos', v: 'Reports, memos and minutes on formatted A4 pages with header and contents, using figures from your data — ready to print or export as PDF.', ex: 'A monthly performance report for leadership, or a decision memo.', t: '6 templates', f: ['Periodic performance report', 'Internal memo', 'Meeting minutes', 'Proposal & quotation', 'Policy or procedure', 'One-page summary'] },
