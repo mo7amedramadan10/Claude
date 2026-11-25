@@ -4002,6 +4002,9 @@ html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scale
 .jeem-scope .ffid-item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; font: inherit; }
 .jeem-scope .ffid-item:hover { border-color: var(--ink-3); }
 .jeem-scope .ffid-item[aria-checked="true"] { border-color: var(--brand, #0B5CAD); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand, #0B5CAD) 25%, transparent); font-weight: 700; }
+.jeem-scope .ffid-pen { flex: none; width: 30px; height: 30px; margin-inline-start: -4px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink-2, var(--ink)); cursor: pointer; font: inherit; font-size: 14px; line-height: 1; }
+.jeem-scope .ffid-pen:hover { border-color: var(--brand, #0B5CAD); color: var(--brand, #0B5CAD); }
+.jeem-scope .ffid-pen:focus-visible { outline: 2px solid var(--brand, #0B5CAD); outline-offset: 2px; }
 .jeem-scope .ffid-item:focus-visible { outline: 2px solid var(--brand, #0B5CAD); outline-offset: 2px; }
 .jeem-scope .ffid-sw { display: inline-flex; }
 .jeem-scope .ffid-sw i, .jeem-scope .ffid-fam i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .12); display: inline-block; }

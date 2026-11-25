@@ -11331,8 +11331,10 @@ function ffidRenderList() {
   const cur = FF.design?.identityId || '';
   el('ffid-list').innerHTML = (FFID.items || []).map(it => `<button type="button" class="ffid-item" role="radio" aria-checked="${FFID.sel === it.id}" data-ffid="${esc(it.id)}">
       <span class="ffid-sw" aria-hidden="true">${ffidSwatches(it.brand || {})}</span>${it.brand?.logo ? `<img src="${esc(it.brand.logo)}" alt="" class="ffid-logo">` : ''}
-      <span class="ffid-name">${esc(it.name)}</span>${it.id === cur ? '<small class="ffid-cur">الحالية</small>' : ''}</button>`).join('');
+      <span class="ffid-name">${esc(it.name)}</span>${it.id === cur ? '<small class="ffid-cur">الحالية</small>' : ''}</button>${FFID.canEdit ? `<button type="button" class="ffid-pen" data-ffid-edit="${esc(it.id)}" title="تعديل الهوية «${esc(it.name)}»: الاسم والألوان والخط والشعار" aria-label="تعديل الهوية ${esc(it.name)}">✎</button>` : ''}`).join('');
   el('ffid-list').querySelectorAll('[data-ffid]').forEach(b => b.addEventListener('click', () => ffidSelect(b.dataset.ffid)));
+  // تعديل الهوية مباشرة من رقاقتها (كان الزر لا يظهر إلا بعد اختيار هوية وفي آخر الشريط فلم يجده المستخدم)
+  el('ffid-list').querySelectorAll('[data-ffid-edit]').forEach(b => b.addEventListener('click', () => ffidmOpen(b.dataset.ffidEdit)));
   el('ffid-new').classList.toggle('hidden', !FFID.canEdit || (FFID.items || []).length > FFID.max);
   el('ffid-edit').classList.toggle('hidden', !FFID.canEdit || FFID.sel == null);
 }
@@ -11451,7 +11453,7 @@ el('ffidm-form').addEventListener('submit', async e => {
     if (isDefault) state.dashBrand = undefined; // رأس اللوحات يعيد جلب الهوية الافتراضية
     const keep = isDefault ? '' : (FFIDM.id || d.id);
     await ffidLoad(); el('ff-idm-modal').classList.add('hidden');
-    if (FFID.open) ffidSelect(keep); el('ffid-list').querySelector(`[data-ffid="${CSS.escape(keep)}"]`)?.focus();
+    if (FFID.open) { ffidSelect(keep); el('ffid-status').textContent = 'حُفظت الهوية في المكتبة. المعاينة الآن بها — اضغط «تطبيق كإصدار جديد» ليتغيّر العرض فعلًا (العروض التي طُبّقت عليها من قبل لا تتغيّر إلا بإعادة التطبيق).'; } el('ffid-list').querySelector(`[data-ffid="${CSS.escape(keep)}"]`)?.focus();
   } catch (x) { err.textContent = x.message; err.classList.remove('hidden'); }
   finally { btn.disabled = false; }
 });
