@@ -374,6 +374,9 @@
   .app, .app.is-collapsed { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: fixed; inset-block: 0; inset-inline-start: 0; width: var(--sidebar-w); transform: translateX(105%); transition: transform .3s var(--ease); box-shadow: var(--shadow-3); z-index: 40; }
   .app.nav-open .sidebar { transform: none; }
+  /* الواجهة الإنجليزية: القائمة على اليسار فتُخفى بالإزاحة يسارًا (الإزاحة يمينًا كانت تُبقي نصفها فوق الصفحة) */
+  :root[dir="ltr"] .sidebar { transform: translateX(-105%); }
+  :root[dir="ltr"] .app.nav-open .sidebar { transform: none; }
   .sb-collapse { display: none; }
   .btn.menu-btn { display: inline-flex; }
   .topbar { padding: 10px 16px; }
@@ -4321,7 +4324,10 @@ body.ff-full-on { overflow: hidden; }
 .proj-card .top .proj-card-acts [data-members] { margin: 0; }
 .et-modal { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; }
 .et-list { display: grid; gap: 8px; margin: 12px 0; }
-.et-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.et-row { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.et-names { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); gap: 8px; align-items: center; }
+.et-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.et-meta .et-usage { margin-inline-start: auto; }
 .et-row input[type="text"], .et-row input:not([type]), .et-add input { min-width: 0; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
 .et-ico-pick { display: flex; align-items: center; gap: 6px; }
 .et-ico-pick select { height: 34px; padding: 0 10px 0 32px; border: 1px solid var(--line); border-radius: 8px; background-color: var(--surface); background-position: left 8px center; background-size: 16px; color: var(--ink); font-size: 13px; max-width: 110px; }
@@ -4330,10 +4336,10 @@ body.ff-full-on { overflow: hidden; }
 .et-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .et-chip { all: unset; cursor: pointer; padding: 4px 12px; border-radius: 999px; border: 1px dashed var(--line); font-size: 13px; color: var(--ink-2); }
 .et-chip:hover, .et-chip:focus-visible { border-color: var(--brand-blue); color: var(--brand-blue); outline: none; }
-.et-add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; }
+.et-add { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 8px; }
 @media (max-width: 640px) {
-  .et-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .et-row .et-ico-pick { grid-column: 1 / -1; }
+  .et-names { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .et-names .et-ico-pick { grid-column: 1 / -1; }
   .et-ico-pick select { max-width: none; flex: 1; }
   .et-add { grid-template-columns: 1fr 1fr; }
   .et-add button { grid-column: 1 / -1; }

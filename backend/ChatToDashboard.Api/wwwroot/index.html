@@ -122,7 +122,7 @@
         <li class="hidden" id="nav-claude-chat"><button type="button" class="nav-link tab" data-screen="claude-chat"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">محادثة Claude</span></button></li>
       </ul>
 
-      <div class="sb-label"><span>المشروع الحالي</span></div>
+      <div class="sb-label"><span id="sb-current-entity">المشروع الحالي</span></div>
       <ul class="nav">
         <li class="proj-item is-open" id="current-project-item">
           <a href="#" class="nav-link" id="current-project-link" aria-expanded="true">
@@ -406,7 +406,7 @@
         <h1><span id="projects-title-word">مشاريع</span> <span id="projects-org-name">المنظمة</span></h1>
         <p id="projects-desc">كل مشروع له محادثته الخاصة ولوحاته ومصادره — اضغط على مشروع لفتح مساحة عمله.</p>
       </div>
-      <div class="proj-head-actions"><button type="button" class="btn btn-ghost hidden" id="entity-types-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg>أنواع الكيانات</button>
+      <div class="proj-head-actions"><button type="button" class="btn btn-ghost hidden" id="entity-types-btn"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-settings"/></svg><span id="entity-types-label">أنواع الكيانات</span></button>
       <button type="button" class="btn btn-primary hidden" id="new-project-btn-top"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg><span id="new-project-btn-text">مشروع جديد</span></button></div>
     </section>
 
@@ -1023,14 +1023,16 @@
 <div id="entity-types-modal" class="modal-overlay hidden" data-ent-skip role="dialog" aria-modal="true" aria-labelledby="et-title">
   <div class="modal et-modal">
     <h3 id="et-title">أنواع الكيانات</h3>
-    <p class="modal-note">الكيان هو ما تُنظَّم تحته المحادثة واللوحات والتصاميم والملفات والصلاحيات. سمِّه كما تسمّيه جهتك (مشروع، قسم، إدارة، فريق…)،
+    <p class="modal-note" id="et-note">الكيان هو ما تُنظَّم تحته المحادثة واللوحات والتصاميم والملفات والصلاحيات. سمِّه كما تسمّيه جهتك (مشروع، قسم، إدارة، فريق…)،
       ويمكن أن تجمع المنظمة أكثر من نوع. الاسم يظهر في القائمة الجانبية وكل الشاشات بحسب نوع الكيان الذي تعمل فيه.</p>
     <div id="et-list" class="et-list"></div>
     <div class="roles-section-title">إضافة نوع</div>
     <div class="et-presets" id="et-presets" role="group" aria-label="أنواع جاهزة"></div>
     <form id="et-add" class="et-add">
-      <input id="et-add-s" type="text" maxlength="40" placeholder="المفرد: قسم" aria-label="الاسم مفردًا" required>
-      <input id="et-add-p" type="text" maxlength="40" placeholder="الجمع: أقسام" aria-label="الاسم جمعًا">
+      <input id="et-add-s" type="text" maxlength="40" dir="rtl" lang="ar" placeholder="المفرد: قسم" aria-label="الاسم مفردًا بالعربية" required>
+      <input id="et-add-p" type="text" maxlength="40" dir="rtl" lang="ar" placeholder="الجمع: أقسام" aria-label="الاسم جمعًا بالعربية">
+      <input id="et-add-se" type="text" maxlength="40" dir="ltr" lang="en" placeholder="Department" aria-label="الاسم مفردًا بالإنجليزية">
+      <input id="et-add-pe" type="text" maxlength="40" dir="ltr" lang="en" placeholder="Departments" aria-label="الاسم جمعًا بالإنجليزية">
       <button type="submit" class="btn btn-primary btn-sm">إضافة</button>
     </form>
     <div id="et-error" class="roles-error hidden"></div>
@@ -1040,8 +1042,8 @@
 
 <div id="project-roles-modal" class="modal-overlay hidden">
   <div class="modal roles-modal-box">
-    <h3>أعضاء المشروع</h3>
-    <p class="modal-note">المشروع: <strong id="project-roles-name">—</strong></p>
+    <h3 id="project-roles-title">أعضاء المشروع</h3>
+    <p class="modal-note"><span id="project-roles-label">المشروع: </span><strong id="project-roles-name">—</strong></p>
     <input type="hidden" id="project-roles-id" />
     <div class="roles-section-title">إضافة عضو</div>
     <div class="role-add-row">

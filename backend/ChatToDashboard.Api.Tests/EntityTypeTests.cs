@@ -49,4 +49,29 @@ public class EntityTypeTests
         Assert.Equal("a", EntityTypeStore.Resolve(types, null)!.Id);
         Assert.Equal("a", EntityTypeStore.Resolve(types, "other-org-type")!.Id);
     }
+
+    [Fact]
+    public void Validate_EnglishNames_OptionalWithDerivedPlural()
+    {
+        var t = new EntityType();
+        Assert.Null(EntityTypeStore.Validate(new EntityTypeRequest { Singular = "قسم", SingularEn = " Department " }, t, creating: true));
+        Assert.Equal(("Department", "Departments"), (t.SingularEn, t.PluralEn));
+
+        var u = new EntityType();
+        Assert.Null(EntityTypeStore.Validate(new EntityTypeRequest { Singular = "فرع", SingularEn = "Branch", PluralEn = "Branches" }, u, creating: true));
+        Assert.Equal(("Branch", "Branches"), (u.SingularEn, u.PluralEn));
+
+        var none = new EntityType();
+        Assert.Null(EntityTypeStore.Validate(new EntityTypeRequest { Singular = "وحدة" }, none, creating: true));
+        Assert.Null(none.SingularEn);
+        Assert.Null(none.PluralEn);
+
+        // تعديل جزئي: إرسال العربي وحده لا يمس الإنجليزي، وإفراغ المفرد الإنجليزي يمسح الاثنين
+        Assert.Null(EntityTypeStore.Validate(new EntityTypeRequest { Plural = "أقسام" }, t, creating: false));
+        Assert.Equal("Department", t.SingularEn);
+        Assert.Null(EntityTypeStore.Validate(new EntityTypeRequest { SingularEn = "" }, t, creating: false));
+        Assert.Null(t.SingularEn);
+        Assert.Null(t.PluralEn);
+        Assert.NotNull(EntityTypeStore.Validate(new EntityTypeRequest { SingularEn = new string('x', 41) }, new EntityType { Singular = "قسم" }, creating: false));
+    }
 }

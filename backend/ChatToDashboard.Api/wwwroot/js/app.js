@@ -381,6 +381,21 @@ const I18N_EN = {
   'لا يوجد عناصر بعد': 'No items yet',
   'مستخدم جديد': 'New User', '(اتركها فاضية لعدم التغيير)': "(leave blank to keep it unchanged)",
   'فشل الحفظ': 'Save failed',
+  // ---- بنود القائمة الجانبية ----
+  'المحادثة واللوحات': 'Chat & Dashboards', 'اللوحات المنشورة': 'Published Dashboards', 'المحلل الذكي': 'Smart Analyst',
+  'منشئ العروض': 'Deck Builder', 'تصميم حر': 'Freeform Design', 'للاطلاع': 'For Review', 'الملفات': 'Files',
+  'العروض التقديمية': 'Presentations', 'مفاتيح الموديلات': 'Model Keys', 'التكاملات الخارجية': 'External Integrations',
+  'الاستهلاك': 'Usage', 'المنظمات': 'Organizations', 'مكتبة النماذج': 'Template Library', 'محادثة Claude': 'Claude Chat',
+  'قراءة تلقائية': 'Auto read',
+  // ---- الكيانات وأنواعها (شاشة الكيانات ونوافذها، ومجموعات القائمة الجانبية) ----
+  'المنظمة': 'Organization', 'الإدارة': 'Administration', 'المنصّة': 'Platform',
+  'الأعضاء': 'Members', 'اللوحات': 'Dashboards', 'المصادر': 'Sources', 'بحث': 'Search',
+  'في هذه المنظمة': 'in this organization', 'لوحة محفوظة لك': 'dashboards saved by you',
+  'مستخدمون في المنظمة': 'users in the organization', 'مصدر بيانات متاح': 'data sources available',
+  'إضافة نوع': 'Add a type', 'إضافة': 'Add', 'أنواع جاهزة': 'Ready-made types', 'النوع': 'Type', 'إنشاء': 'Create',
+  'إضافة عضو': 'Add a member', 'المفرد: قسم': 'Arabic singular', 'الجمع: أقسام': 'Arabic plural',
+  'الاسم مفردًا بالعربية': 'Arabic singular', 'الاسم جمعًا بالعربية': 'Arabic plural',
+  'الاسم مفردًا بالإنجليزية': 'English singular', 'الاسم جمعًا بالإنجليزية': 'English plural',
 };
 const I18N_ENTRIES = Object.entries(I18N_EN).sort((a, b) => b[0].length - a[0].length);
 
@@ -8077,7 +8092,7 @@ function updateCrumbs(name) {
   else if (state.orgName) parts.push(state.orgName);
   if (ENTITY_SCOPED_SCREENS.has(name) && state.entityName) parts.push(state.entityName);
   const label = SCREEN_LABELS[name];
-  if (label) parts.push(label);
+  if (label) parts.push(entIsEn() ? translateText(label) : label);
   crumbs.innerHTML = parts.map((p, i) => {
     const seg = i === parts.length - 1 ? `<strong>${esc(p)}</strong>` : `<span>${esc(p)}</span>`;
     return i === 0 ? seg : `<span class="sep">/</span>${seg}`;
@@ -8192,7 +8207,21 @@ el('current-project-link').addEventListener('click', e => {
 // ENT.cur = كلمات نوع الكيان الحالي (لـ«القسم الحالي» و«بيانات قسمك»…)، وENT.all = كلمات المجموعة في شاشة الكيانات: نوع واحد ← اسمه،
 // وأكثر من نوع ← «كيان/كيانات». النصوص الثابتة المكتوبة بكلمة «مشروع» تُستبدل آليًا بعبارات محددة تعني الكيان فقط (entReplace)،
 // لأن الكلمة نفسها تعني أيضًا «مشروع عمل» في محتوى النماذج («حالة المشاريع»)؛ ومحتوى اللوحات والمعاينات التوضيحية مستثنى.
-const ENT_DEFAULT = { singular: 'مشروع', plural: 'مشاريع', feminine: false, icon: 'layers' };
+const ENT_DEFAULT = { singular: 'مشروع', plural: 'مشاريع', singularEn: 'Project', pluralEn: 'Projects', feminine: false, icon: 'layers' };
+const ENT_GENERIC = { singular: 'كيان', plural: 'كيانات', singularEn: 'Entity', pluralEn: 'Entities', feminine: false, icon: 'layers' };
+// الواجهة الإنجليزية: اسم النوع الإنجليزي (Department/Departments)؛ نوع «مشروع» بلا اسم إنجليزي ← Project، وغيره ← Entity
+const entIsEn = () => document.documentElement.getAttribute('lang') === 'en';
+const L = (ar, en) => entIsEn() ? en : ar;
+function entEn(t) {
+  t = t || ENT_DEFAULT;
+  const s = t.singularEn || (t.singular === 'مشروع' ? 'Project' : 'Entity');
+  return { s, p: t.pluralEn || (t.singularEn ? s + 's' : t.singular === 'مشروع' ? 'Projects' : 'Entities'), icon: t.icon || 'layers' };
+}
+// كلمات العرض بلغة الواجهة: s/p مفرد وجمع، defS/defP معرَّفان (بلا «ال» في الإنجليزية)، neu = «جديد» متّفقة، all = نص «الكل»
+function entShow(t) {
+  if (!entIsEn()) { const w = entWords(t); return { ...w, neu: `${w.s} ${w.adj('جديد')}` }; }
+  const e = entEn(t); return { s: e.s, p: e.p, defS: e.s, defP: e.p, neu: `New ${e.s.toLowerCase()}`, icon: e.icon };
+}
 const ENT = { types: [], cur: ENT_DEFAULT, all: ENT_DEFAULT, currentId: null };
 function entWords(t) {
   t = t || ENT_DEFAULT;
@@ -8244,7 +8273,7 @@ function entAttrs(e) {
   }
 }
 function entApplyTree(root) {
-  if (document.documentElement.getAttribute('lang') === 'en' || !root) return;
+  if (!root) return;
   if (root.nodeType === 3) { entTextNode(root); return; }
   if (root.nodeType !== 1) return;
   entAttrs(root);
@@ -8254,7 +8283,7 @@ function entApplyTree(root) {
 }
 let entObserver = null;
 function entStartObserver() {
-  if (entObserver || document.documentElement.getAttribute('lang') === 'en') return;
+  if (entObserver) return;
   entObserver = new MutationObserver(muts => {
     if (entIsDefaultWords(ENT.cur)) return;
     for (const m of muts) {
@@ -8272,11 +8301,13 @@ function entSetTypes(types, projects, currentTypeId) {
   ENT.cur = entType(currentTypeId);
   // كلمات المجموعة: كل الكيانات من نوع واحد ← اسمه، وإلا «كيان/كيانات»
   const used = [...new Set((projects || []).map(p => entType(p.typeId)))];
-  ENT.all = used.length > 1 ? { singular: 'كيان', plural: 'كيانات', feminine: false, icon: 'layers' } : (used[0] || ENT.cur);
-  const wa = entWords(ENT.all);
+  ENT.all = used.length > 1 ? ENT_GENERIC : (used[0] || ENT.cur);
+  const wa = entShow(ENT.all), wc = entShow(ENT.cur);
   SCREEN_LABELS.projects = wa.defP;
   const nav = el('nav-entities-text'); if (nav) { nav.textContent = wa.defP; nav.closest('.nav-link')?.setAttribute('title', wa.defP); }
-  const ic = document.querySelector('#current-project-item .proj-dot'); if (ic) ic.title = ENT.cur.singular;
+  const ic = document.querySelector('#current-project-item .proj-dot'); if (ic) ic.title = wc.s;
+  // عنوان مجموعة الكيان الحالي في القائمة: العربية يتولاها الاستبدال الآلي («القسم الحالي»)، والإنجليزية هنا
+  if (entIsEn()) { const lb = el('sb-current-entity'); if (lb) lb.textContent = `Current ${wc.s.toLowerCase()}`; }
   entStartObserver();
   entApplyTree(document.body);
   updateCrumbs(state.currentScreen);
@@ -15608,19 +15639,19 @@ function openNewEntityModal(edit) {
   el('new-project-id').value = p ? p.id : '';
   el('new-project-name').value = p ? p.name : '';
   const types = ENT.types.length ? ENT.types : [{ id: '', ...ENT_DEFAULT, isDefault: true }];
-  el('new-project-type').innerHTML = types.map(t => `<option value="${esc(t.id)}">${esc(t.singular)}</option>`).join('');
-  el('new-project-type').value = p ? (p.typeId || '') : (types.find(t => t.isDefault) || types[0]).id;
   el('new-project-type-wrap').classList.toggle('hidden', types.length < 2 && !p);
-  el('new-project-save').textContent = p ? 'حفظ' : 'إنشاء';
+  el('new-project-type').innerHTML = types.map(t => `<option value="${esc(t.id)}">${esc(entShow(t).s)}</option>`).join('');
+  el('new-project-type').value = p ? (p.typeId || '') : (types.find(t => t.isDefault) || types[0]).id;
+  el('new-project-save').textContent = p ? L('حفظ', 'Save') : L('إنشاء', 'Create');
   newEntitySyncLabels();
   el('new-project-modal').classList.remove('hidden');
   el('new-project-name').focus();
 }
 function newEntitySyncLabels() {
-  const w = entWords(entType(el('new-project-type').value));
+  const w = entShow(entType(el('new-project-type').value));
   const editing = !!el('new-project-id').value;
-  el('new-project-title').textContent = editing ? `تعديل ${w.defS}` : `${w.s} ${w.adj('جديد')}`;
-  el('new-project-name-label').textContent = `اسم ${w.defS}`;
+  el('new-project-title').textContent = editing ? L(`تعديل ${w.defS}`, `Edit ${w.s.toLowerCase()}`) : (entIsEn() ? w.neu.replace(/^n/, 'N') : w.neu);
+  el('new-project-name-label').textContent = L(`اسم ${w.defS}`, `${w.s} name`);
 }
 el('new-project-type').addEventListener('change', newEntitySyncLabels);
 
@@ -15668,15 +15699,18 @@ async function loadEntities() {
 }
 // نصوص شاشة الكيانات بكلمات المجموعة (نوع واحد ← اسمه؛ أنواع متعددة ← «كيانات»)
 function entSyncEntitiesScreen() {
-  const w = entWords(ENT.all);
-  el('projects-title-word').textContent = w.p;
-  el('projects-desc').textContent = `لكل ${w.s} محادثته ولوحاته وتصاميمه ومصادره وأعضاؤه — اضغط على ${w.s} لفتح مساحة عمله.`;
-  el('new-project-btn-text').textContent = ENT.types.length > 1 ? 'جديد' : `${w.s} ${w.adj('جديد')}`;
+  const w = entShow(ENT.all), en = entIsEn(), sl = w.s.toLowerCase(), pl = w.p.toLowerCase();
+  const art = /^[aeiou]/.test(sl) ? 'an' : 'a'; // a department / an entity
+  el('projects-title-word').textContent = en ? `${w.p} in` : w.p;
+  el('projects-desc').textContent = en ? `Each ${sl} has its own chat, dashboards, designs, sources and members — click ${art} ${sl} to open its workspace.`
+    : `لكل ${w.s} محادثته ولوحاته وتصاميمه ومصادره وأعضاؤه — اضغط على ${w.s} لفتح مساحة عمله.`;
+  el('new-project-btn-text').textContent = ENT.types.length > 1 ? L('جديد', 'New') : (en ? w.neu.replace(/^n/, 'N') : w.neu);
   el('proj-stat-word').textContent = w.defP;
-  el('projects-search').placeholder = `ابحث في ${w.defP}`;
-  el('projects-filter').setAttribute('aria-label', `تصفية ${w.defP}`);
-  el('projects-filter-mine').textContent = w.p + 'ي';
-  el('projects-empty-note').textContent = `لا توجد ${w.p} مطابقة.`;
+  el('projects-search').placeholder = L(`ابحث في ${w.defP}`, `Search ${pl}`);
+  el('projects-filter').setAttribute('aria-label', L(`تصفية ${w.defP}`, `Filter ${pl}`));
+  el('projects-filter-mine').textContent = en ? `My ${pl}` : w.p + 'ي';
+  el('projects-empty-note').textContent = L(`لا توجد ${w.p} مطابقة.`, `No matching ${pl}.`);
+  el('entity-types-label').textContent = L('أنواع الكيانات', 'Entity types');
 }
 
 // أول مشروع (الافتراضي، المُنشأ تلقائيًا مع المنظمة) هو الوحيد المرتبط فعليًا بمساحة
@@ -15698,20 +15732,20 @@ function renderEntities() {
 
   const card = p => {
     const isLive = p.id === liveEntityId;
-    const tw = entWords(entType(p.typeId));
+    const tw = entShow(entType(p.typeId));
     const roles = state_entities.rolesByEntity[p.id];
     const myRole = roles?.find(r => r.userId === myId)?.role;
     const badge = myRole ? `<span class="proj-role-badge">${esc(ROLE_LABELS[myRole] || myRole)}</span>` : '';
     const statsLine = isAdmin && roles
-      ? `<div class="stats-line"><span class="s"><b>${roles.length}</b><span>أعضاء</span></span></div>`
+      ? `<div class="stats-line"><span class="s"><b>${roles.length}</b><span>${L('أعضاء', 'members')}</span></span></div>`
       : '';
     return `
     <a href="#" class="proj-card ${isLive ? 'is-live' : 'is-pending'}" data-project="${esc(p.id)}" data-live="${isLive}">
       ${badge}
       <div class="top">
         <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-${esc(tw.icon)}"/></svg></span>
-        <div><h3>${esc(p.name)}</h3><p class="desc"><span class="proj-type-chip">${esc(tw.s)}</span> ${isLive ? 'مساحة العمل النشطة الآن' : 'سيُربط بمساحة عمل خاصة قريبًا'}</p></div>
-        ${isAdmin ? `<span class="proj-card-acts"><button type="button" class="btn btn-ghost btn-sm btn-icon" data-edit-project="${esc(p.id)}" title="تعديل الاسم والنوع" aria-label="تعديل ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="أعضاء ${esc(tw.defS)}" aria-label="أعضاء ${esc(tw.defS)}: ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button></span>` : ''}
+        <div><h3>${esc(p.name)}</h3><p class="desc"><span class="proj-type-chip">${esc(tw.s)}</span> ${isLive ? L('مساحة العمل النشطة الآن', 'Active workspace') : L('سيُربط بمساحة عمل خاصة قريبًا', 'Its own workspace is coming soon')}</p></div>
+        ${isAdmin ? `<span class="proj-card-acts"><button type="button" class="btn btn-ghost btn-sm btn-icon" data-edit-project="${esc(p.id)}" title="${L('تعديل الاسم والنوع', 'Edit name and type')}" aria-label="${L('تعديل', 'Edit')} ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="${L(`أعضاء ${esc(tw.defS)}`, `${esc(tw.s)} members`)}" aria-label="${L(`أعضاء ${esc(tw.defS)}`, `${esc(tw.s)} members`)}: ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button></span>` : ''}
       </div>
       ${statsLine}
     </a>`;
@@ -15720,12 +15754,12 @@ function renderEntities() {
   const groups = ENT.types.length > 1
     ? ENT.types.map(t => ({ t, items: projects.filter(p => entType(p.typeId).id === t.id) })).filter(g => g.items.length)
     : [{ t: null, items: projects }];
-  const wa = entWords(ENT.all);
+  const wa = entShow(ENT.all);
   const newCard = isAdmin
-    ? `<button type="button" class="new-card" id="new-project-card"><span class="plus"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><strong>${esc(ENT.types.length > 1 ? 'إضافة جديد' : wa.s + ' ' + wa.adj('جديد'))}</strong></button>`
+    ? `<button type="button" class="new-card" id="new-project-card"><span class="plus"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span><strong>${esc(ENT.types.length > 1 ? L('إضافة جديد', 'Add new') : (entIsEn() ? wa.neu.replace(/^n/, 'N') : wa.neu))}</strong></button>`
     : '';
   el('projects-grid').innerHTML = groups.map(g => (g.t
-    ? `<h2 class="proj-group-head"><span class="proj-ic sm"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${esc(g.t.icon || 'layers')}"/></svg></span>${esc(entWords(g.t).defP)} <span class="n">${g.items.length.toLocaleString('en-US')}</span></h2>`
+    ? `<h2 class="proj-group-head"><span class="proj-ic sm"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${esc(g.t.icon || 'layers')}"/></svg></span>${esc(entShow(g.t).defP)} <span class="n">${g.items.length.toLocaleString('en-US')}</span></h2>`
     : '') + g.items.map(card).join('')).join('') + newCard;
   el('projects-empty-note').classList.toggle('hidden', projects.length > 0);
   el('projects-toolbar').classList.toggle('hidden', state_entities.all.length === 0);
@@ -15780,11 +15814,19 @@ el('new-project-form').addEventListener('submit', async e => {
 
 
 // ---------- أنواع الكيانات (للمسؤول): /api/entity-types ----------
-const ET_PRESETS = [['قسم', 'أقسام'], ['إدارة', 'إدارات'], ['فريق', 'فرق'], ['وحدة', 'وحدات'], ['برنامج', 'برامج'], ['فرع', 'فروع'], ['مبادرة', 'مبادرات'], ['مشروع', 'مشاريع']];
+// الأنواع الجاهزة بأسمائها العربية والإنجليزية
+const ET_PRESETS = [['قسم', 'أقسام', 'Department', 'Departments'], ['إدارة', 'إدارات', 'Directorate', 'Directorates'], ['فريق', 'فرق', 'Team', 'Teams'],
+  ['وحدة', 'وحدات', 'Unit', 'Units'], ['برنامج', 'برامج', 'Program', 'Programs'], ['فرع', 'فروع', 'Branch', 'Branches'],
+  ['مبادرة', 'مبادرات', 'Initiative', 'Initiatives'], ['مشروع', 'مشاريع', 'Project', 'Projects']];
 const ET_ICON_LABELS = { layers: 'طبقات', briefcase: 'حقيبة', users: 'أشخاص', grid: 'شبكة', target: 'هدف', server: 'خادم', dashboard: 'لوحة', shield: 'درع', chart: 'رسم', star: 'نجمة', pin: 'دبوس', calendar: 'تقويم' };
+const ET_ICON_LABELS_EN = { layers: 'Layers', briefcase: 'Briefcase', users: 'People', grid: 'Grid', target: 'Target', server: 'Server', dashboard: 'Dashboard', shield: 'Shield', chart: 'Chart', star: 'Star', pin: 'Pin', calendar: 'Calendar' };
 const ET = { types: [], icons: [], usage: {} };
 async function openEntityTypesModal() {
   el('et-error').classList.add('hidden');
+  if (entIsEn()) {
+    el('et-title').textContent = 'Entity types';
+    el('et-note').textContent = 'An entity is what chat, dashboards, designs, files and permissions are organized under. Name it the way your organization does (project, department, directorate, team…) — one organization can mix several types. The name appears in the sidebar and across every screen, following the type of the entity you are working in. Give each type an English name for the English interface.';
+  }
   el('entity-types-modal').classList.remove('hidden');
   await etLoad();
   el('et-add-s').focus();
@@ -15800,25 +15842,32 @@ async function etLoad() {
 function etError(msg) { el('et-error').textContent = msg; el('et-error').classList.toggle('hidden', !msg); }
 function etRender() {
   const have = new Set(ET.types.map(t => t.singular));
-  el('et-presets').innerHTML = ET_PRESETS.filter(([s]) => !have.has(s)).map(([s, p]) => `<button type="button" class="et-chip" data-s="${esc(s)}" data-p="${esc(p)}">+ ${esc(s)}</button>`).join('');
+  const en = entIsEn(), icl = en ? ET_ICON_LABELS_EN : ET_ICON_LABELS;
+  el('et-presets').innerHTML = ET_PRESETS.filter(([s]) => !have.has(s)).map(([s, p, se, pe]) => `<button type="button" class="et-chip" data-s="${esc(s)}" data-p="${esc(p)}" data-se="${esc(se)}" data-pe="${esc(pe)}">+ ${esc(en ? se : s)}</button>`).join('');
   el('et-list').innerHTML = ET.types.map(t => {
     const n = ET.usage[t.id] || 0;
     return `<div class="et-row" data-id="${esc(t.id)}">
-      <label class="et-ico-pick" title="الأيقونة"><span class="proj-ic sm"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${esc(t.icon)}"/></svg></span>
-        <select data-f="icon" aria-label="أيقونة ${esc(t.singular)}">${ET.icons.map(i => `<option value="${esc(i)}"${i === t.icon ? ' selected' : ''}>${esc(ET_ICON_LABELS[i] || i)}</option>`).join('')}</select></label>
-      <input data-f="singular" value="${esc(t.singular)}" maxlength="40" aria-label="المفرد">
-      <input data-f="plural" value="${esc(t.plural)}" maxlength="40" aria-label="الجمع">
-      <label class="et-check"><input type="checkbox" data-f="feminine"${t.feminine ? ' checked' : ''}> مؤنث</label>
-      <label class="et-check"><input type="radio" name="et-default" data-f="isDefault"${t.isDefault ? ' checked' : ''}> افتراضي</label>
-      <span class="et-usage">${n ? `${n.toLocaleString('en-US')} مستخدَم` : 'غير مستخدَم'}</span>
-      <button type="button" class="btn btn-ghost btn-sm btn-icon" data-del title="${t.isDefault ? 'لا يُحذف الافتراضي' : n ? 'مستخدَم — غيّر نوع كياناته أولًا' : 'حذف النوع'}" aria-label="حذف ${esc(t.singular)}"${t.isDefault || n ? ' disabled' : ''}><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button>
+      <div class="et-names">
+        <label class="et-ico-pick" title="${L('الأيقونة', 'Icon')}"><span class="proj-ic sm"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${esc(t.icon)}"/></svg></span>
+          <select data-f="icon" aria-label="${L('أيقونة', 'Icon for')} ${esc(t.singular)}">${ET.icons.map(i => `<option value="${esc(i)}"${i === t.icon ? ' selected' : ''}>${esc(icl[i] || i)}</option>`).join('')}</select></label>
+        <input data-f="singular" value="${esc(t.singular)}" maxlength="40" dir="rtl" lang="ar" aria-label="${L('المفرد بالعربية', 'Arabic singular')}" title="${L('المفرد بالعربية', 'Arabic singular')}">
+        <input data-f="plural" value="${esc(t.plural)}" maxlength="40" dir="rtl" lang="ar" aria-label="${L('الجمع بالعربية', 'Arabic plural')}" title="${L('الجمع بالعربية', 'Arabic plural')}">
+        <input data-f="singularEn" value="${esc(t.singularEn || '')}" maxlength="40" dir="ltr" lang="en" placeholder="Department" aria-label="${L('المفرد بالإنجليزية', 'English singular')}" title="${L('المفرد بالإنجليزية', 'English singular')}">
+        <input data-f="pluralEn" value="${esc(t.pluralEn || '')}" maxlength="40" dir="ltr" lang="en" placeholder="Departments" aria-label="${L('الجمع بالإنجليزية', 'English plural')}" title="${L('الجمع بالإنجليزية', 'English plural')}">
+      </div>
+      <div class="et-meta">
+        <label class="et-check"><input type="checkbox" data-f="feminine"${t.feminine ? ' checked' : ''}> ${L('مؤنث', 'Feminine (Arabic)')}</label>
+        <label class="et-check"><input type="radio" name="et-default" data-f="isDefault"${t.isDefault ? ' checked' : ''}> ${L('افتراضي', 'Default')}</label>
+        <span class="et-usage">${n ? L(`${n.toLocaleString('en-US')} مستخدَم`, `Used by ${n.toLocaleString('en-US')}`) : L('غير مستخدَم', 'Unused')}</span>
+        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-del title="${t.isDefault ? L('لا يُحذف الافتراضي', 'The default type cannot be deleted') : n ? L('مستخدَم — غيّر نوع كياناته أولًا', 'In use — change its entities’ type first') : L('حذف النوع', 'Delete type')}" aria-label="${L('حذف', 'Delete')} ${esc(t.singular)}"${t.isDefault || n ? ' disabled' : ''}><svg class="icon icon-sm" aria-hidden="true"><use href="#i-trash"/></svg></button>
+      </div>
     </div>`;
   }).join('');
   el('et-list').querySelectorAll('.et-row').forEach(row => {
     const id = row.dataset.id;
     row.querySelectorAll('[data-f]').forEach(f => f.addEventListener('change', () => {
       const cur = ET.types.find(x => x.id === id) || {};
-      if ((f.dataset.f === 'singular' || f.dataset.f === 'plural' || f.dataset.f === 'icon') && f.value.trim() === cur[f.dataset.f]) return;
+      if (['singular', 'plural', 'singularEn', 'pluralEn', 'icon'].includes(f.dataset.f) && f.value.trim() === (cur[f.dataset.f] || '')) return;
       const body = {};
       if (f.dataset.f === 'feminine') body.feminine = f.checked;
       else if (f.dataset.f === 'isDefault') body.isDefault = true;
@@ -15827,7 +15876,7 @@ function etRender() {
     }));
     row.querySelector('[data-del]').addEventListener('click', () => etDelete(id));
   });
-  el('et-presets').querySelectorAll('.et-chip').forEach(b => b.addEventListener('click', () => etAdd(b.dataset.s, b.dataset.p)));
+  el('et-presets').querySelectorAll('.et-chip').forEach(b => b.addEventListener('click', () => etAdd(b.dataset.s, b.dataset.p, b.dataset.se, b.dataset.pe)));
 }
 async function etAfterChange() { await etLoad(); await loadCurrentEntityNav(); if (state.currentScreen === 'projects') loadEntities(); }
 async function etSave(id, body) {
@@ -15838,17 +15887,17 @@ async function etSave(id, body) {
   } catch (e) { etError(e.message); }
   await etAfterChange();
 }
-async function etAdd(singular, plural) {
+async function etAdd(singular, plural, singularEn, pluralEn) {
   etError('');
   try {
-    const r = await fetch('/api/entity-types', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ singular, plural }) });
-    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'تعذّرت الإضافة.');
-    el('et-add-s').value = ''; el('et-add-p').value = '';
+    const r = await fetch('/api/entity-types', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ singular, plural, singularEn: singularEn || null, pluralEn: pluralEn || null }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || L('تعذّرت الإضافة.', 'Could not add the type.'));
+    ['et-add-s', 'et-add-p', 'et-add-se', 'et-add-pe'].forEach(i => { el(i).value = ''; });
   } catch (e) { etError(e.message); }
   await etAfterChange();
 }
 async function etDelete(id) {
-  const t = ET.types.find(x => x.id === id); if (!t || !confirm(`حذف النوع «${t.singular}»؟`)) return;
+  const t = ET.types.find(x => x.id === id); if (!t || !confirm(L(`حذف النوع «${t.singular}»؟`, `Delete the type “${entEn(t).s}”?`))) return;
   etError('');
   try {
     const r = await fetch(`/api/entity-types/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -15860,13 +15909,17 @@ el('entity-types-btn').addEventListener('click', openEntityTypesModal);
 el('et-close').addEventListener('click', closeEntityTypesModal);
 el('entity-types-modal').addEventListener('click', e => { if (e.target === el('entity-types-modal')) closeEntityTypesModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el('entity-types-modal').classList.contains('hidden')) { e.stopPropagation(); closeEntityTypesModal(); } });
-el('et-add').addEventListener('submit', e => { e.preventDefault(); const s = el('et-add-s').value.trim(); if (s) etAdd(s, el('et-add-p').value.trim()); });
+el('et-add').addEventListener('submit', e => { e.preventDefault(); const s = el('et-add-s').value.trim(); if (s) etAdd(s, el('et-add-p').value.trim(), el('et-add-se').value.trim(), el('et-add-pe').value.trim()); });
 
 // ---------- project members (Owner/Editor/Viewer roles on a project) ----------
 async function openEntityRolesModal(entityId, entityName) {
   el('project-roles-error').classList.add('hidden');
   el('project-roles-id').value = entityId;
   el('project-roles-name').textContent = entityName;
+  // عنوان النافذة بنوع هذا الكيان («أعضاء القسم» / «Department members»)
+  const rw = entShow(entType(state_entities.all.find(x => x.id === entityId)?.typeId));
+  el('project-roles-title').textContent = L(`أعضاء ${rw.defS}`, `${rw.s} members`);
+  el('project-roles-label').textContent = L(`${rw.defS}: `, `${rw.s}: `);
   el('project-roles-list').innerHTML = '';
   if (!state.users.length) await loadUsers();
   el('project-role-add-user').innerHTML = state.users.length
