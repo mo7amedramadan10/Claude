@@ -6520,6 +6520,7 @@ async function loadTemplateCatalog() {
 // ---------- sources ----------
 async function loadSources() {
   const res = await fetch('/api/sources');
+  if (!res.ok) return; // حساب مقيَّد بشاشات لا تحتاج المصادر («اطلاع فقط») يُرفض له الطلب بـ 403
   const data = await res.json();
   const knownSystems = new Set(state.systems.map(s => s.id));
   const knownFiles = new Set(state.sourceFiles.map(f => f.id));
@@ -6766,6 +6767,7 @@ el('file-all').addEventListener('change', e => {
 // ---------- file repository ----------
 async function loadFiles() {
   const res = await fetch('/api/repository/files');
+  if (!res.ok) return; // شاشة غير متاحة لحساب مقيَّد (403) أو خطأ — تبقى القائمة كما هي
   state.files = await res.json();
   dashGalFeasibility = null; // تغيّر الملفات يغيّر جدوى النماذج
   kpiDeltaCache.clear(); // وبيانات المؤشرات قد تكون تغيّرت (تحديث ملف)
@@ -8059,7 +8061,7 @@ const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks',
 const SCREEN_LABELS = {
   chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', sources: 'المصادر', users: 'الصلاحيات', repo: 'الملفات',
   history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة',
-  projects: 'المشاريع', presentations: 'العروض التقديمية', 'claude-chat': 'محادثة Claude', decks: 'منشئ العروض', freeform: 'تصميم حر', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
+  projects: 'المشاريع', presentations: 'العروض التقديمية', viewing: 'للاطلاع', 'claude-chat': 'محادثة Claude', decks: 'منشئ العروض', freeform: 'تصميم حر', settings: 'الإعدادات', 'llm-keys': 'مفاتيح الموديلات', integrations: 'التكاملات الخارجية',
   organizations: 'المنظمات', 'templates-admin': 'مكتبة النماذج',
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
@@ -8085,8 +8087,9 @@ function updateCrumbs(name) {
 // ===== صلاحيات الشاشات (ScreenAccess في الخادم) =====
 // المستخدم العادي بقائمة allowedScreens يرى تلك الشاشات فقط؛ null = كل الشاشات، والمسؤول دائمًا الكل. الشاشات غير القابلة للتقييد
 // (شاشات الإدارة والمنصّة) تحميها صلاحية الدور أصلًا.
-const RESTRICTABLE_SCREENS = ['chat', 'published', 'analyst', 'decks', 'freeform', 'sources', 'repo', 'users', 'history', 'active', 'sharelinks', 'presentations', 'projects'];
+const RESTRICTABLE_SCREENS = ['viewing', 'chat', 'published', 'analyst', 'decks', 'freeform', 'sources', 'repo', 'users', 'history', 'active', 'sharelinks', 'presentations', 'projects'];
 const FREEFORM_ONLY_SCREENS = ['freeform', 'repo'];
+const VIEW_ONLY_SCREENS = ['viewing'];
 function screenAllowed(name) {
   const u = state.currentUser; if (!u || u.role === 'Admin' || !Array.isArray(u.allowedScreens)) return true;
   return !RESTRICTABLE_SCREENS.includes(name) || u.allowedScreens.includes(name);
@@ -8126,6 +8129,7 @@ function showScreen(name) {
   if (name === 'active') { if (state.historyLoaded) renderActiveDashboardsList(); else loadHistory(); }
   if (name === 'sharelinks') loadShareList();
   if (name === 'presentations') loadPresentations();
+  if (name === 'viewing') loadViewingScreen();
   if (name === 'claude-chat') loadClaudeChatScreen();
   if (name === 'decks') loadDecksScreen();
   if (name === 'freeform') loadFreeformScreen();
@@ -9881,6 +9885,96 @@ el('ff-search').addEventListener('blur', () => { if (!el('ff-search').value) el(
 el('ff-view-btn').addEventListener('click', () => { FF.gal.list = !FF.gal.list; try { localStorage.setItem('ffGalView', FF.gal.list ? 'list' : 'grid'); } catch {} ffRenderGallery(); });
 window.addEventListener('resize', () => { if (!el('ff-start').classList.contains('hidden')) ffScaleThumbs(); });
 function ffKindChip(k) { const info = FF_KINDS[k]; return info ? `<span class="ff-kind-chip">${esc(info.label)}</span>` : ''; }
+
+// ---------- «للاطلاع»: ما شاركه الآخرون مع المستخدم وله رابط منشور (GET /api/viewing) ----------
+// بطاقات بأسلوب معرض تصميم حر؛ البطاقة رابط حقيقي يفتح الرابط المنشور نفسه في تبويب جديد (لا عارض داخل المنصة).
+// «جديد» = لم يفتحه المستخدم بعد، أو نُشر تحديث له بعد آخر فتح — يُحفظ محليًا لكل مشاهد (localStorage jeemViewSeen).
+const VW = { items: null, tab: 'all', q: '', kind: '', loading: null, io: null, htmlCache: {} };
+function vwSeen() { try { return JSON.parse(localStorage.getItem('jeemViewSeen') || '{}') || {}; } catch { return {}; } }
+function vwMarkSeen(it) { const s = vwSeen(); s[it.key] = it.publishedAt; try { localStorage.setItem('jeemViewSeen', JSON.stringify(s)); } catch {} }
+function vwIsNew(it, seen) { const t = (seen || vwSeen())[it.key]; return !t || new Date(it.publishedAt) > new Date(t); }
+function vwUtc(iso) { return iso && !/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso + 'Z' : iso; }
+async function loadViewingItems(force) {
+  if (VW.loading && !force) return VW.loading;
+  VW.loading = (async () => {
+    try { const r = await fetch('/api/viewing'); if (!r.ok) throw new Error(); const d = await r.json(); VW.items = (d.items || []).map(x => ({ ...x, publishedAt: vwUtc(x.publishedAt) })); }
+    catch { if (!VW.items) VW.items = []; VW.error = true; }
+    VW.items.sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')));
+    vwUpdateBadge();
+    return VW.items;
+  })();
+  try { return await VW.loading; } finally { VW.loading = null; }
+}
+function vwUpdateBadge() {
+  const b = el('viewing-badge'); if (!b || !VW.items) return;
+  const seen = vwSeen(); const n = VW.items.filter(x => vwIsNew(x, seen)).length;
+  b.textContent = n.toLocaleString('en-US'); b.classList.toggle('hidden', !n);
+  const tn = el('vw-new-n'); if (tn) tn.textContent = n ? n.toLocaleString('en-US') : '';
+}
+async function loadViewingScreen() {
+  VW.error = false;
+  if (!VW.items) el('vw-list').dataset.empty = 'جارٍ التحميل…';
+  vwRender();
+  await loadViewingItems(true);
+  vwRender();
+}
+function vwBase() {
+  const q = VW.q.trim().toLowerCase(); const seen = vwSeen();
+  return (VW.items || []).filter(x => (VW.tab === 'all' || (VW.tab === 'new' ? vwIsNew(x, seen) : x.sharedVia === 'user'))
+    && (!q || (x.title || '').toLowerCase().includes(q) || (x.ownerName || '').toLowerCase().includes(q)));
+}
+function vwKind(x) { return FF_KINDS[x.kind] ? x.kind : 'design'; }
+function vwRenderChips(base) {
+  const counts = {}; base.forEach(x => { const k = vwKind(x); counts[k] = (counts[k] || 0) + 1; });
+  const kinds = Object.keys(FF_KINDS).filter(k => counts[k] || VW.kind === k);
+  const chip = (k, label, n, ico) => `<button type="button" class="ff-kchip${k ? ' k-' + k : ''}" data-kind="${k}" aria-pressed="${(VW.kind || '') === k ? 'true' : 'false'}">${ico}<span>${esc(label)}</span><b class="n">${n.toLocaleString('en-US')}</b></button>`;
+  const box = el('vw-kind-chips');
+  box.innerHTML = chip('', 'كل الأنواع', base.length, '') + kinds.map(k => chip(k, FF_KINDS[k].label, counts[k] || 0, `<span class="ff-kchip-ico" aria-hidden="true">${ffKindIcon(k)}</span>`)).join('');
+  box.classList.toggle('hidden', !(VW.items || []).length);
+  box.querySelectorAll('.ff-kchip').forEach(b => b.addEventListener('click', () => { VW.kind = b.dataset.kind; vwRender(); }));
+}
+const VW_VIA = { user: 'شاركه معك', project: 'مع المشروع', org: 'مع المنظمة' };
+function vwRender() {
+  const box = el('vw-list'); if (!box) return;
+  document.querySelectorAll('.vw-tab').forEach(t => t.setAttribute('aria-selected', t.dataset.vwTab === VW.tab ? 'true' : 'false'));
+  const base = vwBase(); vwRenderChips(base);
+  const items = VW.shown = base.filter(x => !VW.kind || vwKind(x) === VW.kind); const all = (VW.items || []).length;
+  if (VW.items) box.dataset.empty = VW.error ? 'تعذّر تحميل القائمة — اضغط «تحديث» للمحاولة ثانية.'
+    : all ? (VW.tab === 'new' ? 'لا جديد منذ آخر فتح — كل شيء اطّلعت عليه.' : 'لا عناصر تطابق التصفية.')
+    : 'لا شيء مشارك معك بعد. حين يشارك زميل تصميمًا أو لوحة معك وينشرها ستظهر هنا.';
+  el('vw-count').textContent = all ? (items.length === all ? `${all.toLocaleString('en-US')} عنصر` : `${items.length.toLocaleString('en-US')} من ${all.toLocaleString('en-US')}`) : '';
+  const seen = vwSeen();
+  box.innerHTML = items.map((x, i) => {
+    const k = vwKind(x); const href = location.origin + x.url; const isNew = vwIsNew(x, seen);
+    const art = x.source === 'dashboard'
+      ? `<div class="ff-card-paper ff-card-dash">${dashGalThumb({ widgets: x.widgets || [], renderKind: x.renderKind })}</div>`
+      : `<div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(x.title)}"></iframe></div>`;
+    const via = x.sharedVia === 'user' ? `من ${x.ownerName || 'زميل'}` : `من ${x.ownerName || 'زميل'} · ${VW_VIA[x.sharedVia] || ''}`;
+    return `<a class="ff-card vw-card k-${k}" href="${esc(href)}" target="_blank" rel="noopener" data-vw="${i}" aria-label="${esc(x.title)} — ${esc(FF_KINDS[k].label)}، ${esc(via)}${isNew ? '، جديد' : ''} (يفتح في تبويب جديد)">
+      <div class="ff-card-art">${art}${isNew ? '<span class="vw-new">جديد</span>' : ''}</div>
+      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(x.title)}</b><small>${esc(via)} · نُشر ${esc(ffAgo(x.publishedAt))}</small>${x.editedAfterPublish ? '<small class="vw-edited" title="عدّل صاحبه التصميم بعد آخر نشر ولم يحدّث النشر بعد — الرابط يعرض النسخة المنشورة">✎ فيه تعديلات لم تُنشر بعد</small>' : ''}</div><span class="vw-open" aria-hidden="true">↗</span></div>
+    </a>`;
+  }).join('');
+  box.querySelectorAll('[data-vw]').forEach(a => a.addEventListener('click', () => { const x = items[+a.dataset.vw]; vwMarkSeen(x); setTimeout(() => { vwUpdateBadge(); vwRender(); }, 0); }));
+  const first = box.querySelector('.ff-card-paper'); if (first) box.style.setProperty('--ff-s', ((first.clientWidth || 200) / 1100).toFixed(4));
+  if (!VW.io) VW.io = new IntersectionObserver(en => en.forEach(e => { if (e.isIntersecting) { VW.io.unobserve(e.target); vwLoadThumb(e.target); } }), { root: el('vw-start'), rootMargin: '200px' });
+  box.querySelectorAll('.vw-card:not(.k-track)').forEach(c => VW.io.observe(c));
+}
+async function vwLoadThumb(card) {
+  const x = (VW.shown || [])[+card.dataset.vw];
+  const f = card.querySelector('.ff-thumb'); if (!x || !f || x.source !== 'freeform') return;
+  let html = VW.htmlCache[x.id];
+  if (html == null) { try { const r = await fetch(`/api/viewing/thumb/${encodeURIComponent(x.id)}`); html = r.ok ? ((await r.json()).html || '') : ''; } catch { html = ''; } VW.htmlCache[x.id] = html; }
+  if (html) f.srcdoc = ffSandboxHtml(html, false, x.kind, true);
+}
+document.querySelectorAll('.vw-tab').forEach(t => t.addEventListener('click', () => { VW.tab = t.dataset.vwTab; vwRender(); }));
+el('vw-search').addEventListener('input', () => { VW.q = el('vw-search').value; vwRender(); });
+el('vw-search-wrap').addEventListener('click', () => { el('vw-search-wrap').classList.add('open'); el('vw-search').focus(); });
+el('vw-search').addEventListener('blur', () => { if (!el('vw-search').value) el('vw-search-wrap').classList.remove('open'); });
+el('vw-refresh').addEventListener('click', () => { VW.htmlCache = {}; loadViewingScreen(); });
+window.addEventListener('resize', () => { const box = el('vw-list'); const first = box && box.querySelector('.ff-card-paper'); if (first) box.style.setProperty('--ff-s', ((first.clientWidth || 200) / 1100).toFixed(4)); });
+// العودة إلى التبويب بعد فتح رابط: إعادة تحميل القائمة إن كانت الشاشة ظاهرة (قد يكون نُشر جديد)، وإلا تحديث العدّاد فقط
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.currentScreen === 'viewing') loadViewingItems(true).then(vwRender); });
 
 // ---------- نماذج تصميم حر: معرض كمعرض «عرض جديد» يُفتح عند اختيار نوع، والنموذج المختار يُرفق في المحادثة ----------
 // التصنيفات نفسها (DK_CATS، تُعرَّف لاحقًا في الملف وتُقرأ عند التشغيل لا عند التحميل)
@@ -13004,6 +13098,8 @@ function renderCurrentUser() {
   // AppUser.IsPlatformOwner and OrganizationsController.
   el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
   applyScreenAccess();
+  // «للاطلاع»: عدّاد الجديد في القائمة الجانبية من أول تحميل (لا ينتظر فتح الشاشة)
+  if (screenAllowed('viewing')) loadViewingItems().catch(() => {});
   // محادثة Claude: يظهر البند فقط لمن تسمح له إعدادات الخادم (ClaudeCli:AllowedRoles).
   ccLoadStatus();
 }
@@ -14200,12 +14296,13 @@ async function startApp() {
   renderCurrentUser();
   renderMessages();
   renderDashboard();
-  await loadSources();
-  await loadFiles();
-  await loadTemplateCatalog();
+  // مستخدم مقيَّد بشاشات لا تشمل الشاشة الافتراضية يبدأ من أول شاشة مسموحة (ولا تُعرض الجولة التعريفية العامة له)؛
+  // يُحسم قبل تحميل المصادر لأن حساب «اطلاع فقط» تُرفض له تلك الطلبات فلا ينبغي أن يتعطّل عليها
+  const restricted = !screenAllowed(state.currentScreen || 'chat');
+  if (restricted) showScreen(firstAllowedScreen());
+  for (const load of [loadSources, loadFiles, loadTemplateCatalog]) { try { await load(); } catch { /* تبقى الحالة كما هي */ } }
   loadCurrentProjectNav();
-  // مستخدم مقيَّد بشاشات لا تشمل الشاشة الافتراضية يبدأ من أول شاشة مسموحة (ولا تُعرض الجولة التعريفية العامة له)
-  if (!screenAllowed(state.currentScreen || 'chat')) { showScreen(firstAllowedScreen()); return; }
+  if (restricted) return;
   maybeAutoStartTour();
 }
 
@@ -15635,7 +15732,7 @@ function togglePermList(listId, allCheckboxId) {
 }
 
 el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
-const SCREEN_PICK_LABELS = { freeform: 'تصميم حر', repo: 'الملفات', chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', decks: 'منشئ العروض', sources: 'المصادر', users: 'الصلاحيات', history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة', presentations: 'العروض التقديمية', projects: 'المشاريع' };
+const SCREEN_PICK_LABELS = { freeform: 'تصميم حر', repo: 'الملفات', chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', decks: 'منشئ العروض', sources: 'المصادر', users: 'الصلاحيات', history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة', presentations: 'العروض التقديمية', projects: 'المشاريع', viewing: 'للاطلاع' };
 function renderUserScreens(list) {
   renderPermChecklist('user-screens-list', Object.keys(SCREEN_PICK_LABELS), list || [], k => k, k => SCREEN_PICK_LABELS[k]);
 }
@@ -15654,6 +15751,8 @@ el('user-screens-preset').addEventListener('click', () => {
   el('user-allow-all-screens').checked = false; renderUserScreens(FREEFORM_ONLY_SCREENS); syncUserScreensUi();
   el('user-allow-all-systems').checked = false; el('user-systems-list').querySelectorAll('input').forEach(i => { i.checked = false; }); togglePermList('user-systems-list', 'user-allow-all-systems');
 });
+// «اطلاع فقط» (للمديرين): صفحة «للاطلاع» وحدها — يفتح ما شورك معه من روابطه المنشورة، بلا أدوات بناء ولا بيانات
+el('user-screens-viewonly').addEventListener('click', () => { el('user-allow-all-screens').checked = false; renderUserScreens(VIEW_ONLY_SCREENS); syncUserScreensUi(); });
 function screensSummary(u) {
   if (u.role === 'Admin' || !Array.isArray(u.allowedScreens)) return 'كل الشاشات';
   return u.allowedScreens.map(k => SCREEN_PICK_LABELS[k] || k).join(' · ') || '—';

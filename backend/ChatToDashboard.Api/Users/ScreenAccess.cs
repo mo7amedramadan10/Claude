@@ -13,10 +13,13 @@ public static class ScreenAccess
 {
     /// <summary>الشاشات التي يمكن تقييد المستخدم العادي بها.</summary>
     public static readonly string[] Screens =
-        { "chat", "published", "analyst", "decks", "freeform", "sources", "repo", "users", "history", "active", "sharelinks", "presentations", "projects" };
+        { "chat", "published", "analyst", "decks", "freeform", "sources", "repo", "users", "history", "active", "sharelinks", "presentations", "projects", "viewing" };
 
     /// <summary>الاختيار الجاهز «تصميم حر فقط»: الشاشة نفسها و«الملفات» ليرفع بياناته (تعرض ملفاته هو فقط).</summary>
     public static readonly string[] FreeformOnly = { "freeform", "repo" };
+
+    /// <summary>الاختيار الجاهز «اطلاع فقط» (للمديرين): صفحة «للاطلاع» وحدها — ما شورك معه وله رابط منشور يُفتح في تبويب جديد.</summary>
+    public static readonly string[] ViewOnly = { "viewing" };
 
     private static readonly string[] Dashboards = { "chat", "history", "active", "sharelinks", "published", "freeform" };
 
@@ -24,6 +27,7 @@ public static class ScreenAccess
     private static readonly (string Prefix, string[] Screens)[] Map = new (string, string[])[]
     {
         ("/api/analyst", new[] { "analyst" }),
+        ("/api/viewing", new[] { "viewing" }),
         ("/api/decks/brand", new[] { "decks", "freeform", "chat" }),
         ("/api/decks", new[] { "decks" }),
         ("/api/published-dashboards", new[] { "published", "active" }),

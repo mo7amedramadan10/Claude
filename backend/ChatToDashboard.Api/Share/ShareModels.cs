@@ -26,6 +26,8 @@ public class SharedDashboard
     /// snapshot is frozen exactly as it was when created, never re-executed (Part 3).</summary>
     public string ActiveFiltersJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; }
+    /// <summary>آخر تحديث للقطة الرابط (إعادة النشر في مكانه)؛ null للصفوف القديمة = تاريخ الإنشاء.</summary>
+    public DateTime? UpdatedAt { get; set; }
 
     /// <summary>Null means "never expires" — the creator picks this themselves at creation
     /// time (a specific date or a duration resolved to one client-side); there is no

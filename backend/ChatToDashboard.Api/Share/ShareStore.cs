@@ -50,6 +50,7 @@ public class ShareStore
                      ("Slug", "NVARCHAR(100)"),
                      ("OrganizationId", "NVARCHAR(64)"),
                      ("HistoryId", "NVARCHAR(64)"),
+                     ("UpdatedAt", "DATETIME2"),
                  })
         {
             try
@@ -73,13 +74,14 @@ public class ShareStore
         entry.Id = NewShareId();
         entry.CreatedAt = DateTime.UtcNow;
         entry.ViewCount = 0;
+        entry.UpdatedAt = entry.CreatedAt;
 
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             $"INSERT INTO {Table} (Id, CreatedByUserId, Question, Summary, WidgetsJson, " +
-            "FiltersJson, ActiveFiltersJson, CreatedAt, ExpiresAt, RevokedAt, ViewCount, Slug, OrganizationId, HistoryId) " +
+            "FiltersJson, ActiveFiltersJson, CreatedAt, ExpiresAt, RevokedAt, ViewCount, Slug, OrganizationId, HistoryId, UpdatedAt) " +
             "VALUES (@Id, @CreatedByUserId, @Question, @Summary, @WidgetsJson, " +
-            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ExpiresAt, @RevokedAt, @ViewCount, @Slug, @OrganizationId, @HistoryId)",
+            "@FiltersJson, @ActiveFiltersJson, @CreatedAt, @ExpiresAt, @RevokedAt, @ViewCount, @Slug, @OrganizationId, @HistoryId, @UpdatedAt)",
             entry);
         return entry;
     }
@@ -143,7 +145,7 @@ public class ShareStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var affected = await connection.ExecuteAsync(
-            $"UPDATE {Table} SET Question = @question, Summary = @summary, WidgetsJson = @widgetsJson, FiltersJson = @filtersJson, ActiveFiltersJson = @activeFiltersJson WHERE Id = @id AND CreatedByUserId = @userId",
+            $"UPDATE {Table} SET Question = @question, Summary = @summary, WidgetsJson = @widgetsJson, FiltersJson = @filtersJson, ActiveFiltersJson = @activeFiltersJson, UpdatedAt = SYSUTCDATETIME() WHERE Id = @id AND CreatedByUserId = @userId",
             new { id, userId, question, summary, widgetsJson, filtersJson, activeFiltersJson });
         return affected > 0;
     }
@@ -166,6 +168,21 @@ public class ShareStore
             $"ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, Slug, OrganizationId, HistoryId FROM {Table} " +
             "WHERE CreatedByUserId = @userId ORDER BY CreatedAt DESC",
             new { userId });
+        return rows.ToList();
+    }
+
+    /// <summary>صفحة «للاطلاع»: روابط اللوحات الحيّة (غير الملغاة) لمجموعة لوحات محفوظة في منظمة، أيًّا كان من نشرها.</summary>
+    public async Task<IReadOnlyList<SharedDashboard>> ListByHistoryIdsAsync(string? organizationId, IReadOnlyCollection<string> historyIds, CancellationToken ct = default)
+    {
+        if (historyIds.Count == 0) return Array.Empty<SharedDashboard>();
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<SharedDashboard>(
+            "SELECT Id, CreatedByUserId, Question, Summary, WidgetsJson, CreatedAt, COALESCE(UpdatedAt, CreatedAt) AS UpdatedAt, " +
+            $"ExpiresAt, RevokedAt, COALESCE(ViewCount, 0) AS ViewCount, Slug, OrganizationId, HistoryId FROM {Table} " +
+            "WHERE HistoryId IN @historyIds AND RevokedAt IS NULL AND (@organizationId IS NULL OR OrganizationId = @organizationId OR OrganizationId IS NULL) " +
+            "ORDER BY CreatedAt DESC",
+            new { historyIds, organizationId });
         return rows.ToList();
     }
 
