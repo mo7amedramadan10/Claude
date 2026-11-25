@@ -53,8 +53,8 @@ public class ViewingController : ControllerBase
         var items = new List<object>();
 
         // تصاميم تصميم حر: المرئية للمستخدم (FreeformAccess) في مشروعه الحالي، ولها عرض منشور فعّال — صف واحد لكل تصميم
-        var designs = (await _designs.ListVisibleAsync(me.OrganizationId, sel.ProjectId, me.Id, isAdmin, ct))
-            .Where(d => InProject(d.ProjectId, sel.ProjectId));
+        var designs = (await _designs.ListVisibleAsync(me.OrganizationId, sel.EntityId, me.Id, isAdmin, ct))
+            .Where(d => InEntity(d.EntityId, sel.EntityId));
         var pres = (await _presentations.ListAsync(me.OrganizationId, ct)).ToDictionary(p => p.Id, p => p);
         var myShares = await _designs.ShareRolesForUserAsync(me.Id, ct);
         foreach (var d in designs)
@@ -72,8 +72,8 @@ public class ViewingController : ControllerBase
         }
 
         // لوحات المتابعة في المشروع الحالي: المفعّلة التي يملكها المستخدم أو له دور فيها، ولها رابط /d/ حيّ — بأحدث رابط لكل لوحة
-        var dashboards = (await _history.ListAsync(me.Id, projectId: sel.ProjectId, ct: ct))
-            .Where(h => h.IsActive && InProject(h.ProjectId, sel.ProjectId))
+        var dashboards = (await _history.ListAsync(me.Id, entityId: sel.EntityId, ct: ct))
+            .Where(h => h.IsActive && InEntity(h.EntityId, sel.EntityId))
             .ToDictionary(h => h.Id, h => h);
         var links = await _shares.ListByHistoryIdsAsync(me.OrganizationId, dashboards.Keys.ToList(), ct);
         foreach (var g in links.Where(l => l.IsLive && l.HistoryId is not null).GroupBy(l => l.HistoryId!))
@@ -100,7 +100,7 @@ public class ViewingController : ControllerBase
         var sel = await _permissions.GetEffectiveSelectionAsync(me, null, ct);
         var d = await _designs.GetByIdAsync(designId, ct);
         if (d?.PresentationId is null) return NotFound();
-        var access = FreeformAccess.Resolve(d, me.Id, me.OrganizationId, sel.ProjectId, me.Role == UserRoles.Admin, await _designs.ShareRoleAsync(d.Id, me.Id, ct));
+        var access = FreeformAccess.Resolve(d, me.Id, me.OrganizationId, sel.EntityId, me.Role == UserRoles.Admin, await _designs.ShareRoleAsync(d.Id, me.Id, ct));
         if (access is null) return NotFound();
         var p = await _presentations.GetAsync(d.PresentationId, ct);
         if (p is null || !p.IsActive) return NotFound();
@@ -108,8 +108,8 @@ public class ViewingController : ControllerBase
     }
 
     /// <summary>العنصر من المشروع الحالي؟ عنصر قديم بلا مشروع يُعرض في كل المشاريع (كما يعامله باقي التطبيق).</summary>
-    internal static bool InProject(string? itemProject, string? currentProject)
-        => string.IsNullOrWhiteSpace(itemProject) || string.Equals(itemProject, currentProject, StringComparison.OrdinalIgnoreCase);
+    internal static bool InEntity(string? itemEntity, string? currentEntity)
+        => string.IsNullOrWhiteSpace(itemEntity) || string.Equals(itemEntity, currentEntity, StringComparison.OrdinalIgnoreCase);
 
     private static string FirstNonEmpty(params string?[] values) => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? "";
 

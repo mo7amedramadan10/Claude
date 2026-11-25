@@ -37,10 +37,10 @@ public class ViewingTests
     [Fact]
     public void InProject_CurrentProjectOrLegacyWithoutProject()
     {
-        Assert.True(ViewingController.InProject("p1", "p1"));
-        Assert.True(ViewingController.InProject("P1", "p1"));
-        Assert.True(ViewingController.InProject(null, "p1"));
-        Assert.False(ViewingController.InProject("p2", "p1"));
-        Assert.False(ViewingController.InProject("p2", null));
+        Assert.True(ViewingController.InEntity("p1", "p1"));
+        Assert.True(ViewingController.InEntity("P1", "p1"));
+        Assert.True(ViewingController.InEntity(null, "p1"));
+        Assert.False(ViewingController.InEntity("p2", "p1"));
+        Assert.False(ViewingController.InEntity("p2", null));
     }
 }

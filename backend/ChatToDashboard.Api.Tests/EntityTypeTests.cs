@@ -1,4 +1,4 @@
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using Xunit;
 
 namespace ChatToDashboard.Api.Tests;

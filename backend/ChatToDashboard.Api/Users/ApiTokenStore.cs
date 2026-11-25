@@ -54,7 +54,7 @@ public class ApiTokenStore
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/EntityStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE على TokenHash هنا (نفس استثناء
         // OrganizationStore)؛ تصادم عشوائي على تجزئة 256-بت مستبعد عمليًا.
         await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(32)", ct);

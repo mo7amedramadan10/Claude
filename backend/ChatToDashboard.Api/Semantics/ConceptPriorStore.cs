@@ -42,7 +42,7 @@ public class ConceptPriorStore
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/EntityStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. NormalizedName/Concept هنا أعمدة عادية (بلا
         // إعادة تركيب المفتاح المركّب نفسه) — إضافتهما فقط تمنع "Invalid column name" على
         // جدول سابق بشكل مختلف، كما ثبت فعليًا مع Organizations/Projects.

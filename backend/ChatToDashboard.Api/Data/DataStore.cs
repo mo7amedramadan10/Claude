@@ -74,6 +74,60 @@ public class DataStore
     /// جدول في <c>staging</c> لا نظير له في <c>dbo</c> بـ <c>ALTER SCHEMA TRANSFER</c> (البيانات والفهارس تبقى كما هي)،
     /// ويعيد كتابة أسماء جداول الملفات المسجَّلة بالبادئة القديمة، ثم يحذف المخطط إن فرغ. جدول له نظير في
     /// <c>dbo</c> بالفعل يُترك مكانه مع تحذير في السجل (لا يُدمج ولا يُحذف شيء تلقائيًا).</summary>
+    /// <summary>جداول التطبيق التي تحمل معرّف الكيان (كان اسمه «مشروع») — قائمة صريحة لأن مخطط dbo فيه جداول ليست من التطبيق
+    /// (KPI/OKR…) قد يكون فيها عمود بالاسم القديم ولا تُمس. أي مخزن جديد بعمود EntityId يُضاف هنا فقط إن وُجد قبل هذا الترحيل.</summary>
+    internal static readonly string[] EntityColumnTables =
+    {
+        "EntityRoles", "FreeformAssets", "FreeformTemplates", "FreeformDesigns", "FreeformMessages", "FreeformQueries", "FreeformShares",
+        "FreeformVersions", "PublishedDashboards", "GraphEdges", "GraphNodes", "DashboardHistory", "DashboardRoles", "BrandIdentities",
+        "DeckBrandTemplatePages", "DeckBrandTemplates", "DeckBrands", "DeckBrandFonts", "Decks", "repo_FilePermissions", "repo_FileRelationships",
+        "repo_Files", "ColumnSemantics", "AnalystConversations", "AnalystMessages", "AnalystResultSources", "AnalystResults",
+        "ExternalIntegrations", "IntegrationPublishLog", "PublishedDashboardSlots", "WidgetDataFilters",
+    };
+
+    /// <summary>SQL الترحيل من «المشروع» إلى «الكيان» (مُختبَر نصيًا): إعادة تسمية الجدولين ثم العمودين ProjectId/ProjectKey في جداول التطبيق.
+    /// يعيد التشغيل بأمان: كل خطوة مشروطة بوجود القديم وغياب الجديد؛ وإن وُجد الاثنان (مخزن أضاف العمود الجديد فارغًا) تُنسخ القيم إلى الجديد.</summary>
+    internal static string EntityRenameSql()
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var (from, to) in new[] { ("Projects", "Entities"), ("ProjectRoles", "EntityRoles") })
+            sb.Append($"IF OBJECT_ID('dbo.{from}') IS NOT NULL AND OBJECT_ID('dbo.{to}') IS NULL EXEC sp_rename 'dbo.{from}', '{to}';\n");
+        foreach (var t in EntityColumnTables)
+            foreach (var (oldCol, newCol) in new[] { ("ProjectId", "EntityId"), ("ProjectKey", "EntityKey") })
+            {
+                sb.Append($"IF OBJECT_ID('dbo.{t}') IS NOT NULL AND COL_LENGTH('dbo.{t}', '{oldCol}') IS NOT NULL\nBEGIN\n");
+                sb.Append($"  IF COL_LENGTH('dbo.{t}', '{newCol}') IS NULL EXEC sp_rename 'dbo.{t}.{oldCol}', '{newCol}', 'COLUMN';\n");
+                sb.Append($"  ELSE EXEC('UPDATE dbo.[{t}] SET [{newCol}] = [{oldCol}] WHERE [{newCol}] IS NULL');\n");
+                sb.Append("END;\n");
+            }
+        return sb.ToString();
+    }
+
+    /// <summary>ترحيل «المشروع» إلى «الكيان» في القاعدة عند الإقلاع، قبل أي مخزن (وإلا أنشأ مخزن عمودًا جديدًا فارغًا بجوار القديم).
+    /// مخططات بيانات الكيانات (proj_&lt;id&gt;) لا تُمس هنا. فشله يُسجَّل ولا يوقف الإقلاع.</summary>
+    public async Task MigrateProjectToEntityAsync(ILogger logger, CancellationToken ct = default)
+    {
+        await using var connection = await OpenConnectionAsync(ct);
+        int pending;
+        await using (var probe = connection.CreateCommand())
+        {
+            var checks = string.Join(" + ", EntityColumnTables.Select(t => $"CASE WHEN COL_LENGTH('dbo.{t}','ProjectId') IS NOT NULL OR COL_LENGTH('dbo.{t}','ProjectKey') IS NOT NULL THEN 1 ELSE 0 END"));
+            probe.CommandText = $"SELECT (CASE WHEN OBJECT_ID('dbo.Projects') IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN OBJECT_ID('dbo.ProjectRoles') IS NOT NULL THEN 1 ELSE 0 END) + {checks}";
+            pending = Convert.ToInt32(await probe.ExecuteScalarAsync(ct));
+        }
+        if (pending == 0) return;
+        await using var tx = await connection.BeginTransactionAsync(ct);
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.Transaction = (SqlTransaction)tx;
+            cmd.CommandText = EntityRenameSql();
+            cmd.CommandTimeout = 300;
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+        await tx.CommitAsync(ct);
+        logger.LogWarning("Migrated {Count} legacy Project names to Entity (tables Projects/ProjectRoles and ProjectId/ProjectKey columns).", pending);
+    }
+
     public async Task MigrateLegacyStagingSchemaAsync(ILogger logger, CancellationToken ct = default)
     {
         const string legacy = "staging";
@@ -144,19 +198,19 @@ public class DataStore
     // ---- Naming ----
 
     /// <summary>The schema a project's own uploaded-file tables live in. Falls back to the shared
-    /// "dbo" schema when <paramref name="projectId"/> is null/blank or doesn't look like one
+    /// "dbo" schema when <paramref name="entityId"/> is null/blank or doesn't look like one
     /// of this app's own ids (defensive: an unexpected value never flows into a dynamically
     /// built schema name). System-sourced and data-folder tables (see SystemApiLoader)
     /// have no project of their own and always stay in "dbo" — only
     /// RepositoryStore's uploaded files get their own project schema.</summary>
-    internal string ProjectSchema(string? projectId)
+    internal string EntitySchema(string? entityId)
     {
-        if (string.IsNullOrWhiteSpace(projectId) || !IsValidProjectId(projectId)) return SqlServerSchema;
-        return "proj_" + projectId;
+        if (string.IsNullOrWhiteSpace(entityId) || !IsValidEntityId(entityId)) return SqlServerSchema;
+        return "proj_" + entityId;
     }
 
-    private static bool IsValidProjectId(string projectId) =>
-        projectId.Length is > 0 and <= 64 && projectId.All(char.IsAsciiHexDigit);
+    private static bool IsValidEntityId(string entityId) =>
+        entityId.Length is > 0 and <= 64 && entityId.All(char.IsAsciiHexDigit);
 
     /// <summary>Quoted table reference for generated DDL/DML.</summary>
     internal string QualifiedTable(string schema, string tableName) =>
@@ -174,9 +228,9 @@ public class DataStore
     }
 
     /// <summary>The name Claude sees and writes in its queries, for a freshly loaded file —
-    /// under <paramref name="projectId"/>'s own schema.</summary>
-    public string DisplayTable(string? projectId, string tableName) =>
-        $"{ProjectSchema(projectId)}.{tableName}";
+    /// under <paramref name="entityId"/>'s own schema.</summary>
+    public string DisplayTable(string? entityId, string tableName) =>
+        $"{EntitySchema(entityId)}.{tableName}";
 
     /// <summary>Strips the schema from a display name, giving the bare table name. Works
     /// the same regardless of which SQL Server schema (shared or per-project) the name carries —
@@ -184,10 +238,10 @@ public class DataStore
     public string BareTableName(string displayName) =>
         displayName.Contains('.') ? displayName.Split('.').Last() : displayName;
 
-    public async Task DropTableAsync(DbConnection connection, string? projectId, string bareName, CancellationToken ct = default)
+    public async Task DropTableAsync(DbConnection connection, string? entityId, string bareName, CancellationToken ct = default)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE IF EXISTS {QualifiedTable(ProjectSchema(projectId), bareName)}";
+        command.CommandText = $"DROP TABLE IF EXISTS {QualifiedTable(EntitySchema(entityId), bareName)}";
         await command.ExecuteNonQueryAsync(ct);
     }
 
@@ -210,19 +264,19 @@ public class DataStore
 
     // ---- Schema ----
 
-    /// <summary>Every column of every table visible to <paramref name="projectId"/>: the shared
+    /// <summary>Every column of every table visible to <paramref name="entityId"/>: the shared
     /// schema (system sources, data-folder reference tables) on its own when
-    /// <paramref name="projectId"/> is null, or unioned with that project's own uploaded-file
+    /// <paramref name="entityId"/> is null, or unioned with that project's own uploaded-file
     /// schema when it isn't. On SQL Server this scopes the scan at the SQL level — a project
     /// never sees, and the scan never even reads, another project's tables — rather than relying
-    /// solely on the application-level <c>IsTableKnownToProject</c> filter every caller still
+    /// solely on the application-level <c>IsTableKnownToEntity</c> filter every caller still
     /// applies on top (kept as a second, now-redundant layer of defense).</summary>
-    public async Task<IReadOnlyList<TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default)
+    public async Task<IReadOnlyList<TableSchema>> GetSchemaAsync(string? entityId = null, CancellationToken ct = default)
     {
-        var projectSchema = ProjectSchema(projectId);
-        var scopedToProject = !string.Equals(projectSchema, SqlServerSchema, StringComparison.Ordinal);
+        var entitySchema = EntitySchema(entityId);
+        var scopedToEntity = !string.Equals(entitySchema, SqlServerSchema, StringComparison.Ordinal);
 
-        var sql = scopedToProject
+        var sql = scopedToEntity
             ? """
               SELECT c.TABLE_SCHEMA AS TableSchema, c.TABLE_NAME AS TableName, c.COLUMN_NAME AS ColumnName, c.DATA_TYPE AS DataType
               FROM INFORMATION_SCHEMA.COLUMNS c
@@ -248,7 +302,7 @@ public class DataStore
         // on the server.
         command.CommandTimeout = LoadCommandTimeoutSeconds;
         command.Parameters.Add(new SqlParameter("@shared", SqlServerSchema));
-        if (scopedToProject) command.Parameters.Add(new SqlParameter("@project", projectSchema));
+        if (scopedToEntity) command.Parameters.Add(new SqlParameter("@project", entitySchema));
 
         var tables = new Dictionary<string, (string Schema, string Table, List<TableColumn> Columns)>();
         var order = new List<string>();
@@ -282,11 +336,11 @@ public class DataStore
     }
 
     /// <summary>Same as <see cref="CreateContainerIfMissingAsync"/> but for one project's own
-    /// schema (a no-op when <paramref name="projectId"/> resolves to the shared schema, which <see cref="CreateContainerIfMissingAsync"/> already
+    /// schema (a no-op when <paramref name="entityId"/> resolves to the shared schema, which <see cref="CreateContainerIfMissingAsync"/> already
     /// covers). Called lazily, right before a project's first upload needs its schema to exist —
     /// the same lazy, idempotent, first-use pattern every schema in this app is already created
     /// by; no eager hook at project-creation time.</summary>
-    /// <param name="projectName">When given, stamped onto the schema as its MS_Description
+    /// <param name="entityName">When given, stamped onto the schema as its MS_Description
     /// extended property (what SSMS/Object Explorer shows as the schema's description/tooltip),
     /// purely so a human browsing the database can tell which project <c>proj_&lt;id&gt;</c>
     /// belongs to without a lookup. Never affects the schema's own name — every query, DDL
@@ -296,10 +350,10 @@ public class DataStore
     /// project is renamed. Kept up to date on every call (not just the first) via
     /// sp_updateextendedproperty, so a later rename is reflected without a special migration
     /// path of its own.</param>
-    public async Task CreateProjectSchemaIfMissingAsync(
-        DbConnection connection, string? projectId, string? projectName = null, CancellationToken ct = default)
+    public async Task CreateEntitySchemaIfMissingAsync(
+        DbConnection connection, string? entityId, string? entityName = null, CancellationToken ct = default)
     {
-        var schema = ProjectSchema(projectId);
+        var schema = EntitySchema(entityId);
         if (string.Equals(schema, SqlServerSchema, StringComparison.Ordinal)) return;
 
         await using (var command = connection.CreateCommand())
@@ -308,20 +362,20 @@ public class DataStore
             await command.ExecuteNonQueryAsync(ct);
         }
 
-        if (string.IsNullOrWhiteSpace(projectName)) return;
+        if (string.IsNullOrWhiteSpace(entityName)) return;
 
         await using var prop = connection.CreateCommand();
         prop.CommandText = """
             IF EXISTS (SELECT 1 FROM sys.extended_properties
                        WHERE class = 3 AND major_id = SCHEMA_ID(@schema) AND name = N'MS_Description')
-                EXEC sp_updateextendedproperty @name = N'MS_Description', @value = @projectName,
+                EXEC sp_updateextendedproperty @name = N'MS_Description', @value = @entityName,
                     @level0type = N'SCHEMA', @level0name = @schema;
             ELSE
-                EXEC sp_addextendedproperty @name = N'MS_Description', @value = @projectName,
+                EXEC sp_addextendedproperty @name = N'MS_Description', @value = @entityName,
                     @level0type = N'SCHEMA', @level0name = @schema;
             """;
         prop.Parameters.Add(new SqlParameter("@schema", schema));
-        prop.Parameters.Add(new SqlParameter("@projectName", projectName));
+        prop.Parameters.Add(new SqlParameter("@entityName", entityName));
         await prop.ExecuteNonQueryAsync(ct);
     }
 
@@ -334,13 +388,13 @@ public class DataStore
     /// bigger table load can genuinely need.</summary>
     private const int LoadCommandTimeoutSeconds = 120;
 
-    /// <summary>Drops and recreates the table under <paramref name="projectId"/>'s own schema
+    /// <summary>Drops and recreates the table under <paramref name="entityId"/>'s own schema
     /// (or the shared schema when null — used by SystemApiLoader, which has
     /// no project of their own), then loads every row of <paramref name="table"/>.</summary>
     public async Task RecreateAndLoadAsync(
-        DbConnection connection, string? projectId, string tableName, DataTable table, CancellationToken ct = default)
+        DbConnection connection, string? entityId, string tableName, DataTable table, CancellationToken ct = default)
     {
-        var target = QualifiedTable(ProjectSchema(projectId), tableName);
+        var target = QualifiedTable(EntitySchema(entityId), tableName);
         var columnDefs = table.Columns.Cast<DataColumn>()
             .Select(c => $"{Quote(c.ColumnName)} {SqlTypeFor(c.DataType)} NULL");
 
@@ -380,19 +434,19 @@ public class DataStore
 
     public string DialectName => "Microsoft SQL Server (T-SQL)";
 
-    /// <summary><paramref name="projectId"/> picks which schema the hint names — a project's
+    /// <summary><paramref name="entityId"/> picks which schema the hint names — a project's
     /// own uploaded files live under its own schema, not the shared one.</summary>
-    public string TableNamingHint(string? projectId) =>
-        $"{ProjectSchema(projectId)}.<TableName> for your own uploaded files, or dbo.<TableName> for shared/system tables";
+    public string TableNamingHint(string? entityId) =>
+        $"{EntitySchema(entityId)}.<TableName> for your own uploaded files, or dbo.<TableName> for shared/system tables";
 
-    /// <summary>Same <paramref name="projectId"/> scoping as <see cref="TableNamingHint"/>.</summary>
-    public string DialectPrompt(string? projectId) =>
+    /// <summary>Same <paramref name="entityId"/> scoping as <see cref="TableNamingHint"/>.</summary>
+    public string DialectPrompt(string? entityId) =>
         $"""
           SQL DIALECT — this is Microsoft SQL Server (T-SQL), NOT PostgreSQL or MySQL:
           - Use TOP N, never LIMIT. Always cap results: SELECT TOP 500 ...
           - Use GETDATE() instead of NOW(); DATEADD/DATEDIFF for date math; FORMAT() or CONVERT() for formatting.
           - Quote identifiers with [square brackets], not double quotes.
-          - Reference a table exactly as it was listed to you (either {ProjectSchema(projectId)}.[TableName]
+          - Reference a table exactly as it was listed to you (either {EntitySchema(entityId)}.[TableName]
             or dbo.[TableName]) — never assume one schema for every table.
           - Only SELECT statements are allowed. Any INSERT/UPDATE/DELETE/DDL is rejected.
           - Every uploaded-file column is stored as nvarchar regardless of what it actually

@@ -72,7 +72,7 @@ public class LlmCredentialStore
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/EntityStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا.
         await AddColumnIfMissingAsync(connection, "Provider", "NVARCHAR(50)", ct);
         await AddColumnIfMissingAsync(connection, "ApiKey", "NVARCHAR(MAX)", ct);

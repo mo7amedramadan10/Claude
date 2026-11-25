@@ -14,16 +14,16 @@ public class AnalystAskRequest
     [JsonPropertyName("conversationId")] public string? ConversationId { get; set; }
     // Accepted for API-shape compatibility with the spec's contract, but never trusted for
     // authorization — see AnalystController.Ask's own remarks: this app has no "pass a
-    // projectId, validate access to it" mechanism anywhere yet (every other controller resolves
-    // "the caller's current project" server-side via ProjectStore.ResolveCurrentProjectIdAsync),
+    // entityId, validate access to it" mechanism anywhere yet (every other controller resolves
+    // "the caller's current project" server-side via EntityStore.ResolveCurrentEntityIdAsync),
     // and Phase 1's own instructions are to reuse the current context mechanism, not invent one.
-    [JsonPropertyName("projectId")] public string? ProjectId { get; set; }
+    [JsonPropertyName("entityId")] public string? EntityId { get; set; }
     [JsonPropertyName("question")] public string Question { get; set; } = "";
     [JsonPropertyName("sourceIds")] public List<string>? SourceIds { get; set; }
 }
 
 /// <summary>
-/// "المحلل الذكي" — see the Project Analyst spec (session transcript) for the full design.
+/// "المحلل الذكي" — see the Entity Analyst spec (session transcript) for the full design.
 /// POST ask streams Server-Sent Events; every other action here is a plain JSON endpoint.
 /// Always Ollama/Qwen (see OllamaClient.GenerateAnalystAsync) — never routed through LlmRouter's
 /// provider selection, per the spec's own fixed stack section. As of Phase 4, every org_data
@@ -121,7 +121,7 @@ public class AnalystController : ControllerBase
             ? SourceSelection.AllEnabled()
             : new SourceSelection { Systems = requestedSourceIds, SystemsUnset = false, Files = requestedSourceIds, FilesUnset = false };
         var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, requestedSelection, ct);
-        if (effectiveSources.ProjectId is null)
+        if (effectiveSources.EntityId is null)
         {
             await emitStage(AnalystStages.Sources, AnalystStageStates.Failed);
             await emit("error", new { code = "no_project", message = "لا يوجد مشروع متاح لهذا الحساب." });
@@ -143,7 +143,7 @@ public class AnalystController : ControllerBase
         }
         else
         {
-            conversation = await _store.CreateConversationAsync(effectiveSources.ProjectId, user.Id, MakeTitle(request.Question), ct);
+            conversation = await _store.CreateConversationAsync(effectiveSources.EntityId, user.Id, MakeTitle(request.Question), ct);
         }
         // So the frontend can pass this back as conversationId on the next question in the same
         // session — the spec's own event list (section 4) doesn't name this event explicitly,
@@ -265,7 +265,7 @@ public class AnalystController : ControllerBase
             var result = await _store.AddResultAsync(new AnalystResult
             {
                 ConversationId = conversation.Id,
-                ProjectId = effectiveSources.ProjectId,
+                EntityId = effectiveSources.EntityId,
                 Title = model.Title,
                 ResultType = model.ResultType,
                 ColumnsJson = JsonSerializer.Serialize(columns),
@@ -351,9 +351,9 @@ public class AnalystController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, SourceSelection.AllEnabled(), ct);
-        if (effectiveSources.ProjectId is null) return NotFound();
+        if (effectiveSources.EntityId is null) return NotFound();
 
-        var result = await _store.GetResultAsync(effectiveSources.ProjectId, id, ct);
+        var result = await _store.GetResultAsync(effectiveSources.EntityId, id, ct);
         if (result is null) return NotFound();
 
         var sources = await _store.ListResultSourcesAsync(id, ct);
@@ -399,9 +399,9 @@ public class AnalystController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, SourceSelection.AllEnabled(), ct);
-        if (effectiveSources.ProjectId is null) return NotFound();
+        if (effectiveSources.EntityId is null) return NotFound();
 
-        var result = await _store.GetResultAsync(effectiveSources.ProjectId, id, ct);
+        var result = await _store.GetResultAsync(effectiveSources.EntityId, id, ct);
         if (result is null) return NotFound();
 
         var sourceContext = await _analytics.DescribeSourcesAsync(effectiveSources, ct);
@@ -472,9 +472,9 @@ public class AnalystController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var effectiveSources = await _permissions.GetEffectiveSelectionAsync(user, SourceSelection.AllEnabled(), ct);
-        if (effectiveSources.ProjectId is null) return NotFound();
+        if (effectiveSources.EntityId is null) return NotFound();
 
-        var result = await _store.GetResultAsync(effectiveSources.ProjectId, id, ct);
+        var result = await _store.GetResultAsync(effectiveSources.EntityId, id, ct);
         if (result is null) return NotFound();
 
         var columns = AnalystStore.DeserializeColumns(result.ColumnsJson);

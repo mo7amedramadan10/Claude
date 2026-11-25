@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Sources;
 
 namespace ChatToDashboard.Api.Users;
@@ -16,12 +16,12 @@ namespace ChatToDashboard.Api.Users;
 public class PermissionsService
 {
     private readonly UserStore _users;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
 
-    public PermissionsService(UserStore users, ProjectStore projects)
+    public PermissionsService(UserStore users, EntityStore projects)
     {
         _users = users;
-        _projects = projects;
+        _entities = projects;
     }
 
     public static string? UserId(ClaimsPrincipal principal) => principal.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -34,21 +34,21 @@ public class PermissionsService
 
     /// <summary>Intersects the client's requested selection with what <paramref name="user"/>
     /// may access, and stamps the user's current project (see
-    /// ProjectStore.ResolveCurrentProjectIdAsync) so AnalyticsTools.DescribeSourcesAsync can
+    /// EntityStore.ResolveCurrentEntityIdAsync) so AnalyticsTools.DescribeSourcesAsync can
     /// scope repository files and integrations to it — an instance method (not the static
     /// helper this used to be) purely because resolving the project needs a DB round trip.</summary>
     public async Task<SourceSelection> GetEffectiveSelectionAsync(
         AppUser user, SourceSelection? requested, CancellationToken ct = default)
     {
         var isAdmin = user.Role == UserRoles.Admin;
-        var projectId = await _projects.ResolveCurrentProjectIdAsync(user.OrganizationId, user.Id, isAdmin, ct);
+        var entityId = await _entities.ResolveCurrentEntityIdAsync(user.OrganizationId, user.Id, isAdmin, ct);
 
         if (isAdmin)
         {
             var admin = requested ?? SourceSelection.AllEnabled();
             admin.UserId = user.Id;
             admin.IsAdmin = true;
-            admin.ProjectId = projectId;
+            admin.EntityId = entityId;
             return admin;
         }
 
@@ -60,7 +60,7 @@ public class PermissionsService
         {
             SystemsUnset = systemsUnset, Systems = systems,
             FilesUnset = filesUnset, Files = files,
-            UserId = user.Id, IsAdmin = false, ProjectId = projectId,
+            UserId = user.Id, IsAdmin = false, EntityId = entityId,
         };
     }
 

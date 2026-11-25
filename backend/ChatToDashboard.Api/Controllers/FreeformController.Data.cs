@@ -21,11 +21,11 @@ public partial class FreeformController
         var (user, selection) = cur.Value;
         var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         if (StoredSources(d) is { } storedSel) selection = (await CurrentAsync(ct, storedSel))!.Value.Selection;
-        selection = InDesignProject(selection, d!);
+        selection = InDesignEntity(selection, d!);
         var profile = await profiles.BuildAsync(await _tools.DescribeSourcesAsync(selection, ct), ct);
         var tables = profile.Tables.Select(t => new { table = t.Table, name = t.SourceName ?? t.Table.Split('.').Last(), rows = t.RowCount, columns = t.Columns.Select(c => new { name = c.Name, kind = c.Kind }) });
         var dashboards = new List<object>();
-        foreach (var h in await history.ListAsync(user.Id, selection.ProjectId, 40, ct))
+        foreach (var h in await history.ListAsync(user.Id, selection.EntityId, 40, ct))
         {
             var widgets = new List<object>();
             try
@@ -48,7 +48,7 @@ public partial class FreeformController
         var (user, selection) = cur.Value;
         var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         if (StoredSources(d) is { } storedSel) selection = (await CurrentAsync(ct, storedSel))!.Value.Selection;
-        selection = InDesignProject(selection, d!);
+        selection = InDesignEntity(selection, d!);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         string sql; string? x = null, y = null; string? widgetType = null, title = null; JsonNode? widgetMeta = null;
         if (!string.IsNullOrWhiteSpace(request.BuildId))
@@ -65,7 +65,7 @@ public partial class FreeformController
         else if (!string.IsNullOrWhiteSpace(request.HistoryId))
         {
             // عنصر من لوحة محفوظة يحق للمستخدم رؤيتها (القائمة نفسها مفلترة بالصلاحيات)
-            var h = (await history.ListAsync(user.Id, selection.ProjectId, 200, ct)).FirstOrDefault(e => e.Id == request.HistoryId);
+            var h = (await history.ListAsync(user.Id, selection.EntityId, 200, ct)).FirstOrDefault(e => e.Id == request.HistoryId);
             if (h is null) return NotFound(new { error = "اللوحة غير موجودة أو لا تملك الوصول إليها." });
             JsonNode? w = null; try { w = (JsonNode.Parse(h.WidgetsJson) as JsonArray)?[request.WidgetIndex ?? -1]; } catch (Exception) { }
             var wsql = w?["query"]?["sql"]?.GetValue<string>();
@@ -97,7 +97,7 @@ public partial class FreeformController
                 .Select(k => new FreeformQuery(k, "", null)).ToList();
             key = FreeformDataBlock.NextKey(taken);
             stored.Add(new FreeformQuery(key, sql.Trim(), null));
-            await _store.SetQueriesAsync(id, stored, d!.DataRefreshedAt ?? DateTime.UtcNow, await _fingerprints.ComputeAsync(stored.Select(q => q.Sql), selection.ProjectId, ct), ct);
+            await _store.SetQueriesAsync(id, stored, d!.DataRefreshedAt ?? DateTime.UtcNow, await _fingerprints.ComputeAsync(stored.Select(q => q.Sql), selection.EntityId, ct), ct);
             if (d.PresentationId is not null) _live.Invalidate(d.PresentationId);
         }
         return Ok(new { key, sql = sql.Trim(), result, rows, rowCount = rows.Count, columns, x, y, widgetType, title, widget = widgetMeta });
@@ -117,7 +117,7 @@ public partial class FreeformController
         var (user, selection) = cur.Value;
         var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         if (StoredSources(d) is { } storedSel) selection = (await CurrentAsync(ct, storedSel))!.Value.Selection;
-        selection = InDesignProject(selection, d!);
+        selection = InDesignEntity(selection, d!);
         var title = (request.Title ?? "").Trim(); var type = string.IsNullOrWhiteSpace(request.Type) ? "bar" : request.Type!.Trim();
         string? prompt = request.Prompt, table = null, sql = null;
         if (request.Ref is { Kind: TemplateKinds.Widget or TemplateKinds.Kpi } r)

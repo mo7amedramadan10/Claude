@@ -10,8 +10,8 @@ namespace ChatToDashboard.Api.Analyst;
 /// database per organization (the reference design's own sidebar copy about an "isolated
 /// database" is aspirational mockup text, not this app's real multi-tenancy — see
 /// Organizations.OrganizationStore's own remarks, which this phase's own instructions ("use the
-/// current context mechanism") point back to). Every table carries ProjectId (and reaches
-/// OrganizationId transitively through Project), same scoping every other project-level store
+/// current context mechanism") point back to). Every table carries EntityId (and reaches
+/// OrganizationId transitively through Entity), same scoping every other project-level store
 /// already uses.
 ///
 /// Four tables so far (AnalystConversations/Messages/Results/ResultSources) — Phase 1's own
@@ -39,7 +39,7 @@ public class AnalystStore
                 $"""
                  IF OBJECT_ID('dbo.AnalystConversations') IS NULL
                  CREATE TABLE {ConversationsTable} (
-                   [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64), [OwnerUserId] NVARCHAR(64), [Title] NVARCHAR(400),
+                   [Id] NVARCHAR(64) PRIMARY KEY, [EntityId] NVARCHAR(64), [OwnerUserId] NVARCHAR(64), [Title] NVARCHAR(400),
                    [IsSaved] BIT, [RollingSummary] NVARCHAR(MAX), [FindingsLedgerJson] NVARCHAR(MAX),
                    [CreatedAt] DATETIME2, [UpdatedAt] DATETIME2)
                  """,
@@ -52,7 +52,7 @@ public class AnalystStore
                 $"""
                  IF OBJECT_ID('dbo.AnalystResults') IS NULL
                  CREATE TABLE {ResultsTable} (
-                   [Id] NVARCHAR(64) PRIMARY KEY, [ConversationId] NVARCHAR(64), [ProjectId] NVARCHAR(64), [Title] NVARCHAR(400),
+                   [Id] NVARCHAR(64) PRIMARY KEY, [ConversationId] NVARCHAR(64), [EntityId] NVARCHAR(64), [Title] NVARCHAR(400),
                    [ResultType] NVARCHAR(16), [ColumnsJson] NVARCHAR(MAX), [RowsJson] NVARCHAR(MAX), [KeyColumn] NVARCHAR(200),
                    [PrimaryMeasure] NVARCHAR(200), [ExecutedSql] NVARCHAR(MAX), [AuditSql] NVARCHAR(MAX), [VerificationJson] NVARCHAR(MAX),
                    [DataVersion] INT, [IsTruncated] BIT, [CreatedAt] DATETIME2)
@@ -74,9 +74,9 @@ public class AnalystStore
 
         // ترحيل: أي عمود من الأربعة جداول أعلاه مفقود من جدول أُنشئ قبل وجوده (قاعدة بيانات
         // مشتركة استُخدمت أثناء التطوير التكراري على هذا الملف) — بلا تأثير إن كان الجدول
-        // جديدًا أصلًا (ADD COLUMN على عمود موجود يُلتقط ويُتجاهل، نفس نمط ProjectStore).
+        // جديدًا أصلًا (ADD COLUMN على عمود موجود يُلتقط ويُتجاهل، نفس نمط EntityStore).
         await AddColumnIfMissingAsync(connection, ConversationsTable, "Id", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, ConversationsTable, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ConversationsTable, "EntityId", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, ConversationsTable, "OwnerUserId", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, ConversationsTable, "Title", "NVARCHAR(400)", ct);
         await AddColumnIfMissingAsync(connection, ConversationsTable, "IsSaved", "BIT", ct);
@@ -96,7 +96,7 @@ public class AnalystStore
 
         await AddColumnIfMissingAsync(connection, ResultsTable, "Id", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, ResultsTable, "ConversationId", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, ResultsTable, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, ResultsTable, "EntityId", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, ResultsTable, "Title", "NVARCHAR(400)", ct);
         await AddColumnIfMissingAsync(connection, ResultsTable, "ResultType", "NVARCHAR(16)", ct);
         await AddColumnIfMissingAsync(connection, ResultsTable, "ColumnsJson", "NVARCHAR(MAX)", ct);
@@ -134,20 +134,20 @@ public class AnalystStore
     // ---- Conversations ----
 
     public async Task<AnalystConversation> CreateConversationAsync(
-        string projectId, string ownerUserId, string title, CancellationToken ct = default)
+        string entityId, string ownerUserId, string title, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         var now = DateTime.UtcNow;
         var row = new AnalystConversation
         {
-            Id = Guid.NewGuid().ToString("N"), ProjectId = projectId, OwnerUserId = ownerUserId,
+            Id = Guid.NewGuid().ToString("N"), EntityId = entityId, OwnerUserId = ownerUserId,
             Title = title, IsSaved = false, CreatedAt = now, UpdatedAt = now,
         };
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"""
             INSERT INTO {ConversationsTable}
-              (Id, ProjectId, OwnerUserId, Title, IsSaved, RollingSummary, FindingsLedgerJson, CreatedAt, UpdatedAt)
-            VALUES (@Id, @ProjectId, @OwnerUserId, @Title, @IsSaved, @RollingSummary, @FindingsLedgerJson, @CreatedAt, @UpdatedAt)
+              (Id, EntityId, OwnerUserId, Title, IsSaved, RollingSummary, FindingsLedgerJson, CreatedAt, UpdatedAt)
+            VALUES (@Id, @EntityId, @OwnerUserId, @Title, @IsSaved, @RollingSummary, @FindingsLedgerJson, @CreatedAt, @UpdatedAt)
             """, row);
         return row;
     }
@@ -214,10 +214,10 @@ public class AnalystStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync($"""
             INSERT INTO {ResultsTable}
-              (Id, ConversationId, ProjectId, Title, ResultType, ColumnsJson, RowsJson, KeyColumn, PrimaryMeasure,
+              (Id, ConversationId, EntityId, Title, ResultType, ColumnsJson, RowsJson, KeyColumn, PrimaryMeasure,
                ExecutedSql, AuditSql, VerificationJson, DataVersion, IsTruncated, CreatedAt)
             VALUES
-              (@Id, @ConversationId, @ProjectId, @Title, @ResultType, @ColumnsJson, @RowsJson, @KeyColumn, @PrimaryMeasure,
+              (@Id, @ConversationId, @EntityId, @Title, @ResultType, @ColumnsJson, @RowsJson, @KeyColumn, @PrimaryMeasure,
                @ExecutedSql, @AuditSql, @VerificationJson, @DataVersion, @IsTruncated, @CreatedAt)
             """, result);
         return result;
@@ -226,12 +226,12 @@ public class AnalystStore
     /// <summary>Scoped to the requesting project so a result id from another project can never
     /// be read cross-tenant even if guessed/leaked — same defense-in-depth every other
     /// project-scoped GET-by-id in this app already applies.</summary>
-    public async Task<AnalystResult?> GetResultAsync(string projectId, string id, CancellationToken ct = default)
+    public async Task<AnalystResult?> GetResultAsync(string entityId, string id, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<AnalystResult>(
-            $"SELECT * FROM {ResultsTable} WHERE Id = @id AND ProjectId = @projectId", new { id, projectId });
+            $"SELECT * FROM {ResultsTable} WHERE Id = @id AND EntityId = @entityId", new { id, entityId });
     }
 
     public async Task AddResultSourcesAsync(IReadOnlyList<AnalystResultSource> sources, CancellationToken ct = default)

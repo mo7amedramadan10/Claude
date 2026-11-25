@@ -1,7 +1,7 @@
 using ChatToDashboard.Api.Data;
 using Dapper;
 
-namespace ChatToDashboard.Api.Projects;
+namespace ChatToDashboard.Api.Entities;
 
 /// <summary>
 /// تخزين جدول <c>PublishedDashboards</c> (§4.23) — بنفس نمط Dapper المشترك لبقية المخازن
@@ -24,22 +24,22 @@ public class PublishedDashboardStore
         var text = $"""
                IF OBJECT_ID('dbo.PublishedDashboards') IS NULL
                CREATE TABLE {Table} (
-                 [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64) NOT NULL, [DashboardId] NVARCHAR(64) NOT NULL,
+                 [Id] NVARCHAR(64) PRIMARY KEY, [EntityId] NVARCHAR(64) NOT NULL, [DashboardId] NVARCHAR(64) NOT NULL,
                  [Version] INT NOT NULL, [PublishedBy] NVARCHAR(200), [PublishedAt] DATETIME2,
                  [Audience] NVARCHAR(20) NOT NULL, [RefreshMode] NVARCHAR(20) NOT NULL, [RefreshEvery] NVARCHAR(100),
                  [SortOrder] INT NOT NULL, [Kind] NVARCHAR(20) NOT NULL,
-                 CONSTRAINT UQ_PublishedDashboards_Project_Dashboard UNIQUE ([ProjectId], [DashboardId]))
+                 CONSTRAINT UQ_PublishedDashboards_Project_Dashboard UNIQUE ([EntityId], [DashboardId]))
                """;
 
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/EntityStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE هنا (نفس استثناء
         // OrganizationStore)، والتكرار محسوم بالفعل في PublishAsync (SELECT قبل أي INSERT).
         await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, "EntityId", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, "DashboardId", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, "Version", "INT", ct);
         await AddColumnIfMissingAsync(connection, "PublishedBy", "NVARCHAR(200)", ct);
@@ -64,13 +64,13 @@ public class PublishedDashboardStore
 
     /// <summary>كل اللوحات المنشورة على المشروع بترتيب التبويبات (بلا تصفية جمهور — هذه
     /// مسؤولية المتحكم).</summary>
-    public async Task<IReadOnlyList<PublishedDashboard>> ListAsync(string projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<PublishedDashboard>> ListAsync(string entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<PublishedDashboard>(
-            $"SELECT * FROM {Table} WHERE ProjectId = @projectId ORDER BY SortOrder, PublishedAt",
-            new { projectId });
+            $"SELECT * FROM {Table} WHERE EntityId = @entityId ORDER BY SortOrder, PublishedAt",
+            new { entityId });
         return rows.ToList();
     }
 
@@ -99,7 +99,7 @@ public class PublishedDashboardStore
     /// موضعها في الترتيب.
     /// </summary>
     public async Task<PublishedDashboard> PublishAsync(
-        string projectId, string dashboardId, string kind, string publishedBy,
+        string entityId, string dashboardId, string kind, string publishedBy,
         string audience, string refreshMode, string? refreshEvery, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
@@ -107,8 +107,8 @@ public class PublishedDashboardStore
         var now = DateTime.UtcNow;
 
         var existing = await connection.QuerySingleOrDefaultAsync<PublishedDashboard>(
-            $"SELECT * FROM {Table} WHERE ProjectId = @projectId AND DashboardId = @dashboardId",
-            new { projectId, dashboardId });
+            $"SELECT * FROM {Table} WHERE EntityId = @entityId AND DashboardId = @dashboardId",
+            new { entityId, dashboardId });
         if (existing is not null)
         {
             existing.Version += 1;
@@ -127,11 +127,11 @@ public class PublishedDashboardStore
         }
 
         var nextOrder = await connection.ExecuteScalarAsync<int?>(
-            $"SELECT MAX(SortOrder) FROM {Table} WHERE ProjectId = @projectId", new { projectId }) ?? -1;
+            $"SELECT MAX(SortOrder) FROM {Table} WHERE EntityId = @entityId", new { entityId }) ?? -1;
         var row = new PublishedDashboard
         {
             Id = Guid.NewGuid().ToString("N"),
-            ProjectId = projectId,
+            EntityId = entityId,
             DashboardId = dashboardId,
             Version = 1,
             PublishedBy = publishedBy,
@@ -143,22 +143,22 @@ public class PublishedDashboardStore
             Kind = kind,
         };
         await connection.ExecuteAsync(
-            $"INSERT INTO {Table} (Id, ProjectId, DashboardId, Version, PublishedBy, PublishedAt, Audience, " +
-            "RefreshMode, RefreshEvery, SortOrder, Kind) VALUES (@Id, @ProjectId, @DashboardId, @Version, " +
+            $"INSERT INTO {Table} (Id, EntityId, DashboardId, Version, PublishedBy, PublishedAt, Audience, " +
+            "RefreshMode, RefreshEvery, SortOrder, Kind) VALUES (@Id, @EntityId, @DashboardId, @Version, " +
             "@PublishedBy, @PublishedAt, @Audience, @RefreshMode, @RefreshEvery, @SortOrder, @Kind)",
             row);
         return row;
     }
 
     /// <summary>يحفظ ترتيبًا كاملًا للمشروع: الموضع في القائمة يصبح <c>SortOrder</c>.</summary>
-    public async Task SaveOrderAsync(string projectId, IReadOnlyList<string> orderedIds, CancellationToken ct = default)
+    public async Task SaveOrderAsync(string entityId, IReadOnlyList<string> orderedIds, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         for (var i = 0; i < orderedIds.Count; i++)
             await connection.ExecuteAsync(
-                $"UPDATE {Table} SET SortOrder = @order WHERE Id = @id AND ProjectId = @projectId",
-                new { order = i, id = orderedIds[i], projectId });
+                $"UPDATE {Table} SET SortOrder = @order WHERE Id = @id AND EntityId = @entityId",
+                new { order = i, id = orderedIds[i], entityId });
     }
 
     public async Task DeleteAsync(string id, CancellationToken ct = default)

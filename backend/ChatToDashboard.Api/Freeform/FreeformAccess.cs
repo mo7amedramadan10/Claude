@@ -7,9 +7,9 @@ namespace ChatToDashboard.Api.Freeform;
 /// </summary>
 public static class FreeformAccess
 {
-    public const string Private = "private", Project = "project", Org = "org";
+    public const string Private = "private", Entity = "project", Org = "org";
     public const string View = "view", Edit = "edit", Owner = "owner";
-    public static readonly string[] Scopes = { Private, Project, Org };
+    public static readonly string[] Scopes = { Private, Entity, Org };
     public static readonly string[] Roles = { View, Edit };
 
     public static string NormalizeScope(string? s) => Scopes.Contains(s ?? "") ? s! : Private;
@@ -17,20 +17,20 @@ public static class FreeformAccess
 
     /// <summary>دور المستخدم في التصميم: owner | edit | view | null (لا وصول).</summary>
     /// <param name="sharedRole">دوره إن شورك معه التصميم بالاسم، وإلا null.</param>
-    public static string? Resolve(FreeformDesign d, string userId, string? organizationId, string? currentProjectId, bool isAdmin, string? sharedRole)
+    public static string? Resolve(FreeformDesign d, string userId, string? organizationId, string? currentEntityId, bool isAdmin, string? sharedRole)
     {
         // تصميم من منظمة أخرى لا يُرى أبدًا؛ تصميم قديم بلا منظمة يُعامل بمشروعه
-        var sameOrg = d.OrganizationId is not null ? string.Equals(d.OrganizationId, organizationId, StringComparison.Ordinal) : SameProject(d, currentProjectId);
+        var sameOrg = d.OrganizationId is not null ? string.Equals(d.OrganizationId, organizationId, StringComparison.Ordinal) : SameEntity(d, currentEntityId);
         if (!sameOrg) return null;
         if (isAdmin || string.Equals(d.CreatedByUserId, userId, StringComparison.OrdinalIgnoreCase)) return Owner;
         string? best = sharedRole is null ? null : NormalizeRole(sharedRole);
         var scope = NormalizeScope(d.ShareScope);
-        if (scope == Org || (scope == Project && SameProject(d, currentProjectId))) best = Max(best, NormalizeRole(d.ShareScopeRole));
+        if (scope == Org || (scope == Entity && SameEntity(d, currentEntityId))) best = Max(best, NormalizeRole(d.ShareScopeRole));
         return best;
     }
 
     public static bool CanEdit(string? access) => access is Owner or Edit;
 
-    private static bool SameProject(FreeformDesign d, string? currentProjectId) => string.Equals(d.ProjectId ?? "", currentProjectId ?? "", StringComparison.Ordinal);
+    private static bool SameEntity(FreeformDesign d, string? currentEntityId) => string.Equals(d.EntityId ?? "", currentEntityId ?? "", StringComparison.Ordinal);
     private static string? Max(string? a, string b) => a == Edit || b == Edit ? Edit : View;
 }

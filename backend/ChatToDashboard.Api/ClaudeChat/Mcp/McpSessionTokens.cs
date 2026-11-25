@@ -8,7 +8,7 @@ public sealed class McpSession
 {
     public required string Token { get; init; }
     public required string UserId { get; init; }
-    public string? ProjectId { get; init; }
+    public string? EntityId { get; init; }
     public DateTime ExpiresAt { get; init; }
     private int _queries;
     public int Queries => _queries;
@@ -29,13 +29,13 @@ public class McpSessionTokens
 
     public McpSessionTokens(TimeProvider? clock = null) => _clock = clock ?? TimeProvider.System;
 
-    public McpSession Issue(string userId, string? projectId, TimeSpan? lifetime = null)
+    public McpSession Issue(string userId, string? entityId, TimeSpan? lifetime = null)
     {
         Prune();
         var token = Prefix + Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
         var session = new McpSession
         {
-            Token = token, UserId = userId, ProjectId = projectId,
+            Token = token, UserId = userId, EntityId = entityId,
             ExpiresAt = _clock.GetUtcNow().UtcDateTime + (lifetime ?? DefaultLifetime),
         };
         _sessions[token] = session;

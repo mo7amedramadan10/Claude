@@ -161,7 +161,7 @@ public class PresentationsController : ControllerBase
         if (p.SourceKind == "deck" && !string.IsNullOrWhiteSpace(p.SourceId) && await _decks.GetByIdAsync(p.SourceId, ct) is { } deck)
         {
             try { spec = System.Text.Json.JsonSerializer.Deserialize<DeckSpec>(deck.SpecJson)?.Normalize(); } catch (System.Text.Json.JsonException) { }
-            if (deck.ProjectId is not null) brand = await _brands.GetAsync(deck.ProjectId, ct);
+            if (deck.EntityId is not null) brand = await _brands.GetAsync(deck.EntityId, ct);
         }
         if (spec is null)
         {

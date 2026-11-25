@@ -42,10 +42,10 @@ public class CrmAnalysisDataProvider : IInteractiveDataProvider
         }, Required: false),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "العملاء المحتملون (leads)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var leadRows = await _matcher.QueryAsync(BuildSelect(matched.Tables["leads"], "industry", "city", "org_size", "agent", "created_at", "closed_at", "stage", "value", "churned"), matched.Context, ct);

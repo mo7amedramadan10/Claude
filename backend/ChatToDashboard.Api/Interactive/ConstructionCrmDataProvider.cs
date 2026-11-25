@@ -73,14 +73,14 @@ public class ConstructionCrmDataProvider : IInteractiveDataProvider
         }, Required: false),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[]
         {
             "طلبات الخدمة (service_requests)", "عروض الأسعار (quotes)", "الأعمال (jobs)",
             "المواعيد (appointments)", "حسابات التحويل (payout_accounts)",
         };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var reqRows = await _matcher.QueryAsync(BuildSelect(matched.Tables["service_requests"], "category", "created_at"), matched.Context, ct);

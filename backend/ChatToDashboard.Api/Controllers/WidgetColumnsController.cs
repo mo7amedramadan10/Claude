@@ -101,9 +101,9 @@ public class WidgetColumnsController : ControllerBase
         var profile = await _profiles.BuildAsync(context, ct);
 
         // كل جداول المشروع المرئية بأعمدتها ومعانيها — لاختيار عمود لمفهوم ناقص من أي جدول.
-        var semantics = string.IsNullOrWhiteSpace(context.ProjectId)
+        var semantics = string.IsNullOrWhiteSpace(context.EntityId)
             ? Array.Empty<ColumnSemantic>()
-            : await _semanticsStore.ListForProjectAsync(context.ProjectId, ct);
+            : await _semanticsStore.ListForEntityAsync(context.EntityId, ct);
         var byKey = semantics.ToDictionary(s => (s.TableName.ToLowerInvariant(), s.ColumnName.ToLowerInvariant()), s => s);
         object DescribeColumn(string table, ProfiledColumn c)
         {
@@ -175,17 +175,17 @@ public class WidgetColumnsController : ControllerBase
             var renamed = mapping.Where(kv => first is not null && first.ContainsKey(kv.Value) && !first.ContainsKey(kv.Key))
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-            if (request.Learn && !string.IsNullOrWhiteSpace(context.ProjectId))
+            if (request.Learn && !string.IsNullOrWhiteSpace(context.EntityId))
             {
                 // تعلّم طبقة المعنى: العمود الذي اختاره المستخدم يحمل معنى العمود الذي استُبدل.
-                var rows = await _semanticsStore.ListForTableAsync(context.ProjectId, table.Table, ct);
+                var rows = await _semanticsStore.ListForTableAsync(context.EntityId, table.Table, ct);
                 foreach (var (from, to) in mapping)
                 {
                     var old = rows.FirstOrDefault(r => r.ColumnName.Equals(from, StringComparison.OrdinalIgnoreCase));
                     var target = rows.FirstOrDefault(r => r.ColumnName.Equals(to, StringComparison.OrdinalIgnoreCase));
                     if (old?.Concept is null || target?.Source == SemanticSources.User) continue;
                     // للمشروع فقط (لا سابقة عابرة للعملاء): استبدال عمود في رسم واحد أضعف من تأكيد صريح في «المصادر».
-                    try { await _semanticsStore.SetByUserAsync(context.ProjectId, table.Table, to, old.Concept, old.Role, old.Unit, old.ValueMapJson, ct); }
+                    try { await _semanticsStore.SetByUserAsync(context.EntityId, table.Table, to, old.Concept, old.Role, old.Unit, old.ValueMapJson, ct); }
                     catch (Exception ex) { _logger.LogInformation(ex, "تعذّر نقل معنى {From} إلى {To}", from, to); }
                 }
             }

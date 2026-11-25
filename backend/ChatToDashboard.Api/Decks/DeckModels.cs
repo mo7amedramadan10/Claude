@@ -117,7 +117,7 @@ public class DeckEditable { [JsonPropertyName("key")] public string Key { get; s
 public class DeckRecord
 {
     [JsonPropertyName("id")] public string Id { get; set; } = "";
-    [JsonPropertyName("projectId")] public string? ProjectId { get; set; }
+    [JsonPropertyName("entityId")] public string? EntityId { get; set; }
     [JsonPropertyName("organizationId")] public string? OrganizationId { get; set; }
     [JsonPropertyName("createdByUserId")] public string CreatedByUserId { get; set; } = "";
     [JsonPropertyName("title")] public string Title { get; set; } = "";

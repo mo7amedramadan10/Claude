@@ -504,10 +504,10 @@ const state = {
   // dashboard header — null (no line shown) rather than guessed when truly unknown (e.g.
   // a public share view, which never calls any of the above).
   lastRefreshedAt: null,
-  // The signed-in user's own organization/current-project names (loadCurrentProjectNav)
+  // The signed-in user's own organization/current-project names (loadCurrentEntityNav)
   // and the currently-open screen's name — together drive the topbar breadcrumb
   // (updateCrumbs). Both names start null until that fetch resolves.
-  orgName: null, projectName: null, currentScreen: 'chat',
+  orgName: null, entityName: null, currentScreen: 'chat',
 };
 
 // Every widget needs a stable client-side id (delete/duplicate/reorder/undo all key off
@@ -3495,7 +3495,7 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'warehouse' && window.JEEM_WAREHOUSE_MOUNT) {
     el.dash.innerHTML = interactiveWarehouseSkeletonHtml(d);
     window.JEEM_WAREHOUSE_MOUNT(el.dash.querySelector('#whRoot'), body.data, {
-      demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
+      demo: false, channel: (d.entityId && d.templateId) ? `${d.entityId}:${d.templateId}` : null,
     });
   } else if (d.renderKind === 'pools' && window.JEEM_POOLS_MOUNT) {
     el.dash.innerHTML = interactivePoolsSkeletonHtml(d);
@@ -3524,7 +3524,7 @@ async function mountInteractiveDashboard(d) {
   } else if (d.renderKind === 'funding' && window.JEEM_FUNDING_MOUNT) {
     el.dash.innerHTML = interactiveFundingSkeletonHtml(d);
     window.JEEM_FUNDING_MOUNT(el.dash.querySelector('#tfRoot'), body.data, {
-      demo: false, channel: (d.projectId && d.templateId) ? `${d.projectId}:${d.templateId}` : null,
+      demo: false, channel: (d.entityId && d.templateId) ? `${d.entityId}:${d.templateId}` : null,
     });
   } else if (d.renderKind === 'construction' && window.JEEM_CONSTRUCTION_MOUNT) {
     el.dash.innerHTML = interactiveConstructionSkeletonHtml(d);
@@ -7881,7 +7881,7 @@ function openHistoryEntry(id) {
     filters: parseFilters(entry.filtersJson),
     // Set only for an "interactive" (RenderKind) dashboard — see mountInteractiveDashboard,
     // called from renderDashboard() before any ordinary widget is touched.
-    renderKind: entry.renderKind || null, templateId: entry.templateId || null, projectId: entry.projectId || null,
+    renderKind: entry.renderKind || null, templateId: entry.templateId || null, entityId: entry.entityId || null,
     // لوحة محادثة بُنيت من قالب: مفتاحه محفوظ في templateId ليبقى «إعادة بناء العنصر» ممكنًا.
     templateKey: entry.renderKind ? null : (entry.templateId || null),
   });
@@ -8053,7 +8053,7 @@ el('history-clear').addEventListener('click', async () => {
 // (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
 // integrations) and the platform-only "organizations" screen never show a project name,
 // since you're managing the organization/platform itself there, not a project within it.
-const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks', 'freeform', 'viewing', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+const ENTITY_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks', 'freeform', 'viewing', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
 // Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
 // lookup here instead of reading the DOM, since the same data-screen value can be the
 // target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
@@ -8066,7 +8066,7 @@ const SCREEN_LABELS = {
 };
 // Topbar breadcrumb ("تسلسل الصفحات"): المنظمة (or المنصّة for the platform-only
 // organizations screen) > المشروع الحالي (project-scoped screens only) > الصفحة الحالية.
-// state.orgName/projectName come from loadCurrentProjectNav()'s /api/projects response —
+// state.orgName/entityName come from loadCurrentEntityNav()'s /api/entities response —
 // re-run here (not just at startup) so the breadcrumb stays correct even before that fetch
 // first resolves, and every time it resolves or the screen changes.
 function updateCrumbs(name) {
@@ -8075,7 +8075,7 @@ function updateCrumbs(name) {
   const parts = ['جيم'];
   if (name === 'organizations' || name === 'templates-admin') parts.push('المنصّة');
   else if (state.orgName) parts.push(state.orgName);
-  if (PROJECT_SCOPED_SCREENS.has(name) && state.projectName) parts.push(state.projectName);
+  if (ENTITY_SCOPED_SCREENS.has(name) && state.entityName) parts.push(state.entityName);
   const label = SCREEN_LABELS[name];
   if (label) parts.push(label);
   crumbs.innerHTML = parts.map((p, i) => {
@@ -8137,7 +8137,7 @@ function showScreen(name) {
   if (name === 'settings') loadSettingsPage();
   if (name === 'llm-keys') loadLlmKeysPage();
   if (name === 'integrations') loadIntegrations();
-  if (name === 'projects') loadProjects();
+  if (name === 'projects') loadEntities();
   if (name === 'organizations') loadOrganizations();
   if (name === 'templates-admin') loadTemplatesAdmin();
   if (name === 'sources') loadSourcesPage();
@@ -8186,9 +8186,9 @@ el('current-project-link').addEventListener('click', e => {
 });
 
 // المشروع الحي الوحيد فعليًا اليوم هو أول مشروع بالمنظمة (نفس التعريف المستخدم في
-// renderProjects لصفحة "المشاريع") — اسمه وحرفه الأول هما اللي بيظهروا هنا.
+// renderEntities لصفحة "المشاريع") — اسمه وحرفه الأول هما اللي بيظهروا هنا.
 // ===== الكيانات وأنواعها (مشروع / قسم / إدارة …) =====
-// الكيان هو ما تُنظَّم تحته مساحة العمل (المحادثة، اللوحات، التصاميم، الملفات، الصلاحيات)، ولكل منظمة أنواعها (/api/projects → types).
+// الكيان هو ما تُنظَّم تحته مساحة العمل (المحادثة، اللوحات، التصاميم، الملفات، الصلاحيات)، ولكل منظمة أنواعها (/api/entities → types).
 // ENT.cur = كلمات نوع الكيان الحالي (لـ«القسم الحالي» و«بيانات قسمك»…)، وENT.all = كلمات المجموعة في شاشة الكيانات: نوع واحد ← اسمه،
 // وأكثر من نوع ← «كيان/كيانات». النصوص الثابتة المكتوبة بكلمة «مشروع» تُستبدل آليًا بعبارات محددة تعني الكيان فقط (entReplace)،
 // لأن الكلمة نفسها تعني أيضًا «مشروع عمل» في محتوى النماذج («حالة المشاريع»)؛ ومحتوى اللوحات والمعاينات التوضيحية مستثنى.
@@ -8265,7 +8265,7 @@ function entStartObserver() {
   });
   entObserver.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] });
 }
-// يضبط الأنواع ونوع الكيان الحالي من رد /api/projects ثم يعيد كتابة كل النصوص (وإرجاعها لأصلها إن عاد النوع «مشروع»)
+// يضبط الأنواع ونوع الكيان الحالي من رد /api/entities ثم يعيد كتابة كل النصوص (وإرجاعها لأصلها إن عاد النوع «مشروع»)
 function entSetTypes(types, projects, currentTypeId) {
   ENT.types = Array.isArray(types) ? types : [];
   ENT.currentId = currentTypeId || null;
@@ -8282,19 +8282,19 @@ function entSetTypes(types, projects, currentTypeId) {
   updateCrumbs(state.currentScreen);
 }
 
-async function loadCurrentProjectNav() {
+async function loadCurrentEntityNav() {
   try {
-    const res = await fetch('/api/projects');
+    const res = await fetch('/api/entities');
     if (!res.ok) return;
     const data = await res.json();
     state.orgName = data.organization?.name || null;
-    const project = data.projects?.[0];
+    const project = data.entities?.[0];
     if (project) {
-      state.projectName = project.name;
+      state.entityName = project.name;
       el('current-project-name').textContent = project.name;
       el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
     }
-    entSetTypes(data.types, data.projects, project?.typeId);
+    entSetTypes(data.types, data.entities, project?.typeId);
     updateCrumbs(state.currentScreen);
   } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
 }
@@ -14399,7 +14399,7 @@ async function startApp() {
   const restricted = !screenAllowed(state.currentScreen || 'chat');
   if (restricted) showScreen(firstAllowedScreen());
   for (const load of [loadSources, loadFiles, loadTemplateCatalog]) { try { await load(); } catch { /* تبقى الحالة كما هي */ } }
-  loadCurrentProjectNav();
+  loadCurrentEntityNav();
   if (restricted) return;
   maybeAutoStartTour();
 }
@@ -14415,14 +14415,14 @@ async function loadOrganizations() {
 function renderOrganizations(orgs) {
   el('org-stat-active').textContent = orgs.filter(o => o.isActive).length;
   el('org-stat-total-label').textContent = `من ${orgs.length} مسجلة`;
-  el('org-stat-projects').textContent = orgs.reduce((sum, o) => sum + o.projectCount, 0);
+  el('org-stat-projects').textContent = orgs.reduce((sum, o) => sum + o.entityCount, 0);
   el('org-stat-users').textContent = orgs.reduce((sum, o) => sum + o.userCount, 0);
 
   el('organizations-table-body').innerHTML = orgs.map(o => `
     <tr>
       <td><div class="cell-user"><span class="org-avatar" style="width:36px;height:36px;font-size:15px">${esc((o.name || '؟').trim().slice(0, 1))}</span><div><strong>${esc(o.name)}</strong><span>${esc(o.slug)}</span></div></div></td>
       <td><span class="status ${o.isActive ? 'ok' : 'off'}">${o.isActive ? 'نشطة' : 'معطّلة'}</span></td>
-      <td><span class="num">${o.projectCount}</span></td>
+      <td><span class="num">${o.entityCount}</span></td>
       <td><span class="num">${o.userCount}</span></td>
       <td class="muted">${new Date(o.createdAt).toLocaleDateString('ar-EG')}</td>
       <td><div class="row-actions">
@@ -15599,10 +15599,10 @@ async function tpladmDelete(kind, key) {
 el('tpladm-editor-modal').addEventListener('click', e => { if (e.target.id === 'tpladm-editor-modal') el('tpladm-editor-modal').classList.add('hidden'); });
 
 
-const state_projects = { all: [], rolesByProject: {}, filter: 'all', search: '' };
+const state_entities = { all: [], rolesByEntity: {}, filter: 'all', search: '' };
 
 // إضافة كيان أو تعديله: النوع من أنواع المنظمة (الافتراضي مختار مبدئيًا)، والعنوان والتسمية يتبعان النوع المختار
-function openNewProjectModal(edit) {
+function openNewEntityModal(edit) {
   const p = edit && edit.id ? edit : null;
   el('new-project-error').classList.add('hidden');
   el('new-project-id').value = p ? p.id : '';
@@ -15612,32 +15612,32 @@ function openNewProjectModal(edit) {
   el('new-project-type').value = p ? (p.typeId || '') : (types.find(t => t.isDefault) || types[0]).id;
   el('new-project-type-wrap').classList.toggle('hidden', types.length < 2 && !p);
   el('new-project-save').textContent = p ? 'حفظ' : 'إنشاء';
-  newProjectSyncLabels();
+  newEntitySyncLabels();
   el('new-project-modal').classList.remove('hidden');
   el('new-project-name').focus();
 }
-function newProjectSyncLabels() {
+function newEntitySyncLabels() {
   const w = entWords(entType(el('new-project-type').value));
   const editing = !!el('new-project-id').value;
   el('new-project-title').textContent = editing ? `تعديل ${w.defS}` : `${w.s} ${w.adj('جديد')}`;
   el('new-project-name-label').textContent = `اسم ${w.defS}`;
 }
-el('new-project-type').addEventListener('change', newProjectSyncLabels);
+el('new-project-type').addEventListener('change', newEntitySyncLabels);
 
-async function loadProjects() {
+async function loadEntities() {
   const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
-  const res = await fetch('/api/projects');
+  const res = await fetch('/api/entities');
   if (!res.ok) { el('projects-grid').innerHTML = ''; return; }
   const data = await res.json();
   el('projects-org-name').textContent = data.organization.name;
-  state_projects.all = data.projects;
-  entSetTypes(data.types, data.projects, ENT.currentId || data.projects?.[0]?.typeId);
-  entSyncProjectsScreen();
+  state_entities.all = data.entities;
+  entSetTypes(data.types, data.entities, ENT.currentId || data.entities?.[0]?.typeId);
+  entSyncEntitiesScreen();
 
   // صف الإحصاءات أعلى الصفحة — كله أرقام حقيقية من endpoints موجودة فعلًا، مفيش فيها أي
   // رقم مُلفّق: المصادر والمشروعات من نفس الاستجابة، اللوحات من سجل المستخدم، والأعضاء من
   // قائمة مستخدمي المنظمة (للمسؤول فقط، لأنها endpoint مقصورة عليه).
-  el('proj-stat-projects').textContent = data.projects.length;
+  el('proj-stat-projects').textContent = data.entities.length;
   el('proj-stat-users-box').classList.toggle('hidden', !isAdmin);
   document.getElementById('projects-hero').classList.toggle('cols-3', !isAdmin);
   document.getElementById('projects-hero').classList.toggle('cols-4', isAdmin);
@@ -15655,19 +15655,19 @@ async function loadProjects() {
   if (isAdmin) {
     if (!state.users.length) await loadUsers();
     el('proj-stat-users').textContent = state.users.length;
-    state_projects.rolesByProject = {};
-    await Promise.all(data.projects.map(async p => {
-      const r = await fetch(`/api/projects/${encodeURIComponent(p.id)}/roles`).then(r => r.ok ? r.json() : { roles: [] }).catch(() => ({ roles: [] }));
-      state_projects.rolesByProject[p.id] = r.roles || [];
+    state_entities.rolesByEntity = {};
+    await Promise.all(data.entities.map(async p => {
+      const r = await fetch(`/api/entities/${encodeURIComponent(p.id)}/roles`).then(r => r.ok ? r.json() : { roles: [] }).catch(() => ({ roles: [] }));
+      state_entities.rolesByEntity[p.id] = r.roles || [];
     }));
   }
 
   el('new-project-btn-top').classList.toggle('hidden', !isAdmin);
   el('entity-types-btn').classList.toggle('hidden', !isAdmin);
-  renderProjects();
+  renderEntities();
 }
 // نصوص شاشة الكيانات بكلمات المجموعة (نوع واحد ← اسمه؛ أنواع متعددة ← «كيانات»)
-function entSyncProjectsScreen() {
+function entSyncEntitiesScreen() {
   const w = entWords(ENT.all);
   el('projects-title-word').textContent = w.p;
   el('projects-desc').textContent = `لكل ${w.s} محادثته ولوحاته وتصاميمه ومصادره وأعضاؤه — اضغط على ${w.s} لفتح مساحة عمله.`;
@@ -15682,24 +15682,24 @@ function entSyncProjectsScreen() {
 // أول مشروع (الافتراضي، المُنشأ تلقائيًا مع المنظمة) هو الوحيد المرتبط فعليًا بمساحة
 // العمل الحالية (المحادثة/اللوحات/المصادر/الملفات) — أي مشروع تاني لسه مجرد سجل، لحد ما
 // يبقى في تبديل حقيقي بين المشاريع على مستوى البيانات (خطوة تالية، مش جزء من هذا البناء).
-function renderProjects() {
+function renderEntities() {
   const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
   const myId = state.currentUser?.id;
-  const liveProjectId = state_projects.all.length ? state_projects.all[0].id : null;
+  const liveEntityId = state_entities.all.length ? state_entities.all[0].id : null;
 
-  let projects = state_projects.all;
-  if (state_projects.search.trim()) {
-    const q = state_projects.search.trim().toLowerCase();
+  let projects = state_entities.all;
+  if (state_entities.search.trim()) {
+    const q = state_entities.search.trim().toLowerCase();
     projects = projects.filter(p => p.name.toLowerCase().includes(q));
   }
-  if (isAdmin && state_projects.filter === 'mine') {
-    projects = projects.filter(p => (state_projects.rolesByProject[p.id] || []).some(r => r.userId === myId));
+  if (isAdmin && state_entities.filter === 'mine') {
+    projects = projects.filter(p => (state_entities.rolesByEntity[p.id] || []).some(r => r.userId === myId));
   }
 
   const card = p => {
-    const isLive = p.id === liveProjectId;
+    const isLive = p.id === liveEntityId;
     const tw = entWords(entType(p.typeId));
-    const roles = state_projects.rolesByProject[p.id];
+    const roles = state_entities.rolesByEntity[p.id];
     const myRole = roles?.find(r => r.userId === myId)?.role;
     const badge = myRole ? `<span class="proj-role-badge">${esc(ROLE_LABELS[myRole] || myRole)}</span>` : '';
     const statsLine = isAdmin && roles
@@ -15728,29 +15728,29 @@ function renderProjects() {
     ? `<h2 class="proj-group-head"><span class="proj-ic sm"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-${esc(g.t.icon || 'layers')}"/></svg></span>${esc(entWords(g.t).defP)} <span class="n">${g.items.length.toLocaleString('en-US')}</span></h2>`
     : '') + g.items.map(card).join('')).join('') + newCard;
   el('projects-empty-note').classList.toggle('hidden', projects.length > 0);
-  el('projects-toolbar').classList.toggle('hidden', state_projects.all.length === 0);
+  el('projects-toolbar').classList.toggle('hidden', state_entities.all.length === 0);
   document.getElementById('projects-filter').classList.toggle('hidden', !isAdmin);
 
   el('projects-grid').querySelectorAll('[data-project]').forEach(card =>
     card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); }));
   el('projects-grid').querySelectorAll('[data-members]').forEach(btn =>
-    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openProjectRolesModal(btn.dataset.members, btn.dataset.pname); }));
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openEntityRolesModal(btn.dataset.members, btn.dataset.pname); }));
   el('projects-grid').querySelectorAll('[data-edit-project]').forEach(btn =>
-    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openNewProjectModal(state_projects.all.find(p => p.id === btn.dataset.editProject)); }));
-  el('new-project-card')?.addEventListener('click', () => openNewProjectModal());
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openNewEntityModal(state_entities.all.find(p => p.id === btn.dataset.editProject)); }));
+  el('new-project-card')?.addEventListener('click', () => openNewEntityModal());
 }
 
-el('new-project-btn-top').addEventListener('click', () => openNewProjectModal());
-el('projects-search').addEventListener('input', e => { state_projects.search = e.target.value; renderProjects(); });
+el('new-project-btn-top').addEventListener('click', () => openNewEntityModal());
+el('projects-search').addEventListener('input', e => { state_entities.search = e.target.value; renderEntities(); });
 document.getElementById('projects-filter').addEventListener('click', e => {
   const btn = e.target.closest('button[data-filter]');
   if (!btn) return;
-  state_projects.filter = btn.dataset.filter;
+  state_entities.filter = btn.dataset.filter;
   document.getElementById('projects-filter').querySelectorAll('button').forEach(b => {
     b.classList.toggle('active', b === btn);
     b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
   });
-  renderProjects();
+  renderEntities();
 });
 
 el('new-project-cancel').addEventListener('click', () => el('new-project-modal').classList.add('hidden'));
@@ -15762,14 +15762,14 @@ el('new-project-form').addEventListener('submit', async e => {
   const id = el('new-project-id').value; const typeId = el('new-project-type').value || null;
   btn.disabled = true;
   try {
-    const res = await fetch(id ? `/api/projects/${encodeURIComponent(id)}` : '/api/projects', {
+    const res = await fetch(id ? `/api/entities/${encodeURIComponent(id)}` : '/api/entities', {
       method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, typeId }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'تعذّر الحفظ.');
     el('new-project-modal').classList.add('hidden');
-    await loadProjects();
-    loadCurrentProjectNav(); // الاسم أو النوع قد تغيّر للكيان الحالي
+    await loadEntities();
+    loadCurrentEntityNav(); // الاسم أو النوع قد تغيّر للكيان الحالي
   } catch (err) {
     el('new-project-error').textContent = err.message;
     el('new-project-error').classList.remove('hidden');
@@ -15829,7 +15829,7 @@ function etRender() {
   });
   el('et-presets').querySelectorAll('.et-chip').forEach(b => b.addEventListener('click', () => etAdd(b.dataset.s, b.dataset.p)));
 }
-async function etAfterChange() { await etLoad(); await loadCurrentProjectNav(); if (state.currentScreen === 'projects') loadProjects(); }
+async function etAfterChange() { await etLoad(); await loadCurrentEntityNav(); if (state.currentScreen === 'projects') loadEntities(); }
 async function etSave(id, body) {
   etError('');
   try {
@@ -15863,22 +15863,22 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el('entit
 el('et-add').addEventListener('submit', e => { e.preventDefault(); const s = el('et-add-s').value.trim(); if (s) etAdd(s, el('et-add-p').value.trim()); });
 
 // ---------- project members (Owner/Editor/Viewer roles on a project) ----------
-async function openProjectRolesModal(projectId, projectName) {
+async function openEntityRolesModal(entityId, entityName) {
   el('project-roles-error').classList.add('hidden');
-  el('project-roles-id').value = projectId;
-  el('project-roles-name').textContent = projectName;
+  el('project-roles-id').value = entityId;
+  el('project-roles-name').textContent = entityName;
   el('project-roles-list').innerHTML = '';
   if (!state.users.length) await loadUsers();
   el('project-role-add-user').innerHTML = state.users.length
     ? state.users.filter(u => u.isActive).map(u => `<option value="${esc(u.id)}">${esc(u.displayName || u.username)}</option>`).join('')
     : '<option value="">لا يوجد مستخدمون آخرون بعد</option>';
   el('project-roles-modal').classList.remove('hidden');
-  await reloadProjectRolesModal();
+  await reloadEntityRolesModal();
 }
 
-async function reloadProjectRolesModal() {
+async function reloadEntityRolesModal() {
   const id = el('project-roles-id').value;
-  const res = await fetch(`/api/projects/${encodeURIComponent(id)}/roles`);
+  const res = await fetch(`/api/entities/${encodeURIComponent(id)}/roles`);
   if (!res.ok) {
     el('project-roles-error').textContent = 'تعذّر تحميل الأعضاء.';
     el('project-roles-error').classList.remove('hidden');
@@ -15892,8 +15892,8 @@ async function reloadProjectRolesModal() {
       </div>`).join('') : `<div class="owner-line">لا يوجد أعضاء بعد — المشروع متاح للمسؤولين فقط.</div>`;
   el('project-roles-list').querySelectorAll('[data-remove]').forEach(btn =>
     btn.addEventListener('click', async () => {
-      await fetch(`/api/projects/${encodeURIComponent(id)}/roles/${encodeURIComponent(btn.dataset.remove)}`, { method: 'DELETE' });
-      await reloadProjectRolesModal();
+      await fetch(`/api/entities/${encodeURIComponent(id)}/roles/${encodeURIComponent(btn.dataset.remove)}`, { method: 'DELETE' });
+      await reloadEntityRolesModal();
     }));
 }
 
@@ -15902,7 +15902,7 @@ el('project-role-add-btn').addEventListener('click', async () => {
   const userId = el('project-role-add-user').value;
   const role = el('project-role-add-select').value;
   if (!userId) return;
-  const res = await fetch(`/api/projects/${encodeURIComponent(id)}/roles/${encodeURIComponent(userId)}`, {
+  const res = await fetch(`/api/entities/${encodeURIComponent(id)}/roles/${encodeURIComponent(userId)}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }),
   });
   const data = await res.json().catch(() => null);
@@ -15912,7 +15912,7 @@ el('project-role-add-btn').addEventListener('click', async () => {
     return;
   }
   el('project-roles-error').classList.add('hidden');
-  await reloadProjectRolesModal();
+  await reloadEntityRolesModal();
 });
 el('project-roles-modal-close').addEventListener('click', () => el('project-roles-modal').classList.add('hidden'));
 

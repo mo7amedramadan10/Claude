@@ -7,7 +7,7 @@ namespace ChatToDashboard.Api.Tests;
 public class FreeformAccessTests
 {
     private static FreeformDesign D(string scope = "private", string role = "view", string project = "p1", string? org = "o1", string owner = "u-owner")
-        => new() { Id = "d1", ProjectId = project, OrganizationId = org, CreatedByUserId = owner, ShareScope = scope, ShareScopeRole = role };
+        => new() { Id = "d1", EntityId = project, OrganizationId = org, CreatedByUserId = owner, ShareScope = scope, ShareScopeRole = role };
 
     [Fact]
     public void OwnerAndAdmin_AreOwners_OtherOrgNeverSees()

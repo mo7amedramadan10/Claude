@@ -68,14 +68,14 @@ public class SupplierRiskDataProvider : IInteractiveDataProvider
         }),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[]
         {
             "سجل التسليمات (deliveries)", "الموردون (suppliers)",
             "مخاطر الفئات السنوية (category_risk_annual)", "مخاطر المخزون السنوية (inventory_categories_annual)",
         };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var delivRows = await _matcher.QueryAsync(BuildSelect(matched.Tables["deliveries"], "order_date", "region", "revenue", "gross_profit", "on_time"), matched.Context, ct);

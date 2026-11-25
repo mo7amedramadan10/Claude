@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using ChatToDashboard.Api.Integrations;
 using ChatToDashboard.Api.Llm;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,12 +28,12 @@ public class IntegrationsController : ControllerBase
     private readonly IntegrationDeliverables _deliverables;
     private readonly PermissionsService _permissions;
     private readonly ClientSchemaDiscoveryService _schemaDiscovery;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
 
     public IntegrationsController(
         IntegrationStore integrations, VisualIdentityService visualIdentity, IIntegrationSetupAssistant assistant,
         PublishService publish, IntegrationDeliverables deliverables, PermissionsService permissions,
-        ClientSchemaDiscoveryService schemaDiscovery, ProjectStore projects)
+        ClientSchemaDiscoveryService schemaDiscovery, EntityStore projects)
     {
         _integrations = integrations;
         _visualIdentity = visualIdentity;
@@ -42,16 +42,16 @@ public class IntegrationsController : ControllerBase
         _deliverables = deliverables;
         _permissions = permissions;
         _schemaDiscovery = schemaDiscovery;
-        _projects = projects;
+        _entities = projects;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     // Every action here is [Authorize(Roles = UserRoles.Admin)] already (class-level), so the
-    // caller is always an org Admin — ResolveCurrentProjectIdAsync's isAdmin branch always
+    // caller is always an org Admin — ResolveCurrentEntityIdAsync's isAdmin branch always
     // applies, same single "current workspace project" every other controller resolves to.
-    private Task<string?> CurrentProjectIdAsync(CancellationToken ct) =>
-        _projects.ResolveCurrentProjectIdAsync(User.FindFirstValue("OrganizationId"), UserId, true, ct);
+    private Task<string?> CurrentEntityIdAsync(CancellationToken ct) =>
+        _entities.ResolveCurrentEntityIdAsync(User.FindFirstValue("OrganizationId"), UserId, true, ct);
 
     /// <summary>Resolves an integration by id AND checks it belongs to the caller's current
     /// project — every by-id endpoint below uses this instead of calling
@@ -62,22 +62,22 @@ public class IntegrationsController : ControllerBase
     {
         var integration = await _integrations.GetByIdAsync(id, ct);
         if (integration is null) return null;
-        var projectId = await CurrentProjectIdAsync(ct);
-        return string.Equals(integration.ProjectId, projectId, StringComparison.OrdinalIgnoreCase) ? integration : null;
+        var entityId = await CurrentEntityIdAsync(ct);
+        return string.Equals(integration.EntityId, entityId, StringComparison.OrdinalIgnoreCase) ? integration : null;
     }
 
     // ---------- CRUD ----------
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct) =>
-        Ok((await _integrations.ListAsync(await CurrentProjectIdAsync(ct), ct)).Select(ToSummary));
+        Ok((await _integrations.ListAsync(await CurrentEntityIdAsync(ct), ct)).Select(ToSummary));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateIntegrationRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
             return BadRequest(new { error = "اسم التكامل مطلوب." });
-        var integration = await _integrations.CreateAsync(request.Name.Trim(), UserId, await CurrentProjectIdAsync(ct), ct);
+        var integration = await _integrations.CreateAsync(request.Name.Trim(), UserId, await CurrentEntityIdAsync(ct), ct);
         return Ok(ToDetail(integration));
     }
 

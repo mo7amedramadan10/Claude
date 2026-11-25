@@ -18,13 +18,13 @@ public sealed record McpTable(string Name, string Schema, string Bare, string Ki
 /// <c>SourceOptions.ActiveSystems</c> (جداول الأنظمة)، ويصف الأعمدة من <c>INFORMATION_SCHEMA</c> مع معنى كل عمود
 /// من <c>dbo.ColumnSemantics</c>، وينفّذ استعلامات القراءة بمهلة وسقف صفوف.
 /// </summary>
-public class ProjectCatalog
+public class EntityCatalog
 {
     private readonly DataStore _db;
     private readonly SourceOptions _sources;
     private readonly IConfiguration _configuration;
 
-    public ProjectCatalog(DataStore db, IOptions<SourceOptions> sources, IConfiguration configuration)
+    public EntityCatalog(DataStore db, IOptions<SourceOptions> sources, IConfiguration configuration)
     {
         _db = db;
         _sources = sources.Value;
@@ -36,19 +36,19 @@ public class ProjectCatalog
     public int MaxQueriesPerMessage => Math.Clamp(_configuration.GetValue("ClaudeCli:MaxQueriesPerMessage", 15), 1, 200);
 
     /// <summary>جداول مشروع المستخدم الحالي فقط + جداول الأنظمة المفعَّلة الموجودة فعلًا في القاعدة.</summary>
-    public async Task<IReadOnlyList<McpTable>> ListAsync(string? projectId, CancellationToken ct)
+    public async Task<IReadOnlyList<McpTable>> ListAsync(string? entityId, CancellationToken ct)
     {
         var result = new List<McpTable>();
         await using var connection = await _db.OpenConnectionAsync(ct);
-        if (!string.IsNullOrWhiteSpace(projectId))
+        if (!string.IsNullOrWhiteSpace(entityId))
         {
             var rows = await connection.QueryAsync<(string TableName, string? DisplayName, string? OriginalFileName, int? RowCount)>(
-                "SELECT TableName, DisplayName, OriginalFileName, [RowCount] FROM [dbo].[repo_Files] WHERE ProjectId = @projectId AND TableName IS NOT NULL AND TableName <> '' ORDER BY COALESCE(LastUpdatedAt, UploadedAt) DESC",
-                new { projectId });
+                "SELECT TableName, DisplayName, OriginalFileName, [RowCount] FROM [dbo].[repo_Files] WHERE EntityId = @entityId AND TableName IS NOT NULL AND TableName <> '' ORDER BY COALESCE(LastUpdatedAt, UploadedAt) DESC",
+                new { entityId });
             foreach (var r in rows)
             {
                 var (schema, bare) = Split(r.TableName);
-                if (!schema.Equals(_db.ProjectSchema(projectId), StringComparison.OrdinalIgnoreCase)) continue; // دفاع: لا جدول خارج مخطط المشروع
+                if (!schema.Equals(_db.EntitySchema(entityId), StringComparison.OrdinalIgnoreCase)) continue; // دفاع: لا جدول خارج مخطط المشروع
                 result.Add(new McpTable($"{schema}.{bare}", schema, bare, "file", r.DisplayName ?? r.OriginalFileName, r.RowCount));
             }
         }
@@ -90,18 +90,18 @@ public class ProjectCatalog
 
     /// <summary>الأعمدة وأنواعها، ومعنى كل عمود (طبقة المعنى) إن وُجد، وعينة صفوف.</summary>
     public async Task<(IReadOnlyList<ColumnInfo> Columns, IReadOnlyList<string> SampleColumns, IReadOnlyList<object?[]> Sample)> DescribeAsync(
-        McpTable table, string? projectId, int sampleRows, CancellationToken ct)
+        McpTable table, string? entityId, int sampleRows, CancellationToken ct)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         var cols = (await connection.QueryAsync<(string ColumnName, string DataType, int? MaxLen, string IsNullable)>(
             "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @bare ORDER BY ORDINAL_POSITION",
             new { schema = table.Schema, bare = table.Bare })).ToList();
         var semantics = new Dictionary<string, (string? Concept, string? Note)>(StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrWhiteSpace(projectId))
+        if (!string.IsNullOrWhiteSpace(entityId))
         {
             var rows = await connection.QueryAsync<(string ColumnName, string? Concept, string? Note)>(
-                "SELECT ColumnName, Concept, Note FROM [dbo].[ColumnSemantics] WHERE ProjectId = @projectId AND (TableName = @full OR TableName = @bare)",
-                new { projectId, full = table.Name, bare = table.Bare });
+                "SELECT ColumnName, Concept, Note FROM [dbo].[ColumnSemantics] WHERE EntityId = @entityId AND (TableName = @full OR TableName = @bare)",
+                new { entityId, full = table.Name, bare = table.Bare });
             foreach (var r in rows) semantics[r.ColumnName] = (r.Concept, r.Note);
         }
         var columns = cols.Select(c =>

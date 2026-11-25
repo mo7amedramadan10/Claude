@@ -108,12 +108,12 @@ public sealed class PresentationLiveDataService
         return html!.Substring(0, m.Index) + m.Groups[1].Value + json + m.Groups[3].Value + html.Substring(m.Index + m.Length);
     }
 
-    private async Task<SourceSelection> SelectionForAsync(string? projectId, string createdByUserId, CancellationToken ct)
+    private async Task<SourceSelection> SelectionForAsync(string? entityId, string createdByUserId, CancellationToken ct)
     {
         // الاستعلامات نُفِّذت أصلًا بصلاحيات صاحب التصميم عند البناء؛ تُعاد بصلاحياته نفسها (لا بصلاحيات من يفتح الرابط العام).
         var owner = await _users.FindByIdAsync(createdByUserId, ct);
         var sel = SourceSelection.AllEnabled();
-        sel.ProjectId = projectId; sel.UserId = createdByUserId; sel.IsAdmin = owner?.Role == UserRoles.Admin;
+        sel.EntityId = entityId; sel.UserId = createdByUserId; sel.IsAdmin = owner?.Role == UserRoles.Admin;
         return sel;
     }
 
@@ -124,7 +124,7 @@ public sealed class PresentationLiveDataService
         var stored = await _freeform.QueriesAsync(designId, ct);
         if (stored.Count == 0) stored = FreeformDataBlock.Parse(d.Html);
         if (stored.Count == 0) return new PresentationLiveData(DateTime.UtcNow, Array.Empty<FreeformQuery>(), null, 0, null);
-        var context = await _tools.DescribeSourcesAsync(await SelectionForAsync(d.ProjectId, d.CreatedByUserId, ct), ct);
+        var context = await _tools.DescribeSourcesAsync(await SelectionForAsync(d.EntityId, d.CreatedByUserId, ct), ct);
         var fresh = new List<FreeformQuery>(); var failed = 0;
         foreach (var q in stored)
         {
@@ -144,7 +144,7 @@ public sealed class PresentationLiveDataService
         if (spec is null) return null;
         var withSql = spec.Slides.Where(s => !string.IsNullOrWhiteSpace(s.Query?.Sql)).ToList();
         if (withSql.Count == 0) return new PresentationLiveData(DateTime.UtcNow, Array.Empty<FreeformQuery>(), null, 0, null);
-        var context = await _tools.DescribeSourcesAsync(await SelectionForAsync(d.ProjectId, d.CreatedByUserId, ct), ct);
+        var context = await _tools.DescribeSourcesAsync(await SelectionForAsync(d.EntityId, d.CreatedByUserId, ct), ct);
         var failed = 0;
         foreach (var slide in withSql)
         {

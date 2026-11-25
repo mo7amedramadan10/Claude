@@ -8,7 +8,7 @@ namespace ChatToDashboard.Api.Freeform;
 public class FreeformDesign
 {
     [JsonPropertyName("id")] public string Id { get; set; } = "";
-    [JsonPropertyName("projectId")] public string? ProjectId { get; set; }
+    [JsonPropertyName("entityId")] public string? EntityId { get; set; }
     [JsonPropertyName("organizationId")] public string? OrganizationId { get; set; }
     [JsonPropertyName("createdByUserId")] public string CreatedByUserId { get; set; } = "";
     [JsonPropertyName("title")] public string Title { get; set; } = "";
@@ -84,7 +84,7 @@ public class FreeformStore
     private volatile bool _schemaReady;
     public FreeformStore(DataStore db) => _db = db;
     private const string T = "[dbo].[FreeformDesigns]", V = "[dbo].[FreeformVersions]", M = "[dbo].[FreeformMessages]";
-    private const string Cols = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, SourcesJson, IdentityId, ShareScope, ShareScopeRole, RecordsPolicy, RecordsAsSource, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
+    private const string Cols = "Id, EntityId, OrganizationId, CreatedByUserId, Title, Kind, TemplateKey, QueryCount, DataRefreshedAt, DataFingerprint, AutoRefresh, SourcesJson, IdentityId, ShareScope, ShareScopeRole, RecordsPolicy, RecordsAsSource, Version, PresentationId, SizeBytes, CreatedAt, UpdatedAt";
     private const string Q = "[dbo].[FreeformQueries]";
     private const string S = "[dbo].[FreeformShares]";
     public static readonly string[] Kinds = { "doc", "slides", "design", "dashboard", "motion" };
@@ -103,7 +103,7 @@ public class FreeformStore
             command.CommandText = $"""
                 IF OBJECT_ID('dbo.FreeformDesigns') IS NULL
                 CREATE TABLE {T} (
-                  [Id] NVARCHAR(32) PRIMARY KEY, [ProjectId] NVARCHAR(64), [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL,
+                  [Id] NVARCHAR(32) PRIMARY KEY, [EntityId] NVARCHAR(64), [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL,
                   [Title] NVARCHAR(300) NOT NULL, [Kind] NVARCHAR(16) NOT NULL DEFAULT 'design', [Html] NVARCHAR(MAX) NOT NULL, [Version] INT NOT NULL DEFAULT 0, [PresentationId] NVARCHAR(32),
                   [SizeBytes] INT NOT NULL DEFAULT 0, [CreatedAt] DATETIME2 NOT NULL, [UpdatedAt] DATETIME2 NOT NULL);
                 IF OBJECT_ID('dbo.FreeformVersions') IS NULL
@@ -139,22 +139,22 @@ public class FreeformStore
         finally { _schemaGate.Release(); }
     }
 
-    public async Task<FreeformDesign> CreateAsync(string? projectId, string? organizationId, string userId, string title, string html, string? prompt, string? kind = null, string? templateKey = null, CancellationToken ct = default, string? sourcesJson = null)
+    public async Task<FreeformDesign> CreateAsync(string? entityId, string? organizationId, string userId, string title, string html, string? prompt, string? kind = null, string? templateKey = null, CancellationToken ct = default, string? sourcesJson = null)
     {
         await EnsureSchemaAsync(ct);
         var now = DateTime.UtcNow;
-        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = string.IsNullOrWhiteSpace(templateKey) ? null : templateKey.Trim(), SourcesJson = sourcesJson, Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
+        var d = new FreeformDesign { Id = Guid.NewGuid().ToString("N")[..16], EntityId = entityId, OrganizationId = organizationId, CreatedByUserId = userId, Title = title, Kind = NormalizeKind(kind), TemplateKey = string.IsNullOrWhiteSpace(templateKey) ? null : templateKey.Trim(), SourcesJson = sourcesJson, Html = html, Version = html.Length > 0 ? 1 : 0, SizeBytes = System.Text.Encoding.UTF8.GetByteCount(html), CreatedAt = now, UpdatedAt = now };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @SourcesJson, @IdentityId, @ShareScope, @ShareScopeRole, @RecordsPolicy, @RecordsAsSource, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
+        await connection.ExecuteAsync($"INSERT INTO {T} ({Cols}, Html) VALUES (@Id, @EntityId, @OrganizationId, @CreatedByUserId, @Title, @Kind, @TemplateKey, @QueryCount, @DataRefreshedAt, @DataFingerprint, @AutoRefresh, @SourcesJson, @IdentityId, @ShareScope, @ShareScopeRole, @RecordsPolicy, @RecordsAsSource, @Version, @PresentationId, @SizeBytes, @CreatedAt, @UpdatedAt, @Html)", d);
         if (d.Version == 1) await connection.ExecuteAsync($"INSERT INTO {V} (DesignId, Version, Html, Prompt, SizeBytes, CreatedAt) VALUES (@id, 1, @html, @prompt, @size, @now)", new { id = d.Id, html, prompt = Trim(prompt), size = d.SizeBytes, now });
         return d;
     }
 
-    public async Task<FreeformDesign?> GetAsync(string id, string? projectId, CancellationToken ct = default)
+    public async Task<FreeformDesign?> GetAsync(string id, string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        return await connection.QuerySingleOrDefaultAsync<FreeformDesign>($"SELECT {Cols}, Html FROM {T} WHERE Id = @id AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL))", new { id, projectId });
+        return await connection.QuerySingleOrDefaultAsync<FreeformDesign>($"SELECT {Cols}, Html FROM {T} WHERE Id = @id AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL))", new { id, entityId });
     }
 
     /// <summary>بالمعرّف وحده بلا تقييد بالمشروع — للبيانات الحيّة للعروض المنشورة (الربط محفوظ على العرض نفسه).</summary>
@@ -165,27 +165,27 @@ public class FreeformStore
         return await connection.QuerySingleOrDefaultAsync<FreeformDesign>($"SELECT {Cols}, Html FROM {T} WHERE Id = @id", new { id });
     }
 
-    public async Task<IReadOnlyList<FreeformDesign>> ListAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<FreeformDesign>> ListAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        return (await connection.QueryAsync<FreeformDesign>($"SELECT {Cols} FROM {T} WHERE (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL)) ORDER BY UpdatedAt DESC", new { projectId })).ToList();
+        return (await connection.QueryAsync<FreeformDesign>($"SELECT {Cols} FROM {T} WHERE (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL)) ORDER BY UpdatedAt DESC", new { entityId })).ToList();
     }
 
     /// <summary>التصاميم التي يحق للمستخدم رؤيتها في منظمته: كلها للمسؤول، وإلا تصاميمه، وما شورك مع المنظمة، وما شورك مع مشروعه
     /// الحالي، وما شورك معه بالاسم. تصميم قديم بلا منظمة يُعامل بمشروعه.</summary>
-    public async Task<IReadOnlyList<FreeformDesign>> ListVisibleAsync(string? organizationId, string? projectId, string userId, bool isAdmin, CancellationToken ct = default)
+    public async Task<IReadOnlyList<FreeformDesign>> ListVisibleAsync(string? organizationId, string? entityId, string userId, bool isAdmin, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         return (await connection.QueryAsync<FreeformDesign>($"""
             SELECT {Cols} FROM {T}
-            WHERE (OrganizationId = @organizationId OR (OrganizationId IS NULL AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL))))
+            WHERE (OrganizationId = @organizationId OR (OrganizationId IS NULL AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL))))
               AND (@isAdmin = 1 OR CreatedByUserId = @userId OR ShareScope = 'org'
-                   OR (ShareScope = 'project' AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL)))
+                   OR (ShareScope = 'project' AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL)))
                    OR Id IN (SELECT DesignId FROM {S} WHERE UserId = @userId))
             ORDER BY UpdatedAt DESC
-            """, new { organizationId, projectId, userId, isAdmin })).ToList();
+            """, new { organizationId, entityId, userId, isAdmin })).ToList();
     }
 
     /// <summary>أدوار المستخدم في التصاميم المشاركة معه بالاسم (معرّف التصميم ← الدور).</summary>

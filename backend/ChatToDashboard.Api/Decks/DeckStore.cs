@@ -12,7 +12,7 @@ public class DeckStore
     private volatile bool _schemaReady;
     public DeckStore(DataStore db) => _db = db;
     private string Table => "[dbo].[Decks]";
-    private const string Columns = "Id, ProjectId, OrganizationId, CreatedByUserId, Title, TemplateKey, PresentationId, SlideCount, DataFingerprint, DataRefreshedAt, AutoRefresh, CreatedAt, UpdatedAt";
+    private const string Columns = "Id, EntityId, OrganizationId, CreatedByUserId, Title, TemplateKey, PresentationId, SlideCount, DataFingerprint, DataRefreshedAt, AutoRefresh, CreatedAt, UpdatedAt";
 
     private async Task EnsureSchemaOnceAsync(CancellationToken ct)
     {
@@ -30,7 +30,7 @@ public class DeckStore
         command.CommandText = $"""
             IF OBJECT_ID('dbo.Decks') IS NULL
             CREATE TABLE {Table} (
-              [Id] NVARCHAR(32) PRIMARY KEY, [ProjectId] NVARCHAR(64), [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL,
+              [Id] NVARCHAR(32) PRIMARY KEY, [EntityId] NVARCHAR(64), [OrganizationId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL,
               [Title] NVARCHAR(300) NOT NULL, [SpecJson] NVARCHAR(MAX) NOT NULL, [TemplateKey] NVARCHAR(100), [PresentationId] NVARCHAR(32),
               [SlideCount] INT NOT NULL DEFAULT 0, [CreatedAt] DATETIME2 NOT NULL, [UpdatedAt] DATETIME2 NOT NULL);
             IF COL_LENGTH('dbo.Decks', 'DataFingerprint') IS NULL ALTER TABLE {Table} ADD [DataFingerprint] NVARCHAR(100) NULL;
@@ -40,26 +40,26 @@ public class DeckStore
         await command.ExecuteNonQueryAsync(ct);
     }
 
-    public async Task<DeckRecord> CreateAsync(string? projectId, string? organizationId, string userId, DeckSpec spec, string? templateKey, CancellationToken ct = default)
+    public async Task<DeckRecord> CreateAsync(string? entityId, string? organizationId, string userId, DeckSpec spec, string? templateKey, CancellationToken ct = default)
     {
         await EnsureSchemaOnceAsync(ct);
         var now = DateTime.UtcNow;
         var r = new DeckRecord
         {
-            Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, OrganizationId = organizationId, CreatedByUserId = userId,
+            Id = Guid.NewGuid().ToString("N")[..16], EntityId = entityId, OrganizationId = organizationId, CreatedByUserId = userId,
             Title = string.IsNullOrWhiteSpace(spec.Title) ? "عرض بلا عنوان" : spec.Title, SpecJson = JsonSerializer.Serialize(spec, DeckSpec.Json),
             TemplateKey = templateKey, SlideCount = spec.Slides.Count, CreatedAt = now, UpdatedAt = now,
         };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {Table} ({Columns}, SpecJson) VALUES (@Id, @ProjectId, @OrganizationId, @CreatedByUserId, @Title, @TemplateKey, @PresentationId, @SlideCount, @DataFingerprint, @DataRefreshedAt, @AutoRefresh, @CreatedAt, @UpdatedAt, @SpecJson)", r);
+        await connection.ExecuteAsync($"INSERT INTO {Table} ({Columns}, SpecJson) VALUES (@Id, @EntityId, @OrganizationId, @CreatedByUserId, @Title, @TemplateKey, @PresentationId, @SlideCount, @DataFingerprint, @DataRefreshedAt, @AutoRefresh, @CreatedAt, @UpdatedAt, @SpecJson)", r);
         return r;
     }
 
-    public async Task<DeckRecord?> GetAsync(string id, string? projectId, CancellationToken ct = default)
+    public async Task<DeckRecord?> GetAsync(string id, string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaOnceAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        return await connection.QuerySingleOrDefaultAsync<DeckRecord>($"SELECT {Columns}, SpecJson FROM {Table} WHERE Id = @id AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL))", new { id, projectId });
+        return await connection.QuerySingleOrDefaultAsync<DeckRecord>($"SELECT {Columns}, SpecJson FROM {Table} WHERE Id = @id AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL))", new { id, entityId });
     }
 
     /// <summary>بالمعرّف وحده بلا تقييد بالمشروع — للبيانات الحيّة للعروض المنشورة.</summary>
@@ -70,11 +70,11 @@ public class DeckStore
         return await connection.QuerySingleOrDefaultAsync<DeckRecord>($"SELECT {Columns}, SpecJson FROM {Table} WHERE Id = @id", new { id });
     }
 
-    public async Task<IReadOnlyList<DeckRecord>> ListAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<DeckRecord>> ListAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaOnceAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        return (await connection.QueryAsync<DeckRecord>($"SELECT {Columns} FROM {Table} WHERE ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL) ORDER BY UpdatedAt DESC", new { projectId })).ToList();
+        return (await connection.QueryAsync<DeckRecord>($"SELECT {Columns} FROM {Table} WHERE EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL) ORDER BY UpdatedAt DESC", new { entityId })).ToList();
     }
 
     public async Task UpdateSpecAsync(string id, DeckSpec spec, CancellationToken ct = default)

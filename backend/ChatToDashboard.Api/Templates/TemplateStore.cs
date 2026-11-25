@@ -41,7 +41,7 @@ public class TemplateStore
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/EntityStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. عمود Key يُضاف بالاسم المهرّب (KeyCol) لأنه
         // محجوز في SQL Server — نفس سبب وجود KeyCol أصلًا.
         await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(200)", ct);

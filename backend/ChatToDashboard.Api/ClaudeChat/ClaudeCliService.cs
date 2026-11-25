@@ -162,7 +162,7 @@ public class ClaudeCliService
 
     /// <summary>يرسل رسالة إلى جلسة CLI (جديدة أو مستأنفة) ويبث الأحداث: delta (نص جزئي)، done (النص الكامل
     /// والتكلفة)، error. يُقتل العملية عند إلغاء الطلب.</summary>
-    public async IAsyncEnumerable<StreamEvent> SendAsync(string sessionId, bool resume, string message, string userId, string? projectId,
+    public async IAsyncEnumerable<StreamEvent> SendAsync(string sessionId, bool resume, string message, string userId, string? entityId,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
     {
         // الأدوات المدمجة معطَّلة دائمًا (--tools "")؛ أدوات القراءة تأتي من خادم MCP الداخلي فقط (الخطوة 4 من الخطة).
@@ -179,7 +179,7 @@ public class ClaudeCliService
         Mcp.McpSession? session = null; string? configPath = null;
         if (ToolsEnabled)
         {
-            session = _tokens.Issue(userId, projectId, TimeSpan.FromMinutes(Math.Max(10, timeout.TotalMinutes + 1)));
+            session = _tokens.Issue(userId, entityId, TimeSpan.FromMinutes(Math.Max(10, timeout.TotalMinutes + 1)));
             configPath = Path.Combine(Path.GetTempPath(), $"jeem-mcp-{Guid.NewGuid():N}.json");
             var config = new JsonObject
             {

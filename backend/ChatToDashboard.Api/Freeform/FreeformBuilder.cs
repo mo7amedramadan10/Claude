@@ -37,8 +37,8 @@ public class FreeformBuilder
         var profileText = "";
         if (hasData)
         {
-            await _semantics.EnsureAnalyzedAsync(context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
-            profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.ProjectId, ct));
+            await _semantics.EnsureAnalyzedAsync(context.EntityId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
+            profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.EntityId, ct));
         }
         var system = BuildSystemPrompt(brand, hasData, profileText, kind, template, LanguageOf(lang, currentHtml));
         var userMsg = new StringBuilder();
@@ -120,8 +120,8 @@ public class FreeformBuilder
         var hasData = profile.Tables.Count > 0; var profileText = "";
         if (hasData)
         {
-            await _semantics.EnsureAnalyzedAsync(context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
-            profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.ProjectId, ct));
+            await _semantics.EnsureAnalyzedAsync(context.EntityId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(20), ct);
+            profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(context.EntityId, ct));
         }
         var system = BuildSystemPrompt(brand, hasData, profileText, kind, template, LanguageOf(null, fullHtml)) + FragmentRules(scopeLabel);
         var known = FreeformScope.KnownClasses(fullHtml);

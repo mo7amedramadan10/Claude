@@ -55,7 +55,7 @@ public class SourceSelection
     /// so a file or integration that belongs to a different project in the same organization
     /// never reaches the agent, exactly like UserId already does for per-file permissions.</summary>
     [JsonIgnore]
-    public string? ProjectId { get; set; }
+    public string? EntityId { get; set; }
 
     public static SourceSelection AllEnabled() => new() { SystemsUnset = true, FilesUnset = true };
 

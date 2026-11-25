@@ -54,10 +54,10 @@ public class SupplyCommandDataProvider : IInteractiveDataProvider
         string? Supplier, double Revenue, double GrossProfit, double Cogs, bool OnTime, bool Stockout, bool Returned,
         double LatePenalty, double WasteCost, double ShipDays);
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "طلبات سلسلة الإمداد (supply_orders)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var rows = await _matcher.QueryAsync(BuildSelect(matched.Tables["supply_orders"],

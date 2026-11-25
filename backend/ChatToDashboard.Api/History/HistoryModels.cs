@@ -33,18 +33,18 @@ public class DashboardHistoryEntry
     public DateTime CreatedAt { get; set; }
 
     /// <summary>The project this dashboard was saved under (the org's single wired-up
-    /// workspace today — see ProjectStore.FirstForOrganizationAsync). Null on every row
+    /// workspace today — see EntityStore.FirstForOrganizationAsync). Null on every row
     /// saved before this column existed; HistoryStore.ListAsync treats a null the same as a
     /// match so old dashboards don't disappear from "سجل اللوحات" once project-filtering
     /// is added, rather than running a one-off backfill.</summary>
-    public string? ProjectId { get; set; }
+    public string? EntityId { get; set; }
 
     /// <summary>Set only for a dashboard created from an "interactive" template (see
     /// BuiltinDashboardTemplate.RenderKind) — the engine key ("network", "workflow",
     /// "marketplace", or a §4.16+ one) the frontend mounts instead of the normal widget
     /// grid. Null for every ordinary chat-built dashboard; <see cref="WidgetsJson"/> is
     /// simply unused ("[]") on a row that has this set, since the engine renders itself
-    /// from GET /api/projects/{projectId}/interactive/{renderKind}/data instead.</summary>
+    /// from GET /api/projects/{entityId}/interactive/{renderKind}/data instead.</summary>
     public string? RenderKind { get; set; }
 
     /// <summary>The originating BuiltinDashboardTemplate.Id — only meaningful alongside

@@ -11,7 +11,7 @@ namespace ChatToDashboard.Api.Live;
 /// client-side library itself instead of pulling from a public CDN (see wwwroot/lib's other
 /// entries) and the official @microsoft/signalr browser bundle isn't available to vendor
 /// here. One broadcast group per caller-defined "channel" string (convention:
-/// "{projectId}:{key}", e.g. "proj123:treasury-funding") — see Program.cs's "/ws/live/
+/// "{entityId}:{key}", e.g. "proj123:treasury-funding") — see Program.cs's "/ws/live/
 /// {channel}" endpoint for the connection handshake and per-project access check, and
 /// wwwroot/js/jeem-live.js for the matching browser client.
 /// </summary>

@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +13,8 @@ namespace ChatToDashboard.Api.Controllers;
 public class EntityTypesController : ControllerBase
 {
     private readonly EntityTypeStore _types;
-    private readonly ProjectStore _projects;
-    public EntityTypesController(EntityTypeStore types, ProjectStore projects) { _types = types; _projects = projects; }
+    private readonly EntityStore _entities;
+    public EntityTypesController(EntityTypeStore types, EntityStore projects) { _types = types; _entities = projects; }
 
     private string? OrganizationId => User.FindFirstValue("OrganizationId") is { Length: > 0 } id ? id : null;
 
@@ -24,7 +24,7 @@ public class EntityTypesController : ControllerBase
         if (OrganizationId is not { } org) return NotFound(new { error = "الحساب غير مرتبط بأي منظمة." });
         var types = await _types.ListAsync(org, ct);
         var counts = new Dictionary<string, int>();
-        foreach (var t in types) counts[t.Id] = await _projects.CountByTypeAsync(org, t.Id, ct);
+        foreach (var t in types) counts[t.Id] = await _entities.CountByTypeAsync(org, t.Id, ct);
         return Ok(new { types, icons = EntityTypeStore.Icons, usage = counts });
     }
 
@@ -65,7 +65,7 @@ public class EntityTypesController : ControllerBase
         var t = (await _types.ListAsync(org, ct)).FirstOrDefault(x => x.Id == id);
         if (t is null) return NotFound(new { error = "النوع غير موجود." });
         if (t.IsDefault) return Conflict(new { error = "لا يُحذف النوع الافتراضي — اجعل نوعًا آخر افتراضيًا أولًا." });
-        var used = await _projects.CountByTypeAsync(org, id, ct);
+        var used = await _entities.CountByTypeAsync(org, id, ct);
         if (used > 0) return Conflict(new { error = $"النوع مستخدَم في {used} — غيّر نوعها أولًا." });
         await _types.DeleteAsync(org, id, ct);
         return NoContent();

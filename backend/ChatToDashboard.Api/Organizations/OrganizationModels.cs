@@ -4,9 +4,9 @@ namespace ChatToDashboard.Api.Organizations;
 
 /// <summary>
 /// A subscribing company on the platform (SaaS tenant). Owns one or more <see
-/// cref="Projects.Project"/>s and, through them, its own isolated dashboards/sources/files —
-/// see Projects.ProjectModels for how a project ties back here. Isolation for now is logical
-/// (every tenant-scoped row carries an OrganizationId/ProjectId column in the one shared
+/// cref="Entities.Entity"/>s and, through them, its own isolated dashboards/sources/files —
+/// see Projects.EntityModels for how a project ties back here. Isolation for now is logical
+/// (every tenant-scoped row carries an OrganizationId/EntityId column in the one shared
 /// database), not a separate physical database per organization.
 /// </summary>
 public class Organization
@@ -26,7 +26,7 @@ public class OrganizationInfo
     [JsonPropertyName("slug")] public string Slug { get; set; } = "";
     [JsonPropertyName("isActive")] public bool IsActive { get; set; }
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
-    [JsonPropertyName("projectCount")] public int ProjectCount { get; set; }
+    [JsonPropertyName("entityCount")] public int EntityCount { get; set; }
     [JsonPropertyName("userCount")] public int UserCount { get; set; }
 }
 

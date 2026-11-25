@@ -39,21 +39,21 @@ public class SemanticsController : ControllerBase
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var profile = await _profiles.BuildAsync(context, ct);
-        var projectId = context.ProjectId ?? "";
-        var rows = string.IsNullOrWhiteSpace(projectId) ? Array.Empty<ColumnSemantic>() : await _store.ListForProjectAsync(projectId, ct);
+        var entityId = context.EntityId ?? "";
+        var rows = string.IsNullOrWhiteSpace(entityId) ? Array.Empty<ColumnSemantic>() : await _store.ListForEntityAsync(entityId, ct);
         var byKey = rows.ToDictionary(r => (r.TableName.ToLowerInvariant(), r.ColumnName.ToLowerInvariant()), r => r);
-        var files = (await _files.ListAsync(selection.ProjectId, ct)).Where(f => !string.IsNullOrWhiteSpace(f.TableName))
+        var files = (await _files.ListAsync(selection.EntityId, ct)).Where(f => !string.IsNullOrWhiteSpace(f.TableName))
             .ToDictionary(f => f.TableName!, f => f, StringComparer.OrdinalIgnoreCase);
         // جدول بلا تحليل من الموديل (ملف قديم، جدول نظام خارجي، أو نداء سابق فشل) يبدأ تحليله الآن في
         // الخلفية ويظهر «قيد التحليل» — فلا يحتاج المستخدم إلى زر لكل جدول.
-        var pending = await _semantics.UnanalyzedTablesAsync(projectId, profile.Tables.Select(t => t.Table), ct);
+        var pending = await _semantics.UnanalyzedTablesAsync(entityId, profile.Tables.Select(t => t.Table), ct);
         if (pending.Count > 0)
-            _ = _semantics.EnsureAnalyzedAsync(projectId, pending, TimeSpan.Zero, CancellationToken.None);
-        var pendingSet = pending.Where(t => _semantics.GetFailure(projectId, t) is null).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _ = _semantics.EnsureAnalyzedAsync(entityId, pending, TimeSpan.Zero, CancellationToken.None);
+        var pendingSet = pending.Where(t => _semantics.GetFailure(entityId, t) is null).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var tables = profile.Tables.Select(t =>
         {
-            var failure = _semantics.GetFailure(projectId, t.Table);
+            var failure = _semantics.GetFailure(entityId, t.Table);
             var columns = t.Columns.Select(c =>
             {
                 byKey.TryGetValue((t.Table.ToLowerInvariant(), c.Name.ToLowerInvariant()), out var s);
@@ -82,7 +82,7 @@ public class SemanticsController : ControllerBase
             };
         }).ToList();
 
-        return Ok(new { projectId, tables, concepts = ConceptCatalog.Concepts });
+        return Ok(new { entityId, tables, concepts = ConceptCatalog.Concepts });
     }
 
     /// <summary>تأكيد/تصحيح معنى عمود من الصفحة المجمّعة (يفوز على أي تحليل آلي لاحق).</summary>
@@ -99,7 +99,7 @@ public class SemanticsController : ControllerBase
             return BadRequest(new { error = "المفهوم غير معروف في القاموس." });
         var role = request.Role ?? ConceptCatalog.Find(request.Concept)?.Role ?? ConceptRoles.Text;
         var valueMap = request.ValueMap is { Count: > 0 } ? System.Text.Json.JsonSerializer.Serialize(request.ValueMap) : null;
-        await _semantics.SetByUserAsync(context.ProjectId!, profiled.Table, column, request.Concept, role, request.Unit, valueMap, ct);
+        await _semantics.SetByUserAsync(context.EntityId!, profiled.Table, column, request.Concept, role, request.Unit, valueMap, ct);
         return NoContent();
     }
 
@@ -111,9 +111,9 @@ public class SemanticsController : ControllerBase
         if (user is null) return Unauthorized();
         var (context, profiled) = await ResolveTableAsync(user, table, ct);
         if (profiled is null) return NotFound(new { error = "الجدول غير موجود في مصادر المشروع." });
-        var rows = await _semantics.AnalyzeTableAsync(context.ProjectId!, profiled.Table, ct);
+        var rows = await _semantics.AnalyzeTableAsync(context.EntityId!, profiled.Table, ct);
         // نجاح الطلب لا يعني نجاح الموديل: عند فشله تُحفظ تخمينات الأسماء فقط ويُعاد السبب للعرض.
-        var failure = _semantics.GetFailure(context.ProjectId, profiled.Table);
+        var failure = _semantics.GetFailure(context.EntityId, profiled.Table);
         return Ok(new { table = profiled.Table, analyzed = rows.Count, analysisError = failure?.Message });
     }
 
@@ -121,7 +121,7 @@ public class SemanticsController : ControllerBase
     {
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        if (string.IsNullOrWhiteSpace(context.ProjectId)) return (context, null);
+        if (string.IsNullOrWhiteSpace(context.EntityId)) return (context, null);
         var profile = await _profiles.BuildAsync(context, ct);
         return (context, profile.Find(table));
     }

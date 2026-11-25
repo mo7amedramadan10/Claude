@@ -16,7 +16,7 @@ public class McpSessionTokensTests
         var resolved = tokens.Resolve(s.Token);
         Assert.NotNull(resolved);
         Assert.Equal("u1", resolved!.UserId);
-        Assert.Equal("p1", resolved.ProjectId);
+        Assert.Equal("p1", resolved.EntityId);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class McpSessionTokensTests
         var tokens = new McpSessionTokens();
         var a = tokens.Issue("u1", "p1"); var b = tokens.Issue("u2", "p2");
         Assert.NotEqual(a.Token, b.Token);
-        Assert.Equal("p2", tokens.Resolve(b.Token)!.ProjectId);
+        Assert.Equal("p2", tokens.Resolve(b.Token)!.EntityId);
         tokens.Revoke(a.Token);
         Assert.NotNull(tokens.Resolve(b.Token));
     }
@@ -166,11 +166,11 @@ public class ReadOnlySqlValidatorTests
             new("proj_ab12.Sales", "proj_ab12", "Sales", "file", "sales.csv", 240),
             new("dbo.sys_procurement", "dbo", "sys_procurement", "system", "نظام المشتريات", null),
         };
-        Assert.Equal("proj_ab12.Sales", ProjectCatalog.Match(allowed, "proj_ab12.Sales")!.Name);
-        Assert.Equal("proj_ab12.Sales", ProjectCatalog.Match(allowed, "[proj_ab12].[Sales]")!.Name);
-        Assert.Equal("proj_ab12.Sales", ProjectCatalog.Match(allowed, "sales")!.Name);
-        Assert.Null(ProjectCatalog.Match(allowed, "proj_zz99.Sales"));
-        Assert.Null(ProjectCatalog.Match(allowed, "repo_Files"));
+        Assert.Equal("proj_ab12.Sales", EntityCatalog.Match(allowed, "proj_ab12.Sales")!.Name);
+        Assert.Equal("proj_ab12.Sales", EntityCatalog.Match(allowed, "[proj_ab12].[Sales]")!.Name);
+        Assert.Equal("proj_ab12.Sales", EntityCatalog.Match(allowed, "sales")!.Name);
+        Assert.Null(EntityCatalog.Match(allowed, "proj_zz99.Sales"));
+        Assert.Null(EntityCatalog.Match(allowed, "repo_Files"));
     }
 }
 

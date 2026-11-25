@@ -61,10 +61,10 @@ public class LiquidityPoolsDataProvider : IInteractiveDataProvider
         "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "المجمّعات (pools)", "سجل النشاط (activity)", "مراكز السيولة (positions)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var poolsTable = matched.Tables["pools"];

@@ -64,10 +64,10 @@ public class CrmPipelineDataProvider : IInteractiveDataProvider
         }),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "العملاء (customers)", "مراحل البيع (stages)", "العملاء الجدد يوميًا (new_customers_daily)", "إحصاءات الصفقات (pipeline_stats)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var stagesTable = matched.Tables["stages"];

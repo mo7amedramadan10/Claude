@@ -78,14 +78,14 @@ public class TreasuryFundingDataProvider : IInteractiveDataProvider
         }, Required: false),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[]
         {
             "أنظمة المدفوعات (payment_systems)", "استحقاقات الدَّين (debt_maturities)",
             "أسعار التمويل (financing_rate_observations)", "سجل الرصيد النقدي (cash_balance_history)", "البنوك (banks)",
         };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var paymentRows = await _matcher.QueryAsync(BuildSelect(matched.Tables["payment_systems"], "name", "value", "delta_pct"), matched.Context, ct);

@@ -51,8 +51,8 @@ public class DeckBuilder
         string profileText = "";
         if (hasData)
         {
-            await _semantics.EnsureAnalyzedAsync(request.Context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(30), ct);
-            profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct));
+            await _semantics.EnsureAnalyzedAsync(request.Context.EntityId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(30), ct);
+            profileText = profile.ToPromptText(semantics: await _semantics.GetPromptNotesAsync(request.Context.EntityId, ct));
         }
 
         // ---- المرحلة 1: التخطيط (المواصفة كاملة) ----

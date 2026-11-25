@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using ChatToDashboard.Api.Data;
 using Dapper;
 
-namespace ChatToDashboard.Api.Projects;
+namespace ChatToDashboard.Api.Entities;
 
 /// <summary>
 /// نوع الكيان (مشروع، قسم، إدارة، فريق…): الكيان هو الوحدة التي تُنظَّم تحتها المحادثة واللوحات والتصاميم والملفات والصلاحيات

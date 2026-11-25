@@ -86,13 +86,13 @@ public class StagedTemplateBuilder
         }
         // طبقة المعنى: أي جدول لم يُحلَّل بعد (ملف قديم، جدول نظام خارجي، أو فشل نداء سابق) يُحلَّل الآن
         // قبل الجدوى والتخطيط — بمهلة حتى لا يعلّق البناء — ثم تُلحق المعاني بملف التعريف في كل نداء.
-        await _semantics.EnsureAnalyzedAsync(request.Context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(45), ct);
-        var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
+        await _semantics.EnsureAnalyzedAsync(request.Context.EntityId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(45), ct);
+        var semantics = await _semantics.GetPromptNotesAsync(request.Context.EntityId, ct);
         var profileText = profile.ToPromptText(semantics: semantics);
 
         // الجدوى الحتمية (المرحلة ج من طبقة المعنى): عنصر يحتاج مفهومًا صلبًا غير موجود في
         // بيانات المشروع لا يُرسل للموديل أصلًا — سببه معروف قبل أي توكن.
-        var available = await _feasibility.AvailableConceptsAsync(request.Context.ProjectId, ct);
+        var available = await _feasibility.AvailableConceptsAsync(request.Context.EntityId, ct);
         var feasibility = WidgetFeasibilityService.Evaluate(available, request.Widgets);
         var candidates = request.Widgets.Where(w => !feasibility.TryGetValue(w.Title, out var f) || f.Feasible).ToList();
         var availableText = available.Count == 0 ? null : string.Join("، ", available.Select(kv =>
@@ -148,11 +148,11 @@ public class StagedTemplateBuilder
         var profile = await _profiles.BuildAsync(request.Context, ct);
         if (profile.Tables.Count == 0)
             return NoDataWidget(spec, "لا توجد مصادر بيانات مفعّلة في المشروع — ارفع ملفًا أو فعّل نظامًا من «المصادر».");
-        await _semantics.EnsureAnalyzedAsync(request.Context.ProjectId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(30), ct);
-        var semantics = await _semantics.GetPromptNotesAsync(request.Context.ProjectId, ct);
+        await _semantics.EnsureAnalyzedAsync(request.Context.EntityId, profile.Tables.Select(t => t.Table), TimeSpan.FromSeconds(30), ct);
+        var semantics = await _semantics.GetPromptNotesAsync(request.Context.EntityId, ct);
         var profileText = profile.ToPromptText(semantics: semantics);
 
-        var available = await _feasibility.AvailableConceptsAsync(request.Context.ProjectId, ct);
+        var available = await _feasibility.AvailableConceptsAsync(request.Context.EntityId, ct);
         var feasibility = WidgetFeasibilityService.Evaluate(available, new[] { spec });
         if (feasibility.TryGetValue(spec.Title, out var fz) && !fz.Feasible)
             return NoDataWidget(spec, $"يحتاج «{string.Join("» و«", fz.Missing)}» وهو غير موجود في بياناتك — أضف عمودًا له أو أكّد معنى عمود موجود من «المصادر».");
@@ -194,7 +194,7 @@ public class StagedTemplateBuilder
                 - عرّف المقاييس المشتركة مرة واحدة في sharedContext (مثلًا: الإيراد = SUM(Revenue)، الفترة الافتراضية = آخر ١٢ شهرًا من البيانات) ليبقى كل العناصر متسقة.
                 - الفلاتر: اقترح ٢ إلى ٤ أعمدة فئوية أو زمنية ذات معنى تجاري، موجودة فعلًا في جدول محدد. لا تذكر قيمها؛ ستُجلب من قاعدة البيانات.
                 """)
-            .AppendLine(_db.DialectPrompt(request.Context.ProjectId))
+            .AppendLine(_db.DialectPrompt(request.Context.EntityId))
             .AppendLine()
             .AppendLine("# ملف تعريف البيانات المتاحة")
             .AppendLine(profileText)
@@ -279,7 +279,7 @@ public class StagedTemplateBuilder
                 - query: إن بُني العنصر من استعلام واحد، ضع {"table": "اسم الجدول الحقيقي", "sql": "نص الاستعلام حرفيًا كما نُفّذ"}؛ وإلا احذف الحقل.
                 - إن تبيّن بعد الاستعلام أن البيانات لا تكفي فعلًا، أعد {"noData": true, "missingReason": "سبب قصير"} بدل اختلاق قيم.
                 """)
-            .AppendLine(_db.DialectPrompt(request.Context.ProjectId))
+            .AppendLine(_db.DialectPrompt(request.Context.EntityId))
             .AppendLine()
             .AppendLine("# ملف تعريف البيانات المتاحة")
             .AppendLine(profileText)

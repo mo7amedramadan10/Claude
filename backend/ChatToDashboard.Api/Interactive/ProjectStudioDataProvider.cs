@@ -58,10 +58,10 @@ public class ProjectStudioDataProvider : IInteractiveDataProvider
         }, Required: false),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "فريق الاستوديو (project_studio_team)", "المشاريع (projects)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var teamTable = matched.Tables["project_studio_team"];

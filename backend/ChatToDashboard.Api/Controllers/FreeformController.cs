@@ -79,7 +79,7 @@ public partial class FreeformController : ControllerBase
     {
         var d = await _store.GetByIdAsync(id, ct);
         if (d is null) return (null, null, NotFound(new { error = "التصميم غير موجود." }));
-        var access = FreeformAccess.Resolve(d, user.Id, user.OrganizationId, selection.ProjectId, user.Role == UserRoles.Admin, await _store.ShareRoleAsync(id, user.Id, ct));
+        var access = FreeformAccess.Resolve(d, user.Id, user.OrganizationId, selection.EntityId, user.Role == UserRoles.Admin, await _store.ShareRoleAsync(id, user.Id, ct));
         if (access is null) return (null, null, NotFound(new { error = "التصميم غير موجود." }));
         if (need == FreeformAccess.Edit && !FreeformAccess.CanEdit(access))
             return (null, access, StatusCode(403, new { error = "هذا التصميم مشارك معك للعرض فقط — اطلب من صاحبه صلاحية التعديل." }));
@@ -89,8 +89,8 @@ public partial class FreeformController : ControllerBase
     }
 
     /// <summary>عمليات البيانات على تصميم تجري في مشروعه هو (قد يكون مشاركًا من مشروع آخر)، وبصلاحيات المستخدم نفسه على الملفات.</summary>
-    private static Sources.SourceSelection InDesignProject(Sources.SourceSelection selection, FreeformDesign d)
-    { if (d.ProjectId is not null) selection.ProjectId = d.ProjectId; return selection; }
+    private static Sources.SourceSelection InDesignEntity(Sources.SourceSelection selection, FreeformDesign d)
+    { if (d.EntityId is not null) selection.EntityId = d.EntityId; return selection; }
 
     /// <summary>اختيار المصادر كما يُحفظ مع التصميم: null حين لم يُرسل شيء أو حين اختار المستخدم كل المصادر.</summary>
     internal static string? SourcesJsonOf(Sources.SourceSelection? s)
@@ -102,11 +102,11 @@ public partial class FreeformController : ControllerBase
     private static Sources.SourceSelection? StoredSources(FreeformDesign? d) => d?.SourcesSelection;
 
     /// <summary>هوية التصميم: هوية المكتبة المختارة له (<paramref name="identityId"/>) إن وُجدت في مشروعه، وإلا الهوية الافتراضية للمشروع.</summary>
-    private async Task<DeckBrand?> BrandAsync(string? projectId, CancellationToken ct, string? identityId = null)
+    private async Task<DeckBrand?> BrandAsync(string? entityId, CancellationToken ct, string? identityId = null)
     {
         DeckBrand? b = null;
-        if (!string.IsNullOrWhiteSpace(identityId)) b = (await HttpContext.RequestServices.GetRequiredService<BrandIdentityStore>().GetAsync(projectId, identityId, ct))?.Brand;
-        b ??= await _brands.GetAsync(projectId, ct); var fonts = await _fonts.ListAsync(projectId, ct);
+        if (!string.IsNullOrWhiteSpace(identityId)) b = (await HttpContext.RequestServices.GetRequiredService<BrandIdentityStore>().GetAsync(entityId, identityId, ct))?.Brand;
+        b ??= await _brands.GetAsync(entityId, ct); var fonts = await _fonts.ListAsync(entityId, ct);
         if (b is null && fonts.Count == 0) return null;
         b ??= new DeckBrand(); b.FontFaces = fonts; return b;
     }
@@ -125,7 +125,7 @@ public partial class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (me, sel) = cur.Value; var isAdmin = me.Role == UserRoles.Admin;
-        var list = await _store.ListVisibleAsync(me.OrganizationId, sel.ProjectId, me.Id, isAdmin, ct);
+        var list = await _store.ListVisibleAsync(me.OrganizationId, sel.EntityId, me.Id, isAdmin, ct);
         var myShares = await _store.ShareRolesForUserAsync(me.Id, ct);
         var shareCounts = await _store.ShareCountsAsync(list.Select(d => d.Id), ct);
         var owners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -137,9 +137,9 @@ public partial class FreeformController : ControllerBase
         var orgSlug = cur.Value.User.OrganizationId is null ? null : (await _organizations.FindByIdAsync(cur.Value.User.OrganizationId, ct))?.Slug;
         return Ok(list.Select(d => new
         {
-            id = d.Id, projectId = d.ProjectId, organizationId = d.OrganizationId, createdByUserId = d.CreatedByUserId, title = d.Title, kind = d.Kind, templateKey = d.TemplateKey,
+            id = d.Id, entityId = d.EntityId, organizationId = d.OrganizationId, createdByUserId = d.CreatedByUserId, title = d.Title, kind = d.Kind, templateKey = d.TemplateKey,
             ownerName = owners.TryGetValue(d.CreatedByUserId ?? "", out var on) ? on : "",
-            access = FreeformAccess.Resolve(d, me.Id, me.OrganizationId, sel.ProjectId, isAdmin, myShares.TryGetValue(d.Id, out var sr) ? sr : null),
+            access = FreeformAccess.Resolve(d, me.Id, me.OrganizationId, sel.EntityId, isAdmin, myShares.TryGetValue(d.Id, out var sr) ? sr : null),
             shareScope = d.ShareScope, shareScopeRole = d.ShareScopeRole, shareCount = shareCounts.TryGetValue(d.Id, out var sc) ? sc : 0,
             version = d.Version, presentationId = d.PresentationId, queryCount = d.QueryCount, dataRefreshedAt = d.DataRefreshedAt, autoRefresh = d.AutoRefresh, sizeBytes = d.SizeBytes, createdAt = d.CreatedAt, updatedAt = d.UpdatedAt,
             publishedUrl = d.PresentationId is not null && byId.TryGetValue(d.PresentationId, out var pres) ? pres.PublicPath(orgSlug) : null,
@@ -152,13 +152,13 @@ public partial class FreeformController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (d, access, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.View, ct); if (err is not null) return err;
-        var brand = await BrandAsync(d!.ProjectId, ct, d.IdentityId);
+        var brand = await BrandAsync(d!.EntityId, ct, d.IdentityId);
         // تغيّر بيانات المصدر منذ آخر تحديث؟ (بصمة الجداول المذكورة في الاستعلامات المسجَّلة مقابل المحفوظة)
         bool? dataChanged = null;
         if (FreeformAccess.CanEdit(access) && d.QueryCount > 0 && d.DataFingerprint is not null)
         {
             var qs = await _store.QueriesAsync(id, ct);
-            var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), d.ProjectId, ct);
+            var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), d.EntityId, ct);
             dataChanged = fp is not null && fp != d.DataFingerprint;
         }
         return Ok(new { design = d, html = ApplyBrandAssets(d.Html, brand), versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), publishedUrl = await PublishedUrlAsync(d, ct), dataChanged, access,
@@ -172,7 +172,7 @@ public partial class FreeformController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (d, _, err) = await LoadAsync(id, cur.Value.User, cur.Value.Selection, FreeformAccess.View, ct); if (err is not null) return err;
         var html = await _store.VersionHtmlAsync(id, version, ct); if (html is null) return NotFound(new { error = "الإصدار غير موجود." });
-        return Ok(new { version, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct, d.IdentityId)) });
+        return Ok(new { version, html = ApplyBrandAssets(html, await BrandAsync(d!.EntityId, ct, d.IdentityId)) });
     }
 
     /// <summary>كتالوج نماذج تصميم حر (اختياريًا لنوع واحد <c>?kind=doc</c>).</summary>
@@ -180,7 +180,7 @@ public partial class FreeformController : ControllerBase
     public async Task<IActionResult> Templates([FromQuery] string? kind, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var custom = await _templates.ListAsync(cur.Value.Selection.ProjectId, ct);
+        var custom = await _templates.ListAsync(cur.Value.Selection.EntityId, ct);
         // نماذج اللوحات من كتالوج المحادثة تُعرض تحت نوع «لوحة» بعد الثابتة (مع احترام تعديلات/إخفاء مالك المنصّة)
         var dashboards = string.IsNullOrWhiteSpace(kind) || kind == "dashboard" ? await _dashTemplates.ListAsync(ct) : Array.Empty<FreeformTemplate>();
         var all = custom.Concat(FreeformTemplates.All).Concat(dashboards);
@@ -204,7 +204,7 @@ public partial class FreeformController : ControllerBase
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة الملف: " + ex.Message }); }
         if (doc.Pages.All(p => p.IsEmpty) && doc.DataBlocks.Count == 0) return BadRequest(new { error = "لم يُعثر على محتوى نصي في الملف.", warnings = doc.Warnings });
-        var t = await _templates.CreateAsync(selection.ProjectId, user.Id, FreeformTemplateStore.FromDocument(doc, kind ?? "design", name, file.FileName), ct);
+        var t = await _templates.CreateAsync(selection.EntityId, user.Id, FreeformTemplateStore.FromDocument(doc, kind ?? "design", name, file.FileName), ct);
         return Ok(new { template = t, pagesRead = doc.Pages.Count(p => !p.IsEmpty), warnings = doc.Warnings });
     }
 
@@ -256,13 +256,13 @@ public partial class FreeformController : ControllerBase
         var (user, selection) = cur.Value;
         var (page, error) = await ReadPageFileAsync(file, title, ct);
         if (page is null) return BadRequest(new { error });
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, page.Name, page.Html, $"رفع الملف «{file!.FileName}» كما هو", page.Kind ?? kind, null, ct);
+        var design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, page.Name, page.Html, $"رفع الملف «{file!.FileName}» كما هو", page.Kind ?? kind, null, ct);
         await _store.AddMessageAsync(design.Id, "user", $"رفع الملف «{file.FileName}» كما هو بلا تعديل.", null, ct);
         var reply = page.IsHtml
             ? "وُضعت الصفحة كما رُفعت حرفيًا (بلا أي تعديل من الموديل). يمكنك الآن تعديل نصها من مساحة العمل، أو طلب تعديلات بالمحادثة، أو نشرها برابط."
             : $"حُوِّل العرض إلى صفحة شرائح كما هو: {page.Slides} شريحة مرسومة بمواضعها وخلفياتها وصورها الأصلية بلا موديل{(page.Notes.Count > 0 ? " — " + string.Join("؛ ", page.Notes) : "")}. يمكنك تعديل النصوص من مساحة العمل أو نشره برابط.";
         await _store.AddMessageAsync(design.Id, "assistant", reply, 1, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct);
+        var brand = await BrandAsync(selection.EntityId, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct), slides = page.Slides, notes = page.Notes });
     }
 
@@ -278,7 +278,7 @@ public partial class FreeformController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var selection = cur.Value.Selection;
         var (d, _, err) = await LoadAsync(id, cur.Value.User, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
-        selection = InDesignProject(selection, d!);
+        selection = InDesignEntity(selection, d!);
         var (page, error) = await ReadPageFileAsync(file, null, ct);
         if (page is null) return BadRequest(new { error });
         var kindChanged = page.Kind is not null && page.Kind != d.Kind;
@@ -291,7 +291,7 @@ public partial class FreeformController : ControllerBase
         if (d.PresentationId is not null) reply += " الرابط المنشور يعرض النسخة المنشورة السابقة حتى تضغط «تحديث النشر».";
         await _store.AddMessageAsync(id, "assistant", reply, v, ct);
         var design = await _store.GetByIdAsync(id, ct) ?? d;
-        var brand = await BrandAsync(selection.ProjectId, ct, design.IdentityId);
+        var brand = await BrandAsync(selection.EntityId, ct, design.IdentityId);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), version = v, versions = await _store.VersionsAsync(id, ct), messages = await _store.MessagesAsync(id, 60, ct), slides = page.Slides, notes = page.Notes, kindChanged, published = d.PresentationId is not null });
     }
 
@@ -312,9 +312,9 @@ public partial class FreeformController : ControllerBase
     public async Task<IActionResult> DeleteTemplate(string key, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var t = await _templates.GetAsync(key, cur.Value.Selection.ProjectId, ct); if (t is null) return NotFound();
+        var t = await _templates.GetAsync(key, cur.Value.Selection.EntityId, ct); if (t is null) return NotFound();
         if (t.CreatedByUserId != cur.Value.User.Id && cur.Value.User.Role != "Admin") return Forbid();
-        await _templates.DeleteAsync(key, cur.Value.Selection.ProjectId, ct); return NoContent();
+        await _templates.DeleteAsync(key, cur.Value.Selection.EntityId, ct); return NoContent();
     }
 
     private readonly IWebHostEnvironment _env;
@@ -352,18 +352,18 @@ public partial class FreeformController : ControllerBase
         var html = await TemplatePageHtmlAsync(t, ct, request?.Lang); if (html is null) return BadRequest(new { error = "هذا النموذج بلا صفحة جاهزة." });
         var title = string.IsNullOrWhiteSpace(request?.Title) ? (en && t.NameEn is not null ? t.NameEn : t.Name).Split('—')[0].Trim() : request!.Title!.Trim();
         if (title.Length > 120) title = title[..120];
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, html, $"بدء من النموذج الجاهز «{t.Name}»", t.Kind, t.Key, ct, SourcesJsonOf(request?.Sources));
+        var design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, title, html, $"بدء من النموذج الجاهز «{t.Name}»", t.Kind, t.Key, ct, SourcesJsonOf(request?.Sources));
         await _store.AddMessageAsync(design.Id, "user", $"ابدأ من النموذج الجاهز «{t.Name}».", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", $"فُتح النموذج «{t.Name}» بشرائحه الـ{t.Sections.Count} كما هو (بلا موديل). عدّل النصوص مباشرة من «✏️ تعديل النص»، أو اكتب هنا ما تريد تغييره (مثل: «املأ الشريحة الخامسة بأرقام المبيعات الفعلية»).", 1, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct);
+        var brand = await BrandAsync(selection.EntityId, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct) });
     }
 
     /// <summary>نموذج التحويل المختار من معرض النوع الجديد: (النموذج، صفحته الجاهزة إن كان نموذج صفحة، أو خطأ). نموذج من نوع آخر مرفوض.</summary>
-    private async Task<(FreeformTemplate? T, string? Page, IActionResult? Error)> ConvertTemplateAsync(string? key, string kind, string? projectId, string lang, CancellationToken ct)
+    private async Task<(FreeformTemplate? T, string? Page, IActionResult? Error)> ConvertTemplateAsync(string? key, string kind, string? entityId, string lang, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(key)) return (null, null, null);
-        var t = await ResolveTemplateAsync(key, projectId, ct);
+        var t = await ResolveTemplateAsync(key, entityId, ct);
         if (t is null) return (null, null, BadRequest(new { error = "النموذج غير موجود." }));
         if (t.Kind != kind) return (null, null, BadRequest(new { error = "النموذج ليس من النوع المطلوب." }));
         var page = string.IsNullOrWhiteSpace(t.Page) ? null : await TemplatePageHtmlAsync(t, ct, lang);
@@ -380,8 +380,8 @@ public partial class FreeformController : ControllerBase
             + $"\n\n# {what} (مرجع للمحتوى فقط)\n{src}";
     }
 
-    private async Task<FreeformTemplate?> ResolveTemplateAsync(string? key, string? projectId, CancellationToken ct)
-        => string.IsNullOrWhiteSpace(key) ? null : FreeformTemplates.Find(key) ?? await _dashTemplates.FindAsync(key, ct) ?? await _templates.GetAsync(key, projectId, ct);
+    private async Task<FreeformTemplate?> ResolveTemplateAsync(string? key, string? entityId, CancellationToken ct)
+        => string.IsNullOrWhiteSpace(key) ? null : FreeformTemplates.Find(key) ?? await _dashTemplates.FindAsync(key, ct) ?? await _templates.GetAsync(key, entityId, ct);
 
     /// <summary>تحويل تصميم إلى نوع آخر (مستند ← شرائح…): تصميم جديد من النوع المطلوب بالمحتوى نفسه، والأصل يبقى كما هو.</summary>
     /// <summary>
@@ -396,20 +396,20 @@ public partial class FreeformController : ControllerBase
         var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         var stored = StoredSources(d);
         if (stored is not null) selection = (await CurrentAsync(ct, stored))!.Value.Selection;
-        selection = InDesignProject(selection, d!);
+        selection = InDesignEntity(selection, d!);
         var text = (request.SlideText ?? "").Trim();
         if (text.Length == 0 && string.IsNullOrWhiteSpace(request.Prompt)) return BadRequest(new { error = "الشريحة بلا نص — اكتب ما تريد أن تشرحه الحركة." });
         var lang = FreeformBuilder.LanguageOf(request.Lang, d!.Html);
         var message = SlideMotionMessage(request, lang);
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct, d.IdentityId);
+        var brand = await BrandAsync(selection.EntityId, ct, d.IdentityId);
         FreeformResult result;
         try { result = await _builder.GenerateAsync(message, null, Array.Empty<FreeformMessage>(), context, brand, user, ct, "motion", null, lang); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل حركة — جرّب ثانية أو صف ما تريد بوضوح أكثر." });
         var title = "حركة: " + (string.IsNullOrWhiteSpace(request.SlideTitle) ? d.Title : Clip(request.SlideTitle.Trim(), 60));
-        var motion = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, result.Html, message, "motion", null, ct, d.SourcesJson);
-        if (result.Queries is { Count: > 0 } q) await _store.SetQueriesAsync(motion.Id, q, DateTime.UtcNow, await _fingerprints.ComputeAsync(q.Select(x => x.Sql), selection.ProjectId, ct), ct);
+        var motion = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, title, result.Html, message, "motion", null, ct, d.SourcesJson);
+        if (result.Queries is { Count: > 0 } q) await _store.SetQueriesAsync(motion.Id, q, DateTime.UtcNow, await _fingerprints.ComputeAsync(q.Select(x => x.Sql), selection.EntityId, ct), ct);
         await _store.AddMessageAsync(motion.Id, "user", $"حركة لشريحة «{(request.SlideTitle ?? "").Trim()}» في «{d.Title}»" + (string.IsNullOrWhiteSpace(request.Prompt) ? "" : $": {request.Prompt.Trim()}"), null, ct);
         await _store.AddMessageAsync(motion.Id, "assistant", result.Reply, motion.Version, ct);
         return Ok(new { design = motion, html = ApplyBrandAssets(motion.Html, brand), reply = result.Reply });
@@ -449,9 +449,9 @@ public partial class FreeformController : ControllerBase
         var message = $"حوّل الصفحة الحالية (وهي {fromLabel}) إلى {toLabel} كاملة: احتفظ بكل المحتوى والنصوص والأرقام والجداول والهوية البصرية نفسها، وأعد تنظيمه وفق بنية «{toLabel}» الموضحة في التعليمات."
             + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}");
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct, src.IdentityId);
+        var brand = await BrandAsync(selection.EntityId, ct, src.IdentityId);
         var lang = FreeformBuilder.LanguageOf(null, src.Html);
-        var (tpl, tplPage, tplErr) = await ConvertTemplateAsync(request.TemplateKey, request.Kind!, selection.ProjectId, lang, ct); if (tplErr is not null) return tplErr;
+        var (tpl, tplPage, tplErr) = await ConvertTemplateAsync(request.TemplateKey, request.Kind!, selection.EntityId, lang, ct); if (tplErr is not null) return tplErr;
         // نموذج صفحة جاهزة: الصفحة الحالية = النموذج، والمحتوى المصدر مرجع يُنقل إليها؛ نموذج بنيوي: يوجّه الموديل ببنيته
         string? baseHtml = src.Html;
         if (tplPage is not null) { message = TemplatePageConvertMessage(tpl!, toLabel, "الصفحة المصدر", src.Html, request.Note); baseHtml = tplPage; }
@@ -461,8 +461,8 @@ public partial class FreeformController : ControllerBase
         try { result = await _builder.GenerateAsync(message, baseHtml, Array.Empty<FreeformMessage>(), context, brand, user, ct, request.Kind!, tplPage is null ? tpl : null, lang, seedQueries: tplPage is null ? null : FreeformDataBlock.Parse(src.Html)); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل صفحة من التحويل — جرّب ثانية أو أضف ملاحظة." });
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{src.Title} ({toLabel})", result.Html, message, request.Kind, tpl?.Key, ct, SourcesJsonOf(wantedSrc));
-        if (result.Queries is { Count: > 0 } cq) await _store.SetQueriesAsync(design.Id, cq, DateTime.UtcNow, await _fingerprints.ComputeAsync(cq.Select(q => q.Sql), selection.ProjectId, ct), ct);
+        var design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, $"{src.Title} ({toLabel})", result.Html, message, request.Kind, tpl?.Key, ct, SourcesJsonOf(wantedSrc));
+        if (result.Queries is { Count: > 0 } cq) await _store.SetQueriesAsync(design.Id, cq, DateTime.UtcNow, await _fingerprints.ComputeAsync(cq.Select(q => q.Sql), selection.EntityId, ct), ct);
         await _store.AddMessageAsync(design.Id, "user", $"تحويل «{src.Title}» من {fromLabel} إلى {toLabel}{(tpl is null ? "" : $" على نموذج «{tpl.Name}»")}", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, sourceId = src.Id });
@@ -494,8 +494,8 @@ public partial class FreeformController : ControllerBase
             + (sqls.Count > blocks.Count ? "\nعناصر أخرى لها جملة SQL بلا وسم جاهز: نفّذها بأداة query_data وضع لها بلوك data-jeem-chart/data-jeem-value بمفتاح نتيجتها." : "")
             + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}")
             + "\n\n# مواصفة اللوحة\n" + spec;
-        var brand = await BrandAsync(selection.ProjectId, ct);
-        var (tpl, tplPage, tplErr) = await ConvertTemplateAsync(request.TemplateKey, kind, selection.ProjectId, "ar", ct); if (tplErr is not null) return tplErr;
+        var brand = await BrandAsync(selection.EntityId, ct);
+        var (tpl, tplPage, tplErr) = await ConvertTemplateAsync(request.TemplateKey, kind, selection.EntityId, "ar", ct); if (tplErr is not null) return tplErr;
         if (tplPage is not null) message = $"هذه صفحة نموذج «{tpl!.Name}» الجاهزة: انقل إليها محتوى لوحة المتابعة أدناه محافظًا على تصميم النموذج وأنماطه وبنيته (استبدل نصوصه ورسومه وأرقامه، وأضف أو احذف شرائح/أقسامًا من النوع نفسه بحسب عدد العناصر).\n" + message;
         else if (tpl is not null) message += $"\nابنِ النتيجة على نموذج «{tpl.Name}» ببنيته وأقسامه.";
         FreeformResult result;
@@ -505,8 +505,8 @@ public partial class FreeformController : ControllerBase
         var (fixedHtml, added) = FreeformDashboardBlocks.EnsureBlocks(result.Html, blocks);
         if (added > 0) result = result with { Html = fixedHtml, Reply = (result.Reply + $"\nأُضيفت {added} رسوم حيّة لم تُوضع في الصفحة في {(kind == "slides" ? "شرائح" : "أقسام")} مستقلة في آخرها.").Trim() };
         if (blocks.Count > 0) result = result with { Reply = (result.Reply + $"\n📊 {blocks.Count} رسوم وأرقام مربوطة ببياناتك الحقيقية وتتحدّث من «🔄 تحديث البيانات» وفي الرابط المنشور.").Trim() };
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{title} ({toLabel})", result.Html!, message, kind, tpl?.Key, ct, SourcesJsonOf(request.Sources));
-        if (result.Queries is { Count: > 0 } qs) { var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, DateTime.UtcNow, fp, ct); }
+        var design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, $"{title} ({toLabel})", result.Html!, message, kind, tpl?.Key, ct, SourcesJsonOf(request.Sources));
+        if (result.Queries is { Count: > 0 } qs) { var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.EntityId, ct); await _store.SetQueriesAsync(design.Id, qs, DateTime.UtcNow, fp, ct); }
         await _store.AddMessageAsync(design.Id, "user", $"تحويل لوحة المتابعة «{title}» إلى {toLabel}", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply });
@@ -576,7 +576,7 @@ public partial class FreeformController : ControllerBase
         if (imageType is not null)
         {
             if (bytes.Length > FreeformAssetStore.MaxBytes) return BadRequest(new { error = "الصورة أكبر من 5MB." });
-            var id = await assets.AddAsync(selection.ProjectId, user.Id, name, imageType, bytes, ct);
+            var id = await assets.AddAsync(selection.EntityId, user.Id, name, imageType, bytes, ct);
             return Ok(new { kind = "image", name, url = $"/api/freeform/assets/{id}" });
         }
         var ext = Path.GetExtension(name).ToLowerInvariant();
@@ -618,15 +618,15 @@ public partial class FreeformController : ControllerBase
         // المصادر: المرسلة في الطلب تغلب، وإلا المحفوظة مع التصميم، وإلا كل ما يحق للمستخدم — مقيَّدة بصلاحياته دائمًا.
         var wanted = request.Sources ?? StoredSources(design);
         if (wanted is not null) selection = (await CurrentAsync(ct, wanted))!.Value.Selection;
-        if (design is not null) selection = InDesignProject(selection, design);
+        if (design is not null) selection = InDesignEntity(selection, design);
         var sourcesJson = SourcesJsonOf(request.Sources);
         var currentHtml = !string.IsNullOrWhiteSpace(request.Html) ? request.Html : design?.Html;
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct, design?.IdentityId);
+        var brand = await BrandAsync(selection.EntityId, ct, design?.IdentityId);
         FreeformResult result;
         var kind = FreeformStore.NormalizeKind(design?.Kind ?? request.Kind);
         // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
-        var template = await ResolveTemplateAsync(design?.TemplateKey ?? request.TemplateKey, selection.ProjectId, ct);
+        var template = await ResolveTemplateAsync(design?.TemplateKey ?? request.TemplateKey, selection.EntityId, ct);
         if (template is not null && template.Kind != kind) template = null;
         var scopeKind = design is not null && !string.IsNullOrWhiteSpace(currentHtml) ? request.Scope?.Kind?.Trim().ToLowerInvariant() : null;
         if (scopeKind is "slide" or "element")
@@ -675,7 +675,7 @@ public partial class FreeformController : ControllerBase
         if (design is null)
         {
             var title = TitleFrom(request.Message);
-            design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, result.Html ?? "", request.Message, kind, template?.Key, ct, sourcesJson);
+            design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, title, result.Html ?? "", request.Message, kind, template?.Key, ct, sourcesJson);
             version = design.Version > 0 ? design.Version : null;
         }
         else
@@ -683,7 +683,7 @@ public partial class FreeformController : ControllerBase
             if (result.Html is not null) { version = await _store.AddVersionAsync(design.Id, result.Html, request.Message, null, ct); design.Version = version.Value; design.Html = result.Html; }
             if (request.Sources is not null && sourcesJson != design.SourcesJson) { await _store.SetSourcesAsync(design.Id, sourcesJson, ct); design.SourcesJson = sourcesJson; }
         }
-        if (result.Html is not null && result.Queries is { Count: > 0 } qs) { var now = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, now, fp, ct); design.QueryCount = qs.Count; design.DataRefreshedAt = now; design.DataFingerprint = fp; }
+        if (result.Html is not null && result.Queries is { Count: > 0 } qs) { var now = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.EntityId, ct); await _store.SetQueriesAsync(design.Id, qs, now, fp, ct); design.QueryCount = qs.Count; design.DataRefreshedAt = now; design.DataFingerprint = fp; }
         await _store.AddMessageAsync(design.Id, "user", request.Message, null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, version, usedData = result.UsedData, versions = await _store.VersionsAsync(design.Id, ct), scope = scopeKind ?? "all", changed = result.Html is not null, slideCount });
@@ -697,7 +697,7 @@ public partial class FreeformController : ControllerBase
         var (user, selection) = cur.Value;
         var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         if (StoredSources(d) is { } storedSel) selection = (await CurrentAsync(ct, storedSel))!.Value.Selection; // المصادر المختارة للتصميم
-        selection = InDesignProject(selection, d!);
+        selection = InDesignEntity(selection, d!);
         var stored = await _store.QueriesAsync(id, ct);
         if (stored.Count == 0) stored = FreeformDataBlock.Parse(d!.Html); // تصميم قديم فيه كتلة بلا تسجيل في الجدول
         if (stored.Count == 0) return BadRequest(new { error = "هذا التصميم بلا استعلامات مسجَّلة (بُني قبل عقد البيانات أو بلا بيانات). استخدم «إعادة البناء بالبيانات الحالية» بالموديل.", noQueries = true });
@@ -714,10 +714,10 @@ public partial class FreeformController : ControllerBase
         var now = DateTime.UtcNow;
         var html = FreeformDataBlock.Inject(d.Html, fresh, now);
         var version = await _store.AddVersionAsync(id, html, $"تحديث البيانات ({fresh.Count - failed.Count} من {stored.Count} استعلامًا)", null, ct);
-        await _store.SetQueriesAsync(id, fresh, now, await _fingerprints.ComputeAsync(fresh.Select(q => q.Sql), selection.ProjectId, ct), ct);
+        await _store.SetQueriesAsync(id, fresh, now, await _fingerprints.ComputeAsync(fresh.Select(q => q.Sql), selection.EntityId, ct), ct);
         if (d.PresentationId is not null) _live.Invalidate(d.PresentationId);
         await _store.AddMessageAsync(id, "assistant", failed.Count == 0 ? $"حُدِّثت البيانات من {stored.Count} استعلامًا." : $"حُدِّثت البيانات من {stored.Count - failed.Count} استعلامًا وفشل {failed.Count}.", version, ct);
-        var brand = await BrandAsync(selection.ProjectId, ct, d!.IdentityId);
+        var brand = await BrandAsync(selection.EntityId, ct, d!.IdentityId);
         return Ok(new { version, html = ApplyBrandAssets(html, brand), refreshedAt = now, ok = stored.Count - failed.Count, failed, versions = await _store.VersionsAsync(id, ct) });
     }
 
@@ -735,7 +735,7 @@ public partial class FreeformController : ControllerBase
         if (request.IdentityId is { } iid)
         {
             iid = iid.Trim();
-            if (iid.Length > 0 && await HttpContext.RequestServices.GetRequiredService<BrandIdentityStore>().GetAsync(d!.ProjectId, iid, ct) is null) return BadRequest(new { error = "الهوية غير موجودة في مشروع التصميم." });
+            if (iid.Length > 0 && await HttpContext.RequestServices.GetRequiredService<BrandIdentityStore>().GetAsync(d!.EntityId, iid, ct) is null) return BadRequest(new { error = "الهوية غير موجودة في مشروع التصميم." });
             var v2 = iid.Length == 0 ? null : iid; await _store.SetIdentityAsync(id, v2, ct); d!.IdentityId = v2;
         }
         if (!string.IsNullOrWhiteSpace(request.Html))
@@ -745,7 +745,7 @@ public partial class FreeformController : ControllerBase
         }
         if (version is null && !string.IsNullOrWhiteSpace(request.Title)) await _store.SetTitleAsync(id, request.Title.Trim(), ct);
         // مع تغيير الهوية تُعاد الصفحة بشعارها الجديد (`data-jeem-logo`) حتى تعرضها الواجهة فورًا
-        string? html = request.IdentityId is not null ? ApplyBrandAssets((await _store.GetByIdAsync(id, ct))?.Html ?? "", await BrandAsync(d!.ProjectId, ct, d.IdentityId)) : null;
+        string? html = request.IdentityId is not null ? ApplyBrandAssets((await _store.GetByIdAsync(id, ct))?.Html ?? "", await BrandAsync(d!.EntityId, ct, d.IdentityId)) : null;
         return Ok(new { version, versions = await _store.VersionsAsync(id, ct), identityId = d!.IdentityId, html });
     }
 
@@ -757,7 +757,7 @@ public partial class FreeformController : ControllerBase
         var html = await _store.VersionHtmlAsync(id, version, ct); if (html is null) return NotFound(new { error = "الإصدار غير موجود." });
         var v = await _store.AddVersionAsync(id, html, $"استعادة الإصدار {version}", null, ct);
         await _store.AddMessageAsync(id, "assistant", $"استُعيد الإصدار {version} كإصدار {v}.", v, ct);
-        return Ok(new { version = v, html = ApplyBrandAssets(html, await BrandAsync(d!.ProjectId, ct, d.IdentityId)), versions = await _store.VersionsAsync(id, ct) });
+        return Ok(new { version = v, html = ApplyBrandAssets(html, await BrandAsync(d!.EntityId, ct, d.IdentityId)), versions = await _store.VersionsAsync(id, ct) });
     }
 
     [HttpDelete("{id}")]
@@ -840,7 +840,7 @@ public partial class FreeformController : ControllerBase
         var (user, selection) = cur.Value;
         var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
         if (string.IsNullOrWhiteSpace(d!.Html)) return BadRequest(new { error = "لا توجد صفحة لنشرها بعد." });
-        var html = ApplyBrandAssets(d.Html, await BrandAsync(d.ProjectId, ct, d.IdentityId));
+        var html = ApplyBrandAssets(d.Html, await BrandAsync(d.EntityId, ct, d.IdentityId));
         if (d.Kind == "slides") html = FreeformDataBlock.EnsureSlidesKit(html);
         html = FreeformDataBlock.EnsureBlocksKit(html);
         html = FreeformDataBlock.EnsureMotionKit(html);

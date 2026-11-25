@@ -89,7 +89,7 @@ public class DeckBrandTemplateStore
     public DeckBrandTemplateStore(DataStore db) => _db = db;
     private const string Table = "[dbo].[DeckBrandTemplates]";
     private const string Pages = "[dbo].[DeckBrandTemplatePages]";
-    private static string Key(string? projectId) => string.IsNullOrEmpty(projectId) ? "-" : projectId;
+    private static string Key(string? entityId) => string.IsNullOrEmpty(entityId) ? "-" : entityId;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     private async Task EnsureSchemaAsync(CancellationToken ct)
@@ -105,7 +105,7 @@ public class DeckBrandTemplateStore
             command.CommandText = $"""
                 IF OBJECT_ID('dbo.DeckBrandTemplates') IS NULL
                 CREATE TABLE {Table} (
-                  [ProjectKey] NVARCHAR(64) PRIMARY KEY, [Id] NVARCHAR(32) NOT NULL, [FileName] NVARCHAR(260) NOT NULL, [SizeBytes] BIGINT NOT NULL,
+                  [EntityKey] NVARCHAR(64) PRIMARY KEY, [Id] NVARCHAR(32) NOT NULL, [FileName] NVARCHAR(260) NOT NULL, [SizeBytes] BIGINT NOT NULL,
                   [Bytes] VARBINARY(MAX) NOT NULL, [InfoJson] NVARCHAR(MAX) NOT NULL, [UploadedBy] NVARCHAR(200), [UploadedAt] DATETIME2 NOT NULL);
                 IF OBJECT_ID('dbo.DeckBrandTemplatePages') IS NULL
                 CREATE TABLE {Pages} (
@@ -232,18 +232,18 @@ public class DeckBrandTemplateStore
         return list;
     }
 
-    public async Task<TemplateInfo> SaveAsync(string? projectId, string? userId, string fileName, byte[] bytes, CancellationToken ct = default)
+    public async Task<TemplateInfo> SaveAsync(string? entityId, string? userId, string fileName, byte[] bytes, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         var id = Guid.NewGuid().ToString("N")[..16];
         var (info, pages) = await Task.Run(() => Analyze(bytes, fileName, id), ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var old = await connection.QuerySingleOrDefaultAsync<string>($"SELECT Id FROM {Table} WHERE ProjectKey = @k", new { k = Key(projectId) });
+        var old = await connection.QuerySingleOrDefaultAsync<string>($"SELECT Id FROM {Table} WHERE EntityKey = @k", new { k = Key(entityId) });
         await using (var tx = await connection.BeginTransactionAsync(ct))
         {
-            if (old is not null) { await connection.ExecuteAsync($"DELETE FROM {Pages} WHERE TemplateId = @old", new { old }, tx); await connection.ExecuteAsync($"DELETE FROM {Table} WHERE ProjectKey = @k", new { k = Key(projectId) }, tx); }
-            await connection.ExecuteAsync($"INSERT INTO {Table} (ProjectKey, Id, FileName, SizeBytes, Bytes, InfoJson, UploadedBy, UploadedAt) VALUES (@k, @id, @fileName, @size, @bytes, @json, @userId, @at)",
-                new { k = Key(projectId), id, fileName = info.FileName, size = info.SizeBytes, bytes, json = JsonSerializer.Serialize(info, Json), userId, at = info.UploadedAt }, tx);
+            if (old is not null) { await connection.ExecuteAsync($"DELETE FROM {Pages} WHERE TemplateId = @old", new { old }, tx); await connection.ExecuteAsync($"DELETE FROM {Table} WHERE EntityKey = @k", new { k = Key(entityId) }, tx); }
+            await connection.ExecuteAsync($"INSERT INTO {Table} (EntityKey, Id, FileName, SizeBytes, Bytes, InfoJson, UploadedBy, UploadedAt) VALUES (@k, @id, @fileName, @size, @bytes, @json, @userId, @at)",
+                new { k = Key(entityId), id, fileName = info.FileName, size = info.SizeBytes, bytes, json = JsonSerializer.Serialize(info, Json), userId, at = info.UploadedAt }, tx);
             foreach (var p in pages)
             {
                 await connection.ExecuteAsync($"INSERT INTO {Pages} (TemplateId, Kind, Idx, Svg) VALUES (@id, @kind, @idx, @svg)", new { id, kind = p.Kind, idx = p.Index, svg = p.Svg }, tx);
@@ -255,11 +255,11 @@ public class DeckBrandTemplateStore
         return info;
     }
 
-    public async Task<TemplateInfo?> GetInfoAsync(string? projectId, CancellationToken ct = default)
+    public async Task<TemplateInfo?> GetInfoAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var json = await connection.QuerySingleOrDefaultAsync<string>($"SELECT InfoJson FROM {Table} WHERE ProjectKey = @k", new { k = Key(projectId) });
+        var json = await connection.QuerySingleOrDefaultAsync<string>($"SELECT InfoJson FROM {Table} WHERE EntityKey = @k", new { k = Key(entityId) });
         return json is null ? null : JsonSerializer.Deserialize<TemplateInfo>(json, Json);
     }
 
@@ -306,23 +306,23 @@ public class DeckBrandTemplateStore
         return Walk(pkg);
     }
 
-    public async Task<TemplateInfo?> SetDefaultsAsync(string? projectId, TemplateDefaults defaults, CancellationToken ct = default)
+    public async Task<TemplateInfo?> SetDefaultsAsync(string? entityId, TemplateDefaults defaults, CancellationToken ct = default)
     {
-        var info = await GetInfoAsync(projectId, ct); if (info is null) return null;
+        var info = await GetInfoAsync(entityId, ct); if (info is null) return null;
         int? Valid(int? i) => i is { } v && v >= 0 && v < info.Layouts.Count ? v : null;
         info.Defaults = new TemplateDefaults { Title = Valid(defaults.Title), Section = Valid(defaults.Section), Content = Valid(defaults.Content), End = Valid(defaults.End) };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"UPDATE {Table} SET InfoJson = @json WHERE ProjectKey = @k", new { json = JsonSerializer.Serialize(info, Json), k = Key(projectId) });
+        await connection.ExecuteAsync($"UPDATE {Table} SET InfoJson = @json WHERE EntityKey = @k", new { json = JsonSerializer.Serialize(info, Json), k = Key(entityId) });
         return info;
     }
 
-    public async Task DeleteAsync(string? projectId, CancellationToken ct = default)
+    public async Task DeleteAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var id = await connection.QuerySingleOrDefaultAsync<string>($"SELECT Id FROM {Table} WHERE ProjectKey = @k", new { k = Key(projectId) });
+        var id = await connection.QuerySingleOrDefaultAsync<string>($"SELECT Id FROM {Table} WHERE EntityKey = @k", new { k = Key(entityId) });
         if (id is null) return;
-        await connection.ExecuteAsync($"DELETE FROM {Pages} WHERE TemplateId = @id; DELETE FROM {Table} WHERE ProjectKey = @k", new { id, k = Key(projectId) });
+        await connection.ExecuteAsync($"DELETE FROM {Pages} WHERE TemplateId = @id; DELETE FROM {Table} WHERE EntityKey = @k", new { id, k = Key(entityId) });
         lock (_cacheLock) _bytesCache.Remove(id);
     }
 }

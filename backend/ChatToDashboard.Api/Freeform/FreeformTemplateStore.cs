@@ -23,7 +23,7 @@ public class FreeformTemplateStore
 
     private sealed class Row
     {
-        public string Id { get; set; } = ""; public string? ProjectId { get; set; } public string CreatedByUserId { get; set; } = "";
+        public string Id { get; set; } = ""; public string? EntityId { get; set; } public string CreatedByUserId { get; set; } = "";
         public string Kind { get; set; } = "design"; public string Name { get; set; } = ""; public string Description { get; set; } = "";
         public string SectionsJson { get; set; } = "[]"; public string Brief { get; set; } = ""; public string Content { get; set; } = "";
         public string SourceFile { get; set; } = ""; public DateTime CreatedAt { get; set; }
@@ -41,7 +41,7 @@ public class FreeformTemplateStore
             await c.ExecuteAsync($"""
                 IF OBJECT_ID('dbo.FreeformTemplates') IS NULL
                 CREATE TABLE {T} (
-                  [Id] NVARCHAR(32) PRIMARY KEY, [ProjectId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL, [Kind] NVARCHAR(16) NOT NULL,
+                  [Id] NVARCHAR(32) PRIMARY KEY, [EntityId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL, [Kind] NVARCHAR(16) NOT NULL,
                   [Name] NVARCHAR(200) NOT NULL, [Description] NVARCHAR(500) NOT NULL DEFAULT '', [SectionsJson] NVARCHAR(MAX) NOT NULL, [Brief] NVARCHAR(MAX) NOT NULL,
                   [Content] NVARCHAR(MAX) NOT NULL, [SourceFile] NVARCHAR(300) NOT NULL DEFAULT '', [CreatedAt] DATETIME2 NOT NULL);
                 """);
@@ -57,38 +57,38 @@ public class FreeformTemplateStore
         Custom = true, SourceFile = r.SourceFile, CreatedByUserId = r.CreatedByUserId, CreatedAt = r.CreatedAt,
     };
 
-    public async Task<IReadOnlyList<FreeformTemplate>> ListAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<FreeformTemplate>> ListAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureAsync(ct);
         await using var c = await _db.OpenConnectionAsync(ct);
-        return (await c.QueryAsync<Row>($"SELECT * FROM {T} WHERE (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL)) ORDER BY CreatedAt DESC", new { projectId })).Select(Map).ToList();
+        return (await c.QueryAsync<Row>($"SELECT * FROM {T} WHERE (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL)) ORDER BY CreatedAt DESC", new { entityId })).Select(Map).ToList();
     }
 
-    public async Task<FreeformTemplate?> GetAsync(string key, string? projectId, CancellationToken ct = default)
+    public async Task<FreeformTemplate?> GetAsync(string key, string? entityId, CancellationToken ct = default)
     {
         if (key is null || !key.StartsWith(KeyPrefix, StringComparison.Ordinal)) return null;
         await EnsureAsync(ct);
         await using var c = await _db.OpenConnectionAsync(ct);
-        var r = await c.QuerySingleOrDefaultAsync<Row>($"SELECT * FROM {T} WHERE Id = @id AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL))", new { id = key[KeyPrefix.Length..], projectId });
+        var r = await c.QuerySingleOrDefaultAsync<Row>($"SELECT * FROM {T} WHERE Id = @id AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL))", new { id = key[KeyPrefix.Length..], entityId });
         return r is null ? null : Map(r);
     }
 
-    public async Task<FreeformTemplate> CreateAsync(string? projectId, string userId, FreeformTemplate t, CancellationToken ct = default)
+    public async Task<FreeformTemplate> CreateAsync(string? entityId, string userId, FreeformTemplate t, CancellationToken ct = default)
     {
         await EnsureAsync(ct);
-        var r = new Row { Id = Guid.NewGuid().ToString("N")[..16], ProjectId = projectId, CreatedByUserId = userId, Kind = FreeformStore.NormalizeKind(t.Kind), Name = t.Name, Description = t.Description,
+        var r = new Row { Id = Guid.NewGuid().ToString("N")[..16], EntityId = entityId, CreatedByUserId = userId, Kind = FreeformStore.NormalizeKind(t.Kind), Name = t.Name, Description = t.Description,
             SectionsJson = JsonSerializer.Serialize(t.Sections), Brief = t.Brief, Content = t.Content ?? "", SourceFile = t.SourceFile ?? "", CreatedAt = DateTime.UtcNow };
         await using var c = await _db.OpenConnectionAsync(ct);
-        await c.ExecuteAsync($"INSERT INTO {T} (Id, ProjectId, CreatedByUserId, Kind, Name, Description, SectionsJson, Brief, Content, SourceFile, CreatedAt) VALUES (@Id, @ProjectId, @CreatedByUserId, @Kind, @Name, @Description, @SectionsJson, @Brief, @Content, @SourceFile, @CreatedAt)", r);
+        await c.ExecuteAsync($"INSERT INTO {T} (Id, EntityId, CreatedByUserId, Kind, Name, Description, SectionsJson, Brief, Content, SourceFile, CreatedAt) VALUES (@Id, @EntityId, @CreatedByUserId, @Kind, @Name, @Description, @SectionsJson, @Brief, @Content, @SourceFile, @CreatedAt)", r);
         return Map(r);
     }
 
-    public async Task<bool> DeleteAsync(string key, string? projectId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(string key, string? entityId, CancellationToken ct = default)
     {
         if (!key.StartsWith(KeyPrefix, StringComparison.Ordinal)) return false;
         await EnsureAsync(ct);
         await using var c = await _db.OpenConnectionAsync(ct);
-        return await c.ExecuteAsync($"DELETE FROM {T} WHERE Id = @id AND (ProjectId = @projectId OR (@projectId IS NULL AND ProjectId IS NULL))", new { id = key[KeyPrefix.Length..], projectId }) > 0;
+        return await c.ExecuteAsync($"DELETE FROM {T} WHERE Id = @id AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL))", new { id = key[KeyPrefix.Length..], entityId }) > 0;
     }
 
     /// <summary>تحويل ملف مقروء إلى نموذج: قسم لكل صفحة/شريحة بعنوانها (أو «القسم n»)، ومحتوى نصي مرجعي محدود الطول.</summary>

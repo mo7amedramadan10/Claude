@@ -124,7 +124,7 @@ public class FreeformAssetStore
             await _db.CreateContainerIfMissingAsync(c, ct);
             await c.ExecuteAsync($"""
                 IF OBJECT_ID('dbo.FreeformAssets') IS NULL
-                CREATE TABLE {T} ([Id] NVARCHAR(32) PRIMARY KEY, [ProjectId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL,
+                CREATE TABLE {T} ([Id] NVARCHAR(32) PRIMARY KEY, [EntityId] NVARCHAR(64), [CreatedByUserId] NVARCHAR(200) NOT NULL,
                   [Name] NVARCHAR(300) NOT NULL, [ContentType] NVARCHAR(64) NOT NULL, [Bytes] VARBINARY(MAX) NOT NULL, [CreatedAt] DATETIME2 NOT NULL);
                 """);
             _ready = true;
@@ -132,13 +132,13 @@ public class FreeformAssetStore
         finally { _gate.Release(); }
     }
 
-    public async Task<string> AddAsync(string? projectId, string userId, string name, string contentType, byte[] bytes, CancellationToken ct)
+    public async Task<string> AddAsync(string? entityId, string userId, string name, string contentType, byte[] bytes, CancellationToken ct)
     {
         await EnsureAsync(ct);
         var id = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12)).ToLowerInvariant();
         await using var c = await _db.OpenConnectionAsync(ct);
-        await c.ExecuteAsync($"INSERT INTO {T} (Id, ProjectId, CreatedByUserId, Name, ContentType, Bytes, CreatedAt) VALUES (@id, @projectId, @userId, @name, @contentType, @bytes, SYSUTCDATETIME())",
-            new { id, projectId, userId, name = name.Length > 300 ? name[..300] : name, contentType, bytes });
+        await c.ExecuteAsync($"INSERT INTO {T} (Id, EntityId, CreatedByUserId, Name, ContentType, Bytes, CreatedAt) VALUES (@id, @entityId, @userId, @name, @contentType, @bytes, SYSUTCDATETIME())",
+            new { id, entityId, userId, name = name.Length > 300 ? name[..300] : name, contentType, bytes });
         return id;
     }
 

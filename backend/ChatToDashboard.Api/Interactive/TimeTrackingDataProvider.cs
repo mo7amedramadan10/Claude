@@ -58,10 +58,10 @@ public class TimeTrackingDataProvider : IInteractiveDataProvider
         }, Required: false),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "سجلات الوقت (time_entries)", "المشاريع (projects)", "الإجازات (leaves)", "الحضور (presence)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var entriesTable = matched.Tables["time_entries"];
@@ -84,7 +84,7 @@ public class TimeTrackingDataProvider : IInteractiveDataProvider
         {
             id = "te" + i,
             userId = Str(r, "user_id"),
-            projectId = Str(r, "project_id"),
+            entityId = Str(r, "project_id"),
             startedAt = Str(r, "started_at"),
             durationMin = (int)Num(r, "duration_min"),
             billable = Bool(r, "billable"),

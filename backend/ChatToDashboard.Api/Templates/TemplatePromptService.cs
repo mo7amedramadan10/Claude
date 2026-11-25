@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ChatToDashboard.Api.Llm;
 using ChatToDashboard.Api.Organizations;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.SchemaLibrary;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Users;
@@ -28,17 +28,17 @@ public class TemplatePromptService
 
     private readonly TemplateStore _templates;
     private readonly OrganizationStore _organizations;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
     private readonly AnalyticsTools _analytics;
     private readonly SchemaMatchingService _schemaMatching;
 
     public TemplatePromptService(
-        TemplateStore templates, OrganizationStore organizations, ProjectStore projects, AnalyticsTools analytics,
+        TemplateStore templates, OrganizationStore organizations, EntityStore projects, AnalyticsTools analytics,
         SchemaMatchingService schemaMatching)
     {
         _templates = templates;
         _organizations = organizations;
-        _projects = projects;
+        _entities = projects;
         _analytics = analytics;
         _schemaMatching = schemaMatching;
     }
@@ -318,9 +318,9 @@ public class TemplatePromptService
             vars["org_name"] = org?.Name ?? "";
         }
 
-        if (!string.IsNullOrWhiteSpace(ctx.ProjectId))
+        if (!string.IsNullOrWhiteSpace(ctx.EntityId))
         {
-            var project = await _projects.FindByIdAsync(ctx.ProjectId, ct);
+            var project = await _entities.FindByIdAsync(ctx.EntityId, ct);
             vars["project_name"] = project?.Name ?? "";
         }
 

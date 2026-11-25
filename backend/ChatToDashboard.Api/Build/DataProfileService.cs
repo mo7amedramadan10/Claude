@@ -116,7 +116,7 @@ public class DataProfileService
     public async Task<DataProfile> BuildAsync(AnalyticsTools.SourceContext context, CancellationToken ct = default)
     {
         var tables = (await _tools.GetVisibleTablesAsync(context, ct)).Take(MaxTables).ToList();
-        var key = (context.ProjectId ?? "") + "|" + string.Join("|", tables.Select(t => t.Table + ":" + t.Columns.Count));
+        var key = (context.EntityId ?? "") + "|" + string.Join("|", tables.Select(t => t.Table + ":" + t.Columns.Count));
         if (_cache.TryGetValue(key, out var hit) && DateTime.UtcNow - hit.At < CacheTtl) return hit.Profile;
 
         var profiled = new List<ProfiledTable>();
@@ -143,9 +143,9 @@ public class DataProfileService
         : context.TableSystems.TryGetValue(table, out var s) ? s : null;
 
     /// <summary>ملف تعريف جدول واحد بالاسم (لتحليل المعاني بعد الرفع) — null إن لم يوجد. بلا تخزين مؤقت.</summary>
-    public async Task<ProfiledTable?> ProfileOneAsync(string tableName, string? projectId, CancellationToken ct = default)
+    public async Task<ProfiledTable?> ProfileOneAsync(string tableName, string? entityId, CancellationToken ct = default)
     {
-        var schema = (await _tools.GetSchemaAsync(projectId, ct))
+        var schema = (await _tools.GetSchemaAsync(entityId, ct))
             .FirstOrDefault(t => string.Equals(t.Table, tableName, StringComparison.OrdinalIgnoreCase));
         return schema is null ? null : await ProfileTableAsync(schema, null, ct);
     }

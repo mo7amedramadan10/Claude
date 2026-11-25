@@ -64,10 +64,10 @@ public class FinanceOpsDataProvider : IInteractiveDataProvider
         }, Required: false),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "حركات النقد (cash_transactions)", "قيود الإيراد والمصروفات (profit_loss_entries)", "مناطق المخزون (inventory_regions)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var cashRows = await _matcher.QueryAsync(BuildSelect(matched.Tables["cash_transactions"], "transaction_date", "amount_in", "amount_out"), matched.Context, ct);

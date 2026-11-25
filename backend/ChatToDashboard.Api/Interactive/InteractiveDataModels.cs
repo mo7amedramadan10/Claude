@@ -2,7 +2,7 @@ namespace ChatToDashboard.Api.Interactive;
 
 /// <summary>
 /// One template's real-data provider — INTERACTIVE-HANDOFF.md §1.3's dataEndpoint
-/// ("/api/projects/{projectId}/interactive/{templateId}/data") implemented per TEMPLATE,
+/// ("/api/projects/{entityId}/interactive/{templateId}/data") implemented per TEMPLATE,
 /// not per engine: several templates can share the same RenderKind/engine (e.g.
 /// policy-network, procurement-network and client-supplier-network are all "network") while
 /// each needs its own real sources and column mapping. Registered via DI (see Program.cs)
@@ -17,7 +17,7 @@ public interface IInteractiveDataProvider
     /// <summary>Builds the engine's real payload for this project, or an unlinked result
     /// when the project hasn't connected the sources this engine needs yet — never
     /// fabricated numbers, same rule as every other data path in this app.</summary>
-    Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct);
+    Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct);
 }
 
 /// <summary>

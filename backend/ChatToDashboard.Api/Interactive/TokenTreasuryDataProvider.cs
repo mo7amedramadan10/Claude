@@ -70,10 +70,10 @@ public class TokenTreasuryDataProvider : IInteractiveDataProvider
         "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت",
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "الأصول (assets)", "مؤشرات الخزينة (stats)", "سجل الإيراد (revenue_history)", "سجل القيمة المقفلة (tvl_history)", "مشاركة المستخدمين (participation)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var assetsTable = matched.Tables["assets"];

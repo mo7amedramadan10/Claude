@@ -12,7 +12,7 @@ public class RepositoryFile
     /// files, even within the same organization. Never null on a file created after project
     /// scoping existed; a pre-existing file was backfilled to its organization's default
     /// project (see Program.cs's startup backfill).</summary>
-    [JsonPropertyName("projectId")] public string? ProjectId { get; set; }
+    [JsonPropertyName("entityId")] public string? EntityId { get; set; }
 
     /// <summary>The uploader-chosen, human-readable name — what's shown everywhere in the
     /// UI and in chat/dashboard references. Required, distinct from the actual uploaded

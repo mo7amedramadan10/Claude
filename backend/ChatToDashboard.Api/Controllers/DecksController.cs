@@ -1,7 +1,7 @@
 using ChatToDashboard.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.RegularExpressions;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using System.Text;
 using System.Text.Json;
 using ChatToDashboard.Api.Decks;
@@ -39,7 +39,7 @@ public class DecksController : ControllerBase
     private readonly DeckBrandStore _brands;
     private readonly DeckBrandFontStore _fonts;
     private readonly DeckBrandTemplateStore _templates;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
     private readonly DeckBuilder _builder;
     private readonly DeckImporter _importer;
     private readonly DataFingerprintService _fingerprints;
@@ -52,9 +52,9 @@ public class DecksController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     public DecksController(DeckStore decks, DeckBrandStore brands, DeckBuilder builder, PresentationStore presentations, OrganizationStore organizations,
-        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, ProjectStore projects, DeckImporter importer, DeckBrandFontStore fonts, DeckBrandTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live)
+        PermissionsService permissions, AnalyticsTools tools, WidgetFeasibilityService feasibility, IWebHostEnvironment env, EntityStore projects, DeckImporter importer, DeckBrandFontStore fonts, DeckBrandTemplateStore templates, DataFingerprintService fingerprints, PresentationLiveDataService live)
     {
-        _decks = decks; _brands = brands; _projects = projects; _importer = importer; _fingerprints = fingerprints; _live = live; _fonts = fonts; _templates = templates; _builder = builder; _presentations = presentations; _organizations = organizations;
+        _decks = decks; _brands = brands; _entities = projects; _importer = importer; _fingerprints = fingerprints; _live = live; _fonts = fonts; _templates = templates; _builder = builder; _presentations = presentations; _organizations = organizations;
         _permissions = permissions; _tools = tools; _feasibility = feasibility; _env = env;
     }
 
@@ -70,28 +70,28 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> GetBrand(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var b = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct);
-        return Ok(new { brand = b, fonts = DeckBrand.Fonts, uploadedFonts = b?.FontFaces ?? await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct), maxLogoBytes = DeckBrand.MaxLogoBytes, maxFontBytes = DeckBrandFontStore.MaxBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct) });
+        var b = await BrandWithFontsAsync(cur.Value.Selection.EntityId, ct);
+        return Ok(new { brand = b, fonts = DeckBrand.Fonts, uploadedFonts = b?.FontFaces ?? await _fonts.ListAsync(cur.Value.Selection.EntityId, ct), maxLogoBytes = DeckBrand.MaxLogoBytes, maxFontBytes = DeckBrandFontStore.MaxBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct) });
     }
 
     [HttpPut("brand")]
     public async Task<IActionResult> SetBrand([FromBody] DeckBrand brand, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
-        var uploaded = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct);
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        var uploaded = await _fonts.ListAsync(cur.Value.Selection.EntityId, ct);
         if (brand.Validate(uploaded.Select(f => f.Family)) is { } err) return BadRequest(new { error = err });
-        if (brand.IsEmpty) await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct);
-        else await _brands.SetAsync(cur.Value.Selection.ProjectId, cur.Value.User.OrganizationId, cur.Value.User.Id, brand, ct);
-        return Ok(new { brand = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct) });
+        if (brand.IsEmpty) await _brands.DeleteAsync(cur.Value.Selection.EntityId, ct);
+        else await _brands.SetAsync(cur.Value.Selection.EntityId, cur.Value.User.OrganizationId, cur.Value.User.Id, brand, ct);
+        return Ok(new { brand = await BrandWithFontsAsync(cur.Value.Selection.EntityId, ct) });
     }
 
     [HttpDelete("brand")]
     public async Task<IActionResult> DeleteBrand(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
-        await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct);
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        await _brands.DeleteAsync(cur.Value.Selection.EntityId, ct);
         return NoContent();
     }
 
@@ -102,21 +102,21 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> ListIdentities([FromServices] BrandIdentityStore identities, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var pid = cur.Value.Selection.ProjectId;
+        var pid = cur.Value.Selection.EntityId;
         var fonts = await _fonts.ListAsync(pid, ct);
         var def = await _brands.GetAsync(pid, ct) ?? new DeckBrand();
         var items = new List<object> { new { id = "", name = string.IsNullOrWhiteSpace(def.Name) ? "الهوية الافتراضية" : def.Name, isDefault = true, brand = def } };
         items.AddRange((await identities.ListAsync(pid, ct)).Select(i => (object)new { id = i.Id, name = i.Name, isDefault = false, brand = i.Brand, updatedAt = i.UpdatedAt }));
-        return Ok(new { items, fonts = DeckBrand.Fonts, uploadedFonts = fonts, maxLogoBytes = DeckBrand.MaxLogoBytes, max = BrandIdentityStore.MaxPerProject, canEdit = await CanEditBrandAsync(cur.Value.User, pid, ct) });
+        return Ok(new { items, fonts = DeckBrand.Fonts, uploadedFonts = fonts, maxLogoBytes = DeckBrand.MaxLogoBytes, max = BrandIdentityStore.MaxPerEntity, canEdit = await CanEditBrandAsync(cur.Value.User, pid, ct) });
     }
 
-    private async Task<(DeckBrand? Brand, string? Name, IActionResult? Error)> ValidIdentityAsync(BrandIdentityRequest request, string? projectId, CancellationToken ct)
+    private async Task<(DeckBrand? Brand, string? Name, IActionResult? Error)> ValidIdentityAsync(BrandIdentityRequest request, string? entityId, CancellationToken ct)
     {
         var name = request.Name?.Trim();
         if (string.IsNullOrEmpty(name)) return (null, null, BadRequest(new { error = "اكتب اسمًا للهوية." }));
         if (name.Length > 120) name = name[..120];
         var brand = request.Brand ?? new DeckBrand();
-        var uploaded = await _fonts.ListAsync(projectId, ct);
+        var uploaded = await _fonts.ListAsync(entityId, ct);
         if (brand.Validate(uploaded.Select(f => f.Family)) is { } err) return (null, null, BadRequest(new { error = err }));
         if (brand.Primary is null && brand.Secondary is null && brand.Accent is null && brand.Font is null && brand.Logo is null) return (null, null, BadRequest(new { error = "حدّد لونًا أو خطًا أو شعارًا واحدًا على الأقل للهوية." }));
         return (brand, name, null);
@@ -126,9 +126,9 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> AddIdentity([FromServices] BrandIdentityStore identities, [FromBody] BrandIdentityRequest request, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var pid = cur.Value.Selection.ProjectId;
+        var pid = cur.Value.Selection.EntityId;
         if (!await CanEditBrandAsync(cur.Value.User, pid, ct)) return StatusCode(403, new { error = "إضافة الهويات للمسؤول أو مالك/محرّر المشروع فقط." });
-        if (await identities.CountAsync(pid, ct) >= BrandIdentityStore.MaxPerProject) return BadRequest(new { error = $"الحد {BrandIdentityStore.MaxPerProject} هوية للمشروع — احذف هوية لا تحتاجها." });
+        if (await identities.CountAsync(pid, ct) >= BrandIdentityStore.MaxPerEntity) return BadRequest(new { error = $"الحد {BrandIdentityStore.MaxPerEntity} هوية للمشروع — احذف هوية لا تحتاجها." });
         var (brand, name, err) = await ValidIdentityAsync(request, pid, ct); if (err is not null) return err;
         var it = await identities.AddAsync(pid, cur.Value.User.OrganizationId, cur.Value.User.Id, name!, brand!, ct);
         return Ok(new { id = it.Id, name = it.Name, isDefault = false, brand = it.Brand, updatedAt = it.UpdatedAt });
@@ -138,7 +138,7 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> UpdateIdentity(string id, [FromServices] BrandIdentityStore identities, [FromBody] BrandIdentityRequest request, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var pid = cur.Value.Selection.ProjectId;
+        var pid = cur.Value.Selection.EntityId;
         if (!await CanEditBrandAsync(cur.Value.User, pid, ct)) return StatusCode(403, new { error = "تعديل الهويات للمسؤول أو مالك/محرّر المشروع فقط." });
         var (brand, name, err) = await ValidIdentityAsync(request, pid, ct); if (err is not null) return err;
         if (!await identities.UpdateAsync(pid, id, name!, brand!, ct)) return NotFound(new { error = "الهوية غير موجودة." });
@@ -149,16 +149,16 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> DeleteIdentity(string id, [FromServices] BrandIdentityStore identities, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var pid = cur.Value.Selection.ProjectId;
+        var pid = cur.Value.Selection.EntityId;
         if (!await CanEditBrandAsync(cur.Value.User, pid, ct)) return StatusCode(403, new { error = "حذف الهويات للمسؤول أو مالك/محرّر المشروع فقط." });
         return await identities.DeleteAsync(pid, id, ct) ? NoContent() : NotFound(new { error = "الهوية غير موجودة." });
     }
 
     /// <summary>الهوية مع خطوطها المرفوعة (@font-face) — null بلا هوية؛ إن وُجدت خطوط بلا هوية تُعاد هوية فارغة تحملها.</summary>
-    private async Task<DeckBrand?> BrandWithFontsAsync(string? projectId, CancellationToken ct)
+    private async Task<DeckBrand?> BrandWithFontsAsync(string? entityId, CancellationToken ct)
     {
-        var b = await _brands.GetAsync(projectId, ct);
-        var fonts = await _fonts.ListAsync(projectId, ct);
+        var b = await _brands.GetAsync(entityId, ct);
+        var fonts = await _fonts.ListAsync(entityId, ct);
         if (b is null && fonts.Count == 0) return null;
         b ??= new DeckBrand();
         b.FontFaces = fonts;
@@ -172,40 +172,40 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> UploadFonts([FromForm] List<IFormFile> files, [FromForm] string? family, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
         if (files is null || files.Count == 0) return BadRequest(new { error = "اختر ملف خط واحدًا على الأقل (.ttf أو .otf أو .woff أو .woff2)." });
-        var existing = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct);
+        var existing = await _fonts.ListAsync(cur.Value.Selection.EntityId, ct);
         var added = new List<DeckBrandFont>(); var errors = new List<string>();
         foreach (var file in files)
         {
             var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
             if (!DeckBrandFont.Formats.ContainsKey(ext)) { errors.Add($"{file.FileName}: الصيغة غير مدعومة."); continue; }
             if (file.Length == 0 || file.Length > DeckBrandFontStore.MaxBytes) { errors.Add($"{file.FileName}: الحجم يتجاوز {DeckBrandFontStore.MaxBytes / 1024 / 1024} ميغابايت."); continue; }
-            if (existing.Count + added.Count >= DeckBrandFontStore.MaxPerProject) { errors.Add($"{file.FileName}: الحد {DeckBrandFontStore.MaxPerProject} ملفًا للمشروع."); continue; }
+            if (existing.Count + added.Count >= DeckBrandFontStore.MaxPerEntity) { errors.Add($"{file.FileName}: الحد {DeckBrandFontStore.MaxPerEntity} ملفًا للمشروع."); continue; }
             byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
             var names = DeckBrandFontStore.ReadSfntNames(bytes);
             if (ext is ".ttf" or ".otf" && names is null) { errors.Add($"{file.FileName}: ليس ملف خط صالحًا."); continue; }
             var fam = !string.IsNullOrWhiteSpace(family) ? family.Trim() : names?.Family ?? Regex.Replace(Path.GetFileNameWithoutExtension(file.FileName), @"[-_](regular|bold|light|medium|italic|semibold|black|thin)+$", "", RegexOptions.IgnoreCase).Replace('-', ' ').Replace('_', ' ');
             if (fam.Length > 120) fam = fam[..120];
             var (weight, style) = DeckBrandFontStore.WeightStyleOf(names?.Subfamily ?? Path.GetFileNameWithoutExtension(file.FileName));
-            added.Add(await _fonts.AddAsync(cur.Value.Selection.ProjectId, cur.Value.User.Id, file.FileName, bytes, fam, weight, style, ct));
+            added.Add(await _fonts.AddAsync(cur.Value.Selection.EntityId, cur.Value.User.Id, file.FileName, bytes, fam, weight, style, ct));
         }
         if (added.Count == 0) return BadRequest(new { error = string.Join(" ", errors) });
-        return Ok(new { added, errors, fonts = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct), brand = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct) });
+        return Ok(new { added, errors, fonts = await _fonts.ListAsync(cur.Value.Selection.EntityId, ct), brand = await BrandWithFontsAsync(cur.Value.Selection.EntityId, ct) });
     }
 
     [HttpDelete("brand/fonts/{id}")]
     public async Task<IActionResult> DeleteFont(string id, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
-        if (!await _fonts.DeleteAsync(cur.Value.Selection.ProjectId, id, ct)) return NotFound(new { error = "ملف الخط غير موجود." });
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct)) return StatusCode(403, new { error = "تعديل هوية المشروع للمسؤول أو مالك المشروع فقط." });
+        if (!await _fonts.DeleteAsync(cur.Value.Selection.EntityId, id, ct)) return NotFound(new { error = "ملف الخط غير موجود." });
         // لو كانت الهوية تختار عائلة لم يعد لها ملفات تُعاد إلى الافتراضي
-        var b = await _brands.GetAsync(cur.Value.Selection.ProjectId, ct);
-        var remaining = await _fonts.ListAsync(cur.Value.Selection.ProjectId, ct);
+        var b = await _brands.GetAsync(cur.Value.Selection.EntityId, ct);
+        var remaining = await _fonts.ListAsync(cur.Value.Selection.EntityId, ct);
         if (b?.Font is { } f && !DeckBrand.Fonts.Contains(f) && !remaining.Any(x => string.Equals(x.Family, f, StringComparison.OrdinalIgnoreCase)))
-        { b.Font = null; b.Validate(); if (b.IsEmpty) await _brands.DeleteAsync(cur.Value.Selection.ProjectId, ct); else await _brands.SetAsync(cur.Value.Selection.ProjectId, cur.Value.User.OrganizationId, cur.Value.User.Id, b, ct); }
-        return Ok(new { fonts = remaining, brand = await BrandWithFontsAsync(cur.Value.Selection.ProjectId, ct) });
+        { b.Font = null; b.Validate(); if (b.IsEmpty) await _brands.DeleteAsync(cur.Value.Selection.EntityId, ct); else await _brands.SetAsync(cur.Value.Selection.EntityId, cur.Value.User.OrganizationId, cur.Value.User.Id, b, ct); }
+        return Ok(new { fonts = remaining, brand = await BrandWithFontsAsync(cur.Value.Selection.EntityId, ct) });
     }
 
     /// <summary>ملف الخط للمتصفح والصفحة المنشورة (داخل iframe بأصل معتم بلا كوكي) — بلا دخول؛ المعرّف عشوائي والخط ليس سرًّا.</summary>
@@ -226,9 +226,9 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> GetTemplate([FromQuery] bool all, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var info = await _templates.GetInfoAsync(cur.Value.Selection.ProjectId, ct);
+        var info = await _templates.GetInfoAsync(cur.Value.Selection.EntityId, ct);
         if (info is not null && !all) info.Layouts = info.Layouts.Where(l => !l.Generic).ToList();
-        return Ok(new { template = info, maxBytes = DeckBrandTemplateStore.MaxBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct) });
+        return Ok(new { template = info, maxBytes = DeckBrandTemplateStore.MaxBytes, canEdit = await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct) });
     }
 
     [HttpPost("brand/template")]
@@ -237,14 +237,14 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> UploadTemplate([FromForm] IFormFile? file, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "رفع قالب الشركة للمسؤول أو مالك المشروع فقط." });
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct)) return StatusCode(403, new { error = "رفع قالب الشركة للمسؤول أو مالك المشروع فقط." });
         if (file is null || file.Length == 0) return BadRequest(new { error = "اختر ملف قالب PowerPoint (.pptx أو .potx)." });
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (ext is not (".pptx" or ".potx")) return BadRequest(new { error = "الصيغة غير مدعومة — المدعوم .pptx و.potx." });
         if (file.Length > DeckBrandTemplateStore.MaxBytes) return BadRequest(new { error = $"حجم القالب يتجاوز {DeckBrandTemplateStore.MaxBytes / 1024 / 1024} ميغابايت." });
         byte[] bytes; using (var ms = new MemoryStream()) { await file.CopyToAsync(ms, ct); bytes = ms.ToArray(); }
         TemplateInfo info;
-        try { info = await _templates.SaveAsync(cur.Value.Selection.ProjectId, cur.Value.User.Id, file.FileName, bytes, ct); }
+        try { info = await _templates.SaveAsync(cur.Value.Selection.EntityId, cur.Value.User.Id, file.FileName, bytes, ct); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex) { return BadRequest(new { error = "تعذّرت قراءة القالب: " + ex.Message }); }
         info.Layouts = info.Layouts.Where(l => !l.Generic).ToList();
@@ -255,8 +255,8 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> SetTemplateDefaults([FromBody] TemplateDefaults defaults, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "تعديل قالب الشركة للمسؤول أو مالك المشروع فقط." });
-        var info = await _templates.SetDefaultsAsync(cur.Value.Selection.ProjectId, defaults, ct);
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct)) return StatusCode(403, new { error = "تعديل قالب الشركة للمسؤول أو مالك المشروع فقط." });
+        var info = await _templates.SetDefaultsAsync(cur.Value.Selection.EntityId, defaults, ct);
         if (info is null) return NotFound(new { error = "لا قالب مرفوعًا." });
         info.Layouts = info.Layouts.Where(l => !l.Generic).ToList();
         return Ok(new { template = info });
@@ -266,8 +266,8 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> DeleteTemplate(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.ProjectId, ct)) return StatusCode(403, new { error = "حذف قالب الشركة للمسؤول أو مالك المشروع فقط." });
-        await _templates.DeleteAsync(cur.Value.Selection.ProjectId, ct);
+        if (!await CanEditBrandAsync(cur.Value.User, cur.Value.Selection.EntityId, ct)) return StatusCode(403, new { error = "حذف قالب الشركة للمسؤول أو مالك المشروع فقط." });
+        await _templates.DeleteAsync(cur.Value.Selection.EntityId, ct);
         return NoContent();
     }
 
@@ -295,11 +295,11 @@ public class DecksController : ControllerBase
     }
 
     /// <summary>المسؤول أو من له دور مالك/محرّر في المشروع الحالي (المشاهد لا يغيّر الهوية). الحساب بلا دور صريح يُعامل كمشاهد.</summary>
-    private async Task<bool> CanEditBrandAsync(AppUser user, string? projectId, CancellationToken ct)
+    private async Task<bool> CanEditBrandAsync(AppUser user, string? entityId, CancellationToken ct)
     {
         if (user.Role == UserRoles.Admin || user.IsPlatformOwner) return true;
-        if (projectId is null) return false;
-        var role = (await _projects.ListRolesAsync(projectId, ct)).FirstOrDefault(r => string.Equals(r.UserId, user.Id, StringComparison.Ordinal))?.Role;
+        if (entityId is null) return false;
+        var role = (await _entities.ListRolesAsync(entityId, ct)).FirstOrDefault(r => string.Equals(r.UserId, user.Id, StringComparison.Ordinal))?.Role;
         return role is "owner" or "editor";
     }
 
@@ -308,7 +308,7 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> Templates(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var available = (await _feasibility.AvailableConceptsAsync(cur.Value.Selection.ProjectId, ct)).Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var available = (await _feasibility.AvailableConceptsAsync(cur.Value.Selection.EntityId, ct)).Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var analyzed = available.Count > 0;
         return Ok(DeckTemplates.All.Select(t =>
         {
@@ -336,20 +336,20 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        return Ok(await _decks.ListAsync(cur.Value.Selection.ProjectId, ct));
+        return Ok(await _decks.ListAsync(cur.Value.Selection.EntityId, ct));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _decks.GetAsync(id, cur.Value.Selection.ProjectId, ct);
+        var d = await _decks.GetAsync(id, cur.Value.Selection.EntityId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         var spec0 = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json);
         bool? dataChanged = null;
         if (d.DataFingerprint is not null && spec0 is not null)
         {
-            var fp = await _fingerprints.ComputeAsync(spec0.Slides.Select(x => x.Query?.Sql).Where(x => !string.IsNullOrWhiteSpace(x))!, cur.Value.Selection.ProjectId, ct);
+            var fp = await _fingerprints.ComputeAsync(spec0.Slides.Select(x => x.Query?.Sql).Where(x => !string.IsNullOrWhiteSpace(x))!, cur.Value.Selection.EntityId, ct);
             dataChanged = fp is not null && fp != d.DataFingerprint;
         }
         return Ok(new { deck = d, spec = spec0, publishedUrl = await PublishedUrlAsync(d, ct), dataChanged });
@@ -362,7 +362,7 @@ public class DecksController : ControllerBase
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var template = DeckTemplates.Find(request.TemplateKey) ?? DeckTemplates.Find("blank")!;
         var spec = DeckTemplates.ToSpec(template, request.Title);
-        var d = await _decks.CreateAsync(cur.Value.Selection.ProjectId, cur.Value.User.OrganizationId, cur.Value.User.Id, spec, template.Key, ct);
+        var d = await _decks.CreateAsync(cur.Value.Selection.EntityId, cur.Value.User.OrganizationId, cur.Value.User.Id, spec, template.Key, ct);
         return Ok(new { deck = d, spec });
     }
 
@@ -370,7 +370,7 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> Update(string id, [FromBody] UpdateDeckRequest request, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _decks.GetAsync(id, cur.Value.Selection.ProjectId, ct);
+        var d = await _decks.GetAsync(id, cur.Value.Selection.EntityId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         if (request.Spec is null) return BadRequest(new { error = "المواصفة مطلوبة." });
         var spec = request.Spec.Normalize();
@@ -383,7 +383,7 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> SetAutoRefresh(string id, [FromBody] DeckAutoRefreshRequest request, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _decks.GetAsync(id, cur.Value.Selection.ProjectId, ct); if (d is null) return NotFound(new { error = "العرض غير موجود." });
+        var d = await _decks.GetAsync(id, cur.Value.Selection.EntityId, ct); if (d is null) return NotFound(new { error = "العرض غير موجود." });
         await _decks.SetAutoRefreshAsync(id, request.On, ct); return Ok(new { autoRefresh = request.On });
     }
 
@@ -393,7 +393,7 @@ public class DecksController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
-        var d = await _decks.GetAsync(id, selection.ProjectId, ct); if (d is null) return NotFound(new { error = "العرض غير موجود." });
+        var d = await _decks.GetAsync(id, selection.EntityId, ct); if (d is null) return NotFound(new { error = "العرض غير موجود." });
         var spec = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json)!.Normalize(); var withSql = spec.Slides.Where(s => !string.IsNullOrWhiteSpace(s.Query?.Sql)).ToList();
         if (withSql.Count == 0) return BadRequest(new { error = "لا شرائح بيانات باستعلام محفوظ في هذا العرض.", noQueries = true });
         var context = await _tools.DescribeSourcesAsync(selection, ct);
@@ -407,7 +407,7 @@ public class DecksController : ControllerBase
             slide.MissingReason = null; updated++;
         }
         var refreshedAt = DateTime.UtcNow;
-        if (updated > 0) { await _decks.UpdateSpecAsync(id, spec.Normalize(), ct); await _decks.SetDataStateAsync(id, await _fingerprints.ComputeAsync(withSql.Select(x => x.Query!.Sql!), selection.ProjectId, ct), refreshedAt, ct); if (d.PresentationId is not null) _live.Invalidate(d.PresentationId); }
+        if (updated > 0) { await _decks.UpdateSpecAsync(id, spec.Normalize(), ct); await _decks.SetDataStateAsync(id, await _fingerprints.ComputeAsync(withSql.Select(x => x.Query!.Sql!), selection.EntityId, ct), refreshedAt, ct); if (d.PresentationId is not null) _live.Invalidate(d.PresentationId); }
         return Ok(new { spec, updated, total = withSql.Count, failed, refreshedAt });
     }
 
@@ -415,7 +415,7 @@ public class DecksController : ControllerBase
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
-        var d = await _decks.GetAsync(id, cur.Value.Selection.ProjectId, ct);
+        var d = await _decks.GetAsync(id, cur.Value.Selection.EntityId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         await _decks.DeleteAsync(id, ct);
         return NoContent();
@@ -431,7 +431,7 @@ public class DecksController : ControllerBase
         DeckRecord? deck = null; DeckSpec? current = null;
         if (!string.IsNullOrWhiteSpace(request.DeckId))
         {
-            deck = await _decks.GetAsync(request.DeckId, selection.ProjectId, ct);
+            deck = await _decks.GetAsync(request.DeckId, selection.EntityId, ct);
             if (deck is null) return NotFound(new { error = "العرض غير موجود." });
             current = request.Spec?.Normalize() ?? JsonSerializer.Deserialize<DeckSpec>(deck.SpecJson, DeckSpec.Json);
         }
@@ -440,10 +440,10 @@ public class DecksController : ControllerBase
         DeckBuildResult result;
         try { result = await _builder.BuildAsync(new DeckBuildRequest(request.Message.Trim(), current, deck is null ? template : null, context, user), ct); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
-        if (deck is null) deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, result.Spec, template?.Key, ct);
+        if (deck is null) deck = await _decks.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, result.Spec, template?.Key, ct);
         else await _decks.UpdateSpecAsync(deck.Id, result.Spec, ct);
         var sqls = result.Spec.Slides.Select(x => x.Query?.Sql).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
-        if (sqls.Count > 0) { var at = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(sqls, selection.ProjectId, ct); await _decks.SetDataStateAsync(deck.Id, fp, at, ct); deck.DataFingerprint = fp; deck.DataRefreshedAt = at; }
+        if (sqls.Count > 0) { var at = DateTime.UtcNow; var fp = await _fingerprints.ComputeAsync(sqls, selection.EntityId, ct); await _decks.SetDataStateAsync(deck.Id, fp, at, ct); deck.DataFingerprint = fp; deck.DataRefreshedAt = at; }
         return Ok(new { deck, spec = result.Spec, reply = result.Reply, dataSlidesBuilt = result.DataSlidesBuilt, dataSlidesTotal = result.DataSlidesTotal });
     }
 
@@ -483,7 +483,7 @@ public class DecksController : ControllerBase
         var (user, selection) = cur.Value;
         var (spec, doc, warnings, m, error) = await ImportSpecAsync(file, refine, mode, title, user, selection, ct);
         if (error is not null) return error;
-        var deck = await _decks.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, spec!, null, ct);
+        var deck = await _decks.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, spec!, null, ct);
         return Ok(new { deck, spec, kind = doc!.Kind, pagesRead = doc.Pages.Count, dataBlocks = doc.DataBlocks.Count, mode = m, warnings });
     }
 
@@ -497,7 +497,7 @@ public class DecksController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
-        var d = await _decks.GetAsync(id, selection.ProjectId, ct);
+        var d = await _decks.GetAsync(id, selection.EntityId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         apply = (apply ?? "replace").Trim().ToLowerInvariant();
         if (apply is not ("replace" or "append")) return BadRequest(new { error = "طريقة التطبيق غير معروفة (replace أو append)." });
@@ -511,7 +511,7 @@ public class DecksController : ControllerBase
         spec.Normalize();
         await _decks.UpdateSpecAsync(id, spec, ct);
         await _decks.SetDataStateAsync(id, null, DateTime.UtcNow, ct);
-        var deck = await _decks.GetAsync(id, selection.ProjectId, ct);
+        var deck = await _decks.GetAsync(id, selection.EntityId, ct);
         return Ok(new { deck, spec, kind = doc!.Kind, pagesRead = doc.Pages.Count, mode = m, apply, slidesBefore = before, slidesAdded = imported.Slides.Count, warnings, published = d.PresentationId is not null });
     }
 
@@ -521,11 +521,11 @@ public class DecksController : ControllerBase
     {
         var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
         var (user, selection) = cur.Value;
-        var d = await _decks.GetAsync(id, selection.ProjectId, ct);
+        var d = await _decks.GetAsync(id, selection.EntityId, ct);
         if (d is null) return NotFound(new { error = "العرض غير موجود." });
         var spec = JsonSerializer.Deserialize<DeckSpec>(d.SpecJson, DeckSpec.Json)!.Normalize();
-        spec.Brand = await BrandWithFontsAsync(selection.ProjectId, ct);
-        if (spec.TemplateMode != "off" && await _templates.GetInfoAsync(selection.ProjectId, ct) is { } tinfo) { tinfo.Layouts = tinfo.Layouts.Where(l => !l.Generic).ToList(); spec.Template = tinfo; }
+        spec.Brand = await BrandWithFontsAsync(selection.EntityId, ct);
+        if (spec.TemplateMode != "off" && await _templates.GetInfoAsync(selection.EntityId, ct) is { } tinfo) { tinfo.Layouts = tinfo.Layouts.Where(l => !l.Generic).ToList(); spec.Template = tinfo; }
         var runtimePath = Path.Combine(_env.WebRootPath, "js", "jeem-deck.js");
         if (!System.IO.File.Exists(runtimePath)) return StatusCode(500, new { error = "محرك العرض غير موجود على الخادم (js/jeem-deck.js)." });
         var runtime = await System.IO.File.ReadAllTextAsync(runtimePath, ct);

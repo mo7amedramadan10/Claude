@@ -44,7 +44,7 @@ public class PresentationStore
         }
         // ترحيل: لا عمود هنا مضمون الوجود بافتراض — جداول هذه القاعدة المشتركة ظهرت عمليًا
         // بأشكال مختلفة تمامًا عن هذا الكود حتى في أعمدة من صلب التعريف الأول (انظر
-        // Organizations/ProjectStore)، فكل عمود يُضاف دفاعيًا — بلا PRIMARY KEY/UNIQUE/
+        // Organizations/EntityStore)، فكل عمود يُضاف دفاعيًا — بلا PRIMARY KEY/UNIQUE/
         // NOT NULL حتى لو كان معرَّفًا هكذا في CREATE (قيمة افتراضية لكل عمود NOT NULL تكفي
         // للإضافة بأمان على صفوف موجودة مسبقًا).
         await AddColumnIfMissingAsync(connection, "Id", sqlServer: "NVARCHAR(32)", ct);

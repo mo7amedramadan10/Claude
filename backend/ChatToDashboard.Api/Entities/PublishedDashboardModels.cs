@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ChatToDashboard.Api.Projects;
+namespace ChatToDashboard.Api.Entities;
 
 /// <summary>
 /// صف واحد من جدول <c>PublishedDashboards</c> (§4.23): لوحة متابعة منشورة على شاشة
@@ -12,7 +12,7 @@ namespace ChatToDashboard.Api.Projects;
 public class PublishedDashboard
 {
     public string Id { get; set; } = "";
-    public string ProjectId { get; set; } = "";
+    public string EntityId { get; set; } = "";
 
     /// <summary>معرّف اللوحة في سجل اللوحات (<c>DashboardHistory.Id</c>).</summary>
     public string DashboardId { get; set; } = "";
@@ -87,21 +87,21 @@ public static class PublishedDashboardRules
     /// هل يرى صاحب هذا الدور في المشروع لوحة منشورة لهذا الجمهور؟ مسؤول المنظمة يرى كل
     /// شيء دائمًا. الدور الفارغ (حساب بلا دور صريح في المشروع) يُعامل كمشاهد — أقل صلاحية.
     /// </summary>
-    public static bool CanView(string audience, string? projectRole, bool isAdmin)
+    public static bool CanView(string audience, string? entityRole, bool isAdmin)
     {
         if (isAdmin) return true;
-        var role = string.IsNullOrEmpty(projectRole) ? ProjectRoles.Viewer : projectRole;
+        var role = string.IsNullOrEmpty(entityRole) ? EntityRoles.Viewer : entityRole;
         return audience switch
         {
-            PublishedAudiences.Owners => role == ProjectRoles.Owner,
-            PublishedAudiences.Editors => role is ProjectRoles.Owner or ProjectRoles.Editor,
+            PublishedAudiences.Owners => role == EntityRoles.Owner,
+            PublishedAudiences.Editors => role is EntityRoles.Owner or EntityRoles.Editor,
             _ => true,
         };
     }
 
     /// <summary>النشر وإعادة الترتيب وإلغاء النشر للمالك والمحرر (ومسؤول المنظمة) فقط.</summary>
-    public static bool CanManage(string? projectRole, bool isAdmin) =>
-        isAdmin || projectRole is ProjectRoles.Owner or ProjectRoles.Editor;
+    public static bool CanManage(string? entityRole, bool isAdmin) =>
+        isAdmin || entityRole is EntityRoles.Owner or EntityRoles.Editor;
 
     /// <summary>
     /// أسماء صفحات اللوحة من عناصرها، بنفس منطق <c>getDashboardPages</c> في app.js: قيم

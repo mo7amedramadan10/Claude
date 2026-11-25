@@ -90,9 +90,9 @@ public class FreeformRecordTableService
             if (existing is null)
             {
                 var saved = await _repo.SaveAsync(parsed, DisplayNameOf(d.Title, collection),
-                    $"بيانات أُدخلت عبر صفحة التصميم «{d.Title}» (مجموعة «{collection}»)، وتتحدّث تلقائيًا بعد كل إدخال.", Category, d.CreatedByUserId, d.ProjectId, ct);
+                    $"بيانات أُدخلت عبر صفحة التصميم «{d.Title}» (مجموعة «{collection}»)، وتتحدّث تلقائيًا بعد كل إدخال.", Category, d.CreatedByUserId, d.EntityId, ct);
                 await _repo.SetSourceAsync(saved.Id, url, DateTime.UtcNow, null, null, null, ct);
-                _semantics.AnalyzeInBackground(saved.ProjectId, saved.TableName);
+                _semantics.AnalyzeInBackground(saved.EntityId, saved.TableName);
                 _logger.LogInformation("أُنشئ جدول سجلات التصميم {Design}/{Collection}: {Table}", designId, collection, saved.TableName);
                 return await _repo.FindAsync(saved.Id, ct) ?? saved;
             }
@@ -102,7 +102,7 @@ public class FreeformRecordTableService
             var after = await _repo.GetColumnsAsync(existing.Id, ct);
             // المعاني تُعاد فقط حين تتغيّر الأعمدة (لا نداء موديل مع كل إدخال).
             if (!before.OrderBy(x => x).SequenceEqual(after.OrderBy(x => x), StringComparer.OrdinalIgnoreCase))
-                _semantics.AnalyzeInBackground(updated?.ProjectId, updated?.TableName);
+                _semantics.AnalyzeInBackground(updated?.EntityId, updated?.TableName);
             return await _repo.FindAsync(existing.Id, ct) ?? updated;
         }
         finally { gate.Release(); }

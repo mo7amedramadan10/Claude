@@ -152,11 +152,11 @@ public class AnalyticsTools
         // actually been discovered — an integration with no schema yet offers nothing to build
         // on, so it's simply left out rather than offered as an empty, unusable source.
         IReadOnlyList<EnabledIntegration> EnabledIntegrations,
-        // Carried through from SourceSelection.ProjectId so ExecuteToolAsync's list_files/
+        // Carried through from SourceSelection.EntityId so ExecuteToolAsync's list_files/
         // search_documents handlers (which only receive this context, not the original
         // selection) can scope their own direct RepositoryStore calls the same way
         // DescribeSourcesAsync already scoped the file/integration lists above.
-        string? ProjectId);
+        string? EntityId);
 
     /// <summary>One toggled-on, schema-discovered integration — everything query_client_data's
     /// tool description needs to let the model write correct SQL against it.</summary>
@@ -186,7 +186,7 @@ public class AnalyticsTools
             if (!system.IsConnected) unconnected.Add(system.Name);
         }
 
-        var files = await _repository.ListAsync(selection.ProjectId, ct);
+        var files = await _repository.ListAsync(selection.EntityId, ct);
         var enabledFiles = new List<string>();
         var disabledFiles = new List<string>();
         var enabledFileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -235,7 +235,7 @@ public class AnalyticsTools
 
         var hasDocuments = files.Any(f => f.Kind == "pdf" && selection.AllowsFile(f.Id));
 
-        var allIntegrations = await _integrations.ListAsync(selection.ProjectId, ct);
+        var allIntegrations = await _integrations.ListAsync(selection.EntityId, ct);
         var enabledIntegrations = allIntegrations
             .Where(i => selection.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
             .Select(i => new EnabledIntegration(i.Id, i.Name, i.ClientDbProvider!, i.ClientSchemaDescription!))
@@ -245,17 +245,17 @@ public class AnalyticsTools
             enabledSystems, disabledSystems, unconnected,
             enabledFiles, disabledFiles, enabledFileIds, tableFiles, tableFileLastUpdated,
             systemTables, disabledSystemTables, disabledFileTables, restrictedFileTables, hasDocuments,
-            enabledIntegrations, selection.ProjectId);
+            enabledIntegrations, selection.EntityId);
     }
 
     /// <summary>Forwards to <see cref="DataStore.GetSchemaAsync"/> — the shared
-    /// schema's tables, unioned with <paramref name="projectId"/>'s own uploaded-file schema
-    /// when given (see <see cref="IsTableKnownToProject"/> for the app-level filter every caller
+    /// schema's tables, unioned with <paramref name="entityId"/>'s own uploaded-file schema
+    /// when given (see <see cref="IsTableKnownToEntity"/> for the app-level filter every caller
     /// still applies on top) — for callers outside this class that need it alongside a
     /// <see cref="SourceContext"/> to call <see cref="CheckSourcePermission"/>
     /// (DashboardAccessService, InquiryAccessService).</summary>
-    public Task<IReadOnlyList<Data.TableSchema>> GetSchemaAsync(string? projectId = null, CancellationToken ct = default) =>
-        _db.GetSchemaAsync(projectId, ct);
+    public Task<IReadOnlyList<Data.TableSchema>> GetSchemaAsync(string? entityId = null, CancellationToken ct = default) =>
+        _db.GetSchemaAsync(entityId, ct);
 
     public IReadOnlyList<ToolSpec> BuildTools(SourceContext context)
     {
@@ -282,7 +282,7 @@ public class AnalyticsTools
                 $"{MaxRowsReturned} rows, so always use {rowCap} (or less). A wide SELECT * can still be cut " +
                 $"further and truncated even under that row cap if the table has many/long columns — select " +
                 $"only the columns you actually need, and prefer SUM/COUNT/AVG/GROUP BY over pulling raw rows " +
-                $"whenever you just need a number. Reference tables as {_db.TableNamingHint(context.ProjectId)}.",
+                $"whenever you just need a number. Reference tables as {_db.TableNamingHint(context.EntityId)}.",
                 new JsonObject
                 {
                     ["type"] = "object",
@@ -1127,7 +1127,7 @@ public class AnalyticsTools
         - ملفات الـ PDF مالهاش جداول: بياناتها الوصفية بترجع في list_files، ومحتواها بيتبحث فيه
           بـ search_documents. لو السؤال عن عدد الملفات أو أسمائها، استخدم list_files.
 
-        {{_db.DialectPrompt(context.ProjectId)}}
+        {{_db.DialectPrompt(context.EntityId)}}
 
         قواعد إضافية على الاستعلام
         - لو مش متأكد من اسم عمود أو جدول بالظبط، ارجع لنتيجة list_files تاني بدل ما تخمّن
@@ -1690,16 +1690,16 @@ public class AnalyticsTools
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>Every table this request can actually see and use — known to this project (see
-    /// <see cref="IsTableKnownToProject"/>), not disabled, not restricted. The same gate
+    /// <see cref="IsTableKnownToEntity"/>), not disabled, not restricted. The same gate
     /// list_files and <see cref="BuildValidTablesHintAsync"/> apply, extracted here so
     /// <see cref="Templates.TemplatePromptService"/> can reuse it to feed
     /// SchemaMatchingService's internal-table matching the exact same set a template build is
     /// actually allowed to query — never a table the request can't reach, even as a hint.</summary>
     public async Task<IReadOnlyList<Data.TableSchema>> GetVisibleTablesAsync(SourceContext context, CancellationToken ct)
     {
-        var schema = await _db.GetSchemaAsync(context.ProjectId, ct);
+        var schema = await _db.GetSchemaAsync(context.EntityId, ct);
         return schema
-            .Where(t => IsTableKnownToProject(t.Table, context))
+            .Where(t => IsTableKnownToEntity(t.Table, context))
             .Where(t => !context.DisabledFileTables.ContainsKey(t.Table))
             .Where(t => !context.DisabledSystemTables.ContainsKey(t.Table))
             .Where(t => !context.RestrictedFileTables.ContainsKey(t.Table))
@@ -1736,7 +1736,7 @@ public class AnalyticsTools
     /// names explicitly, not one the LLM writes into generated SQL, but foreign to this
     /// project in exactly the same way.
     /// </summary>
-    internal static bool IsTableKnownToProject(string table, SourceContext context) =>
+    internal static bool IsTableKnownToEntity(string table, SourceContext context) =>
         context.TableFiles.ContainsKey(table) || context.TableSystems.ContainsKey(table);
 
     /// <summary>
@@ -1779,7 +1779,7 @@ public class AnalyticsTools
                         });
                     // The repository's own catalogue: a PDF contributes no table, so without
                     // this the model has no way to know the file exists at all.
-                    var files = await _repository.ListAsync(context.ProjectId, ct);
+                    var files = await _repository.ListAsync(context.EntityId, ct);
                     var visibleFiles = files
                         .Where(f => context.EnabledFileIds.Contains(f.Id))
                         .Where(f => f.TableName is null || !context.RestrictedFileTables.ContainsKey(f.TableName))
@@ -1811,7 +1811,7 @@ public class AnalyticsTools
                     if (string.IsNullOrWhiteSpace(sql))
                         return ("Error: 'sql' input is required.", true);
 
-                    var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.ProjectId, ct));
+                    var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.EntityId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteQueryAsync(sql, ct);
@@ -1847,7 +1847,7 @@ public class AnalyticsTools
                     periodsAhead = Math.Clamp(periodsAhead, 1, 12);
                     int? seasonLength = input["seasonLength"] is JsonValue seasonNode && seasonNode.TryGetValue<int>(out var sl) ? sl : null;
 
-                    var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.ProjectId, ct));
+                    var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.EntityId, ct));
                     if (permissionError is not null) return (permissionError, true);
 
                     return await ExecuteForecastAsync(sql, periodsAhead, seasonLength, ct);
@@ -1865,7 +1865,7 @@ public class AnalyticsTools
                             file = string.Empty, category = (string?)null, score = 0d, text = string.Empty,
                         });
 
-                    var documents = await _repository.GetTextDocumentsAsync(context.ProjectId, ct);
+                    var documents = await _repository.GetTextDocumentsAsync(context.EntityId, ct);
                     var repositoryHits = documents
                         .Where(d => context.EnabledFileIds.Contains(d.Id))
                         .Select(d => new
@@ -1939,7 +1939,7 @@ public class AnalyticsTools
     /// can never reach a source it shouldn't, same as a model-issued one couldn't.</summary>
     public async Task<(string Result, bool IsError)> RunReadOnlyQueryAsync(string sql, SourceContext context, CancellationToken ct)
     {
-        var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.ProjectId, ct));
+        var permissionError = CheckSourcePermission(sql, context, await _db.GetSchemaAsync(context.EntityId, ct));
         return permissionError is not null ? (permissionError, true) : await ExecuteQueryAsync(sql, ct);
     }
 
@@ -1950,7 +1950,7 @@ public class AnalyticsTools
     /// filter spliced in — the same permission surface as the LLM's own query_data tool.
     /// <paramref name="schema"/> is the full table list from <see
     /// cref="DataStore.GetSchemaAsync"/> (every table in the shared database, not
-    /// just this project's — see <see cref="IsTableKnownToProject"/>), needed for the last
+    /// just this project's — see <see cref="IsTableKnownToEntity"/>), needed for the last
     /// check below; callers already have it or can fetch it cheaply (a metadata-only scan).
     /// </summary>
     internal static string? CheckSourcePermission(
@@ -1981,7 +1981,7 @@ public class AnalyticsTools
         // without this it would run unchecked. Same substring-match style as the checks above,
         // just over "every table this project has never heard of at all" instead of "a table
         // it knows about and has turned off".
-        var foreignTable = schema.FirstOrDefault(t => !IsTableKnownToProject(t.Table, context)
+        var foreignTable = schema.FirstOrDefault(t => !IsTableKnownToEntity(t.Table, context)
             && (ReferencesTable(sql, t.Table) || ReferencesTable(sql, t.Table.Split('.').Last())));
         if (foreignTable is not null)
             return $"الاستعلام مرفوض: الجدول {foreignTable.Table} غير معروف أو غير تابع لهذا المشروع.";
@@ -2216,7 +2216,7 @@ public class AnalyticsTools
     /// Pulls the single JSON object out of a model's final-turn text — tolerates a markdown
     /// code fence or stray prose around it. Shared by every "parse the model's final answer"
     /// path (dashboard, Inquiries, and — internal, since Analyst.AnalystPrompts is a different
-    /// namespace in this same assembly — the Project Analyst's own result JSON); each caller
+    /// namespace in this same assembly — the Entity Analyst's own result JSON); each caller
     /// does its own typed deserialization/validation after.
     /// </summary>
     internal static (string? Candidate, string? Error) ExtractJsonCandidate(string text)

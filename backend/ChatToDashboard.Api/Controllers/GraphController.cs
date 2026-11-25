@@ -1,6 +1,6 @@
 using System.Text.Json;
 using ChatToDashboard.Api.Graph;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,13 +19,13 @@ namespace ChatToDashboard.Api.Controllers;
 public class GraphController : ControllerBase
 {
     private readonly GraphStore _store;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
     private readonly PermissionsService _permissions;
 
-    public GraphController(GraphStore store, ProjectStore projects, PermissionsService permissions)
+    public GraphController(GraphStore store, EntityStore projects, PermissionsService permissions)
     {
         _store = store;
-        _projects = projects;
+        _entities = projects;
         _permissions = permissions;
     }
 
@@ -36,10 +36,10 @@ public class GraphController : ControllerBase
         if (user is null) return Unauthorized();
 
         var isAdmin = user.Role == UserRoles.Admin;
-        var projectId = await _projects.ResolveCurrentProjectIdAsync(user.OrganizationId, user.Id, isAdmin, ct);
-        if (projectId is null) return NotFound();
+        var entityId = await _entities.ResolveCurrentEntityIdAsync(user.OrganizationId, user.Id, isAdmin, ct);
+        if (entityId is null) return NotFound();
 
-        var (nodes, edges) = await _store.GetNetworkAsync(projectId, networkKey, ct);
+        var (nodes, edges) = await _store.GetNetworkAsync(entityId, networkKey, ct);
         if (nodes.Count == 0) return NotFound();
 
         return Ok(new

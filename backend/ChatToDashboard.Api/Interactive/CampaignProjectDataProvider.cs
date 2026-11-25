@@ -86,10 +86,10 @@ public class CampaignProjectDataProvider : IInteractiveDataProvider
 
     internal record PerformanceSeries(List<string> Labels, List<double?> SpendActual, List<double?> SpendForecast, List<double?> ConvActual, List<double?> ConvForecast);
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "بيانات الحملة (campaign_info)", "الأداء اليومي (campaign_daily_performance)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var infoTable = matched.Tables["campaign_info"];

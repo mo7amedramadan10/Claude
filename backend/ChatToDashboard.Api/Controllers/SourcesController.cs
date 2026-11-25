@@ -47,7 +47,7 @@ public class SourcesController : ControllerBase
             // بيانات النظام تغيّرت: أعد تحليل معاني أعمدته للمشروع الحالي في الخلفية (جدول النظام لا يمر بمسار الرفع).
             var user = await _permissions.GetCurrentUserAsync(User, ct);
             var selection = user is null ? null : await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-            _semantics.AnalyzeInBackground(selection?.ProjectId, _systems.TableFor(system));
+            _semantics.AnalyzeInBackground(selection?.EntityId, _systems.TableFor(system));
         }
         return result?.Error is null
             ? Ok(new { system = system.Name, records = result?.Records ?? 0 })
@@ -69,7 +69,7 @@ public class SourcesController : ControllerBase
         var allowed = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         var isAdmin = user.Role == UserRoles.Admin;
 
-        var repoFiles = await _store.ListAsync(allowed.ProjectId, ct);
+        var repoFiles = await _store.ListAsync(allowed.EntityId, ct);
         // allowed.AllowsFile is now always true (file access is never set per-user anymore —
         // see UsersController), so the actual gate for a non-Admin is the same creator/
         // explicitly-granted rule RepositoryController.Files applies to the file list itself.
@@ -85,7 +85,7 @@ public class SourcesController : ControllerBase
         // frontend already sends per chat request (see SourceSelection/AnalyticsTools.
         // DescribeSourcesAsync). Only one whose client schema has actually been discovered is
         // worth offering — an integration still being set up has nothing to build on yet.
-        var allIntegrations = await _integrations.ListAsync(allowed.ProjectId, ct);
+        var allIntegrations = await _integrations.ListAsync(allowed.EntityId, ct);
         var integrations = allIntegrations
             .Where(i => allowed.AllowsSystem(i.Id) && !string.IsNullOrWhiteSpace(i.ClientSchemaDescription))
             .Select(i => new { id = i.Id, name = i.Name, connected = true, kind = "integration" })

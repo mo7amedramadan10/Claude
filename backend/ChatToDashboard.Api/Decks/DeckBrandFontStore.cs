@@ -33,13 +33,13 @@ public class DeckBrandFont
 public class DeckBrandFontStore
 {
     public const int MaxBytes = 6 * 1024 * 1024;
-    public const int MaxPerProject = 12;
+    public const int MaxPerEntity = 12;
     private readonly DataStore _db;
     private readonly SemaphoreSlim _schemaGate = new(1, 1);
     private volatile bool _schemaReady;
     public DeckBrandFontStore(DataStore db) => _db = db;
     private const string Table = "[dbo].[DeckBrandFonts]";
-    private static string Key(string? projectId) => string.IsNullOrEmpty(projectId) ? "-" : projectId;
+    private static string Key(string? entityId) => string.IsNullOrEmpty(entityId) ? "-" : entityId;
 
     private async Task EnsureSchemaAsync(CancellationToken ct)
     {
@@ -54,7 +54,7 @@ public class DeckBrandFontStore
             command.CommandText = $"""
                 IF OBJECT_ID('dbo.DeckBrandFonts') IS NULL
                 CREATE TABLE {Table} (
-                  [Id] NVARCHAR(32) PRIMARY KEY, [ProjectKey] NVARCHAR(64) NOT NULL, [Family] NVARCHAR(120) NOT NULL, [Weight] INT NOT NULL,
+                  [Id] NVARCHAR(32) PRIMARY KEY, [EntityKey] NVARCHAR(64) NOT NULL, [Family] NVARCHAR(120) NOT NULL, [Weight] INT NOT NULL,
                   [Style] NVARCHAR(10) NOT NULL, [FileName] NVARCHAR(260) NOT NULL, [Format] NVARCHAR(12) NOT NULL, [ContentType] NVARCHAR(40) NOT NULL,
                   [Bytes] VARBINARY(MAX) NOT NULL, [SizeBytes] BIGINT NOT NULL, [UploadedBy] NVARCHAR(200), [UploadedAt] DATETIME2 NOT NULL)
                 """;
@@ -64,23 +64,23 @@ public class DeckBrandFontStore
         finally { _schemaGate.Release(); }
     }
 
-    public async Task<List<DeckBrandFont>> ListAsync(string? projectId, CancellationToken ct = default)
+    public async Task<List<DeckBrandFont>> ListAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var rows = await connection.QueryAsync<DeckBrandFont>($"SELECT Id, Family, Weight, Style, FileName, Format, SizeBytes, UploadedAt FROM {Table} WHERE ProjectKey = @k ORDER BY Family, Weight, Style", new { k = Key(projectId) });
+        var rows = await connection.QueryAsync<DeckBrandFont>($"SELECT Id, Family, Weight, Style, FileName, Format, SizeBytes, UploadedAt FROM {Table} WHERE EntityKey = @k ORDER BY Family, Weight, Style", new { k = Key(entityId) });
         return rows.ToList();
     }
 
-    public async Task<DeckBrandFont> AddAsync(string? projectId, string? userId, string fileName, byte[] bytes, string family, int weight, string style, CancellationToken ct = default)
+    public async Task<DeckBrandFont> AddAsync(string? entityId, string? userId, string fileName, byte[] bytes, string family, int weight, string style, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         var (format, contentType) = DeckBrandFont.Formats[ext];
         var f = new DeckBrandFont { Id = Guid.NewGuid().ToString("N")[..16], Family = family, Weight = weight, Style = style, FileName = Path.GetFileName(fileName), Format = format, SizeBytes = bytes.Length, UploadedAt = DateTime.UtcNow };
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"INSERT INTO {Table} (Id, ProjectKey, Family, Weight, Style, FileName, Format, ContentType, Bytes, SizeBytes, UploadedBy, UploadedAt) VALUES (@Id, @k, @Family, @Weight, @Style, @FileName, @Format, @contentType, @bytes, @SizeBytes, @userId, @UploadedAt)",
-            new { f.Id, k = Key(projectId), f.Family, f.Weight, f.Style, f.FileName, f.Format, contentType, bytes, f.SizeBytes, userId, f.UploadedAt });
+        await connection.ExecuteAsync($"INSERT INTO {Table} (Id, EntityKey, Family, Weight, Style, FileName, Format, ContentType, Bytes, SizeBytes, UploadedBy, UploadedAt) VALUES (@Id, @k, @Family, @Weight, @Style, @FileName, @Format, @contentType, @bytes, @SizeBytes, @userId, @UploadedAt)",
+            new { f.Id, k = Key(entityId), f.Family, f.Weight, f.Style, f.FileName, f.Format, contentType, bytes, f.SizeBytes, userId, f.UploadedAt });
         return f;
     }
 
@@ -92,11 +92,11 @@ public class DeckBrandFontStore
         return row is null ? null : ((byte[])row.Bytes, (string)row.ContentType, (string)row.FileName);
     }
 
-    public async Task<bool> DeleteAsync(string? projectId, string id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(string? entityId, string id, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        return await connection.ExecuteAsync($"DELETE FROM {Table} WHERE Id = @id AND ProjectKey = @k", new { id, k = Key(projectId) }) > 0;
+        return await connection.ExecuteAsync($"DELETE FROM {Table} WHERE Id = @id AND EntityKey = @k", new { id, k = Key(entityId) }) > 0;
     }
 
     // ---- قراءة اسم العائلة والوزن من جدول name في ملفات sfnt (ttf/otf) — بلا مكتبة ----

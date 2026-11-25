@@ -56,10 +56,10 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddSingleton<UserStore>();
 builder.Services.AddSingleton<ChatToDashboard.Api.Organizations.OrganizationStore>();
-builder.Services.AddSingleton<ChatToDashboard.Api.Projects.ProjectStore>();
-builder.Services.AddSingleton<ChatToDashboard.Api.Projects.EntityTypeStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Entities.EntityStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Entities.EntityTypeStore>();
 // §4.23 — اللوحات المنشورة داخل المشروع (جدول مستقل عن PublishedDashboardSlots الخاص بالتكاملات).
-builder.Services.AddSingleton<ChatToDashboard.Api.Projects.PublishedDashboardStore>();
+builder.Services.AddSingleton<ChatToDashboard.Api.Entities.PublishedDashboardStore>();
 builder.Services.AddSingleton<PermissionsService>();
 builder.Services.Configure<LdapOptions>(builder.Configuration.GetSection(LdapOptions.SectionName));
 builder.Services.AddSingleton<LdapAuthenticator>();
@@ -109,7 +109,7 @@ builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.ClaudeChatStore>();
 // /api/claude-chat/mcp، يحرسه مفتاح جلسة مؤقت (McpTokenMiddleware) لا كوكي المستخدم.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.Mcp.McpSessionTokens>();
-builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.Mcp.ProjectCatalog>();
+builder.Services.AddSingleton<ChatToDashboard.Api.ClaudeChat.Mcp.EntityCatalog>();
 builder.Services.AddMcpServer(options =>
     {
         options.ServerInfo = new ModelContextProtocol.Protocol.Implementation { Name = "jeem", Version = "1.0.0" };
@@ -324,24 +324,24 @@ app.MapMcp(ChatToDashboard.Api.ClaudeChat.Mcp.McpTokenMiddleware.Path).AllowAnon
 
 // INTERACTIVE-HANDOFF.md §7's "hub /hubs/live" — see LiveChannelHub's own doc comment for
 // why this is a plain WebSocket endpoint instead of a SignalR hub. Channel convention:
-// "{projectId}:{key}" (the project id is always the first segment) — any authenticated
+// "{entityId}:{key}" (the project id is always the first segment) — any authenticated
 // project member (or platform Admin) may subscribe; nobody else's channel is reachable
-// even by guessing a projectId, since the role check below runs before the socket upgrade
+// even by guessing a entityId, since the role check below runs before the socket upgrade
 // is accepted. FallbackPolicy (RequireAuthenticatedUser, configured above) already covers
 // "must be signed in" for this endpoint like every other one; the project-membership check
 // here is the additional, endpoint-specific layer.
 app.Map("/ws/live/{channel}", async (
     HttpContext ctx, string channel, LiveChannelHub hub,
-    ChatToDashboard.Api.Projects.ProjectStore projects) =>
+    ChatToDashboard.Api.Entities.EntityStore projects) =>
 {
     if (!ctx.WebSockets.IsWebSocketRequest) { ctx.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
-    var projectId = channel.Split(':', 2)[0];
-    if (string.IsNullOrEmpty(projectId)) { ctx.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
+    var entityId = channel.Split(':', 2)[0];
+    if (string.IsNullOrEmpty(entityId)) { ctx.Response.StatusCode = StatusCodes.Status400BadRequest; return; }
     var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
     if (userId is null) { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return; }
     if (!ctx.User.IsInRole(UserRoles.Admin))
     {
-        var roles = await projects.ListRolesAsync(projectId, ctx.RequestAborted);
+        var roles = await projects.ListRolesAsync(entityId, ctx.RequestAborted);
         if (!roles.Any(r => r.UserId == userId)) { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return; }
     }
     var socket = await ctx.WebSockets.AcceptWebSocketAsync();
@@ -418,8 +418,13 @@ using (var scope = app.Services.CreateScope())
     // (انظر DataStore.MigrateLegacyStagingSchemaAsync). فشله يُسجَّل ولا يوقف الإقلاع.
     try { await dataStore.MigrateLegacyStagingSchemaAsync(logger); }
     catch (Exception ex) { logger.LogError(ex, "Legacy [staging] → [dbo] schema migration failed."); }
+    // «المشروع» صار «الكيان» في القاعدة: الجداول Projects/ProjectRoles والأعمدة ProjectId/ProjectKey (DataStore.MigrateProjectToEntityAsync)
+    // فشله يوقف الإقلاع عمدًا: لو أكمل التطبيق لأنشأت المخازن جداول/أعمدة جديدة فارغة (Entities/EntityId) بجوار القديمة فتبدو البيانات مفقودة.
+    // الترحيل داخل معاملة فلا يترك القاعدة نصف مُرحَّلة؛ أصلح السبب في السجل ثم أعد التشغيل.
+    try { await dataStore.MigrateProjectToEntityAsync(logger); }
+    catch (Exception ex) { logger.LogCritical(ex, "Project→Entity rename migration failed — startup stopped to avoid creating empty Entity tables next to the old ones."); throw; }
 
-    // SaaS hierarchy (Platform → Organization → Project — see Organizations/Projects): every
+    // SaaS hierarchy (Platform → Organization → Entity — see Organizations/Projects): every
     // install needs at least a default organization and project for its existing/first users
     // and data to belong to. Created once, here, before the admin-seeding step below so a
     // brand-new install's seed admin can be attached to it directly.
@@ -427,12 +432,12 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var orgStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Organizations.OrganizationStore>();
-        var projectStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Projects.ProjectStore>();
+        var entityStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Entities.EntityStore>();
         defaultOrg = await orgStore.FirstAsync();
         if (defaultOrg is null)
         {
             defaultOrg = await orgStore.CreateAsync("المنظمة الافتراضية");
-            await projectStore.CreateAsync(defaultOrg.Id, "المشروع الرئيسي");
+            await entityStore.CreateAsync(defaultOrg.Id, "المشروع الرئيسي");
             logger.LogInformation("Created the default organization + project.");
         }
 
@@ -445,22 +450,22 @@ using (var scope = app.Services.CreateScope())
         // one of them, on any pre-existing install, implicitly belonged to "the" single
         // workspace that existed before organizations/projects did, which is exactly the
         // default organization's own default project. Without this, a brand-new organization
-        // would see every pre-existing file/integration too (ProjectId NULL never matches a
-        // real project id) — the leak this whole ProjectId column exists to close.
-        var defaultProject = await projectStore.FirstForOrganizationAsync(defaultOrg.Id);
-        if (defaultProject is not null)
+        // would see every pre-existing file/integration too (EntityId NULL never matches a
+        // real project id) — the leak this whole EntityId column exists to close.
+        var defaultEntity = await entityStore.FirstForOrganizationAsync(defaultOrg.Id);
+        if (defaultEntity is not null)
         {
             var repositoryStoreForBackfill = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Repository.RepositoryStore>();
-            await repositoryStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
+            await repositoryStoreForBackfill.BackfillMissingEntityAsync(defaultEntity.Id);
             var integrationStoreForBackfill = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Integrations.IntegrationStore>();
-            await integrationStoreForBackfill.BackfillMissingProjectAsync(defaultProject.Id);
+            await integrationStoreForBackfill.BackfillMissingEntityAsync(defaultEntity.Id);
 
-            // Now that every repository file has a real ProjectId (just backfilled above, or
+            // Now that every repository file has a real EntityId (just backfilled above, or
             // already had one), move each one's uploaded-data table out of the shared SQL
             // Server schema into its own project's schema — see RepositoryStore.MigrateExisting-
-            // TablesToProjectSchemasAsync's own doc comment. No-op on SQLite, and idempotent
+            // TablesToEntitySchemasAsync's own doc comment. No-op on SQLite, and idempotent
             // (re-checked by OBJECT_ID, not a flag) so it's cheap to run on every startup.
-            await repositoryStoreForBackfill.MigrateExistingTablesToProjectSchemasAsync();
+            await repositoryStoreForBackfill.MigrateExistingTablesToEntitySchemasAsync();
         }
     }
     catch (Exception ex)
@@ -605,7 +610,7 @@ using (var scope = app.Services.CreateScope())
     // Demo accounts showing the two non-platform-owner permission shapes this app supports:
     // an org Admin (Role=Admin — sees/manages everything in their own organization, same as
     // any org admin) and a plain "User" account scoped to exactly one project via
-    // ProjectRoles (see ProjectsController.List / HistoryController.CurrentProjectIdAsync —
+    // EntityRoles (see EntitiesController.List / HistoryController.CurrentEntityIdAsync —
     // a project, unlike a dashboard, has no single natural owner, so this is a named role
     // row rather than an OwnerId column). Looked up by name/username first so a restart
     // never recreates or duplicates them; the role assignment is re-applied every time
@@ -616,13 +621,13 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var orgStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Organizations.OrganizationStore>();
-        var projectStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Projects.ProjectStore>();
+        var entityStore = scope.ServiceProvider.GetRequiredService<ChatToDashboard.Api.Entities.EntityStore>();
         var userStore = scope.ServiceProvider.GetRequiredService<UserStore>();
 
         var demoOrg = (await orgStore.ListAsync()).FirstOrDefault(o => o.Name == "شركة النموذج التجريبي")
             ?? await orgStore.CreateAsync("شركة النموذج التجريبي");
-        var demoProject = (await projectStore.ListByOrganizationAsync(demoOrg.Id)).FirstOrDefault(p => p.Name == "المشروع الأول")
-            ?? await projectStore.CreateAsync(demoOrg.Id, "المشروع الأول");
+        var demoEntity = (await entityStore.ListByOrganizationAsync(demoOrg.Id)).FirstOrDefault(p => p.Name == "المشروع الأول")
+            ?? await entityStore.CreateAsync(demoOrg.Id, "المشروع الأول");
 
         if (await userStore.FindByUsernameAsync("org.admin") is null)
         {
@@ -645,14 +650,14 @@ using (var scope = app.Services.CreateScope())
                 demoOrg.Name, "org.admin", pw);
         }
 
-        var projectUser = await userStore.FindByUsernameAsync("project.owner");
-        if (projectUser is null)
+        var entityOwnerUser = await userStore.FindByUsernameAsync("project.owner");
+        if (entityOwnerUser is null)
         {
             var pw = RandomNumberGenerator.GetHexString(12);
-            projectUser = await userStore.CreateAsync(new AppUser
+            entityOwnerUser = await userStore.CreateAsync(new AppUser
             {
                 Username = "project.owner",
-                DisplayName = $"مسؤول {demoProject.Name}",
+                DisplayName = $"مسؤول {demoEntity.Name}",
                 Role = UserRoles.User,
                 AuthMethod = AuthMethods.Local,
                 PasswordHash = PasswordHasher.Hash(pw),
@@ -663,10 +668,10 @@ using (var scope = app.Services.CreateScope())
                 IsPlatformOwner = false,
             });
             logger.LogWarning(
-                "Seeded a project-owner demo account for {Project}. Username: {Username} | Password: {Password}",
-                demoProject.Name, "project.owner", pw);
+                "Seeded a project-owner demo account for {Entity}. Username: {Username} | Password: {Password}",
+                demoEntity.Name, "project.owner", pw);
         }
-        await projectStore.SetRoleAsync(demoProject.Id, projectUser.Id, ChatToDashboard.Api.Projects.ProjectRoles.Owner);
+        await entityStore.SetRoleAsync(demoEntity.Id, entityOwnerUser.Id, ChatToDashboard.Api.Entities.EntityRoles.Owner);
     }
     catch (Exception ex)
     {

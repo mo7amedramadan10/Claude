@@ -16,7 +16,7 @@ public static class SemanticSources
 public class ColumnSemantic
 {
     [JsonPropertyName("id")] public string Id { get; set; } = "";
-    [JsonPropertyName("projectId")] public string ProjectId { get; set; } = "";
+    [JsonPropertyName("entityId")] public string EntityId { get; set; } = "";
     [JsonPropertyName("tableName")] public string TableName { get; set; } = "";
     [JsonPropertyName("columnName")] public string ColumnName { get; set; } = "";
 
@@ -56,21 +56,21 @@ public class ColumnSemanticsStore
         var text = $"""
                IF OBJECT_ID('dbo.ColumnSemantics') IS NULL
                CREATE TABLE {Table} (
-                 [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64) NOT NULL, [TableName] NVARCHAR(300) NOT NULL,
+                 [Id] NVARCHAR(64) PRIMARY KEY, [EntityId] NVARCHAR(64) NOT NULL, [TableName] NVARCHAR(300) NOT NULL,
                  [ColumnName] NVARCHAR(300) NOT NULL, [Concept] NVARCHAR(64), [Role] NVARCHAR(20) NOT NULL,
                  [Unit] NVARCHAR(40), [ValueMapJson] NVARCHAR(MAX), [Confidence] FLOAT NOT NULL,
                  [Source] NVARCHAR(10) NOT NULL, [Note] NVARCHAR(500), [UpdatedAt] DATETIME2 NOT NULL,
-                 CONSTRAINT UQ_ColumnSemantics UNIQUE ([ProjectId], [TableName], [ColumnName]))
+                 CONSTRAINT UQ_ColumnSemantics UNIQUE ([EntityId], [TableName], [ColumnName]))
                """;
         await using var command = connection.CreateCommand();
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/EntityStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا. بلا قيد UNIQUE هنا (نفس استثناء
         // OrganizationStore).
         await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, "ProjectId", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
+        await AddColumnIfMissingAsync(connection, "EntityId", "NVARCHAR(64) NOT NULL DEFAULT ''", ct);
         await AddColumnIfMissingAsync(connection, "TableName", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
         await AddColumnIfMissingAsync(connection, "ColumnName", "NVARCHAR(300) NOT NULL DEFAULT ''", ct);
         await AddColumnIfMissingAsync(connection, "Concept", "NVARCHAR(64)", ct);
@@ -94,22 +94,22 @@ public class ColumnSemanticsStore
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 2705) { }
     }
 
-    public async Task<IReadOnlyList<ColumnSemantic>> ListForTableAsync(string projectId, string tableName, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ColumnSemantic>> ListForTableAsync(string entityId, string tableName, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<ColumnSemantic>(
-            $"SELECT * FROM {Table} WHERE ProjectId = @projectId AND TableName = @tableName ORDER BY ColumnName",
-            new { projectId, tableName });
+            $"SELECT * FROM {Table} WHERE EntityId = @entityId AND TableName = @tableName ORDER BY ColumnName",
+            new { entityId, tableName });
         return rows.ToList();
     }
 
-    public async Task<IReadOnlyList<ColumnSemantic>> ListForProjectAsync(string projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ColumnSemantic>> ListForEntityAsync(string entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<ColumnSemantic>(
-            $"SELECT * FROM {Table} WHERE ProjectId = @projectId ORDER BY TableName, ColumnName", new { projectId });
+            $"SELECT * FROM {Table} WHERE EntityId = @entityId ORDER BY TableName, ColumnName", new { entityId });
         return rows.ToList();
     }
 
@@ -121,14 +121,14 @@ public class ColumnSemanticsStore
         foreach (var r in rows)
         {
             var existing = await connection.QuerySingleOrDefaultAsync<ColumnSemantic>(
-                $"SELECT * FROM {Table} WHERE ProjectId = @ProjectId AND TableName = @TableName AND ColumnName = @ColumnName", r);
+                $"SELECT * FROM {Table} WHERE EntityId = @EntityId AND TableName = @TableName AND ColumnName = @ColumnName", r);
             if (existing is { Source: SemanticSources.User }) continue;
             r.Id = existing?.Id ?? Guid.NewGuid().ToString("N");
             r.UpdatedAt = DateTime.UtcNow;
             if (existing is null)
                 await connection.ExecuteAsync(
-                    $"INSERT INTO {Table} (Id, ProjectId, TableName, ColumnName, Concept, Role, Unit, ValueMapJson, Confidence, Source, Note, UpdatedAt) " +
-                    "VALUES (@Id, @ProjectId, @TableName, @ColumnName, @Concept, @Role, @Unit, @ValueMapJson, @Confidence, @Source, @Note, @UpdatedAt)", r);
+                    $"INSERT INTO {Table} (Id, EntityId, TableName, ColumnName, Concept, Role, Unit, ValueMapJson, Confidence, Source, Note, UpdatedAt) " +
+                    "VALUES (@Id, @EntityId, @TableName, @ColumnName, @Concept, @Role, @Unit, @ValueMapJson, @Confidence, @Source, @Note, @UpdatedAt)", r);
             else
                 await connection.ExecuteAsync(
                     $"UPDATE {Table} SET Concept = @Concept, Role = @Role, Unit = @Unit, ValueMapJson = @ValueMapJson, Confidence = @Confidence, " +
@@ -137,7 +137,7 @@ public class ColumnSemanticsStore
     }
 
     /// <summary>تأكيد أو تصحيح من المستخدم — يصير المصدر user بثقة كاملة ولا يُستبدل آليًا بعدها.</summary>
-    public async Task SetByUserAsync(string projectId, string tableName, string columnName, string? concept, string role,
+    public async Task SetByUserAsync(string entityId, string tableName, string columnName, string? concept, string role,
         string? unit, string? valueMapJson, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
@@ -145,19 +145,19 @@ public class ColumnSemanticsStore
         var now = DateTime.UtcNow;
         var updated = await connection.ExecuteAsync(
             $"UPDATE {Table} SET Concept = @concept, Role = @role, Unit = @unit, ValueMapJson = @valueMapJson, Confidence = 1, Source = 'user', " +
-            "Note = NULL, UpdatedAt = @now WHERE ProjectId = @projectId AND TableName = @tableName AND ColumnName = @columnName",
-            new { concept, role, unit, valueMapJson, now, projectId, tableName, columnName });
+            "Note = NULL, UpdatedAt = @now WHERE EntityId = @entityId AND TableName = @tableName AND ColumnName = @columnName",
+            new { concept, role, unit, valueMapJson, now, entityId, tableName, columnName });
         if (updated == 0)
             await connection.ExecuteAsync(
-                $"INSERT INTO {Table} (Id, ProjectId, TableName, ColumnName, Concept, Role, Unit, ValueMapJson, Confidence, Source, Note, UpdatedAt) " +
-                "VALUES (@id, @projectId, @tableName, @columnName, @concept, @role, @unit, @valueMapJson, 1, 'user', NULL, @now)",
-                new { id = Guid.NewGuid().ToString("N"), projectId, tableName, columnName, concept, role, unit, valueMapJson, now });
+                $"INSERT INTO {Table} (Id, EntityId, TableName, ColumnName, Concept, Role, Unit, ValueMapJson, Confidence, Source, Note, UpdatedAt) " +
+                "VALUES (@id, @entityId, @tableName, @columnName, @concept, @role, @unit, @valueMapJson, 1, 'user', NULL, @now)",
+                new { id = Guid.NewGuid().ToString("N"), entityId, tableName, columnName, concept, role, unit, valueMapJson, now });
     }
 
-    public async Task DeleteForTableAsync(string projectId, string tableName, CancellationToken ct = default)
+    public async Task DeleteForTableAsync(string entityId, string tableName, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"DELETE FROM {Table} WHERE ProjectId = @projectId AND TableName = @tableName", new { projectId, tableName });
+        await connection.ExecuteAsync($"DELETE FROM {Table} WHERE EntityId = @entityId AND TableName = @tableName", new { entityId, tableName });
     }
 }

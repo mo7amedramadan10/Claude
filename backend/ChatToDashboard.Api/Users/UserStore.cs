@@ -46,7 +46,7 @@ public class UserStore
                  {
                      ("AllowAllFiles", "BIT"),
                      ("AllowedFilesJson", "NVARCHAR(MAX)"),
-                     // SaaS hierarchy (Platform → Organization → Project) — see AppUser's remarks.
+                     // SaaS hierarchy (Platform → Organization → Entity) — see AppUser's remarks.
                      ("OrganizationId", "NVARCHAR(64)"),
                      ("IsPlatformOwner", "BIT"),
                      // صلاحيات الشاشات (null = كل الشاشات) — انظر ScreenAccess.

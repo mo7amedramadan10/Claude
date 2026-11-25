@@ -28,6 +28,6 @@ public sealed class StubInteractiveDataProvider : IInteractiveDataProvider
         _missingSources = missingSources;
     }
 
-    public Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct) =>
+    public Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct) =>
         Task.FromResult(InteractiveDataResult.Unlinked(_missingSources));
 }

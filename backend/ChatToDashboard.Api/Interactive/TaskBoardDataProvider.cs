@@ -50,10 +50,10 @@ public class TaskBoardDataProvider : IInteractiveDataProvider
         }),
     };
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "فريق اللوحة (board_team)", "المشاريع (board_projects)", "المهام (board_tasks)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var teamRows = await _matcher.QueryAsync(BuildSelect(matched.Tables["board_team"], "id", "name"), matched.Context, ct);
@@ -71,9 +71,9 @@ public class TaskBoardDataProvider : IInteractiveDataProvider
 
         var people = teamRows.Select(r => new { name = Str(r, "name") ?? "" }).ToList();
 
-        var projectIds = projRows.Select(r => Str(r, "id")).ToList();
-        var indexOfProject = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (var i = 0; i < projectIds.Count; i++) if (projectIds[i] is not null) indexOfProject[projectIds[i]!] = i;
+        var entityIds = projRows.Select(r => Str(r, "id")).ToList();
+        var indexOfEntity = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < entityIds.Count; i++) if (entityIds[i] is not null) indexOfEntity[entityIds[i]!] = i;
         var colorIdx = 0;
         var projects = projRows.Select(r => new { name = Str(r, "name") ?? "", color = Str(r, "color") ?? PaletteColors[colorIdx++ % PaletteColors.Length] }).ToList();
 
@@ -83,11 +83,11 @@ public class TaskBoardDataProvider : IInteractiveDataProvider
                 Priority: ValidPriorities.Contains(Str(r, "priority") ?? "") ? Str(r, "priority")! : "med",
                 Status: ValidStatuses.Contains(Str(r, "status") ?? "") ? Str(r, "status")! : "todo",
                 ProgressPct: r.ContainsKey("progress_pct") ? (int?)Num(r, "progress_pct") : null,
-                ProjectId: Str(r, "project_id"), Due: DateStr(r, "due_date"), Assignees: Str(r, "assignee_ids")))
+                EntityId: Str(r, "project_id"), Due: DateStr(r, "due_date"), Assignees: Str(r, "assignee_ids")))
             .Where(t => t.Title is not null && t.Due is not null)
             .Select(t =>
             {
-                var pj = t.ProjectId is not null && indexOfProject.TryGetValue(t.ProjectId, out var pidx) ? pidx : 0;
+                var pj = t.EntityId is not null && indexOfEntity.TryGetValue(t.EntityId, out var pidx) ? pidx : 0;
                 var pg = t.ProgressPct ?? DefaultProgress(t.Status);
                 return (object)new
                 {

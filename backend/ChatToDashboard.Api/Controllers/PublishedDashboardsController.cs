@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using ChatToDashboard.Api.History;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,7 +8,7 @@ namespace ChatToDashboard.Api.Controllers;
 
 /// <summary>
 /// شاشة «اللوحات المنشورة» داخل المشروع (§4.23). كل الطلبات هنا على المشروع الحالي للمستخدم
-/// (بنفس تعريف <see cref="ProjectStore.ResolveCurrentProjectIdAsync"/> الذي تستخدمه بقية
+/// (بنفس تعريف <see cref="EntityStore.ResolveCurrentEntityIdAsync"/> الذي تستخدمه بقية
 /// الشاشات). يرى كل عضو فقط ما يسمح به جمهور النشر ودوره في المشروع، والنشر وإعادة الترتيب
 /// وإلغاء النشر للمالك والمحرر فقط.
 /// </summary>
@@ -17,17 +17,17 @@ namespace ChatToDashboard.Api.Controllers;
 public class PublishedDashboardsController : ControllerBase
 {
     private readonly PublishedDashboardStore _published;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
     private readonly HistoryStore _history;
     private readonly UserStore _users;
     private readonly DashboardAccessService _access;
 
     public PublishedDashboardsController(
-        PublishedDashboardStore published, ProjectStore projects, HistoryStore history, UserStore users,
+        PublishedDashboardStore published, EntityStore projects, HistoryStore history, UserStore users,
         DashboardAccessService access)
     {
         _published = published;
-        _projects = projects;
+        _entities = projects;
         _history = history;
         _users = users;
         _access = access;
@@ -36,29 +36,29 @@ public class PublishedDashboardsController : ControllerBase
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(UserRoles.Admin);
 
-    private Task<string?> CurrentProjectIdAsync(CancellationToken ct) =>
-        _projects.ResolveCurrentProjectIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
+    private Task<string?> CurrentEntityIdAsync(CancellationToken ct) =>
+        _entities.ResolveCurrentEntityIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
 
     /// <summary>دور المستخدم الفعلي في المشروع: مسؤول المنظمة يُعامل كمالك، والحساب بلا دور
     /// صريح يُعامل كمشاهد (أقل صلاحية).</summary>
-    private async Task<string> MyProjectRoleAsync(string projectId, CancellationToken ct)
+    private async Task<string> MyEntityRoleAsync(string entityId, CancellationToken ct)
     {
-        if (IsAdmin) return ProjectRoles.Owner;
-        var roles = await _projects.ListRolesAsync(projectId, ct);
-        return roles.FirstOrDefault(r => r.UserId == UserId)?.Role ?? ProjectRoles.Viewer;
+        if (IsAdmin) return EntityRoles.Owner;
+        var roles = await _entities.ListRolesAsync(entityId, ct);
+        return roles.FirstOrDefault(r => r.UserId == UserId)?.Role ?? EntityRoles.Viewer;
     }
 
     /// <summary>اللوحات المنشورة على المشروع الحالي التي يحق للمستخدم رؤيتها، بترتيب التبويبات.</summary>
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
-        var projectId = await CurrentProjectIdAsync(ct);
-        if (projectId is null) return NotFound(new { error = "الحساب غير مرتبط بأي مشروع." });
-        var project = await _projects.FindByIdAsync(projectId, ct);
-        var myRole = await MyProjectRoleAsync(projectId, ct);
+        var entityId = await CurrentEntityIdAsync(ct);
+        if (entityId is null) return NotFound(new { error = "الحساب غير مرتبط بأي مشروع." });
+        var project = await _entities.FindByIdAsync(entityId, ct);
+        var myRole = await MyEntityRoleAsync(entityId, ct);
 
         var items = new List<object>();
-        foreach (var row in await _published.ListAsync(projectId, ct))
+        foreach (var row in await _published.ListAsync(entityId, ct))
         {
             if (!PublishedDashboardRules.CanView(row.Audience, myRole, IsAdmin)) continue;
             // لوحة حُذفت من السجل بعد نشرها: لا تُعرض (الصف يبقى حتى يُلغى نشره صراحةً).
@@ -69,8 +69,8 @@ public class PublishedDashboardsController : ControllerBase
 
         return Ok(new
         {
-            projectId,
-            projectName = project?.Name,
+            entityId,
+            entityName = project?.Name,
             myRole,
             canManage = PublishedDashboardRules.CanManage(myRole, IsAdmin),
             items,
@@ -85,16 +85,16 @@ public class PublishedDashboardsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Publish([FromBody] PublishDashboardRequest request, CancellationToken ct)
     {
-        var projectId = await CurrentProjectIdAsync(ct);
-        if (projectId is null) return NotFound(new { error = "الحساب غير مرتبط بأي مشروع." });
-        var myRole = await MyProjectRoleAsync(projectId, ct);
+        var entityId = await CurrentEntityIdAsync(ct);
+        if (entityId is null) return NotFound(new { error = "الحساب غير مرتبط بأي مشروع." });
+        var myRole = await MyEntityRoleAsync(entityId, ct);
         if (!PublishedDashboardRules.CanManage(myRole, IsAdmin))
             return StatusCode(403, new { error = "النشر على المشروع متاح للمالك والمحرر فقط." });
 
         var entry = string.IsNullOrWhiteSpace(request.DashboardId) ? null : await _history.GetByIdAsync(request.DashboardId, ct);
         if (entry is null) return NotFound(new { error = "اللوحة غير موجودة." });
         // صف قديم بلا مشروع يُعامل كتابع للمشروع الحالي — نفس قاعدة HistoryStore.ListAsync.
-        if (entry.ProjectId is not null && entry.ProjectId != projectId)
+        if (entry.EntityId is not null && entry.EntityId != entityId)
             return BadRequest(new { error = "هذه اللوحة تابعة لمشروع آخر." });
         if (!entry.IsActive) return BadRequest(new { error = "فعّل اللوحة أولًا قبل نشرها على المشروع." });
 
@@ -111,7 +111,7 @@ public class PublishedDashboardsController : ControllerBase
         if (refreshEvery is { Length: > 100 }) return BadRequest(new { error = "وصف تكرار التحديث طويل جدًا." });
 
         var kind = string.IsNullOrWhiteSpace(entry.RenderKind) ? PublishedKinds.Jr : PublishedKinds.Interactive;
-        var row = await _published.PublishAsync(projectId, entry.Id, kind, UserId, audience, refreshMode, refreshEvery, ct);
+        var row = await _published.PublishAsync(entityId, entry.Id, kind, UserId, audience, refreshMode, refreshEvery, ct);
         return Ok(await DescribeAsync(row, entry, ct));
     }
 
@@ -119,13 +119,13 @@ public class PublishedDashboardsController : ControllerBase
     [HttpPut("order")]
     public async Task<IActionResult> Reorder([FromBody] ReorderPublishedRequest request, CancellationToken ct)
     {
-        var projectId = await CurrentProjectIdAsync(ct);
-        if (projectId is null) return NotFound(new { error = "الحساب غير مرتبط بأي مشروع." });
-        if (!PublishedDashboardRules.CanManage(await MyProjectRoleAsync(projectId, ct), IsAdmin))
+        var entityId = await CurrentEntityIdAsync(ct);
+        if (entityId is null) return NotFound(new { error = "الحساب غير مرتبط بأي مشروع." });
+        if (!PublishedDashboardRules.CanManage(await MyEntityRoleAsync(entityId, ct), IsAdmin))
             return StatusCode(403, new { error = "إعادة الترتيب متاحة للمالك والمحرر فقط." });
 
-        var current = (await _published.ListAsync(projectId, ct)).Select(r => r.Id).ToList();
-        await _published.SaveOrderAsync(projectId, PublishedDashboardRules.ApplyOrder(current, request.Ids ?? new()), ct);
+        var current = (await _published.ListAsync(entityId, ct)).Select(r => r.Id).ToList();
+        await _published.SaveOrderAsync(entityId, PublishedDashboardRules.ApplyOrder(current, request.Ids ?? new()), ct);
         return NoContent();
     }
 
@@ -133,10 +133,10 @@ public class PublishedDashboardsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Unpublish(string id, CancellationToken ct)
     {
-        var projectId = await CurrentProjectIdAsync(ct);
+        var entityId = await CurrentEntityIdAsync(ct);
         var row = await _published.GetAsync(id, ct);
-        if (projectId is null || row is null || row.ProjectId != projectId) return NotFound(new { error = "غير موجود" });
-        if (!PublishedDashboardRules.CanManage(await MyProjectRoleAsync(projectId, ct), IsAdmin))
+        if (entityId is null || row is null || row.EntityId != entityId) return NotFound(new { error = "غير موجود" });
+        if (!PublishedDashboardRules.CanManage(await MyEntityRoleAsync(entityId, ct), IsAdmin))
             return StatusCode(403, new { error = "إلغاء النشر متاح للمالك والمحرر فقط." });
 
         await _published.DeleteAsync(id, ct);
@@ -151,10 +151,10 @@ public class PublishedDashboardsController : ControllerBase
     [HttpGet("{id}/entry")]
     public async Task<IActionResult> Entry(string id, CancellationToken ct)
     {
-        var projectId = await CurrentProjectIdAsync(ct);
+        var entityId = await CurrentEntityIdAsync(ct);
         var row = await _published.GetAsync(id, ct);
-        if (projectId is null || row is null || row.ProjectId != projectId) return NotFound(new { error = "غير موجود" });
-        if (!PublishedDashboardRules.CanView(row.Audience, await MyProjectRoleAsync(projectId, ct), IsAdmin))
+        if (entityId is null || row is null || row.EntityId != entityId) return NotFound(new { error = "غير موجود" });
+        if (!PublishedDashboardRules.CanView(row.Audience, await MyEntityRoleAsync(entityId, ct), IsAdmin))
             return NotFound(new { error = "غير موجود" });
         var entry = await _history.GetByIdAsync(row.DashboardId, ct);
         if (entry is null) return NotFound(new { error = "اللوحة لم تعد موجودة." });
@@ -186,7 +186,7 @@ public class PublishedDashboardsController : ControllerBase
             activeFiltersJson = entry.ActiveFiltersJson,
             createdAt = entry.CreatedAt,
             isActive = entry.IsActive,
-            projectId = entry.ProjectId,
+            entityId = entry.EntityId,
             renderKind = entry.RenderKind,
             templateId = entry.TemplateId,
             myRole = "viewer",

@@ -51,7 +51,7 @@ public class RepositoryController : ControllerBase
         if (user is null) return Unauthorized();
 
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        var files = await _store.ListAsync(selection.ProjectId, ct);
+        var files = await _store.ListAsync(selection.EntityId, ct);
         if (user.Role == UserRoles.Admin) return Ok(files);
 
         var visible = files.Where(f =>
@@ -69,7 +69,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        return Ok(await _store.ListCategoriesAsync(selection.ProjectId, ct));
+        return Ok(await _store.ListCategoriesAsync(selection.EntityId, ct));
     }
 
     /// <summary>True only if <paramref name="id"/> names a file that actually belongs to the
@@ -77,10 +77,10 @@ public class RepositoryController : ControllerBase
     /// real file belonging to a different project 404s exactly like one that doesn't exist at
     /// all, the same "don't even confirm it exists" treatment UsersController gives a
     /// cross-organization user id.</summary>
-    private async Task<bool> FileInCallerProjectAsync(string fileId, string? callerProjectId, CancellationToken ct)
+    private async Task<bool> FileInCallerEntityAsync(string fileId, string? callerEntityId, CancellationToken ct)
     {
-        var fileProjectId = await _store.GetProjectIdAsync(fileId, ct);
-        return fileProjectId is not null && string.Equals(fileProjectId, callerProjectId, StringComparison.OrdinalIgnoreCase);
+        var fileEntityId = await _store.GetEntityIdAsync(fileId, ct);
+        return fileEntityId is not null && string.Equals(fileEntityId, callerEntityId, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -152,9 +152,9 @@ public class RepositoryController : ControllerBase
         {
             var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
             var saved = await _store.SaveAsync(
-                parsed, request.DisplayName, request.Description, request.Category, user.Id, selection.ProjectId, ct);
+                parsed, request.DisplayName, request.Description, request.Category, user.Id, selection.EntityId, ct);
             // طبقة المعنى: فهم أعمدة الجدول مرة واحدة في الخلفية — لا يؤخّر الحفظ ولا يُفشله.
-            _semantics.AnalyzeInBackground(saved.ProjectId, saved.TableName);
+            _semantics.AnalyzeInBackground(saved.EntityId, saved.TableName);
             return Ok(saved);
         }
         catch (Exception ex)
@@ -179,9 +179,9 @@ public class RepositoryController : ControllerBase
         try
         {
             var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-            var saved = await _store.SaveAsync(parsed, request.DisplayName.Trim(), request.Description ?? "", request.Category ?? "", user.Id, selection.ProjectId, ct);
+            var saved = await _store.SaveAsync(parsed, request.DisplayName.Trim(), request.Description ?? "", request.Category ?? "", user.Id, selection.EntityId, ct);
             await _store.SetSourceAsync(saved.Id, request.Url.Trim(), DateTime.UtcNow, null, request.Sheet, sheets, ct);
-            _semantics.AnalyzeInBackground(saved.ProjectId, saved.TableName);
+            _semantics.AnalyzeInBackground(saved.EntityId, saved.TableName);
             return Ok(await _store.FindAsync(saved.Id, ct) ?? saved);
         }
         catch (Exception ex)
@@ -199,7 +199,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)) return NotFound(new { error = "الملف غير موجود." });
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct)) return NotFound(new { error = "الملف غير موجود." });
         var file = await _store.FindAsync(id, ct);
         // جدول سجلات تصميم حر: يُعاد بناؤه من السجلات لا من رابط خارجي.
         if (Freeform.FreeformRecordTableService.Parse(file?.SourceUrl) is { } rec)
@@ -225,7 +225,7 @@ public class RepositoryController : ControllerBase
             var updated = await _store.UpdateDataAsync(id, parsed, ct);
             if (updated is null) return NotFound(new { error = "الملف غير موجود." });
             await _store.SetSourceAsync(id, file.SourceUrl, DateTime.UtcNow, null, sheet, sheets, ct);
-            _semantics.AnalyzeInBackground(updated.ProjectId, updated.TableName);
+            _semantics.AnalyzeInBackground(updated.EntityId, updated.TableName);
             var after = await _store.GetColumnsAsync(id, ct);
             var added = after.Except(before, StringComparer.OrdinalIgnoreCase).ToList();
             var removed = before.Except(after, StringComparer.OrdinalIgnoreCase).ToList();
@@ -246,7 +246,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)) return NotFound(new { error = "الملف غير موجود." });
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct)) return NotFound(new { error = "الملف غير موجود." });
         await _store.SetSourceAsync(id, null, null, null, null, null, ct);
         return NoContent();
     }
@@ -291,7 +291,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
         if (!_parser.TryTake(request.Token, out var parsed))
             return NotFound(new { error = "انتهت صلاحية الملف المرفوع. ارفعه من جديد." });
@@ -300,7 +300,7 @@ public class RepositoryController : ControllerBase
         {
             var updated = await _store.UpdateDataAsync(id, parsed, ct);
         // طبقة المعنى: بيانات جديدة قد تغيّر معاني الأعمدة — تحليل في الخلفية.
-        _semantics.AnalyzeInBackground(updated?.ProjectId, updated?.TableName);
+        _semantics.AnalyzeInBackground(updated?.EntityId, updated?.TableName);
             return updated is null ? NotFound(new { error = "الملف غير موجود." }) : Ok(updated);
         }
         catch (Exception ex)
@@ -327,7 +327,7 @@ public class RepositoryController : ControllerBase
         var (file, error) = await FindAccessibleFileAsync(id, ct);
         if (file is null) return error!;
         if (string.IsNullOrWhiteSpace(file.TableName)) return Ok(new { columns = Array.Empty<object>(), concepts = ChatToDashboard.Api.Semantics.ConceptCatalog.Concepts });
-        var rows = await _semanticsStore.ListForTableAsync(file.ProjectId ?? "", file.TableName, ct);
+        var rows = await _semanticsStore.ListForTableAsync(file.EntityId ?? "", file.TableName, ct);
         return Ok(new { tableName = file.TableName, columns = rows, concepts = ChatToDashboard.Api.Semantics.ConceptCatalog.Concepts });
     }
 
@@ -337,9 +337,9 @@ public class RepositoryController : ControllerBase
     {
         var (file, error) = await FindAccessibleFileAsync(id, ct);
         if (file is null) return error!;
-        if (string.IsNullOrWhiteSpace(file.TableName) || string.IsNullOrWhiteSpace(file.ProjectId))
+        if (string.IsNullOrWhiteSpace(file.TableName) || string.IsNullOrWhiteSpace(file.EntityId))
             return BadRequest(new { error = "هذا الملف ليس له جدول بيانات." });
-        var rows = await _semantics.AnalyzeTableAsync(file.ProjectId, file.TableName, ct);
+        var rows = await _semantics.AnalyzeTableAsync(file.EntityId, file.TableName, ct);
         return Ok(new { tableName = file.TableName, columns = rows });
     }
 
@@ -349,13 +349,13 @@ public class RepositoryController : ControllerBase
     {
         var (file, error) = await FindAccessibleFileAsync(id, ct);
         if (file is null) return error!;
-        if (string.IsNullOrWhiteSpace(file.TableName) || string.IsNullOrWhiteSpace(file.ProjectId))
+        if (string.IsNullOrWhiteSpace(file.TableName) || string.IsNullOrWhiteSpace(file.EntityId))
             return BadRequest(new { error = "هذا الملف ليس له جدول بيانات." });
         if (request.Concept is not null && !ChatToDashboard.Api.Semantics.ConceptCatalog.IsKnown(request.Concept))
             return BadRequest(new { error = "المفهوم غير معروف في القاموس." });
         var role = request.Role ?? ChatToDashboard.Api.Semantics.ConceptCatalog.Find(request.Concept)?.Role ?? ChatToDashboard.Api.Semantics.ConceptRoles.Text;
         var valueMap = request.ValueMap is { Count: > 0 } ? System.Text.Json.JsonSerializer.Serialize(request.ValueMap) : null;
-        await _semantics.SetByUserAsync(file.ProjectId, file.TableName, column, request.Concept, role, request.Unit, valueMap, ct);
+        await _semantics.SetByUserAsync(file.EntityId, file.TableName, column, request.Concept, role, request.Unit, valueMap, ct);
         return NoContent();
     }
 
@@ -364,7 +364,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return (null, Unauthorized());
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        var file = (await _store.ListAsync(selection.ProjectId, ct)).FirstOrDefault(f => f.Id == id);
+        var file = (await _store.ListAsync(selection.EntityId, ct)).FirstOrDefault(f => f.Id == id);
         return file is null ? (null, NotFound(new { error = "الملف غير موجود." })) : (file, null);
     }
 
@@ -375,7 +375,7 @@ public class RepositoryController : ControllerBase
         if (user is null) return Unauthorized();
 
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
 
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
@@ -418,7 +418,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
         var ok = await _store.UpdateMetaAsync(id, request.DisplayName, request.Description, request.Category, ct);
         return ok ? NoContent() : NotFound(new { error = "الملف غير موجود." });
@@ -434,7 +434,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
 
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
@@ -468,7 +468,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
         if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
@@ -487,8 +487,8 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct)
-            || !await FileInCallerProjectAsync(request.RelatedFileId, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct)
+            || !await FileInCallerEntityAsync(request.RelatedFileId, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
         var relationship = await _store.AddRelationshipAsync(id, request.RelatedFileId, request.SharedColumn, ct);
         return Ok(relationship);
@@ -500,7 +500,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
         await _store.DeleteRelationshipAsync(id, relationshipId, ct);
         return NoContent();
@@ -523,7 +523,7 @@ public class RepositoryController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        if (!await FileInCallerProjectAsync(id, selection.ProjectId, ct))
+        if (!await FileInCallerEntityAsync(id, selection.EntityId, ct))
             return NotFound(new { error = "الملف غير موجود." });
         var createdByUserId = await _store.GetCreatedByUserIdAsync(id, ct);
         if (createdByUserId is null) return NotFound(new { error = "الملف غير موجود." });
@@ -531,10 +531,10 @@ public class RepositoryController : ControllerBase
             return Forbid();
 
         // طبقة المعنى: صفوف أعمدة هذا الجدول تُحذف معه حتى لا تُلحق بجدول لاحق يحمل الاسم نفسه.
-        var doomed = (await _store.ListAsync(selection.ProjectId, ct)).FirstOrDefault(f => f.Id == id);
+        var doomed = (await _store.ListAsync(selection.EntityId, ct)).FirstOrDefault(f => f.Id == id);
         await _store.DeleteAsync(id, ct);
-        if (doomed is { TableName.Length: > 0, ProjectId.Length: > 0 })
-            await _semanticsStore.DeleteForTableAsync(doomed.ProjectId, doomed.TableName, ct);
+        if (doomed is { TableName.Length: > 0, EntityId.Length: > 0 })
+            await _semanticsStore.DeleteForTableAsync(doomed.EntityId, doomed.TableName, ct);
         return NoContent();
     }
 }

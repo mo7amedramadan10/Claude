@@ -118,7 +118,7 @@ public class ClaudeChatController : ControllerBase
         await _store.AddMessageAsync(chat.Id, "user", message, ct: ct);
         // مشروع المستخدم الحالي هو نطاق أدوات القراءة لهذه الرسالة (لا يرى غيره).
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        await foreach (var ev in _cli.SendAsync(chat.Id, resume: !isNew, message, user.Id, selection.ProjectId, ct))
+        await foreach (var ev in _cli.SendAsync(chat.Id, resume: !isNew, message, user.Id, selection.EntityId, ct))
         {
             switch (ev.Kind)
             {

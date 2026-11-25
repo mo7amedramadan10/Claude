@@ -38,7 +38,7 @@ public class SchemaAliasStore
         command.CommandText = text;
         await command.ExecuteNonQueryAsync(ct);
 
-        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/ProjectStore —
+        // ترحيل دفاعي: نفس نمط AddColumnIfMissingAsync في PresentationStore/EntityStore —
         // بلا تأثير إن كان الجدول جديدًا أصلًا.
         await AddColumnIfMissingAsync(connection, "Id", "NVARCHAR(200)", ct);
         await AddColumnIfMissingAsync(connection, "ConceptId", "NVARCHAR(400)", ct);

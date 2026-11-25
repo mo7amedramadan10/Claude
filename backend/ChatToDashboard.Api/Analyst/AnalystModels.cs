@@ -1,6 +1,6 @@
 namespace ChatToDashboard.Api.Analyst;
 
-/// <summary>See the Project Analyst spec, section 5 step 1 — a question is classified before
+/// <summary>See the Entity Analyst spec, section 5 step 1 — a question is classified before
 /// anything else runs, and the classification decides whether the tool loop (org_data), a
 /// tool-free general-knowledge answer (general), or an outright refusal (out_of_scope) happens.</summary>
 public static class AnalystKnowledgeScopes
@@ -42,7 +42,7 @@ public static class AnalystSourceKinds
 public class AnalystConversation
 {
     public string Id { get; set; } = "";
-    public string ProjectId { get; set; } = "";
+    public string EntityId { get; set; } = "";
     public string OwnerUserId { get; set; } = "";
     public string Title { get; set; } = "";
     public bool IsSaved { get; set; }
@@ -77,7 +77,7 @@ public class AnalystResult
 {
     public string Id { get; set; } = "";
     public string ConversationId { get; set; } = "";
-    public string ProjectId { get; set; } = "";
+    public string EntityId { get; set; } = "";
     public string Title { get; set; } = "";
     public string ResultType { get; set; } = AnalystResultTypes.Table;
     public string ColumnsJson { get; set; } = "[]";

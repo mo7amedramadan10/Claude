@@ -6,7 +6,7 @@ namespace ChatToDashboard.Api.Graph;
 
 /// <summary>
 /// Persists network-graph data (nodes/edges) for the "لوحات تفاعلية" network dashboards — same
-/// shared-DB/Dapper pattern as AnalystStore. Every row carries ProjectId, so each project gets
+/// shared-DB/Dapper pattern as AnalystStore. Every row carries EntityId, so each project gets
 /// its own network per NetworkKey.
 ///
 /// Phase 2 of the interactive-dashboards handoff ports network-graph.js/graph-drill.js as pure,
@@ -40,13 +40,13 @@ public class GraphStore
                 $"""
                  IF OBJECT_ID('dbo.GraphNodes') IS NULL
                  CREATE TABLE {NodesTable} (
-                   [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64), [NetworkKey] NVARCHAR(40), [NodeKey] NVARCHAR(40),
+                   [Id] NVARCHAR(64) PRIMARY KEY, [EntityId] NVARCHAR(64), [NetworkKey] NVARCHAR(40), [NodeKey] NVARCHAR(40),
                    [Type] NVARCHAR(40), [Name] NVARCHAR(400), [Description] NVARCHAR(MAX), [Year] INT, [DataJson] NVARCHAR(MAX), [CreatedAt] DATETIME2)
                  """,
                 $"""
                  IF OBJECT_ID('dbo.GraphEdges') IS NULL
                  CREATE TABLE {EdgesTable} (
-                   [Id] NVARCHAR(64) PRIMARY KEY, [ProjectId] NVARCHAR(64), [NetworkKey] NVARCHAR(40), [FromKey] NVARCHAR(40),
+                   [Id] NVARCHAR(64) PRIMARY KEY, [EntityId] NVARCHAR(64), [NetworkKey] NVARCHAR(40), [FromKey] NVARCHAR(40),
                    [ToKey] NVARCHAR(40), [RelType] NVARCHAR(40), [Year] INT, [CreatedAt] DATETIME2)
                  """,
             };
@@ -59,9 +59,9 @@ public class GraphStore
         }
 
         // ترحيل دفاعي: إضافة أي عمود مفقود من جدول أُنشئ قبل وجوده (نفس نمط AnalystStore/
-        // ProjectStore) — بلا تأثير إن كان الجدول جديدًا أصلًا.
+        // EntityStore) — بلا تأثير إن كان الجدول جديدًا أصلًا.
         await AddColumnIfMissingAsync(connection, NodesTable, "Id", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, NodesTable, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, NodesTable, "EntityId", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, NodesTable, "NetworkKey", "NVARCHAR(40)", ct);
         await AddColumnIfMissingAsync(connection, NodesTable, "NodeKey", "NVARCHAR(40)", ct);
         await AddColumnIfMissingAsync(connection, NodesTable, "Type", "NVARCHAR(40)", ct);
@@ -72,7 +72,7 @@ public class GraphStore
         await AddColumnIfMissingAsync(connection, NodesTable, "CreatedAt", "DATETIME2", ct);
 
         await AddColumnIfMissingAsync(connection, EdgesTable, "Id", "NVARCHAR(64)", ct);
-        await AddColumnIfMissingAsync(connection, EdgesTable, "ProjectId", "NVARCHAR(64)", ct);
+        await AddColumnIfMissingAsync(connection, EdgesTable, "EntityId", "NVARCHAR(64)", ct);
         await AddColumnIfMissingAsync(connection, EdgesTable, "NetworkKey", "NVARCHAR(40)", ct);
         await AddColumnIfMissingAsync(connection, EdgesTable, "FromKey", "NVARCHAR(40)", ct);
         await AddColumnIfMissingAsync(connection, EdgesTable, "ToKey", "NVARCHAR(40)", ct);
@@ -93,45 +93,45 @@ public class GraphStore
     }
 
     public async Task<(IReadOnlyList<GraphNode> Nodes, IReadOnlyList<GraphEdge> Edges)> GetNetworkAsync(
-        string projectId, string networkKey, CancellationToken ct = default)
+        string entityId, string networkKey, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
-        await SeedIfEmptyAsync(projectId, networkKey, ct);
+        await SeedIfEmptyAsync(entityId, networkKey, ct);
 
         await using var connection = await _db.OpenConnectionAsync(ct);
         var nodes = await connection.QueryAsync<GraphNode>(
-            $"SELECT * FROM {NodesTable} WHERE ProjectId = @projectId AND NetworkKey = @networkKey",
-            new { projectId, networkKey });
+            $"SELECT * FROM {NodesTable} WHERE EntityId = @entityId AND NetworkKey = @networkKey",
+            new { entityId, networkKey });
         var edges = await connection.QueryAsync<GraphEdge>(
-            $"SELECT * FROM {EdgesTable} WHERE ProjectId = @projectId AND NetworkKey = @networkKey",
-            new { projectId, networkKey });
+            $"SELECT * FROM {EdgesTable} WHERE EntityId = @entityId AND NetworkKey = @networkKey",
+            new { entityId, networkKey });
         return (nodes.ToList(), edges.ToList());
     }
 
-    private async Task SeedIfEmptyAsync(string projectId, string networkKey, CancellationToken ct)
+    private async Task SeedIfEmptyAsync(string entityId, string networkKey, CancellationToken ct)
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         var existing = await connection.ExecuteScalarAsync<long>(
-            $"SELECT COUNT(1) FROM {NodesTable} WHERE ProjectId = @projectId AND NetworkKey = @networkKey",
-            new { projectId, networkKey });
+            $"SELECT COUNT(1) FROM {NodesTable} WHERE EntityId = @entityId AND NetworkKey = @networkKey",
+            new { entityId, networkKey });
         if (existing > 0) return;
 
         if (networkKey != GraphNetworkKeys.Policy) return; // No seed defined for this key yet.
 
         var now = DateTime.UtcNow;
-        var nodes = PolicySeed.Nodes(projectId, now);
-        var edges = PolicySeed.Edges(projectId, now);
+        var nodes = PolicySeed.Nodes(entityId, now);
+        var edges = PolicySeed.Edges(entityId, now);
 
         await using var transaction = await connection.BeginTransactionAsync(ct);
         foreach (var n in nodes)
             await connection.ExecuteAsync($"""
-                INSERT INTO {NodesTable} (Id, ProjectId, NetworkKey, NodeKey, Type, Name, Description, Year, DataJson, CreatedAt)
-                VALUES (@Id, @ProjectId, @NetworkKey, @NodeKey, @Type, @Name, @Description, @Year, @DataJson, @CreatedAt)
+                INSERT INTO {NodesTable} (Id, EntityId, NetworkKey, NodeKey, Type, Name, Description, Year, DataJson, CreatedAt)
+                VALUES (@Id, @EntityId, @NetworkKey, @NodeKey, @Type, @Name, @Description, @Year, @DataJson, @CreatedAt)
                 """, n, transaction);
         foreach (var e in edges)
             await connection.ExecuteAsync($"""
-                INSERT INTO {EdgesTable} (Id, ProjectId, NetworkKey, FromKey, ToKey, RelType, Year, CreatedAt)
-                VALUES (@Id, @ProjectId, @NetworkKey, @FromKey, @ToKey, @RelType, @Year, @CreatedAt)
+                INSERT INTO {EdgesTable} (Id, EntityId, NetworkKey, FromKey, ToKey, RelType, Year, CreatedAt)
+                VALUES (@Id, @EntityId, @NetworkKey, @FromKey, @ToKey, @RelType, @Year, @CreatedAt)
                 """, e, transaction);
         await transaction.CommitAsync(ct);
     }
@@ -143,11 +143,11 @@ public class GraphStore
     {
         private static string Json(int c, int cm, int s) => JsonSerializer.Serialize(new { c, cm, s });
 
-        public static List<GraphNode> Nodes(string projectId, DateTime now)
+        public static List<GraphNode> Nodes(string entityId, DateTime now)
         {
             GraphNode N(string key, string type, string name, string desc, int year, int c, int cm, int s) => new()
             {
-                Id = Guid.NewGuid().ToString("N"), ProjectId = projectId, NetworkKey = GraphNetworkKeys.Policy,
+                Id = Guid.NewGuid().ToString("N"), EntityId = entityId, NetworkKey = GraphNetworkKeys.Policy,
                 NodeKey = key, Type = type, Name = name, Description = desc, Year = year, DataJson = Json(c, cm, s), CreatedAt = now,
             };
             return new List<GraphNode>
@@ -208,11 +208,11 @@ public class GraphStore
             };
         }
 
-        public static List<GraphEdge> Edges(string projectId, DateTime now)
+        public static List<GraphEdge> Edges(string entityId, DateTime now)
         {
             GraphEdge E(string a, string b, string r, int? y = null) => new()
             {
-                Id = Guid.NewGuid().ToString("N"), ProjectId = projectId, NetworkKey = GraphNetworkKeys.Policy,
+                Id = Guid.NewGuid().ToString("N"), EntityId = entityId, NetworkKey = GraphNetworkKeys.Policy,
                 FromKey = a, ToKey = b, RelType = r, Year = y, CreatedAt = now,
             };
             return new List<GraphEdge>

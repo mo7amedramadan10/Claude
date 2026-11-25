@@ -60,10 +60,10 @@ public class SaasMetricsDataProvider : IInteractiveDataProvider
     private record PlanMix(string Name, int Accounts, double Revenue, double Arpa, double ChurnPct, double Nrr);
     internal record CohortData(List<string> Months, List<string> Ages, List<List<int?>> Logo, List<List<int?>> Rev);
 
-    public async Task<InteractiveDataResult> BuildAsync(string projectId, CancellationToken ct)
+    public async Task<InteractiveDataResult> BuildAsync(string entityId, CancellationToken ct)
     {
         var missing = new[] { "لقطات الدخل الشهري المتكرر الأسبوعية (account_mrr_snapshots)" };
-        var matched = await _matcher.MatchAsync(projectId, Contract, ct);
+        var matched = await _matcher.MatchAsync(entityId, Contract, ct);
         if (matched is null) return InteractiveDataResult.Unlinked(missing);
 
         var snapTable = matched.Tables["account_mrr_snapshots"];

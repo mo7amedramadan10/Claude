@@ -65,10 +65,10 @@ public class InteractiveContractMatcher
     }
 
     public async Task<MatchedInteractiveContract?> MatchAsync(
-        string projectId, IReadOnlyList<InteractiveTableContract> contract, CancellationToken ct)
+        string entityId, IReadOnlyList<InteractiveTableContract> contract, CancellationToken ct)
     {
         var selection = SourceSelection.AllEnabled();
-        selection.ProjectId = projectId;
+        selection.EntityId = entityId;
         selection.IsAdmin = true; // a system-level build, not on behalf of one user's own file permissions.
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var realTables = await _tools.GetVisibleTablesAsync(context, ct);

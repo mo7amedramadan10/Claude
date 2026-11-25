@@ -11,7 +11,7 @@ namespace ChatToDashboard.Api.Graph;
 public class GraphNode
 {
     public string Id { get; set; } = "";
-    public string ProjectId { get; set; } = "";
+    public string EntityId { get; set; } = "";
     public string NetworkKey { get; set; } = "";
     public string NodeKey { get; set; } = "";
     public string Type { get; set; } = "";
@@ -25,7 +25,7 @@ public class GraphNode
 public class GraphEdge
 {
     public string Id { get; set; } = "";
-    public string ProjectId { get; set; } = "";
+    public string EntityId { get; set; } = "";
     public string NetworkKey { get; set; } = "";
     public string FromKey { get; set; } = "";
     public string ToKey { get; set; } = "";

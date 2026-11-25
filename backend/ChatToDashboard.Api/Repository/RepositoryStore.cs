@@ -19,15 +19,15 @@ public class RepositoryStore
 {
     private readonly DataStore _db;
     private readonly ITableNamingAssistant _tableNaming;
-    private readonly Projects.ProjectStore _projects;
+    private readonly Entities.EntityStore _entities;
     private readonly ILogger<RepositoryStore> _logger;
 
     public RepositoryStore(
-        DataStore db, ITableNamingAssistant tableNaming, Projects.ProjectStore projects, ILogger<RepositoryStore> logger)
+        DataStore db, ITableNamingAssistant tableNaming, Entities.EntityStore projects, ILogger<RepositoryStore> logger)
     {
         _db = db;
         _tableNaming = tableNaming;
-        _projects = projects;
+        _entities = projects;
         _logger = logger;
     }
 
@@ -82,7 +82,7 @@ public class RepositoryStore
                      ("SchemaChangedAt", "DATETIME2"),
                      ("CreatedByUserId", "NVARCHAR(200)"),
                      ("FileContent", "VARBINARY(MAX)"),
-                     ("ProjectId", "NVARCHAR(64)"),
+                     ("EntityId", "NVARCHAR(64)"),
                      ("SourceUrl", "NVARCHAR(2000)"),
                      ("LastSyncedAt", "DATETIME2"),
                      ("SyncError", "NVARCHAR(1000)"),
@@ -124,7 +124,7 @@ public class RepositoryStore
     }
 
     private const string SelectColumns =
-        "Id, ProjectId, COALESCE(DisplayName, OriginalFileName, '') AS DisplayName, " +
+        "Id, EntityId, COALESCE(DisplayName, OriginalFileName, '') AS DisplayName, " +
         "COALESCE(OriginalFileName, '') AS OriginalFileName, COALESCE(Description, '') AS Description, " +
         // RowCount bracketed: SQL Server's parser rejects it bare here ("Incorrect syntax
         // near the keyword 'RowCount'") even though it isn't formally reserved.
@@ -132,23 +132,23 @@ public class RepositoryStore
         "COALESCE(LastUpdatedAt, UploadedAt) AS LastUpdatedAt, TableName, SchemaChangedAt, " +
         "COALESCE(CreatedByUserId, '') AS CreatedByUserId, SourceUrl, LastSyncedAt, SyncError, SourceSheet, SourceSheetsJson";
 
-    /// <summary>Attaches every file that predates project scoping (ProjectId still NULL) to
+    /// <summary>Attaches every file that predates project scoping (EntityId still NULL) to
     /// the organization's default project — called once from Program.cs's startup, the same
     /// "give pre-existing rows the one project everything used to belong to implicitly"
     /// backfill UserStore.BackfillMissingOrganizationAsync already does for OrganizationId.</summary>
-    public async Task BackfillMissingProjectAsync(string projectId, CancellationToken ct = default)
+    public async Task BackfillMissingEntityAsync(string entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
-            $"UPDATE {CatalogueTable} SET ProjectId = @projectId WHERE ProjectId IS NULL OR ProjectId = ''",
-            new { projectId });
+            $"UPDATE {CatalogueTable} SET EntityId = @entityId WHERE EntityId IS NULL OR EntityId = ''",
+            new { entityId });
     }
 
     /// <summary>One-time move of each project's existing uploaded-file tables out of the shared
-    /// schema and into that project's own (see DataStore.ProjectSchema) — called once from
-    /// Program.cs's startup, after BackfillMissingProjectAsync above has already given every
-    /// pre-existing file a ProjectId.
+    /// schema and into that project's own (see DataStore.EntitySchema) — called once from
+    /// Program.cs's startup, after BackfillMissingEntityAsync above has already given every
+    /// pre-existing file a EntityId.
     /// Uses ALTER SCHEMA ... TRANSFER — a metadata-only move with no data copy — so it's fast
     /// and safe to run even with real data already in place; no need for the "rebuild table,
     /// copy rows, drop old" pattern UserStore.RelaxUsernameUniquenessAsync uses for a change
@@ -156,26 +156,26 @@ public class RepositoryStore
     /// OBJECT_ID rather than any local "did I run before" flag, so it's safe to call on every
     /// startup; a single row's failure is logged and skipped rather than aborting the rest, the
     /// same best-effort posture as every other migration in this codebase.</summary>
-    public async Task MigrateExistingTablesToProjectSchemasAsync(CancellationToken ct = default)
+    public async Task MigrateExistingTablesToEntitySchemasAsync(CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var sharedSchema = _db.ProjectSchema(null);
-        var rows = await connection.QueryAsync<(string Id, string TableName, string ProjectId)>(
-            $"SELECT Id, TableName, ProjectId FROM {CatalogueTable} " +
-            "WHERE TableName IS NOT NULL AND TableName <> '' AND ProjectId IS NOT NULL AND ProjectId <> ''");
+        var sharedSchema = _db.EntitySchema(null);
+        var rows = await connection.QueryAsync<(string Id, string TableName, string EntityId)>(
+            $"SELECT Id, TableName, EntityId FROM {CatalogueTable} " +
+            "WHERE TableName IS NOT NULL AND TableName <> '' AND EntityId IS NOT NULL AND EntityId <> ''");
 
         foreach (var row in rows)
         {
-            var targetSchema = _db.ProjectSchema(row.ProjectId);
+            var targetSchema = _db.EntitySchema(row.EntityId);
             if (string.Equals(targetSchema, sharedSchema, StringComparison.Ordinal))
-                continue; // blank/malformed project id — DataStore.ProjectSchema already fell back to shared
+                continue; // blank/malformed project id — DataStore.EntitySchema already fell back to shared
 
             var bareName = _db.BareTableName(row.TableName);
             try
             {
-                var project = await _projects.FindByIdAsync(row.ProjectId, ct);
-                await _db.CreateProjectSchemaIfMissingAsync(connection, row.ProjectId, project?.Name, ct);
+                var project = await _entities.FindByIdAsync(row.EntityId, ct);
+                await _db.CreateEntitySchemaIfMissingAsync(connection, row.EntityId, project?.Name, ct);
 
                 await using var check = connection.CreateCommand();
                 check.CommandText = "SELECT OBJECT_ID(@target)";
@@ -199,19 +199,19 @@ public class RepositoryStore
     }
 
     /// <summary>
-    /// Every file belonging to <paramref name="projectId"/> — the project isolation boundary
-    /// files sit behind (see RepositoryFile.ProjectId). Passing null returns every file
+    /// Every file belonging to <paramref name="entityId"/> — the project isolation boundary
+    /// files sit behind (see RepositoryFile.EntityId). Passing null returns every file
     /// regardless of project; only Program.cs's startup backfill and the one-time migration
     /// path should ever do that — every normal caller resolves a real project id first (see
-    /// ProjectStore.ResolveCurrentProjectIdAsync) so a brand new organization/project never
+    /// EntityStore.ResolveCurrentEntityIdAsync) so a brand new organization/project never
     /// sees another project's files, which is exactly the leak this parameter closes.
     /// </summary>
-    public async Task<IReadOnlyList<RepositoryFile>> ListAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<RepositoryFile>> ListAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var where = projectId is null ? "" : " WHERE ProjectId = @projectId";
-        var files = (await connection.QueryAsync<RepositoryFile>($"SELECT {SelectColumns} FROM {CatalogueTable}{where}", new { projectId }))
+        var where = entityId is null ? "" : " WHERE EntityId = @entityId";
+        var files = (await connection.QueryAsync<RepositoryFile>($"SELECT {SelectColumns} FROM {CatalogueTable}{where}", new { entityId }))
             .OrderByDescending(r => r.UploadedAt).ToList();
         if (files.Count == 0) return files;
 
@@ -269,9 +269,9 @@ public class RepositoryStore
         return files;
     }
 
-    public async Task<IReadOnlyList<string>> ListCategoriesAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<string>> ListCategoriesAsync(string? entityId, CancellationToken ct = default)
     {
-        var files = await ListAsync(projectId, ct);
+        var files = await ListAsync(entityId, ct);
         return files.Select(f => f.Category).Where(c => !string.IsNullOrWhiteSpace(c))
             .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c).ToList();
     }
@@ -279,7 +279,7 @@ public class RepositoryStore
     /// <summary>"Upload new file": creates a brand new file identity.</summary>
     public async Task<RepositoryFile> SaveAsync(
         ParsedUpload parsed, string displayName, string description, string category,
-        string createdByUserId, string? projectId, CancellationToken ct = default)
+        string createdByUserId, string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         var id = Guid.NewGuid().ToString("N");
@@ -287,7 +287,7 @@ public class RepositoryStore
         var record = new RepositoryFile
         {
             Id = id,
-            ProjectId = projectId,
+            EntityId = entityId,
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? parsed.FileName : displayName.Trim(),
             OriginalFileName = parsed.FileName,
             Description = description?.Trim() ?? "",
@@ -316,8 +316,8 @@ public class RepositoryStore
         if (table is not null && table.Columns.Count > 0)
         {
             var columnNames = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
-            bareName = await ResolveBareTableNameAsync(record.DisplayName, record.Description, columnNames, parsed.FileName, id, projectId, ct);
-            record.TableName = _db.DisplayTable(projectId, bareName);
+            bareName = await ResolveBareTableNameAsync(record.DisplayName, record.Description, columnNames, parsed.FileName, id, entityId, ct);
+            record.TableName = _db.DisplayTable(entityId, bareName);
             columnsJson = System.Text.Json.JsonSerializer.Serialize(columnNames);
         }
 
@@ -325,21 +325,21 @@ public class RepositoryStore
 
         if (table is not null && bareName is not null)
         {
-            var project = projectId is null ? null : await _projects.FindByIdAsync(projectId, ct);
-            await _db.CreateProjectSchemaIfMissingAsync(connection, projectId, project?.Name, ct);
-            await _db.RecreateAndLoadAsync(connection, projectId, bareName, table, ct);
+            var project = entityId is null ? null : await _entities.FindByIdAsync(entityId, ct);
+            await _db.CreateEntitySchemaIfMissingAsync(connection, entityId, project?.Name, ct);
+            await _db.RecreateAndLoadAsync(connection, entityId, bareName, table, ct);
         }
 
         try
         {
             await connection.ExecuteAsync(new CommandDefinition(
-                $"INSERT INTO {CatalogueTable} (Id, ProjectId, DisplayName, OriginalFileName, Description, Category, Kind, " +
+                $"INSERT INTO {CatalogueTable} (Id, EntityId, DisplayName, OriginalFileName, Description, Category, Kind, " +
                 "[RowCount], ColumnCount, PageCount, UploadedAt, LastUpdatedAt, TableName, TextContent, ColumnsJson, CreatedByUserId, FileContent) " +
-                "VALUES (@Id, @ProjectId, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
+                "VALUES (@Id, @EntityId, @DisplayName, @OriginalFileName, @Description, @Category, @Kind, " +
                 "@RowCount, @ColumnCount, @PageCount, @UploadedAt, @LastUpdatedAt, @TableName, @TextContent, @ColumnsJson, @CreatedByUserId, @FileContent)",
                 new
                 {
-                    record.Id, record.ProjectId, record.DisplayName, record.OriginalFileName, record.Description, record.Category,
+                    record.Id, record.EntityId, record.DisplayName, record.OriginalFileName, record.Description, record.Category,
                     record.Kind, record.RowCount, record.ColumnCount, record.PageCount, record.UploadedAt,
                     record.LastUpdatedAt, record.TableName, TextContent = parsed.Text, ColumnsJson = columnsJson,
                     record.CreatedByUserId, FileContent = parsed.Content,
@@ -351,7 +351,7 @@ public class RepositoryStore
             // جدول البيانات أُنشئ وحُمِّل أعلاه ثم فشل تسجيل الملف في الفهرس (مهلة SQL Server مثلًا تحت ضغط
             // الذاكرة): بلا هذا التنظيف يبقى الجدول يتيمًا، وكل محاولة رفع تالية تأخذ اسمًا جديدًا (opportunities_2…).
             _logger.LogWarning(ex, "Catalogue insert for {File} failed after its data table was loaded — dropping {Table}", record.DisplayName, record.TableName);
-            try { await _db.DropTableAsync(connection, projectId, bareName, CancellationToken.None); }
+            try { await _db.DropTableAsync(connection, entityId, bareName, CancellationToken.None); }
             catch (Exception dropEx) { _logger.LogWarning(dropEx, "Could not drop the orphan table {Table}", record.TableName); }
             throw;
         }
@@ -375,7 +375,7 @@ public class RepositoryStore
     /// </summary>
     private async Task<string> ResolveBareTableNameAsync(
         string displayName, string description, IReadOnlyList<string> columnNames,
-        string fileName, string id, string? projectId, CancellationToken ct)
+        string fileName, string id, string? entityId, CancellationToken ct)
     {
         var fallback = $"repo_{TabularFileParser.SanitizeTableName(Path.GetFileNameWithoutExtension(fileName))}_{id[..6]}";
 
@@ -396,7 +396,7 @@ public class RepositoryStore
         // new GUID), which a short generic name like "sales_orders" very much is not. Scoped to
         // this project's own schema (plus the shared one) — a short name like "sales" no longer
         // collides with an unrelated project's table of the same name.
-        var existing = (await _db.GetSchemaAsync(projectId, ct))
+        var existing = (await _db.GetSchemaAsync(entityId, ct))
             .Select(t => _db.BareTableName(t.Table))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (!existing.Contains(sanitized)) return sanitized;
@@ -441,11 +441,11 @@ public class RepositoryStore
         await using var connection = await _db.OpenConnectionAsync(ct);
 
         var row = await connection.QuerySingleOrDefaultAsync(
-            $"SELECT TableName, ColumnsJson, ProjectId FROM {CatalogueTable} WHERE Id = @id", new { id });
+            $"SELECT TableName, ColumnsJson, EntityId FROM {CatalogueTable} WHERE Id = @id", new { id });
         if (row is null) return null; // no file with this id at all
         string existingTableName = (string?)row.TableName ?? "";
         string existingColumnsJson = (string?)row.ColumnsJson ?? "[]";
-        string? projectId = (string?)row.ProjectId;
+        string? entityId = (string?)row.EntityId;
 
         var now = DateTime.UtcNow;
         string? newColumnsJson = null;
@@ -454,9 +454,9 @@ public class RepositoryStore
         if (parsed.Table is { } table && table.Columns.Count > 0 && !string.IsNullOrWhiteSpace(existingTableName))
         {
             var bareName = _db.BareTableName(existingTableName);
-            var project = projectId is null ? null : await _projects.FindByIdAsync(projectId, ct);
-            await _db.CreateProjectSchemaIfMissingAsync(connection, projectId, project?.Name, ct);
-            await _db.RecreateAndLoadAsync(connection, projectId, bareName, table, ct);
+            var project = entityId is null ? null : await _entities.FindByIdAsync(entityId, ct);
+            await _db.CreateEntitySchemaIfMissingAsync(connection, entityId, project?.Name, ct);
+            await _db.RecreateAndLoadAsync(connection, entityId, bareName, table, ct);
 
             var newColumns = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList();
             newColumnsJson = System.Text.Json.JsonSerializer.Serialize(newColumns);
@@ -569,12 +569,12 @@ public class RepositoryStore
         return await connection.QuerySingleOrDefaultAsync<RepositoryFile>($"SELECT {SelectColumns} FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
     }
 
-    public async Task<string?> GetProjectIdAsync(string fileId, CancellationToken ct = default)
+    public async Task<string?> GetEntityIdAsync(string fileId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<string?>(
-            $"SELECT ProjectId FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
+            $"SELECT EntityId FROM {CatalogueTable} WHERE Id = @fileId", new { fileId });
     }
 
     public async Task<List<string>> GetPermittedUserIdsAsync(string fileId, CancellationToken ct = default)
@@ -618,12 +618,12 @@ public class RepositoryStore
     {
         await using var connection = await _db.OpenConnectionAsync(ct);
         var row = await connection.QuerySingleOrDefaultAsync(
-            $"SELECT TableName, ProjectId FROM {CatalogueTable} WHERE Id = @id", new { id });
+            $"SELECT TableName, EntityId FROM {CatalogueTable} WHERE Id = @id", new { id });
         string? tableName = row is null ? null : (string?)row.TableName;
-        string? projectId = row is null ? null : (string?)row.ProjectId;
+        string? entityId = row is null ? null : (string?)row.EntityId;
 
         if (!string.IsNullOrWhiteSpace(tableName))
-            await _db.DropTableAsync(connection, projectId, _db.BareTableName(tableName), ct);
+            await _db.DropTableAsync(connection, entityId, _db.BareTableName(tableName), ct);
 
         await connection.ExecuteAsync($"DELETE FROM {CatalogueTable} WHERE Id = @id", new { id });
         await connection.ExecuteAsync($"DELETE FROM {PermissionsTable} WHERE FileId = @id", new { id });
@@ -632,13 +632,13 @@ public class RepositoryStore
 
     /// <summary>Text of PDF files in the enabled categories, for document search.</summary>
     public async Task<IReadOnlyList<(string Id, string Name, string Category, string Text)>> GetTextDocumentsAsync(
-        string? projectId, CancellationToken ct = default)
+        string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<(string Id, string Name, string Category, string Text)>(
             $"SELECT Id, COALESCE(DisplayName, OriginalFileName, '') AS Name, Category, TextContent FROM {CatalogueTable} " +
-            "WHERE TextContent IS NOT NULL AND TextContent <> '' AND ProjectId = @projectId", new { projectId });
+            "WHERE TextContent IS NOT NULL AND TextContent <> '' AND EntityId = @entityId", new { entityId });
         return rows.ToList();
     }
 }

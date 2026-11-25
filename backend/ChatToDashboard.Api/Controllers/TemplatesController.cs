@@ -77,8 +77,8 @@ public class TemplatesController : ControllerBase
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
-        var items = await _feasibility.ForCatalogAsync(selection.ProjectId, ct);
-        return Ok(new { projectId = selection.ProjectId, items = items.Select(i => new { templateId = i.TemplateId, total = i.Total, buildable = i.Buildable, topMissing = i.TopMissing }) });
+        var items = await _feasibility.ForCatalogAsync(selection.EntityId, ct);
+        return Ok(new { entityId = selection.EntityId, items = items.Select(i => new { templateId = i.TemplateId, total = i.Total, buildable = i.Buildable, topMissing = i.TopMissing }) });
     }
 
     // ---------- Public (any signed-in user): display data only, never PromptText ----------

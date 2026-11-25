@@ -71,7 +71,7 @@ public class DeckBrandStore
             command.CommandText = $"""
                 IF OBJECT_ID('dbo.DeckBrands') IS NULL
                 CREATE TABLE {Table} (
-                  [ProjectKey] NVARCHAR(64) PRIMARY KEY, [OrganizationId] NVARCHAR(64), [Name] NVARCHAR(120), [Tagline] NVARCHAR(200),
+                  [EntityKey] NVARCHAR(64) PRIMARY KEY, [OrganizationId] NVARCHAR(64), [Name] NVARCHAR(120), [Tagline] NVARCHAR(200),
                   [Logo] NVARCHAR(MAX), [Primary] NVARCHAR(7), [Secondary] NVARCHAR(7), [Accent] NVARCHAR(7), [Font] NVARCHAR(60),
                   [Footer] NVARCHAR(200), [UpdatedBy] NVARCHAR(200), [UpdatedAt] DATETIME2 NOT NULL)
                 """;
@@ -81,13 +81,13 @@ public class DeckBrandStore
         finally { _schemaGate.Release(); }
     }
 
-    private static string Key(string? projectId) => string.IsNullOrEmpty(projectId) ? "-" : projectId;
+    private static string Key(string? entityId) => string.IsNullOrEmpty(entityId) ? "-" : entityId;
 
-    public async Task<DeckBrand?> GetAsync(string? projectId, CancellationToken ct = default)
+    public async Task<DeckBrand?> GetAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var row = await connection.QuerySingleOrDefaultAsync($"SELECT Name, Tagline, Logo, [Primary], Secondary, Accent, Font, Footer, UpdatedAt FROM {Table} WHERE ProjectKey = @k", new { k = Key(projectId) });
+        var row = await connection.QuerySingleOrDefaultAsync($"SELECT Name, Tagline, Logo, [Primary], Secondary, Accent, Font, Footer, UpdatedAt FROM {Table} WHERE EntityKey = @k", new { k = Key(entityId) });
         if (row is null) return null;
         return new DeckBrand
         {
@@ -96,19 +96,19 @@ public class DeckBrandStore
         };
     }
 
-    public async Task SetAsync(string? projectId, string? organizationId, string userId, DeckBrand b, CancellationToken ct = default)
+    public async Task SetAsync(string? entityId, string? organizationId, string userId, DeckBrand b, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        var p = new { k = Key(projectId), organizationId, b.Name, b.Tagline, b.Logo, b.Primary, b.Secondary, b.Accent, b.Font, b.Footer, userId, now = DateTime.UtcNow };
-        var n = await connection.ExecuteAsync($"UPDATE {Table} SET OrganizationId=@organizationId, Name=@Name, Tagline=@Tagline, Logo=@Logo, [Primary]=@Primary, Secondary=@Secondary, Accent=@Accent, Font=@Font, Footer=@Footer, UpdatedBy=@userId, UpdatedAt=@now WHERE ProjectKey=@k", p);
-        if (n == 0) await connection.ExecuteAsync($"INSERT INTO {Table} (ProjectKey, OrganizationId, Name, Tagline, Logo, [Primary], Secondary, Accent, Font, Footer, UpdatedBy, UpdatedAt) VALUES (@k, @organizationId, @Name, @Tagline, @Logo, @Primary, @Secondary, @Accent, @Font, @Footer, @userId, @now)", p);
+        var p = new { k = Key(entityId), organizationId, b.Name, b.Tagline, b.Logo, b.Primary, b.Secondary, b.Accent, b.Font, b.Footer, userId, now = DateTime.UtcNow };
+        var n = await connection.ExecuteAsync($"UPDATE {Table} SET OrganizationId=@organizationId, Name=@Name, Tagline=@Tagline, Logo=@Logo, [Primary]=@Primary, Secondary=@Secondary, Accent=@Accent, Font=@Font, Footer=@Footer, UpdatedBy=@userId, UpdatedAt=@now WHERE EntityKey=@k", p);
+        if (n == 0) await connection.ExecuteAsync($"INSERT INTO {Table} (EntityKey, OrganizationId, Name, Tagline, Logo, [Primary], Secondary, Accent, Font, Footer, UpdatedBy, UpdatedAt) VALUES (@k, @organizationId, @Name, @Tagline, @Logo, @Primary, @Secondary, @Accent, @Font, @Footer, @userId, @now)", p);
     }
 
-    public async Task DeleteAsync(string? projectId, CancellationToken ct = default)
+    public async Task DeleteAsync(string? entityId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
-        await connection.ExecuteAsync($"DELETE FROM {Table} WHERE ProjectKey = @k", new { k = Key(projectId) });
+        await connection.ExecuteAsync($"DELETE FROM {Table} WHERE EntityKey = @k", new { k = Key(entityId) });
     }
 }

@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using ChatToDashboard.Api.History;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Sources;
 using ChatToDashboard.Api.Users;
 using ChatToDashboard.Api.Widgets;
@@ -21,20 +21,20 @@ public class HistoryController : ControllerBase
     private readonly DashboardAccessService _access;
     private readonly UserStore _users;
     private readonly WidgetQueryService _widgets;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
     private readonly PermissionsService _permissions;
     private readonly PublishedDashboardStore _published;
 
     public HistoryController(
         HistoryStore store, DashboardAccessService access, UserStore users, WidgetQueryService widgets,
-        ProjectStore projects, PermissionsService permissions, PublishedDashboardStore published)
+        EntityStore projects, PermissionsService permissions, PublishedDashboardStore published)
     {
         _published = published;
         _store = store;
         _access = access;
         _users = users;
         _widgets = widgets;
-        _projects = projects;
+        _entities = projects;
         _permissions = permissions;
     }
 
@@ -43,16 +43,16 @@ public class HistoryController : ControllerBase
 
     /// <summary>The caller's currently selected project. An Admin always gets the
     /// organization's first (default) project — still the only one actually wired into a
-    /// multi-project org's live workspace (see ProjectStore.FirstForOrganizationAsync's own
-    /// remarks). A plain "User" account instead gets the first project ProjectRoles actually
+    /// multi-project org's live workspace (see EntityStore.FirstForOrganizationAsync's own
+    /// remarks). A plain "User" account instead gets the first project EntityRoles actually
     /// names them on, if any — so a user scoped to one project genuinely only ever sees that
     /// project's history, even in an org that holds several. Falls back to the same
     /// first-for-org default when they hold no project role at all (the common case before
     /// that table existed), so no pre-existing account's behavior changes. Null only for an
     /// account with no organization at all, which disables project filtering rather than
     /// hiding everything.</summary>
-    private Task<string?> CurrentProjectIdAsync(CancellationToken ct) =>
-        _projects.ResolveCurrentProjectIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
+    private Task<string?> CurrentEntityIdAsync(CancellationToken ct) =>
+        _entities.ResolveCurrentEntityIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
 
     /// <summary>Saves a generated dashboard. Called right after the chat flow renders one.
     /// Always creates a Draft — promoting to Active is a separate, explicit step.</summary>
@@ -80,7 +80,7 @@ public class HistoryController : ControllerBase
             ActiveFiltersJson = request.ActiveFilters.ValueKind == System.Text.Json.JsonValueKind.Undefined
                 ? "{}"
                 : request.ActiveFilters.GetRawText(),
-            ProjectId = await CurrentProjectIdAsync(ct),
+            EntityId = await CurrentEntityIdAsync(ct),
             TemplateId = string.IsNullOrWhiteSpace(request.TemplateId) ? null : request.TemplateId.Trim(),
         };
 
@@ -94,8 +94,8 @@ public class HistoryController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
-        var projectId = await CurrentProjectIdAsync(ct);
-        var entries = await _store.ListAsync(UserId, projectId: projectId, ct: ct);
+        var entityId = await CurrentEntityIdAsync(ct);
+        var entries = await _store.ListAsync(UserId, entityId: entityId, ct: ct);
         var roles = await _store.GetMyRolesAsync(UserId, entries.Select(e => e.Id).ToList(), ct);
         var results = new List<object>();
         foreach (var entry in entries)
@@ -206,7 +206,7 @@ public class HistoryController : ControllerBase
     /// INTERACTIVE-HANDOFF.md §1's "Use in project" action, kept entirely separate from the
     /// normal chat/AI build pipeline since there are no ordinary widgets to generate: the
     /// frontend instead mounts the template's own engine (network/workflow/marketplace, or
-    /// a §4.16+ one) against GET /api/projects/{projectId}/interactive/{templateId}/data.
+    /// a §4.16+ one) against GET /api/projects/{entityId}/interactive/{templateId}/data.
     /// Created Active immediately (never a Draft first) since an interactive dashboard's
     /// whole point is being a live, shared, source-linked view from the start.
     /// </summary>
@@ -228,7 +228,7 @@ public class HistoryController : ControllerBase
             WidgetsJson = "[]",
             FiltersJson = "[]",
             ActiveFiltersJson = "{}",
-            ProjectId = await CurrentProjectIdAsync(ct),
+            EntityId = await CurrentEntityIdAsync(ct),
             RenderKind = template.RenderKind,
             TemplateId = template.Id,
         };
@@ -436,12 +436,12 @@ public class HistoryController : ControllerBase
     /// <summary>هل اللوحة منشورة على المشروع الحالي للمستخدم بجمهور يشمل دوره فيه؟ (§4.23)</summary>
     private async Task<bool> CanViewAsPublishedAsync(DashboardHistoryEntry entry, CancellationToken ct)
     {
-        var projectId = await CurrentProjectIdAsync(ct);
-        if (projectId is null) return false;
+        var entityId = await CurrentEntityIdAsync(ct);
+        if (entityId is null) return false;
         var rows = await _published.ListForDashboardAsync(entry.Id, ct);
-        var row = rows.FirstOrDefault(r => r.ProjectId == projectId);
+        var row = rows.FirstOrDefault(r => r.EntityId == entityId);
         if (row is null) return false;
-        var myRole = (await _projects.ListRolesAsync(projectId, ct)).FirstOrDefault(r => r.UserId == UserId)?.Role;
+        var myRole = (await _entities.ListRolesAsync(entityId, ct)).FirstOrDefault(r => r.UserId == UserId)?.Role;
         return PublishedDashboardRules.CanView(row.Audience, myRole, IsAdmin);
     }
 
@@ -484,7 +484,7 @@ public class HistoryController : ControllerBase
         {
             entry.Id, entry.UserId, entry.Question, entry.QueryDescription, entry.Summary,
             entry.WidgetsJson, entry.FiltersJson, entry.ActiveFiltersJson, entry.CreatedAt,
-            entry.IsActive, entry.OwnerId, entry.ProjectId, entry.RenderKind, entry.TemplateId, ownerName,
+            entry.IsActive, entry.OwnerId, entry.EntityId, entry.RenderKind, entry.TemplateId, ownerName,
             myRole = entry.IsActive ? myRole : "owner",
             disabled, disabledReason,
         };

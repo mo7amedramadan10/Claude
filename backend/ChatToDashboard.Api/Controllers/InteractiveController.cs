@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using ChatToDashboard.Api.Interactive;
-using ChatToDashboard.Api.Projects;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Users;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,12 +13,12 @@ namespace ChatToDashboard.Api.Controllers;
 /// explicit "not linked yet" result the frontend renders as the standard empty state. See
 /// Interactive/InteractiveDataModels.cs for the provider contract.
 ///
-/// The doc's own route shape is "/api/projects/{projectId}/interactive/{templateId}/data",
-/// but this app has no frontend concept of an explicit, navigable projectId for the
+/// The doc's own route shape is "/api/projects/{entityId}/interactive/{templateId}/data",
+/// but this app has no frontend concept of an explicit, navigable entityId for the
 /// signed-in user's own workspace — every other project-scoped endpoint (see
-/// HistoryController.CurrentProjectIdAsync) resolves "the caller's current project" purely
+/// HistoryController.CurrentEntityIdAsync) resolves "the caller's current project" purely
 /// server-side from their claims, the same way this controller does. Matching that existing
-/// convention (dropping {projectId} from the URL) takes precedence over the doc's literal
+/// convention (dropping {entityId} from the URL) takes precedence over the doc's literal
 /// path here, per this task's own "reference doc wins on behavior, but adapt to how the
 /// real app already works where the two genuinely conflict" rule.
 /// </summary>
@@ -27,19 +27,19 @@ namespace ChatToDashboard.Api.Controllers;
 public class InteractiveController : ControllerBase
 {
     private readonly InteractiveDataRegistry _registry;
-    private readonly ProjectStore _projects;
+    private readonly EntityStore _entities;
 
-    public InteractiveController(InteractiveDataRegistry registry, ProjectStore projects)
+    public InteractiveController(InteractiveDataRegistry registry, EntityStore projects)
     {
         _registry = registry;
-        _projects = projects;
+        _entities = projects;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(UserRoles.Admin);
 
-    private Task<string?> CurrentProjectIdAsync(CancellationToken ct) =>
-        _projects.ResolveCurrentProjectIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
+    private Task<string?> CurrentEntityIdAsync(CancellationToken ct) =>
+        _entities.ResolveCurrentEntityIdAsync(User.FindFirstValue("OrganizationId"), UserId, IsAdmin, ct);
 
     [HttpGet("{templateId}/data")]
     public async Task<IActionResult> GetData(string templateId, CancellationToken ct)
@@ -47,10 +47,10 @@ public class InteractiveController : ControllerBase
         var provider = _registry.Find(templateId);
         if (provider is null) return NotFound(new { error = $"لا يوجد نموذج تفاعلي مسجّل باسم \"{templateId}\"." });
 
-        var projectId = await CurrentProjectIdAsync(ct);
-        if (projectId is null) return BadRequest(new { error = "لا يوجد مشروع حالي لهذا المستخدم." });
+        var entityId = await CurrentEntityIdAsync(ct);
+        if (entityId is null) return BadRequest(new { error = "لا يوجد مشروع حالي لهذا المستخدم." });
 
-        var result = await provider.BuildAsync(projectId, ct);
+        var result = await provider.BuildAsync(entityId, ct);
         return Ok(new
         {
             linked = result.Linked,

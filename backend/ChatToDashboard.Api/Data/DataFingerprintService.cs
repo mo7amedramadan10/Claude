@@ -36,10 +36,10 @@ public class DataFingerprintService
     }
 
     /// <summary>بصمة مدمجة للجداول المذكورة في الاستعلامات ضمن كتالوج المشروع؛ null إن لم يُطابق أي جدول.</summary>
-    public async Task<string?> ComputeAsync(IEnumerable<string> sqls, string? projectId, CancellationToken ct = default)
+    public async Task<string?> ComputeAsync(IEnumerable<string> sqls, string? entityId, CancellationToken ct = default)
     {
         var wanted = ExtractTables(sqls); if (wanted.Count == 0) return null;
-        var catalog = await _db.GetSchemaAsync(projectId, ct);
+        var catalog = await _db.GetSchemaAsync(entityId, ct);
         var known = new Dictionary<string, (string Schema, string Name)>(StringComparer.OrdinalIgnoreCase);
         foreach (var t in catalog)
         {

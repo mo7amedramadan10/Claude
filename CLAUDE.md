@@ -2235,3 +2235,25 @@ naming policy تلقائية في السيريلايزر.
   في القائمة، «ببيانات إدارتك»، «سجل… لهذه الإدارة»، «بيانات الإدارة الحالية» بلا تكرار التاء، نص مضاف بعد الإقلاع يُستبدل ومحتوى اللوحة لا، «كيانات ثقة»
   بمجموعتي «الإدارات 1/الأقسام 2»، تغيير نوع كيان يعيد التجميع، «إدارة جديدة/قسم جديد»، إضافة «فريق» وحذفه، إعادة تسمية «إدارة» ← «وكالة» تحدّث القائمة
   والنصوص فورًا، Escape يغلق، بلا أخطاء وبلا تمرير أفقي. **على SQL Server لم يُجرَّب.**
+
+## الكيانات — المرحلة 2 ✅ إعادة التسمية في الكود والقاعدة والـ API: Project → Entity (2026-11-25)
+
+- **تعديل الخطة**: المرحلة 2 كانت «الكود فقط مع بقاء القاعدة»، لكن Dapper يطابق الأعمدة بأسماء الخصائص والكائنات المجهولة تحدد أسماء JSON،
+  ففصل الكود عن القاعدة يعني تحويل أسماء في مئات الاستعلامات — أخطر من تغيير الاثنين معًا. فصارت المرحلة 2 = الكود + الجداول والأعمدة + الـ API معًا،
+  والمرحلة 3 = مخططات البيانات `proj_<id>` (مع أسماء الجداول المحفوظة داخل SQL اللوحات والتصاميم والعروض).
+- **الكود** (سكربت إعادة تسمية بقائمة صريحة، 105 ملفات C# + app.js): المجلد `Projects/` ← `Entities/` (namespace `ChatToDashboard.Api.Entities`)،
+  `ProjectStore` ← `EntityStore`، `Project` ← `Entity`، `ProjectInfo/Request/RoleEntry/Roles` ← `Entity…`، `ProjectsController` ← `EntitiesController`،
+  `ProjectId/projectId` ← `EntityId/entityId` و`ProjectKey` ← `EntityKey` في كل مكان، `ResolveCurrentEntityIdAsync`، `EntitySchema`… وفي app.js:
+  `ENTITY_SCOPED_SCREENS`، `loadCurrentEntityNav`، `state_entities`، `loadEntities/renderEntities`، `openNewEntityModal`… **لم يُمس عمدًا**
+  (معنى «مشروع» التجاري أو مفاتيح محفوظة): `ProjectStudioDataProvider`، `CampaignProjectDataProvider`، `ProjectsOverdue/InTrack/Active`، أسماء الجداول
+  الافتراضية `staging_project*`/`board_projects`، أعمدة العقود `project_id`/`projects`، محركات JS (project-studio، task-board، time-tracking)، مفتاح الشاشة
+  `projects` ومفتاح التصنيف `projects` في النماذج، معرّفات DOM وأصناف CSS (`new-project-modal`، `proj-card`…)، وأسماء الفهارس في القاعدة.
+- **الـ API**: `/api/entities` (والقديم `/api/projects` مسار ثانٍ على المتحكم نفسه مؤقتًا)، والرد `{organization, types, entities}`؛ كل JSON صار `entityId`
+  (و`entityName` في اللوحات المنشورة، و`entityCount` في المنظمات).
+- **القاعدة** `DataStore.MigrateProjectToEntityAsync` عند الإقلاع بعد ترحيل staging وقبل أي مخزن: `sp_rename` للجدولين `Projects` ← `Entities` و`ProjectRoles`
+  ← `EntityRoles`، ثم `ProjectId` ← `EntityId` و`ProjectKey` ← `EntityKey` في **قائمة صريحة** `EntityColumnTables` (31 جدولًا للتطبيق؛ dbo فيه جداول ليست
+  من التطبيق لا تُمس)؛ كل خطوة مشروطة (القديم موجود والجديد غائب)، وإن وُجد العمودان تُنسخ القيم للجديد؛ داخل معاملة؛ و**فشله يوقف الإقلاع** (وإلا أنشأت
+  المخازن جداول فارغة بالاسم الجديد فتبدو البيانات مفقودة). **أي مخزن جديد بعمود كيان يُكتب بـ`EntityId` مباشرة.**
+- تحقق: `EntityRenameMigrationTests` (الشرطية، القائمة الصريحة، ترتيب الجدول قبل أعمدته) 298/298؛ Playwright لشاشة الكيانات على `/api/entities` و«للاطلاع»
+  والحركة داخل الشريحة بلا تراجع. **الترحيل على SQL Server حقيقي لم يُجرَّب هنا — خذ نسخة احتياطية قبل أول إقلاع بالنسخة الجديدة (محليًا وعلى Azure)،
+  والرجوع لنسخة أقدم بعد الترحيل لا يعمل (تبحث عن الأسماء القديمة).** الأقسام السابقة في هذا الملف تذكر الأسماء القديمة (ProjectStore/ProjectId…) كتاريخ.

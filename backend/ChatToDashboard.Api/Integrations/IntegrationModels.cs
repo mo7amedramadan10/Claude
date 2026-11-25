@@ -51,10 +51,10 @@ public class ExternalIntegration
 
     /// <summary>The project this integration belongs to — scopes it away from every other
     /// project's integrations, even within the same organization (see
-    /// RepositoryFile.ProjectId for the same boundary on files). Never null for an
+    /// RepositoryFile.EntityId for the same boundary on files). Never null for an
     /// integration created after project scoping existed; a pre-existing one was backfilled
     /// to its organization's default project.</summary>
-    public string? ProjectId { get; set; }
+    public string? EntityId { get; set; }
 
     public string Name { get; set; } = "";
 

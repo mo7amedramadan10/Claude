@@ -38,14 +38,14 @@ public class ColumnSemanticsService
     }
 
     /// <summary>يشغّل التحليل بلا انتظار (بعد الرفع) ويسجّل أي فشل بدل أن يُسقط الطلب.</summary>
-    public void AnalyzeInBackground(string? projectId, string? tableName)
+    public void AnalyzeInBackground(string? entityId, string? tableName)
     {
-        if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrWhiteSpace(tableName))
+        if (string.IsNullOrWhiteSpace(entityId) || string.IsNullOrWhiteSpace(tableName))
         {
             _logger.LogWarning("لم يُشغَّل تحليل المعاني للجدول {Table}: لا مشروع محدد", tableName);
             return;
         }
-        _ = RunAnalysisAsync(projectId, tableName);
+        _ = RunAnalysisAsync(entityId, tableName);
     }
 
     /// <summary>الجداول قيد التحليل الآن (مفتاح المشروع|الجدول) — تمنع تشغيل التحليل نفسه مرتين من الرفع
@@ -62,33 +62,33 @@ public class ColumnSemanticsService
     public record AnalysisFailure(DateTime At, string Message);
 
     /// <summary>سبب آخر فشل للتحليل الآلي لهذا الجدول، أو null إن لم يفشل (أو نجح بعده).</summary>
-    public AnalysisFailure? GetFailure(string? projectId, string tableName)
+    public AnalysisFailure? GetFailure(string? entityId, string tableName)
     {
-        lock (_failures) return _failures.TryGetValue(projectId + "|" + tableName, out var f) ? new AnalysisFailure(f.At, f.Message) : null;
+        lock (_failures) return _failures.TryGetValue(entityId + "|" + tableName, out var f) ? new AnalysisFailure(f.At, f.Message) : null;
     }
 
-    private void SetFailure(string projectId, string tableName, string? message)
+    private void SetFailure(string entityId, string tableName, string? message)
     {
-        var key = projectId + "|" + tableName;
+        var key = entityId + "|" + tableName;
         lock (_failures) { if (message is null) _failures.Remove(key); else _failures[key] = (DateTime.UtcNow, message); }
     }
 
-    private bool RecentlyFailed(string? projectId, string tableName)
+    private bool RecentlyFailed(string? entityId, string tableName)
     {
-        var f = GetFailure(projectId, tableName);
+        var f = GetFailure(entityId, tableName);
         return f is not null && DateTime.UtcNow - f.At < RetryAfter;
     }
 
     /// <summary>يشغّل تحليل جدول واحد في مهمة خلفية مع منع التكرار وحد التوازي، ويعيد مهمته
     /// (أو null إن كان الجدول نفسه قيد التحليل بالفعل).</summary>
-    private Task? RunAnalysisAsync(string projectId, string tableName)
+    private Task? RunAnalysisAsync(string entityId, string tableName)
     {
-        var key = projectId + "|" + tableName;
+        var key = entityId + "|" + tableName;
         lock (_inFlight) { if (!_inFlight.Add(key)) return null; }
         return Task.Run(async () =>
         {
             await _gate.WaitAsync();
-            try { await AnalyzeTableAsync(projectId, tableName, CancellationToken.None); }
+            try { await AnalyzeTableAsync(entityId, tableName, CancellationToken.None); }
             catch (Exception ex) { _logger.LogWarning(ex, "فشل تحليل معاني الجدول {Table}", tableName); }
             finally { _gate.Release(); lock (_inFlight) { _inFlight.Remove(key); } }
         });
@@ -96,10 +96,10 @@ public class ColumnSemanticsService
 
     /// <summary>الجداول التي لم يُنتج لها الموديل أو المستخدم أي صف بعد (لم تُحلَّل، أو تخمينات أسماء فقط
     /// لأن نداء الموديل فشل) — تشمل جداول الأنظمة الخارجية التي لا تمر بمسار الرفع.</summary>
-    public async Task<IReadOnlyList<string>> UnanalyzedTablesAsync(string? projectId, IEnumerable<string> tables, CancellationToken ct = default)
+    public async Task<IReadOnlyList<string>> UnanalyzedTablesAsync(string? entityId, IEnumerable<string> tables, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(projectId)) return Array.Empty<string>();
-        var analyzed = (await _store.ListForProjectAsync(projectId, ct))
+        if (string.IsNullOrWhiteSpace(entityId)) return Array.Empty<string>();
+        var analyzed = (await _store.ListForEntityAsync(entityId, ct))
             .Where(r => r.Source is SemanticSources.Ai or SemanticSources.User)
             .Select(r => r.TableName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         return tables.Where(t => !analyzed.Contains(t)).ToList();
@@ -108,11 +108,11 @@ public class ColumnSemanticsService
     /// <summary>يضمن تحليل كل الجداول المعطاة قبل بناء لوحة: يشغّل التحليل لغير المحلَّلة (بتوازٍ محدود)
     /// وينتظر حتى <paramref name="budget"/>؛ ما لا يكتمل في المهلة يستمر في الخلفية ويُفيد البناء التالي.
     /// جدول قيد التحليل بالفعل (من رفع أو نداء سابق) لا يُعاد تشغيله. يعيد عدد ما اكتمل داخل المهلة.</summary>
-    public async Task<int> EnsureAnalyzedAsync(string? projectId, IEnumerable<string> tables, TimeSpan budget, CancellationToken ct = default)
+    public async Task<int> EnsureAnalyzedAsync(string? entityId, IEnumerable<string> tables, TimeSpan budget, CancellationToken ct = default)
     {
-        var pending = (await UnanalyzedTablesAsync(projectId, tables, ct)).Where(t => !RecentlyFailed(projectId, t)).ToList();
+        var pending = (await UnanalyzedTablesAsync(entityId, tables, ct)).Where(t => !RecentlyFailed(entityId, t)).ToList();
         if (pending.Count == 0) return 0;
-        var tasks = pending.Select(t => RunAnalysisAsync(projectId!, t)).Where(t => t is not null).Select(t => t!).ToList();
+        var tasks = pending.Select(t => RunAnalysisAsync(entityId!, t)).Where(t => t is not null).Select(t => t!).ToList();
         if (tasks.Count == 0) return 0;
         var all = Task.WhenAll(tasks);
         var finished = await Task.WhenAny(all, Task.Delay(budget, ct)) == all;
@@ -122,9 +122,9 @@ public class ColumnSemanticsService
 
     /// <summary>يحلّل الجدول ويحفظ النتيجة، ويعيد الصفوف المحفوظة. القاعدة الحتمية وحدها عندما
     /// لا يتوفر مزوّد يدعم النداء المرحلي أو يفشل النداء.</summary>
-    public async Task<IReadOnlyList<ColumnSemantic>> AnalyzeTableAsync(string projectId, string tableName, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ColumnSemantic>> AnalyzeTableAsync(string entityId, string tableName, CancellationToken ct = default)
     {
-        var profile = await _profiles.ProfileOneAsync(tableName, projectId, ct);
+        var profile = await _profiles.ProfileOneAsync(tableName, entityId, ct);
         if (profile is null) throw new InvalidOperationException($"الجدول {tableName} غير موجود.");
 
         var rows = new List<ColumnSemantic>();
@@ -138,7 +138,7 @@ public class ColumnSemanticsService
             var confidence = prior?.Confidence ?? guess?.Confidence ?? 0.2;
             rows.Add(new ColumnSemantic
             {
-                ProjectId = projectId, TableName = tableName, ColumnName = c.Name,
+                EntityId = entityId, TableName = tableName, ColumnName = c.Name,
                 Concept = concept, Role = ConceptCatalog.Find(concept)?.Role ?? RoleFromKind(c.Kind),
                 Confidence = confidence, Source = SemanticSources.Rule,
                 Note = prior is not null ? "اسم سبق ربطه بهذا المفهوم في ملفات أخرى." : guess is null ? null : "تخمين من اسم العمود.",
@@ -148,11 +148,11 @@ public class ColumnSemanticsService
         try
         {
             var resolved = await _router.ResolveSemanticsStagedAsync(ct);
-            if (resolved is null) SetFailure(projectId, tableName, "التحليل الآلي معطَّل من «الإعدادات» (نموذج تحليل معاني الأعمدة) — اختر موديلًا له ثم أعد التحليل.");
+            if (resolved is null) SetFailure(entityId, tableName, "التحليل الآلي معطَّل من «الإعدادات» (نموذج تحليل معاني الأعمدة) — اختر موديلًا له ثم أعد التحليل.");
             else
             {
-                await RefineWithModelAsync(resolved.Value.Llm, projectId, profile, rows, ct, resolved.Value.Model);
-                SetFailure(projectId, tableName, rows.Any(r => r.Source == SemanticSources.Ai) ? null
+                await RefineWithModelAsync(resolved.Value.Llm, entityId, profile, rows, ct, resolved.Value.Model);
+                SetFailure(entityId, tableName, rows.Any(r => r.Source == SemanticSources.Ai) ? null
                     : "رد الموديل لم يحتوِ على أعمدة الجدول (لم يُفهم الرد).");
             }
         }
@@ -160,25 +160,25 @@ public class ColumnSemanticsService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "تعذّر تحليل معاني {Table} بالموديل — اعتُمد التخمين الحتمي", tableName);
-            SetFailure(projectId, tableName, Describe(ex));
+            SetFailure(entityId, tableName, Describe(ex));
         }
 
         await _store.UpsertAnalyzedAsync(rows, ct);
         // نتيجة موديل واثقة تُسجَّل كسابقة (الاسم المُوحَّد فقط، لا بيانات).
         foreach (var r in rows.Where(r => r.Source == SemanticSources.Ai && r.Concept is not null && r.Confidence >= 0.9))
             await _priors.RecordAsync(r.ColumnName, r.Concept!, byUser: false, ct);
-        return await _store.ListForTableAsync(projectId, tableName, ct);
+        return await _store.ListForTableAsync(entityId, tableName, ct);
     }
 
     /// <summary>تأكيد المستخدم يُحفظ للمشروع ويُسجَّل سابقةً أقوى من أي نتيجة موديل.</summary>
-    public async Task SetByUserAsync(string projectId, string tableName, string columnName, string? concept, string role,
+    public async Task SetByUserAsync(string entityId, string tableName, string columnName, string? concept, string role,
         string? unit, string? valueMapJson, CancellationToken ct = default)
     {
-        await _store.SetByUserAsync(projectId, tableName, columnName, concept, role, unit, valueMapJson, ct);
+        await _store.SetByUserAsync(entityId, tableName, columnName, concept, role, unit, valueMapJson, ct);
         if (concept is not null) await _priors.RecordAsync(columnName, concept, byUser: true, ct);
     }
 
-    private async Task RefineWithModelAsync(IStagedLlm llm, string projectId, ProfiledTable profile, List<ColumnSemantic> rows, CancellationToken ct, string? modelOverride = null)
+    private async Task RefineWithModelAsync(IStagedLlm llm, string entityId, ProfiledTable profile, List<ColumnSemantic> rows, CancellationToken ct, string? modelOverride = null)
     {
         var system = """
             أنت محلل بيانات تربط أعمدة جدول مرفوع بمفاهيم تحليلية من قاموس ثابت. لكل عمود اختر المفهوم
@@ -198,7 +198,7 @@ public class ColumnSemanticsService
             .AppendLine(string.Join("\n", rows.Select(r => $"- {r.ColumnName}: {r.Concept ?? "null"} ({r.Confidence:0.0})")))
             .ToString();
 
-        var selection = new SourceSelection { SystemsUnset = true, FilesUnset = true, ProjectId = projectId, IsAdmin = true };
+        var selection = new SourceSelection { SystemsUnset = true, FilesUnset = true, EntityId = entityId, IsAdmin = true };
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var call = new StagedCall($"[معاني] {profile.SourceName ?? profile.Table}", system, user, null, context, 2, false, null, modelOverride);
         var result = await llm.RunStagedAsync(call, ct);
@@ -233,11 +233,11 @@ public class ColumnSemanticsService
 
     /// <summary>ملاحظات المعنى لكل عمود في المشروع، لتُلحَق بملف تعريف البيانات في نداءات البناء:
     /// «الإيراد (revenue)» أو مع خريطة القيم «حالة الصفقة (deal_status): مفتوحة=open، مكسوبة=won».</summary>
-    public async Task<IReadOnlyDictionary<(string Table, string Column), string>> GetPromptNotesAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<(string Table, string Column), string>> GetPromptNotesAsync(string? entityId, CancellationToken ct = default)
     {
         var notes = new Dictionary<(string, string), string>();
-        if (string.IsNullOrWhiteSpace(projectId)) return notes;
-        foreach (var s in await _store.ListForProjectAsync(projectId, ct))
+        if (string.IsNullOrWhiteSpace(entityId)) return notes;
+        foreach (var s in await _store.ListForEntityAsync(entityId, ct))
         {
             var concept = ConceptCatalog.Find(s.Concept);
             if (concept is null || s.Confidence < 0.4) continue;

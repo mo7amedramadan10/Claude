@@ -15,10 +15,10 @@ public sealed class JeemMcpTools
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private readonly IHttpContextAccessor _http;
-    private readonly ProjectCatalog _catalog;
+    private readonly EntityCatalog _catalog;
     private readonly ILogger<JeemMcpTools> _logger;
 
-    public JeemMcpTools(IHttpContextAccessor http, ProjectCatalog catalog, ILogger<JeemMcpTools> logger)
+    public JeemMcpTools(IHttpContextAccessor http, EntityCatalog catalog, ILogger<JeemMcpTools> logger)
     {
         _http = http;
         _catalog = catalog;
@@ -34,12 +34,12 @@ public sealed class JeemMcpTools
     {
         var session = Session;
         if (!Budget(session, out var stop)) return stop!;
-        var tables = await _catalog.ListAsync(session.ProjectId, ct);
+        var tables = await _catalog.ListAsync(session.EntityId, ct);
         if (tables.Count == 0)
             return "لا توجد جداول في مشروعك الحالي: ارفع ملفًا من «المصادر» أو فعّل نظامًا خارجيًا.";
         return JsonSerializer.Serialize(new
         {
-            project = session.ProjectId,
+            project = session.EntityId,
             tables = tables.Select(t => new { name = t.Name, kind = t.Kind, source = t.Source, rows = t.Rows }),
             hint = "اكتب اسم الجدول في SQL كما هو في name (بمخططه)، مثل: SELECT TOP (10) * FROM " + tables[0].Name,
         }, Json);
@@ -52,12 +52,12 @@ public sealed class JeemMcpTools
     {
         var session = Session;
         if (!Budget(session, out var stop)) return stop!;
-        var allowed = await _catalog.ListAsync(session.ProjectId, ct);
-        var match = ProjectCatalog.Match(allowed, table);
+        var allowed = await _catalog.ListAsync(session.EntityId, ct);
+        var match = EntityCatalog.Match(allowed, table);
         if (match is null) return $"خطأ: الجدول «{table}» ليس من جداول مشروعك. المتاح: {string.Join("، ", allowed.Select(t => t.Name))}";
         try
         {
-            var (columns, sampleCols, sample) = await _catalog.DescribeAsync(match, session.ProjectId, 5, ct);
+            var (columns, sampleCols, sample) = await _catalog.DescribeAsync(match, session.EntityId, 5, ct);
             return JsonSerializer.Serialize(new
             {
                 table = match.Name, kind = match.Kind, source = match.Source, rows = match.Rows,
@@ -75,7 +75,7 @@ public sealed class JeemMcpTools
     {
         var session = Session;
         if (!Budget(session, out var stop)) return stop!;
-        var allowed = await _catalog.ListAsync(session.ProjectId, ct);
+        var allowed = await _catalog.ListAsync(session.EntityId, ct);
         var validation = ReadOnlySqlValidator.Validate(sql, allowed.Select(t => t.Name).ToList(), _catalog.MaxRows);
         if (!validation.Ok) return "خطأ: " + validation.Error;
         try

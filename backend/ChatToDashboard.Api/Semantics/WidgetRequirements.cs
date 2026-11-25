@@ -110,11 +110,11 @@ public class WidgetFeasibilityService
     public WidgetFeasibilityService(ColumnSemanticsStore semantics) => _semantics = semantics;
 
     /// <summary>المفاهيم المتاحة في المشروع ← الأعمدة الحاملة لها («revenue» ← «staging_sales.Revenue»).</summary>
-    public async Task<IReadOnlyDictionary<string, List<(string Table, string Column)>>> AvailableConceptsAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<string, List<(string Table, string Column)>>> AvailableConceptsAsync(string? entityId, CancellationToken ct = default)
     {
         var map = new Dictionary<string, List<(string, string)>>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(projectId)) return map;
-        var rows = await _semantics.ListForProjectAsync(projectId, ct);
+        if (string.IsNullOrWhiteSpace(entityId)) return map;
+        var rows = await _semantics.ListForEntityAsync(entityId, ct);
         // الجدوى الحتمية تحتاج معرفة موثوقة بالأعمدة: لو لم يُنتج الموديل أو المستخدم أي صف (فشل نداء
         // التحليل أو لم يكتمل بعد) فالمخزَّن تخمينات من الأسماء فقط — نعيد «مجهولًا» (خريطة فارغة) حتى
         // لا يُرفض عنصر حتميًا لأن عمود الحالة اسمه غير مألوف، ويُترك القرار للمخطِّط.
@@ -129,8 +129,8 @@ public class WidgetFeasibilityService
     }
 
     public async Task<IReadOnlyDictionary<string, WidgetFeasibility>> EvaluateAsync(
-        string? projectId, IReadOnlyList<BuiltinDashboardWidgetSpec> widgets, CancellationToken ct = default)
-        => Evaluate(await AvailableConceptsAsync(projectId, ct), widgets);
+        string? entityId, IReadOnlyList<BuiltinDashboardWidgetSpec> widgets, CancellationToken ct = default)
+        => Evaluate(await AvailableConceptsAsync(entityId, ct), widgets);
 
     /// <summary>نفس التقييم على خريطة مفاهيم سبق جلبها (البناء المرحلي يجلبها مرة واحدة للجدوى والتلميحات).</summary>
     public static IReadOnlyDictionary<string, WidgetFeasibility> Evaluate(
@@ -144,9 +144,9 @@ public class WidgetFeasibilityService
     }
 
     /// <summary>لشارة المعرض: لكل قالب عدد العناصر القابلة للبناء وأكثر المفاهيم نقصًا.</summary>
-    public async Task<IReadOnlyList<TemplateFeasibility>> ForCatalogAsync(string? projectId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<TemplateFeasibility>> ForCatalogAsync(string? entityId, CancellationToken ct = default)
     {
-        var available = (await AvailableConceptsAsync(projectId, ct)).Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var available = (await AvailableConceptsAsync(entityId, ct)).Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var analyzed = available.Count > 0;
         var list = new List<TemplateFeasibility>();
         foreach (var t in BuiltinTemplates.Dashboards)
