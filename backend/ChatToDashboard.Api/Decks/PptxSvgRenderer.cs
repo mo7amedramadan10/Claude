@@ -20,6 +20,8 @@ public sealed class PptxSvgRenderer : IDisposable
     private readonly PresentationDocument _doc;
     private readonly PresentationPart _pres;
     public Func<ImagePart, string> MediaUrl { get; set; }
+    /// <summary>اختياري: عنوان بديل لصورة غير مدعومة في المتصفح (EMF/WMF) حوّلها المتصل مسبقًا؛ null = المكان المعلَّم «غير مدعومة».</summary>
+    public Func<ImagePart, string?>? UnsupportedUrl { get; set; }
     public double Width { get; }
     public double Height { get; }
     public IReadOnlyList<SlideLayoutPart> Layouts { get; }
@@ -235,12 +237,13 @@ public sealed class PptxSvgRenderer : IDisposable
         OpenXmlPart? part; try { part = ctx.Part.GetPartById(rid); } catch { return ""; }
         if (part is not ImagePart ip) return "";
         var ct = ip.ContentType.ToLowerInvariant();
-        if (ct.Contains("emf") || ct.Contains("wmf") || ct.Contains("wdp") || ct.Contains("x-") && !ct.Contains("png"))
+        string? alt = null;
+        if ((ct.Contains("emf") || ct.Contains("wmf") || ct.Contains("wdp") || ct.Contains("x-") && !ct.Contains("png")) && (alt = UnsupportedUrl?.Invoke(ip)) is null)
         {
             Unsupported.Add(Path.GetFileName(ip.Uri.ToString()));
             return $"<rect x=\"{F(x)}\" y=\"{F(y)}\" width=\"{F(w)}\" height=\"{F(h)}\" fill=\"none\" stroke=\"#C2413B\" stroke-dasharray=\"8 6\" stroke-width=\"2\"/><text x=\"{F(x + w / 2)}\" y=\"{F(y + h / 2)}\" font-size=\"{F(Math.Max(14, Math.Min(w, h) / 10))}\" fill=\"#C2413B\" text-anchor=\"middle\">صورة {Esc(ct.Split('/').Last().ToUpperInvariant())} غير مدعومة</text>";
         }
-        var url = MediaUrl(ip);
+        var url = alt ?? MediaUrl(ip);
         var alpha = blipFill.Element(A + "blip")?.Element(A + "alphaModFix")?.Attribute("amt")?.Value is { } am ? double.Parse(am, CultureInfo.InvariantCulture) / 100000.0 : 1;
         // القص srcRect بالنِسب: نعرض الصورة كاملة داخل svg متداخل بإطار عرض مقصوص
         var sr = blipFill.Element(A + "srcRect");
@@ -483,9 +486,155 @@ public sealed class PptxSvgRenderer : IDisposable
         var data = gf.Element(A + "graphic")?.Element(A + "graphicData"); var uri = data?.Attribute("uri")?.Value ?? "";
         sb.Append($"<g{TransformAttr(t)}>");
         if (data?.Element(A + "tbl") is { } tbl) sb.Append(Table(tbl, t, ctx));
-        else if (uri.Contains("chart")) sb.Append($"<rect width=\"{F(t.W)}\" height=\"{F(t.H)}\" fill=\"#F5F8FA\" stroke=\"#D7E2E9\" stroke-dasharray=\"10 8\" rx=\"8\"/><text x=\"{F(t.W / 2)}\" y=\"{F(t.H / 2)}\" text-anchor=\"middle\" font-size=\"{F(Math.Max(14, Math.Min(t.W, t.H) / 8))}\" fill=\"#5A6B77\">رسم بياني</text>");
+        else if (uri.Contains("chart")) sb.Append(ChartSvg(data!, t, ctx) ?? $"<rect width=\"{F(t.W)}\" height=\"{F(t.H)}\" fill=\"#F5F8FA\" stroke=\"#D7E2E9\" stroke-dasharray=\"10 8\" rx=\"8\"/><text x=\"{F(t.W / 2)}\" y=\"{F(t.H / 2)}\" text-anchor=\"middle\" font-size=\"{F(Math.Max(14, Math.Min(t.W, t.H) / 8))}\" fill=\"#5A6B77\">رسم بياني</text>");
         else if (uri.Contains("diagram")) sb.Append($"<rect width=\"{F(t.W)}\" height=\"{F(t.H)}\" fill=\"none\" stroke=\"#D7E2E9\" stroke-dasharray=\"10 8\" rx=\"8\"/>");
         sb.Append("</g>");
+    }
+
+    // ================= الرسوم البيانية =================
+    private static readonly XNamespace Cn = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+    private sealed record ChartSeries(string Name, List<double?> Values, (string Hex, double Alpha)? Color, (string Hex, double Alpha)? Line, double LineW, Dictionary<int, (string Hex, double Alpha)> Points);
+
+    /// <summary>يرسم رسم PowerPoint بياني (أعمدة/أشرطة، خط، مساحة، دائري، حلقة) من القيم المخزّنة في الملف بألوان سلاسله؛
+    /// null إن تعذّر (نوع غير مدعوم أو بلا قيم) فيُعرض المكان المحجوز.</summary>
+    private string? ChartSvg(XElement graphicData, Xf t, Ctx ctx)
+    {
+        try
+        {
+            var rid = graphicData.Element(Cn + "chart")?.Attribute(R + "id")?.Value; if (rid is null) return null;
+            if (ctx.Part.GetPartById(rid) is not ChartPart cp) return null;
+            var root = Xml(cp); var plot = root.Descendants(Cn + "plotArea").FirstOrDefault(); if (plot is null) return null;
+            var chart = plot.Elements().FirstOrDefault(e => e.Name.Namespace == Cn && e.Name.LocalName.EndsWith("Chart")); if (chart is null) return null;
+            var kind = chart.Name.LocalName.Replace("3D", "");
+            var series = chart.Elements(Cn + "ser").Select(sr =>
+            {
+                var vals = new List<double?>();
+                var cache = sr.Element(Cn + "val")?.Descendants(Cn + "numCache").FirstOrDefault();
+                if (cache is not null)
+                {
+                                        foreach (var pt in cache.Elements(Cn + "pt"))
+                    {
+                        var idx = (int)Num(pt, "idx"); while (vals.Count <= idx) vals.Add(null);
+                        vals[idx] = double.TryParse(pt.Element(Cn + "v")?.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : null;
+                    }
+                }
+                var sp = sr.Element(Cn + "spPr");
+                var pts = new Dictionary<int, (string, double)>();
+                foreach (var dp in sr.Elements(Cn + "dPt")) if (Color(dp.Element(Cn + "spPr")?.Element(A + "solidFill"), ctx) is { } c) pts[(int)Num(dp.Element(Cn + "idx"))] = c;
+                var ln = sp?.Element(A + "ln");
+                var name = sr.Element(Cn + "tx")?.Descendants(Cn + "v").FirstOrDefault()?.Value ?? "";
+                return new ChartSeries(name, vals, Color(sp?.Element(A + "solidFill"), ctx), Color(ln?.Element(A + "solidFill"), ctx), ln?.Attribute("w") is { } w ? double.Parse(w.Value, CultureInfo.InvariantCulture) / 12700.0 * 1.33 : 2, pts);
+            }).Where(x => x.Values.Any(v => v is not null)).ToList();
+            if (series.Count == 0) return "";
+            var cats = chart.Elements(Cn + "ser").First().Element(Cn + "cat")?.Descendants(Cn + "pt").OrderBy(p => Num(p, "idx")).Select(p => p.Element(Cn + "v")?.Value ?? "").ToList() ?? new();
+            var palette = new[] { "accent1", "accent2", "accent3", "accent4", "accent5", "accent6" }.Select(k => ctx.Scheme.TryGetValue(k, out var h) ? h : "888888").ToArray();
+            string Fill((string Hex, double Alpha)? c, string fb) => c is { } x ? $"fill=\"#{x.Hex}\"" + (x.Alpha < 1 ? $" fill-opacity=\"{F(x.Alpha)}\"" : "") : $"fill=\"#{fb}\"";
+            var sb = new StringBuilder(); double W = t.W, H = t.H;
+            if (kind is "pieChart" or "doughnutChart" or "ofPieChart")
+            {
+                var s0 = series[0]; var vals = s0.Values.Select(v => Math.Max(0, v ?? 0)).ToList(); var sum = vals.Sum(); if (sum <= 0) return "";
+                double cx = W / 2, cy = H / 2, r = Math.Min(W, H) / 2 * 0.92;
+                var hole = kind == "doughnutChart" ? (chart.Element(Cn + "holeSize") is { } hs ? Num(hs) / 100.0 : 0.5) : 0;
+                double a0 = -Math.PI / 2;
+                for (var i = 0; i < vals.Count; i++)
+                {
+                    if (vals[i] <= 0) continue;
+                    var a1 = a0 + vals[i] / sum * Math.PI * 2; var col = s0.Points.TryGetValue(i, out var pc) ? pc : (s0.Color ?? (palette[i % palette.Length], 1));
+                    if (vals[i] >= sum - 1e-9) { sb.Append($"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(r)}\" {Fill(col, palette[0])}/>"); a0 = a1; continue; }
+                    var large = a1 - a0 > Math.PI ? 1 : 0;
+                    string P(double a, double rr) => $"{F(cx + rr * Math.Cos(a))} {F(cy + rr * Math.Sin(a))}";
+                    var path = hole > 0
+                        ? $"M{P(a0, r)} A{F(r)} {F(r)} 0 {large} 1 {P(a1, r)} L{P(a1, r * hole)} A{F(r * hole)} {F(r * hole)} 0 {large} 0 {P(a0, r * hole)}Z"
+                        : $"M{F(cx)} {F(cy)} L{P(a0, r)} A{F(r)} {F(r)} 0 {large} 1 {P(a1, r)}Z";
+                    sb.Append($"<path d=\"{path}\" {Fill(col, palette[0])}/>"); a0 = a1;
+                }
+                if (hole > 0) sb.Append($"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(r * hole)}\" fill=\"#fff\" fill-opacity=\"0\"/>");
+                return sb.ToString();
+            }
+            var n = series.Max(x => x.Values.Count); if (n == 0) return "";
+            var grouping = chart.Element(Cn + "grouping")?.Attribute("val")?.Value ?? "clustered";
+            var horizontal = chart.Element(Cn + "barDir")?.Attribute("val")?.Value == "bar";
+            bool stacked = grouping is "stacked" or "percentStacked", percent = grouping == "percentStacked";
+            // القيم بعد التكديس: لكل نقطة (أسفل، أعلى) لكل سلسلة
+            var totals = Enumerable.Range(0, n).Select(i => series.Sum(x => Math.Max(0, i < x.Values.Count ? x.Values[i] ?? 0 : 0))).ToArray();
+            double V(ChartSeries x, int i) { var v = i < x.Values.Count ? x.Values[i] ?? 0 : 0; return percent ? (totals[i] > 0 ? v / totals[i] * 100 : 0) : v; }
+            double max = 0;
+            for (var i = 0; i < n; i++) { double acc = 0; foreach (var x in series) { var v = V(x, i); acc = stacked ? acc + Math.Max(0, v) : Math.Max(acc, v); } max = Math.Max(max, acc); }
+            if (max <= 0) max = 1; max = percent ? 100 : NiceMax(max);
+            double fs = Math.Max(10, Math.Min(W, H) / 18), padB = cats.Count > 0 ? fs * 1.8 : fs * 0.5, padL = fs * 0.4, padT = fs * 0.5, padR = fs * 0.4;
+            double pw = W - padL - padR, ph = H - padT - padB; if (pw <= 0 || ph <= 0) return "";
+            for (var g = 0; g <= 4; g++)
+            {
+                if (horizontal) { var gx = padL + pw * g / 4; sb.Append($"<line x1=\"{F(gx)}\" y1=\"{F(padT)}\" x2=\"{F(gx)}\" y2=\"{F(padT + ph)}\" stroke=\"#E3E8ED\" stroke-width=\"1\"/>"); }
+                else { var gy = padT + ph - ph * g / 4; sb.Append($"<line x1=\"{F(padL)}\" y1=\"{F(gy)}\" x2=\"{F(padL + pw)}\" y2=\"{F(gy)}\" stroke=\"#E3E8ED\" stroke-width=\"1\"/>"); }
+            }
+            var colorOf = (int si) => series[si].Color ?? series[si].Line ?? (palette[si % palette.Length], 1);
+            if (kind == "barChart")
+            {
+                double band = (horizontal ? ph : pw) / n, inner = band * 0.62, bw = stacked ? inner : inner / series.Count;
+                for (var i = 0; i < n; i++)
+                {
+                    double acc = 0;
+                    for (var si = 0; si < series.Count; si++)
+                    {
+                        var v = Math.Max(0, V(series[si], i)); var len = v / max * (horizontal ? pw : ph);
+                        var off = band * i + (band - inner) / 2 + (stacked ? 0 : bw * si);
+                        var col = series[si].Points.TryGetValue(i, out var pc) ? pc : colorOf(si);
+                        if (horizontal) sb.Append($"<rect x=\"{F(padL + acc)}\" y=\"{F(padT + off)}\" width=\"{F(len)}\" height=\"{F(bw)}\" {Fill(col, palette[0])}/>");
+                        else sb.Append($"<rect x=\"{F(padL + off)}\" y=\"{F(padT + ph - acc - len)}\" width=\"{F(bw)}\" height=\"{F(len)}\" {Fill(col, palette[0])}/>");
+                        if (stacked) acc += len;
+                    }
+                }
+            }
+            else if (kind is "lineChart" or "areaChart")
+            {
+                var step = n > 1 ? pw / (n - 1) : 0; var baseAcc = new double[n];
+                var paths = new List<string>();
+                for (var si = 0; si < series.Count; si++)
+                {
+                    var pts = new List<(double X, double Y, double Y0)>();
+                    for (var i = 0; i < n; i++)
+                    {
+                        var v = Math.Max(0, V(series[si], i)); var y0 = stacked ? baseAcc[i] : 0; var y1 = y0 + v;
+                        if (stacked) baseAcc[i] = y1;
+                        pts.Add((padL + (n > 1 ? step * i : pw / 2), padT + ph - y1 / max * ph, padT + ph - y0 / max * ph));
+                    }
+                    var line = string.Join(" ", pts.Select(p => $"{F(p.X)},{F(p.Y)}"));
+                    var col = colorOf(si);
+                    if (kind == "areaChart")
+                    {
+                        var back = string.Join(" ", pts.AsEnumerable().Reverse().Select(p => $"{F(p.X)},{F(p.Y0)}"));
+                        paths.Add($"<polygon points=\"{line} {back}\" {Fill(col, palette[0])}/>");
+                    }
+                    else
+                    {
+                        var lc = series[si].Line ?? col;
+                        paths.Add($"<polyline points=\"{line}\" fill=\"none\" stroke=\"#{lc.Hex}\" stroke-width=\"{F(Math.Max(1.5, series[si].LineW))}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>");
+                    }
+                }
+                // المساحات المكدّسة تُرسم من الأعلى إلى الأسفل حتى لا تغطي السلسلة الأولى ما فوقها
+                if (kind == "areaChart" && !stacked) paths.Reverse();
+                foreach (var p in paths) sb.Append(p);
+            }
+            else return null;
+            for (var i = 0; i < Math.Min(cats.Count, n); i++)
+            {
+                if (horizontal) continue;
+                var band = kind == "barChart" ? pw / n : (n > 1 ? pw / (n - 1) : pw);
+                var x = kind == "barChart" ? padL + band * i + band / 2 : padL + (n > 1 ? band * i : pw / 2);
+                sb.Append($"<text x=\"{F(x)}\" y=\"{F(H - fs * 0.5)}\" font-size=\"{F(fs)}\" fill=\"#5A6B77\" text-anchor=\"middle\">{Esc(cats[i])}</text>");
+            }
+            return sb.ToString();
+        }
+        catch { return null; }
+    }
+
+    private static double Num(XElement? e, string a = "val") => double.TryParse(e?.Attribute(a)?.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0;
+
+    private static double NiceMax(double v)
+    {
+        var p = Math.Pow(10, Math.Floor(Math.Log10(v))); var m = v / p;
+        return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
     }
 
     private string Table(XElement tbl, Xf t, Ctx ctx)

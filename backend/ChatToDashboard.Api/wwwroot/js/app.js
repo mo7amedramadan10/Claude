@@ -9802,7 +9802,7 @@ function renderFfGalCats() {
   const all = ffGalItems();
   // لنوع «لوحة» تُضاف تصنيفات كتالوج اللوحات (المشتريات، التجزئة، البنوك…) التي لا توجد في تصنيفات النماذج الثابتة
   const extraCats = ffGalKind === 'dashboard' ? DASH_GAL_CATS.filter(c => c[0] !== 'all' && !DK_CATS.some(d => d[0] === c[0])) : [];
-  const cats = ffGalKind === 'track' ? DASH_GAL_CATS : [DK_CATS[0], ['uploaded', 'مرفوعة من ملف', 'file'], ...DK_CATS.slice(1), ...extraCats];
+  const cats = ffGalKind === 'track' ? DASH_GAL_CATS : [DK_CATS[0], ...FF_EXTRA_CATS, ['uploaded', 'مرفوعة من ملف', 'file'], ...DK_CATS.slice(1), ...extraCats];
   el('ffgal-cats').innerHTML = cats.map(([k, name, icon]) => {
     const count = k === 'all' ? all.length : all.filter(t => t.category === k).length;
     if (!count && k !== 'all') return '';
@@ -10902,7 +10902,7 @@ async function ffslRender() {
     const q = FFSL.q.trim().toLowerCase(); const found = all.filter(t => !q || (t.name + ' ' + (t.nameEn || '') + ' ' + (t.description || '')).toLowerCase().includes(q));
     // تصنيفات النماذج: «كل النماذج» ثم كل تصنيف فيه نماذج شرائح (والمختار يبقى ولو صار عدده صفرًا مع البحث)، بعدد ما يطابق البحث.
     const cat = FFSL.cat || 'all', count = k => found.filter(t => (t.category || 'general') === k).length;
-    const cats = DK_CATS.filter(([k]) => k === 'all' || k === cat || all.some(t => (t.category || 'general') === k));
+    const cats = [DK_CATS[0], ...FF_EXTRA_CATS, ...DK_CATS.slice(1)].filter(([k]) => k === 'all' || k === cat || all.some(t => (t.category || 'general') === k));
     const list = cat === 'all' ? found : found.filter(t => (t.category || 'general') === cat);
     body.innerHTML = `<input type="search" id="ffsl-q" class="ffsl-q" placeholder="ابحث في نماذج الشرائح…" value="${esc(FFSL.q)}" aria-label="بحث في النماذج">
       <div class="ffsl-cats" role="group" aria-label="تصنيف النماذج">${cats.map(([k, name]) => `<button type="button" class="ffsl-cat" data-ffsl-cat="${k}" aria-pressed="${k === cat}">${esc(name)} <span class="ffsl-cat-n">${k === 'all' ? found.length : count(k)}</span></button>`).join('')}</div>
@@ -11722,6 +11722,8 @@ const DK_CATS = [
   ['projects', 'المشاريع', 'layers'], ['finance', 'المالية', 'sheet'], ['hr', 'الموارد البشرية', 'users'],
   ['marketing', 'التسويق', 'target'], ['ops', 'العمليات والإمداد', 'server'], ['cx', 'خدمة العملاء', 'headset'], ['general', 'عام', 'more'],
 ];
+// تصنيفات نماذج تصميم حر الإضافية (لا تخص منشئ العروض): «نماذج ثقة» لقوالب الهوية الرسمية، تُعرض أول التصنيفات
+const FF_EXTRA_CATS = [['thiqah', 'نماذج ثقة', 'briefcase']];
 const DK_GLYPH = { title: '🏷️', section: '➖', bullets: '•', 'two-column': '⫴', kpis: '🔢', chart: '📊', table: '▦', image: '🖼️', quote: '❝', tasks: '☑' };
 let dkGalCat = 'all', dkGalQuery = '';
 function dkDemoSpec(t) { const spec = window.JEEM_DECK_DEMO ? JEEM_DECK_DEMO.build(t) : null; if (spec) { spec.brand = DK.brand || null; spec.template = DK.template || null; } return spec; }

@@ -46,7 +46,7 @@ templates/
 |---|---|
 | `key` | فريد، أحرف لاتينية صغيرة وأرقام وشرطات، يبدأ بـ`sl-`. **لا يُغيَّر بعد النشر** (يُحفظ مع تصاميم المستخدمين). |
 | `kind` | دائمًا `slides`. |
-| `category` | واحد من `mgmt` / `sales` / `projects` / `finance` / `hr` / `marketing` / `ops` / `cx` / `general`. |
+| `category` | واحد من `mgmt` / `sales` / `projects` / `finance` / `hr` / `marketing` / `ops` / `cx` / `general` / `thiqah` (نماذج ثقة: قوالب الهوية الرسمية، أول التصنيفات في المعرض). |
 | `icon` | رمز تعبيري واحد. |
 | `name` / `nameEn` | اسم قصير (≤ 40 حرفًا). |
 | `description` / `descriptionEn` | سطر واحد (≤ 120 حرفًا). |

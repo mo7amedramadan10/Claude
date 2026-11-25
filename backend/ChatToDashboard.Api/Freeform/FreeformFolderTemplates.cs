@@ -14,7 +14,7 @@ public static class FreeformFolderTemplates
 {
     public const string RelativeRoot = "templates/freeform";
     private static readonly HashSet<string> Kinds = new(StringComparer.Ordinal) { "slides", "doc", "design", "dashboard", "motion" };
-    private static readonly HashSet<string> Categories = new(StringComparer.Ordinal) { "mgmt", "sales", "projects", "finance", "hr", "marketing", "ops", "cx", "general" };
+    private static readonly HashSet<string> Categories = new(StringComparer.Ordinal) { "mgmt", "sales", "projects", "finance", "hr", "marketing", "ops", "cx", "general", "thiqah" };
     private static readonly Regex KeyRx = new("^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled);
     private static readonly Regex SlideRx = new("<section[^>]*class=\"[^\"]*\\bslide\\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
