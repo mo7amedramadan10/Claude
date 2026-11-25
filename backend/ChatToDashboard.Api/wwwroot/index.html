@@ -897,6 +897,21 @@
   </div>
 </div>
 
+<!-- إضافة شريحة: فارغة بتصميم العرض الحالي، أو نسخة من شريحة فيه، أو شريحة من أي نموذج شرائح جاهز (بأنماطها المعزولة) -->
+<div id="ff-slide-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffsl-heading">
+  <div class="modal share-modal-box ffsl-box">
+    <div class="ffsl-head"><h3 id="ffsl-heading">إضافة شريحة</h3><button type="button" class="ffsl-x" id="ffsl-close" aria-label="إغلاق">✕</button></div>
+    <p class="modal-note">تُضاف الشريحة بعد الشريحة الحالية وتُحفظ إصدارًا جديدًا، ثم تعدّل نصوصها وصورها مباشرة.</p>
+    <div class="ffsl-tabs" role="tablist">
+      <button type="button" role="tab" data-ffsl-tab="blank" aria-selected="true">شريحة فارغة</button>
+      <button type="button" role="tab" data-ffsl-tab="current" aria-selected="false">من هذا العرض</button>
+      <button type="button" role="tab" data-ffsl-tab="templates" aria-selected="false">من نماذج أخرى</button>
+    </div>
+    <div id="ffsl-body" class="ffsl-body"></div>
+    <div id="ffsl-status" class="ffsl-status muted" role="status"></div>
+  </div>
+</div>
+
 <!-- سجلات الإدخال: ما تحفظه صفحة التصميم عبر jeem.records — جدول لكل مجموعة، تصدير CSV، وسياسة الإدخال في الرابط المنشور -->
 <div id="ff-rec-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffr-heading">
   <div class="modal share-modal-box ffr-box">
@@ -1431,6 +1446,8 @@
         <iframe id="ff-preview" class="ff-preview" title="معاينة التصميم" sandbox="allow-scripts allow-popups allow-forms allow-modals allow-downloads"></iframe>
         <!-- أدوات التصميم في وضع التعديل: شريط عائم للإدراج وطلب تعديل عنصر من جيم، ولوحة خصائص للعنصر المحدد -->
         <div id="ff-dtools" class="ff-dtools hidden" role="toolbar" aria-label="أدوات التصميم">
+          <button type="button" class="ffd-btn hidden" id="ffd-slide" title="إضافة شريحة جديدة" aria-label="إضافة شريحة جديدة"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="15" height="11" rx="1.5"/><path d="M20 9v8a2 2 0 0 1-2 2H7"/><path d="M10 8v5M7.5 10.5h5"/></svg></button>
+          <span class="ffd-sep" id="ffd-slide-sep" aria-hidden="true" hidden></span>
           <button type="button" class="ffd-btn" data-ins="text" title="إدراج نص" aria-label="إدراج نص"><b aria-hidden="true">T</b></button>
           <button type="button" class="ffd-btn" data-ins="image" title="إدراج صورة" aria-label="إدراج صورة"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg></button>
           <button type="button" class="ffd-btn" data-ins="table" title="إدراج جدول" aria-label="إدراج جدول"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></svg></button>

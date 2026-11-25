@@ -9434,6 +9434,54 @@ function ffDesignKit() {
     post(info());
   }
   function changed() { dirty++; post({ type: 'd-dirty', count: dirty }); }
+  // ---- إضافة شريحة بعد الشريحة الظاهرة: فارغة بتصميم العرض، أو نسخة من شريحة فيه، أو شريحة مستوردة من نموذج آخر بأنماطها المعزولة ----
+  function topSlides() { return [].slice.call(document.querySelectorAll('section.slide, .slide, [data-slide]')).filter(function (x) { return !x.closest('#jeem-strip') && !(x.parentElement && x.parentElement.closest('section.slide, .slide, [data-slide]')); }); }
+  function cleanSlide(c) {
+    c.classList.remove('active', 'on', 'current', 'is-active'); c.removeAttribute('aria-hidden'); c.style.removeProperty('display'); c.style.removeProperty('opacity'); c.style.removeProperty('transform');
+    [c].concat([].slice.call(c.querySelectorAll('*'))).forEach(function (e) { e.removeAttribute('data-ff-sel'); e.removeAttribute('data-ff-editing'); e.removeAttribute('contenteditable'); e.removeAttribute('data-ff-img-id'); });
+    [].slice.call(c.querySelectorAll('script')).forEach(function (x) { x.parentNode.removeChild(x); });
+    [].slice.call(c.querySelectorAll('.frame')).forEach(function (f) { f.style.removeProperty('transform'); });
+    return c;
+  }
+  var DECOR = /(^|[\s_-])(deco|decor|bg|back|backdrop|lg|logo|brand|co|mir|foot|footer|pn|num|page-?no|stripe|band|shape|ornament|wm)([\s_-]|$)/i;
+  function blankFrom(cur) {
+    var c = cleanSlide(cur.cloneNode(true)), host = c.querySelector('.frame') || c;
+    var head = cur.querySelector('h1,h2,h3'), cs = head ? getComputedStyle(head) : null;
+    [].slice.call(host.children).forEach(function (ch) { var cls = (ch.getAttribute('class') || '') + ' ' + (ch.id || ''); if (!DECOR.test(cls) || ch.querySelector('h1,h2,h3,p,li,table,img:not([class*="logo"])') && !/(^|\s)(deco|bg|lg|logo|mir)(\s|$)/i.test(cls)) host.removeChild(ch); });
+    var abs = host.classList.contains('frame') || getComputedStyle(cur.querySelector('.frame') || cur).position === 'relative';
+    var t = document.createElement('h2'); t.textContent = document.documentElement.lang === 'en' ? 'Slide title' : 'عنوان الشريحة';
+    var b = document.createElement('p'); b.textContent = document.documentElement.lang === 'en' ? 'Write the slide content here.' : 'اكتب محتوى الشريحة هنا.';
+    [t, b].forEach(function (e, i) {
+      if (cs) { e.style.fontFamily = cs.fontFamily; e.style.color = i ? cs.color : cs.color; }
+      e.style.margin = '0'; e.style.fontWeight = i ? '400' : (cs ? cs.fontWeight : '700'); e.style.fontSize = i ? '24px' : '46px'; e.style.lineHeight = '1.35';
+      if (abs) { e.setAttribute('data-jeem-free', ''); e.style.position = 'absolute'; e.style.insetInlineStart = '80px'; e.style.top = i ? '330px' : '240px'; e.style.width = '1000px'; }
+      host.appendChild(e);
+    });
+    if (!abs) { host.style.padding = host.style.padding || '48px'; }
+    return c;
+  }
+  function slideAdd(m) {
+    var list = topSlides(), cur = visibleSlide() || list[list.length - 1]; if (!cur) { post({ type: 'slide-added', error: 'لا توجد شرائح في هذه الصفحة.' }); return; }
+    var node;
+    if (m.mode === 'blank') node = blankFrom(cur);
+    else if (m.mode === 'dup') { var src = list[m.index] || cur; node = cleanSlide(src.cloneNode(true)); [].slice.call(node.querySelectorAll('[id]')).forEach(function (e) { if (document.getElementById(e.id)) e.id = e.id + '-' + Date.now().toString(36).slice(-3); }); }
+    else {
+      var box = document.createElement('div'); box.innerHTML = m.html || ''; node = box.firstElementChild; if (!node) { post({ type: 'slide-added', error: 'تعذّرت قراءة الشريحة.' }); return; }
+      cleanSlide(node);
+      if (m.css) { var stl = document.createElement('style'); stl.id = 'jeem-slide-css-' + (m.scope || Date.now().toString(36)); stl.textContent = m.css; document.head.appendChild(stl); }
+      (m.fonts || []).forEach(function (h) { if (!document.querySelector('link[href="' + h.replace(/"/g, '') + '"]')) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; document.head.appendChild(l); } });
+      // صفحة بلا إطار ثابت تُصغَّر به الشرائح: سكربت صغير يصغّر الإطار 1280×720 المستورد ليلائم الشريحة
+      if (node.querySelector('.frame') && !cur.querySelector('.frame') && !document.getElementById('jeem-slide-fit')) {
+        var fs = document.createElement('script'); fs.id = 'jeem-slide-fit';
+        fs.textContent = "(function(){function f(){document.querySelectorAll('[data-jeem-fit]').forEach(function(s){var fr=s.querySelector('.frame');if(!fr)return;var k=Math.min(s.clientWidth/1280,(s.clientHeight||720)/720)||1;fr.style.transform='scale('+k+')';fr.style.transformOrigin='top center';s.style.minHeight=(720*k)+'px';});}addEventListener('resize',f);addEventListener('load',f);document.addEventListener('jeem:slide',function(){setTimeout(f,0)});f();})();";
+        document.body.appendChild(fs);
+      }
+      if (node.querySelector('.frame') && !cur.querySelector('.frame')) node.setAttribute('data-jeem-fit', '');
+    }
+    cur.parentNode.insertBefore(node, cur.nextSibling);
+    changed();
+    post({ type: 'slide-added', index: topSlides().indexOf(node) });
+  }
   function pushStyle(e) { var old = e.getAttribute('style'); undo.push(function () { if (old == null) e.removeAttribute('style'); else e.setAttribute('style', old); }); }
   function snap(t) { var html = t.outerHTML; undo.push(function () { var tpl = document.createElement('template'); tpl.innerHTML = html; var n = tpl.content.firstElementChild; if (t.parentNode) t.parentNode.replaceChild(n, t); select(n); }); }
   var DEF = {
@@ -9538,6 +9586,7 @@ function ffDesignKit() {
     if (m.op === 'palette') { var ph = m.bind === 'chart' && sel ? chartHost(sel) : null, hc = ph ? colorsOf(ph) : [];
       ensureBlocks(function () { post({ type: 'd-palette', colors: hc.length >= 2 ? hc : (window.JEEM_BLOCKS ? window.JEEM_BLOCKS.palette((sel && slideOf(sel)) || visibleSlide() || document.body) : []) }); }); return; }
     if (m.op === 'deselect') return select(null);
+    if (m.op === 'slide-add') return slideAdd(m);
     if (!sel) return;
     if (m.op === 'style') { pushStyle(sel); for (var k in m.props) { var v = m.props[k]; if (v === '' || v == null) sel.style.removeProperty(k); else sel.style.setProperty(k, v); } changed(); post(info()); return; }
     if (m.op === 'parent') { if (sel.parentElement && sel.parentElement !== document.body) select(sel.parentElement); return; }
@@ -10057,15 +10106,19 @@ window.addEventListener('message', async e => {
       `<button type="button" class="ff-undo-msg ff-shorten-msg" data-i="${+m.i || 0}">✂️ اختصره</button>`);
     return;
   }
+  if (m.type === 'nav-state' && FF.reEdit && FF.navRestore == null) { FF.reEdit = false; setTimeout(() => { if (FF.design && !FF.edit.on) ffEditSetMode(true); }, 150); }
   if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; if (FF.navRestore != null && n >= 2 && FF.navRestore !== i && FF.navRestore < n) { const to = FF.navRestore; FF.navRestore = null; e.source.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*'); return; } FF.navRestore = null; FF.nav = { i, n }; ffRenderScope(); if (FF.overflowCheck) { FF.overflowCheck = false; const src = e.source; setTimeout(() => src.postMessage({ jeemEdit: 1, type: 'check-overflow' }, '*'), 600); } el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
+  if (m.type === 'slide-added') { ffslAdded(m); return; }
   if (m.type === 'html' && FF.edit.pending && m.purpose !== 'ask') {
     FF.edit.pending = null; const html = m.html || '';
     try {
-      const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, note: FF.edit.designDirty ? 'تعديل تصميم مباشر من مساحة العمل (أدوات وخصائص)' : FF.edit.imgDirty ? (FF.edit.dirty ? 'تعديل نصوص وصور مباشر من مساحة العمل' : 'تغيير صور مباشر من مساحة العمل') : 'تعديل نصي مباشر من مساحة العمل' }) });
+      const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, note: FF.edit.slideNote ? FF.edit.slideNote : FF.edit.designDirty ? 'تعديل تصميم مباشر من مساحة العمل (أدوات وخصائص)' : FF.edit.imgDirty ? (FF.edit.dirty ? 'تعديل نصوص وصور مباشر من مساحة العمل' : 'تغيير صور مباشر من مساحة العمل') : 'تعديل نصي مباشر من مساحة العمل' }) });
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
       FF.html = html; FF.viewing = null; if (d.versions) FF.versions = d.versions; if (d.version) FF.design.version = d.version;
-      ffEditSetMode(false, true); ffRender(); ffPushMsg('bot', `حُفظ تعديلك المباشر${d.version ? ` (الإصدار ${d.version})` : ''}.`);
-    } catch (err) { ffPushMsg('err', 'تعذّر حفظ التعديل: ' + err.message); el('ff-edit-save').disabled = false; }
+      const slideNote = FF.edit.slideNote; FF.edit.slideNote = null;
+      ffEditSetMode(false, true); if (slideNote) FF.reEdit = true; ffRender();
+      ffPushMsg('bot', slideNote ? `➕ ${slideNote}${d.version ? ` (الإصدار ${d.version})` : ''} — عدّل نصوصها وصورها مباشرة.` : `حُفظ تعديلك المباشر${d.version ? ` (الإصدار ${d.version})` : ''}.`, slideNote && d.version > 1 ? `<button type="button" class="ff-undo-msg" data-undo="${d.version - 1}" data-from="${d.version}">↶ تراجع عن إضافة الشريحة</button>` : undefined);
+    } catch (err) { FF.edit.slideNote = null; FF.navTarget = null; ffPushMsg('err', 'تعذّر حفظ التعديل: ' + err.message); el('ff-edit-save').disabled = false; }
     finally { el('ff-edit-save').textContent = 'حفظ كإصدار جديد'; }
   }
 });
@@ -10260,7 +10313,7 @@ function ffRender() {
   el('ff-restore').classList.toggle('hidden', !viewingOld);
   el('ff-preview-wrap').classList.toggle('mobile', FF.mobile); el('ff-mobile').setAttribute('aria-pressed', FF.mobile ? 'true' : 'false');
   el('ff-slide-nav').classList.add('hidden');
-  FF.navRestore = FF.nav && FF.nav.n >= 2 && FF.navDesign === (FF.design && FF.design.id) ? FF.nav.i : null; FF.navDesign = FF.design && FF.design.id; FF.nav = { i: 0, n: 0 }; ffRenderScope();
+  FF.navRestore = FF.navTarget != null ? FF.navTarget : FF.nav && FF.nav.n >= 2 && FF.navDesign === (FF.design && FF.design.id) ? FF.nav.i : null; FF.navTarget = null; FF.navDesign = FF.design && FF.design.id; FF.nav = { i: 0, n: 0 }; ffRenderScope();
   el('ff-preview').srcdoc = ffSandboxHtml(FF.html, true, kind) || '<!doctype html><html dir="rtl"><body style="font-family:sans-serif;padding:40px;color:#5A6B77">لا توجد صفحة بعد.</body></html>';
 }
 function ffPushMsg(role, text, extraHtml) { FF.messages.push({ role, text, extraHtml: extraHtml || '' }); ffRenderMessages(); }
@@ -10772,9 +10825,159 @@ el('ff-messages').addEventListener('click', async e => {
 });
 // ---- أدوات التصميم ولوحة الخصائص (الأم) ----
 const FFD = { info: null, insp: true };
+// ---------- إضافة شريحة: نافذة «فارغة / من هذا العرض / من نماذج أخرى» ----------
+// الشريحة من نموذج آخر تُستخرج من صفحته بعد تشغيل سكربتاتها (الرسوم مرسومة) في إطار مخفي بأصل المنصة نفسه (ملفات نماذجنا الثابتة)،
+// وأصنافها ومعرّفاتها تُسبق ببادئة فريدة وأنماطها تُقيَّد بصنف على الشريحة نفسها فلا تتصادم مع أنماط العرض الحالي ولا العكس.
+const FFSL = { tab: 'blank', tpl: null, q: '', busy: false };
+const FFSL_KEEP = new Set(['slide', 'active', 'frame']);
+function ffslLang() { return /<html[^>]*\blang=["']?en/i.test(FF.html || '') ? 'en' : 'ar'; }
+function ffslCount(html) { const d = new DOMParser().parseFromString(html || '', 'text/html'); return [...d.querySelectorAll('section.slide, .slide, [data-slide]')].filter(x => !(x.parentElement && x.parentElement.closest('section.slide, .slide, [data-slide]'))).length; }
+// مصغّرة شريحة واحدة: الصفحة نفسها (أنماطها وسكربتاتها) بلا الشرائح الأخرى — أخف بكثير من الصفحة كاملة لكل مصغّرة
+function ffslThumbDoc(html, i) {
+  const d = new DOMParser().parseFromString(html || '', 'text/html');
+  const list = [...d.querySelectorAll('section.slide, .slide, [data-slide]')].filter(x => !(x.parentElement && x.parentElement.closest('section.slide, .slide, [data-slide]')));
+  // الشرائح الأخرى تبقى أغلفة فارغة فيها عناصرها ذات المعرّف فقط (بلا صور) حتى لا تفشل سكربتات الصفحة التي ترسم فيها بالمعرّف
+  // الشريحة المطلوبة تُنقل أولًا: سكربت الصفحة يفعّل الشريحة الأولى عند التحميل
+  if (list[i] && list[0] && i > 0) list[0].parentNode.insertBefore(list[i], list[0]);
+  list.forEach((x, j) => { if (j === i) { x.classList.add('active'); return; } const keep = [...x.querySelectorAll('[id], .frame')].map(e => { const c = e.cloneNode(false); c.removeAttribute('src'); c.removeAttribute('srcset'); return c; }); x.classList.remove('active'); x.innerHTML = ''; keep.forEach(c => x.appendChild(c)); });
+  return ffSandboxHtml('<!doctype html>\n' + d.documentElement.outerHTML, false, 'slides', true);
+}
+function ffslThumbsHtml(n, kind) { return `<div class="ffsl-grid">${Array.from({ length: n }, (_, i) => `<button type="button" class="ffsl-thumb" data-ffsl-${kind}="${i}" aria-label="الشريحة ${i + 1}"><span class="ffsl-tv"><iframe tabindex="-1" aria-hidden="true" sandbox="allow-scripts" loading="lazy" data-i="${i}"></iframe></span><span class="ffsl-n">${i + 1}</span></button>`).join('')}</div>`; }
+function ffslLoadThumbs(html) {
+  const frames = [...el('ffsl-body').querySelectorAll('.ffsl-tv iframe')];
+  // تحميل كسول ومتتابع (مصغّرتان في وقت واحد) حتى لا تُحمَّل عشرات الصفحات معًا
+  const queue = [], gen = (FFSL.gen = (FFSL.gen || 0) + 1); let running = 0;
+  const pump = () => { while (running < 3 && queue.length && gen === FFSL.gen) { const f = queue.shift(); running++; const fin = () => { running--; pump(); }; f.addEventListener('load', () => setTimeout(fin, 120), { once: true }); setTimeout(fin, 4000); f.srcdoc = ffslThumbDoc(html, +f.dataset.i); } };
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); queue.push(e.target); pump(); } }), { root: el('ffsl-body'), rootMargin: '120px' });
+  frames.forEach(f => io.observe(f));
+  const fit = () => frames.forEach(f => { const w = f.parentElement.clientWidth; if (w) f.parentElement.style.setProperty('--ffsl-k', (w / 1280).toFixed(4)); });
+  fit(); if (window.ResizeObserver) { const ro = new ResizeObserver(fit); ro.observe(el('ffsl-body')); }
+}
+async function ffslRender() {
+  document.querySelectorAll('[data-ffsl-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.ffslTab === FFSL.tab ? 'true' : 'false'));
+  const body = el('ffsl-body'); el('ffsl-status').textContent = '';
+  if (FFSL.tab === 'blank') {
+    body.innerHTML = `<button type="button" class="ffsl-blank" id="ffsl-blank-go"><span class="ffsl-tv ffsl-tv-blank"><b>Aa</b><i></i><i></i></span><span><b>شريحة فارغة بتصميم هذا العرض</b><small class="muted">بالخلفية والزخارف والشعار نفسها من الشريحة الحالية، وعنوان وفقرة جاهزان للكتابة.</small></span></button>`;
+    el('ffsl-blank-go').addEventListener('click', () => ffslInsert({ mode: 'blank' }, 'أُضيفت شريحة فارغة بتصميم العرض'));
+    return;
+  }
+  if (FFSL.tab === 'current') {
+    const n = ffslCount(FF.html);
+    body.innerHTML = n ? `<p class="ffsl-hint muted">اختر شريحة لتُضاف نسخة منها بعد الشريحة الحالية.</p>${ffslThumbsHtml(n, 'dup')}` : '<p class="muted">لا شرائح في هذا العرض.</p>';
+    body.querySelectorAll('[data-ffsl-dup]').forEach(b => b.addEventListener('click', () => ffslInsert({ mode: 'dup', index: +b.dataset.ffslDup }, `أُضيفت نسخة من الشريحة ${+b.dataset.ffslDup + 1}`)));
+    ffslLoadThumbs(FF.html); return;
+  }
+  // من نماذج أخرى: قائمة نماذج الشرائح الجاهزة ثم شرائح المختار
+  const all = (await ffLoadTemplates()).filter(t => t.kind === 'slides' && t.page);
+  if (!FFSL.tpl) {
+    const q = FFSL.q.trim().toLowerCase(); const list = all.filter(t => !q || (t.name + ' ' + (t.nameEn || '') + ' ' + (t.description || '')).toLowerCase().includes(q));
+    body.innerHTML = `<input type="search" id="ffsl-q" class="ffsl-q" placeholder="ابحث في نماذج الشرائح…" value="${esc(FFSL.q)}" aria-label="بحث في النماذج">
+      <div class="ffsl-tpls">${list.map(t => `<button type="button" class="ffsl-tpl" data-ffsl-tpl="${esc(t.key)}"><span class="ffsl-ic" aria-hidden="true">${esc(t.icon || '🖼️')}</span><span><b>${esc(ffslLang() === 'en' && t.nameEn ? t.nameEn : t.name)}</b><small class="muted">${esc(t.description || '')}</small></span>${FF.design && FF.design.templateKey === t.key ? '<em>نموذج هذا العرض</em>' : ''}</button>`).join('') || '<p class="muted">لا نماذج تطابق البحث.</p>'}</div>`;
+    const qi = el('ffsl-q'); qi.addEventListener('input', () => { FFSL.q = qi.value; const pos = qi.selectionStart; ffslRender().then(() => { const n = el('ffsl-q'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }); });
+    body.querySelectorAll('[data-ffsl-tpl]').forEach(b => b.addEventListener('click', () => { FFSL.tpl = all.find(t => t.key === b.dataset.ffslTpl); ffslRender(); }));
+    return;
+  }
+  const t = FFSL.tpl; body.innerHTML = `<p class="muted">جارٍ تحميل شرائح «${esc(t.name)}»…</p>`;
+  const html = await ffTemplatePageHtml(t, ffslLang() === 'en' && t.pageEn ? 'en' : 'ar');
+  if (FFSL.tpl !== t) return;
+  if (!html) { body.innerHTML = '<p class="muted">تعذّر تحميل النموذج.</p>'; return; }
+  const n = ffslCount(html);
+  body.innerHTML = `<div class="ffsl-crumb"><button type="button" id="ffsl-back" class="btn btn-sm btn-ghost">→ كل النماذج</button><b>${esc(t.name)}</b><span class="muted">${n} شريحة</span></div>${ffslThumbsHtml(n, 'tpl')}`;
+  el('ffsl-back').addEventListener('click', () => { FFSL.tpl = null; ffslRender(); });
+  body.querySelectorAll('[data-ffsl-tpl]').forEach(b => b.addEventListener('click', async () => {
+    const i = +b.dataset.ffslTpl; el('ffsl-status').textContent = 'جارٍ تجهيز الشريحة…';
+    try { const x = await ffslExtract(html, i, !(FF.design && FF.design.templateKey === t.key)); ffslInsert(Object.assign({ mode: 'import' }, x), `أُضيفت الشريحة ${i + 1} من نموذج «${t.name}»`); }
+    catch (e) { el('ffsl-status').textContent = 'تعذّر تجهيز الشريحة: ' + e.message; }
+  }));
+  ffslLoadThumbs(html);
+}
+// استخراج شريحة مرسومة من صفحة نموذج + أنماطها مقيَّدة (scope=true) أو كما هي (نموذج العرض نفسه)
+function ffslExtract(html, i, scope) {
+  return new Promise((resolve, reject) => {
+    const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-scripts allow-same-origin'); f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1;
+    f.style.cssText = 'position:fixed;left:-20000px;top:0;width:1280px;height:760px;border:0;visibility:hidden';
+    const done = (fn, v) => { clearTimeout(to); try { f.remove(); } catch { /* */ } fn(v); };
+    const to = setTimeout(() => done(reject, new Error('انتهت المهلة')), 15000);
+    f.addEventListener('load', () => setTimeout(() => {
+      try {
+        const doc = f.contentDocument; const list = [...doc.querySelectorAll('section.slide, .slide, [data-slide]')].filter(x => !(x.parentElement && x.parentElement.closest('section.slide, .slide, [data-slide]')));
+        const src = list[i]; if (!src) throw new Error('الشريحة غير موجودة');
+        const sec = src.cloneNode(true);
+        if (!scope) return done(resolve, { html: sec.outerHTML, css: '', fonts: [] });
+        const tag = Date.now().toString(36).slice(-5), P = 'x' + tag + '-', JX = 'jx' + tag;
+        ffslRename(sec, P); sec.classList.add(JX);
+        const fonts = [...doc.querySelectorAll('link[rel~="stylesheet"][href]')].map(l => l.href).filter(h => /fonts\.googleapis/.test(h));
+        let css = '';
+        for (const sh of doc.styleSheets) { let rules; try { rules = sh.cssRules; } catch { continue; } css += ffslScopeRules(rules, JX, P, fonts); }
+        css = css.replace(/url\(\s*(['"]?)#([\w-]+)\1\s*\)/g, (m0, q, id) => `url(#${P}${id})`);
+        done(resolve, { html: sec.outerHTML, css, fonts: [...new Set(fonts)], scope: JX });
+      } catch (e) { done(reject, e); }
+    }, 700));
+    f.srcdoc = html; document.body.appendChild(f);
+  });
+}
+function ffslRename(root, P) {
+  const refAttrs = ['for', 'aria-labelledby', 'aria-describedby', 'aria-controls'];
+  [root, ...root.querySelectorAll('*')].forEach(e => {
+    const c = e.getAttribute('class'); if (c) e.setAttribute('class', c.split(/\s+/).filter(Boolean).map(k => FFSL_KEEP.has(k) ? k : P + k).join(' '));
+    if (e.id) e.id = P + e.id;
+    for (const a of [...e.attributes]) {
+      let v = a.value, nv = v;
+      if (/url\(\s*['"]?#/.test(v)) nv = v.replace(/url\(\s*(['"]?)#([\w-]+)\1\s*\)/g, (m0, q, id) => `url(#${P}${id})`);
+      if ((a.name === 'href' || a.name === 'xlink:href') && v.startsWith('#') && v.length > 1) nv = '#' + P + v.slice(1);
+      if (refAttrs.includes(a.name)) nv = v.split(/\s+/).filter(Boolean).map(x => P + x).join(' ');
+      if (nv !== v) e.setAttribute(a.name, nv);
+    }
+  });
+}
+function ffslScopeSel(sel, JX, P) {
+  return sel.split(',').map(part => {
+    let x = part.trim(); if (!x) return null;
+    x = x.replace(/\.(-?[_a-zA-Z\u0600-\u06FF][\w\u0600-\u06FF-]*)/g, (m0, c) => FFSL_KEEP.has(c) ? m0 : '.' + P + c).replace(/#(-?[_a-zA-Z][\w-]*)/g, (m0, c) => '#' + P + c);
+    if (/^:root\b/.test(x)) return x.replace(/^:root/, '.' + JX);
+    const h = /^(html(?:\[[^\]]*\]|:[\w-]+(?:\([^)]*\))?)*)(\s+|$)(.*)$/.exec(x);
+    if (h) { let rest = h[3].trim(); if (/^body\b/.test(rest)) rest = rest.replace(/^body\S*\s*/, ''); return rest ? `${h[1]} .${JX} ${rest}` : null; }
+    if (/^body\b/.test(x)) { x = x.replace(/^body\S*\s*/, ''); if (!x) return null; }
+    if (/^\*$/.test(x)) return `.${JX}, .${JX} *`;
+    return `.${JX} ${x}`;
+  }).filter(Boolean).join(', ');
+}
+function ffslScopeRules(rules, JX, P, fonts) {
+  let out = '';
+  for (const r of rules) {
+    if (r.type === 1) { const sel = ffslScopeSel(r.selectorText, JX, P); if (sel) out += `${sel}{${r.style.cssText}}\n`; }
+    else if (r.type === 4) { const inner = ffslScopeRules(r.cssRules, JX, P, fonts); if (inner) out += `@media ${r.conditionText || r.media.mediaText}{${inner}}\n`; }
+    else if (r.type === 12) { const inner = ffslScopeRules(r.cssRules, JX, P, fonts); if (inner) out += `@supports ${r.conditionText}{${inner}}\n`; }
+    else if (r.type === 3) { if (r.href) fonts.push(r.href); }
+    else if (r.type === 5 || r.type === 7) out += r.cssText + '\n';
+  }
+  return out;
+}
+function ffslInsert(payload, note) {
+  if (FFSL.busy) return; FFSL.busy = true; FF.edit.slideNote = note;
+  el('ffsl-status').textContent = 'جارٍ إضافة الشريحة…';
+  ffdPost(Object.assign({ op: 'slide-add' }, payload));
+  setTimeout(() => { if (FFSL.busy) { FFSL.busy = false; FF.edit.slideNote = null; el('ffsl-status').textContent = 'لم تستجب الصفحة — أعد المحاولة.'; } }, 8000);
+}
+function ffslAdded(m) {
+  FFSL.busy = false;
+  if (m.error || m.index == null || m.index < 0) { FF.edit.slideNote = null; el('ffsl-status').textContent = m.error || 'تعذّرت إضافة الشريحة.'; return; }
+  closeFfSlideModal(); FF.navTarget = m.index; // ffRender يضبط الاستعادة منه بعد الحفظ
+  el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now();
+  el('ff-preview').contentWindow.postMessage({ jeemEdit: 1, type: 'get' }, '*');
+}
+function openFfSlideModal() { if (!FF.design || !FF.edit.on) return; FFSL.tab = 'blank'; FFSL.tpl = null; FFSL.q = ''; FFSL.busy = false; el('ff-slide-modal').classList.remove('hidden'); ffslRender(); el('ffsl-close').focus(); }
+function closeFfSlideModal() { FFSL.gen = (FFSL.gen || 0) + 1; el('ff-slide-modal').classList.add('hidden'); el('ffsl-body').innerHTML = ''; }
+el('ffd-slide').addEventListener('click', openFfSlideModal);
+el('ffsl-close').addEventListener('click', () => { closeFfSlideModal(); el('ffd-slide').focus(); });
+el('ff-slide-modal').addEventListener('click', e => { if (e.target === el('ff-slide-modal')) closeFfSlideModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el('ff-slide-modal').classList.contains('hidden')) { e.stopPropagation(); closeFfSlideModal(); el('ffd-slide').focus(); } }, true);
+document.querySelectorAll('[data-ffsl-tab]').forEach(b => b.addEventListener('click', () => { FFSL.tab = b.dataset.ffslTab; FFSL.tpl = null; ffslRender(); }));
 function ffdPost(m) { const w = el('ff-preview').contentWindow; if (w) w.postMessage(Object.assign({ jeemEdit: 1, type: 'd-op' }, m), '*'); }
 function ffdShow(on) {
   if (on) { FFD.insp = !matchMedia('(max-width: 640px)').matches; el('ffd-insp-btn').setAttribute('aria-pressed', FFD.insp ? 'true' : 'false'); } // على الجوال تُفتح اللوحة من زرها فلا تغطي المعاينة
+  const hasSlides = !!(FF.design && (FF.design.kind === 'slides' || (FF.nav && FF.nav.n >= 2)));
+  el('ffd-slide').classList.toggle('hidden', !hasSlides); el('ffd-slide-sep').hidden = !hasSlides;
   el('ff-dtools').classList.toggle('hidden', !on); el('ffd-shape-menu').classList.add('hidden'); el('ffd-shape-btn').setAttribute('aria-expanded', 'false');
   if (!on) { FFD.info = null; el('ff-insp').classList.add('hidden'); el('ff-insp').innerHTML = ''; }
 }
