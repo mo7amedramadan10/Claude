@@ -488,9 +488,14 @@ public sealed class PptxSvgRenderer : IDisposable
         var off = xf.Element(A + "off"); var ext = xf.Element(A + "ext"); if (off is null || ext is null) return;
         var t = new Xf(D(off, "x"), D(off, "y"), D(ext, "cx"), D(ext, "cy"), 0, false, false); if (map is not null) t = map(t);
         var data = gf.Element(A + "graphic")?.Element(A + "graphicData"); var uri = data?.Attribute("uri")?.Value ?? "";
-        sb.Append($"<g{TransformAttr(t)}>");
+        // الرسم البياني المرسوم يُعلَّم بنوعه ومقاسه فيُربط ببيانات المستخدم من وضع التعديل في تصميم حر (يُستبدل ببلوك بيانات في مكانه)
+        string? chartSvg = null, chartKind = null;
+        if (data?.Element(A + "tbl") is null && uri.Contains("chart")) chartSvg = ChartSvg(data!, t, ctx, out chartKind);
+        sb.Append(chartSvg is null ? $"<g{TransformAttr(t)}>" : $"<g{TransformAttr(t)} class=\"pptx-chart\" data-jeem-chartable=\"{chartKind}\" data-w=\"{F(t.W)}\" data-h=\"{F(t.H)}\">");
+        // مساحة نقر شفافة بمقاس الرسم: الفراغ بين الأعمدة يُحسب نقرًا على الرسم لا على الخلفية تحته
+        if (chartSvg is not null) sb.Append($"<rect class=\"pptx-chart-hit\" width=\"{F(t.W)}\" height=\"{F(t.H)}\" fill=\"#fff\" fill-opacity=\"0\"/>");
         if (data?.Element(A + "tbl") is { } tbl) sb.Append(Table(tbl, t, ctx));
-        else if (uri.Contains("chart")) sb.Append(ChartSvg(data!, t, ctx) ?? $"<rect width=\"{F(t.W)}\" height=\"{F(t.H)}\" fill=\"#F5F8FA\" stroke=\"#D7E2E9\" stroke-dasharray=\"10 8\" rx=\"8\"/><text x=\"{F(t.W / 2)}\" y=\"{F(t.H / 2)}\" text-anchor=\"middle\" font-size=\"{F(Math.Max(14, Math.Min(t.W, t.H) / 8))}\" fill=\"#5A6B77\">رسم بياني</text>");
+        else if (uri.Contains("chart")) sb.Append(chartSvg ?? $"<rect width=\"{F(t.W)}\" height=\"{F(t.H)}\" fill=\"#F5F8FA\" stroke=\"#D7E2E9\" stroke-dasharray=\"10 8\" rx=\"8\"/><text x=\"{F(t.W / 2)}\" y=\"{F(t.H / 2)}\" text-anchor=\"middle\" font-size=\"{F(Math.Max(14, Math.Min(t.W, t.H) / 8))}\" fill=\"#5A6B77\">رسم بياني</text>");
         else if (uri.Contains("diagram")) sb.Append($"<rect width=\"{F(t.W)}\" height=\"{F(t.H)}\" fill=\"none\" stroke=\"#D7E2E9\" stroke-dasharray=\"10 8\" rx=\"8\"/>");
         sb.Append("</g>");
     }
@@ -501,8 +506,9 @@ public sealed class PptxSvgRenderer : IDisposable
 
     /// <summary>يرسم رسم PowerPoint بياني (أعمدة/أشرطة، خط، مساحة، دائري، حلقة) من القيم المخزّنة في الملف بألوان سلاسله؛
     /// null إن تعذّر (نوع غير مدعوم أو بلا قيم) فيُعرض المكان المحجوز.</summary>
-    private string? ChartSvg(XElement graphicData, Xf t, Ctx ctx)
+    private string? ChartSvg(XElement graphicData, Xf t, Ctx ctx, out string? blockType)
     {
+        blockType = null;
         try
         {
             var rid = graphicData.Element(Cn + "chart")?.Attribute(R + "id")?.Value; if (rid is null) return null;
@@ -510,6 +516,8 @@ public sealed class PptxSvgRenderer : IDisposable
             var root = Xml(cp); var plot = root.Descendants(Cn + "plotArea").FirstOrDefault(); if (plot is null) return null;
             var chart = plot.Elements().FirstOrDefault(e => e.Name.Namespace == Cn && e.Name.LocalName.EndsWith("Chart")); if (chart is null) return null;
             var kind = chart.Name.LocalName.Replace("3D", "");
+            // نوع بلوك البيانات المقابل (لاقتراح طريقة العرض عند الربط)
+            blockType = kind switch { "pieChart" or "ofPieChart" => "pie", "doughnutChart" => "donut", "lineChart" or "areaChart" or "scatterChart" => "line", _ => "bar" };
             var series = chart.Elements(Cn + "ser").Select(sr =>
             {
                 var vals = new List<double?>();

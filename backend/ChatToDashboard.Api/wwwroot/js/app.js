@@ -9359,6 +9359,8 @@ function ffDesignKit() {
   function scaleOf(e) { var a = e; while (a && !(a.offsetWidth > 0)) a = a.parentElement; return a ? (a.getBoundingClientRect().width / a.offsetWidth) || 1 : 1; }
   function sizeOf(e) { var r = e.getBoundingClientRect(), k = scaleOf(e); return { w: r.width / k, h: r.height / k, r: r, k: k }; }
   function chartHost(e) {
+    // رسم PowerPoint بياني مرسوم داخل SVG الشريحة (قوالب PowerPoint والملفات المرفوعة كما هي): معلَّم من المحرّك بنوعه ومقاسه
+    var pc = e && e.closest && e.closest('[data-jeem-chartable]'); if (pc) return pc.hasAttribute('data-jeem-replaced') ? null : pc;
     var s = slideOf(e), sr = s && s.getBoundingClientRect(), sa = sr ? sr.width * sr.height : innerWidth * innerHeight; // مساحة الشاشة الفعلية للمقارنة
     for (var i = 0, c = e; c && i < 5 && c !== s && c !== document.body; i++, c = c.parentElement) {
       if (c.hasAttribute && (c.hasAttribute('data-jeem-chart') || c.hasAttribute('data-jeem-replaced'))) return null;
@@ -9378,6 +9380,15 @@ function ffDesignKit() {
     var core = t.replace(UNIT_RX, '').replace(/[\s$€£¥٪%+\-−~≈]/g, '').replace(/[KMBkmb]$/, '');
     return /^[\d٠-٩]+([.,٫٬][\d٠-٩]+)*$/.test(core) ? e : null;
   }
+  // الرقم داخل غلاف بلا نص خاص (فقرة فيها span واحد كما في صفحات PowerPoint): ينزل إلى الابن الوحيد حتى الورقة
+  function numTarget(e) {
+    for (var c = e, i = 0; c && i < 4; i++) {
+      var n = numHost(c); if (n) return n;
+      if (c.children.length !== 1 || [].some.call(c.childNodes, function (x) { return x.nodeType === 3 && x.nodeValue.trim(); })) return null;
+      c = c.children[0];
+    }
+    return null;
+  }
   function fmtOf(t) { return /[%٪]/.test(t) ? 'percent' : /ر\.?\s?س|ريال|SAR/.test(t) ? 'currency' : 'compact'; }
   // رمز العملة كما في القالب: «$3.5B» ← بادئة، و«3.5B$» ← لاحقة
   function symOf(t) { t = (t || '').trim(); var m = /^([$€£¥])/.exec(t); if (m) return { prefix: m[1] }; m = /([$€£¥])$/.exec(t); return m ? { unit: m[1] } : {}; }
@@ -9389,7 +9400,7 @@ function ffDesignKit() {
   function bind(m) {
     if (m.entry) addData(m.entry);
     if (m.kind === 'value') {
-      var n = numHost(sel); if (!n) return;
+      var n = numTarget(sel); if (!n) return;
       var BA = ['data-jeem-value', 'data-fmt', 'data-agg', 'data-prefix', 'data-unit'], oldText = n.textContent, oldA = BA.map(function (a) { return n.getAttribute(a); }), sym = symOf(oldText);
       n.setAttribute('data-jeem-value', m.ref || ''); n.setAttribute('data-fmt', m.fmt || fmtOf(oldText)); n.removeAttribute('data-agg');
       if (sym.prefix) n.setAttribute('data-prefix', sym.prefix); if (sym.unit) n.setAttribute('data-unit', sym.unit);
@@ -9399,8 +9410,16 @@ function ffDesignKit() {
     var h = chartHost(sel); if (!h) return;
     var z = sizeOf(h), cfg = Object.assign({}, m.cfg || {}), cols = colorsOf(h); if (cols.length >= 2 && !cfg.colors) cfg.colors = cols;
     var b = document.createElement('div'); b.setAttribute('data-jeem-chart', JSON.stringify(cfg)); b.style.boxSizing = 'border-box';
-    var s = slideOf(h), host = h.parentElement, oldStyle = h.getAttribute('style');
-    if (s && host) {
+    var s = slideOf(h), host = h.parentElement, oldStyle = h.getAttribute('style'), fo = null;
+    if (h.hasAttribute('data-jeem-chartable')) {
+      // داخل SVG الشريحة: البلوك في foreignObject بإحداثيات الرسم نفسها وتحويله، فيتدرّج مع الشريحة كالأصل تمامًا
+      var NS = 'http://www.w3.org/2000/svg'; fo = document.createElementNS(NS, 'foreignObject');
+      fo.setAttribute('x', '0'); fo.setAttribute('y', '0'); fo.setAttribute('width', h.getAttribute('data-w') || '400'); fo.setAttribute('height', h.getAttribute('data-h') || '300');
+      if (h.getAttribute('transform')) fo.setAttribute('transform', h.getAttribute('transform'));
+      fo.setAttribute('data-jeem-chart-fo', '');
+      b.style.cssText += ';width:100%;height:100%';
+      fo.appendChild(b); h.parentNode.insertBefore(fo, h.nextSibling);
+    } else if (s && host) {
       // في الشريحة: البلوك حر داخل حاوية الأصل نفسها (الإطار المصغَّر) وبإحداثياته، فيتبع تصغير القالب ويُسحب
       if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
       var pr = host.getBoundingClientRect(), pk = scaleOf(host);
@@ -9409,7 +9428,7 @@ function ffDesignKit() {
     } else { b.style.cssText += ';width:' + Math.round(z.w) + 'px;max-width:100%;height:' + Math.round(z.h) + 'px'; h.parentNode.insertBefore(b, h.nextSibling); }
     // الأصل يُخفى لا يُحذف: سكربت القالب قد يرسم فيه عند التحميل
     h.setAttribute('data-jeem-replaced', ''); h.style.setProperty('display', 'none', 'important');
-    undo.push(function () { if (b.parentNode) b.parentNode.removeChild(b); h.removeAttribute('data-jeem-replaced'); if (oldStyle == null) h.removeAttribute('style'); else h.setAttribute('style', oldStyle); select(h); });
+    undo.push(function () { if (fo && fo.parentNode) fo.parentNode.removeChild(fo); if (b.parentNode) b.parentNode.removeChild(b); h.removeAttribute('data-jeem-replaced'); if (oldStyle == null) h.removeAttribute('style'); else h.setAttribute('style', oldStyle); select(h); });
     select(b); changed(); renderBlock(b);
   }
   function info() {
@@ -9417,7 +9436,7 @@ function ffDesignKit() {
     // إبراز تحرير النص (خلفية وإطار مؤقتان) لا يُقرأ كخاصية للعنصر
     var ed = sel.hasAttribute('data-ff-editing'), hv = sel.hasAttribute('data-ff-hover'); if (ed) sel.removeAttribute('data-ff-editing'); if (hv) sel.removeAttribute('data-ff-hover');
     var cs = getComputedStyle(sel);
-    var out = { type: 'd-sel', label: label(sel), tag: sel.tagName.toLowerCase(), free: sel.hasAttribute('data-jeem-free'), text: isText(sel), canParent: !!(sel.parentElement && sel.parentElement !== document.body && sel.parentElement !== document.documentElement),
+    var out = { type: 'd-sel', label: label(sel), tag: sel.tagName.toLowerCase(), free: sel.hasAttribute('data-jeem-free'), inSvg: !!(sel.closest && sel.closest('foreignObject[data-jeem-chart-fo]')), text: isText(sel), canParent: !!(sel.parentElement && sel.parentElement !== document.body && sel.parentElement !== document.documentElement),
       s: { width: sel.style.width ? px(sel.style.width) : '', height: sel.style.height ? px(sel.style.height) : '', padding: px(cs.paddingTop), margin: px(cs.marginTop), fill: hex(cs.backgroundColor), opacity: Math.round(parseFloat(cs.opacity) * 100), radius: px(cs.borderTopLeftRadius),
         borderStyle: cs.borderTopStyle === 'none' || px(cs.borderTopWidth) === 0 ? 'none' : cs.borderTopStyle, borderColor: hex(cs.borderTopColor) || '#d9dcd6', borderWidth: px(cs.borderTopWidth), color: hex(cs.color), fontSize: px(cs.fontSize), fontWeight: cs.fontWeight, textAlign: cs.textAlign },
       table: tableInfo(sel.closest('table')) };
@@ -9426,9 +9445,9 @@ function ffDesignKit() {
     var vb = sel.closest('[data-jeem-value]') || sel.querySelector('[data-jeem-value]');
     if (vb && !cb) { out.value = { ref: vb.getAttribute('data-jeem-value') || '', fmt: vb.getAttribute('data-fmt') || '', agg: vb.getAttribute('data-agg') || '', prefix: vb.getAttribute('data-prefix') || '', unit: vb.getAttribute('data-unit') || '' }; var vd = (window.JEEM_DATA || {})[out.value.ref.split('.')[0]]; out.valueCols = vd && vd.rows && vd.rows[0] ? Object.keys(vd.rows[0]) : []; }
     if (!cb && !vb) {
-      var nh = numHost(sel), ch = nh ? null : chartHost(sel);
+      var nh = numTarget(sel), ch = nh ? null : chartHost(sel);
       if (nh) out.bind = { kind: 'value', text: (nh.textContent || '').trim(), fmt: fmtOf(nh.textContent || '') };
-      else if (ch) out.bind = { kind: 'chart', w: Math.round(sizeOf(ch).w), h: Math.round(sizeOf(ch).h) };
+      else if (ch) out.bind = { kind: 'chart', w: Math.round(sizeOf(ch).w), h: Math.round(sizeOf(ch).h), type: ch.getAttribute('data-jeem-chartable') || '' };
     }
     if (ed) sel.setAttribute('data-ff-editing', '1'); if (hv) sel.setAttribute('data-ff-hover', '1'); return out;
   }
@@ -10720,7 +10739,7 @@ async function ffdmOpen(replace) {
   FFDM.replace = !!replace && !FFDM.bind; FFDM.pick = null; FFDM.lib = null; FFDM.last = null; FFDM.typeTouched = false;
   FFDM.pal = FFDM.replace && FFD.info?.chart?.palette === 'dashboard' ? 'dashboard' : 'page'; FFDM.pagePal = null; ffdmRenderPal();
   ffdPost({ op: 'palette', bind: FFDM.bind });
-  FFDM.type = FFDM.bind ? (FFDM.bind === 'value' ? 'value' : 'bar') : replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
+  FFDM.type = FFDM.bind ? (FFDM.bind === 'value' ? 'value' : ({ bar: 'bar', line: 'line', pie: 'donut', donut: 'donut' })[FFD.info?.bind?.type] || 'bar') : replace ? (FFD.info?.value ? 'value' : FFD.info?.chart?.type || 'bar') : 'bar';
   el('ffdm-heading').textContent = FFDM.bind === 'value' ? '🔗 ربط الرقم ببياناتي' : FFDM.bind ? '🔗 ربط الرسمة ببياناتي' : replace ? '📊 تغيير بيانات الرسمة' : '📊 رسمة من بياناتي';
   el('ffdm-ok').textContent = FFDM.bind ? 'ربط' : replace ? 'تطبيق على الرسمة' : 'إدراج في الشريحة'; el('ffdm-title').value = FFDM.replace ? (FFD.info?.chart?.title || '') : '';
   el('ffdm-preview').innerHTML = ''; ffdmWait(true, 'يحمّل مصادر بياناتك…'); el('ffdm-status').textContent = ''; el('ffdm-status').classList.remove('warn');
@@ -11104,7 +11123,8 @@ function ffdRenderInsp() {
       <div class="ffi-sub">عرض الأعمدة (٪)</div><div class="ffi-cols">${t.widths.map((w, k) => `<label><span>ع${(k + 1).toLocaleString('en-US')}</span><input type="number" min="1" max="100" data-w="${k}" value="${w}" aria-label="عرض العمود ${k + 1}"></label>`).join('')}</div>
       ${ffdRow('صف عناوين', `<input type="checkbox" data-t="header"${t.header ? ' checked' : ''} aria-label="صف عناوين">`)}</section>`;
   }
-  h += `<section><h4>التخطيط</h4>${ffdRow('العرض', ffdNum('width', s.width, { u: 'px', label: 'العرض' }, 'min="0" placeholder="تلقائي"'))}${ffdRow('الارتفاع', ffdNum('height', s.height, { u: 'px', label: 'الارتفاع' }, 'min="0" placeholder="تلقائي"'))}
+  // بلوك داخل SVG شريحة PowerPoint: مقاسه وموضعه من إطار الرسم الأصلي (foreignObject) فلا تخطيط يُعدَّل
+  if (!i.inSvg) h += `<section><h4>التخطيط</h4>${ffdRow('العرض', ffdNum('width', s.width, { u: 'px', label: 'العرض' }, 'min="0" placeholder="تلقائي"'))}${ffdRow('الارتفاع', ffdNum('height', s.height, { u: 'px', label: 'الارتفاع' }, 'min="0" placeholder="تلقائي"'))}
     ${ffdRow('الحشوة', ffdNum('padding', s.padding, { u: 'px', label: 'الحشوة' }, 'min="0"'))}${ffdRow('الهامش', ffdNum('margin', s.margin, { u: 'px', label: 'الهامش' }))}</section>`;
   if (i.text) h += `<section><h4>النص</h4>${ffdRow('اللون', ffdColor('color', s.color, 'لون النص'))}${ffdRow('الحجم', ffdNum('font-size', s.fontSize, { u: 'px', label: 'حجم الخط' }, 'min="6" max="300"'))}
     ${ffdRow('الوزن', `<select data-p="font-weight" aria-label="وزن الخط">${[['300', 'خفيف'], ['400', 'عادي'], ['500', 'متوسط'], ['600', 'شبه عريض'], ['700', 'عريض'], ['800', 'أعرض']].map(([v, l]) => `<option value="${v}"${String(s.fontWeight) === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}

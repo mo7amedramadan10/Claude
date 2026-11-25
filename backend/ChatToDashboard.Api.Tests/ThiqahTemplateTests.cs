@@ -31,7 +31,11 @@ public class ThiqahTemplateTests
             Assert.DoesNotContain("غير مدعومة", html);           // صور EMF حُوّلت PNG
             Assert.DoesNotContain(">رسم بياني<", html);           // الرسوم البيانية مرسومة لا أماكن محجوزة
             Assert.Contains("window.goToSlide", html);
-            Assert.Contains(dir == "rtl" ? "عنوان العرض" : "Headline", html);   // أماكن الكتابة الفارغة بنص مطالبة التخطيط
+            Assert.Contains(dir == "rtl" ? "عنوان العرض" : "Headline", html);
+            // الرسوم البيانية معلَّمة بنوعها ومقاسها ومساحة نقر فتُربط ببيانات المستخدم من وضع التعديل
+            var charts = Regex.Matches(html, "data-jeem-chartable=\"(bar|line|pie|donut)\" data-w=\"[\\d.]+\" data-h=\"[\\d.]+\"").Count;
+            Assert.True(charts >= 20, $"{page}: {charts}");
+            Assert.Equal(charts, Regex.Matches(html, "class=\"pptx-chart-hit\"").Count);   // أماكن الكتابة الفارغة بنص مطالبة التخطيط
             foreach (Match m in Regex.Matches(html, "/templates/freeform/sl-thiqah-corporate/assets/([0-9a-f]+\\.png)"))
                 Assert.True(File.Exists(Path.Combine(root, "templates", "freeform", "sl-thiqah-corporate", "assets", m.Groups[1].Value)), m.Value);
         }
@@ -49,6 +53,8 @@ public class ThiqahTemplateTests
         var bars = r.RenderSlide(13);          // الشريحة 14: أعمدة وأشرطة
         Assert.DoesNotContain("رسم بياني", bars);
         Assert.Contains("Category 1", bars);
+        Assert.Contains("data-jeem-chartable=\"donut\"", doughnuts);
+        Assert.Contains("data-jeem-chartable=\"bar\"", bars);
     }
 
     [Fact]
