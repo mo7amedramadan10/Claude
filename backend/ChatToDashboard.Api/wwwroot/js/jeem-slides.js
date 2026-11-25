@@ -48,7 +48,8 @@
     function setHidden(h) { hidden = h; root.classList.toggle('hid', h); tg.textContent = document.documentElement.dir === 'ltr' ? (h ? '▴ Show thumbnails' : '▾ Hide thumbnails') : (h ? '▴ إظهار المصغّرات' : '▾ إخفاء المصغّرات'); tg.setAttribute('aria-expanded', h ? 'false' : 'true'); try { localStorage.setItem('jeemStripHidden', h ? '1' : '0'); } catch (e) {} }
     tg.addEventListener('click', function () { setHidden(!hidden); });
     // ارتفاع الشريط المرئي يُعلن للصفحة في المتغيّر --jeem-strip-h على <html> حتى تحجز له مساحة (الشريط ثابت أسفل الصفحة ويغطي ما تحته).
-    function announceHeight() { var h = hidden ? tg.getBoundingClientRect().height : root.getBoundingClientRect().height; try { document.documentElement.style.setProperty('--jeem-strip-h', Math.round(h) + 'px'); } catch (e) {} }
+    var lastH = -1;
+    function announceHeight() { var h = Math.round(hidden ? tg.getBoundingClientRect().height : root.getBoundingClientRect().height); if (Math.abs(h - lastH) <= 1) return; lastH = h; try { document.documentElement.style.setProperty('--jeem-strip-h', h + 'px'); } catch (e) {} }
     if ('ResizeObserver' in window) new ResizeObserver(announceHeight).observe(root); else setTimeout(announceHeight, 50);
     var _setHidden = setHidden; setHidden = function (h) { _setHidden(h); setTimeout(announceHeight, 0); };
     var thumbs = [];
@@ -62,7 +63,9 @@
       var cs = clone.style; cs.setProperty('display', slideDisplay(), 'important'); cs.setProperty('position', 'static', 'important'); cs.setProperty('opacity', '1', 'important'); cs.setProperty('visibility', 'visible', 'important'); cs.setProperty('transform', 'none', 'important'); cs.setProperty('transition', 'none', 'important'); cs.setProperty('animation', 'none', 'important'); cs.setProperty('width', size.w + 'px', 'important'); cs.setProperty('height', size.h + 'px', 'important'); cs.setProperty('margin', '0', 'important'); cs.setProperty('inset', 'auto', 'important'); cs.setProperty('overflow', 'hidden', 'important');
       var wrap = th.querySelector('.js-c') || document.createElement('div'); wrap.className = 'js-c'; wrap.innerHTML = ''; wrap.style.width = size.w + 'px'; wrap.style.height = size.h + 'px'; wrap.style.transform = 'scale(' + scale + ')'; wrap.appendChild(clone);
       if (!wrap.parentNode) th.insertBefore(wrap, th.firstChild);
-      th.style.height = Math.round(128 * size.h / size.w) + 'px';
+      // ارتفاع المصغّرة يتبع نسبة الشريحة، والشريحة نفسها قد تُحجَّم بارتفاع الشريط (--jeem-strip-h) فتنشأ حلقة تذبذب بفارق بكسل
+      // (تهتز الشريحة صعودًا وهبوطًا)؛ لذا لا يتغيّر ارتفاع مصغّرة قائمة إلا بفارق ملموس.
+      var nh = Math.round(128 * size.h / size.w), oh = parseFloat(th.style.height) || 0; if (!oh || Math.abs(nh - oh) > 3) th.style.height = nh + 'px';
     }
     list.forEach(function (s, k) {
       var th = document.createElement('button'); th.type = 'button'; th.className = 'js-th'; th.setAttribute('role', 'tab'); th.title = 'الشريحة ' + (k + 1) + (s.querySelector('h1,h2,h3') ? ': ' + s.querySelector('h1,h2,h3').textContent.trim().slice(0, 60) : '');
