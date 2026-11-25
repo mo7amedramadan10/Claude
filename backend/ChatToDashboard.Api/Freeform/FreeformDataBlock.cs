@@ -90,6 +90,13 @@ public static class FreeformDataBlock
         return InsertBeforeBodyEnd(html, "<script src=\"/js/jeem-viz.js\"></script><script src=\"/js/jeem-blocks.js\"></script>");
     }
 
+    /// <summary>محرّك المشاهد المتحركة لصفحة «حركة» بعقده (مسرح data-jeem-motion أو مشاهد jm-scene) — مرة واحدة قبل آخر &lt;/body&gt;.</summary>
+    public static string EnsureMotionKit(string html)
+    {
+        if (string.IsNullOrEmpty(html) || !Regex.IsMatch(html, @"data-jeem-motion\b|class=[""'][^""']*\bjm-scene\b", RegexOptions.IgnoreCase) || Regex.IsMatch(html, @"jeem-motion\.js", RegexOptions.IgnoreCase)) return html;
+        return InsertBeforeBodyEnd(html, "<script src=\"/js/jeem-motion.js\"></script>");
+    }
+
     public static string EnsureSlidesKit(string html)
     {
         if (string.IsNullOrEmpty(html) || Regex.IsMatch(html, @"jeem-slides\.js", RegexOptions.IgnoreCase)) return html;
