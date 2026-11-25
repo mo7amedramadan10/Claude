@@ -117,7 +117,6 @@
     <nav class="sb-scroll">
       <div class="sb-label"><span>المنظمة</span></div>
       <ul class="nav">
-        <li><button type="button" class="nav-link tab" data-screen="viewing"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg><span class="nav-text">للاطلاع</span><span class="badge hidden" id="viewing-badge" aria-label="عناصر جديدة">0</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="projects"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المشاريع</span></button></li>
         <li><button type="button" class="nav-link tab" data-screen="presentations"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span class="nav-text">العروض التقديمية</span><span class="badge hidden" id="presentations-badge">0</span></button></li>
         <li class="hidden" id="nav-claude-chat"><button type="button" class="nav-link tab" data-screen="claude-chat"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">محادثة Claude</span></button></li>
@@ -137,6 +136,7 @@
             <li><button type="button" class="nav-link tab" data-screen="analyst"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">المحلل الذكي</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="decks"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">منشئ العروض</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="freeform"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg><span class="nav-text">تصميم حر</span></button></li>
+            <li><button type="button" class="nav-link tab" data-screen="viewing"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-eye"/></svg><span class="nav-text">للاطلاع</span><span class="badge hidden" id="viewing-badge" aria-label="عناصر جديدة">0</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="sources"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">المصادر</span></button></li>
             <li><button type="button" class="nav-link tab hidden" id="proj-permissions-link" data-screen="users"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">الصلاحيات</span></button></li>
             <li><button type="button" class="nav-link tab" data-screen="repo"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-file"/></svg><span class="nav-text">الملفات</span><span class="badge" id="repo-badge">0</span></button></li>
@@ -1561,19 +1561,20 @@
   </section>
 </main>
 
-<!-- «للاطلاع»: كل ما شاركه الآخرون مع المستخدم وله رابط منشور فعّال (تصاميم تصميم حر ولوحات المتابعة) — بطاقات كمعرض تصميم حر،
+<!-- «للاطلاع» داخل المشروع: كل ما له رابط منشور فعّال مما يراه المستخدم (منشوراته وما شورك معه: تصاميم تصميم حر ولوحات المتابعة) — بطاقات كمعرض تصميم حر،
      والنقر يفتح الرابط المنشور نفسه في تبويب جديد. للمديرين باختيار «اطلاع فقط» في صلاحيات الشاشات. -->
 <main id="screen-viewing" class="screen">
   <div class="ff-start vw-start" id="vw-start">
     <div class="ff-sec-head vw-head">
       <h2 class="vw-title">للاطلاع</h2>
-      <p>كل ما شاركه زملاؤك معك وله رابط منشور — اضغط أي بطاقة لفتحه في تبويب جديد.</p>
+      <p id="vw-desc">كل ما نُشر في هذا المشروع مما تراه: منشوراتك وما شاركه زملاؤك معك — اضغط أي بطاقة لفتحها في تبويب جديد.</p>
     </div>
     <div class="ff-sec-head ff-recent-head vw-bar">
       <div class="ff-tabs" role="tablist" aria-label="تصفية العناصر">
         <button type="button" class="ff-tab vw-tab" role="tab" data-vw-tab="all" aria-selected="true">الكل</button>
         <button type="button" class="ff-tab vw-tab" role="tab" data-vw-tab="new" aria-selected="false">جديد <span class="vw-tab-n" id="vw-new-n"></span></button>
-        <button type="button" class="ff-tab vw-tab" role="tab" data-vw-tab="user" aria-selected="false">لي بالاسم</button>
+        <button type="button" class="ff-tab vw-tab" role="tab" data-vw-tab="shared" aria-selected="false">مشترك معي</button>
+        <button type="button" class="ff-tab vw-tab" role="tab" data-vw-tab="mine" aria-selected="false">منشوراتي</button>
       </div>
       <span class="ff-count" id="vw-count"></span>
       <div class="ff-tools">

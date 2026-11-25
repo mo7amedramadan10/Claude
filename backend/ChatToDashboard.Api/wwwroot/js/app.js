@@ -8053,7 +8053,7 @@ el('history-clear').addEventListener('click', async () => {
 // (chat/sources/.../files) — org-only screens (projects list, admin users/settings/
 // integrations) and the platform-only "organizations" screen never show a project name,
 // since you're managing the organization/platform itself there, not a project within it.
-const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks', 'freeform', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
+const PROJECT_SCOPED_SCREENS = new Set(['chat', 'published', 'analyst', 'decks', 'freeform', 'viewing', 'sources', 'users', 'repo', 'history', 'active', 'sharelinks']);
 // Verbatim copies of each screen's own sidebar nav-text (see index.html) — kept as a single
 // lookup here instead of reading the DOM, since the same data-screen value can be the
 // target of more than one nav link (e.g. "users" is both "الصلاحيات" under the project and
@@ -9886,13 +9886,14 @@ el('ff-view-btn').addEventListener('click', () => { FF.gal.list = !FF.gal.list; 
 window.addEventListener('resize', () => { if (!el('ff-start').classList.contains('hidden')) ffScaleThumbs(); });
 function ffKindChip(k) { const info = FF_KINDS[k]; return info ? `<span class="ff-kind-chip">${esc(info.label)}</span>` : ''; }
 
-// ---------- «للاطلاع»: ما شاركه الآخرون مع المستخدم وله رابط منشور (GET /api/viewing) ----------
+// ---------- «للاطلاع» داخل المشروع: كل ما له رابط منشور مما يراه المستخدم — منشوراته وما شورك معه (GET /api/viewing) ----------
 // بطاقات بأسلوب معرض تصميم حر؛ البطاقة رابط حقيقي يفتح الرابط المنشور نفسه في تبويب جديد (لا عارض داخل المنصة).
-// «جديد» = لم يفتحه المستخدم بعد، أو نُشر تحديث له بعد آخر فتح — يُحفظ محليًا لكل مشاهد (localStorage jeemViewSeen).
+// «جديد» = ما شاركه غيره ولم يفتحه بعد، أو نُشر تحديث له بعد آخر فتح — يُحفظ محليًا لكل مشاهد (localStorage jeemViewSeen)؛
+// منشورات المستخدم نفسه لا تُعدّ جديدة أبدًا.
 const VW = { items: null, tab: 'all', q: '', kind: '', loading: null, io: null, htmlCache: {} };
 function vwSeen() { try { return JSON.parse(localStorage.getItem('jeemViewSeen') || '{}') || {}; } catch { return {}; } }
 function vwMarkSeen(it) { const s = vwSeen(); s[it.key] = it.publishedAt; try { localStorage.setItem('jeemViewSeen', JSON.stringify(s)); } catch {} }
-function vwIsNew(it, seen) { const t = (seen || vwSeen())[it.key]; return !t || new Date(it.publishedAt) > new Date(t); }
+function vwIsNew(it, seen) { if (it.mine) return false; const t = (seen || vwSeen())[it.key]; return !t || new Date(it.publishedAt) > new Date(t); }
 function vwUtc(iso) { return iso && !/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso + 'Z' : iso; }
 async function loadViewingItems(force) {
   if (VW.loading && !force) return VW.loading;
@@ -9920,7 +9921,8 @@ async function loadViewingScreen() {
 }
 function vwBase() {
   const q = VW.q.trim().toLowerCase(); const seen = vwSeen();
-  return (VW.items || []).filter(x => (VW.tab === 'all' || (VW.tab === 'new' ? vwIsNew(x, seen) : x.sharedVia === 'user'))
+  const inTab = x => VW.tab === 'all' || (VW.tab === 'new' ? vwIsNew(x, seen) : VW.tab === 'mine' ? !!x.mine : !x.mine);
+  return (VW.items || []).filter(x => inTab(x)
     && (!q || (x.title || '').toLowerCase().includes(q) || (x.ownerName || '').toLowerCase().includes(q)));
 }
 function vwKind(x) { return FF_KINDS[x.kind] ? x.kind : 'design'; }
@@ -9940,8 +9942,8 @@ function vwRender() {
   const base = vwBase(); vwRenderChips(base);
   const items = VW.shown = base.filter(x => !VW.kind || vwKind(x) === VW.kind); const all = (VW.items || []).length;
   if (VW.items) box.dataset.empty = VW.error ? 'تعذّر تحميل القائمة — اضغط «تحديث» للمحاولة ثانية.'
-    : all ? (VW.tab === 'new' ? 'لا جديد منذ آخر فتح — كل شيء اطّلعت عليه.' : 'لا عناصر تطابق التصفية.')
-    : 'لا شيء مشارك معك بعد. حين يشارك زميل تصميمًا أو لوحة معك وينشرها ستظهر هنا.';
+    : all ? (VW.tab === 'new' ? 'لا جديد منذ آخر فتح — كل شيء اطّلعت عليه.' : VW.tab === 'mine' ? 'لم تنشر شيئًا في هذا المشروع بعد — اضغط «نشر» على أي تصميم أو لوحة متابعة.' : VW.tab === 'shared' ? 'لا شيء مشارك معك في هذا المشروع بعد.' : 'لا عناصر تطابق التصفية.')
+    : 'لا شيء منشور في هذا المشروع بعد. ما تنشره أنت أو يشاركه زملاؤك معك وينشرونه يظهر هنا.';
   el('vw-count').textContent = all ? (items.length === all ? `${all.toLocaleString('en-US')} عنصر` : `${items.length.toLocaleString('en-US')} من ${all.toLocaleString('en-US')}`) : '';
   const seen = vwSeen();
   box.innerHTML = items.map((x, i) => {
@@ -9949,10 +9951,10 @@ function vwRender() {
     const art = x.source === 'dashboard'
       ? `<div class="ff-card-paper ff-card-dash">${dashGalThumb({ widgets: x.widgets || [], renderKind: x.renderKind })}</div>`
       : `<div class="ff-card-paper"><iframe class="ff-thumb" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title="معاينة ${esc(x.title)}"></iframe></div>`;
-    const via = x.sharedVia === 'user' ? `من ${x.ownerName || 'زميل'}` : `من ${x.ownerName || 'زميل'} · ${VW_VIA[x.sharedVia] || ''}`;
+    const via = x.mine ? 'منشورك' : x.sharedVia === 'user' ? `من ${x.ownerName || 'زميل'}` : `من ${x.ownerName || 'زميل'} · ${VW_VIA[x.sharedVia] || ''}`;
     return `<a class="ff-card vw-card k-${k}" href="${esc(href)}" target="_blank" rel="noopener" data-vw="${i}" aria-label="${esc(x.title)} — ${esc(FF_KINDS[k].label)}، ${esc(via)}${isNew ? '، جديد' : ''} (يفتح في تبويب جديد)">
       <div class="ff-card-art">${art}${isNew ? '<span class="vw-new">جديد</span>' : ''}</div>
-      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(x.title)}</b><small>${esc(via)} · نُشر ${esc(ffAgo(x.publishedAt))}</small>${x.editedAfterPublish ? '<small class="vw-edited" title="عدّل صاحبه التصميم بعد آخر نشر ولم يحدّث النشر بعد — الرابط يعرض النسخة المنشورة">✎ فيه تعديلات لم تُنشر بعد</small>' : ''}</div><span class="vw-open" aria-hidden="true">↗</span></div>
+      <div class="ff-card-foot"><span class="ff-card-ico" aria-hidden="true">${ffKindIcon(k)}</span><div><b>${esc(x.title)}</b><small>${esc(via)} · نُشر ${esc(ffAgo(x.publishedAt))}</small>${x.editedAfterPublish ? `<small class="vw-edited" title="${x.mine ? 'عدّلت التصميم بعد آخر نشر — اضغط «تحديث النشر» في تصميم حر ليظهر في الرابط' : 'عدّل صاحبه التصميم بعد آخر نشر ولم يحدّث النشر بعد — الرابط يعرض النسخة المنشورة'}">✎ ${x.mine ? 'عدّلته بعد النشر — حدّث النشر' : 'فيه تعديلات لم تُنشر بعد'}</small>` : ''}</div><span class="vw-open" aria-hidden="true">↗</span></div>
     </a>`;
   }).join('');
   box.querySelectorAll('[data-vw]').forEach(a => a.addEventListener('click', () => { const x = items[+a.dataset.vw]; vwMarkSeen(x); setTimeout(() => { vwUpdateBadge(); vwRender(); }, 0); }));

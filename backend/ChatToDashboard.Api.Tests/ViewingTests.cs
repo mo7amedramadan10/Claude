@@ -33,4 +33,14 @@ public class ViewingTests
         Assert.Empty(ViewingController.WidgetSketch("not json"));
         Assert.Empty(ViewingController.WidgetSketch(null));
     }
+
+    [Fact]
+    public void InProject_CurrentProjectOrLegacyWithoutProject()
+    {
+        Assert.True(ViewingController.InProject("p1", "p1"));
+        Assert.True(ViewingController.InProject("P1", "p1"));
+        Assert.True(ViewingController.InProject(null, "p1"));
+        Assert.False(ViewingController.InProject("p2", "p1"));
+        Assert.False(ViewingController.InProject("p2", null));
+    }
 }

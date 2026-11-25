@@ -11,9 +11,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace ChatToDashboard.Api.Controllers;
 
 /// <summary>
-/// صفحة «للاطلاع»: كل ما شاركه الآخرون مع المستخدم وله رابط منشور فعّال — تصاميم «تصميم حر» بأنواعها الخمسة (مشاركة بالاسم أو
-/// مع المشروع أو المنظمة) ولوحات المتابعة التي له دور فيها ولها رابط /d/ حيّ. كل عنصر بطاقة واحدة مهما تعددت طرق مشاركته معه،
-/// والفتح = الرابط المنشور نفسه في تبويب جديد (لا عارض داخل المنصة). ما ليس منشورًا أو رابطه موقوف لا يظهر، ولا تظهر عناصر المستخدم نفسه.
+/// صفحة «للاطلاع» داخل المشروع الحالي: كل ما له رابط منشور فعّال مما يراه المستخدم — تصاميم «تصميم حر» بأنواعها الخمسة (منشوراته هو،
+/// أو مشاركة معه بالاسم أو مع المشروع أو المنظمة) ولوحات المتابعة المفعّلة التي يملكها أو له دور فيها ولها رابط /d/ حيّ. المقصورة على
+/// مشروع المستخدم الحالي فقط (تصميم قديم بلا مشروع يُعامل كمشروع غير محدد). كل عنصر بطاقة واحدة مهما تعددت طرق وصوله، والفتح = الرابط
+/// المنشور نفسه في تبويب جديد (لا عارض داخل المنصة). ما ليس منشورًا أو رابطه موقوف لا يظهر.
 /// </summary>
 [ApiController]
 [Route("api/viewing")]
@@ -51,37 +52,39 @@ public class ViewingController : ControllerBase
         }
         var items = new List<object>();
 
-        // تصاميم تصميم حر: المرئية للمستخدم (FreeformAccess) من غيره، ولها عرض منشور فعّال — صف واحد لكل تصميم
-        var designs = await _designs.ListVisibleAsync(me.OrganizationId, sel.ProjectId, me.Id, isAdmin, ct);
+        // تصاميم تصميم حر: المرئية للمستخدم (FreeformAccess) في مشروعه الحالي، ولها عرض منشور فعّال — صف واحد لكل تصميم
+        var designs = (await _designs.ListVisibleAsync(me.OrganizationId, sel.ProjectId, me.Id, isAdmin, ct))
+            .Where(d => InProject(d.ProjectId, sel.ProjectId));
         var pres = (await _presentations.ListAsync(me.OrganizationId, ct)).ToDictionary(p => p.Id, p => p);
         var myShares = await _designs.ShareRolesForUserAsync(me.Id, ct);
         foreach (var d in designs)
         {
-            if (string.Equals(d.CreatedByUserId, me.Id, StringComparison.OrdinalIgnoreCase)) continue;
+            var mine = string.Equals(d.CreatedByUserId, me.Id, StringComparison.OrdinalIgnoreCase);
             if (d.PresentationId is null || !pres.TryGetValue(d.PresentationId, out var p) || !p.IsActive) continue;
             var byName = myShares.ContainsKey(d.Id);
             items.Add(new
             {
                 key = "f:" + d.Id, source = "freeform", id = d.Id, presentationId = p.Id, kind = d.Kind, title = string.IsNullOrWhiteSpace(p.Title) ? d.Title : p.Title,
-                url = p.PublicPath(orgSlug), ownerName = await NameOf(d.CreatedByUserId),
-                sharedVia = byName ? "user" : d.ShareScope, publishedAt = p.UpdatedAt, editedAfterPublish = d.UpdatedAt > p.UpdatedAt + EditedSlack,
+                url = p.PublicPath(orgSlug), ownerName = mine ? "" : await NameOf(d.CreatedByUserId), mine,
+                sharedVia = mine ? "mine" : byName ? "user" : d.ShareScope, publishedAt = p.UpdatedAt, editedAfterPublish = d.UpdatedAt > p.UpdatedAt + EditedSlack,
                 live = PresentationLiveDataService.IsLive(p),
             });
         }
 
-        // لوحات المتابعة: المفعّلة التي للمستخدم دور فيها (ليس مالكها)، ولها رابط /d/ حيّ — بأحدث رابط لكل لوحة
-        var dashboards = (await _history.ListAsync(me.Id, projectId: null, ct: ct))
-            .Where(h => h.IsActive && !string.Equals(h.OwnerId, me.Id, StringComparison.OrdinalIgnoreCase) && !string.Equals(h.UserId, me.Id, StringComparison.OrdinalIgnoreCase))
+        // لوحات المتابعة في المشروع الحالي: المفعّلة التي يملكها المستخدم أو له دور فيها، ولها رابط /d/ حيّ — بأحدث رابط لكل لوحة
+        var dashboards = (await _history.ListAsync(me.Id, projectId: sel.ProjectId, ct: ct))
+            .Where(h => h.IsActive && InProject(h.ProjectId, sel.ProjectId))
             .ToDictionary(h => h.Id, h => h);
         var links = await _shares.ListByHistoryIdsAsync(me.OrganizationId, dashboards.Keys.ToList(), ct);
         foreach (var g in links.Where(l => l.IsLive && l.HistoryId is not null).GroupBy(l => l.HistoryId!))
         {
             var link = g.OrderByDescending(l => l.UpdatedAt ?? l.CreatedAt).First();
             var h = dashboards[g.Key];
+            var mine = string.Equals(h.OwnerId ?? h.UserId, me.Id, StringComparison.OrdinalIgnoreCase);
             items.Add(new
             {
                 key = "d:" + h.Id, source = "dashboard", id = h.Id, kind = "track", title = FirstNonEmpty(link.Question, h.Question, "لوحة متابعة"),
-                url = link.PublicPath(orgSlug), ownerName = await NameOf(h.OwnerId ?? h.UserId), sharedVia = "user",
+                url = link.PublicPath(orgSlug), ownerName = mine ? "" : await NameOf(h.OwnerId ?? h.UserId), mine, sharedVia = mine ? "mine" : "user",
                 publishedAt = link.UpdatedAt ?? link.CreatedAt, editedAfterPublish = false, live = true,
                 renderKind = h.RenderKind, widgets = WidgetSketch(link.WidgetsJson),
             });
@@ -103,6 +106,10 @@ public class ViewingController : ControllerBase
         if (p is null || !p.IsActive) return NotFound();
         return Ok(new { html = await _presentations.GetHtmlAsync(p.Id, ct) ?? "", kind = d.Kind });
     }
+
+    /// <summary>العنصر من المشروع الحالي؟ عنصر قديم بلا مشروع يُعرض في كل المشاريع (كما يعامله باقي التطبيق).</summary>
+    internal static bool InProject(string? itemProject, string? currentProject)
+        => string.IsNullOrWhiteSpace(itemProject) || string.Equals(itemProject, currentProject, StringComparison.OrdinalIgnoreCase);
 
     private static string FirstNonEmpty(params string?[] values) => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? "";
 
