@@ -10165,7 +10165,7 @@ window.addEventListener('message', async e => {
     return;
   }
   if (m.type === 'nav-state' && FF.reEdit && FF.navRestore == null) { FF.reEdit = false; setTimeout(() => { if (FF.design && !FF.edit.on) ffEditSetMode(true); }, 150); }
-  if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; if (FF.navRestore != null && n >= 2 && FF.navRestore !== i && FF.navRestore < n) { const to = FF.navRestore; FF.navRestore = null; e.source.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*'); return; } FF.navRestore = null; FF.nav = { i, n }; ffRenderScope(); if (FF.overflowCheck) { FF.overflowCheck = false; const src = e.source; setTimeout(() => src.postMessage({ jeemEdit: 1, type: 'check-overflow' }, '*'), 600); } el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
+  if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; if (FF.navRestore != null && n >= 2 && FF.navRestore !== i && FF.navRestore < n) { const to = FF.navRestore; FF.navRestore = null; e.source.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*'); return; } FF.navRestore = null; FF.nav = { i, n }; ffRenderScope(); if (FF.overflowCheck) { FF.overflowCheck = false; const src = e.source; setTimeout(() => src.postMessage({ jeemEdit: 1, type: 'check-overflow' }, '*'), 600); } el('ff-slide-nav').classList.toggle('hidden', n < 2); const go = el('ff-nav-go'); if (document.activeElement !== go) go.value = i + 1; el('ff-nav-total').textContent = n.toLocaleString('en-US'); el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
   if (m.type === 'slide-added') { ffslAdded(m); return; }
   if (m.type === 'slide-removed') { ffslRemoved(m); return; }
   if (m.type === 'html' && FF.edit.pending && m.purpose !== 'ask') {
@@ -10186,6 +10186,20 @@ window.addEventListener('message', async e => {
 function ffNav(dir) { const w = el('ff-preview').contentWindow; if (w) w.postMessage({ jeemEdit: 1, type: 'nav', dir }, '*'); }
 el('ff-nav-prev').addEventListener('click', () => ffNav(-1));
 el('ff-nav-next').addEventListener('click', () => ffNav(1));
+// الانتقال المباشر: كتابة رقم الشريحة ثم Enter (أو مغادرة الحقل)؛ رقم خارج المدى يُقصر على أول/آخر شريحة، وEscape يعيد الرقم الحالي
+function ffNavGo() {
+  const go = el('ff-nav-go'), n = FF.nav?.n || 0, v = parseInt(String(go.value).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)), 10);
+  if (!n || !Number.isFinite(v)) { go.value = (FF.nav?.i || 0) + 1; return; }
+  const to = Math.min(n, Math.max(1, v)) - 1; go.value = to + 1;
+  if (to === FF.nav.i) return;
+  const w = el('ff-preview').contentWindow; if (w) w.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*');
+}
+el('ff-nav-go').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); ffNavGo(); e.target.select(); }
+  else if (e.key === 'Escape') { e.stopPropagation(); e.target.value = (FF.nav?.i || 0) + 1; e.target.blur(); }
+});
+el('ff-nav-go').addEventListener('change', ffNavGo);
+el('ff-nav-go').addEventListener('focus', e => e.target.select());
 // ---------- تغيير الصور من وضع التعديل: نافذة الاختيار في المنصة، والتطبيق داخل الإطار عبر img-set ----------
 function ffEditCountText() {
   const n = FF.edit.dirty + FF.edit.imgDirty + (FF.edit.designDirty || 0); el('ff-edit-save').disabled = !n;

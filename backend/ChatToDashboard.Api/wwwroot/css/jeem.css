@@ -3990,6 +3990,11 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-slide-nav .btn { border: 1px solid var(--line); background: var(--surface); min-width: 96px; justify-content: center; }
 .jeem-scope .ff-slide-nav .btn:disabled { opacity: .45; cursor: default; }
 .jeem-scope .ff-nav-count { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); min-width: 64px; text-align: center; font-feature-settings: "tnum" 1; direction: ltr; }
+.jeem-scope .ff-nav-count { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.jeem-scope .ff-nav-go { width: 4.2em; height: 30px; padding: 0 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; text-align: center; -moz-appearance: textfield; }
+.jeem-scope .ff-nav-go::-webkit-outer-spin-button, .jeem-scope .ff-nav-go::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.jeem-scope .ff-nav-go:hover { border-color: var(--ink-3); }
+.jeem-scope .ff-nav-go:focus-visible { outline: 2px solid var(--brand, #2A78D6); outline-offset: 1px; border-color: transparent; }
 .jeem-scope .ff-nav-ch { font-size: 18px; line-height: 1; }
 html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scaleX(-1); }
 
