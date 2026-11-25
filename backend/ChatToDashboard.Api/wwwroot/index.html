@@ -912,6 +912,22 @@
   </div>
 </div>
 
+<!-- إدراج حركة: تصميم «حركة» من المشروع يُنسخ داخل الشريحة بأنماطه المعزولة ويعمل وحده كلما ظهرت شريحته -->
+<div id="ff-motion-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffmo-heading">
+  <div class="modal share-modal-box ffmo-box">
+    <div class="ffmo-head"><h3 id="ffmo-heading">إدراج حركة</h3><button type="button" class="ffmo-x" id="ffmo-close" aria-label="إغلاق">✕</button></div>
+    <p class="modal-note">اختر تصميمًا من نوع «حركة» في المشروع. تُنسخ الحركة داخل الشريحة فتعمل وحدها كلما ظهرت الشريحة، وفي الرابط المنشور.</p>
+    <label class="sr-only" for="ffmo-q">بحث في تصاميم الحركة</label>
+    <input id="ffmo-q" class="ffmo-q" type="search" placeholder="ابحث بالعنوان…" autocomplete="off">
+    <div id="ffmo-body" class="ffmo-body"></div>
+    <div class="ffmo-foot">
+      <label id="ffmo-replace-wrap" class="ffmo-replace" hidden><input type="checkbox" id="ffmo-replace" checked> <span id="ffmo-replace-label">ضعها مكان العنصر المحدد</span></label>
+      <span id="ffmo-status" class="ffmo-status muted" role="status"></span>
+      <button type="button" id="ffmo-insert" class="btn btn-primary" disabled>إدراج في الشريحة</button>
+    </div>
+  </div>
+</div>
+
 <!-- سجلات الإدخال: ما تحفظه صفحة التصميم عبر jeem.records — جدول لكل مجموعة، تصدير CSV، وسياسة الإدخال في الرابط المنشور -->
 <div id="ff-rec-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ffr-heading">
   <div class="modal share-modal-box ffr-box">
@@ -1453,6 +1469,7 @@
           <button type="button" class="ffd-btn" data-ins="image" title="إدراج صورة" aria-label="إدراج صورة"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg></button>
           <button type="button" class="ffd-btn" data-ins="table" title="إدراج جدول" aria-label="إدراج جدول"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></svg></button>
           <button type="button" class="ffd-btn" id="ffd-chart" title="رسمة أو رقم من بياناتي" aria-label="رسمة أو رقم من بياناتي"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></button>
+          <button type="button" class="ffd-btn" id="ffd-motion" title="حركة من تصاميمك" aria-label="إدراج حركة من تصاميم «حركة»"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M10 9.5v5l4.5-2.5z"/></svg></button>
           <div class="ffd-shapes">
             <button type="button" class="ffd-btn" id="ffd-shape-btn" aria-haspopup="true" aria-expanded="false" title="إدراج شكل" aria-label="إدراج شكل"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="5"/><rect x="11" y="11" width="9" height="9" rx="1"/></svg><span class="ffd-caret" aria-hidden="true">▾</span></button>
             <div id="ffd-shape-menu" class="ffd-menu hidden" role="menu">

@@ -4248,3 +4248,28 @@ body.ff-full-on { overflow: hidden; }
 #ff-slide-modal .ffsl-ic { font-size: 22px; line-height: 1; }
 #ff-slide-modal .ffsl-crumb { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 @media (max-width: 520px) { #ff-slide-modal .ffsl-tv-blank { width: 120px; } #ff-slide-modal .ffsl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+
+/* ===== إدراج حركة في الشريحة (#ff-motion-modal) ===== */
+#ff-motion-modal .ffmo-box { width: min(900px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow: hidden; }
+#ff-motion-modal .ffmo-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#ff-motion-modal .ffmo-head h3 { margin: 0; }
+#ff-motion-modal .ffmo-x { border: 0; background: none; font-size: 18px; cursor: pointer; color: var(--ink-3); padding: 4px 8px; border-radius: 8px; }
+#ff-motion-modal .ffmo-x:hover, #ff-motion-modal .ffmo-x:focus-visible { background: var(--surface-2, #F3F5F7); }
+#ff-motion-modal .ffmo-q { width: 100%; margin: 4px 0 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: var(--surface); color: var(--ink); box-sizing: border-box; }
+#ff-motion-modal .ffmo-body { overflow-y: auto; min-height: 0; flex: 1 1 auto; padding: 2px; }
+#ff-motion-modal .ffmo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; }
+#ff-motion-modal .ffmo-card { display: grid; gap: 6px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; text-align: start; font: inherit; color: var(--ink); min-width: 0; }
+#ff-motion-modal .ffmo-card:hover, #ff-motion-modal .ffmo-card:focus-visible { border-color: var(--brand-600, #127DBD); outline: none; box-shadow: 0 0 0 3px rgb(18 125 189 / .15); }
+#ff-motion-modal .ffmo-card[aria-pressed="true"] { border-color: var(--brand-600, #127DBD); box-shadow: 0 0 0 2px var(--brand-600, #127DBD); }
+#ff-motion-modal .ffmo-card[aria-disabled="true"] { cursor: not-allowed; opacity: .7; }
+#ff-motion-modal .ffmo-tv { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; background: #EEF2F6; }
+#ff-motion-modal .ffmo-tv iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; border: 0; pointer-events: none; transform-origin: top left; transform: scale(var(--ffmo-k, .18)); }
+#ff-motion-modal .ffmo-t { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#ff-motion-modal .ffmo-m { font-size: 12px; color: var(--ink-3); }
+#ff-motion-modal .ffmo-m.warn { color: var(--warn, #B45309); }
+#ff-motion-modal .ffmo-empty { padding: 24px 12px; text-align: center; color: var(--ink-3); }
+#ff-motion-modal .ffmo-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+#ff-motion-modal .ffmo-replace { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); cursor: pointer; }
+#ff-motion-modal .ffmo-status { flex: 1 1 160px; min-height: 20px; font-size: var(--fs-sm); }
+#ff-insp .ffi-check { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { #ff-motion-modal .ffmo-card { transition: none; } }

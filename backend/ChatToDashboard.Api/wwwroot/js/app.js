@@ -9161,7 +9161,7 @@ const FF_ANCHOR_FIX = "<script id=\"ff-anchor-fix\">document.addEventListener('c
 // عدّة تعديل النص المباشر داخل إطار المعاينة (تُحقن مع صفحة التصميم المفتوحة فقط، خاملة حتى يُفعَّل الوضع من الشريط):
 // الأم ترسل {jeemEdit:1,type:enable|disable|get}، والإطار يجعل العنصر النصي المنقور قابلًا للتحرير ويعيد {type:dirty|html}.
 // قبل الإرجاع يُنظَّف كل أثر للعدّة (السمات والأنماط والسكربتات المحقونة) فتبقى الصفحة المحفوظة كما لو كُتبت يدويًا.
-const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,LIVE='input,select,textarea,#jeem-strip,[data-jeem-chart],[data-jeem-value]',TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(e.closest&&e.closest(LIVE))return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop();return}if(cur&&(e.key===' '||e.key==='Enter')&&cur.closest('button,[role=button],a,summary')){e.preventDefault();e.stopPropagation();if(e.key===' ')document.execCommand('insertText',false,' ');return}if(cur&&/^(Arrow|PageUp|PageDown|Home|End| $)/.test(e.key))e.stopPropagation()}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(keep){disable();var clone=document.documentElement.cloneNode(true);clone.querySelectorAll('[data-jeem-chart]').forEach(function(x){x.innerHTML=''});clone.querySelectorAll('[data-ff-sel]').forEach(function(x){x.removeAttribute('data-ff-sel')});clone.querySelectorAll('.jm-in').forEach(function(x){x.classList.remove('jm-in')});if(!keep)clone.querySelectorAll('[data-jeem-target]').forEach(function(x){x.removeAttribute('data-jeem-target')});['#ff-viz-kit','#ff-blocks-kit','#jeem-blocks-css','#ff-motion-kit','#jeem-motion-css','#jm-controls','#ff-edit-kit','#ff-design-kit','#ff-design-style','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-nav-kit','#ff-nav-style','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done],[data-ff-img-kind],[data-ff-navhide]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done');x.removeAttribute('data-ff-img-kind');x.removeAttribute('data-ff-navhide')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize(m.keepTarget),purpose:m.purpose})})})()<\/script>";
+const FF_EDIT_KIT = "<script id=\"ff-edit-kit\">(function(){var on=false,dirty=0,cur=null,LIVE='input,select,textarea,#jeem-strip,[data-jeem-chart],[data-jeem-value]',TAGS='P,H1,H2,H3,H4,H5,H6,LI,TD,TH,SPAN,A,BUTTON,LABEL,SMALL,B,STRONG,EM,I,FIGCAPTION,SUMMARY,DT,DD,BLOCKQUOTE,CAPTION,DIV,TIME,LEGEND'.split(',');function textual(e){if(!e||e===document.body||e===document.documentElement)return null;if(e.closest&&e.closest(LIVE))return null;if(TAGS.indexOf(e.tagName)<0)return textual(e.parentElement);var hasText=false;for(var i=0;i<e.childNodes.length;i++){var n=e.childNodes[i];if(n.nodeType===3&&n.textContent.trim())hasText=true;else if(n.nodeType===1&&!/^(B|I|EM|STRONG|SPAN|A|SMALL|BR|SUP|SUB|MARK|U|S)$/.test(n.tagName))return textual(e.parentElement)}return hasText?e:textual(e.parentElement)}var st=document.createElement('style');st.id='ff-edit-style';st.textContent='[data-ff-editing]{outline:2px solid #2A78D6!important;outline-offset:2px;background:rgba(42,120,214,.06)!important;cursor:text!important}body.ff-edit-on [data-ff-hover]{outline:1px dashed #2A78D6;outline-offset:2px;cursor:text}';function post(m){m.jeemEdit=1;parent.postMessage(m,'*')}function stop(){if(cur){cur.removeAttribute('contenteditable');cur.removeAttribute('data-ff-editing');cur=null}}function onClick(e){if(!on)return;var t=textual(e.target);if(!t)return;e.preventDefault();e.stopPropagation();if(cur===t)return;stop();cur=t;t.setAttribute('contenteditable','true');t.setAttribute('data-ff-editing','1');t.focus()}function onMove(e){if(!on)return;var prev=document.querySelector('[data-ff-hover]');if(prev)prev.removeAttribute('data-ff-hover');var t=textual(e.target);if(t&&t!==cur)t.setAttribute('data-ff-hover','1')}function onInput(e){if(on&&cur&&cur.contains(e.target)){if(!cur.hasAttribute('data-ff-dirty')){cur.setAttribute('data-ff-dirty','1');dirty++}post({type:'dirty',count:dirty})}}function onKey(e){if(!on)return;if(e.key==='Escape'){e.preventDefault();stop();return}if(cur&&(e.key===' '||e.key==='Enter')&&cur.closest('button,[role=button],a,summary')){e.preventDefault();e.stopPropagation();if(e.key===' ')document.execCommand('insertText',false,' ');return}if(cur&&/^(Arrow|PageUp|PageDown|Home|End| $)/.test(e.key))e.stopPropagation()}function enable(){on=true;dirty=0;document.body.classList.add('ff-edit-on');document.head.appendChild(st);document.addEventListener('click',onClick,true);document.addEventListener('mouseover',onMove,true);document.addEventListener('input',onInput,true);document.addEventListener('keydown',onKey,true)}function disable(){on=false;stop();document.body.classList.remove('ff-edit-on');var h=document.querySelector('[data-ff-hover]');if(h)h.removeAttribute('data-ff-hover');if(st.parentNode)st.parentNode.removeChild(st);document.removeEventListener('click',onClick,true);document.removeEventListener('mouseover',onMove,true);document.removeEventListener('input',onInput,true);document.removeEventListener('keydown',onKey,true)}function serialize(keep){disable();var clone=document.documentElement.cloneNode(true);clone.querySelectorAll('[data-jeem-chart]').forEach(function(x){x.innerHTML=''});clone.querySelectorAll('[data-ff-sel]').forEach(function(x){x.removeAttribute('data-ff-sel')});clone.querySelectorAll('.jm-in').forEach(function(x){x.classList.remove('jm-in')});clone.querySelectorAll('.jm-bar').forEach(function(x){x.parentNode.removeChild(x)});if(!keep)clone.querySelectorAll('[data-jeem-target]').forEach(function(x){x.removeAttribute('data-jeem-target')});['#ff-viz-kit','#ff-blocks-kit','#jeem-blocks-css','#ff-motion-kit','#jeem-motion-css','#jm-controls','#ff-edit-kit','#ff-design-kit','#ff-design-style','#ff-img-kit','#ff-img-style','#ff-img-badge','#ff-nav-kit','#ff-nav-style','#ff-anchor-fix','#ff-edit-style','#ff-slides-kit','#jeem-strip','#jeem-strip-style'].forEach(function(sel){var x=clone.querySelector(sel);if(x)x.parentNode.removeChild(x)});clone.querySelectorAll('[contenteditable],[data-ff-editing],[data-ff-hover],[data-ff-dirty],[data-ff-img-id],[data-ff-img-hover],[data-ff-img-done],[data-ff-img-kind],[data-ff-navhide]').forEach(function(x){x.removeAttribute('contenteditable');x.removeAttribute('data-ff-editing');x.removeAttribute('data-ff-hover');x.removeAttribute('data-ff-dirty');x.removeAttribute('data-ff-img-id');x.removeAttribute('data-ff-img-hover');x.removeAttribute('data-ff-img-done');x.removeAttribute('data-ff-img-kind');x.removeAttribute('data-ff-navhide')});var dt=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\\n':'<!DOCTYPE html>\\n';return dt+clone.outerHTML}window.addEventListener('message',function(e){var m=e.data;if(!m||m.jeemEdit!==1||e.source!==parent)return;if(m.type==='enable')enable();else if(m.type==='disable')disable();else if(m.type==='get')post({type:'html',html:serialize(m.keepTarget),purpose:m.purpose})})})()<\/script>";
 // الحقن قبل «آخر» </body> لا أوّله: صفحة قد تحمل «</body>» داخل نص JavaScript مقتبس (دالة تعيد بناء الملف مثلًا)،
 // والاستبدال الأعمى يضع سكربتات المنصة داخل سكربت الصفحة فيكسره كله (علّة حقيقية ظهرت مع صفحة مرفوعة كما هي).
 function ffInsertBeforeBodyEnd(html, add) { const i = html.toLowerCase().lastIndexOf('</body>'); return i < 0 ? html + add : html.slice(0, i) + add + html.slice(i); }
@@ -9440,11 +9440,19 @@ function ffDesignKit() {
       s: { width: sel.style.width ? px(sel.style.width) : '', height: sel.style.height ? px(sel.style.height) : '', padding: px(cs.paddingTop), margin: px(cs.marginTop), fill: hex(cs.backgroundColor), opacity: Math.round(parseFloat(cs.opacity) * 100), radius: px(cs.borderTopLeftRadius),
         borderStyle: cs.borderTopStyle === 'none' || px(cs.borderTopWidth) === 0 ? 'none' : cs.borderTopStyle, borderColor: hex(cs.borderTopColor) || '#d9dcd6', borderWidth: px(cs.borderTopWidth), color: hex(cs.color), fontSize: px(cs.fontSize), fontWeight: cs.fontWeight, textAlign: cs.textAlign },
       table: tableInfo(sel.closest('table')) };
+    var me = motionOf(sel);
+    if (me && me === sel) {
+      var meta = {}; try { meta = JSON.parse(me.getAttribute('data-jeem-motion-embed') || '{}'); } catch (e3) { meta = {}; }
+      var stg = me.querySelector(':scope>[data-jeem-motion]');
+      out.motion = { title: meta.title || '', id: meta.id || null, scenes: stg ? stg.querySelectorAll(':scope>.jm-scene').length : 0, autoplay: me.getAttribute('data-autoplay') !== 'false', loop: me.getAttribute('data-loop') !== 'false', controls: me.getAttribute('data-controls') !== 'false' };
+      out.label = 'حركة';
+    }
+    out.slot = !me && slotOf(sel) ? true : false;
     var cb = sel.closest('[data-jeem-chart]');
     if (cb) { try { out.chart = JSON.parse(cb.getAttribute('data-jeem-chart') || '{}'); } catch (e2) { out.chart = {}; } var dd = (window.JEEM_DATA || {})[out.chart.q]; out.chartCols = dd && dd.rows && dd.rows[0] ? Object.keys(dd.rows[0]) : []; out.label = 'رسمة من البيانات'; }
     var vb = sel.closest('[data-jeem-value]') || sel.querySelector('[data-jeem-value]');
     if (vb && !cb) { out.value = { ref: vb.getAttribute('data-jeem-value') || '', fmt: vb.getAttribute('data-fmt') || '', agg: vb.getAttribute('data-agg') || '', prefix: vb.getAttribute('data-prefix') || '', unit: vb.getAttribute('data-unit') || '' }; var vd = (window.JEEM_DATA || {})[out.value.ref.split('.')[0]]; out.valueCols = vd && vd.rows && vd.rows[0] ? Object.keys(vd.rows[0]) : []; }
-    if (!cb && !vb) {
+    if (!cb && !vb && !me) {
       var nh = numTarget(sel), ch = nh ? null : chartHost(sel);
       if (nh) out.bind = { kind: 'value', text: (nh.textContent || '').trim(), fmt: fmtOf(nh.textContent || '') };
       else if (ch) out.bind = { kind: 'chart', w: Math.round(sizeOf(ch).w), h: Math.round(sizeOf(ch).h), type: ch.getAttribute('data-jeem-chartable') || '' };
@@ -9561,6 +9569,64 @@ function ffDesignKit() {
     add('ff-viz-kit', '/js/jeem-viz.js', function () { add('ff-blocks-kit', '/js/jeem-blocks.js', cb); });
   }
   function renderBlock(b) { ensureBlocks(function () { if (!window.JEEM_BLOCKS) return; if (b.hasAttribute('data-jeem-chart')) window.JEEM_BLOCKS.renderChart(b); else window.JEEM_BLOCKS.renderValue(b); }); }
+  // ---- حركة مُضمَّنة: تصميم «حركة» كامل داخل الشريحة (بلوك بمسرح مصغَّر يشغّله jeem-motion.js في وضعه المُضمَّن) ----
+  function motionOf(e) { return e && e.closest ? e.closest('[data-jeem-motion-embed]') : null; }
+  function ensureMotion(cb) {
+    if (window.JEEM_MOTION_MOUNT) { cb(); return; }
+    var sc = document.getElementById('ff-motion-kit');
+    if (sc) { var n = 0, iv = setInterval(function () { if (window.JEEM_MOTION_MOUNT || ++n > 50) { clearInterval(iv); cb(); } }, 100); return; }
+    sc = document.createElement('script'); sc.id = 'ff-motion-kit'; sc.src = '/js/jeem-motion.js'; sc.onload = cb; sc.onerror = cb; document.body.appendChild(sc);
+  }
+  function mountMotion(b) { ensureMotion(function () { var stg = b.querySelector(':scope>[data-jeem-motion]'); if (stg && window.JEEM_MOTION_MOUNT) window.JEEM_MOTION_MOUNT(stg); }); }
+  // عنصر في الشريحة تصلح الحركة أن تحل مكانه (صورة، مكان صورة، رسمة، صندوق) — لا الشريحة نفسها ولا ما يقاربها مساحةً
+  function slotOf(e) {
+    if (!e || motionOf(e) || e.hasAttribute('data-jeem-replaced')) return null;
+    var s = slideOf(e); if (!s || e === s || (e.classList && e.classList.contains('frame'))) return null;
+    var z = sizeOf(e), sz = sizeOf(s); if (z.w < 120 || z.h < 68 || z.w * z.h > sz.w * sz.h * 0.85) return null;
+    return e;
+  }
+  function insertMotion(m) {
+    var tpl = document.createElement('template'); tpl.innerHTML = m.html || ''; var b = tpl.content.firstElementChild; if (!b) return;
+    var cssEl = null;
+    if (m.css) { cssEl = document.createElement('style'); cssEl.id = 'jeem-motion-css-' + (m.scope || Date.now().toString(36)); cssEl.textContent = m.css; document.head.appendChild(cssEl); }
+    (m.fonts || []).forEach(function (h) { if (!document.querySelector('link[href="' + h.replace(/"/g, '') + '"]')) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; document.head.appendChild(l); } });
+    var old = sel && motionOf(sel) === sel ? sel : null, slot = !old && m.replace ? slotOf(sel) : null, slotStyle = slot ? slot.getAttribute('style') : null, host = null, hostPos = null;
+    if (old) { b.setAttribute('style', old.getAttribute('style') || ''); ['data-autoplay', 'data-loop', 'data-controls'].forEach(function (a) { if (old.hasAttribute(a)) b.setAttribute(a, old.getAttribute(a)); }); if (old.hasAttribute('data-jeem-free')) b.setAttribute('data-jeem-free', ''); old.parentNode.replaceChild(b, old); }
+    else if (slot) {
+      var z = sizeOf(slot); host = slot.parentElement; hostPos = host.style.position;
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      var pr = host.getBoundingClientRect(), pk = scaleOf(host);
+      b.setAttribute('data-jeem-free', ''); b.style.cssText += ';position:absolute;z-index:5;left:' + Math.round((z.r.left - pr.left) / pk) + 'px;top:' + Math.round((z.r.top - pr.top) / pk) + 'px;width:' + Math.round(z.w) + 'px;height:' + Math.round(z.h) + 'px';
+      host.appendChild(b); slot.setAttribute('data-jeem-replaced', ''); slot.style.setProperty('display', 'none', 'important');
+    } else {
+      var s = (sel && slideOf(sel)) || visibleSlide();
+      if (s) {
+        if (getComputedStyle(s).position === 'static') s.style.position = 'relative';
+        var fr = s.querySelector('.frame') || s, w = Math.min(640, Math.round((fr.offsetWidth || 1066) * 0.6)), h = Math.round(w * 9 / 16);
+        b.setAttribute('data-jeem-free', ''); b.style.cssText += ';position:absolute;z-index:5;width:' + w + 'px;height:' + h + 'px';
+        fr.appendChild(b); b.style.left = Math.max(0, Math.round((fr.offsetWidth - w) / 2)) + 'px'; b.style.top = Math.max(0, Math.round((fr.offsetHeight - h) / 2)) + 'px';
+      } else {
+        var anchor = sel; while (anchor && anchor.parentElement && !/^(BODY|MAIN|ARTICLE|SECTION)$/.test(anchor.parentElement.tagName)) anchor = anchor.parentElement;
+        b.style.cssText += ';width:720px;max-width:100%;aspect-ratio:16/9;margin:16px auto';
+        if (anchor && anchor.parentElement) anchor.parentElement.insertBefore(b, anchor.nextSibling); else (document.querySelector('main') || document.body).appendChild(b);
+      }
+    }
+    undo.push(function () {
+      if (b.parentNode) { if (old) b.parentNode.replaceChild(old, b); else b.parentNode.removeChild(b); }
+      if (cssEl && cssEl.parentNode) cssEl.parentNode.removeChild(cssEl);
+      if (slot) { slot.removeAttribute('data-jeem-replaced'); if (slotStyle == null) slot.removeAttribute('style'); else slot.setAttribute('style', slotStyle); if (host) host.style.position = hostPos || ''; }
+      select(old || slot || null);
+    });
+    select(b); changed(); mountMotion(b);
+  }
+  function motionCfg(m) {
+    var mb = motionOf(sel); if (!mb) return;
+    var A = ['data-autoplay', 'data-loop', 'data-controls'], old = A.map(function (a) { return mb.getAttribute(a); });
+    var stg = mb.querySelector(':scope>[data-jeem-motion]');
+    undo.push(function () { A.forEach(function (a, k) { if (old[k] == null) mb.removeAttribute(a); else mb.setAttribute(a, old[k]); }); if (stg && stg.__jm) stg.__jm.update(); post(info()); });
+    ['autoplay', 'loop', 'controls'].forEach(function (k) { if (m[k] != null) mb.setAttribute('data-' + k, m[k] ? 'true' : 'false'); });
+    if (stg && stg.__jm) stg.__jm.update(); changed(); post(info());
+  }
   function visibleSlide() {
     var best = null, area = 0, vw = innerWidth, vh = innerHeight;
     document.querySelectorAll('section.slide,.slide').forEach(function (s) { if (s.closest('#jeem-strip')) return; var r = s.getBoundingClientRect(); var a = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)); if (a > area) { area = a; best = s; } });
@@ -9620,11 +9686,13 @@ function ffDesignKit() {
     if (m.op === 'deselect') return select(null);
     if (m.op === 'slide-add') return slideAdd(m);
     if (m.op === 'slide-remove') return slideRemove();
+    if (m.op === 'motion') return insertMotion(m);
     if (!sel) return;
+    if (m.op === 'motion-cfg') return motionCfg(m);
     if (m.op === 'style') { pushStyle(sel); for (var k in m.props) { var v = m.props[k]; if (v === '' || v == null) sel.style.removeProperty(k); else sel.style.setProperty(k, v); } changed(); post(info()); return; }
     if (m.op === 'parent') { if (sel.parentElement && sel.parentElement !== document.body) select(sel.parentElement); return; }
     if (m.op === 'delete') { var e = sel, p = e.parentNode, nx = e.nextSibling; p.removeChild(e); undo.push(function () { p.insertBefore(e, nx); select(e); }); select(null); changed(); return; }
-    if (m.op === 'duplicate') { var c = sel.cloneNode(true); c.removeAttribute('data-ff-sel'); c.removeAttribute('id'); if (c.hasAttribute('data-jeem-free')) { c.style.left = (px(sel.style.left) + 24) + 'px'; c.style.top = (px(sel.style.top) + 24) + 'px'; } sel.parentNode.insertBefore(c, sel.nextSibling); undo.push(function () { if (c.parentNode) c.parentNode.removeChild(c); }); select(c); changed(); return; }
+    if (m.op === 'duplicate') { var c = sel.cloneNode(true); c.removeAttribute('data-ff-sel'); c.removeAttribute('id'); [].slice.call(c.querySelectorAll('.jm-bar')).forEach(function (x) { x.parentNode.removeChild(x); }); if (c.hasAttribute('data-jeem-motion-embed')) setTimeout(function () { mountMotion(c); }, 0); if (c.hasAttribute('data-jeem-free')) { c.style.left = (px(sel.style.left) + 24) + 'px'; c.style.top = (px(sel.style.top) + 24) + 'px'; } sel.parentNode.insertBefore(c, sel.nextSibling); undo.push(function () { if (c.parentNode) c.parentNode.removeChild(c); }); select(c); changed(); return; }
     if (m.op === 'table') return tableOp(m);
     if (m.op === 'chart-cfg' || m.op === 'value-cfg') {
       var blk = m.op === 'chart-cfg' ? sel.closest('[data-jeem-chart]') : (sel.closest('[data-jeem-value]') || sel.querySelector('[data-jeem-value]'));
@@ -9644,9 +9712,10 @@ function ffDesignKit() {
     if (!on || e.button !== 0) return; var t = e.target; if (t.nodeType !== 1 || t.closest(LIVE)) return;
     if (t === document.body || t === document.documentElement) { select(null); return; }
     var blkSel = t.closest('[data-jeem-chart]'); if (blkSel) t = blkSel;
+    var mo = motionOf(t); if (mo && !t.isContentEditable) t = mo; // الحركة تُحدَّد كبلوك واحد (نصوصها تُعدَّل بالنقر كالمعتاد)
     if (sel !== t && !(sel && sel.contains(t) && sel.hasAttribute('data-jeem-free'))) select(t);
     var free = t.closest('[data-jeem-free]');
-    if (free && !free.isContentEditable) { var r = free.getBoundingClientRect(); drag = { el: free, x: e.clientX, y: e.clientY, l: px(free.style.left), t: px(free.style.top), k: (r.width / (free.offsetWidth || 1)) || 1, moved: false }; }
+    if (free && !free.isContentEditable && !e.target.isContentEditable) { var r = free.getBoundingClientRect(); drag = { el: free, x: e.clientX, y: e.clientY, l: px(free.style.left), t: px(free.style.top), k: (r.width / (free.offsetWidth || 1)) || 1, moved: false }; }
   }
   function onMove(e) {
     if (!drag) return; var dx = (e.clientX - drag.x) / drag.k, dy = (e.clientY - drag.y) / drag.k;
@@ -11002,9 +11071,9 @@ function ffslExtract(html, i, scope) {
 }
 // تعريفات SVG المشتركة (تدرّجات، أنماط، قصّ، رموز…) التي تضعها بعض النماذج خارج الشرائح وتشير إليها الشرائح بـ url(#…) أو href="#…":
 // تُنسخ داخل الشريحة المستوردة (قبل إعادة التسمية فتأخذ البادئة نفسها) وإلا ظهرت الأشكال بلا تعبئتها (قمع بلا تدرّجاته مثلًا).
-function ffslCarryDefs(doc, sec) {
+function ffslCarryDefs(doc, sec, cssText) {
   const refsIn = txt => [...String(txt).matchAll(/url\(\s*['"]?#([\w-]+)|href\s*=\s*["']#([\w-]+)/g)].map(m => m[1] || m[2]);
-  let css = ''; for (const sh of doc.styleSheets) { try { for (const r of sh.cssRules) css += r.cssText + '\n'; } catch { /* ورقة من أصل آخر */ } }
+  let css = cssText || ''; if (cssText == null) for (const sh of doc.styleSheets) { try { for (const r of sh.cssRules) css += r.cssText + '\n'; } catch { /* ورقة من أصل آخر */ } }
   const SVGNS = 'http://www.w3.org/2000/svg', seen = new Set(), out = [];
   const queue = [...refsIn(sec.outerHTML), ...refsIn(css)];
   while (queue.length) {
@@ -11018,10 +11087,10 @@ function ffslCarryDefs(doc, sec) {
   svg.setAttribute('style', 'position:absolute;width:0;height:0;overflow:hidden'); svg.setAttribute('data-jeem-defs', '');
   const defs = document.createElementNS(SVGNS, 'defs'); out.forEach(c => defs.appendChild(c)); svg.appendChild(defs); sec.insertBefore(svg, sec.firstChild);
 }
-function ffslRename(root, P) {
+function ffslRename(root, P, keep = FFSL_KEEP) {
   const refAttrs = ['for', 'aria-labelledby', 'aria-describedby', 'aria-controls'];
   [root, ...root.querySelectorAll('*')].forEach(e => {
-    const c = e.getAttribute('class'); if (c) e.setAttribute('class', c.split(/\s+/).filter(Boolean).map(k => FFSL_KEEP.has(k) ? k : P + k).join(' '));
+    const c = e.getAttribute('class'); if (c) e.setAttribute('class', c.split(/\s+/).filter(Boolean).map(k => keep.has(k) ? k : P + k).join(' '));
     if (e.id) e.id = P + e.id;
     for (const a of [...e.attributes]) {
       let v = a.value, nv = v;
@@ -11032,24 +11101,26 @@ function ffslRename(root, P) {
     }
   });
 }
-function ffslScopeSel(sel, JX, P) {
+// opt.keep: أصناف لا تُسبق؛ opt.body: قواعد body تصير قواعد للحاوية المعزولة (حركة مُضمَّنة تأخذ خط الصفحة وخلفيتها)
+function ffslScopeSel(sel, JX, P, opt = {}) {
+  const keep = opt.keep || FFSL_KEEP;
   return sel.split(',').map(part => {
     let x = part.trim(); if (!x) return null;
-    x = x.replace(/\.(-?[_a-zA-Z\u0600-\u06FF][\w\u0600-\u06FF-]*)/g, (m0, c) => FFSL_KEEP.has(c) ? m0 : '.' + P + c).replace(/#(-?[_a-zA-Z][\w-]*)/g, (m0, c) => '#' + P + c);
+    x = x.replace(/\.(-?[_a-zA-Z\u0600-\u06FF][\w\u0600-\u06FF-]*)/g, (m0, c) => keep.has(c) ? m0 : '.' + P + c).replace(/#(-?[_a-zA-Z][\w-]*)/g, (m0, c) => '#' + P + c);
     if (/^:root\b/.test(x)) return x.replace(/^:root/, '.' + JX);
     const h = /^(html(?:\[[^\]]*\]|:[\w-]+(?:\([^)]*\))?)*)(\s+|$)(.*)$/.exec(x);
     if (h) { let rest = h[3].trim(); if (/^body\b/.test(rest)) rest = rest.replace(/^body\S*\s*/, ''); return rest ? `${h[1]} .${JX} ${rest}` : null; }
-    if (/^body\b/.test(x)) { x = x.replace(/^body\S*\s*/, ''); if (!x) return null; }
+    if (/^body\b/.test(x)) { const only = /^body\S*$/.test(x); x = x.replace(/^body\S*\s*/, ''); if (!x) return only && opt.body ? '.' + JX : null; }
     if (/^\*$/.test(x)) return `.${JX}, .${JX} *`;
     return `.${JX} ${x}`;
   }).filter(Boolean).join(', ');
 }
-function ffslScopeRules(rules, JX, P, fonts) {
+function ffslScopeRules(rules, JX, P, fonts, opt = {}) {
   let out = '';
   for (const r of rules) {
-    if (r.type === 1) { const sel = ffslScopeSel(r.selectorText, JX, P); if (sel) out += `${sel}{${r.style.cssText}}\n`; }
-    else if (r.type === 4) { const inner = ffslScopeRules(r.cssRules, JX, P, fonts); if (inner) out += `@media ${r.conditionText || r.media.mediaText}{${inner}}\n`; }
-    else if (r.type === 12) { const inner = ffslScopeRules(r.cssRules, JX, P, fonts); if (inner) out += `@supports ${r.conditionText}{${inner}}\n`; }
+    if (r.type === 1) { const sel = ffslScopeSel(r.selectorText, JX, P, opt); if (sel) out += `${sel}{${r.style.cssText}}\n`; }
+    else if (r.type === 4) { const inner = ffslScopeRules(r.cssRules, JX, P, fonts, opt); if (inner) out += `@media ${r.conditionText || r.media.mediaText}{${inner}}\n`; }
+    else if (r.type === 12) { const inner = ffslScopeRules(r.cssRules, JX, P, fonts, opt); if (inner) out += `@supports ${r.conditionText}{${inner}}\n`; }
     else if (r.type === 3) { if (r.href) fonts.push(r.href); }
     else if (r.type === 5 || r.type === 7) out += r.cssText + '\n';
   }
@@ -11084,6 +11155,115 @@ function ffslRemoved(m) {
   el('ff-preview').contentWindow.postMessage({ jeemEdit: 1, type: 'get' }, '*');
 }
 el('ffd-slide-del').addEventListener('click', ffslRemove);
+// ---------- إدراج حركة: تصميم «حركة» كامل من المشروع داخل الشريحة ----------
+// الاستخراج نصي (DOMParser) لا يشغّل شيئًا من الصفحة: صفحة «حركة» بعقد المحرّك وصفٌ فقط، والتصميم محتوى مستخدم فلا يُحمَّل بأصل المنصة.
+// المسرح يُنسخ بمقاسه الأصلي (1280×720) وأصنافه ومعرّفاته بسابقة فريدة، وأنماط الصفحة تُقيَّد ببلوك التضمين (قواعد body تصير له).
+const FFMO_KEEP = new Set(['jm-scene', 'on', 'jm-in']);
+const FFMO = { list: [], html: {}, sel: null, q: '', busy: false, gen: 0 };
+function ffmoExtract(html, meta) {
+  const doc = new DOMParser().parseFromString(html || '', 'text/html');
+  let stage = [...doc.querySelectorAll('[data-jeem-motion]')].find(x => !(x.parentElement && x.parentElement.hasAttribute('data-jeem-motion-embed')));
+  if (!stage) { const f = doc.querySelector('.jm-scene'); stage = f && f.parentElement; }
+  const scenes = stage ? [...stage.children].filter(x => x.classList.contains('jm-scene')) : [];
+  if (!scenes.length) throw Object.assign(new Error('هذا التصميم مكتوب بالطريقة القديمة قبل محرّك الحركة. افتحه واطلب أي تعديل بنطاق «العرض كله» ليتحوّل، ثم أدرجه.'), { code: 'old' });
+  const st = stage.cloneNode(true);
+  st.querySelectorAll('script,#jm-controls,.jm-bar').forEach(x => x.remove());
+  st.querySelectorAll('[data-slide]').forEach(x => x.removeAttribute('data-slide')); // المشاهد ليست شرائح في العرض المضيف
+  [...st.children].filter(x => x.classList.contains('jm-scene')).forEach(x => { x.classList.remove('on'); x.removeAttribute('aria-hidden'); });
+  st.querySelectorAll('.jm-in').forEach(x => x.classList.remove('jm-in'));
+  const tag = Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 4), P = 'm' + tag + '-', JX = 'jmx' + tag;
+  const fonts = [...doc.querySelectorAll('link[rel~="stylesheet"][href]')].map(l => l.getAttribute('href')).filter(h => /fonts\.googleapis/.test(h));
+  const styles = [...doc.querySelectorAll('style')].filter(x => !/^(jeem-|ff-)/.test(x.id || '')).map(x => x.textContent);
+  ffslCarryDefs(doc, st, styles.join('\n'));
+  ffslRename(st, P, FFMO_KEEP);
+  let css = '';
+  for (const txt0 of styles) {
+    const txt = txt0.replace(/@import\s+(?:url\()?\s*['"]?([^'")\s;]+)['"]?\s*\)?[^;]*;/g, (m0, u) => { if (/fonts\.googleapis/.test(u)) fonts.push(u); return ''; });
+    const sh = new CSSStyleSheet(); try { sh.replaceSync(txt); } catch { continue; }
+    css += ffslScopeRules(sh.cssRules, JX, P, fonts, { keep: FFMO_KEEP, body: true });
+  }
+  css = css.replace(/url\(\s*(['"]?)#([\w-]+)\1\s*\)/g, (m0, q, id) => `url(#${P}${id})`);
+  st.setAttribute('data-w', '1280'); st.setAttribute('data-h', '720');
+  st.setAttribute('style', `${(st.getAttribute('style') || '').replace(/;?\s*$/, '')};width:1280px;height:720px`.replace(/^;/, ''));
+  const box = document.createElement('div');
+  box.setAttribute('data-jeem-motion-embed', JSON.stringify({ id: meta.id, v: meta.version || null, title: meta.title || '' }));
+  box.className = JX;
+  box.setAttribute('data-autoplay', 'true'); box.setAttribute('data-loop', stage.getAttribute('data-loop') === 'false' ? 'false' : 'true'); box.setAttribute('data-controls', 'true');
+  box.setAttribute('style', 'border-radius:12px;overflow:hidden');
+  box.setAttribute('role', 'img'); box.setAttribute('aria-label', (meta.title || 'حركة') + ' — ' + scenes.length + ' مشاهد');
+  box.appendChild(st);
+  return { html: box.outerHTML, css, fonts: [...new Set(fonts)], scope: JX, scenes: scenes.length };
+}
+async function ffmoHtml(id) {
+  if (FFMO.html[id] != null) return FFMO.html[id];
+  let d = null; try { const r = await fetch(`/api/freeform/${encodeURIComponent(id)}`); d = r.ok ? await r.json() : null; } catch { d = null; }
+  const v = { html: (d && d.html) || '', version: d && d.design ? d.design.version : null };
+  FFMO.html[id] = v; return v;
+}
+async function openFfMotionModal() {
+  if (!FF.design || !FF.edit.on) return;
+  const gen = ++FFMO.gen; FFMO.sel = null; FFMO.q = ''; FFMO.busy = false; el('ffmo-q').value = '';
+  const slot = !!(FFD.info && FFD.info.slot) || !!(FFD.info && FFD.info.motion);
+  el('ffmo-replace-wrap').hidden = !slot;
+  el('ffmo-replace-label').textContent = FFD.info && FFD.info.motion ? 'استبدل الحركة المحددة بها' : `ضعها مكان «${FFD.info ? FFD.info.label : 'العنصر'}» المحدد (يُخفى ويعود بالتراجع)`;
+  el('ffmo-replace').checked = true;
+  el('ffmo-status').textContent = ''; el('ffmo-insert').disabled = true;
+  el('ff-motion-modal').classList.remove('hidden'); el('ffmo-body').innerHTML = '<p class="muted">جارٍ تحميل تصاميم الحركة…</p>'; el('ffmo-q').focus();
+  let list = [];
+  try { const r = await fetch('/api/freeform'); const j = r.ok ? await r.json() : []; list = Array.isArray(j) ? j : []; } catch { list = []; }
+  if (gen !== FFMO.gen) return;
+  FFMO.list = list.filter(d => d && d.kind === 'motion' && !d.track && String(d.id) !== String(FF.design.id));
+  ffmoRender();
+}
+function ffmoRender() {
+  const body = el('ffmo-body'), q = FFMO.q.trim().toLowerCase();
+  const items = FFMO.list.filter(d => !q || String(d.title || '').toLowerCase().includes(q));
+  if (!FFMO.list.length) { body.innerHTML = '<div class="ffmo-empty">لا توجد تصاميم من نوع «حركة» في هذا المشروع بعد.<br>أنشئ واحدًا من «اصنع شيئًا جديدًا ← حركة» ثم عد إلى هنا.</div>'; return; }
+  if (!items.length) { body.innerHTML = '<div class="ffmo-empty">لا نتائج لهذا البحث.</div>'; return; }
+  body.innerHTML = `<div class="ffmo-grid">${items.map(d => `<button type="button" class="ffmo-card" data-ffmo="${esc(String(d.id))}" aria-pressed="${FFMO.sel === String(d.id) ? 'true' : 'false'}">
+    <span class="ffmo-tv"><iframe tabindex="-1" aria-hidden="true" sandbox="allow-scripts" title=""></iframe></span>
+    <span class="ffmo-t">${esc(d.title || 'بلا عنوان')}</span><span class="ffmo-m" data-ffmo-m>${esc(ffAgo(d.updatedAt || d.createdAt) || '')}</span></button>`).join('')}</div>`;
+  body.querySelectorAll('[data-ffmo]').forEach(b => {
+    b.addEventListener('click', () => ffmoPick(b));
+    const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); ffmoThumb(b); } }, { root: body, rootMargin: '200px' }); io.observe(b);
+  });
+}
+async function ffmoThumb(b) {
+  const id = b.dataset.ffmo, f = b.querySelector('iframe'), m = b.querySelector('[data-ffmo-m]');
+  const { html } = await ffmoHtml(id); if (!b.isConnected) return;
+  const ok = FF_MOTION_RX.test(html);
+  b.dataset.ok = ok ? '1' : '0';
+  if (!ok) { b.setAttribute('aria-disabled', 'true'); m.classList.add('warn'); m.textContent = '⚠️ بالطريقة القديمة — عدّله بنطاق «العرض كله» أولًا'; }
+  else { try { const n = ffmoExtract(html, { id }).scenes; m.textContent = `${n.toLocaleString('ar-EG')} ${n > 2 && n < 11 ? 'مشاهد' : 'مشهد'}` + (m.textContent ? ' · ' + m.textContent : ''); } catch { /* */ } }
+  if (html) { f.srcdoc = ffSandboxHtml(html, false, 'motion', true); const k = (b.querySelector('.ffmo-tv').clientWidth || 240) / 1280; f.style.setProperty('--ffmo-k', k); }
+}
+async function ffmoPick(b) {
+  const id = b.dataset.ffmo;
+  if (b.dataset.ok === '0') { el('ffmo-status').textContent = 'هذا التصميم مكتوب بالطريقة القديمة قبل محرّك الحركة. افتحه واطلب أي تعديل بنطاق «العرض كله» ليتحوّل، ثم أدرجه.'; return; }
+  FFMO.sel = id;
+  el('ffmo-body').querySelectorAll('[data-ffmo]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  el('ffmo-insert').disabled = false; el('ffmo-status').textContent = '';
+}
+async function ffmoInsert() {
+  if (FFMO.busy || FFMO.sel == null) return;
+  const d = FFMO.list.find(x => String(x.id) === FFMO.sel); if (!d) return;
+  FFMO.busy = true; el('ffmo-insert').disabled = true; el('ffmo-status').textContent = 'جارٍ تجهيز الحركة…';
+  try {
+    const { html, version } = await ffmoHtml(d.id);
+    const x = ffmoExtract(html, { id: d.id, version, title: d.title });
+    ffdPost({ op: 'motion', html: x.html, css: x.css, fonts: x.fonts, scope: x.scope, replace: !el('ffmo-replace-wrap').hidden && el('ffmo-replace').checked });
+    closeFfMotionModal(); el('ffd-motion').focus();
+  } catch (e) { el('ffmo-status').textContent = e.message || 'تعذّر تجهيز الحركة.'; el('ffmo-insert').disabled = false; }
+  finally { FFMO.busy = false; }
+}
+function closeFfMotionModal() { FFMO.gen++; el('ff-motion-modal').classList.add('hidden'); el('ffmo-body').innerHTML = ''; }
+el('ffd-motion').addEventListener('click', openFfMotionModal);
+el('ffmo-close').addEventListener('click', () => { closeFfMotionModal(); el('ffd-motion').focus(); });
+el('ffmo-insert').addEventListener('click', ffmoInsert);
+el('ffmo-q').addEventListener('input', () => { FFMO.q = el('ffmo-q').value; ffmoRender(); });
+el('ff-motion-modal').addEventListener('click', e => { if (e.target === el('ff-motion-modal')) closeFfMotionModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el('ff-motion-modal').classList.contains('hidden')) { e.stopPropagation(); closeFfMotionModal(); el('ffd-motion').focus(); } }, true);
+
 function openFfSlideModal() { if (!FF.design || !FF.edit.on) return; FFSL.tab = 'blank'; FFSL.tpl = null; FFSL.q = ''; FFSL.cat = 'all'; FFSL.busy = false; el('ff-slide-modal').classList.remove('hidden'); ffslRender(); el('ffsl-close').focus(); }
 function closeFfSlideModal() { FFSL.gen = (FFSL.gen || 0) + 1; el('ff-slide-modal').classList.add('hidden'); el('ffsl-body').innerHTML = ''; }
 el('ffd-slide').addEventListener('click', openFfSlideModal);
@@ -11119,6 +11299,12 @@ function ffdRenderInsp() {
       ${c.type !== 'table' ? ffdRow('الألوان', `<select data-cpal aria-label="ألوان الرسمة"><option value="page"${c.palette !== 'dashboard' ? ' selected' : ''}>ألوان العرض</option><option value="dashboard"${c.palette === 'dashboard' ? ' selected' : ''}>ألوان اللوحة</option></select>`) : ''}
       ${ffdRow('التنسيق', `<select data-c="fmt" aria-label="تنسيق الأرقام">${[['compact', 'مختصر (3.7M)'], ['number', 'رقم كامل'], ['currency', 'عملة'], ['percent', 'نسبة']].map(([k, l]) => `<option value="${k}"${(c.fmt || 'compact') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
       <button type="button" class="ffi-wide" data-a="data-source">📊 تغيير مصدر البيانات…</button></section>`;
+  }
+  if (i.motion) {
+    const mo = i.motion, ck = (k, l) => `<label class="ffi-check"><input type="checkbox" data-mo="${k}"${mo[k] ? ' checked' : ''}> ${l}</label>`;
+    h += `<section><h4>الحركة</h4><div class="ffi-sub">${mo.title ? `من تصميم «${esc(mo.title)}» · ` : ''}${mo.scenes.toLocaleString('ar-EG')} ${mo.scenes > 2 && mo.scenes < 11 ? 'مشاهد' : 'مشهد'}. في وضع التعديل تقف وتظهر مكتملة؛ تعمل وحدها كلما ظهرت الشريحة.</div>
+      ${ck('autoplay', 'تشغيل تلقائي عند ظهور الشريحة')}${ck('loop', 'تكرار')}${ck('controls', 'أزرار التحكم عند التحويم')}
+      <button type="button" class="ffi-wide" data-a="motion-replace">🎬 استبدال بحركة أخرى…</button></section>`;
   }
   if (i.bind) {
     const isV = i.bind.kind === 'value';
@@ -11164,6 +11350,7 @@ function ffdRenderInsp() {
   box.querySelectorAll('[data-border]').forEach(b => b.addEventListener('click', () => {
     const v = b.dataset.border; ffdPost({ op: 'style', props: v === 'none' ? { 'border-style': 'none' } : { 'border-style': v, 'border-width': `${Math.max(1, s.borderWidth || 1)}px`, 'border-color': s.borderColor || '#D9DCD6' } });
   }));
+  box.querySelectorAll('[data-mo]').forEach(inp => inp.addEventListener('change', () => ffdPost({ op: 'motion-cfg', [inp.dataset.mo]: inp.checked })));
   box.querySelectorAll('[data-t]').forEach(inp => inp.addEventListener('change', () => ffdPost({ op: 'table', action: inp.dataset.t, value: inp.type === 'checkbox' ? inp.checked : +inp.value })));
   box.querySelectorAll('[data-w]').forEach(inp => inp.addEventListener('change', () => ffdPost({ op: 'table', action: 'width', index: +inp.dataset.w, value: +inp.value })));
   box.querySelectorAll('[data-c]').forEach(inp => inp.addEventListener('change', () => {
@@ -11182,6 +11369,7 @@ function ffdRenderInsp() {
     const a = b.dataset.a;
     if (a === 'data-source') { ffdmOpen(true); return; }
     if (a === 'data-bind') { ffdmOpen('bind'); return; }
+    if (a === 'motion-replace') { openFfMotionModal(); return; }
     if (a === 'close') { if (matchMedia('(max-width: 640px)').matches) { FFD.insp = false; el('ffd-insp-btn').setAttribute('aria-pressed', 'false'); ffdRenderInsp(); } else ffdPost({ op: 'deselect' }); return; }
     if (a === 'nofill') { ffdPost({ op: 'style', props: { 'background-color': 'transparent', 'background-image': 'none' } }); return; }
     ffdPost({ op: a });

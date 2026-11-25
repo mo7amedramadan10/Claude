@@ -21,6 +21,22 @@ public class FreeformMotionTests
     }
 
     [Fact]
+    public void EmbeddedMotion_InSlide_KeepsSlideCount_AndGetsEngineOnPublish()
+    {
+        // حركة مُضمَّنة في شريحة: مشاهدها بلا data-slide فلا تُعدّ شرائح، والنشر يحقن المحرّك لأنها بعقده
+        var html = "<!DOCTYPE html><html><head></head><body>"
+            + "<section class=\"slide\"><h1>أ</h1></section>"
+            + "<section class=\"slide\"><div data-jeem-motion-embed='{\"id\":\"m1\"}' data-autoplay=\"true\">"
+            + "<div data-jeem-motion data-w=\"1280\" data-h=\"720\"><section class=\"jm-scene\" data-duration=\"4\"><h2 data-in=\"up\">1</h2></section>"
+            + "<section class=\"jm-scene\"><h2>2</h2></section></div></div></section>"
+            + "<section class=\"slide\"><h1>ج</h1></section></body></html>";
+        Assert.Equal(3, FreeformScope.FindSlides(html).Count);
+        var pub = FreeformDataBlock.EnsureMotionKit(html);
+        Assert.Contains("/js/jeem-motion.js", pub);
+        Assert.Equal(pub, FreeformDataBlock.EnsureMotionKit(pub));
+    }
+
+    [Fact]
     public void MotionInstructions_UsePlatformEngine_NotAllScenesAtOnce()
     {
         var k = FreeformBuilder.KindInstructions("motion");
