@@ -25,9 +25,10 @@ public class FreeformSharingRequest { public string? Scope { get; set; } public 
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
 public class FreeformUsePageRequest { public string? Title { get; set; } public Sources.SourceSelection? Sources { get; set; } /// <summary>لغة الصفحة: ar (افتراضي) أو en.</summary>
     public string? Lang { get; set; } }
-public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } }
+public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } /// <summary>نموذج النوع الجديد المختار من معرضه (اختياري).</summary>
+    public string? TemplateKey { get; set; } }
 /// <summary>تحويل لوحة محادثة (مواصفتها كاملة بعناصرها وبياناتها) إلى تصميم حر من نوع معيّن — «لوحات المتابعة» داخل تصميم حر.</summary>
-public class FreeformFromDashboardRequest { public string Kind { get; set; } = "dashboard"; public string? Title { get; set; } public System.Text.Json.JsonElement Dashboard { get; set; } public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } }
+public class FreeformFromDashboardRequest { public string Kind { get; set; } = "dashboard"; public string? Title { get; set; } public System.Text.Json.JsonElement Dashboard { get; set; } public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } public string? TemplateKey { get; set; } }
 
 /// <summary>«تصميم حر»: صفحات HTML كاملة يكتبها الموديل من المحادثة (كـ artifacts) لكل مشروع — إصدارات، تعديل يدوي، نشر في «العروض التقديمية».</summary>
 [ApiController]
@@ -347,6 +348,27 @@ public partial class FreeformController : ControllerBase
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct) });
     }
 
+    /// <summary>نموذج التحويل المختار من معرض النوع الجديد: (النموذج، صفحته الجاهزة إن كان نموذج صفحة، أو خطأ). نموذج من نوع آخر مرفوض.</summary>
+    private async Task<(FreeformTemplate? T, string? Page, IActionResult? Error)> ConvertTemplateAsync(string? key, string kind, string? projectId, string lang, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return (null, null, null);
+        var t = await ResolveTemplateAsync(key, projectId, ct);
+        if (t is null) return (null, null, BadRequest(new { error = "النموذج غير موجود." }));
+        if (t.Kind != kind) return (null, null, BadRequest(new { error = "النموذج ليس من النوع المطلوب." }));
+        var page = string.IsNullOrWhiteSpace(t.Page) ? null : await TemplatePageHtmlAsync(t, ct, lang);
+        return (t, page, null);
+    }
+
+    /// <summary>رسالة التحويل إلى نموذج صفحة جاهزة: الصفحة الحالية = النموذج، والمصدر مرجع للمحتوى فقط.</summary>
+    internal static string TemplatePageConvertMessage(FreeformTemplate t, string toLabel, string what, string? sourceHtml, string? note)
+    {
+        var src = sourceHtml ?? ""; if (src.Length > 90_000) src = src[..90_000] + "\n<!-- …اقتُطع -->";
+        return $"الصفحة الحالية هي نموذج «{t.Name}» الجاهز ({toLabel}). انقل إليها كل محتوى {what} أدناه (النصوص والأرقام والجداول والصور والرسوم وبلوكات البيانات data-jeem-* كما هي) "
+            + "محافظًا على تصميم النموذج وأنماطه وبنيته: استبدل نصوصه وأرقامه بالمحتوى، وأضف أو احذف شرائح/أقسامًا من النوع نفسه بحسب حجم المحتوى. لا تنقل أنماط المصدر."
+            + (string.IsNullOrWhiteSpace(note) ? "" : $"\nملاحظات المستخدم: {note.Trim()}")
+            + $"\n\n# {what} (مرجع للمحتوى فقط)\n{src}";
+    }
+
     private async Task<FreeformTemplate?> ResolveTemplateAsync(string? key, string? projectId, CancellationToken ct)
         => string.IsNullOrWhiteSpace(key) ? null : FreeformTemplates.Find(key) ?? await _dashTemplates.FindAsync(key, ct) ?? await _templates.GetAsync(key, projectId, ct);
 
@@ -367,12 +389,20 @@ public partial class FreeformController : ControllerBase
             + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}");
         var context = await _tools.DescribeSourcesAsync(selection, ct);
         var brand = await BrandAsync(selection.ProjectId, ct, src.IdentityId);
+        var lang = FreeformBuilder.LanguageOf(null, src.Html);
+        var (tpl, tplPage, tplErr) = await ConvertTemplateAsync(request.TemplateKey, request.Kind!, selection.ProjectId, lang, ct); if (tplErr is not null) return tplErr;
+        // نموذج صفحة جاهزة: الصفحة الحالية = النموذج، والمحتوى المصدر مرجع يُنقل إليها؛ نموذج بنيوي: يوجّه الموديل ببنيته
+        string? baseHtml = src.Html;
+        if (tplPage is not null) { message = TemplatePageConvertMessage(tpl!, toLabel, "الصفحة المصدر", src.Html, request.Note); baseHtml = tplPage; }
+        else if (tpl is not null) message += $"\nابنِ النتيجة على نموذج «{tpl.Name}» ببنيته وأقسامه.";
         FreeformResult result;
-        try { result = await _builder.GenerateAsync(message, src.Html, Array.Empty<FreeformMessage>(), context, brand, user, ct, request.Kind!); }
+        // بيانات المصدر الحيّة (كتلة JEEM_DATA) تُنقل مع المحتوى إلى صفحة النموذج فتبقى بلوكاته مربوطة
+        try { result = await _builder.GenerateAsync(message, baseHtml, Array.Empty<FreeformMessage>(), context, brand, user, ct, request.Kind!, tplPage is null ? tpl : null, lang, seedQueries: tplPage is null ? null : FreeformDataBlock.Parse(src.Html)); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل صفحة من التحويل — جرّب ثانية أو أضف ملاحظة." });
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{src.Title} ({toLabel})", result.Html, message, request.Kind, null, ct, SourcesJsonOf(wantedSrc));
-        await _store.AddMessageAsync(design.Id, "user", $"تحويل «{src.Title}» من {fromLabel} إلى {toLabel}", null, ct);
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{src.Title} ({toLabel})", result.Html, message, request.Kind, tpl?.Key, ct, SourcesJsonOf(wantedSrc));
+        if (result.Queries is { Count: > 0 } cq) await _store.SetQueriesAsync(design.Id, cq, DateTime.UtcNow, await _fingerprints.ComputeAsync(cq.Select(q => q.Sql), selection.ProjectId, ct), ct);
+        await _store.AddMessageAsync(design.Id, "user", $"تحويل «{src.Title}» من {fromLabel} إلى {toLabel}{(tpl is null ? "" : $" على نموذج «{tpl.Name}»")}", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), reply = result.Reply, sourceId = src.Id });
     }
@@ -404,14 +434,17 @@ public partial class FreeformController : ControllerBase
             + (string.IsNullOrWhiteSpace(request.Note) ? "" : $"\nملاحظات المستخدم: {request.Note.Trim()}")
             + "\n\n# مواصفة اللوحة\n" + spec;
         var brand = await BrandAsync(selection.ProjectId, ct);
+        var (tpl, tplPage, tplErr) = await ConvertTemplateAsync(request.TemplateKey, kind, selection.ProjectId, "ar", ct); if (tplErr is not null) return tplErr;
+        if (tplPage is not null) message = $"هذه صفحة نموذج «{tpl!.Name}» الجاهزة: انقل إليها محتوى لوحة المتابعة أدناه محافظًا على تصميم النموذج وأنماطه وبنيته (استبدل نصوصه ورسومه وأرقامه، وأضف أو احذف شرائح/أقسامًا من النوع نفسه بحسب عدد العناصر).\n" + message;
+        else if (tpl is not null) message += $"\nابنِ النتيجة على نموذج «{tpl.Name}» ببنيته وأقسامه.";
         FreeformResult result;
-        try { result = await _builder.GenerateAsync(message, null, Array.Empty<FreeformMessage>(), context, brand, user, ct, kind, seedQueries: seeds); }
+        try { result = await _builder.GenerateAsync(message, tplPage, Array.Empty<FreeformMessage>(), context, brand, user, ct, kind, tplPage is null ? tpl : null, seedQueries: seeds); }
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل صفحة من التحويل — جرّب ثانية أو أضف ملاحظة." });
         var (fixedHtml, added) = FreeformDashboardBlocks.EnsureBlocks(result.Html, blocks);
         if (added > 0) result = result with { Html = fixedHtml, Reply = (result.Reply + $"\nأُضيفت {added} رسوم حيّة لم تُوضع في الصفحة في {(kind == "slides" ? "شرائح" : "أقسام")} مستقلة في آخرها.").Trim() };
         if (blocks.Count > 0) result = result with { Reply = (result.Reply + $"\n📊 {blocks.Count} رسوم وأرقام مربوطة ببياناتك الحقيقية وتتحدّث من «🔄 تحديث البيانات» وفي الرابط المنشور.").Trim() };
-        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{title} ({toLabel})", result.Html!, message, kind, null, ct, SourcesJsonOf(request.Sources));
+        var design = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, $"{title} ({toLabel})", result.Html!, message, kind, tpl?.Key, ct, SourcesJsonOf(request.Sources));
         if (result.Queries is { Count: > 0 } qs) { var fp = await _fingerprints.ComputeAsync(qs.Select(q => q.Sql), selection.ProjectId, ct); await _store.SetQueriesAsync(design.Id, qs, DateTime.UtcNow, fp, ct); }
         await _store.AddMessageAsync(design.Id, "user", $"تحويل لوحة المتابعة «{title}» إلى {toLabel}", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);

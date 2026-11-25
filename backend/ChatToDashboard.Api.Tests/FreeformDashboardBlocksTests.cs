@@ -60,3 +60,21 @@ public class FreeformDashboardBlocksTests
         Assert.Equal(0, FreeformDashboardBlocks.EnsureBlocks(h2, blocks).Added);
     }
 }
+
+/// <summary>«⇄ تحويل إلى» بنموذج من معرض النوع الجديد: رسالة نموذج الصفحة الجاهزة تحمل المصدر مرجعًا وتحافظ على تصميم النموذج.</summary>
+public class FreeformConvertTemplateTests
+{
+    [Fact]
+    public void TemplatePageMessage_KeepsTemplateDesign_CarriesSourceAndBlocks_Truncates()
+    {
+        var t = new FreeformTemplate { Key = "sl-x", Kind = "slides", Name = "عرض تنفيذي" };
+        var msg = ChatToDashboard.Api.Controllers.FreeformController.TemplatePageConvertMessage(t, "شرائح", "الصفحة المصدر", "<h1>تقرير الربع</h1>" + new string('x', 100_000), "ركّز على المبيعات");
+        Assert.Contains("نموذج «عرض تنفيذي»", msg);
+        Assert.Contains("محافظًا على تصميم النموذج", msg);
+        Assert.Contains("data-jeem-*", msg);
+        Assert.Contains("<h1>تقرير الربع</h1>", msg);
+        Assert.Contains("ركّز على المبيعات", msg);
+        Assert.Contains("اقتُطع", msg);
+        Assert.True(msg.Length < 92_000);
+    }
+}

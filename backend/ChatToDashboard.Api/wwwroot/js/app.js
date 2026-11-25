@@ -4660,10 +4660,11 @@ function galSetHost(kind) {
 /* «استخدم هذا النموذج» من المعاينة أو أي عرض توضيحي: في معرض تصميم حر يُرفق النموذج (المفتاح d:<id>) في المحادثة بدل بناء لوحة */
 async function galUseTemplate(d) {
   if (galHost.kind === 'ff') {
-    closeFfGallery();
-    if (ffGalKind === 'track') { ffSetTemplate(ffTrackTemplateOf(d)); return; }
+    if (ffGalKind === 'track') { if (ffConvertPick(ffTrackTemplateOf(d))) return; closeFfGallery(); ffSetTemplate(ffTrackTemplateOf(d)); return; }
     const list = await ffLoadTemplates();
     const t = list.find(x => x.key === 'd:' + d.id) || { key: 'd:' + d.id, kind: 'dashboard', category: d.cat, icon: '📊', name: d.name, description: d.desc, sections: (d.widgets || []).map(w => ({ title: w.title, needsData: true, type: w.type })), total: (d.widgets || []).length, dataSections: (d.widgets || []).length, dashboard: true };
+    if (ffConvertPick(t)) return;
+    closeFfGallery();
     ffSetTemplate(t);
     return;
   }
@@ -9017,8 +9018,8 @@ el('ff-tk-refresh-rebuild').addEventListener('click', () => { el('ff-tk-refresh-
 el('ff-tk-convert').addEventListener('click', e => {
   e.stopPropagation(); const panel = el('ff-tk-convert-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
   if (open) {
-    panel.innerHTML = ['dashboard', 'doc', 'slides', 'design'].map(k => `<button type="button" class="dropdown-item" data-kind="${k}"><b>${esc(FF_KINDS[k].label)}</b><small class="muted"> — صفحة HTML حرة من هذه اللوحة</small></button>`).join('');
-    panel.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffTrackConvert(b.dataset.kind); }));
+    panel.innerHTML = ['dashboard', 'doc', 'slides', 'design'].map(k => `<button type="button" class="dropdown-item" data-kind="${k}"><b>${esc(FF_KINDS[k].label)}</b><small class="muted"> — اختر نموذجًا من معرضه أو بلا نموذج</small></button>`).join('');
+    panel.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffStartConvert('track', b.dataset.kind); }));
   }
   panel.classList.toggle('hidden', !open); el('ff-tk-convert').setAttribute('aria-expanded', open ? 'true' : 'false');
 });
@@ -9046,13 +9047,13 @@ async function ffTrackPublish() {
   finally { btn.disabled = false; btn.textContent = label; ffTrackSync(); }
 }
 // تحويل اللوحة إلى تصميم حر (صفحة HTML بالموديل من مواصفة اللوحة وبياناتها) — تصميم جديد يُفتح، واللوحة تبقى في السجل
-async function ffTrackConvert(kind) {
+async function ffTrackConvert(kind, tpl) {
   const d = state.dashboard; if (!d?.widgets?.length || FF.busy) return;
-  const to = FF_KINDS[kind].label; const title = d.name || firstSentence(d.summary || '', 60) || 'لوحة متابعة';
+  const to = FF_KINDS[kind].label + (tpl ? ` على نموذج «${tpl.name}»` : ''); const title = d.name || firstSentence(d.summary || '', 60) || 'لوحة متابعة';
   FF.busy = true; state.messages.push({ role: 'user', text: `حوّل هذه اللوحة إلى ${to} (صفحة HTML)` }); state.loading = true; renderMessages();
   ccSetLoading('ff-pane', `جارٍ التحويل إلى ${to}`, 'الموديل يبني صفحة HTML من عناصر اللوحة وبياناتها — قد يستغرق حتى دقيقة.');
   try {
-    const r = await fetch('/api/freeform/from-dashboard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, title, dashboard: { name: d.name || null, summary: d.summary, widgets: d.widgets }, sources: ffCurrentSources() }) });
+    const r = await fetch('/api/freeform/from-dashboard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, title, dashboard: { name: d.name || null, summary: d.summary, widgets: d.widgets }, sources: ffCurrentSources(), templateKey: tpl ? tpl.key : null }) });
     const res = await r.json().catch(() => ({})); if (!r.ok) throw new Error(res.error || `(${r.status})`);
     state.loading = false; state.messages.pop(); renderMessages(); FF.busy = false;
     FF.kind = kind; await ffOpen(res.design.id);
@@ -9762,13 +9763,37 @@ async function openFfGallery(kind) {
   const track = kind === 'track';
   el('ffgal-start-free').querySelector('b').textContent = track ? 'لوحة متابعة بلا نموذج' : 'تصميم حر بلا نموذج';
   el('ffgal-start-free').querySelector('small').textContent = track ? 'اكتب سؤالك عن بياناتك وجيم يبني اللوحة من الصفر' : 'اكتب طلبك كما تريد وجيم يصمّم من الصفر بهوية مشروعك';
-  el('ffgal-start-import').classList.toggle('hidden', track); el('ffgal-start-page').classList.toggle('hidden', track);
+  // display مباشرة: قاعدة display الخاصة بالبطاقات تغلب صنف hidden
+  ['ffgal-start-import', 'ffgal-start-page'].forEach(id => { el(id).classList.toggle('hidden', track); el(id).style.display = track ? 'none' : ''; });
   el('ffgal-sub-note').textContent = track ? '· نماذج لوحات المحادثة: عادية وتفاعلية، تُبنى من بيانات مشروعك' : '· بنية جاهزة يُبنى عليها طلبك';
   renderFfGalCats(); renderFfGalGrid();
   el('ffgal-view-list').classList.remove('hidden'); el('ffgal-view-preview').classList.add('hidden'); el('ffgal-view-demo').classList.add('hidden');
   el('ff-gallery-modal').classList.remove('hidden');
 }
-function closeFfGallery() { el('ff-gallery-modal').classList.add('hidden'); }
+function closeFfGallery() { el('ff-gallery-modal').classList.add('hidden'); FF.convert = null; }
+// «⇄ تحويل إلى»: يفتح معرض النوع المختار في وضع التحويل؛ اختيار نموذج (أو «بلا نموذج») يحوّل إليه بدل إرفاقه في المحادثة
+async function ffStartConvert(from, kind) {
+  if (from === 'design' ? !FF.design : !state.dashboard?.widgets?.length) return;
+  const conv = { from, kind, title: from === 'design' ? FF.design.title : (state.dashboard.name || firstSentence(state.dashboard.summary || '', 60) || 'لوحة متابعة'), sources: from === 'design' ? FF.sources : ffCurrentSources() };
+  await openFfGallery(kind); FF.convert = conv;
+  const label = (FF_KINDS[kind] || FF_KINDS.design).label;
+  el('ffgal-title').textContent = `تحويل «${conv.title}» إلى ${label}`;
+  el('ffgal-desc').textContent = kind === 'track' ? 'اختر نموذج لوحة تُبنى من بيانات هذا التصميم، أو لوحة بلا نموذج. الأصل يبقى كما هو.' : `اختر نموذج ${label} يُنقل إليه المحتوى بتصميمه، أو حوّل بلا نموذج. الأصل يبقى كما هو.`;
+  if (kind !== 'track') { el('ffgal-start-free').querySelector('b').textContent = 'تحويل بلا نموذج'; el('ffgal-start-free').querySelector('small').textContent = `جيم يعيد بناء المحتوى بنية «${label}» بهوية مشروعك`; }
+  ['ffgal-start-import', 'ffgal-start-page'].forEach(id => { el(id).classList.add('hidden'); el(id).style.display = 'none'; });
+}
+// ينفّذ التحويل بالنموذج المختار (null = بلا نموذج)
+async function ffDoConvert(conv, t) {
+  if (conv.kind === 'track') {
+    // تصميم ← لوحة متابعة: لوحة جديدة بمصادر التصميم وعلى النموذج المختار، بطلب جاهز
+    el('ff-new-btn').click(); ffSetKind('track'); await ffEnsureSources();
+    if (conv.sources) ffSetSources({ systems: conv.sources.systems || [], files: conv.sources.files || [] });
+    ffSetTemplate(t || null);
+    return ffAsk(t ? `ابنِ لوحة «${t.name}» من بيانات تصميم «${conv.title}»` : `ابنِ لوحة متابعة لأهم مؤشرات بيانات تصميم «${conv.title}»`);
+  }
+  return conv.from === 'design' ? ffConvert(conv.kind, t) : ffTrackConvert(conv.kind, t);
+}
+function ffConvertPick(t) { const conv = FF.convert; if (!conv) return false; closeFfGallery(); ffDoConvert(conv, t); return true; }
 function ffGalItems() { return ffGalKind === 'track' ? ffTrackItems() : (FF.templates || []).filter(t => t.kind === ffGalKind); }
 function renderFfGalCats() {
   const all = ffGalItems();
@@ -9863,6 +9888,7 @@ async function ffTemplatePageHtml(t, lang) {
 }
 // «استخدم هذا النموذج»: نموذج صفحة جاهزة → تصميم جديد فورًا من الملف ويُفتح؛ غيره → يُرفق في المحادثة كما كان
 async function ffUseTemplate(t) {
+  if (ffConvertPick(t || null)) return;
   const lang = ffGalLangNow();
   if (!t || !t.page) { closeFfGallery(); ffSetTemplate(t); FF.lang = lang; ffRenderAttach(); return; }
   try {
@@ -9899,7 +9925,7 @@ function openFfGalDemo(t) {
 el('ffgal-close').addEventListener('click', closeFfGallery);
 el('ff-gallery-modal').addEventListener('click', e => { if (e.target === el('ff-gallery-modal')) closeFfGallery(); });
 el('ffgal-search-input').addEventListener('input', () => { ffGalQuery = el('ffgal-search-input').value.trim(); renderFfGalGrid(); });
-el('ffgal-start-free').addEventListener('click', () => { closeFfGallery(); ffSetTemplate(null); });
+el('ffgal-start-free').addEventListener('click', () => { if (ffConvertPick(null)) return; closeFfGallery(); ffSetTemplate(null); });
 // الاختيار: كائن نموذج، أو null = «تصميم حر بلا نموذج». يظهر كشريحة مرفق فوق صندوق الكتابة، وفي أول رسالة بالمحادثة.
 function ffSetTemplate(t) { FF.template = t; ffRenderAttach(); ffEnsureSources().then(() => ffRenderAttach()); el('ff-q').focus(); el('ff-head-desc').textContent = t ? `${FF_KINDS[FF.kind]?.label || 'تصميم'} على نموذج «${t.name}» — اكتب طلبك` : FF.kind === 'track' ? 'لوحة متابعة بلا نموذج — اكتب سؤالك عن بياناتك' : `${FF_KINDS[FF.kind]?.label || 'تصميم'} حر بلا نموذج — اكتب طلبك`; }
 function ffRenderAttach() {
@@ -10261,16 +10287,16 @@ el('ff-convert').addEventListener('click', e => {
   e.stopPropagation(); const panel = el('ff-convert-panel'); const open = panel.classList.contains('hidden'); closeAllDropdowns();
   if (open && FF.design) {
     panel.innerHTML = Object.entries(FF_KINDS).filter(([k]) => k !== FF.design.kind).map(([k, v]) => `<button type="button" class="dropdown-item" data-kind="${k}">${ffKindIcon(k)} ${esc(v.label)}</button>`).join('');
-    panel.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffConvert(b.dataset.kind); }));
+    panel.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { panel.classList.add('hidden'); ffStartConvert('design', b.dataset.kind); }));
   }
   panel.classList.toggle('hidden', !open); el('ff-convert').setAttribute('aria-expanded', open ? 'true' : 'false');
 });
 el('ff-convert-panel').addEventListener('click', e => e.stopPropagation());
-async function ffConvert(kind) {
+async function ffConvert(kind, tpl) {
   if (!FF.design || FF.busy) return;
-  const to = FF_KINDS[kind].label, from = FF.design.title; FF.busy = true; FF.busyText = `يحوّل إلى ${to}…`; ffPushMsg('user', `حوّل «${from}» إلى ${to}`); ffRenderMessages(); el('ff-status').textContent = 'يحوّل…'; ccSetLoading('ff-pane', `جارٍ التحويل إلى ${to}`, 'الموديل يعيد بناء الصفحة بالنوع الجديد محتفظًا بالمحتوى.');
+  const to = FF_KINDS[kind].label + (tpl ? ` على نموذج «${tpl.name}»` : ''), from = FF.design.title; FF.busy = true; FF.busyText = `يحوّل إلى ${to}…`; ffPushMsg('user', `حوّل «${from}» إلى ${to}`); ffRenderMessages(); el('ff-status').textContent = 'يحوّل…'; ccSetLoading('ff-pane', `جارٍ التحويل إلى ${to}`, 'الموديل يعيد بناء الصفحة بالنوع الجديد محتفظًا بالمحتوى.');
   try {
-    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/convert`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, sources: FF.sources }) });
+    const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/convert`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, sources: FF.sources, templateKey: tpl ? tpl.key : null }) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
     FF.busy = false; await ffOpen(d.design.id);
     ffPushMsg('bot', `هذه نسخة ${to} من «${from}» — الأصل محفوظ كما هو في قائمة التصاميم. ${d.reply || ''}`);
