@@ -9486,6 +9486,15 @@ function ffDesignKit() {
     changed();
     post({ type: 'slide-added', index: topSlides().indexOf(node) });
   }
+  // حذف الشريحة الظاهرة: تُحذف من الصفحة ثم تحفظ الأم إصدارًا جديدًا (سكربت القالب يحتفظ بقائمة شرائحه فلا بد من إعادة التحميل)
+  function slideRemove() {
+    var list = topSlides(); if (list.length < 2) { post({ type: 'slide-removed', error: 'لا يمكن حذف الشريحة الوحيدة في العرض.' }); return; }
+    var cur = visibleSlide() || list[list.length - 1], i = list.indexOf(cur);
+    if (sel && cur.contains(sel)) select(null);
+    cur.parentNode.removeChild(cur);
+    changed();
+    post({ type: 'slide-removed', index: i, n: list.length - 1 });
+  }
   function pushStyle(e) { var old = e.getAttribute('style'); undo.push(function () { if (old == null) e.removeAttribute('style'); else e.setAttribute('style', old); }); }
   function snap(t) { var html = t.outerHTML; undo.push(function () { var tpl = document.createElement('template'); tpl.innerHTML = html; var n = tpl.content.firstElementChild; if (t.parentNode) t.parentNode.replaceChild(n, t); select(n); }); }
   var DEF = {
@@ -9591,6 +9600,7 @@ function ffDesignKit() {
       ensureBlocks(function () { post({ type: 'd-palette', colors: hc.length >= 2 ? hc : (window.JEEM_BLOCKS ? window.JEEM_BLOCKS.palette((sel && slideOf(sel)) || visibleSlide() || document.body) : []) }); }); return; }
     if (m.op === 'deselect') return select(null);
     if (m.op === 'slide-add') return slideAdd(m);
+    if (m.op === 'slide-remove') return slideRemove();
     if (!sel) return;
     if (m.op === 'style') { pushStyle(sel); for (var k in m.props) { var v = m.props[k]; if (v === '' || v == null) sel.style.removeProperty(k); else sel.style.setProperty(k, v); } changed(); post(info()); return; }
     if (m.op === 'parent') { if (sel.parentElement && sel.parentElement !== document.body) select(sel.parentElement); return; }
@@ -10138,16 +10148,18 @@ window.addEventListener('message', async e => {
   if (m.type === 'nav-state' && FF.reEdit && FF.navRestore == null) { FF.reEdit = false; setTimeout(() => { if (FF.design && !FF.edit.on) ffEditSetMode(true); }, 150); }
   if (m.type === 'nav-state') { const n = +m.n || 0, i = +m.i || 0; if (FF.navRestore != null && n >= 2 && FF.navRestore !== i && FF.navRestore < n) { const to = FF.navRestore; FF.navRestore = null; e.source.postMessage({ jeemEdit: 1, type: 'nav', index: to }, '*'); return; } FF.navRestore = null; FF.nav = { i, n }; ffRenderScope(); if (FF.overflowCheck) { FF.overflowCheck = false; const src = e.source; setTimeout(() => src.postMessage({ jeemEdit: 1, type: 'check-overflow' }, '*'), 600); } el('ff-slide-nav').classList.toggle('hidden', n < 2); el('ff-nav-count').textContent = `${(i + 1).toLocaleString('en-US')} / ${n.toLocaleString('en-US')}`; el('ff-nav-prev').disabled = i <= 0; el('ff-nav-next').disabled = i >= n - 1; return; }
   if (m.type === 'slide-added') { ffslAdded(m); return; }
+  if (m.type === 'slide-removed') { ffslRemoved(m); return; }
   if (m.type === 'html' && FF.edit.pending && m.purpose !== 'ask') {
     FF.edit.pending = null; const html = m.html || '';
     try {
       const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, note: FF.edit.slideNote ? FF.edit.slideNote : FF.edit.designDirty ? 'تعديل تصميم مباشر من مساحة العمل (أدوات وخصائص)' : FF.edit.imgDirty ? (FF.edit.dirty ? 'تعديل نصوص وصور مباشر من مساحة العمل' : 'تغيير صور مباشر من مساحة العمل') : 'تعديل نصي مباشر من مساحة العمل' }) });
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
       FF.html = html; FF.viewing = null; if (d.versions) FF.versions = d.versions; if (d.version) FF.design.version = d.version;
-      const slideNote = FF.edit.slideNote; FF.edit.slideNote = null;
+      const slideNote = FF.edit.slideNote, removed = FF.edit.slideRemoved; FF.edit.slideNote = null; FF.edit.slideRemoved = false;
       ffEditSetMode(false, true); if (slideNote) FF.reEdit = true; ffRender();
-      ffPushMsg('bot', slideNote ? `➕ ${slideNote}${d.version ? ` (الإصدار ${d.version})` : ''} — عدّل نصوصها وصورها مباشرة.` : `حُفظ تعديلك المباشر${d.version ? ` (الإصدار ${d.version})` : ''}.`, slideNote && d.version > 1 ? `<button type="button" class="ff-undo-msg" data-undo="${d.version - 1}" data-from="${d.version}">↶ تراجع عن إضافة الشريحة</button>` : undefined);
-    } catch (err) { FF.edit.slideNote = null; FF.navTarget = null; ffPushMsg('err', 'تعذّر حفظ التعديل: ' + err.message); el('ff-edit-save').disabled = false; }
+      const ver = d.version ? ` (الإصدار ${d.version})` : '';
+      ffPushMsg('bot', slideNote ? (removed ? `🗑 ${slideNote}${ver}.` : `➕ ${slideNote}${ver} — عدّل نصوصها وصورها مباشرة.`) : `حُفظ تعديلك المباشر${ver}.`, slideNote && d.version > 1 ? `<button type="button" class="ff-undo-msg" data-undo="${d.version - 1}" data-from="${d.version}">↶ تراجع عن ${removed ? 'حذف' : 'إضافة'} الشريحة</button>` : undefined);
+    } catch (err) { FF.edit.slideNote = null; FF.edit.slideRemoved = false; FF.navTarget = null; ffPushMsg('err', 'تعذّر حفظ التعديل: ' + err.message); el('ff-edit-save').disabled = false; }
     finally { el('ff-edit-save').textContent = 'حفظ كإصدار جديد'; }
   }
 });
@@ -11020,6 +11032,22 @@ function ffslAdded(m) {
   el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now();
   el('ff-preview').contentWindow.postMessage({ jeemEdit: 1, type: 'get' }, '*');
 }
+function ffslRemove() {
+  if (!FF.design || !FF.edit.on || FF.edit.pending) return;
+  const n = FF.nav && FF.nav.n || 0, i = FF.nav && FF.nav.i || 0;
+  if (n < 2) { ffPushMsg('err', 'لا يمكن حذف الشريحة الوحيدة في العرض.'); return; }
+  if (!confirm(`حذف الشريحة ${i + 1} من ${n}؟ يُحفظ العرض إصدارًا جديدًا ويمكنك التراجع من المحادثة.`)) return;
+  FF.edit.slideNote = `حُذفت الشريحة ${i + 1}`; FF.edit.slideRemoved = true;
+  ffdPost({ op: 'slide-remove' });
+}
+function ffslRemoved(m) {
+  if (m.error || m.index == null || m.index < 0) { FF.edit.slideNote = null; FF.edit.slideRemoved = false; ffPushMsg('err', m.error || 'تعذّر حذف الشريحة.'); return; }
+  FF.edit.slideNote = `حُذفت الشريحة ${m.index + 1}`;
+  FF.navTarget = Math.min(m.index, Math.max(0, (m.n || 1) - 1)); // الشريحة التي حلّت مكانها (أو الأخيرة)
+  el('ff-edit-save').disabled = true; el('ff-edit-save').textContent = 'يحفظ…'; FF.edit.pending = Date.now();
+  el('ff-preview').contentWindow.postMessage({ jeemEdit: 1, type: 'get' }, '*');
+}
+el('ffd-slide-del').addEventListener('click', ffslRemove);
 function openFfSlideModal() { if (!FF.design || !FF.edit.on) return; FFSL.tab = 'blank'; FFSL.tpl = null; FFSL.q = ''; FFSL.cat = 'all'; FFSL.busy = false; el('ff-slide-modal').classList.remove('hidden'); ffslRender(); el('ffsl-close').focus(); }
 function closeFfSlideModal() { FFSL.gen = (FFSL.gen || 0) + 1; el('ff-slide-modal').classList.add('hidden'); el('ffsl-body').innerHTML = ''; }
 el('ffd-slide').addEventListener('click', openFfSlideModal);
@@ -11031,7 +11059,7 @@ function ffdPost(m) { const w = el('ff-preview').contentWindow; if (w) w.postMes
 function ffdShow(on) {
   if (on) { FFD.insp = !matchMedia('(max-width: 640px)').matches; el('ffd-insp-btn').setAttribute('aria-pressed', FFD.insp ? 'true' : 'false'); } // على الجوال تُفتح اللوحة من زرها فلا تغطي المعاينة
   const hasSlides = !!(FF.design && (FF.design.kind === 'slides' || (FF.nav && FF.nav.n >= 2)));
-  el('ffd-slide').classList.toggle('hidden', !hasSlides); el('ffd-slide-sep').hidden = !hasSlides;
+  el('ffd-slide').classList.toggle('hidden', !hasSlides); el('ffd-slide-del').classList.toggle('hidden', !hasSlides); el('ffd-slide-sep').hidden = !hasSlides;
   el('ff-dtools').classList.toggle('hidden', !on); el('ffd-shape-menu').classList.add('hidden'); el('ffd-shape-btn').setAttribute('aria-expanded', 'false');
   if (!on) { FFD.info = null; el('ff-insp').classList.add('hidden'); el('ff-insp').innerHTML = ''; }
 }

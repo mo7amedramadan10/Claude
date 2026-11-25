@@ -4042,6 +4042,8 @@ html[dir="ltr"] .jeem-scope .ff-nav-ch { display: inline-block; transform: scale
 .jeem-scope .ff-dtools.hidden { display: none; }
 .jeem-scope .ffd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 36px; height: 36px; padding: 0 6px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); cursor: pointer; font: 600 16px/1 var(--font, inherit); }
 .jeem-scope .ffd-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.jeem-scope .ffd-btn.ffd-danger svg { color: var(--danger, #C0392B); }
+.jeem-scope .ffd-btn.ffd-danger:hover { background: color-mix(in srgb, var(--danger, #C0392B) 10%, transparent); }
 .jeem-scope .ffd-btn:focus-visible { outline: 2px solid var(--brand, #2A78D6); outline-offset: 1px; }
 .jeem-scope .ffd-btn[aria-pressed="true"] { background: color-mix(in srgb, var(--brand, #2A78D6) 14%, transparent); color: var(--brand, #2A78D6); }
 .jeem-scope .ffd-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
