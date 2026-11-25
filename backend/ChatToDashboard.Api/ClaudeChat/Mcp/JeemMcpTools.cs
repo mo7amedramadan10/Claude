@@ -48,7 +48,7 @@ public sealed class JeemMcpTools
     [McpServerTool(Name = "describe_table", ReadOnly = true, Idempotent = true),
      Description("أعمدة جدول واحد وأنواعها، ومعنى كل عمود إن كان معروفًا (مثل revenue أو deal_status)، وعينة 5 صفوف. يقبل اسمًا من نتيجة list_tables فقط.")]
     public async Task<string> DescribeTable(
-        [Description("اسم الجدول كما ظهر في list_tables (مثل proj_ab12.Sales)")] string table, CancellationToken ct)
+        [Description("اسم الجدول كما ظهر في list_tables (مثل ent_ab12.Sales)")] string table, CancellationToken ct)
     {
         var session = Session;
         if (!Budget(session, out var stop)) return stop!;

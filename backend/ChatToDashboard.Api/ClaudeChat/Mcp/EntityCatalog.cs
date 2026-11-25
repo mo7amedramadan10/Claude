@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace ChatToDashboard.Api.ClaudeChat.Mcp;
 
-/// <summary>جدول متاح لمستخدم محادثة Claude: ملف من مشروعه (<c>proj_&lt;id&gt;.X</c>) أو نظام خارجي مفعَّل (<c>dbo.sys_X</c>).</summary>
+/// <summary>جدول متاح لمستخدم محادثة Claude: ملف من مشروعه (<c>ent_&lt;id&gt;.X</c>) أو نظام خارجي مفعَّل (<c>dbo.sys_X</c>).</summary>
 public sealed record McpTable(string Name, string Schema, string Bare, string Kind, string? Source, int? Rows);
 
 /// <summary>

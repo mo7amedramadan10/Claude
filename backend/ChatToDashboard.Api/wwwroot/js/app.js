@@ -775,8 +775,8 @@ function widgetShell(w, extraClass) {
   if (w.source && extraClass !== 'kpi') {
     const src = document.createElement('p');
     src.className = 'widget-src';
-    // اسم المخطط الداخلي proj_<id>. لا يعني المستخدم شيئًا فيُحذف من السطر المختصر فقط.
-    src.textContent = firstSentence(w.source.replace(/\bproj_[0-9a-f]{32}\./g, ''), 110);
+    // اسم المخطط الداخلي ent_<id> (proj_<id> قبل 2026-11-25). لا يعني المستخدم شيئًا فيُحذف من السطر المختصر فقط.
+    src.textContent = firstSentence(w.source.replace(/\b(?:ent|proj)_[0-9a-f]{32}\./g, ''), 110);
     titleWrap.appendChild(src);
   }
   head.appendChild(titleWrap);
@@ -4160,7 +4160,7 @@ function computeDashboardSources(widgets) {
   };
   (widgets || []).forEach(collect);
   return [...tables]
-    .map(t => state.tableLabels[t] || t.replace(/\bproj_[0-9a-f]{32}\./, ''))
+    .map(t => state.tableLabels[t] || t.replace(/\b(?:ent|proj)_[0-9a-f]{32}\./, ''))
     .sort((a, b) => a.localeCompare(b, 'ar'));
 }
 // ---------- Part 2: Active-dashboard status badges (state + role) ----------

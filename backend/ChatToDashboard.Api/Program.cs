@@ -423,6 +423,10 @@ using (var scope = app.Services.CreateScope())
     // الترحيل داخل معاملة فلا يترك القاعدة نصف مُرحَّلة؛ أصلح السبب في السجل ثم أعد التشغيل.
     try { await dataStore.MigrateProjectToEntityAsync(logger); }
     catch (Exception ex) { logger.LogCritical(ex, "Project→Entity rename migration failed — startup stopped to avoid creating empty Entity tables next to the old ones."); throw; }
+    // مخططات بيانات الكيانات proj_<id> ← ent_<id> مع إعادة كتابة أسماء الجداول المحفوظة نصًّا (DataStore.MigrateEntitySchemasAsync).
+    // فشله يوقف الإقلاع للسبب نفسه: بدونه يبحث التطبيق عن الملفات في ent_ فتبدو مفقودة وتُنشأ رفعات جديدة في مخطط آخر.
+    try { await dataStore.MigrateEntitySchemasAsync(logger); }
+    catch (Exception ex) { logger.LogCritical(ex, "Entity schema migration (proj_ → ent_) failed — startup stopped; nothing was changed (single transaction)."); throw; }
 
     // SaaS hierarchy (Platform → Organization → Entity — see Organizations/Projects): every
     // install needs at least a default organization and project for its existing/first users

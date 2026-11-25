@@ -104,7 +104,7 @@ public class DataStore
     }
 
     /// <summary>ترحيل «المشروع» إلى «الكيان» في القاعدة عند الإقلاع، قبل أي مخزن (وإلا أنشأ مخزن عمودًا جديدًا فارغًا بجوار القديم).
-    /// مخططات بيانات الكيانات (proj_&lt;id&gt;) لا تُمس هنا. فشله يُسجَّل ولا يوقف الإقلاع.</summary>
+    /// مخططات بيانات الكيانات تُرحَّل في MigrateEntitySchemasAsync.</summary>
     public async Task MigrateProjectToEntityAsync(ILogger logger, CancellationToken ct = default)
     {
         await using var connection = await OpenConnectionAsync(ct);
@@ -126,6 +126,116 @@ public class DataStore
         }
         await tx.CommitAsync(ct);
         logger.LogWarning("Migrated {Count} legacy Project names to Entity (tables Projects/ProjectRoles and ProjectId/ProjectKey columns).", pending);
+    }
+
+    /// <summary>جداول التطبيق التي قد تحمل أسماء جداول الكيانات نصًّا (SQL اللوحات والتصاميم والعروض، أسماء الملفات، المعاني…) — قائمة صريحة
+    /// (لا تُمس جداول dbo التي ليست من التطبيق). مستثنى: usage_Log (سجل تاريخي ضخم لا يؤثر على عمل شيء) وجداول الحسابات والمفاتيح والإعدادات.</summary>
+    internal static readonly string[] EntitySchemaTextTables =
+    {
+        "AnalystConversations", "AnalystMessages", "AnalystResultSources", "AnalystResults", "BrandIdentities", "ClaudeChatMessages", "ClaudeChats",
+        "ColumnSemantics", "DashboardHistory", "DeckBrandTemplates", "Decks", "ExternalIntegrations", "FreeformAssets", "FreeformDesigns",
+        "FreeformMessages", "FreeformQueries", "FreeformRecords", "FreeformTemplates", "FreeformVersions", "GraphEdges", "GraphNodes",
+        "InquiryConversations", "IntegrationPublishLog", "PresentationData", "Presentations", "PromptTemplateOverrides", "PublishedDashboardSlots",
+        "PublishedDashboards", "SchemaAliasEntries", "SharedDashboard", "WidgetDataFilters", "repo_FilePermissions", "repo_FileRelationships", "repo_Files",
+    };
+
+    /// <summary>مخطط النسخ الاحتياطية للصفوف التي يغيّرها ترحيل المخططات — خارج dbo فلا يراها الموديل ولا كتالوج البيانات.</summary>
+    internal const string EntitySchemaBackup = "bak_proj2ent";
+
+    /// <summary>معرّف كيان صالح من اسم مخطط قديم (<c>proj_&lt;hex&gt;</c>)، وإلا null.</summary>
+    internal static string? LegacySchemaEntityId(string schema)
+        => schema.StartsWith(LegacyEntitySchemaPrefix, StringComparison.Ordinal) && schema.Length > LegacyEntitySchemaPrefix.Length
+           && IsValidEntityId(schema[LegacyEntitySchemaPrefix.Length..]) ? schema[LegacyEntitySchemaPrefix.Length..] : null;
+
+    /// <summary>
+    /// ترحيل مخططات بيانات الكيانات عند الإقلاع: <c>proj_&lt;id&gt;</c> ← <c>ent_&lt;id&gt;</c>. داخل معاملة واحدة:
+    /// (1) نسخة احتياطية في <see cref="EntitySchemaBackup"/> لكل صف في جداول <see cref="EntitySchemaTextTables"/> فيه «proj_» (مرة واحدة لكل جدول)؛
+    /// (2) استبدال «proj_&lt;id&gt;» بـ«ent_&lt;id&gt;» حرفيًا لكل معرّف كيان في كل الأعمدة النصية لتلك الجداول (SQL محفوظ، أسماء جداول، صفحات منشورة…)؛
+    /// (3) إنشاء <c>ent_&lt;id&gt;</c> ونقل كل جدول إليه بـ ALTER SCHEMA TRANSFER (البيانات والفهارس كما هي) مع وصف المخطط، ثم حذف القديم إن فرغ.
+    /// يعيد التشغيل بأمان (لا مخطط قديم ← لا شيء). فشله يوقف الإقلاع (انظر Program.cs).
+    /// </summary>
+    public async Task MigrateEntitySchemasAsync(ILogger logger, CancellationToken ct = default)
+    {
+        await using var connection = await OpenConnectionAsync(ct);
+        var ids = new List<string>();
+        await using (var list = connection.CreateCommand())
+        {
+            list.CommandText = "SELECT name FROM sys.schemas WHERE name LIKE 'proj[_]%'";
+            await using var reader = await list.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct)) if (LegacySchemaEntityId(reader.GetString(0)) is { } id) ids.Add(id);
+        }
+        if (ids.Count == 0) return;
+
+        await using var tx = (SqlTransaction)await connection.BeginTransactionAsync(ct);
+        async Task Exec(string sql, params SqlParameter[] ps)
+        {
+            await using var c = connection.CreateCommand();
+            c.Transaction = tx; c.CommandTimeout = 600; c.CommandText = sql; c.Parameters.AddRange(ps);
+            await c.ExecuteNonQueryAsync(ct);
+        }
+        async Task<List<string>> Strings(string sql, params SqlParameter[] ps)
+        {
+            var r = new List<string>();
+            await using var c = connection.CreateCommand();
+            c.Transaction = tx; c.CommandTimeout = 600; c.CommandText = sql; c.Parameters.AddRange(ps);
+            await using var rd = await c.ExecuteReaderAsync(ct);
+            while (await rd.ReadAsync(ct)) r.Add(rd.GetString(0));
+            return r;
+        }
+
+        // (1) و(2) النصوص المحفوظة
+        await Exec($"IF SCHEMA_ID('{EntitySchemaBackup}') IS NULL EXEC('CREATE SCHEMA [{EntitySchemaBackup}]')");
+        var rewritten = 0;
+        foreach (var table in EntitySchemaTextTables)
+        {
+            var cols = await Strings("""
+                SELECT c.name FROM sys.columns c JOIN sys.types ty ON ty.user_type_id = c.user_type_id
+                WHERE c.object_id = OBJECT_ID(@t) AND ty.name IN ('nvarchar', 'varchar')
+                """, new SqlParameter("@t", "dbo." + table));
+            if (cols.Count == 0) continue;
+            var any = string.Join(" OR ", cols.Select(c => $"[{c}] LIKE N'%proj[_]%'"));
+            await Exec($"IF OBJECT_ID('{EntitySchemaBackup}.{table}') IS NULL AND EXISTS (SELECT 1 FROM [dbo].[{table}] WHERE {any}) SELECT * INTO [{EntitySchemaBackup}].[{table}] FROM [dbo].[{table}] WHERE {any}");
+            foreach (var id in ids)
+            {
+                var set = string.Join(", ", cols.Select(c => $"[{c}] = REPLACE([{c}], @old, @new)"));
+                var where = string.Join(" OR ", cols.Select(c => $"[{c}] LIKE @pat"));
+                await using var c = connection.CreateCommand();
+                c.Transaction = tx; c.CommandTimeout = 600;
+                c.CommandText = $"UPDATE [dbo].[{table}] SET {set} WHERE {where}";
+                c.Parameters.Add(new SqlParameter("@old", LegacyEntitySchemaPrefix + id));
+                c.Parameters.Add(new SqlParameter("@new", EntitySchemaPrefix + id));
+                c.Parameters.Add(new SqlParameter("@pat", "%" + "proj[_]" + id + "%"));
+                rewritten += await c.ExecuteNonQueryAsync(ct);
+            }
+        }
+
+        // (3) المخططات
+        var moved = 0;
+        foreach (var id in ids)
+        {
+            string from = LegacyEntitySchemaPrefix + id, to = EntitySchemaPrefix + id;
+            await Exec($"IF SCHEMA_ID('{to}') IS NULL EXEC('CREATE SCHEMA [{to}]')");
+            await Exec($"""
+                IF EXISTS (SELECT 1 FROM fn_listextendedproperty(N'MS_Description', N'SCHEMA', N'{from}', NULL, NULL, NULL, NULL))
+                   AND NOT EXISTS (SELECT 1 FROM fn_listextendedproperty(N'MS_Description', N'SCHEMA', N'{to}', NULL, NULL, NULL, NULL))
+                BEGIN
+                  DECLARE @d sql_variant = (SELECT value FROM fn_listextendedproperty(N'MS_Description', N'SCHEMA', N'{from}', NULL, NULL, NULL, NULL));
+                  EXEC sp_addextendedproperty @name = N'MS_Description', @value = @d, @level0type = N'SCHEMA', @level0name = N'{to}';
+                END
+                """);
+            var tables = await Strings("SELECT o.name FROM sys.objects o WHERE o.schema_id = SCHEMA_ID(@s) AND o.type IN ('U', 'V')", new SqlParameter("@s", from));
+            foreach (var t in tables)
+            {
+                var exists = await Strings("SELECT o.name FROM sys.objects o WHERE o.schema_id = SCHEMA_ID(@s) AND o.name = @n", new SqlParameter("@s", to), new SqlParameter("@n", t));
+                if (exists.Count > 0) { logger.LogWarning("Entity schema migration: {To}.{Table} already exists; {From}.{Table} left in place.", to, t, from, t); continue; }
+                await Exec($"ALTER SCHEMA [{to}] TRANSFER [{from}].[{t.Replace("]", "]]")}]");
+                moved++;
+            }
+            await Exec($"IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE schema_id = SCHEMA_ID('{from}')) EXEC('DROP SCHEMA [{from}]')");
+        }
+        await tx.CommitAsync(ct);
+        logger.LogWarning("Entity schema migration: {Schemas} proj_ schema(s) → ent_, {Tables} table(s) moved, {Rows} stored row(s) rewritten (originals backed up in [{Backup}]).",
+            ids.Count, moved, rewritten, EntitySchemaBackup);
     }
 
     public async Task MigrateLegacyStagingSchemaAsync(ILogger logger, CancellationToken ct = default)
@@ -172,7 +282,7 @@ public class DataStore
         if (moved > 0)
         {
             // أسماء جداول الملفات المحفوظة في الفهرس بالبادئة القديمة (ملفات المخطط المشترك فقط؛ ملفات المشاريع
-            // تحمل proj_<id>. ولا تتأثر).
+            // تحمل ent_<id>. ولا تتأثر).
             await using var rename = connection.CreateCommand();
             rename.CommandText =
                 $"IF OBJECT_ID('{SqlServerSchema}.repo_Files') IS NOT NULL " +
@@ -206,10 +316,14 @@ public class DataStore
     internal string EntitySchema(string? entityId)
     {
         if (string.IsNullOrWhiteSpace(entityId) || !IsValidEntityId(entityId)) return SqlServerSchema;
-        return "proj_" + entityId;
+        return EntitySchemaPrefix + entityId;
     }
 
-    private static bool IsValidEntityId(string entityId) =>
+    /// <summary>بادئة مخطط بيانات الكيان (كانت <c>proj_</c> حتى 2026-11-25 — انظر <see cref="MigrateEntitySchemasAsync"/>).</summary>
+    internal const string EntitySchemaPrefix = "ent_";
+    internal const string LegacyEntitySchemaPrefix = "proj_";
+
+    internal static bool IsValidEntityId(string entityId) =>
         entityId.Length is > 0 and <= 64 && entityId.All(char.IsAsciiHexDigit);
 
     /// <summary>Quoted table reference for generated DDL/DML.</summary>
@@ -217,7 +331,7 @@ public class DataStore
         $"[{schema}].[{tableName.Replace("]", "]]")}]";
 
     /// <summary>Same as the two-argument overload, but for a display name already carrying its
-    /// own schema (e.g. "proj_xxx.Sales" or "dbo.Sales") — as returned by
+    /// own schema (e.g. "ent_xxx.Sales" or "dbo.Sales") — as returned by
     /// <see cref="GetSchemaAsync"/>, never built from client input. Generic over whichever
     /// schema the name actually carries (shared or any project's), so callers never need to
     /// know or re-derive which one a given table lives in.</summary>
@@ -342,9 +456,9 @@ public class DataStore
     /// by; no eager hook at project-creation time.</summary>
     /// <param name="entityName">When given, stamped onto the schema as its MS_Description
     /// extended property (what SSMS/Object Explorer shows as the schema's description/tooltip),
-    /// purely so a human browsing the database can tell which project <c>proj_&lt;id&gt;</c>
+    /// purely so a human browsing the database can tell which project <c>ent_&lt;id&gt;</c>
     /// belongs to without a lookup. Never affects the schema's own name — every query, DDL
-    /// statement and the LLM's own prompt keep referencing the short, stable <c>proj_&lt;id&gt;</c>
+    /// statement and the LLM's own prompt keep referencing the short, stable <c>ent_&lt;id&gt;</c>
     /// form; embedding the (often Arabic, always mutable) display name into the identifier
     /// itself would make every generated query longer and would orphan the name the moment the
     /// project is renamed. Kept up to date on every call (not just the first) via

@@ -33,7 +33,7 @@ public static class ReadOnlySqlValidator
     private static readonly Regex Keywords = new(@"^(SELECT|WHERE|GROUP|ORDER|HAVING|ON|AND|OR|NOT|IN|EXISTS|VALUES|TOP|DISTINCT|ALL|UNION|EXCEPT|INTERSECT|CROSS|OUTER|INNER|LEFT|RIGHT|FULL|JOIN|AS|CASE|WHEN|THEN|ELSE|END|NULL|OFFSET|FETCH|OPTION|PIVOT|UNPIVOT|TABLESAMPLE|WITH)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>يدقّق الاستعلام ويعيده بعد فرض TOP. <paramref name="allowed"/>: الجداول المسموحة بشكل
-    /// <c>schema.name</c> (مثل <c>proj_ab12.Sales</c> أو <c>dbo.sys_procurement</c>).</summary>
+    /// <c>schema.name</c> (مثل <c>ent_ab12.Sales</c> أو <c>dbo.sys_procurement</c>).</summary>
     public static SqlValidation Validate(string? sql, IReadOnlyCollection<string> allowed, int maxRows = 500)
     {
         if (string.IsNullOrWhiteSpace(sql)) return SqlValidation.Reject("الاستعلام فارغ.");
