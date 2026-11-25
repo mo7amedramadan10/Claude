@@ -917,6 +917,14 @@
   <div class="modal share-modal-box ffmo-box">
     <div class="ffmo-head"><h3 id="ffmo-heading">إدراج حركة</h3><button type="button" class="ffmo-x" id="ffmo-close" aria-label="إغلاق">✕</button></div>
     <p class="modal-note">اختر تصميمًا من نوع «حركة» في المشروع. تُنسخ الحركة داخل الشريحة فتعمل وحدها كلما ظهرت الشريحة، وفي الرابط المنشور.</p>
+    <form id="ffmo-ask" class="ffmo-ask">
+      <div class="ffmo-ask-h"><b>✨ اطلب من جيم حركة لهذه الشريحة</b><span class="muted">يبنيها من محتوى الشريحة وألوانها، وتُحفظ أيضًا في تصاميمك من نوع «حركة»</span></div>
+      <div class="ffmo-ask-row"><label class="sr-only" for="ffmo-prompt">ماذا تشرح الحركة؟ (اختياري)</label>
+        <textarea id="ffmo-prompt" rows="2" maxlength="1500" placeholder="اختياري — مثل: اشرح الأرقام بالتدريج وانتهِ بالنتيجة"></textarea>
+        <button type="submit" class="btn btn-primary" id="ffmo-gen">ابنِ الحركة</button></div>
+      <div id="ffmo-wait" class="ffmo-wait" hidden></div>
+    </form>
+    <div class="ffmo-or" aria-hidden="true"><span>أو اختر من تصاميم الحركة</span></div>
     <label class="sr-only" for="ffmo-q">بحث في تصاميم الحركة</label>
     <input id="ffmo-q" class="ffmo-q" type="search" placeholder="ابحث بالعنوان…" autocomplete="off">
     <div id="ffmo-body" class="ffmo-body"></div>

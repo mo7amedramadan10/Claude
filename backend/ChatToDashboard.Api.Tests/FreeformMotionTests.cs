@@ -21,6 +21,30 @@ public class FreeformMotionTests
     }
 
     [Fact]
+    public void SlideMotionMessage_CarriesSlideContent_Colors_Prompt_AndLanguage()
+    {
+        var r = new ChatToDashboard.Api.Controllers.FreeformSlideMotionRequest
+        {
+            SlideText = "الإيرادات 12 مليون\nنمو 18٪", SlideTitle = "نتائج الربع", Prompt = "اشرح النمو بالتدريج",
+            SelectedText = "صورة: رسم الإيرادات", Colors = new() { "#1b7f4b", "#0a2540" }, Font = "Tajawal, sans-serif"
+        };
+        var m = ChatToDashboard.Api.Controllers.FreeformController.SlideMotionMessage(r, "ar");
+        Assert.Contains("داخل شريحة", m);
+        Assert.Contains("الإيرادات 12 مليون", m);
+        Assert.Contains("«نتائج الربع»", m);
+        Assert.Contains("#1b7f4b", m);
+        Assert.Contains("Tajawal", m);
+        Assert.Contains("اشرح النمو بالتدريج", m);
+        Assert.Contains("رسم الإيرادات", m);
+        Assert.Contains("data-in=\"count\"", m);
+        Assert.DoesNotContain("English", m);
+        Assert.Contains("English", ChatToDashboard.Api.Controllers.FreeformController.SlideMotionMessage(new() { SlideText = "Revenue" }, "en"));
+        // نص طويل جدًا يُقتطع
+        var big = ChatToDashboard.Api.Controllers.FreeformController.SlideMotionMessage(new() { SlideText = new string('x', 20000) }, "ar");
+        Assert.True(big.Length < 9000);
+    }
+
+    [Fact]
     public void EmbeddedMotion_InSlide_KeepsSlideCount_AndGetsEngineOnPublish()
     {
         // حركة مُضمَّنة في شريحة: مشاهدها بلا data-slide فلا تُعدّ شرائح، والنشر يحقن المحرّك لأنها بعقده

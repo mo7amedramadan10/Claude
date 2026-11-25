@@ -27,6 +27,17 @@ public class FreeformUsePageRequest { public string? Title { get; set; } public 
     public string? Lang { get; set; } }
 public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } /// <summary>نموذج النوع الجديد المختار من معرضه (اختياري).</summary>
     public string? TemplateKey { get; set; } }
+/// <summary>«اطلب من جيم حركة لهذه الشريحة»: نص الشريحة الظاهرة وألوانها وخطها من المحرر، وطلب المستخدم الاختياري.</summary>
+public class FreeformSlideMotionRequest
+{
+    public string? Prompt { get; set; }
+    public string SlideText { get; set; } = "";
+    public string? SlideTitle { get; set; }
+    public string? SelectedText { get; set; }
+    public List<string>? Colors { get; set; }
+    public string? Font { get; set; }
+    public string? Lang { get; set; }
+}
 /// <summary>تحويل لوحة محادثة (مواصفتها كاملة بعناصرها وبياناتها) إلى تصميم حر من نوع معيّن — «لوحات المتابعة» داخل تصميم حر.</summary>
 public class FreeformFromDashboardRequest { public string Kind { get; set; } = "dashboard"; public string? Title { get; set; } public System.Text.Json.JsonElement Dashboard { get; set; } public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } public string? TemplateKey { get; set; } }
 
@@ -373,6 +384,56 @@ public partial class FreeformController : ControllerBase
         => string.IsNullOrWhiteSpace(key) ? null : FreeformTemplates.Find(key) ?? await _dashTemplates.FindAsync(key, ct) ?? await _templates.GetAsync(key, projectId, ct);
 
     /// <summary>تحويل تصميم إلى نوع آخر (مستند ← شرائح…): تصميم جديد من النوع المطلوب بالمحتوى نفسه، والأصل يبقى كما هو.</summary>
+    /// <summary>
+    /// حركة تُبنى لشريحة بعينها: نداء بناء «حركة» عادي (بعقد المحرّك والفحص والمحاولة الثانية، وبيانات المشروع عبر query_data) يتلقّى محتوى الشريحة
+    /// وألوانها، ويُحفظ الناتج تصميم «حركة» مستقلًا في مشروع العرض (يُعاد استخدامه ويُعدَّل ويُحدَّث منه لاحقًا)؛ الإدراج في الشريحة يتم في المحرر.
+    /// </summary>
+    [HttpPost("{id}/slide-motion")]
+    public async Task<IActionResult> SlideMotion(string id, [FromBody] FreeformSlideMotionRequest request, CancellationToken ct)
+    {
+        var cur = await CurrentAsync(ct); if (cur is null) return Unauthorized();
+        var (user, selection) = cur.Value;
+        var (d, _, err) = await LoadAsync(id, user, selection, FreeformAccess.Edit, ct); if (err is not null) return err;
+        var stored = StoredSources(d);
+        if (stored is not null) selection = (await CurrentAsync(ct, stored))!.Value.Selection;
+        selection = InDesignProject(selection, d!);
+        var text = (request.SlideText ?? "").Trim();
+        if (text.Length == 0 && string.IsNullOrWhiteSpace(request.Prompt)) return BadRequest(new { error = "الشريحة بلا نص — اكتب ما تريد أن تشرحه الحركة." });
+        var lang = FreeformBuilder.LanguageOf(request.Lang, d!.Html);
+        var message = SlideMotionMessage(request, lang);
+        var context = await _tools.DescribeSourcesAsync(selection, ct);
+        var brand = await BrandAsync(selection.ProjectId, ct, d.IdentityId);
+        FreeformResult result;
+        try { result = await _builder.GenerateAsync(message, null, Array.Empty<FreeformMessage>(), context, brand, user, ct, "motion", null, lang); }
+        catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
+        if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل حركة — جرّب ثانية أو صف ما تريد بوضوح أكثر." });
+        var title = "حركة: " + (string.IsNullOrWhiteSpace(request.SlideTitle) ? d.Title : Clip(request.SlideTitle.Trim(), 60));
+        var motion = await _store.CreateAsync(selection.ProjectId, user.OrganizationId, user.Id, title, result.Html, message, "motion", null, ct, d.SourcesJson);
+        if (result.Queries is { Count: > 0 } q) await _store.SetQueriesAsync(motion.Id, q, DateTime.UtcNow, await _fingerprints.ComputeAsync(q.Select(x => x.Sql), selection.ProjectId, ct), ct);
+        await _store.AddMessageAsync(motion.Id, "user", $"حركة لشريحة «{(request.SlideTitle ?? "").Trim()}» في «{d.Title}»" + (string.IsNullOrWhiteSpace(request.Prompt) ? "" : $": {request.Prompt.Trim()}"), null, ct);
+        await _store.AddMessageAsync(motion.Id, "assistant", result.Reply, motion.Version, ct);
+        return Ok(new { design = motion, html = ApplyBrandAssets(motion.Html, brand), reply = result.Reply });
+    }
+
+    private static string Clip(string s, int n) => s.Length <= n ? s : s[..n] + "…";
+
+    /// <summary>رسالة البناء لحركة داخل شريحة: تُعرض مصغَّرة في بلوك داخل الشريحة، فتشرح محتواها بنص قليل كبير وبألوانها وخطها.</summary>
+    internal static string SlideMotionMessage(FreeformSlideMotionRequest r, string lang)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("ابنِ حركة قصيرة (3–5 مشاهد، 15–30 ثانية) تُدرج **داخل شريحة في عرض تقديمي** فتشرح محتواها بصريًا خطوة بخطوة. ");
+        sb.Append("الحركة تُعرض مصغَّرة داخل بلوك في الشريحة (قد يكون ثلث الشريحة)، فاجعل النص قليلًا جدًا وكبيرًا (عنوان + سطر أو رقم في كل مشهد)، ");
+        sb.Append("والأرقام المهمة بـ data-in=\"count\"، والرسوم البسيطة بـ draw. المسرح وحده هو المهم: لا ترويسة ولا عنوان صفحة ولا تذييل خارج المسرح، وbody بلا هامش. ");
+        sb.Append("لا تكرر نص الشريحة حرفيًا: لخّصه وحوّله إلى قصة (ماذا، ولماذا، والنتيجة). لا تخترع أرقامًا ليست في الشريحة أو في بيانات المشروع.\n");
+        if (r.Colors is { Count: > 0 }) sb.Append("ألوان الشريحة (استخدمها لتنسجم الحركة معها، والخلفية فاتحة أو بلون الشريحة): ").Append(string.Join("، ", r.Colors.Take(6).Select(c => Clip(c, 24)))).Append("\n");
+        if (!string.IsNullOrWhiteSpace(r.Font)) sb.Append("خط الشريحة: ").Append(Clip(r.Font.Trim(), 120)).Append(" — استخدمه أولًا في font-family.\n");
+        if (!string.IsNullOrWhiteSpace(r.Prompt)) sb.Append("\n# طلب المستخدم\n").Append(Clip(r.Prompt.Trim(), 1500)).Append("\n");
+        if (!string.IsNullOrWhiteSpace(r.SelectedText)) sb.Append("\n# العنصر الذي ستحل الحركة مكانه (ركّز عليه)\n").Append(Clip(r.SelectedText.Trim(), 1500)).Append("\n");
+        sb.Append("\n# محتوى الشريحة").Append(string.IsNullOrWhiteSpace(r.SlideTitle) ? "" : $" «{Clip(r.SlideTitle.Trim(), 120)}»").Append("\n").Append(Clip((r.SlideText ?? "").Trim(), 6000)).Append("\n");
+        if (lang == "en") sb.Append("\nThe slide is in English: write the motion in English.\n");
+        return sb.ToString();
+    }
+
     [HttpPost("{id}/convert")]
     public async Task<IActionResult> Convert(string id, [FromBody] FreeformConvertRequest request, CancellationToken ct)
     {

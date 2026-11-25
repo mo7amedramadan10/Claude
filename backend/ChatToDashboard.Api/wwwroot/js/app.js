@@ -9619,6 +9619,38 @@ function ffDesignKit() {
     });
     select(b); changed(); mountMotion(b);
   }
+  // محتوى الشريحة الظاهرة لـ«اطلب من جيم حركة لهذه الشريحة»: النص (بلا الحركات المُضمَّنة) والعنوان والألوان الأكثر حضورًا والخط
+  function slideInfo() {
+    var s = (sel && slideOf(sel)) || visibleSlide() || document.body;
+    var SKIP = '[data-jeem-motion-embed],script,style,.jm-bar,[data-jeem-replaced],#jeem-strip';
+    // النص بفواصل: كتلة جديدة = سطر جديد، وعقد النص المتجاورة (وعبر <br>) بمسافة — textContent يلصق الكلمات
+    function blockOf(n) { for (var e = n.parentElement; e && e !== s; e = e.parentElement) { var d = getComputedStyle(e).display; if (d !== 'inline' && d !== 'contents') return e; } return s; }
+    var out = [], lastBlock = null, w = document.createTreeWalker(s, NodeFilter.SHOW_TEXT), n;
+    while ((n = w.nextNode())) {
+      var t = n.nodeValue.replace(/\s+/g, ' ').trim(); if (!t || (n.parentElement && n.parentElement.closest(SKIP))) continue;
+      var b = blockOf(n); out.push(lastBlock && b !== lastBlock ? '\n' + t : (out.length ? ' ' + t : t)); lastBlock = b;
+    }
+    var text = out.join('').replace(/\n{2,}/g, '\n').trim().slice(0, 6000);
+    var h = s.querySelector('h1,h2,h3');
+    // الألوان: الملوّنة أولًا (التعبئات والتدرّجات والعناوين) بوزن المساحة، ثم لون خلفية محايد واحد
+    var freq = {}, sr = s.getBoundingClientRect(), sa = Math.max(1, sr.width * sr.height);
+    function add(c, wt) { var x = hex(c); if (x) freq[x] = (freq[x] || 0) + wt; }
+    // تعبئة SVG بتدرّج url(#id): ألوان محطاته
+    function paint(v, wt) { var m = /url\(["']?#([^"')]+)/.exec(v || ''); if (!m) { add(v, wt); return; } var g = document.getElementById(m[1]); if (!g) return; var st = g.querySelectorAll('stop'); [].slice.call(st).forEach(function (x) { add(getComputedStyle(x).stopColor, wt / Math.max(1, st.length)); }); }
+    function addAll(str, wt) { (String(str || '').match(/rgba?\([^)]*\)/g) || []).forEach(function (c) { add(c, wt); }); }
+    [s].concat([].slice.call(s.querySelectorAll('*')).slice(0, 500)).forEach(function (e) {
+      if (e !== s && e.closest(SKIP)) return; var cs = getComputedStyle(e), r = e.getBoundingClientRect(), a = Math.min(1, r.width * r.height / sa);
+      if (a > 0.01) { add(cs.backgroundColor, a * 10); addAll(cs.backgroundImage, a * 10); }
+      if (/^H[1-4]$/.test(e.tagName)) add(cs.color, 3);
+      if (e.namespaceURI === 'http://www.w3.org/2000/svg' && a > 0.005) { paint(cs.fill, a * 10 + 0.5); paint(cs.stroke, 0.3); }
+    });
+    function sat(x) { var v = parseInt(x.slice(1), 16), r = v >> 16, g = (v >> 8) & 255, b2 = v & 255, mx = Math.max(r, g, b2), mn = Math.min(r, g, b2); return mx ? (mx - mn) / mx : 0; }
+    var keys = Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; });
+    var colors = keys.filter(function (x) { return sat(x) >= 0.25; }).slice(0, 5), neutral = keys.filter(function (x) { return sat(x) < 0.25; })[0];
+    if (neutral) colors.push(neutral);
+    var picked = sel && sel !== s && slotOf(sel) ? sel : null, st = picked ? ((picked.tagName === 'IMG' ? 'صورة: ' + (picked.alt || '') + ' ' : '') + (picked.innerText || picked.textContent || '')).replace(/\s+/g, ' ').trim().slice(0, 1500) : '';
+    post({ type: 'd-slide', text: text, title: h ? (h.innerText || h.textContent).replace(/\s+/g, ' ').trim().slice(0, 120) : '', colors: colors, font: getComputedStyle(h || s).fontFamily, selectedText: st, lang: (document.documentElement.lang || '').slice(0, 2) });
+  }
   function motionCfg(m) {
     var mb = motionOf(sel); if (!mb) return;
     var A = ['data-autoplay', 'data-loop', 'data-controls'], old = A.map(function (a) { return mb.getAttribute(a); });
@@ -9687,6 +9719,7 @@ function ffDesignKit() {
     if (m.op === 'slide-add') return slideAdd(m);
     if (m.op === 'slide-remove') return slideRemove();
     if (m.op === 'motion') return insertMotion(m);
+    if (m.op === 'slide-info') return slideInfo();
     if (!sel) return;
     if (m.op === 'motion-cfg') return motionCfg(m);
     if (m.op === 'style') { pushStyle(sel); for (var k in m.props) { var v = m.props[k]; if (v === '' || v == null) sel.style.removeProperty(k); else sel.style.setProperty(k, v); } changed(); post(info()); return; }
@@ -11202,7 +11235,7 @@ async function ffmoHtml(id) {
 }
 async function openFfMotionModal() {
   if (!FF.design || !FF.edit.on) return;
-  const gen = ++FFMO.gen; FFMO.sel = null; FFMO.q = ''; FFMO.busy = false; el('ffmo-q').value = '';
+  const gen = ++FFMO.gen; FFMO.sel = null; FFMO.q = ''; el('ffmo-q').value = ''; if (!FFMO.busy) { el('ffmo-prompt').value = ''; el('ffmo-gen').disabled = false; }
   const slot = !!(FFD.info && FFD.info.slot) || !!(FFD.info && FFD.info.motion);
   el('ffmo-replace-wrap').hidden = !slot;
   el('ffmo-replace-label').textContent = FFD.info && FFD.info.motion ? 'استبدل الحركة المحددة بها' : `ضعها مكان «${FFD.info ? FFD.info.label : 'العنصر'}» المحدد (يُخفى ويعود بالتراجع)`;
@@ -11256,6 +11289,38 @@ async function ffmoInsert() {
   } catch (e) { el('ffmo-status').textContent = e.message || 'تعذّر تجهيز الحركة.'; el('ffmo-insert').disabled = false; }
   finally { FFMO.busy = false; }
 }
+// «اطلب من جيم حركة لهذه الشريحة»: محتوى الشريحة من الإطار ← بناء «حركة» على الخادم (يُحفظ تصميمًا مستقلًا) ← الإدراج كالاختيار من القائمة
+function ffmoSlideInfo() {
+  return new Promise(res => { const to = setTimeout(() => { FFMO.slideWait = null; res(null); }, 3000); FFMO.slideWait = m => { clearTimeout(to); res(m); }; ffdPost({ op: 'slide-info' }); });
+}
+async function ffmoGenerate(e) {
+  e.preventDefault(); if (FFMO.busy || !FF.design) return;
+  const design = FF.design, replace = !el('ffmo-replace-wrap').hidden && el('ffmo-replace').checked, prompt = el('ffmo-prompt').value.trim();
+  FFMO.busy = true; el('ffmo-gen').disabled = true; el('ffmo-insert').disabled = true; el('ffmo-status').textContent = '';
+  const wait = el('ffmo-wait'); wait.hidden = false;
+  wait.innerHTML = (window.JEEM_LOADER ? JEEM_LOADER.html({ size: 40 }) : '') + '<span><b>جيم يبني الحركة من محتوى الشريحة…</b><br><span class="muted">يكتب المشاهد ويتحقق منها — نحو دقيقة. يمكنك إغلاق النافذة؛ تُدرج الحركة عند اكتمالها.</span></span>';
+  try {
+    const info = await ffmoSlideInfo();
+    if (!info) throw new Error('لم تستجب الصفحة — أعد المحاولة.');
+    if (!info.text && !prompt) throw new Error('الشريحة بلا نص — اكتب ما تريد أن تشرحه الحركة.');
+    const r = await fetch(`/api/freeform/${encodeURIComponent(design.id)}/slide-motion`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, slideText: info.text, slideTitle: info.title, selectedText: replace ? info.selectedText : '', colors: info.colors, font: info.font, lang: info.lang }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'تعذّر بناء الحركة.');
+    FFMO.html[j.design.id] = { html: j.html, version: j.design.version };
+    const x = ffmoExtract(j.html, { id: j.design.id, version: j.design.version, title: j.design.title });
+    const warn = /⚠️[^\n]*/.exec(j.reply || '');
+    if (FF.design !== design || !FF.edit.on) { ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» ولم تُدرج لأن وضع التعديل أُغلق — تجدها في نافذة 🎬 ضمن تصاميم الحركة.`); return; }
+    ffdPost({ op: 'motion', html: x.html, css: x.css, fonts: x.fonts, scope: x.scope, replace });
+    if (!el('ff-motion-modal').classList.contains('hidden')) { closeFfMotionModal(); el('ffd-motion').focus(); }
+    ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» (${x.scenes.toLocaleString('ar-EG')} ${x.scenes > 2 && x.scenes < 11 ? 'مشاهد' : 'مشهد'}) وأُدرجت في الشريحة — اضغط «حفظ كإصدار جديد» لتثبيتها. الحركة محفوظة أيضًا في تصاميمك من نوع «حركة» لتعدّلها أو تعيد استخدامها.${warn ? '\n' + warn[0] : ''}`);
+  } catch (err) {
+    if (!el('ff-motion-modal').classList.contains('hidden')) el('ffmo-status').textContent = err.message || 'تعذّر بناء الحركة.'; else ffPushMsg('err', 'تعذّر بناء الحركة: ' + (err.message || ''));
+  } finally {
+    FFMO.busy = false; el('ffmo-gen').disabled = false; el('ffmo-insert').disabled = FFMO.sel == null; wait.hidden = true; wait.innerHTML = '';
+  }
+}
+el('ffmo-ask').addEventListener('submit', ffmoGenerate);
 function closeFfMotionModal() { FFMO.gen++; el('ff-motion-modal').classList.add('hidden'); el('ffmo-body').innerHTML = ''; }
 el('ffd-motion').addEventListener('click', openFfMotionModal);
 el('ffmo-close').addEventListener('click', () => { closeFfMotionModal(); el('ffd-motion').focus(); });
@@ -11393,6 +11458,7 @@ el('ffd-ask').addEventListener('submit', e => {
 window.addEventListener('message', e => {
   const m = e.data; if (!m || m.jeemEdit !== 1 || e.source !== el('ff-preview').contentWindow) return;
   if (m.type === 'd-sel') { FFD.info = m.none ? null : m; ffdRenderInsp(); return; }
+  if (m.type === 'd-slide') { const r = FFMO.slideWait; FFMO.slideWait = null; if (r) r(m); return; }
   if (m.type === 'd-palette') { FFDM.pagePal = Array.isArray(m.colors) && m.colors.length ? m.colors : null; if (!el('ff-data-modal').classList.contains('hidden')) ffdmShowPreview(); return; }
   if (m.type === 'd-dirty') { FF.edit.designDirty = m.count || 0; ffEditCountText(); return; }
   if (m.type === 'html' && m.purpose === 'ask' && FFD.ask) {
