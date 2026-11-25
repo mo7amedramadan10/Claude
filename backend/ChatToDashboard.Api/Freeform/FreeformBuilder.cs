@@ -68,11 +68,24 @@ public class FreeformBuilder
             string key; lock (gate) { key = FreeformDataBlock.NextKey(recorded); recorded.Add(new FreeformQuery(key, sql.Trim(), parsed)); }
             return result + $"\n\n[مفتاح هذه النتيجة في الصفحة: {key} — للرسوم والأرقام استخدمه في بلوك data-jeem-chart/data-jeem-value (\"q\":\"{key}\")، أو اقرأ JEEM_DATA.{key}.rows في جافاسكربت الصفحة؛ لا تكتب الأرقام حرفيًا]";
         };
-        StagedResult res;
-        try { res = await llm.RunStagedAsync(call, ct); }
+        StagedResult res; string? html; List<string> motionProblems = new();
+        try
+        {
+            res = await llm.RunStagedAsync(call, ct);
+            html = ExtractHtml(res.Json, res.Text);
+            // «حركة»: فحص العقد بعد التوليد، ومحاولة ثانية واحدة بالأسباب؛ يُعتمد الأقل مشاكل
+            if (kind == "motion" && html is not null && (motionProblems = FreeformMotionCheck.Validate(html)).Count > 0)
+            {
+                var retry = call with { Label = call.Label + " — تصحيح", UserMessage = userMsg.ToString() + FreeformMotionCheck.RetryMessage(html, motionProblems) };
+                var res2 = await llm.RunStagedAsync(retry, ct);
+                var html2 = ExtractHtml(res2.Json, res2.Text);
+                var p2 = FreeformMotionCheck.Validate(html2);
+                if (html2 is not null && p2.Count < motionProblems.Count) { res = res2; html = html2; motionProblems = p2; }
+            }
+        }
         finally { AnalyticsTools.ToolObserver.Value = null; }
-        var html = ExtractHtml(res.Json, res.Text);
         var reply = res.Json["reply"]?.GetValue<string>() ?? (html is null ? "لم أستطع إنتاج صفحة من هذا الطلب — وضّح أكثر." : "جاهزة.");
+        if (motionProblems.Count > 0) reply = (reply + "\n⚠️ الحركة قد لا تعمل كما ينبغي: " + string.Join(" ", motionProblems.Take(2)) + " — اطلب «صحّح المشاهد» أو أعد المحاولة.").Trim();
         if (html is not null && recorded.Count > 0) html = FreeformDataBlock.Inject(html, recorded, DateTime.UtcNow);
         var blockProblems = html is null ? new List<string>() : FreeformBlockValidator.Validate(html, recorded.Count > 0 ? recorded : FreeformDataBlock.Parse(html));
         if (blockProblems.Count > 0) reply = (reply + "\n⚠️ بلوكات بيانات تحتاج مراجعة (ستظهر فارغة بسببها): " + string.Join(" ", blockProblems.Take(3))).Trim();

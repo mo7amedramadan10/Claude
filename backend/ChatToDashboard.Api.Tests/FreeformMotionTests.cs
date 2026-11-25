@@ -31,4 +31,31 @@ public class FreeformMotionTests
         // المشاهد تعمل مع «الشريحة الحالية» في نطاق التعديل
         Assert.Equal(2, FreeformScope.FindSlides(Page).Count);
     }
+
+    private static string Scene(string body, int i = 1) => $"<section class=\"jm-scene\" data-slide data-duration=\"5\" data-title=\"م{i}\"><h2 data-in=\"up\">{body}</h2></section>";
+    private static string Stage(params string[] scenes) => "<html><head><style>.jm-scene{display:flex}</style></head><body><div data-jeem-motion>" + string.Join("", scenes) + "</div></body></html>";
+
+    [Fact]
+    public void MotionCheck_AcceptsContractPage()
+    {
+        Assert.Empty(FreeformMotionCheck.Validate(Stage(Scene("المشكلة"), Scene("الثمن", 2), Scene("الحل", 3))));
+    }
+
+    [Fact]
+    public void MotionCheck_FlagsLegacyAndBadPages()
+    {
+        // الصفحة القديمة: مشاهد بمحرّك خاص بلا عقد
+        var legacy = "<html><body><div class='scene'>أ</div><div class='scene'>ب</div><button>تشغيل</button><script>setInterval(()=>{},100)</script></body></html>";
+        Assert.Contains("عقد محرّك الحركة", Assert.Single(FreeformMotionCheck.Validate(legacy)));
+        Assert.Contains(FreeformMotionCheck.Validate(Stage(Scene("وحيد"))), p => p.Contains("مشهد فقط"));
+        var longText = string.Join(" ", Enumerable.Repeat("كلمة", 60));
+        Assert.Contains(FreeformMotionCheck.Validate(Stage(Scene("أ"), Scene(longText, 2))), p => p.Contains("المشهد 2"));
+        var withEngine = Stage(Scene("أ"), Scene("ب", 2)).Replace("</body>", "<style>@keyframes x{}</style><script>requestAnimationFrame(f)</script><button>إيقاف</button></body>");
+        var probs = FreeformMotionCheck.Validate(withEngine);
+        Assert.Equal(3, probs.Count);
+        // سكربتات المنصة وكتلة البيانات لا تُحسب
+        var withKits = Stage(Scene("أ"), Scene("ب", 2)).Replace("</body>", "<script src=\"/js/jeem-motion.js\"></script><script type=\"application/json\" id=\"jeem-data\">{}</script></body>");
+        Assert.Empty(FreeformMotionCheck.Validate(withKits));
+        Assert.Contains("رُفضت آليًا", FreeformMotionCheck.RetryMessage("<html></html>", probs));
+    }
 }
