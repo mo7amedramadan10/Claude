@@ -18,7 +18,7 @@
       cardItems: ['السرعة', 'الاعتمادية', 'الدعم', 'التكامل', 'الأمان', 'التقارير'], cardText: 'نص توضيحي قصير يشرح هذه النقطة بإيجاز.',
       steps: ['الانطلاق', 'التحليل', 'التصميم', 'التنفيذ', 'الإطلاق'], tlDetail: 'المحطة: الانطلاق — اجتماع البدء واعتماد النطاق. (اضغط محطة أخرى)', tlPrefix: 'المحطة: ', tlSuffix: ' — تفاصيل توضيحية لهذه المحطة.',
       faq: ['كيف أبدأ؟', 'ما المدة المتوقعة؟', 'كيف أطلب الدعم؟', 'هل يمكن التعديل لاحقًا؟'], faqA: 'إجابة توضيحية مختصرة لهذا السؤال، تُكتب في الصفحة الحقيقية من محتواك.',
-      fName: 'الاسم', fNamePh: 'الاسم الكامل', fDept: 'الإدارة', depts: ['المبيعات', 'التقنية', 'المالية'], fDate: 'التاريخ', fDetails: 'التفاصيل', fDetailsPh: 'اكتب التفاصيل', fSend: 'إرسال', fOk: '✓ أُرسل الطلب (توضيحي)',
+      fName: 'الاسم', fNamePh: 'الاسم الكامل', fDept: 'الإدارة', depts: ['المبيعات', 'التقنية', 'المالية'], fDate: 'التاريخ', fDetails: 'التفاصيل', fDetailsPh: 'اكتب التفاصيل', fSend: 'إرسال', fOk: '✓ أُرسل الطلب (توضيحي)', rq: ['التقييم العام', 'سهولة الاستخدام', 'سرعة الاستجابة'], rLow: 'ضعيف', rHigh: 'ممتاز',
       bullets: ['نقطة أولى توضيحية تلخّص فكرة القسم.', 'نقطة ثانية بتفصيل مختصر.', 'نقطة ثالثة بإجراء أو توصية.'],
       para: 'نص توضيحي يمثّل محتوى هذا القسم. في الصفحة الحقيقية يكتبه جيم من طلبك وبيانات مشروعك، بهوية مشروعك وألوانه.',
       badge: 'بيانات توضيحية', badgeShort: 'توضيحي', company: 'شركة الأفق للتقنية', dept: 'الإدارة العامة', ref: 'المرجع', date: 'التاريخ', dateVal: '5 نوفمبر 2026',
@@ -39,7 +39,7 @@
       cardItems: ['Speed', 'Reliability', 'Support', 'Integration', 'Security', 'Reports'], cardText: 'A short sample text that explains this point briefly.',
       steps: ['Kickoff', 'Analysis', 'Design', 'Build', 'Launch'], tlDetail: 'Milestone: Kickoff — kickoff meeting and scope approval. (Click another milestone)', tlPrefix: 'Milestone: ', tlSuffix: ' — sample details for this milestone.',
       faq: ['How do I start?', 'How long does it take?', 'How do I request support?', 'Can I edit later?'], faqA: 'A short sample answer to this question; in the real page it is written from your content.',
-      fName: 'Name', fNamePh: 'Full name', fDept: 'Department', depts: ['Sales', 'Technology', 'Finance'], fDate: 'Date', fDetails: 'Details', fDetailsPh: 'Write the details', fSend: 'Submit', fOk: '✓ Request sent (sample)',
+      fName: 'Name', fNamePh: 'Full name', fDept: 'Department', depts: ['Sales', 'Technology', 'Finance'], fDate: 'Date', fDetails: 'Details', fDetailsPh: 'Write the details', fSend: 'Submit', fOk: '✓ Request sent (sample)', rq: ['Overall rating', 'Ease of use', 'Response speed'], rLow: 'Poor', rHigh: 'Excellent',
       bullets: ['A first sample point summarizing the section idea.', 'A second point with brief detail.', 'A third point with an action or recommendation.'],
       para: 'Sample text representing the content of this section. In the real page Jeem writes it from your request and your project data, in your brand colors.',
       badge: 'Sample data', badgeShort: 'Sample', company: 'Horizon Technology Co.', dept: 'General Management', ref: 'Ref', date: 'Date', dateVal: '5 Nov 2026',
@@ -99,6 +99,10 @@
   function form() {
     return `<form class="frm" onsubmit="event.preventDefault();document.getElementById('frm-ok').hidden=false"><label>${L.fName} <input required placeholder="${L.fNamePh}"></label><label>${L.fDept} <select>${L.depts.map(d => `<option>${d}</option>`).join('')}</select></label><label>${L.fDate} <input type="date"></label><label>${L.fDetails} <textarea rows="2" placeholder="${L.fDetailsPh}"></textarea></label><button type="submit">${L.fSend}</button><p id="frm-ok" class="ok" hidden>${L.fOk}</p></form>`;
   }
+  // أسئلة تقييم 1–5 بأزرار (استبيان): الضغط يحدد القيمة، والإرسال يُظهر رسالة النجاح
+  function rating() {
+    return `<form class="frm rate" onsubmit="event.preventDefault();this.querySelector('.ok').hidden=false">${L.rq.map((q, i) => `<fieldset><legend>${q}</legend><div class="stars">${[1, 2, 3, 4, 5].map(n => `<button type="button" aria-pressed="false" onclick="this.parentNode.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',+b.textContent<=${n}?'true':'false'))">${n}</button>`).join('')}</div><small>1 = ${L.rLow} · 5 = ${L.rHigh}</small></fieldset>`).join('')}<button type="submit">${L.fSend}</button><p class="ok" hidden>${L.fOk}</p></form>`;
+  }
   function bullets() { return `<ul class="bl">${L.bullets.map(b => `<li>${b}</li>`).join('')}</ul>`; }
   function para() { return `<p>${L.para}</p>`; }
 
@@ -112,6 +116,8 @@
     if (s.type === 'table') return table(r, shown);
     if (s.type === 'bar' || s.type === 'heat') return bars(r, shown);
     if (s.type === 'interactive') return cards(r, shown);
+    if (kw(t, /تقييم|استبيان/)) return rating();
+    if (kw(t, /الاختيار والتعليق|التسجيل/)) return form();
     if (kw(t, /مؤشر|أرقام|نتائج|عدّاد|الستة|بارزة/)) return kpis(r);
     if (kw(t, /اتجاه|مقابل|إنجاز|يومي|شهري|رسم/)) return line(r, shown);
     if (kw(t, /توزيع|تركيبة|بالإدارة|بالبند|بالفئة/)) return kw(t, /حالة|تركيبة/) ? donut(r, shown) : bars(r, shown);
@@ -137,7 +143,7 @@
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.card{background:#fff;border:1px solid #E3E8EE;border-radius:12px;padding:14px}.card .ic{font-size:24px}.card p{font-size:13px;color:#5A6B77;margin:4px 0 0}
     .tl{display:flex;gap:6px;overflow:auto;padding:10px 0}.tl-s{all:unset;cursor:pointer;flex:1;min-width:110px;text-align:center;padding:8px;border-radius:10px}.tl-s i{display:block;width:14px;height:14px;border-radius:50%;background:#C9D4DE;margin:0 auto 6px}.tl-s.on i{background:${c[0]}}.tl-s.on{background:#F4F7FA}.tl-s b{display:block}.tl-s small{color:#8A98A5}.tl-detail{background:#F4F7FA;border-radius:10px;padding:12px}
     details{background:#fff;border:1px solid #E3E8EE;border-radius:10px;padding:8px 12px;margin:6px 0}summary{cursor:pointer;font-weight:600}
-    .frm{display:grid;gap:10px;max-width:520px}.frm label{display:grid;gap:4px;font-size:14px}.frm input,.frm select,.frm textarea{font:inherit;padding:8px;border:1px solid #C9D4DE;border-radius:8px}.frm button{font:inherit;background:${c[0]};color:#fff;border:0;border-radius:8px;padding:10px;cursor:pointer}.ok{color:#0E8F4F;font-weight:600}
+    .frm{display:grid;gap:10px;max-width:520px}.frm label{display:grid;gap:4px;font-size:14px}.frm input,.frm select,.frm textarea{font:inherit;padding:8px;border:1px solid #C9D4DE;border-radius:8px}.rate fieldset{border:1px solid #DDE5EC;border-radius:10px;padding:8px 12px;display:grid;gap:6px}.rate legend{font-weight:600;padding:0 4px}.stars{display:flex;gap:6px}.stars button{min-width:38px;background:#fff!important;color:#333!important;border:1px solid #C9D4DE!important}.stars button[aria-pressed=true]{background:${c[0]}!important;color:#fff!important}.rate small{color:#667}.frm button{font:inherit;background:${c[0]};color:#fff;border:0;border-radius:8px;padding:10px;cursor:pointer}.ok{color:#0E8F4F;font-weight:600}
     .bl li{margin:4px 0}.badge{display:inline-block;background:#FFF4CC;color:#7A5800;border:1px solid #F2D77A;border-radius:999px;padding:2px 10px;font-size:12px}
     @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`;
 

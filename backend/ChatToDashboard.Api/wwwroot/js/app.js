@@ -11267,7 +11267,8 @@ function ffrRenderSource() {
   box.innerHTML = `<label class="ffr-src-toggle"><input type="checkbox" id="ffr-src-on"${on ? ' checked' : ''}${can ? '' : ' disabled'}> <span><b>استخدم السجلات مصدر بيانات</b><small class="muted">كل مجموعة تصير جدولًا في «المصادر» يتحدّث تلقائيًا بعد كل إدخال، فتُبنى عليه لوحات المتابعة والرسوم.</small></span></label>
     ${on ? `<div class="ffr-src-line">${t ? `🗄️ <b>${esc(t.displayName)}</b> <span class="muted">· ${(t.rows || 0).toLocaleString('ar-EG')} صف · ${(t.columns || 0).toLocaleString('ar-EG')} عمود${t.lastSyncedAt ? ' · حُدِّث ' + esc(relTime(t.lastSyncedAt)) : ''}</span>${t.syncError ? ` <span class="bad">⚠️ ${esc(t.syncError)}</span>` : ''}`
       : '<span class="muted">⏳ لم يُبنَ جدول هذه المجموعة بعد — يُبنى بعد الإدخال التالي، أو اضغط «مزامنة الآن».</span>'}
-      ${can && FFR.col ? '<button type="button" id="ffr-src-sync" class="btn btn-sm btn-ghost">🔄 مزامنة الآن</button>' : ''}</div>` : ''}`;
+      ${can && FFR.col ? '<button type="button" id="ffr-src-sync" class="btn btn-sm btn-ghost">🔄 مزامنة الآن</button>' : ''}
+      ${t && t.fileId ? '<button type="button" id="ffr-src-dash" class="btn btn-sm btn-primary">📊 اعمل لوحة متابعة منه</button>' : ''}</div>` : ''}`;
   el('ffr-src-on').addEventListener('change', async e => {
     const want = e.target.checked; e.target.disabled = true;
     try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records-source`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: want }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || r.status);
@@ -11275,6 +11276,8 @@ function ffrRenderSource() {
       dashGalFeasibility = null; loadSources().catch(() => {}); await ffrLoad(true); }
     catch (x) { ffrError('تعذّر الحفظ: ' + x.message); e.target.checked = !want; e.target.disabled = false; }
   });
+  const db = el('ffr-src-dash');
+  if (db) db.addEventListener('click', () => ffRecordsMakeDashboard(t));
   const sb = el('ffr-src-sync');
   if (sb) sb.addEventListener('click', async () => {
     sb.disabled = true; sb.textContent = 'يبني…';
@@ -11286,6 +11289,19 @@ function ffrPolicyNote() {
   const pub = el('ffr-policy').value === 'public';
   el('ffr-policy-note').textContent = (pub ? 'أي زائر يُدخل بلا تسجيل دخول (حد 60 إدخالًا لكل زائر كل 10 دقائق)، ويرى ما أدخله هو فقط؛ أعضاء المنظمة يرون كل السجلات.'
     : 'يُطلب تسجيل الدخول بحساب من منظمتك قبل الإدخال.') + (FF.access === 'owner' ? '' : ' — يغيّرها صاحب التصميم.');
+}
+// المرحلة 3: لوحة متابعة جديدة («لوحات المتابعة» داخل تصميم حر) مقصورة على جدول سجلات هذه المجموعة وحده، بطلب جاهز يصف ما يُبنى.
+async function ffRecordsMakeDashboard(t) {
+  if (!t || !t.fileId) return;
+  closeFfRecords();
+  try { await loadSources(); } catch { /* المصادر تُحمَّل لاحقًا */ }
+  if (!state.sourceFiles.some(f => f.id === t.fileId)) { ffPushMsg('err', 'جدول السجلات لم يظهر في مصادرك بعد — اضغط «مزامنة الآن» ثم أعد المحاولة.'); return; }
+  el('ff-new-btn').click();
+  ffSetKind('track');
+  ffSetSources({ systems: [], files: [t.fileId] });
+  ffSetTemplate(null);
+  const text = `ابنِ لوحة متابعة لبيانات «${t.displayName}» المُدخلة من صفحة التصميم: مؤشرات لعدد السجلات وأهم القيم الرقمية، واتجاه الإدخالات بحسب «تاريخ الإدخال»، وتوزيعات لأهم الحقول ذات الخيارات (كالحالة أو النوع أو الأولوية)، وجدول بأحدث السجلات، وفلاتر للحقول ذات الخيارات.`;
+  await ffAsk(text);
 }
 function ffRefreshPreviewRecords() { /* الصفحة تستطلع سجلاتها بنفسها (watch)؛ لا حاجة لإعادة رسم المعاينة */ }
 async function openFfRecords() {

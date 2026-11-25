@@ -127,3 +127,29 @@ public class FreeformRecordTableTests
         Assert.Equal(0xEF, up.Content[0]); // CSV بـ BOM للتنزيل
     }
 }
+
+/// <summary>المرحلة 3: قوالب الإدخال ونظام الموديل يعلّمان jeem.records.</summary>
+public class FreeformRecordEntryTemplateTests
+{
+    [Theory]
+    [InlineData("ds-entry-request", "الطلبات")]
+    [InlineData("ds-entry-survey", "الردود")]
+    [InlineData("ds-entry-log", "التحديثات")]
+    [InlineData("ds-entry-attendance", "الحضور")]
+    public void EntryTemplates_UseRecordsWithFixedCollection_AndHaveEnglish(string key, string collection)
+    {
+        var t = FreeformTemplates.All.Single(x => x.Key == key);
+        Assert.Equal("design", t.Kind);
+        Assert.Contains($"jeem.records('{collection}')", t.Brief);
+        Assert.Contains("/js/jeem-page.js", t.Brief);
+        Assert.True(t.HasEn);
+    }
+
+    [Fact]
+    public void SystemPrompt_TeachesRecordsForMultiUserEntry()
+    {
+        var p = FreeformBuilder.BuildSystemPrompt(null, false, "");
+        Assert.Contains("jeem.records(", p);
+        Assert.Contains("sign_in_required", p);
+    }
+}
