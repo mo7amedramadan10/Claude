@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جيم — من بياناتك إلى قرارك</title>
+<meta name="description" content="جيم: مساحة واحدة تصنع فيها المستندات والعروض واللوحات والصفحات من بياناتك الحقيقية، بقوالب جاهزة وبهوية جهتك.">
+<link rel="icon" href="/img/logo-mark.svg" type="image/svg+xml">
+<style>
+/* الصفحة الرئيسية للمنصة: مستقلة عن التطبيق (لا تحمّل app.js ولا jeem.css) — خفيفة وتُعرض قبل تسجيل الدخول. */
+@font-face { font-family: "Tanseek"; src: url("/fonts/tanseek-arabic-light.woff2") format("woff2"); font-weight: 300; font-display: swap; }
+@font-face { font-family: "Tanseek"; src: url("/fonts/tanseek-arabic-medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Tanseek"; src: url("/fonts/tanseek-arabic-bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+:root {
+  --blue: #127DBD; --blue-700: #0E6399; --blue-50: #EDF6FB; --cyan: #28B6E6; --teal: #00BAB3; --purple: #4D4286; --mint: #9DD5CA;
+  --ink: #23272B; --ink-2: #4E5561; --ink-3: #6B7280; --line: #E4E8EC; --surface: #FFFFFF; --surface-2: #F6F9FB; --navy: #0B2236;
+  --k-doc: #2F6FDE; --k-slides: #E0663A; --k-design: #7A4FD6; --k-dashboard: #0E9AA0; --k-motion: #D6437A; --k-track: #127DBD;
+  --r: 18px; --shadow: 0 10px 30px rgba(11, 34, 54, .08); --shadow-lg: 0 24px 60px rgba(11, 34, 54, .16);
+  --font: "Tanseek", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { margin: 0; font-family: var(--font); color: var(--ink); background: var(--surface); line-height: 1.7; font-size: 17px; overflow-x: hidden; }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+.wrap { width: min(1180px, 100% - 32px); margin-inline: auto; }
+.skip { position: absolute; inset-inline-start: 12px; top: -60px; background: var(--blue); color: #fff; padding: 10px 16px; border-radius: 10px; z-index: 100; }
+.skip:focus { top: 12px; }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; border-radius: 8px; }
+
+/* الشريط العلوي */
+.top { position: sticky; top: 0; z-index: 50; background: rgba(255, 255, 255, .9); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid transparent; transition: border-color .2s; }
+.top.scrolled { border-bottom-color: var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 20px; height: 72px; }
+.brand img { height: 34px; width: auto; }
+.nav { display: flex; gap: 6px; margin-inline-start: 12px; }
+.nav a { text-decoration: none; color: var(--ink-2); font-size: 15px; padding: 8px 12px; border-radius: 10px; }
+.nav a:hover { color: var(--ink); background: var(--surface-2); }
+.top-end { margin-inline-start: auto; display: flex; align-items: center; gap: 10px; }
+.lang { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.lang button { border: 0; background: transparent; font: inherit; font-size: 14px; padding: 5px 12px; border-radius: 9px; color: var(--ink-2); cursor: pointer; }
+.lang button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font: inherit; font-weight: 700; font-size: 16px; border-radius: 12px; padding: 12px 22px; border: 1px solid transparent; cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s; white-space: nowrap; }
+.btn-primary { background: var(--blue); color: #fff; box-shadow: 0 8px 20px rgba(18, 125, 189, .28); }
+.btn-primary:hover { background: var(--blue-700); transform: translateY(-1px); }
+.btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+.btn-sm { font-size: 15px; padding: 9px 18px; }
+.arrow { display: inline-block; transition: transform .15s; }
+[dir="rtl"] .arrow { transform: scaleX(-1); }
+
+/* الافتتاحية */
+.hero { position: relative; padding: 64px 0 40px; overflow: hidden; }
+.hero::before { content: ""; position: absolute; inset: -40% -10% auto -10%; height: 120%; background: radial-gradient(60% 50% at 75% 30%, rgba(40, 182, 230, .16), transparent 70%), radial-gradient(50% 45% at 15% 20%, rgba(0, 186, 179, .12), transparent 70%); pointer-events: none; }
+.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--blue); background: var(--blue-50); padding: 6px 14px; border-radius: 999px; }
+.eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+h1 { font-size: clamp(34px, 4.6vw, 58px); line-height: 1.25; margin: 18px 0 16px; font-weight: 700; letter-spacing: -.01em; }
+h1 em { font-style: normal; background: linear-gradient(90deg, var(--blue), var(--teal)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { font-size: clamp(17px, 1.6vw, 20px); color: var(--ink-2); margin: 0 0 28px; max-width: 34em; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.hero-art { position: relative; }
+.shot { border-radius: 16px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
+.shot .bar { display: flex; gap: 6px; padding: 10px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.shot .bar i { width: 10px; height: 10px; border-radius: 50%; background: #D7DDE3; }
+.shot img { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; }
+.hero-art .float { position: absolute; width: 46%; bottom: -26px; inset-inline-start: -28px; }
+.hero-art .float img { aspect-ratio: 16 / 11; }
+.hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; }
+.hero-chips span { font-size: 14px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; }
+
+/* الأقسام */
+section { padding: 84px 0; }
+.alt { background: var(--surface-2); }
+.sec-head { max-width: 760px; margin: 0 auto 44px; text-align: center; }
+.kicker { font-size: 14px; font-weight: 700; color: var(--teal); letter-spacing: .02em; }
+h2 { font-size: clamp(28px, 3.2vw, 40px); line-height: 1.3; margin: 8px 0 12px; }
+.sec-head p { color: var(--ink-2); margin: 0; font-size: 18px; }
+
+/* التحدي */
+.pains { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.pain { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 26px; }
+.pain .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: #FFF2EC; margin-bottom: 14px; }
+.pain h3 { margin: 0 0 6px; font-size: 19px; }
+.pain p { margin: 0; color: var(--ink-2); font-size: 16px; }
+
+/* الحل: ثلاث خطوات */
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; counter-reset: s; }
+.step { position: relative; padding: 28px 26px; border-radius: var(--r); background: linear-gradient(160deg, var(--blue-50), var(--surface)); border: 1px solid var(--line); }
+.step .n { width: 40px; height: 40px; border-radius: 12px; background: var(--blue); color: #fff; font-weight: 700; display: grid; place-items: center; margin-bottom: 14px; }
+.step h3 { margin: 0 0 6px; font-size: 20px; }
+.step p { margin: 0; color: var(--ink-2); font-size: 16px; }
+
+/* المنتجات */
+.products { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.ptabs { display: flex; flex-direction: column; gap: 8px; }
+.ptab { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 14px; align-items: center; text-align: start; width: 100%; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.ptab:hover { border-color: color-mix(in srgb, var(--k) 45%, var(--line)); }
+.ptab[aria-selected="true"] { border-color: var(--k); box-shadow: 0 8px 24px color-mix(in srgb, var(--k) 18%, transparent); }
+.ptab .pic { grid-row: span 2; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: color-mix(in srgb, var(--k) 12%, var(--surface)); }
+.ptab b { font-size: 17px; }
+.ptab small { color: var(--ink-3); font-size: 14px; line-height: 1.5; }
+.ppanel { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; box-shadow: var(--shadow); }
+.ppanel .media { background: color-mix(in srgb, var(--k) 10%, var(--surface-2)); padding: 26px 26px 0; }
+.ppanel .media .shot { box-shadow: 0 -2px 30px rgba(11, 34, 54, .10); border-bottom: 0; border-radius: 14px 14px 0 0; }
+.ppanel .body { padding: 26px 28px 30px; }
+.ppanel h3 { margin: 0 0 6px; font-size: 26px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tcount { font-size: 14px; font-weight: 700; color: var(--k); background: color-mix(in srgb, var(--k) 12%, var(--surface)); padding: 4px 12px; border-radius: 999px; }
+.ppanel .value { color: var(--ink-2); margin: 0 0 16px; font-size: 17px; }
+.ppanel .ex { margin: 0 0 16px; font-size: 15px; color: var(--ink-2); border-inline-start: 3px solid var(--k); padding-inline-start: 12px; }
+.ppanel .ex b { color: var(--ink); }
+.feats { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.feats li { font-size: 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; }
+
+/* قالب لكل شيء */
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 26px; }
+.card .ic { font-size: 26px; margin-bottom: 10px; }
+.card h3 { margin: 0 0 6px; font-size: 19px; }
+.card p { margin: 0; color: var(--ink-2); font-size: 16px; }
+
+/* ما يميّزنا */
+.diff { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.diff .card { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 16px; align-items: start; }
+.diff .card .ic { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; background: var(--blue-50); margin: 0; }
+
+/* الحوكمة: لوحة داكنة */
+.gov { background: var(--navy); color: #E6EEF5; }
+.gov h2 { color: #fff; }
+.gov .sec-head p { color: #A9BACB; }
+.gov .card { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .1); }
+.gov .card h3 { color: #fff; }
+.gov .card p { color: #B5C4D2; }
+.gov .card .ic { width: 50px; height: 50px; border-radius: 14px; display: grid; place-items: center; background: rgba(40, 182, 230, .14); }
+
+/* الأثر */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.stat { text-align: center; padding: 28px 18px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
+.stat b { display: block; font-size: clamp(30px, 3.4vw, 44px); line-height: 1.2; color: var(--blue); direction: ltr; unicode-bidi: isolate; }
+.stat span { color: var(--ink-2); font-size: 15px; }
+.stat b[data-i] { direction: inherit; } /* «25 ثانية» تتبع اتجاه اللغة؛ الأرقام المجرّدة تبقى ltr */
+.note { text-align: center; color: var(--ink-3); font-size: 14px; margin-top: 18px; }
+
+/* الختام */
+.final { padding: 0 0 84px; }
+.final .box { border-radius: 26px; padding: 56px 40px; text-align: center; color: #fff; background: radial-gradient(80% 120% at 85% 0%, rgba(40, 182, 230, .5), transparent 60%), linear-gradient(135deg, var(--blue-700), var(--purple)); box-shadow: var(--shadow-lg); }
+.final h2 { color: #fff; margin-top: 0; }
+.final p { color: rgba(255, 255, 255, .85); max-width: 40em; margin: 0 auto 26px; font-size: 18px; }
+.final .btn-primary { background: #fff; color: var(--blue-700); box-shadow: none; }
+.final .btn-primary:hover { background: var(--blue-50); }
+footer { border-top: 1px solid var(--line); padding: 26px 0; color: var(--ink-3); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+footer img { height: 26px; }
+
+/* حركة الظهور (تُلغى مع تقليل الحركة) */
+/* الإخفاء فقط حين يعمل مراقب الظهور (صنف js-reveal)، فلا يبقى قسم مخفيًا إن تعطّل السكربت أو عند الطباعة */
+.js-reveal .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+.js-reveal .reveal.in { opacity: 1; transform: none; }
+@media print { .js-reveal .reveal { opacity: 1; transform: none; } .top { position: static; } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .btn, .ptab, .top { transition: none; }
+}
+
+/* التجاوب */
+@media (max-width: 980px) {
+  .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 56px; }
+  .products { grid-template-columns: minmax(0, 1fr); }
+  .ptabs { flex-direction: row; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+  .ptab { flex: 0 0 auto; width: auto; grid-template-columns: 36px auto; scroll-snap-align: start; }
+  .ptab .pic { width: 36px; height: 36px; font-size: 18px; grid-row: auto; }
+  .ptab small { display: none; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nav { display: none; }
+}
+@media (max-width: 760px) {
+  section { padding: 60px 0; }
+  .pains, .steps, .grid3, .diff { grid-template-columns: minmax(0, 1fr); }
+  .hero { padding-top: 40px; }
+  .hero-art .float { width: 52%; inset-inline-start: -8px; bottom: -22px; }
+  .final .box { padding: 40px 22px; }
+  .ppanel .media { padding: 16px 16px 0; }
+  .ppanel .body { padding: 20px; }
+}
+@media (max-width: 480px) {
+  .top .wrap { gap: 10px; }
+  .brand img { height: 28px; }
+  .top-end .btn-sm { padding: 8px 12px; font-size: 14px; }
+  .lang button { padding: 5px 9px; }
+  .stats { grid-template-columns: minmax(0, 1fr); }
+  .cta .btn { flex: 1 1 100%; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i="skip">تخطَّ إلى المحتوى</a>
+
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="brand" href="/home" aria-label="جيم"><img src="/img/logo-lockup.svg" alt="جيم" width="102" height="34"></a>
+    <nav class="nav" aria-label="أقسام الصفحة" data-i-aria="navLabel">
+      <a href="#products" data-i="navProducts">المنتجات</a>
+      <a href="#how" data-i="navHow">كيف يعمل</a>
+      <a href="#why" data-i="navWhy">ما يميّزنا</a>
+      <a href="#governance" data-i="navGov">الحوكمة</a>
+    </nav>
+    <div class="top-end">
+      <div class="lang" role="group" aria-label="اللغة" data-i-aria="langLabel">
+        <button type="button" data-lang="ar" aria-pressed="true">العربية</button>
+        <button type="button" data-lang="en" aria-pressed="false" lang="en">English</button>
+      </div>
+      <a class="btn btn-primary btn-sm" href="/app" data-i="login">تسجيل الدخول</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <!-- الافتتاحية -->
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow" data-i="eyebrow">منصة واحدة لكل مخرجات بياناتك</span>
+        <h1 data-i-html="heroTitle">من بياناتك إلى قرارك… <em>في دقائق</em></h1>
+        <p class="lead" data-i="heroLead">اصنع المستندات والعروض واللوحات والصفحات من بيانات جهتك الحقيقية: اختر النوع، وابدأ من قالب جاهز، واطلب ما تريد بالعربية — والنتيجة بأرقامك وبهوية جهتك.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="/app"><span data-i="login">تسجيل الدخول</span> <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="#products" data-i="exploreProducts">استعرض المنتجات</a>
+        </div>
+        <div class="hero-chips" aria-hidden="true">
+          <span data-i="chip1">6 منتجات</span><span data-i="chip2">أكثر من 320 قالبًا جاهزًا</span><span data-i="chip3">عربي وإنجليزي</span><span data-i="chip4">أرقام من بياناتك</span>
+        </div>
+      </div>
+      <div class="hero-art">
+        <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img data-img="slides" src="/img/home/slides-ar.jpg" alt="شريحة من عرض تقديمي أنشأته جيم" data-i-alt="heroAlt1" width="1280" height="800"></div>
+        <div class="shot float"><div class="bar"><i></i><i></i><i></i></div><img data-img="dashboard" src="/img/home/dashboard-ar.jpg" alt="لوحة مؤشرات بأرقام توضيحية" data-i-alt="heroAlt2" width="1280" height="800"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- التحدي -->
+  <section class="alt" id="challenge">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="chKicker">التحدي</span>
+        <h2 data-i="chTitle">البيانات موجودة، لكن الوصول منها إلى قرار ما زال بطيئًا</h2>
+      </div>
+      <div class="pains">
+        <div class="pain reveal"><div class="ic" aria-hidden="true">⏳</div><h3 data-i="p1t">تقارير تستغرق أيامًا</h3><p data-i="p1d">كل تقرير وكل عرض يُبنى يدويًا من جديد، فيضيع وقت الفرق في التنسيق بدل التحليل.</p></div>
+        <div class="pain reveal"><div class="ic" aria-hidden="true">🧩</div><h3 data-i="p2t">أدوات متفرقة</h3><p data-i="p2d">أداة للمستندات وأخرى للعروض وثالثة للوحات، وكل منها يحتاج خبرة ومصدر بيانات منفصلًا.</p></div>
+        <div class="pain reveal"><div class="ic" aria-hidden="true">📉</div><h3 data-i="p3t">أرقام تتقادم</h3><p data-i="p3d">ما إن يُرسل الملف حتى تتغيّر البيانات، فتُتخذ القرارات على أرقام لم تعد صحيحة.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- الحل -->
+  <section id="how">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="howKicker">الحل</span>
+        <h2 data-i="howTitle">مساحة واحدة، وثلاث خطوات</h2>
+        <p data-i="howLead">«تصميم حر» في جيم يجمع كل ما تحتاجه الإدارة من مخرجات في مكان واحد، فوق بياناتك مباشرة.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><div class="n">1</div><h3 data-i="s1t">اختر النوع</h3><p data-i="s1d">مستند، أو عرض شرائح، أو تصميم، أو لوحة، أو مشهد متحرك، أو لوحة متابعة.</p></div>
+        <div class="step reveal"><div class="n">2</div><h3 data-i="s2t">اختر القالب</h3><p data-i="s2d">من معرض قوالب جاهزة لكل نوع، مع معاينة تفاعلية قبل الاستخدام، أو ابدأ من ملفك أو من الصفر.</p></div>
+        <div class="step reveal"><div class="n">3</div><h3 data-i="s3t">اطلب بالعربية</h3><p data-i="s3d">صِف ما تريد، فيبنيه جيم من بياناتك الحقيقية بهوية جهتك، ثم عدّله بنفسك أو انشره برابط.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- المنتجات -->
+  <section class="alt" id="products">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="prKicker">المنتجات</span>
+        <h2 data-i="prTitle">ستة منتجات… ولكل منها قوالبه الجاهزة</h2>
+        <p data-i="prLead">كل نوع في «تصميم حر» منتج متكامل بمعرض قوالب خاص به، يبدأ منه فريقك في ثوانٍ.</p>
+      </div>
+      <div class="products reveal">
+        <div class="ptabs" role="tablist" aria-label="المنتجات" data-i-aria="prTabs" id="ptabs"></div>
+        <div class="ppanel" role="tabpanel" id="ppanel" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- قالب لكل شيء -->
+  <section id="templates">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="tpKicker">قالب لكل شيء</span>
+        <h2 data-i="tpTitle">ابدأ من حيث تريد، وأنهِ بالشكل الذي تريده</h2>
+      </div>
+      <div class="grid3">
+        <div class="card reveal"><div class="ic" aria-hidden="true">🗂️</div><h3 data-i="t1t">معرض لكل نوع</h3><p data-i="t1d">قوالب مصنّفة بالمجال مع بحث، ومعاينة تفاعلية بأرقام توضيحية قبل أن تختار.</p></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">🌐</div><h3 data-i="t2t">بالعربية والإنجليزية</h3><p data-i="t2d">استعرض القالب بأي اللغتين واستخدمه بها، والنصوص والاتجاه يُضبطان تلقائيًا.</p></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">📥</div><h3 data-i="t3t">ابدأ من ملفك</h3><p data-i="t3d">ارفع عرض PowerPoint أو صفحة HTML كما هي، أو حوّل ملفًا موجودًا إلى قالب يُعاد استخدامه.</p></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">✏️</div><h3 data-i="t4t">تعديل مباشر</h3><p data-i="t4d">عدّل النصوص والصور والجداول والأشكال بنفسك، أو اطلب من جيم تعديل شريحة أو عنصر واحد فقط.</p></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">🎨</div><h3 data-i="t5t">هوية جهتك</h3><p data-i="t5d">الشعار والألوان والخطوط تُطبَّق بضغطة، مع إمكانية التبديل بين أكثر من هوية.</p></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">⇄</div><h3 data-i="t6t">تحويل بين الأنواع</h3><p data-i="t6d">حوّل المستند إلى عرض، واللوحة إلى صفحة، مع بقاء الأصل كما هو.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ما يميّزنا -->
+  <section class="alt" id="why">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="whyKicker">ما يميّزنا</span>
+        <h2 data-i="whyTitle">ليس رسومًا جميلة فحسب، بل أرقام يُعتمد عليها</h2>
+      </div>
+      <div class="diff">
+        <div class="card reveal"><div class="ic" aria-hidden="true">🎯</div><div><h3 data-i="w1t">أرقام حقيقية لا مختلَقة</h3><p data-i="w1d">كل رسم ورقم يأتي من استعلام فعلي على بياناتك، وما تعذّر بناؤه يُذكر سببه بوضوح بدل ملئه بأرقام تقديرية.</p></div></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">🧠</div><div><h3 data-i="w2t">يفهم معنى بياناتك</h3><p data-i="w2d">طبقة معنى تتعرّف على الأعمدة أيًّا كانت تسميتها — الإيراد والحالة والمسؤول — فتعمل القوالب على ملفات جهتك كما هي.</p></div></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">🔄</div><div><h3 data-i="w3t">منشور وحيّ</h3><p data-i="w3d">الرابط المنشور يتحدّث مع بياناتك دون إعادة نشر، ويُنبّهك حين تتغيّر البيانات.</p></div></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">💬</div><div><h3 data-i="w4t">مساعد «جيم» داخل العرض</h3><p data-i="w4d">من يشاهد العرض المنشور يسأل عن محتواه كتابةً أو صوتًا، ويتلقّى إجابة من المحتوى نفسه.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- الحوكمة -->
+  <section class="gov" id="governance">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="govKicker">الحوكمة والأمان</span>
+        <h2 data-i="govTitle">تحكّم كامل في من يرى ماذا</h2>
+        <p data-i="govLead">صُممت المنصة لتعمل داخل الجهات وفق صلاحياتها، لا خارجها.</p>
+      </div>
+      <div class="grid3">
+        <div class="card reveal"><div class="ic" aria-hidden="true">🛡️</div><h3 data-i="g1t">صلاحيات متدرّجة</h3><p data-i="g1d">على مستوى المنظمة والمشروع والشاشة والملف، ومشاركة داخلية بصلاحية عرض أو تعديل.</p></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">🔒</div><h3 data-i="g2t">قراءة فقط ومعزولة</h3><p data-i="g2d">الاستعلامات للقراءة فقط وبصلاحيات صاحب البيانات، والصفحات المنشورة معزولة عن حسابات من يشاهدها.</p></div>
+        <div class="card reveal"><div class="ic" aria-hidden="true">🏛️</div><h3 data-i="g3t">سيادة على الذكاء الاصطناعي</h3><p data-i="g3d">اختر مزوّد النموذج، بما في ذلك نماذج تعمل على خوادم الجهة، مع حفظ المفاتيح مشفّرة.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- الأثر -->
+  <section id="impact">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="kicker" data-i="imKicker">الأثر</span>
+        <h2 data-i="imTitle">من أيام العمل اليدوي إلى ثوانٍ</h2>
+      </div>
+      <div class="stats">
+        <div class="stat reveal"><b>6</b><span data-i="st1">منتجات في مساحة واحدة</span></div>
+        <div class="stat reveal"><b>+320</b><span data-i="st2">قالبًا جاهزًا للبدء</span></div>
+        <div class="stat reveal"><b>+3,800</b><span data-i="st3">مؤشر أداء في المكتبة</span></div>
+        <div class="stat reveal"><b data-i="st4v">25 ثانية</b><span data-i="st4">تقريبًا لبناء لوحة كاملة من قالب</span></div>
+      </div>
+      <p class="note" data-i="imNote">زمن البناء من قياس فعلي على ملف مبيعات من 240 صفًا؛ ويختلف بحسب حجم البيانات وعدد العناصر.</p>
+    </div>
+  </section>
+
+  <!-- الختام -->
+  <section class="final">
+    <div class="wrap">
+      <div class="box reveal">
+        <h2 data-i="fTitle">ابدأ الآن من بيانات جهتك</h2>
+        <p data-i="fLead">سجّل الدخول، واختر النوع والقالب، ودع جيم يحوّل بياناتك إلى ما تحتاجه الإدارة.</p>
+        <a class="btn btn-primary" href="/app"><span data-i="login">تسجيل الدخول</span> <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="/img/logo-lockup.svg" alt="جيم" width="78" height="26">
+    <span data-i="foot">© جيم — من بياناتك إلى قرارك.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  // المنتجات الستة = أنواع «تصميم حر»، وأعداد القوالب من الكتالوج الفعلي (FreeformTemplates + مجلدات النماذج + كتالوج اللوحات).
+  var PRODUCTS = [
+    { k: 'doc', ic: '📄', c: 'var(--k-doc)' },
+    { k: 'slides', ic: '🖥️', c: 'var(--k-slides)' },
+    { k: 'design', ic: '🎨', c: 'var(--k-design)' },
+    { k: 'dashboard', ic: '📊', c: 'var(--k-dashboard)' },
+    { k: 'motion', ic: '🎬', c: 'var(--k-motion)' },
+    { k: 'track', ic: '📈', c: 'var(--k-track)', arOnly: true }
+  ];
+  var T = {
+    ar: {
+      title: 'جيم — من بياناتك إلى قرارك', skip: 'تخطَّ إلى المحتوى', navLabel: 'أقسام الصفحة', navProducts: 'المنتجات', navHow: 'كيف يعمل', navWhy: 'ما يميّزنا', navGov: 'الحوكمة',
+      langLabel: 'اللغة', login: 'تسجيل الدخول', eyebrow: 'منصة واحدة لكل مخرجات بياناتك', heroTitle: 'من بياناتك إلى قرارك… <em>في دقائق</em>',
+      heroLead: 'اصنع المستندات والعروض واللوحات والصفحات من بيانات جهتك الحقيقية: اختر النوع، وابدأ من قالب جاهز، واطلب ما تريد بالعربية — والنتيجة بأرقامك وبهوية جهتك.',
+      exploreProducts: 'استعرض المنتجات', chip1: '6 منتجات', chip2: 'أكثر من 320 قالبًا جاهزًا', chip3: 'عربي وإنجليزي', chip4: 'أرقام من بياناتك',
+      heroAlt1: 'شريحة من عرض تقديمي أنشأته جيم', heroAlt2: 'لوحة مؤشرات بأرقام توضيحية',
+      chKicker: 'التحدي', chTitle: 'البيانات موجودة، لكن الوصول منها إلى قرار ما زال بطيئًا',
+      p1t: 'تقارير تستغرق أيامًا', p1d: 'كل تقرير وكل عرض يُبنى يدويًا من جديد، فيضيع وقت الفرق في التنسيق بدل التحليل.',
+      p2t: 'أدوات متفرقة', p2d: 'أداة للمستندات وأخرى للعروض وثالثة للوحات، وكل منها يحتاج خبرة ومصدر بيانات منفصلًا.',
+      p3t: 'أرقام تتقادم', p3d: 'ما إن يُرسل الملف حتى تتغيّر البيانات، فتُتخذ القرارات على أرقام لم تعد صحيحة.',
+      howKicker: 'الحل', howTitle: 'مساحة واحدة، وثلاث خطوات', howLead: '«تصميم حر» في جيم يجمع كل ما تحتاجه الإدارة من مخرجات في مكان واحد، فوق بياناتك مباشرة.',
+      s1t: 'اختر النوع', s1d: 'مستند، أو عرض شرائح، أو تصميم، أو لوحة، أو مشهد متحرك، أو لوحة متابعة.',
+      s2t: 'اختر القالب', s2d: 'من معرض قوالب جاهزة لكل نوع، مع معاينة تفاعلية قبل الاستخدام، أو ابدأ من ملفك أو من الصفر.',
+      s3t: 'اطلب بالعربية', s3d: 'صِف ما تريد، فيبنيه جيم من بياناتك الحقيقية بهوية جهتك، ثم عدّله بنفسك أو انشره برابط.',
+      prKicker: 'المنتجات', prTitle: 'ستة منتجات… ولكل منها قوالبه الجاهزة', prLead: 'كل نوع في «تصميم حر» منتج متكامل بمعرض قوالب خاص به، يبدأ منه فريقك في ثوانٍ.', prTabs: 'المنتجات',
+      exLabel: 'مثال:', shotAlt: 'لقطة من منتج',
+      p_doc: { n: 'المستندات', s: 'تقارير ومذكرات جاهزة للطباعة', v: 'تقارير ومذكرات ومحاضر بصفحات A4 منسّقة بترويسة وفهرس، وبأرقام من بياناتك، جاهزة للطباعة والتصدير بصيغة PDF.', ex: 'تقرير الأداء الشهري للإدارة، أو مذكرة عرض قرار.', t: '6 قوالب', f: ['تقرير أداء دوري', 'مذكرة داخلية', 'محضر اجتماع', 'مقترح وعرض سعر', 'سياسة أو إجراء', 'ملخص صفحة واحدة'] },
+      p_slides: { n: 'العروض التقديمية', s: 'شرائح احترافية بهوية جهتك', v: 'عروض تقديمية بتنقّل وشريط مصغّرات وعرض بملء الشاشة، تُصدَّر بصيغة PDF أو PowerPoint، أو تُنشر برابط يتحدّث مع البيانات.', ex: 'عرض النتائج الربعية لمجلس الإدارة.', t: '63 قالبًا', f: ['قوالب احترافية مصمّمة بالصور', 'بالعربية والإنجليزية', 'رفع عرض PowerPoint كما هو', 'تعديل شريحة دون المساس بالبقية'] },
+      p_design: { n: 'التصاميم', s: 'صفحات وتجارب تفاعلية', v: 'صفحات حرّة التصميم: صفحة هبوط، أو تعريف بمشروع، أو كتالوج، أو نموذج طلب تفاعلي — تُنشر برابط مقروء.', ex: 'صفحة تعريفية بمبادرة جديدة ترسَل للشركاء.', t: '6 قوالب', f: ['صفحة هبوط', 'تعريف بمشروع', 'كتالوج بطاقات', 'نموذج طلب تفاعلي', 'خط زمني تفاعلي', 'دليل وأسئلة شائعة'] },
+      p_dashboard: { n: 'اللوحات', s: 'لوحات مؤشرات بتصميم حر', v: 'لوحة مؤشرات وتحليل بتصميم حر، فيها بطاقات ورسوم وفلاتر، تُبنى من بياناتك وتُنشر لجهات خارجية برابط.', ex: 'لوحة تنفيذية مختصرة بأهم ست مؤشرات.', t: '6 قوالب + كتالوج من 240 لوحة', f: ['لوحة تنفيذية', 'المبيعات والمالية', 'الموارد البشرية', 'المشاريع والعمليات'] },
+      p_motion: { n: 'المشاهد المتحركة', s: 'قصص مرئية قصيرة', v: 'مشاهد متحركة من 10 إلى 30 ثانية تروي الأرقام أو الرحلة أو الفكرة، بأدوات تشغيل وإيقاف وإعادة.', ex: 'شرح رحلة المستفيد خطوة بخطوة في اجتماع.', t: '5 قوالب', f: ['أرقام متحركة', 'رحلة بخطوات', 'شرح فكرة', 'تسلسل زمني', 'مقدمة بالشعار'] },
+      p_track: { n: 'لوحات المتابعة', s: 'متابعة تشغيلية حيّة', v: 'لوحة تشغيلية حيّة على بياناتك، بفلاتر وتصفية بالنقر على الرسوم وتحديث فوري، قابلة للتحويل إلى أي نوع آخر.', ex: 'متابعة مسار المبيعات والفرص يومًا بيوم.', t: 'كتالوج من 240 لوحة، منها 22 تفاعلية', f: ['فلاتر وتصفية متقاطعة', 'مكتبة +3,800 مؤشر', 'رابط حيّ', 'تحويل إلى عرض أو صفحة'] },
+      tpKicker: 'قالب لكل شيء', tpTitle: 'ابدأ من حيث تريد، وأنهِ بالشكل الذي تريده',
+      t1t: 'معرض لكل نوع', t1d: 'قوالب مصنّفة بالمجال مع بحث، ومعاينة تفاعلية بأرقام توضيحية قبل أن تختار.',
+      t2t: 'بالعربية والإنجليزية', t2d: 'استعرض القالب بأي اللغتين واستخدمه بها، والنصوص والاتجاه يُضبطان تلقائيًا.',
+      t3t: 'ابدأ من ملفك', t3d: 'ارفع عرض PowerPoint أو صفحة HTML كما هي، أو حوّل ملفًا موجودًا إلى قالب يُعاد استخدامه.',
+      t4t: 'تعديل مباشر', t4d: 'عدّل النصوص والصور والجداول والأشكال بنفسك، أو اطلب من جيم تعديل شريحة أو عنصر واحد فقط.',
+      t5t: 'هوية جهتك', t5d: 'الشعار والألوان والخطوط تُطبَّق بضغطة، مع إمكانية التبديل بين أكثر من هوية.',
+      t6t: 'تحويل بين الأنواع', t6d: 'حوّل المستند إلى عرض، واللوحة إلى صفحة، مع بقاء الأصل كما هو.',
+      whyKicker: 'ما يميّزنا', whyTitle: 'ليس رسومًا جميلة فحسب، بل أرقام يُعتمد عليها',
+      w1t: 'أرقام حقيقية لا مختلَقة', w1d: 'كل رسم ورقم يأتي من استعلام فعلي على بياناتك، وما تعذّر بناؤه يُذكر سببه بوضوح بدل ملئه بأرقام تقديرية.',
+      w2t: 'يفهم معنى بياناتك', w2d: 'طبقة معنى تتعرّف على الأعمدة أيًّا كانت تسميتها — الإيراد والحالة والمسؤول — فتعمل القوالب على ملفات جهتك كما هي.',
+      w3t: 'منشور وحيّ', w3d: 'الرابط المنشور يتحدّث مع بياناتك دون إعادة نشر، ويُنبّهك حين تتغيّر البيانات.',
+      w4t: 'مساعد «جيم» داخل العرض', w4d: 'من يشاهد العرض المنشور يسأل عن محتواه كتابةً أو صوتًا، ويتلقّى إجابة من المحتوى نفسه.',
+      govKicker: 'الحوكمة والأمان', govTitle: 'تحكّم كامل في من يرى ماذا', govLead: 'صُممت المنصة لتعمل داخل الجهات وفق صلاحياتها، لا خارجها.',
+      g1t: 'صلاحيات متدرّجة', g1d: 'على مستوى المنظمة والمشروع والشاشة والملف، ومشاركة داخلية بصلاحية عرض أو تعديل.',
+      g2t: 'قراءة فقط ومعزولة', g2d: 'الاستعلامات للقراءة فقط وبصلاحيات صاحب البيانات، والصفحات المنشورة معزولة عن حسابات من يشاهدها.',
+      g3t: 'سيادة على الذكاء الاصطناعي', g3d: 'اختر مزوّد النموذج، بما في ذلك نماذج تعمل على خوادم الجهة، مع حفظ المفاتيح مشفّرة.',
+      imKicker: 'الأثر', imTitle: 'من أيام العمل اليدوي إلى ثوانٍ',
+      st1: 'منتجات في مساحة واحدة', st2: 'قالبًا جاهزًا للبدء', st3: 'مؤشر أداء في المكتبة', st4v: '25 ثانية', st4: 'تقريبًا لبناء لوحة كاملة من قالب',
+      imNote: 'زمن البناء من قياس فعلي على ملف مبيعات من 240 صفًا؛ ويختلف بحسب حجم البيانات وعدد العناصر.',
+      fTitle: 'ابدأ الآن من بيانات جهتك', fLead: 'سجّل الدخول، واختر النوع والقالب، ودع جيم يحوّل بياناتك إلى ما تحتاجه الإدارة.',
+      foot: '© جيم — من بياناتك إلى قرارك.'
+    },
+    en: {
+      title: 'Jeem — From your data to your decision', skip: 'Skip to content', navLabel: 'Page sections', navProducts: 'Products', navHow: 'How it works', navWhy: 'Why Jeem', navGov: 'Governance',
+      langLabel: 'Language', login: 'Sign in', eyebrow: 'One platform for everything your data produces', heroTitle: 'From your data to your decision… <em>in minutes</em>',
+      heroLead: 'Create documents, presentations, dashboards and pages from your organization’s real data: pick a type, start from a ready template and describe what you need — in your numbers and your brand.',
+      exploreProducts: 'Explore the products', chip1: '6 products', chip2: '320+ ready templates', chip3: 'Arabic & English', chip4: 'Numbers from your data',
+      heroAlt1: 'A presentation slide created with Jeem', heroAlt2: 'A KPI dashboard with sample figures',
+      chKicker: 'The challenge', chTitle: 'The data is there — getting from it to a decision is still slow',
+      p1t: 'Reports take days', p1d: 'Every report and every deck is rebuilt by hand, so teams spend their time formatting instead of analysing.',
+      p2t: 'Scattered tools', p2d: 'One tool for documents, another for decks, a third for dashboards — each with its own skills and data source.',
+      p3t: 'Numbers go stale', p3d: 'As soon as a file is sent the data changes, and decisions are made on figures that are no longer true.',
+      howKicker: 'The solution', howTitle: 'One workspace, three steps', howLead: 'Jeem’s Freeform workspace brings every output leadership needs into one place, built directly on your data.',
+      s1t: 'Pick a type', s1d: 'A document, a slide deck, a design, a dashboard, an animation or a follow-up dashboard.',
+      s2t: 'Pick a template', s2d: 'From a gallery of ready templates for each type, with an interactive preview — or start from your own file or from scratch.',
+      s3t: 'Ask in plain language', s3d: 'Describe what you need; Jeem builds it from your real data in your brand. Then edit it yourself or publish it as a link.',
+      prKicker: 'Products', prTitle: 'Six products — each with its own ready templates', prLead: 'Every Freeform type is a complete product with its own template gallery, so your team starts in seconds.', prTabs: 'Products',
+      exLabel: 'Example:', shotAlt: 'Product screenshot',
+      p_doc: { n: 'Documents', s: 'Print-ready reports and memos', v: 'Reports, memos and minutes on formatted A4 pages with header and contents, using figures from your data — ready to print or export as PDF.', ex: 'A monthly performance report for leadership, or a decision memo.', t: '6 templates', f: ['Periodic performance report', 'Internal memo', 'Meeting minutes', 'Proposal & quotation', 'Policy or procedure', 'One-page summary'] },
+      p_slides: { n: 'Presentations', s: 'Professional slides in your brand', v: 'Presentations with navigation, a thumbnail strip and full-screen mode, exported to PDF or PowerPoint, or published as a link that stays in sync with your data.', ex: 'Quarterly results for the board.', t: '63 templates', f: ['Professionally designed templates', 'Arabic & English', 'Upload PowerPoint as-is', 'Edit one slide without touching the rest'] },
+      p_design: { n: 'Designs', s: 'Pages and interactive experiences', v: 'Free-form pages: a landing page, a project profile, a catalog or an interactive request form — published on a readable link.', ex: 'A profile page for a new initiative shared with partners.', t: '6 templates', f: ['Landing page', 'Project profile', 'Card catalog', 'Interactive request form', 'Interactive timeline', 'Guide & FAQ'] },
+      p_dashboard: { n: 'Dashboards', s: 'Free-form KPI dashboards', v: 'A free-form KPI and analysis dashboard with cards, charts and filters, built from your data and shareable with external parties as a link.', ex: 'An executive snapshot of the six most important KPIs.', t: '6 templates + a 240-dashboard catalog', f: ['Executive snapshot', 'Sales & finance', 'Human resources', 'Projects & operations'] },
+      p_motion: { n: 'Animations', s: 'Short visual stories', v: 'Animated scenes of 10–30 seconds that tell the story of the numbers, a journey or an idea, with play, pause and replay controls.', ex: 'Walking a meeting through the beneficiary journey step by step.', t: '5 templates', f: ['Animated numbers', 'Step-by-step journey', 'Idea explainer', 'Timeline', 'Logo intro'] },
+      p_track: { n: 'Follow-up dashboards', s: 'Live operational tracking', v: 'A live operational dashboard on your data, with filters, click-to-filter charts and instant refresh — convertible into any other type.', ex: 'Tracking the sales pipeline and opportunities day by day.', t: '240-dashboard catalog, 22 interactive', f: ['Filters & cross-filtering', '3,800+ KPI library', 'Live link', 'Convert to a deck or page'] },
+      tpKicker: 'A template for everything', tpTitle: 'Start wherever you like, finish the way you want',
+      t1t: 'A gallery for every type', t1d: 'Templates organized by domain with search, and an interactive preview with sample figures before you choose.',
+      t2t: 'Arabic and English', t2d: 'Preview a template in either language and use it in that language — text and direction adjust automatically.',
+      t3t: 'Start from your file', t3d: 'Upload a PowerPoint deck or an HTML page as-is, or turn an existing file into a reusable template.',
+      t4t: 'Direct editing', t4d: 'Edit text, images, tables and shapes yourself, or ask Jeem to change a single slide or element only.',
+      t5t: 'Your brand', t5d: 'Logo, colors and fonts applied in one click, with the option to switch between several identities.',
+      t6t: 'Convert between types', t6d: 'Turn a document into a deck or a dashboard into a page — the original stays as it is.',
+      whyKicker: 'Why Jeem', whyTitle: 'Not just good-looking charts — numbers you can rely on',
+      w1t: 'Real numbers, never invented', w1d: 'Every chart and figure comes from a real query on your data; anything that can’t be built is explained clearly instead of being filled with estimates.',
+      w2t: 'Understands your data', w2d: 'A semantic layer recognizes columns whatever they are called — revenue, status, owner — so templates work on your organization’s files as they are.',
+      w3t: 'Published and live', w3d: 'A published link stays in sync with your data without republishing, and tells you when the data has changed.',
+      w4t: 'The Jeem assistant inside', w4d: 'Viewers of a published presentation can ask about its content by text or voice and get answers from the content itself.',
+      govKicker: 'Governance & security', govTitle: 'Full control over who sees what', govLead: 'The platform is built to work inside organizations, within their permissions.',
+      g1t: 'Layered permissions', g1d: 'At organization, project, screen and file level, with internal sharing as view or edit.',
+      g2t: 'Read-only and isolated', g2d: 'Queries are read-only and run with the data owner’s permissions; published pages are isolated from viewers’ accounts.',
+      g3t: 'Sovereignty over AI', g3d: 'Choose the model provider — including models running on your own servers — with keys stored encrypted.',
+      imKicker: 'Impact', imTitle: 'From days of manual work to seconds',
+      st1: 'products in one workspace', st2: 'ready templates to start from', st3: 'KPIs in the library', st4v: '~25 s', st4: 'to build a full dashboard from a template',
+      imNote: 'Build time measured on a 240-row sales file; it varies with data size and the number of elements.',
+      fTitle: 'Start now with your organization’s data', fLead: 'Sign in, pick a type and a template, and let Jeem turn your data into what leadership needs.',
+      foot: '© Jeem — From your data to your decision.'
+    }
+  };
+  var lang = 'ar', current = 0;
+  try { var saved = localStorage.getItem('jeemHomeLang'); if (saved === 'en' || saved === 'ar') lang = saved; } catch (e) { /* التخزين غير متاح */ }
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function img(k) { var p = PRODUCTS.filter(function (x) { return x.k === k; })[0]; return '/img/home/' + k + '-' + (p && p.arOnly ? 'ar' : lang) + '.jpg'; }
+
+  function renderTabs() {
+    var t = T[lang], box = document.getElementById('ptabs');
+    box.innerHTML = PRODUCTS.map(function (p, i) {
+      var d = t['p_' + p.k];
+      return '<button type="button" class="ptab" role="tab" id="ptab-' + p.k + '" aria-controls="ppanel" aria-selected="' + (i === current) + '" tabindex="' + (i === current ? 0 : -1) + '" style="--k:' + p.c + '">' +
+        '<span class="pic" aria-hidden="true">' + p.ic + '</span><b>' + esc(d.n) + '</b><small>' + esc(d.s) + '</small></button>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.ptab'), function (b, i) {
+      b.addEventListener('click', function () { select(i, false); });
+    });
+  }
+  function renderPanel() {
+    var p = PRODUCTS[current], t = T[lang], d = t['p_' + p.k], panel = document.getElementById('ppanel');
+    panel.style.setProperty('--k', p.c);
+    panel.setAttribute('aria-labelledby', 'ptab-' + p.k);
+    panel.innerHTML = '<div class="media"><div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="' + img(p.k) + '" alt="' + esc(t.shotAlt + ': ' + d.n) + '" width="1280" height="800" loading="lazy"></div></div>' +
+      '<div class="body"><h3>' + esc(d.n) + ' <span class="tcount">' + esc(d.t) + '</span></h3><p class="value">' + esc(d.v) + '</p>' +
+      '<p class="ex"><b>' + esc(t.exLabel) + '</b> ' + esc(d.ex) + '</p><ul class="feats">' + d.f.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul></div>';
+  }
+  function select(i, focus) {
+    current = (i + PRODUCTS.length) % PRODUCTS.length;
+    Array.prototype.forEach.call(document.querySelectorAll('.ptab'), function (b, j) { b.setAttribute('aria-selected', String(j === current)); b.tabIndex = j === current ? 0 : -1; });
+    renderPanel();
+    if (focus) document.querySelectorAll('.ptab')[current].focus();
+  }
+  // لوحة المفاتيح على التبويبات: الأسهم بحسب الاتجاه، وHome/End
+  document.getElementById('ptabs').addEventListener('keydown', function (e) {
+    var rtl = document.documentElement.dir === 'rtl', k = e.key, next = null;
+    if (k === 'ArrowDown' || k === (rtl ? 'ArrowLeft' : 'ArrowRight')) next = current + 1;
+    else if (k === 'ArrowUp' || k === (rtl ? 'ArrowRight' : 'ArrowLeft')) next = current - 1;
+    else if (k === 'Home') next = 0; else if (k === 'End') next = PRODUCTS.length - 1;
+    if (next !== null) { e.preventDefault(); select(next, true); }
+  });
+
+  function apply(l) {
+    lang = l; var t = T[l], html = document.documentElement;
+    html.lang = l; html.dir = l === 'ar' ? 'rtl' : 'ltr'; document.title = t.title;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i]'), function (el) { var v = t[el.getAttribute('data-i')]; if (typeof v === 'string') el.textContent = v; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i-html]'), function (el) { var v = t[el.getAttribute('data-i-html')]; if (typeof v === 'string') el.innerHTML = v; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i-aria]'), function (el) { var v = t[el.getAttribute('data-i-aria')]; if (typeof v === 'string') el.setAttribute('aria-label', v); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i-alt]'), function (el) { var v = t[el.getAttribute('data-i-alt')]; if (typeof v === 'string') el.alt = v; });
+    Array.prototype.forEach.call(document.querySelectorAll('img[data-img]'), function (el) { el.src = img(el.getAttribute('data-img')); });
+    Array.prototype.forEach.call(document.querySelectorAll('.lang [data-lang]'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === l)); });
+    renderTabs(); renderPanel();
+    try { localStorage.setItem('jeemHomeLang', l); } catch (e) { /* التخزين غير متاح */ }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.lang [data-lang]'), function (b) {
+    b.addEventListener('click', function () { if (b.getAttribute('data-lang') !== lang) apply(b.getAttribute('data-lang')); });
+  });
+
+  // حدّ الشريط العلوي بعد التمرير، وظهور الأقسام تدريجيًا (بلا حركة مع تقليل الحركة)
+  var top = document.getElementById('top');
+  window.addEventListener('scroll', function () { top.classList.toggle('scrolled', window.scrollY > 8); }, { passive: true });
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var items = document.querySelectorAll('.reveal');
+  if (reduce || !('IntersectionObserver' in window)) Array.prototype.forEach.call(items, function (el) { el.classList.add('in'); });
+  else {
+    document.documentElement.classList.add('js-reveal');
+    var io = new IntersectionObserver(function (entries) { entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }); }, { rootMargin: '0px 0px -8% 0px' });
+    Array.prototype.forEach.call(items, function (el) { io.observe(el); });
+  }
+
+  apply(lang);
+})();
+</script>
+</body>
+</html>

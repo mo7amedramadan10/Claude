@@ -12237,7 +12237,7 @@ el('org-picker-form').addEventListener('submit', e => {
   if (!name) return;
   location.href = `/o/${encodeURIComponent(slugifyOrgName(name))}`;
 });
-el('login-org-change').addEventListener('click', () => { location.href = '/'; });
+el('login-org-change').addEventListener('click', () => { location.href = '/app'; }); // «/» صار الصفحة الرئيسية؛ اختيار المنظمة في التطبيق
 
 function renderCurrentUser() {
   const u = state.currentUser;

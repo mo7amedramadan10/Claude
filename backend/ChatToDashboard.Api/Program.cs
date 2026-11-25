@@ -284,7 +284,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 // Static files (including index.html, which renders its own login screen) are served
 // before authentication runs, so the app shell always loads; every API call underneath
 // it still requires a session via the FallbackPolicy above.
-app.UseDefaultFiles();
+// لا UseDefaultFiles: «/» يُحسم في نقطة نهاية خاصة أدناه (الصفحة الرئيسية للزائر، والتطبيق للمسجَّل أو لرابط مشاركة).
 // الملفات الثابتة تُعاد مصادقتها عند كل تحميل (ETag → 304 رخيصة) حتى لا يبقى المتصفح على نسخة قديمة من app.css/app.js
 // بعد نشر جديد — ظهر ذلك كصفحة مشاركة بقائمة جانبية وشريط قديم لأن app.css المخزَّن لم يحمل قواعد is-shared.
 app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache" });
@@ -368,6 +368,20 @@ app.MapGet("/p/{org}/{slug}", (IWebHostEnvironment env) =>
 // الصفحة تحت مسار بمقطعين فتُحوَّل مراجع index.html النسبية (css/ js/ img/) إلى مطلقة وإلا حلّها المتصفح تحت /d/{org}/.
 app.MapGet("/d/{org}/{slug}", (HttpContext ctx, IWebHostEnvironment env) => SpaIndex.Result(ctx, env))
     .AllowAnonymous();
+
+// الصفحة الرئيسية (wwwroot/home.html): «/» للزائر غير المسجَّل؛ والمسجَّل دخوله يذهب إلى التطبيق مباشرة. أي «/» بسلسلة استعلام
+// (روابط المشاركة القديمة ?share= و?embed=1&pub=…) يبقى للتطبيق كما كان. «/home» يعرض الصفحة الرئيسية دائمًا، و«/app» التطبيق دائمًا
+// (بشاشة الدخول لمن لم يسجّل) — زر «تسجيل الدخول» في الصفحة الرئيسية يوجّه إليه.
+app.MapGet("/", (HttpContext ctx, IWebHostEnvironment env) =>
+    ctx.Request.QueryString.HasValue || ctx.User.Identity?.IsAuthenticated == true ? SpaIndex.Result(ctx, env) : HomePage(ctx, env))
+    .AllowAnonymous();
+app.MapGet("/home", (HttpContext ctx, IWebHostEnvironment env) => HomePage(ctx, env)).AllowAnonymous();
+app.MapGet("/app", (HttpContext ctx, IWebHostEnvironment env) => SpaIndex.Result(ctx, env)).AllowAnonymous();
+static IResult HomePage(HttpContext ctx, IWebHostEnvironment env)
+{
+    ctx.Response.Headers.CacheControl = "no-cache";
+    return Results.File(Path.Combine(env.WebRootPath, "home.html"), "text/html; charset=utf-8");
+}
 
 // /o/{slug} (and anything else with no matching static file or API route) still serves the
 // same single-page app — app.js reads the slug from location.pathname itself (see
