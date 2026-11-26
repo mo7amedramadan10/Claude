@@ -13402,6 +13402,12 @@ function isPlatformMode() { const u = state.currentUser; return !!(u && u.isPlat
 function renderCurrentUser() {
   const u = state.currentUser;
   if (!u) return;
+  // جلسة مالك المنصّة داخل منظمة: شريحة دائمة في الشريط العلوي بزر العودة
+  const chip = el('imp-chip');
+  if (chip) {
+    chip.classList.toggle('hidden', !u.impersonatedBy);
+    if (u.impersonatedBy) el('imp-chip-text').textContent = `أنت داخل «${u.organizationName || 'المنظمة'}» كمسؤول بصفتك مالك المنصّة`;
+  }
   const platform = isPlatformMode();
   el('current-user-name').textContent = platform ? u.displayName : `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
   document.body.classList.toggle('platform-mode', platform);
@@ -14663,6 +14669,7 @@ function renderOrganizations(orgs) {
       <td><span class="num">${o.userCount}</span></td>
       <td class="muted">${new Date(o.createdAt).toLocaleDateString(uiLocale())}</td>
       <td><div class="row-actions">
+        ${o.isActive ? `<button type="button" class="btn btn-primary btn-sm" data-enter-org="${esc(o.id)}" data-org-name="${esc(o.name)}" title="ادخل المنظمة بصلاحية مسؤولها الكاملة، ثم عُد من الشريط العلوي">الدخول كمسؤول</button>` : ''}
         <button type="button" class="btn btn-ghost btn-sm" data-copy-login-link="${esc(o.slug)}" title="نسخ رابط تسجيل الدخول الخاص بهذه المنظمة">نسخ رابط الدخول</button>
         <button type="button" class="btn btn-ghost btn-sm" data-assign-admin="${esc(o.id)}" data-org-name="${esc(o.name)}">تعيين مسؤول</button>
         <button type="button" class="btn btn-ghost btn-sm" data-toggle-org="${esc(o.id)}" data-active="${o.isActive}">${o.isActive ? 'تعطيل' : 'تفعيل'}</button>
@@ -14678,6 +14685,17 @@ function renderOrganizations(orgs) {
     }));
   el('organizations-table-body').querySelectorAll('[data-assign-admin]').forEach(btn =>
     btn.addEventListener('click', () => openOrgAdminModal(btn.dataset.assignAdmin, btn.dataset.orgName)));
+  // «الدخول كمسؤول»: الخادم يدخلك بحساب دعم المنصّة داخل المنظمة (مسؤول كامل الصلاحية) ويحفظ هويتك للعودة
+  el('organizations-table-body').querySelectorAll('[data-enter-org]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/auth/enter-org/${encodeURIComponent(btn.dataset.enterOrg)}`, { method: 'POST' });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { alert(d.error || `تعذّر الدخول (${res.status})`); return; }
+        location.href = d.redirect || '/app';
+      } finally { btn.disabled = false; }
+    }));
   el('organizations-table-body').querySelectorAll('[data-copy-login-link]').forEach(btn =>
     btn.addEventListener('click', async () => {
       const link = `${location.origin}/o/${btn.dataset.copyLoginLink}`;
@@ -14689,6 +14707,16 @@ function renderOrganizations(orgs) {
       } catch { /* clipboard access denied — nothing to recover from here */ }
     }));
 }
+
+el('imp-return')?.addEventListener('click', async () => {
+  const btn = el('imp-return'); btn.disabled = true;
+  try {
+    const res = await fetch('/api/auth/return-to-platform', { method: 'POST' });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(d.error || `تعذّرت العودة (${res.status})`); return; }
+    location.href = d.redirect || '/app';
+  } finally { btn.disabled = false; }
+});
 
 el('new-org-btn').addEventListener('click', () => {
   el('new-org-error').classList.add('hidden');

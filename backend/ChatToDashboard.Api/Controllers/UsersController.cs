@@ -43,6 +43,8 @@ public class UsersController : ControllerBase
 
         var organizationId = OrganizationId;
         if (organizationId is null) return BadRequest(new { error = "الحساب غير مرتبط بأي منظمة." });
+        if (UserStore.IsReservedUsername(request.Username))
+            return BadRequest(new { error = "أسماء المستخدمين التي تبدأ بـ «__» محجوزة للمنصّة." });
         if (await _users.FindByUsernameInOrganizationAsync(organizationId, request.Username.Trim(), ct) is not null)
             return Conflict(new { error = "اسم المستخدم ده موجود بالفعل في هذه المنظمة." });
 
@@ -76,7 +78,7 @@ public class UsersController : ControllerBase
     {
         var organizationId = OrganizationId;
         var user = await _users.FindByIdAsync(id, ct);
-        if (organizationId is null || user is null || user.OrganizationId != organizationId)
+        if (organizationId is null || user is null || user.OrganizationId != organizationId || UserStore.IsReservedUsername(user.Username))
             return NotFound(new { error = "المستخدم غير موجود." });
 
         var error = ValidateRequest(request, isCreate: false);
@@ -125,7 +127,7 @@ public class UsersController : ControllerBase
     {
         var organizationId = OrganizationId;
         var user = await _users.FindByIdAsync(id, ct);
-        if (organizationId is null || user is null || user.OrganizationId != organizationId)
+        if (organizationId is null || user is null || user.OrganizationId != organizationId || UserStore.IsReservedUsername(user.Username))
             return NotFound(new { error = "المستخدم غير موجود." });
         if (user.Role == UserRoles.Admin)
         {

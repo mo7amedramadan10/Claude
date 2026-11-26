@@ -72,6 +72,10 @@ public class UserInfo
     [JsonPropertyName("isPlatformOwner")] public bool IsPlatformOwner { get; set; }
     /// <summary>null = كل الشاشات.</summary>
     [JsonPropertyName("allowedScreens")] public List<string>? AllowedScreens { get; set; }
+    /// <summary>جلسة «الدخول كمسؤول» من مالك المنصّة: اسمه (null في الجلسات العادية).</summary>
+    [JsonPropertyName("impersonatedBy")] public string? ImpersonatedBy { get; set; }
+    /// <summary>اسم المنظمة في جلسة «الدخول كمسؤول» (لشريط العودة).</summary>
+    [JsonPropertyName("organizationName")] public string? OrganizationName { get; set; }
 }
 
 public class LoginRequest

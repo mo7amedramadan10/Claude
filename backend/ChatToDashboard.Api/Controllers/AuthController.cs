@@ -53,7 +53,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "اسم المستخدم أو كلمة المرور غير صحيحة." });
 
         var user = await _users.FindByUsernameInOrganizationAsync(org.Id, request.Username.Trim(), ct);
-        if (user is null || !user.IsActive)
+        if (user is null || !user.IsActive || UserStore.IsReservedUsername(user.Username))
             return Unauthorized(new { error = "اسم المستخدم أو كلمة المرور غير صحيحة." });
 
         bool ok;
@@ -93,9 +93,40 @@ public class AuthController : ControllerBase
         return await SignInAsync(user);
     }
 
-    private async Task<IActionResult> SignInAsync(AppUser user)
+    /// <summary>«الدخول كمسؤول» من شاشة المنظمات: مالك المنصّة المستقل يدخل المنظمة بحساب الدعم الخاص بها (مسؤول كامل الصلاحية
+    /// داخلها)، والجلسة تحمل هوية المالك (<c>ImpersonatedBy</c>) فيعود إلى إدارة المنصّة بلا كلمة مرور.</summary>
+    [HttpPost("enter-org/{organizationId}")]
+    public async Task<IActionResult> EnterOrganization(string organizationId, CancellationToken ct)
     {
-        var identity = new ClaimsIdentity(new[]
+        var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var owner = ownerId is null ? null : await _users.FindByIdAsync(ownerId, ct);
+        if (owner is null || !owner.IsActive || !PlatformGate.IsStandaloneOwner(owner.IsPlatformOwner, owner.OrganizationId))
+            return StatusCode(403, new { error = "الدخول إلى المنظمات لمالك المنصّة فقط." });
+        var org = await _organizations.FindByIdAsync(organizationId, ct);
+        if (org is null) return NotFound(new { error = "المنظمة غير موجودة." });
+        if (!org.IsActive) return BadRequest(new { error = "المنظمة معطّلة — فعّلها أولًا." });
+
+        var support = await _users.EnsurePlatformSupportAccountAsync(org.Id, ct);
+        _logger.LogWarning("Platform owner {Owner} entered organization {Org} as admin", owner.Username, org.Slug);
+        await SignInAsync(support, owner);
+        return Ok(new { organization = new { id = org.Id, name = org.Name, slug = org.Slug }, redirect = "/app" });
+    }
+
+    /// <summary>العودة من منظمة دخلها مالك المنصّة إلى إدارة المنصّة (يتحقق أن الجلسة بدأت منه وأنه ما زال مالكًا نشطًا).</summary>
+    [HttpPost("return-to-platform")]
+    public async Task<IActionResult> ReturnToPlatform(CancellationToken ct)
+    {
+        var ownerId = User.FindFirstValue("ImpersonatedBy");
+        var owner = string.IsNullOrEmpty(ownerId) ? null : await _users.FindByIdAsync(ownerId, ct);
+        if (owner is null || !owner.IsActive || !PlatformGate.IsStandaloneOwner(owner.IsPlatformOwner, owner.OrganizationId))
+            return StatusCode(403, new { error = "هذه الجلسة لم تبدأ من إدارة المنصّة." });
+        await SignInAsync(owner);
+        return Ok(new { redirect = "/app" });
+    }
+
+    private async Task<IActionResult> SignInAsync(AppUser user, AppUser? impersonator = null)
+    {
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim(ClaimTypes.Name, user.Username),
@@ -103,7 +134,13 @@ public class AuthController : ControllerBase
             new Claim("DisplayName", user.DisplayName),
             new Claim("OrganizationId", user.OrganizationId ?? ""),
             new Claim("IsPlatformOwner", user.IsPlatformOwner ? "true" : "false"),
-        }, CookieAuthenticationDefaults.AuthenticationScheme);
+        };
+        if (impersonator is not null)
+        {
+            claims.Add(new Claim("ImpersonatedBy", impersonator.Id));
+            claims.Add(new Claim("ImpersonatedByName", string.IsNullOrWhiteSpace(impersonator.DisplayName) ? impersonator.Username : impersonator.DisplayName));
+        }
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity),
             new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7) });
@@ -132,6 +169,13 @@ public class AuthController : ControllerBase
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Unauthorized();
         }
-        return Ok(UserStore.ToInfo(user));
+        var info = UserStore.ToInfo(user);
+        if (User.FindFirstValue("ImpersonatedBy") is { Length: > 0 })
+        {
+            // جلسة «الدخول كمسؤول» من مالك المنصّة: الواجهة تعرض شريط العودة لإدارة المنصّة
+            info.ImpersonatedBy = User.FindFirstValue("ImpersonatedByName") ?? "مالك المنصّة";
+            info.OrganizationName = user.OrganizationId is null ? null : (await _organizations.FindByIdAsync(user.OrganizationId, ct))?.Name;
+        }
+        return Ok(info);
     }
 }

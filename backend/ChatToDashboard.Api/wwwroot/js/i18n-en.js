@@ -436,6 +436,10 @@ window.JEEM_I18N_EN = Object.assign(window.JEEM_I18N_EN || {}, {
   "اطلب من مسؤول المنظمة إضافتك إلى كيان من «المستخدمون» ← تبويب «صلاحية الكيانات»، ثم أعد تحميل الصفحة.": "Ask your organization admin to add you to an entity from “Users” → “Entities access”, then reload the page.",
   "إعادة التحميل": "Reload",
   "لم تُضف إلى أي كيان بعد — اطلب من مسؤول المنظمة إضافتك إلى كيان.": "You haven't been added to any entity — ask your organization admin to add you.",
+  "الدخول كمسؤول": "Enter as admin",
+  "ادخل المنظمة بصلاحية مسؤولها الكاملة، ثم عُد من الشريط العلوي": "Enter the organization with full admin rights, then return from the top bar",
+  "العودة لإدارة المنصّة": "Back to platform admin",
+  "أنت داخل المنظمة كمسؤول بصفتك مالك المنصّة": "You are inside the organization as admin (platform owner)",
   "صلاحية الكيانات": "Entities access",
   "المسؤول يصل إلى كل الكيانات في المنظمة دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.": "Admins always reach every entity in the organization; this setting is for regular users only.",
   "فعّل الكيانات التي يعمل فيها المستخدم؛ ما يستطيع فعله داخلها تحدده «صلاحية الشاشات». المستخدم بلا أي كيان مفعّل لا يرى أي كيان.": "Turn on the entities the user works in; what they can do inside is set in “Screens access”. A user with no entity turned on sees no entity.",
@@ -1819,6 +1823,7 @@ window.JEEM_I18N_EN = Object.assign(window.JEEM_I18N_EN || {}, {
 
 // قوالب النصوص المركّبة بقيم: كل {} قيمة وقت التشغيل، و{1} {2}… مواضعها في الإنجليزية (تُطابَق على عقدة النص كاملة، بعد القاموس)
 window.JEEM_I18N_EN_PATTERNS = Object.assign(window.JEEM_I18N_EN_PATTERNS || {}, {
+  "أنت داخل «{}» كمسؤول بصفتك مالك المنصّة": "You are inside “{1}” as admin (platform owner)",
   "العنصر: «{}»": "Widget: \"{1}\"",
   "تم اعتماد «{}» كـ «{}».": "\"{1}\" adopted as \"{2}\".",
   "ما زال غير ممكن — {} جرّب عمودًا آخر أعلاه أو «اطلب من جيم» على العنصر.": "Still not possible — {1} Try another column above or \"Ask Jeem\" on the widget.",

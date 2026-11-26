@@ -170,7 +170,7 @@ public class UserStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<int>(
-            $"SELECT COUNT(*) FROM {Table} WHERE OrganizationId = @organizationId", new { organizationId });
+            $"SELECT COUNT(*) FROM {Table} WHERE OrganizationId = @organizationId AND Username <> @support", new { organizationId, support = PlatformSupportUsername });
     }
 
     public async Task<IReadOnlyList<AppUser>> ListByOrganizationAsync(string organizationId, CancellationToken ct = default)
@@ -178,7 +178,7 @@ public class UserStore
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<AppUser>(
-            $"SELECT * FROM {Table} WHERE OrganizationId = @organizationId ORDER BY Username", new { organizationId });
+            $"SELECT * FROM {Table} WHERE OrganizationId = @organizationId AND Username <> @support ORDER BY Username", new { organizationId, support = PlatformSupportUsername });
         return rows.ToList();
     }
 
@@ -217,6 +217,41 @@ public class UserStore
         await using var connection = await _db.OpenConnectionAsync(ct);
         return await connection.ExecuteAsync(
             $"UPDATE {Table} SET IsPlatformOwner = 0 WHERE IsPlatformOwner = 1 AND OrganizationId IS NOT NULL AND OrganizationId <> ''");
+    }
+
+    /// <summary>اسم حساب الدعم الذي يدخل به مالك المنصّة إلى منظمة «كمسؤول» (حساب لكل منظمة، مخفي من قوائمها وعدّاداتها،
+    /// بكلمة مرور عشوائية لا تُعرف، ولا يدخل من شاشة الدخول العادية).</summary>
+    public const string PlatformSupportUsername = "__platform_owner__";
+
+    /// <summary>هل الاسم محجوز لحسابات المنصّة؟ (يبدأ بشرطتين سفليتين)</summary>
+    public static bool IsReservedUsername(string? username) => (username ?? "").Trim().StartsWith("__", StringComparison.Ordinal);
+
+    /// <summary>حساب دعم مالك المنصّة داخل المنظمة — يُنشأ عند أول دخول (مسؤول، نشط) ويُعاد تفعيله إن عُطّل.</summary>
+    public async Task<AppUser> EnsurePlatformSupportAccountAsync(string organizationId, CancellationToken ct = default)
+    {
+        var existing = await FindByUsernameInOrganizationAsync(organizationId, PlatformSupportUsername, ct);
+        if (existing is not null)
+        {
+            if (!existing.IsActive || existing.Role != UserRoles.Admin || existing.AllowedScreensJson is not null)
+            {
+                existing.IsActive = true; existing.Role = UserRoles.Admin; existing.AllowedScreensJson = null;
+                existing.AllowAllSystems = true; existing.AllowAllFiles = true;
+                await UpdateAsync(existing, ct);
+            }
+            return existing;
+        }
+        return await CreateAsync(new AppUser
+        {
+            Username = PlatformSupportUsername,
+            DisplayName = "مالك المنصّة",
+            PasswordHash = PasswordHasher.Hash(Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))),
+            AuthMethod = AuthMethods.Local,
+            Role = UserRoles.Admin,
+            IsActive = true,
+            AllowAllSystems = true,
+            AllowAllFiles = true,
+            OrganizationId = organizationId,
+        }, ct);
     }
 
     public async Task<IReadOnlyList<AppUser>> ListAsync(CancellationToken ct = default)
@@ -273,10 +308,10 @@ public class UserStore
         var like = $"%{query}%";
         var top = $"TOP {limit} ";
         var rows = await connection.QueryAsync<AppUser>(
-            $"SELECT {top}* FROM {Table} WHERE IsActive = 1 AND OrganizationId = @organizationId AND " +
+            $"SELECT {top}* FROM {Table} WHERE IsActive = 1 AND OrganizationId = @organizationId AND Username <> @support AND " +
             "(LOWER(Username) LIKE LOWER(@like) OR LOWER(DisplayName) LIKE LOWER(@like)) " +
             $"ORDER BY Username",
-            new { organizationId, like, limit });
+            new { organizationId, like, limit, support = PlatformSupportUsername });
         return rows.ToList();
     }
 

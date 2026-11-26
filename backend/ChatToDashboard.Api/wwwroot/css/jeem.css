@@ -4417,3 +4417,13 @@ body.ff-full-on { overflow: hidden; }
 #user-modal #user-ents-block { padding: 0; border: 0; background: none; }
 #user-modal .um-sw-list.hidden { display: none; }
 #user-modal #user-systems-list { margin-top: 10px; }
+
+/* شريحة «مالك المنصّة داخل منظمة» في الشريط العلوي (جلسة الدخول كمسؤول) */
+.jeem-scope .imp-chip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin-inline-start: 12px; padding: 4px 6px 4px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--warn, #B7791F) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn, #B7791F) 45%, transparent); color: var(--ink); font-size: 12.5px; font-weight: 600; }
+:root[dir="rtl"] .jeem-scope .imp-chip { padding: 4px 12px 4px 6px; }
+.jeem-scope .imp-chip.hidden { display: none; }
+.jeem-scope .imp-chip .icon { color: var(--warn, #B7791F); flex: none; }
+.jeem-scope .imp-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jeem-scope .imp-chip .btn { flex: none; min-height: 28px; padding: 2px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line, var(--grid)); }
+@media (max-width: 640px) { .jeem-scope .imp-chip { order: 5; flex: 1 1 100%; margin: 6px 0 0; } }
