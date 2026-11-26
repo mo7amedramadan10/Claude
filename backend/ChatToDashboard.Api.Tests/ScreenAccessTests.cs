@@ -7,6 +7,18 @@ namespace ChatToDashboard.Api.Tests;
 public class ScreenAccessTests
 {
     [Fact]
+    public void PublicEndpoints_AreNotGated_EvenForViewOnly()
+    {
+        // الرابط المنشور يستدعي /api/presentations/by/…/meta و/api/share/by/… وهما عامّتان
+        Assert.False(ScreenAccess.AppliesTo("/api/presentations/by/org/slug/meta", isPublicEndpoint: true));
+        Assert.False(ScreenAccess.AppliesTo("/api/share/by/org/slug", isPublicEndpoint: true));
+        // الواجهات نفسها بلا [AllowAnonymous] تبقى مقيَّدة
+        Assert.True(ScreenAccess.AppliesTo("/api/presentations", isPublicEndpoint: false));
+        Assert.False(ScreenAccess.IsApiAllowed("/api/presentations", ScreenAccess.ViewOnly));
+        Assert.False(ScreenAccess.AppliesTo("/api/auth/me", isPublicEndpoint: false)); // غير مقيَّد أصلًا
+    }
+
+    [Fact]
     public void SerializeAndParse_NullMeansAll()
     {
         Assert.Null(ScreenAccess.Serialize(null));
@@ -30,5 +42,19 @@ public class ScreenAccessTests
         Assert.False(ScreenAccess.IsGated("/api/freeformx") && !ScreenAccess.IsApiAllowed("/api/freeformx", a)); // حدود المقطع
         Assert.False(ScreenAccess.IsGated("/api/auth/login"));
         Assert.True(ScreenAccess.IsGated("/api/decksx") == false);
+    }
+
+    [Fact]
+    public void Freeform_IsGated_ToFreeformScreenOnly()
+    {
+        Assert.True(ScreenAccess.IsGated("/api/freeform"));
+        Assert.True(ScreenAccess.IsGated("/api/freeform/abc/records"));
+        Assert.False(ScreenAccess.IsApiAllowed("/api/freeform", ScreenAccess.ViewOnly));
+        Assert.True(ScreenAccess.IsApiAllowed("/api/freeform/generate", ScreenAccess.FreeformOnly));
+        Assert.False(ScreenAccess.IsApiAllowed("/api/freeform", new[] { "chat" }));
+        // الأصول العامة لا تخضع للوسيط أصلًا (نقطة نهاية [AllowAnonymous])
+        Assert.False(ScreenAccess.AppliesTo("/api/freeform/assets/abc", isPublicEndpoint: true));
+        // بادئة مشابهة ليست هي
+        Assert.False(ScreenAccess.IsGated("/api/freeformx"));
     }
 }

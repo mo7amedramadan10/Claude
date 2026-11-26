@@ -28,6 +28,8 @@ public static class ScreenAccess
     {
         ("/api/analyst", new[] { "analyst" }),
         ("/api/viewing", new[] { "viewing" }),
+        // تصميم حر: كل نداءاته من شاشته (ومنها «لوحات المتابعة» داخلها)؛ أصوله العامة assets/{id} موسومة [AllowAnonymous] فلا تخضع.
+        ("/api/freeform", new[] { "freeform" }),
         ("/api/decks/brand", new[] { "decks", "freeform", "chat" }),
         ("/api/decks", new[] { "decks" }),
         ("/api/published-dashboards", new[] { "published", "active" }),
@@ -67,6 +69,12 @@ public static class ScreenAccess
 
     /// <summary>هل للمسار بادئة مقيَّدة أصلًا (فلا يُقرأ المستخدم من القاعدة لغيرها)؟</summary>
     public static bool IsGated(string path) => Match(path) is not null;
+
+    /// <summary>
+    /// هل يخضع هذا الطلب لصلاحيات الشاشات؟ نقطة نهاية عامة ([AllowAnonymous]: الرابط المنشور /p/… ولوحة /d/… وأصولهما) لا تخضع،
+    /// لأن الزائر المجهول يصلها أصلًا — وكان تقييدها يرفض (403) صاحب حساب «اطلاع فقط» وهو مسجَّل دخوله، فيرى «الرابط غير موجود».
+    /// </summary>
+    public static bool AppliesTo(string path, bool isPublicEndpoint) => !isPublicEndpoint && IsGated(path);
 
     /// <summary>هل يُسمح للمستخدم بهذا المسار؟ <paramref name="allowed"/> null = كل الشاشات.</summary>
     public static bool IsApiAllowed(string path, IReadOnlyCollection<string>? allowed)
