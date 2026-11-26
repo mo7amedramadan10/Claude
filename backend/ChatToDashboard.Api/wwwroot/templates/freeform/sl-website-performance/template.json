@@ -1,0 +1,70 @@
+{
+  "key": "sl-website-performance",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🌐",
+  "name": "تقرير أداء الموقع الإلكتروني",
+  "nameEn": "Website Performance Report",
+  "description": "12 شريحة: غلاف، ملخص تنفيذي، بطاقة أداء، اتجاهات، مؤشرات الويب، رحلة الصفحات، الموارد، الاختناقات، التحسين وخارطة الطريق",
+  "descriptionEn": "12 slides: cover, summary, scorecard, trends, web vitals, page journey, resources, bottlenecks, optimization, roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "بطاقة أداء الموقع",
+      "titleEn": "Website Performance Scorecard",
+      "needsData": true
+    },
+    {
+      "title": "اتجاهات الأداء",
+      "titleEn": "Performance Trends",
+      "needsData": true
+    },
+    {
+      "title": "لوحة مؤشرات الويب الأساسية",
+      "titleEn": "Core Web Vitals Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "تحليل تجربة المستخدم ورحلة الصفحات",
+      "titleEn": "User Experience & Page Journey Analysis",
+      "needsData": true
+    },
+    {
+      "title": "تحليل الموارد والتحميل",
+      "titleEn": "Resource & Load Analysis",
+      "needsData": true
+    },
+    {
+      "title": "اختناقات الأداء",
+      "titleEn": "Performance Bottlenecks",
+      "needsData": true
+    },
+    {
+      "title": "مصفوفة التحسين",
+      "titleEn": "Optimization Matrix",
+      "needsData": true
+    },
+    {
+      "title": "الأثر على الأعمال",
+      "titleEn": "Business Impact",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "التوصيات والخطوات التالية",
+      "titleEn": "Recommendation & Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط ومحرك الرسوم، وغيّر النصوص والأرقام فقط؛ قيم الرسوم وتسمياتها (ونسب أشرطة التقدّم في الشريحة 7 ونسبة المقياس في الشريحة 2) في كتل JSON بالمعرّفات chart-data إلى chart-data-9، والمؤشرات والجدول وشارات الحالة نصوص HTML."
+}
