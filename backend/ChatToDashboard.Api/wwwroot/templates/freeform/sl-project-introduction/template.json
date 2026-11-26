@@ -1,0 +1,65 @@
+{
+  "key": "sl-project-introduction",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "🚀",
+  "name": "تقديم المشروع",
+  "nameEn": "Project Introduction",
+  "description": "اثنتا عشرة شريحة لتقديم مشروع: نظرة عامة، الأهداف، النطاق، المخرجات، المعالم، المخاطر والخطوات التالية",
+  "descriptionEn": "Twelve slides to introduce a project: overview, objectives, scope, deliverables, milestones, risks, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة على المشروع",
+      "titleEn": "Project Overview"
+    },
+    {
+      "title": "الأهداف ومعايير النجاح",
+      "titleEn": "Objectives & Success Criteria",
+      "needsData": true
+    },
+    {
+      "title": "نطاق المشروع",
+      "titleEn": "Project Scope"
+    },
+    {
+      "title": "المخرجات الرئيسية",
+      "titleEn": "Key Deliverables"
+    },
+    {
+      "title": "أصحاب المصلحة والأدوار",
+      "titleEn": "Stakeholders & Roles"
+    },
+    {
+      "title": "المعالم الرئيسية",
+      "titleEn": "Milestones",
+      "needsData": true
+    },
+    {
+      "title": "النهج والمنهجية",
+      "titleEn": "Approach & Methodology"
+    },
+    {
+      "title": "المخاطر والافتراضات",
+      "titleEn": "Risks & Assumptions",
+      "needsData": true
+    },
+    {
+      "title": "الاعتمادات والقيود",
+      "titleEn": "Dependencies & Constraints"
+    },
+    {
+      "title": "التواصل والحوكمة",
+      "titleEn": "Communication & Governance",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية والإجراءات الفورية",
+      "titleEn": "Next Steps & Immediate Actions"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والخطوط الموجية وغيّر النصوص والأرقام فقط؛ نسب حلقتي الأهداف في كتلة chart-data ونسب أشرطة المخاطر في chart-data-2."
+}
