@@ -1,0 +1,57 @@
+{
+  "key": "sl-company-introduction",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "التعريف بالشركة",
+  "nameEn": "Company Introduction",
+  "description": "عشر شرائح: غلاف، من نحن، الرؤية والرسالة، المحطات، الخدمات، القيادة، العملاء، الأسواق، لمحة مالية، ختام",
+  "descriptionEn": "Ten slides: cover, about, vision, milestones, services, leaders, clients, markets, financials, close",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us",
+      "needsData": true
+    },
+    {
+      "title": "الرؤية والرسالة والقيم",
+      "titleEn": "Vision & Mission"
+    },
+    {
+      "title": "أبرز المحطات",
+      "titleEn": "Key Milestones"
+    },
+    {
+      "title": "خدماتنا",
+      "titleEn": "Our Services"
+    },
+    {
+      "title": "فريق القيادة",
+      "titleEn": "Leadership Team"
+    },
+    {
+      "title": "محفظة العملاء",
+      "titleEn": "Client Portfolio",
+      "needsData": true
+    },
+    {
+      "title": "الحضور في الأسواق",
+      "titleEn": "Market Presence",
+      "needsData": true
+    },
+    {
+      "title": "لمحة مالية (رسم وجدول)",
+      "titleEn": "Financial Snapshot (chart & table)",
+      "needsData": true
+    },
+    {
+      "title": "الختام والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ أعمدة نمو الإيرادات تُرسم من كتلة chart-data، وأرقام الجدول والمؤشرات نصوص في مكانها."
+}

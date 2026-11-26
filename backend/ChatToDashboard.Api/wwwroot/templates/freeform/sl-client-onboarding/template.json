@@ -1,0 +1,69 @@
+{
+  "key": "sl-client-onboarding",
+  "kind": "slides",
+  "category": "cx",
+  "icon": "🤝",
+  "name": "تهيئة العملاء",
+  "nameEn": "Client Onboarding",
+  "description": "ثلاث عشرة شريحة لتهيئة عميل جديد: من نحن، الخدمات، الأهداف، الجدول الزمني، الأدوار، التواصل، المستندات والأسئلة",
+  "descriptionEn": "13 slides to onboard a new client: about us, services, goals, timeline, roles, communication, documents, FAQs",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "مقدمة",
+      "titleEn": "Introduction"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us",
+      "needsData": true
+    },
+    {
+      "title": "أبرز الإنجازات وآراء العملاء",
+      "titleEn": "Key Achievements & Testimonials",
+      "needsData": true
+    },
+    {
+      "title": "خدماتنا",
+      "titleEn": "Our Services"
+    },
+    {
+      "title": "أهداف التهيئة",
+      "titleEn": "Onboarding Goals"
+    },
+    {
+      "title": "الجدول الزمني",
+      "titleEn": "Timeline"
+    },
+    {
+      "title": "الأدوار والمسؤوليات",
+      "titleEn": "Roles & Responsibilities",
+      "needsData": true
+    },
+    {
+      "title": "خطة التواصل",
+      "titleEn": "Communication Plan",
+      "needsData": true
+    },
+    {
+      "title": "المستندات المطلوبة",
+      "titleEn": "Documentation Required"
+    },
+    {
+      "title": "الأسئلة الشائعة",
+      "titleEn": "FAQs"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "شكرًا لانضمامك",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والمواضع وغيّر النصوص والأرقام فقط (الإحصاءات الزرقاء وصفوف جدول الأدوار)؛ الصور الأربع مقصوصة من الأصل بقصّ clip-path ثابت."
+}

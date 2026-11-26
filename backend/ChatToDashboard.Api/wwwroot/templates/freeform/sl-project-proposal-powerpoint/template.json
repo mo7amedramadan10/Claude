@@ -1,0 +1,74 @@
+{
+  "key": "sl-project-proposal-powerpoint",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "📋",
+  "name": "مقترح مشروع",
+  "nameEn": "Project Proposal",
+  "description": "أربع عشرة شريحة لمقترح مشروع: الملخص والمشكلة والأهداف والحل والنطاق والمنهجية والجدول والفريق والميزانية والمخاطر",
+  "descriptionEn": "14 slides: summary, problem, objectives, solution, scope, method, timeline, team, budget, benefits, risks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "المشكلة أو الفرصة",
+      "titleEn": "Problem or Opportunity",
+      "needsData": true
+    },
+    {
+      "title": "أهداف المشروع",
+      "titleEn": "Project Objectives",
+      "needsData": true
+    },
+    {
+      "title": "الحل المقترح",
+      "titleEn": "Proposed Solution"
+    },
+    {
+      "title": "اقتباس",
+      "titleEn": "Quote"
+    },
+    {
+      "title": "نطاق المشروع",
+      "titleEn": "Project Scope"
+    },
+    {
+      "title": "نهج المشروع ومنهجيته",
+      "titleEn": "Project Approach & Methodology"
+    },
+    {
+      "title": "الجدول الزمني والمحطات",
+      "titleEn": "Project Timeline & Milestones",
+      "needsData": true
+    },
+    {
+      "title": "فريق المشروع والمسؤوليات",
+      "titleEn": "Project Team & Responsibilities"
+    },
+    {
+      "title": "الميزانية ومتطلبات الموارد",
+      "titleEn": "Budget & Resource Requirements",
+      "needsData": true
+    },
+    {
+      "title": "الفوائد المتوقعة والأثر",
+      "titleEn": "Expected Benefits & Business Impact"
+    },
+    {
+      "title": "المخاطر والخطوات التالية والاعتماد",
+      "titleEn": "Risks, Next Steps & Approval"
+    },
+    {
+      "title": "الختام",
+      "titleEn": "Closing"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال الصفراء وشبكة الخطوط، وغيّر النصوص والأرقام فقط (المؤشرات والنسب وجدول الجدول الزمني ومؤشرات الميزانية بلون الحالة مع سهم)."
+}
