@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Management Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «تقرير الإدارة»: كتل مطلقة بإحداثيات الأصل وخصائص منطقية تنعكس للعربية؛ الأشكال غير المتماثلة SVG تُقلب بـ scaleX(-1) في RTL؛ الرسوم الثلاثة من كتل chart-data. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #1A1A1A; --navy: #122F47; --green: #A2BA40; --red: #DC5746; --cyan: #4CC6E2; --line: #C4C4C4; --accent: #A2BA40; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame > * { position: absolute; margin: 0; }
+  .frame p, .frame h1, .frame h2, .frame h3 { margin: 0; }
+  .f-navy { fill: var(--navy); } .f-green { fill: var(--green); } .f-white { fill: #fff; }
+  /* الخلفيات والأشكال غير المتماثلة تُقلب للعربية */
+  .bg { top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .bg, html[dir="rtl"] .flip, html[dir="rtl"] .chev { transform: scaleX(-1); }
+  /* زخرفة الزاوية العليا */
+  .corner { top: 0; inset-inline-end: 0; width: 130px; height: 105px; }
+  .corner .g { fill: var(--green); } .corner .b { fill: url(#mrCorner); }
+  .corner.w .g, .corner.w .b { fill: #fff; }
+  /* رأس الشرائح الداخلية */
+  .co { top: 72px; inset-inline-start: 42px; font-size: 17px; letter-spacing: 3.3px; color: var(--ink); line-height: 1.3; white-space: nowrap; }
+  .tt { top: 106px; inset-inline-start: 36px; font-size: 42px; font-weight: 700; line-height: 1.24; color: var(--navy); letter-spacing: -0.6px; white-space: nowrap; }
+  .tt span { font-weight: 400; letter-spacing: -0.3px; }
+  html[lang="ar"] .co, html[lang="ar"] .tt, html[lang="ar"] .tt span { letter-spacing: 0; }
+  html[lang="ar"] .tt { font-weight: 800; } html[lang="ar"] .tt span { font-weight: 400; }
+  .hd { font-size: 20px; font-weight: 700; line-height: 1.25; color: #111; }
+  .tx { font-size: 18px; line-height: 25px; color: var(--ink); }
+  .wt { color: #fff; }
+  .num { font-weight: 300; color: var(--green); font-size: 28px; line-height: 1; }
+  .big { font-weight: 300; font-size: 82px; line-height: 1; white-space: nowrap; letter-spacing: -1px; }
+  .big small { font-size: .62em; letter-spacing: 0; }
+  .chev { width: 10px; height: 16px; color: var(--green); }
+  .stmt { font-size: 30px; font-weight: 700; line-height: 39px; color: var(--navy); }
+  /* شريحة 1 — الغلاف */
+  .s1 .logo-i { top: 80px; inset-inline-start: 53px; width: 54px; height: 58px; color: #fff; }
+  .logo-t { font-size: 17px; letter-spacing: 2.2px; line-height: 23px; color: #fff; }
+  html[lang="ar"] .logo-t { letter-spacing: 0; }
+  .s1 .logo-t { top: 87px; inset-inline-start: 138px; width: 190px; }
+  .s1 .cv-t { top: 265px; inset-inline-start: 40px; width: 560px; font-size: 66px; font-weight: 700; line-height: 77px; color: #fff; letter-spacing: -0.5px; }
+  .s1 .cv-s { top: 434px; inset-inline-start: 42px; font-size: 29px; letter-spacing: 2.2px; color: var(--green); white-space: nowrap; }
+  .s1 .cv-p { top: 548px; inset-inline-start: 40px; width: 520px; font-size: 22px; line-height: 29px; color: #fff; }
+  .s1 .cv-m { top: 306px; inset-inline-end: 40px; font-size: 54px; font-weight: 300; color: var(--navy); line-height: 1.2; }
+  .s1 .cv-y { top: 383px; inset-inline-end: 34px; font-size: 28px; letter-spacing: 6px; color: #fff; line-height: 1.2; }
+  html[lang="ar"] .s1 .cv-s, html[lang="ar"] .s1 .cv-y, html[lang="ar"] .s1 .cv-t { letter-spacing: 0; }
+  html[lang="ar"] .s1 .cv-y { inset-inline-end: 40px; }
+  /* شريحة 2 — جدول الأعمال */
+  .s2 .ph { top: 173px; inset-inline-start: 0; width: 542px; height: 204px; object-fit: cover; }
+  .s2 .band { top: 173px; inset-inline-start: 541px; width: 739px; height: 204px; background: var(--navy); }
+  .s2 .bh { top: 235px; inset-inline-start: 598px; font-size: 23px; font-weight: 700; color: var(--green); }
+  .s2 .bp { top: 284px; inset-inline-start: 598px; width: 620px; }
+  .ag { top: 390px; width: 300px; height: 280px; }
+  .ag > * { position: absolute; margin: 0; }
+  .ag .ln { top: 0; inset-inline-start: 0; width: 1px; height: 115px; background: var(--navy); }
+  .ag .bar { top: 115px; inset-inline-start: 0; width: 15px; height: 165px; background: var(--navy); }
+  .ag .n { top: 10px; inset-inline-start: 30px; font-size: 34px; font-weight: 300; color: var(--navy); line-height: 1.1; }
+  .ag .h { top: 81px; inset-inline-start: 31px; width: 185px; font-size: 25px; font-weight: 700; line-height: 32px; color: #000; }
+  .ag .d { top: 163px; inset-inline-start: 31px; width: 260px; font-size: 18px; color: var(--green); line-height: 25px; }
+  /* شريحة 3 — الملخص التنفيذي */
+  .panel { top: 0; inset-inline-start: 867px; width: 413px; height: 720px; background: var(--navy); }
+  .s3 .stmt { top: 215px; inset-inline-start: 37px; width: 345px; }
+  .s3 .p1 { top: 219px; inset-inline-start: 423px; width: 430px; }
+  .s3 .p2 { top: 309px; inset-inline-start: 423px; width: 430px; }
+  .cut-e { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+  .cut-s { clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
+  html[dir="rtl"] .cut-e { clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
+  html[dir="rtl"] .cut-s { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+  .box > * { position: absolute; margin: 0; }
+  .s3 .box { top: 360px; height: 310px; }
+  .s3 .b1 { inset-inline-start: 0; width: 398px; background: var(--navy); --c: 53px; }
+  .s3 .b2 { inset-inline-start: 415px; width: 414px; background: var(--green); --c: 50px; }
+  .s3 .box .hd { top: 50px; inset-inline-start: 38px; color: #fff; }
+  .s3 .box .tx { top: 97px; inset-inline-start: 38px; width: 250px; color: #fff; }
+  .s3 .b2 .tx { color: #F6F9E6; }
+  .s3 .box .rule { top: 217px; height: 1px; }
+  .s3 .b1 .rule { inset-inline-start: 35px; width: 160px; background: var(--green); }
+  .s3 .b2 .rule { inset-inline-start: 36px; width: 94px; background: var(--navy); }
+  .up { width: 32px; height: 32px; top: 240px; }
+  .s3 .b1 .up { inset-inline-start: 157px; color: var(--green); }
+  .s3 .b2 .up { inset-inline-start: 92px; color: var(--navy); }
+  .s3 .b1 .big { top: 189px; inset-inline-start: 216px; color: var(--green); }
+  .s3 .b2 .big { top: 189px; inset-inline-start: 150px; color: var(--navy); }
+  .s3 .ri { inset-inline-start: 907px; width: 340px; height: 110px; }
+  .s3 .ri > * { position: absolute; margin: 0; }
+  .s3 .ri .num { top: 0; inset-inline-start: 0; }
+  .s3 .ri .hd { top: 0; inset-inline-start: 60px; color: #fff; }
+  .s3 .ri .tx { top: 46px; inset-inline-start: 60px; width: 270px; color: #fff; }
+  /* شريحة 4 — نظرة عامة على الأعمال */
+  .s4 .lead { top: 182px; inset-inline-start: 40px; width: 430px; font-size: 24px; line-height: 32px; color: var(--ink); }
+  .ov { inset-inline-start: 30px; width: 490px; height: 52px; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
+  .ov b { flex: none; width: 305px; padding-inline-start: 10px; font-size: 19px; font-weight: 700; color: var(--navy); }
+  .ov span { font-size: 19px; color: var(--ink); }
+  .s4 .desc { top: 587px; inset-inline-start: 40px; width: 490px; font-size: 19px; line-height: 26px; color: var(--ink); }
+  .s4 .ph { top: 0; inset-inline-start: 625px; width: 655px; height: 428px; object-fit: cover; }
+  .s4 .pn { top: 428px; inset-inline-start: 564px; width: 716px; height: 292px; background: var(--navy); --c: 58px; }
+  .st > * { position: absolute; margin: 0; }
+  .st { top: 495px; width: 220px; height: 150px; }
+  .st .v { top: 0; inset-inline-start: 0; font-size: 40px; font-weight: 700; color: var(--green); line-height: 1.2; white-space: nowrap; }
+  .st .tx { top: 66px; inset-inline-start: 0; width: 192px; font-size: 17px; line-height: 22.5px; color: #fff; }
+  /* شريحة 5 — مؤشرات الأداء */
+  .chart-h { top: 200px; inset-inline-start: 36px; }
+  .s5 .bars { top: 230px; inset-inline-start: 30px; width: 610px; height: 265px; }
+  .s5 .kb { top: 504px; inset-inline-start: 0; width: 660px; height: 166px; background: var(--navy); }
+  .kv { top: 526px; font-size: 40px; font-weight: 300; line-height: 1.2; white-space: nowrap; }
+  .kv small { font-size: 24px; }
+  .s5 .kt { top: 588px; width: 190px; color: #fff; }
+  .s5 .donut { top: 240px; inset-inline-start: 662px; width: 302px; height: 302px; }
+  .s5 .dc { top: 368px; inset-inline-start: 733px; width: 160px; text-align: center; }
+  .lg { inset-inline-start: 982px; width: 274px; height: 61px; border-bottom: 1px solid #BDBDBD; display: flex; align-items: center; }
+  .lg svg { flex: none; width: 14px; height: 14px; margin-inline-start: 10px; }
+  .lg b { width: 60px; margin-inline-start: 19px; font-size: 18px; color: #111; }
+  .lg span { font-size: 15px; color: var(--ink); }
+  .s5 .rl { top: 572px; inset-inline-start: 660px; width: 594px; height: 1px; background: #333; }
+  .s5 .bt { top: 597px; inset-inline-start: 694px; width: 440px; }
+  /* شريحة 6 — الأداء المالي */
+  .s6 .lines { top: 250px; inset-inline-start: 30px; width: 810px; height: 255px; }
+  .s6 .rb { inset-inline-start: 867px; width: 413px; }
+  .s6 .rb > * { position: absolute; margin: 0; }
+  .s6 .rb .hd { inset-inline-start: 25px; }
+  .s6 .rb .tx { inset-inline-start: 25px; width: 180px; }
+  .s6 .rb .big { inset-inline-end: 43px; }
+  .s6 .fn { top: 535px; width: 270px; height: 110px; }
+  .s6 .fn > * { position: absolute; margin: 0; }
+  .s6 .fn .num { top: 0; inset-inline-start: -2px; }
+  .s6 .fn .tx { top: 57px; inset-inline-start: 0; width: 215px; font-size: 15.5px; line-height: 21.5px; }
+  /* شريحة 7 — أبرز العمليات */
+  .s7 .stmt { top: 215px; inset-inline-start: 37px; width: 300px; }
+  .s7 .p1 { top: 223px; inset-inline-start: 404px; width: 420px; }
+  .s7 .p2 { top: 313px; inset-inline-start: 404px; width: 440px; }
+  .s7 .tl { top: 436px; inset-inline-start: 47px; width: 803px; height: 1px; background: var(--navy); }
+  .s7 .dot { top: 424px; width: 24px; height: 24px; border-radius: 50%; background: var(--navy); }
+  .s7 .oc { top: 472px; width: 260px; height: 160px; }
+  .s7 .oc > * { position: absolute; margin: 0; }
+  .s7 .oc .num { top: 4px; inset-inline-start: 0; }
+  .s7 .oc .hd { top: 60px; inset-inline-start: 0; }
+  .s7 .oc .tx { top: 106px; inset-inline-start: 0; width: 260px; }
+  .s7 .rs { top: 106px; inset-inline-start: 892px; width: 330px; font-size: 26px; font-weight: 700; line-height: 32px; color: #fff; }
+  .s7 .rh { inset-inline-start: 892px; color: #fff; }
+  .s7 .big { inset-inline-end: 43px; color: var(--green); }
+  .s7 .rl { top: 436px; inset-inline-start: 882px; width: 364px; height: 1px; background: var(--green); }
+  /* شريحة 8 — تحديثات الأقسام */
+  .s8 .dp { top: 206px; inset-inline-start: 0; width: 295px; height: 449px; background: var(--navy); }
+  .s8 .dh { top: 289px; inset-inline-start: 38px; color: var(--green); }
+  .s8 .dt { top: 346px; inset-inline-start: 38px; width: 235px; color: #fff; }
+  .s8 .mb { top: 206px; inset-inline-start: 303px; width: 237px; height: 449px; border: 1px solid var(--navy); }
+  .s8 .mv { inset-inline-start: 303px; width: 237px; text-align: center; font-size: 42px; font-weight: 300; color: var(--green); line-height: 1.2; }
+  .s8 .ml { inset-inline-start: 303px; width: 237px; text-align: center; }
+  .s8 .sep { inset-inline-start: 322px; width: 198px; height: 1px; background: #BDBDBD; }
+  .s8 .lc { top: 287px; width: 288px; height: 320px; }
+  .s8 .lc > * { position: absolute; margin: 0; }
+  .s8 .lc .hd { top: 0; inset-inline-start: 10px; }
+  .s8 .lc .rule { top: 36px; inset-inline-start: 0; width: 288px; height: 1px; background: #BDBDBD; }
+  .s8 .lc .chev { inset-inline-start: 10px; }
+  .s8 .lc .tx { inset-inline-start: 41px; width: 260px; }
+  .s8 .lc.red .hd, .s8 .lc.red .chev { color: var(--red); }
+  .s8 .lc.grn .hd { color: var(--green); }
+  /* شريحة 9 — التحديات والمخاطر */
+  .s9 .hr { top: 186px; inset-inline-start: 0; width: 640px; height: 56px; background: var(--red); --c: 20px; }
+  .s9 .hn { top: 186px; inset-inline-start: 640px; width: 640px; height: 56px; background: var(--navy); --c: 20px; }
+  .s9 .hr p, .s9 .hn p { position: absolute; top: 12px; font-size: 22px; font-weight: 700; color: #fff; line-height: 1.3; }
+  .s9 .hr p { inset-inline-end: 42px; } .s9 .hn p { inset-inline-start: 38px; }
+  .rw { height: 90px; }
+  .rw > * { position: absolute; margin: 0; }
+  .rw.l { inset-inline-start: 30px; width: 610px; background: linear-gradient(to right, rgb(248 218 214 / 0), #F8DAD6); }
+  .rw.r { inset-inline-start: 640px; width: 585px; background: linear-gradient(to right, #DDEBF6, rgb(221 235 246 / 0)); }
+  html[dir="rtl"] .rw.l { background: linear-gradient(to left, rgb(248 218 214 / 0), #F8DAD6); }
+  html[dir="rtl"] .rw.r { background: linear-gradient(to left, #DDEBF6, rgb(221 235 246 / 0)); }
+  .rw .tx { top: 15px; line-height: 23px; width: 270px; }
+  .rw.l .tx { inset-inline-start: 15px; } .rw.r .tx { inset-inline-start: 309px; }
+  .rw .hd { top: 14px; width: 200px; line-height: 25px; }
+  .rw.l .hd { inset-inline-end: 38px; text-align: end; color: var(--red); }
+  .rw.r .hd { inset-inline-start: 38px; color: var(--navy); }
+  /* شريحة 10 — المبادرات الاستراتيجية */
+  .s10 .gb { top: 235px; inset-inline-start: 0; width: 1280px; height: 185px; background: linear-gradient(#DCDCDC 0, #DFDFE1 46%, #EEEFF1 62%, #fff 100%); }
+  .s10 .chevs { top: 187px; inset-inline-start: 0; width: 1260px; height: 135px; }
+  .s10 .ch { top: 243px; }
+  .s10 .cn { top: 232px; width: 70px; text-align: end; font-size: 34px; font-weight: 300; color: #fff; line-height: 1.2; }
+  .s10 .bd { top: 352px; width: 238px; font-weight: 700; color: #111; }
+  .s10 .rule { top: 429px; width: 265px; height: 1px; background: #333; }
+  .s10 .chev { }
+  .s10 .it { width: 250px; }
+  /* شريحة 11 — الدروس المستفادة */
+  .lc5 { width: 251px; }
+  .lc5.t { top: 186px; height: 189px; }
+  .lc5.b { top: 413px; height: 234px; }
+  .lc5 > * { position: absolute; margin: 0; }
+  .lc5.nv { background: var(--navy); }
+  .lc5.t.gr { background: linear-gradient(#7B8C30, #849735); }
+  .lc5.b.gr { background: linear-gradient(#8FA539, #A3BB42); }
+  .lc5 .hd { top: 64px; inset-inline-start: 30px; width: 200px; }
+  .lc5.nv .hd { color: var(--green); } .lc5.gr .hd { color: #fff; }
+  .lc5 .chev { inset-inline-start: 22px; }
+  .lc5.gr .chev { color: var(--navy); }
+  .lc5 .tx { inset-inline-start: 58px; width: 190px; color: #fff; }
+  .hx { top: 353px; width: 86px; height: 88px; }
+  /* شريحة 12 — أولويات الربع القادم */
+  .s12 .stairs { top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s12 .tt { white-space: normal; width: 380px; line-height: 52px; }
+  .s12 .lead { top: 232px; inset-inline-start: 37px; width: 385px; font-size: 24px; line-height: 29.5px; color: var(--ink); }
+  .s12 .sh { color: var(--navy); }
+  .s12 .sn { width: 60px; text-align: end; font-size: 28px; font-weight: 300; color: #fff; line-height: 1.2; }
+  .s12 .wh { top: 444px; inset-inline-start: 837px; color: #fff; }
+  .s12 .big { top: 497px; inset-inline-end: 98px; color: var(--green); }
+  .s12 .wt2 { top: 596px; inset-inline-end: 98px; width: 250px; text-align: end; color: #fff; }
+  /* شريحة 13 — شكر وتواصل */
+  .s13 .bn { top: 72px; inset-inline-start: 42px; font-size: 17px; letter-spacing: 3.3px; color: var(--green); line-height: 1.3; white-space: nowrap; }
+  html[lang="ar"] .s13 .bn { letter-spacing: 0; }
+  .s13 .ty { top: 107px; inset-inline-start: 36px; font-size: 56px; font-weight: 700; color: #fff; line-height: 1.25; }
+  .s13 .cw { top: 178px; inset-inline-start: 34px; font-size: 56px; font-weight: 400; color: var(--green); line-height: 1.25; white-space: nowrap; }
+  .s13 .tp { top: 290px; inset-inline-start: 37px; width: 460px; font-size: 22px; line-height: 29.5px; color: #fff; }
+  .s13 .ci { top: 463px; width: 68px; height: 68px; border-radius: 50%; background: var(--green); color: #fff; display: grid; place-items: center; }
+  .s13 .ci svg { width: 38px; height: 38px; }
+  .s13 .cl { top: 556px; font-size: 20px; font-weight: 700; color: #000; text-transform: uppercase; }
+  .s13 .ct { top: 591px; width: 270px; }
+  .s13 .logo-i { top: 320px; inset-inline-start: 975px; width: 58px; height: 64px; color: #fff; }
+  .s13 .logo-t { top: 333px; inset-inline-start: 1066px; width: 175px; font-size: 15px; line-height: 19px; letter-spacing: 2.4px; }
+  html[lang="ar"] .s13 .logo-t { letter-spacing: 0; font-size: 16px; line-height: 21px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><radialGradient id="mrCorner" cx="0.72" cy="0.18" r="0.95"><stop offset="0" stop-color="#2C6FA8"/><stop offset="0.55" stop-color="#1A4970"/><stop offset="1" stop-color="#0F2E4A"/></radialGradient><linearGradient id="mrSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.22" stop-color="#F7FAFE"/><stop offset="1" stop-color="#A9CDEA"/></linearGradient><linearGradient id="mrBlueH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#12324B"/><stop offset="1" stop-color="#2B6A9D"/></linearGradient><linearGradient id="mrBlueV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A6698"/><stop offset="1" stop-color="#143651"/></linearGradient><linearGradient id="mrGreenH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7A8B2F"/><stop offset="1" stop-color="#A6BE46"/></linearGradient><linearGradient id="mrGreenV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A3BA44"/><stop offset="1" stop-color="#859A33"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#mrSky)" points="365,0 1280,0 1280,200 995,362"/><polygon class="f-navy" points="0,0 365,0 995,362 380,720 0,720"/><polygon class="f-green" points="995,362 1280,200 1280,530"/></svg>
+    <svg class="logo-i" viewBox="0 0 56 60" aria-hidden="true"><path d="M8 14 Q6 4.5 16 4 L40 2.8 Q51 2.3 51.6 13 L52.3 42 Q52.6 52.5 42 53.6 L17 56.4 Q6.2 57.6 5.7 46 Z" fill="none" stroke="currentColor" stroke-width="8.5" stroke-linejoin="round"/></svg><p class="logo-t">YOUR COMPANY LOGO HERE</p>
+    <h1 class="cv-t">MANAGEMENT REPORT</h1>
+    <p class="cv-s">PRESENTATION TEMPLATE</p>
+    <p class="cv-p">Insert your desired statement here. Insert your desired text here. This is a sample text.</p>
+    <p class="cv-m"><bdi dir="ltr">M1</bdi></p>
+    <p class="cv-y">YEAR</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><svg class="corner" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>AGENDA</b><span> SLIDE</span></h1>
+    <img class="ph" src="/templates/freeform/sl-management-report/assets/building-facade.jpg" alt="Modern building facade with curving glass balconies">
+    <div class="band"></div>
+    <p class="bh">Insert your heading statement here</p>
+    <p class="tx wt bp">Insert your desired text here. This is a sample text.</p>
+    <div class="ag" style="top:390px;inset-inline-start:35px;"><span class="ln"></span><span class="bar"></span><p class="n"><bdi dir="ltr">01</bdi></p><h2 class="h">Topic Placeholder</h2><p class="d">Insert desired text here</p></div>
+    <div class="ag" style="top:390px;inset-inline-start:353px;"><span class="ln"></span><span class="bar"></span><p class="n"><bdi dir="ltr">02</bdi></p><h2 class="h">Topic Placeholder</h2><p class="d">Insert desired text here</p></div>
+    <div class="ag" style="top:390px;inset-inline-start:678px;"><span class="ln"></span><span class="bar"></span><p class="n"><bdi dir="ltr">03</bdi></p><h2 class="h">Topic Placeholder</h2><p class="d">Insert desired text here</p></div>
+    <div class="ag" style="top:390px;inset-inline-start:994px;"><span class="ln"></span><span class="bar"></span><p class="n"><bdi dir="ltr">04</bdi></p><h2 class="h">Topic Placeholder</h2><p class="d">Insert desired text here</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="panel"></div>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>EXECUTIVE SUMMARY</b><span> SLIDE</span></h1>
+    <h2 class="stmt">Insert your heading statement here about your topic.</h2>
+    <p class="tx p1">Insert your desired text here. This is a sample text. A brief statement about your topic.</p>
+    <p class="tx p2">Insert your desired text here. This is a sample text.</p>
+    <div class="box b1 cut-e"><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p><span class="rule"></span><svg class="up" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 24V9M10 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><p class="big"><bdi dir="ltr">60<small>%</small></bdi></p></div>
+    <div class="box b2 cut-s"><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p><span class="rule"></span><svg class="up" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 24V9M10 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><p class="big"><bdi dir="ltr">$4.5b</bdi></p></div>
+    <div class="ri" style="top:228px;inset-inline-start:907px;"><p class="num"><bdi dir="ltr">01</bdi></p><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="ri" style="top:378px;inset-inline-start:907px;"><p class="num"><bdi dir="ltr">02</bdi></p><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="ri" style="top:531px;inset-inline-start:907px;"><p class="num"><bdi dir="ltr">03</bdi></p><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>BUSINESS OVERVIEW</b><span> SLIDE</span></h1>
+    <p class="lead">Insert your desired statement here. Insert your desired text here.</p>
+    <div class="ov" style="top:276px;inset-inline-start:30px;"><b>COMPANY NAME:</b><span>Insert text here</span></div>
+    <div class="ov" style="top:328px;inset-inline-start:30px;"><b>ESTABLISHED DATE:</b><span>Insert text here</span></div>
+    <div class="ov" style="top:380px;inset-inline-start:30px;"><b>INDUSTRIES:</b><span>Insert text here</span></div>
+    <div class="ov" style="top:431px;inset-inline-start:30px;"><b>ANNUAL SALES:</b><span>Insert text here</span></div>
+    <div class="ov" style="top:527px;inset-inline-start:30px;"><b>BUSINESS DESCRIPTION:</b></div>
+    <p class="desc">Insert your desired text here. This is a sample text. A brief statement about the company.</p>
+    <img class="ph" src="/templates/freeform/sl-management-report/assets/towers-sky.jpg" alt="Skyscrapers against a blue sky seen from below">
+    <div class="pn cut-s"></div>
+    <div class="st" style="top:495px;inset-inline-start:587px;"><p class="v"><bdi dir="ltr">30.5K</bdi></p><p class="tx">Insert your desired statement here. This is a sample text.</p></div>
+    <div class="st" style="top:495px;inset-inline-start:829px;"><p class="v"><bdi dir="ltr">3.5B$</bdi></p><p class="tx">Insert your desired statement here. This is a sample text.</p></div>
+    <div class="st" style="top:495px;inset-inline-start:1071px;"><p class="v"><bdi dir="ltr">87%</bdi></p><p class="tx">Insert your desired statement here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><svg class="corner" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>KEY PERFORMANCE INDICATORS</b><span> SLIDE</span></h1>
+    <h2 class="hd chart-h">Heading Placeholder</h2>
+    <svg class="bars" id="bar-chart" viewBox="0 0 610 265" aria-hidden="true"></svg>
+    <div class="kb"></div>
+    <p class="kv" style="top:526px;inset-inline-start:46px;color:var(--green);"><bdi dir="ltr">+17.8<small>%</small></bdi></p>
+    <p class="kv" style="top:526px;inset-inline-start:257px;color:var(--red);"><bdi dir="ltr">-404.5<small>K</small></bdi></p>
+    <p class="kv" style="top:526px;inset-inline-start:471px;color:var(--cyan);"><bdi dir="ltr">+$3.5<small>M</small></bdi></p>
+    <p class="tx kt" style="top:588px;inset-inline-start:40px;">Insert your desired text here.</p>
+    <p class="tx kt" style="top:588px;inset-inline-start:258px;">Insert your desired text here.</p>
+    <p class="tx kt" style="top:588px;inset-inline-start:470px;">Insert your desired text here.</p>
+    <svg class="donut" id="donut-chart" viewBox="0 0 302 302" aria-hidden="true"></svg>
+    <p class="hd dc">Heading Placeholder</p>
+    <div class="lg" style="top:270px;inset-inline-start:982px;"><svg viewBox="0 0 14 14" aria-hidden="true" style="color:var(--navy)"><circle cx="7" cy="7" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.7" fill="currentColor"/></svg><b><bdi dir="ltr">15%</bdi></b><span>Insert text Here</span></div>
+    <div class="lg" style="top:331px;inset-inline-start:982px;"><svg viewBox="0 0 14 14" aria-hidden="true" style="color:var(--green)"><circle cx="7" cy="7" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.7" fill="currentColor"/></svg><b><bdi dir="ltr">23%</bdi></b><span>Insert text Here</span></div>
+    <div class="lg" style="top:391px;inset-inline-start:982px;"><svg viewBox="0 0 14 14" aria-hidden="true" style="color:var(--cyan)"><circle cx="7" cy="7" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.7" fill="currentColor"/></svg><b><bdi dir="ltr">45%</bdi></b><span>Insert text Here</span></div>
+    <div class="lg" style="top:452px;inset-inline-start:982px;"><svg viewBox="0 0 14 14" aria-hidden="true" style="color:#C9C9C9"><circle cx="7" cy="7" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.7" fill="currentColor"/></svg><b><bdi dir="ltr">15%</bdi></b><span>Insert text Here</span></div>
+    <span class="rl"></span>
+    <p class="tx bt">Insert your desired text here. This is a sample text. A brief statement about your topic.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>FINANCIAL PERFORMANCE</b><span> SLIDE</span></h1>
+    <h2 class="hd chart-h">Heading Placeholder</h2>
+    <svg class="lines" id="line-chart" viewBox="0 0 810 255" aria-hidden="true"></svg>
+    <div class="fn" style="top:535px;inset-inline-start:40px;"><p class="num"><bdi dir="ltr">01</bdi></p><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="fn" style="top:535px;inset-inline-start:324px;"><p class="num"><bdi dir="ltr">02</bdi></p><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="fn" style="top:535px;inset-inline-start:609px;"><p class="num"><bdi dir="ltr">03</bdi></p><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="rb" style="top:0px;inset-inline-start:867px;height:260px;background:#D6D6D6;"><h3 class="hd" style="top:94px">Heading Here</h3><p class="tx" style="top:141px">Insert your desired text here.</p><p class="big" style="top:170px;color:var(--green)"><bdi dir="ltr">60<small>%</small></bdi></p></div>
+    <div class="rb" style="top:260px;inset-inline-start:867px;height:201px;background:var(--green);"><h3 class="hd wt" style="top:23px">Heading Here</h3><p class="tx wt" style="top:70px">Insert your desired text here.</p><p class="big" style="top:108px;color:#fff"><bdi dir="ltr">$4.5<small>M</small></bdi></p></div>
+    <div class="rb" style="top:461px;inset-inline-start:867px;height:259px;background:var(--navy);"><h3 class="hd wt" style="top:30px">Heading Here</h3><p class="tx wt" style="top:77px">Insert your desired text here.</p><p class="big" style="top:117px;color:#fff"><bdi dir="ltr">300<small>+</small></bdi></p></div><svg class="corner" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="panel"></div><svg class="corner w" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>OPERATIONAL HIGHLIGHTS</b><span> SLIDE</span></h1>
+    <h2 class="stmt">Insert your heading statement here about your topic.</h2>
+    <p class="tx p1">Insert your desired text here. This is a sample text. A brief statement about your topic.</p>
+    <p class="tx p2">Insert your desired text here. This is a sample text.</p>
+    <span class="tl"></span>
+    <span class="dot" style="top:424px;inset-inline-start:35px;"></span><div class="oc" style="top:472px;inset-inline-start:38px;"><p class="num"><bdi dir="ltr">01</bdi></p><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <span class="dot" style="top:424px;inset-inline-start:320px;"></span><div class="oc" style="top:472px;inset-inline-start:323px;"><p class="num"><bdi dir="ltr">02</bdi></p><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <span class="dot" style="top:424px;inset-inline-start:604px;"></span><div class="oc" style="top:472px;inset-inline-start:607px;"><p class="num"><bdi dir="ltr">03</bdi></p><h3 class="hd">Heading Here</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <h2 class="rs">Insert your heading statement here.</h2>
+    <h3 class="hd rh" style="top:248px;inset-inline-start:892px;">Heading Here</h3>
+    <p class="big" style="top:293px"><bdi dir="ltr">+17.8<small>%</small></bdi></p>
+    <span class="rl"></span>
+    <h3 class="hd rh" style="top:500px;inset-inline-start:892px;">Heading Here</h3>
+    <p class="big" style="top:545px"><bdi dir="ltr">$1.36<small>B</small></bdi></p>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><svg class="corner" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>DEPARTMENT UPDATES</b><span> SLIDE</span></h1>
+    <div class="dp"></div>
+    <h2 class="hd dh">Department Name</h2>
+    <p class="tx dt">Insert your desired text here. This is a sample text.</p>
+    <div class="mb"></div>
+    <p class="mv" style="top:236px"><bdi dir="ltr">54.2%</bdi></p>
+    <p class="tx ml" style="top:295px">Insert heading here</p>
+    <p class="mv" style="top:374px"><bdi dir="ltr">7.3%</bdi></p>
+    <p class="tx ml" style="top:433px">Insert heading here</p>
+    <p class="mv" style="top:512px"><bdi dir="ltr">3.5%</bdi></p>
+    <p class="tx ml" style="top:571px">Insert heading here</p>
+    <span class="sep" style="top:352px"></span>
+    <span class="sep" style="top:490px"></span>
+    <div class="lc grn" style="top:287px;inset-inline-start:572px;"><h3 class="hd">Heading Here</h3><span class="rule"></span><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:63px;inset-inline-start:10px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:56px">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:157px;inset-inline-start:10px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:150px">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:251px;inset-inline-start:10px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:244px">Insert your desired text here. This is a sample text.</p></div>
+    <div class="lc red" style="top:287px;inset-inline-start:927px;"><h3 class="hd">Heading Here</h3><span class="rule"></span><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:63px;inset-inline-start:10px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:56px">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:157px;inset-inline-start:10px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:150px">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:251px;inset-inline-start:10px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:244px">Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><svg class="corner" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>CHALLENGES AND RISKS</b><span> SLIDE</span></h1>
+    <div class="hr cut-e"><p>Challenges</p></div>
+    <div class="hn cut-s"><p>Risk Mitigation</p></div>
+    <div class="rw l" style="top:247px;inset-inline-start:30px;"><p class="tx">Insert your desired text here. This is a sample text.</p><h3 class="hd">Heading Placeholder</h3></div><div class="rw r" style="top:247px;inset-inline-start:640px;"><h3 class="hd">Heading Placeholder</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="rw l" style="top:344px;inset-inline-start:30px;"><p class="tx">Insert your desired text here. This is a sample text.</p><h3 class="hd">Heading Placeholder</h3></div><div class="rw r" style="top:344px;inset-inline-start:640px;"><h3 class="hd">Heading Placeholder</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="rw l" style="top:441px;inset-inline-start:30px;"><p class="tx">Insert your desired text here. This is a sample text.</p><h3 class="hd">Heading Placeholder</h3></div><div class="rw r" style="top:441px;inset-inline-start:640px;"><h3 class="hd">Heading Placeholder</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <div class="rw l" style="top:540px;inset-inline-start:30px;"><p class="tx">Insert your desired text here. This is a sample text.</p><h3 class="hd">Heading Placeholder</h3></div><div class="rw r" style="top:540px;inset-inline-start:640px;"><h3 class="hd">Heading Placeholder</h3><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><svg class="corner" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>STRATEGIC INITIATIVES</b><span> SLIDE</span></h1>
+    <div class="gb"></div>
+    <svg class="chevs flip" viewBox="0 0 1260 135" aria-hidden="true"><polygon class="f-navy" points="0,0 308,0 348,67.5 308,135 0,135"/><polygon class="f-green" points="308,0 608,0 648,67.5 608,135 308,135 348,67.5"/><polygon class="f-navy" points="608,0 910,0 950,67.5 910,135 608,135 648,67.5"/><polygon class="f-green" points="910,0 1213,0 1253,67.5 1213,135 910,135 950,67.5"/></svg>
+    <h3 class="hd ch" style="top:243px;inset-inline-start:40px;color:var(--green);">Heading Here</h3><p class="cn" style="top:232px;inset-inline-start:242px;"><bdi dir="ltr">01</bdi></p>
+    <p class="tx bd" style="top:352px;inset-inline-start:40px;">Insert your desired text here. This is a sample text.</p><span class="rule" style="top:429px;inset-inline-start:35px;"></span><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:470px;inset-inline-start:34px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:463px;inset-inline-start:67px;">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:562px;inset-inline-start:34px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:555px;inset-inline-start:67px;">Insert your desired text here. This is a sample text.</p>
+    <h3 class="hd ch" style="top:243px;inset-inline-start:364px;color:var(--navy);">Heading Here</h3><p class="cn" style="top:232px;inset-inline-start:548px;"><bdi dir="ltr">02</bdi></p>
+    <p class="tx bd" style="top:352px;inset-inline-start:364px;">Insert your desired text here. This is a sample text.</p><span class="rule" style="top:429px;inset-inline-start:355px;"></span><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:470px;inset-inline-start:354px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:463px;inset-inline-start:387px;">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:562px;inset-inline-start:354px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:555px;inset-inline-start:387px;">Insert your desired text here. This is a sample text.</p>
+    <h3 class="hd ch" style="top:243px;inset-inline-start:665px;color:var(--green);">Heading Here</h3><p class="cn" style="top:232px;inset-inline-start:838px;"><bdi dir="ltr">03</bdi></p>
+    <p class="tx bd" style="top:352px;inset-inline-start:664px;">Insert your desired text here. This is a sample text.</p><span class="rule" style="top:429px;inset-inline-start:655px;"></span><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:470px;inset-inline-start:659px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:463px;inset-inline-start:692px;">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:562px;inset-inline-start:659px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:555px;inset-inline-start:692px;">Insert your desired text here. This is a sample text.</p>
+    <h3 class="hd ch" style="top:243px;inset-inline-start:968px;color:var(--navy);">Heading Here</h3><p class="cn" style="top:232px;inset-inline-start:1142px;"><bdi dir="ltr">04</bdi></p>
+    <p class="tx bd" style="top:352px;inset-inline-start:968px;">Insert your desired text here. This is a sample text.</p><span class="rule" style="top:429px;inset-inline-start:960px;"></span><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:470px;inset-inline-start:962px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:463px;inset-inline-start:994px;">Insert your desired text here. This is a sample text.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:562px;inset-inline-start:962px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx it" style="top:555px;inset-inline-start:994px;">Insert your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><svg class="corner" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>LESSONS LEARNED</b><span> SLIDE</span></h1>
+    <div class="lc5 t nv" style="top:186px;inset-inline-start:0px;"><h3 class="hd" style="inset-inline-start:40px">Insert heading statement here.</h3></div><div class="lc5 b nv" style="top:413px;inset-inline-start:0px;"><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:68px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:63px">Insert your desired text here.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:148px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:143px">This is a sample text.</p></div><svg class="hx" style="top:353px;inset-inline-start:82px;" viewBox="0 0 86 88" aria-hidden="true"><polygon points="43,2 82,23.5 82,64.5 43,86 4,64.5 4,23.5" fill="#122F47" stroke="#fff" stroke-width="3"/><rect x="31.5" y="32.5" width="23" height="23" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M36.5 44l5 5 8.5-10" fill="none" stroke="#fff" stroke-width="2.6"/></svg>
+    <div class="lc5 t gr" style="top:186px;inset-inline-start:257px;"><h3 class="hd" style="inset-inline-start:30px">Insert heading statement here.</h3></div><div class="lc5 b gr" style="top:413px;inset-inline-start:257px;"><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:68px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:63px">Insert your desired text here.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:148px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:143px">This is a sample text.</p></div><svg class="hx" style="top:353px;inset-inline-start:339px;" viewBox="0 0 86 88" aria-hidden="true"><polygon points="43,2 82,23.5 82,64.5 43,86 4,64.5 4,23.5" fill="#A2BA42" stroke="#fff" stroke-width="3"/><rect x="31.5" y="32.5" width="23" height="23" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M36.5 44l5 5 8.5-10" fill="none" stroke="#fff" stroke-width="2.6"/></svg>
+    <div class="lc5 t nv" style="top:186px;inset-inline-start:514px;"><h3 class="hd" style="inset-inline-start:30px">Insert heading statement here.</h3></div><div class="lc5 b nv" style="top:413px;inset-inline-start:514px;"><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:68px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:63px">Insert your desired text here.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:148px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:143px">This is a sample text.</p></div><svg class="hx" style="top:353px;inset-inline-start:596px;" viewBox="0 0 86 88" aria-hidden="true"><polygon points="43,2 82,23.5 82,64.5 43,86 4,64.5 4,23.5" fill="#122F47" stroke="#fff" stroke-width="3"/><rect x="31.5" y="32.5" width="23" height="23" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M36.5 44l5 5 8.5-10" fill="none" stroke="#fff" stroke-width="2.6"/></svg>
+    <div class="lc5 t gr" style="top:186px;inset-inline-start:772px;"><h3 class="hd" style="inset-inline-start:30px">Insert heading statement here.</h3></div><div class="lc5 b gr" style="top:413px;inset-inline-start:772px;"><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:68px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:63px">Insert your desired text here.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:148px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:143px">This is a sample text.</p></div><svg class="hx" style="top:353px;inset-inline-start:854px;" viewBox="0 0 86 88" aria-hidden="true"><polygon points="43,2 82,23.5 82,64.5 43,86 4,64.5 4,23.5" fill="#A2BA42" stroke="#fff" stroke-width="3"/><rect x="31.5" y="32.5" width="23" height="23" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M36.5 44l5 5 8.5-10" fill="none" stroke="#fff" stroke-width="2.6"/></svg>
+    <div class="lc5 t nv" style="top:186px;inset-inline-start:1029px;"><h3 class="hd" style="inset-inline-start:30px">Insert heading statement here.</h3></div><div class="lc5 b nv" style="top:413px;inset-inline-start:1029px;"><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:68px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:63px">Insert your desired text here.</p><svg class="chev" viewBox="0 0 10 16" aria-hidden="true" style="top:148px;inset-inline-start:22px;"><path d="M2 1.5l6.2 6.5L2 14.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><p class="tx" style="top:143px">This is a sample text.</p></div><svg class="hx" style="top:353px;inset-inline-start:1111px;" viewBox="0 0 86 88" aria-hidden="true"><polygon points="43,2 82,23.5 82,64.5 43,86 4,64.5 4,23.5" fill="#122F47" stroke="#fff" stroke-width="3"/><rect x="31.5" y="32.5" width="23" height="23" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M36.5 44l5 5 8.5-10" fill="none" stroke="#fff" stroke-width="2.6"/></svg>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <svg class="stairs flip" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="f-navy" points="1092,0 1280,0 1280,720 0,720 0,600 458,600 458,463 668,463 668,325 881,325 881,187 1092,187"/><rect x="0" y="600" width="458" height="55" fill="url(#mrBlueH)"/><rect x="458" y="517" width="54" height="90" fill="url(#mrBlueV)"/><rect x="458" y="463" width="210" height="54" fill="url(#mrGreenH)"/><polygon points="668,380 722,380 722,478 668,517" fill="url(#mrGreenV)"/><rect x="668" y="325" width="213" height="55" fill="url(#mrBlueH)"/><rect x="881" y="240" width="55" height="90" fill="url(#mrBlueV)"/><rect x="881" y="187" width="211" height="53" fill="url(#mrGreenH)"/><polygon points="1092,50 1147,88 1147,200 1092,240" fill="url(#mrGreenV)"/></svg><svg class="corner w" viewBox="1150 0 130 105" aria-hidden="true"><polygon class="g" points="1179,0 1204,0 1181,28 1160,28"/><polygon class="b" points="1219,0 1280,0 1280,102 1251,83 1251,28 1199,28"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p>
+    <h1 class="tt"><b>NEXT QUARTER PRIORITIES</b><span> SLIDE</span></h1>
+    <p class="lead">Insert your desired text here. This is a sample text. A brief statement about your topic.</p>
+    <h3 class="hd sh" style="top:484px;inset-inline-start:168px;">Heading Here</h3><p class="tx" style="top:530px;inset-inline-start:168px;width:260px;">Insert your desired text here. This is a sample text.</p><p class="sn" style="top:610px;inset-inline-start:380px;"><bdi dir="ltr">01</bdi></p>
+    <h3 class="hd sh" style="top:346px;inset-inline-start:393px;">Heading Here</h3><p class="tx" style="top:392px;inset-inline-start:393px;width:260px;">Insert your desired text here. This is a sample text.</p><p class="sn" style="top:472px;inset-inline-start:592px;"><bdi dir="ltr">02</bdi></p>
+    <h3 class="hd sh" style="top:206px;inset-inline-start:619px;">Heading Here</h3><p class="tx" style="top:252px;inset-inline-start:619px;width:260px;">Insert your desired text here. This is a sample text.</p><p class="sn" style="top:334px;inset-inline-start:802px;"><bdi dir="ltr">03</bdi></p>
+    <h3 class="hd sh" style="top:69px;inset-inline-start:825px;">Heading Here</h3><p class="tx" style="top:115px;inset-inline-start:825px;width:260px;">Insert your desired text here. This is a sample text.</p><p class="sn" style="top:197px;inset-inline-start:1018px;"><bdi dir="ltr">04</bdi></p>
+    <h3 class="hd wh">Heading Here</h3>
+    <p class="big"><bdi dir="ltr">+17.8<small>%</small></bdi></p>
+    <p class="tx wt2">Insert your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#mrSky)" points="547,0 1250,0 885,345"/><polygon class="f-navy" points="0,0 533,0 885,358 535,720 0,720"/><polygon class="f-green" points="1280,15 889,360 1280,705"/><polygon points="35,437 905,437 960,490 960,670 90,670 35,618" fill="#fff" stroke="#A2BA40" stroke-width="3"/></svg>
+    <p class="bn">YOUR BUSINESS NAME HERE</p>
+    <h1 class="ty">Thank You</h1>
+    <p class="cw">Connect With Us</p>
+    <p class="tp">Insert your desired text here. This is a sample text. A brief statement about your topic. This is a sample text.</p>
+    <div class="ci" style="top:463px;inset-inline-start:73px;"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 9.5 12 3l9.5 6.5V20a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1z" opacity=".35"/><rect x="6" y="5" width="12" height="9" rx=".6"/><path d="M8 7.5h8M8 9.6h8M8 11.7h5" stroke="#A2BA40" stroke-width="1.1"/><path d="M2.5 10.2 12 16l9.5-5.8V20a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1z"/></svg></div><h3 class="cl" style="top:556px;inset-inline-start:75px;">EMAIL</h3><p class="tx ct" style="top:591px;inset-inline-start:75px;">Insert your desired text here.</p>
+    <div class="ci" style="top:463px;inset-inline-start:368px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><ellipse cx="12" cy="12" rx="4" ry="9.2"/><path d="M2.8 12h18.4M4.5 7h15M4.5 17h15"/></svg></div><h3 class="cl" style="top:556px;inset-inline-start:377px;">WEBSITE</h3><p class="tx ct" style="top:591px;inset-inline-start:377px;">Insert your desired text here.</p>
+    <div class="ci" style="top:463px;inset-inline-start:673px;"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 3.5 9 6.4c.4.5.4 1.2 0 1.7L7.7 9.6c.9 2 2.6 3.8 4.7 4.7l1.5-1.3c.5-.4 1.2-.4 1.7 0l2.9 2.4c.5.4.6 1.2.1 1.7l-1.5 1.7c-.6.6-1.5.9-2.4.6C9.3 17.9 6.1 14.7 4.6 9.3c-.3-.9 0-1.8.6-2.4l1.4-1.5z"/><path d="M13 3.5a7.5 7.5 0 0 1 7.5 7.5M13 6.5a4.5 4.5 0 0 1 4.5 4.5M13 9.3a1.7 1.7 0 0 1 1.7 1.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><h3 class="cl" style="top:556px;inset-inline-start:680px;">CONTACT</h3><p class="tx ct" style="top:591px;inset-inline-start:680px;">Insert your desired text here.</p>
+    <svg class="logo-i" viewBox="0 0 56 60" aria-hidden="true"><path d="M8 14 Q6 4.5 16 4 L40 2.8 Q51 2.3 51.6 13 L52.3 42 Q52.6 52.5 42 53.6 L17 56.4 Q6.2 57.6 5.7 46 Z" fill="none" stroke="currentColor" stroke-width="8.5" stroke-linejoin="round"/></svg><p class="logo-t">YOUR COMPANY LOGO HERE</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 13</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"labels": ["M1", "M2", "M3", "M4"], "max": 6, "step": 2, "series": [{"name": "Series 1", "color": "#122F47", "values": [4.3, 2.5, 3.5, 4.5]}, {"name": "Series 2", "color": "#A2BA40", "values": [2.4, 4.4, 1.8, 2.8]}]}</script>
+<script type="application/json" id="chart-data-2">{"labels": ["Category 1", "Category 2", "Category 3", "Category 4"], "values": [59, 23, 10, 8], "colors": ["#122F47", "#A2BA40", "#4CC6E2", "#D6D6D6"]}</script>
+<script type="application/json" id="chart-data-3">{"labels": ["M1", "M2", "M3", "M4"], "max": 6, "step": 2, "series": [{"name": "Series 1", "color": "#122F47", "values": [4.3, 2.5, 3.5, 4.5]}, {"name": "Series 2", "color": "#A2BA40", "values": [2.4, 4.4, 1.8, 2.8]}]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- الرسوم الثلاثة: أعمدة مجمّعة، حلقة، خطوط؛ X() يعكس الإحداثي الأفقي للعربية فتبدأ الفئة الأولى من اليمين -----
+  var NS = 'http://www.w3.org/2000/svg';
+  function J(id) { return JSON.parse(document.getElementById(id).textContent); }
+  function E(tag, a, p) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  function T(p, x, y, s, anchor) { var t = E('text', { x: x, y: y, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'central', 'font-size': 15, fill: '#595959' }, p); t.textContent = s; return t; }
+  // أعمدة مجمّعة (شريحة 5): محور القيم في جهة البداية
+  (function () {
+    var d = J('chart-data'), s = document.getElementById('bar-chart'), W = 610, X = function (x) { return RTL ? W - x : x; };
+    var y0 = 222, unit = 201 / d.max, gl = 34, gr = 595, step = 140, c0 = 104, bw = 40;
+    for (var v = 0; v <= d.max; v += d.step) {
+      var y = y0 - v * unit;
+      E('line', { x1: X(gl), y1: y, x2: X(gr), y2: y, stroke: '#D9D9D9', 'stroke-width': 1 }, s);
+      T(s, X(14), y, String(v));
+    }
+    d.labels.forEach(function (lb, i) {
+      var c = c0 + i * step;
+      d.series.forEach(function (se, k) {
+        var h = se.values[i] * unit, x = c - bw + k * bw;
+        E('rect', { x: RTL ? W - x - bw : x, y: y0 - h, width: bw, height: h, fill: se.color }, s);
+      });
+      T(s, X(c), 246, lb);
+    });
+  })();
+  // حلقة (شريحة 5): تبدأ من الأعلى باتجاه عقارب الساعة (عكسها للعربية)
+  (function () {
+    var d = J('chart-data-2'), s = document.getElementById('donut-chart'), cx = 151, cy = 151, r = 121.5, sw = 51;
+    var tot = d.values.reduce(function (a, b) { return a + b; }, 0), a0 = 0, dirx = RTL ? -1 : 1;
+    function pt(a) { return [cx + dirx * r * Math.sin(a), cy - r * Math.cos(a)]; }
+    d.values.forEach(function (v, i) {
+      var a1 = a0 + v / tot * Math.PI * 2, p0 = pt(a0), p1 = pt(a1), large = (a1 - a0) > Math.PI ? 1 : 0;
+      E('path', { d: 'M' + p0[0] + ',' + p0[1] + ' A' + r + ',' + r + ' 0 ' + large + ' ' + (RTL ? 0 : 1) + ' ' + p1[0] + ',' + p1[1], fill: 'none', stroke: d.colors[i % d.colors.length], 'stroke-width': sw }, s);
+      a0 = a1;
+    });
+  })();
+  // خطوط بعلامات (شريحة 6)
+  (function () {
+    var d = J('chart-data-3'), s = document.getElementById('line-chart'), W = 810, X = function (x) { return RTL ? W - x : x; };
+    var y0 = 214, unit = 200 / d.max, gl = 34, gr = 801, x0 = 129, step = 192;
+    for (var v = 0; v <= d.max; v += d.step) {
+      var y = y0 - v * unit;
+      E('line', { x1: X(gl), y1: y, x2: X(gr), y2: y, stroke: '#D9D9D9', 'stroke-width': 1 }, s);
+      T(s, X(14), y, String(v));
+    }
+    d.labels.forEach(function (lb, i) { T(s, X(x0 + i * step), 237, lb); });
+    d.series.forEach(function (se) {
+      var pts = se.values.map(function (v, i) { return X(x0 + i * step) + ',' + (y0 - v * unit); });
+      E('polyline', { points: pts.join(' '), fill: 'none', stroke: se.color, 'stroke-width': 2.6, 'stroke-linejoin': 'round' }, s);
+      pts.forEach(function (p) { var q = p.split(','); E('circle', { cx: q[0], cy: q[1], r: 6, fill: se.color }, s); });
+    });
+  })();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

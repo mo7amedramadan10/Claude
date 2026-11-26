@@ -1,0 +1,72 @@
+{
+  "key": "sl-management-report",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📋",
+  "name": "تقرير الإدارة",
+  "nameEn": "Management Report",
+  "description": "ثلاث عشرة شريحة لتقرير إداري: ملخص، أعمال، مؤشرات ورسوم، عمليات، أقسام، مخاطر، مبادرات، دروس وأولويات",
+  "descriptionEn": "Thirteen management report slides: summary, business, KPIs and charts, operations, risks, initiatives and priorities",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على الأعمال",
+      "titleEn": "Business Overview",
+      "needsData": true
+    },
+    {
+      "title": "مؤشرات الأداء الرئيسية (رسمان)",
+      "titleEn": "Key Performance Indicators (charts)",
+      "needsData": true
+    },
+    {
+      "title": "الأداء المالي (رسم خطي)",
+      "titleEn": "Financial Performance (line chart)",
+      "needsData": true
+    },
+    {
+      "title": "أبرز العمليات",
+      "titleEn": "Operational Highlights",
+      "needsData": true
+    },
+    {
+      "title": "تحديثات الأقسام",
+      "titleEn": "Department Updates",
+      "needsData": true
+    },
+    {
+      "title": "التحديات والمخاطر",
+      "titleEn": "Challenges and Risks"
+    },
+    {
+      "title": "المبادرات الاستراتيجية",
+      "titleEn": "Strategic Initiatives"
+    },
+    {
+      "title": "الدروس المستفادة",
+      "titleEn": "Lessons Learned"
+    },
+    {
+      "title": "أولويات الربع القادم",
+      "titleEn": "Next Quarter Priorities",
+      "needsData": true
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في chart-data والحلقة في chart-data-2 والخطوط في chart-data-3."
+}
