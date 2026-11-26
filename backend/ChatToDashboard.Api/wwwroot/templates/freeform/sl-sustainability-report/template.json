@@ -1,0 +1,66 @@
+{
+  "key": "sl-sustainability-report",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🌿",
+  "name": "تقرير الاستدامة",
+  "nameEn": "Sustainability Report",
+  "description": "اثنتا عشرة شريحة لتقرير استدامة: ملخص، تحديات، رؤية، ركائز، أثر بيئي واجتماعي، حوكمة، لوحة أداء، قصص نجاح وخارطة طريق",
+  "descriptionEn": "Twelve slides: summary, challenges, vision, pillars, environmental and social impact, governance, KPIs, stories, roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "تحديات الاستدامة",
+      "titleEn": "Sustainability Challenges"
+    },
+    {
+      "title": "رؤيتنا للاستدامة",
+      "titleEn": "Our Sustainability Vision"
+    },
+    {
+      "title": "الركائز الاستراتيجية",
+      "titleEn": "Strategic Pillars"
+    },
+    {
+      "title": "الأثر البيئي",
+      "titleEn": "Environmental Impact",
+      "needsData": true
+    },
+    {
+      "title": "الأثر الاجتماعي",
+      "titleEn": "Social Impact",
+      "needsData": true
+    },
+    {
+      "title": "إطار الحوكمة والبيئة والمجتمع",
+      "titleEn": "Governance & ESG Framework"
+    },
+    {
+      "title": "لوحة الأداء (رسم)",
+      "titleEn": "Performance Dashboard (chart)",
+      "needsData": true
+    },
+    {
+      "title": "قصص النجاح",
+      "titleEn": "Success Stories",
+      "needsData": true
+    },
+    {
+      "title": "خارطة الطريق",
+      "titleEn": "Roadmap"
+    },
+    {
+      "title": "الختام",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والخلفيات الشبكية والأشرطة الزخرفية، وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في الشريحة 9 في كتلة JSON بالمعرّف chart-data."
+}

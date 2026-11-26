@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sustainability Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «تقرير الاستدامة»: غلاف داكن بصورة مزرعة رياح وبطاقة بيضاء للعنوان، ثم شرائح بخلفية شبكية وبطاقات خضراء (ليموني، أوسط، عميق، داكن)، وأشرطة ضبابية زخرفية تنعكس في العربية مع الصور. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #172B19; --text: #595959; --accent: #66982F; --bg: #FFFFFF; --dark: #152717; --dark-2: #112814; --lime: #A8BD30; --mid: #66982F; --deep: #3C6C00; --grid-d: #1E321F; --grid-l: #F0F2EA; --grid-g: #E7F0E2; --blob: #5B932C; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* الخلفيات الشبكية: داكنة (1، 9، 11، 12)، بيضاء، وخضراء فاتحة (4، 7) */
+  .frame { background-color: #FFFFFF; background-image: linear-gradient(to right, var(--grid-l) 3px, transparent 3px), linear-gradient(to bottom, var(--grid-l) 3px, transparent 3px); background-size: 55.7px 55.7px; background-position: 54px 53px; }
+  .frame.s1, .frame.s9, .frame.s11, .frame.s12 { background-color: var(--dark); background-image: linear-gradient(to right, var(--grid-d) 3px, transparent 3px), linear-gradient(to bottom, var(--grid-d) 3px, transparent 3px); }
+  .frame.s4, .frame.s7 { background-color: #F7FCF4; background-image: linear-gradient(to right, var(--grid-g) 3px, transparent 3px), linear-gradient(to bottom, var(--grid-g) 3px, transparent 3px); }
+  html[lang="ar"] * { letter-spacing: 0 !important; }
+  /* الأشرطة الضبابية الزخرفية: SVG بإحداثيات الإطار، تنعكس في العربية */
+  .blob { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; pointer-events: none; filter: blur(6px); z-index: 4; }
+  .blob.back { z-index: 0; }
+  .s1 .blob { z-index: 1; }
+  .blob path, .blob circle { fill: none; stroke: var(--blob); stroke-linecap: round; }
+  html[dir="rtl"] .blob { transform: scaleX(-1); }
+  /* الصور: تنعكس في العربية لتتبع مرآة التخطيط (الأجزاء المغطاة بالبطاقات تبقى تحتها) */
+  .ph { position: absolute; display: block; object-fit: cover; }
+  html[dir="rtl"] .ph { transform: scaleX(-1); }
+  .pfr { position: absolute; background: #F3F9EE; border: 1.5px solid #C9DEB6; border-radius: 10px; box-shadow: 0 10px 30px rgb(80 120 60 / .10); }
+  /* العناوين: جزء غامق وجزء خفيف */
+  .ttl { position: absolute; top: 46px; inset-inline-start: 70px; margin: 0; font-size: 60px; font-weight: 300; line-height: 68px; color: var(--ink); letter-spacing: -0.6px; white-space: nowrap; z-index: 2; }
+  .ttl b { font-weight: 700; }
+  .lead { position: absolute; margin: 0; font-size: 18px; line-height: 26px; color: var(--text); z-index: 2; }
+  .kh { position: absolute; margin: 0; font-size: 24px; font-weight: 700; color: #1E1E1E; line-height: 30px; }
+  .bul { position: absolute; margin: 0; padding: 0; list-style: none; z-index: 2; }
+  .bul li { position: relative; padding-inline-start: 37px; font-size: 20px; line-height: 29px; color: var(--text); }
+  .bul li::before { content: ''; position: absolute; inset-inline-start: 2px; top: 5px; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; border: 2.5px solid var(--mid); background: radial-gradient(circle, var(--mid) 0 4px, transparent 4.5px); }
+  .card { position: absolute; border-radius: 15px; color: #fff; z-index: 2; }
+  .card.lime { background: var(--lime); } .card.mid { background: var(--mid); } .card.deep { background: var(--deep); } .card.dk { background: var(--dark-2); }
+  .card .ic { position: absolute; color: #fff; }
+  .card .ic svg, .ico svg { width: 100%; height: 100%; }
+  .card h2 { position: absolute; margin: 0; font-size: 23px; line-height: 29px; font-weight: 700; color: #fff; }
+  .card p { position: absolute; margin: 0; font-size: 18px; line-height: 25.5px; color: rgb(255 255 255 / .82); }
+  .card.lime p { color: #EEF5C4; }
+  .num { font-weight: 300; color: #fff; }
+  .ico { position: absolute; }
+
+  /* ===== 1) الغلاف ===== */
+  .s1 .logo { position: absolute; top: 30px; inset-inline-start: 87px; width: 49px; height: 54px; color: #fff; }
+  .s1 .co { position: absolute; top: 33px; inset-inline-start: 160px; margin: 0; font-size: 16px; line-height: 23px; letter-spacing: 2.6px; color: #E8EDE6; }
+  .s1 .bdg { position: absolute; top: 34px; display: flex; align-items: center; gap: 10px; color: #fff; font-size: 18px; font-weight: 700; }
+  .s1 .bdg i, .s12 .bdg i { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #5E962B 0%, #2C5A16 70%, #1E3E14 100%); box-shadow: 0 6px 12px rgb(0 0 0 / .35); color: #fff; }
+  .s1 .bdg i svg, .s12 .bdg i svg { width: 28px; height: 28px; }
+  .s1 .b1 { inset-inline-start: 806px; } .s1 .b2 { inset-inline-start: 1033px; }
+  .s1 .pfr { top: 115px; inset-inline-start: 58px; width: 1164px; height: 491px; border-radius: 12px; border: 1.5px solid #7EA55A; background: linear-gradient(160deg, #7C9876 0%, #4E6E44 55%, #3A5A30 100%); box-shadow: none; }
+  .s1 .ph { top: 133px; inset-inline-start: 75px; width: 1130px; height: 454px; border-radius: 10px; }
+  .s1 .wcard { position: absolute; top: 344px; inset-inline-start: 0; width: 933px; height: 376px; background: #fff; border-start-end-radius: 22px; z-index: 2; }
+  .s1 .h1a, .s1 .h1b { position: absolute; inset-inline-start: 66px; margin: 0; font-size: 96px; line-height: 1; font-weight: 800; letter-spacing: -3px; z-index: 3; white-space: nowrap; }
+  .s1 .h1a { top: 393px; color: var(--ink); } .s1 .h1b { top: 508px; color: var(--mid); }
+  .s1 .sub { position: absolute; top: 626px; inset-inline-start: 66px; margin: 0; font-size: 31px; line-height: 1; letter-spacing: 6.4px; color: #1A2A1C; z-index: 3; white-space: nowrap; }
+  html[lang="ar"] .s1 .h1a, html[lang="ar"] .s1 .h1b { font-size: 104px; line-height: 1.2; top: 372px; }
+  html[lang="ar"] .s1 .h1b { top: 492px; }
+  html[lang="ar"] .s1 .sub { top: 622px; font-size: 32px; }
+
+  /* ===== 2) الملخص التنفيذي ===== */
+  .s2 .kh { top: 174px; inset-inline-start: 70px; }
+  .s2 .bul { top: 229px; inset-inline-start: 70px; width: 395px; }
+  .s2 .bul li { margin-bottom: 16px; }
+  .s2 .pfr { top: 170px; inset-inline-start: 528px; width: 602px; height: 455px; }
+  .s2 .ph { top: 194px; inset-inline-start: 547px; width: 563px; height: 406px; border-radius: 8px; }
+  .s2 .stat { position: absolute; top: 321px; inset-inline-start: 894px; width: 326px; height: 304px; background: var(--dark); border-radius: 16px; z-index: 3; }
+  .s2 .stat .ico { inset-inline-start: 44px; width: 42px; height: 42px; color: #6CA63A; }
+  .s2 .stat .v { position: absolute; inset-inline-start: 103px; margin: 0; font-size: 76px; line-height: 1; font-weight: 300; color: #fff; letter-spacing: -1px; }
+  .s2 .stat .l { position: absolute; inset-inline-start: 103px; margin: 0; font-size: 18px; line-height: 24px; color: #D9DED6; white-space: nowrap; }
+  .s2 .i1 { top: 51px; } .s2 .v1 { top: 33px; } .s2 .l1 { top: 112px; }
+  .s2 .i2 { top: 188px; } .s2 .v2 { top: 170px; } .s2 .l2 { top: 247px; }
+
+  /* ===== 3) تحديات الاستدامة ===== */
+  .s3 .lead { top: 148px; inset-inline-start: 70px; width: 1100px; }
+  .s3 .card { top: 238px; width: 281px; height: 368px; border-radius: 14px; }
+  .s3 .c1 { inset-inline-start: 62px; } .s3 .c2 { inset-inline-start: 353px; } .s3 .c3 { inset-inline-start: 645px; } .s3 .c4 { inset-inline-start: 937px; }
+  .s3 .card .ic { top: 42px; inset-inline-start: 38px; width: 68px; height: 62px; }
+  .s3 .card h2 { top: 172px; inset-inline-start: 36px; width: 240px; }
+  .s3 .card p { top: 248px; inset-inline-start: 36px; width: 225px; }
+
+  /* ===== 4) رؤيتنا للاستدامة ===== */
+  .s4 .ttl { line-height: 68px; }
+  .s4 .ico.flag { top: 374px; inset-inline-start: 72px; width: 62px; height: 62px; color: var(--lime); }
+  .s4 .quote { position: absolute; top: 471px; inset-inline-start: 70px; width: 520px; margin: 0; font-size: 30px; line-height: 39px; font-style: italic; color: #1E2E20; }
+  html[lang="ar"] .s4 .quote { font-style: normal; font-weight: 500; }
+  .s4 .panel { position: absolute; top: 39px; inset-inline-start: 699px; width: 521px; height: 586px; background: var(--dark); border-radius: 22px; z-index: 2; }
+  .s4 .pi { position: absolute; inset-inline-start: 135px; width: 345px; }
+  .s4 .pi .ico { inset-inline-start: -90px; top: 6px; width: 56px; height: 56px; color: #6AA035; }
+  .s4 .pi h2 { margin: 0 0 8px; font-size: 22px; line-height: 28px; font-weight: 700; color: #fff; }
+  .s4 .pi p { margin: 0; font-size: 18px; line-height: 25.5px; color: #D3D8D1; }
+  .s4 .p1 { top: 48px; } .s4 .p2 { top: 233px; } .s4 .p3 { top: 418px; }
+  .s4 .sep { position: absolute; inset-inline-start: 56px; width: 422px; height: 1px; background: #2E4630; }
+  .s4 .sp1 { top: 199px; } .s4 .sp2 { top: 384px; }
+
+  /* ===== 5) الركائز الاستراتيجية ===== */
+  .s5 .lead { top: 160px; inset-inline-start: 70px; width: 500px; }
+  .s5 .pfr { top: -2px; inset-inline-start: 628px; width: 660px; height: 318px; border-radius: 0; border-top: 0; border-inline-end: 0; box-shadow: none; }
+  .s5 .ph { top: 0; inset-inline-start: 656px; width: 624px; height: 292px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px; }
+  .s5 .card { top: 257px; width: 372px; height: 360px; border-radius: 16px; }
+  .s5 .c1 { inset-inline-start: 60px; } .s5 .c2 { inset-inline-start: 454px; } .s5 .c3 { inset-inline-start: 848px; }
+  .s5 .card .n { position: absolute; top: 34px; inset-inline-start: 36px; margin: 0; font-size: 56px; line-height: 1.2; font-weight: 300; }
+  .s5 .card h2 { top: 155px; inset-inline-start: 38px; width: 300px; }
+  .s5 .card p { top: 231px; inset-inline-start: 38px; width: 300px; }
+
+  /* ===== 6) الأثر البيئي ===== */
+  .s6 .ring { position: absolute; top: 60px; inset-inline-start: 66px; width: 546px; height: 546px; border-radius: 50%; border: 1.5px solid #B7D3A1; background: radial-gradient(circle, #F6FBF2 60%, #EEF6E8 100%); box-shadow: 0 8px 24px rgb(80 120 60 / .10); }
+  .s6 .ph { top: 78px; inset-inline-start: 84px; width: 508px; height: 508px; border-radius: 50%; }
+  .s6 .ttl { top: 50px; inset-inline-start: 682px; line-height: 70px; font-size: 62px; }
+  .s6 .lead { top: 234px; inset-inline-start: 691px; width: 500px; }
+  .s6 .card { top: 374px; width: 276px; height: 257px; border-radius: 14px; z-index: 3; }
+  .s6 .c1 { inset-inline-start: 332px; } .s6 .c2 { inset-inline-start: 625px; } .s6 .c3 { inset-inline-start: 918px; }
+  .s6 .card .ic { top: 40px; inset-inline-start: 42px; width: 44px; height: 44px; }
+  .s6 .card .v { position: absolute; top: 106px; inset-inline-start: 38px; margin: 0; font-size: 56px; line-height: 1.1; font-weight: 300; }
+  .s6 .card p { top: 172px; inset-inline-start: 39px; width: 210px; color: #fff; }
+
+  /* ===== 7) الأثر الاجتماعي ===== */
+  .s7 .lead { top: 196px; inset-inline-start: 70px; width: 440px; }
+  .s7 .kh { top: 377px; inset-inline-start: 70px; }
+  .s7 .bul { top: 433px; inset-inline-start: 70px; width: 440px; }
+  .s7 .bul li { margin-bottom: 16px; }
+  .s7 .cr { position: absolute; width: 284px; height: 284px; border-radius: 50%; border: 1.5px solid #B7D3A1; background: radial-gradient(circle, #F6FBF2 70%, #EAF4E3 100%); box-shadow: 0 8px 20px rgb(80 120 60 / .10); }
+  .s7 .cr1 { top: 48px; inset-inline-start: 549px; } .s7 .cr2 { top: 84px; inset-inline-start: 850px; } .s7 .cr3 { top: 326px; inset-inline-start: 670px; }
+  .s7 .ph { width: 242px; height: 242px; border-radius: 50%; }
+  .s7 .ph1 { top: 69px; inset-inline-start: 570px; } .s7 .ph2 { top: 105px; inset-inline-start: 871px; } .s7 .ph3 { top: 347px; inset-inline-start: 691px; }
+  .s7 .stat { position: absolute; top: 413px; inset-inline-start: 892px; width: 281px; height: 190px; background: #fff; border-radius: 10px; box-shadow: 0 6px 24px rgb(60 90 40 / .08); z-index: 3; }
+  .s7 .stat .ico { top: 48px; inset-inline-start: 27px; width: 40px; height: 40px; color: var(--mid); }
+  .s7 .stat .v { position: absolute; top: 28px; inset-inline-start: 85px; margin: 0; font-size: 76px; line-height: 1.1; font-weight: 400; color: var(--ink); letter-spacing: -1px; }
+  .s7 .stat .l { position: absolute; top: 110px; inset-inline-start: 86px; margin: 0; width: 180px; font-size: 18px; line-height: 25.5px; color: var(--text); }
+
+  /* ===== 8) إطار الحوكمة ===== */
+  .s8 .lead { top: 160px; inset-inline-start: 70px; width: 340px; }
+  .s8 .cl { top: 257px; inset-inline-start: 60px; width: 372px; height: 360px; border-radius: 16px; }
+  .s8 .cl .ic { top: 46px; inset-inline-start: 46px; width: 60px; height: 60px; }
+  .s8 .cl h2 { top: 205px; inset-inline-start: 38px; width: 320px; }
+  .s8 .cl p { top: 247px; inset-inline-start: 38px; width: 290px; }
+  .s8 .pfr { top: 155px; inset-inline-start: 456px; width: 381px; height: 463px; }
+  .s8 .ph { top: 170px; inset-inline-start: 472px; width: 348px; height: 433px; border-radius: 8px; }
+  .s8 .ct, .s8 .cb { inset-inline-start: 860px; width: 368px; border-radius: 12px; }
+  .s8 .ct { top: 155px; height: 225px; } .s8 .cb { top: 400px; height: 217px; }
+  .s8 .ct .ic { top: 30px; inset-inline-start: 38px; width: 42px; height: 50px; } .s8 .cb .ic { top: 30px; inset-inline-start: 34px; width: 50px; height: 46px; }
+  .s8 .ct h2 { top: 132px; inset-inline-start: 31px; width: 330px; } .s8 .ct p { top: 172px; inset-inline-start: 31px; width: 320px; }
+  .s8 .cb h2 { top: 118px; inset-inline-start: 41px; width: 320px; } .s8 .cb p { top: 158px; inset-inline-start: 41px; width: 320px; }
+
+  /* ===== 9) لوحة الأداء ===== */
+  .s9 .ttl { color: #fff; line-height: 68px; }
+  .s9 .lead { top: 309px; inset-inline-start: 70px; width: 380px; color: #F2F2F2; line-height: 25.5px; }
+  .s9 .ico.ppl { top: 482px; inset-inline-start: 60px; width: 52px; height: 42px; color: #fff; }
+  .s9 .big { position: absolute; top: 472px; inset-inline-start: 129px; margin: 0; font-size: 76px; line-height: 1.1; font-weight: 300; color: #fff; letter-spacing: -1px; }
+  .s9 .bl { position: absolute; top: 552px; inset-inline-start: 131px; margin: 0; font-size: 18px; line-height: 25px; color: #fff; white-space: nowrap; }
+  .s9 .chart { position: absolute; top: 75px; inset-inline-start: 517px; width: 495px; height: 528px; background: #fff; border-radius: 12px; z-index: 2; }
+  .s9 .chart svg { position: absolute; top: 0; inset-inline-start: 0; width: 495px; height: 528px; }
+  .s9 .chart text { font-size: 14px; fill: #595959; font-family: var(--font); }
+  .s9 .kc { position: absolute; inset-inline-start: 926px; width: 283px; border-radius: 8px; z-index: 3; color: #fff; }
+  .s9 .k1 { top: 250px; height: 163px; background: var(--deep); } .s9 .k2 { top: 440px; height: 163px; background: var(--mid); }
+  .s9 .kc .ico { width: 38px; height: 42px; color: #fff; }
+  .s9 .k1 .ico { top: 45px; inset-inline-start: 31px; } .s9 .k2 .ico { top: 44px; inset-inline-start: 28px; width: 44px; }
+  .s9 .kc .v { position: absolute; inset-inline-start: 86px; margin: 0; font-size: 76px; line-height: 1.1; font-weight: 300; letter-spacing: -1px; }
+  .s9 .k1 .v { top: 22px; } .s9 .k2 .v { top: 18px; font-size: 64px; }
+  .s9 .kc .l { position: absolute; inset-inline-start: 86px; margin: 0; font-size: 18px; line-height: 24px; color: #E4EED8; white-space: nowrap; }
+  .s9 .k1 .l { top: 107px; } .s9 .k2 .l { top: 107px; }
+
+  /* ===== 10) قصص النجاح ===== */
+  .s10 .pfr { top: 155px; width: 300px; height: 463px; }
+  .s10 .f1 { inset-inline-start: 58px; } .s10 .f2 { inset-inline-start: 651px; }
+  .s10 .ph { top: 173px; width: 271px; height: 426px; border-radius: 8px; }
+  .s10 .ph1 { inset-inline-start: 72px; } .s10 .ph2 { inset-inline-start: 665px; }
+  .s10 .card { top: 216px; width: 262px; height: 401px; border-radius: 14px; }
+  .s10 .c1 { inset-inline-start: 367px; } .s10 .c2 { inset-inline-start: 960px; }
+  .s10 .card .v { position: absolute; top: 46px; inset-inline-start: 36px; margin: 0; font-size: 48px; line-height: 1.2; font-weight: 700; }
+  .s10 .card h2 { top: 143px; inset-inline-start: 36px; width: 210px; }
+  .s10 .card p { top: 246px; inset-inline-start: 36px; width: 200px; }
+
+  /* ===== 11) خارطة الطريق ===== */
+  .s11 .ttl { inset-inline-start: 0; width: 1280px; text-align: center; color: #fff; }
+  .s11 .board { position: absolute; top: 186px; inset-inline-start: 70px; width: 1146px; height: 431px; border-radius: 10px; z-index: 2; background-color: #fff; background-image: linear-gradient(to right, #F6F7F3 2px, transparent 2px), linear-gradient(to bottom, #F6F7F3 2px, transparent 2px); background-size: 55.7px 55.7px; background-position: -16px 23px; }
+  .s11 .dot { position: absolute; top: 165px; width: 44px; height: 44px; margin-inline-start: -22px; border-radius: 50%; background: radial-gradient(circle, #B4C83A 0 55%, #A8BD30 70%, rgb(168 189 48 / 0) 100%); filter: blur(1.5px); z-index: 3; }
+  .s11 .ms { position: absolute; top: 0; width: 220px; margin-inline-start: -110px; text-align: center; }
+  .s11 .ms h2 { position: absolute; top: 64px; inset-inline-start: 0; width: 220px; margin: 0; font-size: 23px; line-height: 29px; font-weight: 700; color: var(--ink); }
+  .s11 .ms p { position: absolute; top: 141px; inset-inline-start: 25px; width: 170px; margin: 0; font-size: 18px; line-height: 25.5px; color: var(--text); }
+  .s11 .ms .yr { position: absolute; top: 334px; inset-inline-start: 0; width: 220px; margin: 0; font-size: 42px; line-height: 1.2; font-weight: 400; color: var(--ink); }
+  .s11 .line { position: absolute; top: 303px; inset-inline-start: 71px; width: 1005px; height: 4px; background: var(--deep); }
+  .s11 .tick { position: absolute; top: 287px; width: 3px; height: 18px; margin-inline-start: -1.5px; background: var(--deep); }
+  .s11 .x1 { inset-inline-start: 164px; } .s11 .x2 { inset-inline-start: 429px; } .s11 .x3 { inset-inline-start: 695px; } .s11 .x4 { inset-inline-start: 960px; }
+  .s11 .d1 { inset-inline-start: 234px; } .s11 .d2 { inset-inline-start: 499px; } .s11 .d3 { inset-inline-start: 765px; } .s11 .d4 { inset-inline-start: 1030px; }
+
+  /* ===== 12) الختام ===== */
+  .s12 .ty { position: absolute; top: 172px; inset-inline-start: 110px; margin: 0; font-size: 90px; line-height: 1.1; font-weight: 700; color: #fff; letter-spacing: -1px; white-space: nowrap; }
+  .s12 .tg { position: absolute; top: 297px; inset-inline-start: 113px; margin: 0; font-size: 38px; line-height: 51px; font-weight: 700; color: var(--lime); }
+  .s12 .bdg { position: absolute; top: 526px; display: flex; align-items: center; gap: 9px; color: #fff; font-size: 18px; font-weight: 700; }
+  .s12 .b1 { inset-inline-start: 117px; } .s12 .b2 { inset-inline-start: 382px; }
+  .s12 .ring { position: absolute; top: 267px; inset-inline-start: 835px; width: 546px; height: 546px; border-radius: 50%; border: 2px solid #5E8C38; background: rgb(70 105 50 / .35); }
+  .s12 .ph { top: 285px; inset-inline-start: 853px; width: 427px; height: 435px; clip-path: circle(255px at 255px 255px); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="logo" viewBox="0 0 48 54" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 6C15 1 33 0 43 4c4 2 5 8 5 20 0 13-1 21-4 25-8 4-27 6-37 2C3 49 0 42 0 28 0 15 2 9 6 6zM16 15c7-2 18-2 22 0 2 3 2 15 0 19-6 2-17 3-22 1-2-3-2-17 0-20z"/></svg><p class="co">YOUR COMPANY<br>LOGO HERE</p><div class="bdg b1"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M21.5 10.5v3"/><path d="M11.8 8.6l-3 3.8h4.2l-3 3.9"/></svg></i><span>Sustainable</span></div><div class="bdg b2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 4.2A8.5 8.5 0 1 0 19.6 17"/><path d="M8.5 16c0-5 3-8.5 8.5-8.5 0 5.2-3.2 8.5-8.5 8.5z"/><path d="M8.5 16l4.5-4.5"/><path d="M16.5 15.5v2.2M19.3 15.5v2.2M15.6 17.7h4.6v1.2a2.3 2.3 0 0 1-4.6 0z"/></svg></i><span>Impactful</span></div>
+    <div class="pfr"></div><img class="ph p1" src="/templates/freeform/sl-sustainability-report/assets/wind-farm.jpg" alt="Wind turbine farm across green fields">
+    <div class="wcard"></div><h1 class="h1a">SUSTAINABILITY</h1><p class="h1b">REPORT</p><p class="sub">PRESENTATION TEMPLATE</p>
+    <svg class="blob" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:66"><circle cx="1332" cy="700" r="216"/></svg>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <svg class="blob" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:70"><path d="M880,-30 C950,40 1060,40 1130,75 C1200,110 1230,190 1265,290"/></svg><h1 class="ttl"><b>Executive Summary</b> Slide</h1>
+    <h2 class="kh">KEY HIGHLIGHTS</h2><ul class="bul"><li>Add objective here. Add text here.</li><li>This is a sample text. Add your text here. Add your desired text here.</li><li>Add your text here. This is a sample text. Add objective here.</li><li>Add objective here. Add text here.</li><li>This is a sample text. Add your text here. Add your desired text here.</li></ul>
+    <div class="pfr"></div><img class="ph p2" src="/templates/freeform/sl-sustainability-report/assets/dam.jpg" alt="Hydroelectric dam among forests and mountains">
+    <div class="stat"><span class="ico i1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.2 6.3L10.4 2.8a1.8 1.8 0 0 1 3.1 0l2.2 3.6"/><path d="M13.3 6.6l2.6-.1.6-2.5"/><path d="M18.4 10.4l2.3 3.9a1.8 1.8 0 0 1-1.6 2.7h-3.6"/><path d="M17 19.2l-1.8-2.2 1.8-1.8"/><path d="M7.5 17H4.8a1.8 1.8 0 0 1-1.5-2.7l2.1-3.7"/><path d="M3.2 11.4l2.3-1.1 1.3 2.3"/><path d="M12.4 21c-.2-3.6 1.6-6.2 5.6-6.6.2 3.9-2 6.4-5.6 6.6z" fill="currentColor" stroke="none"/></svg></span><p class="v v1"><bdi dir="ltr">65%</bdi></p><p class="l l1">Renewable Energy</p><span class="ico i2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 4v16.5H21"/><path d="M6.5 8.5l3.6 4 2.6-2.4 3.6 4.4 2.2-1.8"/><path d="M6.5 11.5l3.6 4 2.6-2.4"/></svg></span><p class="v v2"><bdi dir="ltr">42%</bdi></p><p class="l l2">Carbon Reduction</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <svg class="blob" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:72"><circle cx="1162" cy="-52" r="150"/></svg><h1 class="ttl"><b>Sustainability Challenges</b> Slide</h1>
+    <p class="lead">Add objective here. Add your desired text here. This is a sample text. Add your desired text here. Add text here. Add objective here. Add objective here. Add your desired text here. This is a sample text. Add your desired text here. Add your text here.</p>
+    <div class="card lime c1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.3 18.5h9.9a3.9 3.9 0 0 0 .4-7.8 5.6 5.6 0 0 0-10.8 1.4 3.2 3.2 0 0 0 .5 6.4z"/></svg></span><h2>Climate<br>Change Risks</h2><p>Add objective here. Add your desired text here. This is a sample text.</p></div><div class="card mid c2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8s6.3 6.8 6.3 11.3a6.3 6.3 0 0 1-12.6 0C5.7 9.6 12 2.8 12 2.8z"/><path d="M12.9 9.2l-2.9 4.3h3.8l-2.9 4.3"/></svg></span><h2>Natural<br>Resource Scarcity</h2><p>Add objective here. Add your desired text here. This is a sample text.</p></div><div class="card deep c3"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5v17.5"/><path d="M3 20h18"/><path d="M5.5 16.5l4-5 3.5 3 3.8-5.2 2.4 2"/><circle cx="16.8" cy="9.3" r="1.2"/><path d="M5.5 13l4-5 3.5 3"/><path d="M5 22.5v-1.3M8 22.5v-1.3M11 22.5v-1.3M14 22.5v-1.3M17 22.5v-1.3M20 22.5v-1.3"/></svg></span><h2>Rising<br>Expectations</h2><p>Add objective here. Add your desired text here. This is a sample text.</p></div><div class="card dk c4"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.2" cy="7.2" r="3.7"/><circle cx="16.8" cy="16.8" r="3.7"/><path d="M13.6 4.5h3a3.2 3.2 0 0 1 3.2 3.2v1.6"/><path d="M18 7.6l1.8 1.8 1.8-1.8"/><path d="M10.4 19.5h-3a3.2 3.2 0 0 1-3.2-3.2v-1.6"/><path d="M6 16.4l-1.8-1.8-1.8 1.8"/></svg></span><h2>Evolving ESG<br>Regulations</h2><p>Add objective here. Add your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <svg class="blob back" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:76"><path d="M1310,410 C1240,450 1235,545 1150,600 C1060,655 930,640 820,750"/></svg><h1 class="ttl"><b>Our<br>Sustainability<br>Vision</b> Slide</h1>
+    <span class="ico flag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 21V3.5"/><path d="M5.5 4.5h12.8l-1.6 4 1.6 4H5.5"/><path d="M9.5 4.5v8M13.5 4.5v8"/><path d="M3.5 21h4"/><path d="M14 16.5h3.5a1.6 1.6 0 0 1 0 3.2h-1.2"/></svg></span><p class="quote">Creating sustainable value through responsible business and environmental stewardship.</p>
+    <div class="panel"><div class="pi p1"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.6" r="2"/><path d="M9.2 10a2.8 2.8 0 0 1 5.6 0"/><circle cx="6.3" cy="13.3" r="2"/><path d="M3.5 18.7a2.8 2.8 0 0 1 5.6 0"/><circle cx="17.7" cy="13.3" r="2"/><path d="M14.9 18.7a2.8 2.8 0 0 1 5.6 0"/><path d="M12 10v1.5M6.3 11.3v-1M17.7 11.3v-1M6.3 10.3h11.4"/><path d="M3.5 18.7h17v1.8h-17z"/></svg></span><h2>Lead with integrity</h2><p>This is a sample text. Add objective here. Add your desired text here. This is a sample text. Add objective here.</p></div><div class="sep sp1"></div><div class="pi p2"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12.3" r="2"/><path d="M10.4 11.2C8 9 8.4 4.5 12 3.7c3.6.8 4 4.6 1.6 7.4"/><path d="M14 12.6c3.1-.9 6.8 1.6 5.9 5.1-2.5 2.7-6 1.2-7.1-2.2"/><path d="M10.8 14c-.7 3.2-4.7 5.3-7.3 2.8-.8-3.5 2.3-5.7 5.7-5"/></svg></span><h2>Innovate responsibly</h2><p>This is a sample text. Add objective here. Add your desired text here. This is a sample text. Add objective here.</p></div><div class="sep sp2"></div><div class="pi p3"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 9.5h4.2l3.2-2h4.4l2.6 1.9-1.3 1.1h-4.2"/><path d="M21.5 9.8h-3.6l-3.5 3.6-3.4 1.1H7.5"/><path d="M2.5 14.5h5.8"/><path d="M11.5 10.5L9.2 12"/></svg></span><h2>Collaborate for impact</h2><p>This is a sample text. Add objective here. Add your desired text here. This is a sample text. Add objective here.</p></div></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl"><b>Strategic Pillars</b></h1><p class="lead">Add objective here. Add your desired text here. This is a sample text. Add your desired text here. Add text here.</p>
+    <div class="pfr"></div><img class="ph p5" src="/templates/freeform/sl-sustainability-report/assets/eco-plant.jpg" alt="Clean energy campus with tanks and solar panels"><svg class="blob" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:86"><path d="M1070,-60 C1120,30 1190,95 1310,135"/></svg>
+    <div class="card lime c1"><p class="n"><bdi dir="ltr">01.</bdi></p><h2>Environmental<br>Stewardship</h2><p>Add objective here. Add your desired text here. This is a sample text. Add your text here.</p></div><div class="card mid c2"><p class="n"><bdi dir="ltr">02.</bdi></p><h2>People &amp;<br>Communities</h2><p>Add objective here. Add your desired text here. This is a sample text. Add your text here.</p></div><div class="card deep c3"><p class="n"><bdi dir="ltr">03.</bdi></p><h2>Responsible<br>Governance</h2><p>Add objective here. Add your desired text here. This is a sample text. Add your text here.</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="ring"></div><img class="ph p6" src="/templates/freeform/sl-sustainability-report/assets/gas-tanks.jpg" alt="Industrial facility with spherical tanks in nature"><svg class="blob" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:72"><circle cx="112" cy="112" r="136"/></svg><h1 class="ttl"><b>Environmental<br>Impact</b> Slide</h1><p class="lead">Add objective here. Add text here. This is a sample text. Add your desired text here. Add your desired text here. Add objective here.</p>
+    <div class="card mid c1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5c2-1.6 4-1.6 6 0s4 1.6 6 0 4-1.6 6 0"/><path d="M3 11.5c2-1.6 4-1.6 6 0s4 1.6 6 0 4-1.6 6 0"/><path d="M3 15.5c2-1.6 4-1.6 6 0s4 1.6 6 0 4-1.6 6 0"/></svg></span><p class="v"><bdi dir="ltr">31%</bdi></p><p>Reduction in water usage</p></div><div class="card deep c2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 10A7.8 7.8 0 0 1 17.6 6.3"/><path d="M17.8 2.8v3.8H14"/><path d="M19.5 14A7.8 7.8 0 0 1 6.4 17.7"/><path d="M6.2 21.2v-3.8H10"/><path d="M3 7.5l1.5 2.5 2.5-1.4"/><path d="M21 16.5L19.5 14 17 15.4"/></svg></span><p class="v"><bdi dir="ltr">95%</bdi></p><p>Waste recycled or recovered</p></div><div class="card lime c3"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 10.2L12 3.8l7.8 6.4v8.6a2 2 0 0 1-2 2H6.2a2 2 0 0 1-2-2z"/><path d="M12.9 10l-2.6 3.4h3.4l-2.6 3.4"/></svg></span><p class="v"><bdi dir="ltr">78%</bdi></p><p>Renewable electricity adoption</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <h1 class="ttl"><b>Social Impact</b></h1><p class="lead">Add objective here. Add your desired text here. This is a sample text. Add your desired text here. Add text here. Add objective here.</p><h2 class="kh">KEY HIGHLIGHTS</h2><ul class="bul"><li>Add objective here. Add text here.</li><li>This is a sample text. Add your text here. Add your desired text here.</li><li>Add your text here. Add objective here. This is a sample text.</li></ul>
+    <div class="cr cr1"></div><div class="cr cr2"></div><div class="cr cr3"></div><img class="ph ph1" src="/templates/freeform/sl-sustainability-report/assets/walkway.jpg" alt="Families walking along a green path"><img class="ph ph2" src="/templates/freeform/sl-sustainability-report/assets/solar-class.jpg" alt="Students learning about solar panels"><img class="ph ph3" src="/templates/freeform/sl-sustainability-report/assets/eco-homes.jpg" alt="Sustainable neighborhood with solar roofs"><svg class="blob" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:72"><circle cx="905" cy="-12" r="140"/></svg>
+    <div class="stat"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.2 6.3L10.4 2.8a1.8 1.8 0 0 1 3.1 0l2.2 3.6"/><path d="M13.3 6.6l2.6-.1.6-2.5"/><path d="M18.4 10.4l2.3 3.9a1.8 1.8 0 0 1-1.6 2.7h-3.6"/><path d="M17 19.2l-1.8-2.2 1.8-1.8"/><path d="M7.5 17H4.8a1.8 1.8 0 0 1-1.5-2.7l2.1-3.7"/><path d="M3.2 11.4l2.3-1.1 1.3 2.3"/><path d="M12.4 21c-.2-3.6 1.6-6.2 5.6-6.6.2 3.9-2 6.4-5.6 6.6z" fill="currentColor" stroke="none"/></svg></span><p class="v"><bdi dir="ltr">25K</bdi></p><p class="l">Employee training hours</p></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <h1 class="ttl"><b>Governance &amp; ESG Framework</b> Slide</h1><p class="lead">Add objective here. Add your desired text here. This is a sample text.</p>
+    <div class="card lime cl"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 19.5H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v3"/><path d="M3 9.5h17"/><rect x="14.5" y="15.3" width="7.5" height="6" rx="1.2"/><path d="M16.2 15.3v-1.6a2 2 0 0 1 4 0v1.6"/></svg></span><h2>Ethical Business Practices</h2><p>Add objective here. Add your desired text here. This is a sample text. Add your text here.</p></div>
+    <div class="pfr"></div><img class="ph p8" src="/templates/freeform/sl-sustainability-report/assets/office.jpg" alt="Employee working on a laptop in a green office">
+    <div class="card mid ct"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2.2"/><path d="M8.5 2.5v3M12 2.5v3M15.5 2.5v3"/><path d="M8.5 10h7M8.5 13.5h7M8.5 17h7"/></svg></span><h2>Transparent Reporting</h2><p>Add your desired text here.</p></div><div class="card deep cb"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.6 4.3a1.6 1.6 0 0 1 2.8 0l8.2 14.4a1.6 1.6 0 0 1-1.4 2.4H3.8a1.6 1.6 0 0 1-1.4-2.4z"/><path d="M12 9.5v4.8"/><path d="M12 17.2v.1"/></svg></span><h2>Risk Management</h2><p>Add your desired text here.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <svg class="blob back" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:70"><path d="M1050,-40 C1085,40 1130,105 1200,140 C1250,165 1290,200 1320,230"/></svg><h1 class="ttl"><b>Performance<br>Dashboard</b><br>Slide</h1><p class="lead">Add objective here. This is a sample text. Add your desired text here. Add text here. This is a sample text. Add objective here. Add your desired text here.</p>
+    <span class="ico ppl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="9" r="2.2"/><circle cx="12" cy="7.5" r="2.5"/><circle cx="18.5" cy="9" r="2.2"/><path d="M1.5 17c0-2.6 1.8-4.6 4-4.6 1.2 0 2.3.6 3 1.6"/><path d="M22.5 17c0-2.6-1.8-4.6-4-4.6-1.2 0-2.3.6-3 1.6"/><path d="M7 18c0-3.2 2.2-5.6 5-5.6s5 2.4 5 5.6"/></svg></span><p class="big"><bdi dir="ltr">94%</bdi></p><p class="bl">Employee Engagement</p>
+    <div class="chart"><svg id="c9" viewBox="0 0 495 528" aria-hidden="true"></svg></div>
+    <div class="kc k1"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="5" width="12" height="16.5" rx="3.2"/><path d="M8.5 2.5h7"/><path d="M12.9 9.2l-2.6 3.5h3.4l-2.6 3.6"/></svg></span><p class="v"><bdi dir="ltr">78%</bdi></p><p class="l">Renewable Energy</p></div><div class="kc k2"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5c1.5 0 2-1.2 3.5-1.2S8.5 5.5 10 5.5"/><path d="M3 9c2.5 0 3.5-1.5 6-1.5s4 1.8 6.5 1.8 3-1 5.5-1"/><path d="M3 13c2.5 0 3.5-1.5 6-1.5s4 1.8 6.5 1.8 3-1 5.5-1"/><path d="M3 17c2.5 0 3.5-1.5 6-1.5s4 1.8 6.5 1.8 3-1 5.5-1"/><path d="M8 21c1.5 0 2-1.2 3.5-1.2s2 1.2 3.5 1.2"/></svg></span><p class="v"><bdi dir="ltr">-42%</bdi></p><p class="l">Carbon Emissions</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <svg class="blob" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:82"><circle cx="985" cy="-110" r="150"/></svg><h1 class="ttl"><b>Success Stories</b> Slide</h1>
+    <div class="pfr f1"></div><img class="ph ph1" src="/templates/freeform/sl-sustainability-report/assets/hydrogen.jpg" alt="Green hydrogen facility with solar panels"><div class="card lime c1"><p class="v"><bdi dir="ltr">85,8%</bdi></p><h2>Green<br>Operations<br>Initiative</h2><p>Add objective here. Add your desired text here. This is a sample text. Add text here.</p></div>
+    <div class="pfr f2"></div><img class="ph ph2" src="/templates/freeform/sl-sustainability-report/assets/outdoor-class.jpg" alt="Teacher and students in an outdoor lesson"><div class="card lime c2"><p class="v"><bdi dir="ltr">192K</bdi></p><h2>Community<br>Education<br>Partnership</h2><p>Add objective here. Add your desired text here. This is a sample text. Add text here.</p></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <svg class="blob back" viewBox="0 0 1280 720" aria-hidden="true" style="stroke-width:72"><path d="M960,-30 C1040,15 1095,60 1140,150 C1180,225 1250,235 1310,240"/><path d="M-30,570 C60,578 150,600 230,662 C300,715 380,725 440,770"/></svg><h1 class="ttl"><b>Roadmap</b> Slide</h1>
+    <div class="board"><div class="line"></div><div class="ms x1"><h2>Renewable<br>Expansion</h2><p>This is a sample text. Add objective here. Add your desired text here.</p><p class="yr"><bdi dir="ltr">2027</bdi></p></div><div class="tick x1"></div><div class="ms x2"><h2>Carbon<br>Reduction</h2><p>This is a sample text. Add objective here. Add your desired text here.</p><p class="yr"><bdi dir="ltr">2032</bdi></p></div><div class="tick x2"></div><div class="ms x3"><h2>Zero Waste<br>Goal</h2><p>This is a sample text. Add objective here. Add your desired text here.</p><p class="yr"><bdi dir="ltr">2035</bdi></p></div><div class="tick x3"></div><div class="ms x4"><h2>Net Zero<br>Future</h2><p>This is a sample text. Add objective here. Add your desired text here.</p><p class="yr"><bdi dir="ltr">2037</bdi></p></div><div class="tick x4"></div></div><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div><div class="dot d4"></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <h1 class="ty">THANK YOU</h1><p class="tg">Together we can create a<br>more sustainable tomorrow.</p>
+    <div class="bdg b1"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M9 16c.8-2 2-2.5 3-2.5s2.2.5 3 2.5"/></svg></i><span>Add date here</span></div><div class="bdg b2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.6"/></svg></i><span>Add location here</span></div>
+    <div class="ring"></div><img class="ph p12" src="/templates/freeform/sl-sustainability-report/assets/turbine.jpg" alt="Wind turbine against a cloudy sky">
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 12</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"labels": ["2021", "2022", "2023", "2024"], "max": 140, "step": 20, "series": [{"name": "Series 1", "color": "#66982F", "values": [82, 72, 120, 113]}, {"name": "Series 2", "color": "#3C6C00", "values": [72, 100, 82, 98]}]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // رسم الأعمدة المجمّعة (الشريحة 9) من كتلة chart-data؛ الفئة الأولى في جهة البداية
+  (function () {
+    var d = JSON.parse(document.getElementById('chart-data').textContent), svg = document.getElementById('c9');
+    var W = 495, px0 = 66, px1 = 395, y0 = 466, y1 = 40, bw = 31, s = '', n = d.labels.length, m = d.series.length;
+    function fx(x) { return RTL ? W - x : x; }
+    var unit = (y0 - y1) / d.max, step = (px1 - px0) / n;
+    for (var v = 0; v <= d.max; v += d.step) {
+      var y = y0 - v * unit;
+      s += '<line x1="' + fx(px0) + '" x2="' + fx(px1) + '" y1="' + y + '" y2="' + y + '" stroke="#E3E3E3" stroke-width="1"/>';
+      s += '<text x="' + fx(px0 - 14) + '" y="' + (y + 5) + '" text-anchor="' + (RTL ? 'start' : 'end') + '">' + v + '</text>';
+    }
+    for (var i = 0; i < n; i++) {
+      var cx = fx(px0 + step * (i + .5)), total = m * bw;
+      for (var k = 0; k < m; k++) {
+        var kk = RTL ? m - 1 - k : k, val = d.series[kk].values[i];
+        s += '<rect x="' + (cx - total / 2 + k * bw) + '" y="' + (y0 - val * unit) + '" width="' + bw + '" height="' + (val * unit) + '" fill="' + d.series[kk].color + '"><title>' + d.series[kk].name + ': ' + val + '</title></rect>';
+      }
+      s += '<text x="' + cx + '" y="' + (y0 + 26) + '" text-anchor="middle">' + d.labels[i] + '</text>';
+    }
+    svg.innerHTML = s;
+  })();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
