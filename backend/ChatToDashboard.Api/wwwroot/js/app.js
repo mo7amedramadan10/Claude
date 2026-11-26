@@ -8343,6 +8343,7 @@ async function loadCurrentEntityNav() {
     if (project) {
       state.entityName = project.name;
       el('current-project-name').textContent = project.name;
+      el('current-project-link').title = project.name; // اسم الكيان من بيانات المستخدم: لا يُستبدل (data-ent-skip) والتلميح يتبعه
       el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
     }
     entSetTypes(data.types, data.entities, project?.typeId);
