@@ -8156,10 +8156,14 @@ const RESTRICTABLE_SCREENS = ['viewing', 'chat', 'published', 'analyst', 'decks'
 const FREEFORM_ONLY_SCREENS = ['freeform', 'repo'];
 const VIEW_ONLY_SCREENS = ['viewing'];
 function screenAllowed(name) {
+  if (typeof isPlatformMode === 'function' && isPlatformMode()) return PLATFORM_SCREENS.includes(name);
   const u = state.currentUser; if (!u || u.role === 'Admin' || !Array.isArray(u.allowedScreens)) return true;
   return !RESTRICTABLE_SCREENS.includes(name) || u.allowedScreens.includes(name);
 }
-function firstAllowedScreen() { return RESTRICTABLE_SCREENS.find(screenAllowed) || 'chat'; }
+function firstAllowedScreen() {
+  if (typeof isPlatformMode === 'function' && isPlatformMode()) return 'organizations';
+  return RESTRICTABLE_SCREENS.find(screenAllowed) || 'chat';
+}
 function applyScreenAccess() {
   document.querySelectorAll('[data-screen]').forEach(b => b.classList.toggle('screen-denied', !screenAllowed(b.dataset.screen)));
   // مجموعة في القائمة (رأس «المنظمة» وقائمتها) لم يبقَ فيها بند شاشة ظاهر تُخفى برأسها؛ مجموعة بلا بنود شاشات (الإدارة) لا تُمس
@@ -13359,6 +13363,13 @@ function slugifyOrgName(name) {
 // path if the URL already carries one (a real login link), otherwise shows the org picker so
 // the user can type their organization's name and get redirected to its own link.
 async function resolveOrgScopedLoginAsync() {
+  // دخول مالك المنصّة المستقل (بلا منظمة) من /platform — POST /api/auth/platform-login
+  if (/^\/platform\/?$/.test(location.pathname)) {
+    state.platformLogin = true;
+    el('login-platform-banner').classList.remove('hidden');
+    showLoginScreen();
+    return;
+  }
   const match = location.pathname.match(/^\/o\/([^/]+)\/?$/);
   if (!match) { showOrgPicker(); return; }
   const slug = decodeURIComponent(match[1]);
@@ -13382,11 +13393,26 @@ el('org-picker-form').addEventListener('submit', e => {
   location.href = `/o/${encodeURIComponent(slugifyOrgName(name))}`;
 });
 el('login-org-change').addEventListener('click', () => { location.href = '/app'; }); // «/» صار الصفحة الرئيسية؛ اختيار المنظمة في التطبيق
+el('login-platform-change').addEventListener('click', () => { location.href = '/app'; });
+
+// مالك المنصّة المستقل: حساب بلا منظمة يدير المنصّة فقط (PlatformGate في الخادم) — لا كيانات ولا بيانات منظمات
+const PLATFORM_SCREENS = ['organizations', 'templates-admin', 'settings', 'llm-keys'];
+function isPlatformMode() { const u = state.currentUser; return !!(u && u.isPlatformOwner && !u.organizationId); }
 
 function renderCurrentUser() {
   const u = state.currentUser;
   if (!u) return;
-  el('current-user-name').textContent = `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
+  const platform = isPlatformMode();
+  el('current-user-name').textContent = platform ? u.displayName : `${u.displayName} (${u.role === 'Admin' ? 'مسؤول' : 'مستخدم'})`;
+  document.body.classList.toggle('platform-mode', platform);
+  if (platform) {
+    // لا منظمة ولا كيانات: تبقى قائمة «المنصّة» وحدها
+    el('admin-menu').classList.add('hidden');
+    el('proj-permissions-link').classList.add('hidden');
+    el('platform-menu').classList.remove('hidden');
+    applyScreenAccess();
+    return;
+  }
   // The four admin-only screens all share this one condition — toggled on their shared
   // wrapper (see #admin-menu) rather than each item individually now that they live
   // behind one dropdown instead of four flat tabs.
@@ -13877,9 +13903,9 @@ el('login-form').addEventListener('submit', async e => {
   el('login-submit').disabled = true;
   el('login-error').classList.add('hidden');
   try {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(state.platformLogin ? '/api/auth/platform-login' : '/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, orgSlug: state.loginOrgSlug || '' }),
+      body: JSON.stringify(state.platformLogin ? { username, password } : { username, password, orgSlug: state.loginOrgSlug || '' }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -13923,8 +13949,9 @@ document.addEventListener('keydown', e => {
 });
 
 el('logout-btn').addEventListener('click', async () => {
+  const platform = isPlatformMode();
   await fetch('/api/auth/logout', { method: 'POST' });
-  location.href = '/';
+  location.href = platform ? '/platform' : '/';
 });
 
 el('theme-toggle').addEventListener('click', () => {
@@ -14594,6 +14621,12 @@ function maybeAutoStartTour() {
 
 async function startApp() {
   renderCurrentUser();
+  // مالك المنصّة المستقل: لا محادثة ولا كيانات ولا مصادر — كتالوج النماذج (لمكتبة النماذج) ثم شاشة «المنظمات»
+  if (isPlatformMode()) {
+    try { await loadTemplateCatalog(); } catch { /* تبقى المكتبة كما هي */ }
+    showScreen('organizations');
+    return;
+  }
   renderMessages();
   renderDashboard();
   // يُحسم «بلا كيان» أولًا: مستخدم بلا دور في أي كيان لا تُحمَّل له المصادر ولا الملفات (يرفضها الخادم) بل يرى شاشته فقط
@@ -14874,7 +14907,9 @@ function tpladmStats() {
 function tpladmTabs() {
   const n = { widget: TPLADM.widgets.length, dashboard: TPLADM.dashboards.length, kpi: KPI_LIB ? KPI_LIB.rows.length : 0, schema: TPLADM.schemaRows.length,
     semantics: TPLADM.semantics ? TPLADM.semantics.tables.reduce((s, t) => s + t.columns.length, 0) : null };
-  el('tpladm-tabs').innerHTML = Object.entries(TPLADM_KINDS).map(([k, v]) =>
+  // «معاني الأعمدة» خاص بالكيان الحالي فلا يظهر لمالك المنصّة المستقل (بلا منظمة ولا كيان)
+  if (isPlatformMode() && TPLADM.kind === 'semantics') TPLADM.kind = 'widget';
+  el('tpladm-tabs').innerHTML = Object.entries(TPLADM_KINDS).filter(([k]) => !(k === 'semantics' && isPlatformMode())).map(([k, v]) =>
     `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === TPLADM.kind}">${tplIc(v.icon)}${v.tab}${n[k] != null ? ` <span class="tab-n num">${n[k].toLocaleString('en-US')}</span>` : ''}</button>`).join('');
   el('tpladm-tabs').querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { TPLADM.kind = b.dataset.kind; tpladmRender(); }));
   el('tpladm-new-btn').classList.toggle('hidden', TPLADM.kind !== 'widget' && TPLADM.kind !== 'dashboard');

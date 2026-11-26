@@ -69,6 +69,8 @@
       <span class="brand"><img src="img/logo-lockup.svg" alt="جيم"></span>
       <div><h1>أهلًا بعودتك</h1><p class="lead">اسأل عن بياناتك، واحصل على لوحتك في ثوانٍ.</p></div>
       <p class="auth-org-banner hidden" id="login-org-banner">تسجيل الدخول إلى <strong id="login-org-name"></strong> — <button type="button" id="login-org-change">مش منظمتك؟</button></p>
+      <!-- دخول مالك المنصّة المستقل (/platform): بلا منظمة، لإدارة المنصّة فقط -->
+      <p class="auth-org-banner hidden" id="login-platform-banner"><span>دخول إدارة المنصّة — لحساب مالك المنصّة فقط.</span> <button type="button" id="login-platform-change">دخول منظمة؟</button></p>
       <form id="login-form">
         <div class="field"><label for="login-username">اسم المستخدم</label><input id="login-username" type="text" autocomplete="username" required></div>
         <div class="field"><label for="login-password">كلمة المرور</label><input id="login-password" type="password" autocomplete="current-password" required></div>
@@ -148,8 +150,6 @@
         <div class="sb-label"><span>الإدارة</span></div>
         <ul class="nav">
           <li><button type="button" class="nav-link tab" id="tab-users" data-screen="users"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span></button></li>
-          <li><button type="button" class="nav-link tab" id="tab-settings" data-screen="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات</span></button></li>
-          <li><button type="button" class="nav-link tab" id="tab-llm-keys" data-screen="llm-keys"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">مفاتيح الموديلات</span></button></li>
           <li><button type="button" class="nav-link tab" id="tab-integrations" data-screen="integrations"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">التكاملات الخارجية</span></button></li>
           <li><a class="nav-link" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">الاستهلاك</span></a></li>
         </ul>
@@ -160,6 +160,9 @@
         <ul class="nav">
           <li><button type="button" class="nav-link tab" id="tab-organizations" data-screen="organizations"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span class="nav-text">المنظمات</span></button></li>
           <li><button type="button" class="nav-link tab" id="tab-templates-admin" data-screen="templates-admin"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">مكتبة النماذج</span></button></li>
+          <!-- إعدادات الموديلات ومفاتيحها تسري على المنصّة كلها فهي لمالك المنصّة وحده (LlmSettingsController: سياسة PlatformOwner) -->
+          <li><button type="button" class="nav-link tab" id="tab-settings" data-screen="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات</span></button></li>
+          <li><button type="button" class="nav-link tab" id="tab-llm-keys" data-screen="llm-keys"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">مفاتيح الموديلات</span></button></li>
         </ul>
       </div>
     </nav>

@@ -195,8 +195,28 @@ public class UserStore
         await connection.ExecuteAsync(
             $"UPDATE {Table} SET OrganizationId = @organizationId, " +
             "IsPlatformOwner = CASE WHEN Role = 'Admin' THEN 1 ELSE IsPlatformOwner END " +
-            "WHERE OrganizationId IS NULL OR OrganizationId = ''",
+            // مالك المنصّة المستقل بلا منظمة عمدًا (PlatformGate) — لا يُلحق بالمنظمة الافتراضية
+            "WHERE (OrganizationId IS NULL OR OrganizationId = '') AND ISNULL(IsPlatformOwner, 0) = 0",
             new { organizationId });
+    }
+
+    /// <summary>حسابات مالك المنصّة المستقلة (بلا منظمة).</summary>
+    public async Task<IReadOnlyList<AppUser>> ListStandaloneOwnersAsync(CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<AppUser>(
+            $"SELECT * FROM {Table} WHERE IsPlatformOwner = 1 AND (OrganizationId IS NULL OR OrganizationId = '') ORDER BY Username");
+        return rows.ToList();
+    }
+
+    /// <summary>ينزع صفة مالك المنصّة عن كل حساب داخل منظمة (بعد وجود مالك مستقل)؛ يعيد عدد الحسابات المعدَّلة.</summary>
+    public async Task<int> DemoteOrganizationOwnersAsync(CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.ExecuteAsync(
+            $"UPDATE {Table} SET IsPlatformOwner = 0 WHERE IsPlatformOwner = 1 AND OrganizationId IS NOT NULL AND OrganizationId <> ''");
     }
 
     public async Task<IReadOnlyList<AppUser>> ListAsync(CancellationToken ct = default)

@@ -71,6 +71,30 @@ public class AuthController : ControllerBase
         if (!ok)
             return Unauthorized(new { error = "اسم المستخدم أو كلمة المرور غير صحيحة." });
 
+        return await SignInAsync(user);
+    }
+
+    /// <summary>دخول مالك المنصّة المستقل (بلا منظمة) من الرابط /platform — حسابات محلية فقط، ولا يقبل أي حساب داخل
+    /// منظمة (أولئك يدخلون من رابط منظمتهم). الرسالة واحدة لكل فشل حتى لا يُكشف وجود الاسم.</summary>
+    [HttpPost("platform-login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> PlatformLogin([FromBody] LoginRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+            return BadRequest(new { error = "اسم المستخدم وكلمة المرور مطلوبان." });
+
+        var username = request.Username.Trim();
+        var user = (await _users.ListStandaloneOwnersAsync(ct))
+            .FirstOrDefault(u => string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
+        if (user is null || !user.IsActive || user.AuthMethod != AuthMethods.Local
+            || !PasswordHasher.Verify(request.Password, user.PasswordHash))
+            return Unauthorized(new { error = "اسم المستخدم أو كلمة المرور غير صحيحة." });
+
+        return await SignInAsync(user);
+    }
+
+    private async Task<IActionResult> SignInAsync(AppUser user)
+    {
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
