@@ -1,0 +1,190 @@
+{
+  "key": "sl-business-plan",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📘",
+  "name": "خطة العمل",
+  "nameEn": "Business Plan",
+  "description": "42 شريحة لخطة عمل كاملة: الشركة والفريق والسوق والمنافسين والاستراتيجية والمالية والمخاطر",
+  "descriptionEn": "42 slides for a full business plan: company, team, market, competitors, strategy, finance and risks",
+  "sections": [
+    {
+      "title": "الغلاف الداكن",
+      "titleEn": "Dark Cover"
+    },
+    {
+      "title": "الغلاف الأزرق",
+      "titleEn": "Blue Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact Us"
+    },
+    {
+      "title": "ضبط الوثيقة",
+      "titleEn": "Document Control"
+    },
+    {
+      "title": "فريقنا",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "التعريفات",
+      "titleEn": "Definitions"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary"
+    },
+    {
+      "title": "عنوان قسم",
+      "titleEn": "Section Title"
+    },
+    {
+      "title": "معلومات أساسية عن الشركة",
+      "titleEn": "Basic Corporate Information"
+    },
+    {
+      "title": "الرؤية والرسالة والقيم",
+      "titleEn": "Vision, Mission and Values"
+    },
+    {
+      "title": "تاريخنا",
+      "titleEn": "Our History"
+    },
+    {
+      "title": "الهيكل التنظيمي",
+      "titleEn": "Business Organization"
+    },
+    {
+      "title": "خدماتنا",
+      "titleEn": "Our Services"
+    },
+    {
+      "title": "منتجاتنا",
+      "titleEn": "Our Products"
+    },
+    {
+      "title": "الكفاءات الأساسية",
+      "titleEn": "Core Competencies"
+    },
+    {
+      "title": "البيئة الخارجية",
+      "titleEn": "External Environment"
+    },
+    {
+      "title": "الاقتصاد (رسم)",
+      "titleEn": "The Economy (chart)",
+      "needsData": true
+    },
+    {
+      "title": "تحليل السوق",
+      "titleEn": "Market Analysis",
+      "needsData": true
+    },
+    {
+      "title": "تحليل المنافسين",
+      "titleEn": "Competitor Analysis"
+    },
+    {
+      "title": "المزايا التنافسية",
+      "titleEn": "Competitive Advantages"
+    },
+    {
+      "title": "الاستراتيجية والخطط",
+      "titleEn": "Strategy and Plans"
+    },
+    {
+      "title": "الأهداف",
+      "titleEn": "Objectives"
+    },
+    {
+      "title": "استراتيجية الأعمال",
+      "titleEn": "Business Strategy"
+    },
+    {
+      "title": "خطة التشغيل",
+      "titleEn": "Operating Plan"
+    },
+    {
+      "title": "التحليل المالي (رسم وجدول)",
+      "titleEn": "Financial Analysis (chart & table)",
+      "needsData": true
+    },
+    {
+      "title": "تحليل التعادل",
+      "titleEn": "Break-Even Analysis"
+    },
+    {
+      "title": "توقعات المبيعات (رسم)",
+      "titleEn": "Sales Projections (chart)",
+      "needsData": true
+    },
+    {
+      "title": "الإنفاق الرأسمالي (رسم)",
+      "titleEn": "Capital Spending (chart)",
+      "needsData": true
+    },
+    {
+      "title": "تكاليف التشغيل (رسم)",
+      "titleEn": "Operating Costs (chart)",
+      "needsData": true
+    },
+    {
+      "title": "الأرباح والخسائر (جدول)",
+      "titleEn": "Profit and Loss (table)",
+      "needsData": true
+    },
+    {
+      "title": "الميزانية العمومية (جدول)",
+      "titleEn": "Balance Sheet (table)",
+      "needsData": true
+    },
+    {
+      "title": "التدفق النقدي (جدول)",
+      "titleEn": "Cash Flow (table)",
+      "needsData": true
+    },
+    {
+      "title": "نظرة على المخاطر",
+      "titleEn": "Risks Overview"
+    },
+    {
+      "title": "تحليل المخاطر",
+      "titleEn": "Risk Analysis"
+    },
+    {
+      "title": "تحليل سوات",
+      "titleEn": "SWOT Analysis"
+    },
+    {
+      "title": "العوامل المقيّدة",
+      "titleEn": "Limiting Factors"
+    },
+    {
+      "title": "عوامل النجاح الحاسمة",
+      "titleEn": "Critical Success Factors"
+    },
+    {
+      "title": "السيناريوهات البديلة",
+      "titleEn": "Alternative Scenarios"
+    },
+    {
+      "title": "المخاطر المحددة وحلولها",
+      "titleEn": "Specific Risks and Their Solutions"
+    },
+    {
+      "title": "الخلاصة",
+      "titleEn": "Conclusion"
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ أرقام الرسوم البيانية في كتل JSON بالمعرّفات chart-data-*."
+}
