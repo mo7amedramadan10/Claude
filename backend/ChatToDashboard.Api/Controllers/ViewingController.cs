@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ChatToDashboard.Api.Entities;
 using ChatToDashboard.Api.Freeform;
 using ChatToDashboard.Api.History;
 using ChatToDashboard.Api.Organizations;
@@ -28,18 +29,22 @@ public class ViewingController : ControllerBase
     private readonly HistoryStore _history;
     private readonly ShareStore _shares;
     private readonly UserStore _users;
+    private readonly EntityStore _entities;
 
-    public ViewingController(PermissionsService permissions, FreeformStore designs, PresentationStore presentations, OrganizationStore organizations, HistoryStore history, ShareStore shares, UserStore users)
-    { _permissions = permissions; _designs = designs; _presentations = presentations; _organizations = organizations; _history = history; _shares = shares; _users = users; }
+    public ViewingController(PermissionsService permissions, FreeformStore designs, PresentationStore presentations, OrganizationStore organizations, HistoryStore history, ShareStore shares, UserStore users, EntityStore entities)
+    { _entities = entities; _permissions = permissions; _designs = designs; _presentations = presentations; _organizations = organizations; _history = history; _shares = shares; _users = users; }
 
     /// <summary>هامش التسامح بين آخر تعديل للتصميم وآخر نشر له (النشر نفسه يلمس تاريخ التصميم أحيانًا).</summary>
     private static readonly TimeSpan EditedSlack = TimeSpan.FromMinutes(2);
 
+    /// <param name="entity">اختياري (تطبيق الجوال): كيان بعينه بدل الكيان الحالي — يُقبل فقط إن كان مما يعيده /api/entities للمستخدم
+    /// (المسؤول: كل كيانات منظمته؛ غيره: ما له دور فيه)، وإلا يُتجاهل ويبقى الكيان الحالي.</param>
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken ct)
+    public async Task<IActionResult> List([FromQuery] string? entity, CancellationToken ct)
     {
         var me = await _permissions.GetCurrentUserAsync(User, ct); if (me is null) return Unauthorized();
         var sel = await _permissions.GetEffectiveSelectionAsync(me, null, ct);
+        sel.EntityId = await EntityForAsync(me, sel.EntityId, entity, ct);
         var isAdmin = me.Role == UserRoles.Admin;
         var orgSlug = me.OrganizationId is null ? null : (await _organizations.FindByIdAsync(me.OrganizationId, ct))?.Slug;
         var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -89,15 +94,16 @@ public class ViewingController : ControllerBase
                 renderKind = h.RenderKind, widgets = WidgetSketch(link.WidgetsJson),
             });
         }
-        return Ok(new { items });
+        return Ok(new { entityId = sel.EntityId, items });
     }
 
     /// <summary>معاينة بطاقة تصميم: الصفحة المنشورة كما هي (بلا زيادة عدّاد المشاهدات وبلا بيانات حيّة) — لتصميم يراه المستخدم فقط.</summary>
     [HttpGet("thumb/{designId}")]
-    public async Task<IActionResult> Thumb(string designId, CancellationToken ct)
+    public async Task<IActionResult> Thumb(string designId, [FromQuery] string? entity, CancellationToken ct)
     {
         var me = await _permissions.GetCurrentUserAsync(User, ct); if (me is null) return Unauthorized();
         var sel = await _permissions.GetEffectiveSelectionAsync(me, null, ct);
+        sel.EntityId = await EntityForAsync(me, sel.EntityId, entity, ct);
         var d = await _designs.GetByIdAsync(designId, ct);
         if (d?.PresentationId is null) return NotFound();
         var access = FreeformAccess.Resolve(d, me.Id, me.OrganizationId, sel.EntityId, me.Role == UserRoles.Admin, await _designs.ShareRoleAsync(d.Id, me.Id, ct));
@@ -106,6 +112,20 @@ public class ViewingController : ControllerBase
         if (p is null || !p.IsActive) return NotFound();
         return Ok(new { html = await _presentations.GetHtmlAsync(p.Id, ct) ?? "", kind = d.Kind });
     }
+
+    /// <summary>الكيان المطلوب إن كان مسموحًا للمستخدم، وإلا الكيان الحالي.</summary>
+    private async Task<string?> EntityForAsync(AppUser me, string? current, string? requested, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(requested) || me.OrganizationId is null) return current;
+        var allowed = me.Role == UserRoles.Admin
+            ? await _entities.ListByOrganizationAsync(me.OrganizationId, ct)
+            : await _entities.ListForUserAsync(me.Id, me.OrganizationId, ct);
+        return PickEntity(requested, current, allowed.Select(e => e.Id));
+    }
+
+    internal static string? PickEntity(string? requested, string? current, IEnumerable<string> allowed)
+        => string.IsNullOrWhiteSpace(requested) ? current
+         : allowed.FirstOrDefault(a => string.Equals(a, requested.Trim(), StringComparison.OrdinalIgnoreCase)) ?? current;
 
     /// <summary>العنصر من المشروع الحالي؟ عنصر قديم بلا مشروع يُعرض في كل المشاريع (كما يعامله باقي التطبيق).</summary>
     internal static bool InEntity(string? itemEntity, string? currentEntity)

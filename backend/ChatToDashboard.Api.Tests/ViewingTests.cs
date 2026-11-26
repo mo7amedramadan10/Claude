@@ -43,4 +43,16 @@ public class ViewingTests
         Assert.False(ViewingController.InEntity("p2", "p1"));
         Assert.False(ViewingController.InEntity("p2", null));
     }
+
+    [Fact]
+    public void PickEntity_AcceptsOnlyAllowedEntities()
+    {
+        var allowed = new[] { "e1", "e2" };
+        Assert.Equal("e2", ViewingController.PickEntity("e2", "e1", allowed));
+        Assert.Equal("e2", ViewingController.PickEntity(" E2 ", "e1", allowed));   // المعرّف كما هو مخزَّن
+        Assert.Equal("e1", ViewingController.PickEntity("e9", "e1", allowed));   // كيان لا يحق له ← الحالي
+        Assert.Equal("e1", ViewingController.PickEntity(null, "e1", allowed));
+        Assert.Equal("e1", ViewingController.PickEntity("", "e1", allowed));
+        Assert.Null(ViewingController.PickEntity("e9", null, allowed));
+    }
 }
