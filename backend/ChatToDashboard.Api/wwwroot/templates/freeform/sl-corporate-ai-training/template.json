@@ -1,0 +1,74 @@
+{
+  "key": "sl-corporate-ai-training",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🤖",
+  "name": "تدريب المؤسسات على الذكاء الاصطناعي",
+  "nameEn": "Corporate AI Training",
+  "description": "خمس عشرة شريحة لبرنامج تدريب مؤسسي على الذكاء الاصطناعي: أعمال، أوامر، إنتاجية، بيانات، قيادة، أمن، أخطاء",
+  "descriptionEn": "15 slides for a corporate AI training program: agenda, prompts, productivity, data, leadership, security, Q&A",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الذكاء الاصطناعي في بيئة العمل (نسب)",
+      "titleEn": "AI in the Workplace (percentages)",
+      "needsData": true
+    },
+    {
+      "title": "كيف يعمل الذكاء الاصطناعي",
+      "titleEn": "How AI Works"
+    },
+    {
+      "title": "إتقان صياغة الأمر المثالي",
+      "titleEn": "Mastering the Perfect Prompt"
+    },
+    {
+      "title": "الذكاء الاصطناعي للإنتاجية والمهام اليومية",
+      "titleEn": "AI for Daily Productivity & Tasks"
+    },
+    {
+      "title": "تحليل البيانات دون خبرة تقنية",
+      "titleEn": "Analyzing Data Without Being a Tech Expert"
+    },
+    {
+      "title": "تبنّي التغيير وثقافة تطوير المهارات",
+      "titleEn": "Embracing Change and Upskilling Culture"
+    },
+    {
+      "title": "قيادة الفرق المدعومة بالذكاء الاصطناعي",
+      "titleEn": "Leading AI-Driven Teams"
+    },
+    {
+      "title": "الأمن والخصوصية وقواعد المؤسسة",
+      "titleEn": "AI Security, Privacy, and Corporate Rules"
+    },
+    {
+      "title": "اكتشاف الأخطاء والهلوسات",
+      "titleEn": "Spotting AI Mistakes and Hallucinations"
+    },
+    {
+      "title": "الإنسان + الذكاء الاصطناعي: سير العمل",
+      "titleEn": "Human + AI: Designing the Workflow"
+    },
+    {
+      "title": "بناء مكتبة أوامر للشركة",
+      "titleEn": "Building a Company Prompt Library"
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وطبقات SVG (الإطار والسداسيات والبطاقات) وغيّر النصوص والأرقام فقط؛ نسب شريحة «الذكاء الاصطناعي في بيئة العمل» نصوص تُعدَّل مباشرة."
+}
