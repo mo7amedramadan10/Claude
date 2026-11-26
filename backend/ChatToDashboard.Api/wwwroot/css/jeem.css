@@ -4395,3 +4395,13 @@ body.ff-full-on { overflow: hidden; }
 #user-modal .um-ent-row select { flex: none; width: auto; min-width: 116px; min-height: 36px; padding: 4px 8px; }
 #user-modal .um-ents .empty { display: block; height: auto; padding: 4px 0; color: var(--muted); font-size: 12px; }
 @media (max-width: 520px) { #user-modal .um-tabs { display: grid; grid-template-columns: 1fr 1fr; } }
+
+/* شاشة «لم تُضف إلى أي كيان» (مستخدم عادي بلا دور في أي كيان) */
+.jeem-scope .noent-hidden { display: none !important; }
+#screen-no-entity.active { display: flex; align-items: center; justify-content: center; padding: 24px 16px; min-height: calc(100vh - var(--topbar-h, 68px)); }
+#screen-no-entity .noent-card { max-width: 460px; text-align: center; background: var(--surface); border: 1px solid var(--line, var(--grid)); border-radius: 16px; padding: 28px 24px; }
+#screen-no-entity .noent-ico { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: color-mix(in srgb, var(--brand-blue, #127DBD) 12%, var(--surface)); color: var(--brand-blue, #127DBD); margin-bottom: 12px; }
+#screen-no-entity .noent-ico .icon { width: 26px; height: 26px; }
+#screen-no-entity h2 { margin: 0 0 8px; font-size: 19px; color: var(--ink); }
+#screen-no-entity p { margin: 0 0 10px; color: var(--ink-2, var(--muted)); font-size: 13.5px; line-height: 1.7; }
+#screen-no-entity .btn { margin-top: 6px; }

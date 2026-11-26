@@ -8172,8 +8172,11 @@ function applyScreenAccess() {
   });
 }
 
+// مستخدم عادي بلا دور في أي كيان (EntityGate في الخادم): لا تظهر له شاشات الكيان، بل شاشة «لم تُضف إلى أي كيان» فقط
+const NO_ENTITY_SCREENS = ['no-entity', 'presentations'];
 function showScreen(name) {
-  if (!screenAllowed(name)) name = firstAllowedScreen();
+  if (state.noEntity && !NO_ENTITY_SCREENS.includes(name)) name = 'no-entity';
+  else if (!screenAllowed(name)) name = firstAllowedScreen();
   // «لوحات المتابعة» داخل تصميم حر: أي انتقال لشاشة أخرى (بما فيها «المحادثة واللوحات» من القائمة) يعيد
   // #screen-chat إلى مكانها الأصلي أولًا حتى يعمل التبديل العادي عليها.
   if (name !== 'freeform' && typeof ffTrackActive === 'function' && ffTrackActive()) ffTrackUnmount();
@@ -8372,6 +8375,9 @@ async function loadCurrentEntityNav() {
     // الكيان الحالي = اختيار المستخدم المحفوظ في الخادم (currentId)، وإلا الأول
     const project = (data.entities || []).find(e => e.id === data.currentId) || data.entities?.[0];
     ENT.list = data.entities || []; ENT.entityId = project?.id || null;
+    // بلا أي كيان: القائمة تُخفي قسم الكيان، وكل الشاشات تصير «لم تُضف إلى أي كيان» (المسؤول يرى كل الكيانات دائمًا)
+    state.noEntity = !ENT.list.length && state.currentUser?.role !== 'Admin';
+    entApplyNoEntity();
     if (project) {
       state.entityName = project.name;
       el('current-project-name').textContent = project.name;
@@ -8383,6 +8389,19 @@ async function loadCurrentEntityNav() {
     updateCrumbs(state.currentScreen);
   } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
 }
+
+function entApplyNoEntity() {
+  const on = !!state.noEntity;
+  document.querySelectorAll('.sb-ent-label, #entity-nav').forEach(n => { n.style.display = on ? 'none' : ''; }); // قواعد القائمة تغلب .hidden
+  // بنود القائمة التي تخص الكيان (الكيانات، للاطلاع…) تُخفى؛ تبقى العروض التقديمية على مستوى المنظمة
+  document.querySelectorAll('.sidebar [data-screen]').forEach(b => {
+    if (NO_ENTITY_SCREENS.includes(b.dataset.screen)) return;
+    b.closest('li')?.classList.toggle('noent-hidden', on);
+  });
+  const tnav = document.querySelector('.topbar-nav-group'); if (on && tnav) tnav.style.display = 'none';
+  if (on && state.currentScreen !== 'no-entity' && !NO_ENTITY_SCREENS.includes(state.currentScreen)) showScreen('no-entity');
+}
+el('noent-reload')?.addEventListener('click', () => location.reload());
 
 // ---------- قائمة الكيانات في الشريط الجانبي (التبديل بالنقر) ----------
 // كل كيانات المستخدم تحت بعضها: الحالي مفتوح بصفحاته، والنقر على غيره يجعله الحالي. الاختيار يُحفظ لكل مستخدم في الخادم
@@ -14577,12 +14596,14 @@ async function startApp() {
   renderCurrentUser();
   renderMessages();
   renderDashboard();
+  // يُحسم «بلا كيان» أولًا: مستخدم بلا دور في أي كيان لا تُحمَّل له المصادر ولا الملفات (يرفضها الخادم) بل يرى شاشته فقط
+  await loadCurrentEntityNav();
+  if (state.noEntity) { showScreen('no-entity'); return; }
   // مستخدم مقيَّد بشاشات لا تشمل الشاشة الافتراضية يبدأ من أول شاشة مسموحة (ولا تُعرض الجولة التعريفية العامة له)؛
   // يُحسم قبل تحميل المصادر لأن حساب «اطلاع فقط» تُرفض له تلك الطلبات فلا ينبغي أن يتعطّل عليها
   const restricted = !screenAllowed(state.currentScreen || 'chat');
   if (restricted) showScreen(firstAllowedScreen());
   for (const load of [loadSources, loadFiles, loadTemplateCatalog]) { try { await load(); } catch { /* تبقى الحالة كما هي */ } }
-  loadCurrentEntityNav();
   if (restricted) return;
   maybeAutoStartTour();
 }

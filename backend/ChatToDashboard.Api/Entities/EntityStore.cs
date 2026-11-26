@@ -69,16 +69,15 @@ public class EntityStore
         }
     }
 
-    /// <summary>هل يحق للمستخدم أن يعمل داخل هذا الكيان؟ المسؤول: أي كيان في منظمته؛ غيره: كيان له فيه دور،
-    /// أو أول كيان في المنظمة إن لم يكن له دور في أي كيان (السلوك القديم لحساب بلا أدوار).</summary>
+    /// <summary>هل يحق للمستخدم أن يعمل داخل هذا الكيان؟ المسؤول: أي كيان في منظمته؛ غيره: كيان له فيه دور فقط
+    /// (المستخدم بلا أي دور لا يعمل في أي كيان — لم يعد يُسند إلى أول كيان في المنظمة).</summary>
     public async Task<bool> CanWorkInAsync(string entityId, string organizationId, string userId, bool isAdmin, CancellationToken ct = default)
     {
         var e = await FindByIdAsync(entityId, ct);
         if (e is null || e.OrganizationId != organizationId) return false;
         if (isAdmin) return true;
         var mine = await ListForUserAsync(userId, organizationId, ct);
-        if (mine.Count > 0) return mine.Any(x => x.Id == entityId);
-        return (await FirstForOrganizationAsync(organizationId, ct))?.Id == entityId;
+        return mine.Any(x => x.Id == entityId);
     }
 
     /// <summary>يحفظ الكيان المختار مساحةَ عمل حالية للمستخدم (يتحقق المستدعي من الصلاحية بـ CanWorkInAsync).</summary>
@@ -145,8 +144,8 @@ public class EntityStore
     /// controller that touches files, integrations or dashboards resolve it identically. An
     /// Admin always gets their org's first (default) project — unchanged legacy behavior, since
     /// an Admin manages the whole org, not one project. A plain User gets the first project
-    /// EntityRoles names them on, falling back to the org's first project for an account with
-    /// no explicit role yet (every pre-existing account before EntityRoles existed).
+    /// EntityRoles names them on; with no role at all they get null (no entity — EntityGate
+    /// then refuses every entity-scoped API for them; the old fallback to the org's first project was removed).
     /// </summary>
     public async Task<string?> ResolveCurrentEntityIdAsync(
         string? organizationId, string userId, bool isAdmin, CancellationToken ct = default)
@@ -165,8 +164,9 @@ public class EntityStore
         }
         if (!isAdmin)
         {
+            // المستخدم العادي يعمل فقط في كيان له فيه دور؛ بلا أي دور = بلا كيان (null)، وتمنعه EntityGate من واجهات الكيانات
             var owned = await ListForUserAsync(userId, organizationId, ct);
-            if (owned.Count > 0) return owned[0].Id;
+            return owned.Count > 0 ? owned[0].Id : null;
         }
         var project = await FirstForOrganizationAsync(organizationId, ct);
         return project?.Id;
@@ -221,6 +221,16 @@ public class EntityStore
     /// <summary>Every project (within <paramref name="organizationId"/>) this user holds any
     /// role on — what narrows a plain "User" account's project list/current-project down from
     /// "every project in the org" (the Admin/platform-owner view) to just their own.</summary>
+    /// <summary>هل للمستخدم دور في كيان واحد على الأقل في منظمته؟ (لبوابة <see cref="EntityGate"/>)</summary>
+    public async Task<bool> HasAnyRoleAsync(string userId, string organizationId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {RolesTable} r JOIN {Table} p ON p.Id = r.EntityId WHERE r.UserId = @userId AND p.OrganizationId = @organizationId",
+            new { userId, organizationId }) > 0;
+    }
+
     public async Task<IReadOnlyList<Entity>> ListForUserAsync(string userId, string organizationId, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);

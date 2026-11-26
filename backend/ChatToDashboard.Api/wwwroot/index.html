@@ -1590,6 +1590,15 @@
 
 <!-- «للاطلاع» داخل المشروع: كل ما له رابط منشور فعّال مما يراه المستخدم (منشوراته وما شورك معه: تصاميم تصميم حر ولوحات المتابعة) — بطاقات كمعرض تصميم حر،
      والنقر يفتح الرابط المنشور نفسه في تبويب جديد. للمديرين باختيار «اطلاع فقط» في صلاحيات الشاشات. -->
+<main id="screen-no-entity" class="screen">
+  <div class="noent-card" role="status">
+    <span class="noent-ico" aria-hidden="true"><svg class="icon"><use href="#i-layers"/></svg></span>
+    <h2>لم تُضف إلى أي كيان بعد</h2>
+    <p>حسابك يعمل، لكن ليس لك دور في أي كيان في المنظمة، فلا تظهر لك بيانات ولا لوحات ولا تصاميم.</p>
+    <p>اطلب من مسؤول المنظمة إضافتك إلى كيان من «المستخدمون» ← تبويب «صلاحية الكيانات»، ثم أعد تحميل الصفحة.</p>
+    <button type="button" class="btn btn-primary" id="noent-reload">إعادة التحميل</button>
+  </div>
+</main>
 <main id="screen-viewing" class="screen">
   <div class="ff-start vw-start" id="vw-start">
     <div class="ff-sec-head vw-head">
@@ -2233,7 +2242,7 @@
         <div class="perm-block" id="user-ents-block">
           <div id="user-ents-list" class="um-ents" aria-live="polite"></div>
         </div>
-        <p class="um-note" id="user-ents-note">مالك: يدير الكيان وأعضاءه · محرّر: يبني ويعدّل · مشاهد: يطّلع فقط. المستخدم بلا أي دور يعمل في أول كيان في المنظمة.</p>
+        <p class="um-note" id="user-ents-note">مالك: يدير الكيان وأعضاءه · محرّر: يبني ويعدّل · مشاهد: يطّلع فقط. المستخدم بلا أي دور لا يرى أي كيان.</p>
       </div>
       <div id="user-form-error" class="login-error hidden"></div>
       <div class="modal-actions">

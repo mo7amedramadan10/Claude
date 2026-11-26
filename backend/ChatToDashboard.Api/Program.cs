@@ -310,6 +310,20 @@ app.Use(async (ctx, next) =>
 {
     var path = ctx.Request.Path.Value ?? "";
     var isPublic = ctx.GetEndpoint()?.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() is not null;
+    // بوابة «بلا كيان»: مستخدم عادي ليس له دور في أي كيان لا يصل إلى واجهات الكيانات (EntityGate)
+    if (ctx.User.Identity?.IsAuthenticated == true && ChatToDashboard.Api.Entities.EntityGate.AppliesTo(path, isPublic)
+        && !ctx.User.IsInRole(ChatToDashboard.Api.Users.UserRoles.Admin)
+        && ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } gateUid)
+    {
+        var orgId = ctx.User.FindFirst("OrganizationId")?.Value;
+        if (string.IsNullOrEmpty(orgId) || !await ctx.RequestServices.GetRequiredService<ChatToDashboard.Api.Entities.EntityStore>()
+                .HasAnyRoleAsync(gateUid, orgId, ctx.RequestAborted))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsJsonAsync(new { error = ChatToDashboard.Api.Entities.EntityGate.Message, code = ChatToDashboard.Api.Entities.EntityGate.Code });
+            return;
+        }
+    }
     if (ctx.User.Identity?.IsAuthenticated == true && ChatToDashboard.Api.Users.ScreenAccess.AppliesTo(path, isPublic)
         && ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } uid)
     {

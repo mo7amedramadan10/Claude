@@ -46,11 +46,8 @@ public class EntitiesController : ControllerBase
 
         // Admin (org-wide access by construction, same as every other admin-gated endpoint
         // here) sees every project; a plain User only the one(s) they hold a role on — see
-        // EntityRoles' own remarks. A User with no project role at all (the common case
-        // before this table existed) sees nothing here, same as before this narrowing: the
-        // sidebar's "current project" widget still resolves via HistoryController's own
-        // fallback-to-first-for-org, so their single-project workspace keeps working exactly
-        // as before — this endpoint only drives the org-admin "المشاريع" management screen.
+        // EntityRoles' own remarks. A User with no role at all sees no entity (currentId null):
+        // EntityGate then refuses every entity-scoped API and the UI shows «لم تُضف إلى أي كيان».
         var projects = IsAdmin
             ? await _entities.ListByOrganizationAsync(organizationId, ct)
             : await _entities.ListForUserAsync(UserId, organizationId, ct);
