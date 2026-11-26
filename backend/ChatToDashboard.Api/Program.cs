@@ -291,7 +291,14 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 // لا UseDefaultFiles: «/» يُحسم في نقطة نهاية خاصة أدناه (الصفحة الرئيسية للزائر، والتطبيق للمسجَّل أو لرابط مشاركة).
 // الملفات الثابتة تُعاد مصادقتها عند كل تحميل (ETag → 304 رخيصة) حتى لا يبقى المتصفح على نسخة قديمة من app.css/app.js
 // بعد نشر جديد — ظهر ذلك كصفحة مشاركة بقائمة جانبية وشريط قديم لأن app.css المخزَّن لم يحمل قواعد is-shared.
-app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache" });
+// تطبيق الجوال (/m): ملف البيان بنوعه الصحيح لتثبيت التطبيق (application/manifest+json).
+var staticContentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+staticContentTypes.Mappings[".webmanifest"] = "application/manifest+json";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = staticContentTypes,
+    OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache",
+});
 app.UseWebSockets();
 
 app.UseRouting();
@@ -381,6 +388,15 @@ app.MapGet("/", (HttpContext ctx, IWebHostEnvironment env) =>
     .AllowAnonymous();
 app.MapGet("/home", (HttpContext ctx, IWebHostEnvironment env) => HomePage(ctx, env)).AllowAnonymous();
 app.MapGet("/app", (HttpContext ctx, IWebHostEnvironment env) => SpaIndex.Result(ctx, env)).AllowAnonymous();
+// تطبيق «جيم» للجوال (PWA، wwwroot/m/): للاستعراض فقط، بالكوكي نفسه على الأصل نفسه. «/m» يُحوَّل إلى «/m/» حتى يقع في نطاق
+// عامل الخدمة (/m/)، وأي مسار تحته بلا ملف يفتح الغلاف نفسه (التطبيق يحسم شاشته بنفسه).
+// (قالب «/m» يطابق «/m/» أيضًا، فالتحويل مشروط بغياب الشرطة الأخيرة.)
+app.MapGet("/m/{**rest}", (HttpContext ctx, IWebHostEnvironment env) =>
+{
+    if (ctx.Request.Path.Value == "/m") return Results.Redirect("/m/" + ctx.Request.QueryString);
+    ctx.Response.Headers.CacheControl = "no-cache";
+    return Results.File(Path.Combine(env.WebRootPath, "m", "index.html"), "text/html; charset=utf-8");
+}).AllowAnonymous();
 static IResult HomePage(HttpContext ctx, IWebHostEnvironment env)
 {
     ctx.Response.Headers.CacheControl = "no-cache";

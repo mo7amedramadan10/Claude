@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>جيم</title>
+  <meta name="description" content="استعراض اللوحات والتصاميم المنشورة والمشتركة معك على منصة جيم.">
+  <meta name="theme-color" content="#127DBD">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="جيم">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/m/manifest.webmanifest">
+  <link rel="icon" href="/m/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/m/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/m/app.css">
+</head>
+<body class="jeem-scope">
+  <!-- شاشة التحميل: تظهر حتى يُحسم هل المستخدم مسجَّل دخوله -->
+  <main id="scr-splash" class="scr splash" aria-busy="true">
+    <img src="/m/icons/icon.svg" alt="" class="splash-mark" width="88" height="88">
+    <p class="splash-text" data-i="loading">جارٍ التحميل…</p>
+  </main>
+
+  <!-- تعذّر الاتصال بالخادم -->
+  <main id="scr-offline" class="scr center" hidden>
+    <div class="msg-card" role="alert">
+      <svg class="ico ico-lg" aria-hidden="true"><use href="#mi-offline"/></svg>
+      <h1 class="h2" data-i="offline.title">لا يوجد اتصال</h1>
+      <p class="muted" data-i="offline.body">تعذّر الوصول إلى منصة جيم. تأكد من اتصالك بالشبكة (أو بالشبكة الداخلية) ثم حاول مجددًا.</p>
+      <button type="button" class="btn btn-primary" id="offline-retry"><svg class="ico" aria-hidden="true"><use href="#mi-retry"/></svg><span data-i="retry">إعادة المحاولة</span></button>
+    </div>
+  </main>
+
+  <!-- الدخول -->
+  <main id="scr-login" class="scr login" hidden>
+    <div class="login-head">
+      <img src="/img/logo-lockup.svg" alt="جيم" class="login-logo" width="132" height="48">
+      <p class="muted" data-i="login.tag">لوحاتك وتقاريرك المنشورة، في جيبك.</p>
+    </div>
+    <form id="login-form" class="card login-card" novalidate>
+      <h1 class="h2" data-i="login.title">تسجيل الدخول</h1>
+
+      <div class="org-chip" id="org-chip" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#mi-org"/></svg>
+        <span class="org-chip-name" id="org-chip-name"></span>
+        <button type="button" class="link-btn" id="org-change" data-i="login.changeOrg">تغيير</button>
+      </div>
+
+      <div class="field" id="org-field">
+        <label for="f-org" data-i="login.org">رابط المنظمة</label>
+        <input id="f-org" name="org" type="text" inputmode="url" autocomplete="organization" autocapitalize="none" spellcheck="false" dir="auto" required aria-describedby="f-org-hint">
+        <small id="f-org-hint" class="hint" data-i="login.orgHint">اسم المنظمة كما في رابط الدخول (…/o/اسم-المنظمة) أو الرابط كاملًا.</small>
+      </div>
+      <div class="field">
+        <label for="f-user" data-i="login.user">اسم المستخدم</label>
+        <input id="f-user" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" dir="auto" required>
+      </div>
+      <div class="field">
+        <label for="f-pass" data-i="login.pass">كلمة المرور</label>
+        <div class="pass-wrap">
+          <input id="f-pass" name="password" type="password" autocomplete="current-password" dir="auto" required>
+          <button type="button" class="icon-btn pass-eye" id="pass-eye" aria-pressed="false" aria-label="إظهار كلمة المرور" data-i-aria="login.show"><svg class="ico" aria-hidden="true"><use href="#mi-eye"/></svg></button>
+        </div>
+      </div>
+      <p class="form-error" id="login-error" role="alert" hidden></p>
+      <button type="submit" class="btn btn-primary btn-block" id="login-submit"><span data-i="login.submit">دخول</span></button>
+    </form>
+    <div class="login-foot">
+      <button type="button" class="link-btn lang-switch" data-lang-switch><svg class="ico" aria-hidden="true"><use href="#mi-globe"/></svg><span data-i="lang.other">English</span></button>
+    </div>
+  </main>
+
+  <!-- الرئيسية (المرحلة 1: هيكل فقط — قائمة «للاطلاع» في المرحلة 2) -->
+  <div id="scr-home" class="scr app" hidden>
+    <header class="topbar">
+      <img src="/img/logo-lockup.svg" alt="جيم" class="top-logo" width="88" height="32">
+      <button type="button" class="avatar-btn" id="open-account" aria-haspopup="dialog" aria-controls="account-sheet" aria-label="حسابي" data-i-aria="account.title">
+        <span class="avatar" id="avatar" aria-hidden="true"></span>
+      </button>
+    </header>
+    <main class="content" id="home-main" tabindex="-1">
+      <h1 class="h1"><span data-i="home.hello">أهلًا،</span> <span id="home-name"></span></h1>
+      <p class="muted" id="home-org"></p>
+      <section class="card soon" aria-labelledby="soon-title">
+        <svg class="ico ico-lg" aria-hidden="true"><use href="#mi-eye"/></svg>
+        <h2 class="h3" id="soon-title" data-i="home.soonTitle">للاطلاع</h2>
+        <p class="muted" data-i="home.soonBody">هنا ستظهر اللوحات والتصاميم المنشورة في كيانك والمشتركة معك.</p>
+      </section>
+    </main>
+  </div>
+
+  <!-- حسابي: ورقة سفلية -->
+  <div class="sheet-backdrop" id="account-backdrop" hidden></div>
+  <section class="sheet" id="account-sheet" role="dialog" aria-modal="true" aria-labelledby="account-title" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 class="h3" id="account-title" data-i="account.title">حسابي</h2>
+      <button type="button" class="icon-btn" id="account-close" aria-label="إغلاق" data-i-aria="close"><svg class="ico" aria-hidden="true"><use href="#mi-close"/></svg></button>
+    </div>
+    <div class="acc-user">
+      <span class="avatar avatar-lg" id="acc-avatar" aria-hidden="true"></span>
+      <div>
+        <div class="acc-name" id="acc-name"></div>
+        <div class="muted acc-sub" id="acc-sub"></div>
+      </div>
+    </div>
+    <div class="acc-row">
+      <span class="acc-label" id="lang-label"><svg class="ico" aria-hidden="true"><use href="#mi-globe"/></svg><span data-i="account.lang">اللغة</span></span>
+      <div class="seg" role="group" aria-labelledby="lang-label">
+        <button type="button" class="seg-btn" data-lang="ar" aria-pressed="true">العربية</button>
+        <button type="button" class="seg-btn" data-lang="en" aria-pressed="false">English</button>
+      </div>
+    </div>
+    <a class="acc-link" href="/app"><svg class="ico" aria-hidden="true"><use href="#mi-open"/></svg><span data-i="account.full">فتح المنصة كاملة</span></a>
+    <button type="button" class="btn btn-danger-outline btn-block" id="logout-btn"><svg class="ico" aria-hidden="true"><use href="#mi-logout"/></svg><span data-i="account.logout">تسجيل الخروج</span></button>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- أيقونات -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mi-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="mi-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="mi-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="mi-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l-5-5 5-5M5 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="mi-org" viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 011-1h9a1 1 0 011 1v16M15 10h4a1 1 0 011 1v10M3 21h18M8 8h3M8 12h3M8 16h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="mi-offline" viewBox="0 0 24 24"><path d="M3 3l18 18M8.5 16.5a5 5 0 017 0M5 12.9a10 10 0 015.3-2.8M19 12.9a10 10 0 00-2.6-1.8M2 8.8a15 15 0 014.2-2.6M22 8.8A15 15 0 0011 5.1M12 20h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="mi-retry" viewBox="0 0 24 24"><path d="M20 11a8 8 0 10-2.3 5.7M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="mi-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <script src="/m/app.js"></script>
+</body>
+</html>
