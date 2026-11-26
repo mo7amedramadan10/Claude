@@ -403,7 +403,15 @@ const I18N_ENTRIES = Object.entries(I18N_EN).sort((a, b) => b[0].length - a[0].l
 
 const ARABIC_CHARS_RE = /[؀-ۿ]/;
 
-function translateText(text) {
+// قوالب النصوص التي يركّبها الكود بقيم (أعداد، أسماء، عناوين): «ألحقت {} شريحة من {}» ← "Appended {1} slides from {2}".
+// كل قالب يصير تعبيرًا نمطيًا مثبّتًا على النص كله؛ أطول جزء ثابت فيه يُفحص أولًا بـ includes لتقليل الكلفة.
+const I18N_PATTERNS = Object.entries(window.JEEM_I18N_EN_PATTERNS || {}).map(([ar, en]) => {
+  const parts = ar.replace(/\s+/g, ' ').trim().split('{}');
+  const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { re: new RegExp('^' + parts.map(esc).join('(.+?)') + '$'), key: parts.reduce((a, b) => (b.length > a.length ? b : a), '').trim(), en };
+}).filter(p => p.key.length >= 2).sort((a, b) => b.key.length - a.key.length);
+
+function translateText(text, depth = 0) {
   // المفاتيح بمسافات مفردة، والنص في الصفحة قد يمتد على أسطر بمسافات متعددة (يعرضه المتصفح مطويًا أصلًا)
   let result = ARABIC_CHARS_RE.test(text) ? text.replace(/\s+/g, ' ') : text;
   for (const [ar, en] of I18N_ENTRIES) {
@@ -413,8 +421,19 @@ function translateText(text) {
   // Arabic sentence that isn't itself in the dictionary yet, leaving a garbled mix of
   // English and Arabic. Only accept the translation once no Arabic script remains —
   // otherwise keep the original text untranslated rather than show broken output.
-  if (ARABIC_CHARS_RE.test(result)) return text;
-  return result;
+  if (!ARABIC_CHARS_RE.test(result)) return result;
+  // نص مركّب بقيم: يطابق قالبًا كاملًا، وتُترجم كل قيمة إن كانت مصطلحًا معروفًا وإلا تبقى كما هي (اسم، عنوان من بيانات المستخدم)
+  if (depth === 0) {
+    const t = text.replace(/\s+/g, ' ').trim();
+    for (const p of I18N_PATTERNS) {
+      if (t.indexOf(p.key) === -1) continue;
+      const m = p.re.exec(t);
+      if (!m) continue;
+      const lead = text.match(/^\s*/)[0] ? ' ' : '', tail = /\s$/.test(text) ? ' ' : '';
+      return lead + p.en.replace(/\{(\d+)\}/g, (_, n) => { const v = m[+n] ?? ''; return translateText(v, 1); }) + tail;
+    }
+  }
+  return text;
 }
 
 // data-empty/data-placeholder يعرضهما CSS بـ attr() (حالة فارغة، نص إرشادي لعنوان قابل للتعديل)
