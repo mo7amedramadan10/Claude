@@ -125,9 +125,12 @@ img { max-width: 100%; }
 }
 .top-logo { height: 32px; width: auto; }
 .avatar-btn { border: 0; background: none; padding: 0; width: 44px; height: 44px; border-radius: var(--r-full); cursor: pointer; display: grid; place-items: center; }
+/* أزرق أدكن قليلًا للأسطح التي عليها نص أبيض صغير (الحرف الأول وشارة «جديد») ليبلغ التباين 4.5:1
+   في الوضعين — أزرق الهوية الفاتح في الوضع الداكن لا يحمل نصًا أبيض. */
+.jeem-scope { --m-solid: #0F6DA6; }
 .avatar {
   display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-full);
-  background: var(--brand-blue); color: #fff; font-weight: 700; font-size: var(--fs-md); line-height: 1;
+  background: var(--m-solid); color: #fff; font-weight: 700; font-size: var(--fs-md); line-height: 1;
 }
 .avatar-lg { width: 52px; height: 52px; font-size: var(--fs-xl); }
 .content { flex: 1; padding: var(--sp-5) var(--sp-4) calc(var(--sp-8) + env(safe-area-inset-bottom)); max-width: 720px; width: 100%; margin: 0 auto; outline: none; }
@@ -163,7 +166,7 @@ img { max-width: 100%; }
   font-weight: 500; cursor: pointer; white-space: nowrap;
 }
 .tab[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--ink-inv); font-weight: 700; }
-.tab-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-full); background: var(--brand-blue); color: #fff; font-size: var(--fs-xs); }
+.tab-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-full); background: var(--m-solid); color: #fff; font-size: var(--fs-xs); }
 .tab-n:empty { display: none; }
 .chips { margin-bottom: var(--sp-2); }
 .chip {
@@ -218,7 +221,7 @@ img { max-width: 100%; }
 .badge-new {
   position: absolute; top: 10px; inset-inline-start: 10px; z-index: 1;
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 8px;
-  border-radius: var(--r-full); background: var(--brand-blue); color: #fff; font-size: var(--fs-xs); font-weight: 700; line-height: 1.8;
+  border-radius: var(--r-full); background: var(--m-solid); color: #fff; font-size: var(--fs-xs); font-weight: 700; line-height: 1.8;
   box-shadow: 0 2px 8px rgba(16, 32, 48, .18);
 }
 .badge-new svg { width: 12px; height: 12px; }

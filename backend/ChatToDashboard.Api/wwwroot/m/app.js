@@ -150,6 +150,9 @@
   function show(id) {
     SCREENS.forEach((s) => { $(s).hidden = s !== id; });
     if (id !== 'scr-splash') $('scr-splash').removeAttribute('aria-busy');
+    // كل شاشة تبدأ من أعلاها: على الشاشات القصيرة (الجوال بالعرض) كان تمرير شاشة الدخول إلى زرها
+    // ينتقل إلى الرئيسية فيختفي سطر الترحيب تحت الشريط العلوي.
+    window.scrollTo(0, 0);
   }
 
   let me = null;           // المستخدم الحالي من /api/auth/me
