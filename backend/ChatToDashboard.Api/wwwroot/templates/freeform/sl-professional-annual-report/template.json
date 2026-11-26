@@ -1,0 +1,87 @@
+{
+  "key": "sl-professional-annual-report",
+  "kind": "slides",
+  "category": "general",
+  "icon": "📘",
+  "name": "تقرير سنوي احترافي",
+  "nameEn": "Professional Annual Report",
+  "description": "ست عشرة شريحة لتقرير سنوي: ملخص، العام في لمحة، الأعمال، السوق، المالية، المؤشرات، الجدول، المخاطر والخطوات",
+  "descriptionEn": "16-slide annual report: summary, year at a glance, business, market, finance, KPIs, table, risks, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "العام في لمحة",
+      "titleEn": "Year at a Glance"
+    },
+    {
+      "title": "نظرة عامة على الأعمال",
+      "titleEn": "Business Overview",
+      "needsData": true
+    },
+    {
+      "title": "الأهداف والأولويات الاستراتيجية",
+      "titleEn": "Strategic Objectives & Priorities"
+    },
+    {
+      "title": "نظرة عامة على السوق والقطاع (رسم)",
+      "titleEn": "Market & Industry Overview (chart)",
+      "needsData": true
+    },
+    {
+      "title": "أبرز المؤشرات التشغيلية",
+      "titleEn": "Operational Highlights",
+      "needsData": true
+    },
+    {
+      "title": "أبرز المؤشرات المالية (رسم مساحة)",
+      "titleEn": "Financial Highlights (area chart)",
+      "needsData": true
+    },
+    {
+      "title": "أبرز المؤشرات المالية (خطّان)",
+      "titleEn": "Financial Highlights (line chart)",
+      "needsData": true
+    },
+    {
+      "title": "مؤشرات الأداء الرئيسية",
+      "titleEn": "Key Performance Indicators",
+      "needsData": true
+    },
+    {
+      "title": "لمحة عن الأداء المالي",
+      "titleEn": "Financial Performance Snapshot",
+      "needsData": true
+    },
+    {
+      "title": "هيكل الإيرادات والتكاليف (جدول)",
+      "titleEn": "Revenue & Cost Structure (table)",
+      "needsData": true
+    },
+    {
+      "title": "الأفراد والحوكمة البيئية والاجتماعية",
+      "titleEn": "People & ESG Overview"
+    },
+    {
+      "title": "المخاطر والتوقعات",
+      "titleEn": "Risks & Outlook"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON بالمعرّفات chart-data (أعمدة الشريحة 7) وchart-data-2 (الحلقة) وchart-data-3 (المساحة) وchart-data-4 (الخطّان) وchart-data-5 (نصف الحلقة) وchart-data-6 (الأعمدة الشهرية)."
+}

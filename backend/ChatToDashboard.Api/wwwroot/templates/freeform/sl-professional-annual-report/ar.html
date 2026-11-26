@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>التقرير السنوي الاحترافي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «تقرير سنوي احترافي»: عناوين بنفسجية بجزء غامق وجزء خفيف، بطاقات بيضاء بظلال ناعمة، دوائر زخرفية متدرّجة، صور مقصوصة من الأصل، ورسوم SVG من كتل chart-data (أعمدة، حلقة، مساحة، خطان، نصف حلقة، أعمدة شهرية). */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #111111; --ink-2: #444444; --ink-3: #666666; --accent: #8B48FF; --purple: #8B48FF; --mag: #C03BFF; --pink: #FF5A85; --yellow: #FFB73B; --lav: #EBC8FF; --bg: #FFFFFF; --gd: 90deg; --gtr: to top right; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  html[dir="rtl"] { --gd: 270deg; --gtr: to top left; }
+  .frame > * { position: absolute; margin: 0; }
+  /* عنوان الشريحة: جزء غامق <b> وجزء خفيف */
+  .ttl { top: 98px; inset-inline-start: 74px; font-size: 56px; line-height: 56px; font-weight: 300; color: var(--purple); letter-spacing: -0.3px; white-space: nowrap; }
+  .ttl b { font-weight: 700; }
+  html[lang="ar"] .ttl { font-weight: 400; letter-spacing: 0; } html[lang="ar"] .ttl b { font-weight: 800; }
+  .para { font-size: 19px; line-height: 25.5px; color: var(--ink); }
+  .card { background: #fff; box-shadow: 0 12px 34px rgb(0 0 0 / .09); }
+  .ic { border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .ic svg { width: 46%; height: 46%; }
+  .c-p { background: var(--purple); } .c-m { background: var(--mag); } .c-k { background: var(--pink); } .c-y { background: var(--yellow); }
+  .grad { background: linear-gradient(var(--gd), #8B48FF, #C23BFF); }
+  .blob { border-radius: 50%; }
+  .flip { overflow: hidden; } .flip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  html[dir="rtl"] .flip img, html[dir="rtl"] .mir { transform: scaleX(-1); }
+  .ax { font-family: var(--font); }
+  /* خط Tajawal أصغر بصريًا: تكبير نصوص المحتوى العربية لتقارب حجم الأصل */
+  html[lang="ar"] .frame :is(p, td, th, h3, h4, span, .pl, .lg, .row) { font-size-adjust: ex-height 0.53; }
+  html[lang="ar"] .ax-a { font-size: 10.5px; } html[lang="ar"] .ax-s { font-size: 11px; }
+  h2, h3, h4, p { margin: 0; }
+  /* 1) الغلاف */
+  .frame.s1 { background: #F1F0EE; }
+  .s1 .ph { top: 44px; inset-inline-start: 44px; width: 1192px; height: 344px; object-fit: cover; }
+  .s1 .badge { top: 356px; inset-inline-start: 1143px; width: 60px; height: 60px; border-radius: 8px; color: #fff; display: grid; place-items: center; background: linear-gradient(160deg, #8B48FF, #C23BFF); }
+  .s1 .badge svg { width: 36px; height: 36px; }
+  .s1 .cv { top: 458px; inset-inline-start: 62px; font-size: 78px; line-height: 78px; font-weight: 700; color: var(--purple); white-space: nowrap; letter-spacing: -0.5px; }
+  .s1 .cv .o { color: transparent; -webkit-text-stroke: 2px #9650FF; font-weight: 400; }
+  html[lang="ar"] .s1 .cv { font-weight: 800; letter-spacing: 0; } html[lang="ar"] .s1 .cv .o { font-weight: 500; }
+  .s1 .uline { top: 564px; inset-inline-start: 61px; width: 128px; height: 4px; border-radius: 2px; background: var(--purple); }
+  .s1 .pt { top: 594px; inset-inline-start: 63px; width: 344px; height: 52px; border-radius: 8px; color: #fff; display: flex; align-items: center; justify-content: space-between; padding-inline: 14px 19px; font-size: 18px; letter-spacing: 2.2px; }
+  html[lang="ar"] .s1 .pt { letter-spacing: 0; font-size: 20px; }
+  .s1 .pt svg { width: 20px; height: 20px; flex: none; }
+  .s1 .cvp { top: 592px; inset-inline-start: 447px; width: 790px; font-size: 19.5px; line-height: 25px; color: #111; }
+  .s1 .logo { top: 466px; inset-inline-start: 920px; height: 80px; display: flex; align-items: center; gap: 27px; }
+  .s1 .logo svg { width: 74px; height: 80px; flex: none; }
+  .s1 .logo span { font-size: 18px; line-height: 26px; letter-spacing: 1.6px; color: #111; }
+  html[lang="ar"] .s1 .logo span { letter-spacing: 0; font-size: 20px; }
+  /* 2) المحتويات */
+  .s2 .semi { top: 516px; inset-inline-start: 431px; width: 407px; height: 407px; }
+  .s2 .ph { top: 229px; inset-inline-start: 478px; width: 319px; height: 491px; object-fit: cover; border-radius: 40px 40px 0 0; }
+  .s2 .tc { width: 377px; height: 131px; border-radius: 26px; display: flex; align-items: center; gap: 32px; }
+  .s2 .tc .ic { width: 75px; height: 75px; flex: none; }
+  .s2 .tl { flex-direction: row-reverse; text-align: end; padding-inline-end: 34px; }
+  .s2 .tr { padding-inline-start: 30px; }
+  .s2 .tc h3 { font-size: 22px; line-height: 27px; font-weight: 700; }
+  .s2 .tc p { font-size: 17.5px; line-height: 23px; color: #111; width: 225px; }
+  .s2 .tl1 { top: 275px; inset-inline-start: 75px; } .s2 .tl2 { top: 461px; inset-inline-start: 75px; }
+  .s2 .tr1 { top: 275px; inset-inline-start: 827px; } .s2 .tr2 { top: 461px; inset-inline-start: 830px; }
+  /* 3) الملخص التنفيذي */
+  .s3 .blob { top: -177px; inset-inline-start: -137px; width: 294px; height: 294px; background: linear-gradient(var(--gd), #BB3CFF, #8B48FF); }
+  .s3 .ttl { top: 156px; }
+  .s3 .para { top: 300px; inset-inline-start: 74px; width: 525px; }
+  .bl { inset-inline-start: 73px; width: 460px; }
+  .bl .ic { position: absolute; top: 0; inset-inline-start: 0; width: 34px; height: 34px; box-shadow: 0 6px 14px rgb(139 72 255 / .35); }
+  .bl .ic svg { width: 60%; height: 60%; }
+  .bl h3 { position: absolute; top: 3px; inset-inline-start: 55px; font-size: 22px; line-height: 28px; font-weight: 700; white-space: nowrap; }
+  .bl p { position: absolute; top: 40px; inset-inline-start: 55px; width: 390px; font-size: 19px; line-height: 25.5px; }
+  .s3 .b1 { top: 423px; } .s3 .b2 { top: 552px; }
+  .s3 .pan { top: 111px; inset-inline-start: 653px; width: 512px; height: 537px; border-radius: 46px; background: #F4F4F4; overflow: hidden; box-shadow: 0 10px 40px rgb(0 0 0 / .05); }
+  .s3 .pan > * { position: absolute; }
+  .s3 .pan img { width: 256px; object-fit: cover; }
+  .s3 .im1 { top: 0; inset-inline-start: 256px; height: 271px; } .s3 .im2 { top: 271px; inset-inline-start: 0; height: 266px; }
+  .s3 .k { width: 256px; padding-inline-start: 23px; }
+  .s3 .k1 { top: 56px; inset-inline-start: 0; } .s3 .k2 { top: 325px; inset-inline-start: 256px; }
+  .s3 .k b { display: block; font-size: 40px; line-height: 46px; font-weight: 700; }
+  .s3 .k1 b { color: var(--mag); } .s3 .k2 b { color: var(--purple); }
+  .s3 .k p { margin-top: 9px; font-size: 19px; line-height: 25.5px; width: 215px; }
+  /* 4) العام في لمحة */
+  .s4 .para, .s6 .para, .s9 .para { top: 187px; inset-inline-start: 74px; width: 1110px; }
+  .s4 .col { top: 299px; width: 220px; height: 311px; border-inline-start: 1.5px solid var(--purple); }
+  .s4 .col::before, .s4 .dot { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--purple); }
+  .s4 .col::before { top: -6px; inset-inline-start: -6.75px; }
+  .s4 .col > * { position: absolute; inset-inline-start: 14px; }
+  .s4 .col h3 { top: 59px; font-size: 22px; line-height: 28px; font-weight: 700; white-space: nowrap; }
+  .s4 .col p { top: 103px; width: 200px; font-size: 17.5px; line-height: 23px; }
+  .s4 .col .yr { top: 254px; font-size: 58px; line-height: 60px; font-weight: 700; color: var(--lav); }
+  .s4 .base { top: 657px; inset-inline-start: 72px; width: 927px; height: 1.5px; background: var(--purple); }
+  .s4 .dot { top: 652px; }
+  /* 5) نظرة على الأعمال */
+  .s5 .para, .s8 .para { top: 238px; inset-inline-start: 74px; width: 525px; }
+  .nl { inset-inline-start: 74px; width: 470px; height: 61px; }
+  .nl > * { position: absolute; }
+  .nl .n { top: 3px; inset-inline-start: 0; font-size: 50px; line-height: 56px; font-weight: 700; }
+  .nl i { top: 0; inset-inline-start: 83px; width: 1.5px; height: 61px; background: #333; }
+  .nl h3 { top: -11px; inset-inline-start: 108px; font-size: 22px; line-height: 28px; font-weight: 700; white-space: nowrap; }
+  .nl p { top: 25px; inset-inline-start: 108px; width: 345px; font-size: 17.5px; line-height: 23px; }
+  .nl1 { top: 376px; } .nl2 { top: 477px; } .nl3 { top: 578px; }
+  .s5 .nl1 .n { color: #8B48FF; } .s5 .nl2 .n { color: #A043FF; } .s5 .nl3 .n { color: #B33EFF; }
+  .s5 .conn { top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s5 .circ { border-radius: 50%; text-align: center; }
+  .s5 .circ > * { position: absolute; inset-inline-start: 0; width: 100%; }
+  .s5 .cb { top: 56px; inset-inline-start: 855px; width: 340px; height: 340px; background: var(--purple); color: #fff; }
+  .s5 .cb b { top: 62px; font-size: 62px; line-height: 70px; font-weight: 400; }
+  .s5 .cb span { top: 140px; font-size: 22px; line-height: 28px; }
+  .s5 .cb p { top: 191px; inset-inline-start: 70px; width: 200px; font-size: 19px; line-height: 25.5px; color: #EDE3FF; }
+  .s5 .cw { top: 341px; inset-inline-start: 657px; width: 272px; height: 272px; background: #fff; box-shadow: 0 0 46px rgb(0 0 0 / .09); }
+  .s5 .cw b { top: 78px; font-size: 56px; line-height: 64px; font-weight: 400; color: #B33EFF; }
+  .s5 .cw span { top: 153px; font-size: 22px; line-height: 28px; color: #111; }
+  .s5 .ck { top: 410px; inset-inline-start: 1004px; width: 214px; height: 214px; background: var(--pink); color: #fff; }
+  .s5 .ck b { top: 66px; font-size: 44px; line-height: 50px; font-weight: 400; }
+  .s5 .ck span { top: 124px; font-size: 21px; line-height: 26px; }
+  /* 6) الأهداف */
+  .s6 .semi { top: 485px; inset-inline-start: 640px; width: 470px; height: 470px; }
+  .s6 .card { top: 286px; inset-inline-start: 73px; width: 484px; height: 354px; border-radius: 26px; }
+  .s6 .ob { inset-inline-start: 108px; width: 420px; height: 70px; }
+  .s6 .ob .ic { position: absolute; top: 0; inset-inline-start: 0; width: 70px; height: 70px; }
+  .s6 .ob h3 { position: absolute; top: -1px; inset-inline-start: 96px; font-size: 20px; line-height: 26px; font-weight: 700; white-space: nowrap; }
+  .s6 .ob p { position: absolute; top: 27px; inset-inline-start: 96px; width: 300px; font-size: 17.5px; line-height: 23px; }
+  .s6 .o1 { top: 322px; } .s6 .o2 { top: 428px; } .s6 .o3 { top: 534px; }
+  .s6 .ph { top: 286px; inset-inline-start: 571px; width: 709px; height: 354px; object-fit: cover; border-start-start-radius: 30px; border-end-start-radius: 30px; }
+  /* 7) السوق */
+  .blob-tr { top: -260px; inset-inline-start: 1040px; width: 500px; height: 500px; background: linear-gradient(var(--gtr), #9447FF 10%, #C33BFF 90%); }
+  html[dir="ltr"] .blob-tr { background: linear-gradient(135deg, #C33BFF 30%, #9447FF 72%); } html[dir="rtl"] .blob-tr { background: linear-gradient(225deg, #C33BFF 30%, #9447FF 72%); }
+  .s7 .bars { top: 280px; inset-inline-start: 80px; width: 560px; height: 400px; }
+  .s7 .kc { top: 305px; width: 245px; height: 147px; border-radius: 26px; }
+  .s7 .kc > *, .s7 .kd > * { position: absolute; inset-inline-start: 20px; }
+  .s7 .ka { inset-inline-start: 673px; } .s7 .kb { inset-inline-start: 958px; }
+  .s7 .kc h4 { top: 17px; font-size: 17px; line-height: 22px; font-weight: 700; white-space: nowrap; }
+  .s7 .kc b { top: 50px; font-size: 42px; line-height: 48px; font-weight: 700; color: var(--purple); white-space: nowrap; }
+  .s7 .kb b { color: var(--mag); }
+  .s7 .kc span { top: 101px; font-size: 18px; line-height: 22px; color: #555; }
+  .s7 .kd { top: 470px; inset-inline-start: 673px; width: 530px; height: 202px; border-radius: 26px; }
+  .s7 .kd .donut { top: 21px; inset-inline-start: 208px; width: 160px; height: 160px; }
+  .s7 .kd .pill { top: 23px; inset-inline-start: 72px; width: 164px; height: 47px; border-radius: 10px; background: #fff; box-shadow: 0 8px 22px rgb(0 0 0 / .12); display: flex; align-items: center; gap: 9px; padding-inline-start: 28px; font-size: 20px; font-weight: 700; color: var(--purple); }
+  .s7 .kd .pill svg { width: 21px; height: 21px; flex: none; }
+  .s7 .kd h3 { top: 119px; inset-inline-start: 32px; font-size: 22px; line-height: 29px; font-weight: 700; }
+  .s7 .kd .lg { inset-inline-start: 410px; display: flex; align-items: center; gap: 11px; font-size: 18px; color: #555; white-space: nowrap; }
+  .s7 .kd .lg i { width: 12px; height: 12px; border-radius: 50%; }
+  .s7 .kd .lg1 { top: 35px; } .s7 .kd .lg2 { top: 67px; }
+  .ax-b { font-size: 18px; font-weight: 700; fill: #111; }
+  /* 8) العمليات */
+  .s8 .phc { top: 88px; inset-inline-start: 640px; width: 640px; height: 632px; object-fit: cover; clip-path: circle(555px at 550px 562px); }
+  .s8 .nl1 .n { color: #8B48FF; } .s8 .nl2 .n { color: #B63CFF; } .s8 .nl3 .n { color: #FF5A85; }
+  .s8 .oc { top: 228px; width: 181px; height: 430px; border-radius: 16px; color: #fff; text-align: center; box-shadow: 0 12px 30px rgb(0 0 0 / .12); }
+  .s8 .oc > * { position: absolute; }
+  .s8 .oc .ic { top: 29px; inset-inline-start: 52.5px; width: 76px; height: 76px; background: #fff; box-shadow: 0 6px 14px rgb(0 0 0 / .12); }
+  .s8 .oc b { top: 133px; inset-inline-start: 0; width: 100%; font-size: 30px; line-height: 36px; font-weight: 700; }
+  .s8 .oc h3 { top: 202px; inset-inline-start: 15px; width: 151px; font-size: 22px; line-height: 29px; font-weight: 700; }
+  .s8 .oc p { top: 277px; inset-inline-start: 12px; width: 157px; font-size: 17px; line-height: 22.5px; color: rgb(255 255 255 / .9); }
+  .s8 .oc1 { inset-inline-start: 631px; background: var(--purple); } .s8 .oc1 .ic { color: var(--purple); }
+  .s8 .oc2 { inset-inline-start: 833px; background: var(--mag); } .s8 .oc2 .ic { color: var(--mag); }
+  .s8 .oc3 { inset-inline-start: 1035px; background: var(--pink); } .s8 .oc3 .ic { color: var(--pink); }
+  /* 9) أبرز المؤشرات المالية */
+  .s9 .chc { top: 282px; inset-inline-start: 73px; width: 548px; height: 384px; border-radius: 30px; box-shadow: 0 12px 40px rgb(0 0 0 / .1); }
+  .s9 .chc svg { width: 548px; height: 384px; }
+  .ax-a { font-size: 18px; fill: #555; }
+  .s9 .mc { inset-inline-start: 634px; width: 228px; height: 178px; border-radius: 16px; }
+  .s9 .mc > * { position: absolute; inset-inline-start: 24px; }
+  .s9 .m1 { top: 288px; } .s9 .m2 { top: 478px; }
+  .s9 .mc .tag { top: 0; inset-inline-start: 118px; width: 91px; height: 32px; border-radius: 0 0 8px 8px; color: #fff; font-size: 14px; font-weight: 700; display: grid; place-items: center; }
+  .s9 .m1 .tag { background: var(--mag); } .s9 .m2 .tag { background: var(--purple); }
+  .s9 .mc b { top: 37px; font-size: 30px; line-height: 36px; font-weight: 700; color: #222; }
+  .s9 .mc h4 { top: 74px; font-size: 20px; line-height: 26px; font-weight: 400; color: #222; white-space: nowrap; }
+  .s9 .mc .row { top: 115px; width: 190px; display: flex; justify-content: space-between; font-size: 14px; line-height: 18px; color: #333; }
+  .s9 .mc .trk { top: 138px; width: 190px; height: 4px; border-radius: 2px; background: #E8E8E8; overflow: hidden; }
+  .s9 .mc .trk i { display: block; height: 100%; border-radius: 2px; }
+  .s9 .m1 .trk i { background: var(--mag); } .s9 .m2 .trk i { background: var(--purple); }
+  .s9 .rh { top: 318px; inset-inline-start: 891px; font-size: 26px; line-height: 33px; font-weight: 700; color: #222; }
+  .s9 .rp { top: 408px; inset-inline-start: 891px; width: 290px; font-size: 14.5px; line-height: 19.2px; color: #444; }
+  .btn { height: 51px; border-radius: 26px; background: var(--purple); color: #fff; font-size: 20px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 12px 24px rgb(139 72 255 / .25); }
+  .s9 .btn { top: 576px; inset-inline-start: 891px; width: 286px; }
+  /* 10) خطّا المؤشرات المالية */
+  .s10 .lines { top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s10 .it { top: 380px; width: 240px; }
+  .s10 .it > * { position: absolute; inset-inline-start: 0; }
+  .s10 .it i { top: 0; width: 216px; height: 4px; border-radius: 2px; }
+  .s10 .it h3 { top: 28px; font-size: 24px; line-height: 30px; font-weight: 700; white-space: nowrap; }
+  .s10 .it p { top: 68px; width: 232px; font-size: 17.5px; line-height: 23px; }
+  .s10 .i1 { inset-inline-start: 72px; } .s10 .i1 i { background: var(--purple); }
+  .s10 .i2 { inset-inline-start: 349px; } .s10 .i2 i { background: var(--mag); }
+  /* 11) مؤشرات الأداء */
+  .s11 .para { top: 239px; inset-inline-start: 74px; width: 620px; }
+  .s11 .pl { top: 405px; height: 60px; border-radius: 30px; background: #fff; box-shadow: 0 12px 26px rgb(0 0 0 / .1); display: grid; place-items: center; font-size: 20px; color: #444; }
+  .s11 .pl1 { inset-inline-start: 100px; width: 193px; } .s11 .pl2 { inset-inline-start: 343px; width: 194px; } .s11 .pl3 { inset-inline-start: 556px; width: 194px; }
+  .s11 .kp { top: 495px; height: 172px; border-radius: 18px; color: #fff; }
+  .s11 .kp > * { position: absolute; inset-inline-start: 16px; }
+  .s11 .kp b { top: 23px; font-size: 40px; line-height: 46px; font-weight: 700; }
+  .s11 .kp b sup { font-size: 22px; vertical-align: 14px; margin-inline-start: 6px; }
+  .s11 .kp p { top: 81px; font-size: 17px; line-height: 22.5px; color: rgb(255 255 255 / .92); }
+  .s11 .kp1 { inset-inline-start: 73px; width: 247px; background: linear-gradient(var(--gd), #BD3BFF, #C43BFF); box-shadow: 0 14px 26px rgb(192 59 255 / .25); } .s11 .kp1 p { width: 215px; }
+  .s11 .kp2 { inset-inline-start: 335px; width: 212px; background: var(--purple); box-shadow: 0 14px 26px rgb(139 72 255 / .25); } .s11 .kp2 p { width: 180px; }
+  .s11 .kp3 { inset-inline-start: 562px; width: 183px; background: #D2B5FF; color: #222; } .s11 .kp3 p { width: 155px; color: #222; }
+  .s11 .rc { top: 130px; inset-inline-start: 790px; width: 394px; height: 537px; border-radius: 40px; }
+  .s11 .rc > * { position: absolute; inset-inline-start: 36px; }
+  .s11 .rc span { top: 65px; font-size: 20px; line-height: 26px; color: var(--purple); }
+  .s11 .rc h3 { top: 94px; font-size: 25px; line-height: 32px; font-weight: 700; color: #333; white-space: nowrap; }
+  .s11 .rc p { top: 149px; width: 320px; font-size: 19px; line-height: 25.5px; color: #444; }
+  .s11 .rc svg { top: 310px; inset-inline-start: 30px; width: 340px; height: 185px; }
+  /* 12) لمحة الأداء المالي */
+  .s12 .para { top: 310px; inset-inline-start: 74px; width: 405px; }
+  .s12 .btn, .s16 .btn { top: 549px; inset-inline-start: 73px; width: 285px; }
+  .blob-br { top: 325px; inset-inline-start: 755px; width: 1090px; height: 1090px; }
+  .s12 .kpis { top: 100px; inset-inline-start: 529px; width: 677px; height: 156px; border-radius: 16px; display: grid; grid-template-columns: repeat(4, 1fr); padding-top: 19px; text-align: center; }
+  .s12 .kpis > div { display: flex; flex-direction: column; align-items: center; }
+  .s12 .bd { width: 96px; height: 38px; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 18px; color: #222; }
+  .s12 .bd svg { width: 18px; height: 18px; }
+  .s12 .up { background: #E9DDFF; color: #222; } .s12 .up svg { color: #B83CFF; }
+  .s12 .dn { background: #FFDDF1; } .s12 .dn svg { color: #E0408F; }
+  .s12 .kpis span { margin-top: 15px; font-size: 18px; line-height: 24px; color: #222; white-space: nowrap; }
+  .s12 .kpis b { margin-top: 12px; font-size: 20px; line-height: 26px; font-weight: 700; color: #111; }
+  .s12 .cc { top: 276px; inset-inline-start: 529px; width: 677px; height: 367px; border-radius: 16px; }
+  .s12 .cc > * { position: absolute; }
+  .s12 .cc h4 { top: 29px; inset-inline-start: 30px; font-size: 18px; line-height: 22px; font-weight: 700; color: #222; }
+  .s12 .cc .dd { top: 25px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 3px; font-size: 13.5px; white-space: nowrap; }
+  .s12 .cc .dd svg { width: 12px; height: 12px; }
+  .s12 .dd1 { inset-inline-start: 468px; width: 78px; background: #C8D8FF; color: #223; } .s12 .dd2 { inset-inline-start: 566px; width: 80px; background: #3A7BFF; color: #fff; }
+  .s12 .cc svg.ch { top: 0; inset-inline-start: 0; width: 677px; height: 367px; }
+  .ax-s { font-size: 13.5px; fill: #222; }
+  /* 13) هيكل الإيرادات والتكاليف */
+  .s13 .para { top: 239px; inset-inline-start: 74px; width: 1110px; }
+  .s13 table { top: 336px; inset-inline-start: 73px; width: 1128px; border-collapse: collapse; table-layout: fixed; font-size: 18px; color: #222; }
+  .s13 th { height: 54px; background: var(--purple); color: #fff; font-size: 20px; font-weight: 700; text-align: center; padding: 0; }
+  .s13 td { height: 54px; border: 1px solid #E3E3E3; text-align: center; padding: 0 5px; white-space: nowrap; }
+  .s13 td:nth-child(2) { text-align: start; }
+  .s13 tbody tr:nth-child(even) td { background: #F5F5F5; }
+  /* 14) الأفراد والاستدامة */
+  .s14 .phw { top: 0; inset-inline-start: 0; width: 585px; height: 397px; }
+  .s14 .semi { top: 532px; inset-inline-start: 797px; width: 376px; height: 376px; background: var(--purple); }
+  .s14 .ttl { inset-inline-start: 641px; }
+  .s14 .para { top: 239px; inset-inline-start: 641px; width: 525px; }
+  .s14 .card { top: 360px; inset-inline-start: 138px; width: 1069px; height: 259px; border-radius: 26px; box-shadow: 0 16px 42px rgb(0 0 0 / .12); }
+  .s14 .ei { top: 404px; width: 310px; height: 180px; }
+  .s14 .ei > * { position: absolute; }
+  .s14 .ei .ic { top: 0; inset-inline-start: 0; width: 76px; height: 76px; }
+  .s14 .ei h3 { top: 22px; inset-inline-start: 96px; font-size: 26px; line-height: 32px; font-weight: 700; white-space: nowrap; }
+  .s14 .ei p { top: 96px; inset-inline-start: 0; width: 300px; font-size: 19px; line-height: 25.5px; }
+  .s14 .e1 { inset-inline-start: 181px; } .s14 .e2 { inset-inline-start: 520px; } .s14 .e3 { inset-inline-start: 861px; }
+  /* 15) المخاطر والتوقعات */
+  .s15 .phw { top: 0; inset-inline-start: 640px; width: 640px; height: 516px; border-end-start-radius: 60px; }
+  .s15 .sq { top: 516px; inset-inline-start: 961px; width: 319px; height: 204px; background: linear-gradient(var(--gtr), #8B48FF, #C03BFF 70%); }
+  .s15 .ttl, .s16 .ttl { inset-inline-start: 75px; }
+  .s15 .para, .s16 .para { top: 187px; inset-inline-start: 75px; width: 485px; }
+  .s15 .rc { width: 360px; height: 135px; border-radius: 12px; box-shadow: 0 12px 32px rgb(0 0 0 / .1); background: #fff; }
+  .s15 .rc > * { position: absolute; inset-inline-start: 25px; }
+  .s15 .rc h3 { top: 29px; font-size: 23px; line-height: 29px; font-weight: 700; white-space: nowrap; }
+  .s15 .rc p { top: 62px; width: 305px; font-size: 17.5px; line-height: 23px; }
+  .s15 .r1 { top: 332px; inset-inline-start: 75px; color: #fff; background: linear-gradient(var(--gd), #8B48FF, #C23BFF); box-shadow: none; } .s15 .r1 p { color: rgb(255 255 255 / .92); }
+  .s15 .r2 { top: 332px; inset-inline-start: 463px; width: 361px; } .s15 .r3 { top: 498px; inset-inline-start: 75px; } .s15 .r4 { top: 498px; inset-inline-start: 463px; width: 361px; }
+  /* 16) الخطوات التالية */
+  .s16 .sp { inset-inline-start: 75px; width: 497px; height: 96px; border-radius: 48px; background: #fff; box-shadow: 0 14px 30px rgb(0 0 0 / .08); }
+  .s16 .sp > * { position: absolute; }
+  .s16 .sp1 { top: 317px; box-shadow: none; border: 1.5px solid #9B5CFF; } .s16 .sp2 { top: 440px; } .s16 .sp3 { top: 562px; }
+  .s16 .sp .ic { top: 26px; inset-inline-start: 20px; width: 42px; height: 42px; font-size: 18px; font-weight: 700; box-shadow: 0 6px 14px rgb(139 72 255 / .3); }
+  .s16 .sp1 .ic { top: 24.5px; inset-inline-start: 18.5px; }
+  .s16 .sp p { top: 13px; inset-inline-start: 81px; width: 285px; font-size: 17px; line-height: 22.5px; }
+  .s16 .sp svg { top: 37px; inset-inline-start: 380px; width: 22px; height: 22px; color: #111; }
+  .s16 .sp b { top: 31px; inset-inline-start: 420px; font-size: 24px; line-height: 32px; font-weight: 700; color: #B03CFF; }
+  .s16 .tab { top: 197px; inset-inline-start: 628px; width: 577px; height: 440px; border-radius: 22px; background: #121212; border: 2px solid #D9D9D9; }
+  .s16 .scr { top: 213px; inset-inline-start: 645px; width: 543px; height: 408px; border-radius: 6px; object-fit: cover; }
+  .s16 .pen { top: 180px; inset-inline-start: 748px; width: 344px; height: 15px; border-radius: 8px; background: linear-gradient(#FFFFFF, #DADADA); box-shadow: 0 2px 4px rgb(0 0 0 / .15); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="par-lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B48FF"/><stop offset="1" stop-color="#B23CFF"/></linearGradient><linearGradient id="par-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8B48FF" stop-opacity=".8"/><stop offset=".85" stop-color="#8B48FF" stop-opacity=".05"/><stop offset="1" stop-color="#8B48FF" stop-opacity="0"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <img class="ph" src="/templates/freeform/sl-professional-annual-report/assets/office.jpg" alt="مكتب مفتوح حديث بحواسيب محمولة على مكاتب بيضاء"><div class="badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5 2h12a2 2 0 0 1 2 2v9.2a5.2 5.2 0 0 0-6.7 7.8H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm2.6 4.1a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm2.9.4v1.6h5.8V6.5zm-2.9 3.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm2.9.4V12h5.8v-1.6zm-2.9 3.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm2.9.4v1.6h2.8v-1.6z"/><path d="M14.6 18.3l1.7 1.7 3.6-3.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h1 class="cv"><b>التقرير</b> <span class="o">السنوي</span></h1><i class="uline"></i><div class="pt grad"><span>قالب عرض تقديمي</span><svg class="mir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18L18 6M8.5 6H18v9.5"/></svg></div><p class="cvp">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. هذا نص توضيحي. أدخل النص المطلوب هنا.</p><div class="logo"><svg viewBox="0 0 74 80" aria-hidden="true"><path fill="url(#par-lg)" fill-rule="evenodd" d="M12 3C30-1 52 1 64 7c9 5 10 17 8 33-2 18-6 32-16 37-14 5-36 4-47-4C1 67 0 53 1 38 2 20 4 6 12 3zM24 19c-4 1-6 4-6 10-1 9 0 21 3 26 2 4 7 5 14 5 7 0 13-1 16-4 3-4 4-14 4-22 0-8-1-12-5-14-6-2-19-2-26-1z"/></svg><span>شعار شركتك<br>هنا</span></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">شريحة <b>جدول المحتويات</b></h1><i class="semi blob grad"></i><img class="ph" src="/templates/freeform/sl-professional-annual-report/assets/desk.jpg" alt="مكتب عمل عليه حاسوب محمول وأكوام من الأوراق"><div class="card tc tl tl1"><span class="ic c-p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="3" width="14" height="17" rx="1.5"/><path d="M5 11.5h14M10 7.3h4M10 15.7h4M7.5 20v1.5M16.5 20v1.5"/></svg></span><div class="tx"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا.</p></div></div><div class="card tc tl tl2"><span class="ic c-m"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3h3v18H5zM9.5 3H18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H9.5z"/></svg></span><div class="tx"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا.</p></div></div><div class="card tc tr tr1"><span class="ic c-k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M9 3v8.5l3-2.4 3 2.4V3" fill="currentColor"/></svg></span><div class="tx"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا.</p></div></div><div class="card tc tr tr2"><span class="ic c-y"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5 2h9l5 5v15H5zM8 10.5h8v1.8H8zM8 14h8v1.8H8zM8 17.5h5.5v1.8H8z"/></svg></span><div class="tx"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا.</p></div></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <i class="blob"></i><h1 class="ttl">شريحة <b>الملخص</b><br><b>التنفيذي</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><div class="bl b1"><span class="ic c-p"><svg class="mir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6.5l5.5 5.5-5.5 5.5"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="bl b2"><span class="ic c-m"><svg class="mir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6.5l5.5 5.5-5.5 5.5"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="pan"><img class="im1" src="/templates/freeform/sl-professional-annual-report/assets/meeting.jpg" alt="مديرون مجتمعون حول طاولة اجتماعات"><img class="im2" src="/templates/freeform/sl-professional-annual-report/assets/tablet.jpg" alt="يدان تمسكان جهازًا لوحيًا بمخططات بجوار حاسوب محمول"><div class="k k1"><b><bdi dir="ltr">95k</bdi></b><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="k k2"><b><bdi dir="ltr">31k</bdi></b><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">شريحة <b>العام في لمحة</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><div class="col" style="inset-inline-start:72px"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p><span class="yr">2026</span></div><div class="col" style="inset-inline-start:304px"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p><span class="yr">2027</span></div><div class="col" style="inset-inline-start:536px"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p><span class="yr">2028</span></div><div class="col" style="inset-inline-start:768px"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p><span class="yr">2029</span></div><div class="col" style="inset-inline-start:999px"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p><span class="yr">2030</span></div><i class="base"></i><i class="dot" style="inset-inline-start:66px"></i><i class="dot" style="inset-inline-start:298px"></i><i class="dot" style="inset-inline-start:530px"></i><i class="dot" style="inset-inline-start:762px"></i><i class="dot" style="inset-inline-start:993px"></i>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">شريحة <b>نظرة عامة</b><br><b>على الأعمال</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><div class="nl nl1"><span class="n">01</span><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="nl nl2"><span class="n">02</span><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="nl nl3"><span class="n">03</span><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><svg class="conn mir" viewBox="0 0 1280 720" aria-hidden="true"><g fill="none" stroke="#444" stroke-width="1.2" stroke-dasharray="3 3"><path d="M855 226H793V341"/><path d="M793 613V658H1111V624"/></g><g fill="#333"><circle cx="855" cy="226" r="3.8"/><circle cx="793" cy="341" r="3.8"/><circle cx="793" cy="613" r="3.8"/><circle cx="1111" cy="624" r="3.8"/></g></svg><div class="circ cb"><b><bdi dir="ltr">45+</bdi></b><span>مليون</span><p>هذا نص توضيحي. أدخل نصك هنا. يمكنك إضافة نص.</p></div><div class="circ cw"><b><bdi dir="ltr">97%</bdi></b><span>النسبة المئوية</span></div><div class="circ ck"><b><bdi dir="ltr">328k</bdi></b><span>عميل</span></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="ttl"><b>الأهداف والأولويات الاستراتيجية</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><i class="semi blob grad"></i><img class="ph" src="/templates/freeform/sl-professional-annual-report/assets/team.jpg" alt="فريق عمل يتناقش حول طاولة اجتماعات"><div class="card"></div><div class="ob o1"><span class="ic c-p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="3" width="14" height="17" rx="1.5"/><path d="M5 11.5h14M10 7.3h4M10 15.7h4M7.5 20v1.5M16.5 20v1.5"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="ob o2"><span class="ic c-m"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3h3v18H5zM9.5 3H18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H9.5z"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="ob o3"><span class="ic c-k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M9 3v8.5l3-2.4 3 2.4V3" fill="currentColor"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <i class="blob blob-tr"></i><h1 class="ttl">شريحة <b>نظرة عامة على</b><br><b>السوق والقطاع</b></h1><svg class="bars" id="b7" viewBox="0 0 560 400" aria-hidden="true"></svg><div class="card kc ka"><h4>حرّر النص هنا</h4><b><bdi dir="ltr">$150.00</bdi></b><span>أضف نصًا</span></div><div class="card kc kb"><h4>حرّر النص هنا</h4><b><bdi dir="ltr">$150.00</bdi></b><span>أضف نصًا</span></div><div class="card kd"><svg class="donut" id="d7" viewBox="0 0 160 160" aria-hidden="true"></svg><div class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#8B48FF"/><path d="M7 12.3l3.3 3.2L17 8.8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><bdi dir="ltr">$150.00</bdi></span></div><h3>حرّر نصك<br>هنا</h3><div class="lg lg1"><i class="c-p"></i><span>القيمة أ</span></div><div class="lg lg2"><i class="c-m"></i><span>القيمة ب</span></div></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="flip phc"><img src="/templates/freeform/sl-professional-annual-report/assets/laptop.jpg" alt="موظف يراجع تقارير على حاسوب محمول"></div><h1 class="ttl">شريحة <b>أبرز المؤشرات</b><br><b>التشغيلية</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><div class="nl nl1"><span class="n">01</span><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="nl nl2"><span class="n">02</span><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="nl nl3"><span class="n">03</span><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="oc oc1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="3" width="14" height="17" rx="1.5"/><path d="M5 11.5h14M10 7.3h4M10 15.7h4M7.5 20v1.5M16.5 20v1.5"/></svg></span><b><bdi dir="ltr">15%</bdi></b><h3>حرّر نصك<br>هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="oc oc2"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3h3v18H5zM9.5 3H18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H9.5z"/></svg></span><b><bdi dir="ltr">25%</bdi></b><h3>حرّر نصك<br>هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="oc oc3"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M9 3v8.5l3-2.4 3 2.4V3" fill="currentColor"/></svg></span><b><bdi dir="ltr">60%</bdi></b><h3>حرّر نصك<br>هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <h1 class="ttl">شريحة <b>أبرز المؤشرات المالية</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><div class="card chc"><svg id="a9" viewBox="0 0 548 384" aria-hidden="true"></svg></div><div class="card mc m1"><span class="tag">2025</span><b><bdi dir="ltr">20+</bdi></b><h4>حرّر النص هنا</h4><div class="row"><span>حرّر النص هنا</span><span><bdi dir="ltr">35%</bdi></span></div><div class="trk"><i style="width:54%"></i></div></div><div class="card mc m2"><span class="tag">2025</span><b><bdi dir="ltr">30+</bdi></b><h4>حرّر النص هنا</h4><div class="row"><span>حرّر النص هنا</span><span><bdi dir="ltr">20%</bdi></span></div><div class="trk"><i style="width:40%"></i></div></div><h3 class="rh">حرّر نصك<br>هنا</h3><p class="rp">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><div class="btn">حرّر نصك هنا</div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <svg class="lines" id="l10" viewBox="0 0 1280 720" aria-hidden="true"></svg><h1 class="ttl">شريحة <b>أبرز</b><br><b>المؤشرات المالية</b></h1><div class="it i1"><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="it i2"><i></i><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <h1 class="ttl">شريحة <b>مؤشرات</b><br><b>الأداء الرئيسية</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي. أدخل النص المطلوب هنا.</p><div class="pl pl1">حرّر النص هنا</div><div class="pl pl2">حرّر النص هنا</div><div class="pl pl3">حرّر النص هنا</div><div class="kp kp1"><b>60<sup>%</sup></b><p>هذا نص توضيحي. أدخل نصك هنا. يمكنك إضافة نص توضيحي.</p></div><div class="kp kp2"><b>40<sup>%</sup></b><p>هذا نص توضيحي. أدخل نصك هنا. يمكنك إضافة نص.</p></div><div class="kp kp3"><b>30<sup>%</sup></b><p>هذا نص توضيحي. أدخل نصك هنا.</p></div><div class="card rc"><span>أضف نصًا</span><h3>حرّر نصك هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي.</p><svg id="g11" viewBox="0 0 340 185" aria-hidden="true"></svg></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <i class="blob blob-br grad"></i><h1 class="ttl"><b>لمحة</b><br><b>عن الأداء</b><br><b>المالي</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><div class="btn">حرّر نصك هنا</div><div class="card kpis"><div><span class="bd up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V5M6 10.5L12 4.5l6 6"/></svg><span><bdi dir="ltr">25%</bdi></span></span><span>رصيدي</span><b><bdi dir="ltr">$23,491</bdi></b></div><div><span class="bd up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V5M6 10.5L12 4.5l6 6"/></svg><span><bdi dir="ltr">17%</bdi></span></span><span>إجمالي الدخل</span><b><bdi dir="ltr">$4,862</bdi></b></div><div><span class="bd dn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15M6 13.5l6 6 6-6"/></svg><span><bdi dir="ltr">19%</bdi></span></span><span>إجمالي الادخار</span><b><bdi dir="ltr">$3,574</bdi></b></div><div><span class="bd dn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15M6 13.5l6 6 6-6"/></svg><span><bdi dir="ltr">24%</bdi></span></span><span>إجمالي المصروفات</span><b><bdi dir="ltr">$1,288</bdi></b></div></div><div class="card cc"><svg class="ch" id="b12" viewBox="0 0 677 367" aria-hidden="true"></svg><h4>حرّر النص هنا</h4><span class="dd dd1">أضف نصًا<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span><span class="dd dd2">أضف نصًا<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <i class="blob blob-tr"></i><h1 class="ttl">شريحة <b>هيكل</b><br><b>الإيرادات والتكاليف</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><table><colgroup><col style="width:48px"><col style="width:317px"><col style="width:133px"><col style="width:132px"><col style="width:133px"><col style="width:116px"><col style="width:133px"><col style="width:116px"></colgroup><thead><tr><th>#</th><th>حرّر النص هنا</th><th>أضف نصًا</th><th>أضف نصًا</th><th>أضف نصًا</th><th>أضف نصًا</th><th>أضف نصًا</th><th>أضف نصًا</th></tr></thead><tbody><tr><td>1</td><td>هذا نص توضيحي</td><td></td><td><bdi dir="ltr">$240.560</bdi></td><td>أضف نصًا</td><td><bdi dir="ltr">Q1-Q4</bdi></td><td>011140</td><td><bdi dir="ltr">+18%</bdi></td></tr><tr><td>2</td><td>أدخل النص المطلوب هنا</td><td></td><td><bdi dir="ltr">$240.560</bdi></td><td>أضف نصًا</td><td><bdi dir="ltr">Q1-Q4</bdi></td><td>011140</td><td><bdi dir="ltr">+0.77%</bdi></td></tr><tr><td>3</td><td>يمكنك إضافة نص توضيحي</td><td></td><td><bdi dir="ltr">$240.560</bdi></td><td>أضف نصًا</td><td><bdi dir="ltr">Q1-Q4</bdi></td><td>011140</td><td><bdi dir="ltr">+25%</bdi></td></tr><tr><td>4</td><td>أدخل نصك التوضيحي هنا</td><td></td><td><bdi dir="ltr">$240.560</bdi></td><td>أضف نصًا</td><td>-</td><td>-</td><td>-</td></tr><tr><td>5</td><td>يمكنك إضافة نص توضيحي</td><td></td><td><bdi dir="ltr">$240.560</bdi></td><td>أضف نصًا</td><td>-</td><td>-</td><td>-</td></tr></tbody></table>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14">
+    <div class="flip phw"><img src="/templates/freeform/sl-professional-annual-report/assets/factory.jpg" alt="مهندسون بخوذات السلامة يفحصون آلات المصنع"></div><i class="semi blob"></i><h1 class="ttl">شريحة <b>الأفراد والحوكمة</b><br><b>البيئية والاجتماعية</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل النص المطلوب هنا. هذا نص توضيحي.</p><div class="card"></div><div class="ei e1"><span class="ic c-p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="3" width="14" height="17" rx="1.5"/><path d="M5 11.5h14M10 7.3h4M10 15.7h4M7.5 20v1.5M16.5 20v1.5"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص. أدخل نصك هنا.</p></div><div class="ei e2"><span class="ic c-m"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3h3v18H5zM9.5 3H18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H9.5z"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص. أدخل نصك هنا.</p></div><div class="ei e3"><span class="ic c-k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 3h14v18H5z"/><path d="M9 3v8.5l3-2.4 3 2.4V3" fill="currentColor"/></svg></span><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص. أدخل نصك هنا.</p></div>
+  </div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15">
+    <div class="flip phw"><img src="/templates/freeform/sl-professional-annual-report/assets/analyst.jpg" alt="محلل يعمل أمام شاشة بيانات ثلاثية الأبعاد"></div><i class="sq"></i><h1 class="ttl"><b>المخاطر والتوقعات</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل نصك هنا. هذا نص توضيحي.</p><div class="rc r1"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="rc r2"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="rc r3"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="rc r4"><h3>حرّر النص هنا</h3><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص.</p></div>
+  </div></section>
+  <!-- 16 -->
+  <section class="slide"><div class="frame s16">
+    <i class="blob blob-br grad"></i><h1 class="ttl">شريحة <b>الخطوات التالية</b></h1><p class="para">هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك التوضيحي هنا. أدخل نصك هنا. هذا نص توضيحي.</p><div class="sp sp1"><span class="ic grad">1</span><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5 11l7-7 7 7"/></svg><b><bdi dir="ltr">20k</bdi></b></div><div class="sp sp2"><span class="ic grad">2</span><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5 11l7-7 7 7"/></svg><b><bdi dir="ltr">19k</bdi></b></div><div class="sp sp3"><span class="ic grad">3</span><p>هذا نص توضيحي. أدخل النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدخل نصك هنا.</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5 11l7-7 7 7"/></svg><b><bdi dir="ltr">11k</bdi></b></div><i class="pen"></i><i class="tab"></i><img class="scr" src="/templates/freeform/sl-professional-annual-report/assets/city.jpg" alt="رجل أعمال يتأمل أفق المدينة من نافذة المكتب">
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 16</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script type="application/json" id="chart-data">{"labels": ["يناير", "فبراير", "مارس", "أبريل", "مايو"], "values": [56, 100, 79, 66, 38], "highlight": 1}</script>
+<script type="application/json" id="chart-data-2">{"values": [22, 78], "colors": ["#8B48FF", "#C03BFF"]}</script>
+<script type="application/json" id="chart-data-3">{"labels": ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"], "values": [2.5, 5.5, 3, 2.8, 3, 2.3, 6, 4.5, 3, 4.2, 3, 3], "max": 7}</script>
+<script type="application/json" id="chart-data-4">{"series": [{"color": "#8B48FF", "dot": "#A98BFF", "values": [2.8, -0.6, 0.2, 1.7, 3.7, 6.5, 6.1, 12.2, 3.4, 14.6, 7.4, 12.6, 12.6, 10.6, 11.8, 14.6, 30.8, 40.8, 30.8, 26.7, 14.6, 10.6, 12.6, 14.2, 13.4, 16.6, 10.6, 8.6, 6.6]}, {"color": "#C03BFF", "dot": "#C03BFF", "values": [0.5, 0.5, 1.7, 0.5, 2.1, 4.1, 2.9, 4.9, 4.1, 2.9, 1.3, 4.1, 6.5, 7.3, 9.7, 11.8, 21.0, 56.5, 52.4, 40.4, 42.8, 22.6, 16.6, 18.6, 14.6, 7.3, 3.3, 1.7, 2.5]}]}</script>
+<script type="application/json" id="chart-data-5">{"values": [38, 37, 25], "colors": ["#C03BFF", "#8B48FF", "#E8DAFF"]}</script>
+<script type="application/json" id="chart-data-6">{"labels": ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"], "values": [5000, 4420, 5540, 3650, 4940, 5730, 4090, 4510, 5320, 5540, 6000, 4340], "tones": "kppppppppmmk", "ticks": [3000, 4000, 5000, 6000], "prefix": "$"}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- الرسوم من كتل chart-data (الفئة الأولى في جهة البداية) -----
+  var NS = 'http://www.w3.org/2000/svg';
+  function J(id) { try { return JSON.parse(document.getElementById(id).textContent); } catch (e) { return null; } }
+  function el(tag, at, parent) { var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); if (parent) parent.appendChild(e); return e; }
+  function T(parent, x, y, s, cls, anchor) { var t = el('text', { x: x, y: y, 'class': 'ax ' + cls, 'text-anchor': anchor || 'middle', direction: 'ltr' }, parent); t.textContent = s; return t; }
+  // قطاع حلقي: الزاويتان بالراديان مع عقارب الساعة من الساعة 12
+  function arc(cx, cy, r0, r1, a0, a1) {
+    if (a1 < a0) { var t = a0; a0 = a1; a1 = t; }
+    function P(r, a) { return (cx + r * Math.sin(a)).toFixed(2) + ',' + (cy - r * Math.cos(a)).toFixed(2); }
+    var lg = (a1 - a0) > Math.PI ? 1 : 0;
+    return 'M' + P(r1, a0) + 'A' + r1 + ',' + r1 + ' 0 ' + lg + ' 1 ' + P(r1, a1) + 'L' + P(r0, a1) + 'A' + r0 + ',' + r0 + ' 0 ' + lg + ' 0 ' + P(r0, a0) + 'Z';
+  }
+  function ring(svg, d, cx, cy, r0, r1, start, span, dir) {
+    var sum = d.values.reduce(function (a, b) { return a + b; }, 0), a = start;
+    d.values.forEach(function (v, i) { var b = a + dir * span * v / sum; el('path', { d: arc(cx, cy, r0, r1, a, b), fill: d.colors[i], stroke: '#fff', 'stroke-width': 2 }, svg); a = b; });
+  }
+  // الشريحة 7: أعمدة شهرية بزوايا علوية مدوّرة، والعمود المُبرز وردي
+  (function () {
+    var d = J('chart-data'), g = document.getElementById('b7'); if (!d || !g) return;
+    var W = 560, base = 352, H = 336, bw = 89, step = 109.2, mx = Math.max.apply(null, d.values);
+    d.values.forEach(function (v, i) {
+      var h = H * v / mx, x = 13 + i * step; if (RTL) x = W - x - bw;
+      var y = base - h, r = Math.min(14, h / 2);
+      el('path', { d: 'M' + x + ',' + base + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + bw - r) + 'Q' + (x + bw) + ',' + y + ' ' + (x + bw) + ',' + (y + r) + 'V' + base + 'Z', fill: i === d.highlight ? '#FF5A85' : '#8B48FF' }, g);
+      T(g, x + bw / 2, 386, d.labels[i], 'ax-b');
+    });
+  })();
+  // الشريحة 7: حلقة القيمتين — الأولى من الساعة 12 نحو جهة البداية
+  (function () { var d = J('chart-data-2'), g = document.getElementById('d7'); if (d && g) ring(g, d, 80, 80, 48, 80, 0, 2 * Math.PI, RTL ? 1 : -1); })();
+  // الشريحة 9: مخطط مساحة شهري بمحور قيم واحد
+  (function () {
+    var d = J('chart-data-3'), g = document.getElementById('a9'); if (!d || !g) return;
+    var W = 548, y0 = 300, u = 243 / d.max, X = function (i) { var x = 72 + i * 39.1; return RTL ? W - x : x; }, Y = function (v) { return y0 - v * u; };
+    for (var k = 0; k <= d.max; k++) {
+      el('line', { x1: RTL ? W - 52 : 52, x2: RTL ? W - 522 : 522, y1: Y(k), y2: Y(k), stroke: '#EEEEEE', 'stroke-width': 1 }, g);
+      T(g, RTL ? W - 27 : 27, Y(k) + 6, String(k), 'ax-a');
+    }
+    var pts = d.values.map(function (v, i) { return X(i).toFixed(1) + ',' + Y(v).toFixed(1); });
+    el('path', { d: 'M' + X(0) + ',' + Y(1) + 'L' + pts.join('L') + 'L' + X(d.values.length - 1) + ',' + Y(1) + 'Z', fill: 'url(#par-area)' }, g);
+    el('path', { d: 'M' + pts.join('L'), fill: 'none', stroke: '#8B48FF', 'stroke-width': 2.6, 'stroke-linejoin': 'round' }, g);
+    d.labels.forEach(function (s, i) { T(g, X(i), 334, s, 'ax-a'); });
+  })();
+  // الشريحة 10: خطّان زخرفيان بعرض الشريحة
+  (function () {
+    var d = J('chart-data-4'), g = document.getElementById('l10'); if (!d || !g) return;
+    d.series.forEach(function (s) {
+      var n = s.values.length, pts = s.values.map(function (v, i) { var x = i * 1280 / (n - 1); return [RTL ? 1280 - x : x, 720 - v * 10]; });
+      el('path', { d: 'M' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join('L'), fill: 'none', stroke: s.color, 'stroke-width': 2.6, 'stroke-linejoin': 'round' }, g);
+      pts.forEach(function (p) { el('circle', { cx: p[0], cy: p[1], r: 3.8, fill: s.dot }, g); });
+    });
+  })();
+  // الشريحة 11: نصف حلقة تبدأ من جهة البداية
+  (function () { var d = J('chart-data-5'), g = document.getElementById('g11'); if (d && g) ring(g, d, 167, 170, 75, 161, RTL ? Math.PI / 2 : -Math.PI / 2, Math.PI, RTL ? -1 : 1); })();
+  // الشريحة 12: أعمدة شهرية مستديرة بمحور قيم واحد
+  (function () {
+    var d = J('chart-data-6'), g = document.getElementById('b12'); if (!d || !g) return;
+    var W = 677, lo = d.ticks[0], u = 63.4 / 1000, Y = function (v) { return 295 - (v - lo) * u; }, C = { k: '#FF5A85', p: '#8B48FF', m: '#C03BFF' };
+    d.ticks.forEach(function (t) { T(g, RTL ? W - 32 : 32, Y(t) + 5, d.prefix + t, 'ax-s', RTL ? 'end' : 'start'); });
+    d.values.forEach(function (v, i) {
+      var c = 112 + i * 47.3; if (RTL) c = W - c;
+      el('rect', { x: c - 12.5, y: Y(v), width: 25, height: 298 - Y(v), rx: 12.5, fill: C[d.tones[i]] || C.p }, g);
+      T(g, c, 333, d.labels[i], 'ax-s');
+    });
+  })();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
