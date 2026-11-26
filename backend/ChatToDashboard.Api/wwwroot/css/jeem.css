@@ -4415,3 +4415,5 @@ body.ff-full-on { overflow: hidden; }
 #user-modal .um-sw-list .empty { display: block; height: auto; padding: 12px 14px; color: var(--muted); font-size: 12px; }
 :root[dir="ltr"] .switch input:checked + span::after { transform: translateX(18px); }
 #user-modal #user-ents-block { padding: 0; border: 0; background: none; }
+#user-modal .um-sw-list.hidden { display: none; }
+#user-modal #user-systems-list { margin-top: 10px; }

@@ -440,6 +440,8 @@ window.JEEM_I18N_EN = Object.assign(window.JEEM_I18N_EN || {}, {
   "المسؤول يصل إلى كل الكيانات في المنظمة دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.": "Admins always reach every entity in the organization; this setting is for regular users only.",
   "فعّل الكيانات التي يعمل فيها المستخدم؛ ما يستطيع فعله داخلها تحدده «صلاحية الشاشات». المستخدم بلا أي كيان مفعّل لا يرى أي كيان.": "Turn on the entities the user works in; what they can do inside is set in “Screens access”. A user with no entity turned on sees no entity.",
   "يرى المستخدم كل شاشات المنصة، والجديد منها تلقائيًا": "The user sees every platform screen, including new ones",
+  "يرى المستخدم بيانات كل الأنظمة الخارجية المفعّلة، والجديد منها تلقائيًا": "The user sees data from every enabled external system, including new ones",
+  "الأنظمة": "Systems",
   "اختيارات جاهزة:": "Presets:",
   "الشاشات": "Screens",
   "الكيانات": "Entities",

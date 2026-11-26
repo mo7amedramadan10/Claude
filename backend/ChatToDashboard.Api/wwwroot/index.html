@@ -2215,8 +2215,11 @@
 
       <div class="um-panel hidden" role="tabpanel" id="um-panel-systems" aria-labelledby="um-tab-systems">
         <div class="perm-block">
-          <label class="chk-row"><input type="checkbox" id="user-allow-all-systems" checked> الوصول لكل الأنظمة</label>
-          <div id="user-systems-list" class="perm-list"></div>
+          <div class="um-sw-row um-sw-all">
+            <span class="um-sw-txt"><strong>الوصول لكل الأنظمة</strong><small>يرى المستخدم بيانات كل الأنظمة الخارجية المفعّلة، والجديد منها تلقائيًا</small></span>
+            <label class="switch"><input type="checkbox" role="switch" id="user-allow-all-systems" checked aria-label="الوصول لكل الأنظمة"><span></span></label>
+          </div>
+          <div id="user-systems-list" class="um-sw-list" role="group" aria-label="الأنظمة"></div>
         </div>
         <!-- File access isn't set here anymore — it's managed only per-file from "مستودع
              الملفات" (the 🔒 button on each file: creator/Admin/explicitly granted), so a

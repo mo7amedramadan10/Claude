@@ -16362,7 +16362,12 @@ function openUserModal(user) {
   el('user-password-row').style.display = (user ? user.authMethod : 'Local') === 'Local' ? '' : 'none';
 
   el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
-  renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name, 'لا توجد أنظمة خارجية مفعّلة في المنصة حاليًا — يرى المستخدم ملفاته وما شورك معه فقط.');
+  { // قائمة الأنظمة بمفاتيح تشغيل/إيقاف كالشاشات والكيانات
+    const sysOn = user ? user.allowedSystems || [] : [];
+    el('user-systems-list').innerHTML = state.systems.length
+      ? state.systems.map(s => umSwitchRow({ icon: '#i-database', name: s.name, value: s.id, checked: sysOn.includes(s.id) })).join('')
+      : '<span class="empty">لا توجد أنظمة خارجية مفعّلة في المنصة حاليًا — يرى المستخدم ملفاته وما شورك معه فقط.</span>';
+  }
   togglePermList('user-systems-list', 'user-allow-all-systems');
   const scr = user && Array.isArray(user.allowedScreens) ? user.allowedScreens : null;
   el('user-allow-all-screens').checked = !scr; renderUserScreens(scr || []); syncUserScreensUi();
