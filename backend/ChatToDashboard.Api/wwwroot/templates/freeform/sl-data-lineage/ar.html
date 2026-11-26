@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تسلسل البيانات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «تسلسل البيانات»: أربعة بنود (مثلث فيروزي + عنوان غامق + نص رمادي) تفصلها خطوط رفيعة في جهة البداية، وكتلة كحلية بعنوان كبير أعلى جهة النهاية، وتحتها تركيب زخرفي من مربعات (أزرق رمادي، داكن، برتقالي) وخطوط أفقية فيروزية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #253551; --ink-2: #7B8190; --accent: #4A9EAD; --navy: #243450; --slate: #44546C; --dark: #333D50; --orange: #EC7C30; --rule: #DCDFE4; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .s1 .it { position: absolute; inset-inline-start: 45px; width: 640px; height: 162px; padding-top: 75px; padding-inline-start: 49px; }
+  .s1 .it + .it { border-top: 1px solid var(--rule); }
+  .s1 .it1 { top: 41px; } .s1 .it2 { top: 203px; } .s1 .it3 { top: 365px; } .s1 .it4 { top: 527px; }
+  .s1 .it .tri { position: absolute; top: 41px; inset-inline-start: 17px; width: 15px; height: 13px; color: var(--accent); }
+  .s1 .it .tri svg { width: 100%; height: 100%; }
+  .s1 .it h2 { position: absolute; top: 30px; inset-inline-start: 49px; margin: 0; font-size: 28px; font-weight: 700; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+  .s1 .it p { margin: 0; font-size: 19px; line-height: 25px; color: var(--ink-2); }
+  .s1 .hero { position: absolute; top: 0; inset-inline-start: 703px; width: 577px; height: 298px; background: var(--navy); }
+  .s1 .hero h1 { position: absolute; top: 54px; inset-inline-start: 79px; margin: 0; font-size: 72px; font-weight: 400; line-height: 85px; color: #fff; letter-spacing: -0.5px; }
+  html[lang="ar"] .s1 .hero h1 { font-weight: 500; letter-spacing: 0; }
+  html[lang="ar"] .s1 .it h2 { font-weight: 800; }
+  .s1 .sq { position: absolute; }
+  .s1 .sq2 { top: 481px; inset-inline-start: 914px; width: 180px; height: 180px; background: var(--dark); }
+  .s1 .sq1 { top: 388px; inset-inline-start: 828px; width: 180px; height: 180px; background: var(--slate); }
+  .s1 .sq3 { top: 567px; inset-inline-start: 769px; width: 60px; height: 60px; background: var(--orange); }
+  .s1 .lines { top: 435px; inset-inline-start: 1055px; width: 180px; height: 184px; background: repeating-linear-gradient(to bottom, var(--accent) 0 1.5px, transparent 1.5px 8.4px); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="it it1"><span class="tri"><svg viewBox="0 0 15 13" fill="currentColor" aria-hidden="true"><polygon points="0,0 15,0 7.5,13"/></svg></span><h2>استكمال جرد البيانات</h2><p>أدخل النص المطلوب هنا. أضف نصًا.<br>هذا نص بسيط. أدخل النص المطلوب هنا.</p></div>
+    <div class="it it2"><span class="tri"><svg viewBox="0 0 15 13" fill="currentColor" aria-hidden="true"><polygon points="0,0 15,0 7.5,13"/></svg></span><h2>التحقق من ملكية البيانات</h2><p>أدخل النص المطلوب هنا. أضف نصًا.<br>هذا نص بسيط. أدخل النص المطلوب هنا.</p></div>
+    <div class="it it3"><span class="tri"><svg viewBox="0 0 15 13" fill="currentColor" aria-hidden="true"><polygon points="0,0 15,0 7.5,13"/></svg></span><h2>توثيق تسلسل البيانات</h2><p>أدخل النص المطلوب هنا. أضف نصًا.<br>هذا نص بسيط. أدخل النص المطلوب هنا.</p></div>
+    <div class="it it4"><span class="tri"><svg viewBox="0 0 15 13" fill="currentColor" aria-hidden="true"><polygon points="0,0 15,0 7.5,13"/></svg></span><h2>تعزيز نموذج الحوكمة</h2><p>أدخل النص المطلوب هنا. أضف نصًا.<br>هذا نص بسيط. أدخل النص المطلوب هنا.</p></div>
+    <div class="hero"><h1>الأسئلة<br>والنقاش</h1></div>
+    <div class="sq sq2"></div><div class="sq sq1"></div><div class="sq sq3"></div><div class="sq lines"></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 1</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

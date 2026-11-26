@@ -1,0 +1,76 @@
+{
+  "key": "sl-quarterly-management-review",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📊",
+  "name": "المراجعة الإدارية الربعية",
+  "nameEn": "Quarterly Management Review",
+  "description": "أربع عشرة شريحة: غلاف، جدول أعمال، ملخص، مؤشرات، نتائج مالية، أداء، مخاطر، إجراءات، أولويات، أسئلة وختام",
+  "descriptionEn": "14 slides: cover, agenda, summary, KPIs, financials, performance, risks, actions, focus, Q&A, thanks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي (رسم خطي)",
+      "titleEn": "Executive Summary (line chart)",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على الأعمال الربعية",
+      "titleEn": "Quarterly Business Overview",
+      "needsData": true
+    },
+    {
+      "title": "تقدّم الأهداف الاستراتيجية",
+      "titleEn": "Strategic Objectives Progress"
+    },
+    {
+      "title": "لوحة مؤشرات الأداء (رسوم)",
+      "titleEn": "KPI Dashboard (charts)",
+      "needsData": true
+    },
+    {
+      "title": "النتائج المالية (أعمدة مكدّسة)",
+      "titleEn": "Financial Results (stacked bars)",
+      "needsData": true
+    },
+    {
+      "title": "الأداء التشغيلي (رسوم ومقياس)",
+      "titleEn": "Operational Performance (charts & gauge)",
+      "needsData": true
+    },
+    {
+      "title": "أداء الإدارات",
+      "titleEn": "Department Performance",
+      "needsData": true
+    },
+    {
+      "title": "المخاطر والقضايا",
+      "titleEn": "Risk and Issues",
+      "needsData": true
+    },
+    {
+      "title": "الإجراءات الإدارية",
+      "titleEn": "Management Actions"
+    },
+    {
+      "title": "أولويات الربع القادم",
+      "titleEn": "Next Quarter Focus"
+    },
+    {
+      "title": "الأسئلة والأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "الشكر والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم (الخطية والأعمدة والمكدّسة ونسب المقياسين) في كتلة JSON بالمعرّف chart-data."
+}

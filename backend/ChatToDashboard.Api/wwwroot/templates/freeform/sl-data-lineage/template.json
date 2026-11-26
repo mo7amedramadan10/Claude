@@ -1,0 +1,17 @@
+{
+  "key": "sl-data-lineage",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🔗",
+  "name": "تسلسل البيانات",
+  "nameEn": "Data Lineage",
+  "description": "شريحة ختامية للأسئلة والنقاش بأربع خطوات لتسلسل البيانات وحوكمتها",
+  "descriptionEn": "A question & discussion closing slide with four data lineage and governance steps",
+  "sections": [
+    {
+      "title": "الأسئلة والنقاش",
+      "titleEn": "Question & Discussion"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ البنود الأربعة بمثلثاتها وفواصلها والكتلة الكحلية والمربعات الزخرفية ثابتة المواضع."
+}

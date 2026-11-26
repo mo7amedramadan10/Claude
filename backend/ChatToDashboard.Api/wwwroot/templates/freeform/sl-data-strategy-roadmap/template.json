@@ -1,0 +1,21 @@
+{
+  "key": "sl-data-strategy-roadmap",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🗺️",
+  "name": "خارطة طريق استراتيجية البيانات",
+  "nameEn": "Data Strategy Roadmap",
+  "description": "شريحتان (فاتحة وداكنة) لخارطة طريق بأربع سنوات وثلاثة مسارات: التخطيط والعمليات والمراجعة",
+  "descriptionEn": "Two slides (light and dark) of a 4-year roadmap across planning, process and review tracks",
+  "sections": [
+    {
+      "title": "خارطة الطريق (فاتحة)",
+      "titleEn": "Roadmap (Light)"
+    },
+    {
+      "title": "خارطة الطريق (داكنة)",
+      "titleEn": "Roadmap (Dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الشبكة أربعة أعمدة سنوات × ثلاثة صفوف، وكل بطاقة تتسع لخانتين نائبتين أو ثلاث."
+}

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خارطة طريق استراتيجية البيانات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «خارطة طريق استراتيجية البيانات»: عنوان أعلى، أربعة رؤوس أعمدة للسنوات بزوايا علوية مدوّرة، وثلاثة صفوف (التخطيط، العمليات، المراجعة) بتسمية عمودية في جهة البداية وبطاقات بيضاء فيها خانات نائبة بإطار رمادي. الشريحة الثانية النسخة الداكنة. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #262626; --ink-2: #404040; --accent: #6E86E0; --hd: #6E86E0; --lab: #D9D9D9; --lab-ink: #404040; --pill: #D9D9D9; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .rm .ttl { position: absolute; top: 40px; inset-inline-start: 65px; margin: 0; font-size: 41.5px; font-weight: 400; line-height: 56px; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .rm .ttl { font-weight: 500; }
+  .rm .hd { position: absolute; top: 113px; width: 267px; height: 50px; background: var(--hd); border-start-start-radius: 8px; border-start-end-radius: 8px; color: #fff; display: grid; place-items: center; }
+  .rm .hd h2 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1; }
+  .rm .lab { position: absolute; inset-inline-start: 65px; width: 49px; height: 161px; background: var(--lab); border-start-start-radius: 8px; border-end-start-radius: 8px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 23px; }
+  .rm .lab h3 { margin: 0; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 18px; font-weight: 700; letter-spacing: .6px; color: var(--lab-ink); line-height: 1; }
+  .rm .card { position: absolute; width: 267px; height: 161px; background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgb(0 0 0 / .16); padding: 16px 14px 0; display: flex; flex-direction: column; gap: 6px; }
+  .rm .card p { margin: 0; height: 40px; border: 1px solid var(--pill); border-radius: 8px; display: grid; place-items: center; font-size: 18px; line-height: 1; color: var(--ink-2); }
+  .rm .c1 { inset-inline-start: 121px; } .rm .c2 { inset-inline-start: 397px; } .rm .c3 { inset-inline-start: 673px; } .rm .c4 { inset-inline-start: 949px; }
+  .rm .r1 { top: 169px; } .rm .r2 { top: 339px; } .rm .r3 { top: 508px; }
+  /* النسخة الداكنة */
+  .rm.dk { --bg: #212A5C; --ink: #FFFFFF; --hd: #34438C; --lab: #34438C; --lab-ink: #FFFFFF; background: var(--bg); }
+  .rm.dk .card { box-shadow: none; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><div class="rm" style="position:absolute;inset:0">
+    <h1 class="ttl">قالب خارطة طريق استراتيجية البيانات</h1>
+    <div class="hd c1"><h2>السنة <bdi dir="ltr">1</bdi></h2></div>
+    <div class="hd c2"><h2>السنة <bdi dir="ltr">2</bdi></h2></div>
+    <div class="hd c3"><h2>السنة <bdi dir="ltr">3</bdi></h2></div>
+    <div class="hd c4"><h2>السنة <bdi dir="ltr">4</bdi></h2></div>
+    <div class="lab r1"><h3>التخطيط</h3></div>
+    <div class="card r1 c1"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r1 c2"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r1 c3"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r1 c4"><p>عنوان نائب</p></div>
+    <div class="lab r2"><h3>العمليات</h3></div>
+    <div class="card r2 c1"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r2 c2"><p>عنوان نائب</p></div>
+    <div class="card r2 c3"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r2 c4"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="lab r3"><h3>المراجعة</h3></div>
+    <div class="card r3 c1"><p>عنوان نائب</p></div>
+    <div class="card r3 c2"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r3 c3"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r3 c4"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+  </div></div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><div class="rm dk" style="position:absolute;inset:0">
+    <h1 class="ttl">قالب خارطة طريق استراتيجية البيانات</h1>
+    <div class="hd c1"><h2>السنة <bdi dir="ltr">1</bdi></h2></div>
+    <div class="hd c2"><h2>السنة <bdi dir="ltr">2</bdi></h2></div>
+    <div class="hd c3"><h2>السنة <bdi dir="ltr">3</bdi></h2></div>
+    <div class="hd c4"><h2>السنة <bdi dir="ltr">4</bdi></h2></div>
+    <div class="lab r1"><h3>التخطيط</h3></div>
+    <div class="card r1 c1"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r1 c2"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r1 c3"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r1 c4"><p>عنوان نائب</p></div>
+    <div class="lab r2"><h3>العمليات</h3></div>
+    <div class="card r2 c1"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r2 c2"><p>عنوان نائب</p></div>
+    <div class="card r2 c3"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r2 c4"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="lab r3"><h3>المراجعة</h3></div>
+    <div class="card r3 c1"><p>عنوان نائب</p></div>
+    <div class="card r3 c2"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r3 c3"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+    <div class="card r3 c4"><p>عنوان نائب</p><p>عنوان نائب</p></div>
+  </div></div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
