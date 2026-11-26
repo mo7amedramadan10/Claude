@@ -1,0 +1,23 @@
+{
+  "key": "sl-lightweight-store-performance-dashboard",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "🏪",
+  "name": "لوحة أداء المتجر الخفيفة",
+  "nameEn": "Lightweight Store Performance Dashboard",
+  "description": "لوحتان للبيع بالتجزئة بتصميم فاتح: الاستراتيجية والمبيعات والمخزون، ثم المبيعات حسب المنطقة والمتاجر ومعدل التحويل",
+  "descriptionEn": "Two light retail dashboards: strategy, sales and inventory, then sales by geography, key stores and conversion rate",
+  "sections": [
+    {
+      "title": "الاستراتيجية: المبيعات والمخزون",
+      "titleEn": "Strategy: Sales & Inventory",
+      "needsData": true
+    },
+    {
+      "title": "المبيعات حسب المنطقة والمتاجر ومعدل التحويل",
+      "titleEn": "Sales by Geo, Key Stores & Conversion",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط ومحرك الرسوم، وغيّر النصوص والأرقام فقط؛ قيم الرسوم وتسمياتها في كتل JSON بالمعرّفات chart-data إلى chart-data-10، والمؤشرات والجدول نصوص HTML."
+}

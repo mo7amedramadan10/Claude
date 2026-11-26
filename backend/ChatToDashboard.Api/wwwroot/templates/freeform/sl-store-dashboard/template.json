@@ -1,0 +1,23 @@
+{
+  "key": "sl-store-dashboard",
+  "kind": "slides",
+  "category": "sales",
+  "icon": "🛍️",
+  "name": "لوحة أداء المتجر",
+  "nameEn": "Store Performance Dashboard",
+  "description": "لوحة أداء متجر بنسختين فاتحة وداكنة: مؤشرات رئيسية، المبيعات عبر الزمن، إيرادات الفئات، وأداء المتاجر",
+  "descriptionEn": "Store dashboard in light and dark versions: KPIs, sales over time, category revenues and store performance",
+  "sections": [
+    {
+      "title": "لوحة أداء المتجر (فاتحة)",
+      "titleEn": "Store Performance Dashboard (Light)",
+      "needsData": true
+    },
+    {
+      "title": "لوحة أداء المتجر (داكنة)",
+      "titleEn": "Store Performance Dashboard (Dark)",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط ومحرك الرسوم، وغيّر النصوص والأرقام فقط؛ الشريحة الثانية نسخة داكنة من الأولى. قيم الرسم الخطي والحلقة وأشرطة الجدول في كتل JSON بالمعرّفات chart-data إلى chart-data-6، والمؤشرات وأسماء المتاجر وقيمها نصوص HTML."
+}

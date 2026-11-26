@@ -1,0 +1,33 @@
+{
+  "key": "sl-vision-strategy-scorecard",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🗺️",
+  "name": "بطاقة أداء الرؤية والاستراتيجية",
+  "nameEn": "Vision Strategy Scorecard",
+  "description": "خمس شرائح لبطاقة أداء بأربعة منظورات بأهدافها ومقاييسها: نظرة عامة ثم إبراز كل منظور",
+  "descriptionEn": "Five scorecard slides with goals and key metrics for four perspectives: overview, then each highlighted",
+  "sections": [
+    {
+      "title": "المنظورات الأربعة",
+      "titleEn": "All Four Perspectives"
+    },
+    {
+      "title": "المنظور المالي",
+      "titleEn": "Financial Perspective"
+    },
+    {
+      "title": "منظور العملاء",
+      "titleEn": "Customer Perspective"
+    },
+    {
+      "title": "المنظور التشغيلي",
+      "titleEn": "Operational Perspective"
+    },
+    {
+      "title": "منظور الابتكار",
+      "titleEn": "Innovation Perspective"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الدائرة الرباعية والحلقة رسم SVG، وعناوين المنظورات والأهداف والمقاييس نصوص HTML، والصنف on يحدد المنظور المُبرز في كل شريحة."
+}

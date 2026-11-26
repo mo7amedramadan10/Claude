@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>فئات مؤشرات الأداء</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «فئات مؤشرات الأداء»: أربع لوحات HTML بزاوية خارجية مدوّرة، وأجنحة وحلقة شفافة في SVG واحد (يُعكس للعربية)، ودائرة مركزية بتدرّج وظل؛ الصنف on على اللوحة يلوّنها وعلى الجناح يلوّنه، وما ليس on رمادي. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #252525; --accent: #0072C5; --bg: #FFFFFF; --q1: #0072C5; --q1d: #035591; --q2: #FFA800; --q2d: #BF7F03; --q3: #6D3483; --q3d: #4E2760; --q4: #AAAAAA; --q4d: #7F7F7F; --off: #F2F2F2; --offd: #D9D9D9; --offt: #7F7F7F; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 40px; font-weight: 400; line-height: 56px; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 500; }
+  /* الأجنحة والحلقة: SVG بإحداثيات الإطار، يُعكس للعربية لأن اللوحات تنعكس */
+  .diag { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .diag { transform: scaleX(-1); }
+  .diag .f { fill: var(--offd); } .diag .ring { fill: #fff; opacity: .7; }
+  .diag .f1.on { fill: var(--q1d); } .diag .f2.on { fill: var(--q2d); } .diag .f3.on { fill: var(--q3d); } .diag .f4.on { fill: var(--q4d); }
+  .diag.all .ring { opacity: .1; }
+  /* اللوحات: الزاوية الخارجية مدوّرة */
+  .pn { position: absolute; width: 396px; height: 228px; background: var(--off); color: var(--offt); }
+  .pn.p1 { top: 156px; inset-inline-start: 64px; border-start-start-radius: 46px; }
+  .pn.p2 { top: 156px; inset-inline-start: 820px; border-start-end-radius: 46px; }
+  .pn.p3 { top: 414px; inset-inline-start: 64px; border-end-start-radius: 46px; }
+  .pn.p4 { top: 414px; inset-inline-start: 820px; border-end-end-radius: 46px; }
+  .pn.on { color: #fff; } .pn.p1.on { background: var(--q1); } .pn.p2.on { background: var(--q2); } .pn.p3.on { background: var(--q3); } .pn.p4.on { background: var(--q4); }
+  .pn .ic { position: absolute; top: 26px; inset-inline-start: 42px; width: 62px; height: 62px; color: inherit; }
+  .pn:not(.on) .ic { color: #8C8C8C; }
+  .pn.p3 .ic, .pn.p4 .ic { top: 20px; }
+  .pn .ic svg { width: 100%; height: 100%; }
+  .pn h2 { position: absolute; top: 95px; inset-inline-start: 41px; margin: 0; font-size: 22px; font-weight: 700; line-height: 30px; }
+  .pn p { position: absolute; top: 127px; inset-inline-start: 41px; width: 330px; margin: 0; font-size: 17px; line-height: 23px; }
+  .pn.p3 h2, .pn.p4 h2 { top: 94px; } .pn.p3 p, .pn.p4 p { top: 126px; }
+  html[lang="ar"] .pn p { font-size: 18px; line-height: 25px; }
+  /* الدائرة المركزية */
+  .hub { position: absolute; top: 272px; inset-inline-start: 512px; width: 257px; height: 257px; border-radius: 50%; background: linear-gradient(165deg, #DCDCDC 0%, #F1F1F1 45%, #FBFBFB 100%); box-shadow: 0 16px 16px -4px rgb(0 0 0 / .22); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #262626; }
+  .hub b { font-size: 46px; font-weight: 700; line-height: 54px; margin-top: 6px; }
+  .hub span { font-size: 24px; font-weight: 700; line-height: 30px; }
+  html[lang="ar"] .hub b { font-size: 44px; line-height: 56px; } html[lang="ar"] .hub span { font-size: 22px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب فئات مؤشرات الأداء</h1>
+    <svg class="diag all" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="f f1 on" points="459,156 628,384 459,384"/><polygon class="f f2 on" points="821,156 652,384 821,384"/><polygon class="f f3 on" points="459,642 628,414 459,414"/><polygon class="f f4 on" points="821,642 652,414 821,414"/><circle class="ring" cx="640" cy="400" r="164"/><rect x="440" y="384" width="400" height="30" fill="#fff"/></svg>
+    <div class="pn p1 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 24 5l19 10z"/><path d="M5 15h38v3H5zM7 37h34v3H7zM4 40h40v3H4z"/><path d="M10 18v19M14 18v19M20 18v19M24 18v19M28 18v19M34 18v19M38 18v19"/><circle cx="24" cy="11.5" r="1.6"/></svg></span><h2>استراتيجية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p2 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="24" cy="21" r="4.5"/><path d="M15.5 37c0-5 3.8-8.2 8.5-8.2s8.5 3.2 8.5 8.2"/><circle cx="12" cy="14" r="4"/><path d="M3.5 29c0-4.6 3.6-7.6 8.5-7.6 2.2 0 4 .6 5.5 1.6"/><circle cx="36" cy="14" r="4"/><path d="M44.5 29c0-4.6-3.6-7.6-8.5-7.6-2.2 0-4 .6-5.5 1.6"/></svg></span><h2>تشغيلية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p3 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M3 4 15 8v36L3 40z"/><path d="M15 8h5v8M20 32v8h-5"/><path d="M46 24H27M33 17.5 26.5 24l6.5 6.5"/></svg></span><h2>وظيفية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p4 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 32c0-4.5-5-7.5-5-14a11.5 11.5 0 0 1 23 0c0 6.5-5 9.5-5 14z"/><path d="M18 35.5h12M19 39h10M21 42.5h6"/><path d="M24 1.5v4M7 8l3 3M41 8l-3 3M2 22h4M42 22h4M7 36l3-3M41 36l-3-3"/></svg></span><h2>قيادية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="hub"><b>فئات</b><span>مؤشرات الأداء</span></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب فئات مؤشرات الأداء</h1>
+    <svg class="diag" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="f f1 on" points="459,156 628,384 459,384"/><polygon class="f f2" points="821,156 652,384 821,384"/><polygon class="f f3" points="459,642 628,414 459,414"/><polygon class="f f4" points="821,642 652,414 821,414"/><circle class="ring" cx="640" cy="400" r="164"/><rect x="440" y="384" width="400" height="30" fill="#fff"/></svg>
+    <div class="pn p1 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 24 5l19 10z"/><path d="M5 15h38v3H5zM7 37h34v3H7zM4 40h40v3H4z"/><path d="M10 18v19M14 18v19M20 18v19M24 18v19M28 18v19M34 18v19M38 18v19"/><circle cx="24" cy="11.5" r="1.6"/></svg></span><h2>استراتيجية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p2"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="24" cy="21" r="4.5"/><path d="M15.5 37c0-5 3.8-8.2 8.5-8.2s8.5 3.2 8.5 8.2"/><circle cx="12" cy="14" r="4"/><path d="M3.5 29c0-4.6 3.6-7.6 8.5-7.6 2.2 0 4 .6 5.5 1.6"/><circle cx="36" cy="14" r="4"/><path d="M44.5 29c0-4.6-3.6-7.6-8.5-7.6-2.2 0-4 .6-5.5 1.6"/></svg></span><h2>تشغيلية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p3"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M3 4 15 8v36L3 40z"/><path d="M15 8h5v8M20 32v8h-5"/><path d="M46 24H27M33 17.5 26.5 24l6.5 6.5"/></svg></span><h2>وظيفية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p4"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 32c0-4.5-5-7.5-5-14a11.5 11.5 0 0 1 23 0c0 6.5-5 9.5-5 14z"/><path d="M18 35.5h12M19 39h10M21 42.5h6"/><path d="M24 1.5v4M7 8l3 3M41 8l-3 3M2 22h4M42 22h4M7 36l3-3M41 36l-3-3"/></svg></span><h2>قيادية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="hub"><b>فئات</b><span>مؤشرات الأداء</span></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">قالب فئات مؤشرات الأداء</h1>
+    <svg class="diag" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="f f1" points="459,156 628,384 459,384"/><polygon class="f f2 on" points="821,156 652,384 821,384"/><polygon class="f f3" points="459,642 628,414 459,414"/><polygon class="f f4" points="821,642 652,414 821,414"/><circle class="ring" cx="640" cy="400" r="164"/><rect x="440" y="384" width="400" height="30" fill="#fff"/></svg>
+    <div class="pn p1"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 24 5l19 10z"/><path d="M5 15h38v3H5zM7 37h34v3H7zM4 40h40v3H4z"/><path d="M10 18v19M14 18v19M20 18v19M24 18v19M28 18v19M34 18v19M38 18v19"/><circle cx="24" cy="11.5" r="1.6"/></svg></span><h2>استراتيجية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p2 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="24" cy="21" r="4.5"/><path d="M15.5 37c0-5 3.8-8.2 8.5-8.2s8.5 3.2 8.5 8.2"/><circle cx="12" cy="14" r="4"/><path d="M3.5 29c0-4.6 3.6-7.6 8.5-7.6 2.2 0 4 .6 5.5 1.6"/><circle cx="36" cy="14" r="4"/><path d="M44.5 29c0-4.6-3.6-7.6-8.5-7.6-2.2 0-4 .6-5.5 1.6"/></svg></span><h2>تشغيلية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p3"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M3 4 15 8v36L3 40z"/><path d="M15 8h5v8M20 32v8h-5"/><path d="M46 24H27M33 17.5 26.5 24l6.5 6.5"/></svg></span><h2>وظيفية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p4"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 32c0-4.5-5-7.5-5-14a11.5 11.5 0 0 1 23 0c0 6.5-5 9.5-5 14z"/><path d="M18 35.5h12M19 39h10M21 42.5h6"/><path d="M24 1.5v4M7 8l3 3M41 8l-3 3M2 22h4M42 22h4M7 36l3-3M41 36l-3-3"/></svg></span><h2>قيادية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="hub"><b>فئات</b><span>مؤشرات الأداء</span></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">قالب فئات مؤشرات الأداء</h1>
+    <svg class="diag" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="f f1" points="459,156 628,384 459,384"/><polygon class="f f2" points="821,156 652,384 821,384"/><polygon class="f f3 on" points="459,642 628,414 459,414"/><polygon class="f f4" points="821,642 652,414 821,414"/><circle class="ring" cx="640" cy="400" r="164"/><rect x="440" y="384" width="400" height="30" fill="#fff"/></svg>
+    <div class="pn p1"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 24 5l19 10z"/><path d="M5 15h38v3H5zM7 37h34v3H7zM4 40h40v3H4z"/><path d="M10 18v19M14 18v19M20 18v19M24 18v19M28 18v19M34 18v19M38 18v19"/><circle cx="24" cy="11.5" r="1.6"/></svg></span><h2>استراتيجية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p2"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="24" cy="21" r="4.5"/><path d="M15.5 37c0-5 3.8-8.2 8.5-8.2s8.5 3.2 8.5 8.2"/><circle cx="12" cy="14" r="4"/><path d="M3.5 29c0-4.6 3.6-7.6 8.5-7.6 2.2 0 4 .6 5.5 1.6"/><circle cx="36" cy="14" r="4"/><path d="M44.5 29c0-4.6-3.6-7.6-8.5-7.6-2.2 0-4 .6-5.5 1.6"/></svg></span><h2>تشغيلية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p3 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M3 4 15 8v36L3 40z"/><path d="M15 8h5v8M20 32v8h-5"/><path d="M46 24H27M33 17.5 26.5 24l6.5 6.5"/></svg></span><h2>وظيفية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p4"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 32c0-4.5-5-7.5-5-14a11.5 11.5 0 0 1 23 0c0 6.5-5 9.5-5 14z"/><path d="M18 35.5h12M19 39h10M21 42.5h6"/><path d="M24 1.5v4M7 8l3 3M41 8l-3 3M2 22h4M42 22h4M7 36l3-3M41 36l-3-3"/></svg></span><h2>قيادية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="hub"><b>فئات</b><span>مؤشرات الأداء</span></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">قالب فئات مؤشرات الأداء</h1>
+    <svg class="diag" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="f f1" points="459,156 628,384 459,384"/><polygon class="f f2" points="821,156 652,384 821,384"/><polygon class="f f3" points="459,642 628,414 459,414"/><polygon class="f f4 on" points="821,642 652,414 821,414"/><circle class="ring" cx="640" cy="400" r="164"/><rect x="440" y="384" width="400" height="30" fill="#fff"/></svg>
+    <div class="pn p1"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 24 5l19 10z"/><path d="M5 15h38v3H5zM7 37h34v3H7zM4 40h40v3H4z"/><path d="M10 18v19M14 18v19M20 18v19M24 18v19M28 18v19M34 18v19M38 18v19"/><circle cx="24" cy="11.5" r="1.6"/></svg></span><h2>استراتيجية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p2"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="24" cy="21" r="4.5"/><path d="M15.5 37c0-5 3.8-8.2 8.5-8.2s8.5 3.2 8.5 8.2"/><circle cx="12" cy="14" r="4"/><path d="M3.5 29c0-4.6 3.6-7.6 8.5-7.6 2.2 0 4 .6 5.5 1.6"/><circle cx="36" cy="14" r="4"/><path d="M44.5 29c0-4.6-3.6-7.6-8.5-7.6-2.2 0-4 .6-5.5 1.6"/></svg></span><h2>تشغيلية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p3"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M3 4 15 8v36L3 40z"/><path d="M15 8h5v8M20 32v8h-5"/><path d="M46 24H27M33 17.5 26.5 24l6.5 6.5"/></svg></span><h2>وظيفية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="pn p4 on"><span class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 32c0-4.5-5-7.5-5-14a11.5 11.5 0 0 1 23 0c0 6.5-5 9.5-5 14z"/><path d="M18 35.5h12M19 39h10M21 42.5h6"/><path d="M24 1.5v4M7 8l3 3M41 8l-3 3M2 22h4M42 22h4M7 36l3-3M41 36l-3-3"/></svg></span><h2>قيادية</h2><p>أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="hub"><b>فئات</b><span>مؤشرات الأداء</span></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 5</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

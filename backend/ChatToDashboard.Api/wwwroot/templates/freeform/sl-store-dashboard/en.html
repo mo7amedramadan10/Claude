@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Store Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «لوحة أداء المتجر»: الصنف s1 للنسخة الفاتحة وs2 للداكنة (متغيّرات الألوان على الإطار)؛ الرسم الخطي والحلقة وأشرطة الجدول تُرسم من كتل JSON بالمعرّفات chart-data إلى chart-data-6 (الفئة الأولى في جهة البداية). */
+  :root { --font: 'Open Sans', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #262626; --accent: #3561C0; --bg: #FFFFFF; --navy: #192F60; --blue: #3561C0; --blue-2: #8AADE7; --blue-3: #D3E2F9; --side-1: #1A428D; --side-2: #12316A; --green: #4EA72E; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* متغيّرات السمة: فاتحة (s1) وداكنة (s2) */
+  .s1 { --pg: #fff; --kc: #F2F2F2; --kic: #3561C0; --klab: #1F1F1F; --kval: #192F60; --kvs: #595959; --cd: #fff; --cdb: #D9D9D9; --h: #192F60; --tx: #262626; --ax: #595959; --ln: #D9D9D9; --ttl: #192F60; --sub: #404040; }
+  .s2 { --pg: linear-gradient(180deg, #1A3061 0%, #22407F 45%, #0F254E 100%); --kc: #3660C2; --kic: #8AADE7; --klab: #fff; --kval: #fff; --kvs: #fff; --cd: #284A93; --cdb: #2E5099; --h: #fff; --tx: #fff; --ax: #fff; --ln: #4466B5; --ttl: #fff; --sub: #fff; }
+  .frame { background: var(--pg); }
+  /* الشريط الجانبي */
+  .side { position: absolute; top: 17px; inset-inline-start: 17px; width: 131px; height: 683px; border-radius: 16px; background: linear-gradient(180deg, var(--side-1), var(--side-2)); }
+  .nv { position: absolute; inset-inline-start: 17px; width: 131px; margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #fff; font-size: 16px; line-height: 20px; }
+  .nv svg { width: 38px; height: 38px; }
+  .nv.on::before { content: ''; position: absolute; z-index: -1; top: -23px; inset-inline-start: 9px; width: 113px; height: 107px; border-radius: 10px; background: linear-gradient(180deg, #3962C0, #2A4F9E); }
+  .nv.on { z-index: 1; }
+  /* العنوان */
+  .ttl { position: absolute; top: 26px; inset-inline-start: 164px; margin: 0; font-size: 31px; font-weight: 800; line-height: 42px; color: var(--ttl); white-space: nowrap; }
+  .sub { position: absolute; top: 69px; inset-inline-start: 165px; margin: 0; font-size: 20px; line-height: 28px; color: var(--sub); white-space: nowrap; }
+  html[lang="ar"] .ttl { font-size: 32px; }
+  /* بطاقات المؤشرات */
+  .kc { position: absolute; top: 103px; width: 213px; height: 107px; border-radius: 8px; background: var(--kc); }
+  .kc .ic { position: absolute; top: 22px; inset-inline-start: 11px; width: 50px; height: 50px; border-radius: 50%; background: var(--kic); color: #fff; display: grid; place-items: center; }
+  .kc .ic svg { width: 26px; height: 26px; }
+  .kc .hd { position: absolute; top: 18px; inset-inline-start: 74px; width: 134px; }
+  .kc.two .hd { top: 14px; }
+  .kc h3 { margin: 0; font-size: 14px; font-weight: 700; line-height: 17px; color: var(--klab); }
+  .kc .v { display: block; font-size: 27px; font-weight: 700; line-height: 33px; color: var(--kval); }
+  .kc .dl { position: absolute; top: 80px; inset-inline-start: 10px; margin: 0; display: flex; align-items: center; gap: 4px; font-size: 13px; line-height: 18px; color: var(--kvs); white-space: nowrap; }
+  .up { color: var(--green); display: inline-flex; align-items: center; }
+  .up svg { width: 16px; height: 16px; }
+  .dl b, .pct b { color: var(--green); font-weight: 700; }
+  html[lang="ar"] .kc h3 { font-size: 14px; } html[lang="ar"] .kc .dl { font-size: 12.5px; }
+  /* البطاقات الكبيرة */
+  .cd { position: absolute; color: var(--tx); background: var(--cd); border: 1px solid var(--cdb); border-radius: 10px; }
+  .cd h2 { position: absolute; top: 10px; inset-inline-start: 14px; margin: 0; font-size: 19px; font-weight: 700; line-height: 26px; color: var(--h); white-space: nowrap; }
+  .ch { position: absolute; top: -1px; inset-inline-start: -1px; overflow: visible; }
+  .ch text { fill: var(--ax); font-family: var(--font); }
+  .ch .lg { fill: var(--tx); }
+  .ch .bd { fill: var(--tx); font-weight: 700; }
+  /* جدول المتاجر */
+  .th { position: absolute; top: 42px; height: 23px; margin: 0; border-top: 1px solid var(--ln); border-bottom: 1px solid var(--ln); font-size: 14px; font-weight: 700; line-height: 21px; color: var(--tx); padding-inline-start: 0; }
+  .rw { position: absolute; margin: 0; font-size: 14px; line-height: 18px; color: var(--tx); white-space: nowrap; }
+  .pct { display: flex; align-items: center; gap: 4px; font-size: 14px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="side"></div>
+    <p class="nv" style="top:46px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 11.5 12 3l9.5 8.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></p>
+    <p class="nv on" style="top:136px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><path d="M2.5 17a9.5 9.5 0 0 1 19 0"/><path d="M12 7.5v1.6M7.3 8.8l.8 1.4M16.7 8.8l-.8 1.4M4.3 12.2l1.4.8M19.7 12.2l-1.4.8M3.2 16.5h1.6M19.2 16.5h1.6"/><path d="M12.6 16.2 8.5 11.3"/><circle cx="12.8" cy="16.6" r="1"/></svg><span>Overview</span></p>
+    <p class="nv" style="top:251px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M5.5 20.5v-5h3v5M10 20.5v-8h3v8M14.5 20.5V8h3v12.5"/><path d="m5.5 12 4-4 3 2 6-6.5M16 3.5h2.5V6"/></svg><span>Sales</span></p>
+    <p class="nv" style="top:369px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h2.2l1.2 3.5"/><path d="M5.9 6.5h15l-1.4 8.5H7.3z"/><path d="M8.5 6.5 9.6 15M12 6.5V15M15.5 6.5 14.6 15M18.5 6.5 17.4 15M6.4 9.3h14.1M6.9 12.2h13.1"/><path d="M7.3 15 6.6 18h13"/><circle cx="8.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg><span>Products</span></p>
+    <p class="nv" style="top:486px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><circle cx="12" cy="11" r="2.4"/><path d="M7.5 19.5c0-2.6 2-4.4 4.5-4.4s4.5 1.8 4.5 4.4"/><circle cx="6" cy="7.5" r="2.1"/><path d="M1.8 15c0-2.3 1.8-3.9 4.2-3.9 1.1 0 2 .3 2.7.8"/><circle cx="18" cy="7.5" r="2.1"/><path d="M22.2 15c0-2.3-1.8-3.9-4.2-3.9-1.1 0-2 .3-2.7.8"/></svg><span>Customers</span></p>
+    <p class="nv" style="top:603px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M14.6 2h1.8l.3 1.4 1 .5 1.3-.6 1.2 1.3-.6 1.2.5 1.1 1.4.3v1.8l-1.4.3-.5 1 .6 1.3-1.2 1.2-1.3-.6-1 .5-.3 1.4h-1.8l-.3-1.4-1-.5-1.3.6-1.2-1.2.6-1.3-.5-1-1.4-.3V7.3l1.4-.3.5-1.1-.6-1.2 1.2-1.3 1.3.6 1-.5z"/><circle cx="15.5" cy="8.2" r="2.3"/><path d="M6.6 11.2h1.8l.3 1.4 1 .5 1.3-.6 1.2 1.3-.6 1.2.5 1.1 1.4.3v1.8l-1.4.3-.5 1 .6 1.3-1.2 1.2-1.3-.6-1 .5-.3 1.4H6.6l-.3-1.4-1-.5-1.3.6-1.2-1.2.6-1.3-.5-1-1.4-.3v-1.8l1.4-.3.5-1.1-.6-1.2 1.2-1.3 1.3.6 1-.5z"/><circle cx="7.5" cy="17.4" r="2.3"/></svg><span>Settings</span></p>
+    <h1 class="ttl">STORE PERFORMANCE DASHBOARD</h1><p class="sub">Overview of key performance metrics</p>
+    <div class="kc" style="inset-inline-start:165px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M16 7.5c-.6-1.6-2.1-2.5-4-2.5-2.4 0-4 1.3-4 3.2 0 4.5 8.2 2.4 8.2 7 0 2-1.8 3.3-4.3 3.3-2 0-3.7-1-4.3-2.8M12 2.5V5M12 18.5V21"/></svg></span><div class="hd"><h3>TOTAL SALES</h3><b class="v"><bdi dir="ltr">$125,000</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">12.4%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc" style="inset-inline-start:384px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 7.5h13l1 14h-15z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg></span><div class="hd"><h3>TOTAL ODERS</h3><b class="v"><bdi dir="ltr">1,243</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">8.7%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc" style="inset-inline-start:605px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5z"/></svg></span><div class="hd"><h3>CUSTOMERS</h3><b class="v"><bdi dir="ltr">982</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">10.1%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc two" style="inset-inline-start:826px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h2.6l2 10.5h11.5L20.5 7H5.8"/><path d="M9.5 7v7.5M13 7v7.5M16.5 7v7.5M6.4 10.7h13.2"/><circle cx="9" cy="18.5" r="1.4" fill="currentColor"/><circle cx="17" cy="18.5" r="1.4" fill="currentColor"/></svg></span><div class="hd"><h3>AVERAGE ORDERS VALUE</h3><b class="v"><bdi dir="ltr">$101.02</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">10.1%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc" style="inset-inline-start:1047px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.5 5h6.5l3.5 3.5v6.5l-8 6.5-8.5-8.5zM16.6 7.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z"/><path d="M15 6.5 11 2" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></span><div class="hd"><h3>GROSS MARGIN</h3><b class="v"><bdi dir="ltr">38.6%</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">2.3%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="cd" style="top:221px;inset-inline-start:164px;width:610px;height:251px"><h2>SALES OVER TIME</h2><svg class="ch" data-chart="chart-data" width="610" height="251" viewBox="0 0 610 251" aria-hidden="true"></svg></div>
+    <div class="cd" style="top:221px;inset-inline-start:789px;width:473px;height:251px"><h2>KEY STORE REVENUES</h2><svg class="ch" data-chart="chart-data-2" width="473" height="251" viewBox="0 0 473 251" aria-hidden="true"></svg></div>
+    <div class="cd" style="top:482px;inset-inline-start:164px;width:1098px;height:221px"><h2>SALES OVER TIME</h2><p class="th" style="inset-inline-start:14px;width:245px">STORE</p><p class="th" style="inset-inline-start:271px;width:555px">TOTAL SALES</p><p class="th" style="inset-inline-start:837px;width:245px">VS PREVIOUS PERIOD</p><svg class="ch" data-chart="chart-data-3" width="1098" height="221" viewBox="0 0 1098 221" aria-hidden="true"></svg>
+      <p class="rw" style="top:79px;inset-inline-start:14px">Downtown Store</p><p class="rw" style="top:79px;inset-inline-start:271px"><bdi dir="ltr">$28,650</bdi></p><p class="rw pct" style="top:79px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">15.2%</bdi></b></p>
+      <p class="rw" style="top:106px;inset-inline-start:14px">Westside Store</p><p class="rw" style="top:106px;inset-inline-start:271px"><bdi dir="ltr">$22,340</bdi></p><p class="rw pct" style="top:106px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">11.3%</bdi></b></p>
+      <p class="rw" style="top:132px;inset-inline-start:14px">Uptown Store</p><p class="rw" style="top:132px;inset-inline-start:271px"><bdi dir="ltr">$19,870</bdi></p><p class="rw pct" style="top:132px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">8.6%</bdi></b></p>
+      <p class="rw" style="top:159px;inset-inline-start:14px">Lakeside Store</p><p class="rw" style="top:159px;inset-inline-start:271px"><bdi dir="ltr">$16,540</bdi></p><p class="rw pct" style="top:159px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">6.4%</bdi></b></p>
+      <p class="rw" style="top:185px;inset-inline-start:14px">Airport Store</p><p class="rw" style="top:185px;inset-inline-start:271px"><bdi dir="ltr">$13,980</bdi></p><p class="rw pct" style="top:185px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">3.1%</bdi></b></p>
+    </div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="side"></div>
+    <p class="nv" style="top:46px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 11.5 12 3l9.5 8.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg></p>
+    <p class="nv on" style="top:136px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><path d="M2.5 17a9.5 9.5 0 0 1 19 0"/><path d="M12 7.5v1.6M7.3 8.8l.8 1.4M16.7 8.8l-.8 1.4M4.3 12.2l1.4.8M19.7 12.2l-1.4.8M3.2 16.5h1.6M19.2 16.5h1.6"/><path d="M12.6 16.2 8.5 11.3"/><circle cx="12.8" cy="16.6" r="1"/></svg><span>Overview</span></p>
+    <p class="nv" style="top:251px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M5.5 20.5v-5h3v5M10 20.5v-8h3v8M14.5 20.5V8h3v12.5"/><path d="m5.5 12 4-4 3 2 6-6.5M16 3.5h2.5V6"/></svg><span>Sales</span></p>
+    <p class="nv" style="top:369px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h2.2l1.2 3.5"/><path d="M5.9 6.5h15l-1.4 8.5H7.3z"/><path d="M8.5 6.5 9.6 15M12 6.5V15M15.5 6.5 14.6 15M18.5 6.5 17.4 15M6.4 9.3h14.1M6.9 12.2h13.1"/><path d="M7.3 15 6.6 18h13"/><circle cx="8.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg><span>Products</span></p>
+    <p class="nv" style="top:486px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><circle cx="12" cy="11" r="2.4"/><path d="M7.5 19.5c0-2.6 2-4.4 4.5-4.4s4.5 1.8 4.5 4.4"/><circle cx="6" cy="7.5" r="2.1"/><path d="M1.8 15c0-2.3 1.8-3.9 4.2-3.9 1.1 0 2 .3 2.7.8"/><circle cx="18" cy="7.5" r="2.1"/><path d="M22.2 15c0-2.3-1.8-3.9-4.2-3.9-1.1 0-2 .3-2.7.8"/></svg><span>Customers</span></p>
+    <p class="nv" style="top:603px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" aria-hidden="true"><path d="M14.6 2h1.8l.3 1.4 1 .5 1.3-.6 1.2 1.3-.6 1.2.5 1.1 1.4.3v1.8l-1.4.3-.5 1 .6 1.3-1.2 1.2-1.3-.6-1 .5-.3 1.4h-1.8l-.3-1.4-1-.5-1.3.6-1.2-1.2.6-1.3-.5-1-1.4-.3V7.3l1.4-.3.5-1.1-.6-1.2 1.2-1.3 1.3.6 1-.5z"/><circle cx="15.5" cy="8.2" r="2.3"/><path d="M6.6 11.2h1.8l.3 1.4 1 .5 1.3-.6 1.2 1.3-.6 1.2.5 1.1 1.4.3v1.8l-1.4.3-.5 1 .6 1.3-1.2 1.2-1.3-.6-1 .5-.3 1.4H6.6l-.3-1.4-1-.5-1.3.6-1.2-1.2.6-1.3-.5-1-1.4-.3v-1.8l1.4-.3.5-1.1-.6-1.2 1.2-1.3 1.3.6 1-.5z"/><circle cx="7.5" cy="17.4" r="2.3"/></svg><span>Settings</span></p>
+    <h1 class="ttl">STORE PERFORMANCE DASHBOARD</h1><p class="sub">Overview of key performance metrics</p>
+    <div class="kc" style="inset-inline-start:165px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M16 7.5c-.6-1.6-2.1-2.5-4-2.5-2.4 0-4 1.3-4 3.2 0 4.5 8.2 2.4 8.2 7 0 2-1.8 3.3-4.3 3.3-2 0-3.7-1-4.3-2.8M12 2.5V5M12 18.5V21"/></svg></span><div class="hd"><h3>TOTAL SALES</h3><b class="v"><bdi dir="ltr">$125,000</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">12.4%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc" style="inset-inline-start:384px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 7.5h13l1 14h-15z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg></span><div class="hd"><h3>TOTAL ODERS</h3><b class="v"><bdi dir="ltr">1,243</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">8.7%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc" style="inset-inline-start:605px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5z"/></svg></span><div class="hd"><h3>CUSTOMERS</h3><b class="v"><bdi dir="ltr">982</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">10.1%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc two" style="inset-inline-start:826px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h2.6l2 10.5h11.5L20.5 7H5.8"/><path d="M9.5 7v7.5M13 7v7.5M16.5 7v7.5M6.4 10.7h13.2"/><circle cx="9" cy="18.5" r="1.4" fill="currentColor"/><circle cx="17" cy="18.5" r="1.4" fill="currentColor"/></svg></span><div class="hd"><h3>AVERAGE ORDERS VALUE</h3><b class="v"><bdi dir="ltr">$101.02</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">10.1%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="kc" style="inset-inline-start:1047px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.5 5h6.5l3.5 3.5v6.5l-8 6.5-8.5-8.5zM16.6 7.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z"/><path d="M15 6.5 11 2" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></span><div class="hd"><h3>GROSS MARGIN</h3><b class="v"><bdi dir="ltr">38.6%</bdi></b></div><p class="dl"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">2.3%</bdi></b> vs Apr -1 Apr 30</p></div>
+    <div class="cd" style="top:221px;inset-inline-start:164px;width:610px;height:251px"><h2>SALES OVER TIME</h2><svg class="ch" data-chart="chart-data-4" width="610" height="251" viewBox="0 0 610 251" aria-hidden="true"></svg></div>
+    <div class="cd" style="top:221px;inset-inline-start:789px;width:473px;height:251px"><h2>KEY STORE REVENUES</h2><svg class="ch" data-chart="chart-data-5" width="473" height="251" viewBox="0 0 473 251" aria-hidden="true"></svg></div>
+    <div class="cd" style="top:482px;inset-inline-start:164px;width:1098px;height:221px"><h2>SALES OVER TIME</h2><p class="th" style="inset-inline-start:14px;width:245px">STORE</p><p class="th" style="inset-inline-start:271px;width:555px">TOTAL SALES</p><p class="th" style="inset-inline-start:837px;width:245px">VS PREVIOUS PERIOD</p><svg class="ch" data-chart="chart-data-6" width="1098" height="221" viewBox="0 0 1098 221" aria-hidden="true"></svg>
+      <p class="rw" style="top:79px;inset-inline-start:14px">Downtown Store</p><p class="rw" style="top:79px;inset-inline-start:271px"><bdi dir="ltr">$28,650</bdi></p><p class="rw pct" style="top:79px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">15.2%</bdi></b></p>
+      <p class="rw" style="top:106px;inset-inline-start:14px">Westside Store</p><p class="rw" style="top:106px;inset-inline-start:271px"><bdi dir="ltr">$22,340</bdi></p><p class="rw pct" style="top:106px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">11.3%</bdi></b></p>
+      <p class="rw" style="top:132px;inset-inline-start:14px">Uptown Store</p><p class="rw" style="top:132px;inset-inline-start:271px"><bdi dir="ltr">$19,870</bdi></p><p class="rw pct" style="top:132px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">8.6%</bdi></b></p>
+      <p class="rw" style="top:159px;inset-inline-start:14px">Lakeside Store</p><p class="rw" style="top:159px;inset-inline-start:271px"><bdi dir="ltr">$16,540</bdi></p><p class="rw pct" style="top:159px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">6.4%</bdi></b></p>
+      <p class="rw" style="top:185px;inset-inline-start:14px">Airport Store</p><p class="rw" style="top:185px;inset-inline-start:271px"><bdi dir="ltr">$13,980</bdi></p><p class="rw pct" style="top:185px;inset-inline-start:837px"><span class="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V4M5.5 10.5 12 4l6.5 6.5"/></svg></span><b><bdi dir="ltr">3.1%</bdi></b></p>
+    </div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"categories": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], "max": 15, "ticks": [0, 5, 10, 15], "series": [{"name": "Series 1", "color": "#8AADE7", "dashed": true, "values": [4.3, 2.5, 3.5, 4.1, 11.1, 7.0, 8.0, 8.9, 9.9, 12.1, 13.0, 11.0]}, {"name": "Series 2", "color": "#3D62BA", "values": [6.7, 6.9, 5.3, 7.5, 13.1, 8.0, 11.2, 10.6, 11.8, 13.9, 13.4, 12.9]}]}</script>
+<script type="application/json" id="chart-data-2">{"categories": ["Apparel", "Footwear", "Accessories", "Home & Living", "Others"], "values": [43820, 31360, 25070, 15520, 9660], "colors": ["#123168", "#3561C0", "#8AADE7", "#D3E2F9", "#D6DAE3"], "prefix": "$", "totalLabel": "Total"}</script>
+<script type="application/json" id="chart-data-3">{"max": 100, "values": [80, 60, 50, 40, 30], "color": "#8AADE7", "track": "#D9D9D9"}</script>
+<script type="application/json" id="chart-data-4">{"categories": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], "max": 15, "ticks": [0, 5, 10, 15], "series": [{"name": "Series 1", "color": "#8AADE7", "dashed": true, "values": [4.3, 2.5, 3.5, 4.1, 11.1, 7.0, 8.0, 8.9, 9.9, 12.1, 13.0, 11.0]}, {"name": "Series 2", "color": "#3D62BA", "values": [6.7, 6.9, 5.3, 7.5, 13.1, 8.0, 11.2, 10.6, 11.8, 13.9, 13.4, 12.9]}]}</script>
+<script type="application/json" id="chart-data-5">{"categories": ["Apparel", "Footwear", "Accessories", "Home & Living", "Others"], "values": [43820, 31360, 25070, 15520, 9660], "colors": ["#123168", "#3561C0", "#8AADE7", "#D3E2F9", "#D6DAE3"], "prefix": "$", "totalLabel": "Total"}</script>
+<script type="application/json" id="chart-data-6">{"max": 100, "values": [80, 60, 50, 40, 30], "color": "#8AADE7", "track": "#D9D9D9"}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- محرك الرسوم: كل رسم يُقرأ من كتلة JSON بمعرّفه ويُرسم بإحداثيات بطاقته؛ X() يعكس الإحداثيات للعربية -----
+  var NS = 'http://www.w3.org/2000/svg';
+  function J(id) { return JSON.parse(document.getElementById(id).textContent); }
+  function E(tag, a, p) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  function fmt(v) { return Number(v).toLocaleString('en-US'); }
+  function host(id) {
+    var s = document.querySelector('svg[data-chart="' + id + '"]'); while (s.firstChild) s.removeChild(s.firstChild);
+    var W = +s.getAttribute('width');
+    return { s: s, X: function (x) { return RTL ? W - x : x; }, R: function (x, w) { return RTL ? W - x - w : x; },
+      T: function (x, y, str, o) { o = o || {}; var an = o.anchor || 'middle'; if (o.num && RTL && an !== 'middle') an = an === 'start' ? 'end' : 'start'; // الأرقام باتجاه LTR حتى لا ينقلب ترتيبها
+        var t = E('text', { x: RTL ? W - x : x, y: y, 'font-size': o.size || 13, 'text-anchor': an, 'dominant-baseline': 'central' }, s); if (o.num) t.setAttribute('direction', 'ltr');
+        if (o.cls) t.setAttribute('class', o.cls); if (o.fill) t.setAttribute('style', 'fill:' + o.fill); t.textContent = str; return t; } };
+  }
+  function smooth(pts) {
+    var d = 'M' + pts[0][0] + ',' + pts[0][1];
+    for (var i = 0; i < pts.length - 1; i++) { var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      d += ' C' + (p1[0] + (p2[0] - p0[0]) / 6) + ',' + (p1[1] + (p2[1] - p0[1]) / 6) + ' ' + (p2[0] - (p3[0] - p1[0]) / 6) + ',' + (p2[1] - (p3[1] - p1[1]) / 6) + ' ' + p2[0] + ',' + p2[1]; }
+    return d;
+  }
+  // 1) رسم خطي بسلسلتين (المتقطعة dashed)
+  function lineChart(id) { var d = J(id), h = host(id), base = 205, top = 60, x0 = 45, step = 47.9, k = (base - top) / d.max;
+    d.ticks.forEach(function (t) { h.T(29, base - t * k, String(t), { anchor: 'end' }); });
+    E('line', { x1: h.X(38), y1: base, x2: h.X(574), y2: base, stroke: 'currentColor', 'stroke-opacity': .25, 'stroke-width': 1 }, h.s);
+    d.categories.forEach(function (c, i) { h.T(x0 + i * step, 225, c, { size: RTL ? 12 : 13 }); });
+    var leg = [353, 477];
+    d.series.forEach(function (s, j) { var pts = s.values.map(function (v, i) { return [h.X(x0 + i * step), base - v * k]; });
+      var a = { d: smooth(pts), fill: 'none', stroke: s.color, 'stroke-width': 3, 'stroke-linecap': 'round' }; if (s.dashed) a['stroke-dasharray'] = '14 9';
+      E('path', a, h.s);
+      var b = { x1: h.X(leg[j]), y1: 27, x2: h.X(leg[j] + 33), y2: 27, stroke: s.color, 'stroke-width': 3, 'stroke-linecap': 'round' }; if (s.dashed) b['stroke-dasharray'] = '12 7';
+      E('line', b, h.s); h.T(leg[j] + 37, 27, s.name, { anchor: 'start', size: 15 }); });
+  }
+  // 2) حلقة مع شرح وإجمالي محسوب
+  function donut(id) { var d = J(id), h = host(id), cx = 101, cy = 146, r1 = 86, r0 = 30, tot = d.values.reduce(function (a, b) { return a + b; }, 0), a0 = 0;
+    d.values.forEach(function (v, i) { var a1 = a0 + 2 * Math.PI * v / tot, big = a1 - a0 > Math.PI ? 1 : 0, sw = RTL ? 0 : 1;
+      var P = function (a, r) { return h.X(cx + r * Math.sin(a)) + ',' + (cy - r * Math.cos(a)); };
+      E('path', { d: 'M' + P(a0, r1) + ' A' + r1 + ',' + r1 + ' 0 ' + big + ' ' + sw + ' ' + P(a1, r1) + ' L' + P(a1, r0) + ' A' + r0 + ',' + r0 + ' 0 ' + big + ' ' + (1 - sw) + ' ' + P(a0, r0) + 'Z', fill: d.colors[i] }, h.s);
+      a0 = a1;
+      var y = 62 + i * 28.7; E('circle', { cx: h.X(222), cy: y, r: 5.5, fill: d.colors[i] }, h.s);
+      h.T(235, y, d.categories[i], { anchor: 'start', size: 14, cls: 'lg' });
+      h.T(343, y, d.prefix + fmt(v) + ' (' + Math.round(v / tot * 100) + '%)', { anchor: 'start', size: 14, cls: 'lg', num: 1 }); });
+    [200, 235].forEach(function (y) { E('line', { x1: h.X(216), y1: y, x2: h.X(459), y2: y, stroke: 'currentColor', 'stroke-opacity': .25 }, h.s); });
+    h.T(216, 217, d.totalLabel, { anchor: 'start', size: 14, cls: 'bd' }); h.T(343, 217, d.prefix + fmt(tot) + ' (100%)', { anchor: 'start', size: 14, cls: 'bd', num: 1 });
+  }
+  // 3) أشرطة الجدول: الطول = القيمة ÷ الحد الأقصى
+  function bars(id) { var d = J(id), h = host(id), x0 = 346, W = 458;
+    d.values.forEach(function (v, i) { var y = 83 + i * 26.6, w = W * Math.max(0, Math.min(1, v / d.max));
+      E('rect', { x: h.R(x0, W), y: y, width: W, height: 9, fill: d.track }, h.s); E('rect', { x: h.R(x0, w), y: y, width: w, height: 9, fill: d.color }, h.s); });
+  }
+  lineChart('chart-data'); donut('chart-data-2'); bars('chart-data-3');
+  lineChart('chart-data-4'); donut('chart-data-5'); bars('chart-data-6');
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

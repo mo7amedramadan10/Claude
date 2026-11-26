@@ -1,0 +1,17 @@
+{
+  "key": "sl-strategic-vision-strategy-scorecard-template-powerpoint",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "بطاقة أداء الرؤية والاستراتيجية",
+  "nameEn": "Strategic Vision Strategy Scorecard",
+  "description": "شريحة بطاقة أداء متوازن بأربعة منظورات: المالي والعملاء والتشغيلي والابتكار حول الرؤية والاستراتيجية",
+  "descriptionEn": "Balanced scorecard slide with four perspectives: financial, customer, operational and innovation",
+  "sections": [
+    {
+      "title": "بطاقة أداء الرؤية والاستراتيجية",
+      "titleEn": "Vision Strategy Scorecard"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الدائرة الرباعية رسم SVG، والأيقونات والعناوين والنصوص عناصر HTML."
+}

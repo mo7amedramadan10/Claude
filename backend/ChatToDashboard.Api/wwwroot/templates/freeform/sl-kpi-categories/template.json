@@ -1,0 +1,33 @@
+{
+  "key": "sl-kpi-categories",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🎯",
+  "name": "فئات مؤشرات الأداء",
+  "nameEn": "KPI Categories",
+  "description": "خمس شرائح لفئات مؤشرات الأداء الأربع: نظرة عامة ثم إبراز كل فئة على حدة",
+  "descriptionEn": "Five slides on the four KPI categories: overview, then each category highlighted",
+  "sections": [
+    {
+      "title": "الفئات الأربع",
+      "titleEn": "All Four Categories"
+    },
+    {
+      "title": "المؤشرات الاستراتيجية",
+      "titleEn": "Strategic KPIs"
+    },
+    {
+      "title": "المؤشرات التشغيلية",
+      "titleEn": "Operational KPIs"
+    },
+    {
+      "title": "المؤشرات الوظيفية",
+      "titleEn": "Functional KPIs"
+    },
+    {
+      "title": "المؤشرات القيادية",
+      "titleEn": "Leading KPIs"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الأجنحة والحلقة رسم SVG، والصنف on على اللوحة والجناح يحدد الفئة المُبرزة في كل شريحة."
+}
