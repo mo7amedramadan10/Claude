@@ -423,14 +423,14 @@ function translateText(text, depth = 0) {
   // otherwise keep the original text untranslated rather than show broken output.
   if (!ARABIC_CHARS_RE.test(result)) return result;
   // نص مركّب بقيم: يطابق قالبًا كاملًا، وتُترجم كل قيمة إن كانت مصطلحًا معروفًا وإلا تبقى كما هي (اسم، عنوان من بيانات المستخدم)
-  if (depth === 0) {
+  if (depth < 2) {
     const t = text.replace(/\s+/g, ' ').trim();
     for (const p of I18N_PATTERNS) {
       if (t.indexOf(p.key) === -1) continue;
       const m = p.re.exec(t);
       if (!m) continue;
       const lead = text.match(/^\s*/)[0] ? ' ' : '', tail = /\s$/.test(text) ? ' ' : '';
-      return lead + p.en.replace(/\{(\d+)\}/g, (_, n) => { const v = m[+n] ?? ''; return translateText(v, 1); }) + tail;
+      return lead + p.en.replace(/\{(\d+)\}/g, (_, n) => { const v = m[+n] ?? ''; return translateText(v, depth + 1); }) + tail;
     }
   }
   return text;
@@ -6254,7 +6254,7 @@ function inquiryBlockHtml(block, turnIndex, blockIndex) {
       </div>`;
   }
   const dateHtml = block.extractedAt
-    ? `<span class="inquiry-block-date">بيانات بتاريخ ${new Date(block.extractedAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}</span>`
+    ? `<span class="inquiry-block-date">بيانات بتاريخ ${new Date(block.extractedAt).toLocaleDateString(uiLocale(), { day: 'numeric', month: 'long', year: 'numeric' })}</span>`
     : '';
   const examinedHtml = block.examined && block.examined.length
     ? `<div class="inquiry-examined"><span class="inquiry-examined-label">تم فحص:</span>
@@ -6752,7 +6752,7 @@ function systemStatusText(s) {
   if (s.error) return 'تعذّر الجلب من النظام — مرّر المؤشر لعرض السبب';
   if (!s.lastRefreshed) return 'لم يتم الجلب بعد — اضغط «جلب»';
   const when = new Date(s.lastRefreshed + (s.lastRefreshed.endsWith('Z') ? '' : 'Z'));
-  return `${s.records.toLocaleString('en-US')} سجل · آخر جلب ${when.toLocaleTimeString('ar-EG')}`;
+  return `${s.records.toLocaleString('en-US')} سجل · آخر جلب ${when.toLocaleTimeString(uiLocale())}`;
 }
 
 async function refreshSystem(btn) {
@@ -6851,6 +6851,8 @@ function repoCategories() {
 
 // "قبل 3 أيام" / "اليوم" / "منذ 5 أشهر" — the same relative-time granularity the design
 // mockup uses for "آخر تحديث" and the "لم يُستخدم منذ..." staleness hint.
+// لغة تنسيق الأرقام والتواريخ المعروضة: عربية في الواجهة العربية، وإنجليزية (بأرقام لاتينية) في الإنجليزية
+function uiLocale() { return document.documentElement.lang === 'en' ? 'en-GB' : 'ar-EG'; }
 function relTime(dateStr) {
   const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   if (state.lang === 'en') {
@@ -6948,7 +6950,7 @@ function renderRepo() {
             ${relLinks}
           </div>
         </div>
-        <div class="col-updated"><b>${relTime(f.lastUpdatedAt)}</b>${new Date(f.lastUpdatedAt).toLocaleDateString('ar-EG')}</div>
+        <div class="col-updated"><b>${relTime(f.lastUpdatedAt)}</b>${new Date(f.lastUpdatedAt).toLocaleDateString(uiLocale())}</div>
         <div class="col-usage"><div class="num">${f.usageCount}</div><div class="lbl">لوحة</div></div>
         <div class="col-access">${access}</div>
         <div class="col-actions">
@@ -7568,7 +7570,7 @@ function renderHistory() {
         <div class="q">${esc(h.question)}</div>
         <div class="summary">${esc(h.summary)}</div>
         ${ownerLine}
-        <div class="meta">${when.toLocaleString('ar-EG')} · ${widgets.length} عنصر</div>
+        <div class="meta">${when.toLocaleString(uiLocale())} · ${widgets.length} عنصر</div>
         <div class="actions">
           <button class="open-btn" data-open="${esc(h.id)}">فتح</button>
           ${activateBtn}${delBtn}
@@ -7870,7 +7872,7 @@ function renderActiveDashboardsList() {
             <div class="fr-line2">${esc(h.summary)}${ownerLine ? ` <span class="sep">·</span> ${ownerLine}` : ''}</div>
           </div>
         </div>
-        <div class="col-updated"><b>${relTime(h.createdAt)}</b>${when.toLocaleDateString('ar-EG')}</div>
+        <div class="col-updated"><b>${relTime(h.createdAt)}</b>${when.toLocaleDateString(uiLocale())}</div>
         <div class="col-usage"><div class="num">${widgets.length}</div><div class="lbl">عنصر</div></div>
         <div class="col-access">${roleBadge || '—'}</div>
         <div class="col-actions">
@@ -8831,7 +8833,7 @@ async function loadShareList() {
       const status = shareStatus(s);
       const when = new Date(s.createdAt + (s.createdAt.endsWith('Z') ? '' : 'Z'));
       const expiryText = s.expiresAt
-        ? new Date(s.expiresAt + (s.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG')
+        ? new Date(s.expiresAt + (s.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString(uiLocale())
         : 'بدون انتهاء';
       const revokeBtn = status.cls === 'live'
         ? `<button class="icon-btn revoke-share-btn" data-revoke="${esc(s.id)}" title="إلغاء الرابط">🚫</button>` : '';
@@ -9356,6 +9358,11 @@ function ffAgo(iso) {
   const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24), mo = Math.floor(d / 30);
   // جمع عربي: 1 مفرد، 2 مثنى، 3–10 جمع، فوق 10 مفرد منصوب
   const ar = (n, one, two, few, many) => n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${few}` : `${n} ${many}`;
+  if (document.documentElement.lang === 'en') { // الواجهة الإنجليزية: «2 hours ago»
+    const en = (n, u) => `${n} ${u}${n === 1 ? '' : 's'} ago`;
+    if (m < 1) return 'just now'; if (m < 60) return en(m, 'minute'); if (h < 24) return en(h, 'hour'); if (d < 30) return en(d, 'day');
+    if (mo < 12) return en(mo, 'month'); return en(Math.floor(mo / 12), 'year');
+  }
   if (m < 1) return 'الآن'; if (m < 60) return 'قبل ' + ar(m, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة');
   if (h < 24) return 'قبل ' + ar(h, 'ساعة', 'ساعتين', 'ساعات', 'ساعة'); if (d < 30) return 'قبل ' + ar(d, 'يوم', 'يومين', 'أيام', 'يومًا');
   if (mo < 12) return 'قبل ' + ar(mo, 'شهر', 'شهرين', 'أشهر', 'شهرًا'); const y = Math.floor(mo / 12); return 'قبل ' + ar(y, 'سنة', 'سنتين', 'سنوات', 'سنة');
@@ -11059,6 +11066,11 @@ const FF_ACCESS_LABEL = { owner: 'مالك', edit: 'تعديل', view: 'عرض �
 const FF_SCOPE_LABEL = { project: 'مشترك مع المشروع', org: 'مشترك مع المنظمة' };
 const FF_RO_IDS = ['ff-edit-text', 'ff-identity', 'ff-import-into', 'ff-refresh', 'ff-stale', 'ff-publish', 'ff-code', 'ff-restore'];
 function ffShareLabel(scope, count) {
+  if (document.documentElement.lang === 'en') { // الواجهة الإنجليزية: الجملة تُبنى بالإنجليزية مباشرة (المثنى والجمع العربي لا يُترجمان بقالب)
+    const p = []; if (scope === 'project') p.push('Shared with the workspace'); else if (scope === 'org') p.push('Shared with the organization');
+    if (count) p.push(`${p.length ? 'with' : 'Shared with'} ${count.toLocaleString('en-US')} ${count === 1 ? 'person' : 'people'}`);
+    return p.join(' and ');
+  }
   const parts = []; if (FF_SCOPE_LABEL[scope]) parts.push(FF_SCOPE_LABEL[scope]);
   if (count) parts.push(count === 1 ? 'مع شخص واحد' : count === 2 ? 'مع شخصين' : `مع ${count.toLocaleString('en-US')} أشخاص`);
   return parts.length ? parts.join(' و') : '';
@@ -11661,7 +11673,7 @@ async function ffmoThumb(b) {
   const ok = FF_MOTION_RX.test(html);
   b.dataset.ok = ok ? '1' : '0';
   if (!ok) { b.setAttribute('aria-disabled', 'true'); m.classList.add('warn'); m.textContent = '⚠️ بالطريقة القديمة — عدّله بنطاق «العرض كله» أولًا'; }
-  else { try { const n = ffmoExtract(html, { id }).scenes; m.textContent = `${n.toLocaleString('ar-EG')} ${n > 2 && n < 11 ? 'مشاهد' : 'مشهد'}` + (m.textContent ? ' · ' + m.textContent : ''); } catch { /* */ } }
+  else { try { const n = ffmoExtract(html, { id }).scenes; m.textContent = `${n.toLocaleString(uiLocale())} ${n > 2 && n < 11 ? 'مشاهد' : 'مشهد'}` + (m.textContent ? ' · ' + m.textContent : ''); } catch { /* */ } }
   if (html) { f.srcdoc = ffSandboxHtml(html, false, 'motion', true); const k = (b.querySelector('.ffmo-tv').clientWidth || 240) / 1280; f.style.setProperty('--ffmo-k', k); }
 }
 async function ffmoPick(b) {
@@ -11713,7 +11725,7 @@ async function ffmoGenerate(e) {
     if (FF.design !== design || !FF.edit.on) { ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» ولم تُدرج لأن وضع التعديل أُغلق — تجدها في نافذة 🎬 ضمن تصاميم الحركة.`); return; }
     ffmoPlaceInsert(x, place, j.design.title);
     if (!el('ff-motion-modal').classList.contains('hidden')) { closeFfMotionModal(); el('ffd-motion').focus(); }
-    ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» (${x.scenes.toLocaleString('ar-EG')} ${x.scenes > 2 && x.scenes < 11 ? 'مشاهد' : 'مشهد'}) ${place === 'slide' ? 'وأُضيفت شريحةً مستقلة بعد الشريحة الحالية (تُحفظ تلقائيًا)' : 'وأُدرجت في الشريحة — اضغط «حفظ كإصدار جديد» لتثبيتها'}. الحركة محفوظة أيضًا في تصاميمك من نوع «حركة» لتعدّلها أو تعيد استخدامها.${warn ? '\n' + warn[0] : ''}`);
+    ffPushMsg('assistant', `🎬 بنى جيم «${j.design.title}» (${x.scenes.toLocaleString(uiLocale())} ${x.scenes > 2 && x.scenes < 11 ? 'مشاهد' : 'مشهد'}) ${place === 'slide' ? 'وأُضيفت شريحةً مستقلة بعد الشريحة الحالية (تُحفظ تلقائيًا)' : 'وأُدرجت في الشريحة — اضغط «حفظ كإصدار جديد» لتثبيتها'}. الحركة محفوظة أيضًا في تصاميمك من نوع «حركة» لتعدّلها أو تعيد استخدامها.${warn ? '\n' + warn[0] : ''}`);
   } catch (err) {
     if (!el('ff-motion-modal').classList.contains('hidden')) el('ffmo-status').textContent = err.message || 'تعذّر بناء الحركة.'; else ffPushMsg('err', 'تعذّر بناء الحركة: ' + (err.message || ''));
   } finally {
@@ -11767,7 +11779,7 @@ function ffdRenderInsp() {
   }
   if (i.motion) {
     const mo = i.motion, ck = (k, l) => `<label class="ffi-check"><input type="checkbox" data-mo="${k}"${mo[k] ? ' checked' : ''}> ${l}</label>`;
-    h += `<section><h4>الحركة</h4><div class="ffi-sub">${mo.title ? `من تصميم «${esc(mo.title)}» · ` : ''}${mo.scenes.toLocaleString('ar-EG')} ${mo.scenes > 2 && mo.scenes < 11 ? 'مشاهد' : 'مشهد'}. في وضع التعديل تقف وتظهر مكتملة؛ تعمل وحدها كلما ظهرت الشريحة.</div>
+    h += `<section><h4>الحركة</h4><div class="ffi-sub">${mo.title ? `من تصميم «${esc(mo.title)}» · ` : ''}${mo.scenes.toLocaleString(uiLocale())} ${mo.scenes > 2 && mo.scenes < 11 ? 'مشاهد' : 'مشهد'}. في وضع التعديل تقف وتظهر مكتملة؛ تعمل وحدها كلما ظهرت الشريحة.</div>
       ${mo.full ? '<div class="ffi-sub">تملأ الشريحة كاملة.</div>' : ''}${ck('autoplay', 'تشغيل تلقائي عند ظهور الشريحة')}${ck('loop', 'تكرار (وإلا تتوقف عند آخر مشهد)')}${ck('controls', 'أزرار التحكم عند التحويم')}
       <button type="button" class="ffi-wide" data-a="motion-replace">🎬 استبدال بحركة أخرى…</button></section>`;
   }
@@ -12190,14 +12202,14 @@ const FFR = { open: false, info: null, col: null, data: null, timer: 0 };
 function ffRecordsChanged() { clearTimeout(FFR.timer); FFR.timer = setTimeout(() => { if (FFR.open) ffrLoad(true); else ffrCount(); }, 400); }
 async function ffrCount() {
   const b = el('ff-records-count'); if (!FF.design) { b.classList.add('hidden'); return; }
-  try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records`); if (!r.ok) throw 0; const d = await r.json(); const n = (d.collections || []).reduce((a, c) => a + (c.count || 0), 0); b.textContent = n ? n.toLocaleString('ar-EG') : ''; b.classList.toggle('hidden', !n); }
+  try { const r = await fetch(`/api/freeform/${encodeURIComponent(FF.design.id)}/records`); if (!r.ok) throw 0; const d = await r.json(); const n = (d.collections || []).reduce((a, c) => a + (c.count || 0), 0); b.textContent = n ? n.toLocaleString(uiLocale()) : ''; b.classList.toggle('hidden', !n); }
   catch { b.classList.add('hidden'); }
 }
 function ffrDate(v) { const d = new Date(v); return isNaN(d) ? String(v || '') : d.toLocaleString(state.lang === 'en' ? 'en-GB' : 'ar-EG', { dateStyle: 'short', timeStyle: 'short' }); }
 function ffrValue(v) { if (v == null) return ''; if (typeof v === 'object') return JSON.stringify(v); return String(v); }
 function ffrRenderCols() {
   const cols = (FFR.info && FFR.info.collections) || [];
-  el('ffr-cols').innerHTML = cols.map(c => `<button type="button" role="tab" class="ffr-col${c.name === FFR.col ? ' on' : ''}" aria-selected="${c.name === FFR.col}" data-ffr-col="${esc(c.name)}">${esc(c.name)} <small>${(c.count || 0).toLocaleString('ar-EG')}</small></button>`).join('');
+  el('ffr-cols').innerHTML = cols.map(c => `<button type="button" role="tab" class="ffr-col${c.name === FFR.col ? ' on' : ''}" aria-selected="${c.name === FFR.col}" data-ffr-col="${esc(c.name)}">${esc(c.name)} <small>${(c.count || 0).toLocaleString(uiLocale())}</small></button>`).join('');
   el('ffr-cols').querySelectorAll('[data-ffr-col]').forEach(b => b.addEventListener('click', () => { FFR.col = b.dataset.ffrCol; ffrRenderCols(); ffrRenderSource(); ffrLoadRows(); }));
 }
 function ffrRenderRows() {
@@ -12207,7 +12219,7 @@ function ffrRenderRows() {
   const items = d.items || []; const fields = [];
   items.forEach(r => Object.keys(r.data || {}).forEach(k => { if (!fields.includes(k)) fields.push(k); }));
   if (!items.length) { box.innerHTML = '<p class="muted">لا سجلات في هذه المجموعة.</p>'; return; }
-  box.innerHTML = `<div class="ffr-meta muted">${d.total.toLocaleString('ar-EG')} سجل${d.total > items.length ? ` — يُعرض أحدث ${items.length.toLocaleString('ar-EG')}` : ''}</div>
+  box.innerHTML = `<div class="ffr-meta muted">${d.total.toLocaleString(uiLocale())} سجل${d.total > items.length ? ` — يُعرض أحدث ${items.length.toLocaleString(uiLocale())}` : ''}</div>
     <div class="ffr-table-wrap"><table class="ffr-table"><thead><tr><th scope="col">#</th>${fields.map(f => `<th scope="col">${esc(f)}</th>`).join('')}<th scope="col">أدخله</th><th scope="col">التاريخ</th><th scope="col"><span class="sr-only">إجراءات</span></th></tr></thead>
     <tbody>${items.map(r => `<tr><td>${r.id}</td>${fields.map(f => `<td>${esc(ffrValue((r.data || {})[f]))}</td>`).join('')}<td>${esc(r.createdBy || 'زائر')}</td><td title="${esc(r.createdAt)}">${esc(ffrDate(r.createdAt))}</td>
       <td>${r.canChange ? `<button type="button" class="ffr-del" data-ffr-del="${r.id}" aria-label="حذف السجل ${r.id}" title="حذف">🗑</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
@@ -12234,7 +12246,7 @@ async function ffrLoad(keepCol) {
   const isOwner = FF.access === 'owner';
   el('ffr-policy').value = FFR.info.policy || 'members'; el('ffr-policy').disabled = !isOwner; ffrPolicyNote();
   el('ffr-export').classList.toggle('hidden', !(FFR.info.manager && FFR.col));
-  const n = cols.reduce((a, c) => a + (c.count || 0), 0); const b = el('ff-records-count'); b.textContent = n ? n.toLocaleString('ar-EG') : ''; b.classList.toggle('hidden', !n);
+  const n = cols.reduce((a, c) => a + (c.count || 0), 0); const b = el('ff-records-count'); b.textContent = n ? n.toLocaleString(uiLocale()) : ''; b.classList.toggle('hidden', !n);
   ffrRenderCols(); ffrRenderSource(); await ffrLoadRows();
 }
 // المرحلة 2: كل مجموعة تُبنى جدولًا في «المصادر» (ملف مرتبط بالتصميم) — الحالة والمزامنة والتشغيل/الإيقاف.
@@ -12245,7 +12257,7 @@ function ffrRenderSource() {
   const t = (info.tables || []).find(x => x.collection === FFR.col);
   const on = info.asSource !== false; const can = !!info.manager;
   box.innerHTML = `<label class="ffr-src-toggle"><input type="checkbox" id="ffr-src-on"${on ? ' checked' : ''}${can ? '' : ' disabled'}> <span><b>استخدم السجلات مصدر بيانات</b><small class="muted">كل مجموعة تصير جدولًا في «المصادر» يتحدّث تلقائيًا بعد كل إدخال، فتُبنى عليه لوحات المتابعة والرسوم.</small></span></label>
-    ${on ? `<div class="ffr-src-line">${t ? `🗄️ <b>${esc(t.displayName)}</b> <span class="muted">· ${(t.rows || 0).toLocaleString('ar-EG')} صف · ${(t.columns || 0).toLocaleString('ar-EG')} عمود${t.lastSyncedAt ? ' · حُدِّث ' + esc(relTime(t.lastSyncedAt)) : ''}</span>${t.syncError ? ` <span class="bad">⚠️ ${esc(t.syncError)}</span>` : ''}`
+    ${on ? `<div class="ffr-src-line">${t ? `🗄️ <b>${esc(t.displayName)}</b> <span class="muted">· ${(t.rows || 0).toLocaleString(uiLocale())} صف · ${(t.columns || 0).toLocaleString(uiLocale())} عمود${t.lastSyncedAt ? ' · حُدِّث ' + esc(relTime(t.lastSyncedAt)) : ''}</span>${t.syncError ? ` <span class="bad">⚠️ ${esc(t.syncError)}</span>` : ''}`
       : '<span class="muted">⏳ لم يُبنَ جدول هذه المجموعة بعد — يُبنى بعد الإدخال التالي، أو اضغط «مزامنة الآن».</span>'}
       ${can && FFR.col ? '<button type="button" id="ffr-src-sync" class="btn btn-sm btn-ghost">🔄 مزامنة الآن</button>' : ''}
       ${t && t.fileId ? '<button type="button" id="ffr-src-dash" class="btn btn-sm btn-primary">📊 اعمل لوحة متابعة منه</button>' : ''}</div>` : ''}`;
@@ -13029,7 +13041,7 @@ async function loadPresentations() {
     }
     list.innerHTML = items.map(p => {
       const status = shareStatus(p);
-      const expiryText = p.expiresAt ? new Date(p.expiresAt + (p.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString('ar-EG') : 'بدون انتهاء';
+      const expiryText = p.expiresAt ? new Date(p.expiresAt + (p.expiresAt.endsWith('Z') ? '' : 'Z')).toLocaleDateString(uiLocale()) : 'بدون انتهاء';
       const live = status.cls === 'live';
       const manage = p.canManage;
       return `<div class="file-row${live ? '' : ' stale'}" data-id="${esc(p.id)}">
@@ -14604,7 +14616,7 @@ function renderOrganizations(orgs) {
       <td><span class="status ${o.isActive ? 'ok' : 'off'}">${o.isActive ? 'نشطة' : 'معطّلة'}</span></td>
       <td><span class="num">${o.entityCount}</span></td>
       <td><span class="num">${o.userCount}</span></td>
-      <td class="muted">${new Date(o.createdAt).toLocaleDateString('ar-EG')}</td>
+      <td class="muted">${new Date(o.createdAt).toLocaleDateString(uiLocale())}</td>
       <td><div class="row-actions">
         <button type="button" class="btn btn-ghost btn-sm" data-copy-login-link="${esc(o.slug)}" title="نسخ رابط تسجيل الدخول الخاص بهذه المنظمة">نسخ رابط الدخول</button>
         <button type="button" class="btn btn-ghost btn-sm" data-assign-admin="${esc(o.id)}" data-org-name="${esc(o.name)}">تعيين مسؤول</button>
@@ -15037,7 +15049,7 @@ function tpladmListPane(kind) {
           <td><span class="badge">${esc(catName(x.category))}</span></td>
           <td><p class="lib-prompt">${tpladmCodeVars(x.promptText)}</p></td>
           <td>${tpladmStatusPill(x.status)}</td>
-          <td class="muted"><span class="num">v${x.version || 1}</span><span class="lib-date num">${x.updatedAt ? new Date(x.updatedAt).toLocaleDateString('ar-EG') : ''}</span></td>
+          <td class="muted"><span class="num">v${x.version || 1}</span><span class="lib-date num">${x.updatedAt ? new Date(x.updatedAt).toLocaleDateString(uiLocale()) : ''}</span></td>
           <td><div class="row-actions">
             <button class="btn btn-sm" type="button" data-act="edit">${tplIc('edit')}تعديل</button>
             <button class="btn btn-ghost btn-sm btn-icon" type="button" data-act="dup" aria-label="نسخ كنموذج جديد" title="نسخ كنموذج جديد">${tplIc('layers')}</button>
@@ -15430,7 +15442,7 @@ async function tpladmRulesPane() {
         ${tpladmVarChips('rules')}
         <textarea id="rulesTa" class="prompt-box" rows="12" dir="rtl">${esc(data.promptText || '')}</textarea>
         <div class="prompt-meta"><span class="pm-warn" hidden></span><span><span class="num pm-count">${(data.promptText || '').length.toLocaleString('en-US')}</span> حرف</span></div>
-        <div class="row-actions" style="margin-top:10px"><button class="btn btn-primary" type="button" id="tpladm-rules-save">${tplIc('check')}حفظ القواعد</button><span class="muted" id="tpladm-rules-meta">${data.updatedAt ? `آخر تعديل: ${new Date(data.updatedAt).toLocaleDateString('ar-EG')}${data.updatedByName ? ' · ' + esc(data.updatedByName) : ''}` : ''}</span></div>
+        <div class="row-actions" style="margin-top:10px"><button class="btn btn-primary" type="button" id="tpladm-rules-save">${tplIc('check')}حفظ القواعد</button><span class="muted" id="tpladm-rules-meta">${data.updatedAt ? `آخر تعديل: ${new Date(data.updatedAt).toLocaleDateString(uiLocale())}${data.updatedByName ? ' · ' + esc(data.updatedByName) : ''}` : ''}</span></div>
       </div>
       <div class="field">
         <label>المتغيرات المتاحة</label>
