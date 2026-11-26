@@ -1,0 +1,85 @@
+{
+  "key": "sl-circles-company-profile",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🔵",
+  "name": "الملف التعريفي للشركة — دوائر",
+  "nameEn": "Circles Company Profile",
+  "description": "سبع عشرة شريحة بالدوائر المتدرّجة: غلاف، فهرس، تاريخ، رؤية، عمليات، فريق، منتجات، سوق، نموذج عمل، مالية، تواصل",
+  "descriptionEn": "17 gradient-circle slides: cover, contents, history, vision, operations, team, products, market, finance, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "تاريخ الشركة وأبرز المحطات",
+      "titleEn": "Company History & Milestones",
+      "needsData": true
+    },
+    {
+      "title": "الرسالة والرؤية",
+      "titleEn": "Mission & Vision"
+    },
+    {
+      "title": "عملياتنا حول العالم",
+      "titleEn": "Operations Across the Globe",
+      "needsData": true
+    },
+    {
+      "title": "فريق القيادة والثقافة",
+      "titleEn": "Leadership Team & Culture"
+    },
+    {
+      "title": "المنتجات والخدمات الأساسية",
+      "titleEn": "Core Product & Service"
+    },
+    {
+      "title": "المشكلة التي نحلّها",
+      "titleEn": "The Problem We Solve"
+    },
+    {
+      "title": "الحل وعرض القيمة",
+      "titleEn": "Solution & Value Proposition"
+    },
+    {
+      "title": "نظرة على السوق والفرص (حلقة بيانات)",
+      "titleEn": "Market Overview & Opportunity (donut)",
+      "needsData": true
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model"
+    },
+    {
+      "title": "لمحة مالية (حلقة بيانات)",
+      "titleEn": "Financial Snapshot (donut)",
+      "needsData": true
+    },
+    {
+      "title": "أبرز الإنجازات",
+      "titleEn": "Key Achievements"
+    },
+    {
+      "title": "آراء العملاء",
+      "titleEn": "What Our Clients Say"
+    },
+    {
+      "title": "النظرة المستقبلية وخارطة الطريق",
+      "titleEn": "Future Outlook & Roadmap"
+    },
+    {
+      "title": "كلمة الرئيس التنفيذي",
+      "titleEn": "Message from the CEO"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ نسب حلقتي البيانات في كتلتي JSON بالمعرّفين chart-data (السوق) وchart-data-2 (اللمحة المالية)، والنِّسب الظاهرة نصوص HTML بجوارهما."
+}
