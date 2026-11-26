@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Consultancy Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «خدمات استشارات البيانات»: 15 شريحة (غلاف، من نحن، المشكلة، الحلول، الخدمات، لماذا نحن، المنهجية، الأدوات، دراسة حالة، الفوائد، الفريق، الجدول الزمني، آراء العملاء، الأسعار، الختام) بأخضر داكن وذهبي وبطاقات بيضاء بظلال ناعمة. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #0D0D0D; --ink-2: #1F1F1F; --muted: #444444; --dark: #0F2B26; --green: #16443A; --gold: #CDB785; --gold-2: #B39B58; --pale: #D4D2BB; --plat: #3D5E58; --accent: #16443A; --bg: #FFFFFF; --sh: 0 14px 34px rgb(0 0 0 / .11); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عناصر مشتركة */
+  html[dir="rtl"] .mir { transform: scaleX(-1); }
+  .gl { position: absolute; top: 0; bottom: 0; inset-inline-start: 31px; width: 5px; background: var(--gold); z-index: 4; }
+  .frame h1, .frame h2, .frame h3, .frame p { margin: 0; }
+  .ttl { position: absolute; font-size: 55px; font-weight: 400; line-height: 61px; color: var(--ink); letter-spacing: -.2px; white-space: nowrap; }
+  .ttl small { display: block; font-size: 42px; line-height: 52px; }
+  html[lang="ar"] .ttl { font-weight: 500; letter-spacing: 0; }
+  .tx { position: absolute; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+  .hd { font-size: 24.5px; line-height: 32px; font-weight: 400; color: var(--ink); }
+  html[lang="ar"] .hd { font-weight: 500; }
+  .wt { color: #FFFFFF; }
+  .card { position: absolute; background: #FFFFFF; border-radius: 16px; box-shadow: var(--sh); }
+  .sphere { position: absolute; border-radius: 50%; background: radial-gradient(circle at 74% 22%, #FFFFFF 0%, #FBFCFC 36%, #E6EBEA 60%, #C4CDCB 84%, #A9B5B2 100%); }
+  html[dir="rtl"] .sphere { transform: scaleX(-1); }
+  .shape { position: absolute; }
+  html[dir="rtl"] .shape { transform: scaleX(-1); }
+  .shape img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  bdi { unicode-bidi: isolate; }
+
+  /* 1) الغلاف */
+  .s1 .bgimg { position: absolute; inset: 0; width: 1280px; height: 720px; object-fit: cover; }
+  html[dir="rtl"] .s1 .bgimg { transform: scaleX(-1); }
+  .s1 .big { position: absolute; inset-inline-start: 66px; margin: 0; font-size: 80px; line-height: 92px; font-weight: 400; color: #FFFFFF; letter-spacing: -.5px; white-space: nowrap; }
+  html[lang="ar"] .s1 .big { font-weight: 500; letter-spacing: 0; }
+  .s1 .l2 { color: var(--gold); }
+  .s1 .row2 { position: absolute; top: 503px; inset-inline-start: 66px; display: flex; align-items: center; gap: 0; }
+  .s1 .row2 .big { position: static; }
+  .s1 .row2 .a { width: 68px; height: 68px; color: #FFFFFF; margin-inline-start: 36px; flex: none; }
+  .s1 .pill { position: absolute; top: 521px; inset-inline-start: 584px; width: 360px; height: 49px; border-radius: 25px; background: #B39C59; color: #FFFFFF; font-size: 18px; letter-spacing: 2.4px; display: grid; place-items: center; white-space: nowrap; }
+  html[lang="ar"] .s1 .pill { letter-spacing: 0; font-size: 21px; font-weight: 500; }
+  .s1 .logo { position: absolute; top: 608px; inset-inline-start: 70px; width: 60px; height: 66px; }
+  .s1 .lt { position: absolute; top: 620px; inset-inline-start: 155px; font-size: 13.5px; line-height: 20px; letter-spacing: 1.6px; color: var(--gold); }
+  html[lang="ar"] .s1 .lt { letter-spacing: 0; font-size: 16px; line-height: 22px; }
+
+  /* 2) من نحن */
+  .s2 .ph { top: 0; inset-inline-start: 0; width: 1280px; height: 452px; clip-path: path('M0 0H1280V223A50 50 0 0 1 1230 273H1035A50 50 0 0 0 985 323V452H50A50 50 0 0 1 0 402Z'); }
+  .s2 .ttl { font-size: 84px; line-height: 92px; color: #FFFFFF; }
+  .s2 .ttl small { font-size: 54px; line-height: 64px; }
+  .s2 .go { position: absolute; top: 177px; inset-inline-start: 537px; width: 55px; height: 55px; border-radius: 50%; background: #FFFFFF; color: var(--dark); display: grid; place-items: center; }
+  .s2 .go svg { width: 30px; height: 30px; }
+  .s2 .intro { position: absolute; top: 128px; inset-inline-start: 702px; width: 400px; color: #FFFFFF; }
+  .s2 .intro h2 { font-size: 24px; line-height: 34px; font-weight: 700; margin-bottom: 12px; }
+  .s2 .intro p { width: 392px; font-size: 20px; line-height: 25.5px; }
+  .s2 .bigarr { position: absolute; top: 285px; inset-inline-start: 1023px; width: 120px; height: 120px; color: var(--green); }
+  .s2 .c { top: 411px; width: 328px; height: 265px; border-radius: 22px; padding: 26px 0 0; padding-inline: 25px 22px; }
+  .s2 .c1 { inset-inline-start: 122px; background: var(--gold); color: #FFFFFF; }
+  .s2 .c2 { inset-inline-start: 476px; } .s2 .c3 { inset-inline-start: 830px; }
+  .s2 .num { font-size: 56px; line-height: 70px; font-weight: 400; color: var(--dark); }
+  .s2 .c1 .num, .s2 .c1 .hd, .s2 .c1 p { color: #FFFFFF; }
+  .s2 .c .hd { margin-top: 23px; }
+  .s2 .c .hd { margin-top: 21px; }
+  .s2 .c p { margin-top: 7px; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+
+  /* 3) بيان المشكلة */
+  .ttl.tl1 { top: 96px; inset-inline-start: 97px; }
+  .s3 .ph { top: 340px; inset-inline-start: 0; width: 740px; height: 380px; clip-path: path('M0 0H450A50 50 0 0 1 500 50V100A50 50 0 0 0 550 150H690A50 50 0 0 1 740 200V380H0Z'); }
+  .s3 .arr { position: absolute; top: 381px; inset-inline-start: 547px; width: 76px; height: 76px; color: var(--green); }
+  .s3 .it { top: 105px; inset-inline-start: 809px; width: 421px; height: 146px; padding: 25px 0 0; padding-inline: 62px 20px; box-shadow: 8px 12px 26px rgb(0 0 0 / .13); }
+  .s3 .it2 { top: 287px; } .s3 .it3 { top: 468px; }
+  .s3 .sq { position: absolute; top: 46px; inset-inline-start: -26px; width: 58px; height: 56px; border-radius: 8px; background: linear-gradient(135deg, #1B2550, #12463A); color: #FFFFFF; font-size: 20px; font-weight: 700; display: grid; place-items: center; }
+  .s3 .it p { width: 330px; margin-top: 8px; font-size: 20px; line-height: 25px; color: var(--ink-2); }
+
+  /* 4) حلولنا */
+  .s4 .man { position: absolute; top: 40px; inset-inline-start: 755px; width: 350px; height: 344px; object-fit: cover; }
+  .s4 .pw { position: absolute; top: 384px; inset-inline-start: 62px; width: 1156px; height: 274px; filter: drop-shadow(0 22px 26px rgb(0 0 0 / .13)); }
+  .s4 .pbg { inset: 0; width: 100%; height: 100%; background: var(--green); clip-path: path('M45 0H1111A45 45 0 0 1 1156 45V176A25 25 0 0 1 1131 201H1106A25 25 0 0 0 1081 226V229A45 45 0 0 1 1036 274H45A45 45 0 0 1 0 229V45A45 45 0 0 1 45 0Z'); }
+  .s4 .arr { position: absolute; top: 594px; inset-inline-start: 1155px; width: 64px; height: 64px; color: var(--green); }
+  .s4 .col { position: absolute; top: 36px; width: 290px; color: #FFFFFF; }
+  .s4 .col svg { width: 50px; height: 50px; display: block; }
+  .s4 .col .hd { color: #FFFFFF; margin-top: 30px; }
+  .s4 .col p { margin-top: 7px; font-size: 20px; line-height: 25.5px; }
+  .s4 .k1 { inset-inline-start: 46px; } .s4 .k2 { inset-inline-start: 382px; } .s4 .k3 { inset-inline-start: 718px; }
+  .s4 .dv { position: absolute; top: 44px; width: 2px; height: 184px; background: #0C3129; }
+  .s4 .d1 { inset-inline-start: 353px; } .s4 .d2 { inset-inline-start: 689px; }
+
+  /* 5) الخدمات */
+  .s5 .band { position: absolute; top: 208px; inset-inline-start: 0; width: 1280px; height: 246px; object-fit: cover; }
+  .s5 .c { top: 454px; width: 338px; height: 222px; border-radius: 0 0 16px 16px; padding: 29px 0 0; padding-inline: 17px 22px; }
+  .s5 .c1 { inset-inline-start: 76px; } .s5 .c2 { inset-inline-start: 471px; background: var(--green); } .s5 .c3 { inset-inline-start: 866px; }
+  .s5 .top { display: flex; align-items: center; gap: 24px; }
+  .s5 .n { flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--dark); color: #FFFFFF; font-size: 20px; display: grid; place-items: center; }
+  .s5 .c2 .n { background: #FFFFFF; color: var(--dark); }
+  .s5 .c2 .hd, .s5 .c2 p { color: #FFFFFF; }
+  .s5 .c p { width: 282px; margin-top: 24px; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+  .s5 .c.c2 p { color: #FFFFFF; }
+  .s5 .ga { position: absolute; top: 533px; width: 55px; height: 55px; border-radius: 50%; background: var(--gold); color: var(--dark); display: grid; place-items: center; z-index: 2; box-shadow: 0 6px 14px rgb(0 0 0 / .12); }
+  .s5 .ga svg { width: 26px; height: 26px; }
+  .s5 .ga1 { inset-inline-start: 391px; } .s5 .ga2 { inset-inline-start: 783px; }
+
+  /* 6) لماذا تختارنا */
+  .s6 .ttl { top: 228px; inset-inline-start: 82px; }
+  .s6 .lead { top: 400px; inset-inline-start: 82px; width: 325px; }
+  .s6 .k { inset-inline-start: 455px; width: 248px; height: 235px; border-radius: 18px; padding: 0 20px; }
+  .s6 .k1 { top: 93px; } .s6 .k2 { top: 382px; }
+  .s6 .ring { position: absolute; top: 12px; inset-inline-end: 15px; width: 62px; height: 62px; border-radius: 50%; border: 1.5px solid #E6E6E6; }
+  .s6 .pc { position: absolute; top: 22px; inset-inline-end: 40px; font-size: 40px; line-height: 54px; font-weight: 700; color: var(--dark); }
+  .s6 .k .hd { position: absolute; top: 96px; inset-inline-start: 19px; font-size: 22px; line-height: 28px; }
+  .s6 .k p { position: absolute; top: 132px; inset-inline-start: 19px; width: 205px; font-size: 17.5px; line-height: 22.5px; color: var(--muted); }
+  .s6 .rib { position: absolute; top: 120px; inset-inline-start: 700px; width: 560px; height: 500px; }
+  .s6 .rt { position: absolute; width: 320px; text-align: center; font-size: 17.5px; line-height: 22px; font-weight: 700; color: #FFFFFF; white-space: nowrap; transform: rotate(-12.4deg); }
+  html[dir="rtl"] .s6 .rt { transform: rotate(12.4deg); }
+  .s6 .r1 { top: 281px; inset-inline-start: 810px; } .s6 .r2 { top: 399px; inset-inline-start: 841px; transform: rotate(-12.8deg); }
+  html[dir="rtl"] .s6 .r2 { transform: rotate(12.8deg); }
+  .s6 .r3 { top: 505px; inset-inline-start: 861px; color: #FBF3DF; }
+
+  /* 7) المنهجية */
+  .s7 .lead, .s3 .lead, .s4 .lead { top: 256px; inset-inline-start: 97px; width: 530px; }
+  .s7 .lead { top: 267px; width: 490px; }
+  .s7 .ph { position: absolute; top: 383px; inset-inline-start: 97px; width: 458px; height: 287px; border-radius: 16px; object-fit: cover; }
+  .s7 .panel { top: 76px; inset-inline-start: 686px; width: 567px; height: 700px; border-radius: 30px; }
+  .s7 .row { position: absolute; inset-inline-start: 718px; width: 500px; display: flex; align-items: center; }
+  .s7 .row .hd { flex: none; width: 210px; font-size: 22px; }
+  .s7 .row p { width: 285px; font-size: 17.5px; line-height: 22.5px; color: var(--ink-2); }
+  .s7 .w1 { top: 140px; } .s7 .w2 { top: 271px; } .s7 .w4 { top: 588px; }
+  .s7 .hl { position: absolute; top: 402px; inset-inline-start: 620px; width: 582px; height: 124px; background: var(--dark); }
+  .s7 .w3 { top: 427px; inset-inline-start: 657px; }
+  .s7 .w3 .hd, .s7 .w3 p { color: #FFFFFF; }
+  .s7 .arr { position: absolute; top: 340px; inset-inline-start: 624px; width: 48px; height: 48px; color: var(--green); }
+
+  /* 8) الأدوات */
+  .s8 .band { position: absolute; top: 342px; inset-inline-start: 0; width: 1280px; height: 378px; background: var(--dark); }
+  .s8 .ph { position: absolute; top: 222px; width: 304px; height: 276px; border-radius: 22px; object-fit: cover; }
+  .s8 .t { position: absolute; top: 540px; width: 304px; text-align: center; color: #FFFFFF; }
+  .s8 .t .hd { color: #FFFFFF; }
+  .s8 .t p { margin-top: 11px; font-size: 20px; line-height: 25.5px; color: #F0F0F0; padding: 0 12px; }
+  .s8 .x1 { inset-inline-start: 128px; } .s8 .x2 { inset-inline-start: 488px; } .s8 .x3 { inset-inline-start: 848px; }
+
+  /* 9) دراسة حالة */
+  .s9 .bgs { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .s9 .bgs, html[dir="rtl"] .s15 .bgs { transform: scaleX(-1); }
+  .s9 .p1 { position: absolute; top: 0; inset-inline-start: 80px; width: 270px; height: 494px; object-fit: cover; border-radius: 0 0 40px 40px; }
+  .s9 .p2 { position: absolute; top: 86px; inset-inline-start: 386px; width: 272px; height: 548px; object-fit: cover; border-radius: 40px; }
+  .s9 .ttl { top: 96px; inset-inline-start: 731px; }
+  .s9 .lead { top: 194px; inset-inline-start: 731px; width: 490px; }
+  .s9 .rk { position: absolute; top: 326px; inset-inline-start: 722px; width: 82px; height: 82px; color: var(--dark); }
+  .s9 .vd { position: absolute; top: 325px; inset-inline-start: 821px; width: 1.5px; height: 82px; background: var(--dark); }
+  .s9 .itm { position: absolute; top: 318px; inset-inline-start: 851px; width: 360px; }
+  .s9 .itm p { width: 330px; margin-top: 4px; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+  .s9 .st { top: 475px; width: 294px; height: 190px; padding: 31px 28px 0; }
+  .s9 .st1 { inset-inline-start: 556px; background: var(--dark); color: #FFFFFF; } .s9 .st2 { inset-inline-start: 882px; }
+  .s9 .st b { display: block; font-size: 31px; line-height: 44px; font-weight: 700; color: var(--green); }
+  .s9 .st1 b { color: #FFFFFF; }
+  .s9 .st p { margin-top: 15px; font-size: 18px; line-height: 22.5px; color: var(--ink-2); }
+  .s9 .st1 p { color: #FFFFFF; }
+
+  /* 10) الفوائد */
+  .lead.wide { top: 194px; inset-inline-start: 97px; width: 1030px; }
+  .s10 .bw { position: absolute; top: 283px; width: 323px; height: 383px; filter: drop-shadow(0 18px 22px rgb(0 0 0 / .13)); }
+  .s10 .bshape { inset: 0; width: 100%; height: 100%; background: var(--dark); clip-path: path('M45 0H206A30 30 0 0 1 236 30V57A30 30 0 0 0 266 87H295A28 28 0 0 1 323 115V338A45 45 0 0 1 278 383H45A45 45 0 0 1 0 338V45A45 45 0 0 1 45 0Z'); }
+  .s10 .b1 { inset-inline-start: 97px; } .s10 .b2 { inset-inline-start: 478px; } .s10 .b3 { inset-inline-start: 860px; }
+  .s10 .ic { position: absolute; top: 40px; inset-inline-start: 35px; width: 70px; height: 70px; border-radius: 50%; background: var(--gold); color: #FFFFFF; display: grid; place-items: center; }
+  .s10 .ic svg { width: 40px; height: 40px; }
+  .s10 .b2 .ic { background: #FFFFFF; color: var(--dark); }
+  .s10 .b2 .ic svg { width: 40px; height: 40px; }
+  .s10 .bt { position: absolute; top: 158px; inset-inline-start: 36px; width: 262px; color: #FFFFFF; }
+  .s10 .bt .hd { color: #FFFFFF; }
+  .s10 .bt p { width: 236px; margin-top: 10px; font-size: 20px; line-height: 25.5px; }
+
+  /* 11) الفريق */
+  .s11 .m { position: absolute; top: 365px; width: 274px; height: 307px; border-radius: 18px; background: var(--dark); color: #FFFFFF; padding: 113px 19px 0; }
+  .s11 .m1 { inset-inline-start: 97px; } .s11 .m2 { inset-inline-start: 470px; background: var(--gold-2); } .s11 .m3 { inset-inline-start: 844px; }
+  .s11 .m .hd { color: #FFFFFF; }
+  .s11 .m em { display: block; font-size: 18px; line-height: 24px; font-style: italic; margin-top: 3px; }
+  html[lang="ar"] .s11 .m em { font-style: normal; opacity: .9; }
+  .s11 .m p { width: 232px; margin-top: 24px; font-size: 20px; line-height: 25.5px; }
+  .s11 .ph { position: absolute; top: 279px; width: 178px; height: 172px; border-radius: 12px; object-fit: cover; box-shadow: 0 10px 22px rgb(0 0 0 / .12); }
+  .s11 .q1 { inset-inline-start: 258px; } .s11 .q2 { inset-inline-start: 632px; } .s11 .q3 { inset-inline-start: 1006px; }
+
+  /* 12) الجدول الزمني */
+  .s12 .bar { position: absolute; top: 339px; inset-inline-start: 66px; width: 1214px; height: 77px; display: flex; border-start-start-radius: 38.5px; border-end-start-radius: 38.5px; overflow: hidden; box-shadow: 0 28px 30px -14px rgb(0 0 0 / .16); }
+  .s12 .seg { flex: none; height: 77px; display: flex; align-items: center; font-size: 27px; font-weight: 700; color: #FFFFFF; padding-inline-start: 31px; }
+  .s12 .y1 { width: 232px; padding-inline-start: 32px; background: linear-gradient(90deg, #CDB785, #D3C196); }
+  .s12 .y2 { width: 233px; background: var(--green); padding-inline-start: 29px; }
+  .s12 .y3 { width: 232px; background: linear-gradient(90deg, #B49A56, #BAA266 60%, #AF9552); padding-inline-start: 24px; }
+  .s12 .y4 { width: 232px; background: var(--green); padding-inline-start: 20px; }
+  .s12 .y5 { width: 285px; background: var(--pale); color: var(--green); padding-inline-start: 17px; }
+  html[dir="rtl"] .s12 .y1 { background: linear-gradient(270deg, #CDB785, #D3C196); }
+  html[dir="rtl"] .s12 .y3 { background: linear-gradient(270deg, #B49A56, #BAA266 60%, #AF9552); }
+  .s12 .tc { position: absolute; top: 462px; width: 205px; }
+  .s12 .tc p { margin-top: 7px; font-size: 17px; line-height: 22.7px; color: var(--ink-2); }
+  .s12 .t1 { inset-inline-start: 98px; } .s12 .t2 { inset-inline-start: 326px; } .s12 .t3 { inset-inline-start: 555px; } .s12 .t4 { inset-inline-start: 783px; } .s12 .t5 { inset-inline-start: 1012px; }
+
+  /* 13) آراء العملاء */
+  .s13 .pnl { position: absolute; top: 0; inset-inline-start: 52px; width: 926px; height: 497px; background: var(--dark); clip-path: path('M0 0H926V310A47 47 0 0 1 879 357H800A47 47 0 0 0 753 404V497H50A50 50 0 0 1 0 447Z'); }
+  .s13 .ttl { top: 96px; inset-inline-start: 120px; color: #FFFFFF; }
+  .s13 .lead { top: 262px; inset-inline-start: 120px; width: 525px; color: #FFFFFF; }
+  .s13 .arr { position: absolute; top: 370px; inset-inline-start: 815px; width: 70px; height: 70px; color: var(--green); }
+  .s13 .q { top: 460px; width: 369px; height: 207px; padding: 25px 20px 0; }
+  .s13 .q1 { inset-inline-start: 95px; } .s13 .q2 { inset-inline-start: 477px; } .s13 .q3 { inset-inline-start: 859px; }
+  .s13 .q p { width: 330px; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+  .s13 .q .hd { position: absolute; bottom: 30px; inset-inline-end: 14px; }
+
+  /* 14) الأسعار */
+  .s14 .pc { width: 323px; height: 363px; border-radius: 30px; box-shadow: 0 18px 40px rgb(0 0 0 / .10); text-align: center; }
+  .s14 .pc1 { top: 287px; inset-inline-start: 97px; } .s14 .pc2 { top: 262px; inset-inline-start: 478px; } .s14 .pc3 { top: 287px; inset-inline-start: 860px; }
+  .s14 .tag { position: absolute; top: -21px; inset-inline-start: 83px; width: 154px; height: 42px; border-radius: 21px; background: var(--dark); color: #FFFFFF; font-size: 18px; display: grid; place-items: center; box-shadow: 0 10px 18px rgb(0 0 0 / .13); }
+  .s14 .pc2 .tag { background: #BBA766; } .s14 .pc3 .tag { background: var(--plat); }
+  .s14 .pr { position: absolute; top: 60px; inset-inline-end: 34px; color: var(--dark); white-space: nowrap; }
+  .s14 .pr span { font-size: 20px; } .s14 .pr b { font-size: 47px; line-height: 60px; font-weight: 400; }
+  .s14 .pc2 .pr { color: var(--gold-2); } .s14 .pc3 .pr { color: var(--green); }
+  .s14 .pc .hd { position: absolute; top: 125px; inset-inline-end: 30px; font-size: 22px; }
+  .s14 .ln { position: absolute; top: 177px; inset-inline-start: 30px; width: 264px; height: 1px; background: #333; }
+  .s14 .pc p { position: absolute; top: 216px; inset-inline-start: 34px; width: 255px; font-size: 18px; line-height: 22.6px; color: #2A2A2A; }
+
+  /* 15) الختام */
+  .s15 .ph { position: absolute; top: 99px; inset-inline-start: 167px; width: 419px; height: 522px; border-radius: 22px; object-fit: cover; }
+  .s15 .ttl { top: 96px; inset-inline-start: 680px; }
+  .s15 .lead { top: 262px; inset-inline-start: 680px; width: 525px; }
+  .s15 .dl { position: absolute; inset-inline-start: 692px; width: 301px; height: 1.5px; background: repeating-linear-gradient(90deg, var(--dark) 0 7px, transparent 7px 12px); }
+  .s15 .dt { position: absolute; width: 25px; height: 25px; border-radius: 50%; background: var(--dark); }
+  .s15 .g { position: absolute; width: 240px; }
+  .s15 .g .hd { font-size: 22px; }
+  .s15 .g p { margin-top: 4px; font-size: 18px; line-height: 23px; color: var(--ink-2); }
+  .s1 .l1 { position: absolute; top: 405px; inset-inline-start: 66px; }
+  .ttl.tl2 { position: absolute; top: 106px; inset-inline-start: 108px; }
+  .s3 .lead { position: absolute; top: 254px; inset-inline-start: 97px; }
+  .s4 .lead { position: absolute; top: 254px; inset-inline-start: 97px; }
+
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><img class="bgimg" src="/templates/freeform/sl-data-consultancy-services/assets/cover.jpg" alt="Team reviewing a data dashboard"><h1 class="big l1">DATA CONSULTANCY</h1><div class="row2"><h1 class="big l2">SERVICES</h1><svg class="a mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 5 18.5 18.5M19.5 8v11.5H8" fill="none" stroke="currentColor" stroke-width="3.2"/></svg></div><span class="pill">PRESENTATION TEMPLATE</span><svg class="logo" viewBox="0 0 60 66" aria-hidden="true"><path d="M8 6Q30-2 52 5Q60 8 58 18Q55 33 58 48Q60 58 50 60Q28 66 8 62Q0 60 2 50Q5 33 2 16Q0 8 8 6Z" fill="#CDB785"/><path d="M15 17Q32 12 47 14.5Q51 15.5 50 20Q47 33 50 46Q51 51 46 51.5Q30 56 16 52.5Q11 51.5 12 46Q15.5 32 12 22Q11 17.5 15 17Z" fill="#0F2B26"/></svg><p class="lt">YOUR COMPANY<br>LOGO HERE</p></div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><div class="shape ph"><img src="/templates/freeform/sl-data-consultancy-services/assets/about.jpg" alt="Consultants in a meeting"></div><i class="gl" aria-hidden="true"></i><h1 class="ttl tl2">About Us<small>Slide</small></h1><span class="go"><svg class="mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div class="intro"><h2>Edit Text Here</h2><p>This is a sample text. Insert your text here. You can add sample text. This is a sample text. Insert your desired text here.</p></div><svg class="bigarr mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 5 18.5 18.5M19.5 8v11.5H8" fill="none" stroke="currentColor" stroke-width="2.8"/></svg><div class="card c c1"><div class="num"><bdi dir="ltr">01</bdi></div><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="card c c2"><div class="num"><bdi dir="ltr">02</bdi></div><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="card c c3"><div class="num"><bdi dir="ltr">03</bdi></div><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div></div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><i class="gl" aria-hidden="true"></i><h1 class="ttl tl1">Problem Statement<small>Slide</small></h1><p class="tx lead">This is a sample text. Insert your text here. You can add sample text. This is a sample text. Insert your text here.</p><div class="shape ph"><img src="/templates/freeform/sl-data-consultancy-services/assets/problem.jpg" alt="Analyst reviewing charts with colleagues"></div><svg class="arr mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 19 18.5 5.5M8.5 4.5H19.5V15.5" fill="none" stroke="currentColor" stroke-width="2.9"/></svg><div class="card it it1"><span class="sq"><bdi dir="ltr">01</bdi></span><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add sample text.</p></div><div class="card it it2"><span class="sq"><bdi dir="ltr">02</bdi></span><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add sample text.</p></div><div class="card it it3"><span class="sq"><bdi dir="ltr">03</bdi></span><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add sample text.</p></div></div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><i class="gl" aria-hidden="true"></i><h1 class="ttl tl1">Our Solutions<small>Slide</small></h1><p class="tx lead">This is a sample text. Insert your text here. You can add sample text. This is a sample text. Insert your text here.</p><img class="man" src="/templates/freeform/sl-data-consultancy-services/assets/solutions.jpg" alt="Smiling consultant"><div class="pw"><div class="shape pbg"></div><div class="col k1"><svg class="" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.2 2.8c-5 .1-9 2.4-11.7 6.5l-3.6.3-3.3 3.3 4.2 1.1 2.5 2.5 1.1 4.2 3.3-3.3.3-3.6c4.1-2.7 6.4-6.7 6.5-11.7zm-5.6 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM6 15.8c-1.8.3-2.9 1.7-3 5.3 3.6-.1 5-1.2 5.3-3z"/></svg><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="col k2"><svg class="" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="14.5" width="4.8" height="6.5" rx=".4"/><rect x="9.6" y="9.2" width="4.8" height="11.8" rx=".4"/><rect x="16.2" y="3" width="4.8" height="18" rx=".4"/></svg><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="col k3"><svg class="" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 10.2 9.8 8l10.6 10.6a1.5 1.5 0 0 1-2.2 2.2z"/><path d="M2.6 8.4 7 4c2-2 5-2.4 7.6-1.2L11.3 5l1.5 1.5L9 10.3 7.4 8.7 5.9 10.2z"/><path d="M14.2 8.2 4.3 18.1a1.5 1.5 0 0 0 2.2 2.2l9.9-9.9a4 4 0 0 0 5-5.5l-2.3 2.3-2-.4-.4-2 2.3-2.3a4 4 0 0 0-4.8 5.7z"/></svg><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><i class="dv d1"></i><i class="dv d2"></i></div><svg class="arr mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 5 18.5 18.5M19.5 8v11.5H8" fill="none" stroke="currentColor" stroke-width="3"/></svg></div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><i class="gl" aria-hidden="true"></i><div class="sphere" style="top:-178px; inset-inline-start:990px; width:496px; height:496px"></div><h1 class="ttl tl1">Service Offerings</h1><img class="band" src="/templates/freeform/sl-data-consultancy-services/assets/band.jpg" alt="Team in front of an analytics screen"><div class="card c c1"><div class="top"><span class="n"><bdi dir="ltr">01</bdi></span><h3 class="hd">Edit Text Here</h3></div><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="card c c2"><div class="top"><span class="n"><bdi dir="ltr">02</bdi></span><h3 class="hd">Edit Text Here</h3></div><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="card c c3"><div class="top"><span class="n"><bdi dir="ltr">03</bdi></span><h3 class="hd">Edit Text Here</h3></div><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><span class="ga ga1"><svg class="mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ga ga2"><svg class="mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6"><i class="gl" aria-hidden="true"></i><h1 class="ttl">Why<br>Choose Us</h1><p class="tx lead">This is a sample text. Insert your text here. You can add sample text. This is a sample text. Insert your desired text here. This is a sample text. Insert your text here.</p><div class="card k k1"><i class="ring"></i><span class="pc"><bdi dir="ltr">70%</bdi></span><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="card k k2"><i class="ring"></i><span class="pc"><bdi dir="ltr">30%</bdi></span><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add text.</p></div><svg class="rib mir" viewBox="725 128 525 478" aria-hidden="true"><path d="M900 136H788V180M788 490V524H806" fill="none" stroke="#E4E4E4" stroke-width="1.5"/><path fill="#15443A" stroke="#15443A" stroke-width=".8" stroke-linejoin="round" fill-rule="evenodd" d="M1193 318 1187 300 1185 299 1181 306 1175 312 1155 326 1123 343 1109 348 1102 352 1078 360 1073 363 1025 378 980 390 896 407 857 412 849 411 845 413 839 413 834 411 831 413 827 413 823 409 821 403 815 395 805 386 794 381 785 379 780 380 774 379 770 381 766 381 752 388 739 402 732 422 732 430 734 433 734 438 741 453 753 465 765 471 776 473 790 472 801 468 821 469 822 470 844 470 845 469 857 470 862 468 867 469 874 467 884 467 888 465 913 463 957 455 962 453 967 453 1016 441 1020 439 1028 438 1034 435 1045 433 1067 425 1080 422 1101 413 1108 412 1122 405 1126 404 1127 405 1131 403 1132 401 1144 397 1179 378 1192 368 1199 356 1198 342 1196 337 1196 331ZM758 412 761 409 765 409 774 412 785 420 793 420 799 428 799 431 797 433 794 432 790 435 789 437 790 442 788 444 778 442 775 438 774 432 763 423ZM1044 173 1040 167 1029 163 1000 158 986 158 985 159 987 161 986 164 975 173 964 178 936 187 898 195 892 194 888 196 879 196 877 194 872 194 868 190 868 188 863 189 835 210 823 222 823 227 828 231 847 233 848 235 854 233 868 233 900 229 948 219 993 205 1029 189 1028 188 1031 185 1041 179Z"/><path fill="#0F2E28" stroke="#0F2E28" stroke-width=".8" stroke-linejoin="round" fill-rule="evenodd" d="M1173 195 1167 184 1158 175 1152 171 1137 166 1121 167 1104 175 1092 188 1093 191 1089 197 1087 208 1088 221 1085 225 1083 224 1076 226 1075 229 1061 236 1034 247 999 259 930 277 887 285 853 289 828 290 827 289 828 286 829 286 823 290 806 289 793 285 786 278 779 293 772 313 769 325 770 335 773 338 785 343 797 345 829 345 830 348 799 363 776 378 791 379 805 385 820 400 824 409 827 412 831 412 834 410 839 411 840 408 859 400 915 380 995 358 1043 348 1080 342 1116 338 1126 339 1133 337 1160 322 1175 311 1180 306 1185 298 1187 299 1185 293 1179 286 1165 281 1150 279 1104 280 1103 277 1126 265 1141 254 1155 248 1166 238 1172 228 1175 218 1175 203ZM1116 212 1120 215 1119 222 1115 225 1111 222 1112 215ZM1132 204 1135 206 1136 211 1131 226 1127 229 1122 226 1122 222 1127 207 1130 204ZM1148 196 1151 199 1151 203 1142 230 1140 232 1136 232 1134 230 1134 226 1143 199 1146 196ZM991 157 962 157 932 162 900 171 885 177 869 185 868 187 872 193 877 193 879 195 888 195 879 195 877 192 895 185 931 175 977 166 980 168 986 162 984 159 986 157Z"/><path fill="#0B1F1D" stroke="#0B1F1D" stroke-width=".8" stroke-linejoin="round" fill-rule="evenodd" d="M1092 191 1083 188 1080 189 1049 188 1045 190 1035 191 1027 190 993 206 948 220 900 230 868 234 854 234 835 243 830 244 811 255 809 255 805 259 799 262 790 271 788 279 793 284 800 287 823 289 830 284 838 282 840 280 864 271 894 262 900 259 928 252 934 249 947 247 953 244 959 244 981 238 986 238 1029 229 1068 224 1077 225 1081 223 1085 223 1087 221 1086 215 1087 200Z"/><path fill="#B1944B" stroke="#B1944B" stroke-width=".8" stroke-linejoin="round" fill-rule="evenodd" d="M1166 407 1165 406 1127 406 1112 411 1102 416 1099 416 1054 432 991 449 950 458 945 458 940 460 923 462 918 464 873 469 850 479 829 492 816 505 815 513 818 517 824 520 840 524 882 524 907 511 932 501 935 501 958 492 1017 476 1078 464 1113 460 1142 460 1157 453 1162 448 1159 442 1158 429 1161 417Z"/><path fill="#CCB785" stroke="#CCB785" stroke-width=".8" stroke-linejoin="round" fill-rule="evenodd" d="M1238 424 1232 410 1221 399 1210 394 1192 393 1182 396 1174 401 1168 407 1163 415 1160 424 1159 433 1160 441 1163 449 1159 453 1143 461 1140 461 1119 471 1097 479 1023 501 943 518 897 524 887 523 882 525 872 525 871 526 840 525 825 521 821 521 821 522 837 538 855 552 865 558 879 561 918 561 929 559 936 560 944 557 959 556 996 548 1001 548 1018 543 1023 543 1045 536 1063 532 1072 528 1079 527 1105 517 1110 517 1115 515 1118 512 1124 511 1127 507 1129 509 1132 505 1136 503 1139 504 1165 488 1174 479 1179 469 1184 469 1192 472 1206 472 1217 468 1229 459 1236 448 1238 441ZM1180 437 1180 435 1183 433 1190 433 1192 435 1190 438ZM1203 433 1215 427 1216 431 1214 433 1218 435 1219 438 1216 440 1213 440 1209 437 1205 437ZM1198 427 1203 434 1201 437 1201 450 1199 452 1197 452 1195 448 1195 430ZM1188 418 1191 415 1192 416 1203 415 1207 419 1203 420 1198 425 1194 421 1191 421Z"/><path fill="#ABA881" stroke="#ABA881" stroke-width=".8" stroke-linejoin="round" fill-rule="evenodd" d="M1137 524 1135 521 1131 519 1113 516 1110 518 1105 518 1063 533 1045 537 1023 544 1018 544 1001 549 996 549 959 557 944 558 936 561 932 560 931 563 925 566 917 573 915 580 917 583 921 585 936 589 938 586 939 589 941 589 942 587 979 584 978 582 986 577 1019 565 1064 556 1085 557 1104 550 1117 543 1121 542 1122 543 1121 544 1136 530Z"/><path fill="#D4D4C2" stroke="#D4D4C2" stroke-width=".8" stroke-linejoin="round" fill-rule="evenodd" d="M1118 545 1093 556 1083 558 1079 561 1036 574 982 585 974 585 958 588 942 588 942 590 962 593 998 593 1033 587 1040 584 1044 584 1075 573 1102 558 1116 548Z"/></svg><span class="rt r1">This is a sample text</span><span class="rt r2">Insert your desired text here</span><span class="rt r3">You can add sample text.</span></div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><i class="gl" aria-hidden="true"></i><h1 class="ttl tl1">Methodology<br>&amp; Approach</h1><p class="tx lead">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p><img class="ph" src="/templates/freeform/sl-data-consultancy-services/assets/meeting.jpg" alt="Consultants discussing results on a tablet"><div class="card panel"></div><div class="row w1"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="row w2"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="hl"></div><div class="row w3"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="row w4"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><svg class="arr mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 19 5.5 5.5M4.5 15.5V4.5H15.5" fill="none" stroke="currentColor" stroke-width="3"/></svg></div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><div class="band"></div><i class="gl" aria-hidden="true"></i><div class="sphere" style="top:-201px; inset-inline-start:1005px; width:490px; height:490px"></div><h1 class="ttl tl1">Tools &amp; Technologies</h1><img class="ph x1" src="/templates/freeform/sl-data-consultancy-services/assets/tool-1.jpg" alt="Laptop showing charts"><img class="ph x2" src="/templates/freeform/sl-data-consultancy-services/assets/tool-2.jpg" alt="Laptop showing an analytics dashboard"><img class="ph x3" src="/templates/freeform/sl-data-consultancy-services/assets/tool-3.jpg" alt="Laptop showing data visualizations"><div class="t x1"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="t x2"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div><div class="t x3"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add text. This is a sample text.</p></div></div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><svg class="bgs" viewBox="0 0 1280 720" aria-hidden="true"><path d="M0 0H350V236C440 284 522 452 545 720H0Z" fill="#0F2B26"/></svg><i class="gl" aria-hidden="true"></i><img class="p1" src="/templates/freeform/sl-data-consultancy-services/assets/phone-1.jpg" alt="Phone showing a case study report"><img class="p2" src="/templates/freeform/sl-data-consultancy-services/assets/phone-2.jpg" alt="Phone showing an analytics app"><h1 class="ttl">Case Study</h1><p class="tx lead">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your desired text here. This is a sample text.</p><svg class="rk" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.2 2.8c-5 .1-9 2.4-11.7 6.5l-3.6.3-3.3 3.3 4.2 1.1 2.5 2.5 1.1 4.2 3.3-3.3.3-3.6c4.1-2.7 6.4-6.7 6.5-11.7zm-5.6 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM6 15.8c-1.8.3-2.9 1.7-3 5.3 3.6-.1 5-1.2 5.3-3z"/></svg><i class="vd"></i><div class="itm"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your text here. You can add sample text.</p></div><div class="card st st1"><b><bdi dir="ltr">96%</bdi></b><p>This is a sample text. Insert your desired text here. You can add sample text.</p></div><div class="card st st2"><b><bdi dir="ltr">23k+</bdi></b><p>This is a sample text. Insert your desired text here. You can add sample text.</p></div></div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><i class="gl" aria-hidden="true"></i><h1 class="ttl tl1">Data-Driven Benefits</h1><p class="tx lead wide">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your text here. This is a sample text. This is a sample text. Insert your desired text here. You can add sample text.</p><div class="bw b1"><div class="shape bshape"></div><span class="ic"><svg class="" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4.2" ry="9"/><path d="M3 12h18"/></g></svg></span><div class="bt"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your text here.</p></div></div><div class="bw b2"><div class="shape bshape"></div><span class="ic"><svg class="" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 5l5 5M19 5l-5 5M5 19l5-5M19 19l-5-5"/></g><path d="M3 3h7.5L3 10.5zM21 3h-7.5L21 10.5zM3 21h7.5L3 13.5zM21 21h-7.5l7.5-7.5z"/></svg></span><div class="bt"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your text here.</p></div></div><div class="bw b3"><div class="shape bshape"></div><span class="ic"><svg class="" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7.2l4.6 4.1L12 5.4l4.4 5.9L21 7.2l-2 9.8H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5 19.6h14" stroke="currentColor" stroke-width="1.7"/></svg></span><div class="bt"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your text here.</p></div></div></div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><i class="gl" aria-hidden="true"></i><h1 class="ttl tl1">Team Introduction</h1><p class="tx lead wide">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your text here. This is a sample text. This is a sample text. Insert your desired text here. You can add sample text.</p><div class="m m1"><h3 class="hd">Edit Text Here</h3><em>Edit Text Here</em><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="m m2"><h3 class="hd">Edit Text Here</h3><em>Edit Text Here</em><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="m m3"><h3 class="hd">Edit Text Here</h3><em>Edit Text Here</em><p>This is a sample text. Insert your desired text here. You can add text.</p></div><img class="ph q1" src="/templates/freeform/sl-data-consultancy-services/assets/team-1.jpg" alt="Team member portrait"><img class="ph q2" src="/templates/freeform/sl-data-consultancy-services/assets/team-2.jpg" alt="Team member portrait"><img class="ph q3" src="/templates/freeform/sl-data-consultancy-services/assets/team-3.jpg" alt="Team member portrait"></div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><i class="gl" aria-hidden="true"></i><h1 class="ttl tl1">Timeline</h1><p class="tx lead wide">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your text here. This is a sample text. This is a sample text. Insert your desired text here. You can add sample text.</p><div class="bar"><span class="seg y1"><bdi dir="ltr">2025</bdi></span><span class="seg y2"><bdi dir="ltr">2026</bdi></span><span class="seg y3"><bdi dir="ltr">2027</bdi></span><span class="seg y4"><bdi dir="ltr">2028</bdi></span><span class="seg y5"><bdi dir="ltr">2029</bdi></span></div><div class="tc t1"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div><div class="tc t2"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div><div class="tc t3"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div><div class="tc t4"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div><div class="tc t5"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div></div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13"><i class="gl" aria-hidden="true"></i><div class="shape pnl"></div><h1 class="ttl">Client<br>Testimonials</h1><p class="tx lead">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your text here. This is a sample text. This is a sample text.</p><svg class="arr mir" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 5 18.5 18.5M19.5 8v11.5H8" fill="none" stroke="currentColor" stroke-width="2.8"/></svg><div class="card q q1"><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p><h3 class="hd">Edit Text Here</h3></div><div class="card q q2"><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p><h3 class="hd">Edit Text Here</h3></div><div class="card q q3"><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p><h3 class="hd">Edit Text Here</h3></div></div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14"><i class="gl" aria-hidden="true"></i><div class="sphere" style="top:-201px; inset-inline-start:1005px; width:490px; height:490px"></div><h1 class="ttl tl1">Pricing</h1><div class="card pc pc1"><span class="tag">Silver</span><span class="pr"><bdi dir="ltr"><span>$</span><b>49</b></bdi></span><h3 class="hd">Edit Text Here</h3><i class="ln"></i><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div><div class="card pc pc2"><span class="tag">Gold</span><span class="pr"><bdi dir="ltr"><span>$</span><b>59</b></bdi></span><h3 class="hd">Edit Text Here</h3><i class="ln"></i><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div><div class="card pc pc3"><span class="tag">Platinum</span><span class="pr"><bdi dir="ltr"><span>$</span><b>69</b></bdi></span><h3 class="hd">Edit Text Here</h3><i class="ln"></i><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p></div></div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15"><svg class="bgs" viewBox="0 0 1280 720" aria-hidden="true"><path d="M0 0H545C500 180 240 380 225 720H0Z" fill="#0F2B26"/></svg><i class="gl" aria-hidden="true"></i><img class="ph" src="/templates/freeform/sl-data-consultancy-services/assets/closing.jpg" alt="Team meeting around a laptop"><h1 class="ttl">Closing &amp;<br>Call To Action</h1><p class="tx lead">This is a sample text. Insert your desired text here. You can add text. This is a sample text. Insert your text here.</p><i class="dl" style="top:371px"></i><i class="dl" style="top:534px"></i><i class="dt" style="top:360px; inset-inline-start:680px"></i><i class="dt" style="top:360px; inset-inline-start:981px"></i><i class="dt" style="top:523px; inset-inline-start:680px"></i><i class="dt" style="top:523px; inset-inline-start:981px"></i><div class="g" style="top:404px; inset-inline-start:680px"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="g" style="top:404px; inset-inline-start:981px"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="g" style="top:567px; inset-inline-start:680px"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="g" style="top:567px; inset-inline-start:981px"><h3 class="hd">Edit Text Here</h3><p>This is a sample text. Insert your desired text here.</p></div></div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 15</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{
+  "key": "sl-data-consultancy-services",
+  "kind": "slides",
+  "category": "general",
+  "icon": "📊",
+  "name": "خدمات استشارات البيانات",
+  "nameEn": "Data Consultancy Services",
+  "description": "15 شريحة لشركة استشارات بيانات: من نحن، المشكلة، الحلول، الخدمات، المنهجية، دراسة حالة، الفريق، الأسعار والختام",
+  "descriptionEn": "15 slides for a data consultancy: about, problem, solutions, services, method, case study, team, pricing, close",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement"
+    },
+    {
+      "title": "حلولنا",
+      "titleEn": "Our Solutions"
+    },
+    {
+      "title": "الخدمات المقدَّمة",
+      "titleEn": "Service Offerings"
+    },
+    {
+      "title": "لماذا تختارنا (نسب)",
+      "titleEn": "Why Choose Us (percentages)",
+      "needsData": true
+    },
+    {
+      "title": "المنهجية والأسلوب",
+      "titleEn": "Methodology & Approach"
+    },
+    {
+      "title": "الأدوات والتقنيات",
+      "titleEn": "Tools & Technologies"
+    },
+    {
+      "title": "دراسة حالة (مؤشرات)",
+      "titleEn": "Case Study (metrics)",
+      "needsData": true
+    },
+    {
+      "title": "فوائد قائمة على البيانات",
+      "titleEn": "Data-Driven Benefits"
+    },
+    {
+      "title": "التعريف بالفريق",
+      "titleEn": "Team Introduction"
+    },
+    {
+      "title": "الجدول الزمني",
+      "titleEn": "Timeline"
+    },
+    {
+      "title": "آراء العملاء",
+      "titleEn": "Client Testimonials"
+    },
+    {
+      "title": "الأسعار",
+      "titleEn": "Pricing",
+      "needsData": true
+    },
+    {
+      "title": "الختام والدعوة إلى العمل",
+      "titleEn": "Closing & Call To Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور والأشكال (clip-path) وغيّر النصوص والأرقام فقط؛ النسب والمؤشرات والأسعار نصوص عادية تُعدَّل في مكانها."
+}
