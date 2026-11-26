@@ -157,6 +157,13 @@ let currentRecord = null; // the full record behind the open drawer — see open
 
 async function load() {
   const res = await fetch('/api/usage?limit=200');
+  // الاستهلاك لمالك المنصّة وحده: غيره (أو بلا دخول) يرى سببًا واضحًا بدل صفحة معطوبة
+  if (!res.ok) {
+    document.querySelector('main').innerHTML = `<div style="margin:60px auto;max-width:520px;text-align:center;line-height:1.8">
+      <h2 style="margin:0 0 8px">${res.status === 401 ? 'سجّل الدخول أولًا' : 'هذه الصفحة لمالك المنصّة وحده'}</h2>
+      <p style="margin:0;color:#6b7785">سجل الاستهلاك يجمع نداءات الموديل لكل المنظمات، فيعرضه مالك المنصّة من «إدارة المنصّة».</p></div>`;
+    return;
+  }
   data = await res.json();
   renderStats(); renderByModel(); renderRequests();
 }

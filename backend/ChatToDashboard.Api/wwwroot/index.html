@@ -151,7 +151,6 @@
         <ul class="nav">
           <li><button type="button" class="nav-link tab" id="tab-users" data-screen="users"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-text">المستخدمون</span></button></li>
           <li><button type="button" class="nav-link tab" id="tab-integrations" data-screen="integrations"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg><span class="nav-text">التكاملات الخارجية</span></button></li>
-          <li><a class="nav-link" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">الاستهلاك</span></a></li>
         </ul>
       </div>
 
@@ -162,7 +161,9 @@
           <li><button type="button" class="nav-link tab" id="tab-templates-admin" data-screen="templates-admin"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-text">مكتبة النماذج</span></button></li>
           <!-- إعدادات الموديلات ومفاتيحها تسري على المنصّة كلها فهي لمالك المنصّة وحده (LlmSettingsController: سياسة PlatformOwner) -->
           <li><button type="button" class="nav-link tab" id="tab-settings" data-screen="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-text">الإعدادات</span></button></li>
-          <li><button type="button" class="nav-link tab" id="tab-llm-keys" data-screen="llm-keys"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">مفاتيح الموديلات</span></button></li>
+          <!-- الاستهلاك يجمع نداءات الموديل لكل المنظمات، فهو لمالك المنصّة وحده (UsageController: سياسة PlatformOwner) -->
+          <li><a class="nav-link" id="usage-link" href="/usage" title="ما أُرسل للموديل وكم استهلك"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">الاستهلاك</span></a></li>
+          <li class="hidden"><!-- صارت تبويبًا في «الإعدادات» --><button type="button" class="nav-link tab" id="tab-llm-keys" data-screen="llm-keys"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span class="nav-text">مفاتيح الموديلات</span></button></li>
         </ul>
       </div>
     </nav>
@@ -1688,6 +1689,11 @@
 
 <div id="screen-settings" class="screen">
   <div class="settings-wrap">
+    <div class="um-tabs set-tabs" role="tablist" aria-label="أقسام الإعدادات">
+      <button type="button" class="um-tab set-tab active" role="tab" id="set-tab-models" aria-controls="set-panel-models" aria-selected="true" data-set-tab="models">الموديلات</button>
+      <button type="button" class="um-tab set-tab" role="tab" id="set-tab-keys" aria-controls="set-panel-keys" aria-selected="false" tabindex="-1" data-set-tab="keys">مفاتيح الموديلات</button>
+    </div>
+    <div class="set-panel" role="tabpanel" id="set-panel-models" aria-labelledby="set-tab-models">
     <div class="settings-banner">
       <span class="settings-banner-icon">🌐</span>
       <div>
@@ -1696,13 +1702,9 @@
       </div>
     </div>
 
+    <div class="set-grid">
     <div class="settings-section">
-      <h3>الموديل المستخدم حاليًا</h3>
-      <div id="settings-current" class="settings-current">جارٍ التحميل…</div>
-    </div>
-
-    <div class="settings-section">
-      <h3>تغيير الموديل</h3>
+      <h3 class="set-h">موديل اللوحات والمحادثة <span id="settings-current" class="settings-current">جارٍ التحميل…</span></h3>
       <div id="settings-providers" class="model-switch-providers"></div>
       <div id="settings-ollama-row" class="model-switch-ollama-row hidden">
         <label>الموديل الداخلي (Ollama)
@@ -1725,7 +1727,7 @@
 
     <div class="settings-section">
       <h3>نموذج قراءة المستندات (PDF)</h3>
-      <p class="model-switch-note">يُستخدم وقت رفع أي ملف PDF جديد ليقرأ صفحاته كصور — بما فيها
+      <p class="model-switch-note set-desc" tabindex="0" role="button" aria-expanded="false">يُستخدم وقت رفع أي ملف PDF جديد ليقرأ صفحاته كصور — بما فيها
         صفحة ممسوحة ضوئيًا أو جدول/رسم بياني مضمّن — بدل الاكتفاء باستخراج النص الرقمي فقط.
         إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لكل غرض.
         لو فشلت القراءة بالذكاء الاصطناعي لأي سبب، يرجع النظام تلقائيًا للاستخراج النصي العادي
@@ -1752,7 +1754,7 @@
 
     <div class="settings-section">
       <h3>نموذج تحليل الصور</h3>
-      <p class="model-switch-note">يُستخدم لما ترفق صورة داشبورد أو مخطط لإعادة بنائه ببياناتك —
+      <p class="model-switch-note set-desc" tabindex="0" role="button" aria-expanded="false">يُستخدم لما ترفق صورة داشبورد أو مخطط لإعادة بنائه ببياناتك —
         إعداد مستقل تمامًا عن "الموديل المستخدم حاليًا" أعلاه: ممكن تختار موديل مختلف لتحليل
         الصور. لو تركته «نفس الموديل الحالي»، ستُرسل الصورة لنفس الموديل المختار فوق كالمعتاد؛
         بعض الموديلات الداخلية لا تدعم تحليل الصور فترجع خطأً واضحاً بدل تجاهل الصورة بصمت.</p>
@@ -1778,7 +1780,7 @@
 
     <div class="settings-section">
       <h3>نموذج استخراج الهوية البصرية (التكاملات الخارجية)</h3>
-      <p class="model-switch-note">يُستخدم فقط في شاشة «التكاملات الخارجية» لاستخراج هوية بصرية
+      <p class="model-switch-note set-desc" tabindex="0" role="button" aria-expanded="false">يُستخدم فقط في شاشة «التكاملات الخارجية» لاستخراج هوية بصرية
         من صورة شعار أو دليل هوية بلا نص مصاحب. مُعطّل افتراضيًا حتى تختار موديل صراحةً هنا
         وتؤكد إنه يدعم تحليل الصور — أي عملية استخراج بصورة بدون هذا التأكيد تُرفض برسالة واضحة
         بدل إرسال الصورة لموديل ما يدعمهاش.</p>
@@ -1808,7 +1810,7 @@
 
     <div class="settings-section">
       <h3>نموذج تحليل معاني الأعمدة</h3>
-      <p class="model-switch-note">يُستخدم مرة واحدة لكل جدول بعد رفع ملف أو تحديث نظام خارجي ليفهم معنى كل عمود
+      <p class="model-switch-note set-desc" tabindex="0" role="button" aria-expanded="false">يُستخدم مرة واحدة لكل جدول بعد رفع ملف أو تحديث نظام خارجي ليفهم معنى كل عمود
         من قيمه (إيراد، حالة صفقة، عميل…) — وعلى هذه المعاني تعتمد جدوى عناصر القوالب. إعداد مستقل
         عن «الموديل المستخدم حاليًا»: لو تركته «نفس الموديل الحالي» يتبع موديل اللوحات، ولو اخترت
         «معطّل» يُكتفى بتخمين الأسماء فقط. لا يُعاد التحليل تلقائيًا لجدول سبق تحليله.</p>
@@ -1832,10 +1834,12 @@
       </div>
     </div>
 
+    </div>
+
     <div class="settings-section">
       <h3>معلومات عن الموديلات المتاحة</h3>
-      <p class="model-switch-note">مفاتيح الوصول وعناوين البوابات لكل مزوّد تُدار من صفحة
-        <a href="#" id="link-to-llm-keys">«مفاتيح الموديلات»</a> في قائمة الإدارة.</p>
+      <p class="model-switch-note">مفاتيح الوصول وعناوين البوابات لكل مزوّد تُدار من تبويب
+        <a href="#" id="link-to-llm-keys">«مفاتيح الموديلات»</a> أعلى الصفحة.</p>
       <div class="settings-info-grid">
         <div class="settings-info-card" data-provider="Anthropic">
           <div class="settings-info-head">
@@ -1860,11 +1864,9 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
-
-<div id="screen-llm-keys" class="screen">
-  <div class="settings-wrap">
+      </div>
+    <!-- «مفاتيح الموديلات» صارت تبويبًا هنا (كانت شاشة مستقلة screen-llm-keys؛ المعرّفات كما هي) -->
+    <div class="set-panel hidden" role="tabpanel" id="set-panel-keys" aria-labelledby="set-tab-keys">
     <div class="settings-banner">
       <span class="settings-banner-icon">🔑</span>
       <div>
@@ -1876,8 +1878,12 @@
       </div>
     </div>
     <div id="llm-keys-grid" class="llm-keys-grid"><div class="lib-empty"><span class="spinner"></span> جارٍ التحميل…</div></div>
+      </div>
   </div>
 </div>
+
+<!-- بقيت للتوافق: showScreen('llm-keys') يحوّل إلى تبويب المفاتيح في «الإعدادات» -->
+<div id="screen-llm-keys" class="screen"></div>
 
 <div id="screen-integrations" class="screen">
   <div class="settings-wrap">

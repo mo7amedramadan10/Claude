@@ -10,7 +10,7 @@ public static class PlatformGate
 {
     private static readonly string[] Allowed =
     {
-        "/api/auth", "/api/organizations", "/api/templates", "/api/schema-aliases", "/api/llm-settings",
+        "/api/auth", "/api/organizations", "/api/templates", "/api/schema-aliases", "/api/llm-settings", "/api/usage",
     };
 
     public const string Code = "platform_only";

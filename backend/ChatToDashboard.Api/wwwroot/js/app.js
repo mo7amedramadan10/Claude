@@ -8178,7 +8178,39 @@ function applyScreenAccess() {
 
 // مستخدم عادي بلا دور في أي كيان (EntityGate في الخادم): لا تظهر له شاشات الكيان، بل شاشة «لم تُضف إلى أي كيان» فقط
 const NO_ENTITY_SCREENS = ['no-entity', 'presentations'];
+// «الإعدادات»: تبويبا «الموديلات» و«مفاتيح الموديلات» (الثانية كانت شاشة مستقلة؛ showScreen('llm-keys') يفتح تبويبها)
+let SET_TAB = 'models';
+function setSetTab(name, focus) {
+  SET_TAB = name;
+  document.querySelectorAll('#screen-settings .set-tab').forEach(t => {
+    const on = t.dataset.setTab === name;
+    t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+    el(t.getAttribute('aria-controls')).classList.toggle('hidden', !on);
+    if (on && focus) t.focus();
+  });
+  if (name === 'keys') loadLlmKeysPage();
+}
+document.querySelectorAll('#screen-settings .set-tab').forEach(t => {
+  t.addEventListener('click', () => setSetTab(t.dataset.setTab));
+  t.addEventListener('keydown', e => {
+    const tabs = [...document.querySelectorAll('#screen-settings .set-tab')], i = tabs.indexOf(t);
+    const rtl = getComputedStyle(t).direction === 'rtl';
+    let j = null;
+    if (e.key === 'ArrowLeft') j = rtl ? i + 1 : i - 1; else if (e.key === 'ArrowRight') j = rtl ? i - 1 : i + 1;
+    else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = tabs.length - 1;
+    if (j == null) return;
+    e.preventDefault(); setSetTab(tabs[(j + tabs.length) % tabs.length].dataset.setTab, true);
+  });
+});
+// الوصف الطويل لكل نموذج مختصر في سطرين، والنقر (أو Enter) يعرضه كاملًا
+document.querySelectorAll('#screen-settings .set-desc').forEach(p => {
+  const toggle = () => { const open = p.classList.toggle('open'); p.setAttribute('aria-expanded', String(open)); };
+  p.addEventListener('click', toggle);
+  p.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+});
+
 function showScreen(name) {
+  if (name === 'llm-keys') { name = 'settings'; SET_TAB = 'keys'; }
   if (state.noEntity && !NO_ENTITY_SCREENS.includes(name)) name = 'no-entity';
   else if (!screenAllowed(name)) name = firstAllowedScreen();
   // «لوحات المتابعة» داخل تصميم حر: أي انتقال لشاشة أخرى (بما فيها «المحادثة واللوحات» من القائمة) يعيد
@@ -8206,8 +8238,7 @@ function showScreen(name) {
   if (name === 'decks') loadDecksScreen();
   if (name === 'freeform') loadFreeformScreen();
   if (name === 'users') loadUsers();
-  if (name === 'settings') loadSettingsPage();
-  if (name === 'llm-keys') loadLlmKeysPage();
+  if (name === 'settings') { loadSettingsPage(); setSetTab(SET_TAB); }
   if (name === 'integrations') loadIntegrations();
   if (name === 'projects') loadEntities();
   if (name === 'organizations') loadOrganizations();
@@ -13742,7 +13773,7 @@ el('settings-semantics-save').addEventListener('click', async () => {
     el('settings-semantics-error').classList.remove('hidden');
   } finally { btn.disabled = false; }
 });
-el('link-to-llm-keys').addEventListener('click', e => { e.preventDefault(); showScreen('llm-keys'); });
+el('link-to-llm-keys').addEventListener('click', e => { e.preventDefault(); setSetTab('keys', true); });
 
 // ---------- صفحة «مفاتيح الموديلات» (GET/PUT/DELETE /api/llm-settings/credentials) ----------
 const KEY_SOURCE_LABEL = {

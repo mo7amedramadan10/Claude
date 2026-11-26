@@ -5,10 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ChatToDashboard.Api.Controllers;
 
-// Prompts, tool results and cost data for every user's questions — admin only.
+// نصوص الطلبات ونتائج الأدوات وتكلفتها لكل المستخدمين في كل المنظمات — لمالك المنصّة وحده (كانت لمسؤول أي منظمة فترى نداءات المنظمات الأخرى).
 [ApiController]
 [Route("api/usage")]
-[Authorize(Roles = UserRoles.Admin)]
+[Authorize(Policy = "PlatformOwner")]
 public class UsageController : ControllerBase
 {
     private readonly UsageStore _store;
