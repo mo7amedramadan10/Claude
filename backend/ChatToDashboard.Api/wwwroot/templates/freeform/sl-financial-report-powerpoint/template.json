@@ -1,0 +1,66 @@
+{
+  "key": "sl-financial-report-powerpoint",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "📊",
+  "name": "التقرير المالي",
+  "nameEn": "Financial Report",
+  "description": "11 شريحة: غلاف، ملخص تنفيذي، الإيرادات، المصروفات، الأرباح والخسائر، الميزانية، التدفق النقدي، النسب، المقارنة، التوقعات",
+  "descriptionEn": "11 slides: cover, summary, revenue, expenses, P&L, balance sheet, cash flow, ratios, YoY, outlook, closing",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "توزيع الإيرادات (رسم حلقي)",
+      "titleEn": "Revenue Breakdown (donut)",
+      "needsData": true
+    },
+    {
+      "title": "تحليل المصروفات",
+      "titleEn": "Expense Analysis",
+      "needsData": true
+    },
+    {
+      "title": "قائمة الأرباح والخسائر",
+      "titleEn": "Profit & Loss Statement",
+      "needsData": true
+    },
+    {
+      "title": "ملخص الميزانية العمومية (شريط مكدّس)",
+      "titleEn": "Balance Sheet Summary (stacked bar)",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على التدفق النقدي",
+      "titleEn": "Cash Flow Overview",
+      "needsData": true
+    },
+    {
+      "title": "النسب المالية ومؤشرات الأداء",
+      "titleEn": "Financial Ratios & KPIs",
+      "needsData": true
+    },
+    {
+      "title": "المقارنة السنوية",
+      "titleEn": "Year-over-Year Comparison",
+      "needsData": true
+    },
+    {
+      "title": "التوقعات المالية",
+      "titleEn": "Financial Outlook",
+      "needsData": true
+    },
+    {
+      "title": "الختام والتواصل",
+      "titleEn": "Closing & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ نسب الرسم الحلقي في كتلة chart-data ومبالغ تركيب الأصول ونسبها وتسمياتها في chart-data-2."
+}

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Financial Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «التقرير المالي»: كتل بتدرّج كحلي/برقوقي بزوايا مقصوصة (الأصناف cut-*) وأشرطة عناوين بتدرّج برقوقي/أرجواني؛ كل الإحداثيات مطلقة 1280×720 بخصائص منطقية فتنعكس العربية تلقائيًا؛ الرسم الحلقي والشريط المكدّس يُرسمان من كتلتي chart-data وchart-data-2. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #000000; --ink-2: #404040; --ink-3: #595959; --accent: #B41265; --navy: #271F48; --plum: #6B3164; --mag: #B41265; --pink: #E7D0D6; --gray: #F2F2F2; --line: #D9D9D9; --green: #6AA84F; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame h1, .frame h2, .frame h3, .frame p, .frame ul { margin: 0; padding: 0; }
+  .a { position: absolute; }
+  .b { position: absolute; }
+  html[dir="rtl"] .dec { transform: scaleX(-1); }
+  bdi { unicode-bidi: isolate; }
+  /* الألوان والتدرّجات (تنعكس جهتها في العربية) */
+  .gray { background: var(--gray); }
+  .band { background: linear-gradient(90deg, var(--plum), var(--mag)); }
+  html[dir="rtl"] .band { background: linear-gradient(270deg, var(--plum), var(--mag)); }
+  .gd-tl-p { background: linear-gradient(to bottom right, var(--plum), var(--navy)); }
+  html[dir="rtl"] .gd-tl-p { background: linear-gradient(to bottom left, var(--plum), var(--navy)); }
+  .gd-tl-n { background: linear-gradient(to bottom right, var(--navy), var(--plum)); }
+  html[dir="rtl"] .gd-tl-n { background: linear-gradient(to bottom left, var(--navy), var(--plum)); }
+  .gd-tr-p { background: linear-gradient(to bottom left, var(--plum), var(--navy)); }
+  html[dir="rtl"] .gd-tr-p { background: linear-gradient(to bottom right, var(--plum), var(--navy)); }
+  .gd-tr-n { background: linear-gradient(to bottom left, var(--navy), var(--plum)); }
+  html[dir="rtl"] .gd-tr-n { background: linear-gradient(to bottom right, var(--navy), var(--plum)); }
+  .gd-h { background: linear-gradient(90deg, var(--navy), var(--plum)); }
+  html[dir="rtl"] .gd-h { background: linear-gradient(270deg, var(--navy), var(--plum)); }
+  /* الزوايا المقصوصة: --c طول القصّ */
+  .cut-br { clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%); }
+  html[dir="rtl"] .cut-br { clip-path: polygon(0 0, 100% 0, 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+  .cut-tr { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+  html[dir="rtl"] .cut-tr { clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
+  .cut-tl { clip-path: polygon(var(--c) 0, 100% 0, 100% 100%, 0 100%, 0 var(--c)); }
+  html[dir="rtl"] .cut-tl { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+  .tri-br { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  html[dir="rtl"] .tri-br { clip-path: polygon(0 0, 100% 100%, 0 100%); }
+  .tri-tr { clip-path: polygon(0 0, 100% 0, 100% 100%); }
+  html[dir="rtl"] .tri-tr { clip-path: polygon(0 0, 100% 0, 0 100%); }
+  /* النصوص المشتركة */
+  .ttl { font-size: 50px; font-weight: 700; line-height: 60px; color: var(--ink); white-space: nowrap; letter-spacing: -.3px; }
+  .sub { font-size: 22px; font-weight: 700; line-height: 28px; color: var(--mag); white-space: nowrap; }
+  .bt { font-size: 20px; line-height: 29px; color: var(--ink-3); }
+  .frame .bnd { position: absolute; margin: 0; display: block; line-height: 63px; padding-inline-start: 29px; color: #fff; font-size: 23px; font-weight: 700; white-space: nowrap; }
+  .bul li { list-style: none; position: relative; padding-inline-start: 30px; font-size: 20px; line-height: 34.5px; color: var(--ink-3); white-space: nowrap; }
+  .bul li::before { content: ""; position: absolute; inset-inline-start: 3px; top: 13px; width: 8px; height: 8px; background: var(--mag); transform: rotate(45deg); }
+  .ic { position: absolute; display: block; }
+  /* شبكة النقاط المثلثية */
+  .dots { position: absolute; width: 94px; height: 94px; }
+  .dots i { position: absolute; width: 8px; height: 8px; border-radius: 50%; }
+  .slash { position: absolute; top: 56px; inset-inline-start: 1168px; width: 42px; height: 66px; color: #BFBFBF; }
+  .photo { position: absolute; display: block; object-fit: cover; }
+  html[dir="rtl"] .photo { transform: scaleX(-1); }
+  .s1 .city { top: 36px; inset-inline-start: 40px; width: 1200px; height: 364px; clip-path: polygon(142px 0, 100% 0, 100% 223px, 1058px 100%, 0 100%, 0 142px); }
+  .s1 .logo { position: absolute; top: 36px; inset-inline-start: 40px; width: 53px; height: 55px; color: var(--plum); }
+  html[dir="rtl"] .s1 .logo { transform: scaleX(-1); }
+  .s1 .pt { position: absolute; top: 365px; inset-inline-start: 24px; width: 565px; height: 85px; padding-inline-start: 46px; line-height: 85px; font-size: 30px; font-weight: 400; letter-spacing: 3.2px; }
+  html[lang="ar"] .s1 .pt { letter-spacing: 0; font-size: 32px; font-weight: 500; }
+  .s1 .big { font-size: 100px; font-weight: 700; line-height: 100px; white-space: nowrap; letter-spacing: -1.5px; }
+  .s1 .fin { color: #000; }
+  .s1 .rep { background: linear-gradient(90deg, var(--navy), var(--plum)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  html[dir="rtl"] .s1 .rep { background-image: linear-gradient(270deg, var(--navy), var(--plum)); }
+  html[lang="ar"] .s1 .big { font-size: 96px; letter-spacing: 0; line-height: 104px; }
+  .s1 .sl2 { position: absolute; top: 488px; inset-inline-start: 588px; width: 82px; height: 172px; color: #A6A6A6; }
+  .s1 .k { font-size: 20px; font-weight: 700; color: var(--mag); line-height: 26px; white-space: nowrap; }
+  .s1 .v { font-size: 18px; color: var(--ink-3); line-height: 24px; white-space: nowrap; }
+  .s1 .pk { --c: 54px; }
+  .s1 .pkl { position: absolute; top: 512px; inset-inline-start: 1053px; width: 162px; height: 2px; background: #fff; }
+  .s1 .pb { font-size: 20px; font-weight: 700; color: #fff; line-height: 26px; white-space: nowrap; }
+  .s1 .pbv { font-size: 18px; color: #fff; line-height: 27px; white-space: nowrap; }
+  .kv { font-size: 46px; font-weight: 700; line-height: 56px; color: #fff; white-space: nowrap; letter-spacing: -1px; }
+  html[lang="ar"] .kv { letter-spacing: 0; }
+  .kl { font-size: 18px; line-height: 24px; color: #D9C9DA; white-space: nowrap; }
+  .s2 .mg { background: linear-gradient(172deg, #B8106A, #6E3063); }
+  html[dir="rtl"] .s2 .mg { background: linear-gradient(188deg, #B8106A, #6E3063); }
+  .s2 .kt { font-size: 30px; font-weight: 700; color: #2A2350; line-height: 36px; white-space: nowrap; }
+  .s2 .q { color: #D9D9D9; width: 52px; height: 40px; }
+  html[dir="rtl"] .s2 .q { transform: scaleX(-1); }
+  .s2 .qt { font-size: 22px; font-weight: 700; color: var(--mag); line-height: 29px; width: 370px; }
+  .s3 .ttl2 { white-space: normal; line-height: 57px; }
+  .s3 .bandp { clip-path: polygon(0 88px, 699px 88px, 787px 0, 100% 100%, 0 100%); }
+  html[dir="rtl"] .s3 .bandp { clip-path: polygon(100% 88px, 88px 88px, 0 0, 0 100%, 100% 100%); }
+  .s3 .donut { position: absolute; top: 140px; inset-inline-start: 547px; width: 352px; height: 352px; }
+  .s3 .donut text { font-family: var(--font); font-size: 22px; font-weight: 500; }
+  .s3 .lg { position: absolute; inset-inline-start: 964px; width: 300px; height: 56px; }
+  .s3 .lg i { position: absolute; top: 0; inset-inline-start: 0; width: 13px; height: 56px; }
+  .s3 .lg b { position: absolute; top: 2px; inset-inline-start: 33px; font-size: 20px; font-weight: 400; color: #222; line-height: 26px; white-space: nowrap; }
+  .s3 .lg span { position: absolute; top: 30px; inset-inline-start: 33px; font-size: 18px; color: #7F7F7F; line-height: 24px; }
+  .s3 .wd { position: absolute; top: 591px; inset-inline-start: 527px; width: 96px; height: 40px; }
+  .s3 .wd i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; }
+  .s3 .tr { font-size: 22px; color: #fff; line-height: 30px; white-space: nowrap; }
+  .s3 .trv { font-size: 30px; font-weight: 700; color: #fff; line-height: 36px; white-space: nowrap; letter-spacing: -.5px; }
+  .s4 .ttl2 { white-space: normal; line-height: 57px; }
+  .s4 .at { font-size: 20px; font-weight: 700; color: var(--mag); line-height: 28px; white-space: nowrap; }
+  .cell { position: absolute; }
+  .cell .ic { inset-inline-start: 50%; transform: translateX(-50%); }
+  html[dir="rtl"] .cell .ic { transform: translateX(50%); }
+  .cell .cv { position: absolute; inset-inline-start: 0; width: 100%; text-align: center; font-size: 36px; font-weight: 700; line-height: 44px; letter-spacing: -1px; }
+  html[lang="ar"] .cell .cv { letter-spacing: 0; }
+  .cell .cl { position: absolute; inset-inline-start: 0; width: 100%; text-align: center; font-size: 18px; line-height: 26px; }
+  .cell.dk { color: #fff; } .cell.dk .cl { color: #fff; }
+  .cell.lt { color: #262626; } .cell.lt .cl { color: var(--plum); } .cell.lt .ic { color: var(--navy); }
+  .r1 .ic { top: 78px; } .r1 .cv { top: 186px; } .r1 .cl { top: 232px; }
+  .r2 .ic { top: 70px; } .r2 .cv { top: 168px; } .r2 .cl { top: 217px; }
+  .s5 .meet { top: 79px; inset-inline-start: 794px; width: 407px; height: 161px; }
+  .s5 .meetw { --c: 57px; position: absolute; top: 79px; inset-inline-start: 794px; width: 407px; height: 161px; overflow: hidden; }
+  .s5 .meetw .photo { top: 0; inset-inline-start: 0; width: 100%; height: 100%; }
+  .pl { position: absolute; top: 242px; inset-inline-start: 79px; width: 714px; border-collapse: collapse; table-layout: fixed; }
+  .pl th { height: 55px; color: #fff; font-size: 21px; font-weight: 700; text-align: center; border-inline-end: 1px solid #fff; padding: 0; }
+  .pl th:first-child { text-align: start; padding-inline-start: 14px; }
+  .pl td { height: 57.3px; font-size: 19px; text-align: center; padding: 0; border-inline-end: 1px solid #DCDCDC; color: #595959; }
+  .pl td:last-child, .pl th:last-child { border-inline-end: 0; }
+  .pl td:first-child { text-align: start; padding-inline-start: 14px; font-weight: 700; }
+  .pl td.g { color: var(--green); font-weight: 700; }
+  .pl tr:nth-child(even) td { background: var(--gray); }
+  .s5 .nm { font-size: 30px; font-weight: 500; color: #fff; line-height: 38px; white-space: nowrap; }
+  .s5 .nml { font-size: 20px; color: #fff; line-height: 26px; white-space: nowrap; }
+  .s5 .ki { font-size: 20px; font-weight: 700; color: #000; line-height: 26px; }
+  .s5 .kip { font-size: 18px; line-height: 25.6px; color: var(--ink-3); width: 290px; }
+  .rows { position: absolute; }
+  .rows .rw { position: absolute; inset-inline-start: 0; width: 100%; display: flex; align-items: center; height: 30px; }
+  .rows .rl { font-size: 20px; color: #1A1A1A; white-space: nowrap; }
+  .rows .ln { height: 2px; background: var(--navy); flex: 1; }
+  .rows .rv { font-size: 20px; font-weight: 700; color: var(--plum); white-space: nowrap; text-align: end; }
+  .s6 .ln { margin-inline: 20px 24px; }
+  .s6 .stack { position: absolute; top: 498px; inset-inline-start: 55px; width: 1170px; height: 170px; overflow: visible; }
+  .s6 .stack text { font-family: var(--font); }
+  .s7 .rows .ln { flex: none; position: absolute; inset-inline-start: 229px; width: 756px; }
+  .s7 .rows .rv { position: absolute; inset-inline-end: 0; }
+  .s7 .rows .rv.up { color: var(--green); } .s7 .rows .rv.dn { color: var(--mag); }
+  .s7 .cl { font-size: 18px; color: #fff; line-height: 24px; white-space: nowrap; }
+  .s7 .cv { font-size: 36px; font-weight: 700; color: #fff; line-height: 44px; white-space: nowrap; letter-spacing: -1px; }
+  html[lang="ar"] .s7 .cv { letter-spacing: 0; }
+  .s7 .arw { position: absolute; width: 64px; height: 12px; color: #C9B6CE; }
+  html[dir="rtl"] .s7 .arw { transform: scaleX(-1); }
+  .s7 .vl { position: absolute; top: 544px; inset-inline-start: 803px; width: 1.5px; height: 135px; background: #D8C9DD; }
+  .s7 .ki { font-size: 18px; font-weight: 700; color: #fff; line-height: 24px; }
+  .s7 .kip { font-size: 18px; line-height: 25.5px; color: #D9C9DE; width: 300px; }
+  .kp { position: absolute; border-collapse: collapse; table-layout: fixed; }
+  .kp th { white-space: nowrap; font-size: 22px; font-weight: 700; color: var(--plum); text-align: start; padding: 0; border-bottom: 3px solid var(--plum); }
+  .kp td { font-size: 22px; color: #262626; text-align: start; padding: 0; border-bottom: 1px solid #D9D9D9; }
+  .kp th + th, .kp td + td { border-inline-start: 1px solid #D9D9D9; }
+  .kp tr:last-child td { border-bottom: 3px solid var(--plum); }
+  .s8 .kp { top: 241px; inset-inline-start: 84px; width: 676px; }
+  .s8 .kp th { height: 57px; } .s8 .kp td { height: 65px; }
+  .s8 .kp th:nth-child(n+2), .s8 .kp td:nth-child(n+2) { padding-inline-start: 39px; }
+  html[lang="ar"] .s8 .kp th:nth-child(n+2), html[lang="ar"] .s8 .kp td:nth-child(n+2) { padding-inline-start: 18px; }
+  .s8 .ktk { font-size: 18px; font-weight: 700; color: #262626; line-height: 24px; }
+  .s8 .ktp { font-size: 18px; color: var(--ink-3); line-height: 24px; white-space: nowrap; }
+  .s8 .panel { --c: 69px; }
+  .s8 .slashw { color: #fff; }
+  .s8 .ph { font-size: 22px; font-weight: 700; color: #fff; line-height: 29px; }
+  .s8 .pt { position: absolute; width: 31px; height: 32px; background: var(--pink); }
+  .s8 .pv { font-size: 40px; font-weight: 700; color: #fff; line-height: 48px; white-space: nowrap; letter-spacing: -1px; }
+  html[lang="ar"] .s8 .pv { letter-spacing: 0; }
+  .s8 .pl2 { font-size: 18px; color: #D9C9DE; line-height: 24px; white-space: nowrap; }
+  .s9 .kp { top: 227px; inset-inline-start: 84px; width: 1104px; }
+  .s9 .kp th { height: 52px; } .s9 .kp td { height: 60px; font-size: 20px; }
+  .s9 .kp th:nth-child(n+2) { text-align: center; }
+  .s9 .kp td:nth-child(2), .s9 .kp td:nth-child(3) { text-align: end; padding-inline-end: 38px; }
+  .s9 .kp td:nth-child(4) { text-align: end; padding-inline-end: 21px; color: var(--green); font-weight: 700; }
+  .s9 .kp tr:last-child td { border-bottom: 0; }
+  .s9 .bot { clip-path: polygon(0 0, 1232px 0, 100% 48px, 100% 100%, 0 100%); }
+  html[dir="rtl"] .s9 .bot { clip-path: polygon(48px 0, 100% 0, 100% 100%, 0 100%, 0 48px); }
+  .s9 .num { font-size: 44px; font-weight: 700; color: #A58EAE; line-height: 50px; letter-spacing: -1px; }
+  .s9 .dl { font-size: 20px; font-weight: 700; color: #fff; line-height: 25px; white-space: nowrap; }
+  .s9 .dp { font-size: 18px; color: #D9C9DE; line-height: 26px; width: 300px; }
+  .s10 .tv { font-size: 40px; font-weight: 700; color: #fff; line-height: 48px; white-space: nowrap; letter-spacing: -.8px; }
+  html[lang="ar"] .s10 .tv { letter-spacing: 0; }
+  .s10 .tl { font-size: 18px; color: #D9C9DE; line-height: 24px; white-space: nowrap; }
+  .s10 .pn { font-size: 60px; font-weight: 700; color: #D9D9DE; line-height: 64px; letter-spacing: -2px; }
+  .s10 .pt { font-size: 22px; font-weight: 700; color: #2A2350; line-height: 28px; white-space: nowrap; }
+  .s10 .pp { font-size: 18px; color: var(--ink-3); line-height: 24px; white-space: nowrap; }
+  .s11 .lg11 { position: absolute; top: 75px; inset-inline-start: 112px; width: 43px; height: 47px; color: #fff; }
+  html[dir="rtl"] .s11 .lg11 { transform: scaleX(-1); }
+  .s11 .lt { font-size: 16px; color: #fff; line-height: 24px; letter-spacing: 2.2px; white-space: nowrap; }
+  html[lang="ar"] .s11 .lt { letter-spacing: 0; font-size: 17px; }
+  .s11 .big { font-size: 66px; font-weight: 700; color: #fff; line-height: 77px; white-space: nowrap; letter-spacing: -1px; }
+  html[lang="ar"] .s11 .big { letter-spacing: 0; font-size: 64px; line-height: 80px; }
+  .s11 .hl { position: absolute; top: 507px; inset-inline-start: 121px; width: 895px; height: 3px; background: var(--mag); }
+  .s11 .ct { font-size: 20px; color: #fff; line-height: 28px; white-space: nowrap; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="dn1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2A2152"/><stop offset="1" stop-color="#1E1839"/></linearGradient><linearGradient id="dn2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#47264F"/><stop offset="1" stop-color="#6B3164"/></linearGradient><linearGradient id="dn3" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E0C4A"/><stop offset="1" stop-color="#B41265"/></linearGradient><linearGradient id="dn4" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E7D0D6"/><stop offset="1" stop-color="#E9D3D9"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <img class="photo city" src="/templates/freeform/sl-financial-report-powerpoint/assets/city.jpg" alt="Black and white skyscrapers in a financial district">
+    <span class="logo"><svg viewBox="0 0 54 56" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 3C24 1 37 1 46 6c6 4 7 14 6 26-1 12-5 21-14 22-11 2-24 1-32-3C0 47 0 37 1 25 2 12 3 5 12 3zm4 10c-5 1-6 5-6 13 0 9 1 15 5 17 5 2 13 2 19 1 6-1 8-5 9-13 1-8 0-13-4-16-5-3-15-3-23-2z"/></svg></span>
+    <div class="dots" style="top:305px; inset-inline-start:1146px;"><i style="top:0px; inset-inline-start:57px; background:#552B5B"></i><i style="top:0px; inset-inline-start:86px; background:#6B3164"></i><i style="top:29px; inset-inline-start:29px; background:#3F2552"></i><i style="top:29px; inset-inline-start:57px; background:#552B5B"></i><i style="top:29px; inset-inline-start:86px; background:#6B3164"></i><i style="top:57px; inset-inline-start:0px; background:#271F48"></i><i style="top:57px; inset-inline-start:29px; background:#3F2552"></i><i style="top:57px; inset-inline-start:57px; background:#552B5B"></i><i style="top:57px; inset-inline-start:86px; background:#6B3164"></i><i style="top:86px; inset-inline-start:0px; background:#271F48"></i><i style="top:86px; inset-inline-start:29px; background:#3F2552"></i><i style="top:86px; inset-inline-start:57px; background:#552B5B"></i><i style="top:86px; inset-inline-start:86px; background:#6B3164"></i></div>
+    <p class="bnd band pt">PRESENTATION TEMPLATE</p>
+    <h1 class="a big fin" style="top:478px; inset-inline-start:58px;">FINANCIAL</h1>
+    <p class="a big rep" style="top:576px; inset-inline-start:58px;">REPORT</p>
+    <svg class="sl2 dec" viewBox="0 0 82 172" aria-hidden="true"><path d="M62 2 2 170M80 2 18 170" stroke="currentColor" stroke-width="1.6"/></svg>
+    <p class="a k" style="top:497px; inset-inline-start:702px;">Company Name</p><p class="a v" style="top:529px; inset-inline-start:702px;">FY 2037 Financial Performance</p>
+    <p class="a k" style="top:595px; inset-inline-start:702px;">Reporting Period</p><p class="a v" style="top:627px; inset-inline-start:702px;">Jan — Dec 2037</p>
+    <div class="b pkt tri-br" style="top:612px; inset-inline-start:1189px; width:42px; height:42px; background:#CF78A8;"></div>
+    <div class="b gd-h cut-br pk" style="top:485px; inset-inline-start:1028px; width:212px; height:178px;"></div>
+    <div class="pkl"></div>
+    <p class="a pb" style="top:547px; inset-inline-start:1060px;">Prepared by</p><p class="a pbv" style="top:578px; inset-inline-start:1060px;">Finance &amp;<br>Strategy Team</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="a ttl" style="top:56px; inset-inline-start:84px;">Executive Summary Slide</h1><p class="a sub" style="top:136px; inset-inline-start:84px;">FY 2037 AT A GLANCE</p>
+    <div class="dots" style="top:66px; inset-inline-start:1038px;"><i style="top:0px; inset-inline-start:57px; background:#552B5B"></i><i style="top:0px; inset-inline-start:86px; background:#6B3164"></i><i style="top:29px; inset-inline-start:29px; background:#3F2552"></i><i style="top:29px; inset-inline-start:57px; background:#552B5B"></i><i style="top:29px; inset-inline-start:86px; background:#6B3164"></i><i style="top:57px; inset-inline-start:0px; background:#271F48"></i><i style="top:57px; inset-inline-start:29px; background:#3F2552"></i><i style="top:57px; inset-inline-start:57px; background:#552B5B"></i><i style="top:57px; inset-inline-start:86px; background:#6B3164"></i><i style="top:86px; inset-inline-start:0px; background:#271F48"></i><i style="top:86px; inset-inline-start:29px; background:#3F2552"></i><i style="top:86px; inset-inline-start:57px; background:#552B5B"></i><i style="top:86px; inset-inline-start:86px; background:#6B3164"></i></div><svg class="slash dec" viewBox="0 0 42 66" aria-hidden="true"><path d="M30 0 2 62M42 0 14 66" stroke="currentColor" stroke-width="1.6"/></svg>
+    <div class="b gd-tl-p" style="top:243px; inset-inline-start:0px; width:741px; height:477px;"></div><div class="b gray" style="top:243px; inset-inline-start:741px; width:539px; height:477px;"></div><div class="b mg" style="top:212px; inset-inline-start:373px; width:285px; height:259px;"></div>
+    <span class="ic" style="top:284px; inset-inline-start:89px; width:56px; height:56px; color:#B9A2BA;"><svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.2 6.6 18.6 4l.4 2.1L4.6 8.7z"/><path d="M2 8.5h20v10H2zm1.8 1.8v6.4h16.4v-6.4z"/><ellipse cx="12" cy="13.5" rx="2.4" ry="2"/><circle cx="6" cy="13.5" r=".9"/><circle cx="18" cy="13.5" r=".9"/></svg></span><p class="a kv" style="top:352px; inset-inline-start:82px;">$128.6M</p><p class="a kl" style="top:418px; inset-inline-start:84px;">2037 Revenue</p>
+    <span class="ic" style="top:258px; inset-inline-start:424px; width:64px; height:64px; color:#fff;"><svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 2h1.8v18.2H22V22H2z"/><path d="M5.5 14h3v5h-3zm4.5-3h3v8h-3zm4.5-4h3v12h-3zm4.5-3h3v15h-3z"/><path d="m5.3 11.6 4.2-4.2 2.6 2.4 3.7-4.3-1.3-1.1h4.3v4.2l-1.2-1.3-5.4 6.1-2.6-2.4-3 3z"/></svg></span><p class="a kv" style="top:352px; inset-inline-start:425px;">+14.8%</p><p class="a kl" style="top:418px; inset-inline-start:425px;">Revenue  Growth</p>
+    <span class="ic" style="top:514px; inset-inline-start:89px; width:46px; height:46px; color:#B9A2BA;"><svg width="46" height="46" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 2h18v18h-1.5v2h-3v-2h-9v2h-3v-2H3zm1.8 1.8v14.4h14.4V3.8z"/><path d="M6.5 5.5h11v11h-11zm1.5 1.5v8h8V7z"/><circle cx="12" cy="11" r="2.2"/><path d="M11.4 10.4h1.2v3.4h-1.2z" fill="#fff" opacity=".5"/></svg></span><p class="a kv" style="top:578px; inset-inline-start:82px;">$51.4M</p><p class="a kl" style="top:645px; inset-inline-start:84px;">Gross Profit</p>
+    <span class="ic" style="top:512px; inset-inline-start:422px; width:56px; height:56px; color:#B9A2BA;"><svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m9.6 2.5 7.8 4.5-5.9 10.2-7.8-4.5zm-.2 3.5-1 1.7.9.5-1.4 2.4-.9-.5-1 1.7 4.8 2.8 1-1.7.9.5 1.4-2.4-.9-.5 1-1.7z"/><circle cx="10.6" cy="9.8" r="1.6"/><path d="M15.5 13.6c1.6-.2 3.4.5 4.6 1.8-1.3.1-2.4.6-3.2 1.5 1.2.1 2.3.6 3.1 1.5-1.6.5-3.4.1-4.6-.9l-1.6-.7zM5 12.6c-1.6.3-3 1.5-3.4 3.2 1-.4 2.2-.4 3.2 0-1 .6-1.6 1.6-1.8 2.8 1.4-.5 2.6-1.6 3-3z"/></svg></span><p class="a kv" style="top:578px; inset-inline-start:424px;">$18.6M</p><p class="a kl" style="top:645px; inset-inline-start:424px;">Net Income</p>
+    <h2 class="a kt" style="top:299px; inset-inline-start:825px;">KEY TAKEAWAYS</h2>
+    <ul class="a bul" style="top:362px; inset-inline-start:825px;"><li>Revenue increased 14.8% YoY</li><li>Gross margin reached 40.0%</li><li>This is a sample text</li><li>Add your desired text here</li></ul>
+    <span class="ic q" style="top:548px; inset-inline-start:797px;"><svg viewBox="0 0 52 40" fill="currentColor" aria-hidden="true"><path d="M0 40V22C0 9 6 2 18 0l2 5c-6 2-9 6-9 12h9v23zm30 0V22c0-13 6-20 18-22l2 5c-6 2-9 6-9 12h9v23z"/></svg></span>
+    <p class="a qt" style="top:604px; inset-inline-start:825px;">This is a sample text, add your desired text here</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="b gray" style="top:0px; inset-inline-start:493px; width:787px; height:553px;"></div><div class="b gd-tl-p bandp" style="top:465px; inset-inline-start:493px; width:787px; height:255px;"></div>
+    <h1 class="a ttl ttl2" style="top:62px; inset-inline-start:84px; width:400px;">Revenue<br>Breakdown</h1><p class="a sub" style="top:199px; inset-inline-start:84px;">ADD A SUBHEADING HERE</p>
+    <p class="a bt" style="top:291px; inset-inline-start:84px; width:330px;">This is a sample text, add your desired text here. This is a sample text, add your desired text here. This is a sample text.</p>
+    <ul class="a bul" style="top:567px; inset-inline-start:84px;"><li>Add your bullet point here</li><li>This is a sample text</li><li>Add your desired text here</li></ul>
+    <svg class="donut" viewBox="0 0 352 352" aria-hidden="true"></svg>
+    <div class="lg" style="top:145px; inset-inline-start:964px;"><i style="background:var(--navy)"></i><b>Enterprise  Solutions</b><span>$52.4M</span></div><div class="lg" style="top:241px; inset-inline-start:964px;"><i style="background:var(--plum)"></i><b>Consumer Products</b><span>$38.7M</span></div><div class="lg" style="top:337px; inset-inline-start:964px;"><i style="background:var(--mag)"></i><b>Digital Services</b><span>$24.6M</span></div><div class="lg" style="top:433px; inset-inline-start:964px;"><i style="background:var(--pink)"></i><b>Advisory &amp; Other</b><span>$12.9M</span></div>
+    <div class="wd"><i style="top:0px; inset-inline-start:0px"></i><i style="top:0px; inset-inline-start:18px"></i><i style="top:0px; inset-inline-start:36px"></i><i style="top:0px; inset-inline-start:54px"></i><i style="top:0px; inset-inline-start:72px"></i><i style="top:0px; inset-inline-start:90px"></i><i style="top:18px; inset-inline-start:0px"></i><i style="top:18px; inset-inline-start:18px"></i><i style="top:18px; inset-inline-start:36px"></i><i style="top:18px; inset-inline-start:54px"></i><i style="top:18px; inset-inline-start:72px"></i><i style="top:18px; inset-inline-start:90px"></i><i style="top:36px; inset-inline-start:0px"></i><i style="top:36px; inset-inline-start:18px"></i><i style="top:36px; inset-inline-start:36px"></i><i style="top:36px; inset-inline-start:54px"></i><i style="top:36px; inset-inline-start:72px"></i><i style="top:36px; inset-inline-start:90px"></i></div><p class="a tr" style="top:595px; inset-inline-start:650px;">Total revenue</p><p class="a trv" style="top:592px; inset-inline-start:962px;">$128.6M</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="a ttl ttl2" style="top:62px; inset-inline-start:84px; width:420px;">Expense<br>Analysis Slide</h1><p class="a sub" style="top:199px; inset-inline-start:84px;">ADD A SUBHEADING HERE</p>
+    <ul class="a bul" style="top:305px; inset-inline-start:84px;"><li>Add your bullet point here</li><li>This is a sample text</li><li>Add your desired text here</li></ul>
+    <p class="a at" style="top:484px; inset-inline-start:84px;">Add text here</p><p class="a bt" style="top:520px; inset-inline-start:84px; width:345px;">This is a sample text. Add your desired text here. This is a sample text. Add your desired text here.</p>
+    <div class="cell dk r1 gd-tr-p" style="top:22px; inset-inline-start:509px; width:250px; height:337px;"><span class="ic" style="width:58px; height:58px; color:currentColor;"><svg width="58" height="58" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 3h3.6l.8 3H23l-2 9.5H7.6l.5 2H20v1.8H6.7L3.2 4.8H1zm5 4.8 1.4 5.9h12.1l1.2-5.9zm3 1.4h1.4v3.4H9zm3.4 0h1.4v3.4h-1.4zm3.4 0h1.4v3.4h-1.4z"/><circle cx="8.6" cy="21" r="1.6"/><circle cx="18.4" cy="21" r="1.6"/></svg></span><p class="cv">$77.2M</p><p class="cl">Cost of Goods Sold</p></div>
+    <div class="cell lt r1 gray" style="top:22px; inset-inline-start:759px; width:249px; height:337px;"><span class="ic" style="width:72px; height:72px; color:currentColor;"><svg width="72" height="72" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.4" r="3.1"/><circle cx="5.2" cy="8.6" r="2.5"/><circle cx="18.8" cy="8.6" r="2.5"/><path d="M12 11.6c-3.3 0-6 1.9-6 4.6V19h12v-2.8c0-2.7-2.7-4.6-6-4.6z"/><path d="M5.2 11.9C2.9 11.9 1 13.3 1 15.3V18h3.6v-1.8c0-1.6.7-3 1.9-4.1a5 5 0 0 0-1.3-.2zm13.6 0a5 5 0 0 0-1.3.2c1.2 1.1 1.9 2.5 1.9 4.1V18H23v-2.7c0-2-1.9-3.4-4.2-3.4z"/></svg></span><p class="cv">$12.8M</p><p class="cl">Personnel</p></div>
+    <div class="cell dk r1 gd-tl-n cut-br" style="top:22px; inset-inline-start:1008px; width:249px; height:337px; --c: 41px;"><span class="ic" style="width:52px; height:52px; color:currentColor;"><svg width="52" height="52" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 2h1.8v18.2H22V22H2z"/><path d="M5.5 14h3v5h-3zm4.5-3h3v8h-3zm4.5-4h3v12h-3zm4.5-3h3v15h-3z"/><path d="m5.3 11.6 4.2-4.2 2.6 2.4 3.7-4.3-1.3-1.1h4.3v4.2l-1.2-1.3-5.4 6.1-2.6-2.4-3 3z"/></svg></span><p class="cv">$6.4M</p><p class="cl">Sales &amp; Marketing</p></div>
+    <div class="cell lt r2 gray" style="top:359px; inset-inline-start:509px; width:250px; height:333px;"><span class="ic" style="width:48px; height:48px; color:currentColor;"><svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 1h10.6L20 6.4V23H4zm1.8 1.8v18.4h12.4V7.2h-4.4V2.8z"/><path d="M7.5 9.5h9v1.5h-9zm0 3h9V14h-9zm0 3h9V17h-9zm0 3h6V20h-6z"/></svg></span><p class="cv">$3.3M</p><p class="cl">General &amp;<br>Administrative</p></div>
+    <div class="cell dk r2 gd-tl-n cut-br" style="top:359px; inset-inline-start:759px; width:249px; height:333px; --c: 42px;"><span class="ic" style="width:52px; height:52px; color:currentColor;"><svg width="52" height="52" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.3 1.5h3.4l.6 2.9c.8.3 1.5.7 2.2 1.2l2.8-1 1.7 3-2.2 1.9a8 8 0 0 1 0 2.5l2.2 1.9-1.7 3-2.8-1c-.7.5-1.4.9-2.2 1.2l-.6 2.9h-3.4l-.6-2.9c-.8-.3-1.5-.7-2.2-1.2l-2.8 1-1.7-3L5 13.5a8 8 0 0 1 0-2.5L2.8 9.1l1.7-3 2.8 1c.7-.5 1.4-.9 2.2-1.2zM12 8.5a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4z"/></svg></span><p class="cv">$4.1M</p><p class="cl">Technology</p></div>
+    <div class="cell lt r2 gray cut-br" style="top:359px; inset-inline-start:1008px; width:249px; height:333px; --c: 53px;"><span class="ic" style="width:76px; height:76px; color:currentColor;"><svg width="76" height="76" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 4h15.5v12H10v2.2h2.8V20H4.7v-1.8h2.8V16H1zm1.8 1.8v8.4h11.9V5.8z"/><path d="M17.8 4H23v16h-5.2zm1.3 2.2v1.2h2.6V6.2zm0 2.6V10h2.6V8.8zm1.3 7a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z"/></svg></span><p class="cv">$103.8M</p><p class="cl">Total Operating<br>Expenses</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="a ttl" style="top:56px; inset-inline-start:84px;">Profit &amp; Loss Statement</h1><p class="a sub" style="top:136px; inset-inline-start:84px;">ADD A SUBHEADING HERE</p><svg class="slash dec" viewBox="0 0 42 66" aria-hidden="true"><path d="M30 0 2 62M42 0 14 66" stroke="currentColor" stroke-width="1.6"/></svg>
+    <div class="meetw cut-tr"><img class="photo" src="/templates/freeform/sl-financial-report-powerpoint/assets/meeting.jpg" alt="Business team meeting reviewing financial results"></div>
+    <table class="pl"><thead><tr><th class="gd-h">Metric</th><th class="gd-h">FY 2037</th><th class="gd-h">FY 2036</th></tr></thead><tbody><tr><td>Revenue</td><td class="g">$128.6M</td><td>$112.0M</td></tr><tr><td>COGS</td><td class="g">$77.2M</td><td>$69.8M</td></tr><tr><td>Gross Profit</td><td class="g">$51.4M</td><td>$42.2M</td></tr><tr><td>Operating  Expenses</td><td class="g">$26.6M</td><td>$24.7M</td></tr><tr><td>Operating  Profit</td><td class="g">$24.8M</td><td>$17.5M</td></tr><tr><td>Net Income</td><td class="g">$18.6M</td><td>$12.9M</td></tr></tbody></table>
+    <div class="b gd-tl-p" style="top:242px; inset-inline-start:794px; width:407px; height:182px;"></div><div class="b gray" style="top:424px; inset-inline-start:794px; width:407px; height:221px;"></div>
+    <span class="ic" style="top:294px; inset-inline-start:845px; width:70px; height:70px; color:#fff;"><svg width="70" height="70" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 21h22v1.6H1z"/><path d="M2 14.5h3v5H2zm4.5-4h3v9h-3zm4.5-5h3v14h-3zm4.5 3h3v11h-3z"/><path d="M20 1h1.8v20H20z"/></svg></span><p class="a nm" style="top:299px; inset-inline-start:948px;">14.5% 3.0 pts</p><p class="a nml" style="top:340px; inset-inline-start:948px;">Net Margin</p>
+    <p class="a ki" style="top:462px; inset-inline-start:856px;">Key Insight</p><p class="a kip" style="top:499px; inset-inline-start:856px;">This is a sample text. Add your desired text here. This is a sample text. Add your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="b gray cut-br" style="top:0px; inset-inline-start:0px; width:1280px; height:418px; --c: 66px;"></div><div class="b tri-br" style="top:359px; inset-inline-start:1219px; width:45px; height:43px; background:#CF78A8;"></div>
+    <h1 class="a ttl" style="top:56px; inset-inline-start:84px;">Balance Sheet Summary Slide</h1><p class="a sub" style="top:136px; inset-inline-start:84px;">AS OF DECEMBER 31, 2037</p><div class="dots" style="top:64px; inset-inline-start:1104px;"><i style="top:0px; inset-inline-start:57px; background:#552B5B"></i><i style="top:0px; inset-inline-start:86px; background:#6B3164"></i><i style="top:29px; inset-inline-start:29px; background:#3F2552"></i><i style="top:29px; inset-inline-start:57px; background:#552B5B"></i><i style="top:29px; inset-inline-start:86px; background:#6B3164"></i><i style="top:57px; inset-inline-start:0px; background:#271F48"></i><i style="top:57px; inset-inline-start:29px; background:#3F2552"></i><i style="top:57px; inset-inline-start:57px; background:#552B5B"></i><i style="top:57px; inset-inline-start:86px; background:#6B3164"></i><i style="top:86px; inset-inline-start:0px; background:#271F48"></i><i style="top:86px; inset-inline-start:29px; background:#3F2552"></i><i style="top:86px; inset-inline-start:57px; background:#552B5B"></i><i style="top:86px; inset-inline-start:86px; background:#6B3164"></i></div>
+    <div class="rows" style="top:0px; inset-inline-start:84px; width:1113px; height:400px;"><div class="rw" style="top:218px"><span class="rl">Total Assets</span><span class="ln"></span><span class="rv">$186.4M</span></div><div class="rw" style="top:272px"><span class="rl">Total Liabilities</span><span class="ln"></span><span class="rv">$92.7M</span></div><div class="rw" style="top:325px"><span class="rl">Shareholder’s  Equity</span><span class="ln"></span><span class="rv">$93.7M</span></div></div>
+    <p class="bnd band" style="top:402px; inset-inline-start:55px; width:353px; height:63px;">ASSET COMPOSITION</p>
+    <svg class="stack" viewBox="0 0 1170 170" aria-hidden="true"></svg>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="b gray cut-br" style="top:207px; inset-inline-start:0px; width:1280px; height:443px; --c: 22px;"></div><div class="b tri-br" style="top:158px; inset-inline-start:1143px; width:56px; height:60px; background:var(--mag);"></div>
+    <h1 class="a ttl" style="top:56px; inset-inline-start:84px;">Cash Flow Overview Slide</h1><p class="a sub" style="top:136px; inset-inline-start:84px;">ADD A SUBHEADING HERE</p><svg class="slash dec" viewBox="0 0 42 66" aria-hidden="true"><path d="M30 0 2 62M42 0 14 66" stroke="currentColor" stroke-width="1.6"/></svg>
+    <div class="rows" style="top:0px; inset-inline-start:84px; width:1113px; height:460px;"><div class="rw" style="top:252px"><span class="rl">Operating  Activities</span><span class="ln"></span><span class="rv up">+$28.4M</span></div><div class="rw" style="top:306px"><span class="rl">Investing Activities</span><span class="ln"></span><span class="rv dn">-$14.7M</span></div><div class="rw" style="top:361px"><span class="rl">Financing Activities</span><span class="ln"></span><span class="rv dn">-$6.2M</span></div><div class="rw" style="top:415px"><span class="rl">Net Cash Movement</span><span class="ln"></span><span class="rv up">+$7.5M</span></div></div>
+    <div class="b gd-tr-n cut-br" style="top:502px; inset-inline-start:0px; width:1258px; height:218px; --c: 35px;"></div>
+    <p class="bnd band" style="top:490px; inset-inline-start:55px; width:353px; height:63px;">CASH POSITION</p>
+    <p class="a cl" style="top:595px; inset-inline-start:84px;">Beginning Cash</p><p class="a cv" style="top:627px; inset-inline-start:82px;">$25.3M</p><span class="arw" style="top:602px; inset-inline-start:250px;"><svg viewBox="0 0 64 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M0 6h62M56 1l6 5-6 5"/></svg></span>
+    <p class="a cl" style="top:595px; inset-inline-start:347px;">Net Movement</p><p class="a cv" style="top:627px; inset-inline-start:346px;">+$7.5M</p><span class="arw" style="top:602px; inset-inline-start:512px;"><svg viewBox="0 0 64 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M0 6h62M56 1l6 5-6 5"/></svg></span>
+    <p class="a cl" style="top:595px; inset-inline-start:610px;">Ending Cash</p><p class="a cv" style="top:627px; inset-inline-start:609px;">$32.8M</p>
+    <div class="vl"></div><p class="a ki" style="top:551px; inset-inline-start:860px;">Key Insight</p><p class="a kip" style="top:594px; inset-inline-start:860px;">This is a sample text. Add your desired text here. This is a sample text. Add your desired text here.</p>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="b gray cut-tl" style="top:197px; inset-inline-start:0px; width:1280px; height:523px; --c: 48px;"></div>
+    <h1 class="a ttl" style="top:56px; inset-inline-start:84px;">Financial Ratios &amp; KPIs</h1><p class="a sub" style="top:136px; inset-inline-start:84px;">ADD A SUBHEADING HERE</p>
+    <table class="kp"><colgroup><col style="width:317px"><col style="width:194px"><col></colgroup><thead><tr><th>KPI</th><th>FY 2037</th><th>Change</th></tr></thead><tbody><tr><td>Gross Margin</td><td>40.0%</td><td>+2.3pts</td></tr><tr><td>Net Margin</td><td>14.5%</td><td>+3.0pts</td></tr><tr><td>Return on Investment</td><td>18.2%</td><td>+2.1pts</td></tr><tr><td>Debt-to-Equity</td><td>0.99x</td><td>-0.12x</td></tr></tbody></table>
+    <p class="a ktk" style="top:614px; inset-inline-start:84px;">Key Takeaway</p><p class="a ktp" style="top:650px; inset-inline-start:84px;">This is a sample text. Add your desired text here. This is a sample text. Add your desired text here.</p>
+    <div class="b gd-tr-n cut-br panel" style="top:59px; inset-inline-start:814px; width:430px; height:531px;"></div><span class="slashw"><svg class="slash dec" viewBox="0 0 42 66" aria-hidden="true"><path d="M30 0 2 62M42 0 14 66" stroke="currentColor" stroke-width="1.6"/></svg></span>
+    <h2 class="a ph" style="top:135px; inset-inline-start:865px;">PERFORMANCE<br>HIGHLIGHT</h2>
+    <span class="pt tri-tr" style="top:260px; inset-inline-start:870px;"></span><p class="a pv" style="top:248px; inset-inline-start:926px;">$25.3M</p><p class="a pl2" style="top:296px; inset-inline-start:926px;">Return  on Investment</p><span class="pt tri-tr" style="top:367px; inset-inline-start:870px;"></span><p class="a pv" style="top:355px; inset-inline-start:926px;">40.0%</p><p class="a pl2" style="top:403px; inset-inline-start:926px;">Gross Margin</p><span class="pt tri-tr" style="top:474px; inset-inline-start:870px;"></span><p class="a pv" style="top:462px; inset-inline-start:926px;">14.5%</p><p class="a pl2" style="top:510px; inset-inline-start:926px;">Net Margin</p>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <div class="b gray cut-tr" style="top:197px; inset-inline-start:0px; width:1280px; height:360px; --c: 62px;"></div>
+    <h1 class="a ttl" style="top:56px; inset-inline-start:84px;">Year-over-Year Comparison Slide</h1><p class="a sub" style="top:136px; inset-inline-start:84px;">ADD A SUBHEADING HERE</p>
+    <table class="kp"><colgroup><col style="width:570px"><col style="width:194px"><col style="width:194px"><col></colgroup><thead><tr><th>KPI</th><th>FY 2036</th><th>FY 2037</th><th>Change</th></tr></thead><tbody><tr><td>Gross Margin</td><td>$112.0M</td><td>$128.6M</td><td>+14.8%</td></tr><tr><td>Net Margin</td><td>$42.2M</td><td>$51.4M</td><td>+21.8%</td></tr><tr><td>Return on Investment</td><td>$17.5M</td><td>$24.8M</td><td>+41.7%</td></tr><tr><td>Debt-to-Equity</td><td>$12.9M</td><td>$18.6M</td><td>+44.2%</td></tr></tbody></table>
+    <div class="b gd-tl-p bot" style="top:557px; inset-inline-start:0px; width:1280px; height:163px;"></div>
+    <p class="bnd band" style="top:545px; inset-inline-start:55px; width:386px; height:63px;">KEY PERFORMANCE DRIVERS</p>
+    <p class="a num" style="top:635px; inset-inline-start:82px;">01</p><p class="a dl" style="top:633px; inset-inline-start:150px;">Revenue<br>Growth</p>
+    <p class="a num" style="top:635px; inset-inline-start:336px;">02</p><p class="a dl" style="top:633px; inset-inline-start:403px;">Margin<br>Improvement</p>
+    <p class="a num" style="top:635px; inset-inline-start:650px;">03</p><p class="a dl" style="top:633px; inset-inline-start:717px;">Cost<br>Discipline</p>
+    <p class="a dp" style="top:632px; inset-inline-start:907px;">This is a sample text. Add your desired text here. Add text here</p>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <div class="b gray cut-tr" style="top:243px; inset-inline-start:0px; width:1280px; height:477px; --c: 55px;"></div>
+    <h1 class="a ttl" style="top:56px; inset-inline-start:84px;">Financial Outlook Slide</h1><p class="a sub" style="top:136px; inset-inline-start:84px;">ADD A SUBHEADING HERE</p><div class="dots" style="top:68px; inset-inline-start:1116px;"><i style="top:0px; inset-inline-start:57px; background:#552B5B"></i><i style="top:0px; inset-inline-start:86px; background:#6B3164"></i><i style="top:29px; inset-inline-start:29px; background:#3F2552"></i><i style="top:29px; inset-inline-start:57px; background:#552B5B"></i><i style="top:29px; inset-inline-start:86px; background:#6B3164"></i><i style="top:57px; inset-inline-start:0px; background:#271F48"></i><i style="top:57px; inset-inline-start:29px; background:#3F2552"></i><i style="top:57px; inset-inline-start:57px; background:#552B5B"></i><i style="top:57px; inset-inline-start:86px; background:#6B3164"></i><i style="top:86px; inset-inline-start:0px; background:#271F48"></i><i style="top:86px; inset-inline-start:29px; background:#3F2552"></i><i style="top:86px; inset-inline-start:57px; background:#552B5B"></i><i style="top:86px; inset-inline-start:86px; background:#6B3164"></i></div>
+    <div class="b gd-tr-n cut-br" style="top:210px; inset-inline-start:31px; width:554px; height:476px; --c: 76px;"></div>
+    <p class="bnd band" style="top:210px; inset-inline-start:55px; width:267px; height:63px;">2038 TARGETS</p>
+    <span class="ic" style="top:317px; inset-inline-start:86px; width:64px; height:64px; color:#B9A2BA;"><svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m9.6 2.5 7.8 4.5-5.9 10.2-7.8-4.5zm-.2 3.5-1 1.7.9.5-1.4 2.4-.9-.5-1 1.7 4.8 2.8 1-1.7.9.5 1.4-2.4-.9-.5 1-1.7z"/><circle cx="10.6" cy="9.8" r="1.6"/><path d="M15.5 13.6c1.6-.2 3.4.5 4.6 1.8-1.3.1-2.4.6-3.2 1.5 1.2.1 2.3.6 3.1 1.5-1.6.5-3.4.1-4.6-.9l-1.6-.7zM5 12.6c-1.6.3-3 1.5-3.4 3.2 1-.4 2.2-.4 3.2 0-1 .6-1.6 1.6-1.8 2.8 1.4-.5 2.6-1.6 3-3z"/></svg></span><p class="a tv" style="top:319px; inset-inline-start:184px;">$145M</p><p class="a tl" style="top:365px; inset-inline-start:184px;">Revenue  Target</p><span class="ic" style="top:435px; inset-inline-start:86px; width:54px; height:54px; color:#B9A2BA;"><svg width="54" height="54" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8.5 1.5 6.3 1.7-4.6 17.4-2.9-2.3-3.4 1.4z"/><path d="M8.9 4.2 7 11.5l1.6.4 1.9-7.3zm2.1 4.3a1.6 1.6 0 1 0 .8 3.1 1.6 1.6 0 0 0-.8-3.1z" fill="#fff" opacity=".45"/><path d="m15.8 5.3 3 1.6-5.2 14.6-2.2-1.6z" opacity=".8"/></svg></span><p class="a tv" style="top:437px; inset-inline-start:184px;">42%</p><p class="a tl" style="top:483px; inset-inline-start:184px;">Gross Margin Target</p><span class="ic" style="top:553px; inset-inline-start:86px; width:58px; height:58px; color:#B9A2BA;"><svg width="58" height="58" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="8" cy="6.2" rx="6.5" ry="2.6"/><path d="M1.5 7.4c0 1.5 2.9 2.7 6.5 2.7s6.5-1.2 6.5-2.7v2.6c0 1.5-2.9 2.7-6.5 2.7S1.5 11.5 1.5 10z" opacity=".85"/><path d="M1.5 11.4c0 1.5 2.9 2.7 6.5 2.7 1.1 0 2.2-.1 3.1-.3V17c-.9.2-2 .3-3.1.3-3.6 0-6.5-1.2-6.5-2.7z" opacity=".85"/><ellipse cx="16" cy="13.4" rx="6.5" ry="2.6"/><path d="M9.5 14.6c0 1.5 2.9 2.7 6.5 2.7s6.5-1.2 6.5-2.7v2.6c0 1.5-2.9 2.7-6.5 2.7s-6.5-1.2-6.5-2.7zm0 3.8c0 1.5 2.9 2.7 6.5 2.7s6.5-1.2 6.5-2.7V21c0 1.5-2.9 2.7-6.5 2.7S9.5 22.5 9.5 21z" opacity=".85"/></svg></span><p class="a tv" style="top:555px; inset-inline-start:184px;">$22M</p><p class="a tl" style="top:601px; inset-inline-start:184px;">Net Income  Target</p>
+    <p class="bnd band" style="top:210px; inset-inline-start:650px; width:387px; height:63px;">NEXT YEAR PRIORITIES</p>
+    <p class="a pn" style="top:314px; inset-inline-start:658px;">01</p><h3 class="a pt" style="top:315px; inset-inline-start:746px;">Accelerate Revenue Growth</h3><p class="a pp" style="top:349px; inset-inline-start:746px;">This is a sample text. Add your desired text here.</p><p class="a pn" style="top:411px; inset-inline-start:658px;">02</p><h3 class="a pt" style="top:412px; inset-inline-start:746px;">Protect Margins</h3><p class="a pp" style="top:446px; inset-inline-start:746px;">Add your desired text here. This is a sample text.</p><p class="a pn" style="top:507px; inset-inline-start:658px;">03</p><h3 class="a pt" style="top:508px; inset-inline-start:746px;">Invest for Scale</h3><p class="a pp" style="top:542px; inset-inline-start:746px;">This is a sample text. Add your desired text here.</p><p class="a pn" style="top:604px; inset-inline-start:658px;">04</p><h3 class="a pt" style="top:605px; inset-inline-start:746px;">Strengthen Cash Generation</h3><p class="a pp" style="top:639px; inset-inline-start:746px;">Add your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <div class="b gd-tr-n cut-br" style="top:0px; inset-inline-start:0px; width:1243px; height:683px; --c: 110px;"></div><div class="b tri-tr" style="top:19px; inset-inline-start:1164px; width:60px; height:55px; background:var(--pink);"></div><div class="b tri-br" style="top:563px; inset-inline-start:1125px; width:97px; height:98px; background:var(--mag);"></div>
+    <span class="lg11"><svg viewBox="0 0 54 56" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 3C24 1 37 1 46 6c6 4 7 14 6 26-1 12-5 21-14 22-11 2-24 1-32-3C0 47 0 37 1 25 2 12 3 5 12 3zm4 10c-5 1-6 5-6 13 0 9 1 15 5 17 5 2 13 2 19 1 6-1 8-5 9-13 1-8 0-13-4-16-5-3-15-3-23-2z"/></svg></span><p class="a lt" style="top:77px; inset-inline-start:173px;">YOUR COMPANY<br>LOGO HERE</p>
+    <h1 class="a big" style="top:228px; inset-inline-start:116px;">Building Stronger<br>Financial Performance<br>for Sustainable Growth</h1>
+    <div class="hl"></div><div class="dots" style="top:225px; inset-inline-start:1038px;"><i style="top:0px; inset-inline-start:57px; background:#fff"></i><i style="top:0px; inset-inline-start:86px; background:#fff"></i><i style="top:29px; inset-inline-start:29px; background:#fff"></i><i style="top:29px; inset-inline-start:57px; background:#fff"></i><i style="top:29px; inset-inline-start:86px; background:#fff"></i><i style="top:57px; inset-inline-start:0px; background:#fff"></i><i style="top:57px; inset-inline-start:29px; background:#fff"></i><i style="top:57px; inset-inline-start:57px; background:#fff"></i><i style="top:57px; inset-inline-start:86px; background:#fff"></i><i style="top:86px; inset-inline-start:0px; background:#fff"></i><i style="top:86px; inset-inline-start:29px; background:#fff"></i><i style="top:86px; inset-inline-start:57px; background:#fff"></i><i style="top:86px; inset-inline-start:86px; background:#fff"></i></div>
+    <span class="ic" style="top:560px; inset-inline-start:123px; width:40px; height:40px; color:#fff;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="4.5" width="21" height="15" rx="1.5"/><path d="m2 5.5 10 8 10-8M2 19l7.5-7M22 19l-7.5-7"/></svg></span><p class="a ct" style="top:565px; inset-inline-start:186px;">Add your email here</p>
+    <span class="ic" style="top:563px; inset-inline-start:514px; width:32px; height:32px; color:#fff;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 2.5 3.2 4.2c-.8 2.6.2 6.6 3.6 10.6 3.6 4.2 8 6.5 11 6.3l2-3.1-4.2-3.4-2.4 1.6c-1.6-.9-3.8-3.2-4.8-5l1.6-2.6z"/></svg></span><p class="a ct" dir="ltr" style="top:565px; inset-inline-start:560px;">+1 (234) 567 8901</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 11</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"values": [41, 30, 19, 10], "fills": ["dn1", "dn2", "dn3", "dn4"], "ink": ["#fff", "#fff", "#fff", "#1A1A1A"]}</script>
+<script type="application/json" id="chart-data-2">{"items": [{"label": "Cash & Equivalents", "amount": "$32.8M", "pct": 18}, {"label": "Receivables", "amount": "$41.6M", "pct": 22}, {"label": "Property & Equipment", "amount": "$68.2M", "pct": 37}, {"label": "Other Assets", "amount": "$43.8M", "pct": 23}], "colors": ["#271F48", "#6B3164", "#B41265", "#E7D0D6"], "ink": ["#fff", "#fff", "#fff", "#6B3164"]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, at, txt) { var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); if (txt != null) e.textContent = txt; return e; }
+  // رسم حلقي: يبدأ من الأعلى باتجاه عقارب الساعة (عكسها في العربية)
+  function drawDonut() {
+    var d = JSON.parse(document.getElementById('chart-data').textContent), svg = document.querySelector('.s3 .donut');
+    var cx = 176, cy = 176, R = 169, r = 75, lr = 121, m = RTL ? -1 : 1, a0 = 0;
+    var tot = d.values.reduce(function (a, b) { return a + b; }, 0);
+    function pt(rad, a) { a = a * Math.PI / 180; return [cx + m * rad * Math.sin(a), cy - rad * Math.cos(a)]; }
+    d.values.forEach(function (v, i) {
+      var sw = v / tot * 360, a1 = a0 + sw, big = sw > 180 ? 1 : 0, s = RTL ? 0 : 1, rs = RTL ? 1 : 0;
+      var p1 = pt(R, a0), p2 = pt(R, a1), p3 = pt(r, a1), p4 = pt(r, a0);
+      svg.appendChild(el('path', { d: 'M' + p1 + ' A' + R + ',' + R + ' 0 ' + big + ' ' + s + ' ' + p2 + ' L' + p3 + ' A' + r + ',' + r + ' 0 ' + big + ' ' + rs + ' ' + p4 + ' Z', fill: 'url(#' + d.fills[i] + ')' }));
+      var c = pt(lr, a0 + sw / 2);
+      svg.appendChild(el('text', { x: c[0], y: c[1] + 8, 'text-anchor': 'middle', fill: d.ink[i], direction: 'ltr' }, v + '%'));
+      a0 = a1;
+    });
+  }
+  // شريط مكدّس لتركيب الأصول: القيمة فوق، النسبة داخل، التسمية تحت؛ الفئة الأولى في جهة البداية
+  function drawStack() {
+    var d = JSON.parse(document.getElementById('chart-data-2').textContent), svg = document.querySelector('.s6 .stack');
+    var W = 1170, x = 0, tot = d.items.reduce(function (a, b) { return a + b.pct; }, 0);
+    d.items.forEach(function (it, i) {
+      var w = it.pct / tot * W, sx = RTL ? W - x - w : x, tx = RTL ? sx + w - 16 : sx + 16, anc = RTL ? 'end' : 'start';
+      svg.appendChild(el('rect', { x: sx, y: 58, width: w, height: 66, fill: d.colors[i] }));
+      svg.appendChild(el('text', { x: tx, y: 37, 'text-anchor': anc, fill: '#6B3164', 'font-size': 28, 'font-weight': 700, direction: 'ltr', 'letter-spacing': -0.6 }, it.amount));
+      svg.appendChild(el('text', { x: tx, y: 98, 'text-anchor': anc, fill: d.ink[i], 'font-size': 20, 'font-weight': 700, direction: 'ltr' }, it.pct + '%'));
+      svg.appendChild(el('text', { x: tx, y: 157, 'text-anchor': 'start', fill: '#1A1A1A', 'font-size': 18, direction: RTL ? 'rtl' : 'ltr' }, it.label));
+      x += w;
+    });
+  }
+  drawDonut(); drawStack();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
