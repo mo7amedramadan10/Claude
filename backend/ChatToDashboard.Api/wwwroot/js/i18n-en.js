@@ -435,7 +435,7 @@ window.JEEM_I18N_EN = Object.assign(window.JEEM_I18N_EN || {}, {
   "لم تُضف إلى أي كيان بعد — اطلب من مسؤول المنظمة إضافتك إلى كيان.": "You haven't been added to any entity — ask your organization admin to add you.",
   "صلاحية الكيانات": "Entities access",
   "المسؤول يصل إلى كل الكيانات في المنظمة دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.": "Admins always reach every entity in the organization; this setting is for regular users only.",
-  "مالك: يدير الكيان وأعضاءه · محرّر: يبني ويعدّل · مشاهد: يطّلع فقط. المستخدم بلا أي دور لا يرى أي كيان.": "Owner: manages the entity and its members · Editor: builds and edits · Viewer: read only. A user with no role sees no entity.",
+  "أي دور يُدخل المستخدم إلى الكيان · المالك والمحرّر فقط ينشران في «اللوحات المنشورة» ويعدّلان هوية الكيان · الشاشات المتاحة تحددها «صلاحية الشاشات». المستخدم بلا أي دور لا يرى أي كيان.": "Any role lets the user into the entity · only owners and editors publish in “Published dashboards” and edit the entity’s identity · available screens are set in “Screens access”. A user with no role sees no entity.",
   "بلا وصول": "No access",
   "مشاهد": "Viewer",
   "محرّر": "Editor",
