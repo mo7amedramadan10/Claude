@@ -397,12 +397,15 @@ const I18N_EN = {
   'الاسم مفردًا بالعربية': 'Arabic singular', 'الاسم جمعًا بالعربية': 'Arabic plural',
   'الاسم مفردًا بالإنجليزية': 'English singular', 'الاسم جمعًا بالإنجليزية': 'English plural',
 };
+// القاموس الموسّع في js/i18n-en.js (يُحمَّل قبل هذا الملف) يُدمج هنا؛ مفاتيحه تغلب المكتوبة أعلاه عند التكرار
+Object.assign(I18N_EN, window.JEEM_I18N_EN || {});
 const I18N_ENTRIES = Object.entries(I18N_EN).sort((a, b) => b[0].length - a[0].length);
 
 const ARABIC_CHARS_RE = /[؀-ۿ]/;
 
 function translateText(text) {
-  let result = text;
+  // المفاتيح بمسافات مفردة، والنص في الصفحة قد يمتد على أسطر بمسافات متعددة (يعرضه المتصفح مطويًا أصلًا)
+  let result = ARABIC_CHARS_RE.test(text) ? text.replace(/\s+/g, ' ') : text;
   for (const [ar, en] of I18N_ENTRIES) {
     if (result.indexOf(ar) !== -1) result = result.split(ar).join(en);
   }
@@ -414,11 +417,15 @@ function translateText(text) {
   return result;
 }
 
-const I18N_ATTRS = ['placeholder', 'title', 'aria-label'];
+// data-empty/data-placeholder يعرضهما CSS بـ attr() (حالة فارغة، نص إرشادي لعنوان قابل للتعديل)
+const I18N_ATTRS = ['placeholder', 'title', 'aria-label', 'data-empty', 'data-placeholder'];
 
 function translateNode(node) {
   if (!node) return;
   if (node.nodeType === Node.TEXT_NODE) {
+    // محتوى يكتبه المستخدم أو كود، والعنصر الذي يُكتب فيه الآن (لا تُستبدل كلمة أثناء الكتابة)
+    const host = node.parentElement;
+    if (host && (host.closest('textarea, pre, code') || (host.isContentEditable && host.contains(document.activeElement)))) return;
     const t = translateText(node.textContent);
     if (t !== node.textContent) node.textContent = t;
     return;
@@ -432,6 +439,8 @@ function translateNode(node) {
       if (t !== v) node.setAttribute(attr, t);
     }
   });
+  // محتوى textarea/pre/code يكتبه المستخدم أو كود: تُترجم سماته (placeholder…) فقط
+  if (node.tagName === 'TEXTAREA' || node.tagName === 'PRE' || node.tagName === 'CODE') return;
   node.childNodes.forEach(translateNode);
 }
 
