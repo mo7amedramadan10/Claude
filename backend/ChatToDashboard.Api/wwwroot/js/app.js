@@ -16188,8 +16188,18 @@ function togglePermList(listId, allCheckboxId) {
 
 el('user-allow-all-systems').addEventListener('change', () => togglePermList('user-systems-list', 'user-allow-all-systems'));
 const SCREEN_PICK_LABELS = { freeform: 'تصميم حر', repo: 'الملفات', chat: 'المحادثة واللوحات', published: 'اللوحات المنشورة', analyst: 'المحلل الذكي', decks: 'منشئ العروض', sources: 'المصادر', users: 'الصلاحيات', history: 'السجل', active: 'اللوحات النشطة', sharelinks: 'روابط المشاركة', presentations: 'العروض التقديمية', projects: 'المشاريع', viewing: 'للاطلاع' };
+// قائمة الشاشات: صف لكل شاشة بأيقونتها من القائمة الجانبية واسمها ومفتاح تشغيل/إيقاف (القيمة في input.value كما كانت للحفظ)
+function umSwitchRow({ icon, name, sub, value, checked, attrs = '' }) {
+  return `<label class="um-sw-row"><svg class="icon" aria-hidden="true"><use href="${esc(icon)}"/></svg>`
+    + `<span class="um-sw-txt"><strong${attrs}>${esc(name)}</strong>${sub ? `<small>${esc(sub)}</small>` : ''}</span>`
+    + `<span class="switch"><input type="checkbox" role="switch" value="${esc(value)}"${checked ? ' checked' : ''} aria-label="${esc(name)}"><span></span></span></label>`;
+}
 function renderUserScreens(list) {
-  renderPermChecklist('user-screens-list', Object.keys(SCREEN_PICK_LABELS), list || [], k => k, k => SCREEN_PICK_LABELS[k]);
+  const on = list || [];
+  el('user-screens-list').innerHTML = Object.keys(SCREEN_PICK_LABELS).map(k => umSwitchRow({
+    icon: document.querySelector(`.sidebar [data-screen="${k}"] use, .topbar [data-screen="${k}"] use, [data-screen="${k}"] use`)?.getAttribute('href') || '#i-layers',
+    name: SCREEN_PICK_LABELS[k], value: k, checked: on.includes(k),
+  })).join('');
 }
 function syncUserScreensUi() {
   const admin = el('user-role').value === 'Admin';
@@ -16246,7 +16256,6 @@ el('user-form').addEventListener('invalid', e => {
 
 // تبويب «صلاحية الكيانات»: دور المستخدم على كل كيان في المنظمة (بلا وصول/مشاهد/محرّر/مالك)، يُحفظ مع المستخدم
 const UM_ENT = { list: null, seq: 0 };
-const UM_ENT_ROLES = [['', 'بلا وصول'], ['viewer', 'مشاهد'], ['editor', 'محرّر'], ['owner', 'مالك']];
 async function umLoadEntities(userId) {
   const seq = ++UM_ENT.seq; UM_ENT.list = null;
   const box = el('user-ents-list');
@@ -16276,14 +16285,15 @@ function umRenderEntities() {
   if (!items.length) { box.innerHTML = '<span class="empty">لا توجد كيانات في المنظمة بعد.</span>'; return; }
   box.innerHTML = items.map((e, i) => {
     const w = entShow(entType(e.typeId));
-    const opts = UM_ENT_ROLES.map(([v, t]) => `<option value="${v}"${(e.role || '') === v ? ' selected' : ''}>${t}</option>`).join('');
-    return `<div class="um-ent-row"><svg class="icon" aria-hidden="true"><use href="#i-${esc(w.icon || 'layers')}"/></svg>`
-      + `<span class="um-ent-name"><strong data-ent-skip>${esc(e.name)}</strong><small>${esc(w.s)}</small></span>`
-      + `<select data-um-ent="${i}" aria-label="${esc('الدور في ' + e.name)}">${opts}</select></div>`;
+    return umSwitchRow({ icon: '#i-' + (w.icon || 'layers'), name: e.name, sub: w.s, value: String(i), checked: !!e.role, attrs: ' data-ent-skip' });
   }).join('');
-  box.querySelectorAll('select[data-um-ent]').forEach(sel => sel.addEventListener('change', () => {
-    UM_ENT.list[+sel.dataset.umEnt].role = sel.value || null;
+  // خياران فقط: مفعّل/موقوف. التفعيل يُبقي دوره السابق إن وُجد وإلا «محرّر» (يرى الكيان وينشر فيه ويعدّل هويته)
+  box.querySelectorAll('input[type=checkbox]').forEach(inp => inp.addEventListener('change', () => {
+    const e = UM_ENT.list[+inp.value];
+    e.role = inp.checked ? (e.prevRole || 'editor') : null;
+    if (inp.checked) e.prevRole = e.role;
   }));
+  items.forEach(e => { if (e.role) e.prevRole = e.role; });
 }
 function syncUserEntitiesUi() {
   const admin = el('user-role').value === 'Admin';

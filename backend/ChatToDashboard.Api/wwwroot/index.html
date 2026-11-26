@@ -2225,13 +2225,16 @@
       <div class="um-panel hidden" role="tabpanel" id="um-panel-screens" aria-labelledby="um-tab-screens">
         <p class="um-note hidden" id="user-screens-admin-note">المسؤول يرى كل الشاشات دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.</p>
         <div class="perm-block" id="user-screens-block">
-          <label class="chk-row"><input type="checkbox" id="user-allow-all-screens" checked> الوصول لكل الشاشات</label>
-          <div class="um-presets">
+          <div class="um-sw-row um-sw-all">
+            <span class="um-sw-txt"><strong>الوصول لكل الشاشات</strong><small>يرى المستخدم كل شاشات المنصة، والجديد منها تلقائيًا</small></span>
+            <label class="switch"><input type="checkbox" role="switch" id="user-allow-all-screens" checked aria-label="الوصول لكل الشاشات"><span></span></label>
+          </div>
+          <div class="um-presets"><span class="um-note">اختيارات جاهزة:</span>
             <button type="button" id="user-screens-preset" class="btn btn-ghost btn-sm">✎ تصميم حر فقط (مع الملفات)</button>
             <button type="button" id="user-screens-viewonly" class="btn btn-ghost btn-sm">👁 اطلاع فقط (للمديرين)</button>
           </div>
           <div id="user-screens-wrap" class="hidden">
-            <div id="user-screens-list" class="perm-list"></div>
+            <div id="user-screens-list" class="um-sw-list" role="group" aria-label="الشاشات"></div>
             <p class="um-note">يرى المستخدم الشاشات المحددة فقط في القائمة، ويرفض الخادم واجهات الشاشات الأخرى. بياناته تبقى بحسب صلاحيات الملفات والأنظمة.</p>
           </div>
         </div>
@@ -2240,9 +2243,9 @@
       <div class="um-panel hidden" role="tabpanel" id="um-panel-entities" aria-labelledby="um-tab-entities">
         <p class="um-note hidden" id="user-ents-admin-note">المسؤول يصل إلى كل الكيانات في المنظمة دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.</p>
         <div class="perm-block" id="user-ents-block">
-          <div id="user-ents-list" class="um-ents" aria-live="polite"></div>
+          <div id="user-ents-list" class="um-sw-list" role="group" aria-label="الكيانات" aria-live="polite"></div>
         </div>
-        <p class="um-note" id="user-ents-note">أي دور يُدخل المستخدم إلى الكيان · المالك والمحرّر فقط ينشران في «اللوحات المنشورة» ويعدّلان هوية الكيان · الشاشات المتاحة تحددها «صلاحية الشاشات». المستخدم بلا أي دور لا يرى أي كيان.</p>
+        <p class="um-note" id="user-ents-note">فعّل الكيانات التي يعمل فيها المستخدم؛ ما يستطيع فعله داخلها تحدده «صلاحية الشاشات». المستخدم بلا أي كيان مفعّل لا يرى أي كيان.</p>
       </div>
       <div id="user-form-error" class="login-error hidden"></div>
       <div class="modal-actions">

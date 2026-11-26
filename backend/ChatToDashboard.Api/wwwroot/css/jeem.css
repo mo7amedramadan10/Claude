@@ -4384,16 +4384,8 @@ body.ff-full-on { overflow: hidden; }
 #user-modal #user-screens-preset { margin: 0; }
 #user-modal .modal-actions { margin-top: 4px; }
 @media (max-width: 520px) { #user-modal .um-tab { font-size: 12px; padding: 6px 6px; } }
-/* تبويب «صلاحية الكيانات»: صف لكل كيان بأيقونة نوعه واسمه وقائمة الدور */
+/* تبويب «صلاحية الكيانات»: الكتلة تُخفى لدور المسؤول (القائمة نفسها بأنماط .um-sw-list في الذيل) */
 #user-modal #user-ents-block.hidden { display: none; }
-#user-modal .um-ents { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
-#user-modal .um-ent-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line, var(--grid)); border-radius: 10px; background: var(--surface); }
-#user-modal .um-ent-row > .icon { width: 18px; height: 18px; flex: none; color: var(--brand-blue, var(--accent)); }
-#user-modal .um-ent-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
-#user-modal .um-ent-name strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#user-modal .um-ent-name small { font-size: 11px; color: var(--ink-3, var(--muted)); }
-#user-modal .um-ent-row select { flex: none; width: auto; min-width: 116px; min-height: 36px; padding: 4px 8px; }
-#user-modal .um-ents .empty { display: block; height: auto; padding: 4px 0; color: var(--muted); font-size: 12px; }
 @media (max-width: 520px) { #user-modal .um-tabs { display: grid; grid-template-columns: 1fr 1fr; } }
 
 /* شاشة «لم تُضف إلى أي كيان» (مستخدم عادي بلا دور في أي كيان) */
@@ -4405,3 +4397,21 @@ body.ff-full-on { overflow: hidden; }
 #screen-no-entity h2 { margin: 0 0 8px; font-size: 19px; color: var(--ink); }
 #screen-no-entity p { margin: 0 0 10px; color: var(--ink-2, var(--muted)); font-size: 13.5px; line-height: 1.7; }
 #screen-no-entity .btn { margin-top: 6px; }
+
+/* نافذة المستخدم: قوائم تشغيل/إيقاف (الشاشات والكيانات) — صف لكل بند بأيقونته واسمه ومفتاحه */
+#user-modal .um-sw-list { display: flex; flex-direction: column; max-height: 340px; overflow-y: auto; border: 1px solid var(--line, var(--grid)); border-radius: 12px; background: var(--surface); }
+#user-modal .um-sw-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 12px; padding: 10px 14px; min-height: 48px; cursor: pointer; margin: 0; font-size: 13.5px; color: var(--ink); }
+#user-modal .um-sw-list .um-sw-row + .um-sw-row { border-top: 1px solid var(--line, var(--grid)); }
+#user-modal .um-sw-list .um-sw-row:hover { background: var(--bg, #F3F5F7); }
+#user-modal .um-sw-row > .icon { width: 18px; height: 18px; flex: none; color: var(--brand-blue, var(--accent)); }
+#user-modal .um-sw-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.4; }
+#user-modal .um-sw-txt strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#user-modal .um-sw-txt small { font-size: 11.5px; color: var(--ink-3, var(--muted)); font-weight: 400; }
+#user-modal .um-sw-all { padding: 4px 2px 12px; border-bottom: 1px solid var(--line, var(--grid)); cursor: default; }
+#user-modal .um-sw-all strong { font-size: 14px; }
+#user-modal .um-presets { align-items: center; }
+#user-modal #user-screens-wrap { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+#user-modal #user-screens-wrap.hidden { display: none; }
+#user-modal .um-sw-list .empty { display: block; height: auto; padding: 12px 14px; color: var(--muted); font-size: 12px; }
+:root[dir="ltr"] .switch input:checked + span::after { transform: translateX(18px); }
+#user-modal #user-ents-block { padding: 0; border: 0; background: none; }
