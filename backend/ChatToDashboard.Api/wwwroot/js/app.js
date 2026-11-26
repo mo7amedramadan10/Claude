@@ -13445,7 +13445,6 @@ function renderCurrentUser() {
   if (platform) {
     // لا منظمة ولا كيانات: تبقى قائمة «المنصّة» وحدها
     el('admin-menu').classList.add('hidden');
-    el('proj-permissions-link').classList.add('hidden');
     el('platform-menu').classList.remove('hidden');
     applyScreenAccess();
     return;
@@ -13454,9 +13453,6 @@ function renderCurrentUser() {
   // wrapper (see #admin-menu) rather than each item individually now that they live
   // behind one dropdown instead of four flat tabs.
   el('admin-menu').classList.toggle('hidden', u.role !== 'Admin');
-  // "الصلاحيات" تحت المشروع الحالي رابط تاني لنفس شاشة المستخدمين الحقيقية (الأدوار +
-  // صلاحيات الأنظمة/الملفات لكل مستخدم) — نفس شرط ظهور #admin-menu بالظبط.
-  el('proj-permissions-link').classList.toggle('hidden', u.role !== 'Admin');
   // Platform owner (us) sees every organization, not just their own — see
   // AppUser.IsPlatformOwner and OrganizationsController.
   el('platform-menu').classList.toggle('hidden', !u.isPlatformOwner);
