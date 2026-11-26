@@ -1,0 +1,25 @@
+{
+  "key": "sl-project-team-structure",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "👥",
+  "name": "هيكل فريق المشروع",
+  "nameEn": "Project Team Structure",
+  "description": "ثلاث شرائح لهيكل فريق المشروع: قائد وفرق ملوّنة بأعضائها، ثم صفوف أدوار بصور شخصية سداسية",
+  "descriptionEn": "Three project team org-chart slides: a lead, color-coded teams and members, then role rows with hexagon photos",
+  "sections": [
+    {
+      "title": "القائد وثلاثة فرق",
+      "titleEn": "Lead and Three Teams"
+    },
+    {
+      "title": "القائد وأربعة فرق بأعضائها",
+      "titleEn": "Lead and Four Teams with Members"
+    },
+    {
+      "title": "القائد وصفوف الأدوار",
+      "titleEn": "Lead and Role Rows"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وألوان الفرق والصور السداسية وخطوط الوصل، وغيّر الأسماء والمسميات والنصوص فقط."
+}

@@ -1,0 +1,71 @@
+{
+  "key": "sl-project-update",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "📋",
+  "name": "تحديث المشروع",
+  "nameEn": "Project Update",
+  "description": "ثلاث عشرة شريحة لتحديث المشروع: الملخص، الإنجازات، التقدّم، الميزانية، المخاطر، المؤشرات والخطوات التالية",
+  "descriptionEn": "13 project update slides: summary, accomplishments, progress, budget, risks, KPIs and next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "الإنجازات الرئيسية",
+      "titleEn": "Key Accomplishments",
+      "needsData": true
+    },
+    {
+      "title": "التقدّم مقابل الخطة",
+      "titleEn": "Progress against Plan"
+    },
+    {
+      "title": "نظرة عامة على الميزانية (رسمان)",
+      "titleEn": "Budget Overview (charts)",
+      "needsData": true
+    },
+    {
+      "title": "المخاطر والمشكلات",
+      "titleEn": "Risks and Issues",
+      "needsData": true
+    },
+    {
+      "title": "مؤشرات الأداء الرئيسية",
+      "titleEn": "Key Performance Indicators",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "آراء أصحاب المصلحة",
+      "titleEn": "Stakeholder Feedback"
+    },
+    {
+      "title": "بنود العمل",
+      "titleEn": "Action Items",
+      "needsData": true
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والمربعات الملوّنة وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON: chart-data (أعمدة الميزانية الربعية)، chart-data-2 (حلقة توزيع الميزانية)، chart-data-3 (حلقتا مؤشرات الأداء)، وحدّث أرقام النِّسب الظاهرة بجوارها لتطابقها."
+}
