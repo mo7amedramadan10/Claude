@@ -1,0 +1,72 @@
+{
+  "key": "sl-operational-report",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🏭",
+  "name": "التقرير التشغيلي",
+  "nameEn": "Operational Report",
+  "description": "ثلاث عشرة شريحة: غلاف، جدول أعمال، ملخص، مؤشرات تشغيلية ورسوم، كفاءة وموارد وجودة، تحديات، خطة، ختام",
+  "descriptionEn": "13 slides: cover, agenda, summary, KPI dashboards and charts, efficiency, resources, quality, challenges, plan",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على العمليات",
+      "titleEn": "Operations Overview",
+      "needsData": true
+    },
+    {
+      "title": "لوحة مؤشرات الأداء التشغيلي",
+      "titleEn": "Operational KPI Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "مخرجات الإنتاج أو الخدمة",
+      "titleEn": "Production or Service Output",
+      "needsData": true
+    },
+    {
+      "title": "كفاءة العمليات",
+      "titleEn": "Process Efficiency"
+    },
+    {
+      "title": "استغلال الموارد",
+      "titleEn": "Resource Utilization",
+      "needsData": true
+    },
+    {
+      "title": "أداء الجودة",
+      "titleEn": "Quality Performance",
+      "needsData": true
+    },
+    {
+      "title": "التحديات التشغيلية",
+      "titleEn": "Operational Challenges"
+    },
+    {
+      "title": "مبادرات تحسين العمليات",
+      "titleEn": "Process Improvement Initiatives"
+    },
+    {
+      "title": "الخطة التشغيلية للفترة القادمة",
+      "titleEn": "Next Period Operational Plan",
+      "needsData": true
+    },
+    {
+      "title": "الختام والتواصل",
+      "titleEn": "Thank You / Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال الزخرفية وغيّر النصوص والأرقام فقط؛ أرقام الرسوم والمقاييس في كتل JSON بالمعرّفات chart-data وchart-data-2 حتى chart-data-9."
+}
