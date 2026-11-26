@@ -8339,7 +8339,10 @@ async function loadCurrentEntityNav() {
     if (!res.ok) return;
     const data = await res.json();
     state.orgName = data.organization?.name || null;
-    const project = data.entities?.[0];
+    // الكيان الحالي = اختيار المستخدم المحفوظ في الخادم (currentId)، وإلا الأول
+    const project = (data.entities || []).find(e => e.id === data.currentId) || data.entities?.[0];
+    ENT.list = data.entities || []; ENT.entityId = project?.id || null;
+    entRenderSwitchButton();
     if (project) {
       state.entityName = project.name;
       el('current-project-name').textContent = project.name;
@@ -8350,6 +8353,46 @@ async function loadCurrentEntityNav() {
     updateCrumbs(state.currentScreen);
   } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
 }
+
+// ---------- تبديل الكيان الحالي (مساحة العمل) ----------
+// الاختيار يُحفظ لكل مستخدم في الخادم (PUT /api/entities/current) فتلتزم به كل الشاشات والواجهات (ResolveCurrentEntityIdAsync)،
+// ثم تُعاد الصفحة لأن ذاكرات الشاشات (المصادر، الملفات، السجل، التصاميم…) كلها للكيان السابق.
+function entRenderSwitchButton() {
+  const btn = el('entity-switch-btn'); if (!btn) return;
+  btn.classList.toggle('hidden', (ENT.list || []).length < 2);
+  el('entity-switch-text').textContent = L('تبديل', 'Switch');
+  btn.title = L('التبديل إلى مساحة عمل أخرى', 'Switch to another workspace');
+}
+function entRenderSwitchPanel() {
+  const panel = el('entity-switch-panel'); const list = ENT.list || [];
+  const groups = []; list.forEach(e => { const t = entType(e.typeId); let g = groups.find(x => x.t === t); if (!g) groups.push(g = { t, items: [] }); g.items.push(e); });
+  panel.innerHTML = groups.map(g => (groups.length > 1 ? `<div class="ent-sw-head">${esc(entShow(g.t).defP)}</div>` : '') + g.items.map(e => {
+    const on = e.id === ENT.entityId;
+    return `<button type="button" class="ent-sw-item" role="menuitemradio" aria-checked="${on}" data-ent-go="${esc(e.id)}"><span class="proj-dot">${esc((e.name || '؟').trim().slice(0, 1))}</span><span class="grow">${esc(e.name)}</span>${on ? '<span class="ent-sw-check" aria-hidden="true">✓</span>' : ''}</button>`;
+  }).join('')).join('') + `<button type="button" class="ent-sw-all" data-ent-all>${esc(L('كل ', 'All ') + entShow(ENT.all).defP)}</button>`;
+  panel.querySelectorAll('[data-ent-go]').forEach(b => b.addEventListener('click', () => entSwitchTo(b.dataset.entGo)));
+  panel.querySelector('[data-ent-all]').addEventListener('click', () => { entSwitchPanel(false); showScreen('projects'); });
+}
+function entSwitchPanel(open) {
+  const panel = el('entity-switch-panel'), btn = el('entity-switch-btn');
+  if (open) { entRenderSwitchPanel(); panel.classList.remove('hidden'); btn.setAttribute('aria-expanded', 'true'); (panel.querySelector('[aria-checked="true"]') || panel.querySelector('button'))?.focus(); }
+  else { panel.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); }
+}
+async function entSwitchTo(id) {
+  if (!id || id === ENT.entityId) { entSwitchPanel(false); return; }
+  try {
+    const r = await fetch('/api/entities/current', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entityId: id }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    location.reload();
+  } catch (e) { alert(L('تعذّر التبديل: ', 'Could not switch: ') + e.message); }
+}
+el('entity-switch-btn').addEventListener('click', e => { e.stopPropagation(); entSwitchPanel(el('entity-switch-panel').classList.contains('hidden')); });
+el('entity-switch-panel').addEventListener('click', e => e.stopPropagation());
+el('entity-switch-panel').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.stopPropagation(); entSwitchPanel(false); el('entity-switch-btn').focus(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const bs = [...el('entity-switch-panel').querySelectorAll('button')]; const i = bs.indexOf(document.activeElement); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus(); }
+});
+document.addEventListener('click', () => { if (!el('entity-switch-panel').classList.contains('hidden')) entSwitchPanel(false); });
 
 // ---------- chat panel open/closed ----------
 // Two states only (per the design reference, not the old shrink/grow/hide rail-size
@@ -15740,7 +15783,9 @@ async function loadEntities() {
   const data = await res.json();
   el('projects-org-name').textContent = data.organization.name;
   state_entities.all = data.entities;
-  entSetTypes(data.types, data.entities, ENT.currentId || data.entities?.[0]?.typeId);
+  state_entities.currentId = data.currentId || data.entities?.[0]?.id || null;
+  ENT.list = data.entities || []; ENT.entityId = state_entities.currentId; entRenderSwitchButton();
+  entSetTypes(data.types, data.entities, (data.entities || []).find(e => e.id === state_entities.currentId)?.typeId || data.entities?.[0]?.typeId);
   entSyncEntitiesScreen();
 
   // صف الإحصاءات أعلى الصفحة — كله أرقام حقيقية من endpoints موجودة فعلًا، مفيش فيها أي
@@ -15797,7 +15842,7 @@ function entSyncEntitiesScreen() {
 function renderEntities() {
   const isAdmin = state.currentUser && state.currentUser.role === 'Admin';
   const myId = state.currentUser?.id;
-  const liveEntityId = state_entities.all.length ? state_entities.all[0].id : null;
+  const liveEntityId = state_entities.currentId || (state_entities.all.length ? state_entities.all[0].id : null); // مساحة العمل الحالية للمستخدم
 
   let projects = state_entities.all;
   if (state_entities.search.trim()) {
@@ -15822,7 +15867,7 @@ function renderEntities() {
       ${badge}
       <div class="top">
         <span class="proj-ic"><svg class="icon" aria-hidden="true"><use href="#i-${esc(tw.icon)}"/></svg></span>
-        <div><h3>${esc(p.name)}</h3><p class="desc"><span class="proj-type-chip">${esc(tw.s)}</span> ${isLive ? L('مساحة العمل النشطة الآن', 'Active workspace') : L('سيُربط بمساحة عمل خاصة قريبًا', 'Its own workspace is coming soon')}</p></div>
+        <div><h3>${esc(p.name)}</h3><p class="desc"><span class="proj-type-chip">${esc(tw.s)}</span> ${isLive ? L('مساحة العمل النشطة الآن', 'Active workspace') : L('اضغط للانتقال إلى مساحة عمله', 'Click to switch to its workspace')}</p></div>
         ${isAdmin ? `<span class="proj-card-acts"><button type="button" class="btn btn-ghost btn-sm btn-icon" data-edit-project="${esc(p.id)}" title="${L('تعديل الاسم والنوع', 'Edit name and type')}" aria-label="${L('تعديل', 'Edit')} ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" class="btn btn-ghost btn-sm btn-icon" data-members="${esc(p.id)}" data-pname="${esc(p.name)}" title="${L(`أعضاء ${esc(tw.defS)}`, `${esc(tw.s)} members`)}" aria-label="${L(`أعضاء ${esc(tw.defS)}`, `${esc(tw.s)} members`)}: ${esc(p.name)}"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-users"/></svg></button></span>` : ''}
       </div>
       ${statsLine}
@@ -15844,7 +15889,7 @@ function renderEntities() {
   document.getElementById('projects-filter').classList.toggle('hidden', !isAdmin);
 
   el('projects-grid').querySelectorAll('[data-project]').forEach(card =>
-    card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); }));
+    card.addEventListener('click', e => { e.preventDefault(); if (card.dataset.live === 'true') showScreen('chat'); else entSwitchTo(card.dataset.project); }));
   el('projects-grid').querySelectorAll('[data-members]').forEach(btn =>
     btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openEntityRolesModal(btn.dataset.members, btn.dataset.pname); }));
   el('projects-grid').querySelectorAll('[data-edit-project]').forEach(btn =>

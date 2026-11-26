@@ -13,6 +13,8 @@ public class EntityStore
 
     private string Table => "[dbo].[Entities]";
     private string RolesTable => "[dbo].[EntityRoles]";
+    /// <summary>الكيان الذي اختاره كل مستخدم مساحةَ عمل حالية (صف لكل مستخدم).</summary>
+    private const string ChoiceTable = "[dbo].[UserCurrentEntity]";
 
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
@@ -55,6 +57,39 @@ public class EntityStore
             rolesCommand.CommandText = rolesText;
             await rolesCommand.ExecuteNonQueryAsync(ct);
         }
+
+        // اختيار الكيان الحالي لكل مستخدم (تبديل مساحة العمل)
+        await using (var choiceCommand = connection.CreateCommand())
+        {
+            choiceCommand.CommandText = $"""
+                IF OBJECT_ID('dbo.UserCurrentEntity') IS NULL
+                CREATE TABLE {ChoiceTable} ([UserId] NVARCHAR(200) NOT NULL PRIMARY KEY, [EntityId] NVARCHAR(64) NOT NULL, [UpdatedAt] DATETIME2 NOT NULL)
+                """;
+            await choiceCommand.ExecuteNonQueryAsync(ct);
+        }
+    }
+
+    /// <summary>هل يحق للمستخدم أن يعمل داخل هذا الكيان؟ المسؤول: أي كيان في منظمته؛ غيره: كيان له فيه دور،
+    /// أو أول كيان في المنظمة إن لم يكن له دور في أي كيان (السلوك القديم لحساب بلا أدوار).</summary>
+    public async Task<bool> CanWorkInAsync(string entityId, string organizationId, string userId, bool isAdmin, CancellationToken ct = default)
+    {
+        var e = await FindByIdAsync(entityId, ct);
+        if (e is null || e.OrganizationId != organizationId) return false;
+        if (isAdmin) return true;
+        var mine = await ListForUserAsync(userId, organizationId, ct);
+        if (mine.Count > 0) return mine.Any(x => x.Id == entityId);
+        return (await FirstForOrganizationAsync(organizationId, ct))?.Id == entityId;
+    }
+
+    /// <summary>يحفظ الكيان المختار مساحةَ عمل حالية للمستخدم (يتحقق المستدعي من الصلاحية بـ CanWorkInAsync).</summary>
+    public async Task SetCurrentChoiceAsync(string userId, string entityId, CancellationToken ct = default)
+    {
+        await EnsureSchemaAsync(ct);
+        await using var connection = await _db.OpenConnectionAsync(ct);
+        await connection.ExecuteAsync($"""
+            UPDATE {ChoiceTable} SET EntityId = @entityId, UpdatedAt = SYSUTCDATETIME() WHERE UserId = @userId;
+            IF @@ROWCOUNT = 0 INSERT INTO {ChoiceTable} (UserId, EntityId, UpdatedAt) VALUES (@userId, @entityId, SYSUTCDATETIME());
+            """, new { userId, entityId });
     }
 
     private async Task AddColumnIfMissingAsync(System.Data.Common.DbConnection connection, string column, string sqlServer, CancellationToken ct)
@@ -117,6 +152,17 @@ public class EntityStore
         string? organizationId, string userId, bool isAdmin, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(organizationId)) return null;
+        // الكيان الذي اختاره المستخدم بنفسه (تبديل مساحة العمل) — ما دام في منظمته ويحق له العمل فيه
+        await EnsureSchemaAsync(ct);
+        await using (var connection = await _db.OpenConnectionAsync(ct))
+        {
+            var chosen = await connection.ExecuteScalarAsync<string?>($"""
+                SELECT TOP 1 e.Id FROM {ChoiceTable} c JOIN {Table} e ON e.Id = c.EntityId
+                WHERE c.UserId = @userId AND e.OrganizationId = @organizationId
+                  AND (@isAdmin = 1 OR EXISTS (SELECT 1 FROM {RolesTable} r WHERE r.EntityId = e.Id AND r.UserId = @userId))
+                """, new { userId, organizationId, isAdmin });
+            if (chosen is not null) return chosen;
+        }
         if (!isAdmin)
         {
             var owned = await ListForUserAsync(userId, organizationId, ct);

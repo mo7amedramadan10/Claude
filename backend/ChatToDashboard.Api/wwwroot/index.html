@@ -122,7 +122,8 @@
         <li class="hidden" id="nav-claude-chat"><button type="button" class="nav-link tab" data-screen="claude-chat"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><span class="nav-text">محادثة Claude</span></button></li>
       </ul>
 
-      <div class="sb-label"><span id="sb-current-entity">المشروع الحالي</span></div>
+      <div class="sb-label sb-ent-label"><span id="sb-current-entity">المشروع الحالي</span><button type="button" id="entity-switch-btn" class="sb-ent-switch hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="entity-switch-panel"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chev-down"/></svg><span id="entity-switch-text">تبديل</span></button></div>
+      <div id="entity-switch-panel" class="ent-switch-panel hidden" role="menu" data-ent-skip></div>
       <ul class="nav">
         <li class="proj-item is-open" id="current-project-item">
           <a href="#" class="nav-link" id="current-project-link" aria-expanded="true">

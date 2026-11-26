@@ -61,7 +61,22 @@ public class EntitiesController : ControllerBase
             organization = new { id = org.Id, name = org.Name, slug = org.Slug },
             types,
             entities = projects.Select(p => Info(p, types)),
+            // مساحة العمل الحالية للمستخدم (اختياره المحفوظ، وإلا الكيان الافتراضي)
+            currentId = await _entities.ResolveCurrentEntityIdAsync(organizationId, UserId, IsAdmin, ct),
         });
+    }
+
+    /// <summary>تبديل مساحة العمل: يحفظ الكيان المختار للمستخدم، فتعمل عليه كل الشاشات (المحادثة واللوحات والتصاميم والملفات…).</summary>
+    [HttpPut("current")]
+    public async Task<IActionResult> SetCurrent([FromBody] EntityCurrentRequest request, CancellationToken ct)
+    {
+        var organizationId = OrganizationId;
+        if (organizationId is null) return NotFound(new { error = "الحساب غير مرتبط بأي منظمة." });
+        if (string.IsNullOrWhiteSpace(request.EntityId)) return BadRequest(new { error = "اختر كيانًا." });
+        if (!await _entities.CanWorkInAsync(request.EntityId, organizationId, UserId, IsAdmin, ct))
+            return StatusCode(403, new { error = "ليس لك دور في هذا الكيان — اطلب من مسؤول المنظمة إضافتك إليه." });
+        await _entities.SetCurrentChoiceAsync(UserId, request.EntityId, ct);
+        return Ok(new { currentId = request.EntityId });
     }
 
     [HttpPost]
@@ -150,3 +165,6 @@ public class EntitiesController : ControllerBase
         return NoContent();
     }
 }
+
+/// <summary>طلب تبديل الكيان الحالي.</summary>
+public class EntityCurrentRequest { public string EntityId { get; set; } = ""; }
