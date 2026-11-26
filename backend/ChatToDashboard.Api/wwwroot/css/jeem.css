@@ -4366,3 +4366,21 @@ body.ff-full-on { overflow: hidden; }
 
 /* تبديل الكيان الحالي من القائمة الجانبية */
 .sb-ent-label { position: relative; }
+
+/* نافذة المستخدم بتبويبات: البيانات الأساسية / صلاحية الأنظمة / صلاحية الشاشات */
+#user-modal .user-modal-box { width: min(560px, 100%); display: flex; flex-direction: column; }
+#user-modal .um-tabs { display: flex; gap: 4px; padding: 4px; margin: 4px 0 14px; background: var(--bg, #F3F5F7); border-radius: 12px; }
+#user-modal .um-tab { flex: 1 1 0; min-width: 0; min-height: 38px; padding: 6px 10px; border: 0; border-radius: 9px; background: none;
+  color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#user-modal .um-tab:hover { color: var(--ink); }
+#user-modal .um-tab.active { background: var(--surface); color: var(--brand-blue, var(--accent)); box-shadow: 0 1px 3px rgba(20, 40, 60, .12); }
+#user-modal .um-tab:focus-visible { outline: 2px solid var(--brand-blue, var(--accent)); outline-offset: 1px; }
+#user-modal .um-panel { display: flex; flex-direction: column; gap: 12px; min-height: 260px; }
+#user-modal .um-panel.hidden { display: none; }
+#user-modal .um-lab { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+#user-modal .um-note { margin: 0; color: var(--ink-3, var(--muted)); font-size: 12px; font-weight: 400; line-height: 1.6; }
+#user-modal .um-note.hidden { display: none; }
+#user-modal .um-presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 2px; }
+#user-modal #user-screens-preset { margin: 0; }
+#user-modal .modal-actions { margin-top: 4px; }
+@media (max-width: 520px) { #user-modal .um-tab { font-size: 12px; padding: 6px 6px; } }

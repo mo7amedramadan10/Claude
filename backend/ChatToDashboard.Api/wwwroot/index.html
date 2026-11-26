@@ -2171,44 +2171,59 @@
 <div id="user-modal" class="modal-overlay hidden">
   <div class="modal user-modal-box">
     <h3 id="user-modal-title">مستخدم جديد</h3>
+    <!-- تبويبات نافذة المستخدم: البيانات الأساسية / صلاحية الأنظمة / صلاحية الشاشات (umSetTab في app.js) -->
+    <div class="um-tabs" role="tablist" aria-label="أقسام بيانات المستخدم">
+      <button type="button" class="um-tab active" role="tab" id="um-tab-basic" aria-controls="um-panel-basic" aria-selected="true" data-um-tab="basic">البيانات الأساسية</button>
+      <button type="button" class="um-tab" role="tab" id="um-tab-systems" aria-controls="um-panel-systems" aria-selected="false" tabindex="-1" data-um-tab="systems">صلاحية الأنظمة</button>
+      <button type="button" class="um-tab" role="tab" id="um-tab-screens" aria-controls="um-panel-screens" aria-selected="false" tabindex="-1" data-um-tab="screens">صلاحية الشاشات</button>
+    </div>
     <form id="user-form">
       <input type="hidden" id="user-id">
-      <label>اسم المستخدم<input id="user-username" type="text" required></label>
-      <label>الاسم المعروض<input id="user-displayname" type="text"></label>
-      <label>طريقة الدخول
-        <select id="user-authmethod">
-          <option value="Local">محلي (اسم مستخدم وكلمة مرور)</option>
-          <option value="ActiveDirectory">Active Directory</option>
-        </select>
-      </label>
-      <label id="user-password-row">كلمة المرور <span class="hint" id="user-password-hint"></span>
-        <input id="user-password" type="password" autocomplete="new-password">
-      </label>
-      <label>الدور
-        <select id="user-role">
-          <option value="User">مستخدم عادي</option>
-          <option value="Admin">مسؤول</option>
-        </select>
-      </label>
-      <label class="chk-row"><input type="checkbox" id="user-active" checked> الحساب نشط</label>
-
-      <div class="perm-block">
-        <label class="chk-row"><input type="checkbox" id="user-allow-all-systems" checked> الوصول لكل الأنظمة</label>
-        <div id="user-systems-list" class="perm-list"></div>
+      <div class="um-panel" role="tabpanel" id="um-panel-basic" aria-labelledby="um-tab-basic">
+        <label>اسم المستخدم<input id="user-username" type="text" required></label>
+        <label>الاسم المعروض<input id="user-displayname" type="text"></label>
+        <label>طريقة الدخول
+          <select id="user-authmethod">
+            <option value="Local">محلي (اسم مستخدم وكلمة مرور)</option>
+            <option value="ActiveDirectory">Active Directory</option>
+          </select>
+        </label>
+        <label id="user-password-row"><span class="um-lab">كلمة المرور <span class="um-note" id="user-password-hint"></span></span>
+          <input id="user-password" type="password" autocomplete="new-password">
+        </label>
+        <label>الدور
+          <select id="user-role">
+            <option value="User">مستخدم عادي</option>
+            <option value="Admin">مسؤول</option>
+          </select>
+        </label>
+        <label class="chk-row"><input type="checkbox" id="user-active" checked> الحساب نشط</label>
       </div>
-      <!-- File access isn't set here anymore — it's managed only per-file from "مستودع
-           الملفات" (the 🔒 button on each file: creator/Admin/explicitly granted), so a
-           user's file permissions live in one place instead of two. -->
-      <p class="hint">صلاحيات الملفات بتتحدد من مستودع الملفات نفسه (زر 🔒 على كل ملف)، مش من هنا.</p>
+
+      <div class="um-panel hidden" role="tabpanel" id="um-panel-systems" aria-labelledby="um-tab-systems">
+        <div class="perm-block">
+          <label class="chk-row"><input type="checkbox" id="user-allow-all-systems" checked> الوصول لكل الأنظمة</label>
+          <div id="user-systems-list" class="perm-list"></div>
+        </div>
+        <!-- File access isn't set here anymore — it's managed only per-file from "مستودع
+             الملفات" (the 🔒 button on each file: creator/Admin/explicitly granted), so a
+             user's file permissions live in one place instead of two. -->
+        <p class="um-note">صلاحيات الملفات بتتحدد من مستودع الملفات نفسه (زر 🔒 على كل ملف)، مش من هنا.</p>
+      </div>
 
       <!-- صلاحيات الشاشات (ScreenAccess): للمستخدم العادي فقط؛ المسؤول يرى كل شيء. «تصميم حر فقط» = تصميم حر + الملفات -->
-      <div class="perm-block" id="user-screens-block">
-        <label class="chk-row"><input type="checkbox" id="user-allow-all-screens" checked> الوصول لكل الشاشات</label>
-        <button type="button" id="user-screens-preset" class="btn btn-ghost btn-sm">✎ تصميم حر فقط (مع الملفات)</button>
-        <button type="button" id="user-screens-viewonly" class="btn btn-ghost btn-sm">👁 اطلاع فقط (للمديرين)</button>
-        <div id="user-screens-wrap" class="hidden">
-          <div id="user-screens-list" class="perm-list"></div>
-          <p class="hint">يرى المستخدم الشاشات المحددة فقط في القائمة، ويرفض الخادم واجهات الشاشات الأخرى. بياناته تبقى بحسب صلاحيات الملفات والأنظمة أعلاه.</p>
+      <div class="um-panel hidden" role="tabpanel" id="um-panel-screens" aria-labelledby="um-tab-screens">
+        <p class="um-note hidden" id="user-screens-admin-note">المسؤول يرى كل الشاشات دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.</p>
+        <div class="perm-block" id="user-screens-block">
+          <label class="chk-row"><input type="checkbox" id="user-allow-all-screens" checked> الوصول لكل الشاشات</label>
+          <div class="um-presets">
+            <button type="button" id="user-screens-preset" class="btn btn-ghost btn-sm">✎ تصميم حر فقط (مع الملفات)</button>
+            <button type="button" id="user-screens-viewonly" class="btn btn-ghost btn-sm">👁 اطلاع فقط (للمديرين)</button>
+          </div>
+          <div id="user-screens-wrap" class="hidden">
+            <div id="user-screens-list" class="perm-list"></div>
+            <p class="um-note">يرى المستخدم الشاشات المحددة فقط في القائمة، ويرفض الخادم واجهات الشاشات الأخرى. بياناته تبقى بحسب صلاحيات الملفات والأنظمة.</p>
+          </div>
         </div>
       </div>
 

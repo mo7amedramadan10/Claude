@@ -16173,6 +16173,7 @@ function renderUserScreens(list) {
 function syncUserScreensUi() {
   const admin = el('user-role').value === 'Admin';
   el('user-screens-block').classList.toggle('hidden', admin); // المسؤول يرى كل الشاشات دائمًا
+  el('user-screens-admin-note').classList.toggle('hidden', !admin);
   el('user-screens-wrap').classList.toggle('hidden', el('user-allow-all-screens').checked);
 }
 el('user-allow-all-screens').addEventListener('change', () => {
@@ -16195,8 +16196,36 @@ el('user-authmethod').addEventListener('change', () => {
   el('user-password-row').style.display = el('user-authmethod').value === 'Local' ? '' : 'none';
 });
 
+// تبويبات نافذة المستخدم: لوحة واحدة ظاهرة، والأسهم تنقل بين التبويبات (بحسب الاتجاه) وHome/End
+function umSetTab(name, focus) {
+  document.querySelectorAll('#user-modal .um-tab').forEach(t => {
+    const on = t.dataset.umTab === name;
+    t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+    el(t.getAttribute('aria-controls')).classList.toggle('hidden', !on);
+    if (on && focus) t.focus();
+  });
+}
+document.querySelectorAll('#user-modal .um-tab').forEach(t => {
+  t.addEventListener('click', () => umSetTab(t.dataset.umTab));
+  t.addEventListener('keydown', e => {
+    const tabs = [...document.querySelectorAll('#user-modal .um-tab')], i = tabs.indexOf(t);
+    const rtl = getComputedStyle(t).direction === 'rtl';
+    let j = null;
+    if (e.key === 'ArrowLeft') j = rtl ? i + 1 : i - 1; else if (e.key === 'ArrowRight') j = rtl ? i - 1 : i + 1;
+    else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = tabs.length - 1;
+    if (j == null) return;
+    e.preventDefault(); umSetTab(tabs[(j + tabs.length) % tabs.length].dataset.umTab, true);
+  });
+});
+// حقل مطلوب في تبويب مخفي لا يستطيع المتصفح إظهار رسالته: انتقل إلى تبويبه أولًا
+el('user-form').addEventListener('invalid', e => {
+  const panel = e.target.closest('.um-panel');
+  if (panel && panel.classList.contains('hidden')) umSetTab(panel.id.replace('um-panel-', ''));
+}, true);
+
 function openUserModal(user) {
   el('user-form-error').classList.add('hidden');
+  umSetTab('basic');
   el('user-id').value = user ? user.id : '';
   el('user-modal-title').textContent = user ? `تعديل ${user.username}` : 'مستخدم جديد';
   el('user-username').value = user ? user.username : '';
