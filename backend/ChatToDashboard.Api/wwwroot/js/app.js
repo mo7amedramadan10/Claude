@@ -8372,7 +8372,6 @@ async function loadCurrentEntityNav() {
     // الكيان الحالي = اختيار المستخدم المحفوظ في الخادم (currentId)، وإلا الأول
     const project = (data.entities || []).find(e => e.id === data.currentId) || data.entities?.[0];
     ENT.list = data.entities || []; ENT.entityId = project?.id || null;
-    entRenderSwitchButton();
     if (project) {
       state.entityName = project.name;
       el('current-project-name').textContent = project.name;
@@ -8380,49 +8379,41 @@ async function loadCurrentEntityNav() {
       el('current-project-dot').textContent = (project.name || '؟').trim().slice(0, 1);
     }
     entSetTypes(data.types, data.entities, project?.typeId);
+    entRenderNavList();
     updateCrumbs(state.currentScreen);
   } catch { /* القائمة تفضل بقيمتها الافتراضية لو الطلب فشل */ }
 }
 
-// ---------- تبديل الكيان الحالي (مساحة العمل) ----------
-// الاختيار يُحفظ لكل مستخدم في الخادم (PUT /api/entities/current) فتلتزم به كل الشاشات والواجهات (ResolveCurrentEntityIdAsync)،
-// ثم تُعاد الصفحة لأن ذاكرات الشاشات (المصادر، الملفات، السجل، التصاميم…) كلها للكيان السابق.
-function entRenderSwitchButton() {
-  const btn = el('entity-switch-btn'); if (!btn) return;
-  btn.classList.toggle('hidden', (ENT.list || []).length < 2);
-  el('entity-switch-text').textContent = L('تبديل', 'Switch');
-  btn.title = L('التبديل إلى مساحة عمل أخرى', 'Switch to another workspace');
-}
-function entRenderSwitchPanel() {
-  const panel = el('entity-switch-panel'); const list = ENT.list || [];
-  const groups = []; list.forEach(e => { const t = entType(e.typeId); let g = groups.find(x => x.t === t); if (!g) groups.push(g = { t, items: [] }); g.items.push(e); });
-  panel.innerHTML = groups.map(g => (groups.length > 1 ? `<div class="ent-sw-head">${esc(entShow(g.t).defP)}</div>` : '') + g.items.map(e => {
-    const on = e.id === ENT.entityId;
-    return `<button type="button" class="ent-sw-item" role="menuitemradio" aria-checked="${on}" data-ent-go="${esc(e.id)}"><span class="proj-dot">${esc((e.name || '؟').trim().slice(0, 1))}</span><span class="grow">${esc(e.name)}</span>${on ? '<span class="ent-sw-check" aria-hidden="true">✓</span>' : ''}</button>`;
-  }).join('')).join('') + `<button type="button" class="ent-sw-all" data-ent-all>${esc(L('كل ', 'All ') + entShow(ENT.all).defP)}</button>`;
-  panel.querySelectorAll('[data-ent-go]').forEach(b => b.addEventListener('click', () => entSwitchTo(b.dataset.entGo)));
-  panel.querySelector('[data-ent-all]').addEventListener('click', () => { entSwitchPanel(false); showScreen('projects'); });
-}
-function entSwitchPanel(open) {
-  const panel = el('entity-switch-panel'), btn = el('entity-switch-btn');
-  if (open) { entRenderSwitchPanel(); panel.classList.remove('hidden'); btn.setAttribute('aria-expanded', 'true'); (panel.querySelector('[aria-checked="true"]') || panel.querySelector('button'))?.focus(); }
-  else { panel.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); }
+// ---------- قائمة الكيانات في الشريط الجانبي (التبديل بالنقر) ----------
+// كل كيانات المستخدم تحت بعضها: الحالي مفتوح بصفحاته، والنقر على غيره يجعله الحالي. الاختيار يُحفظ لكل مستخدم في الخادم
+// (PUT /api/entities/current) فتلتزم به كل الشاشات (ResolveCurrentEntityIdAsync)، ثم تُعاد الصفحة لأن ذاكرات الشاشات للكيان السابق.
+function entRenderNavList() {
+  const nav = el('entity-nav'), cur = el('current-project-item'); if (!nav || !cur) return;
+  nav.querySelectorAll('.ent-other').forEach(n => n.remove());
+  const list = ENT.list || [];
+  const lb = el('sb-current-entity');
+  if (list.length < 2) return;
+  // العنوان يصير جمع نوع الكيانات («الأقسام») بدل «القسم الحالي» لأن القائمة فيها أكثر من كيان
+  if (lb) { lb.setAttribute('data-ent-skip', ''); lb.textContent = entShow(ENT.all).defP; }
+  const idx = list.findIndex(e => e.id === ENT.entityId);
+  list.forEach((e, i) => {
+    if (e.id === ENT.entityId) return;
+    const li = document.createElement('li');
+    li.className = 'proj-item ent-other';
+    li.setAttribute('data-ent-skip', '');
+    li.innerHTML = `<a href="#" class="nav-link" data-ent-go="${esc(e.id)}" title="${esc(L('الانتقال إلى ', 'Open ') + e.name)}"><span class="proj-dot">${esc((e.name || '؟').trim().slice(0, 1))}</span><span class="nav-text">${esc(e.name)}</span><svg class="icon icon-sm chev" aria-hidden="true"><use href="#i-chev-left"/></svg></a>`;
+    li.querySelector('a').addEventListener('click', ev => { ev.preventDefault(); entSwitchTo(e.id); });
+    if (idx >= 0 && i < idx) nav.insertBefore(li, cur); else nav.appendChild(li);
+  });
 }
 async function entSwitchTo(id) {
-  if (!id || id === ENT.entityId) { entSwitchPanel(false); return; }
+  if (!id || id === ENT.entityId) return;
   try {
     const r = await fetch('/api/entities/current', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entityId: id }) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
     location.reload();
-  } catch (e) { alert(L('تعذّر التبديل: ', 'Could not switch: ') + e.message); }
+  } catch (e) { alert(L('تعذّر الانتقال: ', 'Could not switch: ') + e.message); }
 }
-el('entity-switch-btn').addEventListener('click', e => { e.stopPropagation(); entSwitchPanel(el('entity-switch-panel').classList.contains('hidden')); });
-el('entity-switch-panel').addEventListener('click', e => e.stopPropagation());
-el('entity-switch-panel').addEventListener('keydown', e => {
-  if (e.key === 'Escape') { e.stopPropagation(); entSwitchPanel(false); el('entity-switch-btn').focus(); return; }
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const bs = [...el('entity-switch-panel').querySelectorAll('button')]; const i = bs.indexOf(document.activeElement); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus(); }
-});
-document.addEventListener('click', () => { if (!el('entity-switch-panel').classList.contains('hidden')) entSwitchPanel(false); });
 
 // ---------- chat panel open/closed ----------
 // Two states only (per the design reference, not the old shrink/grow/hide rail-size
@@ -15824,8 +15815,9 @@ async function loadEntities() {
   el('projects-org-name').textContent = data.organization.name;
   state_entities.all = data.entities;
   state_entities.currentId = data.currentId || data.entities?.[0]?.id || null;
-  ENT.list = data.entities || []; ENT.entityId = state_entities.currentId; entRenderSwitchButton();
+  ENT.list = data.entities || []; ENT.entityId = state_entities.currentId;
   entSetTypes(data.types, data.entities, (data.entities || []).find(e => e.id === state_entities.currentId)?.typeId || data.entities?.[0]?.typeId);
+  entRenderNavList();
   entSyncEntitiesScreen();
 
   // صف الإحصاءات أعلى الصفحة — كله أرقام حقيقية من endpoints موجودة فعلًا، مفيش فيها أي
