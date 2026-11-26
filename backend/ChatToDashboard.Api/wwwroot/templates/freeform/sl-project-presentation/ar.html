@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض المشروع</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «عرض مشروع»: شريط علوي أزرق/برتقالي، عنوان كبير بالأزرق الداكن وسطر اسم الشركة فوقه، وكتل لونية ثابتة بإحداثيات مطلقة. الأرقام في الشرائح نصوص قابلة للتعديل، والدوائر والمؤشرات بنسبها من CSS. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #111111; --navy: #234865; --navy-2: #1A364C; --steel: #3F7192; --accent: #E8A14E; --green: #83C144; --pale: #DEE7EE; --rule: #C9D3DC; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .a { position: absolute; margin: 0; }
+  .bar { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 11px; background: linear-gradient(to right, var(--navy) 0 778px, var(--accent) 778px); }
+  html[dir="rtl"] .bar { background: linear-gradient(to left, var(--navy) 0 778px, var(--accent) 778px); }
+  .navy { background: var(--navy); } .navy2 { background: var(--navy-2); } .orange { background: var(--accent); } .steel { background: var(--steel); }
+  .rule { background: var(--rule); } .lrule { background: #E3E7EB; } .nline { background: var(--navy); } .wline { background: rgb(255 255 255 / .85); }
+  .co { top: 74px; inset-inline-start: 42px; font-size: 18px; letter-spacing: 3.3px; line-height: 1; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .co { letter-spacing: 0; font-size: 20px; font-weight: 500; top: 70px; }
+  .ttl { font-size: 45px; font-weight: 700; line-height: 1; letter-spacing: -0.3px; color: var(--navy); white-space: nowrap; }
+  .ttl .lt { font-weight: 400; }
+  .ttl.two { white-space: normal; line-height: 57px; top: 110px !important; }
+  html[lang="ar"] .ttl { font-size: 46px; font-weight: 800; letter-spacing: 0; }
+  .bd { font-size: 22px; line-height: 29px; color: var(--ink); }
+  .sm, .bl p, .num p, .gcard p, .sp p, .ob p, .sbox p, .stk > p, .rcard p, .rkh p, .ns > p, .ctx p, .tlc p, .mst p { font-size: 17.3px; line-height: 23px; margin: 0; }
+  .w { color: #fff; }
+  html[lang="ar"] .bd { line-height: 34px; } html[lang="ar"] .sm, html[lang="ar"] :is(.bl, .num, .gcard, .sp, .ob, .sbox, .stk, .rcard, .rkh, .ns, .ctx, .tlc, .mst) p { line-height: 1.35; }
+  h3 { margin: 0; }
+  .ic { width: 20px; height: 20px; flex: none; }
+  html[dir="rtl"] .arr, html[dir="rtl"] .send { transform: scaleX(-1); }
+  /* 1 — الغلاف */
+  .s1 .tri { top: 0; inset-inline-start: 0; width: 118px; height: 118px; background: var(--navy); clip-path: polygon(0 0, 100% 0, 0 100%); }
+  html[dir="rtl"] .s1 .tri { clip-path: polygon(0 0, 100% 0, 100% 100%); }
+  .cover-art { top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .cover-art { transform: scaleX(-1); }
+  .logo { position: absolute; width: 58px; height: 64px; }
+  .lg1 { top: 328px; inset-inline-start: 960px; } .lg15 { top: 526px; inset-inline-start: 53px; }
+  .lgt { font-size: 17px; letter-spacing: 3px; line-height: 23px; color: var(--navy); white-space: nowrap; }
+  .lgt.sm2 { font-size: 14.2px; line-height: 19px; color: var(--ink); }
+  html[lang="ar"] .lgt { letter-spacing: 0; }
+  .c-t { font-size: 67px; font-weight: 700; line-height: 86px; color: var(--accent); letter-spacing: -0.6px; }
+  html[lang="ar"] .c-t { font-size: 78px; font-weight: 800; line-height: 92px; }
+  .c-s { font-size: 28px; letter-spacing: 3.2px; line-height: 1; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .c-s { letter-spacing: 0; font-size: 34px; }
+  .c-lb { font-size: 20px; font-weight: 700; line-height: 1; letter-spacing: .3px; color: var(--ink); }
+  .c-v { font-size: 17.3px; line-height: 23px; color: var(--ink); }
+  /* 2 — جدول الأعمال */
+  .ag-n { font-size: 22px; line-height: 1; color: var(--accent); font-weight: 300; }
+  .ag-t { font-size: 30px; line-height: 1.2; color: var(--navy); }
+  /* 3 — نظرة عامة */
+  .cap-h { font-size: 20px; font-weight: 700; line-height: 1; color: #fff; letter-spacing: .2px; }
+  .pn-v { font-size: 20px; font-weight: 700; line-height: 25px; color: #fff; }
+  .bl { display: flex; gap: 19px; align-items: flex-start; } .bl .ic { margin-top: 2px; } .bl.o .ic { color: var(--accent); }
+  .bl.gr .ic { color: var(--green); } .bl.pale .ic { color: #D5DEE8; } .bl.w .ic { color: #fff; }
+  .sp { display: grid; grid-template-columns: 20px 1fr; column-gap: 22px; color: #fff; }
+  .sp h3 { font-size: 18px; font-weight: 700; line-height: 22px; } .sp p { grid-column: 2; margin-top: 15px !important; }
+  .why { font-size: 35px; font-weight: 700; line-height: 1; color: var(--accent); }
+  .num { display: grid; grid-template-columns: 43px 1fr; } .num span { grid-row: span 2; font-size: 42px; font-weight: 300; line-height: 1; color: var(--steel); }
+  .num h3 { font-size: 23px; font-weight: 700; line-height: 1.2; color: var(--ink); } .num p { margin-top: 12px !important; color: var(--ink); }
+  .num.n2 { grid-template-columns: 58px 1fr; }
+  /* 4 — الخلفية */
+  .stmt { font-size: 25.6px; font-weight: 700; line-height: 33px; color: var(--ink); }
+  .kpi-o { font-size: 44.5px; font-weight: 300; line-height: 1; color: var(--accent); }
+  .kt { font-size: 19.5px; line-height: 25px; color: var(--ink); }
+  .gcard { width: 436px; height: 135px; padding: 30px 40px 0 83px; background: linear-gradient(to right, #ADCBE3 0, #C7DCEC 35%, #FFFFFF 100%); }
+  html[dir="rtl"] .gcard { background: linear-gradient(to left, #ADCBE3 0, #C7DCEC 35%, #FFFFFF 100%); padding: 30px 83px 0 40px; }
+  .gcard h3 { font-size: 23px; font-weight: 700; line-height: 1.2; color: var(--ink); } .gcard p { margin-top: 10px !important; }
+  /* 5 — الأهداف */
+  .circ { border-radius: 50%; display: grid; place-items: center; }
+  .circ p { position: relative; z-index: 3; color: #fff; font-size: 58px; font-weight: 300; line-height: 1; }
+  .circ sup { font-size: .5em; vertical-align: .8em; }
+  .circ.o { background: rgb(232 161 78 / .68); } .circ.g { background: rgb(131 193 68 / .72); } .circ.n { background: rgb(35 72 101 / .7); }
+  .badge { width: 50px; height: 50px; border-radius: 50%; border: 4px solid #fff; color: #fff; font-weight: 700; font-size: 20px; display: grid; place-items: center; z-index: 2; }
+  .badge.o { background: var(--accent); } .badge.g { background: var(--green); } .badge.n { background: var(--navy); }
+  .stem { background: var(--navy); } .dot { background: var(--navy); border-radius: 50%; }
+  .ob { width: 240px; text-align: center; } .ob h3 { font-size: 23px; font-weight: 700; line-height: 1.2; color: var(--ink); } .ob p { margin-top: 10px !important; font-size: 18.3px; }
+  /* 6 — النطاق */
+  .sbox { width: 396px; height: 107px; border: 1px solid var(--navy); background: #fff; padding: 36px 34px 0; }
+  .sbox.out { background: var(--pale); }
+  .tab { height: 37px; color: #fff; font-size: 17px; letter-spacing: 4px; display: grid; place-items: center; line-height: 1; white-space: nowrap; }
+  html[lang="ar"] .tab { letter-spacing: 0; font-size: 19px; font-weight: 500; }
+  .tab.g { background: var(--green); } .tab.n { background: var(--navy); } .tab.o { background: var(--accent); }
+  /* 7 — أصحاب المصلحة */
+  .stk { width: 340px; color: #fff; } .stk h3 { font-size: 21px; font-weight: 700; line-height: 1.2; }
+  .stk > p { margin-top: 15px !important; } .stk > i { display: block; width: 91px; height: 1px; background: #fff; margin: 20px 0 22px; }
+  .stk .bl { position: static; margin-bottom: 32px; gap: 8px; } .stk .bl p { font-size: 14.7px; line-height: 21px; } .stk .bl .ic { width: 17px; height: 17px; margin-top: 2px; }
+  .kpi .kv { font-size: 33px; font-weight: 700; line-height: 1; color: var(--navy); margin: 0; }
+  .kpi .kv small { font-size: .7em; }
+  .kpi .dn { color: #FF8184; font-size: 18px; margin-inline-start: 10px; vertical-align: .25em; }
+  .kpi i { display: block; width: 68px; height: 3px; background: #436026; margin: 15px 0 13px; }
+  .kpi .kl { font-size: 17.5px; line-height: 1.2; color: var(--ink); margin: 0; }
+  /* 8 — النهج */
+  .acol { width: 290px; height: 430px; border: 3px solid; border-bottom: 0; border-image: linear-gradient(to bottom, #E6A55A 0, #9CB9D4 20%, #C8D9E8 65%, rgb(255 255 255 / 0) 100%) 1; }
+  .ahd { width: 270px; height: 36px; color: #fff; font-size: 20px; font-weight: 700; line-height: 36px; padding-inline-start: 8px; }
+  .ah { font-size: 20px; font-weight: 700; line-height: 25px; color: var(--ink); }
+  .rl { font-size: 20px; font-weight: 700; line-height: 25px; color: var(--ink); }
+  /* 9 — الجدول الزمني */
+  .vline { background: var(--navy); } .sq { border: 5px solid var(--navy); background: #fff; }
+  .gstem { background: #7CC144; }
+  .ms { width: 40px; height: 40px; border-radius: 50%; background: #8DBC54; border: 3px solid #1F3A4F; box-shadow: inset 0 0 0 3px #fff; color: #fff; display: grid; place-items: center; }
+  .ms svg { width: 18px; height: 18px; }
+  .tlc { width: 200px; } .tlc .yr { font-size: 23px; line-height: 1; color: var(--accent); }
+  .tlc h3 { font-size: 20px; font-weight: 700; line-height: 25px; color: var(--ink); margin-top: 26px; } .tlc p:last-child { font-size: 15px; line-height: 19px; margin-top: 34px; width: 145px; }
+  .mst { width: 160px; } .mst h3 { font-size: 18px; font-weight: 700; line-height: 1.2; color: #7CC144; } .mst p { font-size: 15px; line-height: 19px; margin-top: 7px; }
+  /* 10 — المخرجات */
+  .dl { width: 1210px; border-collapse: collapse; table-layout: fixed; }
+  .dl th { background: var(--navy); color: #fff; font-size: 20px; font-weight: 700; height: 76px; text-align: start; padding: 0 10px; border-bottom: 1px solid #fff; }
+  .dl td { height: 75.5px; font-size: 17.3px; line-height: 23px; color: var(--ink); padding: 0 10px; }
+  .dl td.i { padding-inline-start: 10px; } .dl td.b { font-weight: 700; }
+  .dl tbody tr:nth-child(even) td { background: var(--pale); }
+  /* 11 — الموارد */
+  .rsh.n { background: var(--navy); } .rsh.o { background: var(--accent); } .rsh.g { background: var(--green); }
+  .rcard { width: 355px; height: 418px; background: #fff; border: 1px solid; padding: 54px 30px 0 35px; }
+  .rcard.n { border-color: var(--navy); } .rcard.o { border-color: var(--accent); } .rcard.g { border-color: var(--green); }
+  .rcard h3 { font-size: 26px; font-weight: 700; line-height: 32px; color: var(--ink); width: 200px; }
+  .rcard .rt { font-size: 19.5px; line-height: 25px; margin-top: 18px; }
+  .rcard .bl { position: static; margin-top: 44px; gap: 8px; } .rcard .bl + .bl { margin-top: 34px; } .rcard .bl .ic { width: 16px; height: 16px; margin-top: 3px; }
+  /* 12 — المخاطر */
+  .rkshadow { top: 250px; inset-inline-start: 35px; width: 1210px; height: 10px; background: radial-gradient(ellipse at 50% 0, rgb(0 0 0 / .4), rgb(0 0 0 / 0) 70%); }
+  .rkc { top: 198px; width: 324px; height: 56px; color: #fff; font-size: 21px; font-weight: 700; display: grid; place-items: center; }
+  .rkc.navy { background: var(--navy); } .rkc.orange { background: var(--accent); } .rkc.green { background: var(--green); }
+  .rkh { width: 330px; } .rkh .rn { font-size: 25px; font-style: italic; color: var(--accent); font-weight: 300; line-height: 1; }
+  .rkh h3 { font-size: 21px; font-weight: 700; color: var(--navy); line-height: 1.2; margin-top: 4px; } .rkh p:last-child { margin-top: 2px; }
+  .s12 .bl { gap: 8px; } .s12 .bl .ic { width: 16px; height: 16px; margin-top: 3px; }
+  /* 13 — الحالة */
+  .info { width: 476px; } .info .r { display: grid; grid-template-columns: 181px 1fr; align-items: center; padding-inline-start: 10px; min-height: 55px; }
+  .info .r.sh { background: var(--pale); min-height: 75px; border-top: 2px solid #A9BDD0; border-bottom: 2px solid #A9BDD0; }
+  .info b { font-size: 20px; color: var(--navy); } .info span { font-size: 18px; line-height: 25px; color: var(--ink); } .info .og { color: var(--accent); font-weight: 700; }
+  .sth { font-size: 18px; font-weight: 700; line-height: 1; color: var(--ink); }
+  .sbar { inset-inline-start: 534px; width: 235px; height: 75px; background: linear-gradient(to right, var(--steel) 0 40px, var(--navy) 40px); padding: 14px 10px 0 65px; }
+  html[dir="rtl"] .sbar { background: linear-gradient(to left, var(--steel) 0 40px, var(--navy) 40px); padding: 14px 65px 0 10px; }
+  .sbar p { color: #fff; font-size: 17px; line-height: 23px; margin: 0; }
+  .trk { inset-inline-start: 785px; width: 227px; height: 18px; background: linear-gradient(#B9C9D6, #B9C9D6) 0 9px / 100% 1px no-repeat; }
+  .trk i { position: absolute; top: 0; width: 1px; height: 18px; background: #B9C9D6; } .trk i:nth-child(1) { inset-inline-start: 0; } .trk i:nth-child(2) { inset-inline-start: 112px; } .trk i:nth-child(3) { inset-inline-end: 0; }
+  .knob { width: 34px; height: 34px; border-radius: 50%; border: 3px solid; background: #fff; }
+  .knob::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: currentColor; }
+  .knob.o { color: var(--accent); } .knob.g { color: var(--green); } .knob.n { color: var(--navy); }
+  /* 14 — الخطوات التالية */
+  .ns { top: 198px; width: 356px; height: 442px; padding: 62px 30px 0 26px; }
+  .ns.dk { background: var(--navy); color: #fff; } .ns.lt { background: var(--pale); color: var(--ink); }
+  .ns .sq { position: absolute; top: 0; inset-inline-end: 0; width: 83px; height: 79px; background: var(--accent); display: grid; place-items: center; }
+  .ns .send { width: 44px; height: 44px; } .ns.dk .send { color: var(--navy); } .ns.lt .send { color: #F6CA9A; }
+  .ns .nn { font-size: 36px; font-weight: 300; line-height: 1; margin: 0 4px; } .ns.dk .nn { color: var(--accent); } .ns.lt .nn { color: var(--navy); }
+  .ns h3 { font-size: 22.7px; font-weight: 700; line-height: 29px; margin-top: 46px; width: 220px; } .ns.lt h3 { color: var(--navy); }
+  .ns > p:not(.nn) { font-size: 19.5px !important; line-height: 25px !important; margin-top: 30px !important; }
+  .ns .pb { position: absolute; top: 352px; inset-inline-start: 23px; width: 290px; height: 23px; }
+  .ns.dk .pb { background: var(--navy-2); } .ns.lt .pb { background: #BFCFDE; }
+  .ns .pb i { position: absolute; inset-block: 0; inset-inline-start: 0; width: 60px; } .ns.dk .pb i { background: var(--accent); } .ns.lt .pb i { background: #90AECA; }
+  /* 15 — الختام */
+  .ty { font-size: 56px; font-weight: 700; line-height: 1; color: var(--navy); letter-spacing: -0.5px; }
+  .ty2 { font-size: 55px; font-weight: 300; line-height: 1; color: var(--accent); }
+  html[lang="ar"] .ty, html[lang="ar"] .ty2 { font-size: 62px; }
+  .ctile { inset-inline-start: 655px; width: 83px; height: 62px; color: #fff; display: grid; place-items: center; background: linear-gradient(to right, rgb(255 255 255 / 0), rgb(35 72 101 / .55)); }
+  html[dir="rtl"] .ctile { background: linear-gradient(to left, rgb(255 255 255 / 0), rgb(35 72 101 / .55)); }
+  .ctile svg { width: 38px; height: 38px; }
+  .ctx { inset-inline-start: 774px; width: 470px; color: #fff; } .ctx h3 { font-size: 21px; font-weight: 700; line-height: 1.2; } .ctx p { margin-top: 2px !important; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gNavy" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#46779A"/><stop offset=".35" stop-color="#2F5878"/><stop offset="1" stop-color="#1C3A52"/></linearGradient><linearGradient id="gOrange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C97B2A"/><stop offset=".3" stop-color="#D98B37"/><stop offset="1" stop-color="#E8A14E"/></linearGradient><filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="a tri"></div>
+    <svg class="a cover-art" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="470,0 510,0 757,247 743,262" fill="#000" opacity=".1" filter="url(#blur)"/><polygon points="470,720 510,720 757,473 743,458" fill="#000" opacity=".1" filter="url(#blur)"/><polygon points="757,252 1040,0 1280,0 875,358" fill="url(#gNavy)"/><polygon points="757,468 875,362 1280,720 1040,720" fill="url(#gOrange)"/><polygon points="753,255 874,360 753,465" fill="#E8A14E" stroke="#fff" stroke-width="2.5"/></svg>
+    <svg class="logo lg1" viewBox="0 0 60 66" aria-hidden="true"><path fill="var(--navy)" fill-rule="evenodd" d="M10 3C24 -1 40 0 52 5c6 3 8 7 8 14v26c0 9-3 14-10 17C36 67 22 67 10 63 3 61 0 56 0 47V18C0 9 3 5 10 3zM17 14c-4 1-6 3-6 8v21c0 5 2 8 6 9 9 3 18 3 26 0 4-1 6-4 6-9V22c0-5-2-7-6-8-9-3-18-3-26 0z"/></svg>
+    <p class="a lgt" style="top:338px;inset-inline-start:1050px;">ضع شعار<br>شركتك هنا</p>
+    <h1 class="a c-t" style="top:247px;inset-inline-start:41px;width:640px;">عرض<br>المشروع</h1>
+    <p class="a c-s" style="top:440px;inset-inline-start:43px;">قالب عرض تقديمي</p>
+    <p class="a c-lb" style="top:554px;inset-inline-start:43px;width:260px;">مقدَّم من</p><p class="a c-v" style="top:595px;inset-inline-start:42px;width:280px;">يمكنك إضافة اسمك هنا.</p>
+    <p class="a c-lb" style="top:554px;inset-inline-start:343px;width:260px;">التاريخ</p><p class="a c-v" style="top:595px;inset-inline-start:342px;width:280px;">أدخل التاريخ هنا.</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <p class="a co" style="top:74px">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:117px;inset-inline-start:35px;">جدول الأعمال</h1>
+    <img class="a" src="/templates/freeform/sl-project-presentation/assets/agenda.jpg" alt="زميلان يناقشان خطة أمام لوح أبيض" style="top:0;inset-inline-start:421px;width:859px;height:266px;object-fit:cover">
+    <div class="a navy" style="top:266px;inset-inline-start:0px;width:421px;height:454px;"></div>
+    <p class="a bd w" style="top:302px;inset-inline-start:37px;width:330px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <p class="a ag-n" style="top:304.0px;inset-inline-start:446px;width:50px;">01</p><p class="a ag-t" style="top:299.0px;inset-inline-start:513px;width:420px;">عنوان القسم 01</p><p class="a sm" style="top:298.0px;inset-inline-start:974px;width:290px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a rule" style="top:358.0px;inset-inline-start:436px;width:809px;height:1px;"></div>
+    <p class="a ag-n" style="top:379.5px;inset-inline-start:446px;width:50px;">02</p><p class="a ag-t" style="top:374.5px;inset-inline-start:513px;width:420px;">عنوان القسم 02</p><p class="a sm" style="top:373.5px;inset-inline-start:974px;width:290px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a rule" style="top:433.5px;inset-inline-start:436px;width:809px;height:1px;"></div>
+    <p class="a ag-n" style="top:455.0px;inset-inline-start:446px;width:50px;">03</p><p class="a ag-t" style="top:450.0px;inset-inline-start:513px;width:420px;">عنوان القسم 03</p><p class="a sm" style="top:449.0px;inset-inline-start:974px;width:290px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a rule" style="top:509.0px;inset-inline-start:436px;width:809px;height:1px;"></div>
+    <p class="a ag-n" style="top:530.5px;inset-inline-start:446px;width:50px;">04</p><p class="a ag-t" style="top:525.5px;inset-inline-start:513px;width:420px;">عنوان القسم 04</p><p class="a sm" style="top:524.5px;inset-inline-start:974px;width:290px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a rule" style="top:584.5px;inset-inline-start:436px;width:809px;height:1px;"></div>
+    <p class="a ag-n" style="top:606.0px;inset-inline-start:446px;width:50px;">05</p><p class="a ag-t" style="top:601.0px;inset-inline-start:513px;width:420px;">عنوان القسم 05</p><p class="a sm" style="top:600.0px;inset-inline-start:974px;width:290px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">نظرة عامة على المشروع</h1>
+    <p class="a bd" style="top:198px;inset-inline-start:37px;width:680px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <div class="a navy" style="top:287px;inset-inline-start:0px;width:390px;height:433px;"></div><div class="a orange" style="top:287px;inset-inline-start:390px;width:388px;height:433px;"></div>
+    <p class="a cap-h" style="top:345px;inset-inline-start:41px;width:330px;">اسم المشروع</p><div class="a wline" style="top:377px;inset-inline-start:35px;width:333px;height:1px;"></div><p class="a pn-v" style="top:398px;inset-inline-start:41px;width:320px;">أدخل اسم مشروعك هنا.<br>هذا نص توضيحي.</p><div class="a bl w o" style="top:484px;inset-inline-start:46px;width:320px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="a bl w o" style="top:560px;inset-inline-start:46px;width:320px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <p class="a cap-h" style="top:345px;inset-inline-start:416px;width:330px;">راعي المشروع / رعاته</p><div class="a wline" style="top:377px;inset-inline-start:410px;width:333px;height:1px;"></div><div class="a sp" style="top:402px;inset-inline-start:419px;width:320px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="a sp" style="top:519px;inset-inline-start:419px;width:320px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <h2 class="a why" style="top:147px;inset-inline-start:848px;width:400px;">لماذا يهمّ؟</h2>
+    <p class="a bd" style="top:203px;inset-inline-start:850px;width:400px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a nline" style="top:285px;inset-inline-start:851px;width:379px;height:1px;"></div>
+    <div class="a num" style="top:306px;inset-inline-start:849px;width:400px"><span>1</span><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a num" style="top:445px;inset-inline-start:849px;width:400px"><span>2</span><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a num" style="top:584px;inset-inline-start:849px;width:400px"><span>3</span><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">الخلفية والسياق</h1>
+    <p class="a bd" style="top:198px;inset-inline-start:37px;width:680px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <div class="a navy" style="top:294px;inset-inline-start:35px;width:14px;height:76px;"></div><p class="a stmt" style="top:301px;inset-inline-start:79px;width:520px;">أدخل العبارة الرئيسية هنا.<br>هذا نص توضيحي.</p>
+    <p class="a kpi-o" style="top:399px;inset-inline-start:77px;width:210px;"><bdi dir="ltr">$525M</bdi></p><p class="a kt" style="top:402px;inset-inline-start:293px;width:200px;">أدخل النص<br>المطلوب هنا.</p>
+    <p class="a kpi-o" style="top:491px;inset-inline-start:77px;width:210px;"><bdi dir="ltr">100+</bdi></p><p class="a kt" style="top:494px;inset-inline-start:293px;width:200px;">أدخل النص<br>المطلوب هنا.</p>
+    <p class="a kpi-o" style="top:584px;inset-inline-start:77px;width:210px;"><bdi dir="ltr">4.2K+</bdi></p><p class="a kt" style="top:587px;inset-inline-start:293px;width:200px;">أدخل النص<br>المطلوب هنا.</p><div class="a nline" style="top:473px;inset-inline-start:74px;width:468px;height:1px;"></div><div class="a nline" style="top:572px;inset-inline-start:74px;width:468px;height:1px;"></div>
+    <div class="a steel" style="top:202px;inset-inline-start:723px;width:15px;height:454px;"></div>
+    <div class="a gcard" style="top:202px;inset-inline-start:738px"><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a gcard" style="top:361px;inset-inline-start:738px"><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a gcard" style="top:520px;inset-inline-start:738px"><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl two" style="top:116px;inset-inline-start:36px;width:470px;">الأهداف<br>ومعايير النجاح</h1>
+    <p class="a bd" style="top:263px;inset-inline-start:37px;width:430px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <div class="a num n2" style="top:382px;inset-inline-start:38px;width:380px"><span>1</span><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a num n2" style="top:522px;inset-inline-start:38px;width:380px"><span>2</span><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a circ o" style="top:166px;inset-inline-start:512px;width:248px;height:248px"><p><bdi dir="ltr">$3.5<sup>B</sup></bdi></p></div><span class="a badge o" style="top:149px;inset-inline-start:611px">1</span><div class="a stem" style="top:414px;inset-inline-start:635.5px;width:1px;height:84px;"></div><div class="a dot" style="top:494px;inset-inline-start:632px;width:8px;height:8px;"></div><div class="a ob" style="top:526px;inset-inline-start:516px"><h3>عنوان هنا</h3><p>أدخل النص<br>المطلوب هنا.</p></div>
+    <div class="a circ g" style="top:132px;inset-inline-start:708px;width:316px;height:316px"><p><bdi dir="ltr">87<sup>%</sup></bdi></p></div><span class="a badge g" style="top:110px;inset-inline-start:841px">2</span><div class="a stem" style="top:448px;inset-inline-start:865.5px;width:1px;height:50px;"></div><div class="a dot" style="top:494px;inset-inline-start:862px;width:8px;height:8px;"></div><div class="a ob" style="top:526px;inset-inline-start:746px"><h3>عنوان هنا</h3><p>أدخل النص<br>المطلوب هنا.</p></div>
+    <div class="a circ n" style="top:166px;inset-inline-start:968px;width:248px;height:248px"><p><bdi dir="ltr">300<sup>+</sup></bdi></p></div><span class="a badge n" style="top:147px;inset-inline-start:1067px">3</span><div class="a stem" style="top:414px;inset-inline-start:1091.5px;width:1px;height:84px;"></div><div class="a dot" style="top:494px;inset-inline-start:1088px;width:8px;height:8px;"></div><div class="a ob" style="top:526px;inset-inline-start:972px"><h3>عنوان هنا</h3><p>أدخل النص<br>المطلوب هنا.</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">تحديد النطاق</h1>
+    <p class="a bd" style="top:198px;inset-inline-start:37px;width:330px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <div class="a num n2" style="top:382px;inset-inline-start:38px;width:380px"><span>1</span><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a num n2" style="top:522px;inset-inline-start:38px;width:380px"><span>2</span><h3>عنوان هنا</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="a sbox" style="top:223px;inset-inline-start:433px"><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="a sbox out" style="top:223px;inset-inline-start:845px"><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><span class="a tab g" style="top:204px;inset-inline-start:462px;width:166px">ضمن النطاق</span><span class="a tab n" style="top:204px;inset-inline-start:877px;width:212px">خارج النطاق</span>
+    <div class="a sbox" style="top:370px;inset-inline-start:433px"><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="a sbox out" style="top:370px;inset-inline-start:845px"><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><span class="a tab g" style="top:351px;inset-inline-start:462px;width:166px">ضمن النطاق</span><span class="a tab n" style="top:351px;inset-inline-start:877px;width:212px">خارج النطاق</span>
+    <div class="a sbox" style="top:526px;inset-inline-start:433px"><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="a sbox out" style="top:526px;inset-inline-start:845px"><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><span class="a tab g" style="top:507px;inset-inline-start:462px;width:166px">ضمن النطاق</span><span class="a tab n" style="top:507px;inset-inline-start:877px;width:212px">خارج النطاق</span>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="bar"></div><div class="a orange" style="top:21px;inset-inline-start:819px;width:461px;height:315px;"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">أصحاب المصلحة الرئيسيون</h1>
+    <p class="a bd" style="top:198px;inset-inline-start:37px;width:680px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <div class="a navy" style="top:337px;inset-inline-start:0px;width:400px;height:318px;"></div><div class="a navy2" style="top:337px;inset-inline-start:400px;width:419px;height:318px;"></div>
+    <div class="a stk " style="top:84px;inset-inline-start:869px"><h3>عنوان نائب</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><i></i><div class="a bl w" style="top:0px;inset-inline-start:0px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl w" style="top:0px;inset-inline-start:0px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div></div><div class="a stk " style="top:382px;inset-inline-start:44px"><h3>عنوان نائب</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><i></i><div class="a bl w" style="top:0px;inset-inline-start:0px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl w" style="top:0px;inset-inline-start:0px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div></div><div class="a stk " style="top:382px;inset-inline-start:456px"><h3>عنوان نائب</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><i></i><div class="a bl w" style="top:0px;inset-inline-start:0px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl w" style="top:0px;inset-inline-start:0px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div></div>
+    <div class="a kpi" style="top:384px;inset-inline-start:876px"><p class="kv"><bdi dir="ltr">45<small>%</small></bdi><span class="dn" aria-label="انخفاض">▼</span></p><i></i><p class="kl">عنوان المؤشر النائب</p></div>
+    <div class="a kpi" style="top:513px;inset-inline-start:875px"><p class="kv"><bdi dir="ltr">$14<small>M</small></bdi><span class="dn" aria-label="انخفاض">▼</span></p><i></i><p class="kl">عنوان المؤشر النائب</p></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">نهجنا</h1>
+    <div class="a lrule" style="top:407px;inset-inline-start:37px;width:1243px;height:1px;"></div><div class="a lrule" style="top:505px;inset-inline-start:37px;width:1243px;height:1px;"></div>
+    <div class="a acol" style="top:205px;inset-inline-start:281px"></div><p class="a ahd navy" style="top:217px;inset-inline-start:290px">عنوان هنا</p><p class="a ah" style="top:286px;inset-inline-start:293px;width:270px;">عنوان<br>نائب</p><p class="a sm" style="top:347px;inset-inline-start:293px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><p class="a sm" style="top:433px;inset-inline-start:293px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><p class="a sm" style="top:538px;inset-inline-start:293px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <div class="a acol" style="top:205px;inset-inline-start:591px"></div><p class="a ahd orange" style="top:217px;inset-inline-start:600px">عنوان هنا</p><p class="a ah" style="top:286px;inset-inline-start:603px;width:270px;">عنوان<br>نائب</p><p class="a sm" style="top:347px;inset-inline-start:603px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><p class="a sm" style="top:433px;inset-inline-start:603px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><p class="a sm" style="top:538px;inset-inline-start:603px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <div class="a acol" style="top:205px;inset-inline-start:902px"></div><p class="a ahd steel" style="top:217px;inset-inline-start:911px">عنوان هنا</p><p class="a ah" style="top:286px;inset-inline-start:914px;width:270px;">عنوان<br>نائب</p><p class="a sm" style="top:347px;inset-inline-start:914px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><p class="a sm" style="top:433px;inset-inline-start:914px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><p class="a sm" style="top:538px;inset-inline-start:914px;width:270px;">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p>
+    <p class="a rl" style="top:312px;inset-inline-start:42px;width:220px;">أدخل النص<br>المطلوب هنا.</p>
+    <p class="a rl" style="top:436px;inset-inline-start:42px;width:220px;">أدخل النص<br>المطلوب هنا.</p>
+    <p class="a rl" style="top:541px;inset-inline-start:42px;width:220px;">أدخل النص<br>المطلوب هنا.</p>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">الجدول الزمني والمعالم</h1>
+    <div class="a navy" style="top:356px;inset-inline-start:0px;width:1280px;height:5px;"></div>
+    <div class="a vline" style="top:374px;inset-inline-start:58px;width:1px;height:281px;"></div><div class="a sq" style="top:343px;inset-inline-start:58px;width:30px;height:30px;"></div><div class="a tlc" style="top:398px;inset-inline-start:78px"><p class="yr">السنة 1</p><h3>عنوان<br>نائب</h3><p>أدخل النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="a vline" style="top:374px;inset-inline-start:303px;width:1px;height:281px;"></div><div class="a sq" style="top:343px;inset-inline-start:303px;width:30px;height:30px;"></div><div class="a tlc" style="top:398px;inset-inline-start:323px"><p class="yr">السنة 2</p><h3>عنوان<br>نائب</h3><p>أدخل النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="a vline" style="top:374px;inset-inline-start:549px;width:1px;height:281px;"></div><div class="a sq" style="top:343px;inset-inline-start:549px;width:30px;height:30px;"></div><div class="a tlc" style="top:398px;inset-inline-start:569px"><p class="yr">السنة 3</p><h3>عنوان<br>نائب</h3><p>أدخل النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="a vline" style="top:374px;inset-inline-start:795px;width:1px;height:281px;"></div><div class="a sq" style="top:343px;inset-inline-start:795px;width:30px;height:30px;"></div><div class="a tlc" style="top:398px;inset-inline-start:815px"><p class="yr">السنة 4</p><h3>عنوان<br>نائب</h3><p>أدخل النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="a vline" style="top:374px;inset-inline-start:1041px;width:1px;height:281px;"></div><div class="a sq" style="top:343px;inset-inline-start:1041px;width:30px;height:30px;"></div><div class="a tlc" style="top:398px;inset-inline-start:1061px"><p class="yr">السنة 5</p><h3>عنوان<br>نائب</h3><p>أدخل النص المطلوب هنا. هذا نص توضيحي.</p></div>
+    <div class="a gstem" style="top:215px;inset-inline-start:238px;width:2px;height:128px;"></div><span class="a ms" style="top:340px;inset-inline-start:219px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/></svg></span><div class="a mst" style="top:211px;inset-inline-start:260px"><h3>المَعلم 1</h3><p>أدخل النص<br>المطلوب هنا.</p></div>
+    <div class="a gstem" style="top:215px;inset-inline-start:671px;width:2px;height:128px;"></div><span class="a ms" style="top:340px;inset-inline-start:652px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/></svg></span><div class="a mst" style="top:211px;inset-inline-start:693px"><h3>المَعلم 2</h3><p>أدخل النص<br>المطلوب هنا.</p></div>
+    <div class="a gstem" style="top:215px;inset-inline-start:1005px;width:2px;height:128px;"></div><span class="a ms" style="top:340px;inset-inline-start:986px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/></svg></span><div class="a mst" style="top:211px;inset-inline-start:1027px"><h3>المَعلم 3</h3><p>أدخل النص<br>المطلوب هنا.</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">المخرجات</h1>
+    <table class="a dl" style="top:191px;inset-inline-start:35px"><colgroup><col style="width:53px"><col style="width:189px"><col style="width:189px"><col style="width:264px"><col style="width:295px"><col style="width:220px"></colgroup><thead><tr><th colspan="2">مرحلة المشروع</th><th>المُخرَج</th><th>الوصف</th><th>معايير القبول</th><th>الجهة المسؤولة</th></tr></thead><tbody><tr><td class="i">1</td><td class="b">المرحلة 1</td><td class="b">المُخرَج 1</td><td>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</td><td>أدخل النص المطلوب هنا.</td><td>أدخل نصك هنا.</td></tr><tr><td class="i">2</td><td class="b">المرحلة 2</td><td class="b">المُخرَج 2</td><td>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</td><td>أدخل النص المطلوب هنا.</td><td>أدخل نصك هنا.</td></tr><tr><td class="i">3</td><td class="b">المرحلة 3</td><td class="b">المُخرَج 3</td><td>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</td><td>أدخل النص المطلوب هنا.</td><td>أدخل نصك هنا.</td></tr><tr><td class="i">4</td><td class="b">المرحلة 4</td><td class="b">المُخرَج 4</td><td>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</td><td>أدخل النص المطلوب هنا.</td><td>أدخل نصك هنا.</td></tr><tr><td class="i">5</td><td class="b">المرحلة 5</td><td class="b">المُخرَج 5</td><td>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</td><td>أدخل النص المطلوب هنا.</td><td>أدخل نصك هنا.</td></tr></tbody></table>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">الموارد والمسؤوليات</h1>
+    <div class="a rsh n" style="top:241px;inset-inline-start:49px;width:355px;height:418px;"></div><div class="a rcard n" style="top:223px;inset-inline-start:35px"><h3>عنوان<br>نائب</h3><p class="rt">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a bl gr" style="top:0px;inset-inline-start:0px;width:300px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl gr" style="top:0px;inset-inline-start:0px;width:300px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div></div><span class="a tab n" style="top:204px;inset-inline-start:65px;width:167px">الدور هنا</span>
+    <div class="a rsh o" style="top:241px;inset-inline-start:457px;width:355px;height:418px;"></div><div class="a rcard o" style="top:223px;inset-inline-start:443px"><h3>عنوان<br>نائب</h3><p class="rt">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a bl gr" style="top:0px;inset-inline-start:0px;width:300px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl gr" style="top:0px;inset-inline-start:0px;width:300px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div></div><span class="a tab o" style="top:204px;inset-inline-start:473px;width:167px">الدور هنا</span>
+    <div class="a rsh g" style="top:241px;inset-inline-start:872px;width:355px;height:418px;"></div><div class="a rcard g" style="top:223px;inset-inline-start:858px"><h3>عنوان<br>نائب</h3><p class="rt">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="a bl gr" style="top:0px;inset-inline-start:0px;width:300px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl gr" style="top:0px;inset-inline-start:0px;width:300px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div></div><span class="a tab g" style="top:204px;inset-inline-start:888px;width:167px">الدور هنا</span>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">المخاطر والافتراضات</h1>
+    <div class="a rkshadow"></div><p class="a rkc navy" style="inset-inline-start:111px">فئة المخاطر</p><p class="a rkc orange" style="inset-inline-start:478px">المخاطر المحددة</p><p class="a rkc green" style="inset-inline-start:845px">استراتيجية التخفيف</p><div class="a rule" style="top:384px;inset-inline-start:112px;width:1054px;height:1px;"></div><div class="a rule" style="top:505px;inset-inline-start:112px;width:1054px;height:1px;"></div>
+    <div class="a rkh" style="top:285px;inset-inline-start:120px"><p class="rn">01</p><h3>عنوان رئيسي</h3><p>أدخل النص المطلوب هنا.</p></div><div class="a bl pale" style="top:305px;inset-inline-start:480px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl pale" style="top:345px;inset-inline-start:480px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div><div class="a bl gr" style="top:305px;inset-inline-start:848px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl gr" style="top:345px;inset-inline-start:848px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div>
+    <div class="a rkh" style="top:399px;inset-inline-start:120px"><p class="rn">02</p><h3>عنوان رئيسي</h3><p>أدخل النص المطلوب هنا.</p></div><div class="a bl pale" style="top:419px;inset-inline-start:480px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl pale" style="top:459px;inset-inline-start:480px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div><div class="a bl gr" style="top:419px;inset-inline-start:848px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl gr" style="top:459px;inset-inline-start:848px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div>
+    <div class="a rkh" style="top:515px;inset-inline-start:120px"><p class="rn">03</p><h3>عنوان رئيسي</h3><p>أدخل النص المطلوب هنا.</p></div><div class="a bl pale" style="top:535px;inset-inline-start:480px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl pale" style="top:575px;inset-inline-start:480px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div><div class="a bl gr" style="top:535px;inset-inline-start:848px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>أدخل النص المطلوب هنا.</p></div><div class="a bl gr" style="top:575px;inset-inline-start:848px;width:330px"><svg class="ic arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p>هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">الوضع الحالي</h1>
+    <div class="a info" style="top:222px;inset-inline-start:35px"><div class="r"><b>اسم المشروع:</b><span>اسم المشروع النائب</span></div><div class="r sh"><b>مسؤول التواصل:</b><span>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</span></div><div class="r"><b>الحالة الحالية:</b><span class="og">قيد التنفيذ</span></div></div>
+    <p class="a bd" style="top:465px;inset-inline-start:37px;width:460px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <p class="a sth" style="top:177px;inset-inline-start:780px;width:230px;">عدّل هنا</p><p class="a sth" style="top:177px;inset-inline-start:1035px;width:230px;">الوصف</p>
+    <div class="a sbar" style="top:209.0px"><p>أدخل النص<br>المطلوب هنا.</p></div><div class="a trk" style="top:238.0px"><i></i><i></i><i></i></div><span class="a knob o" style="top:230.0px;inset-inline-start:844px"></span><p class="a sm" style="top:230.0px;inset-inline-start:1035px;width:230px;">أدخل النص المطلوب هنا. نص توضيحي هنا.</p>
+    <div class="a sbar" style="top:294.5px"><p>أدخل النص<br>المطلوب هنا.</p></div><div class="a trk" style="top:323.5px"><i></i><i></i><i></i></div><span class="a knob g" style="top:315.5px;inset-inline-start:957px"></span><p class="a sm" style="top:315.5px;inset-inline-start:1035px;width:230px;">أدخل النص المطلوب هنا. نص توضيحي هنا.</p>
+    <div class="a sbar" style="top:380.0px"><p>أدخل النص<br>المطلوب هنا.</p></div><div class="a trk" style="top:409.0px"><i></i><i></i><i></i></div><span class="a knob g" style="top:401.0px;inset-inline-start:910px"></span><p class="a sm" style="top:401.0px;inset-inline-start:1035px;width:230px;">أدخل النص المطلوب هنا. نص توضيحي هنا.</p>
+    <div class="a sbar" style="top:465.5px"><p>أدخل النص<br>المطلوب هنا.</p></div><div class="a trk" style="top:494.5px"><i></i><i></i><i></i></div><span class="a knob g" style="top:486.5px;inset-inline-start:933px"></span><p class="a sm" style="top:486.5px;inset-inline-start:1035px;width:230px;">أدخل النص المطلوب هنا. نص توضيحي هنا.</p>
+    <div class="a sbar" style="top:551.0px"><p>أدخل النص<br>المطلوب هنا.</p></div><div class="a trk" style="top:580.0px"><i></i><i></i><i></i></div><span class="a knob n" style="top:572.0px;inset-inline-start:805px"></span><p class="a sm" style="top:572.0px;inset-inline-start:1035px;width:230px;">أدخل النص المطلوب هنا. نص توضيحي هنا.</p>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14">
+    <div class="bar"></div><p class="a co">اسم شركتك هنا</p>
+    <h1 class="a ttl" style="top:116px;inset-inline-start:36px;">الخطوات التالية والقرارات</h1>
+    <div class="a ns dk" style="inset-inline-start:35px"><span class="sq"><svg class="send" viewBox="0 0 48 48" aria-hidden="true"><path d="M43 6 5 20l16 6 6 16z M21 26 43 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span><p class="nn">01</p><h3>أدخل العبارة الرئيسية هنا.</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="pb"><i></i></div></div>
+    <div class="a ns lt" style="inset-inline-start:449px"><span class="sq"><svg class="send" viewBox="0 0 48 48" aria-hidden="true"><path d="M43 6 5 20l16 6 6 16z M21 26 43 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span><p class="nn">02</p><h3>أدخل العبارة الرئيسية هنا.</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="pb"><i></i></div></div>
+    <div class="a ns lt" style="inset-inline-start:864px"><span class="sq"><svg class="send" viewBox="0 0 48 48" aria-hidden="true"><path d="M43 6 5 20l16 6 6 16z M21 26 43 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span><p class="nn">03</p><h3>أدخل العبارة الرئيسية هنا.</h3><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><div class="pb"><i></i></div></div>
+  </div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15">
+    <p class="a co">اسم شركتك هنا</p>
+    <div class="a steel" style="top:0px;inset-inline-start:640px;width:98px;height:720px;"></div><div class="a navy" style="top:0px;inset-inline-start:738px;width:542px;height:720px;"></div>
+    <h1 class="a ty" style="top:116px;inset-inline-start:34px;width:600px;">شكرًا لكم</h1><h2 class="a ty2" style="top:184px;inset-inline-start:34px;width:600px;">تواصلوا معنا</h2>
+    <p class="a bd" style="top:288px;inset-inline-start:37px;width:460px;">أدخل النص المطلوب هنا. هذا نص توضيحي. بيان موجز عن موضوعك. هذا نص توضيحي.</p>
+    <svg class="logo lg15" viewBox="0 0 60 66" aria-hidden="true"><path fill="var(--navy)" fill-rule="evenodd" d="M10 3C24 -1 40 0 52 5c6 3 8 7 8 14v26c0 9-3 14-10 17C36 67 22 67 10 63 3 61 0 56 0 47V18C0 9 3 5 10 3zM17 14c-4 1-6 3-6 8v21c0 5 2 8 6 9 9 3 18 3 26 0 4-1 6-4 6-9V22c0-5-2-7-6-8-9-3-18-3-26 0z"/></svg><p class="a lgt sm2" style="top:540px;inset-inline-start:143px;">ضع شعار<br>شركتك هنا</p>
+    <span class="a ctile" style="top:183px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 10l9-7 9 7v11H3zm2 1.6V19h14v-7.4l-7 5zM7 8h10v5.5l-5 3.4-5-3.4zM9 9.5v1h6v-1zm0 2v1h6v-1z"/></svg></span><div class="a ctx" style="top:196px"><h3>البريد الإلكتروني</h3><p>أدخل النص المطلوب هنا.</p></div>
+    <span class="a ctile" style="top:290px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M6.5 3.5l3 3-1.6 2.2a11 11 0 0 0 5.4 5.4l2.2-1.6 3 3-2 2.5C10.8 18 4.9 12 3.9 6.3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M14 6.5a4 4 0 0 1 3.5 3.5M14 3.3a7 7 0 0 1 6.7 6.7"/></svg></span><div class="a ctx" style="top:303px"><h3>رقم هاتف التواصل</h3><p>أدخل النص المطلوب هنا.</p></div>
+    <span class="a ctile" style="top:409px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 21V9h5V5h6v4h4V2h5v19zM4 11v2h1v-2zm0 4v2h1v-2zm5-8v2h1V7zm0 4v2h1v-2zm0 4v2h1v-2zm2-8v2h1V7zm0 4v2h1v-2zm0 4v2h1v-2zm8-11v2h1V4zm0 4v2h1V8zm0 4v2h1v-2zm0 4v2h1v-2zm-3-4v2h1v-2zm0 4v2h1v-2z"/></svg></span><div class="a ctx" style="top:422px"><h3>موقع المكتب</h3><p>أدخل النص المطلوب هنا.</p></div>
+    <span class="a ctile" style="top:526px"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M4.5 7.5h15M4.5 16.5h15"/></g></svg></span><div class="a ctx" style="top:539px"><h3>الموقع الإلكتروني للشركة</h3><p>أدخل النص المطلوب هنا.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 15</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

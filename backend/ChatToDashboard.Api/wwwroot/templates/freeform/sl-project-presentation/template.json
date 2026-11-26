@@ -1,0 +1,77 @@
+{
+  "key": "sl-project-presentation",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "📋",
+  "name": "عرض المشروع",
+  "nameEn": "Project Presentation",
+  "description": "15 شريحة لعرض مشروع: الأعمال، النظرة العامة، الأهداف، النطاق، الجدول الزمني، المخرجات، المخاطر والحالة",
+  "descriptionEn": "15 project slides: agenda, overview, objectives, scope, timeline, deliverables, risks and status",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "نظرة عامة على المشروع",
+      "titleEn": "Project Overview"
+    },
+    {
+      "title": "الخلفية والسياق (مؤشرات)",
+      "titleEn": "Background & Context (KPIs)",
+      "needsData": true
+    },
+    {
+      "title": "الأهداف ومعايير النجاح (أرقام)",
+      "titleEn": "Objectives & Success Criteria (figures)",
+      "needsData": true
+    },
+    {
+      "title": "تحديد النطاق",
+      "titleEn": "Scope Definition"
+    },
+    {
+      "title": "أصحاب المصلحة الرئيسيون (مؤشران)",
+      "titleEn": "Key Stakeholders (two KPIs)",
+      "needsData": true
+    },
+    {
+      "title": "نهجنا",
+      "titleEn": "Our Approach"
+    },
+    {
+      "title": "الجدول الزمني والمعالم",
+      "titleEn": "Timeline & Milestones"
+    },
+    {
+      "title": "المخرجات (جدول)",
+      "titleEn": "Deliverables (table)"
+    },
+    {
+      "title": "الموارد والمسؤوليات",
+      "titleEn": "Resources & Responsibilities"
+    },
+    {
+      "title": "المخاطر والافتراضات",
+      "titleEn": "Risks & Assumptions"
+    },
+    {
+      "title": "الوضع الحالي (مؤشرات التقدّم)",
+      "titleEn": "Current Status (progress)",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية والقرارات",
+      "titleEn": "Next Steps & Decisions"
+    },
+    {
+      "title": "الختام والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والإحداثيات وغيّر النصوص والأرقام فقط؛ مؤشرات الشرائح (القيم في الدوائر والمؤشرات وصفوف الجدول) نصوص قابلة للتعديل، وموضع مؤشر الحالة في الشريحة 13 يُضبط بـ inset-inline-start داخل المسار."
+}
