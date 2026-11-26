@@ -1,0 +1,89 @@
+{
+  "key": "sl-performance-improvement",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📈",
+  "name": "خارطة طريق تحسين الأداء",
+  "nameEn": "Performance Improvement Roadmap",
+  "description": "ثماني عشرة شريحة: الوضع الحالي، الأسباب الجذرية، الأهداف والمؤشرات، الخارطة المرحلية، الميزانية، المخاطر",
+  "descriptionEn": "18 slides: current state, root causes, goals & KPIs, phased roadmap, budget, risks, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل القسم الأول",
+      "titleEn": "Section Divider 01"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "تقييم الوضع الحالي والمستقبلي",
+      "titleEn": "Current State Assessment",
+      "needsData": true
+    },
+    {
+      "title": "تحليل الأسباب الجذرية",
+      "titleEn": "Root Cause Analysis"
+    },
+    {
+      "title": "الأهداف الاستراتيجية ومؤشرات الأداء",
+      "titleEn": "Strategic Goals & KPIs",
+      "needsData": true
+    },
+    {
+      "title": "نموذج التشغيل المستهدف",
+      "titleEn": "Target Operating Model"
+    },
+    {
+      "title": "خارطة الطريق المرحلية",
+      "titleEn": "Phased Roadmap Overview"
+    },
+    {
+      "title": "المبادرات الرئيسية",
+      "titleEn": "Key Initiatives (Workstreams)"
+    },
+    {
+      "title": "متطلبات الموارد والميزانية",
+      "titleEn": "Resources & Budget Requirements",
+      "needsData": true
+    },
+    {
+      "title": "فاصل القسم الثاني",
+      "titleEn": "Section Divider 02"
+    },
+    {
+      "title": "إدارة التغيير والتواصل",
+      "titleEn": "Change Management & Communication"
+    },
+    {
+      "title": "خطة تخفيف المخاطر",
+      "titleEn": "Risk Mitigation Plan"
+    },
+    {
+      "title": "وتيرة القياس وإعداد التقارير",
+      "titleEn": "Measurement & Reporting Cadence"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "الأسئلة والأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "الشكر والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ نسبة حلقة الميزانية في الشريحة 11 في كتلة chart-data (value وmax)."
+}
