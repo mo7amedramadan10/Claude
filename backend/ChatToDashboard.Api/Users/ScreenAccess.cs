@@ -68,6 +68,12 @@ public static class ScreenAccess
     /// <summary>هل للمسار بادئة مقيَّدة أصلًا (فلا يُقرأ المستخدم من القاعدة لغيرها)؟</summary>
     public static bool IsGated(string path) => Match(path) is not null;
 
+    /// <summary>
+    /// هل يخضع هذا الطلب لصلاحيات الشاشات؟ نقطة نهاية عامة ([AllowAnonymous]: الرابط المنشور /p/… ولوحة /d/… وأصولهما) لا تخضع،
+    /// لأن الزائر المجهول يصلها أصلًا — وكان تقييدها يرفض (403) صاحب حساب «اطلاع فقط» وهو مسجَّل دخوله، فيرى «الرابط غير موجود».
+    /// </summary>
+    public static bool AppliesTo(string path, bool isPublicEndpoint) => !isPublicEndpoint && IsGated(path);
+
     /// <summary>هل يُسمح للمستخدم بهذا المسار؟ <paramref name="allowed"/> null = كل الشاشات.</summary>
     public static bool IsApiAllowed(string path, IReadOnlyCollection<string>? allowed)
     {

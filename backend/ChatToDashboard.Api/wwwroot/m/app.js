@@ -9,6 +9,8 @@
   // مفاتيح التخزين المحلي (تفضيلات غير سرية فقط)
   const K_ORG = 'jeemMobileOrg';      // {slug, name} آخر منظمة دخل منها المستخدم
   const K_LANG = 'jeemMobileLang';    // ar | en
+  const K_THEME = 'jeemMobileTheme';  // auto | light | dark
+  const K_ENT = 'jeemMobileEntity';   // معرّف الكيان المختار (يُتجاهل إن لم يعد مسموحًا)
 
   const $ = (id) => document.getElementById(id);
   const store = {
@@ -42,7 +44,7 @@
       'vw.via.project': 'مع الكيان', 'vw.via.org': 'مع المنظمة', 'vw.published': 'نُشر {ago}',
       'vw.newBadge': 'جديد', 'vw.editedMine': 'عدّلته بعد النشر — حدّث النشر من المنصة',
       'vw.editedOther': 'فيه تعديلات لم تُنشر بعد — الرابط يعرض النسخة المنشورة',
-      'vw.opens': 'يفتح في نافذة جديدة', 'vw.refreshed': 'تم تحديث القائمة.',
+      'vw.opens': 'يفتح داخل التطبيق', 'vw.refreshed': 'تم تحديث القائمة.',
       'vw.empty.none': 'لا شيء منشور في كيانك بعد. ما تنشره أنت أو يشاركه زملاؤك معك وينشرونه يظهر هنا.',
       'vw.empty.new': 'لا جديد منذ آخر فتح — اطّلعت على كل شيء.',
       'vw.empty.mine': 'لم تنشر شيئًا في هذا الكيان بعد.',
@@ -51,6 +53,11 @@
       'vw.empty.error': 'تعذّر تحميل القائمة. تأكد من الاتصال ثم حاول مجددًا.',
       'vw.empty.forbidden': 'حسابك لا يملك صلاحية «للاطلاع». اطلب من مسؤول المنصة إضافتها.',
       'kind.doc': 'مستند', 'kind.slides': 'شرائح', 'kind.design': 'تصميم', 'kind.dashboard': 'لوحة', 'kind.motion': 'حركة', 'kind.track': 'لوحة متابعة',
+      'ent.title': 'اختر الكيان', 'ent.note': 'تعرض القائمة ما نُشر في الكيان المختار.', 'ent.generic': 'الكيان', 'ent.change': 'تغيير الكيان، الحالي: {name}',
+      'ent.switched': 'صرت تعرض: {name}',
+      'viewer.back': 'رجوع إلى القائمة', 'viewer.ext': 'فتح في المتصفح', 'viewer.loading': 'جارٍ فتح الصفحة…',
+      'viewer.offline': 'لا يوجد اتصال الآن — الصفحة المنشورة تحتاج اتصالًا لعرض أحدث الأرقام.',
+      'account.theme': 'المظهر', 'theme.auto': 'تلقائي', 'theme.light': 'فاتح', 'theme.dark': 'داكن',
       'account.title': 'حسابي', 'account.lang': 'اللغة', 'account.full': 'فتح المنصة كاملة',
       'account.logout': 'تسجيل الخروج', 'account.loggedOut': 'تم تسجيل الخروج.',
       'session.expired': 'انتهت الجلسة — سجّل الدخول مجددًا.',
@@ -78,7 +85,7 @@
       'vw.via.project': 'with the entity', 'vw.via.org': 'with the organization', 'vw.published': 'Published {ago}',
       'vw.newBadge': 'New', 'vw.editedMine': 'Edited after publishing — republish from the platform',
       'vw.editedOther': 'Has unpublished edits — the link shows the published version',
-      'vw.opens': 'opens in a new window', 'vw.refreshed': 'List refreshed.',
+      'vw.opens': 'opens in the app', 'vw.refreshed': 'List refreshed.',
       'vw.empty.none': 'Nothing is published in your entity yet. What you publish, or colleagues share with you and publish, appears here.',
       'vw.empty.new': "Nothing new since your last visit — you're all caught up.",
       'vw.empty.mine': "You haven't published anything in this entity yet.",
@@ -87,6 +94,11 @@
       'vw.empty.error': "Couldn't load the list. Check your connection and try again.",
       'vw.empty.forbidden': "Your account doesn't have access to For Review. Ask a platform admin to add it.",
       'kind.doc': 'Document', 'kind.slides': 'Slides', 'kind.design': 'Design', 'kind.dashboard': 'Dashboard', 'kind.motion': 'Motion', 'kind.track': 'Tracking dashboard',
+      'ent.title': 'Choose an entity', 'ent.note': 'The list shows what is published in the chosen entity.', 'ent.generic': 'Entity', 'ent.change': 'Change entity, current: {name}',
+      'ent.switched': 'Now showing: {name}',
+      'viewer.back': 'Back to the list', 'viewer.ext': 'Open in browser', 'viewer.loading': 'Opening the page…',
+      'viewer.offline': "You're offline — the published page needs a connection to show the latest numbers.",
+      'account.theme': 'Appearance', 'theme.auto': 'Auto', 'theme.light': 'Light', 'theme.dark': 'Dark',
       'account.title': 'My account', 'account.lang': 'Language', 'account.full': 'Open the full platform',
       'account.logout': 'Sign out', 'account.loggedOut': 'Signed out.',
       'session.expired': 'Your session ended — please sign in again.',
@@ -105,7 +117,7 @@
     document.querySelectorAll('[data-i-ph]').forEach((el) => { el.placeholder = t(el.dataset.iPh); });
     syncPassEye();
     renderUser();
-    if (me) renderViewing();
+    if (me) { renderViewing(); renderEntityChip(); }
   }
   function setLang(next) {
     lang = next === 'en' ? 'en' : 'ar';
@@ -180,6 +192,7 @@
     show('scr-home');
     $('home-main').focus({ preventScroll: true });
     loadViewing();
+    loadEntities();
   }
 
   // ---------- الدخول ----------
@@ -302,8 +315,9 @@
   }
   // حبس التركيز داخل الورقة أثناء فتحها
   function trapFocus(ev) {
-    if (ev.key !== 'Tab' || $('account-sheet').hidden) return;
-    const items = [...$('account-sheet').querySelectorAll('button, a[href]')].filter((el) => !el.disabled && el.offsetParent !== null);
+    const dlg = ['ent-sheet', 'account-sheet', 'scr-viewer'].map($).find((d) => !d.hidden);
+    if (ev.key !== 'Tab' || !dlg) return;
+    const items = [...dlg.querySelectorAll('button, a[href], iframe')].filter((el) => !el.disabled && el.offsetParent !== null);
     if (!items.length) return;
     const first = items[0], last = items[items.length - 1];
     if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
@@ -381,11 +395,12 @@
     const seq = ++VW.seq;
     if (!opts.quiet || !VW.items) { VW.state = 'loading'; renderViewing(); }
     const btn = $('vw-refresh'); btn.classList.add('spin'); btn.disabled = true;
-    const r = await api('/api/viewing');
+    const r = await api('/api/viewing' + entQuery('?'));
     btn.classList.remove('spin'); btn.disabled = false;
     if (seq !== VW.seq) return;
     if (r.status === 401) { me = null; resetViewing(); showLogin(t('session.expired')); return; }
     if (r.ok && r.data) {
+      if (r.data.entityId) { ENT.current = r.data.entityId; renderEntityChip(); }
       VW.items = (r.data.items || []).map((x) => Object.assign({}, x, { publishedAt: utc(x.publishedAt) }))
         .sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')));
       VW.state = 'ready';
@@ -495,7 +510,7 @@
         : `<div class="vw-paper"><span class="ph"><svg aria-hidden="true"><use href="#mk-${k}"/></svg></span></div>`;
       const edited = x.editedAfterPublish ? `<small class="edited"><svg aria-hidden="true"><use href="#mi-edit"/></svg>${esc(t(x.mine ? 'vw.editedMine' : 'vw.editedOther'))}</small>` : '';
       const label = [x.title, t('kind.' + k), via, fresh ? t('vw.newBadge') : '', fmt('vw.published', { ago: ago(x.publishedAt) }), t('vw.opens')].filter(Boolean).join('، ');
-      return `<a class="vw-card k-${k}" href="${esc(x.url)}" target="_blank" rel="noopener" data-card="${i}" aria-label="${esc(label)}">
+      return `<a class="vw-card k-${k}" href="${esc(x.url)}" data-card="${i}" data-key="${esc(x.key)}" aria-label="${esc(label)}">
         <div class="vw-art">${art}${fresh ? `<span class="badge-new"><svg aria-hidden="true"><use href="#mi-new"/></svg>${esc(t('vw.newBadge'))}</span>` : ''}</div>
         <div class="vw-foot">${kindIcon(k)}<div class="vw-meta"><b>${esc(x.title)}</b><small>${esc(via)} · ${esc(fmt('vw.published', { ago: ago(x.publishedAt) }))}</small>${edited}</div>
         <svg class="ico vw-go" aria-hidden="true"><use href="#mi-open"/></svg></div></a>`;
@@ -540,7 +555,7 @@
     if (!x || !x.id || !paper || x.source !== 'freeform') return;
     let html = VW.html[x.id];
     if (html == null) {
-      const r = await api('/api/viewing/thumb/' + encodeURIComponent(x.id));
+      const r = await api('/api/viewing/thumb/' + encodeURIComponent(x.id) + entQuery('?'));
       html = r.ok && r.data ? r.data.html || '' : '';
       if (!r.offline) VW.html[x.id] = html;
     }
@@ -577,15 +592,157 @@
     $('vw-list').addEventListener('click', (ev) => {
       const a = ev.target.closest('.vw-card'); if (!a || a.classList.contains('skel')) return;
       const x = VW.shown[+a.dataset.card]; if (!x) return;
-      markSeen(x); setTimeout(renderViewing, 0);
+      // نقرة عادية: العارض داخل التطبيق؛ مع Ctrl/Cmd/Shift أو الزر الأوسط يترك المتصفح يفتحها كما يريد
+      if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button === 1) { markSeen(x); setTimeout(renderViewing, 0); return; }
+      ev.preventDefault();
+      openViewer(x);
     });
     if ('ResizeObserver' in window) { VW.ro = new ResizeObserver(scaleThumbs); VW.ro.observe($('vw-list')); }
   }
   function resetViewing() {
     VW.items = null; VW.state = 'idle'; VW.html = {}; VW.queue = []; VW.shown = []; VW.seq++;
     VW.tab = 'all'; VW.q = ''; VW.kind = '';
+    ENT.list = null; ENT.current = null; closeViewer(true);
     if ($('vw-search')) $('vw-search').value = '';
     if ($('vw-list')) $('vw-list').innerHTML = '';
+  }
+
+  // ---------- الكيان: اختيار ما تعرضه القائمة (لمن له أكثر من كيان) ----------
+  // المنصة تحسم «الكيان الحالي» في الخادم (أول كيان للمستخدم)، فيمرّر التطبيق اختياره بمعامل entity في /api/viewing
+  // ويتحقق الخادم أنه مما يحق له وإلا تجاهله. الاختيار تفضيل محلي غير سري (معرّف فقط).
+  const ENT = { list: null, types: [], current: null, choice: store.get(K_ENT) || null };
+  function entQuery(prefix) { return ENT.choice ? `${prefix}entity=${encodeURIComponent(ENT.choice)}` : ''; }
+  function entTypeLabel(e) {
+    const ty = (ENT.types || []).find((x) => x.id === (e && e.typeId));
+    if (lang === 'en') return (ty && ty.singularEn) || t('ent.generic');
+    return (ty && ty.singular) || t('ent.generic');
+  }
+  function entShown() {
+    const id = ENT.choice || ENT.current;
+    return (ENT.list || []).find((e) => e.id === id) || null;
+  }
+  async function loadEntities() {
+    const r = await api('/api/entities');
+    if (!r.ok || !r.data) { ENT.list = null; renderEntityChip(); return; } // حساب بلا صلاحية عليها: لا شريحة، والقائمة على الكيان الافتراضي
+    ENT.list = r.data.entities || []; ENT.types = r.data.types || [];
+    if (ENT.choice && !ENT.list.some((e) => e.id === ENT.choice)) { ENT.choice = null; store.del(K_ENT); loadViewing({ quiet: true }); }
+    renderEntityChip();
+  }
+  function renderEntityChip() {
+    const chip = $('ent-chip'); if (!chip) return;
+    const e = entShown();
+    chip.hidden = !(ENT.list && ENT.list.length > 1 && e);
+    if (chip.hidden) return;
+    $('ent-chip-type').textContent = entTypeLabel(e) + ':';
+    $('ent-chip-name').textContent = e.name;
+    chip.setAttribute('aria-label', fmt('ent.change', { name: e.name }));
+  }
+  let entReturn = null;
+  function openEntSheet() {
+    entReturn = document.activeElement;
+    const cur = entShown();
+    $('ent-list').innerHTML = (ENT.list || []).map((e) => `<button type="button" class="ent-opt" role="radio" aria-checked="${cur && cur.id === e.id}" data-id="${esc(e.id)}" tabindex="${cur && cur.id === e.id ? 0 : -1}">
+      <span><span class="ent-type">${esc(entTypeLabel(e))}</span><span class="ent-name">${esc(e.name)}</span></span>
+      <svg class="ent-tick" aria-hidden="true"><use href="#mi-check"/></svg></button>`).join('');
+    $('ent-backdrop').hidden = false; $('ent-sheet').hidden = false;
+    $('ent-chip').setAttribute('aria-expanded', 'true');
+    ($('ent-list').querySelector('[aria-checked="true"]') || $('ent-list').querySelector('.ent-opt') || $('ent-close')).focus();
+  }
+  function closeEntSheet() {
+    if ($('ent-sheet').hidden) return;
+    $('ent-backdrop').hidden = true; $('ent-sheet').hidden = true;
+    $('ent-chip').setAttribute('aria-expanded', 'false');
+    if (entReturn && document.contains(entReturn)) entReturn.focus();
+  }
+  function pickEntity(id) {
+    const e = (ENT.list || []).find((x) => x.id === id); if (!e) return;
+    closeEntSheet();
+    if (id === (ENT.choice || ENT.current)) return;
+    ENT.choice = id; store.set(K_ENT, id);
+    VW.html = {}; VW.kind = ''; renderEntityChip();
+    loadViewing().then(() => toast(fmt('ent.switched', { name: e.name })));
+  }
+
+  // ---------- العارض داخل التطبيق ----------
+  // يفتح الرابط المنشور نفسه (/p/… أو /d/…) ملء الشاشة بزر رجوع — صفحتا النشر فيهما الأرقام الحيّة والتنقّل والتصدير
+  // ومساعد جيم، فلا يُعاد بناؤها. زر الرجوع في الجهاز يغلقه (pushState)، وإغلاقه يفرّغ الإطار فتتوقف أي طلبات دورية فيه.
+  const VIEW = { key: null, url: null, pushed: false };
+  function openViewer(x) {
+    markSeen(x);
+    const k = kindOf(x);
+    VIEW.key = x.key; VIEW.url = x.url;
+    $('viewer-title').textContent = x.title || '';
+    $('viewer-sub').textContent = `${t('kind.' + k)} · ${viaText(x)}`;
+    $('viewer-ext').href = x.url;
+    $('scr-viewer').hidden = false;
+    $('scr-home').inert = true;
+    document.body.classList.add('viewer-open');
+    if (!VIEW.pushed) { history.pushState({ mView: x.key }, '', '#view'); VIEW.pushed = true; }
+    loadFrame();
+    $('viewer-back').focus();
+  }
+  function loadFrame() {
+    $('viewer-offline').hidden = true;
+    if (navigator.onLine === false) { $('viewer-loading').hidden = true; $('viewer-offline').hidden = false; return; }
+    $('viewer-loading').hidden = false;
+    // إطار جديد في كل مرة: أول تحميل لإطار يُضاف للصفحة لا يُنشئ قيدًا في سجل التصفّح (بخلاف تغيير src لإطار قائم)
+    removeFrame();
+    const f = document.createElement('iframe');
+    f.id = 'viewer-frame'; f.title = $('viewer-title').textContent;
+    f.setAttribute('allow', 'fullscreen; clipboard-write; microphone');
+    f.addEventListener('load', () => { $('viewer-loading').hidden = true; });
+    f.src = VIEW.url;
+    $('scr-viewer').querySelector('.viewer-body').appendChild(f);
+  }
+  function removeFrame() { const f = $('viewer-frame'); if (f) f.remove(); }
+  function closeViewer(silent) {
+    if ($('scr-viewer').hidden) return;
+    $('scr-viewer').hidden = true;
+    $('scr-home').inert = false;
+    document.body.classList.remove('viewer-open');
+    removeFrame();
+    VIEW.pushed = false;
+    const key = VIEW.key; VIEW.key = null;
+    if (silent) return;
+    renderViewing();
+    const card = [...$('vw-list').querySelectorAll('.vw-card')].find((c) => c.dataset.key === key);
+    (card || $('home-main')).focus({ preventScroll: false });
+  }
+
+  // ---------- المظهر: تلقائي (يتبع النظام) أو فاتح أو داكن ----------
+  const darkMq = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+  function themePref() { const v = store.get(K_THEME); return v === 'light' || v === 'dark' ? v : 'auto'; }
+  function applyTheme() {
+    const pref = themePref();
+    const dark = pref === 'dark' || (pref === 'auto' && darkMq && darkMq.matches);
+    if (dark) document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme');
+    document.querySelectorAll('.seg-btn[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeSet === pref)));
+    const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = dark ? '#181D23' : '#127DBD';
+  }
+
+  function bindPhase3() {
+    $('ent-chip').addEventListener('click', openEntSheet);
+    $('ent-close').addEventListener('click', closeEntSheet);
+    $('ent-backdrop').addEventListener('click', closeEntSheet);
+    $('ent-list').addEventListener('click', (ev) => { const b = ev.target.closest('.ent-opt'); if (b) pickEntity(b.dataset.id); });
+    // مجموعة اختيار: الأسهم تنقل بين الخيارات (بلا اختيار حتى Enter/مسافة)
+    $('ent-list').addEventListener('keydown', (ev) => {
+      const opts = [...$('ent-list').querySelectorAll('.ent-opt')]; const i = opts.indexOf(document.activeElement); if (i < 0) return;
+      let j = -1;
+      if (ev.key === 'ArrowDown' || ev.key === (lang === 'ar' ? 'ArrowLeft' : 'ArrowRight')) j = (i + 1) % opts.length;
+      else if (ev.key === 'ArrowUp' || ev.key === (lang === 'ar' ? 'ArrowRight' : 'ArrowLeft')) j = (i - 1 + opts.length) % opts.length;
+      if (j < 0) return;
+      ev.preventDefault(); opts.forEach((o) => { o.tabIndex = -1; }); opts[j].tabIndex = 0; opts[j].focus();
+    });
+    $('viewer-back').addEventListener('click', () => { if (VIEW.pushed && history.state && history.state.mView) history.back(); else closeViewer(); });
+    $('viewer-retry').addEventListener('click', loadFrame);
+    window.addEventListener('popstate', () => { if (!$('scr-viewer').hidden) { VIEW.pushed = false; closeViewer(); } });
+    window.addEventListener('offline', () => { if (!$('scr-viewer').hidden && !$('viewer-loading').hidden) { $('viewer-loading').hidden = true; $('viewer-offline').hidden = false; } });
+    document.querySelectorAll('.seg-btn[data-theme-set]').forEach((b) => b.addEventListener('click', () => { store.set(K_THEME, b.dataset.themeSet); applyTheme(); }));
+    if (darkMq) (darkMq.addEventListener ? darkMq.addEventListener('change', applyTheme) : darkMq.addListener(applyTheme));
+    // فتح التطبيق على «#view» (إعادة تحميل والعارض مفتوح): نبدأ من القائمة
+    if (location.hash === '#view') history.replaceState(null, '', location.pathname + location.search);
+    applyTheme();
   }
 
   // ---------- الربط ----------
@@ -604,10 +761,15 @@
   $('account-backdrop').addEventListener('click', closeSheet);
   $('logout-btn').addEventListener('click', logout);
   bindViewing();
+  bindPhase3();
   document.querySelectorAll('.seg-btn[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
   document.querySelectorAll('[data-lang-switch]').forEach((b) => b.addEventListener('click', () => setLang(lang === 'ar' ? 'en' : 'ar')));
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') closeSheet();
+    if (ev.key === 'Escape') {
+      if (!$('ent-sheet').hidden) closeEntSheet();
+      else if (!$('account-sheet').hidden) closeSheet();
+      else if (!$('scr-viewer').hidden) $('viewer-back').click();
+    }
     trapFocus(ev);
   });
   document.addEventListener('visibilitychange', recheckSession);

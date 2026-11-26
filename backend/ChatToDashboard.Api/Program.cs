@@ -309,7 +309,8 @@ app.UseAuthentication();
 app.Use(async (ctx, next) =>
 {
     var path = ctx.Request.Path.Value ?? "";
-    if (ctx.User.Identity?.IsAuthenticated == true && ChatToDashboard.Api.Users.ScreenAccess.IsGated(path)
+    var isPublic = ctx.GetEndpoint()?.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() is not null;
+    if (ctx.User.Identity?.IsAuthenticated == true && ChatToDashboard.Api.Users.ScreenAccess.AppliesTo(path, isPublic)
         && ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } uid)
     {
         var u = await ctx.RequestServices.GetRequiredService<ChatToDashboard.Api.Users.UserStore>().FindByIdAsync(uid, ctx.RequestAborted);

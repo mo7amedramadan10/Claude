@@ -4,7 +4,7 @@
    لا يخزّن أبدًا أي رد من /api/ (بيانات عملاء وصلاحيات تتغيّر) ولا الصفحات المنشورة (/p/، /d/).
    الاستراتيجية: الشبكة أولًا (فيظهر كل نشر جديد فورًا)، والمخزَّن احتياط عند انقطاع الاتصال فقط.
    ========================================================== */
-const VERSION = 'jeem-m-v2';
+const VERSION = 'jeem-m-v3';
 const SHELL = [
   '/m/',
   '/m/app.css',
@@ -14,6 +14,7 @@ const SHELL = [
   '/m/icons/icon-192.png',
   '/css/tokens.css',
   '/img/logo-lockup.svg',
+  '/img/logo-lockup-dark.svg',
   '/fonts/tanseek-arabic-light.woff2',
   '/fonts/tanseek-arabic-medium.woff2',
   '/fonts/tanseek-arabic-bold.woff2',
