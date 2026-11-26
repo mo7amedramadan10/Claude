@@ -7,6 +7,18 @@ namespace ChatToDashboard.Api.Tests;
 public class ScreenAccessTests
 {
     [Fact]
+    public void PublicEndpoints_AreNotGated_EvenForViewOnly()
+    {
+        // الرابط المنشور يستدعي /api/presentations/by/…/meta و/api/share/by/… وهما عامّتان
+        Assert.False(ScreenAccess.AppliesTo("/api/presentations/by/org/slug/meta", isPublicEndpoint: true));
+        Assert.False(ScreenAccess.AppliesTo("/api/share/by/org/slug", isPublicEndpoint: true));
+        // الواجهات نفسها بلا [AllowAnonymous] تبقى مقيَّدة
+        Assert.True(ScreenAccess.AppliesTo("/api/presentations", isPublicEndpoint: false));
+        Assert.False(ScreenAccess.IsApiAllowed("/api/presentations", ScreenAccess.ViewOnly));
+        Assert.False(ScreenAccess.AppliesTo("/api/auth/me", isPublicEndpoint: false)); // غير مقيَّد أصلًا
+    }
+
+    [Fact]
     public void SerializeAndParse_NullMeansAll()
     {
         Assert.Null(ScreenAccess.Serialize(null));
