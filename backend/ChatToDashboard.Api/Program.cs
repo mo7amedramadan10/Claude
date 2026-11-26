@@ -467,6 +467,11 @@ using (var scope = app.Services.CreateScope())
         var userStoreForBackfill = scope.ServiceProvider.GetRequiredService<UserStore>();
         await userStoreForBackfill.BackfillMissingOrganizationAsync(defaultOrg.Id);
 
+        // كل محتوى قديم بلا كيان (لوحات، تصاميم، عروض، محادثات المحلل، ملفات، تكاملات) يُسند لأول كيان في منظمته — قبل إسناد
+        // الملفات والتكاملات الباقية للكيان الافتراضي أدناه، فلا يذهب صف منظمة أخرى إلى المنظمة الافتراضية.
+        try { await scope.ServiceProvider.GetRequiredService<DataStore>().BackfillOrphanEntitiesAsync(defaultOrg.Id, logger); }
+        catch (Exception ex) { logger.LogWarning(ex, "Assigning content without an entity failed; continuing startup."); }
+
         // Files and external integrations predate project-level isolation entirely — every
         // one of them, on any pre-existing install, implicitly belonged to "the" single
         // workspace that existed before organizations/projects did, which is exactly the

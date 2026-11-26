@@ -172,18 +172,20 @@ public class FreeformStore
         return (await connection.QueryAsync<FreeformDesign>($"SELECT {Cols} FROM {T} WHERE (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL)) ORDER BY UpdatedAt DESC", new { entityId })).ToList();
     }
 
-    /// <summary>التصاميم التي يحق للمستخدم رؤيتها في منظمته: كلها للمسؤول، وإلا تصاميمه، وما شورك مع المنظمة، وما شورك مع مشروعه
-    /// الحالي، وما شورك معه بالاسم. تصميم قديم بلا منظمة يُعامل بمشروعه.</summary>
+    /// <summary>التصاميم التي يحق للمستخدم رؤيتها: في كيانه الحالي — كلها للمسؤول، وإلا تصاميمه وما شورك مع الكيان؛ ومن أي كيان في
+    /// منظمته — ما شورك مع المنظمة كلها أو معه بالاسم. (قبل تبديل الكيانات كانت كل تصاميم المنظمة تظهر للمسؤول وتصاميم المستخدم في كل كيان.)</summary>
     public async Task<IReadOnlyList<FreeformDesign>> ListVisibleAsync(string? organizationId, string? entityId, string userId, bool isAdmin, CancellationToken ct = default)
     {
         await EnsureSchemaAsync(ct);
         await using var connection = await _db.OpenConnectionAsync(ct);
         return (await connection.QueryAsync<FreeformDesign>($"""
             SELECT {Cols} FROM {T}
-            WHERE (OrganizationId = @organizationId OR (OrganizationId IS NULL AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL))))
-              AND (@isAdmin = 1 OR CreatedByUserId = @userId OR ShareScope = 'org'
-                   OR (ShareScope = 'project' AND (EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL)))
-                   OR Id IN (SELECT DesignId FROM {S} WHERE UserId = @userId))
+            WHERE ((EntityId = @entityId OR (@entityId IS NULL AND EntityId IS NULL))
+                   AND (OrganizationId = @organizationId OR OrganizationId IS NULL)
+                   AND (@isAdmin = 1 OR CreatedByUserId = @userId OR ShareScope IN ('project', 'org')
+                        OR Id IN (SELECT DesignId FROM {S} WHERE UserId = @userId)))
+               OR (OrganizationId = @organizationId
+                   AND (ShareScope = 'org' OR Id IN (SELECT DesignId FROM {S} WHERE UserId = @userId)))
             ORDER BY UpdatedAt DESC
             """, new { organizationId, entityId, userId, isAdmin })).ToList();
     }

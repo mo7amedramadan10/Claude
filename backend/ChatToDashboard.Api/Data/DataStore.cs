@@ -1,3 +1,4 @@
+using Dapper;
 using System.Data;
 using System.Data.Common;
 using Microsoft.Data.SqlClient;
@@ -101,6 +102,57 @@ public class DataStore
                 sb.Append("END;\n");
             }
         return sb.ToString();
+    }
+
+    /// <summary>جداول المحتوى الظاهر للمستخدم التي قد تحمل صفوفًا قديمة بلا كيان (EntityId فارغ) — تُسند لأول كيان في منظمتها.</summary>
+    internal static readonly string[] OrphanEntityTables =
+    {
+        "DashboardHistory", "FreeformDesigns", "FreeformTemplates", "Decks", "PublishedDashboards", "AnalystConversations",
+        "repo_Files", "ExternalIntegrations",
+    };
+
+    /// <summary>أعمدة المستخدم التي يُستدل بها على منظمة الصف حين لا يحمل OrganizationId، بترتيب الأولوية.</summary>
+    internal static readonly string[] OrphanUserColumns = { "OwnerId", "CreatedByUserId", "UserId", "CreatedBy" };
+
+    /// <summary>SQL إسناد الصفوف بلا كيان في جدول واحد إلى أول كيان (الأقدم) في منظمتها: المنظمة من عمود OrganizationId إن وُجد، وإلا من حساب
+    /// صاحب الصف (AppUsers.OrganizationId)، وإلا المنظمة الافتراضية @defaultOrg. منظمة بلا كيانات تُترك صفوفها كما هي. مُختبَر نصيًا.</summary>
+    internal static string OrphanBackfillSql(string table, IReadOnlyCollection<string> columns)
+    {
+        var has = new HashSet<string>(columns, StringComparer.OrdinalIgnoreCase);
+        var org = new List<string>();
+        if (has.Contains("OrganizationId")) org.Add("NULLIF(t.[OrganizationId], '')");
+        foreach (var c in OrphanUserColumns)
+            if (has.Contains(c)) org.Add($"(SELECT TOP 1 NULLIF(u.[OrganizationId], '') FROM [dbo].[AppUsers] u WHERE u.[Id] = t.[{c}])");
+        org.Add("@defaultOrg");
+        // COALESCE يتطلب معاملين على الأقل؛ جدول بلا عمود منظمة ولا صاحب يأخذ المنظمة الافتراضية مباشرة
+        var orgExpr = org.Count == 1 ? org[0] : $"COALESCE({string.Join(", ", org)})";
+        return $"""
+            UPDATE t SET [EntityId] = (SELECT TOP 1 e.[Id] FROM [dbo].[Entities] e WHERE e.[OrganizationId] = {orgExpr} ORDER BY e.[CreatedAt])
+            FROM [dbo].[{table}] t
+            WHERE (t.[EntityId] IS NULL OR t.[EntityId] = '')
+              AND EXISTS (SELECT 1 FROM [dbo].[Entities] e WHERE e.[OrganizationId] = {orgExpr});
+            """;
+    }
+
+    /// <summary>يسند عند الإقلاع كل لوحة/تصميم/عرض/محادثة محلل/ملف/تكامل قديم بلا كيان إلى أول كيان في منظمته — فلا يظهر الصف القديم
+    /// في كل الكيانات ولا يختفي منها كلها (التصاميم والعروض بلا كيان كانت لا تظهر في أي كيان). آمن للتكرار: يمس الفارغ فقط.</summary>
+    public async Task<int> BackfillOrphanEntitiesAsync(string? defaultOrganizationId, ILogger logger, CancellationToken ct = default)
+    {
+        await using var connection = await OpenConnectionAsync(ct);
+        if (await connection.ExecuteScalarAsync<int?>("SELECT CASE WHEN OBJECT_ID('dbo.Entities') IS NULL THEN 0 ELSE 1 END") != 1) return 0;
+        var total = 0;
+        foreach (var table in OrphanEntityTables)
+        {
+            var cols = (await connection.QueryAsync<string>(
+                "SELECT c.name FROM sys.columns c WHERE c.object_id = OBJECT_ID(@t)", new { t = "dbo." + table })).ToList();
+            if (!cols.Contains("EntityId", StringComparer.OrdinalIgnoreCase)) continue;
+            int n;
+            try { n = await connection.ExecuteAsync(OrphanBackfillSql(table, cols), new { defaultOrg = defaultOrganizationId }, commandTimeout: 300); }
+            catch (Exception ex) { logger.LogWarning(ex, "Could not assign rows without an entity in {Table}.", table); continue; }
+            if (n > 0) logger.LogInformation("Assigned {Count} row(s) without an entity in {Table} to their organization's first entity.", n, table);
+            total += n;
+        }
+        return total;
     }
 
     /// <summary>ترحيل «المشروع» إلى «الكيان» في القاعدة عند الإقلاع، قبل أي مخزن (وإلا أنشأ مخزن عمودًا جديدًا فارغًا بجوار القديم).
