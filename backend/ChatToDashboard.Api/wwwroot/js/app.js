@@ -16223,6 +16223,63 @@ el('user-form').addEventListener('invalid', e => {
   if (panel && panel.classList.contains('hidden')) umSetTab(panel.id.replace('um-panel-', ''));
 }, true);
 
+// تبويب «صلاحية الكيانات»: دور المستخدم على كل كيان في المنظمة (بلا وصول/مشاهد/محرّر/مالك)، يُحفظ مع المستخدم
+const UM_ENT = { list: null, seq: 0 };
+const UM_ENT_ROLES = [['', 'بلا وصول'], ['viewer', 'مشاهد'], ['editor', 'محرّر'], ['owner', 'مالك']];
+async function umLoadEntities(userId) {
+  const seq = ++UM_ENT.seq; UM_ENT.list = null;
+  const box = el('user-ents-list');
+  box.innerHTML = '<p class="um-note">جارٍ تحميل الكيانات…</p>';
+  try {
+    let items;
+    if (userId) {
+      const r = await fetch(`/api/entities/user-roles/${encodeURIComponent(userId)}`);
+      if (!r.ok) throw new Error(r.status);
+      items = (await r.json()).entities || [];
+    } else {
+      const r = await fetch('/api/entities');
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      items = (d.entities || []).map(e => ({ id: e.id, name: e.name, typeId: e.typeId, role: null }));
+    }
+    if (seq !== UM_ENT.seq) return;
+    UM_ENT.list = items;
+    umRenderEntities();
+  } catch {
+    if (seq !== UM_ENT.seq) return;
+    box.innerHTML = '<p class="um-note">تعذّر تحميل الكيانات — أغلق النافذة وافتحها مرة أخرى.</p>';
+  }
+}
+function umRenderEntities() {
+  const box = el('user-ents-list'), items = UM_ENT.list || [];
+  if (!items.length) { box.innerHTML = '<span class="empty">لا توجد كيانات في المنظمة بعد.</span>'; return; }
+  box.innerHTML = items.map((e, i) => {
+    const w = entShow(entType(e.typeId));
+    const opts = UM_ENT_ROLES.map(([v, t]) => `<option value="${v}"${(e.role || '') === v ? ' selected' : ''}>${t}</option>`).join('');
+    return `<div class="um-ent-row"><svg class="icon" aria-hidden="true"><use href="#i-${esc(w.icon || 'layers')}"/></svg>`
+      + `<span class="um-ent-name"><strong data-ent-skip>${esc(e.name)}</strong><small>${esc(w.s)}</small></span>`
+      + `<select data-um-ent="${i}" aria-label="${esc('الدور في ' + e.name)}">${opts}</select></div>`;
+  }).join('');
+  box.querySelectorAll('select[data-um-ent]').forEach(sel => sel.addEventListener('change', () => {
+    UM_ENT.list[+sel.dataset.umEnt].role = sel.value || null;
+  }));
+}
+function syncUserEntitiesUi() {
+  const admin = el('user-role').value === 'Admin';
+  el('user-ents-admin-note').classList.toggle('hidden', !admin);
+  el('user-ents-block').classList.toggle('hidden', admin);
+  el('user-ents-note').classList.toggle('hidden', admin);
+}
+el('user-role').addEventListener('change', syncUserEntitiesUi);
+async function umSaveEntities(userId) {
+  if (!userId || !UM_ENT.list || el('user-role').value === 'Admin') return true;
+  const roles = UM_ENT.list.filter(e => e.role).map(e => ({ entityId: e.id, role: e.role }));
+  const r = await fetch(`/api/entities/user-roles/${encodeURIComponent(userId)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roles }),
+  });
+  return r.ok;
+}
+
 function openUserModal(user) {
   el('user-form-error').classList.add('hidden');
   umSetTab('basic');
@@ -16243,6 +16300,7 @@ function openUserModal(user) {
   togglePermList('user-systems-list', 'user-allow-all-systems');
   const scr = user && Array.isArray(user.allowedScreens) ? user.allowedScreens : null;
   el('user-allow-all-screens').checked = !scr; renderUserScreens(scr || []); syncUserScreensUi();
+  syncUserEntitiesUi(); umLoadEntities(user ? user.id : null);
 
   el('user-modal').classList.remove('hidden');
 }
@@ -16281,6 +16339,14 @@ el('user-form').addEventListener('submit', async e => {
       const err = await res.json().catch(() => ({}));
       el('user-form-error').textContent = err.error || `فشل الحفظ (${res.status})`;
       el('user-form-error').classList.remove('hidden');
+      return;
+    }
+    const saved = await res.json().catch(() => ({}));
+    if (!(await umSaveEntities(id || saved.id))) {
+      el('user-form-error').textContent = 'حُفظ المستخدم، لكن تعذّر حفظ صلاحية الكيانات — افتحه وأعد المحاولة.';
+      el('user-form-error').classList.remove('hidden');
+      el('user-id').value = id || saved.id || '';
+      await loadUsers();
       return;
     }
     el('user-modal').classList.add('hidden');

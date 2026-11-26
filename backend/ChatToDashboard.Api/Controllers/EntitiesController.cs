@@ -154,6 +154,51 @@ public class EntitiesController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>صلاحيات مستخدم واحد على كل كيانات المنظمة — لتبويب «صلاحية الكيانات» في نافذة المستخدم.</summary>
+    [HttpGet("user-roles/{targetUserId}")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> GetUserRoles(string targetUserId, CancellationToken ct)
+    {
+        if (OrganizationId is not { } orgId) return NotFound();
+        var target = await _users.FindByIdAsync(targetUserId, ct);
+        if (target is null || target.OrganizationId != orgId) return NotFound(new { error = "المستخدم غير موجود." });
+        var entities = await _entities.ListByOrganizationAsync(orgId, ct);
+        var types = await _types.ListAsync(orgId, ct);
+        var result = new List<object>();
+        foreach (var e in entities)
+        {
+            var role = (await _entities.ListRolesAsync(e.Id, ct)).FirstOrDefault(r => r.UserId == targetUserId)?.Role;
+            result.Add(new { id = e.Id, name = e.Name, typeId = EntityTypeStore.Resolve(types, e.TypeId)?.Id, role });
+        }
+        return Ok(new { entities = result });
+    }
+
+    /// <summary>يستبدل كل أدوار المستخدم على كيانات منظمته بالقائمة المرسلة (الكيان الغائب منها = بلا دور).</summary>
+    [HttpPut("user-roles/{targetUserId}")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> SetUserRoles(string targetUserId, [FromBody] SetUserEntityRolesRequest request, CancellationToken ct)
+    {
+        if (OrganizationId is not { } orgId) return NotFound();
+        var target = await _users.FindByIdAsync(targetUserId, ct);
+        if (target is null || target.OrganizationId != orgId) return NotFound(new { error = "المستخدم غير موجود." });
+        var wanted = new Dictionary<string, string>();
+        foreach (var r in request.Roles ?? new())
+        {
+            if (string.IsNullOrWhiteSpace(r.EntityId)) continue;
+            if (r.Role != EntityRoles.Owner && r.Role != EntityRoles.Editor && r.Role != EntityRoles.Viewer)
+                return BadRequest(new { error = "الدور غير صحيح." });
+            wanted[r.EntityId] = r.Role;
+        }
+        var entities = await _entities.ListByOrganizationAsync(orgId, ct);
+        if (wanted.Keys.Any(k => entities.All(e => e.Id != k))) return BadRequest(new { error = "كيان غير موجود في المنظمة." });
+        foreach (var e in entities)
+        {
+            if (wanted.TryGetValue(e.Id, out var role)) await _entities.SetRoleAsync(e.Id, targetUserId, role, ct);
+            else await _entities.RemoveRoleAsync(e.Id, targetUserId, ct);
+        }
+        return NoContent();
+    }
+
     [HttpDelete("{id}/roles/{targetUserId}")]
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> RemoveRole(string id, string targetUserId, CancellationToken ct)
@@ -168,3 +213,7 @@ public class EntitiesController : ControllerBase
 
 /// <summary>طلب تبديل الكيان الحالي.</summary>
 public class EntityCurrentRequest { public string EntityId { get; set; } = ""; }
+
+/// <summary>طلب ضبط أدوار مستخدم على كيانات منظمته.</summary>
+public class SetUserEntityRolesRequest { public List<UserEntityRole> Roles { get; set; } = new(); }
+public class UserEntityRole { public string EntityId { get; set; } = ""; public string Role { get; set; } = ""; }

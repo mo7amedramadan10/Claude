@@ -2176,6 +2176,7 @@
       <button type="button" class="um-tab active" role="tab" id="um-tab-basic" aria-controls="um-panel-basic" aria-selected="true" data-um-tab="basic">البيانات الأساسية</button>
       <button type="button" class="um-tab" role="tab" id="um-tab-systems" aria-controls="um-panel-systems" aria-selected="false" tabindex="-1" data-um-tab="systems">صلاحية الأنظمة</button>
       <button type="button" class="um-tab" role="tab" id="um-tab-screens" aria-controls="um-panel-screens" aria-selected="false" tabindex="-1" data-um-tab="screens">صلاحية الشاشات</button>
+      <button type="button" class="um-tab" role="tab" id="um-tab-entities" aria-controls="um-panel-entities" aria-selected="false" tabindex="-1" data-um-tab="entities">صلاحية الكيانات</button>
     </div>
     <form id="user-form">
       <input type="hidden" id="user-id">
@@ -2227,6 +2228,13 @@
         </div>
       </div>
 
+      <div class="um-panel hidden" role="tabpanel" id="um-panel-entities" aria-labelledby="um-tab-entities">
+        <p class="um-note hidden" id="user-ents-admin-note">المسؤول يصل إلى كل الكيانات في المنظمة دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.</p>
+        <div class="perm-block" id="user-ents-block">
+          <div id="user-ents-list" class="um-ents" aria-live="polite"></div>
+        </div>
+        <p class="um-note" id="user-ents-note">مالك: يدير الكيان وأعضاءه · محرّر: يبني ويعدّل · مشاهد: يطّلع فقط. المستخدم بلا أي دور يعمل في أول كيان في المنظمة.</p>
+      </div>
       <div id="user-form-error" class="login-error hidden"></div>
       <div class="modal-actions">
         <button type="button" id="user-cancel">إلغاء</button>

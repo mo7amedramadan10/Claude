@@ -4367,7 +4367,7 @@ body.ff-full-on { overflow: hidden; }
 /* تبديل الكيان الحالي من القائمة الجانبية */
 .sb-ent-label { position: relative; }
 
-/* نافذة المستخدم بتبويبات: البيانات الأساسية / صلاحية الأنظمة / صلاحية الشاشات */
+/* نافذة المستخدم بتبويبات: البيانات الأساسية / صلاحية الأنظمة / صلاحية الشاشات / صلاحية الكيانات */
 #user-modal .user-modal-box { width: min(560px, 100%); display: flex; flex-direction: column; }
 #user-modal .um-tabs { display: flex; gap: 4px; padding: 4px; margin: 4px 0 14px; background: var(--bg, #F3F5F7); border-radius: 12px; }
 #user-modal .um-tab { flex: 1 1 0; min-width: 0; min-height: 38px; padding: 6px 10px; border: 0; border-radius: 9px; background: none;
@@ -4384,3 +4384,14 @@ body.ff-full-on { overflow: hidden; }
 #user-modal #user-screens-preset { margin: 0; }
 #user-modal .modal-actions { margin-top: 4px; }
 @media (max-width: 520px) { #user-modal .um-tab { font-size: 12px; padding: 6px 6px; } }
+/* تبويب «صلاحية الكيانات»: صف لكل كيان بأيقونة نوعه واسمه وقائمة الدور */
+#user-modal #user-ents-block.hidden { display: none; }
+#user-modal .um-ents { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+#user-modal .um-ent-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line, var(--grid)); border-radius: 10px; background: var(--surface); }
+#user-modal .um-ent-row > .icon { width: 18px; height: 18px; flex: none; color: var(--brand-blue, var(--accent)); }
+#user-modal .um-ent-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+#user-modal .um-ent-name strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#user-modal .um-ent-name small { font-size: 11px; color: var(--ink-3, var(--muted)); }
+#user-modal .um-ent-row select { flex: none; width: auto; min-width: 116px; min-height: 36px; padding: 4px 8px; }
+#user-modal .um-ents .empty { display: block; height: auto; padding: 4px 0; color: var(--muted); font-size: 12px; }
+@media (max-width: 520px) { #user-modal .um-tabs { display: grid; grid-template-columns: 1fr 1fr; } }
