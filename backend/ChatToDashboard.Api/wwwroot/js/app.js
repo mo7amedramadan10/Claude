@@ -16152,9 +16152,9 @@ function renderUsers() {
     btn.addEventListener('click', () => deleteUser(btn.dataset.del)));
 }
 
-function renderPermChecklist(containerId, items, checkedList, keyFn, labelFn) {
+function renderPermChecklist(containerId, items, checkedList, keyFn, labelFn, emptyText) {
   const container = el(containerId);
-  if (!items.length) { container.innerHTML = '<span class="empty">لا يوجد عناصر بعد</span>'; return; }
+  if (!items.length) { container.innerHTML = `<span class="empty">${esc(emptyText || 'لا يوجد عناصر بعد')}</span>`; return; }
   container.innerHTML = items.map(item => {
     const key = keyFn(item);
     return `<label><input type="checkbox" value="${esc(key)}" ${checkedList.includes(key) ? 'checked' : ''}> ${esc(labelFn(item))}</label>`;
@@ -16239,7 +16239,7 @@ function openUserModal(user) {
   el('user-password-row').style.display = (user ? user.authMethod : 'Local') === 'Local' ? '' : 'none';
 
   el('user-allow-all-systems').checked = user ? user.allowAllSystems : true;
-  renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name);
+  renderPermChecklist('user-systems-list', state.systems, user ? user.allowedSystems : [], s => s.id, s => s.name, 'لا توجد أنظمة خارجية مفعّلة في المنصة حاليًا — يرى المستخدم ملفاته وما شورك معه فقط.');
   togglePermList('user-systems-list', 'user-allow-all-systems');
   const scr = user && Array.isArray(user.allowedScreens) ? user.allowedScreens : null;
   el('user-allow-all-screens').checked = !scr; renderUserScreens(scr || []); syncUserScreensUi();

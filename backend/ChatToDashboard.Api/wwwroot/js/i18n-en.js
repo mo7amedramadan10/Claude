@@ -429,6 +429,7 @@ window.JEEM_I18N_EN = Object.assign(window.JEEM_I18N_EN || {}, {
   "الوصول لكل الشاشات": "Access to all screens",
   "البيانات الأساسية": "Basic info",
   "صلاحية الأنظمة": "Systems access",
+  "لا توجد أنظمة خارجية مفعّلة في المنصة حاليًا — يرى المستخدم ملفاته وما شورك معه فقط.": "No external systems are enabled on the platform right now — the user sees only their own files and what is shared with them.",
   "صلاحية الشاشات": "Screens access",
   "أقسام بيانات المستخدم": "User sections",
   "المسؤول يرى كل الشاشات دائمًا؛ هذه الصلاحية للمستخدم العادي فقط.": "Admins always see every screen; this applies to regular users only.",
