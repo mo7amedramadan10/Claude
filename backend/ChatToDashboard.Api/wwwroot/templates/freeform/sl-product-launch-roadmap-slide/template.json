@@ -1,0 +1,21 @@
+{
+  "key": "sl-product-launch-roadmap-slide",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "🚀",
+  "name": "خارطة طريق إطلاق منتج",
+  "nameEn": "Product Launch Roadmap",
+  "description": "شريحتان (فاتحة وداكنة): جدول ستة أشهر بثلاثة مسارات للمنصة والبرمجيات والتسويق",
+  "descriptionEn": "Two slides (light and dark): a six-month timeline with platform, software and marketing lanes",
+  "sections": [
+    {
+      "title": "خارطة الطريق (فاتحة)",
+      "titleEn": "Roadmap (Light)"
+    },
+    {
+      "title": "خارطة الطريق (داكنة)",
+      "titleEn": "Roadmap (Dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ كل شريط مهمة يحدد موضعه وطوله بالأشهر في style (بداية = 330 + 148.8 × رقم الشهر، والعرض 143 لكل شهر)."
+}

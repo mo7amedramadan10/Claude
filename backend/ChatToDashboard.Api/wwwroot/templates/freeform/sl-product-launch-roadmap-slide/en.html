@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Launch Roadmap</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «خارطة طريق إطلاق منتج»: رأس بربعين وستة أشهر في دوائر على خط، أعمدة أشهر متناوبة التظليل، وثلاثة مسارات (المنصة، البرمجيات، التسويق) بدائرة أيقونة وأشرطة مهام ملوّنة تمتد شهرًا أو أكثر. الصنف dk يقلب الشريحة إلى الوضع الداكن. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #000000; --ink-2: #404040; --accent: #E5C175; --bg: #FFFFFF; --gold: #E5C175; --gold-bar: #F0D9A8; --blue: #A6CCDD; --blue-bar: #CBE0EB; --violet: #ADA8D0; --violet-bar: #D1CDE5; --m-dark: #404040; --m-gray: #828282; --shade: #F7F7F7; --rule: #262626; --rule-2: #595959; --qline: #D9D9D9; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 41.5px; font-weight: 400; line-height: 1.2; color: #333; white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 500; }
+  .pl { position: absolute; inset: 0; }
+  /* الربعان */
+  .q { position: absolute; top: 108px; height: 24px; width: 437px; display: flex; align-items: center; gap: 12px; }
+  .q::before, .q::after { content: ""; flex: 1; height: 1px; background: var(--qline); }
+  .q span { font-size: 16px; font-weight: 700; color: #000; }
+  .q2 span { color: #898989; }
+  .q1 { inset-inline-start: 330px; } .q2 { inset-inline-start: 780px; }
+  /* أعمدة الأشهر المظلّلة */
+  .shade { position: absolute; top: 171px; height: 507px; width: 143px; background: var(--shade); }
+  .rule { position: absolute; inset-inline-start: 65px; width: 1151px; height: 3px; background: var(--rule); }
+  .rule.r0 { top: 170px; } .rule.r1 { top: 339px; } .rule.r2 { top: 508px; background: var(--rule-2); } .rule.r3 { top: 677px; }
+  .mo { position: absolute; top: 149px; width: 44px; height: 44px; margin-inline-start: -22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 14.5px; background: var(--m-dark); }
+  html[lang="ar"] .mo { font-size: 12px; }
+  .mo.g { background: var(--m-gray); }
+  /* المسارات */
+  .lane { position: absolute; inset-inline-start: 65px; margin: 0; font-size: 20px; font-weight: 400; line-height: 25px; color: #000; text-transform: uppercase; }
+  html[lang="ar"] .lane { font-size: 21px; font-weight: 500; }
+  .lic { position: absolute; inset-inline-start: 223px; width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center; color: #000; }
+  .lic svg { width: 54px; height: 54px; }
+  .bar { position: absolute; height: 36px; display: grid; place-items: center; font-size: 15px; color: var(--ink-2); white-space: nowrap; }
+  .bar.c1 { background: var(--gold-bar); } .bar.c2 { background: var(--blue-bar); } .bar.c3 { background: var(--violet-bar); }
+  /* الوضع الداكن */
+  .pl.dk { background: #262626; }
+  .pl.dk .shade { background: #1A1A1A; } .pl.dk .rule { background: #7E7E7E; } .pl.dk .rule.r2 { background: #808080; } .pl.dk .rule.r3 { background: #262626; }
+  .pl.dk .q::before, .pl.dk .q::after { background: #808080; } .pl.dk .q span { color: #fff; }
+  .pl.dk .lane, .pl.dk ~ .ttl { color: #fff; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="pl">
+    <div class="shade" style="inset-inline-start:330px"></div>
+    <div class="shade" style="inset-inline-start:627px"></div>
+    <div class="shade" style="inset-inline-start:925px"></div>
+    <div class="q q1"><span>Q1</span></div>
+    <div class="q q2"><span>Q2</span></div>
+    <div class="rule r0"></div>
+    <div class="rule r1"></div>
+    <div class="rule r2"></div>
+    <div class="rule r3"></div>
+    <div class="mo" style="inset-inline-start:401px">JAN</div>
+    <div class="mo" style="inset-inline-start:549px">FEB</div>
+    <div class="mo" style="inset-inline-start:696px">MAR</div>
+    <div class="mo g" style="inset-inline-start:843px">APR</div>
+    <div class="mo g" style="inset-inline-start:992px">MAY</div>
+    <div class="mo g" style="inset-inline-start:1139px">JUN</div>
+    <h2 class="lane" style="top:228px">Platform<br>Development</h2>
+    <div class="lic" style="top:209px;background:var(--gold)"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M24 6L44 17 24 28 4 17z"/><path d="M12 22.5L4 27l20 11 20-11-8-4.5"/><path d="M4 22l20 11 20-11" opacity="0"/></svg></div>
+    <h2 class="lane" style="top:400px">Software<br>Development</h2>
+    <div class="lic" style="top:381px;background:var(--blue)"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="42" height="32" rx="1"/><path d="M3 15h42"/><path d="M34 11.5h.5M38 11.5h.5M42 11.5h.01" stroke-width="2.2"/><path d="M9 22l7 4.5-7 4.5"/><path d="M19 33h9"/></svg></div>
+    <h2 class="lane" style="top:577px">Marketing</h2>
+    <div class="lic" style="top:546px;background:var(--violet)"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M8 30l26-18 6 14-29 9z"/><path d="M8 30l-3 2 2 5 4-2"/><path d="M15 34l2 6 6-2-1-5.5"/><path d="M34 12l1.5-1 6 14-1.5 1"/></svg></div>
+    <div class="bar c1" style="top:206px;inset-inline-start:330px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:206px;inset-inline-start:479px;width:292px">Insert your desired text here.</div>
+    <div class="bar c1" style="top:246px;inset-inline-start:628px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:246px;inset-inline-start:776px;width:292px">Insert your desired text here.</div>
+    <div class="bar c1" style="top:246px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:286px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:286px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:330px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:479px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:628px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:479px;width:292px">Insert your desired text here.</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:925px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:445px;inset-inline-start:702px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:445px;inset-inline-start:925px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:445px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:533px;inset-inline-start:330px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:533px;inset-inline-start:479px;width:292px">Insert your desired text here.</div>
+    <div class="bar c3" style="top:533px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:573px;inset-inline-start:628px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:573px;inset-inline-start:776px;width:292px">Insert your desired text here.</div>
+    <div class="bar c3" style="top:573px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:613px;inset-inline-start:546px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:613px;inset-inline-start:925px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:613px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    </div>
+    <h1 class="ttl">Product Launch Roadmap PowerPoint Template</h1>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="pl dk">
+    <div class="shade" style="inset-inline-start:330px"></div>
+    <div class="shade" style="inset-inline-start:627px"></div>
+    <div class="shade" style="inset-inline-start:925px"></div>
+    <div class="q q1"><span>Q1</span></div>
+    <div class="q q2"><span>Q2</span></div>
+    <div class="rule r0"></div>
+    <div class="rule r1"></div>
+    <div class="rule r2"></div>
+    <div class="rule r3"></div>
+    <div class="mo" style="inset-inline-start:401px">JAN</div>
+    <div class="mo" style="inset-inline-start:549px">FEB</div>
+    <div class="mo" style="inset-inline-start:696px">MAR</div>
+    <div class="mo g" style="inset-inline-start:843px">APR</div>
+    <div class="mo g" style="inset-inline-start:992px">MAY</div>
+    <div class="mo g" style="inset-inline-start:1139px">JUN</div>
+    <h2 class="lane" style="top:228px">Platform<br>Development</h2>
+    <div class="lic" style="top:209px;background:var(--gold)"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M24 6L44 17 24 28 4 17z"/><path d="M12 22.5L4 27l20 11 20-11-8-4.5"/><path d="M4 22l20 11 20-11" opacity="0"/></svg></div>
+    <h2 class="lane" style="top:400px">Software<br>Development</h2>
+    <div class="lic" style="top:381px;background:var(--blue)"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="42" height="32" rx="1"/><path d="M3 15h42"/><path d="M34 11.5h.5M38 11.5h.5M42 11.5h.01" stroke-width="2.2"/><path d="M9 22l7 4.5-7 4.5"/><path d="M19 33h9"/></svg></div>
+    <h2 class="lane" style="top:577px">Marketing</h2>
+    <div class="lic" style="top:546px;background:var(--violet)"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M8 30l26-18 6 14-29 9z"/><path d="M8 30l-3 2 2 5 4-2"/><path d="M15 34l2 6 6-2-1-5.5"/><path d="M34 12l1.5-1 6 14-1.5 1"/></svg></div>
+    <div class="bar c1" style="top:206px;inset-inline-start:330px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:206px;inset-inline-start:479px;width:292px">Insert your desired text here.</div>
+    <div class="bar c1" style="top:246px;inset-inline-start:628px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:246px;inset-inline-start:776px;width:292px">Insert your desired text here.</div>
+    <div class="bar c1" style="top:246px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:286px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c1" style="top:286px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:330px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:479px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:628px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:365px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:479px;width:292px">Insert your desired text here.</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:925px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:405px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:445px;inset-inline-start:702px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:445px;inset-inline-start:925px;width:143px">Placeholder</div>
+    <div class="bar c2" style="top:445px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:533px;inset-inline-start:330px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:533px;inset-inline-start:479px;width:292px">Insert your desired text here.</div>
+    <div class="bar c3" style="top:533px;inset-inline-start:776px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:573px;inset-inline-start:628px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:573px;inset-inline-start:776px;width:292px">Insert your desired text here.</div>
+    <div class="bar c3" style="top:573px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:613px;inset-inline-start:546px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:613px;inset-inline-start:925px;width:143px">Placeholder</div>
+    <div class="bar c3" style="top:613px;inset-inline-start:1074px;width:143px">Placeholder</div>
+    </div>
+    <h1 class="ttl">Product Launch Roadmap PowerPoint Template</h1>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

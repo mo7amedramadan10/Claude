@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>إدارة المشاريع بنموذج الشلال</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «إدارة المشاريع بالشلال»: الشريحة الأولى ستة صفوف (رقم، شريط ملوّن يطول درجةً، مربع أيقونة، سهم منحنٍ)، والثانية ستة أعمدة برؤوس ملوّنة تنزل درجة درجة ونصوص في أسفلها. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #000000; --ink-2: #595959; --num: #565857; --accent: #2378B9; --bg: #FFFFFF; --line: #BFBFBF; --b1: #23CFA9; --b2: #3DCFC2; --b3: #47B6C9; --b4: #499DDD; --b5: #4981D4; --b6: #4B66B5; --d1: #1E997D; --d2: #28A198; --d3: #2F8D99; --d4: #2378B9; --d5: #2A5EAA; --d6: #374D86; --h1: #1B9A7C; --h2: #28A198; --h3: #2D8E97; --h4: #2378B9; --h5: #2C5DAC; --h6: #344E87; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 42px; font-weight: 400; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 500; }
+  /* الشريحة 1: صفوف الدرج */
+  .s1 .row { position: absolute; inset-inline-start: 64px; height: 90px; }
+  .s1 .num { position: absolute; top: 0; inset-inline-start: 0; width: 103px; height: 90px; display: grid; place-items: center; font-size: 30px; font-weight: 700; color: var(--num); background: linear-gradient(to right, #E1EEEC, #F7FAFA); }
+  html[dir="rtl"] .s1 .num { background: linear-gradient(to left, #E1EEEC, #F7FAFA); }
+  .s1 .band { position: absolute; top: 0; inset-inline-start: 103px; height: 90px; display: flex; align-items: center; color: #fff; }
+  .s1 .band h2 { flex: none; width: 193px; margin: 0; padding-inline-start: 16px; font-size: 19px; font-weight: 700; line-height: 1.3; }
+  .s1 .band p { margin: 0; width: 240px; font-size: 17.5px; line-height: 1.17; }
+  html[lang="ar"] .s1 .band p { font-size: 17.5px; line-height: 1.3; }
+  html[lang="ar"] .s2 .txt p { font-size: 16px; }
+  .s1 .ibox { position: absolute; top: 0; width: 104px; height: 90px; display: grid; place-items: center; color: #fff; }
+  .s1 .ibox svg { width: 52px; height: 52px; }
+  /* المثلث الداكن أسفل مربع الأيقونة */
+  .s1 .vee { position: absolute; top: 90px; width: 104px; height: 34px; clip-path: polygon(0 0, 100% 0, 50% 100%); background: linear-gradient(to bottom, rgb(0 30 60 / .16), rgb(0 30 60 / .03)); z-index: 2; }
+  .s1 .arr { position: absolute; width: 34px; height: 46px; }
+  html[dir="rtl"] .s1 .arr { transform: scaleX(-1); }
+  .r1 { top: 129px; } .r2 { top: 219px; } .r3 { top: 309px; } .r4 { top: 399px; } .r5 { top: 489px; } .r6 { top: 579px; }
+  .r1 .band { width: 426px; background: var(--b1); } .r1 .ibox { inset-inline-start: 529px; background: var(--d1); } .r1 .vee { inset-inline-start: 529px; }
+  .r2 .band { width: 530px; background: var(--b2); } .r2 .ibox { inset-inline-start: 633px; background: var(--d2); } .r2 .vee { inset-inline-start: 633px; }
+  .r3 .band { width: 634px; background: var(--b3); } .r3 .ibox { inset-inline-start: 737px; background: var(--d3); } .r3 .vee { inset-inline-start: 737px; }
+  .r4 .band { width: 738px; background: var(--b4); } .r4 .ibox { inset-inline-start: 841px; background: var(--d4); } .r4 .vee { inset-inline-start: 841px; }
+  .r5 .band { width: 842px; background: var(--b5); } .r5 .ibox { inset-inline-start: 945px; background: var(--d5); } .r5 .vee { inset-inline-start: 945px; }
+  .r6 .band { width: 946px; background: var(--b6); } .r6 .ibox { inset-inline-start: 1049px; background: var(--d6); }
+  .r1 .arr { top: 22px; inset-inline-start: 667px; } .r2 .arr { top: 22px; inset-inline-start: 771px; } .r3 .arr { top: 22px; inset-inline-start: 875px; }
+  .r4 .arr { top: 22px; inset-inline-start: 979px; } .r5 .arr { top: 22px; inset-inline-start: 1083px; }
+  /* الشريحة 2: أعمدة نازلة */
+  .s2 .col { position: absolute; width: 192px; bottom: 50px; border-inline-start: 1px solid var(--line); }
+  .s2 .col.last { border-inline-end: 1px solid var(--line); }
+  .s2 .hd { position: absolute; top: 0; inset-inline-start: -1px; width: 193px; height: 67px; display: grid; place-items: center; text-align: center; color: #fff; font-size: 19px; font-weight: 700; line-height: 1.3; padding: 0 10px; }
+  .s2 .col.last .hd { width: 193px; }
+  .s2 .shade { position: absolute; top: 67px; inset-inline-start: 0; width: 191px; height: 58px; clip-path: polygon(0 0, 100% 0, 100% 100%); background: linear-gradient(to bottom, rgb(0 0 0 / .07), rgb(0 0 0 / 0)); }
+  html[dir="rtl"] .s2 .shade { clip-path: polygon(0 0, 100% 0, 0 100%); }
+  .s2 .txt { position: absolute; bottom: 2px; inset-inline-start: 12px; width: 172px; display: flex; flex-direction: column; gap: 21px; }
+  .s2 .txt p { margin: 0; font-size: 15.5px; line-height: 21px; color: var(--ink-2); }
+  .s2 .arr { position: absolute; width: 30px; height: 42px; }
+  html[dir="rtl"] .s2 .arr { transform: scaleX(-1); }
+  .c1 { inset-inline-start: 64px; top: 125px; } .c1 .hd { background: var(--h1); }
+  .c2 { inset-inline-start: 256px; top: 192px; } .c2 .hd { background: var(--h2); }
+  .c3 { inset-inline-start: 447px; top: 259px; } .c3 .hd { background: var(--h3); }
+  .c4 { inset-inline-start: 640px; top: 325px; } .c4 .hd { background: var(--h4); }
+  .c5 { inset-inline-start: 832px; top: 392px; } .c5 .hd { background: var(--h5); }
+  .c6 { inset-inline-start: 1025px; top: 459px; } .c6 .hd { background: var(--h6); }
+  .s2 .a1 { top: 137px; inset-inline-start: 335px; } .s2 .a2 { top: 204px; inset-inline-start: 527px; } .s2 .a3 { top: 270px; inset-inline-start: 720px; }
+  .s2 .a4 { top: 337px; inset-inline-start: 913px; } .s2 .a5 { top: 404px; inset-inline-start: 1105px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="wf-arr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2AA79F"/><stop offset="1" stop-color="#2C4F8E"/></linearGradient><linearGradient id="wf-arr-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9C9C9"/><stop offset="1" stop-color="#B0B0B0"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب إدارة المشاريع بنموذج الشلال</h1>
+    <div class="row r1"><div class="num"><bdi dir="ltr">01</bdi></div><div class="band"><h2>تحليل المتطلبات</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="ibox"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 4v4"/><rect x="5" y="8" width="38" height="24"/><path d="M3 8h42"/><path d="M24 32v6M24 38l-9 8M24 38l9 8"/><circle cx="24" cy="20" r="8"/><path d="M24 12v8h8"/><path d="M24 20l5 6"/></svg></div><div class="vee"></div><svg class="arr " viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr)"/></svg></div>
+    <div class="row r2"><div class="num"><bdi dir="ltr">02</bdi></div><div class="band"><h2>التصميم</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="ibox"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="42" height="29" rx="1.5"/><rect x="7" y="10" width="34" height="21"/><path d="M19 35v6M29 35v6M14 42h20"/><rect x="11" y="12" width="3.5" height="3.5"/><path d="M14.5 14h11l9 7-5 1-1 6z"/><path d="M14 16c1 6 5 9 8 10"/><rect x="20.5" y="25" width="3.5" height="3.5"/></svg></div><div class="vee"></div><svg class="arr " viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr)"/></svg></div>
+    <div class="row r3"><div class="num"><bdi dir="ltr">03</bdi></div><div class="band"><h2>التنفيذ</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="ibox"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 4v5M9 10l3.5 3.5M39 10l-3.5 3.5M4 24h5M39 24h5"/><path d="M17 33c-3-2.5-5-6-5-10a12 12 0 0 1 24 0c0 4-2 7.5-5 10v4H17z"/><path d="M18 40h12M20 43h8"/><circle cx="24" cy="23" r="3"/><path d="M24 16.5v2.5M24 27v2.5M17.5 23H20M28 23h2.5M19.5 18.5l1.7 1.7M26.8 25.8l1.7 1.7M28.5 18.5l-1.7 1.7M21.2 25.8l-1.7 1.7"/></svg></div><div class="vee"></div><svg class="arr " viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr)"/></svg></div>
+    <div class="row r4"><div class="num"><bdi dir="ltr">04</bdi></div><div class="band"><h2>الاختبار</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="ibox"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 44v-8c-5-3-8-8-8-14 0-9.5 7.5-17 17-17s16 6.5 16 15l4 8h-4v6c0 2-1.5 3-3 3h-6v7"/><circle cx="24" cy="20" r="4"/><circle cx="24" cy="20" r="8" stroke-dasharray="3 3.3"/><path d="M14 33h10M14 37h8"/></svg></div><div class="vee"></div><svg class="arr " viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr)"/></svg></div>
+    <div class="row r5"><div class="num"><bdi dir="ltr">05</bdi></div><div class="band"><h2>النشر</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="ibox"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="30" cy="16" r="4"/><path d="M30 5l2 3.5 4-.5 1 4 3.5 2-1.5 3.5 1.5 3.5-3.5 2-1 4-4-.5-2 3.5-2-3.5-4 .5-1-4-3.5-2 1.5-3.5L19.5 14l3.5-2 1-4 4 .5z"/><circle cx="16" cy="33" r="4"/><path d="M16 22l2 3.5 4-.5 1 4 3.5 2-1.5 3.5 1.5 3.5-3.5 2-1 4-4-.5-2 3.5-2-3.5-4 .5-1-4-3.5-2L5.5 37 4 33.5 7.5 31l1-4 4 .5z"/></svg></div><div class="vee"></div><svg class="arr " viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr)"/></svg></div>
+    <div class="row r6"><div class="num"><bdi dir="ltr">06</bdi></div><div class="band"><h2>الصيانة</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="ibox"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l3-2 13 13-3 3L6 9z"/><path d="M19 20l20 20a2.5 2.5 0 0 1-3.5 3.5L15.5 23.5"/><path d="M42 12a7 7 0 0 1-9.5 6.5L12 39a3 3 0 0 1-4-4l20.5-20.5A7 7 0 0 1 35 5l-4 4 1 4 4 1z"/></svg></div></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب إدارة المشاريع بنموذج الشلال</h1>
+    <div class="col c1"><div class="hd">تحليل المتطلبات</div><div class="shade"></div><div class="txt"><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div>
+    <div class="col c2"><div class="hd">التصميم</div><div class="shade"></div><div class="txt"><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div>
+    <div class="col c3"><div class="hd">التنفيذ</div><div class="shade"></div><div class="txt"><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div>
+    <div class="col c4"><div class="hd">الاختبار</div><div class="shade"></div><div class="txt"><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div>
+    <div class="col c5"><div class="hd">النشر</div><div class="shade"></div><div class="txt"><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div>
+    <div class="col c6 last"><div class="hd">الصيانة</div><div class="shade"></div><div class="txt"><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div>
+    <svg class="arr a1" viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr-g)"/></svg><svg class="arr a2" viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr-g)"/></svg><svg class="arr a3" viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr-g)"/></svg><svg class="arr a4" viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr-g)"/></svg><svg class="arr a5" viewBox="0 0 34 46" aria-hidden="true"><path d="M1,3 C16,3 25,12 24,27 L31,27 L19.5,45 L8,27 L15,27 C15.5,16 10,8 1,3 Z" fill="url(#wf-arr-g)"/></svg>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

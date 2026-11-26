@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strategic Roadmap</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «خارطة طريق استراتيجية»: طريق متعرّج يضيق نحو الأفق يُرسم بـ JS من مصفوفة نقاط (x, y, نصف العرض)، سحب SVG خفيفة، هدف بسهم، وأربع بطاقات (رأس متدرّج بأيقونة وعنوان، وتذييل رمادي) بدبابيس إلى الطريق. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #333333; --ink-2: #404040; --accent: #E0661D; --bg: #FFFFFF; --c1a: #82A2CC; --c1b: #4774B1; --c1p: #87A4CC; --c2a: #E66C22; --c2b: #B24E14; --c2p: #E0661D; --c3a: #648E76; --c3b: #476958; --c3p: #5D9274; --c4a: #3466B1; --c4b: #24487F; --c4p: #3361AC; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 41px; font-weight: 400; line-height: 1.2; color: var(--ink); white-space: nowrap; z-index: 3; }
+  html[lang="ar"] .ttl { font-weight: 500; }
+  /* الخلفية الزخرفية (سحب + طريق + هدف) مرسومة بإحداثيات الإنجليزية وتنعكس للعربية */
+  .scene { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .scene { transform: scaleX(-1); }
+  .cloud { fill: url(#rm-cloud); }
+  /* البطاقات */
+  .card { position: absolute; width: 346px; border-radius: 9px; box-shadow: 0 3px 7px rgb(0 0 0 / .22); z-index: 2; }
+  .card::after { content: ""; position: absolute; inset: 5px; border: 1.5px dashed rgb(255 255 255 / .38); border-radius: 6px; pointer-events: none; }
+  .card .hd { position: relative; height: 72px; border-radius: 9px 9px 0 0; display: flex; align-items: center; color: #fff; }
+  .card .ic { position: absolute; top: 16px; inset-inline-start: 24px; width: 44px; height: 44px; color: rgb(255 255 255 / .82); }
+  .card .ic svg { width: 100%; height: 100%; }
+  .card .tx { position: absolute; top: 12px; inset-inline-start: 86px; }
+  .card h2 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; }
+  .card .hd p { margin: 1px 0 0; font-size: 14.5px; line-height: 1.25; }
+  .card .ft { height: 36px; background: #F2F2F2; border-radius: 0 0 9px 9px; display: flex; align-items: center; padding-inline-start: 86px; font-size: 14.5px; color: var(--ink-2); }
+  .card .ft p { margin: 0; }
+  .card .pin { position: absolute; top: 100%; inset-inline-start: 170px; width: 6px; }
+  .card .pin::after { content: ""; position: absolute; bottom: -9px; inset-inline-start: -6px; width: 18px; height: 18px; border-radius: 50%; border: 5px solid currentColor; background: #fff; box-sizing: border-box; }
+  .k1 { top: 237px; inset-inline-start: 84px; } .k1 .hd { background: linear-gradient(200deg, var(--c1a), var(--c1b)); } .k1 .pin { height: 80px; background: var(--c1p); color: var(--c1p); }
+  .k2 { top: 155px; inset-inline-start: 641px; } .k2 .hd { background: linear-gradient(200deg, var(--c2a), var(--c2b)); } .k2 .pin { height: 17px; background: var(--c2p); color: var(--c2p); inset-inline-start: 171px; width: 4px; }
+  .k2 .pin::after { width: 13px; height: 13px; border-width: 3px; bottom: -6px; inset-inline-start: -4.5px; }
+  .k3 { top: 353px; inset-inline-start: 856px; } .k3 .hd { background: linear-gradient(200deg, var(--c3a), var(--c3b)); } .k3 .pin { height: 52px; background: var(--c3p); color: var(--c3p); }
+  .k4 { top: 495px; inset-inline-start: 333px; } .k4 .hd { background: linear-gradient(200deg, var(--c4a), var(--c4b)); } .k4 .pin { height: 84px; background: var(--c4p); color: var(--c4p); }
+  html[dir="rtl"] .k1 .hd { background: linear-gradient(160deg, var(--c1a), var(--c1b)); } html[dir="rtl"] .k2 .hd { background: linear-gradient(160deg, var(--c2a), var(--c2b)); }
+  html[dir="rtl"] .k3 .hd { background: linear-gradient(160deg, var(--c3a), var(--c3b)); } html[dir="rtl"] .k4 .hd { background: linear-gradient(160deg, var(--c4a), var(--c4b)); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="rm-cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#F6F8FB"/><stop offset="1" stop-color="#EBEFF6"/></linearGradient><linearGradient id="rm-road" gradientUnits="userSpaceOnUse" x1="0" y1="250" x2="0" y2="720"><stop offset="0" stop-color="#2A3B5E"/><stop offset="1" stop-color="#151F33"/></linearGradient><linearGradient id="rm-tgt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C2611F"/><stop offset="1" stop-color="#8A3A12"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="scene" viewBox="0 0 1280 720" aria-hidden="true"><g class="cloud"><ellipse cx="430" cy="238" rx="140" ry="20"/><circle cx="341" cy="227" r="28"/><circle cx="388" cy="214" r="42"/><circle cx="448" cy="207" r="52"/><circle cx="509" cy="220" r="37"/><circle cx="546" cy="231" r="24"/></g><g class="cloud"><ellipse cx="1100" cy="189" rx="115" ry="16"/><circle cx="1027" cy="180" r="23"/><circle cx="1065" cy="169" r="35"/><circle cx="1115" cy="163" r="42"/><circle cx="1165" cy="174" r="30"/><circle cx="1195" cy="183" r="19"/></g><g class="cloud"><ellipse cx="1085" cy="344" rx="120" ry="17"/><circle cx="1009" cy="334" r="24"/><circle cx="1049" cy="323" r="36"/><circle cx="1101" cy="317" r="44"/><circle cx="1153" cy="328" r="32"/><circle cx="1185" cy="338" r="20"/></g><g class="target"><circle cx="1078" cy="138" r="41" fill="url(#rm-tgt)"/><circle cx="1078" cy="138" r="31" fill="#fff"/><circle cx="1078" cy="138" r="22" fill="url(#rm-tgt)"/><circle cx="1078" cy="138" r="13" fill="#fff"/><circle cx="1078" cy="138" r="7" fill="url(#rm-tgt)"/><line x1="1078" y1="138" x2="1151" y2="72" stroke="#8C8C8C" stroke-width="4" stroke-linecap="round"/><path d="M1141,76 L1146,60 L1156,66 Z M1146,81 L1161,77 L1155,88 Z" fill="#3A3A3A"/><path d="M1146,70 L1150,62 L1162,68 L1156,76 Z" fill="#555"/></g><g class="cloud"><ellipse cx="1110" cy="211" rx="95" ry="13"/><circle cx="1049" cy="203" r="19"/><circle cx="1081" cy="194" r="29"/><circle cx="1122" cy="189" r="35"/><circle cx="1163" cy="198" r="25"/><circle cx="1189" cy="206" r="16"/></g><g class="cloud"><ellipse cx="300" cy="458" rx="150" ry="22"/><circle cx="205" cy="446" r="30"/><circle cx="255" cy="432" r="46"/><circle cx="320" cy="424" r="56"/><circle cx="385" cy="438" r="40"/><circle cx="425" cy="450" r="26"/></g><g class="cloud"><ellipse cx="520" cy="463" rx="70" ry="10"/><circle cx="475" cy="457" r="14"/><circle cx="499" cy="451" r="21"/><circle cx="529" cy="447" r="26"/><circle cx="559" cy="454" r="18"/><circle cx="578" cy="459" r="12"/></g><g class="cloud"><ellipse cx="250" cy="680" rx="210" ry="30"/><circle cx="117" cy="663" r="42"/><circle cx="187" cy="643" r="64"/><circle cx="278" cy="632" r="78"/><circle cx="369" cy="652" r="56"/><circle cx="425" cy="669" r="36"/></g><g class="cloud"><ellipse cx="1000" cy="672" rx="190" ry="27"/><circle cx="879" cy="657" r="38"/><circle cx="943" cy="639" r="58"/><circle cx="1025" cy="629" r="70"/><circle cx="1107" cy="647" r="50"/><circle cx="1158" cy="662" r="32"/></g><g class="cloud"><ellipse cx="980" cy="501" rx="80" ry="11"/><circle cx="929" cy="495" r="16"/><circle cx="956" cy="487" r="24"/><circle cx="990" cy="483" r="29"/><circle cx="1025" cy="490" r="21"/><circle cx="1046" cy="497" r="13"/></g><g class="cloud"><ellipse cx="170" cy="558" rx="85" ry="12"/><circle cx="116" cy="551" r="17"/><circle cx="144" cy="543" r="26"/><circle cx="181" cy="538" r="31"/><circle cx="218" cy="546" r="22"/><circle cx="240" cy="553" r="14"/></g><g class="cloud"><ellipse cx="740" cy="607" rx="60" ry="8"/><circle cx="702" cy="602" r="12"/><circle cx="722" cy="596" r="18"/><circle cx="748" cy="593" r="22"/><circle cx="774" cy="599" r="16"/><circle cx="790" cy="604" r="10"/></g><g id="rm-road-g"></g></svg>
+    <h1 class="ttl">Strategic Roadmap PowerPoint Template</h1>
+    <div class="card k1"><div class="hd"><div class="ic"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M30 6h4l.7 3.4 2.4 1 2.9-2 2.8 2.8-2 2.9 1 2.4 3.4.7v4l-3.4.7-1 2.4 2 2.9-2.8 2.8-2.9-2-2.4 1L34 32h-4l-.7-3.4-2.4-1-2.9 2-2.8-2.8 2-2.9-1-2.4L18.8 20.8v-4l3.4-.7 1-2.4-2-2.9L24 8l2.9 2 2.4-1zm2 8.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z"/><path fill-rule="evenodd" d="M13 24h3.4l.6 2.8 2 .8 2.4-1.6 2.4 2.4-1.6 2.4.8 2 2.8.6v3.4l-2.8.6-.8 2 1.6 2.4-2.4 2.4-2.4-1.6-2 .8-.6 2.8H13l-.6-2.8-2-.8-2.4 1.6-2.4-2.4 1.6-2.4-.8-2L3.6 37.6v-3.4l2.8-.6.8-2-1.6-2.4L8 26.8l2.4 1.6 2-.8zm1.7 7.2a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4z"/></svg></div><div class="tx"><h2>Placeholder</h2><p>This is a sample text.</p></div></div><div class="ft"><p>Insert your desired text here.</p></div><div class="pin"></div></div>
+    <div class="card k2"><div class="hd"><div class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.4" aria-hidden="true"><circle cx="22" cy="26" r="18"/><circle cx="22" cy="26" r="11"/><circle cx="22" cy="26" r="4" fill="currentColor" stroke="none"/><path d="M22 26L40 8" stroke-linecap="round"/><path d="M36 6l5-2-1 5 5-1-3 4h-5z" fill="currentColor" stroke="none"/></svg></div><div class="tx"><h2>Placeholder</h2><p>This is a sample text.</p></div></div><div class="ft"><p>Insert your desired text here.</p></div><div class="pin"></div></div>
+    <div class="card k3"><div class="hd"><div class="ic"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true"><path d="M5 5h38l3 12H2z"/><path d="M2 17h44c0 3.3-2.4 6-5.5 6S35 20.3 35 17c0 3.3-2.5 6-5.5 6S24 20.3 24 17c0 3.3-2.5 6-5.5 6S13 20.3 13 17c0 3.3-2.5 6-5.5 6S2 20.3 2 17z" opacity=".9"/><path fill-rule="evenodd" d="M6 25h36v20H6zm4 4v16h10V29zm15 0v10h13V29z"/></svg></div><div class="tx"><h2>Placeholder</h2><p>This is a sample text.</p></div></div><div class="ft"><p>Insert your desired text here.</p></div><div class="pin"></div></div>
+    <div class="card k4"><div class="hd"><div class="ic"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true"><path d="M1 14l8-3 7 17-7 3z"/><path d="M47 14l-8-3-7 17 7 3z"/><path d="M15 15l7-3c2-1 4-1 6 0l9 4 2 10-2 2-8-6-4 3c-2 1.5-4.5 1-5.5-1L19 21l-2 1z" opacity=".95"/><path d="M17 27l3-1c1.5-.5 3 .5 3 2 1.5-.5 3 .5 3 2 1.5-.5 3 .5 3 2l1-1 4 3c1 1 1 2.5 0 3.5s-2.5 1-3.5 0l-1-.8c.5 1.3-.3 2.6-1.7 2.8-1 .2-1.8-.2-2.3-.8-.2 1.3-1.4 2.2-2.8 2-1-.1-1.7-.8-2-1.6-.6.8-1.7 1.2-2.7.8C14 39 13.6 37.6 14.2 36.5L17 27z"/></svg></div><div class="tx"><h2>Placeholder</h2><p>This is a sample text.</p></div></div><div class="ft"><p>Insert your desired text here.</p></div><div class="pin"></div></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 1</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="road-data">{"points": [[950, 252, 6], [900, 268, 8], [840, 281, 9.5], [760, 299, 11], [680, 315, 12], [632, 326, 12.5], [622, 337, 13], [650, 347, 14], [720, 355, 15], [790, 366, 16], [836, 380, 17], [838, 396, 18], [800, 410, 19], [730, 426, 20], [650, 438, 21], [598, 452, 22], [592, 470, 23], [630, 484, 24], [720, 502, 26], [810, 528, 29], [890, 553, 32], [918, 575, 34], [895, 597, 37], [810, 617, 40], [700, 648, 44], [555, 688, 49], [400, 734, 54], [300, 765, 56]]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // رسم الطريق المتعرّج: شرائح متتابعة من الأفق إلى الأمام (الأقرب يُرسم فوق الأبعد)، لكل شريحة جانب داكن وحافة فاتحة وسطح، ثم خطوط متقطعة في المنتصف
+  function drawRoad() {
+    var g = document.getElementById('rm-road-g'); if (!g) return;
+    var P = JSON.parse(document.getElementById('road-data').textContent).points, S = [], NS = 'http://www.w3.org/2000/svg';
+    function cr(a, b, c, d, t) { var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
+    for (var i = 0; i < P.length - 1; i++) {
+      var p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
+      for (var k = 0; k < 10; k++) { var t = k / 10; S.push([cr(p0[0], p1[0], p2[0], p3[0], t), cr(p0[1], p1[1], p2[1], p3[1], t), p1[2] + (p2[2] - p1[2]) * t]); }
+    }
+    S.push(P[P.length - 1]);
+    function el(tag, at) { var e = document.createElementNS(NS, tag); for (var a in at) e.setAttribute(a, at[a]); g.appendChild(e); return e; }
+    function poly(a, b, dy) { var s = ''; for (var j = a; j <= b; j++) s += (j === a ? 'M' : 'L') + S[j][0].toFixed(1) + ',' + (S[j][1] + dy).toFixed(1); return s; }
+    var STEP = 6, BACK = 4;
+    for (var a = 0; a < S.length - 1; a += STEP) {
+      var b = Math.min(S.length - 1, a + STEP), w = S[a][2], side = 2 + w * 0.16;
+      el('path', { d: poly(a, b, side), fill: 'none', stroke: '#2B2E35', 'stroke-width': (2 * w + 2).toFixed(1), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      el('path', { d: poly(a, b, 0), fill: 'none', stroke: '#9FB6DE', 'stroke-width': (2 * w + 2.4).toFixed(1), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      el('path', { d: poly(Math.max(0, a - BACK), b, 0), fill: 'none', stroke: 'url(#rm-road)', 'stroke-width': (2 * w).toFixed(1), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+    }
+    // الخط المتقطّع: طول الشرطة وسماكتها يتناسبان مع عرض الطريق
+    var acc = 0, on = true, start = 0;
+    for (var j = 1; j < S.length; j++) {
+      var dx = S[j][0] - S[j - 1][0], dy = S[j][1] - S[j - 1][1], len = Math.sqrt(dx * dx + dy * dy), w2 = S[j][2];
+      acc += len;
+      var lim = on ? w2 * 0.9 : w2 * 0.75;
+      if (acc >= lim) {
+        if (on && j > start) el('path', { d: poly(start, j, 0), fill: 'none', stroke: '#E9EEF6', 'stroke-width': Math.max(1, w2 * 0.075).toFixed(2), 'stroke-linecap': 'butt' });
+        on = !on; acc = 0; start = j;
+      }
+    }
+  }
+  drawRoad();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

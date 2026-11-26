@@ -1,0 +1,17 @@
+{
+  "key": "sl-strategic-roadmap-slide",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🛣️",
+  "name": "خارطة طريق استراتيجية",
+  "nameEn": "Strategic Roadmap",
+  "description": "شريحة واحدة: طريق متعرّج نحو الهدف بأربع محطات في بطاقات ملوّنة بأيقونات",
+  "descriptionEn": "One slide: a winding road toward the goal with four milestones in colored iconed cards",
+  "sections": [
+    {
+      "title": "الطريق ومحطاته الأربع",
+      "titleEn": "Road with Four Milestones"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر نصوص البطاقات فقط؛ الطريق يُرسم من كتلة road-data ولا يُعدَّل إلا إن طُلب تغيير شكله."
+}

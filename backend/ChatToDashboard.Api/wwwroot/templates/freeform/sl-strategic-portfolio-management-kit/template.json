@@ -1,0 +1,65 @@
+{
+  "key": "sl-strategic-portfolio-management-kit",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🗂️",
+  "name": "حقيبة الإدارة الاستراتيجية للمحافظ",
+  "nameEn": "Strategic Portfolio Management Kit",
+  "description": "اثنتا عشرة شريحة داكنة: غلاف، ركائز التشغيل، تخصيص رأس المال، مؤشرات، جدول قرارات، رسم نمو، حوكمة، وختام",
+  "descriptionEn": "Twelve dark slides: cover, operating pillars, capital allocation, KPIs, decision table, growth chart, governance, close",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نموذج التشغيل بخمس ركائز",
+      "titleEn": "5-Pillar Operating Model"
+    },
+    {
+      "title": "تسلسل الاستراتيجية إلى التنفيذ",
+      "titleEn": "Strategy-to-Execution Lineage"
+    },
+    {
+      "title": "تخصيص رأس المال على ثلاثة آفاق (رسم حلقي)",
+      "titleEn": "3-Horizon Capital Allocation (donut)",
+      "needsData": true
+    },
+    {
+      "title": "مصفوفة الأولويات والمفاضلة",
+      "titleEn": "Prioritization & Trade-Off Matrix"
+    },
+    {
+      "title": "المؤشرات الحيوية للمحفظة",
+      "titleEn": "Portfolio Vital Signs",
+      "needsData": true
+    },
+    {
+      "title": "مصفوفة قرارات الشركة",
+      "titleEn": "Company Decision Matrix",
+      "needsData": true
+    },
+    {
+      "title": "خارطة التسليم الهجين بالأرباع",
+      "titleEn": "Hybrid Delivery Roadmap (Quarters)"
+    },
+    {
+      "title": "التغيير وتبنّي المستخدمين",
+      "titleEn": "Change & User Adoption"
+    },
+    {
+      "title": "خارطة التسليم الهجين (رسم خطي)",
+      "titleEn": "Hybrid Delivery Roadmap (line chart)",
+      "needsData": true
+    },
+    {
+      "title": "الحوكمة وبنود العمل",
+      "titleEn": "Governance & Action Items"
+    },
+    {
+      "title": "الختام والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ نِسب الرسم الحلقي في كتلة chart-data وقيم الرسم الخطي وفئاته في chart-data-2، وألوان حالات الجدول (أخضر/كهرماني/أحمر) تبقى مقرونة باسم الحالة."
+}

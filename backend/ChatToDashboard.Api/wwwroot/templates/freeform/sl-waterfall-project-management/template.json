@@ -1,0 +1,21 @@
+{
+  "key": "sl-waterfall-project-management",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "🪜",
+  "name": "إدارة المشاريع بنموذج الشلال",
+  "nameEn": "Waterfall Project Management",
+  "description": "شريحتان لمراحل الشلال الست: درج أفقي بأيقونات، ثم أعمدة نازلة بنصوص لكل مرحلة",
+  "descriptionEn": "Two slides of the six waterfall phases: an iconed staircase, then descending columns with notes",
+  "sections": [
+    {
+      "title": "درج المراحل الست",
+      "titleEn": "Six-Phase Staircase"
+    },
+    {
+      "title": "أعمدة المراحل النازلة",
+      "titleEn": "Descending Phase Columns"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ أطوال الأشرطة ومواضع الأعمدة ثابتة لتصنع شكل الدرج."
+}
