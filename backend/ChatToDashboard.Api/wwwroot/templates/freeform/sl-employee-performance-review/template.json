@@ -1,0 +1,86 @@
+{
+  "key": "sl-employee-performance-review",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🧑‍💼",
+  "name": "مراجعة أداء الموظفين",
+  "nameEn": "Employee Performance Review",
+  "description": "سبع عشرة شريحة لمراجعة الأداء: ملخص، إطار تقييم، كفاءات، مؤشرات واتجاهات، نقاط قوة ونمو، خطة تطوير ومكافآت",
+  "descriptionEn": "17 slides: summary, evaluation framework, competencies, KPIs and trends, strengths, growth, development plan, rewards",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل القسم",
+      "titleEn": "Section Divider"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "إطار تقييم الأداء",
+      "titleEn": "Performance Evaluation Framework"
+    },
+    {
+      "title": "الكفاءات الأساسية ومقاييس السلوك",
+      "titleEn": "Core Competencies & Behavioral Metrics",
+      "needsData": true
+    },
+    {
+      "title": "مؤشرات الأداء الرئيسية",
+      "titleEn": "Key Performance Indicators",
+      "needsData": true
+    },
+    {
+      "title": "اتجاهات الإنتاجية",
+      "titleEn": "Productivity Trends",
+      "needsData": true
+    },
+    {
+      "title": "نقاط القوة والإسهامات",
+      "titleEn": "Strengths & Core Contributions"
+    },
+    {
+      "title": "مجالات النمو وتطوير المهارات",
+      "titleEn": "Areas for Growth & Skill Development"
+    },
+    {
+      "title": "آراء الزملاء",
+      "titleEn": "Peer & Cross-Functional Feedback"
+    },
+    {
+      "title": "خارطة تطوير الموظفين",
+      "titleEn": "Development & Upskilling Roadmap"
+    },
+    {
+      "title": "الأهداف القادمة",
+      "titleEn": "Upcoming Objectives & Alignment"
+    },
+    {
+      "title": "التقدير والمكافآت",
+      "titleEn": "Recognition & Rewards Summary",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "الأسئلة والأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "الشكر والتواصل",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم (العنكبوتي والحلقة والأعمدة والخطوط) في كتل JSON بالمعرّفات chart-data وchart-data-2 وchart-data-3 وchart-data-4."
+}
