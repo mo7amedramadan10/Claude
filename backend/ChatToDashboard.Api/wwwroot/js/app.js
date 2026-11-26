@@ -10273,8 +10273,9 @@ async function ffUseTemplate(t) {
   const lang = ffGalLangNow();
   if (!t || !t.page) { closeFfGallery(); ffSetTemplate(t); FF.lang = lang; ffRenderAttach(); return; }
   try {
-    const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/use`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sources: FF.sources || undefined, lang }) });
+    const r = await fetch(`/api/freeform/templates/${encodeURIComponent(t.key)}/use`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sources: FF.sources || undefined, lang, identityId: FF.identityId || undefined }) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `(${r.status})`);
+    await ffApplyIdentityToNew(d.design, d.html);
     closeFfGallery(); FF.kind = t.kind; await ffOpen(d.design.id);
   } catch (e) { alert('تعذّر فتح النموذج: ' + e.message); }
 }
@@ -10322,6 +10323,7 @@ function ffRenderAttach() {
   const srcChip = box.querySelector('#ff-src-chip');
   srcChip.addEventListener('click', e => { e.stopPropagation(); ffToggleSourcesPanel(); });
   srcChip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ffToggleSourcesPanel(); } });
+  ffRenderIdentityChip(box, locked);
   box.classList.remove('hidden');
   const chip = box.querySelector('.ff-chip');
   if (!locked) { chip.addEventListener('click', e => { if (e.target.closest('.ff-chip-x')) { ffSetTemplate(null); return; } openFfGallery(FF.kind || 'design'); }); chip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFfGallery(FF.kind || 'design'); } }); }
@@ -10382,6 +10384,59 @@ async function ffToggleSourcesPanel(force) {
 }
 el('ff-src-panel').addEventListener('click', e => e.stopPropagation());
 document.addEventListener('click', () => el('ff-src-panel')?.classList.add('hidden'));
+// ---------- هوية العرض عند إنشاء تصميم جديد ----------
+// FF.identityId: undefined = لم يُختر (الافتراضية ضمنًا)، '' = الافتراضية صراحةً، وإلا معرّف هوية من المكتبة.
+// تُرسل مع البناء الأول فيبني الموديل بألوانها وخطها وشعارها وتُحفظ مع التصميم، ومع «استخدم» لنموذج الصفحة الجاهزة تُعاد تلوين
+// صفحته بها فورًا (ffRebrand) كإصدار ثانٍ. لتصميم قائم تعرض الشريحة هويته وتفتح شريط «🎨 الهوية» لتغييرها.
+function ffIdentityName(id) { const it = (FFID.items || []).find(i => i.id === (id || '')); return it ? it.name : (id ? 'هوية' : 'الافتراضية'); }
+function ffRenderIdentityChip(box, locked) {
+  if (FF.kind === 'track' || FF.track) return; // لوحات المتابعة بلا هوية عرض
+  const id = locked ? (FF.design?.identityId || '') : (FF.identityId || '');
+  const it = (FFID.items || []).find(i => i.id === id); const b = it?.brand || {};
+  const canChange = !locked || FF.access !== 'view';
+  box.insertAdjacentHTML('beforeend', `<span class="ff-chip ident${id ? ' narrow' : ''}" id="ff-id-chip" ${canChange ? 'role="button" tabindex="0"' : ''} title="${locked ? 'هوية هذا العرض — اضغط لتغييرها' : 'الهوية التي يُبنى بها التصميم (الألوان والخط والشعار) — اضغط للاختيار'}"><span class="ff-chip-ico">🎨</span><b>الهوية: ${esc(ffIdentityName(id))}</b>${b.primary ? `<span class="ffid-sw" aria-hidden="true">${ffidSwatches(b)}</span>` : ''}</span>`);
+  if (!FFID.items) ffidLoad().then(() => ffRenderAttach()).catch(() => { FFID.items = []; });
+  if (!canChange) return;
+  const chip = box.querySelector('#ff-id-chip');
+  const act = () => { if (locked) { if (FF.design) (FFID.open ? ffidClose(true) : ffidOpen()); } else ffToggleIdentityPanel(); };
+  chip.addEventListener('click', e => { e.stopPropagation(); act(); });
+  chip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+}
+function ffRenderIdentityPanel() {
+  const panel = el('ff-id-pick'); const cur = FF.identityId || '';
+  panel.innerHTML = `<div class="ff-src-head"><b>هوية العرض</b><span>${(FFID.items || []).length} في المكتبة</span></div>
+    <div class="ff-idp-list" role="radiogroup" aria-label="هوية العرض">${(FFID.items || []).map(it => `<button type="button" class="ff-idp-item" role="radio" aria-checked="${it.id === cur}" data-id="${esc(it.id)}">
+      <span class="ffid-sw" aria-hidden="true">${ffidSwatches(it.brand || {})}</span>${it.brand?.logo ? `<img src="${esc(it.brand.logo)}" alt="" class="ffid-logo">` : ''}
+      <span class="grow">${esc(it.name)}</span>${it.brand?.font ? `<span class="note">${esc(it.brand.font)}</span>` : ''}${it.id === cur ? '<span class="ff-idp-check" aria-hidden="true">✓</span>' : ''}</button>`).join('') || '<div class="nested-empty">لا هويات بعد.</div>'}</div>
+    ${FFID.canEdit ? '<button type="button" class="btn btn-ghost btn-sm ff-idp-new" id="ff-idp-new">+ هوية جديدة</button>' : ''}
+    <div class="ff-src-foot">يبني جيم التصميم بألوان الهوية وخطها وشعارها، ويمكن تغييرها لاحقًا من «🎨 الهوية» في شريط الأدوات.</div>`;
+  panel.querySelectorAll('.ff-idp-item').forEach(b => b.addEventListener('click', () => { FF.identityId = b.dataset.id; panel.classList.add('hidden'); ffRenderAttach(); el('ff-id-chip')?.focus(); }));
+  panel.querySelector('#ff-idp-new')?.addEventListener('click', () => { panel.classList.add('hidden'); FFIDM.forNew = true; ffidmOpen(null); });
+}
+async function ffToggleIdentityPanel(force) {
+  const panel = el('ff-id-pick'); const open = force !== undefined ? force : panel.classList.contains('hidden');
+  el('ff-src-panel').classList.add('hidden');
+  if (!open) { panel.classList.add('hidden'); return; }
+  panel.innerHTML = '<small class="muted">يحمّل الهويات…</small>'; panel.classList.remove('hidden');
+  try { await ffidLoad(); ffRenderIdentityPanel(); (panel.querySelector('[aria-checked="true"]') || panel.querySelector('.ff-idp-item'))?.focus(); }
+  catch (e) { panel.innerHTML = `<small class="ffid-err">تعذّر تحميل الهويات: ${esc(e.message)}</small>`; }
+}
+el('ff-id-pick').addEventListener('click', e => e.stopPropagation());
+el('ff-id-pick').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); el('ff-id-pick').classList.add('hidden'); el('ff-id-chip')?.focus(); } });
+document.addEventListener('click', () => el('ff-id-pick')?.classList.add('hidden'));
+function ffIdentityLineHtml() { return FF.identityId ? `<span class="ff-msg-attach">🎨 الهوية: <b>${esc(ffIdentityName(FF.identityId))}</b></span>` : ''; }
+// نموذج صفحة جاهزة بهوية مختارة: إعادة تلوين صفحته بها (ألوانًا وخطًا وشعارًا) كإصدار ثانٍ فورًا
+async function ffApplyIdentityToNew(design, html) {
+  if (FF.identityId === undefined || !html) return;
+  try {
+    if (!FFID.items) await ffidLoad();
+    const brand = ffidBrandOf(FF.identityId || ''); if (!brand || !(brand.primary || brand.font || brand.logo)) return;
+    const res = ffRebrand(html, brand, ffidDefaultMap(ffidFamilies(new DOMParser().parseFromString(html, 'text/html'))));
+    const doc = new DOMParser().parseFromString(res.html, 'text/html'); doc.querySelectorAll('img[data-jeem-logo]').forEach(i => i.removeAttribute('src'));
+    const out = (/^\s*<!doctype/i.test(res.html) ? '<!DOCTYPE html>\n' : '') + doc.documentElement.outerHTML;
+    await fetch(`/api/freeform/${encodeURIComponent(design.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html: out, identityId: FF.identityId || '', note: `تطبيق الهوية «${ffIdentityName(FF.identityId)}»` }) });
+  } catch { /* يبقى النموذج بألوانه الأصلية؛ تُغيَّر الهوية لاحقًا من «🎨 الهوية» */ }
+}
 function ffAttachLineHtml(t) { return t ? `<span class="ff-msg-attach">📎 نموذج: <b>${esc(ffTplName(t, FF.lang))}</b>${FF.lang === 'en' ? ' · English' : ''}</span>` : `<span class="ff-msg-attach">✦ ${FF.kind === 'track' ? 'لوحة متابعة' : 'تصميم حر'} بلا نموذج</span>`; }
 
 // ---------- تحديث البيانات: بلا موديل (إعادة تنفيذ الاستعلامات المسجَّلة) أو إعادة البناء بالموديل ----------
@@ -10772,8 +10827,8 @@ async function ffAsk(text, opts) {
   ccSetLoading('ff-pane', FF.design ? 'جارٍ تعديل الصفحة' : 'جارٍ بناء الصفحة', 'الموديل يعمل على طلبك وقد يستغرق حتى دقيقة — ستظهر النتيجة هنا فور اكتمالها.');
   try {
     if (!FF.design && (!FF.kind || FF.template === undefined)) { FF.busy = false; ffPushMsg('bot', 'اختر نوع المخرج أولًا من بطاقات «اصنع شيئًا جديدًا» (مستند، شرائح، تصميم، لوحة، حركة) ثم نموذجًا أو «تصميم حر بلا نموذج».'); el('ff-send').disabled = false; el('ff-status').textContent = ''; return; }
-    if (!FF.design) FF.messages[FF.messages.length - 1].extraHtml = ffAttachLineHtml(FF.template) + ffSourcesLineHtml(FF.sources) + ffAttachmentsLineHtml(atts); // أول رسالة تحمل المرفق والمصادر ليظهر الاختيار في المحادثة
-    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: opts?.html ? opts.html : FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, lang: FF.design ? undefined : (FF.lang || ffLangDefault()), sources: FF.design ? undefined : FF.sources, attachments: atts.length ? atts : undefined, scope: FF.design ? (opts?.scope || ffCurrentScope()) : undefined };
+    if (!FF.design) FF.messages[FF.messages.length - 1].extraHtml = ffAttachLineHtml(FF.template) + ffSourcesLineHtml(FF.sources) + ffIdentityLineHtml() + ffAttachmentsLineHtml(atts); // أول رسالة تحمل المرفق والمصادر ليظهر الاختيار في المحادثة
+    const body = { message: text, designId: FF.design ? FF.design.id : null, kind: FF.design ? FF.design.kind : FF.kind, templateKey: !FF.design && FF.template ? FF.template.key : null, html: opts?.html ? opts.html : FF.design && FF.viewing != null && FF.viewing !== FF.design.version ? FF.html : null, lang: FF.design ? undefined : (FF.lang || ffLangDefault()), sources: FF.design ? undefined : FF.sources, identityId: FF.design ? undefined : (FF.identityId || undefined), attachments: atts.length ? atts : undefined, scope: FF.design ? (opts?.scope || ffCurrentScope()) : undefined };
     const r = await fetch('/api/freeform/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `(${r.status})`);
@@ -10887,7 +10942,7 @@ if (SpeechRecognitionCtor) {
   });
   el('ff-form').addEventListener('submit', () => { if (on) stop(); }, true);
 }
-el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.atts = []; ffRenderFiles(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.lang = null; ffGalLang = null; FF.access = null; ffApplyAccess(); ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
+el('ff-new-btn').addEventListener('click', () => { ffTrackUnmount(); FF.atts = []; ffRenderFiles(); FF.design = null; FF.html = ''; FF.versions = []; FF.messages = []; FF.viewing = null; FF.publishedUrl = null; FF.kind = null; FF.template = undefined; FF.sources = null; FF.identityId = undefined; FF.lang = null; ffGalLang = null; FF.access = null; ffApplyAccess(); ffRenderAttach(); ffShowStart(); ffRenderMessages(); });
 el('ff-present').addEventListener('click', () => { const f = el('ff-preview'); (f.requestFullscreen || f.webkitRequestFullscreen || function () {}).call(f); });
 el('ff-replay').addEventListener('click', () => { const f = el('ff-preview'); const h = f.srcdoc; f.srcdoc = ''; setTimeout(() => { f.srcdoc = h; }, 30); });
 el('ff-print').addEventListener('click', () => { if (!FF.html) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(ffInsertBeforeBodyEnd(ffWithRuntimeKits(FF.html, FF.design?.kind), '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400))<\/script>')); w.document.close(); });
@@ -11996,7 +12051,7 @@ function ffidmOpen(id) {
   el('ffidm-delete').classList.toggle('hidden', !(it && it.id)); el('ffidm-error').classList.add('hidden');
   ffidmPreview(); el('ff-idm-modal').classList.remove('hidden'); el('ffidm-name').focus();
 }
-function ffidmClose() { el('ff-idm-modal').classList.add('hidden'); (FFID.open ? el('ffid-new') : el('ff-identity'))?.focus(); }
+function ffidmClose() { el('ff-idm-modal').classList.add('hidden'); const nw = FFIDM.forNew; FFIDM.forNew = false; (nw ? el('ff-id-chip') : FFID.open ? el('ffid-new') : el('ff-identity'))?.focus(); }
 ['ffidm-primary', 'ffidm-secondary', 'ffidm-accent', 'ffidm-font', 'ffidm-name'].forEach(id => el(id).addEventListener('input', ffidmPreview));
 el('ffidm-logo-file').addEventListener('change', () => {
   const f = el('ffidm-logo-file').files[0]; el('ffidm-logo-file').value = ''; if (!f) return;
@@ -12025,6 +12080,8 @@ el('ffidm-form').addEventListener('submit', async e => {
     if (isDefault) state.dashBrand = undefined; // رأس اللوحات يعيد جلب الهوية الافتراضية
     const keep = isDefault ? '' : (FFIDM.id || d.id);
     await ffidLoad(); el('ff-idm-modal').classList.add('hidden');
+    // هوية جديدة من شريحة الهوية لتصميم لم يُبنَ بعد: تُختار له مباشرة
+    if (FFIDM.forNew) { FFIDM.forNew = false; FF.identityId = keep; ffRenderAttach(); el('ff-id-chip')?.focus(); return; }
     if (FFID.open) { ffidSelect(keep); el('ffid-status').textContent = 'حُفظت الهوية في المكتبة. المعاينة الآن بها — اضغط «تطبيق كإصدار جديد» ليتغيّر العرض فعلًا (العروض التي طُبّقت عليها من قبل لا تتغيّر إلا بإعادة التطبيق).'; } el('ffid-list').querySelector(`[data-ffid="${CSS.escape(keep)}"]`)?.focus();
   } catch (x) { err.textContent = x.message; err.classList.remove('hidden'); }
   finally { btn.disabled = false; }

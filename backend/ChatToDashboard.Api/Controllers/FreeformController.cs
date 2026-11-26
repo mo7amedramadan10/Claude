@@ -18,13 +18,15 @@ public class FreeformGenerateRequest { public string Message { get; set; } = "";
     public string? Lang { get; set; } /// <summary>المصادر المختارة (systems/files)؛ null = لا تغيير (المحفوظة مع التصميم أو الكل).</summary>
     public Sources.SourceSelection? Sources { get; set; } /// <summary>مرفقات هذه الرسالة (نصوص مستخرجة، صور، ملفات بيانات محفوظة).</summary>
     public List<FreeformAttachment>? Attachments { get; set; } /// <summary>نطاق التعديل لتصميم قائم: slide (شريحة بعينها) أو element (العنصر المعلَّم بـ data-jeem-target في Html)؛ null/all = الصفحة كلها.</summary>
-    public FreeformScopeRequest? Scope { get; set; } }
+    public FreeformScopeRequest? Scope { get; set; } /// <summary>هوية العرض للتصميم الجديد من مكتبة الهويات ("" أو null = الافتراضية)؛ تُتجاهل لتصميم قائم.</summary>
+    public string? IdentityId { get; set; } }
 public class FreeformSaveRequest { public string? IdentityId { get; set; } public string? Html { get; set; } public string? Title { get; set; } public string? Note { get; set; } public bool? AutoRefresh { get; set; } public Sources.SourceSelection? Sources { get; set; } public bool? ClearSources { get; set; } }
 /// <summary>إعدادات مشاركة تصميم: الوصول العام (private/project/org) ودوره، والمستخدمون بالاسم بأدوارهم.</summary>
 public class FreeformSharingRequest { public string? Scope { get; set; } public string? ScopeRole { get; set; } public List<FreeformShare> Users { get; set; } = new(); }
 public class FreeformPublishRequest { public string? Slug { get; set; } public string? Title { get; set; } }
 public class FreeformUsePageRequest { public string? Title { get; set; } public Sources.SourceSelection? Sources { get; set; } /// <summary>لغة الصفحة: ar (افتراضي) أو en.</summary>
-    public string? Lang { get; set; } }
+    public string? Lang { get; set; } /// <summary>هوية العرض المختارة للتصميم الجديد ("" أو null = الافتراضية).</summary>
+    public string? IdentityId { get; set; } }
 public class FreeformConvertRequest { public string Kind { get; set; } = ""; public string? Note { get; set; } public Sources.SourceSelection? Sources { get; set; } /// <summary>نموذج النوع الجديد المختار من معرضه (اختياري).</summary>
     public string? TemplateKey { get; set; } }
 /// <summary>«اطلب من جيم حركة لهذه الشريحة»: نص الشريحة الظاهرة وألوانها وخطها من المحرر، وطلب المستخدم الاختياري.</summary>
@@ -100,6 +102,15 @@ public partial class FreeformController : ControllerBase
         return System.Text.Json.JsonSerializer.Serialize(new Sources.SourceSelection { Systems = s.Systems ?? new(), Files = s.Files ?? new() });
     }
     private static Sources.SourceSelection? StoredSources(FreeformDesign? d) => d?.SourcesSelection;
+
+    /// <summary>هوية تصميم جديد من الطلب: ("" أو null) = الافتراضية (Id null)؛ معرّف غير موجود في مكتبة الكيان = Ok false.</summary>
+    private async Task<(bool Ok, string? Id)> NewIdentityAsync(string? identityId, string? entityId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(identityId)) return (true, null);
+        var id = identityId.Trim();
+        var found = await HttpContext.RequestServices.GetRequiredService<BrandIdentityStore>().GetAsync(entityId, id, ct);
+        return found is null ? (false, null) : (true, id);
+    }
 
     /// <summary>هوية التصميم: هوية المكتبة المختارة له (<paramref name="identityId"/>) إن وُجدت في مشروعه، وإلا الهوية الافتراضية للمشروع.</summary>
     private async Task<DeckBrand?> BrandAsync(string? entityId, CancellationToken ct, string? identityId = null)
@@ -350,12 +361,15 @@ public partial class FreeformController : ControllerBase
         var t = FreeformTemplates.Find(key); if (t is null) return NotFound();
         var en = request?.Lang == "en";
         var html = await TemplatePageHtmlAsync(t, ct, request?.Lang); if (html is null) return BadRequest(new { error = "هذا النموذج بلا صفحة جاهزة." });
+        var useIdentity = await NewIdentityAsync(request?.IdentityId, selection.EntityId, ct);
+        if (!useIdentity.Ok) return BadRequest(new { error = "الهوية المختارة غير موجودة — اخترها من جديد." });
         var title = string.IsNullOrWhiteSpace(request?.Title) ? (en && t.NameEn is not null ? t.NameEn : t.Name).Split('—')[0].Trim() : request!.Title!.Trim();
         if (title.Length > 120) title = title[..120];
         var design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, title, html, $"بدء من النموذج الجاهز «{t.Name}»", t.Kind, t.Key, ct, SourcesJsonOf(request?.Sources));
+        if (useIdentity.Id is not null) { await _store.SetIdentityAsync(design.Id, useIdentity.Id, ct); design.IdentityId = useIdentity.Id; }
         await _store.AddMessageAsync(design.Id, "user", $"ابدأ من النموذج الجاهز «{t.Name}».", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", $"فُتح النموذج «{t.Name}» بشرائحه الـ{t.Sections.Count} كما هو (بلا موديل). عدّل النصوص مباشرة من «✏️ تعديل النص»، أو اكتب هنا ما تريد تغييره (مثل: «املأ الشريحة الخامسة بأرقام المبيعات الفعلية»).", 1, ct);
-        var brand = await BrandAsync(selection.EntityId, ct);
+        var brand = await BrandAsync(selection.EntityId, ct, design.IdentityId);
         return Ok(new { design, html = ApplyBrandAssets(design.Html, brand), versions = await _store.VersionsAsync(design.Id, ct), messages = await _store.MessagesAsync(design.Id, 60, ct) });
     }
 
@@ -462,6 +476,7 @@ public partial class FreeformController : ControllerBase
         catch (InvalidOperationException ex) { return StatusCode(503, new { error = ex.Message }); }
         if (string.IsNullOrWhiteSpace(result.Html)) return StatusCode(502, new { error = "لم يُنتج الموديل صفحة من التحويل — جرّب ثانية أو أضف ملاحظة." });
         var design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, $"{src.Title} ({toLabel})", result.Html, message, request.Kind, tpl?.Key, ct, SourcesJsonOf(wantedSrc));
+        if (src.IdentityId is not null) { await _store.SetIdentityAsync(design.Id, src.IdentityId, ct); design.IdentityId = src.IdentityId; } // النسخة المحوَّلة ترث هوية الأصل
         if (result.Queries is { Count: > 0 } cq) await _store.SetQueriesAsync(design.Id, cq, DateTime.UtcNow, await _fingerprints.ComputeAsync(cq.Select(q => q.Sql), selection.EntityId, ct), ct);
         await _store.AddMessageAsync(design.Id, "user", $"تحويل «{src.Title}» من {fromLabel} إلى {toLabel}{(tpl is null ? "" : $" على نموذج «{tpl.Name}»")}", null, ct);
         await _store.AddMessageAsync(design.Id, "assistant", result.Reply, design.Version, ct);
@@ -622,7 +637,10 @@ public partial class FreeformController : ControllerBase
         var sourcesJson = SourcesJsonOf(request.Sources);
         var currentHtml = !string.IsNullOrWhiteSpace(request.Html) ? request.Html : design?.Html;
         var context = await _tools.DescribeSourcesAsync(selection, ct);
-        var brand = await BrandAsync(selection.EntityId, ct, design?.IdentityId);
+        // الهوية: المحفوظة مع التصميم القائم، أو المختارة عند إنشاء تصميم جديد (يُرفض معرّف ليس في مكتبة هذا الكيان)
+        var newIdentity = design is null ? await NewIdentityAsync(request.IdentityId, selection.EntityId, ct) : (Ok: true, Id: null);
+        if (!newIdentity.Ok) return BadRequest(new { error = "الهوية المختارة غير موجودة — اخترها من جديد." });
+        var brand = await BrandAsync(selection.EntityId, ct, design?.IdentityId ?? newIdentity.Id);
         FreeformResult result;
         var kind = FreeformStore.NormalizeKind(design?.Kind ?? request.Kind);
         // النموذج: المحفوظ مع التصميم (يُبقي البنية عبر التعديلات) وإلا المختار في الطلب الأول
@@ -676,6 +694,7 @@ public partial class FreeformController : ControllerBase
         {
             var title = TitleFrom(request.Message);
             design = await _store.CreateAsync(selection.EntityId, user.OrganizationId, user.Id, title, result.Html ?? "", request.Message, kind, template?.Key, ct, sourcesJson);
+            if (newIdentity.Id is not null) { await _store.SetIdentityAsync(design.Id, newIdentity.Id, ct); design.IdentityId = newIdentity.Id; }
             version = design.Version > 0 ? design.Version : null;
         }
         else

@@ -3720,6 +3720,25 @@ html.is-embed, .is-embed body { height: auto; min-height: 0; overflow: hidden; }
 .jeem-scope .ff-attach { display: flex; flex-wrap: wrap; gap: 6px; }
 .jeem-scope .ff-chip.src .ff-chip-ico { background: #E8F3EC; }
 .jeem-scope .ff-chip.src.narrow { border-color: #BFE0CB; background: #F1F9F4; }
+/* شريحة هوية العرض ولوحة اختيارها عند إنشاء تصميم جديد */
+.jeem-scope .ff-chip.ident .ff-chip-ico { background: #F3ECFB; }
+.jeem-scope .ff-chip.ident.narrow { border-color: #D9C8F0; background: #F8F3FD; }
+.jeem-scope .ff-chip.ident .ffid-sw { display: inline-flex; gap: 2px; }
+.jeem-scope .ff-chip.ident .ffid-sw i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,.08); }
+.jeem-scope .ff-id-pick .ff-idp-list { display: flex; flex-direction: column; gap: 2px; }
+.jeem-scope .ff-idp-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: var(--fs-sm); text-align: start; cursor: pointer; }
+.jeem-scope .ff-idp-item:hover, .jeem-scope .ff-idp-item:focus-visible { background: var(--surface-2); }
+.jeem-scope .ff-idp-item[aria-checked="true"] { background: var(--surface-2); font-weight: 700; }
+.jeem-scope .ff-idp-item .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jeem-scope .ff-idp-item .note { font-size: 11px; color: var(--ink-3); }
+.jeem-scope .ff-idp-item .ffid-sw { display: inline-flex; gap: 2px; flex: none; }
+.jeem-scope .ff-idp-item .ffid-sw i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,.08); }
+.jeem-scope .ff-idp-item .ffid-sw i.none { background: repeating-linear-gradient(45deg, #ddd 0 2px, transparent 2px 4px) !important; }
+.jeem-scope .ff-idp-item .ffid-logo { height: 18px; max-width: 48px; object-fit: contain; flex: none; }
+.jeem-scope .ff-idp-check { color: var(--brand, #0B5CAD); font-weight: 700; }
+.jeem-scope .ff-idp-new { margin: 6px 4px 0; }
+:root[data-theme="dark"] .jeem-scope .ff-chip.ident .ff-chip-ico { background: color-mix(in srgb, #8A5CC7 30%, var(--surface)); }
+:root[data-theme="dark"] .jeem-scope .ff-chip.ident.narrow { border-color: color-mix(in srgb, #8A5CC7 50%, var(--surface)); background: color-mix(in srgb, #8A5CC7 14%, var(--surface)); }
 .jeem-scope .cc-composer .input-box { position: relative; }
 .jeem-scope .ff-src-panel { position: absolute; inset-inline-start: 10px; bottom: calc(100% - 4px); z-index: 40; width: 320px; max-width: calc(100vw - 32px); max-height: 60vh; overflow: auto; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(20, 40, 60, .14); }
 .jeem-scope .ff-src-panel .ff-src-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 8px; font-size: var(--fs-xs); color: var(--ink-3); }
