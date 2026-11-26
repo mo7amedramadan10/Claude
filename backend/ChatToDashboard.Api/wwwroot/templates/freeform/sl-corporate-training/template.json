@@ -1,0 +1,53 @@
+{
+  "key": "sl-corporate-training",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🎓",
+  "name": "التدريب المؤسسي",
+  "nameEn": "Corporate Training",
+  "description": "عشر شرائح لدورة تدريبية: غلاف، مقدمة، مخطط الوحدات، النظرية، تعمّق، نشاط، تحقق، دراسة حالة، ملخص، وشهادة",
+  "descriptionEn": "Ten training slides: cover, intro, module outline, theory, deep dive, activity, quiz, case study, summary, certificate",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "مقدمة الدورة",
+      "titleEn": "Course Introduction"
+    },
+    {
+      "title": "مخطط الوحدات",
+      "titleEn": "Module Outline"
+    },
+    {
+      "title": "نظرة على النظرية",
+      "titleEn": "Theory Overview"
+    },
+    {
+      "title": "التعمّق",
+      "titleEn": "Deep Dive"
+    },
+    {
+      "title": "شريحة النشاط",
+      "titleEn": "Activity Slide"
+    },
+    {
+      "title": "التحقق من المعرفة",
+      "titleEn": "Knowledge Check"
+    },
+    {
+      "title": "دراسة حالة وتطبيق",
+      "titleEn": "Case Study & Application"
+    },
+    {
+      "title": "الملخص",
+      "titleEn": "Summary"
+    },
+    {
+      "title": "الموارد والشهادة",
+      "titleEn": "Resources & Certificate"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص فقط؛ العنصر المُبرز في القوائم المرقّمة يحمل الصنف on."
+}

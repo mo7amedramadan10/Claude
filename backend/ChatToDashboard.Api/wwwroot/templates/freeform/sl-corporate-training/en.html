@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corporate Training</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@900&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «التدريب المؤسسي»: عشر شرائح بخلفية بيضاء (عدا الغلاف الداكن)، عنابي داكن #360D1B وبرتقالي #F06F4F ونبيذي #7B2435، بطاقات بزوايا مدوّرة، دوائر مرقّمة، مربعات تأشير بظل، وشبكات نقاط زخرفية. الصور الفوتوغرافية مقصوصة من الأصل في assets. */
+  :root { --font: 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #000000; --accent: #F06F4F; --bg: #FFFFFF; --dark: #1A060C; --maroon: #360D1B; --wine: #7B2435; --wine-2: #722837; --orange: #F06F4F; --salmon: #F6B5A5; --text: #2B2B2B; --muted: #4A4A4A; --gray: #7F7F7F; --check: #9A4E36; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* أنماط مشتركة */
+  .frame h1, .frame h2, .frame p { margin: 0; }
+  .abs { position: absolute; }
+  .ttl { position: absolute; top: 96px; inset-inline-start: 73px; font-size: 51px; font-weight: 700; line-height: 57px; color: var(--ink); letter-spacing: -0.3px; }
+  html[lang="ar"] .ttl { font-weight: 800; font-size: 50px; line-height: 64px; letter-spacing: 0; top: 90px; }
+  .kick { position: absolute; top: 84px; inset-inline-start: 73px; font-size: 17.7px; letter-spacing: 3.4px; color: var(--gray); text-transform: uppercase; }
+  html[lang="ar"] .kick { letter-spacing: 0; font-size: 19px; top: 80px; }
+  .lead { position: absolute; font-size: 22px; line-height: 29px; color: #111; }
+  .p20 { font-size: 19.6px; line-height: 25.7px; }
+  html[lang="ar"] .lead { line-height: 32px; font-size: 21px; }
+  html[lang="ar"] .p20 { line-height: 28px; font-size: 19px; }
+  .dots { position: absolute; background-image: radial-gradient(circle, var(--maroon) 3.2px, transparent 3.8px); }
+  /* مربع تأشير أبيض بظل */
+  .chk { position: absolute; inset-inline-start: 73px; width: 42px; height: 42px; border-radius: 9px; background: #fff; box-shadow: 0 7px 14px rgb(60 20 30 / .13), 0 1px 3px rgb(0 0 0 / .06); color: var(--check); display: grid; place-items: center; }
+  .chk svg { width: 20px; height: 20px; }
+  .chk-t { position: absolute; inset-inline-start: 143px; font-size: 20.5px; line-height: 25px; color: var(--text); font-size: 19.6px; }
+  html[lang="ar"] .chk-t { font-size: 19px; line-height: 26px; }
+  /* قائمة مرقّمة بعنصر نشط في شريط عنابي (الشريحتان 5 و10) */
+  .nl { position: absolute; inset-inline-start: 73px; width: 368px; height: 58px; border-radius: 29px; display: flex; align-items: center; gap: 22px; padding-inline-start: 17px; color: #3A1421; font-size: 19.8px; }
+  .nl b { font-size: 22px; font-weight: 700; color: var(--maroon); }
+  .nl.on { background: var(--maroon); color: #fff; }
+  .nl.on b { color: #fff; }
+  html[lang="ar"] .nl { font-size: 19px; }
+  .h24 { position: absolute; inset-inline-start: 73px; font-size: 26px; font-weight: 700; color: #000; line-height: 1.2; }
+  .ph { position: absolute; display: block; object-fit: cover; }
+
+  /* 1) الغلاف */
+  .s1 { background: var(--dark); }
+  .s1 .panel { position: absolute; top: 0; inset-inline-end: 0; width: 300px; height: 720px; background: var(--orange); }
+  .s1 .trainee { top: 228px; inset-inline-start: 600px; width: 525px; height: 492px; }
+  html[dir="rtl"] .s1 .trainee, html[dir="rtl"] .s2 .meet, html[dir="rtl"] .s10 .phone { transform: scaleX(-1); }
+  .s1 .logo { position: absolute; top: 52px; inset-inline-start: 63px; width: 74px; height: 82px; color: #fff; }
+  .s1 .logo-t { position: absolute; top: 66px; inset-inline-start: 164px; color: #fff; font-size: 17.1px; line-height: 26px; letter-spacing: 1.6px; text-transform: uppercase; }
+  html[lang="ar"] .s1 .logo-t { letter-spacing: 0; font-size: 19px; line-height: 28px; top: 64px; }
+  .s1 .m1 { position: absolute; top: 64px; inset-inline-start: 755px; width: 72px; text-align: center; color: #fff; font-size: 17.2px; }
+  .s1 .m2 { position: absolute; top: 64px; inset-inline-start: 900px; width: 62px; text-align: center; color: #fff; font-size: 17.2px; }
+  .s1 .home { position: absolute; top: 60px; inset-inline-start: 1016px; width: 111px; height: 33px; border-radius: 17px; background: #fff; color: var(--dark); font-size: 17.4px; font-weight: 700; display: grid; place-items: center; }
+  .s1 .burger { position: absolute; top: 68px; inset-inline-start: 1184px; width: 25px; height: 17px; border-top: 2.5px solid #fff; border-bottom: 2.5px solid #fff; }
+  .s1 .burger::after { content: ''; position: absolute; inset-inline: 0; top: 5px; border-top: 2.5px solid #fff; }
+  .s1 .c1 { position: absolute; top: 255px; inset-inline-start: 62px; color: #fff; font-size: 68px; font-weight: 700; line-height: 77px; text-transform: uppercase; }
+  html[lang="ar"] .s1 .c1 { font-size: 76px; line-height: 92px; font-weight: 800; letter-spacing: 0; top: 236px; }
+  .s1 .c2 { position: absolute; top: 430px; inset-inline-start: 63px; color: #fff; font-size: 22.8px; letter-spacing: 3.3px; text-transform: uppercase; }
+  html[lang="ar"] .s1 .c2 { letter-spacing: 0; font-size: 28px; top: 424px; }
+  .s1 .btn { position: absolute; top: 482px; inset-inline-start: 63px; width: 254px; height: 50px; border-radius: 25px; background: var(--wine); color: #fff; font-size: 21px; font-weight: 700; display: grid; place-items: center; }
+  .s1 .go { position: absolute; top: 482px; inset-inline-start: 327px; width: 50px; height: 50px; border-radius: 50%; background: var(--orange); color: var(--dark); display: grid; place-items: center; }
+  .s1 .go svg, .s9 .arr svg { width: 28px; height: 28px; }
+  html[dir="rtl"] .s1 .go svg, html[dir="rtl"] .s9 .arr svg { transform: scaleX(-1); }
+  .s1 .c3 { position: absolute; top: 568px; inset-inline-start: 63px; color: #fff; font-size: 19.5px; }
+  .s1 .dots { top: 286px; inset-inline-end: 89px; width: 168px; height: 80px; background-size: 33.6px 20px; background-image: radial-gradient(circle, #341125 3.3px, transparent 3.9px); }
+
+  /* 2) مقدمة الدورة */
+  .s2 .meet { top: 80px; inset-inline-start: 48px; width: 540px; height: 578px; clip-path: path('M28,0 H302 A28,28 0 0 1 330,28 V65 H512 A28,28 0 0 1 540,93 V550 A28,28 0 0 1 512,578 H238 A28,28 0 0 1 210,550 V515 H28 A28,28 0 0 1 0,487 V28 A28,28 0 0 1 28,0 Z'); }
+  .s2 .dots { top: 577px; inset-inline-start: 152px; width: 130px; height: 72px; background-size: 26px 24px; }
+  .s2 .ttl { top: 100px; inset-inline-start: 682px; }
+  html[lang="ar"] .s2 .ttl { top: 92px; }
+  .s2 .lead { top: 243px; inset-inline-start: 682px; width: 500px; }
+  .card { position: absolute; border-radius: 22px; color: #fff; }
+  .card .ib { position: absolute; top: 19px; inset-inline-end: 15px; width: 52px; height: 52px; border-radius: 9px; background: #fff; color: var(--maroon); display: grid; place-items: center; }
+  .card .ib svg { width: 32px; height: 32px; }
+  .card h2 { position: absolute; top: 79px; inset-inline-start: 23px; font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .card p { position: absolute; top: 121px; inset-inline-start: 23px; width: 290px; font-size: 17.2px; line-height: 22.6px; }
+  html[lang="ar"] .card p { font-size: 17px; line-height: 25px; }
+  .s2 .k1 { top: 419px; inset-inline-start: 532px; width: 320px; height: 223px; background: var(--maroon); }
+  .s2 .k2 { top: 419px; inset-inline-start: 881px; width: 321px; height: 223px; background: var(--orange); }
+
+  /* 3) مخطط الوحدات */
+  .s3 .lead { top: 249px; inset-inline-start: 73px; width: 452px; }
+  .s3 .chk-t { width: 470px; }
+  .s3 .row { position: absolute; inset-inline-start: 683px; width: 500px; height: 159px; border-radius: 22px; background: var(--orange); }
+  .s3 .num { position: absolute; inset-inline-start: 640px; width: 92px; height: 92px; border-radius: 50%; background: var(--maroon); color: #fff; font-size: 45px; font-weight: 300; display: grid; place-items: center; }
+  html[lang="ar"] .s3 .num { font-weight: 500; font-size: 38px; }
+  .s3 .row h2 { position: absolute; top: 31px; inset-inline-start: 90px; color: #fff; font-size: 26px; font-weight: 700; }
+  .s3 .row p { position: absolute; top: 76px; inset-inline-start: 90px; width: 390px; color: #fff; font-size: 19.6px; line-height: 25px; }
+  html[lang="ar"] .s3 .row p { font-size: 18.5px; line-height: 27px; top: 74px; }
+  .s3 .dots { top: 663px; inset-inline-start: 1149px; width: 132px; height: 60px; background-size: 33px 20px; }
+
+  /* 4) نظرة على النظرية */
+  .s4 .ttl { top: 112px; } html[lang="ar"] .s4 .ttl { top: 104px; }
+  .s4 .lead { top: 198px; inset-inline-start: 73px; width: 510px; }
+  .s4 .trainer { top: 86px; inset-inline-start: 663px; width: 575px; height: 294px; border-radius: 16px; }
+  .s4 .col { position: absolute; top: 429px; width: 305px; height: 259px; border-radius: 12px; }
+  .s4 .col .n { position: absolute; top: 34px; inset-inline-start: 0; font-size: 37.5px; font-weight: 700; line-height: 1.2; }
+  .s4 .col h2 { position: absolute; top: 92px; inset-inline-start: 0; font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .s4 .col p { position: absolute; top: 147px; inset-inline-start: 0; width: 240px; font-size: 19.8px; line-height: 25.5px; color: var(--muted); }
+  html[lang="ar"] .s4 .col p { font-size: 18.5px; line-height: 27px; }
+  .s4 .c1 { inset-inline-start: 73px; color: var(--maroon); }
+  .s4 .c2 { inset-inline-start: 347px; background: var(--maroon); color: #fff; }
+  .s4 .c2 .n, .s4 .c2 h2, .s4 .c2 p { inset-inline-start: 31px; } .s4 .c2 .n { top: 30px; } .s4 .c2 h2 { top: 89px; } .s4 .c2 p { top: 144px; color: #fff; }
+  .s4 .c3 { inset-inline-start: 688px; color: var(--orange); }
+  .s4 .c4 { inset-inline-start: 966px; color: var(--wine-2); }
+
+  /* 5) تعمّق */
+  .s5 .ttl { top: 112px; } html[lang="ar"] .s5 .ttl { top: 104px; }
+  .s5 .lead { top: 198px; inset-inline-start: 73px; width: 835px; }
+  .s5 .h24 { top: 311px; }
+  .s5 .sub { position: absolute; top: 356px; inset-inline-start: 73px; width: 390px; color: #111; }
+  .s5 .w1 { top: 460px; inset-inline-start: 463px; width: 240px; height: 188px; border-radius: 16px; }
+  .s5 .w2 { top: 352px; inset-inline-start: 714px; width: 239px; height: 296px; border-radius: 16px; }
+  .s5 .w3 { top: 260px; inset-inline-start: 968px; width: 240px; height: 394px; border-radius: 16px; }
+  .s5 .ov { position: absolute; top: 567px; inset-inline-start: 984px; width: 210px; color: #fff; font-size: 17.2px; line-height: 22.6px; }
+  html[lang="ar"] .s5 .ov { font-size: 17px; line-height: 25px; top: 556px; }
+
+  /* 6) النشاط */
+  .s6 .ttl { top: 100px; } html[lang="ar"] .s6 .ttl { top: 94px; }
+  .s6 .lead, .s7 .lead { top: 198px; inset-inline-start: 73px; width: 1130px; }
+  .s6 .line { position: absolute; top: 345px; inset-inline-start: 104px; width: 1176px; border-top: 3px solid var(--maroon); }
+  .s6 .st { position: absolute; top: 315px; width: 63px; height: 63px; border-radius: 50%; display: grid; place-items: center; font-size: 25px; font-weight: 700; }
+  .s6 .st1 { inset-inline-start: 73px; background: #fff; border: 3px solid var(--maroon); color: var(--maroon); }
+  .s6 .st2 { inset-inline-start: 455px; background: var(--maroon); color: #fff; }
+  .s6 .st3 { inset-inline-start: 837px; background: var(--orange); color: #fff; }
+  .s6 .box { position: absolute; top: 407px; width: 370px; height: 253px; border-radius: 12px; box-shadow: 0 14px 30px rgb(0 0 0 / .08); }
+  .s6 .box h2 { position: absolute; top: 72px; inset-inline-start: 23px; font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .s6 .box p { position: absolute; top: 135px; inset-inline-start: 23px; width: 325px; font-size: 17.2px; line-height: 22.4px; }
+  html[lang="ar"] .s6 .box p { font-size: 17px; line-height: 25px; top: 128px; }
+  .s6 .b1 { inset-inline-start: 73px; background: #fff; color: #3A1421; } .s6 .b1 p { color: #111; }
+  .s6 .b2 { inset-inline-start: 455px; background: var(--maroon); color: #fff; }
+  .s6 .b3 { inset-inline-start: 837px; background: var(--orange); color: #fff; } .s6 .b3 p { color: #FFF3EE; }
+
+  /* 7) التحقق من المعرفة */
+  .s7 .ttl { top: 100px; } html[lang="ar"] .s7 .ttl { top: 94px; }
+  .s7 .q { position: absolute; top: 350px; width: 230px; height: 312px; border-inline-start: 1.3px solid #3A1421; }
+  .s7 .q::before { content: ''; position: absolute; top: -6px; inset-inline-start: -7px; width: 12px; height: 12px; border-radius: 50%; background: #3A1421; }
+  .s7 .q h2 { position: absolute; top: 56px; inset-inline-start: 14px; font-size: 23px; font-weight: 700; color: #000; line-height: 1.2; }
+  .s7 .q p { position: absolute; top: 101px; inset-inline-start: 14px; width: 205px; font-size: 17.3px; line-height: 22.5px; color: #111; }
+  html[lang="ar"] .s7 .q p { font-size: 17px; line-height: 25px; }
+  .s7 .q .big { position: absolute; bottom: -17px; inset-inline-start: 9px; font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 110px; line-height: 1; color: var(--salmon); }
+
+  /* 8) دراسة حالة وتطبيق */
+  .s8 .lead { top: 256px; inset-inline-start: 73px; width: 410px; }
+  .s8 .chk-t { font-size: 17.2px; line-height: 23px; width: 290px; }
+  html[lang="ar"] .s8 .chk-t { font-size: 17px; line-height: 25px; }
+  .s8 .dot { position: absolute; inset-inline-start: 583px; width: 51px; height: 51px; border-radius: 50%; color: #fff; font-size: 19px; font-weight: 700; display: grid; place-items: center; }
+  .s8 .dot.d { background: var(--maroon); } .s8 .dot.o { background: var(--orange); }
+  .s8 .h { position: absolute; inset-inline-start: 583px; font-size: 23px; font-weight: 700; color: #000; }
+  .s8 .t { position: absolute; inset-inline-start: 583px; width: 270px; font-size: 19.7px; line-height: 25.5px; color: #111; }
+  html[lang="ar"] .s8 .t { font-size: 19px; line-height: 27px; }
+  .s8 .ph { inset-inline-start: 960px; width: 251px; height: 175px; border-radius: 10px; }
+
+  /* 9) الملخص */
+  .s9 .ttl b { font-weight: 700; } .s9 .ttl span { font-weight: 300; }
+  html[lang="ar"] .s9 .ttl span { font-weight: 400; }
+  .s9 .lead { top: 193px; inset-inline-start: 73px; width: 1090px; }
+  .s9 .it { position: absolute; inset-inline-start: 73px; width: 519px; border-bottom: 2px solid #3A1421; }
+  .s9 .it p { font-size: 19.6px; line-height: 25.5px; color: #3A1421; width: 420px; }
+  html[lang="ar"] .s9 .it p { font-size: 19px; line-height: 27px; }
+  .s9 .arr { position: absolute; inset-inline-end: 10px; width: 45px; height: 45px; border-radius: 50%; display: grid; place-items: center; }
+  .s9 .arr svg { width: 22px; height: 22px; }
+  .s9 .arr.d { background: var(--maroon); color: #fff; } .s9 .arr.o { border: 1.5px solid var(--orange); color: var(--orange); }
+  .s9 .office { top: 298px; inset-inline-start: 705px; width: 453px; height: 199px; border-start-start-radius: 22px; border-start-end-radius: 22px; }
+  .s9 .o2 { top: 507px; inset-inline-start: 705px; width: 221px; height: 152px; border-end-start-radius: 22px; }
+  .s9 .n2 { top: 507px; inset-inline-start: 937px; width: 221px; height: 152px; border-end-end-radius: 22px; }
+
+  /* 10) الموارد والشهادة */
+  .s10 .lead { top: 256px; inset-inline-start: 73px; width: 425px; }
+  .s10 .h24 { top: 381px; }
+  .s10 .sub { position: absolute; top: 425px; inset-inline-start: 73px; width: 520px; color: #111; }
+  .s10 .phone { top: 112px; inset-inline-start: 660px; width: 265px; height: 550px; }
+  .s10 .badge { position: absolute; top: 149px; inset-inline-start: 644px; width: 55px; height: 55px; border-radius: 10px; background: linear-gradient(135deg, #B23F60, #8A2846); color: #fff; display: grid; place-items: center; }
+  .s10 .badge svg { width: 34px; height: 34px; }
+  .s10 .card { inset-inline-start: 884px; width: 323px; height: 176px; border-radius: 14px; box-shadow: 0 12px 28px rgb(0 0 0 / .14); }
+  .s10 .card .ic { position: absolute; top: 20px; inset-inline-end: 16px; width: 38px; height: 38px; color: #fff; }
+  .s10 .card h2 { top: 40px; inset-inline-start: 18px; font-size: 23px; }
+  .s10 .card p { top: 82px; inset-inline-start: 18px; width: 280px; font-size: 17.2px; line-height: 22.6px; }
+  html[lang="ar"] .s10 .card p { font-size: 17px; line-height: 25px; top: 78px; }
+  .s10 .q1 { top: 226px; background: var(--maroon); }
+  .s10 .q2 { top: 428px; background: var(--orange); }
+
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="panel"></div><img class="ph trainee" src="/templates/freeform/sl-corporate-training/assets/trainee.jpg" alt="Smiling trainee holding a laptop"><div class="dots"></div><svg class="logo" viewBox="0 0 74 82" aria-hidden="true"><path d="M14,6 C32,1 52,0 64,2 C72,4 74,12 73,30 C72,50 71,64 67,70 C62,77 40,80 18,81 C6,82 1,77 1,62 C0,44 0,26 3,16 C5,10 8,8 14,6 Z M23,20 C33,17 47,16 54,17 C59,18 60,22 59,34 C58,47 58,55 55,58 C51,62 38,63 26,64 C19,65 16,62 16,54 C15,44 15,34 16,27 C17,23 19,21 23,20 Z" fill="currentColor" fill-rule="evenodd"/></svg><p class="logo-t">YOUR COMPANY<br>LOGO HERE</p><span class="m1">Contact</span><span class="m2">About</span><span class="home">Home</span><span class="burger" aria-hidden="true"></span><h1 class="c1">CORPORATE<br>TRAINING</h1><p class="c2">PRESENTATION TEMPLATE</p><span class="btn">Edit Text Here</span><span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5M9 5h10v10"/></svg></span><p class="c3">This is a sample text. You can edit this text.</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <img class="ph meet" src="/templates/freeform/sl-corporate-training/assets/meeting.jpg" alt="Trainer presenting to a team in a meeting room"><div class="dots"></div><h1 class="ttl">Course<br>Introduction</h1><p class="lead p20">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p><div class="card k1"><span class="ib"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="3.6" height="17" rx=".4"/><rect x="8.6" y="7" width="3.6" height="13" rx=".4"/><rect x="14.2" y="10" width="3.6" height="10" rx=".4"/><rect x="19.4" y="13.5" width="2.4" height="6.5" rx=".4"/><rect x="2" y="20.6" width="20" height="1.4"/></svg></span><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div><div class="card k2"><span class="ib"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4.5" width="16" height="11" rx="1.2"/><path d="M2 19h20"/></svg></span><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">Module<br>Outline Slide</h1><p class="lead p20">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text.</p><span class="chk" style="top:413px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="chk-t" style="top:421px">This is a sample text. Insert your text here.</p><span class="chk" style="top:476px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="chk-t" style="top:484px">You can add sample text. Insert your text here.</p><span class="chk" style="top:538px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="chk-t" style="top:546px">This is a sample text. Insert your text here.</p><span class="chk" style="top:600px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="chk-t" style="top:608px">You can add sample text. Insert your text here.</p><div class="row" style="top:86px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text.</p></div><span class="num" style="top:119px">01</span><div class="row" style="top:280px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text.</p></div><span class="num" style="top:313px">02</span><div class="row" style="top:474px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text.</p></div><span class="num" style="top:507px">03</span><div class="dots"></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <p class="kick">CONTENT SLIDE</p><h1 class="ttl">Theory Overview</h1><p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text.</p><img class="ph trainer" src="/templates/freeform/sl-corporate-training/assets/trainer.jpg" alt="Trainer explaining a diagram on a screen"><div class="col c1"><span class="n">01.</span><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="col c2"><span class="n">02.</span><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="col c3"><span class="n">03.</span><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="col c4"><span class="n">04.</span><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <p class="kick">CONTENT SLIDE</p><h1 class="ttl">Deep Dive</h1><p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here.</p><h2 class="h24">Edit Text Here</h2><p class="sub p20">This is a sample text. Insert your desired text here. You can add sample text.</p><div class="nl" style="top:454px"><b>01</b><span>This is a sample text</span></div><div class="nl on" style="top:524px"><b>02</b><span>Insert your desired text here</span></div><div class="nl" style="top:588px"><b>03</b><span>You can add sample text</span></div><img class="ph w1" src="/templates/freeform/sl-corporate-training/assets/workshop-1.jpg" alt="Trainer presenting a chart"><img class="ph w2" src="/templates/freeform/sl-corporate-training/assets/workshop-2.jpg" alt="Team working with sticky notes"><img class="ph w3" src="/templates/freeform/sl-corporate-training/assets/workshop-3.jpg" alt="Online quiz on a laptop"><p class="ov">This is a sample text. Insert your desired text here. You can add text.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="ttl">Activity Slide</h1><p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here.</p><div class="line"></div><span class="st st1">1</span><span class="st st2">2</span><span class="st st3">3</span><div class="box b1"><h2>Activity Training #1</h2><p>This is a sample text. Insert your desired text here. You can add sample text. Insert your text here. You can add sample text. Insert your text here.</p></div><div class="box b2"><h2>Activity Training #2</h2><p>This is a sample text. Insert your desired text here. You can add sample text. Insert your text here. You can add sample text. Insert your text here.</p></div><div class="box b3"><h2>Activity Training #3</h2><p>This is a sample text. Insert your desired text here. You can add sample text. Insert your text here. You can add sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <h1 class="ttl">Knowledge Check</h1><p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here.</p><div class="q" style="inset-inline-start:72px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p><span class="big" aria-hidden="true">1</span></div><div class="q" style="inset-inline-start:304px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p><span class="big" aria-hidden="true">2</span></div><div class="q" style="inset-inline-start:536px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p><span class="big" aria-hidden="true">3</span></div><div class="q" style="inset-inline-start:768px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p><span class="big" aria-hidden="true">4</span></div><div class="q" style="inset-inline-start:999px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p><span class="big" aria-hidden="true">5</span></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <h1 class="ttl">Case Study<br>&amp; Application</h1><p class="lead">This is a sample text. Insert your text here. You can add sample text. Insert your sample text here. You can add sample text. Insert your text here.</p><span class="chk" style="top:447px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="chk-t" style="top:446px">This is a sample text. Insert your text here. You can add sample text.</p><span class="chk" style="top:526px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="chk-t" style="top:525px">This is a sample text. Insert your text here. You can add sample text.</p><span class="chk" style="top:604px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="chk-t" style="top:603px">This is a sample text. Insert your text here. You can add sample text.</p><span class="dot d" style="top:77px">01</span><h2 class="h" style="top:151px">Edit Text Here</h2><p class="t" style="top:190px">This is a sample text. Insert your desired text here.</p><span class="dot o" style="top:286px">02</span><h2 class="h" style="top:353px">Edit Text Here</h2><p class="t" style="top:392px">This is a sample text. Insert your desired text here.</p><span class="dot o" style="top:489px">03</span><h2 class="h" style="top:556px">Edit Text Here</h2><p class="t" style="top:595px">This is a sample text. Insert your desired text here.</p><img class="ph" style="top:71px" src="/templates/freeform/sl-corporate-training/assets/desk.jpg" alt="Office desk with documents"><img class="ph" style="top:276px" src="/templates/freeform/sl-corporate-training/assets/laptop.jpg" alt="Person taking an online quiz"><img class="ph" style="top:480px" src="/templates/freeform/sl-corporate-training/assets/notes.jpg" alt="Notebook with key points">
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <h1 class="ttl"><b>Summary</b> <span>Slide</span></h1><p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your text here.</p><div class="it" style="top:338px;height:126px"><p style="width:365px">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p><span class="arr d" style="top:16px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7l10 10M17 9v8H9"/></svg></span></div><div class="it" style="top:497px;height:66px"><p>This is a sample text. Insert your text here.</p><span class="arr o" style="top:-6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div><div class="it" style="top:597px;height:63px"><p>This is a sample text. Insert your text here.</p><span class="arr o" style="top:-9px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div><img class="ph office" src="/templates/freeform/sl-corporate-training/assets/office.jpg" alt="Organized office desk"><img class="ph o2" src="/templates/freeform/sl-corporate-training/assets/office-2.jpg" alt="Desk with books and laptop"><img class="ph n2" src="/templates/freeform/sl-corporate-training/assets/notes-2.jpg" alt="Key points notebook and coffee">
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <h1 class="ttl">Resources<br>&amp; Certificate</h1><p class="lead">This is a sample text. Insert your text here. You can add sample text. Insert your text here. You can add sample text.</p><h2 class="h24">Edit Text Here</h2><p class="sub p20">This is a sample text. Insert your desired text here.</p><div class="nl" style="top:473px;padding-inline-start:29px"><b>01</b><span>This is a sample text</span></div><div class="nl on" style="top:543px"><b>02</b><span>Insert your desired text here</span></div><div class="nl" style="top:607px;padding-inline-start:29px"><b>03</b><span>You can add sample text</span></div><img class="ph phone" src="/templates/freeform/sl-corporate-training/assets/phone.jpg" alt="Certificate displayed on a phone"><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9a5 5 0 0 1 4-4" stroke-dasharray="0.1 3.2"/><path d="M5 13a5 5 0 0 0 4 4M13 5a5 5 0 0 1 4 4" stroke-dasharray="0.1 3.2"/><path d="M12 12h7v7h-7z" stroke="none"/><path d="M19 13v4a2 2 0 0 1-2 2h-4"/><path d="M14 15.5h-2.5V13"/><path d="M11.5 15.5l4-4"/></svg></span><div class="card q1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="16" rx="3"/><path d="M2.5 8h19M9 8v11.5"/><path d="M19 15.5a3 3 0 1 1-1-2.2M18.6 11.6v1.9h-1.9"/></svg></span><h2>Edit Text Here</h2><p>This is a sample text. Insert your text here. You can add sample text. Insert your sample text here.</p></div><div class="card q2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="16" height="12" rx="2.5"/><path d="M8 20h7M11.5 16v4"/><path d="M20.5 3.5l-6.5 6.5-1 3 3-1 6.5-6.5a1.4 1.4 0 0 0-2-2z" fill="var(--orange)"/></svg></span><h2>Edit Text Here</h2><p>This is a sample text. Insert your text here. You can add sample text. Insert your sample text here.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 10</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
