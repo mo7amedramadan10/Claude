@@ -1,4 +1,4 @@
-using ChatToDashboard.Api.ClaudeChat.Mcp;
+﻿using ChatToDashboard.Api.ClaudeChat.Mcp;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -310,6 +310,16 @@ app.Use(async (ctx, next) =>
 {
     var path = ctx.Request.Path.Value ?? "";
     var isPublic = ctx.GetEndpoint()?.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() is not null;
+    // بوابة مالك المنصّة المستقل (بلا منظمة): يدير المنصّة فقط ولا يصل إلى واجهات بيانات المنظمات (PlatformGate)
+    if (ctx.User.Identity?.IsAuthenticated == true
+        && ChatToDashboard.Api.Users.PlatformGate.IsStandaloneOwner(
+            ctx.User.FindFirst("IsPlatformOwner")?.Value == "true", ctx.User.FindFirst("OrganizationId")?.Value)
+        && ChatToDashboard.Api.Users.PlatformGate.Blocks(path, isPublic))
+    {
+        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await ctx.Response.WriteAsJsonAsync(new { error = ChatToDashboard.Api.Users.PlatformGate.Message, code = ChatToDashboard.Api.Users.PlatformGate.Code });
+        return;
+    }
     // بوابة «بلا كيان»: مستخدم عادي ليس له دور في أي كيان لا يصل إلى واجهات الكيانات (EntityGate)
     if (ctx.User.Identity?.IsAuthenticated == true && ChatToDashboard.Api.Entities.EntityGate.AppliesTo(path, isPublic)
         && !ctx.User.IsInRole(ChatToDashboard.Api.Users.UserRoles.Admin)
@@ -544,6 +554,7 @@ using (var scope = app.Services.CreateScope())
     // Auth:SeedAdmin:Username/Password if set (user-secrets, same as every other
     // credential here), otherwise a random password logged once so the app is usable
     // out of the box.
+    var freshInstall = false;
     try
     {
         var userStore = scope.ServiceProvider.GetRequiredService<UserStore>();
@@ -564,11 +575,11 @@ using (var scope = app.Services.CreateScope())
                 IsActive = true,
                 AllowAllSystems = true,
                 AllowAllFiles = true,
-                // The very first account is, by definition, us — the platform owner — until
-                // real customer organizations exist (see AppUser.IsPlatformOwner).
+                // مسؤول المنظمة الافتراضية فقط — مالك المنصّة حساب مستقل بلا منظمة يُنشأ أدناه (Auth:PlatformOwner)
                 OrganizationId = defaultOrg?.Id,
-                IsPlatformOwner = true,
+                IsPlatformOwner = false,
             });
+            freshInstall = true;
 
             if (generated)
                 logger.LogWarning(
@@ -596,8 +607,10 @@ using (var scope = app.Services.CreateScope())
             }
             else
             {
+                // مسؤول المنظمة الافتراضية بهذا الاسم (لمالك المنصّة المستقل علمه الخاص: Auth:PlatformOwner:ResetPassword)
                 var owners = (await userStore.ListAsync())
-                    .Where(u => u.IsPlatformOwner && u.AuthMethod == AuthMethods.Local &&
+                    .Where(u => u.Role == UserRoles.Admin && u.AuthMethod == AuthMethods.Local &&
+                                u.OrganizationId == defaultOrg?.Id &&
                                 string.Equals(u.Username, seedUsername, StringComparison.OrdinalIgnoreCase))
                     .ToList();
                 if (owners.Count == 0)
@@ -615,17 +628,17 @@ using (var scope = app.Services.CreateScope())
                         AllowAllSystems = true,
                         AllowAllFiles = true,
                         OrganizationId = defaultOrg?.Id,
-                        IsPlatformOwner = true,
+                        IsPlatformOwner = false,
                     });
                     logger.LogWarning(
-                        "Auth:SeedAdmin:ResetPassword: no platform-owner account named {Username} existed — created one from configuration. " +
+                        "Auth:SeedAdmin:ResetPassword: no default-organization admin account named {Username} existed — created one from configuration. " +
                         "Remove Auth:SeedAdmin:ResetPassword now.",
                         seedUsername);
                 }
                 else if (owners.Count > 1)
                 {
                     logger.LogWarning(
-                        "Auth:SeedAdmin:ResetPassword: found {Count} platform-owner accounts named {Username} — nothing was reset.",
+                        "Auth:SeedAdmin:ResetPassword: found {Count} default-organization admin accounts named {Username} — nothing was reset.",
                         owners.Count, seedUsername);
                 }
                 else
@@ -635,7 +648,7 @@ using (var scope = app.Services.CreateScope())
                     owner.IsActive = true;
                     await userStore.UpdateAsync(owner);
                     logger.LogWarning(
-                        "Auth:SeedAdmin:ResetPassword: password of platform-owner account {Username} was reset from configuration. " +
+                        "Auth:SeedAdmin:ResetPassword: password of default-organization admin account {Username} was reset from configuration. " +
                         "Remove Auth:SeedAdmin:ResetPassword now so it is not reapplied on every startup.",
                         seedUsername);
                 }
@@ -645,6 +658,71 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex, "Failed to ensure an initial admin account exists.");
+    }
+
+    // مالك المنصّة المستقل (بلا منظمة، يدخل من /platform ويدير المنظمات والكتالوج وإعدادات الموديلات فقط — PlatformGate):
+    // يُنشأ من Auth:PlatformOwner:Username/Password، أو بكلمة عشوائية تُسجَّل مرة في تثبيت جديد تمامًا. على قاعدة قائمة بلا كلمة
+    // مضبوطة لا يُنشأ شيء ويبقى مالك المنصّة القديم داخل منظمته كما كان (حتى لا يفقد أحد صلاحية المنصّة على نشر قائم).
+    // بعد وجود مالك مستقل تُنزع صفة مالك المنصّة عن أي حساب داخل منظمة (يبقى مسؤول منظمته كما هو).
+    try
+    {
+        var userStore = scope.ServiceProvider.GetRequiredService<UserStore>();
+        var ownerUsername = builder.Configuration["Auth:PlatformOwner:Username"] ?? "owner";
+        var ownerPassword = builder.Configuration["Auth:PlatformOwner:Password"];
+        var standalone = await userStore.ListStandaloneOwnersAsync();
+        var named = standalone.FirstOrDefault(u => string.Equals(u.Username, ownerUsername, StringComparison.OrdinalIgnoreCase));
+
+        if (standalone.Count == 0 && (freshInstall || !string.IsNullOrWhiteSpace(ownerPassword)))
+        {
+            var generated = string.IsNullOrWhiteSpace(ownerPassword);
+            if (generated) ownerPassword = RandomNumberGenerator.GetHexString(12);
+            await userStore.CreateAsync(new AppUser
+            {
+                Username = ownerUsername,
+                DisplayName = "مالك المنصّة",
+                Role = UserRoles.Admin,
+                AuthMethod = AuthMethods.Local,
+                PasswordHash = PasswordHasher.Hash(ownerPassword!),
+                IsActive = true,
+                OrganizationId = null,
+                IsPlatformOwner = true,
+            });
+            if (generated)
+                logger.LogWarning(
+                    "Created the standalone platform-owner account. Username: {Username} | Password: {Password} — sign in at /platform, " +
+                    "or set Auth:PlatformOwner:Username/Password via user-secrets to choose them.", ownerUsername, ownerPassword);
+            else
+                logger.LogInformation("Created the standalone platform-owner account {Username} from Auth:PlatformOwner (sign in at /platform).", ownerUsername);
+        }
+        else if (standalone.Count == 0)
+        {
+            logger.LogInformation(
+                "No standalone platform-owner account yet — set Auth:PlatformOwner:Password (and optionally Username) to create one; " +
+                "until then the platform owner stays the account inside its organization.");
+        }
+        else if (named is not null && builder.Configuration.GetValue<bool>("Auth:PlatformOwner:ResetPassword"))
+        {
+            if (string.IsNullOrWhiteSpace(ownerPassword))
+                logger.LogWarning("Auth:PlatformOwner:ResetPassword is set but Auth:PlatformOwner:Password is empty — nothing was reset.");
+            else
+            {
+                named.PasswordHash = PasswordHasher.Hash(ownerPassword);
+                named.IsActive = true;
+                await userStore.UpdateAsync(named);
+                logger.LogWarning("Auth:PlatformOwner:ResetPassword: password of {Username} was reset — remove the flag now.", ownerUsername);
+            }
+        }
+
+        if ((await userStore.ListStandaloneOwnersAsync()).Count > 0)
+        {
+            var demoted = await userStore.DemoteOrganizationOwnersAsync();
+            if (demoted > 0)
+                logger.LogWarning("Standalone platform owner exists — removed platform-owner rights from {Count} account(s) inside organizations (they stay organization admins).", demoted);
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to ensure the standalone platform-owner account.");
     }
 
     // Demo accounts showing the two non-platform-owner permission shapes this app supports:

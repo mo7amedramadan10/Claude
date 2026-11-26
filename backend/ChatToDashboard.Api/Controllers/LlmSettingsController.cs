@@ -79,7 +79,8 @@ public class UpdateCredentialRequest
 /// </summary>
 [ApiController]
 [Route("api/llm-settings")]
-[Authorize(Roles = UserRoles.Admin)]
+// إعدادات الموديلات ومفاتيحها تسري على المنصّة كلها (كل المنظمات) فهي لمالك المنصّة وحده لا لمسؤول أي منظمة
+[Authorize(Policy = "PlatformOwner")]
 public class LlmSettingsController : ControllerBase
 {
     // The models the gateway's Connection Guide listed as installed — used only if the live

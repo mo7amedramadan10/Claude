@@ -76,6 +76,8 @@ public class TemplatesController : ControllerBase
     {
         var user = await _permissions.GetCurrentUserAsync(User, ct);
         if (user is null) return Unauthorized();
+        // مالك المنصّة المستقل بلا منظمة ولا كيان: لا جدوى (ولا يُقرأ أي شيء من بيانات المنظمات)
+        if (string.IsNullOrEmpty(user.OrganizationId)) return Ok(new { entityId = (string?)null, items = Array.Empty<object>() });
         var selection = await _permissions.GetEffectiveSelectionAsync(user, null, ct);
         var items = await _feasibility.ForCatalogAsync(selection.EntityId, ct);
         return Ok(new { entityId = selection.EntityId, items = items.Select(i => new { templateId = i.TemplateId, total = i.Total, buildable = i.Buildable, topMissing = i.TopMissing }) });
