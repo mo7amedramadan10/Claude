@@ -1,0 +1,94 @@
+{
+  "key": "sl-evidence-based-insights",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🔎",
+  "name": "رؤى قائمة على الأدلة",
+  "nameEn": "Evidence-Based Insights",
+  "description": "18 شريحة: غلاف، محتويات، ملخص تنفيذي، منهجية، نتائج برسوم، مقارنة، اتجاهات، توصيات، خطوات، أسئلة وشكر",
+  "descriptionEn": "18 slides: cover, contents, summary, methodology, charted findings, comparison, trends, recommendations, Q&A",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل القسم",
+      "titleEn": "Section Divider"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "سؤال البحث والأهداف",
+      "titleEn": "Research Question & Objectives"
+    },
+    {
+      "title": "المنهجية ومصادر البيانات",
+      "titleEn": "Methodology & Data Sources",
+      "needsData": true
+    },
+    {
+      "title": "مشهد الأدلة",
+      "titleEn": "Evidence Landscape",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على النتائج الرئيسية (رسم)",
+      "titleEn": "Key Findings Overview (chart)",
+      "needsData": true
+    },
+    {
+      "title": "التعمق في النتيجة (رسم)",
+      "titleEn": "Finding Deep Dive (chart)",
+      "needsData": true
+    },
+    {
+      "title": "التحليل المقارن (رسمان)",
+      "titleEn": "Comparative Analysis (charts)",
+      "needsData": true
+    },
+    {
+      "title": "تحليل الاتجاهات (رسم)",
+      "titleEn": "Trend Analysis (chart)",
+      "needsData": true
+    },
+    {
+      "title": "المحرّكات والعوامل المساهمة",
+      "titleEn": "Drivers & Contributing Factors",
+      "needsData": true
+    },
+    {
+      "title": "الأدلة النوعية",
+      "titleEn": "Qualitative Evidence",
+      "needsData": true
+    },
+    {
+      "title": "قوة الأدلة وحدودها",
+      "titleEn": "Evidence Strength & Limitations"
+    },
+    {
+      "title": "الدلالات والتوصيات",
+      "titleEn": "Implications & Recommendations"
+    },
+    {
+      "title": "الأولويات والخطوات التالية",
+      "titleEn": "Priorities & Next Steps"
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكر وتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON بالمعرّفات chart-data وchart-data-2 حتى chart-data-5 (فئات وسلاسل بقيمها، والحد الأعلى والخطوة)، والشبكة والبطاقات البيضاء في الشرائح الملوّنة زخرفة SVG ثابتة."
+}
