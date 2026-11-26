@@ -4590,7 +4590,27 @@ const DASH_GAL_LAYOUTS = {
 // L.order indexes 6 "chart" slots that may not all exist there, so this only renders the ones
 // that do instead of spreading `undefined` into the thumbnail (which rendered a literal
 // "t-undefined"/"undefined" glyph for any dashboard with fewer than 10 widgets total).
+// نوع العنصر ← شكل المصغّرة: أنواع اللوحات الحقيقية (bar/pie/area/stages…) لا مقابل لها حرفيًا في DASH_GAL_GLYPH،
+// وكانت تُرسم نصًّا «undefined» في «للاطلاع» وبطاقات «لوحات المتابعة» وبعض نماذج الكتالوج.
+function dashGalGlyphOf(type) {
+  const t = String(type || '').toLowerCase();
+  if (DASH_GAL_GLYPH[t]) return t;
+  if (/line|area|forecast|spark/.test(t)) return 'line';
+  if (/pie|donut|radial|gauge/.test(t)) return 'donut';
+  if (/table/.test(t)) return 'table';
+  if (/funnel|stage/.test(t)) return 'funnel';
+  if (/heat|treemap|matrix/.test(t)) return 'heat';
+  if (/column|multi|stack/.test(t)) return 'cbars';
+  return 'hbars';
+}
 function dashGalArrange(d) {
+  // لوحة حقيقية (لا تبدأ بأربعة مؤشرات كنماذج الكتالوج): التوزيع من نوع كل عنصر وحجمه بدل تراتيب النماذج
+  if (!d.layout && !d.widgets.slice(0, 4).every(w => w && w.type === 'kpi')) {
+    return d.widgets.slice(0, 12).map(w => {
+      const g = dashGalGlyphOf(w.type); const sz = String(w.size || '').toLowerCase();
+      return { ...w, span: g === 'kpi' || sz === 'small' ? 3 : g === 'table' || sz === 'full' || sz === 'large' ? 12 : 6 };
+    });
+  }
   const L = DASH_GAL_LAYOUTS[d.layout || 'a'];
   const kpis = d.widgets.slice(0, 4).map(w => ({ ...w, span: 3 }));
   const charts = d.widgets.slice(4);
@@ -4600,8 +4620,8 @@ function dashGalArrange(d) {
 const DASH_GAL_RENDER_ICON = { network: 'share', workflow: 'layers', marketplace: 'users', warehouse: 'layers', pools: 'chart', treasury: 'wallet', crm: 'briefcase', teamtasks: 'calendar', timetracking: 'clock', saas: 'chart', studio: 'layers', campaign: 'target', funding: 'wallet', construction: 'briefcase', board: 'list', leads: 'users', risk: 'shield', analysis: 'filter', command: 'server', finance: 'percent' };
 function dashGalThumb(d) {
   if (d.renderKind) return `<span class="dash-thumb dash-thumb-network">${ic2(DASH_GAL_RENDER_ICON[d.renderKind] || 'share')}</span>`;
-  return `<span class="dash-thumb">${dashGalArrange(d).map(w =>
-    `<i class="s${w.span} t-${w.type}">${DASH_GAL_GLYPH[w.type]}</i>`).join('')}</span>`;
+  return `<span class="dash-thumb">${dashGalArrange(d).map(w => { const g = dashGalGlyphOf(w.type);
+    return `<i class="s${w.span} t-${g}">${DASH_GAL_GLYPH[g]}</i>`; }).join('')}</span>`;
 }
 
 // كل نموذج = 4 مؤشرات + 6 رسوم (10 عناصر). `widgets[].title` بس هو اللي بيتعرض في
