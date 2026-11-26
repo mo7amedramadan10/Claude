@@ -1,0 +1,33 @@
+{
+  "key": "sl-project-perspectives",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "🧭",
+  "name": "وجهات نظر المشروع",
+  "nameEn": "Project Perspectives",
+  "description": "خمس شرائح لأبعاد المشروع الأربعة (النطاق، الوقت، التكلفة، الجودة): نظرة عامة ثم إبراز كل بُعد",
+  "descriptionEn": "Five slides on scope, time, cost and quality: an overview, then each perspective highlighted",
+  "sections": [
+    {
+      "title": "الأبعاد الأربعة",
+      "titleEn": "All Perspectives"
+    },
+    {
+      "title": "النطاق",
+      "titleEn": "Scope"
+    },
+    {
+      "title": "الوقت",
+      "titleEn": "Time"
+    },
+    {
+      "title": "التكلفة",
+      "titleEn": "Cost"
+    },
+    {
+      "title": "الجودة",
+      "titleEn": "Quality"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الأسهم والحلقة رسم SVG، والصنف on يحدد السهم المُبرز في كل شريحة والصنف all يلوّن الأسهم كلها في الشريحة الأولى."
+}

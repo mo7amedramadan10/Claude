@@ -1,0 +1,69 @@
+{
+  "key": "sl-failed-project-post-mortem",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "🧯",
+  "name": "تحليل إخفاق المشروع",
+  "nameEn": "Failed Project Post-mortem",
+  "description": "ثلاث عشرة شريحة لمراجعة مشروع متعثّر: الخلفية، الأهداف، ما حدث، الأسباب، الأثر، الدروس والإجراءات",
+  "descriptionEn": "Thirteen slides reviewing a failed project: background, goals, outcomes, causes, impact, lessons, actions",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "خلفية المشروع",
+      "titleEn": "Project Background",
+      "needsData": true
+    },
+    {
+      "title": "الأهداف ومعايير النجاح",
+      "titleEn": "Goals & Success Criteria",
+      "needsData": true
+    },
+    {
+      "title": "ما الذي حدث فعلًا",
+      "titleEn": "What Actually Happened",
+      "needsData": true
+    },
+    {
+      "title": "أين انحرف المشروع",
+      "titleEn": "Where the Project Went Off Track"
+    },
+    {
+      "title": "الخط الزمني للأحداث الحرجة",
+      "titleEn": "Timeline of Critical Events"
+    },
+    {
+      "title": "عوامل الإخفاق",
+      "titleEn": "Failure Factors"
+    },
+    {
+      "title": "تحليل الأسباب الجذرية",
+      "titleEn": "Root Cause Analysis"
+    },
+    {
+      "title": "أثر الإخفاق",
+      "titleEn": "Impact of the Failure",
+      "needsData": true
+    },
+    {
+      "title": "إشارات التحذير",
+      "titleEn": "Warning Signs We Missed"
+    },
+    {
+      "title": "الدروس المستفادة",
+      "titleEn": "Key Lessons Learned"
+    },
+    {
+      "title": "الإجراءات التصحيحية",
+      "titleEn": "Corrective Actions"
+    },
+    {
+      "title": "الختام",
+      "titleEn": "Closing"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزوايا الحمراء والصور، وغيّر النصوص والأرقام فقط (المؤشرات وشارات التغيّر والجدول)."
+}

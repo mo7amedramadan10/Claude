@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تحليل إخفاق المشروع</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «تحليل إخفاق المشروع»: غلاف بشكل أحمر مائل، خلفية المشروع، الأهداف، ما حدث فعلًا، مواضع الانحراف، الخط الزمني، عوامل الإخفاق، تحليل الأسباب الجذرية، الأثر، إشارات التحذير، الدروس، الإجراءات التصحيحية، والختام. الأشكال الحمراء الزاوية مثلثات SVG بتدرّجات تنعكس في العربية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #2C3537; --body: #595959; --accent: #E71E24; --red: #E71E24; --red-d: #8C1014; --yellow: #FDDB3B; --gold: #E9B90B; --cream: #FFF9F1; --pink: #F7B6B1; --dash: #A6A6A6; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عناصر مشتركة */
+  .pan { position: absolute; background: var(--cream); }
+  .h1 { position: absolute; top: 59px; inset-inline-start: 83px; margin: 0; font-size: 60px; line-height: 68px; font-weight: 700; letter-spacing: -1.6px; color: var(--ink); }
+  html[lang="ar"] .h1 { letter-spacing: 0; font-weight: 800; line-height: 76px; }
+  .sub { position: absolute; top: 150px; inset-inline-start: 83px; margin: 0; font-size: 20px; line-height: 28px; color: var(--body); }
+  .tx { margin: 0; font-size: 18px; line-height: 25.5px; color: var(--body); }
+  .lead { position: absolute; margin: 0; font-size: 20px; line-height: 29px; color: var(--body); }
+  .ab { position: absolute; }
+  .ttl-b { margin: 0 0 8px; font-size: 25px; line-height: 32px; font-weight: 700; color: var(--ink); letter-spacing: -.4px; }
+  html[lang="ar"] .ttl-b, html[lang="ar"] .h1 { letter-spacing: 0; }
+  .ic { position: absolute; display: block; }
+  .ic svg { width: 100%; height: 100%; }
+  .vd { position: absolute; width: 0; border-inline-start: 1.5px dashed var(--dash); }
+  .hd { position: absolute; height: 0; border-top: 1.5px dashed var(--dash); }
+  .badge { position: absolute; display: grid; place-items: center; background: var(--yellow); color: var(--red); font-weight: 700; font-size: 22px; margin: 0; }
+  /* الزوايا الحمراء: مثلث قائم أعلى جهة النهاية، يُقلب رأسيًا للزاوية السفلية ويُعكس في العربية */
+  .cor { position: absolute; inset-inline-end: 0; }
+  .cor.bot { transform: scaleY(-1); }
+  html[dir="rtl"] .cor { transform: scaleX(-1); }
+  html[dir="rtl"] .cor.bot { transform: scale(-1, -1); }
+  /* الشعار */
+  .logo { position: absolute; top: 82px; display: flex; gap: 20px; align-items: center; color: #111; }
+  .logo svg { width: 42px; height: 48px; flex: none; }
+  .logo p { margin: 0; font-size: 16px; line-height: 23px; letter-spacing: 2.4px; text-transform: uppercase; }
+  html[lang="ar"] .logo p { letter-spacing: 0; font-size: 17px; }
+  mark { background: none; color: inherit; }
+
+  /* 1 الغلاف */
+  .s1 { background: linear-gradient(135deg, #FFFFFF 0%, #FFFCF8 30%, #FFF8EF 55%, #FFFFFF 100%); }
+  html[dir="rtl"] .s1 { background: linear-gradient(225deg, #FFFFFF 0%, #FFFCF8 30%, #FFF8EF 55%, #FFFFFF 100%); }
+  .s1 .logo { inset-inline-start: 86px; }
+  .s1 .big { position: absolute; top: 262px; inset-inline-start: 80px; margin: 0; font-size: 104px; line-height: 106px; font-weight: 700; letter-spacing: -5.5px; color: var(--ink); }
+  html[lang="ar"] .s1 .big { font-size: 104px; line-height: 128px; letter-spacing: 0; font-weight: 800; top: 238px; }
+  .s1 .big mark { background: linear-gradient(transparent 31%, var(--yellow) 31%, var(--yellow) 101%, transparent 101%); padding-inline: 18px 2px; margin-inline-start: -18px; }
+  html[lang="ar"] .s1 .big mark { background: linear-gradient(transparent 34%, var(--yellow) 34%, var(--yellow) 86%, transparent 86%); padding-inline: 12px; margin-inline-start: -12px; }
+  .s1 .kick { position: absolute; top: 522px; inset-inline-start: 80px; margin: 0; font-size: 40px; line-height: 50px; font-weight: 400; letter-spacing: 6.6px; color: var(--ink); }
+  html[lang="ar"] .s1 .kick { letter-spacing: 0; word-spacing: 8px; font-size: 40px; }
+  .s1 .ptl { position: absolute; top: 628px; inset-inline-start: 82px; display: flex; align-items: center; gap: 20px; margin: 0; font-size: 20px; font-weight: 700; color: var(--ink); }
+  .s1 .ptl::before { content: ""; width: 35px; height: 2px; background: var(--ink); }
+
+  /* 2 خلفية المشروع */
+  .s2 .pan { top: 0; inset-inline-start: 575px; width: 705px; height: 720px; }
+  .s2 .h1 { width: 470px; }
+  .s2 .sub { top: 229px; }
+  .s2 .star { top: 448px; inset-inline-start: 81px; width: 70px; height: 70px; color: var(--red); }
+  .s2 .lead { top: 543px; inset-inline-start: 87px; width: 385px; }
+  .s2 .it { position: absolute; inset-inline-start: 648px; width: 300px; }
+  .s2 .it h2 { margin: 0 0 9px; font-size: 25px; line-height: 32px; font-weight: 700; color: #000; }
+  .s2 .it1 { top: 82px; } .s2 .it2 { top: 305px; }
+  .s2 .b1 { top: 84px; inset-inline-start: 1029px; width: 185px; height: 47px; }
+  .s2 .b2 { top: 312px; inset-inline-start: 1032px; width: 185px; height: 47px; }
+  .s2 .hd { top: 255px; inset-inline-start: 640px; width: 598px; }
+  .s2 .bud { position: absolute; top: 493px; inset-inline-start: 560px; width: 670px; height: 194px; background: var(--red); }
+  .s2 .bud .yb { position: absolute; top: 0; inset-inline-start: 63px; width: 197px; height: 167px; background: var(--yellow); display: grid; place-items: center; padding-top: 50px; margin: 0; font-size: 46px; font-weight: 700; color: var(--ink); letter-spacing: -1px; }
+  .s2 .bud .bt { position: absolute; top: 22px; inset-inline-start: 300px; width: 300px; }
+  .s2 .bud h2 { margin: 0 0 9px; font-size: 26px; line-height: 34px; font-weight: 400; color: #fff; }
+  .s2 .bud .tx { color: rgb(255 255 255 / .86); }
+
+  /* 3 الأهداف ومعايير النجاح */
+  .s3 .pan { top: 0; inset-inline-start: 0; width: 1280px; height: 425px; }
+  .s3 .ln { position: absolute; top: 229px; height: 4px; }
+  .s3 .ln1 { inset-inline-start: 73px; width: 346px; background: var(--red); }
+  .s3 .ln2 { inset-inline-start: 520px; width: 687px; background: var(--ink); }
+  .s3 .t1 { position: absolute; top: 254px; inset-inline-start: 83px; width: 300px; }
+  .s3 .t2 { position: absolute; top: 254px; inset-inline-start: 529px; width: 650px; }
+  .s3 .rb { position: absolute; top: 360px; inset-inline-start: 73px; width: 347px; height: 340px; background: var(--red); }
+  .s3 .kp { position: absolute; top: 455px; width: 300px; }
+  .s3 .kp .v { margin: 0 0 18px; font-size: 82px; line-height: 104px; font-weight: 700; letter-spacing: -3px; color: var(--red); }
+  .s3 .kp .tx { width: 290px; }
+  .s3 .k1 { inset-inline-start: 121px; width: 250px; } .s3 .k1 .v { color: var(--yellow); } .s3 .k1 .ttl-b { color: #fff; } .s3 .k1 .tx { color: #fff; width: 240px; }
+  .s3 .k2 { inset-inline-start: 529px; } .s3 .k3 { inset-inline-start: 895px; }
+
+  /* 4 ما الذي حدث فعلًا */
+  .s4 .pan { top: 232px; inset-inline-start: 0; width: 1280px; height: 488px; }
+  .s4 .ln { position: absolute; top: 230px; height: 4px; width: 346px; }
+  .s4 .ln1 { inset-inline-start: 73px; background: var(--red); } .s4 .ln2 { inset-inline-start: 466px; background: var(--red); } .s4 .ln3 { inset-inline-start: 859px; background: var(--yellow); }
+  .s4 .vd { top: 295px; height: 282px; } .s4 .vd1 { inset-inline-start: 443px; } .s4 .vd2 { inset-inline-start: 836px; }
+  .s4 .col { position: absolute; top: 298px; width: 300px; }
+  .s4 .c1 { inset-inline-start: 72px; } .s4 .c2 { inset-inline-start: 497px; } .s4 .c3 { inset-inline-start: 893px; }
+  .s4 .dl { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 24px; line-height: 34px; font-weight: 700; color: var(--ink); }
+  .s4 .dl svg { width: 21px; height: 21px; color: var(--red); }
+  .s4 .c3 .dl svg { color: var(--gold); }
+  .s4 .v { margin: 2px 0 20px; font-size: 90px; line-height: 104px; font-weight: 700; letter-spacing: -3px; color: var(--red); }
+  .s4 .c3 .v { color: var(--gold); }
+
+  /* 5 أين انحرف المشروع */
+  .s5 .pan { top: 369px; inset-inline-start: 0; width: 1280px; height: 351px; }
+  .s5 .ph { position: absolute; top: 0; inset-inline-start: 694px; width: 586px; height: 369px; object-fit: cover; }
+  .s5 .h1 { width: 580px; }
+  .s5 .lead { top: 245px; inset-inline-start: 83px; width: 490px; }
+  .s5 .rb { position: absolute; top: 332px; inset-inline-start: 655px; width: 305px; height: 366px; background: var(--red); }
+  .s5 .vd { top: 465px; inset-inline-start: 349px; height: 183px; }
+  .s5 .it { position: absolute; top: 427px; width: 200px; }
+  .s5 .it .ttl-b { width: 170px; }
+  .s5 .it .ic { position: static; width: 46px; height: 46px; margin-bottom: 38px; color: var(--pink); }
+  .s5 .i1 { inset-inline-start: 87px; } .s5 .i2 { inset-inline-start: 388px; } .s5 .i3 { inset-inline-start: 698px; } .s5 .i4 { inset-inline-start: 1004px; }
+  .s5 .i3 .ic { color: var(--yellow); } .s5 .i3 .ttl-b, .s5 .i3 .tx { color: #fff; }
+
+  /* 6 الخط الزمني */
+  .s6 .pan { top: 270px; inset-inline-start: 0; width: 1280px; height: 355px; }
+  .s6 .tl { position: absolute; top: 266px; inset-inline-start: 82px; width: 946px; height: 4px; background: var(--red); }
+  .s6 .tld { position: absolute; top: 266px; inset-inline-start: 1028px; width: 172px; height: 4px; background: repeating-linear-gradient(90deg, var(--red) 0 15px, transparent 15px 24px); }
+  .s6 .st { position: absolute; top: 250px; width: 36px; height: 36px; color: #000; background: var(--bg); }
+  .s6 .ev { position: absolute; top: 313px; width: 210px; }
+  .s6 .ev .badge { position: static; display: inline-grid; min-width: 69px; padding: 0 10px; height: 38px; font-size: 18px; }
+  .s6 .ev h2 { width: 165px; margin: 40px 0 15px; margin-inline-start: 10px; font-size: 25px; line-height: 32px; font-weight: 700; color: #000; }
+  .s6 .ev .tx { margin-inline-start: 10px; width: 200px; }
+  .s6 .e1 { inset-inline-start: 63px; } .s6 .e2 { inset-inline-start: 372px; } .s6 .e3 { inset-inline-start: 682px; } .s6 .e4 { inset-inline-start: 991px; }
+  .s6 .ft { position: absolute; top: 625px; inset-inline-start: 0; width: 1280px; height: 95px; background: var(--red); }
+  .s6 .ft .ic { top: 30px; inset-inline-start: 64px; width: 48px; height: 40px; color: var(--yellow); }
+  .s6 .ft .tx { position: absolute; top: 22px; inset-inline-start: 136px; width: 1040px; color: #fff; }
+
+  /* 7 عوامل الإخفاق */
+  .s7 .pan { top: 0; inset-inline-start: 0; width: 492px; height: 720px; }
+  .s7 .h1 { width: 380px; }
+  .s7 .sub { top: 225px; }
+  .s7 .dia { top: 376px; inset-inline-start: 80px; width: 52px; height: 52px; color: var(--yellow); }
+  .s7 .big { position: absolute; top: 452px; inset-inline-start: 83px; width: 340px; margin: 0; font-size: 29.5px; line-height: 38.6px; font-weight: 400; color: var(--body); }
+  html[lang="ar"] .s7 .big { font-weight: 400; font-size: 29px; line-height: 44px; }
+  .s7 .row { position: absolute; inset-inline-start: 558px; width: 660px; height: 180px; }
+  .s7 .r1 { top: 0; } .s7 .r2 { top: 180px; } .s7 .r3 { top: 360px; } .s7 .r4 { top: 540px; }
+  .s7 .num { position: absolute; top: 38px; inset-inline-start: 0; margin: 0; font-size: 88px; line-height: 104px; font-weight: 700; letter-spacing: -3px; color: var(--ink); }
+  .s7 .bd { position: absolute; top: 48px; inset-inline-start: 121px; width: 390px; }
+  .s7 .bd .ttl-b { margin-bottom: 6px; }
+  .s7 .chv { top: 55px; inset-inline-start: 572px; width: 75px; height: 70px; }
+  .s7 .hd { top: 180px; inset-inline-start: -18px; width: 675px; }
+
+  /* 8 تحليل الأسباب الجذرية */
+  .s8 .pan { top: 351px; inset-inline-start: 511px; width: 769px; height: 369px; }
+  .s8 .ph { position: absolute; top: 0; inset-inline-start: 511px; width: 769px; height: 351px; object-fit: cover; }
+  .s8 .rb { position: absolute; top: 55px; inset-inline-start: 34px; width: 519px; height: 276px; background: var(--red); }
+  .s8 .rb .ic { top: 40px; inset-inline-start: 46px; width: 48px; height: 40px; color: var(--yellow); }
+  .s8 .rb .bt { position: absolute; top: 113px; inset-inline-start: 49px; width: 418px; }
+  .s8 .rb .ttl-b, .s8 .rb .tx { color: #fff; }
+  .s8 .rb .ttl-b { margin-bottom: 5px; }
+  .s8 .sub { top: 440px; }
+  .s8 .h1 { top: 494px; width: 420px; }
+  .s8 .vd { top: 395px; inset-inline-start: 891px; height: 283px; }
+  .s8 .it { position: absolute; top: 434px; width: 300px; }
+  .s8 .it .ic { position: static; width: 52px; height: 52px; margin-bottom: 30px; color: var(--pink); }
+  .s8 .i1 { inset-inline-start: 563px; } .s8 .i2 { inset-inline-start: 952px; }
+  .s8 .i2 .ic { width: 46px; height: 46px; margin-bottom: 36px; }
+
+  /* 9 أثر الإخفاق */
+  .s9 .pan { top: 218px; inset-inline-start: 0; width: 1280px; height: 502px; }
+  .s9 .vd { top: 272px; height: 401px; } .s9 .vd1 { inset-inline-start: 431px; } .s9 .vd2 { inset-inline-start: 864px; }
+  .s9 .hd { top: 473px; inset-inline-start: 55px; width: 1172px; }
+  .s9 .cell { position: absolute; width: 330px; }
+  .s9 .r1 { top: 275px; } .s9 .r2 { top: 519px; }
+  .s9 .x1 { inset-inline-start: 83px; } .s9 .x2 { inset-inline-start: 515px; } .s9 .x3 { inset-inline-start: 947px; }
+  .s9 .top { display: flex; align-items: center; gap: 28px; height: 78px; }
+  .s9 .v { flex: none; white-space: nowrap; margin: 0; font-size: 66px; line-height: 78px; font-weight: 700; letter-spacing: -2.5px; color: var(--red); }
+  .s9 .bg { flex: none; display: flex; align-items: center; justify-content: center; gap: 4px; width: 87px; height: 36px; background: var(--yellow); margin: 0; font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -.5px; }
+  .s9 .bg svg { width: 15px; height: 15px; color: var(--red); }
+  .s9 .cell .ttl-b { margin: 2px 0 8px; }
+
+  /* 10 إشارات التحذير */
+  .s10 .pan { top: 343px; inset-inline-start: 0; width: 1280px; height: 377px; }
+  .s10 .lead { top: 219px; inset-inline-start: 83px; width: 490px; }
+  .s10 .ws { position: absolute; width: 490px; height: 140px; }
+  .s10 .w1 { top: 381px; inset-inline-start: 80px; } .s10 .w2 { top: 381px; inset-inline-start: 712px; }
+  .s10 .w3 { top: 556px; inset-inline-start: 80px; } .s10 .w4 { top: 556px; inset-inline-start: 712px; }
+  .s10 .ws .ic { top: 6px; inset-inline-start: 2px; width: 22px; height: 22px; color: var(--red); }
+  .s10 .ws .bt { position: absolute; top: 0; inset-inline-start: 38px; width: 300px; }
+  .s10 .ws .ttl-b { font-size: 23px; line-height: 29px; margin-bottom: 11px; }
+  .s10 .ws .badge { top: 0; inset-inline-start: 356px; width: 130px; height: 36px; font-size: 18px; color: var(--ink); }
+
+  /* 11 الدروس المستفادة */
+  .s11 .pan { top: 250px; inset-inline-start: 0; width: 1280px; height: 470px; }
+  .s11 .rb { position: absolute; top: 185px; inset-inline-start: 718px; width: 514px; height: 535px; background: var(--red); }
+  .s11 .rb .ic { top: 77px; inset-inline-start: 50px; width: 74px; height: 62px; color: var(--yellow); }
+  .s11 .rb .q { position: absolute; top: 184px; inset-inline-start: 53px; width: 372px; margin: 0; font-size: 46px; line-height: 63px; font-weight: 400; color: #fff; }
+  html[lang="ar"] .s11 .rb .q { font-weight: 400; font-size: 44px; line-height: 70px; }
+  .s11 .ls { position: absolute; inset-inline-start: 72px; width: 600px; height: 150px; }
+  .s11 .l1 { top: 296px; } .s11 .l2 { top: 446px; } .s11 .l3 { top: 596px; }
+  .s11 .ls .n { position: absolute; top: 4px; inset-inline-start: 22px; margin: 0; font-size: 31px; line-height: 40px; font-weight: 700; color: var(--red); }
+  .s11 .ls .bt { position: absolute; top: 0; inset-inline-start: 82px; width: 400px; }
+  .s11 .ls h2 { margin: 0 0 4px; font-size: 20px; line-height: 27px; font-weight: 700; color: var(--ink); letter-spacing: .2px; }
+  .s11 .ls .tx { line-height: 23px; }
+  .s11 .hd { inset-inline-start: 72px; width: 600px; } .s11 .hd1 { top: 411px; } .s11 .hd2 { top: 562px; }
+
+  /* 12 الإجراءات التصحيحية */
+  .s12 .pan { top: 0; inset-inline-start: 0; width: 1280px; height: 318px; }
+  .s12 table { position: absolute; top: 235px; inset-inline-start: 73px; width: 1147px; border-collapse: collapse; font-size: 18px; }
+  .s12 th { height: 80px; background: var(--red); color: #fff; font-size: 22px; font-weight: 700; text-align: start; padding: 0 20px; }
+  .s12 td { height: 70px; padding: 0 20px; color: var(--body); border-bottom: 1.5px solid #D9D9D9; background: #fff; }
+  .s12 td:first-child { font-weight: 700; color: var(--ink); }
+  .s12 .c1 { width: 440px; } .s12 .c2 { width: 403px; }
+
+  /* 13 الختام */
+  .s13 .logo { inset-inline-start: 100px; }
+  .s13 .q { position: absolute; top: 254px; inset-inline-start: 110px; width: 920px; margin: 0; font-size: 74px; line-height: 96px; font-weight: 400; letter-spacing: -1.5px; color: var(--ink); }
+  html[lang="ar"] .s13 .q { font-weight: 400; font-size: 68px; line-height: 104px; letter-spacing: 0; top: 240px; width: 880px; }
+  .s13 .q mark { background: linear-gradient(transparent 8%, var(--yellow) 8%, var(--yellow) 90%, transparent 90%); padding-inline: 8px; margin-inline: -8px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .s13 .ct { position: absolute; top: 630px; display: flex; align-items: center; gap: 20px; margin: 0; font-size: 20px; color: var(--ink); }
+  .s13 .ct::before { content: ""; width: 35px; height: 2px; background: var(--red); }
+  .s13 .ct1 { inset-inline-start: 133px; } .s13 .ct2 { inset-inline-start: 515px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="cr0" x1="0" y1="0" x2="1" y2="0.6"><stop offset="0" stop-color="#E71E24"/><stop offset=".55" stop-color="#E71E24"/><stop offset="1" stop-color="#B5151A"/></linearGradient><linearGradient id="cr1" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#E71E24"/><stop offset=".45" stop-color="#C9191F"/><stop offset="1" stop-color="#7E0D10"/></linearGradient><linearGradient id="cr2" x1="0.6" y1="0.4" x2="1" y2="0"><stop offset="0" stop-color="#E71E24"/><stop offset="1" stop-color="#8A1014"/></linearGradient><linearGradient id="chg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E71E24"/><stop offset="1" stop-color="#A30F16"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="cor" style="top:0px;width:483px;height:483px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <svg class="cor bot" style="top:405px;width:315px;height:315px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <div class="logo"><svg viewBox="0 0 42 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 4c9-3 20-3 28 1 5 3 5 12 4 22-1 9-3 16-9 18-8 2-18 2-25-1C1 41 1 31 2 22 3 13 3 6 8 4zm4 6c-3 1-4 6-4 13s0 13 3 15c5 2 12 2 17 1 4-1 5-7 5-13s0-12-3-14c-5-3-13-3-18-2z"/></svg><p>شعار شركتك<br>هنا</p></div>
+    <h1 class="big">تحليل <mark>إخفاق</mark><br>المشروع</h1>
+    <p class="kick">قالب عرض تقديمي</p>
+    <p class="ptl">عنوان المشروع هنا</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="pan"></div>
+    <h1 class="h1">خلفية مشروعنا</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <span class="ic star"><svg viewBox="0 0 70 70" aria-hidden="true"><path fill="currentColor" d="M35 0c1.4 20 5 31.6 35 35-30 3.4-33.6 15-35 35-1.4-20-5-31.6-35-35 30-3.4 33.6-15 35-35z"/></svg></span>
+    <p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. أضف النص المطلوب هنا.</p>
+    <div class="it it1"><h2>مدة المشروع</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف نصك هنا.</p></div>
+    <p class="badge b1">8 أشهر</p>
+    <div class="hd"></div>
+    <div class="it it2"><h2>الفريق الأساسي</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف نصك هنا.</p></div>
+    <p class="badge b2">12 عضوًا</p>
+    <div class="bud"><p class="yb"><bdi dir="ltr">$240K</bdi></p><div class="bt"><h2>الميزانية الأولية</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي.</p></div></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="pan"></div>
+    <h1 class="h1">الأهداف ومعايير النجاح</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <div class="ln ln1"></div>
+    <div class="ln ln2"></div>
+    <p class="tx t1">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا.</p>
+    <p class="tx t2">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <div class="rb"></div>
+    <div class="kp k1"><p class="v"><bdi dir="ltr">90%</bdi></p><h2 class="ttl-b">هدف التبنّي</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div>
+    <div class="kp k2"><p class="v">6 أشهر</p><h2 class="ttl-b">موعد التسليم المستهدف</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا.</p></div>
+    <div class="kp k3"><p class="v"><bdi dir="ltr">20%</bdi></p><h2 class="ttl-b">مكاسب الكفاءة</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <svg class="cor" style="top:0px;width:177px;height:177px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <div class="pan"></div>
+    <h1 class="h1">ما الذي حدث فعلًا؟</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <div class="ln ln1"></div>
+    <div class="ln ln2"></div>
+    <div class="ln ln3"></div>
+    <div class="vd vd1"></div>
+    <div class="vd vd2"></div>
+    <div class="col c1"><p class="dl"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">65%</bdi></p><p class="v"><bdi dir="ltr">$31M</bdi></p><h2 class="ttl-b">الميزانية</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div>
+    <div class="col c2"><p class="dl"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">3.2%</bdi></p><p class="v"><bdi dir="ltr">16%</bdi></p><h2 class="ttl-b">تبنّي المستخدمين</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div>
+    <div class="col c3"><p class="dl"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 10l8-7 8 7M2 17.5l8-7 8 7"/></svg><bdi dir="ltr">65%</bdi></p><p class="v"><bdi dir="ltr">42%</bdi></p><h2 class="ttl-b">مكاسب الكفاءة</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="pan"></div>
+    <img class="ph" src="/templates/freeform/sl-failed-project-post-mortem/assets/team-meeting.jpg" alt="اجتماع فريق حول طاولة">
+    <h1 class="h1">أين انحرف المشروع عن مساره؟</h1>
+    <p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. أضف النص المطلوب هنا.</p>
+    <div class="rb"></div>
+    <div class="vd"></div>
+    <div class="it i1"><span class="ic"><svg viewBox="0 0 46 46" aria-hidden="true"><path fill="currentColor" d="M30 2c8-2 14 4 14 13 0 6-2 13-6 19-4 7-10 11-18 11C10 45 2 41 1 34c-1-6 3-9 7-10-5-3-6-9-2-13 3-3 8-3 12 0 1-5 6-8 12-9z"/></svg></span><h2 class="ttl-b">اختصارات في الاختبار</h2><p class="tx">هذا نص توضيحي. أضف نصك هنا.</p></div>
+    <div class="it i2"><span class="ic"><svg viewBox="0 0 52 52" aria-hidden="true"><path fill="currentColor" d="M26 2c2 3 3 6 6 9s8 8 15 13c1.5 1 1.5 3 0 4-7 5-12 10-15 13s-4 6-6 9c-1 1.4-2.6 1.4-3.6 0-2-3-3-6-6-9S8.6 33 2 28c-1.5-1-1.5-3 0-4 6.6-5 11.4-10 14.4-13s4-6 6-9c1-1.4 2.6-1.4 3.6 0z"/></svg></span><h2 class="ttl-b">إطلاق متعجّل</h2><p class="tx">هذا نص توضيحي. أضف نصك هنا.</p></div>
+    <div class="it i3"><span class="ic"><svg viewBox="0 0 48 40" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round" d="M5 30C10 22 16 11 15 6c-1-4-7-1-8 7-1 9-1 20 5 21 5 1 9-5 13-9 4-4 9-12 14-10 5 2 0 10-9 11-3 6 3 10 9 7 2-1 4-3 5-4"/></svg></span><h2 class="ttl-b">توسّع النطاق</h2><p class="tx">هذا نص توضيحي. أضف نصك هنا.</p></div>
+    <div class="it i4"><span class="ic"><svg viewBox="0 0 46 46" aria-hidden="true"><path fill="currentColor" d="M36 2c6 1 9 7 8 14-1 8-6 15-13 21-7 6-15 8-22 7-6-1-9-6-8-11 1-6 7-10 14-12 7-2 11-5 13-10 2-6 3-10 8-9z"/></svg></span><h2 class="ttl-b">تأخّر القرارات</h2><p class="tx">هذا نص توضيحي. أضف نصك هنا.</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <svg class="cor" style="top:0px;width:233px;height:233px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <div class="pan"></div>
+    <h1 class="h1">الخط الزمني للأحداث الحرجة</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <div class="tl"></div>
+    <div class="tld"></div>
+    <span class="ic st" style="inset-inline-start:64px"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span>
+    <span class="ic st" style="inset-inline-start:373px"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span>
+    <span class="ic st" style="inset-inline-start:682px"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span>
+    <span class="ic st" style="inset-inline-start:992px"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span>
+    <div class="ev e1"><p class="badge">يناير</p><h2>انطلاق المشروع</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف نصًا هنا.</p></div>
+    <div class="ev e2"><p class="badge">فبراير</p><h2>توسّع النطاق</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف نصًا هنا.</p></div>
+    <div class="ev e3"><p class="badge">مايو</p><h2>تأخّر الاختبارات</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف نصًا هنا.</p></div>
+    <div class="ev e4"><p class="badge">أغسطس</p><h2>تأجيل الإطلاق</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف نصًا هنا.</p></div>
+    <div class="ft"><span class="ic"><svg viewBox="0 0 48 40" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round" d="M5 30C10 22 16 11 15 6c-1-4-7-1-8 7-1 9-1 20 5 21 5 1 9-5 13-9 4-4 9-12 14-10 5 2 0 10-9 11-3 6 3 10 9 7 2-1 4-3 5-4"/></svg></span><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا.</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="pan"></div>
+    <h1 class="h1">عوامل الإخفاق</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <span class="ic dia"><svg viewBox="0 0 52 52" aria-hidden="true"><path fill="currentColor" d="M26 2c2 3 3 6 6 9s8 8 15 13c1.5 1 1.5 3 0 4-7 5-12 10-15 13s-4 6-6 9c-1 1.4-2.6 1.4-3.6 0-2-3-3-6-6-9S8.6 33 2 28c-1.5-1-1.5-3 0-4 6.6-5 11.4-10 14.4-13s4-6 6-9c1-1.4 2.6-1.4 3.6 0z"/></svg></span>
+    <p class="big">أثّرت نقاط ضعف متعددة في قدرة المشروع على الاستجابة للمشكلات والحفاظ على اتجاه ثابت.</p>
+    <div class="row r1"><p class="num">1.</p><div class="bd"><h2 class="ttl-b">نطاق غير منضبط</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div><span class="ic chv"><svg viewBox="0 0 75 70" aria-hidden="true"><g fill="none" stroke-width="17" stroke-linejoin="round" stroke-linecap="butt"><path d="M8 4l29.5 28L67 4" stroke="#F29CA0" opacity=".85"/><path d="M8 16l29.5 28L67 16" stroke="#EC6268" opacity=".9"/><path d="M8 28l29.5 28L67 28" stroke="url(#chg)"/></g></svg></span><div class="hd"></div></div>
+    <div class="row r2"><p class="num">2.</p><div class="bd"><h2 class="ttl-b">ملكية مجزّأة</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div><span class="ic chv"><svg viewBox="0 0 75 70" aria-hidden="true"><g fill="none" stroke-width="17" stroke-linejoin="round" stroke-linecap="butt"><path d="M8 4l29.5 28L67 4" stroke="#F29CA0" opacity=".85"/><path d="M8 16l29.5 28L67 16" stroke="#EC6268" opacity=".9"/><path d="M8 28l29.5 28L67 28" stroke="url(#chg)"/></g></svg></span><div class="hd"></div></div>
+    <div class="row r3"><p class="num">3.</p><div class="bd"><h2 class="ttl-b">جدولة غير واقعية</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div><span class="ic chv"><svg viewBox="0 0 75 70" aria-hidden="true"><g fill="none" stroke-width="17" stroke-linejoin="round" stroke-linecap="butt"><path d="M8 4l29.5 28L67 4" stroke="#F29CA0" opacity=".85"/><path d="M8 16l29.5 28L67 16" stroke="#EC6268" opacity=".9"/><path d="M8 28l29.5 28L67 28" stroke="url(#chg)"/></g></svg></span><div class="hd"></div></div>
+    <div class="row r4"><p class="num">4.</p><div class="bd"><h2 class="ttl-b">اختبار غير كافٍ</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div><span class="ic chv"><svg viewBox="0 0 75 70" aria-hidden="true"><g fill="none" stroke-width="17" stroke-linejoin="round" stroke-linecap="butt"><path d="M8 4l29.5 28L67 4" stroke="#F29CA0" opacity=".85"/><path d="M8 16l29.5 28L67 16" stroke="#EC6268" opacity=".9"/><path d="M8 28l29.5 28L67 28" stroke="url(#chg)"/></g></svg></span></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="pan"></div>
+    <img class="ph" src="/templates/freeform/sl-failed-project-post-mortem/assets/boardroom.jpg" alt="اجتماع في قاعة اجتماعات بجدران زجاجية">
+    <div class="rb"><span class="ic"><svg viewBox="0 0 48 40" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round" d="M5 30C10 22 16 11 15 6c-1-4-7-1-8 7-1 9-1 20 5 21 5 1 9-5 13-9 4-4 9-12 14-10 5 2 0 10-9 11-3 6 3 10 9 7 2-1 4-3 5-4"/></svg></span><div class="bt"><h2 class="ttl-b">ضعف حوكمة المشروع</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي. هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <h1 class="h1">تحليل الأسباب الجذرية</h1>
+    <div class="vd"></div>
+    <div class="it i1"><span class="ic"><svg viewBox="0 0 52 52" aria-hidden="true"><path fill="currentColor" d="M26 2c2 3 3 6 6 9s8 8 15 13c1.5 1 1.5 3 0 4-7 5-12 10-15 13s-4 6-6 9c-1 1.4-2.6 1.4-3.6 0-2-3-3-6-6-9S8.6 33 2 28c-1.5-1-1.5-3 0-4 6.6-5 11.4-10 14.4-13s4-6 6-9c1-1.4 2.6-1.4 3.6 0z"/></svg></span><h2 class="ttl-b">فجوات العمليات</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div>
+    <div class="it i2"><span class="ic"><svg viewBox="0 0 46 46" aria-hidden="true"><path fill="currentColor" d="M36 2c6 1 9 7 8 14-1 8-6 15-13 21-7 6-15 8-22 7-6-1-9-6-8-11 1-6 7-10 14-12 7-2 11-5 13-10 2-6 3-10 8-9z"/></svg></span><h2 class="ttl-b">فجوات القيادة</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا. هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <svg class="cor" style="top:0px;width:190px;height:190px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <div class="pan"></div>
+    <h1 class="h1">أثر الإخفاق</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <div class="vd vd1"></div>
+    <div class="vd vd2"></div>
+    <div class="hd"></div>
+    <div class="cell r1 x1"><div class="top"><p class="v"><bdi dir="ltr">+29%</bdi></p><p class="bg"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">11%</bdi></p></div><h2 class="ttl-b">تجاوز الميزانية</h2><p class="tx">هذا نص توضيحي.</p></div>
+    <div class="cell r1 x2"><div class="top"><p class="v"><bdi dir="ltr">+2</bdi> شهر</p><p class="bg"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">1.2%</bdi></p></div><h2 class="ttl-b">تجاوز الميزانية</h2><p class="tx">هذا نص توضيحي.</p></div>
+    <div class="cell r1 x3"><div class="top"><p class="v"><bdi dir="ltr">42%</bdi></p><p class="bg"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">2.6%</bdi></p></div><h2 class="ttl-b">تجاوز الميزانية</h2><p class="tx">هذا نص توضيحي.</p></div>
+    <div class="cell r2 x1"><div class="top"><p class="v"><bdi dir="ltr">14</bdi> نقطة</p><p class="bg"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">2%</bdi></p></div><h2 class="ttl-b">تجاوز الميزانية</h2><p class="tx">هذا نص توضيحي.</p></div>
+    <div class="cell r2 x2"><div class="top"><p class="v"><bdi dir="ltr">32%</bdi></p><p class="bg"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">1.6%</bdi></p></div><h2 class="ttl-b">تجاوز الميزانية</h2><p class="tx">هذا نص توضيحي.</p></div>
+    <div class="cell r2 x3"><div class="top"><p class="v"><bdi dir="ltr">3</bdi></p><p class="bg"><svg viewBox="0 0 20 20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="miter" d="M2 2.5l8 7 8-7M2 10l8 7 8-7"/></svg><bdi dir="ltr">0.6%</bdi></p></div><h2 class="ttl-b">تجاوز الميزانية</h2><p class="tx">هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <svg class="cor" style="top:0px;width:265px;height:265px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <svg class="cor bot" style="top:93px;width:250px;height:250px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <div class="pan"></div>
+    <h1 class="h1">إشارات تحذير أغفلناها</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي.</p>
+    <div class="ws w1"><span class="ic"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span><div class="bt"><h2 class="ttl-b">تكرار تأخّر<br>المراحل الرئيسية</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا.</p></div><p class="badge">خطر مرتفع</p></div>
+    <div class="ws w2"><span class="ic"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span><div class="bt"><h2 class="ttl-b">تراكم متزايد<br>للعيوب</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا.</p></div><p class="badge">في تصاعد</p></div>
+    <div class="ws w3"><span class="ic"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span><div class="bt"><h2 class="ttl-b">تراجع ثقة أصحاب المصلحة</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا.</p></div><p class="badge">مُغفَل</p></div>
+    <div class="ws w4"><span class="ic"><svg viewBox="0 0 36 36" aria-hidden="true"><g stroke="currentColor" stroke-width="6.5"><path d="M18 1v34M3.3 9.5l29.4 17M3.3 26.5l29.4-17"/></g></svg></span><div class="bt"><h2 class="ttl-b">غموض توزيع الموارد</h2><p class="tx">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصًا هنا.</p></div><p class="badge">خطر مرتفع</p></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <div class="pan"></div>
+    <h1 class="h1">أهم الدروس المستفادة</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <div class="hd hd1"></div>
+    <div class="hd hd2"></div>
+    <div class="ls l1"><p class="n">1.</p><div class="bt"><h2>ضبط التغيير مبكرًا</h2><p class="tx">كل متطلب جديد يحتاج إلى تقييم أثر موثّق وموافقة.</p></div></div>
+    <div class="ls l2"><p class="n">2.</p><div class="bt"><h2>تصعيد المخاطر بسرعة</h2><p class="tx">يجب أن يتمكّن الفريق من إثارة المخاوف قبل أن تصبح المواعيد غير قابلة للتدارك.</p></div></div>
+    <div class="ls l3"><p class="n">3.</p><div class="bt"><h2>حماية معايير الجودة</h2><p class="tx">ينبغي أن يبقى الاختبار والتحقق مع المستخدمين شرطين أساسيين للإصدار.</p></div></div>
+    <div class="rb"><span class="ic"><svg viewBox="0 0 48 40" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round" d="M5 30C10 22 16 11 15 6c-1-4-7-1-8 7-1 9-1 20 5 21 5 1 9-5 13-9 4-4 9-12 14-10 5 2 0 10-9 11-3 6 3 10 9 7 2-1 4-3 5-4"/></svg></span><p class="q">يصبح الإخفاق قيّمًا حين يغيّر طريقة عملنا.</p></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <div class="pan"></div>
+    <h1 class="h1">الإجراءات التصحيحية</h1>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p>
+    <table><thead><tr><th class="c1">الإجراء</th><th class="c2">المسؤول</th><th>الموعد المستهدف</th></tr></thead><tbody><tr><td>إرساء ضبط التغيير</td><td>مدير المشروع</td><td>الأسبوع 2</td></tr><tr><td>تعيين مالكي القرارات</td><td>رؤساء الإدارات</td><td>الأسبوع 2</td></tr><tr><td>إدخال مراجعات المخاطر</td><td>مكتب إدارة المشاريع</td><td>الأسبوع 4</td></tr><tr><td>تعزيز اختبارات الإصدار</td><td>قائد ضمان الجودة</td><td>الأسبوع 6</td></tr><tr><td>التحقق من تبنّي المستخدمين</td><td>قائد المنتج</td><td>الأسبوع 8</td></tr></tbody></table>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <svg class="cor" style="top:0px;width:128px;height:128px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <svg class="cor bot" style="top:450px;width:270px;height:270px" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,0 100,0 100,100" fill="url(#cr0)"/><polygon points="0,0 38,0 100,62 100,100" fill="url(#cr1)"/><polygon points="62,0 100,0 100,38" fill="url(#cr2)"/></svg>
+    <div class="logo"><svg viewBox="0 0 42 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 4c9-3 20-3 28 1 5 3 5 12 4 22-1 9-3 16-9 18-8 2-18 2-25-1C1 41 1 31 2 22 3 13 3 6 8 4zm4 6c-3 1-4 6-4 13s0 13 3 15c5 2 12 2 17 1 4-1 5-7 5-13s0-12-3-14c-5-3-13-3-18-2z"/></svg><p>شعار شركتك<br>هنا</p></div>
+    <p class="q">كل انتكاسة تساعدنا على <mark>اتخاذ قرارات أفضل</mark> و<mark>تحقيق نتائج</mark> أقوى.</p>
+    <p class="ct ct1">أدخل بريدك الإلكتروني هنا</p>
+    <p class="ct ct2"><bdi dir="ltr">+1 (234) 567 8901</bdi></p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 13</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Perspectives</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «وجهات نظر المشروع»: عنوان أعلى، رسم SVG لأربعة أسهم ملوّنة متجهة إلى حلقة رباعية الأقسام حول نص مركزي، وتسمية لكل محور. الصنف on يُبرز السهم، والصنف all على الرسم يلوّن الأسهم كلها. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #262626; --accent: #2E7FAE; --bg: #FFFFFF; --muted: #7F7F7F; --muted-2: #BFBFBF; --off: #F2F2F2; --c-scope: #8CB54F; --c-time: #5EB6A2; --c-cost: #2F80AD; --c-quality: #E45A35; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 41px; font-weight: 400; line-height: 1.25; color: var(--ink); }
+  html[lang="ar"] .ttl { font-weight: 500; }
+  /* الرسم: يُعكس أفقيًا في العربية فينتقل سهم الجودة إلى اليمين */
+  .pp { position: absolute; top: 150px; inset-inline-start: 230px; width: 820px; height: 510px; }
+  html[dir="rtl"] .pp { transform: scaleX(-1); }
+  .pp .ar { fill: var(--off); }
+  .pp .ar.on.scope, .pp.all .ar.scope { fill: var(--c-scope); }
+  .pp .ar.on.time, .pp.all .ar.time { fill: var(--c-time); }
+  .pp .ar.on.cost, .pp.all .ar.cost { fill: var(--c-cost); }
+  .pp .ar.on.quality, .pp.all .ar.quality { fill: var(--c-quality); }
+  /* تسميات المحاور */
+  .ax { position: absolute; margin: 0; width: 160px; height: 34px; line-height: 34px; text-align: center; font-size: 22px; font-weight: 700; color: var(--muted-2); transform: rotate(var(--r, 0deg)); }
+  html[dir="rtl"] .ax { transform: rotate(calc(var(--r, 0deg) * -1)); }
+  .ax.on { color: #000; }
+  .ax-scope { top: 107px; inset-inline-start: 560px; }
+  .ax-cost { top: 658px; inset-inline-start: 560px; }
+  .ax-quality { top: 386px; inset-inline-start: 108px; --r: -90deg; }
+  .ax-time { top: 386px; inset-inline-start: 1012px; --r: 90deg; }
+  /* نص وأيقونة داخل كل سهم */
+  .bx { position: absolute; margin: 0; font-size: 17px; line-height: 23px; color: var(--muted); }
+  .bx.on { color: #fff; }
+  .ic { position: absolute; color: var(--muted); }
+  .ic.on { color: #fff; }
+  .ic svg { width: 100%; height: 100%; }
+  .bx-scope { top: 179px; inset-inline-start: 551px; width: 240px; text-align: start; }
+  .bx-cost { top: 579px; inset-inline-start: 551px; width: 240px; text-align: start; }
+  .bx-quality { top: 394px; inset-inline-start: 270px; width: 180px; text-align: center; }
+  .bx-time { top: 394px; inset-inline-start: 825px; width: 180px; text-align: center; }
+  .ic-scope { top: 180px; inset-inline-start: 471px; width: 34px; height: 42px; }
+  .ic-cost { top: 577px; inset-inline-start: 461px; width: 63px; height: 48px; }
+  .ic-quality { top: 327px; inset-inline-start: 328px; width: 64px; height: 50px; }
+  .ic-time { top: 326px; inset-inline-start: 897px; width: 37px; height: 50px; }
+  /* الحلقة المركزية */
+  .ql { position: absolute; margin: 0; width: 140px; height: 26px; line-height: 26px; text-align: center; font-size: 18px; font-weight: 700; color: #fff; transform: rotate(var(--r)); }
+  html[dir="rtl"] .ql { transform: rotate(calc(var(--r) * -1)); }
+  .ql1 { top: 318px; inset-inline-start: 496px; --r: -45deg; }
+  .ql2 { top: 318px; inset-inline-start: 641px; --r: 45deg; }
+  .ql3 { top: 463px; inset-inline-start: 502px; --r: 45deg; }
+  .ql4 { top: 463px; inset-inline-start: 641px; --r: -45deg; }
+  .ctr { position: absolute; top: 377px; inset-inline-start: 570px; width: 140px; margin: 0; text-align: center; font-size: 19px; line-height: 25px; font-weight: 700; color: var(--ink); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">Project Perspectives PowerPoint Template</h1>
+    <svg class="pp all" viewBox="230 150 820 510" aria-hidden="true"><polygon class="ar scope" points="426,157 851,157 851,235 905,235 640,404 373,235 426,235"/><polygon class="ar time" points="1040,274 1040,532 918,532 918,565 640,404 918,242 918,274"/><polygon class="ar cost" points="426,650 851,650 851,573 905,573 640,404 373,573 426,573"/><polygon class="ar quality" points="240,274 362,274 362,242 640,404 362,565 362,532 240,532"/><g stroke="#fff" stroke-width="8" stroke-linecap="butt"><line x1="367" y1="238" x2="640" y2="404"/><line x1="913" y1="238" x2="640" y2="404"/><line x1="367" y1="570" x2="640" y2="404"/><line x1="913" y1="570" x2="640" y2="404"/></g><circle cx="640" cy="404" r="160" fill="#fff"/><path fill="#B63A1B" d="M640,404 L494,404 A146,146 0 0 1 640,258 Z"/><path fill="#678B38" d="M640,404 L640,258 A146,146 0 0 1 786,404 Z"/><path fill="#3E8F7C" d="M640,404 L786,404 A146,146 0 0 1 640,550 Z"/><path fill="#23607F" d="M640,404 L640,550 A146,146 0 0 1 494,404 Z"/><g fill="#fff"><rect x="636.5" y="250" width="7" height="308"/><rect x="486" y="400.5" width="308" height="7"/><circle cx="640" cy="404" r="73"/><rect x="578" y="342" width="124" height="124" rx="3"/></g></svg>
+    <p class="ax ax-scope on">Scope</p>
+    <span class="ic ic-scope on"><svg viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="2" y="2" width="30" height="38" rx="1"/><path d="M15 10h11M15 17h11M15 24h11M15 31h11"/><path d="M8 10h3M8 17h3M8 24h3M8 31h3" stroke-width="3.2"/></svg></span>
+    <p class="bx bx-scope on">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-time on">Time</p>
+    <span class="ic ic-time on"><svg viewBox="0 0 37 50" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="35" height="5" rx="1"/><rect x="1" y="44" width="35" height="5" rx="1"/><path d="M5 6h27v4c0 6-5 10-9.5 15C27 30 32 34 32 40v4H5v-4c0-6 5-10 9.5-15C10 20 5 16 5 10z M9 10c0 5 5 9 9.5 13.5C23 19 28 15 28 10z M18.5 29C14 33 9 36 9 40h19c0-4-5-7-9.5-11z" fill-rule="evenodd"/><path d="M11 40c2-3 5-5 7.5-7 2.5 2 5.5 4 7.5 7z"/></svg></span>
+    <p class="bx bx-time on">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-cost on">Cost</p>
+    <span class="ic ic-cost on"><svg viewBox="0 0 64 48" fill="currentColor" aria-hidden="true"><path d="M10 13l40-11 1.5 4-40 11z"/><path d="M8 18l44-9 .8 4-44 9z"/><path fill-rule="evenodd" d="M2 20h60v27H2z M7 25v17h50V25z"/><circle cx="32" cy="33.5" r="6"/><circle cx="16" cy="33.5" r="2.6"/><circle cx="48" cy="33.5" r="2.6"/></svg></span>
+    <p class="bx bx-cost on">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-quality on">Quality</p>
+    <span class="ic ic-quality on"><svg viewBox="0 0 64 50" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h34l12 14L32 47 3 17z"/><path d="M3 17h58M15 3l8 14 9-14 9 14 8-14M23 17l9 30 9-30"/></svg></span>
+    <p class="bx bx-quality on">This is a sample text. Insert your desired text here.</p>
+    <span class="ql ql1">Placeholder</span>
+    <span class="ql ql2">Placeholder</span>
+    <span class="ql ql3">Placeholder</span>
+    <span class="ql ql4">Placeholder</span>
+    <p class="ctr">Project Perspectives</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">Project Perspectives PowerPoint Template</h1>
+    <svg class="pp" viewBox="230 150 820 510" aria-hidden="true"><polygon class="ar scope on" points="426,157 851,157 851,235 905,235 640,404 373,235 426,235"/><polygon class="ar time" points="1040,274 1040,532 918,532 918,565 640,404 918,242 918,274"/><polygon class="ar cost" points="426,650 851,650 851,573 905,573 640,404 373,573 426,573"/><polygon class="ar quality" points="240,274 362,274 362,242 640,404 362,565 362,532 240,532"/><g stroke="#fff" stroke-width="8" stroke-linecap="butt"><line x1="367" y1="238" x2="640" y2="404"/><line x1="913" y1="238" x2="640" y2="404"/><line x1="367" y1="570" x2="640" y2="404"/><line x1="913" y1="570" x2="640" y2="404"/></g><circle cx="640" cy="404" r="160" fill="#fff"/><path fill="#B63A1B" d="M640,404 L494,404 A146,146 0 0 1 640,258 Z"/><path fill="#678B38" d="M640,404 L640,258 A146,146 0 0 1 786,404 Z"/><path fill="#3E8F7C" d="M640,404 L786,404 A146,146 0 0 1 640,550 Z"/><path fill="#23607F" d="M640,404 L640,550 A146,146 0 0 1 494,404 Z"/><g fill="#fff"><rect x="636.5" y="250" width="7" height="308"/><rect x="486" y="400.5" width="308" height="7"/><circle cx="640" cy="404" r="73"/><rect x="578" y="342" width="124" height="124" rx="3"/></g></svg>
+    <p class="ax ax-scope on">Scope</p>
+    <span class="ic ic-scope on"><svg viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="2" y="2" width="30" height="38" rx="1"/><path d="M15 10h11M15 17h11M15 24h11M15 31h11"/><path d="M8 10h3M8 17h3M8 24h3M8 31h3" stroke-width="3.2"/></svg></span>
+    <p class="bx bx-scope on">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-time">Time</p>
+    <span class="ic ic-time"><svg viewBox="0 0 37 50" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="35" height="5" rx="1"/><rect x="1" y="44" width="35" height="5" rx="1"/><path d="M5 6h27v4c0 6-5 10-9.5 15C27 30 32 34 32 40v4H5v-4c0-6 5-10 9.5-15C10 20 5 16 5 10z M9 10c0 5 5 9 9.5 13.5C23 19 28 15 28 10z M18.5 29C14 33 9 36 9 40h19c0-4-5-7-9.5-11z" fill-rule="evenodd"/><path d="M11 40c2-3 5-5 7.5-7 2.5 2 5.5 4 7.5 7z"/></svg></span>
+    <p class="bx bx-time">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-cost">Cost</p>
+    <span class="ic ic-cost"><svg viewBox="0 0 64 48" fill="currentColor" aria-hidden="true"><path d="M10 13l40-11 1.5 4-40 11z"/><path d="M8 18l44-9 .8 4-44 9z"/><path fill-rule="evenodd" d="M2 20h60v27H2z M7 25v17h50V25z"/><circle cx="32" cy="33.5" r="6"/><circle cx="16" cy="33.5" r="2.6"/><circle cx="48" cy="33.5" r="2.6"/></svg></span>
+    <p class="bx bx-cost">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-quality">Quality</p>
+    <span class="ic ic-quality"><svg viewBox="0 0 64 50" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h34l12 14L32 47 3 17z"/><path d="M3 17h58M15 3l8 14 9-14 9 14 8-14M23 17l9 30 9-30"/></svg></span>
+    <p class="bx bx-quality">This is a sample text. Insert your desired text here.</p>
+    <span class="ql ql1">Placeholder</span>
+    <span class="ql ql2">Placeholder</span>
+    <span class="ql ql3">Placeholder</span>
+    <span class="ql ql4">Placeholder</span>
+    <p class="ctr">Project Perspectives</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">Project Perspectives PowerPoint Template</h1>
+    <svg class="pp" viewBox="230 150 820 510" aria-hidden="true"><polygon class="ar scope" points="426,157 851,157 851,235 905,235 640,404 373,235 426,235"/><polygon class="ar time on" points="1040,274 1040,532 918,532 918,565 640,404 918,242 918,274"/><polygon class="ar cost" points="426,650 851,650 851,573 905,573 640,404 373,573 426,573"/><polygon class="ar quality" points="240,274 362,274 362,242 640,404 362,565 362,532 240,532"/><g stroke="#fff" stroke-width="8" stroke-linecap="butt"><line x1="367" y1="238" x2="640" y2="404"/><line x1="913" y1="238" x2="640" y2="404"/><line x1="367" y1="570" x2="640" y2="404"/><line x1="913" y1="570" x2="640" y2="404"/></g><circle cx="640" cy="404" r="160" fill="#fff"/><path fill="#B63A1B" d="M640,404 L494,404 A146,146 0 0 1 640,258 Z"/><path fill="#678B38" d="M640,404 L640,258 A146,146 0 0 1 786,404 Z"/><path fill="#3E8F7C" d="M640,404 L786,404 A146,146 0 0 1 640,550 Z"/><path fill="#23607F" d="M640,404 L640,550 A146,146 0 0 1 494,404 Z"/><g fill="#fff"><rect x="636.5" y="250" width="7" height="308"/><rect x="486" y="400.5" width="308" height="7"/><circle cx="640" cy="404" r="73"/><rect x="578" y="342" width="124" height="124" rx="3"/></g></svg>
+    <p class="ax ax-scope">Scope</p>
+    <span class="ic ic-scope"><svg viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="2" y="2" width="30" height="38" rx="1"/><path d="M15 10h11M15 17h11M15 24h11M15 31h11"/><path d="M8 10h3M8 17h3M8 24h3M8 31h3" stroke-width="3.2"/></svg></span>
+    <p class="bx bx-scope">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-time on">Time</p>
+    <span class="ic ic-time on"><svg viewBox="0 0 37 50" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="35" height="5" rx="1"/><rect x="1" y="44" width="35" height="5" rx="1"/><path d="M5 6h27v4c0 6-5 10-9.5 15C27 30 32 34 32 40v4H5v-4c0-6 5-10 9.5-15C10 20 5 16 5 10z M9 10c0 5 5 9 9.5 13.5C23 19 28 15 28 10z M18.5 29C14 33 9 36 9 40h19c0-4-5-7-9.5-11z" fill-rule="evenodd"/><path d="M11 40c2-3 5-5 7.5-7 2.5 2 5.5 4 7.5 7z"/></svg></span>
+    <p class="bx bx-time on">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-cost">Cost</p>
+    <span class="ic ic-cost"><svg viewBox="0 0 64 48" fill="currentColor" aria-hidden="true"><path d="M10 13l40-11 1.5 4-40 11z"/><path d="M8 18l44-9 .8 4-44 9z"/><path fill-rule="evenodd" d="M2 20h60v27H2z M7 25v17h50V25z"/><circle cx="32" cy="33.5" r="6"/><circle cx="16" cy="33.5" r="2.6"/><circle cx="48" cy="33.5" r="2.6"/></svg></span>
+    <p class="bx bx-cost">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-quality">Quality</p>
+    <span class="ic ic-quality"><svg viewBox="0 0 64 50" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h34l12 14L32 47 3 17z"/><path d="M3 17h58M15 3l8 14 9-14 9 14 8-14M23 17l9 30 9-30"/></svg></span>
+    <p class="bx bx-quality">This is a sample text. Insert your desired text here.</p>
+    <span class="ql ql1">Placeholder</span>
+    <span class="ql ql2">Placeholder</span>
+    <span class="ql ql3">Placeholder</span>
+    <span class="ql ql4">Placeholder</span>
+    <p class="ctr">Project Perspectives</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">Project Perspectives PowerPoint Template</h1>
+    <svg class="pp" viewBox="230 150 820 510" aria-hidden="true"><polygon class="ar scope" points="426,157 851,157 851,235 905,235 640,404 373,235 426,235"/><polygon class="ar time" points="1040,274 1040,532 918,532 918,565 640,404 918,242 918,274"/><polygon class="ar cost on" points="426,650 851,650 851,573 905,573 640,404 373,573 426,573"/><polygon class="ar quality" points="240,274 362,274 362,242 640,404 362,565 362,532 240,532"/><g stroke="#fff" stroke-width="8" stroke-linecap="butt"><line x1="367" y1="238" x2="640" y2="404"/><line x1="913" y1="238" x2="640" y2="404"/><line x1="367" y1="570" x2="640" y2="404"/><line x1="913" y1="570" x2="640" y2="404"/></g><circle cx="640" cy="404" r="160" fill="#fff"/><path fill="#B63A1B" d="M640,404 L494,404 A146,146 0 0 1 640,258 Z"/><path fill="#678B38" d="M640,404 L640,258 A146,146 0 0 1 786,404 Z"/><path fill="#3E8F7C" d="M640,404 L786,404 A146,146 0 0 1 640,550 Z"/><path fill="#23607F" d="M640,404 L640,550 A146,146 0 0 1 494,404 Z"/><g fill="#fff"><rect x="636.5" y="250" width="7" height="308"/><rect x="486" y="400.5" width="308" height="7"/><circle cx="640" cy="404" r="73"/><rect x="578" y="342" width="124" height="124" rx="3"/></g></svg>
+    <p class="ax ax-scope">Scope</p>
+    <span class="ic ic-scope"><svg viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="2" y="2" width="30" height="38" rx="1"/><path d="M15 10h11M15 17h11M15 24h11M15 31h11"/><path d="M8 10h3M8 17h3M8 24h3M8 31h3" stroke-width="3.2"/></svg></span>
+    <p class="bx bx-scope">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-time">Time</p>
+    <span class="ic ic-time"><svg viewBox="0 0 37 50" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="35" height="5" rx="1"/><rect x="1" y="44" width="35" height="5" rx="1"/><path d="M5 6h27v4c0 6-5 10-9.5 15C27 30 32 34 32 40v4H5v-4c0-6 5-10 9.5-15C10 20 5 16 5 10z M9 10c0 5 5 9 9.5 13.5C23 19 28 15 28 10z M18.5 29C14 33 9 36 9 40h19c0-4-5-7-9.5-11z" fill-rule="evenodd"/><path d="M11 40c2-3 5-5 7.5-7 2.5 2 5.5 4 7.5 7z"/></svg></span>
+    <p class="bx bx-time">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-cost on">Cost</p>
+    <span class="ic ic-cost on"><svg viewBox="0 0 64 48" fill="currentColor" aria-hidden="true"><path d="M10 13l40-11 1.5 4-40 11z"/><path d="M8 18l44-9 .8 4-44 9z"/><path fill-rule="evenodd" d="M2 20h60v27H2z M7 25v17h50V25z"/><circle cx="32" cy="33.5" r="6"/><circle cx="16" cy="33.5" r="2.6"/><circle cx="48" cy="33.5" r="2.6"/></svg></span>
+    <p class="bx bx-cost on">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-quality">Quality</p>
+    <span class="ic ic-quality"><svg viewBox="0 0 64 50" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h34l12 14L32 47 3 17z"/><path d="M3 17h58M15 3l8 14 9-14 9 14 8-14M23 17l9 30 9-30"/></svg></span>
+    <p class="bx bx-quality">This is a sample text. Insert your desired text here.</p>
+    <span class="ql ql1">Placeholder</span>
+    <span class="ql ql2">Placeholder</span>
+    <span class="ql ql3">Placeholder</span>
+    <span class="ql ql4">Placeholder</span>
+    <p class="ctr">Project Perspectives</p>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">Project Perspectives PowerPoint Template</h1>
+    <svg class="pp" viewBox="230 150 820 510" aria-hidden="true"><polygon class="ar scope" points="426,157 851,157 851,235 905,235 640,404 373,235 426,235"/><polygon class="ar time" points="1040,274 1040,532 918,532 918,565 640,404 918,242 918,274"/><polygon class="ar cost" points="426,650 851,650 851,573 905,573 640,404 373,573 426,573"/><polygon class="ar quality on" points="240,274 362,274 362,242 640,404 362,565 362,532 240,532"/><g stroke="#fff" stroke-width="8" stroke-linecap="butt"><line x1="367" y1="238" x2="640" y2="404"/><line x1="913" y1="238" x2="640" y2="404"/><line x1="367" y1="570" x2="640" y2="404"/><line x1="913" y1="570" x2="640" y2="404"/></g><circle cx="640" cy="404" r="160" fill="#fff"/><path fill="#B63A1B" d="M640,404 L494,404 A146,146 0 0 1 640,258 Z"/><path fill="#678B38" d="M640,404 L640,258 A146,146 0 0 1 786,404 Z"/><path fill="#3E8F7C" d="M640,404 L786,404 A146,146 0 0 1 640,550 Z"/><path fill="#23607F" d="M640,404 L640,550 A146,146 0 0 1 494,404 Z"/><g fill="#fff"><rect x="636.5" y="250" width="7" height="308"/><rect x="486" y="400.5" width="308" height="7"/><circle cx="640" cy="404" r="73"/><rect x="578" y="342" width="124" height="124" rx="3"/></g></svg>
+    <p class="ax ax-scope">Scope</p>
+    <span class="ic ic-scope"><svg viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="2" y="2" width="30" height="38" rx="1"/><path d="M15 10h11M15 17h11M15 24h11M15 31h11"/><path d="M8 10h3M8 17h3M8 24h3M8 31h3" stroke-width="3.2"/></svg></span>
+    <p class="bx bx-scope">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-time">Time</p>
+    <span class="ic ic-time"><svg viewBox="0 0 37 50" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="35" height="5" rx="1"/><rect x="1" y="44" width="35" height="5" rx="1"/><path d="M5 6h27v4c0 6-5 10-9.5 15C27 30 32 34 32 40v4H5v-4c0-6 5-10 9.5-15C10 20 5 16 5 10z M9 10c0 5 5 9 9.5 13.5C23 19 28 15 28 10z M18.5 29C14 33 9 36 9 40h19c0-4-5-7-9.5-11z" fill-rule="evenodd"/><path d="M11 40c2-3 5-5 7.5-7 2.5 2 5.5 4 7.5 7z"/></svg></span>
+    <p class="bx bx-time">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-cost">Cost</p>
+    <span class="ic ic-cost"><svg viewBox="0 0 64 48" fill="currentColor" aria-hidden="true"><path d="M10 13l40-11 1.5 4-40 11z"/><path d="M8 18l44-9 .8 4-44 9z"/><path fill-rule="evenodd" d="M2 20h60v27H2z M7 25v17h50V25z"/><circle cx="32" cy="33.5" r="6"/><circle cx="16" cy="33.5" r="2.6"/><circle cx="48" cy="33.5" r="2.6"/></svg></span>
+    <p class="bx bx-cost">This is a sample text. Insert your desired text here.</p>
+    <p class="ax ax-quality on">Quality</p>
+    <span class="ic ic-quality on"><svg viewBox="0 0 64 50" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h34l12 14L32 47 3 17z"/><path d="M3 17h58M15 3l8 14 9-14 9 14 8-14M23 17l9 30 9-30"/></svg></span>
+    <p class="bx bx-quality on">This is a sample text. Insert your desired text here.</p>
+    <span class="ql ql1">Placeholder</span>
+    <span class="ql ql2">Placeholder</span>
+    <span class="ql ql3">Placeholder</span>
+    <span class="ql ql4">Placeholder</span>
+    <p class="ctr">Project Perspectives</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 5</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
