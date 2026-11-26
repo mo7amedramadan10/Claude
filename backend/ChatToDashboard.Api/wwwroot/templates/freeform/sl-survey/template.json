@@ -1,0 +1,87 @@
+{
+  "key": "sl-survey",
+  "kind": "slides",
+  "category": "cx",
+  "icon": "📋",
+  "name": "نتائج الاستبيان",
+  "nameEn": "Survey Results",
+  "description": "خمس عشرة شريحة لعرض نتائج استبيان: غلاف، أعمدة، حلقات نسب، أيقونات أشخاص، منحنيات، دوائر، وأعمدة مكدسة",
+  "descriptionEn": "Fifteen survey-results slides: cover, bars, percentage donuts, people icons, trend lines, pies and stacked bars",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "أعمدة وأربعة أرقام رئيسية",
+      "titleEn": "Bar Chart & Key Figures",
+      "needsData": true
+    },
+    {
+      "title": "أربع حلقات نسب",
+      "titleEn": "Four Percentage Donuts",
+      "needsData": true
+    },
+    {
+      "title": "مقارنة بأيقونات الأشخاص",
+      "titleEn": "People Icon Comparison",
+      "needsData": true
+    },
+    {
+      "title": "حلقات البيانات",
+      "titleEn": "Data Rings",
+      "needsData": true
+    },
+    {
+      "title": "أربع نسب بالأيقونات",
+      "titleEn": "Four Icon Percentages",
+      "needsData": true
+    },
+    {
+      "title": "ثلاث حلقات نسب",
+      "titleEn": "Three Donut Charts",
+      "needsData": true
+    },
+    {
+      "title": "أشرطة التقدّم",
+      "titleEn": "Progress Bars",
+      "needsData": true
+    },
+    {
+      "title": "منحنيان ومؤشرات",
+      "titleEn": "Trend Lines & KPIs",
+      "needsData": true
+    },
+    {
+      "title": "حلقتان وقائمة",
+      "titleEn": "Two Donuts & List",
+      "needsData": true
+    },
+    {
+      "title": "دائرة مجزأة ومؤشران",
+      "titleEn": "Pie Chart & Highlights",
+      "needsData": true
+    },
+    {
+      "title": "دائرة مجزأة وملاحظات",
+      "titleEn": "Pie Chart & Notes",
+      "needsData": true
+    },
+    {
+      "title": "منحنى بقيم ومؤشرات مالية",
+      "titleEn": "Line Chart & Financials",
+      "needsData": true
+    },
+    {
+      "title": "التوزيع حسب الجنس",
+      "titleEn": "Gender Split",
+      "needsData": true
+    },
+    {
+      "title": "أعمدة مكدسة لعامين",
+      "titleEn": "Stacked Bars by Year",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم والحلقات والأشرطة في كتل JSON بالمعرّفات chart-data حتى chart-data-11 فعدّل القيم هناك."
+}
