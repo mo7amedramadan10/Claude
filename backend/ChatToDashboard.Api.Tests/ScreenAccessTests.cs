@@ -43,4 +43,18 @@ public class ScreenAccessTests
         Assert.False(ScreenAccess.IsGated("/api/auth/login"));
         Assert.True(ScreenAccess.IsGated("/api/decksx") == false);
     }
+
+    [Fact]
+    public void Freeform_IsGated_ToFreeformScreenOnly()
+    {
+        Assert.True(ScreenAccess.IsGated("/api/freeform"));
+        Assert.True(ScreenAccess.IsGated("/api/freeform/abc/records"));
+        Assert.False(ScreenAccess.IsApiAllowed("/api/freeform", ScreenAccess.ViewOnly));
+        Assert.True(ScreenAccess.IsApiAllowed("/api/freeform/generate", ScreenAccess.FreeformOnly));
+        Assert.False(ScreenAccess.IsApiAllowed("/api/freeform", new[] { "chat" }));
+        // الأصول العامة لا تخضع للوسيط أصلًا (نقطة نهاية [AllowAnonymous])
+        Assert.False(ScreenAccess.AppliesTo("/api/freeform/assets/abc", isPublicEndpoint: true));
+        // بادئة مشابهة ليست هي
+        Assert.False(ScreenAccess.IsGated("/api/freeformx"));
+    }
 }

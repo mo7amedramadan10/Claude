@@ -28,6 +28,8 @@ public static class ScreenAccess
     {
         ("/api/analyst", new[] { "analyst" }),
         ("/api/viewing", new[] { "viewing" }),
+        // تصميم حر: كل نداءاته من شاشته (ومنها «لوحات المتابعة» داخلها)؛ أصوله العامة assets/{id} موسومة [AllowAnonymous] فلا تخضع.
+        ("/api/freeform", new[] { "freeform" }),
         ("/api/decks/brand", new[] { "decks", "freeform", "chat" }),
         ("/api/decks", new[] { "decks" }),
         ("/api/published-dashboards", new[] { "published", "active" }),
