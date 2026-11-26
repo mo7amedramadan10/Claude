@@ -1,0 +1,58 @@
+{
+  "key": "sl-professional-report",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "📘",
+  "name": "تقرير احترافي",
+  "nameEn": "Professional Report",
+  "description": "عشر شرائح لتقرير مؤسسي: غلاف، جدول أعمال، ملخص تنفيذي، أهداف، أداء مالي، مخاطر، مستهدفات، توصيات وتواصل",
+  "descriptionEn": "Ten corporate report slides: cover, agenda, summary, goals, financials, risks, targets, outlook, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول أعمال اليوم",
+      "titleEn": "Today’s Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "رسالة ترحيب من الرئيس التنفيذي",
+      "titleEn": "Welcome Message From Executive"
+    },
+    {
+      "title": "الأهداف الاستراتيجية المستقبلية",
+      "titleEn": "Future Strategic Goals",
+      "needsData": true
+    },
+    {
+      "title": "الأداء المالي",
+      "titleEn": "Financial Performance",
+      "needsData": true
+    },
+    {
+      "title": "التحديات والمخاطر",
+      "titleEn": "Challenges & Risks",
+      "needsData": true
+    },
+    {
+      "title": "المستهدفات العامة",
+      "titleEn": "General Targets",
+      "needsData": true
+    },
+    {
+      "title": "التوقعات والتوصيات",
+      "titleEn": "Outlook & Recommendations"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في كتلة chart-data، والأشرطة الأفقية ونسب الحلقتين في chart-data-2."
+}
