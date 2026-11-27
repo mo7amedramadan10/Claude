@@ -1,0 +1,93 @@
+{
+  "key": "sl-corporate-innovation-lab-proposal",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧪",
+  "name": "مقترح مختبر الابتكار المؤسسي",
+  "nameEn": "Corporate Innovation Lab Proposal",
+  "description": "تسع عشرة شريحة لمقترح مختبر ابتكار: المشكلة والرؤية والأهداف والحوكمة والميزانية والمؤشرات وخارطة التنفيذ",
+  "descriptionEn": "19 slides for an innovation lab proposal: problem, vision, objectives, governance, budget, KPIs and roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل قسم",
+      "titleEn": "Section Divider"
+    },
+    {
+      "title": "الملخص التنفيذي (مؤشرات ورسم)",
+      "titleEn": "Executive Summary (KPIs and chart)",
+      "needsData": true
+    },
+    {
+      "title": "فرصة السوق",
+      "titleEn": "Market Opportunity",
+      "needsData": true
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement"
+    },
+    {
+      "title": "الرؤية والرسالة والقيم",
+      "titleEn": "Vision, Mission and Values"
+    },
+    {
+      "title": "الأهداف الاستراتيجية",
+      "titleEn": "Strategic Objectives"
+    },
+    {
+      "title": "نموذج التشغيل",
+      "titleEn": "Operating Model"
+    },
+    {
+      "title": "هيكل الحوكمة",
+      "titleEn": "Governance Structure"
+    },
+    {
+      "title": "منهجيتنا",
+      "titleEn": "Our Methodology"
+    },
+    {
+      "title": "المنظومة والشراكات",
+      "titleEn": "Ecosystem & Partnerships"
+    },
+    {
+      "title": "متطلبات الموارد",
+      "titleEn": "Resource Requirements"
+    },
+    {
+      "title": "توزيع الميزانية (رسم)",
+      "titleEn": "Budget Allocation (chart)",
+      "needsData": true
+    },
+    {
+      "title": "المؤشرات ومقاييس النجاح (رسم)",
+      "titleEn": "KPIs & Success Metrics (chart)",
+      "needsData": true
+    },
+    {
+      "title": "خارطة التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "خطواتنا التالية",
+      "titleEn": "Our Next Steps"
+    },
+    {
+      "title": "الأسئلة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "الشكر والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشرطة المنحنية وغيّر النصوص والأرقام فقط؛ الرسم المكدّس في الملخص والمؤشرات من كتلتي chart-data وchart-data-4، وحلقات الميزانية من chart-data-2، وحلقتا النسبة من chart-data-3 (حدّث الأرقام الظاهرة بجوارها لتطابقها)."
+}
