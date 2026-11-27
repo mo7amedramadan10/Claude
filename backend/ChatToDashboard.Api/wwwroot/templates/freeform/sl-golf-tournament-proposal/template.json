@@ -1,0 +1,54 @@
+{
+  "key": "sl-golf-tournament-proposal",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "⛳",
+  "name": "مقترح بطولة غولف",
+  "nameEn": "Golf Tournament Proposal",
+  "description": "تسع شرائح لمقترح بطولة غولف: الغلاف والنظرة العامة والجدول والملعب والرعاية والجوائز والتسجيل والميزانية والشكر",
+  "descriptionEn": "Nine slides for a golf tournament proposal: cover, overview, schedule, course, sponsors, prizes, registration, budget",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة على الفعالية",
+      "titleEn": "Event Overview"
+    },
+    {
+      "title": "جدول الفعالية",
+      "titleEn": "Event Schedule",
+      "needsData": true
+    },
+    {
+      "title": "خريطة الملعب",
+      "titleEn": "Course Map",
+      "needsData": true
+    },
+    {
+      "title": "باقات الرعاية",
+      "titleEn": "Sponsorship Packages",
+      "needsData": true
+    },
+    {
+      "title": "فئات الجوائز",
+      "titleEn": "Prize Categories"
+    },
+    {
+      "title": "التسجيل",
+      "titleEn": "Registration",
+      "needsData": true
+    },
+    {
+      "title": "الميزانية",
+      "titleEn": "Budget",
+      "needsData": true
+    },
+    {
+      "title": "شكرًا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط (الأوقات والأسعار وبنود الميزانية وإجماليها)."
+}

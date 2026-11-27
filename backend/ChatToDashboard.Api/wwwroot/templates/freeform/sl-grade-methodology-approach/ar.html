@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نهج منهجية غريد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «نهج منهجية غريد»: شريط خطوات A–E بدوائر زرقاء فوق لوحة رمادية، ثم مخطط تدفق: نوعا الدراسات، ودرجات اليقين الأولية بنقاط بنفسجية، وصندوقا المجالات التي تخفض الدرجة وترفعها، ثم الدرجة الناتجة. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #1A1A1A; --text: #262626; --accent: #448FEC; --bg: #FFFFFF; --panel: #F2F2F2; --blue: #448FEC; --line: #428DEA; --frame: #4A8AD9; --green: #4FC394; --orange: #EA9923; --purple: #7F2CC4; --purple-2: #380564; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame h1, .frame p { margin: 0; }
+  .ttl { position: absolute; top: 44px; inset-inline-start: 64px; font-size: 42px; line-height: 1; font-weight: 400; color: #000; white-space: nowrap; letter-spacing: 0; }
+  html[lang="ar"] .ttl { font-weight: 500; top: 38px; }
+  /* شريط الخطوات A–E */
+  .band { position: absolute; top: 137px; inset-inline-start: 64px; width: 1152px; height: 116px; border-radius: 14px; background: var(--panel); }
+  .stp { position: absolute; top: 105px; width: 220px; text-align: center; }
+  .stp b { display: block; width: 63px; height: 63px; margin: 0 auto; border-radius: 50%; background: var(--blue); color: #fff; font-size: 28px; line-height: 63px; font-weight: 700; }
+  .stp span { display: block; max-width: 186px; margin: 14px auto 0; font-size: 14.5px; line-height: 17px; color: var(--text); text-transform: uppercase; }
+  html[lang="ar"] .stp span { font-size: 16px; line-height: 20px; margin-top: 12px; max-width: 200px; }
+  .stp.a { inset-inline-start: 82px; } .stp.b { inset-inline-start: 306px; } .stp.c { inset-inline-start: 530px; }
+  .stp.d { inset-inline-start: 754px; } .stp.e { inset-inline-start: 979px; }
+  /* الرسم الموجّه: الأسهم والقوس الأيمن والإطار المنقّط (يُعكس في العربية) */
+  .flow { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .flow { transform: scaleX(-1); }
+  .flow .ar { stroke: var(--line); stroke-width: 2.6; fill: none; } .flow .hd { fill: var(--line); }
+  /* نوعا الدراسات */
+  .stu { position: absolute; width: 190px; text-align: center; }
+  .stu i { display: grid; place-items: center; width: 93px; height: 93px; margin: 0 auto; border-radius: 50%; color: #fff; }
+  .stu i svg { width: 46px; height: 46px; }
+  .stu span { display: block; max-width: 150px; margin: 12px auto 0; font-size: 14.5px; line-height: 17px; color: var(--text); text-transform: uppercase; }
+  html[lang="ar"] .stu span { font-size: 16px; line-height: 20px; }
+  .stu.s-r { top: 320px; inset-inline-start: 16px; } .stu.s-r i { background: var(--green); }
+  .stu.s-n { top: 481px; inset-inline-start: 16px; } .stu.s-n i { background: var(--orange); }
+  /* الدرجات ونقاطها */
+  .pill { position: absolute; height: 40px; border-radius: 20px; background: var(--panel); text-align: center; font-size: 16px; line-height: 40px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .lv { inset-inline-start: 190px; width: 124px; }
+  .dots { inset-inline-start: 334px; width: 128px; display: flex; align-items: center; gap: 10.5px; padding-inline-start: 9.5px; }
+  .dots em { flex: none; width: 19px; height: 19px; border-radius: 50%; background: #D8D8D8; border: 2px solid #BEBDC3; }
+  .dots em.on { background: var(--purple); border-color: var(--purple-2); }
+  .r1 { top: 346px; } .r2 { top: 428px; } .r3 { top: 507px; } .r4 { top: 588px; }
+  .res { inset-inline-start: 1090px; width: 126px; font-size: 18px; }
+  .o1 { top: 334px; } .o2 { top: 416px; } .o3 { top: 495px; } .o4 { top: 576px; }
+  html[lang="ar"] .pill { font-weight: 800; line-height: 46px; }
+  html[lang="ar"] .stp b { line-height: 66px; }
+  /* صندوقا المجالات */
+  .box { position: absolute; top: 288px; height: 376px; border: 3px solid var(--frame); border-radius: 22px; }
+  .box::before { content: ""; position: absolute; inset: 12px; border-radius: 16px; background: var(--panel); }
+  .box.dn { inset-inline-start: 511px; width: 294px; } .box.up { inset-inline-start: 820px; width: 183px; }
+  .dm { position: absolute; width: 150px; text-align: center; }
+  .dm i { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto; border-radius: 50%; background: var(--blue); color: #fff; }
+  .dm i svg { width: 38px; height: 38px; }
+  .dm span { display: block; margin-top: var(--g, 10px); font-size: 13.5px; line-height: 15px; font-weight: 700; color: var(--ink); }
+  html[lang="ar"] .dm span { font-size: 15px; line-height: 18px; font-weight: 800; }
+  .d1 { top: 320px; inset-inline-start: 510px; } .d2 { top: 320px; inset-inline-start: 656px; }
+  .d3 { top: 433px; inset-inline-start: 510px; } .d4 { top: 433px; inset-inline-start: 656px; }
+  .d5 { top: 525px; inset-inline-start: 583px; }
+  .u1 { top: 317px; inset-inline-start: 835px; --g: 9px; } .u2 { top: 416px; inset-inline-start: 835px; --g: 9px; } .u3 { top: 516px; inset-inline-start: 835px; --g: 9px; }
+  .u3 span { max-width: 104px; margin-inline: auto; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب شريحة نهج منهجية «غريد»</h1>
+    <div class="band"></div>
+    <p class="stp a"><b>A</b><span>نوع الدراسات في تجميع الأدلة</span></p>
+    <p class="stp b"><b>B</b><span>اليقين الأولي في الأدلة</span></p>
+    <p class="stp c"><b>C</b><span>خمسة مجالات قد تخفض درجة اليقين</span></p>
+    <p class="stp d"><b>D</b><span>ثلاثة مجالات قد ترفع درجة اليقين</span></p>
+    <p class="stp e"><b>E</b><span>درجة اليقين الناتجة وفق غريد</span></p>
+    <svg class="flow" viewBox="0 0 1280 720" aria-hidden="true"><rect x="500" y="276" width="512" height="397" rx="30" fill="none" stroke="#D4D4D4" stroke-width="3" stroke-dasharray="4 4"/><path class="ar" d="M163,367 H180"/><polygon class="hd" points="177,361.5 186,367 177,372.5"/><path class="ar" d="M313,367 H327"/><polygon class="hd" points="324,361.5 333,367 324,372.5"/><path class="ar" d="M465,367 H481"/><polygon class="hd" points="478,361.5 487,367 478,372.5"/><path class="ar" d="M163,527 H180"/><polygon class="hd" points="177,521.5 186,527 177,532.5"/><path class="ar" d="M313,527 H327"/><polygon class="hd" points="324,521.5 333,527 324,532.5"/><path class="ar" d="M465,527 H481"/><polygon class="hd" points="478,521.5 487,527 478,532.5"/><path class="ar" d="M1003,475 H1056 M1056,353 V597"/><path class="ar" d="M1056,354 H1081"/><polygon class="hd" points="1078,348.5 1087,354 1078,359.5"/><path class="ar" d="M1056,436 H1081"/><polygon class="hd" points="1078,430.5 1087,436 1078,441.5"/><path class="ar" d="M1056,518 H1081"/><polygon class="hd" points="1078,512.5 1087,518 1078,523.5"/><path class="ar" d="M1056,597 H1081"/><polygon class="hd" points="1078,591.5 1087,597 1078,602.5"/></svg>
+    <p class="stu s-r"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2.2" stroke-width="1.3"/><g fill="currentColor" stroke="none"><circle cx="9.5" cy="8" r="1.1"/><circle cx="14.5" cy="8" r="1.1"/><circle cx="9.5" cy="12" r="1.1"/><circle cx="14.5" cy="12" r="1.1"/><circle cx="9.5" cy="16" r="1.1"/><circle cx="14.5" cy="16" r="1.1"/></g></svg></i><span>دراسات عشوائية</span></p>
+    <p class="stu s-n"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.2 16.4 7l1.4 3.4-12.9 5.2z"/><path d="M16.9 6.6 20 5.4l1.6 3.9-3.1 1.2"/><path d="M3 12.4l.9 2.3"/><path d="M10.6 13.4 7.8 20.5M11.8 13l2.6 7.5M11.2 13.6v7.2"/></svg></i><span>دراسات غير عشوائية</span></p>
+    <p class="pill lv r1">مرتفع</p><p class="pill dots r1" aria-label="مرتفع"><em class="on"></em><em class="on"></em><em class="on"></em><em class="on"></em></p>
+    <p class="pill lv r2">متوسط</p><p class="pill dots r2" aria-label="متوسط"><em class="on"></em><em class="on"></em><em class="on"></em><em></em></p>
+    <p class="pill lv r3">منخفض</p><p class="pill dots r3" aria-label="منخفض"><em class="on"></em><em class="on"></em><em></em><em></em></p>
+    <p class="pill lv r4">منخفض جدًا</p><p class="pill dots r4" aria-label="منخفض جدًا"><em class="on"></em><em></em><em></em><em></em></p>
+    <div class="box dn"></div><div class="box up"></div>
+    <p class="dm d1"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.2v14.6M8.5 19.6h7M5 7.4h14"/><path d="M5.6 7.6 3.4 12.6h4.4zM18.4 7.6l-2.2 5h4.4z"/><path d="M3.2 12.8a2.4 1.6 0 0 0 4.8 0M16 12.8a2.4 1.6 0 0 0 4.8 0"/><circle cx="12" cy="3.6" r=".7"/></svg></i><span>خطر التحيز</span></p>
+    <p class="dm d2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 9.3H5l3-3"/><path d="M5 14.7h14l-3 3"/></svg></i><span>عدم الاتساق</span></p>
+    <p class="dm d3"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="17.6" cy="6" r="1.2"/><circle cx="6" cy="18" r="1.2"/><path d="M16.3 6.3c-2.8.4-4.6 1.3-4.6 3.2 0 2.3 4.4 2.3 4.4 4.9 0 2.6-3.2 3.6-8.8 3.6" stroke-dasharray=".2 1.6"/></svg></i><span>عدم المباشرة</span></p>
+    <p class="dm d4"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1.9"/><g fill="currentColor" stroke="none"><circle cx="6.6" cy="7.9" r="1.4"/><circle cx="12.3" cy="19" r="1.3"/><circle cx="17.4" cy="7.2" r="1.1"/></g></svg></i><span>عدم الدقة</span></p>
+    <p class="dm d5"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="9.5" r="2.6"/><path d="M7 12.1v2"/><path d="M16.8 6.4l-2.6 4.6h5.2z"/><path d="M3.2 15.4l17.4-3.2"/><path d="M10.6 14.3 12 18.6l1.6-4.6M9.6 19h4.8"/></svg></i><span>تحيز النشر</span></p>
+    <p class="dm u1"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4v15.5H20"/><path d="M8 15.5l2.6-2.6 1.8 1.6 4.5-5.2"/><path d="M14.6 9.2h2.6v2.5"/></svg></i><span>الجرعة والاستجابة</span></p>
+    <p class="dm u2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 3.5v16h-8"/><path d="M6.5 9h9M8.5 12h7"/><path d="M10.5 16.2 13 14.6l2.5 1.6-2.5 1.6z" fill="currentColor"/></svg></i><span>أثر كبير</span></p>
+    <p class="dm u3"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 3.5v16h-8"/><path d="M14.5 9.6h-4.4M10.1 9.6l1.4-1.2M10.1 9.6l1.4 1.2"/><path d="M3.2 14.8 6.4 13l3.2 1.8-3.2 1.8z"/><path d="M10.6 14.8l3.2-1.8 3.2 1.8-3.2 1.8z" fill="currentColor"/></svg></i><span>تشويش متبقٍّ معاكس</span></p>
+    <p class="pill res o1">مرتفع</p>
+    <p class="pill res o2">متوسط</p>
+    <p class="pill res o3">منخفض</p>
+    <p class="pill res o4">منخفض جدًا</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 1</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "key": "sl-grade-methodology-approach",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🧪",
+  "name": "نهج منهجية غريد",
+  "nameEn": "GRADE Methodology Approach",
+  "description": "شريحة واحدة تشرح منهجية غريد لتقدير اليقين في الأدلة: خمس خطوات ومخطط تدفق للدرجات والمجالات",
+  "descriptionEn": "One slide explaining the GRADE certainty-of-evidence method: five steps and a flow of levels and domains",
+  "sections": [
+    {
+      "title": "نهج منهجية غريد",
+      "titleEn": "GRADE Methodology Approach"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ عدد النقاط البنفسجية (الصنف on) يمثل مستوى اليقين في كل صف، والأسهم والإطار المنقّط رسم SVG."
+}

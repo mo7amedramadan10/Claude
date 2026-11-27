@@ -1,0 +1,33 @@
+{
+  "key": "sl-governance-framework-cycle-diagram",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🔄",
+  "name": "مخطط دورة إطار الحوكمة",
+  "nameEn": "Governance Framework Cycle Diagram",
+  "description": "خمس شرائح لدورة حوكمة رباعية: نظرة عامة ثم إبراز التقييم والتنفيذ والمراقبة والتكرار",
+  "descriptionEn": "Five slides of a 4-stage governance cycle: overview, then Assess, Implement, Monitor and Iterate highlighted",
+  "sections": [
+    {
+      "title": "الدورة كاملة",
+      "titleEn": "Full Cycle"
+    },
+    {
+      "title": "التقييم",
+      "titleEn": "Assess"
+    },
+    {
+      "title": "التنفيذ",
+      "titleEn": "Implement"
+    },
+    {
+      "title": "المراقبة",
+      "titleEn": "Monitor"
+    },
+    {
+      "title": "التكرار",
+      "titleEn": "Iterate"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الدورة رسم SVG، والصنف on على المرحلة (.ph) ومجموعتها في الرسم (.st) يحدد ما يُبرز بالأزرق في كل شريحة."
+}

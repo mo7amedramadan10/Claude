@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golf Tournament Proposal</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «مقترح بطولة غولف»: غلاف بصورة مائلة الحافة، ونظرة عامة ببطاقات صور، وجدول زمني، وخريطة الملعب، وباقات الرعاية، وفئات الجوائز، والتسجيل، والميزانية، وشريحة شكر. الألوان: أخضر داكن وأخضر متوسط وبيج وأصفر. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #262626; --accent: #365E29; --bg: #FFFFFF; --green: #365E29; --green-2: #4A7D38; --beige: #F3EBE0; --yellow: #F6FF1F; --gray: #7F7F7F; --gray-2: #5E5E5E; --soft: #E3E8DC; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عناصر مشتركة: العنوان الفرعي والعنوان الرئيسي والفقرة الرمادية */
+  .frame h1, .frame h2, .frame h3, .frame p { margin: 0; }
+  .sub { position: absolute; font-size: 22.5px; line-height: 1; color: var(--gray); white-space: nowrap; }
+  .ttl { position: absolute; font-size: 56px; line-height: 61px; font-weight: 700; color: var(--green); letter-spacing: -0.5px; }
+  .para { position: absolute; font-size: 20px; line-height: 25.5px; color: var(--gray); }
+  html[lang="ar"] .ttl { letter-spacing: 0; font-weight: 800; }
+  html[lang="ar"] .para { font-size: 20px; line-height: 27px; }
+  .band { position: absolute; inset-inline-start: 0; width: 1280px; background: var(--beige); }
+  .ph { position: absolute; display: block; object-fit: cover; }
+  .ic svg { display: block; width: 100%; height: 100%; }
+
+  /* 1) الغلاف */
+  .s1 .ph1 { top: 0; inset-inline-start: 0; width: 545px; height: 720px; clip-path: polygon(0 0, 539px 0, 410px 720px, 0 720px); }
+  /* في العربية تُعكس الصورة نفسها فتنعكس حافتها المائلة معها */
+  html[dir="rtl"] .s1 .ph1 { transform: scaleX(-1); }
+  .s1 .deco { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .s1 .deco { transform: scaleX(-1); }
+  .s1 .logo { position: absolute; top: 38px; inset-inline-end: 53px; width: 75px; height: 80px; color: var(--green-2); }
+  .s1 .t1, .s1 .t3 { position: absolute; inset-inline-start: 570px; font-weight: 700; line-height: 1; color: var(--ink); white-space: nowrap; letter-spacing: -4.5px; }
+  .s1 .t1 { top: 155px; font-size: 150px; }
+  .s1 .t3 { top: 448px; font-size: 104px; letter-spacing: -3.6px; }
+  .s1 .t2 { position: absolute; top: 324px; inset-inline-start: 554px; width: 560px; height: 101px; border-radius: 10px; background: var(--green-2); color: #fff; font-size: 76px; font-weight: 700; line-height: 101px; text-align: center; letter-spacing: -2.5px; white-space: nowrap; }
+  .s1 .t4 { position: absolute; top: 572px; inset-inline-start: 572px; font-size: 31px; line-height: 1; letter-spacing: 6.3px; color: #6E8F62; white-space: nowrap; }
+  .s1 .tab { position: absolute; bottom: 0; inset-inline-end: 0; width: 253px; height: 69px; background: var(--green-2); border-start-start-radius: 36px; color: var(--yellow); font-size: 22px; line-height: 69px; padding-inline-start: 69px; white-space: nowrap; }
+  html[lang="ar"] .s1 .t1, html[lang="ar"] .s1 .t3 { letter-spacing: 0; font-weight: 800; }
+  html[lang="ar"] .s1 .t1 { top: 130px; font-size: 150px; }
+  html[lang="ar"] .s1 .t3 { top: 432px; font-size: 120px; }
+  html[lang="ar"] .s1 .t2 { letter-spacing: 0; font-weight: 800; font-size: 80px; line-height: 124px; }
+  html[lang="ar"] .s1 .t4 { letter-spacing: 0; font-size: 34px; top: 568px; }
+
+  /* 2) نظرة عامة على الفعالية */
+  .s2 .band { top: 0; height: 340px; }
+  .s2 .sub { top: 84px; inset-inline-start: 76px; }
+  .s2 .ttl { top: 127px; inset-inline-start: 74px; width: 300px; }
+  html[lang="ar"] .s2 .ttl { width: 320px; top: 122px; }
+  .s2 .meta { position: absolute; inset-inline-start: 73px; display: flex; align-items: center; gap: 14px; font-size: 20px; color: var(--green); white-space: nowrap; }
+  .s2 .meta .ic { width: 25px; height: 25px; color: var(--green-2); }
+  .s2 .m1 { top: 431px; } .s2 .m2 { top: 475px; }
+  .s2 .para { top: 537px; inset-inline-start: 76px; width: 292px; }
+  .s2 .card { position: absolute; top: 79px; width: 270px; height: 570px; border-radius: 22px; background: var(--green); }
+  .s2 .c1 { inset-inline-start: 407px; } .s2 .c2 { inset-inline-start: 689px; } .s2 .c3 { inset-inline-start: 970px; }
+  .s2 .card img { position: absolute; top: 13px; inset-inline-start: 15px; width: 240px; height: 403px; border-radius: 18px; object-fit: cover; }
+  .s2 .card h3 { position: absolute; top: 451px; inset-inline-start: 29px; font-size: 20px; line-height: 1; font-weight: 700; color: var(--yellow); white-space: nowrap; }
+  .s2 .card p { position: absolute; top: 487px; inset-inline-start: 29px; width: 225px; font-size: 20px; line-height: 25px; color: var(--soft); }
+
+  /* 3) جدول الفعالية */
+  .s3 .band { top: 455px; height: 265px; }
+  .s3 .sub, .s4 .sub, .s7 .sub { top: 84px; inset-inline-start: 76px; }
+  .s3 .ttl, .s4 .ttl, .s7 .ttl { top: 127px; inset-inline-start: 74px; white-space: nowrap; }
+  .s3 .para { top: 222px; inset-inline-start: 76px; width: 490px; }
+  .s3 .ph3 { top: 367px; inset-inline-start: 71px; width: 510px; height: 287px; border-radius: 22px; }
+  .s3 .tm { position: absolute; width: 270px; height: 287px; border-radius: 25px; background: var(--green); }
+  .s3 .q1 { top: 62px; inset-inline-start: 686px; } .s3 .q2 { top: 62px; inset-inline-start: 967px; }
+  .s3 .q3 { top: 367px; inset-inline-start: 686px; } .s3 .q4 { top: 367px; inset-inline-start: 967px; }
+  .s3 .tm .hr { position: absolute; top: 48px; inset-inline-start: 28px; font-size: 30px; line-height: 1; font-weight: 700; color: var(--yellow); white-space: nowrap; }
+  .s3 .tm h3 { position: absolute; top: 146px; inset-inline-start: 28px; font-size: 25px; line-height: 1; font-weight: 700; color: #fff; white-space: nowrap; }
+  .s3 .tm p { position: absolute; top: 189px; inset-inline-start: 28px; width: 225px; font-size: 20px; line-height: 25px; color: var(--soft); }
+
+  /* 4) خريطة الملعب */
+  .s4 .ph4 { top: 0; inset-inline-start: 624px; width: 656px; height: 720px; border-start-start-radius: 55px; }
+  /* تُعكس الصورة في العربية حتى تقع حوافها المغطّاة تحت اللوحة المعكوسة؛ والزوايا تُبدَّل لأن الانعكاس يقلبها */
+  html[dir="rtl"] .s4 .ph4 { transform: scaleX(-1); border-start-start-radius: 0; border-start-end-radius: 55px; }
+  .s4 .panel { position: absolute; top: 273px; inset-inline-start: 0; width: 676px; height: 447px; background: var(--beige); border-start-end-radius: 62px; }
+  .s4 .it { position: absolute; inset-inline-start: 0; width: 640px; height: 90px; }
+  .s4 .i1 { top: 350px; } .s4 .i2 { top: 471px; } .s4 .i3 { top: 591px; }
+  .s4 .it .ic { position: absolute; top: 2px; inset-inline-start: 68px; width: 58px; height: 58px; color: var(--green-2); }
+  .s4 .it h3 { position: absolute; top: 0; inset-inline-start: 174px; font-size: 30px; line-height: 1; font-weight: 700; color: var(--ink); white-space: nowrap; letter-spacing: -0.3px; }
+  .s4 .it p { position: absolute; top: 50px; inset-inline-start: 174px; font-size: 20px; line-height: 1; color: var(--gray-2); white-space: nowrap; }
+  html[lang="ar"] .s4 .it h3 { letter-spacing: 0; }
+
+  /* 5) باقات الرعاية */
+  .s5 { background: var(--green); }
+  .s5 .sub { top: 58px; inset-inline-start: 0; width: 1280px; text-align: center; color: #fff; }
+  .s5 .ttl { top: 95px; inset-inline-start: 0; width: 1280px; text-align: center; color: var(--yellow); font-size: 56px; }
+  .s5 .pk { position: absolute; top: 203px; width: 363px; height: 449px; border-radius: 22px; background: var(--beige); text-align: center; }
+  .s5 .k1 { inset-inline-start: 77px; } .s5 .k2 { inset-inline-start: 459px; } .s5 .k3 { inset-inline-start: 840px; }
+  .s5 .pk::before { content: ""; position: absolute; top: 33px; inset-inline-start: 156px; width: 51px; height: 7px; border-radius: 4px; background: var(--green); }
+  .s5 .pk .pr { position: absolute; top: 72px; inset-inline-start: 0; width: 100%; font-size: 62px; line-height: 1; font-weight: 700; color: var(--green-2); letter-spacing: -2px; }
+  .s5 .pk h3 { position: absolute; top: 155px; inset-inline-start: 0; width: 100%; font-size: 22px; line-height: 1; font-weight: 700; color: var(--green); }
+  .s5 .pk ul { position: absolute; top: 204px; inset-inline-start: 52px; width: 260px; margin: 0; padding: 0; list-style: none; }
+  .s5 .pk li { height: 54px; line-height: 54px; font-size: 20px; color: #4D4D4D; border-bottom: 1px solid #D3D0C7; white-space: nowrap; }
+  .s5 .pk li:last-child { border-bottom: 0; }
+  html[lang="ar"] .s5 .pk .pr { letter-spacing: 0; }
+
+  /* 6) فئات الجوائز */
+  .s6 .band { top: 0; height: 588px; }
+  .s6 .sub { top: 63px; inset-inline-start: 0; width: 1280px; text-align: center; }
+  .s6 .ttl { top: 97px; inset-inline-start: 0; width: 1280px; text-align: center; }
+  .s6 .pz { position: absolute; bottom: 91px; width: 231px; border-radius: 22px; background: var(--green); color: #fff; text-align: center; }
+  .s6 .z1 { inset-inline-start: 46px; height: 309px; } .s6 .z2 { inset-inline-start: 285px; height: 364px; }
+  .s6 .z3 { inset-inline-start: 524px; height: 411px; } .s6 .z4 { inset-inline-start: 764px; height: 364px; }
+  .s6 .z5 { inset-inline-start: 1003px; height: 309px; }
+  .s6 .pin { position: absolute; top: -33px; inset-inline-start: 81px; width: 70px; height: 86px; }
+  .s6 .pin svg { position: absolute; inset: 0; width: 70px; height: 86px; }
+  .s6 .pin b { position: absolute; top: 21px; inset-inline-start: 0; width: 70px; font-size: 20px; line-height: 24px; font-weight: 700; color: #5A7E14; }
+  .s6 .pz .ic { position: absolute; top: var(--it, 84px); inset-inline-start: 87px; width: 57px; height: 57px; }
+  .s6 .pz h3 { position: absolute; top: var(--ht, 180px); inset-inline-start: 0; width: 100%; font-size: 26px; line-height: 1; font-weight: 700; }
+  .s6 .pz p { position: absolute; top: calc(var(--ht, 180px) + 38px); inset-inline-start: calc(50% - var(--pw, 170px) / 2); width: var(--pw, 170px); font-size: 20px; line-height: 25.5px; color: var(--soft); }
+  .s6 .z1, .s6 .z5 { --it: 84px; --ht: 182px; --pw: 120px; }
+  .s6 .z2, .s6 .z4 { --it: 87px; --ht: 186px; }
+  .s6 .z3 { --it: 84px; --ht: 172px; }
+  .s6 .foot { position: absolute; top: 673px; inset-inline-start: 0; width: 1280px; text-align: center; font-size: 20px; line-height: 1; color: var(--gray); white-space: nowrap; }
+
+  /* 7) التسجيل */
+  .s7 .band { top: 335px; height: 385px; }
+  .s7 .para.p1 { top: 234px; inset-inline-start: 76px; width: 440px; }
+  .s7 .ph7 { top: 0; inset-inline-start: 628px; width: 652px; height: 408px; border-start-start-radius: 50px; border-end-end-radius: 50px; }
+  html[dir="rtl"] .s7 .ph7 { transform: scaleX(-1); border-start-start-radius: 0; border-end-end-radius: 0; border-start-end-radius: 50px; border-end-start-radius: 50px; }
+  .s7 .price { position: absolute; top: 386px; inset-inline-start: 74px; font-size: 112px; line-height: 1; font-weight: 700; color: var(--green-2); letter-spacing: -4px; }
+  .s7 .per { position: absolute; top: 510px; inset-inline-start: 76px; font-size: 30px; line-height: 1; color: var(--ink); }
+  .s7 .para.p2 { top: 577px; inset-inline-start: 76px; width: 390px; }
+  .s7 .rg { position: absolute; width: 346px; height: 168px; border-radius: 14px; background: var(--green); }
+  .s7 .r1 { top: 313px; inset-inline-start: 540px; } .s7 .r2 { top: 313px; inset-inline-start: 896px; }
+  .s7 .r3 { top: 491px; inset-inline-start: 540px; } .s7 .r4 { top: 491px; inset-inline-start: 896px; }
+  .s7 .rg::before { content: ""; position: absolute; top: -4px; inset-inline-start: 31px; width: 84px; height: 8px; border-radius: 4px; background: var(--yellow); }
+  .s7 .rg h3 { position: absolute; top: 40px; inset-inline-start: 31px; font-size: 22px; line-height: 1; font-weight: 700; color: #fff; white-space: nowrap; }
+  .s7 .rg p { position: absolute; top: 79px; inset-inline-start: 31px; width: 283px; font-size: 20px; line-height: 25px; color: var(--soft); }
+  html[lang="ar"] .s7 .price { letter-spacing: 0; }
+
+  /* 8) الميزانية */
+  .s8 { background: var(--green); }
+  .s8 .sub { top: 64px; inset-inline-start: 83px; color: #fff; }
+  .s8 .ttl { top: 92px; inset-inline-start: 82px; color: var(--yellow); }
+  .s8 .para { top: 78px; inset-inline-start: 873px; width: 300px; color: #DCE3D4; }
+  .s8 .tbl { position: absolute; top: 213px; inset-inline-start: 75px; width: 1130px; height: 449px; border-radius: 22px; background: var(--beige); }
+  .s8 .tbl ul { position: absolute; top: 21px; inset-inline-start: 45px; width: 1039px; margin: 0; padding: 0; list-style: none; }
+  .s8 .tbl li { display: flex; justify-content: space-between; align-items: center; height: 58px; padding-inline: 10px; border-bottom: 1.5px solid #C9C8BE; font-size: 20px; color: #5E5E5E; }
+  .s8 .tbl li b { font-weight: 400; color: #333; }
+  .s8 .tbl li.last { border-bottom: 2px solid var(--green-2); }
+  .s8 .tbl li.tot { border-bottom: 0; font-size: 26px; font-weight: 700; color: var(--green-2); }
+  .s8 .tbl li.tot b { font-weight: 700; color: var(--green-2); }
+
+  /* 9) شكرًا */
+  .s9 { background: var(--beige); }
+  .s9 .logo { position: absolute; top: 72px; inset-inline-start: 483px; width: 55px; height: 60px; color: var(--green-2); }
+  .s9 .co { position: absolute; top: 81px; inset-inline-start: 563px; font-size: 18px; line-height: 23px; letter-spacing: 2px; color: #5A6170; white-space: nowrap; }
+  html[lang="ar"] .s9 .co { letter-spacing: 0; }
+  .s9 .ty { position: absolute; top: 246px; inset-inline-start: 0; width: 1280px; text-align: center; font-size: 179px; line-height: 1; font-weight: 700; color: var(--green); letter-spacing: -6.5px; white-space: nowrap; }
+  html[lang="ar"] .s9 .ty { letter-spacing: 0; font-weight: 800; top: 218px; font-size: 180px; }
+  .s9 .pill { position: absolute; top: 493px; inset-inline-start: 185px; width: 910px; height: 78px; border-radius: 39px; background: var(--green); color: #fff; font-size: 22px; font-weight: 700; line-height: 78px; text-align: center; }
+  .s9 .ct { position: absolute; top: 636px; display: flex; align-items: center; gap: 12px; font-size: 21px; line-height: 26px; color: var(--gray); white-space: nowrap; }
+  .s9 .ct .ic { width: 28px; height: 28px; color: var(--green-2); flex: none; }
+  .s9 .t1 { inset-inline-start: 73px; } .s9 .t2 { inset-inline-start: 378px; } .s9 .t3 { inset-inline-start: 679px; } .s9 .t4 { inset-inline-start: 980px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <img class="ph ph1" src="/templates/freeform/sl-golf-tournament-proposal/assets/clubs.jpg" alt="Golf clubs on the grass">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="0,0 45,0 0,245" fill="#4A7D38"/><line x1="555" y1="0" x2="427" y2="720" stroke="#4A7D38" stroke-width="2.2"/></svg>
+    <span class="logo ic"><svg viewBox="0 0 80 84" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M24 6C40 2 62 6 72 12c6 4 7 40 3 58-2 8-30 12-52 12C10 82 5 74 4 50 3 26 6 10 24 6zm2 14c-6 2-8 8-8 28 0 14 2 18 8 19 14 2 32 1 37-3 3-8 4-34 1-38-8-5-27-8-38-6z"/><path d="M17 16 27 5" stroke="#fff" stroke-width="3.5"/><path d="M63 79 73 68" stroke="#fff" stroke-width="3.5"/></svg></span>
+    <h1 class="t1">GOLF</h1><p class="t2">TOURNAMENT</p><p class="t3">PROPOSAL</p>
+    <p class="t4">PRESENTATION TEMPLATE</p>
+    <p class="tab">Add text here</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="band"></div>
+    <p class="sub">Add subheading here</p>
+    <h1 class="ttl">Event Overview</h1>
+    <p class="meta m1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="10.2"/><path d="M12 6.2V12l3.6 2.6" stroke-linecap="round"/></svg></span><span>Add date here</span></p>
+    <p class="meta m2"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.8a7 7 0 0 0-7 7c0 5.2 7 13.4 7 13.4s7-8.2 7-13.4a7 7 0 0 0-7-7zm0 9.6a2.6 2.6 0 1 1 0-5.2 2.6 2.6 0 0 1 0 5.2z"/></svg></span><span>Add place here</span></p>
+    <p class="para">This is a sample text. Insert your desired text here. This is a sample text. Add text here.</p>
+    <div class="card c1"><img src="/templates/freeform/sl-golf-tournament-proposal/assets/handshake.jpg" alt="Two golfers shaking hands"><h3>Friendly Competition</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="card c2"><img src="/templates/freeform/sl-golf-tournament-proposal/assets/booths.jpg" alt="Sponsor booths on the course"><h3>Brand Exposure</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="card c3"><img src="/templates/freeform/sl-golf-tournament-proposal/assets/lounge.jpg" alt="VIP lounge overlooking the course"><h3>Exclusive Benefits</h3><p>This is a sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="band"></div>
+    <p class="sub">Add subheading here</p>
+    <h1 class="ttl">Event Schedule</h1>
+    <p class="para">This is a sample text. Insert your desired text here. Insert your desired text here.</p>
+    <img class="ph ph3" src="/templates/freeform/sl-golf-tournament-proposal/assets/course.jpg" alt="Golf course with a lake">
+    <div class="tm q1"><p class="hr">08:00 am</p><h3>Rules Briefing</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="tm q2"><p class="hr">09:00 am</p><h3>Event Start</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="tm q3"><p class="hr">12:00 pm</p><h3>Lunch Break</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="tm q4"><p class="hr">03:00 pm</p><h3>Ceremony</h3><p>This is a sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <p class="sub">Add subheading here</p>
+    <h1 class="ttl">Course Map</h1>
+    <img class="ph ph4" src="/templates/freeform/sl-golf-tournament-proposal/assets/aerial.jpg" alt="Aerial view of the golf course">
+    <div class="panel"></div>
+    <div class="it i1"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.2l1.7 1.2 2-.2.8 1.9 1.8 1-.2 2 1.2 1.7-1.2 1.7.2 2-1.8 1-.8 1.9-2-.2L12 16.3l-1.7-1.1-2 .2-.8-1.9-1.8-1 .2-2L4.7 8.8l1.2-1.7-.2-2 1.8-1 .8-1.9 2 .2zM12 4.6a4.2 4.2 0 1 0 0 8.4 4.2 4.2 0 0 0 0-8.4z"/><path d="M8 15.3 5.8 21.5l2.9-.6 1.6 2.1 1.9-5.6zM16 15.3l2.2 6.2-2.9-.6-1.6 2.1-1.9-5.6z"/></svg></span><h3>18 championship holes</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="it i2"><span class="ic"><svg viewBox="0 0 26 18" fill="currentColor" aria-hidden="true"><circle cx="13" cy="9" r="7.6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="9" r="5.4"/><path d="M1 1.5v4.3c0 .9.5 1.5 1.1 1.8V17h1.3V7.6c.6-.3 1.1-.9 1.1-1.8V1.5h-.8v3.8h-.6V1.5h-.7v3.8h-.6V1.5z"/><path d="M24.8 1.2c-1.5.7-2.3 2.6-2.3 5V10h1v7h1.3z"/></svg></span><h3>Food &amp; beverage stations</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="it i3"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5c-2 0-3.7 1.2-4.3 3A3.9 3.9 0 0 0 3.5 8.4c0 .9.3 1.7.8 2.4A3.7 3.7 0 0 0 7.6 17c1.1 0 2.1-.4 2.9-1.1l.3 2.2-3 3.4h1.9l1.9-2 .2 2.9h1.6l.2-2.9 1.9 2h1.9l-3-3.4.3-2.2c.8.7 1.8 1.1 2.9 1.1a3.7 3.7 0 0 0 3.3-6.2c.5-.7.8-1.5.8-2.4a3.9 3.9 0 0 0-4.2-3.9c-.6-1.8-2.3-3-4.3-3z"/></svg></span><h3>Parking and shuttle area</h3><p>This is a sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <p class="sub">Add subheading here</p>
+    <h1 class="ttl">Sponsorship Packages</h1>
+    <div class="pk k1"><p class="pr">$5,000</p><h3>SILVER SPONSOR</h3><ul><li>Logo placement</li><li>Social promotion</li><li>Event recognition</li><li>This is a sample text</li></ul></div>
+    <div class="pk k2"><p class="pr">$10,000</p><h3>GOLD SPONSOR</h3><ul><li>Event branding</li><li>Exhibition space</li><li>Marketing exposure</li><li>This is a sample text</li></ul></div>
+    <div class="pk k3"><p class="pr">$15,000</p><h3>PLATINUM SPONSOR</h3><ul><li>Title branding</li><li>Premium booth</li><li>VIP invitations</li><li>This is a sample text</li></ul></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="band"></div>
+    <p class="sub">Add subheading here</p>
+    <h1 class="ttl">Prize Categories</h1>
+    <div class="pz z1"><span class="pin"><svg viewBox="0 0 70 86" aria-hidden="true"><path d="M35 82 14.6 57.4A30 30 0 1 1 55.4 57.4z" fill="#F6FF1F" stroke="#F3EBE0" stroke-width="5" stroke-linejoin="round"/></svg><b>04</b></span><span class="ic"><svg viewBox="0 0 32 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 13.5h-.5A1.5 1.5 0 0 1 1 12V9.6c0-.9.6-1.6 1.5-1.8l4.3-.9 3.6-4c.6-.6 1.4-1 2.3-1h7.1c1 0 1.9.4 2.5 1.2l2.8 3.6 3.9.8c.9.2 1.6 1 1.6 1.9V12a1.5 1.5 0 0 1-1.5 1.5H29"/><path d="M10.5 13.5h11"/><path d="M9.5 6.9 12 4h4.5v2.9zM18.5 4h2.2l2.2 2.9h-4.4z" fill="currentColor" stroke="none"/><circle cx="6.8" cy="13.5" r="2.7"/><circle cx="25.2" cy="13.5" r="2.7"/></svg></span><h3>Drive</h3><p>This is a sample text.</p></div>
+    <div class="pz z2"><span class="pin"><svg viewBox="0 0 70 86" aria-hidden="true"><path d="M35 82 14.6 57.4A30 30 0 1 1 55.4 57.4z" fill="#F6FF1F" stroke="#F3EBE0" stroke-width="5" stroke-linejoin="round"/></svg><b>02</b></span><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 10h4.3v11H1.5z"/><path d="M7.3 10.3 11.6 3c1.2-.4 2.6.5 2.5 1.9L13.6 9h6.2c1.4 0 2.4 1.2 2.1 2.5l-1.6 7.4A2.6 2.6 0 0 1 17.8 21H7.3z"/><path d="M14.5 12.6h7M14.5 15.6h6.4M14.5 18.4h5.6" stroke="#365E29" stroke-width="1.1"/></svg></span><h3>Runner-Up</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="pz z3"><span class="pin"><svg viewBox="0 0 70 86" aria-hidden="true"><path d="M35 82 14.6 57.4A30 30 0 1 1 55.4 57.4z" fill="#F6FF1F" stroke="#F3EBE0" stroke-width="5" stroke-linejoin="round"/></svg><b>01</b></span><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.2l1.7 1.2 2-.2.8 1.9 1.8 1-.2 2 1.2 1.7-1.2 1.7.2 2-1.8 1-.8 1.9-2-.2L12 16.3l-1.7-1.1-2 .2-.8-1.9-1.8-1 .2-2L4.7 8.8l1.2-1.7-.2-2 1.8-1 .8-1.9 2 .2zM12 4.6a4.2 4.2 0 1 0 0 8.4 4.2 4.2 0 0 0 0-8.4z"/><path d="M8 15.3 5.8 21.5l2.9-.6 1.6 2.1 1.9-5.6zM16 15.3l2.2 6.2-2.9-.6-1.6 2.1-1.9-5.6z"/></svg></span><h3>Champion</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="pz z4"><span class="pin"><svg viewBox="0 0 70 86" aria-hidden="true"><path d="M35 82 14.6 57.4A30 30 0 1 1 55.4 57.4z" fill="#F6FF1F" stroke="#F3EBE0" stroke-width="5" stroke-linejoin="round"/></svg><b>03</b></span><span class="ic"><svg viewBox="0 0 30 20" fill="currentColor" aria-hidden="true"><circle cx="15" cy="5" r="3.6"/><circle cx="6.5" cy="6.5" r="2.8"/><circle cx="23.5" cy="6.5" r="2.8"/><path d="M8.5 19.5v-2.3c0-3.4 2.9-6.4 6.5-6.4s6.5 3 6.5 6.4v2.3z"/><path d="M1 18v-1.6c0-2.6 2.3-4.8 5.3-4.8 1 0 1.9.2 2.6.7a8 8 0 0 0-2 5.7z"/><path d="M29 18v-1.6c0-2.6-2.3-4.8-5.3-4.8-1 0-1.9.2-2.6.7a8 8 0 0 1 2 5.7z"/></svg></span><h3>Third Place</h3><p>This is a sample text. Insert your text here.</p></div>
+    <div class="pz z5"><span class="pin"><svg viewBox="0 0 70 86" aria-hidden="true"><path d="M35 82 14.6 57.4A30 30 0 1 1 55.4 57.4z" fill="#F6FF1F" stroke="#F3EBE0" stroke-width="5" stroke-linejoin="round"/></svg><b>05</b></span><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 7.6 9 6.2 2.2 8.8v13l6.8-2.6 6.4 2.6 6.4-2.6V12"/><path d="M9 6.2v13M15.4 12.4v9.4"/><path d="M17.5 1.6a3.4 3.4 0 0 0-3.4 3.4c0 2.6 3.4 6.4 3.4 6.4s3.4-3.8 3.4-6.4a3.4 3.4 0 0 0-3.4-3.4zm0 4.7a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6z" fill="currentColor" stroke="none"/></svg></span><h3>Longest</h3><p>This is a sample text.</p></div>
+    <p class="foot">This is a sample text. Insert your desired text here. Insert your desired text here. This is a sample text. Insert your text here.</p>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="band"></div>
+    <p class="sub">Add subheading here</p>
+    <h1 class="ttl">Registration</h1>
+    <p class="para p1">This is a sample text. Insert your desired text here. Insert your desired text here.</p>
+    <img class="ph ph7" src="/templates/freeform/sl-golf-tournament-proposal/assets/cart.jpg" alt="Golf cart between stone walls">
+    <p class="price">$250</p>
+    <p class="per">/participant</p>
+    <p class="para p2">Insert your desired text here. Insert your desired text here. This is a sample text.</p>
+    <div class="rg r1"><h3>Green Fee</h3><p>This is a sample text. Insert your text here. Add text here.</p></div>
+    <div class="rg r2"><h3>Tournament Kit</h3><p>This is a sample text. Insert your text here. Add text here.</p></div>
+    <div class="rg r3"><h3>Lunch &amp; Refreshments</h3><p>This is a sample text. Insert your text here. Add text here.</p></div>
+    <div class="rg r4"><h3>Award Ceremony</h3><p>This is a sample text. Insert your text here. Add text here.</p></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <p class="sub">Add subheading here</p>
+    <h1 class="ttl">Budget</h1>
+    <p class="para">This is a sample text. Insert your desired text here. This is a sample text. Add text here.</p>
+    <div class="tbl"><ul><li><span>Golf Course Rental</span><b>$12,000</b></li><li><span>Tournament Operations Team</span><b>$8,500</b></li><li><span>Food &amp; Beverage Services</span><b>$6,000</b></li><li><span>Marketing &amp; Promotion</span><b>$3,500</b></li><li><span>Awards &amp; Prizes</span><b>$7,000</b></li><li class="last"><span>Event Contingency Fund</span><b>$3,000</b></li><li class="tot"><span>Total Estimated Budget</span><b>$40,000</b></li></ul></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <span class="logo ic"><svg viewBox="0 0 80 84" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M24 6C40 2 62 6 72 12c6 4 7 40 3 58-2 8-30 12-52 12C10 82 5 74 4 50 3 26 6 10 24 6zm2 14c-6 2-8 8-8 28 0 14 2 18 8 19 14 2 32 1 37-3 3-8 4-34 1-38-8-5-27-8-38-6z"/><path d="M17 16 27 5" stroke="#fff" stroke-width="3.5"/><path d="M63 79 73 68" stroke="#fff" stroke-width="3.5"/></svg></span><p class="co">YOUR COMPANY<br>LOGO HERE</p>
+    <h1 class="ty">Thank you!</h1>
+    <p class="pill">Ready to Join the Tournament?</p>
+    <p class="ct t1"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.8a7 7 0 0 0-7 7c0 5.2 7 13.4 7 13.4s7-8.2 7-13.4a7 7 0 0 0-7-7zm0 9.6a2.6 2.6 0 1 1 0-5.2 2.6 2.6 0 0 1 0 5.2z"/></svg></span><span>Add place here</span></p><p class="ct t2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="10.2"/><path d="M12 6.2V12l3.6 2.6" stroke-linecap="round"/></svg></span><span>Add date here</span></p><p class="ct t3"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M22.5 2 1.5 10.4l6.4 2.6L22.5 2zM22.5 2 16 21.5l-8.1-8.5M7.9 13v7.3l3.4-3.8"/></svg></span><span>Add email here</span></p><p class="ct t4"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.6 1.8 8.7 5c.5.5.5 1.3 0 1.8L7 8.5a14 14 0 0 0 8.5 8.5l1.7-1.7c.5-.5 1.3-.5 1.8 0l3.2 3.1c.5.5.5 1.3 0 1.8l-2 2c-.8.8-2 1-3 .6C10.6 20.4 3.6 13.4 1.2 6.8c-.4-1-.2-2.2.6-3l2-2c.5-.5 1.3-.5 1.8 0z"/></svg></span><span>+1 (234) 567890</span></p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 9</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
