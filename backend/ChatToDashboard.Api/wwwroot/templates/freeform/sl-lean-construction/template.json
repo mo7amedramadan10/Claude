@@ -1,0 +1,81 @@
+{
+  "key": "sl-lean-construction",
+  "kind": "slides",
+  "category": "projects",
+  "icon": "🏗️",
+  "name": "البناء الرشيق",
+  "nameEn": "Lean Construction",
+  "description": "ست عشرة شريحة عن البناء الرشيق: الهدر، المبادئ، تدفق القيمة، المخطِّط الأخير، الأدوات، خارطة التنفيذ والمؤشرات",
+  "descriptionEn": "16 slides on lean construction: wastes, principles, value stream, Last Planner, tools, roadmap and KPIs",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "مقدمة إلى البناء الرشيق",
+      "titleEn": "Introduction to Lean Construction"
+    },
+    {
+      "title": "أنواع الهدر الثمانية في البناء",
+      "titleEn": "The 8 Wastes in Construction"
+    },
+    {
+      "title": "مبادئ البناء الرشيق",
+      "titleEn": "Lean Construction Principles"
+    },
+    {
+      "title": "رسم خريطة تدفق القيمة",
+      "titleEn": "Value Stream Mapping",
+      "needsData": true
+    },
+    {
+      "title": "نظام المخطِّط الأخير",
+      "titleEn": "Last Planner System"
+    },
+    {
+      "title": "فوائد البناء الرشيق",
+      "titleEn": "Benefits of Lean Construction",
+      "needsData": true
+    },
+    {
+      "title": "أدوات البناء الرشيق وأساليبه",
+      "titleEn": "Lean Construction Tools & Methods"
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "المؤشرات والمقاييس",
+      "titleEn": "KPIs and Metrics",
+      "needsData": true
+    },
+    {
+      "title": "نموذج دراسة حالة",
+      "titleEn": "Case Study Sample",
+      "needsData": true
+    },
+    {
+      "title": "التحديات والحلول",
+      "titleEn": "Challenges and Solutions"
+    },
+    {
+      "title": "أدوار الفريق في المشاريع الرشيقة",
+      "titleEn": "Team Roles in Lean Projects"
+    },
+    {
+      "title": "الملخّص وأبرز الدروس",
+      "titleEn": "Summary & Key Takeaways"
+    },
+    {
+      "title": "شكرًا لكم وتواصلوا معنا",
+      "titleEn": "Thank You — Connect With Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ حلقة «قيمة المشروع» تُرسم من كتلة chart-data فعدّل قيمها هناك."
+}
