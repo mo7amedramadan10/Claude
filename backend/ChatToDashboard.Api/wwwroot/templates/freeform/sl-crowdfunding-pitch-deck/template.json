@@ -1,0 +1,81 @@
+{
+  "key": "sl-crowdfunding-pitch-deck",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💸",
+  "name": "عرض التمويل الجماعي",
+  "nameEn": "Crowdfunding Pitch Deck",
+  "description": "خمس عشرة شريحة لعرض حملة تمويل جماعي: المشكلة والمنتج والسوق والمنافسة والمكافآت والميزانية والمطلوب",
+  "descriptionEn": "Fifteen slides to pitch a crowdfunding campaign: problem, product, market, competition, rewards, budget, ask",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "المشكلة",
+      "titleEn": "The Problem",
+      "needsData": true
+    },
+    {
+      "title": "تعرّف على المنتج",
+      "titleEn": "Meet the Product"
+    },
+    {
+      "title": "لماذا الآن",
+      "titleEn": "Why Now"
+    },
+    {
+      "title": "عرض حي",
+      "titleEn": "Live Demo"
+    },
+    {
+      "title": "الداعم المستهدف",
+      "titleEn": "Target Backer"
+    },
+    {
+      "title": "حجم السوق",
+      "titleEn": "Market Size",
+      "needsData": true
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape",
+      "needsData": true
+    },
+    {
+      "title": "استراتيجية التمويل الجماعي",
+      "titleEn": "Crowdfunding Strategy",
+      "needsData": true
+    },
+    {
+      "title": "مستويات المكافآت",
+      "titleEn": "Reward Tiers",
+      "needsData": true
+    },
+    {
+      "title": "خطة التسويق",
+      "titleEn": "Marketing Plan"
+    },
+    {
+      "title": "تعرّف على الفريق",
+      "titleEn": "Meet the Team",
+      "needsData": true
+    },
+    {
+      "title": "الميزانية واستخدام الأموال (رسم)",
+      "titleEn": "Budget and Use of Funds (chart)",
+      "needsData": true
+    },
+    {
+      "title": "المخاطر وسبل التخفيف",
+      "titleEn": "Risk & Mitigations"
+    },
+    {
+      "title": "المطلوب",
+      "titleEn": "The Ask",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ حلقة الميزانية تُرسم من كتلة chart-data (القيم والألوان)، فعدّل قيمها هناك وحدّث نسب وسيلة الإيضاح المجاورة لتطابقها."
+}
