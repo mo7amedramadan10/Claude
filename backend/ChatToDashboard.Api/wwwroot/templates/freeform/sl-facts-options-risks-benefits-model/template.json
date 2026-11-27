@@ -1,0 +1,25 @@
+{
+  "key": "sl-facts-options-risks-benefits-model",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "⚖️",
+  "name": "الحقائق والخيارات والمخاطر والمنافع",
+  "nameEn": "Facts Options Risks Benefits Model",
+  "description": "ثلاث شرائح لنموذج FORB لاتخاذ القرار: أعمدة بالنقاط، وصفوف أفقية، وأعمدة بشريط أسهم",
+  "descriptionEn": "Three FORB decision-model slides: bullet columns, horizontal rows, and columns with an arrow band",
+  "sections": [
+    {
+      "title": "أعمدة النموذج بالنقاط",
+      "titleEn": "FORB Columns with Bullets"
+    },
+    {
+      "title": "صفوف النموذج الأفقية",
+      "titleEn": "FORB Horizontal Rows"
+    },
+    {
+      "title": "أعمدة بشريط أسهم",
+      "titleEn": "FORB Columns with Arrow Band"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الألوان الأربعة ثابتة لكل عنصر (الصنف k-f/k-o/k-r/k-b) والحروف F وO وR وB تبقى كما هي."
+}

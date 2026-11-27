@@ -1,0 +1,60 @@
+{
+  "key": "sl-enterprise-business",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "عرض أعمال المؤسسات",
+  "nameEn": "Enterprise Business",
+  "description": "إحدى عشرة شريحة مؤسسية: عرض القيمة، ملخص تنفيذي، أهداف، حل مقترح، خارطة طريق، مؤشرات أداء، مخاطر وخلاصة",
+  "descriptionEn": "Eleven corporate slides: value proposition, summary, objectives, solution, roadmap, KPIs, risks and next steps",
+  "sections": [
+    {
+      "title": "عرض القيمة",
+      "titleEn": "Value Proposition",
+      "needsData": true
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary"
+    },
+    {
+      "title": "نظرة عامة على المؤسسة",
+      "titleEn": "Organization Overview"
+    },
+    {
+      "title": "سياق الأعمال والتحديات",
+      "titleEn": "Business Context & Challenges"
+    },
+    {
+      "title": "الأهداف الاستراتيجية",
+      "titleEn": "Strategic Objectives",
+      "needsData": true
+    },
+    {
+      "title": "الحل المقترح",
+      "titleEn": "Proposed Solution"
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "نموذج التشغيل",
+      "titleEn": "Operating Model"
+    },
+    {
+      "title": "مؤشرات الأداء ومقاييس النجاح",
+      "titleEn": "KPIs & Success Metrics",
+      "needsData": true
+    },
+    {
+      "title": "المخاطر وسبل التخفيف",
+      "titleEn": "Risks & Mitigation"
+    },
+    {
+      "title": "الخلاصة والخطوات التالية",
+      "titleEn": "Conclusion & Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أعمدة شريحة مؤشرات الأداء تُرسم من كتلة chart-data (القيم نسبة من 100 والشهران المُبرزان في highlight)، والأشرطة المائلة والأشكال رسوم SVG."
+}

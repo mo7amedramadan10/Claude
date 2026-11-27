@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enterprise Business Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «أعمال المؤسسات»: خلفية بيضاء، عناوين بتدرّج أزرق أفقي (جزء غامق وجزء خفيف)، أشرطة مائلة متدرّجة من الأزرق الداكن إلى السماوي مع خطوط رفيعة، وصور مكتبية مقصوصة بأشكال مائلة. الزخارف والصور المائلة تنعكس في العربية. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #000000; --tx: #000000; --muted: #444444; --navy: #2C4F77; --navy-2: #1F3B5C; --accent: #2C4F77; --sky: #4EA8CF; --mid: #2390BA; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* زخارف وصور بإحداثيات الإطار: تُعكس في العربية */
+  .deco { position: absolute; inset: 0; width: 1280px; height: 720px; pointer-events: none; }
+  html[dir="rtl"] .deco, html[dir="rtl"] .frame .ph, html[dir="rtl"] .frame .tile { transform: scaleX(-1); }
+  /* العنوان: تدرّج أزرق أفقي، والجزء الخفيف بوزن عادي */
+  .ttl { position: absolute; top: 102px; inset-inline-start: 73px; margin: 0; font-size: 52px; line-height: 57px; font-weight: 400; letter-spacing: -.6px; white-space: nowrap; width: max-content; color: transparent;
+         background: linear-gradient(90deg, #6592C8 0%, #2C4D76 100%); -webkit-background-clip: text; background-clip: text; z-index: 2; }
+  html[dir="rtl"] .ttl { background-image: linear-gradient(270deg, #6592C8 0%, #2C4D76 100%); letter-spacing: 0; line-height: 62px; top: 96px; }
+  .ttl b { font-weight: 700; }
+  html[lang="ar"] .ttl b { font-weight: 800; }
+  .lead { position: absolute; margin: 0; font-size: 19px; line-height: 25.5px; color: var(--tx); z-index: 2; }
+  html[lang="ar"] .lead { line-height: 27px; }
+  .lead.wide { top: 196px; inset-inline-start: 73px; width: 1022px; }
+  h2 { margin: 0; }
+  /* الخط العربي أصغر بصريًا من اللاتيني بالحجم نفسه: تكبير متناسب لنصوص المحتوى */
+  html[lang="ar"] .frame p, html[lang="ar"] .frame h2, html[lang="ar"] .frame .ct span { font-size-adjust: 0.47; }
+  /* 1: عرض القيمة */
+  .s1 .l1 { top: 265px; inset-inline-start: 73px; width: 476px; }
+  .s1 .tile { position: absolute; width: 272px; object-fit: cover; }
+  .s1 .ta { top: 0; inset-inline-start: 906px; height: 214px; } .s1 .tb { top: 225px; inset-inline-start: 622px; height: 272px; }
+  .s1 .tc { top: 225px; inset-inline-start: 906px; height: 272px; } .s1 .td { top: 507px; inset-inline-start: 622px; height: 213px; }
+  .s1 .stat { position: absolute; top: 76px; inset-inline-end: 429px; text-align: end; }
+  .s1 .stat .n { margin: 0; font-size: 36px; line-height: 44px; font-weight: 700; color: var(--navy); }
+  .s1 .stat .c { margin: 0; font-size: 17px; line-height: 22px; color: #414141; }
+  .s1 .dsq { position: absolute; top: 81px; inset-inline-start: 880px; width: 54px; height: 54px; border-radius: 10px; background: var(--navy); display: grid; place-items: center; }
+  .s1 .dsq svg { width: 26px; height: 26px; }
+  .s1 .card { position: absolute; top: 466px; inset-inline-start: 76px; width: 624px; height: 161px; background: #fff; border-radius: 30px; box-shadow: 0 10px 34px rgb(0 0 0 / .13); z-index: 3; }
+  .s1 .pc { position: absolute; top: 40px; inset-inline-start: 41px; width: 140px; text-align: center; }
+  .s1 .pc .n { margin: 0; font-size: 42px; line-height: 52px; font-weight: 700; color: var(--navy); }
+  .s1 .pc .c { margin: 0; font-size: 17px; line-height: 26px; color: #444; }
+  .s1 .big { position: absolute; top: 38px; inset-inline-start: 218px; margin: 0; font-size: 70px; line-height: 88px; font-weight: 700; color: var(--navy); letter-spacing: -1px; }
+  .s1 .n328 { position: absolute; top: 562px; inset-inline-start: 906px; width: 272px; margin: 0; text-align: center; font-size: 68px; line-height: 86px; font-weight: 700; color: var(--navy); }
+  /* 2: الملخص التنفيذي */
+  .s2 .l2 { top: 249px; inset-inline-start: 73px; width: 476px; }
+  .s2 .gpanel { position: absolute; top: 0; inset-inline-start: 730px; width: 320px; height: 720px; background: linear-gradient(250deg, #2E5B84 0%, #4A9AC0 55%, #52A6CB 100%); }
+  html[dir="rtl"] .s2 .gpanel { background: linear-gradient(110deg, #2E5B84 0%, #4A9AC0 55%, #52A6CB 100%); }
+  .s2 .ph1 { position: absolute; top: 0; inset-inline-start: 900px; width: 298px; height: 457px; object-fit: cover; border-radius: 0 0 10px 10px; }
+  .s2 .ph2 { position: absolute; top: 539px; inset-inline-start: 614px; width: 273px; height: 181px; object-fit: cover; border-radius: 10px 10px 0 0; }
+  .s2 .hr { position: absolute; top: 388px; inset-inline-start: 0; width: 245px; height: 2px; background: #3F6390; }
+  .s2 .bh { position: absolute; top: 424px; inset-inline-start: 128px; font-size: 20px; line-height: 26px; font-weight: 700; display: flex; align-items: center; gap: 16px; }
+  .s2 .bh i { width: 12px; height: 12px; border-radius: 2px; background: linear-gradient(135deg, #2E5A88, #4C8BC0); flex: none; }
+  .s2 .bp { position: absolute; top: 479px; inset-inline-start: 127px; width: 480px; margin: 0; font-size: 19px; line-height: 25.5px; }
+  .s2 .bq { position: absolute; top: 570px; inset-inline-start: 127px; width: 410px; margin: 0; font-size: 19px; line-height: 25.5px; padding-inline-start: 19px; border-inline-start: 2px solid #4A6D93; }
+  /* 3: نظرة عامة على المؤسسة */
+  .s3 .ph { position: absolute; top: 0; inset-inline-start: 705px; width: 575px; height: 720px; object-fit: cover; clip-path: polygon(113px 0, 575px 0, 575px 720px, 243px 720px, 0 231px); }
+  .s3 .l3 { top: 249px; inset-inline-start: 73px; width: 402px; }
+  .s3 .gcard { position: absolute; top: 394px; inset-inline-start: 73px; width: 523px; height: 290px; border-radius: 14px; background: linear-gradient(150deg, #2D5482 0%, #3F82B0 55%, #4FA8D0 100%); color: #fff; z-index: 3; }
+  html[dir="rtl"] .s3 .gcard { background: linear-gradient(210deg, #2D5482 0%, #3F82B0 55%, #4FA8D0 100%); }
+  .s3 .ci { position: absolute; top: 39px; inset-inline-start: 27px; width: 70px; height: 70px; border-radius: 50%; background: #fff; color: var(--navy); display: grid; place-items: center; }
+  .s3 .ci svg { width: 36px; height: 36px; }
+  .s3 .num { position: absolute; top: 18px; inset-inline-end: 22px; font-size: 84px; line-height: 96px; font-weight: 300; color: transparent; background: linear-gradient(180deg, rgb(255 255 255 / .1), rgb(255 255 255 / .55)); -webkit-background-clip: text; background-clip: text; }
+  .s3 .gcard h2 { position: absolute; top: 138px; inset-inline-start: 27px; font-size: 22px; line-height: 28px; font-weight: 700; }
+  .s3 .gcard p { position: absolute; top: 183px; inset-inline-start: 27px; width: 450px; margin: 0; font-size: 17px; line-height: 22.5px; color: #EEF6FB; }
+  /* 4: سياق الأعمال والتحديات */
+  .s4 .ph { position: absolute; top: 182px; inset-inline-start: 488px; width: 792px; height: 538px; clip-path: path('M359,0 L529,170 L358,341 L188,171 Z M677,43 L792,158 L792,538 L559,538 L370,350 Z M269,268 L539,538 L0,538 Z'); }
+  .s4 .l4 { top: 249px; inset-inline-start: 73px; width: 472px; }
+  .s4 .vl { position: absolute; top: 393px; inset-inline-start: 72px; width: 3px; height: 214px; background: linear-gradient(180deg, #2E5682, #6FB1D6); }
+  .s4 .it { position: absolute; inset-inline-start: 120px; width: 440px; }
+  .s4 .it1 { top: 393px; } .s4 .it2 { top: 517px; }
+  .s4 .it h2 { font-size: 21px; line-height: 28px; font-weight: 700; }
+  .s4 .it p { margin: 13px 0 0; font-size: 18px; line-height: 23px; }
+  /* 5: الأهداف الاستراتيجية */
+  .s5 .lab { position: absolute; width: 140px; text-align: center; color: #F1F7FB; }
+  .s5 .lab p { margin: 0; font-size: 18px; line-height: 25px; }
+  .s5 .lab .v { font-size: 20px; font-weight: 700; }
+  .s5 .chip { position: absolute; width: 136px; height: 50px; border-radius: 12px; background: #E8E7E8; box-shadow: 0 8px 18px rgb(0 0 0 / .08); display: flex; align-items: center; gap: 15px; padding-inline-start: 10px; }
+  .s5 .chip .ci { width: 36px; height: 36px; border-radius: 7px; background: linear-gradient(180deg, #2C5C89, #4DA6CF); color: #fff; display: grid; place-items: center; }
+  .s5 .chip .ci svg { width: 20px; height: 20px; }
+  .s5 .chip b { font-size: 17px; color: var(--navy); font-weight: 700; }
+  .s5 .c1 { top: 312px; inset-inline-start: 190px; } .s5 .c2 { top: 490px; inset-inline-start: 72px; } .s5 .c3 { top: 593px; inset-inline-start: 402px; }
+  .s5 .vl5 { position: absolute; top: 302px; inset-inline-start: 677px; width: 3px; height: 382px; background: linear-gradient(180deg, #2E5682, #5FAED3); }
+  .s5 .it5 { position: absolute; inset-inline-start: 725px; width: 440px; }
+  .s5 .it5 h2 { font-size: 22px; line-height: 28px; font-weight: 700; }
+  .s5 .it5 p { margin: 13px 0 0; font-size: 18px; line-height: 23px; }
+  /* 6: الحل المقترح */
+  .s6 .circ { position: absolute; top: 294px; width: 142px; height: 142px; border-radius: 50%; background: #F1F1F1; color: #4BA3CD; display: grid; place-items: center; }
+  .s6 .circ svg { width: 68px; height: 68px; }
+  .s6 .it6 { position: absolute; top: 476px; width: 218px; text-align: end; }
+  .s6 .it6 h2 { font-size: 21px; line-height: 30px; font-weight: 700; }
+  .s6 .it6 p { margin: 13px 0 0; font-size: 17.5px; line-height: 22.3px; }
+  /* 7: خارطة طريق التنفيذ */
+  .s7 .l8 { top: 263px; inset-inline-start: 73px; width: 352px; }
+  .s7 .rcard { position: absolute; width: 330px; height: 142px; background: #fff; border-radius: 18px; box-shadow: 0 6px 28px rgb(0 0 0 / .09); padding: 28px 18px 0; }
+  .s7 .rcard.re { text-align: end; }
+  .s7 .rcard h2 { font-size: 21px; line-height: 30px; font-weight: 700; }
+  .s7 .rcard p { margin: 8px 0 0; font-size: 17px; line-height: 23px; }
+  .s7 .pin { position: absolute; width: 94px; height: 94px; }
+  .s7 .pin .drop { position: absolute; inset: 0; background: currentColor; transform: rotate(45deg); border-radius: 50%; }
+  .s7 .pin.pe .drop { border-radius: 50% 0 50% 50%; } .s7 .pin.ps .drop { border-radius: 50% 50% 50% 0; }
+  html[dir="rtl"] .s7 .pin.pe .drop { border-radius: 50% 50% 50% 0; } html[dir="rtl"] .s7 .pin.ps .drop { border-radius: 50% 0 50% 50%; }
+  .s7 .pin .in { position: absolute; inset: 16px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .s7 .pin .in svg { width: 34px; height: 34px; }
+  .s7 .dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; }
+  /* 8: نموذج التشغيل */
+  .s8 .hi { position: absolute; width: 64px; height: 64px; }
+  .s8 .hi.n { top: 417px; color: #fff; } .s8 .hi.o { top: 478px; width: 68px; height: 68px; color: #111; }
+  .s8 .hi svg { width: 100%; height: 100%; }
+  .s8 .it9 { position: absolute; width: 220px; text-align: center; }
+  .s8 .it9.up { top: 291px; } .s8 .it9.dn { top: 555px; }
+  .s8 .it9 h2 { font-size: 21px; line-height: 30px; font-weight: 700; }
+  .s8 .it9 p { margin: 8px 0 0; font-size: 17.5px; line-height: 22.5px; }
+  /* 9: مؤشرات الأداء */
+  .s9 .panel { position: absolute; top: 264px; inset-inline-start: 73px; width: 804px; height: 400px; background: #fff; box-shadow: 0 10px 40px rgb(0 0 0 / .08); }
+  .s9 .panel h2 { position: absolute; top: 24px; inset-inline-start: 32px; font-size: 25px; line-height: 32px; font-weight: 700; color: var(--navy); }
+  .s9 .panel .date { position: absolute; top: 56px; inset-inline-start: 32px; margin: 0; font-size: 17px; line-height: 22px; color: #BBBBBB; }
+  .s9 .pill { position: absolute; top: 30px; inset-inline-end: 22px; height: 36px; padding: 0 16px 0 10px; border-radius: 18px; background: var(--navy); color: #fff; font-size: 18px; display: flex; align-items: center; gap: 6px; }
+  html[dir="rtl"] .s9 .pill { padding: 0 10px 0 16px; }
+  .s9 .pill svg { width: 20px; height: 20px; }
+  .s9 .bars { position: absolute; top: 118px; inset-inline-start: 32px; width: 745px; height: 275px; }
+  .s9 .bars text { font-size: 18px; fill: #222; font-family: var(--font); }
+  html[lang="ar"] .s9 .bars text { font-size: 12.5px; }
+  .s9 .kic { position: absolute; top: 279px; inset-inline-start: 905px; width: 47px; height: 47px; background: var(--navy); color: #fff; display: grid; place-items: center; }
+  .s9 .kic svg { width: 26px; height: 26px; }
+  .s9 .kh { position: absolute; top: 346px; inset-inline-start: 905px; font-size: 22px; line-height: 30px; font-weight: 700; }
+  .s9 .kp { position: absolute; top: 376px; inset-inline-start: 905px; margin: 0; font-size: 18px; line-height: 24px; }
+  .s9 .kbox { position: absolute; top: 419px; inset-inline-start: 905px; width: 284px; height: 246px; background: var(--navy); color: #fff; padding: 30px 23px 0; }
+  .s9 .kbox .kv { margin: 0; font-size: 66px; line-height: 80px; font-weight: 300; }
+  .s9 .kbox h2 { margin-top: 11px; font-size: 22px; line-height: 30px; font-weight: 700; }
+  .s9 .kbox p { margin: 6px 0 0; font-size: 18px; line-height: 23px; }
+  /* 10: المخاطر والتخفيف */
+  .s10 .ph { position: absolute; top: 0; inset-inline-start: 583px; width: 697px; height: 480px; object-fit: cover; clip-path: path('M0,0 L697,0 L697,295 L538,440 Q463,508 400,440 Z'); }
+  .s10 .l11 { top: 241px; inset-inline-start: 73px; width: 535px; }
+  .s10 .col { position: absolute; top: 427px; width: 292px; }
+  .s10 .col .cn { margin: 0; font-size: 66px; line-height: 80px; font-weight: 700; color: var(--navy); }
+  .s10 .col i { display: block; width: 75px; height: 3px; background: var(--navy); margin-top: 3px; }
+  .s10 .col h2 { margin-top: 30px; font-size: 25px; line-height: 32px; font-weight: 700; }
+  .s10 .col p { margin: 6px 0 0; font-size: 19.5px; line-height: 25px; }
+  /* 11: الخلاصة والخطوات التالية */
+  .s11 .ph { position: absolute; top: 0; inset-inline-start: 0; width: 587px; height: 720px; object-fit: cover; }
+  .s11 .t12 { top: 146px; inset-inline-start: 640px; }
+  .s11 .ccard { position: absolute; top: 321px; inset-inline-start: 235px; width: 955px; height: 296px; background: #fff; box-shadow: 0 10px 40px rgb(0 0 0 / .1); z-index: 3; }
+  .s11 .vb { position: absolute; top: 42px; inset-inline-start: 42px; width: 3px; height: 215px; background: var(--navy); }
+  .s11 .ci1, .s11 .ci2 { position: absolute; inset-inline-start: 75px; width: 440px; }
+  .s11 .ci1 { top: 50px; } .s11 .ci2 { top: 166px; }
+  .s11 .ccard h2 { font-size: 21px; line-height: 28px; font-weight: 700; }
+  .s11 .ccard p { margin: 6px 0 0; font-size: 18px; line-height: 23px; }
+  .s11 .ct { position: absolute; inset-inline-start: 557px; height: 68px; display: flex; align-items: center; gap: 22px; padding-inline-start: 18px; font-size: 20px; color: #34506F; }
+  .s11 .ct svg { width: 36px; height: 36px; color: var(--navy); flex: none; }
+  .s11 .mail { top: 22px; } .s11 .web { top: 203px; }
+  .s11 .tel { top: 111px; width: 345px; background: var(--navy); color: #fff; }
+  .s11 .tel svg { color: #fff; width: 32px; height: 32px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gband" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E5A83"/><stop offset="1" stop-color="#4EA8CF"/></linearGradient><linearGradient id="gband2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#52A8CE"/><stop offset="1" stop-color="#2E5C85"/></linearGradient><linearGradient id="gchev" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2C5080"/><stop offset=".45" stop-color="#3C79A8"/><stop offset="1" stop-color="#52ABD2"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl"><b>Value Proposition</b><br>Presentation Slide</h1><p class="lead l1">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. This is a sample text. Insert your desired text here.</p><img class="tile ta" src="/templates/freeform/sl-enterprise-business/assets/tile-a.jpg" alt="Glass facade of an office building"><img class="tile tb" src="/templates/freeform/sl-enterprise-business/assets/tile-b.jpg" alt="Office lobby with tall windows"><img class="tile tc" src="/templates/freeform/sl-enterprise-business/assets/tile-c.jpg" alt="Modern office building exterior"><img class="tile td" src="/templates/freeform/sl-enterprise-business/assets/tile-d.jpg" alt="Open-plan office with desks"><div class="stat"><p class="n"><bdi dir="ltr">+287</bdi></p><p class="c">This is a sample text</p></div><div class="dsq"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#fff"/><path d="M12.6 6v1.3c1.3.2 2.2.9 2.5 2l-1.5.5c-.2-.7-.8-1.1-1.7-1.1-1 0-1.6.4-1.6 1 0 .5.4.8 1.6 1.1l.9.2c1.8.4 2.6 1.2 2.6 2.5 0 1.3-1 2.2-2.8 2.4V17h-1.2v-1.2c-1.5-.2-2.5-1-2.8-2.2l1.6-.5c.2.8.9 1.3 2 1.3 1.1 0 1.7-.4 1.7-1 0-.5-.4-.8-1.5-1.1l-1-.2c-1.7-.4-2.5-1.2-2.5-2.4 0-1.2.9-2.1 2.5-2.3V6z" fill="#2C4F77"/></svg></div><div class="card"><div class="pc"><p class="n"><bdi dir="ltr">80%</bdi></p><p class="c">Add Text</p></div><p class="big"><bdi dir="ltr">$367,000</bdi></p></div><p class="n328"><bdi dir="ltr">+328</bdi></p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl"><b>Executive Summary</b><br>Presentation Slide</h1><p class="lead l2">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your desired text here. You can add sample text.</p><div class="gpanel"></div><img class="ph1" src="/templates/freeform/sl-enterprise-business/assets/team.jpg" alt="Colleagues reviewing documents at a desk"><img class="ph2" src="/templates/freeform/sl-enterprise-business/assets/control.jpg" alt="Team working in a control room"><div class="hr"></div><h2 class="bh"><i></i>Edit Your Text Here</h2><p class="bp">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p><p class="bq">This is a sample text. Insert your desired text here. You can add sample text.</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <img class="ph" src="/templates/freeform/sl-enterprise-business/assets/meeting.jpg" alt="Business meeting at a conference table"><svg class="deco lines3" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="748,78 900,78 590,720 437,720" fill="none" stroke="#3F6E9C" stroke-width="1.3"/><polygon points="533,173 676,173 948,720 805,720" fill="url(#gband)"/></svg><h1 class="ttl"><b>Organization</b><br><b>Overview</b> Slide</h1><p class="lead l3">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your desired text here.</p><div class="gcard"><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h7l4 4v11a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M16 4v4h4"/><path d="M5 7v12a2 2 0 0 0 2 2h9"/><path d="M11 11h5M11 14h6M11 17h4"/></svg></div><span class="num"><bdi dir="ltr">01</bdi></span><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your desired text here. You can add sample text.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <svg class="deco bars4" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="727,0 780,0 1034,254 1007,281" fill="url(#gband)"/><polygon points="722,455 743,455 478,720 457,720" fill="#A9D4E8"/></svg><img class="ph" src="/templates/freeform/sl-enterprise-business/assets/office.jpg" alt="Executive office with city view"><h1 class="ttl"><b>Business Context</b><br><b>&amp; Challenges</b> Slide</h1><p class="lead l4">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. Insert your desired text here. This is a sample text.</p><div class="vl"></div><div class="it it1"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="it it2"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <svg class="deco band-tr" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1045,0 1208,0 1133,150 970,150" fill="none" stroke="#5AAACC" stroke-width="1.3"/><polygon points="1073,0 1220,0 1280,120 1280,412" fill="url(#gband)"/></svg><h1 class="ttl"><b>Strategic Objectives</b> Slide</h1><p class="lead wide">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. You can add sample text.</p><svg class="deco shapes5" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="537.4,391.5 503.7,508.8 385.4,538.3 300.6,450.5 334.3,333.2 452.6,303.7" fill="#50AACF" stroke="#50AACF" stroke-width="52" stroke-linejoin="round"/><polygon points="434.1,487.5 407.4,580.8 313.3,604.2 245.9,534.5 272.6,441.2 366.7,417.8" fill="#2390BA" stroke="#2390BA" stroke-width="42" stroke-linejoin="round"/><polygon points="348.7,558.4 327.5,632.4 252.8,651.0 199.3,595.6 220.5,521.6 295.2,503.0" fill="#2C4F77" stroke="#2C4F77" stroke-width="34" stroke-linejoin="round"/><polygon points="280.2,619.5 263.7,677.2 205.5,691.7 163.8,648.5 180.3,590.8 238.5,576.3" fill="#1F3A57" stroke="#1F3A57" stroke-width="28" stroke-linejoin="round"/></svg><div class="lab" style="top:326px; inset-inline-start:370px"><p class="v"><bdi dir="ltr">45%</bdi></p><p>Add Text</p></div><div class="lab" style="top:428px; inset-inline-start:293px"><p class="v"><bdi dir="ltr">30%</bdi></p><p>Add Text</p></div><div class="lab" style="top:510px; inset-inline-start:218px"><p class="v"><bdi dir="ltr">15%</bdi></p><p>Add Text</p></div><div class="lab" style="top:613px; inset-inline-start:151px"><p class="v"><bdi dir="ltr">10%</bdi></p><p>Add Text</p></div><div class="chip c1"><span class="ci"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5 2.5 7.5v1.6h19V7.5z"/><rect x="4.3" y="10.4" width="2.4" height="7.4"/><rect x="8.6" y="10.4" width="2.4" height="7.4"/><rect x="13" y="10.4" width="2.4" height="7.4"/><rect x="17.3" y="10.4" width="2.4" height="7.4"/><rect x="2.5" y="19" width="19" height="2.5"/></svg></span><b>20K</b></div><div class="chip c2"><span class="ci"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.1A9 9 0 1 0 20.9 13H11z"/><path d="M13 1.1V11h9.9A9.9 9.9 0 0 0 13 1.1z"/></svg></span><b>56K</b></div><div class="chip c3"><span class="ci"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9.5h3.5l9-5v15l-9-5H3z"/><path d="M6.5 14.5 8 20h2.6l-1.4-5.5"/><path d="M18 9.2a3.5 3.5 0 0 1 0 5.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></span><b>76K</b></div><div class="vl5"></div><div class="it5" style="top:303px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="it5" style="top:441px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="it5" style="top:579px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <svg class="deco band-tr" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1045,0 1208,0 1133,150 970,150" fill="none" stroke="#5AAACC" stroke-width="1.3"/><polygon points="1073,0 1220,0 1280,120 1280,412" fill="url(#gband)"/></svg><h1 class="ttl"><b>Proposed Solution</b> Slide</h1><p class="lead wide">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. You can add sample text.</p><svg class="deco chev6" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="73,322 340,322 368,365 340,408 73,408 105,365" fill="url(#gchev)"/><polygon points="355,322 622,322 650,365 622,408 355,408 387,365" fill="url(#gchev)"/><polygon points="636,322 903,322 931,365 903,408 636,408 668,365" fill="url(#gchev)"/><polygon points="917,322 1184,322 1212,365 1184,408 917,408 949,365" fill="url(#gchev)"/><rect x="315" y="387" width="14" height="73" fill="#4BA6CF"/><path d="M322,460 V620 Q322,650 292,650 H168" fill="none" stroke="#2C4F77" stroke-width="2"/><circle cx="168" cy="650" r="4" fill="#2C4F77"/><rect x="597" y="387" width="14" height="73" fill="#4BA6CF"/><path d="M604,460 V620 Q604,650 574,650 H450" fill="none" stroke="#2C4F77" stroke-width="2"/><circle cx="450" cy="650" r="4" fill="#2C4F77"/><rect x="878" y="387" width="14" height="73" fill="#4BA6CF"/><path d="M885,460 V620 Q885,650 855,650 H731" fill="none" stroke="#2C4F77" stroke-width="2"/><circle cx="731" cy="650" r="4" fill="#2C4F77"/><rect x="1159" y="387" width="14" height="73" fill="#4BA6CF"/><path d="M1166,460 V620 Q1166,650 1136,650 H1012" fill="none" stroke="#2C4F77" stroke-width="2"/><circle cx="1012" cy="650" r="4" fill="#2C4F77"/></svg><div class="circ" style="inset-inline-start:150px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 2h9.5L19 6.5V22H5z"/><path d="M14.5 2v4.5H19" fill="#fff" opacity=".35"/><path d="M7.5 18.5l3-3.5 2.3 2 3.7-4.5" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.3 12.5h2.4v2.4" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 10v9.5h10" fill="none" stroke="#fff" stroke-width="1.1"/></svg></div><div class="circ" style="inset-inline-start:432px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.6 4a8.4 8.4 0 1 0 9.4 9.4h-9.4z"/><path d="M12.6 2.1v9.3h9.3a9.3 9.3 0 0 0-9.3-9.3z"/></svg></div><div class="circ" style="inset-inline-start:713px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2.5" y="11" width="5.2" height="10.5" rx=".4"/><rect x="9.4" y="7.5" width="5.2" height="14" rx=".4"/><rect x="16.3" y="2.5" width="5.2" height="19" rx=".4"/></svg></div><div class="circ" style="inset-inline-start:994px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="5.6" r="3.6"/><path d="M2 21.5v-4.2c0-2.9 2.4-4.8 5.4-5.1L9 15.6l1.6-3.4c1.2.1 2.3.5 3.2 1.1V21.5z"/><path d="M8.3 12.4h1.4l-.2 1.6.7 4.2-1.2 1.2-1.2-1.2.7-4.2z" fill="#fff"/><rect x="15" y="16" width="2" height="5.5"/><rect x="18" y="13.5" width="2" height="8"/><path d="M14.6 13.8 19 9.6l-1.6-.1 3.6-2.7.4 4.4-1.1-1.2-4.6 4.4z"/></svg></div><div class="it6" style="inset-inline-start:80px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="it6" style="inset-inline-start:362px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="it6" style="inset-inline-start:643px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="it6" style="inset-inline-start:924px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <svg class="deco band-bl" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="150,560 305,560 228,720 73,720" fill="none" stroke="#5AAACC" stroke-width="1.3"/><polygon points="0,305 205,720 0,720" fill="url(#gband2)"/></svg><h1 class="ttl"><b>Implementation</b><br><b>Roadmap</b> Slide</h1><p class="lead l8">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. This is a sample text. Insert your text here.</p><div class="rcard" style="top:76px; inset-inline-start:892px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="rcard re" style="top:219px; inset-inline-start:496px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="rcard" style="top:360px; inset-inline-start:892px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="rcard re" style="top:502px; inset-inline-start:496px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="pin pe" style="top:101px; inset-inline-start:731px; color:#1F3B5C"><i class="drop"></i><span class="in"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5 2.5 7.5v1.6h19V7.5z"/><rect x="4.3" y="10.4" width="2.4" height="7.4"/><rect x="8.6" y="10.4" width="2.4" height="7.4"/><rect x="13" y="10.4" width="2.4" height="7.4"/><rect x="17.3" y="10.4" width="2.4" height="7.4"/><rect x="2.5" y="19" width="19" height="2.5"/></svg></span></div><i class="dot" style="top:142px; inset-inline-start:844px; background:#1F3B5C"></i><div class="pin ps" style="top:243px; inset-inline-start:895px; color:#2C4F77"><i class="drop"></i><span class="in"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.1A9 9 0 1 0 20.9 13H11z"/><path d="M13 1.1V11h9.9A9.9 9.9 0 0 0 13 1.1z"/></svg></span></div><i class="dot" style="top:284px; inset-inline-start:858px; background:#2C4F77"></i><div class="pin pe" style="top:384px; inset-inline-start:731px; color:#6894C4"><i class="drop"></i><span class="in"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h15A1.5 1.5 0 0 1 21 4.5V14h-2V8H5v10h7v2H4.5A1.5 1.5 0 0 1 3 18.5z"/><circle cx="6.2" cy="5.5" r=".8" fill="#fff"/><circle cx="8.6" cy="5.5" r=".8" fill="#fff"/><path d="M16 11a4 4 0 0 1 3.3 6.3l2.4 2.4-1.4 1.4-2.4-2.4A4 4 0 1 1 16 11zm0 1.8a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z"/></svg></span></div><i class="dot" style="top:425px; inset-inline-start:844px; background:#6894C4"></i><div class="pin ps" style="top:526px; inset-inline-start:895px; color:#4FA9CF"><i class="drop"></i><span class="in"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.5 5.5c3.6 0 6.6 1.8 7.6 4.4H20v4h-1.8c-.5 1.2-1.4 2.2-2.5 2.9V20h-2.8v-2.3h-4V20H6.1v-3.6C4.2 15.2 3 13.4 3 11.4c0-.8.2-1.6.5-2.3L2 7.6l1.4-1.4 1.6 1.6c1.4-1.4 3.4-2.3 5.5-2.3z"/><circle cx="15.2" cy="10.5" r=".9" fill="#fff"/><path d="M8.5 8.5h3.6" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/></svg></span></div><i class="dot" style="top:567px; inset-inline-start:858px; background:#4FA9CF"></i>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <h1 class="ttl"><b>Operating Model</b> Presentation Slide</h1><p class="lead wide">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. You can add sample text.</p><svg class="deco hex9" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="73,449.0 118.75,370 210.25,370 256,449.0 210.25,528 118.75,528" fill="#2C4F77"/><polygon points="446.5,449.0 492.25,370 583.75,370 629.5,449.0 583.75,528 492.25,528" fill="#2C4F77"/><polygon points="820,449.0 865.75,370 957.25,370 1003,449.0 957.25,528 865.75,528" fill="#2C4F77"/><polygon points="243,512.5 297.25,418 405.75,418 460,512.5 405.75,607 297.25,607" fill="#fff" stroke="#6CB4D4" stroke-width="1.3"/><polygon points="616.5,512.5 670.75,418 779.25,418 833.5,512.5 779.25,607 670.75,607" fill="#fff" stroke="#6CB4D4" stroke-width="1.3"/><polygon points="990,512.5 1044.25,418 1152.75,418 1207,512.5 1152.75,607 1044.25,607" fill="#fff" stroke="#6CB4D4" stroke-width="1.3"/></svg><span class="hi n" style="inset-inline-start:132px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12.5" rx="1"/><path d="M9.5 20.5h5M12 16.5v4"/><path d="M6.5 13.5 8 7.5l1.5 6M7 11.5h2"/><path d="M11.5 13.5V8h2.2a1.4 1.4 0 0 1 0 2.8h-2.2"/><path d="M15.5 13.5l1.8-5.5 1.7 5.5"/></svg></span><span class="hi n" style="inset-inline-start:506px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7.5" width="12.5" height="7.5" rx=".6"/><circle cx="8.2" cy="11.2" r="2"/><path d="M4 6l11-1.8.6 2.4"/><ellipse cx="18.5" cy="12" rx="3.5" ry="1.3"/><path d="M15 12v7.2c0 .7 1.6 1.3 3.5 1.3s3.5-.6 3.5-1.3V12M15 14.4c0 .7 1.6 1.3 3.5 1.3s3.5-.6 3.5-1.3M15 16.8c0 .7 1.6 1.3 3.5 1.3s3.5-.6 3.5-1.3M5.5 19.5h7.5"/></svg></span><span class="hi n" style="inset-inline-start:879px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9.6c1-1.8 3.6-1.4 3.6.6 0 1.6-1.9 2.8-3.6 4.3-1.7-1.5-3.6-2.7-3.6-4.3 0-2 2.6-2.4 3.6-.6z"/><path d="M5 5.5A9 9 0 0 1 16.6 4.3M19 18.5A9 9 0 0 1 7.4 19.7"/><path d="M15.4 2.8l1.5 1.5-1.8 1"/><path d="M8.6 21.2l-1.5-1.5 1.8-1"/><path d="M2.5 13.5h3.2l2.6-1.6h2.2"/><path d="M5.7 13.5v4.5"/><path d="M21.5 10.5h-3.2l-2.6 1.6"/><path d="M18.3 10.5V6"/></svg></span><span class="hi o" style="inset-inline-start:317px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v6"/><circle cx="10.5" cy="7.6" r="2.4"/><path d="M7.4 12.5a3.4 3.4 0 0 1 6.2 0"/><path d="M7 15.5h1M10 15.5h3.5M7 18h1M10 18h2.5"/><path d="M19.5 10.8l1.7 1.7-6.4 6.4-2.5.8.8-2.5z"/></svg></span><span class="hi o" style="inset-inline-start:691px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14.5" cy="3.6" r="1.6"/><path d="M9 9.5l3.2-2.7 3 .6 1.8 3 2.5.6"/><path d="M12.4 7l-1 5.2 3 2.6-1 3.8"/><path d="M11.4 12.2 8.6 15.5H5.5"/><rect x="3.5" y="8.5" width="4.5" height="3.6" rx=".5" transform="rotate(-20 5.7 10.3)"/><path d="M8.5 21l4-3.5 2.5 1.5 6-6.5M18 12.5h3v3"/></svg></span><span class="hi o" style="inset-inline-start:1064px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="3.2"/><path d="M10.6 6.6a1.4 1.4 0 0 1 2.8 0M10 9.4a2.6 2.6 0 0 1 4 0"/><circle cx="6.8" cy="16.2" r="2.8"/><circle cx="16.4" cy="17" r="3.4"/><path d="M5.6 15.6a1.2 1.2 0 0 1 2.4 0M15 16.5a1.4 1.4 0 0 1 2.8 0M14.4 19.4a2.6 2.6 0 0 1 4 0M5.2 18.5a2.2 2.2 0 0 1 3.2 0"/><path d="M9.5 9.2 7.8 13.5M14 10l1.4 3.6M9.6 16.5h3.4"/><path d="M15.2 7H20l1.5-1.5M8.8 7H4L2.5 8.5M20.5 12.5h1.5"/><circle cx="21.7" cy="5.2" r=".6"/><circle cx="2.3" cy="8.7" r=".6"/></svg></span><div class="it9 dn" style="inset-inline-start:54px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="it9 dn" style="inset-inline-start:428px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="it9 dn" style="inset-inline-start:801px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="it9 up" style="inset-inline-start:241px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="it9 up" style="inset-inline-start:615px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div><div class="it9 up" style="inset-inline-start:988px"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <svg class="deco band10" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="1033,0 1220,0 1280,120 1280,495" fill="url(#gband)"/><line x1="1222" y1="378" x2="1055" y2="720" stroke="#5AAACC" stroke-width="1.3"/><line x1="1281" y1="666" x2="1255" y2="720" stroke="#5AAACC" stroke-width="1.3"/></svg><h1 class="ttl"><b>KPIs &amp;</b><br><b>Success Metrics</b></h1><div class="panel"><h2>Summary</h2><p class="date">Date</p><span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/></svg>Add Text</span><svg class="bars" data-chart="chart-data" viewBox="0 0 745 275" role="img" aria-label="Monthly bar chart"></svg></div><div class="kic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.1A9 9 0 1 0 20.9 13H11z"/><path d="M13 1.1V11h9.9A9.9 9.9 0 0 0 13 1.1z"/></svg></div><h2 class="kh">Edit Text Here</h2><p class="kp">Insert your desired text here.</p><div class="kbox"><p class="kv"><bdi dir="ltr">56%</bdi></p><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text.</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <img class="ph" src="/templates/freeform/sl-enterprise-business/assets/team-standing.jpg" alt="Team discussing in an office"><h1 class="ttl"><b>Risks &amp; Mitigation</b><br>Presentation Slide</h1><p class="lead l11">This is a sample text. Insert your desired text here. You can add sample text. This is a sample text. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. You can add sample text.</p><div class="col" style="inset-inline-start:73px"><p class="cn"><bdi dir="ltr">01</bdi></p><i></i><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text.</p></div><div class="col" style="inset-inline-start:425px"><p class="cn"><bdi dir="ltr">02</bdi></p><i></i><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text.</p></div><div class="col" style="inset-inline-start:778px"><p class="cn"><bdi dir="ltr">03</bdi></p><i></i><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add text. This is a sample text.</p></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <img class="ph" src="/templates/freeform/sl-enterprise-business/assets/boardroom.jpg" alt="Colleagues in a boardroom"><h1 class="ttl t12"><b>Conclusion &amp;</b><br><b>Next Steps</b> Slide</h1><div class="ccard"><i class="vb"></i><div class="ci1"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="ci2"><h2>Edit Text Here</h2><p>This is a sample text. Insert your desired text here. You can add sample text. This is a sample text.</p></div><div class="ct mail"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2.6"/><path d="M3 6.2l9 6.6 9-6.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Enter your email address here</span></div><div class="ct tel"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2.8 9.6 6.4c.4.6.3 1.4-.2 1.9L8 9.6c.8 2.3 3.5 5 5.9 5.9l1.3-1.4c.5-.5 1.3-.6 1.9-.2l3.6 2.6c.6.4.8 1.3.3 1.9l-1.6 2.1c-.6.8-1.7 1.1-2.7.8C10.5 19.5 4.6 13.6 2.8 7.4c-.3-1 0-2.1.8-2.7L5.1 3c.6-.5 1.5-.4 1.9.2z"/><path d="M14 3.5a6.5 6.5 0 0 1 6.5 6.5M14 6.6a3.4 3.4 0 0 1 3.4 3.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span dir="ltr">+1 (212) 123-4567</span></div><div class="ct web"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="11" cy="11" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 11h17M11 2.5c-2.6 2.6-3.6 5.4-3.6 8.5s1 5.9 3.6 8.5M11 2.5c2.6 2.6 3.6 5.4 3.6 8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13 12.5l9 3.6-4 1.3 3 3-1.6 1.6-3-3-1.3 4z" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg><span>Enter your website here</span></div></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 11</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], "values": [47, 56, 25, 41, 70, 12, 50, 38, 61, 20, 70, 29], "max": 100, "highlight": [4, 9]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- أعمدة الأشهر داخل مسارات مدوّرة: الشهر الأول في جهة البداية -----
+  var NS = 'http://www.w3.org/2000/svg';
+  function E(tag, a, p) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  Array.prototype.forEach.call(document.querySelectorAll('svg[data-chart]'), function (s) {
+    var d = JSON.parse(document.getElementById(s.getAttribute('data-chart')).textContent);
+    var n = d.labels.length, W = 745, gap = 8, w = (W - gap * (n - 1)) / n, H = 230, inner = H - 6;
+    while (s.firstChild) s.removeChild(s.firstChild);
+    d.labels.forEach(function (lb, i) {
+      var x = RTL ? W - (i + 1) * w - i * gap : i * (w + gap);
+      E('rect', { x: x, y: 0, width: w, height: H, rx: 15, fill: '#EEF3F9' }, s);
+      var h = Math.max(28, d.values[i] / d.max * inner);
+      E('rect', { x: x + 3, y: H - 3 - h, width: w - 6, height: h, rx: 13, fill: d.highlight.indexOf(i) >= 0 ? '#2C4F77' : '#9BB8D9' }, s);
+      var t = E('text', { x: x + w / 2, y: 262, 'text-anchor': 'middle', 'dominant-baseline': 'central' }, s); t.textContent = lb;
+    });
+  });
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
