@@ -1,0 +1,91 @@
+{
+  "key": "sl-marketing-promotion-campaign",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "📣",
+  "name": "حملة ترويجية تسويقية",
+  "nameEn": "Marketing Promotion Campaign",
+  "description": "18 شريحة لخطة حملة ترويجية: الجمهور والقنوات والجدول الزمني والميزانية والمؤشرات والنتائج",
+  "descriptionEn": "18 slides for a promotion campaign plan: audience, channels, timeline, budget, KPIs and results",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "نظرة عامة على الحملة وأهدافها",
+      "titleEn": "Campaign Overview & Objectives"
+    },
+    {
+      "title": "ملف الجمهور المستهدف",
+      "titleEn": "Target Audience Profile"
+    },
+    {
+      "title": "عرض القيمة لدينا",
+      "titleEn": "Our Value Proposition"
+    },
+    {
+      "title": "فرصة السوق",
+      "titleEn": "Market Opportunity",
+      "needsData": true
+    },
+    {
+      "title": "قنوات التسويق",
+      "titleEn": "Marketing Channels"
+    },
+    {
+      "title": "المفاهيم الإبداعية",
+      "titleEn": "Creative Concepts"
+    },
+    {
+      "title": "الجدول الزمني والمراحل",
+      "titleEn": "Timeline & Phases",
+      "needsData": true
+    },
+    {
+      "title": "الميزانية وتوزيع الموارد",
+      "titleEn": "Budget & Resource Allocation",
+      "needsData": true
+    },
+    {
+      "title": "مؤشرات الأداء والنتائج المتوقعة",
+      "titleEn": "KPIs and Expected Results",
+      "needsData": true
+    },
+    {
+      "title": "خطة القياس وإعداد التقارير",
+      "titleEn": "Measurement & Reporting Plan",
+      "needsData": true
+    },
+    {
+      "title": "المخاطر واستراتيجيات التخفيف",
+      "titleEn": "Risk & Mitigation Strategies"
+    },
+    {
+      "title": "الخطوات التالية وخطة الإطلاق",
+      "titleEn": "Next Steps & Launch Plan"
+    },
+    {
+      "title": "نتائج الحملة",
+      "titleEn": "Campaign Results",
+      "needsData": true
+    },
+    {
+      "title": "الخاتمة",
+      "titleEn": "Conclusion"
+    },
+    {
+      "title": "ماذا يقول عملاؤنا",
+      "titleEn": "What Our Customer Says"
+    },
+    {
+      "title": "شكرًا لكم وتواصل معنا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال وغيّر النصوص والأرقام فقط؛ الرسوم الحلقية والأعمدة المكدّسة تُرسم من كتلة chart-data فعدّل قيمها هناك (ومن query_data عند طلب بيانات حقيقية)."
+}
