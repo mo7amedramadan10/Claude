@@ -1,0 +1,64 @@
+{
+  "key": "sl-creative-business-powerpoint",
+  "kind": "slides",
+  "category": "general",
+  "icon": "💼",
+  "name": "عرض أعمال إبداعي",
+  "nameEn": "Creative Business Presentation",
+  "description": "اثنتا عشرة شريحة: غلاف، محتويات، من نحن، المقدمة، التحديات، السوق، النهج، القيم، المالية، الجدول الزمني، المخاطر، الملخص",
+  "descriptionEn": "Twelve slides: cover, agenda, about, intro, challenges, market, approach, values, finance, timeline, risks, summary",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "المحتويات",
+      "titleEn": "Our Content"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "المقدمة والقيم الجوهرية",
+      "titleEn": "Introduction & Core Values",
+      "needsData": true
+    },
+    {
+      "title": "تحديات العمل",
+      "titleEn": "Business Challenge"
+    },
+    {
+      "title": "تحليل السوق",
+      "titleEn": "Market Analysis"
+    },
+    {
+      "title": "النهج المقترح",
+      "titleEn": "Proposed Approach"
+    },
+    {
+      "title": "قيم العمل",
+      "titleEn": "Business Values"
+    },
+    {
+      "title": "نظرة مالية (رسمان)",
+      "titleEn": "Financial Overview (charts)",
+      "needsData": true
+    },
+    {
+      "title": "الجدول الزمني",
+      "titleEn": "Timeline"
+    },
+    {
+      "title": "المخاطر المحتملة",
+      "titleEn": "Potential Risks",
+      "needsData": true
+    },
+    {
+      "title": "الملخص",
+      "titleEn": "Summary"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ أرقام رسمي النظرة المالية في كتلتي JSON بالمعرّفين chart-data وchart-data-2، ومستويات المخاطر بالأصناف lo/me/hi على نقاط الجدول."
+}

@@ -1,0 +1,49 @@
+{
+  "key": "sl-creative-company-profile",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "الملف التعريفي الإبداعي للشركة",
+  "nameEn": "Creative Company Profile",
+  "description": "تسع شرائح: غلاف، نظرة عامة، من نحن، الخدمات، القطاعات، الجوائز، الصحة والسلامة والبيئة، دراسة حالة، تواصل معنا",
+  "descriptionEn": "Nine slides: cover, overview, about us, services, industries, awards, HSE, case study, contact us",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة",
+      "titleEn": "Overview"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "الخدمات",
+      "titleEn": "Services"
+    },
+    {
+      "title": "القطاعات التي نخدمها",
+      "titleEn": "Industries Served"
+    },
+    {
+      "title": "الجوائز",
+      "titleEn": "Awards"
+    },
+    {
+      "title": "الصحة والسلامة والبيئة",
+      "titleEn": "HSE"
+    },
+    {
+      "title": "دراسة حالة",
+      "titleEn": "Case Study"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والكتل الزخرفية والصور وغيّر النصوص فقط؛ الكتل العضوية مسارات SVG في طبقة .full، ورمز QR رسم SVG يُستبدل برمز العميل عند الحاجة."
+}
