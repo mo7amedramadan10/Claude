@@ -1,0 +1,91 @@
+{
+  "key": "sl-merger-and-acquisition",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "🤝",
+  "name": "الاندماج والاستحواذ",
+  "nameEn": "Merger & Acquisition",
+  "description": "سبع عشرة شريحة لصفقة اندماج واستحواذ: الملخص والسوق والمالية والتآزر والدمج والمخاطر والتواصل والخطوات التالية",
+  "descriptionEn": "17 slides for an M&A deal: summary, market, financials, synergies, integration, risks, communication, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us",
+      "needsData": true
+    },
+    {
+      "title": "المبررات الاستراتيجية",
+      "titleEn": "Strategic Rationale"
+    },
+    {
+      "title": "تحليل السوق",
+      "titleEn": "Market Analysis",
+      "needsData": true
+    },
+    {
+      "title": "نظرة مالية عامة",
+      "titleEn": "Financial Overview",
+      "needsData": true
+    },
+    {
+      "title": "لمحة عن الصفقة",
+      "titleEn": "Deal Snapshot",
+      "needsData": true
+    },
+    {
+      "title": "التآزر وخلق القيمة",
+      "titleEn": "Synergy & Value Creation",
+      "needsData": true
+    },
+    {
+      "title": "خطة الدمج",
+      "titleEn": "Integration Plan",
+      "needsData": true
+    },
+    {
+      "title": "تحليل المخاطر",
+      "titleEn": "Risk Analysis"
+    },
+    {
+      "title": "الاعتبارات القانونية والتنظيمية",
+      "titleEn": "Legal & Regulatory Considerations"
+    },
+    {
+      "title": "خطة التواصل",
+      "titleEn": "Communication Plan"
+    },
+    {
+      "title": "الموارد البشرية",
+      "titleEn": "Human Resources",
+      "needsData": true
+    },
+    {
+      "title": "تكامل تقنية المعلومات والأنظمة",
+      "titleEn": "IT & Systems Integration",
+      "needsData": true
+    },
+    {
+      "title": "ملخص النقاط الرئيسية",
+      "titleEn": "Summary of Key Points",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    },
+    {
+      "title": "الختام والتواصل",
+      "titleEn": "Closing & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ رسم الأعمدة في شريحة النظرة المالية يُرسم من كتلة chart-data (السنوات وقيم الإيرادات والأرباح التشغيلية) فعدّل أرقامه هناك."
+}
