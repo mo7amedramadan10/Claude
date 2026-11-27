@@ -1,0 +1,55 @@
+{
+  "key": "sl-digital-agency-portfolio",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🎨",
+  "name": "معرض أعمال وكالة رقمية",
+  "nameEn": "Digital Agency Portfolio",
+  "description": "عشر شرائح لوكالة رقمية: غلاف، من نحن، الخدمات، دراسة حالة، قبل وبعد، العملية، الأسعار، العملاء، الآراء، والدعوة",
+  "descriptionEn": "Ten agency slides: cover, about, services, case study, before/after, process, pricing, clients, testimonials, CTA",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "نظرة على الخدمات",
+      "titleEn": "Service Overview"
+    },
+    {
+      "title": "دراسة حالة",
+      "titleEn": "Case Study",
+      "needsData": true
+    },
+    {
+      "title": "قبل وبعد",
+      "titleEn": "Before & After"
+    },
+    {
+      "title": "مخطط العملية",
+      "titleEn": "Process Diagram"
+    },
+    {
+      "title": "باقات الأسعار",
+      "titleEn": "Pricing Packages",
+      "needsData": true
+    },
+    {
+      "title": "شعارات العملاء",
+      "titleEn": "Client Logos"
+    },
+    {
+      "title": "آراء العملاء",
+      "titleEn": "Testimonials"
+    },
+    {
+      "title": "الدعوة إلى الإجراء",
+      "titleEn": "Call-To-Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت لمعرض أعمال وكالة رقمية: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور والألوان، وغيّر النصوص والأرقام فقط (أرقام دراسة الحالة ونسبها وأسعار الباقات)."
+}
