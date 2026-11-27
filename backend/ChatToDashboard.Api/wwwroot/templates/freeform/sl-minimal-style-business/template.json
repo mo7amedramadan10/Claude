@@ -1,0 +1,65 @@
+{
+  "key": "sl-minimal-style-business",
+  "kind": "slides",
+  "category": "general",
+  "icon": "💼",
+  "name": "أعمال بأسلوب بسيط",
+  "nameEn": "Minimal Style Business",
+  "description": "اثنتا عشرة شريحة أعمال بسيطة: غلاف، محتويات، لمحة، مشكلة، قيمة، خدمات، آلية، سوق، مقاييس، حالة، خارطة، ودعوة",
+  "descriptionEn": "Twelve minimal business slides: cover, contents, snapshot, problem, value, services, process, GTM, metrics, roadmap, CTA",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "لمحة عن الشركة",
+      "titleEn": "Company Snapshot"
+    },
+    {
+      "title": "تعريف المشكلة",
+      "titleEn": "Problem Definition"
+    },
+    {
+      "title": "عرض القيمة",
+      "titleEn": "Value Proposition",
+      "needsData": true
+    },
+    {
+      "title": "المنتجات والخدمات",
+      "titleEn": "Products & Services"
+    },
+    {
+      "title": "آلية عملنا",
+      "titleEn": "Our Process"
+    },
+    {
+      "title": "استراتيجية الدخول إلى السوق",
+      "titleEn": "Go-to-Market Strategy",
+      "needsData": true
+    },
+    {
+      "title": "المقاييس الرئيسية والأداء",
+      "titleEn": "Key Metrics & Performance",
+      "needsData": true
+    },
+    {
+      "title": "دراسة حالة",
+      "titleEn": "Case Study"
+    },
+    {
+      "title": "خارطة الطريق أو الجدول الزمني",
+      "titleEn": "Roadmap or Timeline"
+    },
+    {
+      "title": "دعوة إلى اتخاذ إجراء",
+      "titleEn": "Call to Action",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والمواضع وغيّر النصوص والأرقام فقط؛ قمم شريحة استراتيجية الدخول إلى السوق تُرسم من كتلة chart-data (values بالنسب) فعدّل القيم هناك."
+}
