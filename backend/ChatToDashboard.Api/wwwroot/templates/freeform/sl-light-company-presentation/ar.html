@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض الشركة الفاتح</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «عرض الشركة الفاتح»: خلفية بيضاء، مساحات رمادية فاتحة، بطاقات بتدرّج قطري برتقالي، دوائر أيقونات برتقالية بإطار أبيض، شارات أرقام بظل طويل، ولوحات برتقالية عمودية. --gdir اتجاه تدرّج البطاقات و--pdir اتجاه تدرّج اللوحات، وكلاهما ينعكس في العربية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #0D0E20; --ink-2: #262626; --accent: #FF5A00; --orange: #FF5C01; --orange-d: #BF4400; --gray: #F2F2F2; --muted: #969696; --bg: #FFFFFF; --gdir: to bottom right; --rdir: to top left; --pdir: 195deg; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عام */
+  .frame { color: var(--ink); }
+  .frame h1, .frame h2, .frame h3, .frame p { margin: 0; }
+  .ttl { position: absolute; top: 39px; inset-inline-start: 64px; font-size: 46px; font-weight: 700; line-height: 1.2; color: var(--ink); letter-spacing: 0; white-space: nowrap; }
+  .ttl em, .cv-t .o { font-style: normal; color: var(--accent); }
+  html[lang="ar"] .ttl { letter-spacing: 0; font-weight: 800; }
+  .ft { position: absolute; top: 657px; inset-inline-start: 64px; font-size: 14.5px; letter-spacing: 4.5px; color: var(--muted); white-space: nowrap; }
+  html[lang="ar"] .ft { letter-spacing: 0; word-spacing: 6px; font-size: 17px; top: 654px; }
+  .pg { position: absolute; top: 643px; inset-inline-end: 64px; font-size: 38px; font-weight: 700; color: var(--accent); line-height: 1.2; }
+  .lead { position: absolute; font-size: 18px; line-height: 25px; color: var(--ink-2); }
+  .logo { position: absolute; display: flex; align-items: center; gap: 6px; }
+  .logo .mk { flex: none; }
+  html[dir="rtl"] { --gdir: to bottom left; --rdir: to top right; --pdir: 165deg; }
+  .bar { position: absolute; top: 0; inset-inline-end: 0; width: 111px; height: 720px; background: linear-gradient(var(--pdir), #FF5C01 0%, #E35000 45%, #BF4400 100%); }
+  /* الدائرة البرتقالية بإطار أبيض (أيقونات سوات والخدمات وعلامة الصح) */
+  .sc, .svb, .ckb { position: absolute; border-radius: 50%; display: grid; place-items: center; color: #fff;
+        background: linear-gradient(var(--gdir), #FF5E04 15%, #E65200 45%, #8E2F00); border: 3px solid #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / .06); }
+
+  /* 1) الغلاف */
+  .cv-gray { position: absolute; top: 0; inset-inline-start: 323px; width: 665px; height: 229px; background: var(--gray); border-end-start-radius: 40px; }
+  .lg1 { top: 64px; inset-inline-start: 66px; color: #000; }
+  .lg1 .mk { width: 78px; height: 84px; }
+  .cv-photo { position: absolute; top: 83px; inset-inline-start: 617px; width: 560px; height: 637px; object-fit: cover; border-radius: 20px 20px 0 0; }
+  .cv-shape { position: absolute; top: 100px; inset-inline-start: 1150px; width: 130px; height: 620px; }
+  html[dir="rtl"] .cv-shape { transform: scaleX(-1); }
+  .cv-t { position: absolute; top: 373px; inset-inline-start: 64px; font-size: 61px; font-weight: 700; line-height: 78px; letter-spacing: 0; color: var(--ink); }
+  .cv-t span { display: block; white-space: nowrap; }
+  html[lang="ar"] .cv-t { font-weight: 800; letter-spacing: 0; line-height: 90px; top: 360px; font-size: 66px; }
+  .cv-s { position: absolute; top: 551px; inset-inline-start: 66px; font-size: 24px; letter-spacing: 7.6px; color: var(--ink-2); white-space: nowrap; }
+  html[lang="ar"] .cv-s { letter-spacing: 0; word-spacing: 8px; font-size: 28px; top: 546px; }
+
+  /* 2) نبذة عنا */
+  .s2 .panel-w { position: absolute; top: 0; inset-inline-end: 0; width: 353px; height: 720px; background: linear-gradient(var(--pdir), #FF5C01 0%, #E35000 40%, #BF4400 100%); }
+  .s2 .ttl { top: 86px; }
+  html[lang="en"] .frame p:not(.ft):not(.cv-s) { letter-spacing: -.2px; }
+  .ab-photo { position: absolute; top: 95px; inset-inline-start: 678px; width: 499px; height: 530px; object-fit: cover; border-radius: 17px; }
+  .ab-lead { top: 160px; inset-inline-start: 64px; width: 560px; }
+  .ckc { position: absolute; inset-inline-start: 96px; width: 537px; height: 135px; border-radius: 22px; color: #fff; background: linear-gradient(var(--gdir), #FF5C01, #C04300); padding-inline-start: 68px; padding-top: 25px; }
+  .ckc h3 { font-size: 22px; font-weight: 700; line-height: 30px; margin-bottom: 7px; }
+  .ckc p { font-size: 18px; line-height: 24px; max-width: 380px; }
+  .ckb { inset-inline-start: 72px; width: 47px; height: 47px; border: 1.5px solid #FFB58A; box-shadow: 0 1px 3px rgb(0 0 0 / .2); }
+  .ckb svg { width: 28px; height: 28px; }
+
+  /* 3) تحليل سوات */
+  .sw-gray { position: absolute; top: 135px; inset-inline-start: 405px; width: 480px; height: 497px; background: var(--gray); }
+  .sw { position: absolute; width: 411px; height: 241px; border-radius: 30px; color: #fff; background: linear-gradient(var(--gdir), #FF5C01, #C04300); padding-inline-start: 37px; padding-top: 26px; overflow: hidden; }
+  .sw.e { padding-inline-start: 66px; }
+  .sw h2 { font-size: 29px; font-weight: 700; line-height: 38px; margin-bottom: 6px; }
+  .sw p { font-size: 18px; line-height: 23px; max-width: 235px; }
+  .sw .lt { position: absolute; bottom: -2px; inset-inline-end: 18px; font-size: 150px; font-weight: 800; line-height: 1; color: rgb(255 255 255 / .1); font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif; }
+  .sc { width: 106px; height: 106px; }
+  .sc svg { width: 58px; height: 58px; stroke-width: .85; }
+  .sw-c { position: absolute; top: 300px; inset-inline-start: 490px; width: 300px; text-align: center; font-size: 78px; font-weight: 800; line-height: 90px; letter-spacing: -1px; color: var(--ink); }
+  html[lang="ar"] .sw-c { letter-spacing: 0; }
+  .sw-cp { position: absolute; top: 404px; inset-inline-start: 520px; width: 240px; text-align: center; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+
+  /* 4) الخدمات */
+  .sv-gray { position: absolute; top: 0; inset-inline-end: 0; width: 558px; height: 407px; background: var(--gray); }
+  .svc { position: absolute; top: 226px; width: 277px; height: 341px; border-radius: 24px; color: #fff; background: linear-gradient(var(--rdir), #FF5A00, #C24400); text-align: center; padding: 81px 14px 0; }
+  .svc h2 { font-size: 26px; font-weight: 700; line-height: 34px; margin-bottom: 11px; }
+  .svc p { font-size: 18px; line-height: 23px; }
+  .svb { top: 177px; width: 95px; height: 95px; }
+  .svb svg { width: 50px; height: 50px; stroke-width: .9; }
+
+  /* 5) و6) تدفق العملية والخط الزمني */
+  .flow { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .flow { transform: scaleX(-1); }
+  .num { position: absolute; display: grid; place-items: center; font-size: 40px; font-weight: 700; color: #fff; }
+  .fl { position: absolute; width: 250px; }
+  .fl h2, .tl h2 { font-size: 24px; font-weight: 700; line-height: 32px; margin-bottom: 11px; color: #252525; }
+  .fl p, .tl p { font-size: 18px; line-height: 23px; color: var(--ink-2); }
+  .tl { position: absolute; top: 429px; width: 210px; }
+
+  /* 7) الفريق */
+  .tm-block { position: absolute; top: 0; inset-inline-start: 0; width: 814px; height: 405px; background: var(--orange); }
+  .s7 .ttl { color: #fff; }
+  .tm-lead { top: 128px; inset-inline-start: 64px; width: 385px; color: #fff; }
+  .tm-photo { position: absolute; object-fit: cover; }
+  /* صور الفريق تُعكس في العربية لتطابق خلفيتها البرتقالية/البيضاء الكتلة المعكوسة */
+  html[dir="rtl"] .tm-photo { transform: scaleX(-1); }
+  .tm { position: absolute; top: 518px; width: 281px; height: 88px; color: #fff; border-start-start-radius: 44px; border-end-start-radius: 44px;
+        background: linear-gradient(var(--gdir), #FF5A00 0%, #E65000 45%, #B94000 100%); padding-inline-start: 47px; padding-top: 19px; }
+  .tm h2 { font-size: 21px; font-weight: 700; line-height: 28px; }
+  .tm p { font-size: 16px; line-height: 24px; }
+
+  /* 8) شكرًا */
+  .ty-block { position: absolute; top: 0; inset-inline-start: 0; width: 411px; height: 300px; background: var(--orange); }
+  .ty-bar { position: absolute; top: 0; inset-inline-end: 0; width: 111px; height: 720px; background: linear-gradient(#FF5A00, #FFF5EF); }
+  .lg8 { top: 40px; inset-inline-start: 64px; color: #fff; }
+  .lg8 .mk { width: 40px; height: 40px; }
+  .lg8 span { font-size: 28px; font-weight: 800; letter-spacing: -.8px; }
+  html[lang="ar"] .lg8 span { letter-spacing: 0; }
+  .ty-card { position: absolute; top: 135px; inset-inline-start: 64px; width: 411px; height: 600px; border-radius: 20px; background: var(--gray); }
+  .ty-photo { position: absolute; top: 114px; inset-inline-start: 731px; width: 549px; height: 348px; object-fit: cover; border-start-start-radius: 18px; border-end-start-radius: 18px; }
+  .ty-t { position: absolute; top: 205px; inset-inline-start: 200px; width: 415px; text-align: center; font-size: 98px; font-weight: 800; line-height: 118px; letter-spacing: 1px; color: var(--ink); font-family: Arial, 'Helvetica Neue', sans-serif; }
+  html[lang="ar"] .ty-t { font-family: var(--font); letter-spacing: 0; font-size: 104px; line-height: 124px; top: 190px; }
+  .ty-t span { display: block; }
+  .ty-p { position: absolute; top: 525px; inset-inline-start: 535px; width: 525px; font-size: 18px; line-height: 25px; color: var(--ink-2); }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF5A00"/><stop offset=".5" stop-color="#FFA46C"/><stop offset="1" stop-color="#FDEEE4"/></linearGradient><linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5E04"/><stop offset=".45" stop-color="#DA4E00"/><stop offset="1" stop-color="#7E2A00"/></linearGradient><linearGradient id="gs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7A30" stop-opacity=".75"/><stop offset=".85" stop-color="#FF8A45" stop-opacity="0"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <span class="cv-gray"></span><span class="logo lg1"><svg class="mk" viewBox="0 0 40 40" aria-hidden="true"><rect x="5.5" y="5.5" width="29" height="29" rx="10" fill="none" stroke="currentColor" stroke-width="7"/></svg></span><svg class="cv-shape" viewBox="1150 100 130 620" preserveAspectRatio="none" aria-hidden="true"><polygon points="1177,104 1280,532 1280,720 1150,720" fill="url(#gv)"/></svg><img class="cv-photo" src="/templates/freeform/sl-light-company-presentation/assets/cover-office.jpg" alt="زميلان يعملان معًا على حاسوب محمول في مكتب عصري"><h1 class="cv-t"><span class="w">العرض التقديمي</span><span class="o">للشركة</span></h1><p class="cv-s">قالب عرض تقديمي</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <span class="panel-w"></span><img class="ab-photo" src="/templates/freeform/sl-light-company-presentation/assets/about-office.jpg" alt="مكتب مفتوح وفريق أثناء العمل"><h1 class="ttl">نبذة <em>عنّا</em></h1><p class="lead ab-lead">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="ckc" style="top:310px"><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p></div><span class="ckb" style="top:354px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.4l4 3.8 8-8.4"/></svg></span><div class="ckc" style="top:465px"><h3>عنوان نائب</h3><p>هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p></div><span class="ckb" style="top:509px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.4l4 3.8 8-8.4"/></svg></span><p class="ft">قالب عرض تقديمي للشركة</p><span class="pg">2</span>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <span class="sw-gray"></span><h1 class="ttl">تحليل <em>سوات</em></h1><div class="sw sw" style="top:135px;inset-inline-start:64px"><h2>نقاط القوة</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p><span class="lt">S</span></div><span class="sc" style="top:202px;inset-inline-start:422px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10.2" r="2.1"/><circle cx="6" cy="7.4" r="2.1"/><circle cx="18" cy="7.4" r="2.1"/><path d="M2.3 15.3c.3-2.6 1.8-4 3.7-4 1 0 1.8.3 2.4.9M21.7 15.3c-.3-2.6-1.8-4-3.7-4-1 0-1.8.3-2.4.9"/><path d="M7.6 18.2c.3-2.7 2.1-4.1 4.4-4.1s4.1 1.4 4.4 4.1z"/></svg></span><div class="sw sw e" style="top:135px;inset-inline-end:64px"><h2>نقاط الضعف</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p><span class="lt">W</span></div><span class="sc" style="top:202px;inset-inline-end:422px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.6" r="3.6"/><path d="M4.2 20.3c.4-4.3 3.6-6.6 7.8-6.6s7.4 2.3 7.8 6.6z"/></svg></span><div class="sw sw" style="top:391px;inset-inline-start:64px"><h2>الفرص</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p><span class="lt">O</span></div><span class="sc" style="top:458px;inset-inline-start:422px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2.6" width="8" height="9.4" rx="2.2"/><path d="M6.2 9.2v3.6c0 .8.6 1.4 1.4 1.4h8.8c.8 0 1.4-.6 1.4-1.4V9.2M12 14.2v3.4M7.4 17.6h9.2M7.4 17.6v1.6M16.6 17.6v1.6M12 17.6v2"/><circle cx="7.4" cy="20.4" r=".9"/><circle cx="16.6" cy="20.4" r=".9"/><circle cx="12" cy="20.8" r=".9"/></svg></span><div class="sw sw e" style="top:391px;inset-inline-end:64px"><h2>التهديدات</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p><span class="lt">T</span></div><span class="sc" style="top:458px;inset-inline-end:422px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.6 5.4h18.8M2.6 18.6h18.8M4.4 5.4v13.2M19.6 5.4v13.2M8.2 5.4v13.2M15.8 5.4v13.2"/><path d="M8.2 9.6c1.4-.6 2.4-.4 3.8 0s2.4.6 3.8 0M8.2 14.4c1.4-.6 2.4-.4 3.8 0s2.4.6 3.8 0"/><rect x="10.6" y="10.4" width="2.8" height="3.2" rx=".5"/><path d="M11.3 10.4V9.6a.7.7 0 0 1 1.4 0v.8"/></svg></span><p class="sw-c">سوات</p><p class="sw-cp">هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="ft">قالب عرض تقديمي للشركة</p><span class="pg">3</span>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <span class="sv-gray"></span><h1 class="ttl">خدمات <em>شركتنا</em></h1><div class="svc" style="inset-inline-start:64px"><h2>الخدمة <bdi dir="ltr">01</bdi></h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><span class="svb" style="inset-inline-start:155px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10.2" r="2.1"/><circle cx="6" cy="7.4" r="2.1"/><circle cx="18" cy="7.4" r="2.1"/><path d="M2.3 15.3c.3-2.6 1.8-4 3.7-4 1 0 1.8.3 2.4.9M21.7 15.3c-.3-2.6-1.8-4-3.7-4-1 0-1.8.3-2.4.9"/><path d="M7.6 18.2c.3-2.7 2.1-4.1 4.4-4.1s4.1 1.4 4.4 4.1z"/></svg></span><div class="svc" style="inset-inline-start:356px"><h2>الخدمة <bdi dir="ltr">02</bdi></h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><span class="svb" style="inset-inline-start:447px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M10.3 2.8h3.4l.5 2.4c.6.2 1.2.5 1.7.9l2.3-.8 1.7 2.9-1.8 1.6c.1.7.1 1.3 0 2l1.8 1.6-1.7 2.9-2.3-.8c-.5.4-1.1.7-1.7.9l-.5 2.4h-3.4l-.5-2.4a7 7 0 0 1-1.7-.9l-2.3.8-1.7-2.9 1.8-1.6a6 6 0 0 1 0-2L3.9 8.2l1.7-2.9 2.3.8c.5-.4 1.1-.7 1.7-.9z"/></svg></span><div class="svc" style="inset-inline-start:648px"><h2>الخدمة <bdi dir="ltr">03</bdi></h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><span class="svb" style="inset-inline-start:739px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.8" width="14" height="4.4" rx=".7"/><rect x="5" y="7.2" width="14" height="4.4" rx=".7"/><rect x="5" y="11.6" width="14" height="4.4" rx=".7"/><path d="M7.2 5h.01M9 5h.01M7.2 9.4h.01M9 9.4h.01M7.2 13.8h.01M9 13.8h.01M12 16v2.4M3 20.4h7.4M13.6 20.4H21"/><rect x="10.4" y="18.4" width="3.2" height="3.2" rx=".4"/></svg></span><div class="svc" style="inset-inline-start:940px"><h2>الخدمة <bdi dir="ltr">04</bdi></h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><span class="svb" style="inset-inline-start:1031px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.6" y="3.6" width="18.8" height="13" rx=".8"/><rect x="4.2" y="5.2" width="15.6" height="9.8"/><path d="M10.4 16.6v3M13.6 16.6v3M7.6 19.8h8.8"/></svg></span><p class="ft">قالب عرض تقديمي للشركة</p><span class="pg">4</span>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <span class="bar"></span><h1 class="ttl"><em>تدفّق العملية</em> الأفقي</h1><svg class="flow" viewBox="0 0 1280 720" aria-hidden="true"><g fill="none" stroke="#FF5A00" stroke-width="4.6" stroke-linecap="butt"><path d="M380,338 V230 A40,40 0 0 0 340,190 H104 A40,40 0 0 0 64,230 V385 A40,40 0 0 0 104,425 H285" /><path d="M420,360 H348 A40,40 0 0 0 308,400 V556 A40,40 0 0 0 348,596 H584 A40,40 0 0 0 624,556 V448" transform="translate(0 0)"/><path d="M868,338 V230 A40,40 0 0 0 828,190 H592 A40,40 0 0 0 552,230 V385 A40,40 0 0 0 592,425 H773" /><rect x="796.3" y="360.3" width="315.4" height="235.4" rx="40"/><polyline points="453,222 478,247 453,272" stroke-width="4.2"/><polyline points="697,487 721,510 697,533" stroke-width="4.2"/></g><polygon points="270,148 329,234 270,234" fill="url(#gs)"/><rect x="172" y="143" width="99" height="91" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/><polygon points="514,319 573,405 514,405" fill="url(#gs)"/><rect x="416" y="314" width="99" height="91" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/><polygon points="758,148 817,234 758,234" fill="url(#gs)"/><rect x="660" y="143" width="99" height="91" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/><polygon points="1002,319 1061,405 1002,405" fill="url(#gs)"/><rect x="904" y="314" width="99" height="91" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/></svg><span class="num" style="top:142px;inset-inline-start:171px;width:102px;height:94px"><bdi>01</bdi></span><span class="num" style="top:313px;inset-inline-start:415px;width:102px;height:94px"><bdi>02</bdi></span><span class="num" style="top:142px;inset-inline-start:659px;width:102px;height:94px"><bdi>03</bdi></span><span class="num" style="top:313px;inset-inline-start:903px;width:102px;height:94px"><bdi>04</bdi></span><div class="fl" style="top:290px;inset-inline-start:97px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="fl" style="top:467px;inset-inline-start:344px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="fl" style="top:290px;inset-inline-start:584px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="fl" style="top:467px;inset-inline-start:831px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><p class="ft">قالب عرض تقديمي للشركة</p><span class="pg">5</span>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <span class="bar"></span><h1 class="ttl">شريحة <em>الخط الزمني</em></h1><svg class="flow" viewBox="0 0 1280 720" aria-hidden="true"><g fill="none" stroke="#FF5A00" stroke-width="4"><path d="M74,349 H1101"/><polyline points="1078,326 1101,349 1078,372"/></g><polygon points="213,308 272,393 213,393" fill="url(#gs)"/><rect x="114" y="303" width="100" height="90" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/><polygon points="464,308 523,393 464,393" fill="url(#gs)"/><rect x="365" y="303" width="100" height="90" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/><polygon points="730,308 789,393 730,393" fill="url(#gs)"/><rect x="631" y="303" width="100" height="90" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/><polygon points="997,308 1056,393 997,393" fill="url(#gs)"/><rect x="898" y="303" width="100" height="90" rx="14" fill="url(#gb)" stroke="#FF5A00" stroke-width="2.6"/></svg><span class="num" style="top:302px;inset-inline-start:113px;width:103px;height:93px"><bdi>01</bdi></span><span class="num" style="top:302px;inset-inline-start:364px;width:103px;height:93px"><bdi>02</bdi></span><span class="num" style="top:302px;inset-inline-start:630px;width:103px;height:93px"><bdi>03</bdi></span><span class="num" style="top:302px;inset-inline-start:897px;width:103px;height:93px"><bdi>04</bdi></span><div class="tl" style="inset-inline-start:117px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف نصك هنا.</p></div><div class="tl" style="inset-inline-start:362px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف نصك هنا.</p></div><div class="tl" style="inset-inline-start:631px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف نصك هنا.</p></div><div class="tl" style="inset-inline-start:899px"><h2>عنوان نائب</h2><p>هذا نص توضيحي. أضف نصك هنا.</p></div><p class="ft">قالب عرض تقديمي للشركة</p><span class="pg">6</span>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <span class="tm-block"></span><h1 class="ttl">فريق عملنا</h1><p class="lead tm-lead">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p><img class="tm-photo" src="/templates/freeform/sl-light-company-presentation/assets/team-1.jpg" alt="صورة عضو الفريق" style="top:180px;inset-inline-start:400px;width:216px;height:338px"><div class="tm" style="inset-inline-start:334px"><h2>الرئيس التنفيذي</h2><p>الاسم</p></div><img class="tm-photo" src="/templates/freeform/sl-light-company-presentation/assets/team-2.jpg" alt="صورة عضو الفريق" style="top:190px;inset-inline-start:683px;width:232px;height:328px"><div class="tm" style="inset-inline-start:634px"><h2>المدير</h2><p>الاسم</p></div><img class="tm-photo" src="/templates/freeform/sl-light-company-presentation/assets/team-3.jpg" alt="صورة عضو الفريق" style="top:190px;inset-inline-start:1005px;width:215px;height:328px"><div class="tm" style="inset-inline-start:935px"><h2>رئيس التسويق</h2><p>الاسم</p></div><p class="ft">قالب عرض تقديمي للشركة</p><span class="pg">7</span>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <span class="ty-block"></span><span class="ty-bar"></span><span class="ty-card"></span><span class="logo lg8"><svg class="mk" viewBox="0 0 40 40" aria-hidden="true"><rect x="5.5" y="5.5" width="29" height="29" rx="10" fill="none" stroke="currentColor" stroke-width="7"/></svg><span>الشعار</span></span><img class="ty-photo" src="/templates/freeform/sl-light-company-presentation/assets/thanks-office.jpg" alt="مكتب مفتوح يطل على المدينة"><h1 class="ty-t"><span>شكرًا</span><span>لكم</span></h1><p class="ty-p">هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي. هذا نص توضيحي. أضف النص المطلوب هنا. هذا نص توضيحي.</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 8</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

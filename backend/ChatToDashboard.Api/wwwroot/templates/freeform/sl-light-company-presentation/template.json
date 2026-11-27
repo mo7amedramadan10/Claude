@@ -1,0 +1,45 @@
+{
+  "key": "sl-light-company-presentation",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "عرض الشركة الفاتح",
+  "nameEn": "Light Company Presentation",
+  "description": "ثماني شرائح فاتحة بلمسات برتقالية: غلاف، نبذة، تحليل سوات، الخدمات، تدفق العملية، الخط الزمني، الفريق، شكرًا",
+  "descriptionEn": "Eight light slides with orange accents: cover, about, SWOT, services, process flow, timeline, team, thanks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نبذة عنّا",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "تحليل سوات",
+      "titleEn": "SWOT Analysis"
+    },
+    {
+      "title": "خدماتنا",
+      "titleEn": "Our Services"
+    },
+    {
+      "title": "تدفّق العملية الأفقي",
+      "titleEn": "Horizontal Process Flow"
+    },
+    {
+      "title": "الخط الزمني",
+      "titleEn": "Timeline"
+    },
+    {
+      "title": "فريق العمل",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "شكرًا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص فقط؛ الأشكال والشارات رسوم SVG تنعكس في العربية، والصور في assets النموذج."
+}
