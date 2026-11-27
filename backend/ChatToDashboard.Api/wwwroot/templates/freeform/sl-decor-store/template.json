@@ -1,0 +1,68 @@
+{
+  "key": "sl-decor-store",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🛋️",
+  "name": "متجر الديكور",
+  "nameEn": "Decor Store",
+  "description": "ثلاث عشرة شريحة لمتجر ديكور: العلامة والمجموعات والمنتجات والأنماط والفئات والخدمات والفروع والتواصل",
+  "descriptionEn": "13 decor store slides: brand, collections, products, styles, categories, services, locations and contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "عن العلامة التجارية",
+      "titleEn": "About the Brand",
+      "needsData": true
+    },
+    {
+      "title": "مجموعاتنا",
+      "titleEn": "Our Collections"
+    },
+    {
+      "title": "منتجات مميزة",
+      "titleEn": "Featured Products",
+      "needsData": true
+    },
+    {
+      "title": "أنماط التصميم الداخلي",
+      "titleEn": "Interior Design Styles"
+    },
+    {
+      "title": "أفكار للغرف",
+      "titleEn": "Room Inspirations"
+    },
+    {
+      "title": "فئات المنتجات",
+      "titleEn": "Product Categories"
+    },
+    {
+      "title": "تجربة العملاء",
+      "titleEn": "Customer Experience"
+    },
+    {
+      "title": "مواقع المتاجر",
+      "titleEn": "Store Locations",
+      "needsData": true
+    },
+    {
+      "title": "لماذا تختارنا",
+      "titleEn": "Why Choose Us"
+    },
+    {
+      "title": "أحدث الصيحات",
+      "titleEn": "Latest Trends"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact"
+    },
+    {
+      "title": "أيقونات الديكور",
+      "titleEn": "Decor Icons"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور والأيقونات وغيّر النصوص والأرقام فقط (سنة التأسيس، أرقام المنتجات والفروع، أسماء المدن على الخريطة)؛ رمز QR نمط توضيحي يُستبدل برمز موقع العميل."
+}

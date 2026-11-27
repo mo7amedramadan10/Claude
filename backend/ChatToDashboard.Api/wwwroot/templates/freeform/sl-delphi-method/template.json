@@ -1,0 +1,30 @@
+{
+  "key": "sl-delphi-method",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🔮",
+  "name": "منهج دلفي",
+  "nameEn": "Delphi Method",
+  "description": "أربع شرائح لمنهج دلفي: التعريف والمبادئ والخبراء، مراحل العملية، جولات الإجماع، والنتائج والتوصيات",
+  "descriptionEn": "Four Delphi Method slides: definition, principles and experts, process, consensus rounds, results",
+  "sections": [
+    {
+      "title": "تعريف منهج دلفي ومبادئه",
+      "titleEn": "Delphi Method Overview"
+    },
+    {
+      "title": "مراحل منهج دلفي",
+      "titleEn": "Delphi Method Process"
+    },
+    {
+      "title": "جولات الإجماع المتكررة",
+      "titleEn": "Iterative Consensus Rounds"
+    },
+    {
+      "title": "نتائج دلفي والإجماع",
+      "titleEn": "Delphi Results & Consensus",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ نسبة الإجماع في الحلقة وأطوال أشرطة الاتفاق تُقرأ من كتلة chart-data (consensus وagreementBars) فعدّلها مع النصوص الظاهرة."
+}
