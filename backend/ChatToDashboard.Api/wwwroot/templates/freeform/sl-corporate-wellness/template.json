@@ -1,0 +1,63 @@
+{
+  "key": "sl-corporate-wellness",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "🧘",
+  "name": "برنامج العافية المؤسسية",
+  "nameEn": "Corporate Wellness Program",
+  "description": "اثنتا عشرة شريحة لبرنامج عافية الموظفين: الملخص، الأسباب، الركائز، العروض، الرحلة، الأثر، المقاييس، خارطة الطريق",
+  "descriptionEn": "Twelve slides for an employee wellness program: summary, pillars, offerings, journey, impact, KPIs, roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "لماذا تهمّ عافية الموظفين؟",
+      "titleEn": "Why Employee Wellbeing Matters?"
+    },
+    {
+      "title": "استراتيجية العافية ورؤيتها",
+      "titleEn": "Wellness Strategy & Vision"
+    },
+    {
+      "title": "ركائز البرنامج",
+      "titleEn": "Program Pillars"
+    },
+    {
+      "title": "عروض البرنامج",
+      "titleEn": "Program Offerings"
+    },
+    {
+      "title": "رحلة عافية الموظف",
+      "titleEn": "Employee Wellness Journey"
+    },
+    {
+      "title": "الأثر على الأعمال",
+      "titleEn": "Business Impact"
+    },
+    {
+      "title": "مقاييس النجاح ومؤشرات الأداء (رسم)",
+      "titleEn": "Success Metrics & KPIs (chart)",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "قصص النجاح",
+      "titleEn": "Success Stories"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والموجات والصور وغيّر النصوص والأرقام فقط؛ أرقام الرسم البياني في شريحة المقاييس في كتلة JSON بالمعرّف chart-data."
+}
