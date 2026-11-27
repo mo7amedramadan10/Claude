@@ -1,0 +1,37 @@
+{
+  "key": "sl-ladder-of-inference-model",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🪜",
+  "name": "نموذج سلّم الاستدلال",
+  "nameEn": "Ladder of Inference Model",
+  "description": "ست شرائح لسلّم الاستدلال بخمس خطوات: نظرة عامة ملوّنة ثم إبراز كل خطوة على حدة",
+  "descriptionEn": "Six slides of a 5-step ladder of inference: colored overview, then each step highlighted",
+  "sections": [
+    {
+      "title": "السلّم كاملًا",
+      "titleEn": "Full Ladder"
+    },
+    {
+      "title": "الخطوة 01: اختيار البيانات",
+      "titleEn": "Step 01: Select Data"
+    },
+    {
+      "title": "الخطوة 02: تحليل البيانات",
+      "titleEn": "Step 02: Analyze Data"
+    },
+    {
+      "title": "الخطوة 03: تسمية ما يحدث",
+      "titleEn": "Step 03: Name What Is Happening"
+    },
+    {
+      "title": "الخطوة 04: تفسير ما يحدث",
+      "titleEn": "Step 04: Explain What Is Happening"
+    },
+    {
+      "title": "الخطوة 05: تقرير ما يجب فعله",
+      "titleEn": "Step 05: Decide What To Do"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ السلّم رسم SVG واحد، والصنف on على مجموعة الشريط والأيقونة يحدد الخطوة المُبرزة في كل شريحة."
+}
