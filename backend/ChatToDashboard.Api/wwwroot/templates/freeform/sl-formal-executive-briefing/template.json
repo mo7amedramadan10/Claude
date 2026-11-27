@@ -1,0 +1,17 @@
+{
+  "key": "sl-formal-executive-briefing",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "❓",
+  "name": "إحاطة تنفيذية رسمية",
+  "nameEn": "Formal Executive Briefing",
+  "description": "شريحة أسئلة وأجوبة كحلية: عنوان ووسائل تواصل، وبطاقة بخمسة محاور أحدها مفتوح بإجابته",
+  "descriptionEn": "Navy Q&A slide: title and contact details beside a card of five topics with one expanded answer",
+  "sections": [
+    {
+      "title": "شريحة الأسئلة والأجوبة",
+      "titleEn": "Q&A Slide"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والمواضع، وغيّر النصوص فقط (العنوان، النص، وسائل التواصل، وعناوين البنود الخمسة وإجابة البند المفتوح)."
+}

@@ -1,0 +1,67 @@
+{
+  "key": "sl-formal-company-profile",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "ملف تعريفي رسمي للشركة",
+  "nameEn": "Formal Company Profile",
+  "description": "ثلاث عشرة شريحة بلون التيل وصور معمارية: من نحن، الإيرادات، القيادة، الفريق، الاستراتيجية، سوات، المشاريع، التواصل",
+  "descriptionEn": "13 teal slides with architectural photos: about us, revenue, CEO, team, strategy, SWOT, projects, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الغلاف (خلفية داكنة)",
+      "titleEn": "Cover (Dark)"
+    },
+    {
+      "title": "من نحن؟",
+      "titleEn": "Who We Are?"
+    },
+    {
+      "title": "نمو إيرادات الأعمال",
+      "titleEn": "Business Revenue Growth",
+      "needsData": true
+    },
+    {
+      "title": "أفكار أعمالنا",
+      "titleEn": "Our Business Ideas"
+    },
+    {
+      "title": "تعرّف على الرئيس التنفيذي",
+      "titleEn": "Meet Our Company CEO"
+    },
+    {
+      "title": "تعرّف على فريقنا المتميز",
+      "titleEn": "Meet Our Great Team"
+    },
+    {
+      "title": "استراتيجية شركتنا",
+      "titleEn": "Our Company Strategy"
+    },
+    {
+      "title": "تحليل سوات",
+      "titleEn": "SWOT Analysis"
+    },
+    {
+      "title": "محفظة مشاريعنا",
+      "titleEn": "Our Project Portfolio",
+      "needsData": true
+    },
+    {
+      "title": "معرض مشاريعنا",
+      "titleEn": "Our Project Gallery"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Get In Touch"
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والمواضع والصور، وغيّر النصوص والأرقام فقط (مثل مبالغ نمو الإيرادات ورقم 50+ في محفظة المشاريع)."
+}

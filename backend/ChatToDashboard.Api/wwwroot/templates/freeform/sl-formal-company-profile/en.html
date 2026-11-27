@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formal Company Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «ملف تعريفي رسمي للشركة»: خلفية بيضاء أو تيل (#3B9792) مع كتل مربعة بالتيل الداكن (#2C716E) والفاتح (#D4EEED)، شبكات نقاط زخرفية، وصور معمارية رمادية؛ العناوين بخط عريض بلون التيل، والنص الرمادي الداكن، وتذييل «Formal Company Profile» ورقم صفحة فوق مربع فاتح. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #262626; --ink-2: #333333; --accent: #3B9792; --teal: #3B9792; --teal-d: #2C716E; --teal-l: #D4EEED; --teal-m: #A9DDD9; --gray: #F2F2F2; --muted: #8A8A8A; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame > * { position: absolute; margin: 0; }
+  .blk { background: var(--teal); } .blk.d { background: var(--teal-d); } .blk.l { background: var(--teal-l); } .blk.g { background: var(--gray); }
+  .ph { object-fit: cover; display: block; }
+  /* النصوص المشتركة */
+  .h { font-weight: 700; color: var(--teal); letter-spacing: -0.6px; }
+  html[lang="ar"] .h { font-weight: 800; letter-spacing: 0; }
+  .bd { font-size: 17.5px; line-height: 24.7px; color: var(--ink-2); }
+  html[lang="ar"] .bd { font-size: 18px; }
+  .bd p { margin: 0; } .bd p + p { margin-top: 24.7px; }
+  .wt { color: #fff; }
+  /* التذييل ورقم الصفحة */
+  .ft { top: 660.9px; inset-inline-start: 64px; font-size: 18px; line-height: 24px; color: var(--muted); white-space: nowrap; }
+  .ft b { font-weight: 700; }
+  .pgb { top: 655px; inset-inline-start: 1207px; width: 23px; height: 37px; background: var(--teal-m); }
+  .pg { top: 653.7px; inset-inline-end: 63px; font-size: 36px; line-height: 40px; font-weight: 700; color: var(--teal); letter-spacing: -1px; }
+  /* الشعار */
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo svg { width: 54px; height: 58px; flex: none; }
+  .logo span { font-size: 14px; line-height: 19px; letter-spacing: 1.9px; color: var(--teal); }
+  html[lang="ar"] .logo span { letter-spacing: 0; font-size: 15px; }
+  .lg-a { fill: var(--teal); } .lg-b { fill: var(--teal-d); }
+  /* شبكات النقاط */
+  .dots { display: grid; gap: 28px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+  .dots.w i { background: #fff; }
+  /* علامة الاقتباس (شكل غير متماثل يُعكس في العربية) */
+  .qm { width: 49px; height: 38px; color: #fff; }
+  html[dir="rtl"] .qm { transform: scaleX(-1); }
+
+  /* 1–2 الغلاف */
+  .cv-logo { top: 45px; inset-inline-start: 30px; }
+  .cv-d1 { top: 76px; inset-inline-start: 869px; grid-template-columns: repeat(4, 6px); }
+  .cv-d2 { top: 571px; inset-inline-start: 23px; grid-template-columns: repeat(3, 6px); }
+  .cv-blk { top:0px; inset-inline-start:1064px; width:216px; height:329px; }
+  .cv-ph { top:224px; inset-inline-start:673px; width:607px; height:330px; }
+  .cv-ttl { top: 225.2px; inset-inline-start: 104px; font-size: 82px; line-height: 87px; letter-spacing: -1.5px; white-space: nowrap; }
+  .cv-ttl span { display: block; }
+  .cv-ttl .t1 { font-weight: 400; color: #404040; }
+  .cv-ttl .t2 { font-weight: 700; color: var(--teal); letter-spacing: -3px; }
+  html[lang="ar"] .cv-ttl { font-size: 76px; letter-spacing: 0; }
+  html[lang="ar"] .cv-ttl .t2 { font-weight: 800; letter-spacing: 0; }
+  .cv-sub { top: 512.5px; inset-inline-start: 106px; font-size: 19.5px; line-height: 26px; color: #424242; letter-spacing: -0.8px; }
+  html[lang="ar"] .cv-sub { letter-spacing: 0; font-size: 22px; }
+  .s2 { background: var(--teal); }
+  .s2 .cv-blk { background: var(--teal-d); }
+  .s2 .cv-ttl .t1 { color: #3C4544; } .s2 .cv-ttl .t2, .s2 .cv-sub, .s2 .logo span { color: #fff; }
+  .s2 .lg-a { fill: #fff; }
+
+  /* 3 من نحن */
+  .s3 .ph1 { top:103px; inset-inline-start:580px; width:700px; height:234px; }
+  .s3 .sq { top:0px; inset-inline-start:1052px; width:178px; height:163px; }
+  .s3 .ttl { top: 159.6px; inset-inline-start: 62px; font-size: 80px; line-height: 87px; width: 460px; text-transform: none; }
+  .s3 .p1 { top: 382.4px; inset-inline-start: 64px; width: 462px; }
+  .s3 .bar { top:386px; inset-inline-start:580px; width:22px; height:144px; }
+  .s3 .p2 { top: 382.4px; inset-inline-start: 658px; width: 556px; }
+
+  /* 4 نمو الإيرادات */
+  .s4 .k { top: 220.8px; font-size: 67px; line-height: 70px; font-weight: 700; color: #fff; letter-spacing: -1.5px; }
+  .s4 .k1 { inset-inline-start: 62px; } .s4 .k2 { inset-inline-start: 387px; }
+  .s4 .kl { top: 301.1px; font-size: 25px; line-height: 32px; font-weight: 700; color: #fff; letter-spacing: -0.4px; }
+  .s4 .kl1 { inset-inline-start: 64px; } .s4 .kl2 { inset-inline-start: 389px; }
+  .s4 .p1 { top: 375.4px; inset-inline-start: 64px; width: 600px; }
+  .s4 .ttl { top: 178.2px; inset-inline-start: 790px; font-size: 46px; line-height: 51.5px; width: 300px; }
+  .s4 .p2 { top: 382.4px; inset-inline-start: 790px; width: 382px; }
+
+  /* عنوان جانبي ونص للشرائح 5–8 */
+  :is(.s5,.s6,.s7,.s8) .ttl { top: 130.0px; inset-inline-start: 63px; font-size: 46px; line-height: 52px; width: 330px; }
+  :is(.s5,.s6,.s7,.s8) .lead { inset-inline-start: 64px; }
+
+  /* 5 أفكارنا */
+  .s5 .ttl, .s8 .ttl { width: 240px; }
+  html[lang="ar"] :is(.s6,.s7) .ttl { width: 440px; }
+  .s5 .lead { top: 315.4px; width: 275px; }
+  .s5 .qb { top: 135px; inset-inline-start: 641px; width: 240px; height: 423px; }
+  .s5 .qm { top: 183px; inset-inline-start: 675px; }
+  .s5 .qt { top: 246.4px; inset-inline-start: 675px; width: 170px; }
+  .s5 .ph-h { top: 130.1px; inset-inline-start: 932px; font-size: 31px; line-height: 40px; font-weight: 700; color: var(--ink); letter-spacing: -0.5px; }
+  .s5 .p2 { top: 190.4px; inset-inline-start: 932px; width: 285px; }
+
+  /* 6 الرئيس التنفيذي */
+  .s6 .lead, .s7 .lead { top: 274.4px; width: 382px; }
+  .s6 .ceo { top:0px; inset-inline-start:823px; width:393px; height:559px; }
+  html[dir="rtl"] .s6 .ceo { transform: scaleX(-1); }
+  .s6 .qb { top: 67px; inset-inline-start: 545px; width: 311px; height: 181px; }
+  .s6 .qm { top: 99px; inset-inline-start: 579px; }
+  .s6 .qt { top: 155.4px; inset-inline-start: 579px; width: 240px; }
+  .s6 .nb { top: 483px; inset-inline-start: 746px; width: 260px; height: 53px; }
+  .s6 .nm { top: 494.5px; inset-inline-start: 761px; font-size: 26px; line-height: 30px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+
+  /* 7 الفريق */
+  .s7 .tm { top: 80px; width: 327px; height: 478px; }
+  .s7 .tm1 { inset-inline-start: 524px; } .s7 .tm2 { inset-inline-start: 889px; }
+  .s7 .nb { top: 485px; width: 327px; height: 53px; display: grid; place-items: center; font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .s7 .nb1 { inset-inline-start: 524px; } .s7 .nb2 { inset-inline-start: 889px; }
+
+  /* 8 الاستراتيجية */
+  .s8 .lead { top: 315.4px; width: 275px; }
+  .s8 .cd { top: 133px; width: 273px; height: 425px; }
+  .s8 .cd1 { inset-inline-start: 395px; } .s8 .cd2 { inset-inline-start: 669px; } .s8 .cd3 { inset-inline-start: 943px; }
+  .s8 .ic { top: 185px; width: 60px; height: 56px; color: var(--teal-d); }
+  .s8 .ic svg { width: 100%; height: 100%; }
+  .s8 .sh { top: 257.7px; font-size: 23.5px; line-height: 30px; font-weight: 700; color: var(--ink); letter-spacing: -0.3px; }
+  .s8 .sp { top: 307.4px; width: 200px; line-height: 22.7px; }
+  .s8 .c1 { inset-inline-start: 433px; } .s8 .c2 { inset-inline-start: 707px; } .s8 .c3 { inset-inline-start: 980px; }
+  .s8 .sh.c1, .s8 .sp.c1 { color: #fff; }
+
+  /* 9 سوات */
+  .s9 .bn { top: 73px; inset-inline-start: 64px; width: 1152px; height: 97px; display: grid; place-items: center; font-size: 48px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+  html[lang="ar"] .s9 .bn { font-weight: 800; }
+  .s9 .gb { top: 232px; width: 235px; height: 113px; }
+  .s9 .lt { top: 234.9px; font-size: 104px; line-height: 110px; font-weight: 700; color: var(--teal-m); }
+  .s9 .sq { top: 304px; width: 84px; height: 84px; display: grid; place-items: center; color: #fff; }
+  .s9 .sq svg { width: 40px; height: 40px; }
+  .s9 .wh { top: 424.5px; width: 235px; text-align: center; font-size: 23px; line-height: 28px; font-weight: 700; color: var(--ink); }
+  .s9 .wp { top: 467.4px; width: 235px; padding: 0 14px; text-align: center; line-height: 22.7px; }
+  .s9 .k1 { inset-inline-start: 131px; } .s9 .lt.k1 { inset-inline-start: 151px; } .s9 .sq.k1 { inset-inline-start: 207px; }
+  .s9 .k2 { inset-inline-start: 383px; } .s9 .lt.k2 { inset-inline-start: 403px; } .s9 .sq.k2 { inset-inline-start: 459px; }
+  .s9 .k3 { inset-inline-start: 635px; } .s9 .lt.k3 { inset-inline-start: 655px; } .s9 .sq.k3 { inset-inline-start: 711px; }
+  .s9 .k4 { inset-inline-start: 888px; } .s9 .lt.k4 { inset-inline-start: 908px; } .s9 .sq.k4 { inset-inline-start: 964px; }
+
+  /* 10 محفظة المشاريع */
+  .s10 .ttl { top: 72.5px; inset-inline-start: 63px; font-size: 46px; line-height: 51px; width: 300px; }
+  .s10 .lead { top: 196.4px; inset-inline-start: 64px; width: 525px; }
+  .s10 .qb { top: 330px; inset-inline-start: 64px; width: 250px; height: 252px; }
+  .s10 .qm { top: 371px; inset-inline-start: 104px; }
+  .s10 .qt { top: 434.4px; inset-inline-start: 104px; width: 178px; }
+  .s10 .nbx { top: 405px; inset-inline-start: 640px; width: 234px; height: 177px; }
+  .s10 .num { top: 436.6px; inset-inline-end: 439px; font-size: 48px; line-height: 52px; font-weight: 700; color: #fff; }
+  .s10 .nt { top: 495.4px; inset-inline-end: 439px; width: 175px; text-align: end; }
+
+  /* 11 المعرض */
+  .s11 .ttl { top: 70.0px; inset-inline-start: 63px; font-size: 46px; line-height: 52px; white-space: nowrap; }
+
+  /* 12 التواصل */
+  .s12 .ph1 { top:88px; inset-inline-start:489px; width:791px; height:537px; }
+  .s12 .sq { top: 0; inset-inline-start: 587px; width: 178px; height: 163px; }
+  .s12 .ttl { top: 139.5px; inset-inline-start: 62px; font-size: 63px; line-height: 66px; white-space: nowrap; letter-spacing: -0.2px; }
+  .s12 .lead { top: 225.4px; inset-inline-start: 64px; width: 345px; }
+  .s12 .ci { inset-inline-start: 64px; width: 40px; height: 40px; border-radius: 50%; background: var(--teal); color: #fff; display: grid; place-items: center; }
+  .s12 .ci svg { width: 20px; height: 20px; }
+  .s12 .ch { font-size: 23px; line-height: 30px; font-weight: 700; color: var(--ink); }
+  .s12 .ct { width: 260px; }
+
+  /* 13 الختام */
+  .s13 { background: #fff; }
+  .s13 .top { top: 0; inset-inline-start: 0; width: 1280px; height: 564px; }
+  .s13 .dk { top: 564px; inset-inline-start: 1003px; width: 277px; height: 156px; }
+  .s13 .ty { top: 186.1px; inset-inline-start: 282px; font-size: 80px; line-height: 88px; color: #fff; letter-spacing: -1px; white-space: nowrap; }
+  .s13 .tp { top: 296.4px; inset-inline-start: 285px; width: 462px; color: #fff; }
+  .s13 .d1 { top: 68px; inset-inline-start: 1100px; grid-template-columns: repeat(4, 6px); }
+  .s13 .d2 { top: 390px; inset-inline-start: 15px; grid-template-columns: repeat(4, 6px); }
+  .s13 .logo { top: 613px; inset-inline-start: 84px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><clipPath id="fcp-lgc"><polygon points="18,0 60,0 60,46 44,48 44,14 18,12"/></clipPath></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="logo cv-logo"><svg viewBox="0 0 54 58" aria-hidden="true"><path class="lg-a" fill-rule="evenodd" d="M10 6C24 1 40 3 50 9c4 15 4 30 0 41-14 7-30 8-44 2C2 38 2 22 10 6zM16 14c10-3 21-2 29 2 2 11 2 20 0 28-11 5-22 5-32 2-3-11-3-21 3-32z"/><path class="lg-b" clip-path="url(#fcp-lgc)" fill-rule="evenodd" d="M10 6C24 1 40 3 50 9c4 15 4 30 0 41-14 7-30 8-44 2C2 38 2 22 10 6zM16 14c10-3 21-2 29 2 2 11 2 20 0 28-11 5-22 5-32 2-3-11-3-21 3-32z"/></svg><span>YOUR COMPANY<br>LOGO HERE</span></div><div class="dots cv-d1" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="dots cv-d2" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <img class="ph cv-ph" src="/templates/freeform/sl-formal-company-profile/assets/cover.jpg" alt="Building facade"><div class="blk cv-blk"></div>
+    <h1 class="cv-ttl"><span class="t1">FORMAL</span><span class="t2">COMPANY</span><span class="t2">PROFILE</span></h1><p class="cv-sub">PRESENTATION TEMPLATE</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="logo cv-logo"><svg viewBox="0 0 54 58" aria-hidden="true"><path class="lg-a" fill-rule="evenodd" d="M10 6C24 1 40 3 50 9c4 15 4 30 0 41-14 7-30 8-44 2C2 38 2 22 10 6zM16 14c10-3 21-2 29 2 2 11 2 20 0 28-11 5-22 5-32 2-3-11-3-21 3-32z"/><path class="lg-b" clip-path="url(#fcp-lgc)" fill-rule="evenodd" d="M10 6C24 1 40 3 50 9c4 15 4 30 0 41-14 7-30 8-44 2C2 38 2 22 10 6zM16 14c10-3 21-2 29 2 2 11 2 20 0 28-11 5-22 5-32 2-3-11-3-21 3-32z"/></svg><span>YOUR COMPANY<br>LOGO HERE</span></div><div class="dots cv-d1 w" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="dots cv-d2 w" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <img class="ph cv-ph" src="/templates/freeform/sl-formal-company-profile/assets/cover.jpg" alt="Building facade"><div class="blk cv-blk"></div>
+    <h1 class="cv-ttl"><span class="t1">FORMAL</span><span class="t2">COMPANY</span><span class="t2">PROFILE</span></h1><p class="cv-sub">PRESENTATION TEMPLATE</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <img class="ph ph1" src="/templates/freeform/sl-formal-company-profile/assets/who.jpg" alt="Building facade"><div class="blk sq"></div>
+    <h1 class="h ttl">WHO WE ARE?</h1><div class="bd p1"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p></div><div class="blk bar"></div><div class="bd p2"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">3</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="blk l" style="top:0;inset-inline-start:469px;width:179px;height:133px"></div><div class="blk" style="top:133px;inset-inline-start:0;width:722px;height:385px"></div><div class="blk l" style="top:640px;inset-inline-start:790px;width:179px;height:80px"></div>
+    <p class="k k1"><bdi dir="ltr">$1,39m</bdi></p><p class="k k2"><bdi dir="ltr">$6,72m</bdi></p><p class="kl kl1">Placeholder</p><p class="kl kl2">Placeholder</p><div class="bd wt p1"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <h1 class="h ttl">Business Revenue Growth</h1><div class="bd p2"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">4</p>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="h ttl">Our Business Ideas</h1><div class="bd lead"><p>This is a sample text. Insert your desired text here.</p></div>
+    <img class="ph" style="top:135px;inset-inline-start:399px;width:242px;height:211px" src="/templates/freeform/sl-formal-company-profile/assets/room.jpg" alt="Meeting room"><img class="ph" style="top:347px;inset-inline-start:399px;width:242px;height:212px" src="/templates/freeform/sl-formal-company-profile/assets/meeting.jpg" alt="Team meeting"><div class="blk qb"></div><svg class="qm" viewBox="0 0 49 38" fill="currentColor" aria-hidden="true"><path d="M21 0C9 3 1 11 1 23v15h19V20h-9c0-7 4-12 11-14zM48 0C36 3 28 11 28 23v15h19V20h-9c0-7 4-12 11-14z"/></svg><div class="bd wt qt"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <h2 class="ph-h">Placeholder</h2><div class="bd p2"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p><p>Insert your desired text here. This is a sample text.</p></div>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">5</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="h ttl">Meet Our Company CEO</h1><div class="bd lead"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+    <img class="ph ceo" src="/templates/freeform/sl-formal-company-profile/assets/ceo.jpg" alt="Company CEO"><div class="blk qb"></div><svg class="qm" viewBox="0 0 49 38" fill="currentColor" aria-hidden="true"><path d="M21 0C9 3 1 11 1 23v15h19V20h-9c0-7 4-12 11-14zM48 0C36 3 28 11 28 23v15h19V20h-9c0-7 4-12 11-14z"/></svg><div class="bd wt qt"><p>This is a sample text. Insert your desired text here.</p></div><div class="blk nb"></div><p class="nm">JANE DOE</p>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">6</p>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <h1 class="h ttl">Meet Our Great Team</h1><div class="bd lead"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+    <img class="ph tm tm1" src="/templates/freeform/sl-formal-company-profile/assets/team-1.jpg" alt="Team member"><img class="ph tm tm2" src="/templates/freeform/sl-formal-company-profile/assets/team-2.jpg" alt="Team member"><p class="blk nb nb1">JONE DOE</p><p class="blk nb nb2">EMMA OLIVIA</p>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">7</p>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <h1 class="h ttl">Our Company Strategy</h1><div class="bd lead"><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="blk cd cd1"></div><div class="blk l cd cd3"></div><div class="ic c1"><svg viewBox="0 0 60 56" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M27 0h6l1 5 4 2 4-3 4 4-3 4 2 4 5 1v6l-5 1-2 4 3 4-4 4-4-3-4 2-1 5h-6l-1-5-4-2-4 3-4-4 3-4-2-4-5-1v-6l5-1 2-4-3-4 4-4 4 3 4-2zm3 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" transform="translate(4 0) scale(.7)"/><path fill-rule="evenodd" d="M27 0h6l1 5 4 2 4-3 4 4-3 4 2 4 5 1v6l-5 1-2 4 3 4-4 4-4-3-4 2-1 5h-6l-1-5-4-2-4 3-4-4 3-4-2-4-5-1v-6l5-1 2-4-3-4 4-4 4 3 4-2zm3 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" transform="translate(-10 22) scale(.72)"/></svg></div><h2 class="sh c1">Strategy 01</h2><div class="bd sp c1"><p>This is a sample text. Insert your desired text here. This is a sample text.</p></div><div class="ic c2"><svg viewBox="0 0 60 40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="6"/><circle cx="48" cy="9" r="6"/><circle cx="30" cy="17" r="6"/><path d="M1 30c0-8 5-12 11-12 4 0 7 1 9 4-4 2-6 5-7 8z"/><path d="M59 30c0-8-5-12-11-12-4 0-7 1-9 4 4 2 6 5 7 8z"/><path d="M16 40c0-9 6-14 14-14s14 5 14 14z"/></svg></div><h2 class="sh c2">Strategy 02</h2><div class="bd sp c2"><p>This is a sample text. Insert your desired text here. This is a sample text.</p></div><div class="ic c3"><svg viewBox="0 0 60 50" fill="currentColor" aria-hidden="true"><circle cx="10" cy="5" r="4"/><circle cx="22" cy="5" r="4"/><circle cx="34" cy="5" r="4"/><path d="M5 10h10l2 14h-4l-1 10H8L7 24H3zM17 10h10l2 14h-4l-1 10h-4l-1-10h-4zM29 10h10l2 14h-4l-1 10h-4l-1-10h-4z"/><path d="M2 49l-2-3 19-17 9 7 21-19-4-2 13-3-3 13-3-3-24 22-9-7z"/></svg></div><h2 class="sh c3">Strategy 03</h2><div class="bd sp c3"><p>This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">8</p>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <h1 class="blk bn">SWOT ANALYSIS</h1>
+    <div class="blk g gb k1"></div><span class="lt k1" aria-hidden="true">S</span><div class="blk sq k1"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="20" cy="17" r="4"/><circle cx="9" cy="12" r="3.5"/><circle cx="31" cy="12" r="3.5"/><path d="M11 30c0-5 4-8 9-8s9 3 9 8z"/><path d="M2 24c0-4 3-7 7-7 3 0 5 1 6 3M38 24c0-4-3-7-7-7-3 0-5 1-6 3"/></svg></div><h2 class="wh k1">STRENGTHS</h2><div class="bd wp k1"><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="blk g gb k2"></div><span class="lt k2" aria-hidden="true">W</span><div class="blk sq k2"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="14" y="3" width="12" height="15" rx="4"/><path d="M11 18v4h18v-4M9 15v6M31 15v6M20 22v8M12 33l8-3 8 3M12 33v2M28 33v2M20 30v5"/><circle cx="12" cy="36" r="1.2"/><circle cx="28" cy="36" r="1.2"/><circle cx="20" cy="36.5" r="1.2"/></svg></div><h2 class="wh k2">WEAKNESSES</h2><div class="bd wp k2"><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="blk g gb k3"></div><span class="lt k3" aria-hidden="true">O</span><div class="blk sq k3"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M4 37h32M10 37V3h20v34"/><path d="M10 3l12 4v33l-12-3"/><circle cx="19" cy="21" r="1"/></svg></div><h2 class="wh k3">OPPORTUNITIES</h2><div class="bd wp k3"><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="blk g gb k4"></div><span class="lt k4" aria-hidden="true">T</span><div class="blk sq k4"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3 4v33h34"/><rect x="7" y="8" width="7" height="28"/><rect x="18" y="16" width="7" height="20"/><rect x="29" y="25" width="6" height="11"/><path d="M9 4l14 9 8 1 6 6M37 15v5h-5"/></svg></div><h2 class="wh k4">THREATS</h2><div class="bd wp k4"><p>This is a sample text. Insert your desired text here.</p></div>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">9</p>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <h1 class="h ttl">Our Project Portfolio</h1><div class="bd lead"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <div class="blk qb"></div><svg class="qm" viewBox="0 0 49 38" fill="currentColor" aria-hidden="true"><path d="M21 0C9 3 1 11 1 23v15h19V20h-9c0-7 4-12 11-14zM48 0C36 3 28 11 28 23v15h19V20h-9c0-7 4-12 11-14z"/></svg><div class="bd wt qt"><p>This is a sample text. Insert your desired text here. This is a sample text.</p></div><img class="ph" style="top:330px;inset-inline-start:330px;width:295px;height:252px" src="/templates/freeform/sl-formal-company-profile/assets/portfolio-1.jpg" alt="Building facade"><img class="ph" style="top:91px;inset-inline-start:640px;width:234px;height:298px" src="/templates/freeform/sl-formal-company-profile/assets/portfolio-2.jpg" alt="Building facade"><img class="ph" style="top:91px;inset-inline-start:890px;width:326px;height:491px" src="/templates/freeform/sl-formal-company-profile/assets/portfolio-3.jpg" alt="Building facade"><div class="blk nbx"></div><p class="num"><bdi dir="ltr">50+</bdi></p><div class="bd wt nt"><p>Insert your desired text here.</p></div>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">10</p>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <h1 class="h ttl">Our Project Gallery</h1>
+    <img class="ph" style="top:164px; inset-inline-start:64px; width:374px; height:453px;" src="/templates/freeform/sl-formal-company-profile/assets/gallery-1.jpg" alt="Building facade"><img class="ph" style="top:164px; inset-inline-start:453px; width:763px; height:220px;" src="/templates/freeform/sl-formal-company-profile/assets/gallery-2.jpg" alt="Building facade"><img class="ph" style="top:398px; inset-inline-start:453px; width:374px; height:219px;" src="/templates/freeform/sl-formal-company-profile/assets/gallery-3.jpg" alt="Building facade"><img class="ph" style="top:398px; inset-inline-start:841px; width:375px; height:219px;" src="/templates/freeform/sl-formal-company-profile/assets/gallery-4.jpg" alt="Building facade">
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">11</p>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <img class="ph ph1" src="/templates/freeform/sl-formal-company-profile/assets/contact.jpg" alt="Building facade"><div class="blk sq"></div>
+    <h1 class="h ttl">Get In Touch</h1><div class="bd lead"><p>This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <div class="ci" style="top:330px"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M10 19s-6-7-6-11a6 6 0 0 1 12 0c0 4-6 11-6 11z"/><circle cx="10" cy="8" r="2.2"/></svg></div><h2 class="ch" style="top:317.5px;inset-inline-start:123px">Address</h2><div class="bd ct" style="top:355.4px;inset-inline-start:123px;width:222px"><p>Insert your desired text here. This is a sample text.</p></div>
+    <div class="ci" style="top:432px"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="1.5" y="4" width="17" height="12"/><path d="M1.5 4l8.5 7 8.5-7M1.5 16l6-6M18.5 16l-6-6"/></svg></div><h2 class="ch" style="top:425.5px;inset-inline-start:123px">Email</h2><div class="bd ct" style="top:459.4px;inset-inline-start:123px;width:300px"><p>Enter email address here</p></div>
+    <div class="ci" style="top:535px"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M4 2l3 0 2 4-2 2c1 2 3 4 5 5l2-2 4 2v3c0 1-1 2-2 2C9 18 2 11 2 4c0-1 1-2 2-2z"/></svg></div><h2 class="ch" style="top:525.5px;inset-inline-start:125px">Phone</h2><div class="bd ct" style="top:562.2px;inset-inline-start:125px;line-height:23px;letter-spacing:-0.4px"><p><bdi dir="ltr">+1 (212) 123 4567</bdi><br><bdi dir="ltr">+1 (212) 234 5678</bdi></p></div>
+    <p class="ft">Formal <b>Company</b> Profile</p><div class="pgb"></div><p class="pg">12</p>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <div class="blk top"></div><div class="blk d dk"></div><div class="dots d1 w" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="dots d2 w" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 class="h ty">THANK YOU</h1><div class="bd tp"><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <div class="logo "><svg viewBox="0 0 54 58" aria-hidden="true"><path class="lg-a" fill-rule="evenodd" d="M10 6C24 1 40 3 50 9c4 15 4 30 0 41-14 7-30 8-44 2C2 38 2 22 10 6zM16 14c10-3 21-2 29 2 2 11 2 20 0 28-11 5-22 5-32 2-3-11-3-21 3-32z"/><path class="lg-b" clip-path="url(#fcp-lgc)" fill-rule="evenodd" d="M10 6C24 1 40 3 50 9c4 15 4 30 0 41-14 7-30 8-44 2C2 38 2 22 10 6zM16 14c10-3 21-2 29 2 2 11 2 20 0 28-11 5-22 5-32 2-3-11-3-21 3-32z"/></svg><span>YOUR COMPANY<br>LOGO HERE</span></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 13</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
