@@ -1,0 +1,76 @@
+{
+  "key": "sl-decision-making-under-uncertainty",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "اتخاذ القرار في ظل عدم اليقين",
+  "nameEn": "Decision Making Under Uncertainty",
+  "description": "أربع عشرة شريحة: معايير القرار وجداولها، إطار العملية، شجرة القرار، رسمان لتحليل المنفعة والحساسية، ومبادئ",
+  "descriptionEn": "Fourteen slides: decision criteria tables, process framework, decision tree, utility and sensitivity charts, principles",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الإبحار في المجهول",
+      "titleEn": "Navigating the Unknown"
+    },
+    {
+      "title": "تحدّي عدم اليقين",
+      "titleEn": "The Challenge of Uncertainty",
+      "needsData": true
+    },
+    {
+      "title": "تعريف عدم اليقين: المخاطرة والجهل",
+      "titleEn": "Defining Uncertainty: Risk & Ignorance"
+    },
+    {
+      "title": "إطار عملية اتخاذ القرار",
+      "titleEn": "The Decision Process Framework"
+    },
+    {
+      "title": "المعيار 1: أقصى الأقصى",
+      "titleEn": "Criterion 1: Maximax"
+    },
+    {
+      "title": "المعيار 2: أقصى الأدنى",
+      "titleEn": "Criterion 2: Maximin",
+      "needsData": true
+    },
+    {
+      "title": "المعيار 3: أدنى الندم الأقصى",
+      "titleEn": "Criterion 3: Minimax Regret",
+      "needsData": true
+    },
+    {
+      "title": "القيمة النقدية المتوقعة",
+      "titleEn": "Expected Monetary Value (EMV) & EOL",
+      "needsData": true
+    },
+    {
+      "title": "أشجار القرار",
+      "titleEn": "Decision Trees: Mapping Sequential Choices"
+    },
+    {
+      "title": "نظرية المنفعة",
+      "titleEn": "Utility Theory: Beyond the Dollars",
+      "needsData": true
+    },
+    {
+      "title": "تحليل الحساسية واختبار المتانة",
+      "titleEn": "Sensitivity Analysis and Robustness Testing",
+      "needsData": true
+    },
+    {
+      "title": "الخلاصة: مبادئ القرار الفعّال",
+      "titleEn": "Conclusion: Principles for Effective Decision Making",
+      "needsData": true
+    },
+    {
+      "title": "شكرًا وتواصلوا معنا",
+      "titleEn": "Thank You — Connect With Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الجداول في الشرائح 7–9 خلايا HTML، والرسمان في الشريحتين 11 و12 يُرسمان من كتلتي chart-data وchart-data-2 فعدّل قيمهما من query_data عند طلب بيانات."
+}

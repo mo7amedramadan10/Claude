@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Making Under Uncertainty</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «اتخاذ القرار في ظل عدم اليقين»: زخارف زاوية زرقاء وخضراء ثابتة، عناوين زرقاء بجزء غامق، بطاقات وجداول ورسمان من كتلتي chart-data وchart-data-2. الأشكال الزخرفية غير المتماثلة في SVG بعرض الإطار تنعكس في العربية. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #000000; --ink-2: #222222; --accent: #004BA8; --blue: #004BA8; --navy: #02367F; --green: #8DE96A; --green-d: #3A9A1E; --lblue: #BBD9FF; --rblue: #D6E8FF; --lgreen: #D1F6C3; --teal: #007C76; --gray: #D9D9D9; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* اتجاه التدرّجات الأفقية: يبدأ اللون من جهة البداية */
+  .frame { --gd: 90deg; }
+  html[dir="rtl"] .frame { --gd: 270deg; }
+  html[dir="rtl"] .mir, html[dir="rtl"] .flip { transform: scaleX(-1); }
+  .full { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; pointer-events: none; }
+  bdi { unicode-bidi: isolate; }
+  /* زخارف الزوايا المشتركة */
+  .cn-b { position: absolute; top: 0; inset-inline-end: 35px; width: 80px; height: 57px; background: var(--blue); border-end-start-radius: 30px; z-index: 3; }
+  .cn-g { position: absolute; top: 0; inset-inline-end: 0; width: 35px; height: 57px; background: var(--green); z-index: 3; }
+  .sq { position: absolute; bottom: 0; inset-inline-start: 0; width: 35px; height: 57px; background: var(--blue); z-index: 3; }
+  .sq.g { background: var(--green); }
+  /* الرأس والعنوان */
+  .biz { position: absolute; top: 72px; inset-inline-start: 43px; margin: 0; font-size: 17px; line-height: 22px; letter-spacing: 3.3px; font-weight: 400; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .biz { letter-spacing: 0; font-size: 19px; }
+  .ttl { position: absolute; top: 112px; inset-inline-start: 43px; margin: 0; font-size: 45px; line-height: 57px; font-weight: 400; color: var(--blue); letter-spacing: -0.3px; white-space: nowrap; }
+  .ttl b { font-weight: 700; }
+  html[lang="ar"] .ttl { letter-spacing: 0; font-size: 44px; }
+  .lead { position: absolute; margin: 0; font-size: 21.5px; line-height: 29px; color: var(--ink); }
+  html[lang="ar"] .lead { font-size: 22px; }
+  /* بند مرقّم: رقم أخضر + عنوان + نص */
+  .nb { position: absolute; }
+  .nb .n { display: block; font-size: 20px; line-height: 26px; color: #4CC72A; }
+  .nb h3 { margin: 16px 0 0; padding-inline-start: 4px; font-size: 19px; line-height: 23px; font-weight: 700; color: var(--blue); }
+  .nb p { margin: 0; padding-inline-start: 4px; font-size: 16.5px; line-height: 23px; color: var(--ink); }
+  .rule { position: absolute; height: 1px; background: #000; }
+  .ic-ar { display: inline-block; flex: none; }
+  .ic-ar svg { width: 100%; height: 100%; }
+
+  /* 1 — الغلاف */
+  .s1 .c-g { position: absolute; top: 0; inset-inline-start: 0; width: 72px; height: 118px; background: var(--green); }
+  .s1 .c-b { position: absolute; top: 0; inset-inline-start: 72px; width: 165px; height: 118px; background: var(--blue); border-end-end-radius: 60px; }
+  .s1 .c-l { position: absolute; top: 0; inset-inline-end: 0; width: 413px; height: 210px; background: var(--lblue); border-end-start-radius: 95px; }
+  .s1 .logo { position: absolute; top: 72px; inset-inline-start: 972px; width: 60px; height: 66px; color: var(--blue); }
+  .logo-t { position: absolute; margin: 0; font-size: 15px; line-height: 19px; letter-spacing: 2.6px; color: var(--blue); }
+  html[lang="ar"] .logo-t { letter-spacing: 0; font-size: 17px; line-height: 22px; }
+  .s1 .logo-t { top: 86px; inset-inline-start: 1063px; }
+  .s1 .hero { position: absolute; top: 276px; inset-inline-start: 0; width: 867px; height: 444px; background: var(--blue); border-start-end-radius: 90px; }
+  .s1 .c-gb { position: absolute; bottom: 0; inset-inline-start: 0; width: 113px; height: 57px; background: var(--green); border-start-end-radius: 30px; }
+  .s1 h1 { position: absolute; top: 386px; inset-inline-start: 58px; margin: 0; color: #fff; font-size: 56px; line-height: 72px; font-weight: 400; white-space: nowrap; letter-spacing: -0.5px; }
+  .s1 h1 b { font-weight: 700; }
+  .s1 .sub { position: absolute; top: 541px; inset-inline-start: 60px; margin: 0; color: var(--green); font-size: 30px; line-height: 40px; letter-spacing: 3px; white-space: nowrap; }
+  html[lang="ar"] .s1 h1 { letter-spacing: 0; line-height: 76px; top: 378px; }
+  html[lang="ar"] .s1 .sub { letter-spacing: 0; }
+  .s1 .intro { position: absolute; top: 403px; inset-inline-start: 898px; width: 320px; margin: 0; font-size: 22.5px; line-height: 29px; color: var(--ink); }
+  .s1 .gl { position: absolute; top: 541px; inset-inline-start: 898px; width: 75px; height: 3px; background: var(--green); }
+  .s1 .date { position: absolute; top: 590px; inset-inline-start: 898px; margin: 0; font-size: 22.5px; line-height: 30px; font-weight: 700; color: var(--blue); }
+
+  /* 2 — بطاقات */
+  .s2 .ttl { top: 112px; }
+  .card { position: absolute; width: 302px; border-radius: 40px; }
+  .card .ic-ar { position: absolute; top: 21px; inset-inline-start: 233px; width: 46px; height: 46px; }
+  .card h3 { position: absolute; top: 65px; inset-inline-start: 22px; width: 240px; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; }
+  .card p { position: absolute; top: 153px; inset-inline-start: 22px; width: 260px; margin: 0; font-size: 18px; line-height: 23px; }
+  .card ul { position: absolute; top: 207px; inset-inline-start: 26px; margin: 0; padding: 0; list-style: none; }
+  .card li { display: flex; align-items: center; gap: 19px; height: 37px; font-size: 15px; line-height: 20px; }
+  .card li .ic-ar { position: static; width: 17px; height: 17px; }
+  .s2 .k1 { top: 315px; inset-inline-start: 50px; height: 323px; background: var(--lblue); }
+  .s2 .k1 h3 { color: var(--blue); } .s2 .k1 .ic-ar { color: #5C9DFF; }
+  .s2 .k2 { top: 315px; inset-inline-start: 417px; height: 323px; background: var(--lgreen); }
+  .s2 .k2 h3 { color: var(--green-d); } .s2 .k2 .ic-ar { color: #6FDD47; }
+  .s2 .k3 { top: 118px; inset-inline-start: 795px; height: 325px; background: var(--blue); color: #fff; }
+  .s2 .k3 h3 { top: 71px; font-size: 20px; line-height: 25px; } .s2 .k3 p { top: 158px; } .s2 .k3 ul { top: 214px; } .s2 .k3 > .ic-ar { color: #8FBEFF; } .s2 .k3 li .ic-ar { color: #BBD9FF; }
+  .s2 .k1 li .ic-ar { color: var(--blue); } .s2 .k2 li .ic-ar { color: var(--green-d); }
+  .s2 .stm { position: absolute; top: 483px; inset-inline-start: 819px; width: 400px; margin: 0; font-size: 25.5px; line-height: 32px; font-weight: 700; color: var(--ink); }
+  .s2 .bar { position: absolute; top: 576px; inset-inline-start: 819px; width: 101px; height: 10px; border-radius: 5px; background: var(--blue); }
+
+  /* 3 — تحدي عدم اليقين */
+  .stat { position: absolute; width: 175px; }
+  .stat b { display: block; font-size: 42px; line-height: 50px; font-weight: 700; color: var(--ink); padding-inline-start: 3px; }
+  .stat i { display: block; height: 1px; background: #000; margin-top: 16px; }
+  .stat p { margin: 20px 0 0; padding-inline-start: 4px; width: 165px; font-size: 16.5px; line-height: 23px; color: var(--ink); }
+  .s3 .ctr { position: absolute; top: 300px; inset-inline-start: 527px; width: 236px; margin: 0; text-align: center; font-size: 27px; line-height: 39px; font-weight: 700; color: var(--blue); }
+  .s3 .br { position: absolute; inset-inline-start: 966px; width: 212px; margin: 0; font-size: 16.5px; line-height: 23px; color: var(--ink); }
+
+  /* 4 — بطاقات مرقّمة */
+  .s4 .ttl b { display: block; }
+  .s4 .pc { position: absolute; top: 247px; width: 327px; height: 389px; border-radius: 10px; overflow: hidden; color: #fff; text-align: center; }
+  .s4 .pc h3 { position: absolute; top: 38px; inset-inline-start: 0; width: 100%; margin: 0; padding: 0 62px; font-size: 24px; line-height: 32px; font-weight: 700; }
+  .s4 .pc i { position: absolute; top: 113px; inset-inline-start: 60px; width: 182px; height: 1px; background: currentColor; opacity: .9; }
+  .s4 .pc p { position: absolute; top: 150px; inset-inline-start: 40px; width: 247px; margin: 0; font-size: 16.5px; line-height: 23px; }
+  .s4 .pc .ring { position: absolute; top: 299px; inset-inline-start: 66px; width: 182px; height: 182px; border-radius: 50%; background: #fff; }
+  .s4 .pc .ring::before { content: ''; position: absolute; inset: 12px; border-radius: 50%; background: linear-gradient(180deg, var(--rc) 0%, #fff 75%); }
+  .s4 .pc .ring span { position: absolute; top: 43px; inset-inline-start: 0; width: 100%; font-size: 29px; line-height: 40px; color: var(--ink); }
+  .s4 .p1 { inset-inline-start: 111px; background: var(--blue); --rc: #BDD8FE; } .s4 .p1 .ring { inset-inline-start: 66px; }
+  .s4 .p2 { inset-inline-start: 477px; background: var(--teal); --rc: #7FD0DF; } .s4 .p2 .ring { inset-inline-start: 66px; }
+  .s4 .p3 { inset-inline-start: 842px; background: var(--green); color: var(--ink); --rc: #CFF4C1; } .s4 .p3 .ring { inset-inline-start: 67px; }
+
+  /* 5 — إطار عملية القرار */
+  .s5 .ci { position: absolute; top: 208px; width: 264px; height: 264px; border-radius: 50%; box-shadow: 10px 16px 22px rgb(0 0 0 / .12); }
+  .s5 .ci .o { position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(var(--gd), var(--c1) 0%, var(--c2) 55%, #fff 100%); }
+  .s5 .ci .w { position: absolute; inset: 15px; border-radius: 50%; background: #fff; }
+  .s5 .ci .d { position: absolute; inset: 22px; border-radius: 50%; background: linear-gradient(var(--gd), var(--c1) 0%, #fff 100%); box-shadow: inset 0 6px 0 var(--c3); }
+  .s5 .ci h3 { position: absolute; top: 0; inset-inline-start: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; margin: 0; padding: 0 30px; font-size: 24.5px; line-height: 32px; font-weight: 700; color: var(--blue); }
+  .s5 .gr { --c1: #B9F0A2; --c2: #DDF8D2; --c3: #BDF0A9; } .s5 .bl { --c1: #B5D2FA; --c2: #D7E7FD; --c3: #B9D5FE; }
+  .s5 .x1 { inset-inline-start: 48px; z-index: 5; } .s5 .x2 { inset-inline-start: 290px; z-index: 4; } .s5 .x3 { inset-inline-start: 525px; z-index: 3; } .s5 .x4 { inset-inline-start: 752px; z-index: 2; } .s5 .x5 { inset-inline-start: 973px; z-index: 1; }
+  .s5 .ct { position: absolute; top: 507px; width: 160px; margin: 0; text-align: center; font-size: 16.5px; line-height: 22.5px; color: var(--ink); }
+
+  /* 6 — المصفوفة */
+  .cell { position: absolute; width: 212px; height: 111px; border-radius: 20px; text-align: center; }
+  .cell h4 { margin: 0; padding-top: var(--pt, 28px); font-size: 17.5px; line-height: 24px; font-weight: 700; color: var(--ink); }
+  .cell p { margin: 7px auto 0; width: 150px; font-size: 15.5px; line-height: 19.5px; color: var(--ink-2); }
+  .cell.v.g { background: linear-gradient(180deg, #D7F7CB 0%, #fff 100%); }
+  .cell.v.y { background: linear-gradient(180deg, #DBDBDB 0%, #fff 100%); }
+  .cell.v.b { background: linear-gradient(180deg, #C3DDFE 0%, #fff 100%); }
+  .cell.h.g { background: linear-gradient(var(--gd), #D7F7CB 0%, #E5FAE0 40%, #fff 100%); }
+  .cell.h.b { background: linear-gradient(var(--gd), #BED9FE 0%, #D8E8FE 45%, #fff 100%); }
+  .s6 .ylab { position: absolute; width: 140px; height: 20px; margin: 0; text-align: center; font-size: 15px; line-height: 20px; color: var(--ink); transform: rotate(-90deg); white-space: nowrap; }
+  .s6 .yh { position: absolute; top: 377px; inset-inline-start: 412px; width: 160px; height: 46px; margin: 0; text-align: center; font-size: 18px; line-height: 23px; font-weight: 700; color: var(--ink); transform: rotate(-90deg); }
+  .s6 .xl { position: absolute; top: 616px; margin: 0; font-size: 15px; line-height: 20px; color: var(--ink); white-space: nowrap; }
+  .s6 .xh { position: absolute; top: 615px; inset-inline-start: 731px; width: 300px; margin: 0; text-align: center; font-size: 18px; line-height: 24px; font-weight: 700; color: var(--ink); }
+
+  /* 7، 8، 9 — الجداول */
+  .tb { position: absolute; border-collapse: collapse; table-layout: fixed; font-size: 19px; color: var(--ink); }
+  .tb td, .tb th { padding: 0 10px; white-space: nowrap; font-weight: 400; text-align: start; }
+  .tb th { font-weight: 700; }
+  .tb .band th { background: var(--blue); color: #fff; text-align: center; height: 38px; }
+  .tb .z td { background: var(--rblue); }
+  .tb .cur { display: inline-block; width: 36px; }
+  .s7 .tb { top: 204px; inset-inline-start: 35px; width: 832px; }
+  .s7 .tb .hd th { height: 50px; }
+  .s7 .tb td { height: 75.5px; }
+  .s7 .tb td:not(:first-child) { padding-inline-start: 14px; }
+  .s7 .pane { position: absolute; top: 57px; inset-inline-end: 0; width: 413px; height: 663px; background: var(--blue); border-start-start-radius: 90px; }
+  .s7 .lead { top: 151px; inset-inline-start: 905px; width: 320px; color: #fff; }
+  .s7 .nb h3, .s7 .nb p { color: #fff; } .s7 .nb h3 { font-size: 19px; }
+  .s7 .rule { background: #6FDD47; }
+  .s8 .tb { top: 204px; inset-inline-start: 39px; width: 1202px; font-size: 19px; }
+  .s8 .tb th, .s8 .tb td { text-align: center; padding: 0; }
+  .s8 .tb .c0 { text-align: end; padding-inline-end: 10px; }
+  .s8 .tb .hd th { height: 39px; }
+  .s8 .tb .hd .dk { background: var(--navy); color: #fff; }
+  .s8 .tb .hd .gn { background: var(--green); }
+  .s8 .tb td { height: 49px; }
+  .s8 .tb td.last { font-weight: 700; }
+  .s8 .tb .z td.last { background: var(--lgreen); }
+  .s8 .tb .band .e { background: transparent; }
+  .s8 .box { position: absolute; top: 511px; inset-inline-start: 35px; width: 1210px; height: 151px; background: var(--blue); }
+  .s8 .lead { top: 538px; inset-inline-start: 61px; width: 330px; color: #fff; }
+  .s8 .nb h3, .s8 .nb p { color: #fff; }
+  .s9 .tb { top: 204px; inset-inline-start: 413px; width: 832px; }
+  .s9 .tb .hd th { height: 50px; }
+  .s9 .tb td { height: 75.5px; }
+  .s9 .tb .r { text-align: end; }
+  .s9 .rule { background: #D9D9D9; }
+
+  /* 10 — شجرة القرار */
+  .s10 .root { position: absolute; top: 374px; inset-inline-start: 65px; width: 273px; height: 106px; border-radius: 14px; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; text-align: center; margin: 0; padding: 0 50px; font-size: 18.5px; line-height: 25px; font-weight: 700; }
+  .s10 .nd { position: absolute; width: 136px; margin: 0; text-align: center; font-size: 16.5px; line-height: 23px; color: var(--ink); }
+  .s10 .bx { position: absolute; width: 245px; height: 76px; border: 3px solid var(--gray); border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; margin: 0; padding: 0 50px; font-size: 16.5px; line-height: 23px; color: var(--ink); }
+  .s10 .bx.on { border-color: var(--blue); }
+  .s10 .tw { position: absolute; inset-inline-start: 936px; width: 29px; height: 29px; color: #D3D3D3; }
+
+  /* 11 و12 — الرسوم */
+  .ch-h { position: absolute; margin: 0; font-size: 19px; line-height: 24px; font-weight: 700; color: var(--ink); }
+  .ch-t { position: absolute; margin: 0; font-size: 16.5px; line-height: 22px; color: var(--ink); }
+  .ch-l { position: absolute; height: 1px; background: #1A3E73; }
+  .chart { direction: ltr; }
+  .chart text { font-size: 14px; fill: #595959; font-family: var(--font); }
+  .legend { position: absolute; display: flex; gap: 46px; justify-content: center; font-size: 14.5px; line-height: 20px; color: #595959; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend .ln { display: inline-block; width: 30px; height: 3px; position: relative; }
+  .legend .ln::after { content: ''; position: absolute; top: -2px; inset-inline-start: 12px; width: 7px; height: 7px; border-radius: 50%; background: inherit; }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; }
+  .s11 .panel { position: absolute; top: 383px; inset-inline-start: 0; width: 489px; height: 280px; background: var(--blue); border-start-end-radius: 90px; }
+  .s11 .gs { position: absolute; top: 383px; inset-inline-start: 0; width: 35px; height: 280px; background: var(--green); }
+  .s11 .nb .n { font-size: 28px; line-height: 34px; }
+  .s11 .nb h3 { margin-top: 14px; color: #fff; font-size: 19.5px; }
+  .s11 .nb p { color: #fff; font-size: 17.5px; width: 190px; line-height: 22px; }
+  .s12 .nb p { width: 170px; }
+  .s12 .rule { background: #D9D9D9; }
+
+  /* 13 — شرائط المبادئ */
+  .s13 .bd { position: absolute; height: 135px; border-radius: 68px 0 0 68px; background: linear-gradient(var(--gd), var(--c) 0%, var(--c) 16%, #fff 100%); }
+  html[dir="rtl"] .s13 .bd { border-radius: 0 68px 68px 0; }
+  .s13 .bd.g { --c: #B9F0A4; } .s13 .bd.b { --c: #BCD9FF; }
+  .s13 .bd .num { position: absolute; top: 19px; inset-inline-start: 16px; width: 97px; height: 97px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 30px; font-weight: 700; color: var(--ink); }
+  .s13 .bd h3 { position: absolute; top: 0; inset-inline-start: 130px; width: 150px; height: 135px; display: flex; align-items: center; margin: 0; font-size: 19.5px; line-height: 25px; font-weight: 700; color: var(--ink); }
+  .s13 .bd p { position: absolute; top: 0; height: 135px; display: flex; align-items: center; margin: 0; font-size: 16.5px; line-height: 23px; color: var(--ink); }
+
+  /* 14 — التواصل */
+  .s14 .ttl { top: 109px; font-size: 56px; line-height: 70px; }
+  .s14 .ttl b { display: block; }
+  .s14 .panel { position: absolute; top: 508px; inset-inline-start: 0; width: 417px; height: 212px; background: var(--blue); border-start-end-radius: 90px; }
+  .s14 .logo { position: absolute; top: 547px; inset-inline-start: 49px; width: 60px; height: 66px; color: #fff; }
+  .s14 .logo-t { top: 561px; inset-inline-start: 140px; color: #fff; }
+  .s14 .st { position: absolute; }
+  .s14 .st .ico { position: absolute; width: 37px; height: 37px; color: var(--blue); }
+  .s14 .st h3 { position: absolute; margin: 0; font-size: 17.5px; line-height: 22px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .s14 .st p { position: absolute; margin: 0; font-size: 15px; line-height: 20px; color: var(--ink); white-space: nowrap; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="stepbar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".35" stop-color="#EDEDED"/><stop offset="1" stop-color="#D6D6D6"/></linearGradient><linearGradient id="stepsh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DADADA"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient><linearGradient id="stepshx" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".25" stop-color="#fff" stop-opacity="0"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><div class="c-g"></div><div class="c-b"></div><div class="c-l"></div><div class="logo"><svg viewBox="0 0 60 66" aria-hidden="true"><path transform="rotate(-9 30 33)" d="M9 9.5C22 3.5 42 3 53.5 8.5 57.5 24 57 42 52.5 57.5 39 63.5 19 63 7.5 57 4 42 4.5 24 9 9.5Z" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="round"/></svg></div><p class="logo-t">YOUR COMPANY<br>LOGO HERE</p><div class="hero"></div><div class="c-gb"></div><h1><b>DECISION MAKING</b><br>UNDER UNCERTAINTY</h1><p class="sub">PRESENTATION TEMPLATE</p><p class="intro">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="gl"></div><p class="date">INSERT DATE HERE</p></div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Navigating the Unknown</b></h1><p class="lead" style="top:198px; inset-inline-start:48px; width:520px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="card k1"><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10.6"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Heading Title Placeholder</h3><p>Insert your desired text here. This is a sample text.</p><ul><li><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Insert your desired text here</span></li><li><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Insert your desired text here</span></li></ul></div><div class="card k2"><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10.6"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Heading Title Placeholder</h3><p>Insert your desired text here. This is a sample text.</p><ul><li><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Insert your desired text here</span></li><li><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Insert your desired text here</span></li></ul></div><div class="card k3"><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10.6"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Heading Title Placeholder</h3><p>Insert your desired text here. This is a sample text.</p><ul><li><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Insert your desired text here</span></li><li><span class="ic-ar flip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Insert your desired text here</span></li></ul></div><p class="stm">Insert your heading statement here. This is a sample text.</p><div class="bar"></div></div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>The Challenge of<br>Uncertainty</b></h1><p class="lead" style="top:258px; inset-inline-start:44px; width:320px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="stat" style="top:422px; inset-inline-start:43px;"><b><bdi dir="ltr">100+</bdi></b><i></i><p>Insert your desired text here. This is a sample text.</p></div><div class="stat" style="top:422px; inset-inline-start:271px;"><b><bdi dir="ltr">46%</bdi></b><i></i><p>Insert your desired text here. This is a sample text.</p></div><svg class="full mir" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="645" cy="360" r="186" fill="none" stroke="#6FDD47" stroke-width="3" stroke-dasharray="0.1 6" stroke-linecap="round"/><circle cx="645" cy="360" r="158" fill="none" stroke="#004BA8" stroke-width="5"/><path d="M831,360 C865,360 880,352 880,315 L880,158 C880,130 900,118 930,118" fill="none" stroke="#004BA8" stroke-width="2.6"/><path d="M831,360 C882,360 897,352 897,315 L897,260 C897,232 917,220 930,220" fill="none" stroke="#004BA8" stroke-width="2.6"/><path d="M831,360 L930,360" fill="none" stroke="#004BA8" stroke-width="2.6"/><path d="M831,360 C882,360 897,368 897,405 L897,458 C897,486 917,498 930,498" fill="none" stroke="#004BA8" stroke-width="2.6"/><path d="M831,360 C865,360 880,368 880,405 L880,562 C880,590 900,602 930,602" fill="none" stroke="#004BA8" stroke-width="2.6"/></svg><p class="ctr">Insert your heading statement here.</p><p class="br" style="top:95px;">Insert your desired text here. This is a sample text.</p><p class="br" style="top:197px;">Insert your desired text here. This is a sample text.</p><p class="br" style="top:337px;">Insert your desired text here. This is a sample text.</p><p class="br" style="top:475px;">Insert your desired text here. This is a sample text.</p><p class="br" style="top:579px;">Insert your desired text here. This is a sample text.</p></div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Defining Uncertainty:</b>Risk &amp; Ignorance</h1><div class="pc p1"><h3>Heading Title Placeholder</h3><i></i><p>Insert your desired text here. This is a sample text.</p><div class="ring"><span>01</span></div></div><div class="pc p2"><h3>Heading Title Placeholder</h3><i></i><p>Insert your desired text here. This is a sample text.</p><div class="ring"><span>02</span></div></div><div class="pc p3"><h3>Heading Title Placeholder</h3><i></i><p>Insert your desired text here. This is a sample text.</p><div class="ring"><span>03</span></div></div></div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>The Decision Process Framework</b></h1><div class="ci gr x1"><div class="o"></div><div class="w"></div><div class="d"></div><h3>Define<br>Problem</h3></div><div class="ci bl x2"><div class="o"></div><div class="w"></div><div class="d"></div><h3>Identify<br>Alternatives</h3></div><div class="ci gr x3"><div class="o"></div><div class="w"></div><div class="d"></div><h3>List States of<br>Nature</h3></div><div class="ci bl x4"><div class="o"></div><div class="w"></div><div class="d"></div><h3>Select<br>Criterion</h3></div><div class="ci gr x5"><div class="o"></div><div class="w"></div><div class="d"></div><h3>Evaluate &amp;<br>Decide</h3></div><p class="ct" style="inset-inline-start:88px;">Insert your desired text here. This is a sample text.</p><p class="ct" style="inset-inline-start:336px;">Insert your desired text here. This is a sample text.</p><p class="ct" style="inset-inline-start:568px;">Insert your desired text here. This is a sample text.</p><p class="ct" style="inset-inline-start:797px;">Insert your desired text here. This is a sample text.</p><p class="ct" style="inset-inline-start:1024px;">Insert your desired text here. This is a sample text.</p></div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Criterion 1:</b> Maximax</h1><p class="lead" style="top:198px; inset-inline-start:42px; width:320px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="nb" style="top:329px; inset-inline-start:43px;"><span class="n">01</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><div class="rule" style="top:455px; inset-inline-start:40px; width:336px;"></div><div class="nb" style="top:482px; inset-inline-start:43px;"><span class="n">02</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><svg class="full mir" viewBox="0 0 1280 720" aria-hidden="true"><g fill="none" stroke="#004BA8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M527,609 L527,190 M519,200 L527,187 L535,200"/><path d="M527,609 L1232,609 M1222,601 L1236,609 L1222,617"/></g></svg><div class="cell v g" style="top:201px; inset-inline-start:542px; --pt:28px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell v y" style="top:201px; inset-inline-start:772px; --pt:28px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell v y" style="top:201px; inset-inline-start:1002px; --pt:28px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell v b" style="top:342px; inset-inline-start:542px; --pt:32px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell v g" style="top:342px; inset-inline-start:772px; --pt:32px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell v y" style="top:342px; inset-inline-start:1002px; --pt:32px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell h b" style="top:482px; inset-inline-start:542px; --pt:18px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell h b" style="top:482px; inset-inline-start:772px; --pt:18px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><div class="cell h g" style="top:482px; inset-inline-start:1002px; --pt:18px;"><h4>Heading Here</h4><p>Insert your desired text here.</p></div><p class="ylab" style="top:240px; inset-inline-start:433px;">Insert text here</p><p class="ylab" style="top:540px; inset-inline-start:433px;">Insert text here</p><p class="yh">Insert<br>heading here</p><p class="xl" style="inset-inline-start:536px;">Insert text here</p><p class="xh">Insert heading here</p><p class="xl" style="inset-inline-end:53px;">Insert text here</p></div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><div class="cn-g"></div><div class="pane"></div><div class="cn-b"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Criterion 2:</b> Maximin</h1><table class="tb"><colgroup><col style="width:200px"><col style="width:231px"><col style="width:232px"><col style="width:169px"></colgroup><tr class="band"><th colspan="4">Heading Here</th></tr><tr class="hd"><th>Heading Here</th><th>Heading Here</th><th>Heading Here</th><th>Heading Here</th></tr><tr class="z"><td>Insert text here</td><td><span class="cur">$</span><bdi dir="ltr">200,000</bdi></td><td><span class="cur">$</span><bdi dir="ltr">-163,000</bdi></td><td><span class="cur">$</span><bdi dir="ltr">10,000</bdi></td></tr><tr><td>Insert text here</td><td><span class="cur">$</span><bdi dir="ltr">100,000</bdi></td><td><span class="cur">$</span><bdi dir="ltr">-30,000</bdi></td><td><span class="cur">$</span><bdi dir="ltr">40,000</bdi></td></tr><tr class="z"><td>Insert text here</td><td><span class="cur">$</span><bdi dir="ltr">25,000</bdi></td><td><span class="cur">$</span><bdi dir="ltr">0</bdi></td><td><span class="cur">$</span><bdi dir="ltr">0</bdi></td></tr><tr><td>Insert text here</td><td><span class="cur">$</span><bdi dir="ltr">200,000</bdi></td><td><span class="cur">$</span><bdi dir="ltr">0</bdi></td><td><span class="cur">$</span><bdi dir="ltr">100,000</bdi></td></tr></table><p class="lead">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="nb" style="top:329px; inset-inline-start:908px;"><span class="n">01</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><div class="rule" style="top:456px; inset-inline-start:903px; width:312px;"></div><div class="nb" style="top:482px; inset-inline-start:908px;"><span class="n">02</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div></div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><div class="cn-b"></div><div class="cn-g"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Criterion 3:</b> Minimax Regret</h1><table class="tb"><colgroup><col style="width:240px"><col style="width:240px"><col style="width:241px"><col style="width:241px"><col style="width:240px"></colgroup><tr class="band"><th class="e"></th><th colspan="3">Heading Here</th><th class="e"></th></tr><tr class="hd"><th class="c0">Heading Here</th><th class="dk">Heading Here</th><th class="dk">Heading Here</th><th class="dk">Heading Here</th><th class="gn">Heading Here</th></tr><tr class="z"><td class="c0">Insert text here</td><td>7</td><td>6</td><td>23</td><td class="last">23</td></tr><tr><td class="c0">Insert text here</td><td>10</td><td>16</td><td>0</td><td class="last">16</td></tr><tr class="z"><td class="c0">Insert text here</td><td>0</td><td>23</td><td>24</td><td class="last">24</td></tr><tr><td class="c0">Insert text here</td><td>16</td><td>21</td><td>4</td><td class="last">21</td></tr></table><div class="box"></div><p class="lead">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="nb" style="top:537px; inset-inline-start:459px;"><span class="n">01</span><h3 style="margin-top:16px;">Heading Title</h3><p>Insert your desired text here.</p></div><div class="nb" style="top:537px; inset-inline-start:790px;"><span class="n">02</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div></div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Expected Monetary Value (EMV) &amp; EOL</b></h1><p class="lead" style="top:198px; inset-inline-start:42px; width:320px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="nb" style="top:320px; inset-inline-start:43px;"><span class="n">01</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><div class="rule" style="top:443px; inset-inline-start:40px; width:346px;"></div><div class="nb" style="top:474px; inset-inline-start:43px;"><span class="n">02</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><table class="tb"><colgroup><col style="width:237px"><col style="width:195px"><col style="width:231px"><col style="width:169px"></colgroup><tr class="band"><th colspan="4">MARKET</th></tr><tr class="hd"><th>Alternative</th><th class="r">Favorable</th><th class="r">Unfavorable</th><th class="r">EMV</th></tr><tr class="z"><td>Insert text here</td><td class="r"><bdi dir="ltr">$ 200,000</bdi></td><td class="r"><bdi dir="ltr">$ -163,000</bdi></td><td class="r"><bdi dir="ltr">$ 10,000</bdi></td></tr><tr><td>Insert text here</td><td class="r"><bdi dir="ltr">$ 100,000</bdi></td><td class="r"><bdi dir="ltr">$ -30,000</bdi></td><td class="r"><bdi dir="ltr">$ 40,000</bdi></td></tr><tr class="z"><td>Insert text here</td><td class="r"><bdi dir="ltr">$ 25,000</bdi></td><td class="r"><bdi dir="ltr">0</bdi></td><td class="r"><bdi dir="ltr">0</bdi></td></tr><tr><td>Insert text here</td><td class="r"><bdi dir="ltr">$ 200,000</bdi></td><td class="r"><bdi dir="ltr">0</bdi></td><td class="r"><bdi dir="ltr">$ 100,000</bdi></td></tr></table></div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Decision Trees:</b> Mapping Sequential Choices</h1><p class="lead" style="top:198px; inset-inline-start:42px; width:320px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><svg class="full mir" viewBox="0 0 1280 720" aria-hidden="true"><g fill="none" stroke="#CFCFCF" stroke-width="1.5"><path d="M342,427 C360,427 372,418 372,400 L372,300 C372,284 382,273 402,272"/><path d="M342,427 C360,427 372,436 372,454 L372,553 C372,569 382,580 402,581"/><path d="M612,305 C630,305 644,296 644,280 L644,252 C644,238 656,229 676,229"/><path d="M612,305 C630,305 644,314 644,330 L644,358 C644,372 656,381 676,381"/><path d="M612,548 C630,548 644,539 644,523 L644,495 C644,481 656,472 676,472"/><path d="M612,548 C630,548 644,557 644,573 L644,605 C644,619 656,628 676,628"/></g><circle cx="509" cy="305" r="102" fill="none" stroke="#6FDD47" stroke-width="3" stroke-dasharray="0.1 5.5" stroke-linecap="round"/><circle cx="509" cy="305" r="89" fill="#fff" stroke="#004BA8" stroke-width="5"/><circle cx="509" cy="548" r="102" fill="none" stroke="#222" stroke-width="3" stroke-dasharray="0.1 5.5" stroke-linecap="round"/><circle cx="509" cy="548" r="89" fill="#fff" stroke="#57DC33" stroke-width="5"/></svg><p class="root">Insert your desired text here.</p><p class="nd" style="top:277px; inset-inline-start:441px;">Insert your desired text here.</p><p class="nd" style="top:521px; inset-inline-start:441px;">Insert your desired text here.</p><p class="bx on" style="top:191px; inset-inline-start:676px;">Insert your desired text here.</p><p class="bx on" style="top:191px; inset-inline-start:980px;">Insert your desired text here.</p><p class="bx" style="top:333px; inset-inline-start:676px;">Insert your desired text here.</p><p class="bx" style="top:333px; inset-inline-start:980px;">Insert your desired text here.</p><p class="bx on" style="top:438px; inset-inline-start:676px;">Insert your desired text here.</p><p class="bx on" style="top:438px; inset-inline-start:980px;">Insert your desired text here.</p><p class="bx" style="top:580px; inset-inline-start:676px;">Insert your desired text here.</p><p class="bx" style="top:580px; inset-inline-start:980px;">Insert your desired text here.</p><span class="tw flip" style="top:214px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10.6"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="tw flip" style="top:356px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10.6"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="tw flip" style="top:461px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10.6"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="tw flip" style="top:603px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10.6"/><path d="M6.8 12h10M12.6 7.8 16.8 12l-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Utility Theory:</b><br>Beyond the Dollars</h1><p class="lead" style="top:259px; inset-inline-start:42px; width:410px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="panel"></div><div class="gs"></div><div class="nb" style="top:441px; inset-inline-start:44px;"><span class="n">01</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><div class="nb" style="top:441px; inset-inline-start:264px;"><span class="n">02</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><p class="ch-h" style="top:127px; inset-inline-start:544px;">Heading Title</p><p class="ch-t" style="top:152px; inset-inline-start:544px;">Insert your desired text here.</p><div class="ch-l" style="top:193px; inset-inline-start:543px; width:680px;"></div><svg class="full chart" id="line-chart" viewBox="0 0 1280 720" aria-hidden="true"></svg><div class="legend" id="line-legend" style="top:616px; inset-inline-start:567px; width:653px;"></div></div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Sensitivity Analysis and</b><br>Robustness Testing</h1><p class="lead" style="top:247px; inset-inline-start:42px; width:490px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="nb" style="top:356px; inset-inline-start:43px;"><span class="n">01</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><div class="rule" style="top:493px; inset-inline-start:39px; width:217px;"></div><div class="nb" style="top:509px; inset-inline-start:43px;"><span class="n">02</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><div class="nb" style="top:356px; inset-inline-start:306px;"><span class="n">03</span><h3>Heading Title</h3><p>Insert your desired text here.</p></div><div class="rule" style="top:493px; inset-inline-start:302px; width:217px;"></div><p class="ch-h" style="top:126px; inset-inline-start:642px;">Heading Title</p><p class="ch-t" style="top:151px; inset-inline-start:642px;">Insert your desired text here.</p><div class="ch-l" style="top:192px; inset-inline-start:640px; width:583px;"></div><svg class="full chart" id="bar-chart" viewBox="0 0 1280 720" aria-hidden="true"></svg><div class="legend" id="bar-legend" style="top:636px; inset-inline-start:640px; width:581px; gap:16px;"></div></div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13"><div class="cn-b"></div><div class="cn-g"></div><div class="sq"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Conclusion:</b> Principles for<br>Effective Decision Making</h1><p class="lead" style="top:258px; inset-inline-start:48px; width:400px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="stat" style="top:380px; inset-inline-start:43px; width:159px;"><b><bdi dir="ltr">100+</bdi></b><i style="margin-top:14px"></i><p style="margin-top:20px; width:138px;">Insert your desired text here.</p></div><div class="stat" style="top:380px; inset-inline-start:232px; width:159px;"><b><bdi dir="ltr">45%</bdi></b><i style="margin-top:14px"></i><p style="margin-top:20px; width:138px;">Insert your desired text here.</p></div><div class="bd g" style="top:90px; inset-inline-start:793px; width:487px;"><span class="num">04</span><h3>Heading Title Placeholder</h3><p style="inset-inline-start:291px; width:150px;">Insert your desired text here. This is a sample text.</p></div><div class="bd g" style="top:236px; inset-inline-start:679px; width:601px;"><span class="num">03</span><h3>Heading Title Placeholder</h3><p style="inset-inline-start:329px; width:212px;">Insert your desired text here. This is a sample text.</p></div><div class="bd b" style="top:381px; inset-inline-start:489px; width:791px;"><span class="num">02</span><h3>Heading Title Placeholder</h3><p style="inset-inline-start:342px; width:250px;">Insert your desired text here. This is a sample text.</p></div><div class="bd b" style="top:526px; inset-inline-start:338px; width:942px;"><span class="num">01</span><h3>Heading Title Placeholder</h3><p style="inset-inline-start:366px; width:250px;">Insert your desired text here. This is a sample text.</p></div></div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14"><div class="cn-b"></div><div class="cn-g"></div><p class="biz">YOUR BUSINESS NAME HERE</p><h1 class="ttl"><b>Thank You</b>Connect With Us</h1><p class="lead" style="top:281px; inset-inline-start:45px; width:390px;">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="panel"></div><div class="sq g"></div><div class="logo"><svg viewBox="0 0 60 66" aria-hidden="true"><path transform="rotate(-9 30 33)" d="M9 9.5C22 3.5 42 3 53.5 8.5 57.5 24 57 42 52.5 57.5 39 63.5 19 63 7.5 57 4 42 4.5 24 9 9.5Z" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="round"/></svg></div><p class="logo-t">YOUR COMPANY<br>LOGO HERE</p><svg class="full mir" viewBox="0 0 1280 720" aria-hidden="true"><path d="M850,116 h280 a11,11 0 0 1 0,22 h-280 z" fill="url(#stepbar)"/><path d="M865,138 L1140,138 L1230,198 L865,198 Z" fill="url(#stepsh)"/><path d="M715,249 h280 a11,11 0 0 1 0,22 h-280 z" fill="url(#stepbar)"/><path d="M730,271 L1005,271 L1095,331 L730,331 Z" fill="url(#stepsh)"/><path d="M605,402 h280 a11,11 0 0 1 0,22 h-280 z" fill="url(#stepbar)"/><path d="M620,424 L895,424 L985,484 L620,484 Z" fill="url(#stepsh)"/><path d="M450,549 h280 a11,11 0 0 1 0,22 h-280 z" fill="url(#stepbar)"/><path d="M465,571 L740,571 L830,631 L465,631 Z" fill="url(#stepsh)"/></svg><div class="st"><span class="ico" style="top:67px; inset-inline-start:884px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V21H3z"/><path d="M3 9.5 12 16l9-6.5"/><path d="M6.5 11.5V5.2h11v6.3" fill="#fff"/><path d="M8.6 7.5h6.8M8.6 9.8h6.8M8.6 12h4" stroke-linecap="round"/></svg></span><h3 style="top:168px; inset-inline-start:888px;">Email Address</h3><p style="top:190px; inset-inline-start:888px;">Insert your desired text here.</p></div><div class="st"><span class="ico" style="top:200px; inset-inline-start:748px;"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 3.2 9 2.4l2.2 4.7-1.9 1.4c.6 2.5 2.2 4.6 4.4 6.1l1.9-1.3 4 3.2-1.4 2.2c-1 1.4-3 1.8-4.6.9-4.6-2.6-7.7-6.9-8.6-11.9-.3-1.4.3-2.3 1.6-2.5z"/><path d="M14 3.5a7 7 0 0 1 6.5 6.5M14 6.4a4.2 4.2 0 0 1 3.6 3.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><h3 style="top:301px; inset-inline-start:753px;">Contact Number/s</h3><p style="top:323px; inset-inline-start:753px;">Insert your desired text here.</p></div><div class="st"><span class="ico" style="top:353px; inset-inline-start:647px;"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 21V10h6v11zM8.5 21V4.5h7V21zM16.5 21V8h6v13z"/><g fill="#fff"><rect x="3" y="12" width="1.4" height="1.6"/><rect x="5" y="12" width="1.4" height="1.6"/><rect x="3" y="15" width="1.4" height="1.6"/><rect x="5" y="15" width="1.4" height="1.6"/><rect x="10" y="6.5" width="1.5" height="1.7"/><rect x="12.6" y="6.5" width="1.5" height="1.7"/><rect x="10" y="10" width="1.5" height="1.7"/><rect x="12.6" y="10" width="1.5" height="1.7"/><rect x="10" y="13.5" width="1.5" height="1.7"/><rect x="12.6" y="13.5" width="1.5" height="1.7"/><rect x="18" y="10" width="1.4" height="1.6"/><rect x="20" y="10" width="1.4" height="1.6"/><rect x="18" y="13" width="1.4" height="1.6"/><rect x="20" y="13" width="1.4" height="1.6"/><rect x="11" y="17.5" width="2" height="3.5"/></g></svg></span><h3 style="top:454px; inset-inline-start:643px;">Office Location</h3><p style="top:476px; inset-inline-start:643px;">Insert your desired text here.</p></div><div class="st"><span class="ico" style="top:500px; inset-inline-start:483px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9.6"/><ellipse cx="12" cy="12" rx="4.3" ry="9.6"/><path d="M2.4 12h19.2M12 2.4v19.2M4 7h16M4 17h16"/></svg></span><h3 style="top:601px; inset-inline-start:488px;">Company Website</h3><p style="top:623px; inset-inline-start:488px;">Insert your desired text here.</p></div></div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 14</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"x": [1, 2, 3, 4], "series": [{"name": "Item 1", "color": "#004BA8", "values": [4.3, 2.5, 3.5, 4.5]}, {"name": "Item 2", "color": "#8DE96A", "values": [2.4, 4.4, 1.8, 2.8]}, {"name": "Item 3", "color": "#007C76", "values": [2, 2, 3, 5]}]}</script>
+<script type="application/json" id="chart-data-2">{"categories": ["Item 1", "Item 2", "Item 3", "Item 4"], "series": [{"name": "Heading 1", "color": "#004BA8", "values": [4.3, 2.5, 3.5, 4.5]}, {"name": "Heading 2", "color": "#8DE96A", "values": [2.4, 4.4, 1.8, 2.8]}, {"name": "Heading 3", "color": "#007C76", "values": [2, 2, 3, 5]}]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // الإحداثي الأفقي ينعكس في العربية حتى تبدأ القيم من جهة البداية
+  function X(x) { return RTL ? 1280 - x : x; }
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  // رسم خطي ناعم: المحور الأفقي 0–4.5 والرأسي 0–6
+  function drawLine() {
+    var d = JSON.parse(document.getElementById('chart-data').textContent), svg = document.getElementById('line-chart'), out = '';
+    var x0 = 567, x1 = 1220, y0 = 561, y1 = 233;
+    function px(v) { return x0 + (x1 - x0) * v / 4.5; } function py(v) { return y0 - (y0 - y1) * v / 6; }
+    for (var g = 0; g <= 6; g++) { out += '<line x1="' + X(540) + '" x2="' + X(1220) + '" y1="' + py(g) + '" y2="' + py(g) + '" stroke="#D9D9D9" stroke-width="1"/>';
+      out += '<text x="' + X(551) + '" y="' + (py(g) + 5) + '" text-anchor="end"' + (RTL ? ' transform="translate(0 0)"' : '') + '>' + g + '</text>'; }
+    for (var t = 0; t <= 9; t++) { var v = t / 2; out += '<text x="' + X(px(v)) + '" y="589" text-anchor="middle">' + v + '</text>'; }
+    d.series.forEach(function (s) {
+      var pts = s.values.map(function (v, i) { return [X(px(d.x[i])), py(v)]; }), p = 'M' + pts[0][0] + ',' + pts[0][1];
+      for (var i = 0; i < pts.length - 1; i++) {
+        var a = pts[i - 1] || pts[i], b = pts[i], c = pts[i + 1], e = pts[i + 2] || c;
+        p += ' C' + (b[0] + (c[0] - a[0]) / 6).toFixed(1) + ',' + (b[1] + (c[1] - a[1]) / 6).toFixed(1) + ' ' + (c[0] - (e[0] - b[0]) / 6).toFixed(1) + ',' + (c[1] - (e[1] - b[1]) / 6).toFixed(1) + ' ' + c[0] + ',' + c[1];
+      }
+      out += '<path d="' + p + '" fill="none" stroke="' + s.color + '" stroke-width="3" stroke-linecap="round"/>';
+      pts.forEach(function (q) { out += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="3.3" fill="' + s.color + '"/>'; });
+    });
+    svg.innerHTML = out;
+    if (RTL) Array.prototype.forEach.call(svg.querySelectorAll('text[text-anchor="end"]'), function (t) { t.setAttribute('text-anchor', 'start'); });
+    document.getElementById('line-legend').innerHTML = d.series.map(function (s) { return '<span><i class="ln" style="background:' + s.color + '"></i>' + esc(s.name) + '</span>'; }).join('');
+  }
+  // أعمدة أفقية مكدّسة: المحور 0–14
+  function drawBars() {
+    var d = JSON.parse(document.getElementById('chart-data-2').textContent), svg = document.getElementById('bar-chart'), out = '';
+    var x0 = 640, x1 = 1221, top = 218, bot = 585, n = d.categories.length, step = (bot - top) / n, bh = 36;
+    function px(v) { return x0 + (x1 - x0) * v / 14; }
+    for (var g = 0; g <= 14; g += 2) { out += '<line x1="' + X(px(g)) + '" x2="' + X(px(g)) + '" y1="' + top + '" y2="' + bot + '" stroke="#D9D9D9" stroke-width="1"/>';
+      out += '<text x="' + X(px(g)) + '" y="612" text-anchor="middle">' + g + '</text>'; }
+    for (var i = 0; i < n; i++) {
+      var y = bot - step * (i + 0.5) - bh / 2, acc = 0;
+      d.series.forEach(function (s) { var v = s.values[i], a = X(px(acc)), b = X(px(acc + v)); out += '<rect x="' + Math.min(a, b).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + Math.abs(b - a).toFixed(1) + '" height="' + bh + '" fill="' + s.color + '"/>'; acc += v; });
+      out += '<text x="' + X(624) + '" y="' + (y + bh / 2 + 5).toFixed(1) + '" text-anchor="' + (RTL ? 'start' : 'end') + '">' + esc(d.categories[i]) + '</text>';
+    }
+    svg.innerHTML = out;
+    document.getElementById('bar-legend').innerHTML = d.series.map(function (s) { return '<span><i class="sw" style="background:' + s.color + '"></i>' + esc(s.name) + '</span>'; }).join('');
+  }
+  drawLine(); drawBars();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
