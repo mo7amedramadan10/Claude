@@ -1,0 +1,69 @@
+{
+  "key": "sl-global-business-strategy",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🌍",
+  "name": "استراتيجية الأعمال العالمية",
+  "nameEn": "Global Business Strategy",
+  "description": "13 شريحة بهوية كحلية: نظرة عامة، السوق، الانتشار، الأولويات، العملاء، التموضع، التنفيذ والأثر المالي",
+  "descriptionEn": "13 navy slides: overview, market, footprint, priorities, segments, positioning, roadmap and financial impact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة على الاستراتيجية",
+      "titleEn": "Global Strategy Overview"
+    },
+    {
+      "title": "مشهد السوق العالمي",
+      "titleEn": "Global Market Landscape",
+      "needsData": true
+    },
+    {
+      "title": "الانتشار العالمي الحالي",
+      "titleEn": "Current Global Footprint",
+      "needsData": true
+    },
+    {
+      "title": "أولويات الأسواق",
+      "titleEn": "Market Prioritization"
+    },
+    {
+      "title": "شرائح العملاء المستهدفة",
+      "titleEn": "Target Customer Segments"
+    },
+    {
+      "title": "التموضع التنافسي",
+      "titleEn": "Competitive Positioning"
+    },
+    {
+      "title": "استراتيجية دخول السوق",
+      "titleEn": "Market Entry Strategy"
+    },
+    {
+      "title": "نموذج التشغيل العالمي",
+      "titleEn": "Global Operating Model"
+    },
+    {
+      "title": "مبادرات النمو",
+      "titleEn": "Growth Initiatives",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "الأثر المالي",
+      "titleEn": "Financial Impact",
+      "needsData": true
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ رسم الأثر المالي يُرسم من كتلة chart-data (الفئات والسلسلتان وقيمهما)."
+}
