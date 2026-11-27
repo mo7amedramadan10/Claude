@@ -1,0 +1,78 @@
+{
+  "key": "sl-field-service-management",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🛠️",
+  "name": "إدارة الخدمة الميدانية",
+  "nameEn": "Field Service Management",
+  "description": "أربع عشرة شريحة لإدارة الخدمة الميدانية: المؤشرات، التحديات، التشغيل، الإرسال، المخزون، المنظومة، لوحة الأداء والخارطة",
+  "descriptionEn": "14 field service slides: KPIs, challenges, operating model, dispatch, inventory, ecosystem, dashboard and roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة بالمؤشرات",
+      "titleEn": "Overview with KPIs",
+      "needsData": true
+    },
+    {
+      "title": "تحديات الخدمة الميدانية",
+      "titleEn": "Field Service Challenges",
+      "needsData": true
+    },
+    {
+      "title": "نموذج التشغيل",
+      "titleEn": "Operating Model",
+      "needsData": true
+    },
+    {
+      "title": "سير عمل الجدولة والإرسال",
+      "titleEn": "Scheduling & Dispatch Workflow"
+    },
+    {
+      "title": "رحلة الفني",
+      "titleEn": "Technician Journey"
+    },
+    {
+      "title": "تحسين المسارات والقوى العاملة",
+      "titleEn": "Route & Workforce Optimization"
+    },
+    {
+      "title": "إدارة المخزون وقطع الغيار",
+      "titleEn": "Inventory & Spare Parts Management",
+      "needsData": true
+    },
+    {
+      "title": "الأصول والصيانة وأوامر العمل",
+      "titleEn": "Asset, Maintenance & Work Orders",
+      "needsData": true
+    },
+    {
+      "title": "تجربة خدمة العملاء",
+      "titleEn": "Customer Service Experience",
+      "needsData": true
+    },
+    {
+      "title": "المنظومة التقنية",
+      "titleEn": "FSM Technology Ecosystem",
+      "needsData": true
+    },
+    {
+      "title": "مؤشرات الأداء ولوحة المتابعة",
+      "titleEn": "KPIs & Performance Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق التحول",
+      "titleEn": "Transformation Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "الختام",
+      "titleEn": "Closing"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ رسما الأعمدة في شريحة لوحة المؤشرات يُقرآن من كتلتي chart-data وchart-data-2 (الفئات والقيم والحد الأعلى والخطوة) فعدّل أرقامهما هناك."
+}
