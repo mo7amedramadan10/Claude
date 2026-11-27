@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض مؤسسي بالأزرق الفاتح</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «شركات بالأزرق الفاتح»: خلفية بيضاء بهالات خزامية باهتة، عناوين بتدرّج من الكحلي إلى الأزرق الفاتح، بطاقات بيضاء مدوّرة بظل خزامي ونقاط ثلاث، صور مكاتب بزوايا علوية مدوّرة. الصور التي تعلوها بطاقة في الأصل (الصنف fl) تُعكس في العربية حتى تبقى البطاقة فوق موضعها. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #111111; --tx: #1A1A1A; --accent: #2B43FF; --navy: #1E2290; --sky: #6F82F7; --dot: #A9B5FF; --div: #3645D4; --lav: #F3F3FF; --panel: #F7F7FF; --purple: #818EFF; --gd: 90deg; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  html[dir="rtl"] { --gd: 270deg; }
+  .frame > * { position: absolute; margin: 0; }
+  /* هالة خزامية باهتة في الخلفية */
+  .glow { border-radius: 50%; background: radial-gradient(closest-side, #EFEFFF 0%, #F2F2FF 55%, rgb(243 243 255 / 0) 100%); }
+  /* العنوان بتدرّج لكل سطر */
+  .tt { font-size: 62px; font-weight: 700; line-height: 68px; letter-spacing: -0.5px; }
+  .tt span { display: block; width: fit-content; background: linear-gradient(var(--gd), #1E2290 0%, #3743CC 45%, #6F82F7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: 4px; }
+  html[lang="ar"] .tt { font-weight: 800; letter-spacing: 0; line-height: 74px; font-size: 60px; }
+  .tx { font-size: 19px; line-height: 25.5px; color: var(--tx); }
+  .sm { font-size: 17px; line-height: 22.5px; color: var(--tx); }
+  html[lang="ar"] .tx { font-size: 19px; line-height: 27px; }
+  html[lang="ar"] .sm { font-size: 17px; line-height: 23.5px; }
+  .card { background: #fff; border-radius: 20px; box-shadow: 0 8px 26px rgb(90 100 255 / .2); }
+  .ghost { background: var(--panel); border-radius: 44px; box-shadow: 0 8px 26px rgb(110 120 255 / .16); }
+  .dots { display: flex; gap: 5px; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--dot); }
+  .dots.s i { width: 11px; height: 11px; }
+  .dots.f i { background: #E9EBFF; }
+  .card > *, .ghost > * { position: absolute; margin: 0; }
+  .h { font-size: 22px; font-weight: 700; line-height: 1.25; color: var(--ink); }
+  .h2 { font-size: 25px; font-weight: 400; line-height: 1.25; color: var(--ink); }
+  .lb { font-size: 17px; line-height: 1.3; color: var(--tx); }
+  .big { font-size: 38px; font-weight: 700; line-height: 1.1; color: var(--accent); }
+  .vl { width: 2px; background: var(--div); }
+  .ic { width: 52px; height: 52px; color: var(--accent); }
+  .ic svg { width: 100%; height: 100%; }
+  img.ph { object-fit: cover; display: block; }
+  /* صورة تعلوها بطاقة في الأصل: تُعكس في العربية لتبقى البطاقة المطبوعة تحت البطاقة المعكوسة */
+  html[dir="rtl"] img.fl { transform: scaleX(-1); }
+  html[dir="rtl"] .mir { transform: scaleX(-1); }
+
+  /* 1 الغلاف */
+  .s1 .logo { top: 92px; inset-inline-start: 64px; width: 74px; height: 80px; color: var(--purple); }
+  .s1 .lgt { top: 108px; inset-inline-start: 172px; font-size: 17px; line-height: 26px; letter-spacing: 1.6px; color: var(--ink); }
+  .s1 .big-t { top: 248px; inset-inline-start: 62px; font-size: 106px; font-weight: 600; line-height: 128px; color: transparent; -webkit-text-stroke: 1.2px #3F4BDC; letter-spacing: -1px; white-space: nowrap; }
+  html[lang="ar"] .s1 .big-t { font-size: 120px; font-weight: 800; top: 222px; letter-spacing: 0; }
+  .s1 .bar { top: 374px; inset-inline-start: 62px; width: 102px; height: 5px; border-radius: 3px; background: var(--accent); }
+  .s1 .sub { top: 398px; inset-inline-start: 64px; font-size: 22px; letter-spacing: 2.6px; color: var(--ink); }
+  html[lang="ar"] .s1 .sub { letter-spacing: 0; font-size: 26px; top: 394px; }
+  .s1 .tx { top: 510px; inset-inline-start: 64px; width: 270px; }
+  .s1 .photo { top: 106px; inset-inline-start: 760px; width: 456px; height: 534px; border-radius: 52px 52px 0 0; }
+  .s1 .stats { top: 493px; inset-inline-start: 400px; width: 600px; height: 112px; display: flex; align-items: center; }
+  .s1 .st { position: relative; flex: 1; text-align: center; }
+  .s1 .st b { display: block; font-size: 22px; font-weight: 700; line-height: 30px; color: var(--ink); }
+  .s1 .st span { display: block; font-size: 17.5px; line-height: 26px; color: #3A49D6; }
+  .s1 .st + .st { border-inline-start: 2px solid var(--div); }
+
+  /* 2 نبذة عن الشركة */
+  .s2 .tt { top: 182px; inset-inline-start: 83px; }
+  .s2 .photo { top: 136px; inset-inline-start: 490px; width: 384px; height: 584px; border-radius: 50px 50px 0 0; }
+  .s2 .card { top: 407px; inset-inline-start: 208px; width: 328px; height: 213px; }
+  .s2 .card .lb { top: 28px; inset-inline-start: 24px; }
+  .s2 .card .dots { top: 30px; inset-inline-end: 26px; }
+  .s2 .card .big { top: 66px; inset-inline-start: 24px; }
+  .s2 .card .sm { top: 125px; inset-inline-start: 24px; width: 290px; }
+  .s2 .track { top: 236px; inset-inline-start: 826px; width: 279px; height: 32px; border-radius: 16px; background: #fff; box-shadow: 0 6px 18px rgb(90 100 255 / .14); }
+  .s2 .fill { top: 236px; inset-inline-start: 826px; width: 238px; height: 32px; border-radius: 10px; background: var(--accent); }
+  .s2 .arr { top: 244px; inset-inline-start: 1028px; width: 24px; height: 16px; color: #fff; }
+  .s2 .pct { top: 279px; inset-inline-end: 227px; text-align: end; font-size: 21px; line-height: 28px; color: var(--accent); }
+  .s2 .pl { top: 306px; inset-inline-end: 227px; text-align: end; font-size: 18px; line-height: 24px; color: var(--tx); }
+  .s2 .p1 { top: 384px; inset-inline-start: 914px; width: 330px; }
+  .s2 .p2 { top: 527px; inset-inline-start: 914px; width: 330px; }
+
+  /* 3 الرؤية والرسالة */
+  .s3 .tt { top: 156px; inset-inline-start: 88px; }
+  .s3 .dots { top: 147px; inset-inline-start: 550px; }
+  .s3 .tx { top: 351px; inset-inline-start: 81px; width: 530px; }
+  .s3 .photo { top: 127px; inset-inline-start: 665px; width: 418px; height: 593px; border-radius: 46px 46px 0 0; }
+  .s3 .ghost { top: 128px; inset-inline-start: 1141px; width: 300px; height: 640px; }
+  .s3 .card { top: 455px; inset-inline-start: 88px; width: 648px; height: 227px; border-radius: 40px; }
+  .s3 .card .vl { top: 32px; inset-inline-start: 327px; height: 163px; }
+  .cols2 .c { position: absolute; width: 285px; }
+  .cols2 .c .dots { position: static; margin-bottom: 22px; }
+  .cols2 .c .h2 { margin: 0 0 10px; }
+  .cols2 .c .sm { margin: 0; }
+  .s3 .c1 { top: 48px; inset-inline-start: 28px; }
+  .s3 .c2 { top: 48px; inset-inline-start: 351px; }
+
+  /* 4 بيان المشكلة */
+  .s4 .glow { opacity: .9; }
+  .s4 .tt { top: 92px; inset-inline-start: 88px; }
+  .s4 .tx { top: 281px; inset-inline-start: 88px; width: 480px; }
+  .s4 .card.k { top: 431px; inset-inline-start: 88px; width: 495px; height: 212px; }
+  .s4 .card.k .lb { top: 28px; inset-inline-start: 24px; }
+  .s4 .card.k .dots { top: 30px; inset-inline-end: 24px; }
+  .s4 .card.k .big { top: 66px; inset-inline-start: 24px; }
+  .s4 .card.k .sm { top: 124px; inset-inline-start: 24px; width: 450px; }
+  .s4 .trk { top: 141px; inset-inline-start: 655px; width: 20px; height: 475px; border-radius: 10px; background: #fff; box-shadow: 0 4px 14px rgb(90 100 255 / .18); }
+  .s4 .thm { top: 167px; inset-inline-start: 652px; width: 27px; height: 90px; border-radius: 13px; background: var(--accent); }
+  .s4 .g1 { top: 85px; inset-inline-start: 786px; width: 323px; height: 558px; }
+  .s4 .g2 { top: 85px; inset-inline-start: 1167px; width: 300px; height: 558px; }
+  .s4 .card.f { top: 120px; inset-inline-start: 735px; width: 302px; height: 174px; border-radius: 30px; }
+  .s4 .card.f .h { top: 26px; inset-inline-start: 20px; }
+  .s4 .card.f .dots { top: 33px; inset-inline-end: 40px; }
+  .s4 .card.f .sm { top: 79px; inset-inline-start: 20px; width: 240px; }
+  .it { width: 250px; }
+  .it .h { margin: 0 0 14px; }
+  .it .sm { margin: 0; }
+  .s4 .i2 { top: 346px; inset-inline-start: 823px; }
+  .s4 .i3 { top: 494px; inset-inline-start: 823px; }
+
+  /* 5 الحل */
+  .s5 .gt { top: -60px; inset-inline-start: 632px; width: 584px; height: 166px; border-radius: 50px; }
+  .s5 .gb { top: 165px; inset-inline-start: 632px; width: 584px; height: 491px; border-radius: 40px; }
+  .s5 .tt { top: 112px; inset-inline-start: 88px; font-size: 66px; line-height: 74px; }
+  .s5 .dots { top: 231px; inset-inline-start: 438px; }
+  .s5 .tx { top: 301px; inset-inline-start: 88px; width: 450px; }
+  .s5 .photo { top: 408px; inset-inline-start: 88px; width: 466px; height: 248px; border-start-end-radius: 32px; border-start-start-radius: 0; }
+  .s5 .card { top: 200px; inset-inline-start: 581px; width: 302px; height: 174px; border-radius: 30px; }
+  .s5 .card .it { position: absolute; top: 34px; inset-inline-start: 27px; width: 240px; }
+  .s5 .it .h { margin-bottom: 14px; }
+  .s5 .i2 { top: 234px; inset-inline-start: 945px; }
+  .s5 .i3 { top: 442px; inset-inline-start: 673px; }
+  .s5 .i4 { top: 442px; inset-inline-start: 945px; }
+  .s5 .ln { top: 599px; inset-inline-start: 680px; width: 433px; height: 2px; background: #3D49AF; }
+
+  /* 6 القيمة المقترحة */
+  .s6 .photo { top: 126px; inset-inline-start: 65px; width: 535px; height: 385px; border-radius: 34px 52px 0 0; }
+  html[dir="rtl"] .s6 .photo { border-radius: 52px 34px 0 0; }
+  .s6 .card { top: 510px; inset-inline-start: 44px; width: 600px; height: 112px; }
+  .s6 .card .lb { top: 18px; inset-inline-start: 20px; }
+  .s6 .card .big { top: 45px; inset-inline-start: 20px; font-size: 38px; }
+  .s6 .card .vl { top: 27px; inset-inline-start: 295px; height: 58px; }
+  .s6 .card .sm { top: 22px; inset-inline-start: 329px; width: 250px; }
+  .s6 .tt { top: 158px; inset-inline-start: 681px; }
+  .s6 .tx { top: 322px; inset-inline-start: 681px; width: 520px; }
+  .s6 .trk { top: 441px; inset-inline-start: 733px; width: 22px; height: 223px; border-radius: 11px; background: #fff; box-shadow: 0 4px 14px rgb(90 100 255 / .2); }
+  .s6 .thm { top: 442px; inset-inline-start: 731px; width: 26px; height: 90px; border-radius: 13px; background: var(--accent); }
+  .s6 .it { width: 345px; }
+  .s6 .i1 { top: 445px; inset-inline-start: 808px; }
+  .s6 .i2 { top: 566px; inset-inline-start: 845px; }
+
+  /* 7 الخدمات */
+  .s7 .tt { top: 92px; inset-inline-start: 88px; }
+  .s7 .photo { top: 64px; inset-inline-start: 751px; width: 529px; height: 592px; border-radius: 62px 0 0 0; }
+  .s7 .pnl { top: 552px; inset-inline-start: 81px; width: 1118px; height: 220px; border-radius: 44px; background: rgb(247 247 255 / .92); box-shadow: 0 8px 26px rgb(110 120 255 / .14); }
+  .s7 .card { top: 304px; width: 249px; height: 350px; }
+  .s7 .card .ic { top: 37px; inset-inline-start: 18px; }
+  .s7 .card .h { top: 132px; inset-inline-start: 17px; font-size: 24px; }
+  .s7 .card .tx { top: 180px; inset-inline-start: 17px; width: 222px; }
+
+  /* 8 المنهجية */
+  .s8 .card { top: 163px; inset-inline-start: 138px; width: 659px; height: 127px; border-radius: 22px; }
+  .s8 .card .tt { top: 28px; inset-inline-start: 36px; font-size: 62px; }
+  .s8 .card .dots { top: 56px; inset-inline-end: 47px; }
+  .s8 .p1 { top: 136px; inset-inline-start: 652px; width: 424px; height: 584px; border-radius: 54px 54px 0 0; }
+  .s8 .p2 { top: 136px; inset-inline-start: 1114px; width: 166px; height: 584px; border-start-start-radius: 52px; }
+  .s8 .vl { height: 308px; top: 356px; }
+  .s8 .it { width: 240px; }
+  .s8 .it .h { margin-bottom: 10px; }
+
+  /* 9 فرصة السوق */
+  .s9 .pa { top: 134px; inset-inline-start: 76px; width: 496px; height: 148px; border-start-start-radius: 14px; border-start-end-radius: 22px; border-end-end-radius: 44px; border-end-start-radius: 44px; }
+  .s9 .pb { top: 320px; inset-inline-start: 76px; width: 496px; height: 400px; border-radius: 42px 42px 0 0; }
+  .s9 .tt { top: 160px; inset-inline-start: 633px; }
+  .s9 .dots { top: 193px; inset-inline-start: 1075px; }
+  .s9 .card { top: 348px; inset-inline-start: 440px; width: 704px; height: 199px; border-radius: 22px; }
+  .s9 .card .ic { top: 31px; width: 46px; height: 46px; }
+  .s9 .card .sm { top: 96px; width: 200px; font-size: 18px; line-height: 22.5px; }
+  .s9 .card .vl { top: 26px; height: 146px; }
+  .s9 .tx { top: 577px; inset-inline-start: 640px; width: 520px; }
+
+  /* 10 دراسة حالة */
+  .s10 .pp { top: 0; inset-inline-start: 41px; width: 454px; height: 720px; background: var(--purple); box-shadow: -8px 0 16px rgb(0 0 0 / .06); }
+  html[dir="rtl"] .s10 .pp { box-shadow: 8px 0 16px rgb(0 0 0 / .06); }
+  .s10 .bez { top: 182px; inset-inline-start: 115px; width: 501px; height: 334px; border-radius: 14px 14px 0 0; background: #0E0E10; box-shadow: inset 0 0 0 2px #3A3A3E; }
+  .s10 .scr { top: 199px; inset-inline-start: 124px; width: 483px; height: 309px; }
+  .s10 .base { top: 512px; inset-inline-start: 82px; width: 567px; height: 20px; border-radius: 2px 2px 14px 14px; background: linear-gradient(#8A8A8E, #4A4A4E 60%, #2C2C2E); }
+  .s10 .notch { top: 512px; inset-inline-start: 327px; width: 76px; height: 8px; border-radius: 0 0 8px 8px; background: #3B3B3F; }
+  .s10 .tt { top: 138px; inset-inline-start: 713px; }
+  .s10 .tx { top: 241px; inset-inline-start: 713px; width: 480px; }
+  .s10 .card { top: 434px; inset-inline-start: 536px; width: 648px; height: 228px; border-radius: 22px; }
+  .s10 .card .vl { top: 33px; inset-inline-start: 328px; height: 163px; }
+  .s10 .c1 { top: 49px; inset-inline-start: 27px; }
+  .s10 .c2 { top: 49px; inset-inline-start: 350px; }
+
+  /* 11 الفريق */
+  .s11 .pt { width: 136px; height: 144px; border-radius: 16px 16px 0 0; }
+  .s11 .nm { width: 184px; height: 72px; border-radius: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .s11 .nm > * { position: static; }
+  .s11 .nm b { font-size: 20px; line-height: 26px; color: var(--ink); }
+  .s11 .nm i { font-size: 15px; line-height: 20px; color: var(--tx); }
+  .s11 .tt { top: 140px; inset-inline-start: 795px; }
+  .s11 .tx { top: 320px; inset-inline-start: 795px; width: 400px; }
+  .s11 .btn { top: 535px; inset-inline-start: 795px; width: 274px; height: 57px; border-radius: 12px; background: var(--accent); color: #fff; font-size: 22px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 8px 20px rgb(43 67 255 / .25); }
+
+  /* 12 التواصل */
+  .s12 .tt { top: 104px; inset-inline-start: 88px; }
+  .s12 .tx { top: 285px; inset-inline-start: 88px; width: 520px; }
+  .s12 .pnl { top: 575px; inset-inline-start: 62px; width: 592px; height: 200px; border-radius: 40px; background: var(--panel); box-shadow: 0 8px 30px rgb(110 120 255 / .24); }
+  .s12 .card { top: 432px; width: 262px; height: 243px; }
+  .s12 .card .ic { top: 20px; inset-inline-start: 16px; width: 54px; height: 56px; }
+  .s12 .card .h { top: 92px; inset-inline-start: 20px; }
+  .s12 .card .sm { top: 136px; inset-inline-start: 20px; width: 224px; font-size: 17.5px; }
+  html[lang="ar"] .s12 .card .sm { font-size: 16.5px; line-height: 22.5px; }
+  .s12 .photo { top: 64px; inset-inline-start: 751px; width: 529px; height: 592px; border-start-start-radius: 64px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="glow" style="top:-500px; inset-inline-start:-700px; width:1450px; height:1450px" aria-hidden="true"></div><svg class="logo" viewBox="0 0 74 80" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M17 3C34 -1 56 1 67 7c7 4 7 16 6 30-1 15-3 31-8 36-6 6-30 7-46 3C7 73 2 66 1 52 0 37 2 13 7 8c2-3 6-4 10-5zM25 16c-6 1-9 4-10 11-1 9-1 22 1 29 2 6 8 8 16 8 9 0 18-1 22-5 4-5 5-20 4-30-1-7-4-11-10-12-8-2-16-2-23-1z"/></svg><p class="lgt">شعار شركتك<br>هنا</p><h1 class="big-t">مؤسسي</h1><div class="bar"></div><p class="sub">قالب عرض تقديمي</p><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><img class="ph photo fl" src="/templates/freeform/sl-light-blue-corporate/assets/office.jpg" alt="مكتب مفتوح مشرق"><div class="card stats"><div class="st"><b><bdi dir="ltr">25,000+</bdi></b><span>حرّر النص هنا</span></div><div class="st"><b><bdi dir="ltr">15,000+</bdi></b><span>حرّر النص هنا</span></div><div class="st"><b><bdi dir="ltr">100,000+</bdi></b><span>حرّر النص هنا</span></div></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="glow" style="top:-560px; inset-inline-start:-620px; width:1250px; height:1250px" aria-hidden="true"></div><h1 class="tt"><span>نبذة عن</span><span>الشركة</span></h1><img class="ph photo fl" src="/templates/freeform/sl-light-blue-corporate/assets/meeting.jpg" alt="اجتماع عمل حول طاولة"><div class="card"><p class="lb">حرّر النص هنا</p><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><p class="big"><bdi dir="ltr">98%</bdi></p><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p></div><div class="track"></div><div class="fill"></div><svg class="arr mir" viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8h19M15 2.5 21 8l-6 5.5"/></svg><p class="pct"><bdi dir="ltr">98%</bdi></p><p class="pl">حرّر النص هنا</p><p class="tx p1">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج النص المطلوب هنا.</p><p class="tx p2">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="glow" style="top:-650px; inset-inline-start:430px; width:1500px; height:1500px" aria-hidden="true"></div><h1 class="tt"><span>الرؤية</span><span>والرسالة</span></h1><div class="dots f" aria-hidden="true"><i></i><i></i><i></i></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا.</p><div class="ghost"></div><img class="ph photo fl" src="/templates/freeform/sl-light-blue-corporate/assets/pointing.jpg" alt="يد تشير إلى مستندات"><div class="card cols2"><div class="vl"></div><div class="c c1"><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><h3 class="h2">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p></div><div class="c c2"><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><h3 class="h2">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p></div></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="glow" style="top:180px; inset-inline-start:-560px; width:1300px; height:1300px" aria-hidden="true"></div><h1 class="tt"><span>بيان</span><span>المشكلة</span></h1><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج نصك هنا.</p><div class="card k"><p class="lb">حرّر النص هنا</p><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><p class="big"><bdi dir="ltr">98%</bdi></p><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج النص المطلوب هنا.</p></div><div class="trk"></div><div class="thm"></div><div class="ghost g1"></div><div class="ghost g2"></div><div class="card f"><h3 class="h">حرّر النص هنا</h3><div class="dots s" aria-hidden="true"><i></i><i></i><i></i></div><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="it i2"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="it i3"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="ghost gt"></div><div class="ghost gb"></div><h1 class="tt"><span>الحل</span><span>الذي نقدّمه</span></h1><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><p class="tx">هذا نص توضيحي. أدرج نصك هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p><img class="ph photo" src="/templates/freeform/sl-light-blue-corporate/assets/handshake.jpg" alt="مصافحة عمل"><div class="card"><div class="it "><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div></div><div class="it i2"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="it i3"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="it i4"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="ln"></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="glow" style="top:-640px; inset-inline-start:560px; width:1400px; height:1400px" aria-hidden="true"></div><img class="ph photo" src="/templates/freeform/sl-light-blue-corporate/assets/desk.jpg" alt="مكتب عليه حاسوب محمول في مقر حديث"><div class="card"><p class="lb">حرّر النص هنا</p><p class="big"><bdi dir="ltr">$1.3</bdi> مليون</p><div class="vl"></div><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><h1 class="tt"><span>القيمة</span><span>المقترحة</span></h1><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج النص المطلوب هنا.</p><div class="trk"></div><div class="thm"></div><div class="it i1"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="it i2"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="glow" style="top:-700px; inset-inline-start:430px; width:1400px; height:1400px" aria-hidden="true"></div><h1 class="tt"><span>الخدمات</span><span>والعروض</span></h1><div class="pnl"></div><img class="ph photo fl" src="/templates/freeform/sl-light-blue-corporate/assets/presenter.jpg" alt="مقدّمة عرض أمام شاشة"><div class="card" style="inset-inline-start:113px"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.6a3.6 3.6 0 0 1 7.2 0v1.6a3.6 3.6 0 0 1-7.2 0z"/><path d="M5.6 8.2c1.6.2 3.2-.4 4.3-1.6.6 1 1.6 1.6 2.8 1.7"/><path d="M11.6 3.2h8.6v6.4a4.3 4.3 0 0 1-6.3 3.8"/><path d="M14.1 6.8h1.6M17.3 6.8h1.6M15 10.2c.9.6 2.1.6 3 0"/><path d="M2.8 22v-3.6c0-2 1.6-3.6 3.6-4h5.4c2 .4 3.6 2 3.6 4V22"/><path d="M9.1 14.4l-.9 4.3 .9 1.5 .9-1.5-.9-4.3"/><path d="M2 19.5v2M16.2 19.5v2"/></svg></div><h3 class="h">حرّر النص هنا</h3><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا.</p></div><div class="card" style="inset-inline-start:381px"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="2.4" width="12.4" height="17.6" rx=".4"/><path d="M6.2 4.6h6.8M6.2 5.9h6.8" stroke-width=".9"/><rect x="5.8" y="7.8" width="3.2" height="3.2"/><path d="M7.4 9.2v.1M6.4 11c.3-.8 1.7-.8 2 0"/><path d="M10.3 8.4h4M10.3 10.2h4M5.8 12.8h7M5.8 14.6h5.4"/><path d="M7.4 16.6c-.4-.4-1.6-.4-1.6.4s1.6.5 1.6 1.3-1.2.8-1.6.4M6.6 16v3.4M8.6 18h2.6"/><circle cx="16.6" cy="17.4" r="4.2" fill="#fff"/><path d="M14.7 17.4l1.4 1.4 2.6-2.8"/></svg></div><h3 class="h">حرّر النص هنا</h3><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا.</p></div><div class="card" style="inset-inline-start:650px"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="11.2" y="2.4" width="8.2" height="11.6" rx=".3"/><rect x="12.7" y="4.4" width="1.5" height="1.5"/><rect x="12.7" y="7.4" width="1.5" height="1.5"/><rect x="12.7" y="10.4" width="1.5" height="1.5"/><path d="M15.4 5.2h2.6M15.4 8.2h2.6M15.4 11.2h2.6"/><path d="M3.6 14.4l1.9-2 1.9 2V21.6H3.6z"/><circle cx="5.5" cy="15.2" r=".5"/><path d="M5.5 11.4V8.4h3.4" stroke-dasharray=".9 1"/><circle cx="19.4" cy="17.4" r="1.1"/><path d="M19.4 14.4v1M19.4 19.4v1M16.4 17.4h1M21.4 17.4h1M17.3 15.3l.7.7M20.8 18.8l.7.7M21.5 15.3l-.7.7M18 18.8l-.7.7"/><circle cx="19.4" cy="17.4" r="2.2"/></svg></div><h3 class="h">حرّر النص هنا</h3><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا.</p></div><div class="card" style="inset-inline-start:918px"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.2 2.4h12.2v17.8H6.2z"/><path d="M12.3 4.2l3 1.1v2.6c0 1.9-1.3 3.1-3 3.7-1.7-.6-3-1.8-3-3.7V5.3z"/><path d="M12.3 6.1l1.6.6v1.3c0 .9-.6 1.6-1.6 2-.9-.4-1.6-1.1-1.6-2V6.7z"/><path d="M3 13.2h3.2v8.4H3z"/><rect x="7.6" y="13" width="2" height="2"/><rect x="7.6" y="16.4" width="2" height="2"/><path d="M8.1 14l.5.5 1.2-1.3M8.1 17.4l.5.5 1.2-1.3"/><path d="M11.6 21v-5.8l1.6-2.7c.5-.8 1.6-.4 1.5.5l-.4 2.4h3.6c.8 0 1.3.7 1.1 1.4l-1 3.6c-.2.4-.5.6-1 .6zM19.4 15h2.2v6h-2.2"/></svg></div><h3 class="h">حرّر النص هنا</h3><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا.</p></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="glow" style="top:-560px; inset-inline-start:-560px; width:1300px; height:1300px" aria-hidden="true"></div><img class="ph p1 fl" src="/templates/freeform/sl-light-blue-corporate/assets/analytics.jpg" alt="حاسوب محمول يعرض لوحة تحليلات"><img class="ph p2" src="/templates/freeform/sl-light-blue-corporate/assets/hologram.jpg" alt="واجهة حاسوب ثلاثية الأبعاد"><div class="card"><h1 class="tt"><span>المنهجية</span></h1><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div></div><div class="vl" style="inset-inline-start:83px"></div><div class="vl" style="inset-inline-start:361px"></div><div class="it " style="top:368px; inset-inline-start:108px"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="it " style="top:368px; inset-inline-start:384px"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="it " style="top:557px; inset-inline-start:108px"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص.</p></div><div class="it " style="top:557px; inset-inline-start:384px"><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <div class="glow" style="top:-560px; inset-inline-start:520px; width:1500px; height:1500px" aria-hidden="true"></div><img class="ph pa" src="/templates/freeform/sl-light-blue-corporate/assets/team-walk.jpg" alt="فريق يسير في ممر"><img class="ph pb fl" src="/templates/freeform/sl-light-blue-corporate/assets/boardroom.jpg" alt="اجتماع فريق في قاعة الاجتماعات"><h1 class="tt"><span>فرصة</span><span>السوق</span></h1><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><div class="card"><div class="ic" style="inset-inline-start:31px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.6a3.6 3.6 0 0 1 7.2 0v1.6a3.6 3.6 0 0 1-7.2 0z"/><path d="M5.6 8.2c1.6.2 3.2-.4 4.3-1.6.6 1 1.6 1.6 2.8 1.7"/><path d="M11.6 3.2h8.6v6.4a4.3 4.3 0 0 1-6.3 3.8"/><path d="M14.1 6.8h1.6M17.3 6.8h1.6M15 10.2c.9.6 2.1.6 3 0"/><path d="M2.8 22v-3.6c0-2 1.6-3.6 3.6-4h5.4c2 .4 3.6 2 3.6 4V22"/><path d="M9.1 14.4l-.9 4.3 .9 1.5 .9-1.5-.9-4.3"/><path d="M2 19.5v2M16.2 19.5v2"/></svg></div><p class="sm" style="inset-inline-start:29px">هذا نص توضيحي. أدرج نصك هنا. يمكنك إضافة نص.</p><div class="ic" style="inset-inline-start:259px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="2.4" width="12.4" height="17.6" rx=".4"/><path d="M6.2 4.6h6.8M6.2 5.9h6.8" stroke-width=".9"/><rect x="5.8" y="7.8" width="3.2" height="3.2"/><path d="M7.4 9.2v.1M6.4 11c.3-.8 1.7-.8 2 0"/><path d="M10.3 8.4h4M10.3 10.2h4M5.8 12.8h7M5.8 14.6h5.4"/><path d="M7.4 16.6c-.4-.4-1.6-.4-1.6.4s1.6.5 1.6 1.3-1.2.8-1.6.4M6.6 16v3.4M8.6 18h2.6"/><circle cx="16.6" cy="17.4" r="4.2" fill="#fff"/><path d="M14.7 17.4l1.4 1.4 2.6-2.8"/></svg></div><p class="sm" style="inset-inline-start:257px">هذا نص توضيحي. أدرج نصك هنا. يمكنك إضافة نص.</p><div class="ic" style="inset-inline-start:486px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="11.2" y="2.4" width="8.2" height="11.6" rx=".3"/><rect x="12.7" y="4.4" width="1.5" height="1.5"/><rect x="12.7" y="7.4" width="1.5" height="1.5"/><rect x="12.7" y="10.4" width="1.5" height="1.5"/><path d="M15.4 5.2h2.6M15.4 8.2h2.6M15.4 11.2h2.6"/><path d="M3.6 14.4l1.9-2 1.9 2V21.6H3.6z"/><circle cx="5.5" cy="15.2" r=".5"/><path d="M5.5 11.4V8.4h3.4" stroke-dasharray=".9 1"/><circle cx="19.4" cy="17.4" r="1.1"/><path d="M19.4 14.4v1M19.4 19.4v1M16.4 17.4h1M21.4 17.4h1M17.3 15.3l.7.7M20.8 18.8l.7.7M21.5 15.3l-.7.7M18 18.8l-.7.7"/><circle cx="19.4" cy="17.4" r="2.2"/></svg></div><p class="sm" style="inset-inline-start:484px">هذا نص توضيحي. أدرج نصك هنا. يمكنك إضافة نص.</p><div class="vl" style="inset-inline-start:234px"></div><div class="vl" style="inset-inline-start:462px"></div></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <div class="pp"></div><div class="bez"></div><img class="ph scr" src="/templates/freeform/sl-light-blue-corporate/assets/laptop-screen.jpg" alt="زميل يراجع مستندات"><div class="base"></div><div class="notch"></div><h1 class="tt"><span>دراسة حالة</span></h1><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج نصك هنا.</p><div class="card cols2"><div class="vl"></div><div class="c c1"><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><h3 class="h2">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p></div><div class="c c2"><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><h3 class="h2">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p></div></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <div class="glow" style="top:-300px; inset-inline-start:-760px; width:1500px; height:1500px" aria-hidden="true"></div><img class="ph pt" style="top:144px; inset-inline-start:96px" src="/templates/freeform/sl-light-blue-corporate/assets/p1.jpg" alt="صورة أحد أعضاء الفريق"><div class="card nm" style="top:288px; inset-inline-start:72px"><b>حرّر النص هنا</b><i>أضف نصًا</i></div><img class="ph pt" style="top:144px; inset-inline-start:319px" src="/templates/freeform/sl-light-blue-corporate/assets/p2.jpg" alt="صورة أحد أعضاء الفريق"><div class="card nm" style="top:288px; inset-inline-start:295px"><b>حرّر النص هنا</b><i>أضف نصًا</i></div><img class="ph pt" style="top:144px; inset-inline-start:543px" src="/templates/freeform/sl-light-blue-corporate/assets/p3.jpg" alt="صورة أحد أعضاء الفريق"><div class="card nm" style="top:288px; inset-inline-start:519px"><b>حرّر النص هنا</b><i>أضف نصًا</i></div><img class="ph pt" style="top:407px; inset-inline-start:96px" src="/templates/freeform/sl-light-blue-corporate/assets/p4.jpg" alt="صورة أحد أعضاء الفريق"><div class="card nm" style="top:551px; inset-inline-start:72px"><b>حرّر النص هنا</b><i>أضف نصًا</i></div><img class="ph pt" style="top:407px; inset-inline-start:319px" src="/templates/freeform/sl-light-blue-corporate/assets/p5.jpg" alt="صورة أحد أعضاء الفريق"><div class="card nm" style="top:551px; inset-inline-start:295px"><b>حرّر النص هنا</b><i>أضف نصًا</i></div><img class="ph pt" style="top:407px; inset-inline-start:543px" src="/templates/freeform/sl-light-blue-corporate/assets/p6.jpg" alt="صورة أحد أعضاء الفريق"><div class="card nm" style="top:551px; inset-inline-start:519px"><b>حرّر النص هنا</b><i>أضف نصًا</i></div><h1 class="tt"><span>تعرّف</span><span>على فريقنا</span></h1><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج نصك هنا.</p><p class="btn">حرّر نصك هنا</p>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <div class="glow" style="top:-500px; inset-inline-start:480px; width:1300px; height:1300px" aria-hidden="true"></div><h1 class="tt"><span>التواصل</span><span>ودعوة للعمل</span></h1><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك التوضيحي هنا. هذا نص توضيحي. أدرج النص المطلوب هنا.</p><div class="pnl"></div><div class="card" style="inset-inline-start:91px"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.6a3.6 3.6 0 0 1 7.2 0v1.6a3.6 3.6 0 0 1-7.2 0z"/><path d="M5.6 8.2c1.6.2 3.2-.4 4.3-1.6.6 1 1.6 1.6 2.8 1.7"/><path d="M11.6 3.2h8.6v6.4a4.3 4.3 0 0 1-6.3 3.8"/><path d="M14.1 6.8h1.6M17.3 6.8h1.6M15 10.2c.9.6 2.1.6 3 0"/><path d="M2.8 22v-3.6c0-2 1.6-3.6 3.6-4h5.4c2 .4 3.6 2 3.6 4V22"/><path d="M9.1 14.4l-.9 4.3 .9 1.5 .9-1.5-.9-4.3"/><path d="M2 19.5v2M16.2 19.5v2"/></svg></div><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p></div><div class="card" style="inset-inline-start:364px"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="2.4" width="12.4" height="17.6" rx=".4"/><path d="M6.2 4.6h6.8M6.2 5.9h6.8" stroke-width=".9"/><rect x="5.8" y="7.8" width="3.2" height="3.2"/><path d="M7.4 9.2v.1M6.4 11c.3-.8 1.7-.8 2 0"/><path d="M10.3 8.4h4M10.3 10.2h4M5.8 12.8h7M5.8 14.6h5.4"/><path d="M7.4 16.6c-.4-.4-1.6-.4-1.6.4s1.6.5 1.6 1.3-1.2.8-1.6.4M6.6 16v3.4M8.6 18h2.6"/><circle cx="16.6" cy="17.4" r="4.2" fill="#fff"/><path d="M14.7 17.4l1.4 1.4 2.6-2.8"/></svg></div><h3 class="h">حرّر النص هنا</h3><p class="sm">هذا نص توضيحي. أدرج النص المطلوب هنا. يمكنك إضافة نص توضيحي. أدرج نصك هنا.</p></div><img class="ph photo" src="/templates/freeform/sl-light-blue-corporate/assets/conference.jpg" alt="زملاء في قاعة اجتماعات">
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 12</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

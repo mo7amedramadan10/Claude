@@ -1,0 +1,65 @@
+{
+  "key": "sl-light-blue-corporate",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "عرض مؤسسي بالأزرق الفاتح",
+  "nameEn": "Light Blue Corporate",
+  "description": "اثنتا عشرة شريحة مؤسسية: غلاف، نبذة، رؤية، مشكلة وحل، قيمة، خدمات، منهجية، سوق، حالة، فريق، وتواصل",
+  "descriptionEn": "Twelve corporate slides: cover, overview, vision, problem & solution, value, services, market, case, team, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover",
+      "needsData": true
+    },
+    {
+      "title": "نبذة عن الشركة",
+      "titleEn": "Company Overview",
+      "needsData": true
+    },
+    {
+      "title": "الرؤية والرسالة",
+      "titleEn": "Vision & Mission"
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement",
+      "needsData": true
+    },
+    {
+      "title": "الحل الذي نقدّمه",
+      "titleEn": "Our Solution"
+    },
+    {
+      "title": "القيمة المقترحة",
+      "titleEn": "Value Proposition",
+      "needsData": true
+    },
+    {
+      "title": "الخدمات والعروض",
+      "titleEn": "Services & Offering"
+    },
+    {
+      "title": "المنهجية",
+      "titleEn": "Methodology"
+    },
+    {
+      "title": "فرصة السوق",
+      "titleEn": "Market Opportunity"
+    },
+    {
+      "title": "دراسة حالة",
+      "titleEn": "Case Study"
+    },
+    {
+      "title": "تعرّف على فريقنا",
+      "titleEn": "Meet Our Team"
+    },
+    {
+      "title": "التواصل ودعوة للعمل",
+      "titleEn": "Contact & Call To Action"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور، وغيّر النصوص والأرقام فقط (أرقام بطاقة الغلاف، والنسب، والمبلغ في شريحة القيمة)."
+}
