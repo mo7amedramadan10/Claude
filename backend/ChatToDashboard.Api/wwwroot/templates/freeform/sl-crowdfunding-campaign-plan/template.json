@@ -1,0 +1,81 @@
+{
+  "key": "sl-crowdfunding-campaign-plan",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🚀",
+  "name": "خطة حملة تمويل جماعي",
+  "nameEn": "Crowdfunding Campaign Plan",
+  "description": "خمس عشرة شريحة لحملة تمويل جماعي: الأهداف، المنصة، الجمهور، المكافآت، الخطط، الميزانية، المخاطر والمؤشرات",
+  "descriptionEn": "15 slides for a crowdfunding campaign: goals, platform, audience, rewards, plans, budget, risks and KPIs",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "أهداف الحملة",
+      "titleEn": "Campaign Goals",
+      "needsData": true
+    },
+    {
+      "title": "اختيار المنصة",
+      "titleEn": "Platform Selection"
+    },
+    {
+      "title": "الجمهور والشخصيات",
+      "titleEn": "Audience & Persona",
+      "needsData": true
+    },
+    {
+      "title": "هيكل المكافآت",
+      "titleEn": "Reward Architecture",
+      "needsData": true
+    },
+    {
+      "title": "حسابات التمويل",
+      "titleEn": "Funding Math",
+      "needsData": true
+    },
+    {
+      "title": "خارطة ما قبل الإطلاق",
+      "titleEn": "Pre-Launch Roadmap"
+    },
+    {
+      "title": "خطة أسبوع الإطلاق",
+      "titleEn": "Launch Week Plan",
+      "needsData": true
+    },
+    {
+      "title": "إيقاع الحملة المباشرة",
+      "titleEn": "Live Campaign Cadence",
+      "needsData": true
+    },
+    {
+      "title": "تقويم المحتوى",
+      "titleEn": "Content Calendar"
+    },
+    {
+      "title": "ميزانية التسويق",
+      "titleEn": "Marketing Budget",
+      "needsData": true
+    },
+    {
+      "title": "الفريق والأدوار",
+      "titleEn": "Team & Roles"
+    },
+    {
+      "title": "منظومة الأدوات",
+      "titleEn": "Tooling Stack"
+    },
+    {
+      "title": "سجل المخاطر",
+      "titleEn": "Risk Register"
+    },
+    {
+      "title": "لوحة مؤشرات الأداء",
+      "titleEn": "KPI Dashboard",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ قيم الرسم الخطي في شريحة لوحة المؤشرات تُعدَّل في كتلة JSON بالمعرّف chart-data."
+}

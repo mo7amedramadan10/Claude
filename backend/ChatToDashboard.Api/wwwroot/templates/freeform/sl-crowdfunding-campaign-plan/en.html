@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crowdfunding Campaign Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «خطة حملة تمويل جماعي»: خلفيات فيروزية أو فاتحة بزخارف حلقية باهتة من شكل الشعار، بطاقات بيضاء مدوّرة بإطار فيروزي، شارات وأشرطة برتقالية، أرقام كحلية كبيرة، صور فوتوغرافية بزوايا مدوّرة، ورسم خطي من كتلة chart-data. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #12211C; --teal: #048C80; --teal-d: #026A61; --teal-x: #0D4238; --accent: #048C80; --orange: #FC913B; --navy: #0F2843; --night: #11182B; --slate: #273444; --gray: #5E5E5E; --mint: #E6F2F1; --pale: #F6FAF9; --steel: #536579; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame { background: var(--bg); }
+  .dc { position: absolute; pointer-events: none; }
+  html[dir="rtl"] .dc { transform: scaleX(-1); }
+  .ab { position: absolute; margin: 0; }
+  .ttl { position: absolute; margin: 0; top: 61px; inset-inline-start: 98px; font-size: 58px; font-weight: 700; line-height: 63px; color: var(--ink); letter-spacing: -0.6px; white-space: nowrap; }
+  .ttl.c, .sub.c { inset-inline-start: 0; width: 1280px; text-align: center; }
+  .sub { position: absolute; margin: 0; top: 140px; inset-inline-start: 98px; font-size: 22px; line-height: 30px; color: var(--teal); white-space: nowrap; }
+  .wt { color: #fff !important; }
+  .ic svg { width: 100%; height: 100%; display: block; }
+  html[lang="ar"] .ttl { letter-spacing: 0; font-weight: 800; margin-top: 6px; }
+  html[lang="ar"] .sub { margin-top: 4px; }
+  .star { color: var(--orange); font-size: 15px; display: inline-block; width: 30px; }
+  /* 1) الغلاف */
+  .s1 .grid { position: absolute; inset: 0; background-color: #fff; background-image: linear-gradient(rgb(20 40 110 / .028) 1px, transparent 1px), linear-gradient(90deg, rgb(20 40 110 / .028) 1px, transparent 1px); background-size: 8px 8px; }
+  .s1 .logo { position: absolute; top: 88px; inset-inline-start: 95px; display: flex; align-items: center; gap: 26px; color: #4A6A94; }
+  .s1 .logo svg { width: 62px; height: 66px; flex: none; margin: -4px -5px 0; }
+  .s1 .logo span { font-size: 18px; line-height: 24px; letter-spacing: 2.4px; color: #4E6383; max-width: 200px; }
+  html[lang="ar"] .s1 .logo span { letter-spacing: 0; font-size: 20px; }
+  /* الصورة تُعكس في العربية لأن الشريط الفيروزي يغطي طرفها؛ الزاوية المدوّرة فيزيائية قبل العكس فتصير يمنى بعده */
+  .s1 .cover { position: absolute; top: 0; inset-inline-start: 615px; width: 665px; height: 437px; object-fit: cover; border-top-left-radius: 100px; }
+  html[dir="rtl"] .s1 .cover { transform: scaleX(-1); }
+  .s1 .band { position: absolute; top: 437px; inset-inline-start: 0; width: 1280px; height: 283px; background: var(--teal-d); border-start-end-radius: 28px; }
+  .s1 .panel { position: absolute; top: 360px; inset-inline-start: 0; width: 968px; height: 320px; background: var(--teal); border-start-end-radius: 30px; border-end-end-radius: 30px; color: #fff; }
+  .s1 .panel h1 { position: absolute; margin: 0; top: 51px; inset-inline-start: 90px; font-size: 70px; line-height: 1; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap; }
+  .s1 .panel .l2 { position: absolute; margin: 0; top: 146px; inset-inline-start: 91px; font-size: 50px; line-height: 1; font-weight: 400; letter-spacing: 4px; white-space: nowrap; }
+  .s1 .panel .l3 { position: absolute; margin: 0; top: 230px; inset-inline-start: 91px; font-size: 24px; line-height: 1; letter-spacing: 2.6px; white-space: nowrap; }
+  html[lang="ar"] .s1 .panel h1 { font-weight: 800; letter-spacing: 0; top: 40px; }
+  html[lang="ar"] .s1 .panel .l2 { letter-spacing: 1px; top: 140px; }
+  html[lang="ar"] .s1 .panel .l3 { letter-spacing: 0; top: 226px; }
+  .s1 .launch { position: absolute; top: 465px; inset-inline-start: 873px; width: 420px; height: 156px; background: var(--orange); border-start-start-radius: 16px; border-end-start-radius: 16px; color: #fff; }
+  .s1 .launch p { position: absolute; margin: 0; inset-inline-start: 55px; line-height: 1; font-weight: 700; white-space: nowrap; }
+  .s1 .launch .a { top: 36px; font-size: 26px; } .s1 .launch .b { top: 80px; font-size: 44px; letter-spacing: -1.2px; }
+  /* 2) أهداف الحملة */
+  .s2 { background: var(--teal) !important; }
+  .s2 .card { position: absolute; top: 269px; inset-inline-start: 45px; width: 1190px; height: 480px; background: #fff; border-radius: 22px; }
+  .gc { position: absolute; width: 300px; height: 720px; text-align: center; }
+  .gc > * { position: absolute; margin: 0; inset-inline-start: 0; width: 300px; }
+  .s2 .num { top: 234px; inset-inline-start: 112px; width: 76px; height: 76px; border-radius: 50%; background: var(--orange); color: #fff; font-size: 22px; font-weight: 700; line-height: 76px; }
+  .s2 .ic { top: 341px; inset-inline-start: 88px; width: 124px; height: 124px; border-radius: 50%; background: #E8F2F2; color: var(--teal); padding: 31px; }
+  .s2 .v { top: 495px; font-size: 50px; line-height: 1; font-weight: 700; color: var(--teal); }
+  .s2 .h { top: 561px; font-size: 26px; line-height: 32px; font-weight: 700; color: var(--ink); }
+  .s2 .p { top: 604px; inset-inline-start: 5px; width: 290px; font-size: 20px; line-height: 25px; color: var(--gray); }
+  /* 3) اختيار المنصة */
+  .s3 .tb { position: absolute; background: #fff; top: 258px; inset-inline-start: 43px; width: 1194px; height: 480px; border: 2px solid var(--teal); border-bottom: 0; border-radius: 22px 22px 0 0; }
+  .s3 .hl { position: absolute; top: 337px; inset-inline-start: 43px; width: 1194px; height: 2px; background: var(--teal); }
+  .s3 .vl { position: absolute; top: 258px; inset-inline-start: 978px; width: 2px; height: 462px; background: var(--teal); }
+  .s3 .pa { position: absolute; top: 221px; inset-inline-start: 437px; width: 286px; height: 520px; background: var(--teal); border-radius: 16px 16px 0 0; }
+  .s3 .pa::after { content: ""; position: absolute; top: 115px; inset-inline-start: 0; width: 100%; height: 2px; background: #fff; }
+  .fade { position: absolute; width: 8px; height: 230px; top: 490px; background: linear-gradient(rgb(255 255 255 / 0), #fff 92%); }
+  .s3 .th { position: absolute; top: 284px; font-size: 26px; line-height: 32px; font-weight: 700; color: var(--ink); text-align: center; white-space: nowrap; }
+  .s3 .td { position: absolute; font-size: 22px; line-height: 30px; color: var(--gray); text-align: center; white-space: nowrap; }
+  .s3 .td.a { color: #fff; font-weight: 700; }
+  .s3 .crit { position: absolute; inset-inline-start: 84px; display: flex; align-items: center; gap: 22px; font-size: 22px; line-height: 30px; color: var(--gray); white-space: nowrap; }
+  .s3 .crit .ic { width: 46px; height: 46px; color: var(--teal); flex: none; }
+  /* 4) الجمهور والشخصيات */
+  .s4, .s5, .s10, .s11, .s14 { background: var(--pale) !important; }
+  .s4 .ttl { white-space: normal; width: 300px; }
+  html[lang="ar"] .s4 .ttl { width: 420px; }
+  .s4 .sub { top: 207px; font-size: 24px; }
+  .s4 .body { position: absolute; margin: 0; top: 474px; inset-inline-start: 98px; width: 350px; font-size: 20px; line-height: 25.7px; color: var(--gray); }
+  .pc { position: absolute; inset-inline-start: 565px; width: 760px; height: 272px; background: #fff; border: 2px solid var(--teal); border-start-start-radius: 26px; border-end-start-radius: 26px; }
+  .pc > * { position: absolute; margin: 0; }
+  .pc .ic { top: 50px; inset-inline-start: 47px; width: 80px; height: 80px; border-radius: 50%; background: #E2EFEE; color: var(--teal); padding: 19px; }
+  .pc .nm { top: 148px; inset-inline-start: 47px; width: 160px; font-size: 26px; line-height: 32px; font-weight: 700; color: #0F1A2E; }
+  .pc .dv { top: 50px; inset-inline-start: 210px; width: 2px; height: 169px; background: #A9D6D2; }
+  .pc .lb { top: 51px; font-size: 20px; line-height: 24px; color: var(--gray); white-space: nowrap; }
+  .pc .vv { top: 84px; font-size: 30px; line-height: 36px; font-weight: 700; color: var(--teal-x); white-space: nowrap; }
+  .pc .ds { top: 159px; inset-inline-start: 253px; width: 390px; font-size: 20px; line-height: 25px; color: var(--gray); }
+  /* 5) هيكل المكافآت */
+  .s5 .tb { position: absolute; top: 242px; inset-inline-start: 33px; width: 1214px; height: 500px; background: #fff; border: 1.5px solid var(--teal); border-bottom: 0; border-radius: 22px 22px 0 0; }
+  .s5 .vl { position: absolute; top: 243px; inset-inline-start: 336px; width: 1.5px; height: 477px; background: var(--teal); }
+  .s5 .hi { position: absolute; top: 221px; inset-inline-start: 640px; width: 303px; height: 520px; background: var(--teal); border-radius: 16px 16px 0 0; }
+  .s5 .fade { background: linear-gradient(rgb(255 255 255 / 0), #fff 85%); height: 260px; top: 460px; }
+  .s5 .pr { top: 329px; font-size: 90px; line-height: 1; font-weight: 700; color: var(--navy); letter-spacing: -1px; }
+  .s5 .pl { top: 470px; inset-inline-start: 26px; width: 248px; height: 51px; border-radius: 26px; background: var(--teal); color: #fff; font-size: 20px; line-height: 51px; font-weight: 700; }
+  .s5 .ds { top: 548px; inset-inline-start: 25px; width: 250px; font-size: 20px; line-height: 25.5px; color: var(--gray); }
+  .s5 .on .pr, .s5 .on .ds { color: #fff; } .s5 .on .pl { background: var(--orange); }
+  /* 6) حسابات التمويل */
+  .s6 .top { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 368px; background: var(--teal); overflow: hidden; }
+  .s6 .rule { position: absolute; top: 368px; inset-inline-start: 0; width: 1280px; height: 3px; background: var(--navy); }
+  .s6 .para { position: absolute; margin: 0; top: 172px; inset-inline-start: 98px; width: 1065px; font-size: 19.8px; line-height: 25px; color: #fff; }
+  .s6 .r1 { position: absolute; top: 371px; inset-inline-start: 88px; width: 1104px; height: 71px; background: var(--mint); }
+  .s6 .r3 { position: absolute; top: 519px; inset-inline-start: 67px; width: 1146px; height: 73px; background: var(--orange); border-radius: 12px; }
+  .s6 .cl { position: absolute; width: 1px; }
+  .s6 .r3 { z-index: 1; }
+  .s6 .cell { position: absolute; z-index: 2; font-size: 22px; line-height: 30px; color: var(--gray); white-space: nowrap; }
+  .s6 .cell.h { font-size: 24px; font-weight: 700; color: #fff; }
+  .s6 .cell.o { font-weight: 700; color: #fff; }
+  /* 7) خارطة ما قبل الإطلاق */
+  .s7 .box { position: absolute; top: 204px; inset-inline-start: 33px; width: 1214px; height: 481px; background: var(--teal); border-radius: 22px; }
+  .s7 .big { top: 280px; font-size: 105px; line-height: 1; font-weight: 800; letter-spacing: -2px; background: linear-gradient(rgb(255 255 255 / .78), rgb(255 255 255 / .06) 92%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .s7 .pill { top: 375px; inset-inline-start: 46px; width: 208px; height: 66px; border-radius: 33px; color: #fff; font-size: 20px; font-weight: 700; line-height: 66px; text-transform: uppercase; }
+  .s7 .p1 { background: #fff; color: var(--teal-x); } .s7 .p2, .s7 .p3 { background: var(--orange); } .s7 .p4 { background: #10182A; }
+  .s7 .q { top: 464px; font-size: 26px; line-height: 32px; font-weight: 700; color: #fff; }
+  .s7 .d { top: 510px; inset-inline-start: 60px; width: 180px; font-size: 20px; line-height: 25.5px; color: #fff; }
+  .s7 .arr { position: absolute; top: 401px; height: 14px; color: #fff; }
+  html[dir="rtl"] .s7 .arr { transform: scaleX(-1); }
+  /* 8) خطة أسبوع الإطلاق */
+  .s8 .tl { position: absolute; top: 0; inset-inline-start: 0; width: 508px; height: 470px; background: var(--teal); border-start-end-radius: 60px; }
+  .s8 .or { position: absolute; top: 430px; inset-inline-start: 0; width: 542px; height: 290px; background: var(--orange); border-start-end-radius: 40px; }
+  .s8 .ttl { white-space: normal; width: 380px; }
+  .s8 .sub { top: 202px; font-size: 24px; line-height: 32px; white-space: normal; width: 230px; color: #fff; }
+  .s8 .oh { position: absolute; margin: 0; top: 495px; inset-inline-start: 98px; font-size: 28px; line-height: 36px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .s8 .op { position: absolute; margin: 0; top: 556px; inset-inline-start: 98px; width: 330px; font-size: 20px; line-height: 25.5px; color: #fff; }
+  .s8 .line { position: absolute; top: 0; inset-inline-start: 701px; width: 3px; height: 720px; background: linear-gradient(#E6F2F1 0 165px, #13857A 165px); }
+  .s8 .dot { position: absolute; inset-inline-start: 693px; width: 20px; height: 20px; border-radius: 50%; background: var(--teal); }
+  .s8 .hd { position: absolute; top: 84px; font-size: 18px; line-height: 24px; font-weight: 700; color: #D2D5DC; text-transform: uppercase; white-space: nowrap; }
+  .s8 .day { position: absolute; inset-inline-start: 616px; font-size: 34px; line-height: 40px; font-weight: 700; color: var(--steel); }
+  .s8 .amt { position: absolute; inset-inline-start: 746px; font-size: 36px; line-height: 42px; font-weight: 700; color: var(--teal); white-space: nowrap; }
+  .s8 .cum { position: absolute; inset-inline-start: 747px; font-size: 20px; line-height: 26px; font-weight: 700; color: #0F1A2E; white-space: nowrap; }
+  .s8 .bl { position: absolute; inset-inline-start: 747px; margin: 0; padding: 0; list-style: none; font-size: 20px; line-height: 28px; color: var(--gray); white-space: nowrap; }
+  /* 9) إيقاع الحملة */
+  .s9 { background: var(--teal) !important; }
+  .s9 .sub { top: 141px; color: #fff; }
+  .cc { position: absolute; width: 390px; height: 560px; background: #fff; border-radius: 22px; }
+  .cc .tag { position: absolute; top: -28px; inset-inline-start: 70px; width: 250px; height: 57px; border-radius: 8px; background: var(--orange); color: #fff; font-size: 20px; line-height: 57px; font-weight: 700; text-align: center; letter-spacing: .3px; }
+  .s9 .gc { width: 390px; } .s9 .gc > * { width: 390px; }
+  .s9 .nm { top: 352px; font-size: 26px; line-height: 32px; font-weight: 700; color: var(--teal); }
+  .s9 .dy { top: 392px; font-size: 20px; line-height: 26px; color: var(--steel); }
+  .s9 .vv { top: 450px; font-size: 84px; line-height: 1; font-weight: 700; color: var(--navy); letter-spacing: -2px; }
+  .s9 .ds { top: 568px; inset-inline-start: 50px; width: 290px; font-size: 20px; line-height: 25.5px; color: var(--gray); }
+  /* 10) تقويم المحتوى */
+  .s10 .cal { position: absolute; top: 204px; inset-inline-start: 36px; width: 1208px; height: 540px; background: #fff; border: 2px solid var(--teal); border-bottom: 0; border-radius: 22px 22px 0 0; }
+  .s10 .h, .s10 .v { position: absolute; background: var(--teal); }
+  .s10 .h { inset-inline-start: 36px; width: 1208px; height: 2px; } .s10 .v { top: 204px; width: 2px; height: 516px; }
+  .s10 .fd { position: absolute; top: 560px; inset-inline-start: 30px; width: 1220px; height: 160px; background: linear-gradient(rgb(255 255 255 / 0), rgb(255 255 255 / .55) 45%, #fff 100%); }
+  .s10 .dn { position: absolute; font-size: 20px; line-height: 24px; color: #1E6B61; text-align: end; }
+  .s10 .bar { position: absolute; height: 55px; border-radius: 28px; color: #fff; font-size: 20px; font-weight: 700; line-height: 55px; text-align: center; white-space: nowrap; }
+  /* 11) ميزانية التسويق */
+  .s11 .gc { width: 280px; } .s11 .gc > * { width: 280px; }
+  .s11 .ic { top: 195px; inset-inline-start: 88px; width: 104px; height: 104px; border-radius: 50%; background: #E2EEEE; color: #0F1A2E; padding: 24px; }
+  .s11 .lb { top: 328px; font-size: 20px; line-height: 26px; color: var(--gray); white-space: nowrap; }
+  .s11 .vv { top: 370px; font-size: 34px; line-height: 40px; font-weight: 700; color: #05473B; }
+  .s11 .dv { position: absolute; top: 317px; width: 1.5px; height: 104px; background: #93CBC5; }
+  .s11 .pn { position: absolute; top: 499px; inset-inline-start: 80px; width: 1120px; height: 260px; background: var(--teal); border-radius: 22px; }
+  .s11 .hb { position: absolute; top: 477px; width: 403px; height: 69px; border-radius: 10px; background: var(--navy); color: #fff; font-size: 30px; line-height: 69px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .s11 .wl { position: absolute; top: 519px; inset-inline-start: 640px; width: 1.5px; height: 161px; background: rgb(255 255 255 / .85); }
+  .s11 .bv { position: absolute; width: 200px; text-align: center; color: #fff; }
+  .s11 .bv span { display: block; font-size: 20px; line-height: 26px; color: #E3F3F1; }
+  .s11 .bv b { display: block; margin-top: 15px; font-size: 30px; line-height: 36px; }
+  /* 12) الفريق والأدوار */
+  .s12 { background: #0E2841 !important; }
+  .tm { position: absolute; top: 179px; width: 363px; height: 475px; background: var(--teal); border-radius: 12px; }
+  .tm > * { position: absolute; margin: 0; }
+  .tm img { top: 0; inset-inline-start: 0; width: 316px; height: 279px; object-fit: cover; border-radius: 12px; }
+  .tm .tag { top: 239px; inset-inline-start: 22px; height: 57px; padding: 0 20px; border-radius: 8px; background: var(--orange); color: #fff; font-size: 20px; line-height: 57px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+  .tm .nm { top: 315px; inset-inline-start: 32px; font-size: 30px; line-height: 38px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .tm .ds { top: 362px; inset-inline-start: 32px; width: 300px; font-size: 20px; line-height: 25px; color: #D4EEEA; }
+  /* 13) أدوات العمل */
+  .s13 .ph { position: absolute; top: 0; inset-inline-start: 546px; width: 734px; height: 430px; object-fit: cover; border-top-left-radius: 62px; }
+  html[dir="rtl"] .s13 .ph { transform: scaleX(-1); }
+  .s13 .pn { position: absolute; top: 382px; inset-inline-start: 0; width: 1280px; height: 338px; background: #F8F9FB; border-start-end-radius: 52px; }
+  .s13 .ttl { white-space: normal; width: 300px; }
+  .s13 .sub { top: 205px; font-size: 24px; }
+  .s13 .n { position: absolute; top: 331px; width: 96px; height: 96px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 26px; line-height: 96px; font-weight: 700; text-align: center; }
+  .s13 .col { position: absolute; top: 450px; width: 340px; }
+  .s13 .col h2 { margin: 0; font-size: 32px; line-height: 44px; font-weight: 700; color: #13253D; }
+  .s13 .col p { margin: 11px 0 0; width: 270px; font-size: 20px; line-height: 25px; color: #3A3A3A; }
+  .s13 .col ul { margin: 20px 0 0; padding: 0; list-style: none; font-size: 20px; line-height: 33px; color: #3A3A3A; white-space: nowrap; }
+  /* 14) سجل المخاطر */
+  .s14 .sub { top: 147px; font-size: 18px; line-height: 26px; color: var(--gray); }
+  .s14 .th { position: absolute; top: 225px; font-size: 26px; line-height: 32px; font-weight: 700; color: var(--teal); white-space: nowrap; }
+  .s14 .pn { position: absolute; top: 277px; inset-inline-start: 0; width: 1283px; height: 450px; background: #fff; border: 2px solid var(--teal); border-bottom: 0; border-start-end-radius: 52px; }
+  .s14 .sep { position: absolute; inset-inline-start: 88px; width: 1104px; height: 2px; background: #CCD5DC; }
+  .s14 .td { position: absolute; font-size: 20px; line-height: 28px; color: var(--gray); white-space: nowrap; }
+  .s14 .td.b { font-weight: 700; } .s14 .hi { color: var(--orange); } .s14 .md { color: #536A85; } .s14 .lo { color: var(--teal); }
+  .s14 .ob { position: absolute; top: 569px; inset-inline-start: 0; width: 1237px; height: 151px; background: var(--orange); border-start-end-radius: 40px; }
+  .s14 .tg { position: absolute; top: 552px; inset-inline-start: 72px; width: 318px; height: 57px; border-radius: 8px; background: var(--navy); color: #fff; font-size: 22px; line-height: 57px; font-weight: 700; padding-inline-start: 26px; white-space: nowrap; }
+  .s14 .op { position: absolute; margin: 0; top: 633px; inset-inline-start: 98px; width: 1120px; font-size: 22px; line-height: 30px; color: #fff; }
+  /* 15) لوحة المؤشرات */
+  .s15 { background: var(--night) !important; }
+  .s15 .low { position: absolute; top: 270px; inset-inline-start: 0; width: 1280px; height: 450px; background: var(--slate); border-start-end-radius: 50px; }
+  .s15 .ds { position: absolute; margin: 0; top: 147px; inset-inline-start: 98px; width: 440px; font-size: 18px; line-height: 26px; color: #C8D0DA; }
+  .s15 .k { position: absolute; width: 270px; }
+  .s15 .k > * { display: block; margin: 0; white-space: nowrap; }
+  .s15 .k .l { font-size: 22px; line-height: 30px; font-weight: 700; color: #CAD3DE; }
+  .s15 .k .v { margin-top: 15px; font-size: 36px; line-height: 40px; font-weight: 700; color: #25AF9F; }
+  .s15 .k .s { margin-top: 10px; font-size: 17px; line-height: 22px; color: #15887C; }
+  .s15 .crd { position: absolute; top: 54px; inset-inline-start: 675px; width: 551px; height: 612px; background: var(--teal); border-radius: 20px; }
+  .s15 .ct { position: absolute; margin: 0; top: 86px; inset-inline-start: 740px; font-size: 24px; line-height: 32px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .s15 .cap { position: absolute; margin: 0; top: 567px; inset-inline-start: 740px; width: 420px; font-size: 20px; line-height: 25px; color: #fff; }
+  .s15 .chart { position: absolute; top: 154px; inset-inline-start: 735px; width: 450px; height: 362px; overflow: visible; }
+  .s15 .chart text { font-family: var(--font); font-size: 18px; fill: #fff; }
+  .s15 .bdg { position: absolute; top: 74px; inset-inline-start: 1077px; width: 160px; height: 186px; border-radius: 10px; background: var(--orange); color: #fff; text-align: center; }
+  .s15 .bdg i { position: absolute; top: 38px; inset-inline-start: 68px; width: 24px; height: 20px; background: #fff; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .s15 .bdg b { position: absolute; top: 86px; inset-inline-start: 0; width: 160px; font-size: 46px; line-height: 50px; }
+  .s15 .bdg span { position: absolute; top: 137px; inset-inline-start: 0; width: 160px; font-size: 18px; line-height: 24px; font-weight: 700; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="cf-ring" viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" rx="30" fill="none" stroke="currentColor" stroke-width="14" transform="rotate(-5 50 50)"/></symbol></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="grid"></div>
+    <div class="logo"><svg viewBox="0 0 62 66" aria-hidden="true" fill="none" stroke-linecap="butt"><path d="M12 15C8 25 8 42 10 52C12 60 18 59 25 58L51 52" stroke="currentColor" stroke-width="9"/><path d="M14 9C30 5 45 8 52 12C56 15 55 21 54 30L52 51" stroke="#fff" stroke-width="12"/><path d="M14 9C30 5 45 8 52 12C56 15 55 21 54 30L52 51" stroke="currentColor" stroke-width="9"/></svg><span>YOUR COMPANY LOGO HERE</span></div>
+    <img class="cover" src="/templates/freeform/sl-crowdfunding-campaign-plan/assets/cover.jpg" alt="A group of young people looking at a phone together">
+    <div class="band"></div>
+    <div class="panel"><h1>CROWDFUNDING</h1><p class="l2">CAMPAIGN PLAN</p><p class="l3">PRESENTATION TEMPLATE</p></div>
+    <div class="launch"><p class="a">TARGET LAUNCH</p><p class="b">OCT 15, 2035</p></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:150px;inset-inline-start:-230px;width:430px;height:430px;color:rgb(255 255 255 / .07)"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:1025px;width:650px;height:650px;color:rgb(255 255 255 / .07)"><use href="#cf-ring"/></svg>
+    <h1 class="ttl c wt">Campaign Goals</h1><p class="sub c wt">You can add a subheading here</p>
+    <div class="card"></div>
+    <div class="gc" style="top:0px;inset-inline-start:147px"><span class="num" style="top:234px">01</span><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="9" cy="5.6" rx="6" ry="2.5"/><path d="M3 7.4c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v2.1c0 1.4-2.7 2.5-6 2.5S3 10.9 3 9.5z"/><path d="M3 11.3c0 1.4 2.7 2.5 6 2.5.6 0 1.1 0 1.6-.1v2.1c-.5.1-1 .1-1.6.1-3.3 0-6-1.1-6-2.5z"/><ellipse cx="15.6" cy="13.4" rx="5.6" ry="2.3"/><path d="M10 15.2c0 1.3 2.5 2.3 5.6 2.3s5.6-1 5.6-2.3v1.9c0 1.3-2.5 2.3-5.6 2.3S10 18.4 10 17.1z"/><path d="M10 18.7c0 1.3 2.5 2.3 5.6 2.3s5.6-1 5.6-2.3v1.9c0 1.3-2.5 2.3-5.6 2.3S10 21.9 10 20.6z"/></svg></div><p class="v">$100K</p><h2 class="h">Funding Goal</h2><p class="p">This is a sample text. Insert your desired text here.</p></div>
+    <div class="gc" style="top:-8px;inset-inline-start:490px"><span class="num" style="top:242px">02</span><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.5 8.2 16.8 4.6l1.1 2.6L7.4 8.2z"/><path fill-rule="evenodd" d="M2 9.2h20v10.6H2zm2 2v6.6h16v-6.6z"/><circle cx="12" cy="14.5" r="1.9"/><circle cx="6.3" cy="14.5" r=".9"/><circle cx="17.7" cy="14.5" r=".9"/></svg></div><p class="v">$250K</p><h2 class="h">Stretch Goal</h2><p class="p">This is a sample text. Insert your desired text here.</p></div>
+    <div class="gc" style="top:-17px;inset-inline-start:832px"><span class="num" style="top:251px">03</span><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5.6" r="2.2"/><circle cx="5.6" cy="7.4" r="1.9"/><circle cx="18.4" cy="7.4" r="1.9"/><path d="M8.8 11.6c.4-1.9 1.7-3 3.2-3s2.8 1.1 3.2 3z"/><path d="M2.6 12.8c.3-1.8 1.5-2.9 3-2.9 1 0 1.8.4 2.4 1.2l-.6 1.7z"/><path d="M21.4 12.8c-.3-1.8-1.5-2.9-3-2.9-1 0-1.8.4-2.4 1.2l.6 1.7z"/><path d="M2 19.5c0-4.3 4.5-6.6 10-6.6s10 2.3 10 6.6z"/></svg></div><p class="v">5,000</p><h2 class="h">Target Backers</h2><p class="p">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:-330px;width:480px;height:480px;color:#EFF4F3"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:110px;inset-inline-start:1075px;width:500px;height:500px;color:#EFF4F3"><use href="#cf-ring"/></svg>
+    <h1 class="ttl c">Platform Selection</h1><p class="sub c">You can add a subheading here</p>
+    <div class="tb"></div><div class="hl"></div><div class="vl"></div><div class="pa"></div><div class="fade" style="inset-inline-start:39px"></div><div class="fade" style="inset-inline-start:1233px"></div><div class="fade" style="inset-inline-start:975px"></div>
+    <span class="th" style="inset-inline-start:88px">Criteria</span><span class="th wt" style="inset-inline-start:437px;width:286px">Platform A</span><span class="th" style="inset-inline-start:723px;width:256px">Platform B</span><span class="th" style="inset-inline-start:979px;width:258px">Platform C</span>
+    <div class="crit" style="top:376px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><ellipse cx="12" cy="12" rx="4.2" ry="9.5"/><path d="M2.5 12h19M12 2.5v19"/></svg></span><span>Traffic</span></div><span class="td a" style="top:384px;inset-inline-start:437px;width:286px">High</span><span class="td" style="top:384px;inset-inline-start:723px;width:256px">Low</span><span class="td" style="top:384px;inset-inline-start:979px;width:258px">Add your text</span>
+    <div class="crit" style="top:456px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="6.5" y="1.8" width="11" height="20.4" rx="1.6"/><path d="M10.5 4.6h3M10.8 19.4h2.4"/></svg></span><span>Hardware Audience</span></div><span class="td a" style="top:464px;inset-inline-start:437px;width:286px">Medium</span><span class="td" style="top:464px;inset-inline-start:723px;width:256px">Low</span><span class="td" style="top:464px;inset-inline-start:979px;width:258px">Add your text</span>
+    <div class="crit" style="top:536px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" transform="rotate(-38 12 12)" d="M8.6 4.6h6.8v14.8H8.6zm1.6 1.6v11.6h3.6V6.2zM12 10.3a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4z"/><path d="M8.2 8.6C6 5.8 3.6 5 1.2 5.6c1.2.7 2 1.5 2.3 2.5-1 .2-1.7.6-2.2 1.3 1.6-.1 3.2.4 4.6 1.6z"/><path d="M15.8 15.4c2.2 2.8 4.6 3.6 7 3-1.2-.7-2-1.5-2.3-2.5 1-.2 1.7-.6 2.2-1.3-1.6.1-3.2-.4-4.6-1.6z"/></svg></span><span>Equity Option</span></div><span class="td a" style="top:544px;inset-inline-start:437px;width:286px">High</span><span class="td" style="top:544px;inset-inline-start:723px;width:256px">Medium</span><span class="td" style="top:544px;inset-inline-start:979px;width:258px">Add your text</span>
+    <div class="crit" style="top:616px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 16.5A10 10 0 0 1 5 9.4l1.5 1.5a7.9 7.9 0 0 0-2.4 5.6zM6.4 8a10 10 0 0 1 4.6-2V8.2a7.9 7.9 0 0 0-3.1 1.3zM13 6a10 10 0 0 1 4.6 2l-1.5 1.5A7.9 7.9 0 0 0 13 8.2zM19 9.4a10 10 0 0 1 3 7.1h-2.1a7.9 7.9 0 0 0-2.4-5.6z"/><path d="m11.1 17.4 1-8.2 1 8.2a1 1 0 0 1-2 0z"/></svg></span><span>International Reach</span></div><span class="td a" style="top:624px;inset-inline-start:437px;width:286px">High</span><span class="td" style="top:624px;inset-inline-start:723px;width:256px">High</span><span class="td" style="top:624px;inset-inline-start:979px;width:258px">Add your text</span>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:-330px;width:480px;height:480px;color:#E6F1EF"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:425px;inset-inline-start:240px;width:560px;height:560px;color:#E8F3F1"><use href="#cf-ring"/></svg>
+    <h1 class="ttl">Audience & Persona</h1><p class="sub">You can add a subheading here</p><p class="body">This is a sample text. Insert your desired text here. Add your text. This is a sample text. Insert your desired text here. This is a sample text.</p>
+    <div class="pc" style="top:69px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9.6" r="2.6"/><circle cx="5.4" cy="6.4" r="2.4"/><circle cx="18.6" cy="6.4" r="2.4"/><path d="M6.6 19.8c0-3.2 2.4-5.4 5.4-5.4s5.4 2.2 5.4 5.4z"/><path d="M.8 15.4c0-2.9 2-4.8 4.6-4.8 1.3 0 2.4.5 3.2 1.3a6.6 6.6 0 0 0-2.4 3.5z"/><path d="M23.2 15.4c0-2.9-2-4.8-4.6-4.8-1.3 0-2.4.5-3.2 1.3a6.6 6.6 0 0 1 2.4 3.5z"/></svg></span><h2 class="nm">Early Adopter</h2><span class="dv"></span><span class="lb" style="inset-inline-start:255px">Age</span><span class="vv" style="inset-inline-start:254px">28–40</span><span class="lb" style="inset-inline-start:397px">Income</span><span class="vv" style="inset-inline-start:396px">$80K+</span><span class="lb" style="inset-inline-start:554px">Location</span><span class="vv" style="inset-inline-start:553px">US</span><p class="ds">This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <div class="pc" style="top:361px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 7.2C7.6 4.4 9.5 2.6 12 2.6c2.6 0 4.4 1.7 4.4 4.3 0 .5 0 1-.2 1.4-1.4-1.3-3.6-1.6-5.4-1.1-1 .3-2 .8-2.8 1.5-.3-.4-.4-1-.4-1.5z"/><path d="M8.2 9.4c1.9-1.5 5.2-1.8 7.7-.3a4.1 4.1 0 0 1-7.7.3z"/><path d="M3.8 21.4c0-4.4 3.5-7.2 8.2-7.2s8.2 2.8 8.2 7.2z"/></svg></span><h2 class="nm">Executive Innovator</h2><span class="dv"></span><span class="lb" style="inset-inline-start:255px">Age</span><span class="vv" style="inset-inline-start:254px">35–55</span><span class="lb" style="inset-inline-start:397px">Income</span><span class="vv" style="inset-inline-start:396px">$100K+</span><span class="lb" style="inset-inline-start:554px">Location</span><span class="vv" style="inset-inline-start:553px">UK</span><p class="ds">This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-260px;inset-inline-start:1060px;width:520px;height:520px;color:#E9F3F2"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:400px;inset-inline-start:-470px;width:500px;height:500px;color:#E9F3F2"><use href="#cf-ring"/></svg>
+    <h1 class="ttl c">Reward Architecture</h1><p class="sub c">You can add a subheading here</p>
+    <div class="tb"></div><div class="vl"></div><div class="hi"></div><div class="fade" style="inset-inline-start:29px"></div><div class="fade" style="inset-inline-start:1243px"></div><div class="fade" style="inset-inline-start:332px"></div>
+    <div class="gc" style="top:0;inset-inline-start:35px"><p class="pr">$25</p><span class="pl">EARLY BIRD TIER</span><p class="ds">This is a sample text. Insert your desired text here. Add your text</p></div>
+    <div class="gc" style="top:0;inset-inline-start:338px"><p class="pr">$99</p><span class="pl">STANDARD TIER</span><p class="ds">This is a sample text. Insert your desired text here. Add your text</p></div>
+    <div class="gc on" style="top:0;inset-inline-start:642px"><p class="pr">$129</p><span class="pl">PREMIUM BUNDLE</span><p class="ds">This is a sample text. Insert your desired text here. Add your text</p></div>
+    <div class="gc" style="top:0;inset-inline-start:945px"><p class="pr">$199</p><span class="pl">LIMITED EDITION</span><p class="ds">This is a sample text. Insert your desired text here. Add your text</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="top"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:790px;width:600px;height:600px;color:rgb(255 255 255 / .07)"><use href="#cf-ring"/></svg></div><div class="rule"></div>
+    <h1 class="ttl wt">Funding Math</h1><p class="para">This is a sample text. Insert your desired text here. This is a sample text. Add your text here. This is a sample text. Insert your desired text here. This is a sample text. Add your text here. This is a sample text.</p>
+    <div class="r1"></div><div class="r3"></div><span class="cl" style="top:297px;height:71px;inset-inline-start:362px;background:rgb(255 255 255 / .45)"></span><span class="cl" style="top:371px;height:294px;inset-inline-start:362px;background:#D3DADF"></span><span class="cl" style="top:297px;height:71px;inset-inline-start:593px;background:rgb(255 255 255 / .45)"></span><span class="cl" style="top:371px;height:294px;inset-inline-start:593px;background:#D3DADF"></span><span class="cl" style="top:297px;height:71px;inset-inline-start:887px;background:rgb(255 255 255 / .45)"></span><span class="cl" style="top:371px;height:294px;inset-inline-start:887px;background:#D3DADF"></span><span class="cell h" style="top:317px;inset-inline-start:108px">Tier</span><span class="cell h" style="top:317px;inset-inline-start:383px">Price</span><span class="cell h" style="top:317px;inset-inline-start:613px">Expected Sales</span><span class="cell h" style="top:317px;inset-inline-start:907px">Revenue</span><span class="cell" style="top:392px;inset-inline-start:108px">Supporter</span><span class="cell" style="top:392px;inset-inline-start:383px">$10</span><span class="cell" style="top:392px;inset-inline-start:613px">500</span><span class="cell" style="top:392px;inset-inline-start:907px">Add your text</span><span class="cell" style="top:466px;inset-inline-start:108px">Early Bird</span><span class="cell" style="top:466px;inset-inline-start:383px">$99</span><span class="cell" style="top:466px;inset-inline-start:613px">2,000</span><span class="cell" style="top:466px;inset-inline-start:907px">Add your text</span><span class="cell o" style="top:541px;inset-inline-start:110px">Standard</span><span class="cell o" style="top:541px;inset-inline-start:385px">$129</span><span class="cell o" style="top:541px;inset-inline-start:613px">1,200</span><span class="cell o" style="top:541px;inset-inline-start:909px">Add your text</span><span class="cell" style="top:614px;inset-inline-start:108px">Duo Pack</span><span class="cell" style="top:614px;inset-inline-start:383px">$239</span><span class="cell" style="top:614px;inset-inline-start:613px">400</span><span class="cell" style="top:614px;inset-inline-start:907px">Add your text</span>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-100px;inset-inline-start:965px;width:600px;height:600px;color:#F1FAF9"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:320px;inset-inline-start:1250px;width:300px;height:300px;color:#F1FAF9"><use href="#cf-ring"/></svg>
+    <h1 class="ttl">Pre-Launch Roadmap</h1><p class="sub">You can add a subheading here</p>
+    <div class="box"></div>
+    <div class="gc" style="top:0;inset-inline-start:47px"><span class="big">01</span><span class="pill p1">PRE-LAUNCH</span><span class="q">Q1 2035</span><p class="d">This is a sample text. Insert your desired text here.</p></div>
+    <div class="gc" style="top:0;inset-inline-start:338px"><span class="big">02</span><span class="pill p2">LAUNCH</span><span class="q">Q2 2035</span><p class="d">This is a sample text. Insert your desired text here.</p></div>
+    <div class="gc" style="top:0;inset-inline-start:640px"><span class="big">03</span><span class="pill p3">FUNDING</span><span class="q">Q3 2035</span><p class="d">This is a sample text. Insert your desired text here.</p></div>
+    <div class="gc" style="top:0;inset-inline-start:932px"><span class="big">04</span><span class="pill p4">PRODUCTION</span><span class="q">Q2 2036</span><p class="d">This is a sample text. Insert your desired text here.</p></div>
+    <svg class="arr" style="inset-inline-start:303px;width:81px" viewBox="0 0 81 14" aria-hidden="true"><path d="M0 7H79" stroke="currentColor" stroke-width="2"/><path d="M74 1.5 80 7 74 12.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><svg class="arr" style="inset-inline-start:594px;width:92px" viewBox="0 0 92 14" aria-hidden="true"><path d="M0 7H90" stroke="currentColor" stroke-width="2"/><path d="M85 1.5 91 7 85 12.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><svg class="arr" style="inset-inline-start:896px;width:82px" viewBox="0 0 82 14" aria-hidden="true"><path d="M0 7H80" stroke="currentColor" stroke-width="2"/><path d="M75 1.5 81 7 75 12.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-550px;inset-inline-start:760px;width:600px;height:600px;color:#EEF7F6"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:360px;inset-inline-start:1095px;width:500px;height:500px;color:#EEF7F6"><use href="#cf-ring"/></svg>
+    <div class="tl"></div><div class="or"></div>
+    <h1 class="ttl wt">Launch Week Plan</h1><p class="sub">You can add a subheading here</p>
+    <h2 class="oh">This is a sample text.</h2><p class="op">This is a sample text. Insert your desired text here. This is a sample text. Add your text here.</p>
+    <div class="line"></div><span class="hd" style="inset-inline-start:617px">DAY</span><span class="hd" style="inset-inline-start:747px">FUNDING TARGET</span>
+    <span class="dot" style="top:156px"></span><span class="day" style="top:146px">01</span><span class="amt" style="top:145px">$25,000</span><span class="cum" style="top:196px">30% Cumulative Funding</span><ul class="bl" style="top:232px"><li><span class="star">✦</span>Add key activities here</li><li><span class="star">✦</span>This is a sample text for key activities</li></ul>
+    <span class="dot" style="top:361px"></span><span class="day" style="top:351px">03</span><span class="amt" style="top:350px">$40,000</span><span class="cum" style="top:401px">45% Cumulative Funding</span><ul class="bl" style="top:437px"><li><span class="star">✦</span>Add key activities here</li></ul>
+    <span class="dot" style="top:536px"></span><span class="day" style="top:526px">07</span><span class="amt" style="top:525px">$75,000</span><span class="cum" style="top:576px">50% Cumulative Funding</span><ul class="bl" style="top:612px"><li><span class="star">✦</span>Add key activities here</li></ul>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:-330px;width:480px;height:480px;color:rgb(255 255 255 / .06)"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:110px;inset-inline-start:1160px;width:400px;height:400px;color:rgb(255 255 255 / .06)"><use href="#cf-ring"/></svg>
+    <h1 class="ttl wt">Live Campaign Cadence</h1><p class="sub">You can add a subheading here</p>
+    <div class="cc" style="top:290px;inset-inline-start:45px"><span class="tag">PHASE 1</span></div><div class="gc" style="top:0;inset-inline-start:45px"><h2 class="nm">Launch Week</h2><span class="dy">Day 1-7</span><p class="vv">$350K</p><p class="ds">This is a sample text. Insert your desired text here. This is a sample text. Add text here</p></div>
+    <div class="cc" style="top:237px;inset-inline-start:445px"><span class="tag">PHASE 2</span></div><div class="gc" style="top:0;inset-inline-start:445px"><h2 class="nm">Growth</h2><span class="dy">Day 8-20</span><p class="vv">$100K</p><p class="ds">This is a sample text. Insert your desired text here. This is a sample text. Add text here</p></div>
+    <div class="cc" style="top:176px;inset-inline-start:845px"><span class="tag">PHASE 3</span></div><div class="gc" style="top:0;inset-inline-start:845px"><h2 class="nm">Final Push</h2><span class="dy">Day 21-30</span><p class="vv">$50K</p><p class="ds">This is a sample text. Insert your desired text here. This is a sample text. Add text here</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:-330px;width:480px;height:480px;color:#E9F3F2"><use href="#cf-ring"/></svg>
+    <h1 class="ttl c">Content Calendar</h1><p class="sub c">You can add a subheading here</p>
+    <div class="cal"></div><span class="h" style="top:335px"></span><span class="h" style="top:458px"></span><span class="h" style="top:590px"></span><span class="v" style="inset-inline-start:196px"></span><span class="v" style="inset-inline-start:362px"></span><span class="v" style="inset-inline-start:535px"></span><span class="v" style="inset-inline-start:714px"></span><span class="v" style="inset-inline-start:897px"></span><span class="v" style="inset-inline-start:1071px"></span><div class="fd"></div><span class="dn" style="top:218px;inset-inline-start:36px;width:150px">01</span><span class="dn" style="top:218px;inset-inline-start:197px;width:155px">02</span><span class="dn" style="top:218px;inset-inline-start:363px;width:162px">03</span><span class="dn" style="top:218px;inset-inline-start:536px;width:168px">04</span><span class="dn" style="top:218px;inset-inline-start:715px;width:172px">05</span><span class="dn" style="top:218px;inset-inline-start:898px;width:163px">06</span><span class="dn" style="top:218px;inset-inline-start:1072px;width:161px">07</span><span class="dn" style="top:345px;inset-inline-start:36px;width:150px">08</span><span class="dn" style="top:345px;inset-inline-start:197px;width:155px">09</span><span class="dn" style="top:345px;inset-inline-start:363px;width:162px">10</span><span class="dn" style="top:345px;inset-inline-start:536px;width:168px">11</span><span class="dn" style="top:345px;inset-inline-start:715px;width:172px">12</span><span class="dn" style="top:345px;inset-inline-start:898px;width:163px">13</span><span class="dn" style="top:345px;inset-inline-start:1072px;width:161px">14</span><span class="dn" style="top:470px;inset-inline-start:36px;width:150px">15</span><span class="dn" style="top:470px;inset-inline-start:197px;width:155px">16</span><span class="dn" style="top:470px;inset-inline-start:363px;width:162px">17</span><span class="dn" style="top:470px;inset-inline-start:536px;width:168px">18</span><span class="dn" style="top:470px;inset-inline-start:715px;width:172px">19</span><span class="dn" style="top:470px;inset-inline-start:898px;width:163px">20</span><span class="dn" style="top:470px;inset-inline-start:1072px;width:161px">21</span><span class="dn" style="top:602px;inset-inline-start:36px;width:150px">22</span><span class="dn" style="top:602px;inset-inline-start:197px;width:155px">23</span><span class="dn" style="top:602px;inset-inline-start:363px;width:162px">24</span><span class="dn" style="top:602px;inset-inline-start:536px;width:168px">25</span><span class="dn" style="top:602px;inset-inline-start:715px;width:172px">26</span><span class="dn" style="top:602px;inset-inline-start:898px;width:163px">27</span><span class="dn" style="top:602px;inset-inline-start:1072px;width:161px">28</span><span class="bar" style="top:264px;inset-inline-start:581px;width:611px;background:var(--teal);color:#fff">Weekly Themes</span><span class="bar" style="top:393px;inset-inline-start:107px;width:889px;background:var(--orange);color:#fff">Social Posts</span><span class="bar" style="top:512px;inset-inline-start:106px;width:225px;background:#10182A;color:#fff">Newsletter</span><span class="bar" style="top:648px;inset-inline-start:448px;width:361px;background:#C9D3DF;color:#1E2A3C">Video Updates</span>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:-330px;width:480px;height:480px;color:#E9F3F2"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-500px;inset-inline-start:1000px;width:600px;height:600px;color:#E9F3F2"><use href="#cf-ring"/></svg>
+    <h1 class="ttl c">Marketing Budget</h1>
+    <div class="gc" style="top:0;inset-inline-start:80px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" transform="rotate(-38 12 12)" d="M8.6 4.6h6.8v14.8H8.6zm1.6 1.6v11.6h3.6V6.2zM12 10.3a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4z"/><path d="M8.2 8.6C6 5.8 3.6 5 1.2 5.6c1.2.7 2 1.5 2.3 2.5-1 .2-1.7.6-2.2 1.3 1.6-.1 3.2.4 4.6 1.6z"/><path d="M15.8 15.4c2.2 2.8 4.6 3.6 7 3-1.2-.7-2-1.5-2.3-2.5 1-.2 1.7-.6 2.2-1.3-1.6.1-3.2-.4-4.6-1.6z"/></svg></span><span class="lb">Total Budget</span><span class="vv">$100,000</span></div>
+    <div class="gc" style="top:0;inset-inline-start:360px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7.5c0-1.7 1.3-3 3-3h12c1.7 0 3 1.3 3 3v1.6H3z"/><circle cx="8" cy="9.4" r="1.6" opacity=".55"/><circle cx="11" cy="8.8" r="1.6" opacity=".55"/><circle cx="14.2" cy="9.2" r="1.6" opacity=".55"/><path fill-rule="evenodd" d="M2.5 10.6h19v9.4h-19zm2 2v5.4h15v-5.4z"/><rect x="10.5" y="11.4" width="3" height="3.6" rx=".6"/></svg></span><span class="lb">Expected Revenue</span><span class="vv">$500,000</span></div>
+    <div class="gc" style="top:0;inset-inline-start:640px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.8 3.2v9.6l7.6 5.8A9.6 9.6 0 1 1 10.8 3.2z"/><path d="M12.8 1.6a9.6 9.6 0 0 1 9 9.6h-9z"/><path d="M13.6 13.2h8.2a9.6 9.6 0 0 1-2.2 5.6z"/></svg></span><span class="lb">Target Leads</span><span class="vv">20,000</span></div>
+    <div class="gc" style="top:0;inset-inline-start:920px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="8.2" r="2.1"/><circle cx="19" cy="8.2" r="2.1"/><path d="M1 15c0-2.5 1.7-4.1 4-4.1.9 0 1.6.2 2.2.7a7 7 0 0 0-.9 3.4z"/><path d="M23 15c0-2.5-1.7-4.1-4-4.1-.9 0-1.6.2-2.2.7.6 1 .9 2.2.9 3.4z"/><path fill-rule="evenodd" d="M12 4.6a5.4 5.4 0 1 1 0 10.8 5.4 5.4 0 0 1 0-10.8zm0 2a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/><path d="m15.4 14.4 1.5-1.4 4.3 4.3-1.5 1.5z"/><path d="M6.6 18.6c.3-2 1.6-3.4 3.4-4 .6.4 1.3.7 2 .8l-.9 3.2z"/></svg></span><span class="lb">Target ROAS</span><span class="vv">5.0x</span></div><span class="dv" style="inset-inline-start:360px"></span><span class="dv" style="inset-inline-start:640px"></span><span class="dv" style="inset-inline-start:920px"></span>
+    <div class="pn"></div><div class="wl"></div><span class="hb" style="inset-inline-start:158px">Budget Allocation</span><span class="hb" style="inset-inline-start:719px">Revenue Forecast</span><div class="bv" style="top:582px;inset-inline-start:93px"><span>Add text</span><b><bdi dir="ltr">45%</bdi></b></div><div class="bv" style="top:582px;inset-inline-start:259px"><span>Add text</span><b><bdi dir="ltr">55%</bdi></b></div><div class="bv" style="top:582px;inset-inline-start:426px"><span>Add text</span><b><bdi dir="ltr">100,000</bdi></b></div><div class="bv" style="top:582px;inset-inline-start:694px"><span>Add text here</span><b><bdi dir="ltr">$500,000</bdi></b></div><div class="bv" style="top:582px;inset-inline-start:944px"><span>Add text here</span><b><bdi dir="ltr">$400,000</bdi></b></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:135px;inset-inline-start:-300px;width:470px;height:470px;color:#1A324A"><use href="#cf-ring"/></svg><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:625px;inset-inline-start:1165px;width:400px;height:400px;color:#1A324A"><use href="#cf-ring"/></svg>
+    <h1 class="ttl c wt">Team & Roles</h1>
+    <div class="tm" style="inset-inline-start:83px"><img src="/templates/freeform/sl-crowdfunding-campaign-plan/assets/team-1.jpg" alt="Team member portrait"><span class="tag">EXECUTIVE</span><h2 class="nm">Michael Carter</h2><p class="ds">This is a sample text. Insert your desired text here.</p></div>
+    <div class="tm" style="inset-inline-start:467px"><img src="/templates/freeform/sl-crowdfunding-campaign-plan/assets/team-2.jpg" alt="Team member portrait"><span class="tag">MARKETING</span><h2 class="nm">Sarah Mitchell</h2><p class="ds">This is a sample text. Insert your desired text here.</p></div>
+    <div class="tm" style="inset-inline-start:850px"><img src="/templates/freeform/sl-crowdfunding-campaign-plan/assets/team-3.jpg" alt="Team member portrait"><span class="tag">OPERATIONS</span><h2 class="nm">Olivia Lee</h2><p class="ds">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <img class="ph" src="/templates/freeform/sl-crowdfunding-campaign-plan/assets/tooling.jpg" alt="Two colleagues reviewing charts on printed reports"><div class="pn"></div>
+    <h1 class="ttl">Tooling Stack</h1><p class="sub">Add subheading here</p>
+    <span class="n" style="inset-inline-start:99px">01</span><div class="col" style="inset-inline-start:98px"><h2>Marketing</h2><p>This is a sample text. Insert your desired text here.</p><ul><li><span class="star">✦</span>This is a sample text</li><li><span class="star">✦</span>This is a sample text</li></ul></div>
+    <span class="n" style="inset-inline-start:498px">02</span><div class="col" style="inset-inline-start:501px"><h2>Analytics</h2><p>This is a sample text. Insert your desired text here.</p><ul><li><span class="star">✦</span>This is a sample text</li><li><span class="star">✦</span>This is a sample text</li></ul></div>
+    <span class="n" style="inset-inline-start:890px">03</span><div class="col" style="inset-inline-start:893px"><h2>Community</h2><p>This is a sample text. Insert your desired text here.</p><ul><li><span class="star">✦</span>This is a sample text</li><li><span class="star">✦</span>This is a sample text</li></ul></div>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14"><svg class="dc" viewBox="0 0 100 100" aria-hidden="true" style="top:-330px;inset-inline-start:960px;width:600px;height:600px;color:#E9F3F2"><use href="#cf-ring"/></svg>
+    <h1 class="ttl">Risk Register</h1><p class="sub">This is a sample text. Insert your desired text here. This is a sample text.</p>
+    <span class="th" style="inset-inline-start:98px">Risk</span><span class="th" style="inset-inline-start:437px">Impact</span><span class="th" style="inset-inline-start:621px">Probability</span><span class="th" style="inset-inline-start:848px">Mitigation</span>
+    <div class="pn"></div><span class="sep" style="top:348px"></span><span class="sep" style="top:407px"></span><span class="sep" style="top:466px"></span><span class="td" style="top:307px;inset-inline-start:98px">Ad costs increase</span><span class="td b hi" style="top:307px;inset-inline-start:437px">High</span><span class="td b md" style="top:307px;inset-inline-start:623px">Medium</span><span class="td" style="top:307px;inset-inline-start:850px">This is a sample text</span><span class="td" style="top:366px;inset-inline-start:98px">Video delay</span><span class="td b md" style="top:366px;inset-inline-start:437px">Medium</span><span class="td b md" style="top:366px;inset-inline-start:623px">Medium</span><span class="td" style="top:366px;inset-inline-start:850px">Add your desired text here</span><span class="td" style="top:425px;inset-inline-start:98px">Manufacturing issue</span><span class="td b hi" style="top:425px;inset-inline-start:437px">High</span><span class="td b lo" style="top:425px;inset-inline-start:623px">Low</span><span class="td" style="top:425px;inset-inline-start:850px">This is a sample text. Add text</span><span class="td" style="top:484px;inset-inline-start:98px">Low launch momentum</span><span class="td b lo" style="top:484px;inset-inline-start:437px">Low</span><span class="td b md" style="top:484px;inset-inline-start:623px">Medium</span><span class="td" style="top:484px;inset-inline-start:850px">Add your desired text here</span>
+    <div class="ob"></div><span class="tg">Critical Risk Threshold</span><p class="op">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p>
+  </div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15">
+    <div class="low"></div>
+    <h1 class="ttl wt">KPI Dashboard</h1><p class="ds">This is a sample text. Add text here. Insert your desired text here. This is a sample text.</p>
+    <div class="k" style="top:329px;inset-inline-start:98px"><span class="l">Total Funds Raised</span><span class="v">$145,200</span><span class="s">58% of $250k goal</span></div><div class="k" style="top:329px;inset-inline-start:380px"><span class="l">Total Backers</span><span class="v">1,320</span><span class="s">Avg. Pledge: $100/backer</span></div><div class="k" style="top:501px;inset-inline-start:98px"><span class="l">Total Page Views</span><span class="v">48,500</span><span class="s">2.7% Conversion rate</span></div><div class="k" style="top:501px;inset-inline-start:382px"><span class="l">Time Remaining</span><span class="v">14 days left</span><span class="s">Ends on 28 May</span></div>
+    <div class="crd"></div><h2 class="ct">Chart title</h2><svg class="chart" id="cf-chart" viewBox="0 0 450 362" aria-hidden="true"></svg><p class="cap">This is a space for chart caption or description. Insert your desired text here.</p>
+    <div class="bdg"><i></i><b>86%</b><span>GROWTH</span></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 15</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"labels": ["Text here", "Text here", "Text here", "Text here"], "max": 300, "grid": [100, 200, 300], "series": [{"name": "Series 1", "color": "#FFFFFF", "values": [280, 100, 190, 305]}, {"name": "Series 2", "color": "#FC913B", "values": [90, 290, 25, 129]}, {"name": "Series 3", "color": "#11182B", "values": [50, 48, 150, 61]}]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // رسم خطي ناعم من كتلة chart-data؛ الفئة الأولى في جهة البداية، والقيم على مقياس 0..max
+  function drawChart() {
+    var svg = document.getElementById('cf-chart'); if (!svg) return;
+    var d = JSON.parse(document.getElementById('chart-data').textContent);
+    var W = 450, x0 = 8, x1 = 443, base = 318, H = 300, n = d.labels.length;
+    var step = (x1 - x0) / n, ns = 'http://www.w3.org/2000/svg';
+    function X(i) { var x = x0 + step * (i + .5); return RTL ? W - x : x; }
+    function Y(v) { return base - v / d.max * H; }
+    function el(t, a) { var e = document.createElementNS(ns, t); for (var k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; }
+    d.grid.forEach(function (g) { el('line', { x1: x0, x2: x1, y1: Y(g), y2: Y(g), stroke: 'rgba(255,255,255,.75)', 'stroke-width': 1.2, 'stroke-dasharray': '4 3' }); });
+    el('line', { x1: x0, x2: x1, y1: base, y2: base, stroke: '#CFE6E3', 'stroke-width': 2.5 });
+    d.labels.forEach(function (l, i) { var t = el('text', { x: X(i), y: base + 33, 'text-anchor': 'middle' }); t.textContent = l; });
+    d.series.forEach(function (s) {
+      var p = s.values.map(function (v, i) { return [X(i), Y(v)]; }), path = 'M' + p[0][0] + ' ' + p[0][1];
+      for (var i = 0; i < p.length - 1; i++) {
+        var a = p[i - 1] || p[i], b = p[i], c = p[i + 1], e = p[i + 2] || c;
+        path += ' C' + (b[0] + (c[0] - a[0]) / 6) + ' ' + (b[1] + (c[1] - a[1]) / 6) + ' ' + (c[0] - (e[0] - b[0]) / 6) + ' ' + (c[1] - (e[1] - b[1]) / 6) + ' ' + c[0] + ' ' + c[1];
+      }
+      el('path', { d: path, fill: 'none', stroke: s.color, 'stroke-width': 5, 'stroke-linecap': 'round' });
+    });
+  }
+  drawChart();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
