@@ -1,0 +1,63 @@
+{
+  "key": "sl-light-geometry-aesthetic",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🔷",
+  "name": "جماليات الهندسة الخفيفة",
+  "nameEn": "Light Geometry Aesthetic",
+  "description": "اثنتا عشرة شريحة بزخارف هندسية: غلاف، تعريف، أرقام، خدمات، أولويات، فرص، إطار، جدول تنفيذ، رسم حلقي، خارطة طريق، تواصل",
+  "descriptionEn": "12 geometric slides: cover, about, key figures, services, priorities, framework, table, donut, roadmap, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "نظرة عامة على الشركة",
+      "titleEn": "Company Overview",
+      "needsData": true
+    },
+    {
+      "title": "خدماتنا",
+      "titleEn": "Our Service"
+    },
+    {
+      "title": "الأولويات الاستراتيجية",
+      "titleEn": "Strategic Priorities"
+    },
+    {
+      "title": "خريطة الفرص",
+      "titleEn": "Opportunity Landscape"
+    },
+    {
+      "title": "الإطار الاستراتيجي",
+      "titleEn": "Strategic Framework"
+    },
+    {
+      "title": "نموذج التنفيذ",
+      "titleEn": "Execution Model"
+    },
+    {
+      "title": "قياس النجاح",
+      "titleEn": "Measuring Success",
+      "needsData": true
+    },
+    {
+      "title": "خارطة الطريق",
+      "titleEn": "Roadmap"
+    },
+    {
+      "title": "الفصل التالي",
+      "titleEn": "The Next Chapter"
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Get in Touch"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وطبقات الزخارف الهندسية .deco وغيّر النصوص والأرقام فقط؛ قيم الرسم الحلقي ونسبه في كتلة chart-data وتوافقها النسب المكتوبة بجانبه."
+}

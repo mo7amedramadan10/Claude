@@ -1,0 +1,33 @@
+{
+  "key": "sl-lightweight-tam-sam-som",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🎯",
+  "name": "السوق الكلي والمتاح والممكن",
+  "nameEn": "Lightweight TAM SAM SOM",
+  "description": "أربع شرائح لتقدير حجم السوق بدوائر متداخلة وبطاقات أرقام: نظرة عامة ثم إبراز كل مستوى",
+  "descriptionEn": "Four market-sizing slides with nested circles and value cards: overview, then each level highlighted",
+  "sections": [
+    {
+      "title": "المستويات الثلاثة",
+      "titleEn": "All Three Levels",
+      "needsData": true
+    },
+    {
+      "title": "السوق الكلي",
+      "titleEn": "TAM",
+      "needsData": true
+    },
+    {
+      "title": "السوق المتاح",
+      "titleEn": "SAM",
+      "needsData": true
+    },
+    {
+      "title": "السوق الممكن",
+      "titleEn": "SOM",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ الدوائر رسم SVG، والصنف on يحدد المستوى المُبرز (الدائرة والتسمية والسهم والبطاقة) في كل شريحة، وأرقام البطاقات الثلاث متطابقة في الشرائح الأربع."
+}

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جماليات الهندسة الخفيفة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «جماليات الهندسة الخفيفة»: غلاف، من نحن، نظرة عامة بالأرقام، الخدمات، الأولويات، الفرص، الإطار الاستراتيجي، نموذج التنفيذ (جدول)، قياس النجاح (رسم حلقي)، خارطة الطريق، الفصل التالي، التواصل. الزخارف SVG في طبقة .deco تنعكس للعربية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #0D0D0D; --ink-2: #595959; --accent: #FF4F3B; --bg: #F2F2F2; --navy: #003D64; --red: #FF4F3B; --yellow: #FFC501; --gold: #BD9305; --sky: #0AB4F0; --line: #D9D9D9; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame { background: var(--bg); }
+  .deco { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .deco { transform: scaleX(-1); }
+  .t { position: absolute; margin: 0; }
+  .h { top: 61px; inset-inline-start: 83px; font-size: 51px; font-weight: 400; line-height: 58px; color: var(--ink); white-space: nowrap; letter-spacing: -.4px; }
+  .sub { top: 134px; inset-inline-start: 83px; font-size: 22.5px; line-height: 28px; color: var(--navy); white-space: nowrap; }
+  .p { font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); }
+  html[lang="ar"] .h { font-weight: 500; letter-spacing: 0; }
+  /* الخط العربي أصغر بصريًا فتُكبَّر نصوص المتن والعناوين الفرعية قليلًا */
+  html[lang="ar"] .p, html[lang="ar"] .svc p, html[lang="ar"] .col p, html[lang="ar"] .card p, html[lang="ar"] .m p, html[lang="ar"] .ms p, html[lang="ar"] .foot { font-size: 20px; line-height: 27px; }
+  html[lang="ar"] .sub, html[lang="ar"] .frame h3, html[lang="ar"] .s5 .quote, html[lang="ar"] .s8 .h3, html[lang="ar"] .s6 .lbl { font-size: 24px; }
+  html[lang="ar"] .s8 td { font-size: 19px; }
+  html[dir="rtl"] .flip svg { transform: scaleX(-1); }
+  .ic { position: absolute; display: block; }
+  .ic svg { width: 100%; height: 100%; }
+  .navy { color: var(--navy); } .red { color: var(--red); } .gold { color: var(--gold); } .sky { color: var(--sky); } .yel { color: var(--yellow); }
+  .rule { position: absolute; height: 2px; }
+  .logo { position: absolute; display: flex; align-items: center; gap: 20px; }
+  .logo svg { width: 42px; height: 46px; flex: none; }
+  .logo span { font-size: 16px; line-height: 23px; letter-spacing: 2.4px; color: var(--ink); text-transform: uppercase; }
+  html[lang="ar"] .logo span { letter-spacing: 0; font-size: 18.4px; }
+  /* 1 الغلاف */
+  .s1 .logo { top: 92px; inset-inline-start: 88px; }
+  .s1 .c1 { top: 229px; inset-inline-start: 82px; font-size: 68px; line-height: 80px; font-weight: 400; letter-spacing: -1.6px; color: #000; white-space: nowrap; }
+  .s1 .c2 { top: 303px; inset-inline-start: 80px; font-size: 96px; line-height: 108px; font-weight: 400; letter-spacing: 6.2px; color: #000; white-space: nowrap; }
+  .s1 .c3 { top: 417px; inset-inline-start: 83px; font-size: 30px; line-height: 40px; letter-spacing: 6.6px; color: var(--red); white-space: nowrap; }
+  html[lang="ar"] .s1 .c1 { font-size: 70px; font-weight: 500; letter-spacing: 0; top: 222px; }
+  html[lang="ar"] .s1 .c2 { font-size: 92px; font-weight: 700; letter-spacing: 0; top: 296px; }
+  html[lang="ar"] .s1 .c3 { letter-spacing: 0; font-size: 30px; }
+  .s1 .r1 { top: 489px; inset-inline-start: 74px; width: 315px; background: var(--red); }
+  .s1 .r2 { top: 489px; inset-inline-start: 406px; width: 53px; background: var(--red); }
+  .s1 .p { top: 555px; inset-inline-start: 88px; width: 460px; }
+  /* 2 من نحن */
+  .s2 .h { top: 131px; inset-inline-start: 588px; }
+  .s2 .sub { top: 208px; inset-inline-start: 588px; }
+  .s2 .p1 { top: 385px; inset-inline-start: 588px; width: 486px; }
+  .s2 .p2 { top: 487px; inset-inline-start: 588px; width: 486px; }
+  /* 3 نظرة عامة */
+  .s3 .p { top: 236px; inset-inline-start: 80px; width: 700px; }
+  .s3 .stat { position: absolute; top: 447px; width: 200px; }
+  .s3 .stat .ic { position: static; width: 56px; height: 56px; color: var(--red); }
+  .s3 .stat b { display: block; margin-top: 38px; font-size: 44px; line-height: 56px; font-weight: 400; color: #000; }
+  .s3 .stat span { display: block; margin-top: 10px; font-size: 18.4px; line-height: 26px; color: var(--ink-2); }
+  .s3 .st1 { inset-inline-start: 346px; } .s3 .st1 .ic { margin-inline-start: -6px; }
+  .s3 .st2 { inset-inline-start: 579px; } .s3 .st2 .ic { margin-inline-start: 1px; }
+  .s3 .st3 { inset-inline-start: 826px; } .s3 .st3 .ic { margin-inline-start: 1px; }
+  .s3 .dv { position: absolute; top: 457px; width: 2px; height: 188px; background: #CFCFCF; }
+  /* 4 الخدمات */
+  .s4 .p { top: 231px; inset-inline-start: 80px; width: 352px; }
+  .s4 .svc { position: absolute; width: 250px; }
+  .s4 .svc .ic { position: static; width: 60px; height: 50px; }
+  .s4 .svc h3 { margin: 16px 0 0; font-size: 22.5px; line-height: 28px; font-weight: 400; }
+  .s4 .svc p { margin: 13px 0 0; font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); width: 200px; }
+  .s4 .v1 { top: 186px; inset-inline-start: 697px; } .s4 .v2 { top: 186px; inset-inline-start: 1014px; }
+  .s4 .v3 { top: 471px; inset-inline-start: 697px; } .s4 .v4 { top: 471px; inset-inline-start: 1014px; }
+  .s4 .svc .tm { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: var(--red); color: #fff; font-size: 22.5px; margin-top: -4px; margin-bottom: 0; }
+  /* 5 الأولويات */
+  .s5 .h { top: 148px; inset-inline-start: 175px; }
+  .s5 .sub { top: 219px; inset-inline-start: 175px; }
+  .s5 .quote { top: 165px; inset-inline-start: 769px; width: 440px; font-size: 22.5px; line-height: 29px; color: var(--red); }
+  .s5 .p { top: 245px; inset-inline-start: 769px; width: 450px; }
+  .s5 .col { position: absolute; top: 400px; width: 205px; }
+  .s5 .col b { display: block; font-size: 44px; line-height: 54px; font-weight: 400; color: var(--red); }
+  .s5 .col h3 { margin: 42px 0 0; height: 58px; font-size: 22.5px; line-height: 29px; font-weight: 400; color: var(--navy); }
+  .s5 .col p { width: 192px; margin: 13px 0 0; font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); }
+  .s5 .k1 { inset-inline-start: 83px; } .s5 .k2 { inset-inline-start: 393px; } .s5 .k3 { inset-inline-start: 703px; } .s5 .k4 { inset-inline-start: 1013px; }
+  .s5 .dv { position: absolute; top: 407px; width: 2px; height: 256px; background: #D9D9D9; }
+  /* 6 الفرص */
+  .s6 .four { position: absolute; top: 268px; inset-inline-start: 80px; width: 204px; height: 268px; }
+  .s6 .lbl { top: 568px; inset-inline-start: 80px; width: 235px; text-align: center; font-size: 22.5px; line-height: 29px; color: var(--navy); }
+  .s6 .card { position: absolute; width: 412px; height: 202px; background: #fff; }
+  .s6 .card .ic { top: 42px; inset-inline-start: 33px; width: 62px; height: 52px; }
+  .s6 .card h3 { position: absolute; top: 44px; inset-inline-start: 136px; margin: 0; font-size: 22.5px; line-height: 28px; font-weight: 400; }
+  .s6 .card p { position: absolute; top: 85px; inset-inline-start: 136px; margin: 0; width: 245px; font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); }
+  .s6 .o1 { top: 222px; inset-inline-start: 400px; } .s6 .o2 { top: 222px; inset-inline-start: 827px; }
+  .s6 .o3 { top: 438px; inset-inline-start: 400px; } .s6 .o4 { top: 438px; inset-inline-start: 827px; }
+  .s6 .rule { top: 679px; inset-inline-start: 80px; width: 131px; background: var(--navy); }
+  .s6 .foot { top: 668px; inset-inline-start: 233px; font-size: 18.4px; line-height: 26px; color: var(--ink-2); white-space: nowrap; }
+  /* 7 الإطار الاستراتيجي */
+  .s7 .card { position: absolute; top: 245px; width: 296px; height: 372px; background: #fff; }
+  .s7 .card h3 { position: absolute; top: 55px; inset-inline-start: 36px; margin: 0; font-size: 22.5px; line-height: 28px; font-weight: 400; }
+  .s7 .card p { position: absolute; top: 97px; inset-inline-start: 36px; margin: 0; width: 205px; font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); }
+  .s7 .card .ic { top: 282px; inset-inline-start: 31px; width: 60px; height: 52px; }
+  .s7 .f1 { inset-inline-start: 57px; } .s7 .f2 { inset-inline-start: 492px; } .s7 .f3 { inset-inline-start: 927px; }
+  .s7 .rule { top: 666px; inset-inline-start: 80px; width: 131px; background: var(--red); }
+  .s7 .foot { top: 655px; inset-inline-start: 233px; font-size: 18.4px; line-height: 26px; color: #fff; white-space: nowrap; }
+  /* 8 نموذج التنفيذ */
+  .s8 table { position: absolute; top: 243px; inset-inline-start: 70px; width: 691px; border-collapse: collapse; table-layout: fixed; }
+  .s8 th, .s8 td { height: 79px; padding: 0 0 0 20px; padding-inline: 20px 0; text-align: start; font-size: 18.4px; color: var(--ink-2); }
+  .s8 th { background: var(--navy); color: #fff; font-size: 22.5px; font-weight: 700; }
+  .s8 td:first-child { color: var(--navy); font-weight: 700; }
+  .s8 tr:nth-child(odd) td { background: #DADFE3; }
+  .s8 .c1 { width: 204px; } .s8 .c2 { width: 225px; }
+  .s8 .h3 { top: 248px; inset-inline-start: 833px; width: 230px; font-size: 22.5px; line-height: 29px; color: var(--navy); }
+  .s8 .p1 { top: 331px; inset-inline-start: 833px; width: 266px; }
+  .s8 .p2 { top: 459px; inset-inline-start: 833px; width: 272px; }
+  /* 9 قياس النجاح */
+  .s9 .m { position: absolute; inset-inline-start: 80px; width: 560px; }
+  .s9 .m b { position: absolute; top: 0; inset-inline-start: 0; font-size: 44px; line-height: 52px; font-weight: 400; }
+  .s9 .m h3 { position: absolute; top: 0; inset-inline-start: 127px; margin: 0; font-size: 22.5px; line-height: 28px; font-weight: 400; white-space: nowrap; }
+  .s9 .m p { position: absolute; top: 32px; inset-inline-start: 127px; margin: 0; font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); white-space: nowrap; }
+  .s9 .m1 { top: 237px; } .s9 .m2 { top: 342px; } .s9 .m3 { top: 446px; } .s9 .m4 { top: 551px; }
+  .s9 .m4 b { color: #000; }
+  .s9 .donut { position: absolute; top: 124px; inset-inline-start: 692px; width: 504px; height: 504px; }
+  .s9 .donut text { font-weight: 700; font-size: 22px; fill: #fff; font-family: var(--font); }
+  /* 10 خارطة الطريق */
+  .s10 .h { top: 61px; inset-inline-start: 892px; }
+  .s10 .sub { top: 134px; inset-inline-start: 887px; }
+  .s10 .date { position: absolute; margin: 0; inset-inline-start: 47px; font-size: 19px; line-height: 25px; color: var(--red); }
+  .s10 .dot { position: absolute; inset-inline-start: 114px; width: 42px; height: 42px; border-radius: 50%; background: #fff; }
+  .s10 .dot::after { content: ""; position: absolute; inset: 11.5px; border-radius: 50%; background: var(--red); }
+  .s10 .vline { position: absolute; top: 95px; inset-inline-start: 134px; width: 2px; height: 552px; background: #44546A; }
+  .s10 .ahead { position: absolute; top: 640px; inset-inline-start: 129px; width: 12px; height: 12px; border-inline-end: 2px solid #44546A; border-bottom: 2px solid #44546A; transform: rotate(45deg); }
+  html[dir="rtl"] .s10 .ahead { transform: rotate(-45deg); }
+  .s10 .dash { position: absolute; inset-inline-start: 27px; width: 730px; border-top: 1.5px dashed #C4C4C4; }
+  .s10 .ms h3 { position: absolute; inset-inline-start: 187px; margin: 0; font-size: 22.5px; line-height: 28px; font-weight: 400; color: var(--navy); white-space: nowrap; }
+  .s10 .ms p { position: absolute; inset-inline-start: 187px; margin: 0; width: 525px; font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); }
+  .s10 .cal { top: 237px; inset-inline-start: 896px; width: 42px; height: 40px; color: var(--red); }
+  .s10 .big { top: 299px; inset-inline-start: 893px; font-size: 44px; line-height: 56px; color: var(--navy); white-space: nowrap; }
+  .s10 .p { top: 372px; inset-inline-start: 892px; width: 340px; }
+  /* 11 الفصل التالي */
+  .s11 .big { top: 292px; inset-inline-start: 80px; font-size: 46px; line-height: 57px; color: var(--red); white-space: nowrap; }
+  .s11 .p { top: 437px; inset-inline-start: 80px; width: 490px; }
+  .s11 .card { position: absolute; inset-inline-start: 661px; width: 577px; height: 188px; background: #fff; }
+  .s11 .card .ic { top: 46px; inset-inline-start: 36px; width: 60px; height: 56px; }
+  .s11 .card h3 { position: absolute; top: 47px; inset-inline-start: 142px; margin: 0; font-size: 22.5px; line-height: 28px; font-weight: 400; white-space: nowrap; }
+  .s11 .card p { position: absolute; top: 89px; inset-inline-start: 142px; margin: 0; width: 395px; font-size: 18.4px; line-height: 25.5px; color: var(--ink-2); }
+  .s11 .n1 { top: 69px; } .s11 .n2 { top: 275px; } .s11 .n3 { top: 481px; }
+  /* 12 التواصل */
+  .s12 .logo { top: 92px; inset-inline-start: 120px; }
+  .s12 .kick { top: 307px; inset-inline-start: 109px; font-size: 28px; line-height: 38px; color: var(--red); white-space: nowrap; }
+  .s12 .big { top: 357px; inset-inline-start: 107px; font-size: 60px; line-height: 63px; font-weight: 400; letter-spacing: -1.2px; color: #000; }
+  html[lang="ar"] .s12 .big { letter-spacing: 0; font-weight: 500; }
+  .s12 .ci { position: absolute; top: 539px; }
+  .s12 .ci .ic { position: static; width: 28px; height: 28px; color: var(--sky); }
+  .s12 .ci span { display: block; margin-top: 16px; font-size: 18px; line-height: 26px; color: var(--ink-2); white-space: nowrap; }
+  .s12 .ci i { display: block; margin-top: 12px; margin-inline-start: -5px; width: 53px; height: 2px; background: var(--sky); }
+  .s12 .e1 { inset-inline-start: 108px; } .s12 .e2 { inset-inline-start: 405px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="48" y="48" width="985" height="624" fill="none" stroke="#FFFFFF" stroke-width="2"/><rect x="779" y="110" width="250" height="250" fill="#FFC501"/><polygon points="1029,110 1029,360 779,360" fill="#003D64"/><circle cx="852" cy="190" r="32" fill="#FFFFFF"/><rect x="1029" y="110" width="251" height="250" fill="#FFFFFF"/><polygon points="1029,110 1280,361 1029,361" fill="#003D64"/><circle cx="1202" cy="190" r="32" fill="#FF4F3B"/><rect x="779" y="360" width="250" height="250" fill="#FFFFFF"/><polygon points="779,360 1029,360 1029,610" fill="#003D64"/><circle cx="852" cy="542" r="32" fill="#003D64"/><rect x="1029" y="360" width="251" height="250" fill="#FFC501"/><rect x="1070" y="400" width="169" height="170" fill="#FFFFFF"/><rect x="1030" y="-15" width="62" height="62" fill="#FF4F3B"/><polygon points="1030,47 1092,47 1092,-15" fill="#003D64"/><rect x="1092" y="-15" width="62" height="62" fill="#FFFFFF"/><polygon points="1092,47 1154,47 1154,-15" fill="#003D64"/><rect x="1030" y="47" width="62" height="63" fill="#F2F2F2"/><polygon points="1030,110 1092,110 1092,47" fill="#003D64"/><rect x="1092" y="47" width="62" height="63" fill="#003D64"/><polygon points="1092,47 1155,47 1092,110" fill="#FFC501"/><rect x="1154" y="-15" width="126" height="125" fill="#003D64"/><circle cx="1284" cy="-14" r="127" fill="#F2F2F2"/><circle cx="1275" cy="-10" r="57" fill="#FF4F3B"/><rect x="1033" y="610" width="122" height="110" fill="#003D64"/><rect x="1033" y="610" width="59" height="110" fill="#FFFFFF"/><polygon points="1040,610 1088,610 1064,636" fill="#EDEDED"/><polygon points="1033,721 1075,679 1117,721" fill="#FFC501"/><polygon points="1090,610 1133,652 1090,695 1047,652" fill="#FFFFFF"/><polygon points="1091,632 1112,652 1091,673 1070,652" fill="#FF4F3B"/><rect x="1155" y="610" width="125" height="110" fill="#003D64"/><rect x="1170" y="636" width="84" height="90" fill="#FF4F3B"/><rect x="1191" y="657" width="42" height="41" fill="#003D64"/></svg>
+    <div class="logo"><svg viewBox="0 0 42 46" aria-hidden="true"><path fill="#003D64" fill-rule="evenodd" d="M9 3.5C17 1 27 1 36 3.6c3.6 1 5 3.4 4.6 7.4l-1.8 23.8c-.3 3.8-2.4 6.4-6.4 7.2C24 43.6 15 43.6 7 41.4 3.4 40.4 1.8 38 1.8 34.2V10.6C1.8 6.8 4.6 4.8 9 3.5zM12.5 11c5.6-1.4 11.6-1.4 17.2 0 .9.2 1.3.9 1.2 1.8l-1.1 18.6c0 .9-.6 1.5-1.4 1.7-5 1.2-10 1.2-15 0-.8-.2-1.4-.9-1.4-1.8V12.8c0-.9.6-1.6 1.5-1.8z"/></svg><span>شعار شركتك<br>هنا</span></div>
+    <h1 class="t c1">الهندسة الخفيفة</h1>
+    <p class="t c2">الجمالية</p>
+    <p class="t c3">قالب عرض تقديمي</p>
+    <i class="rule r1"></i><i class="rule r2"></i>
+    <p class="t p">هذا نص توضيحي. أضف النص المطلوب هنا.<br>أضف النص هنا. أضف النص هنا. هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M445,63 H1216 V592" fill="none" stroke="#fff" stroke-width="2"/><rect x="0" y="0" width="222" height="222" fill="#FFC501"/><path d="M0,0 L222,0 A222,222 0 0 1 0,222 Z" fill="#E6E6E6"/><path d="M0,0 L150,0 A150,150 0 0 1 0,150 Z" fill="#003D64"/><path d="M0,0 L75,0 A75,75 0 0 1 0,75 Z" fill="#FF4F3B"/><rect x="222" y="0" width="223" height="223" fill="#003D64"/><circle cx="259.167" cy="37.1667" r="37" fill="#FF4F3B"/><circle cx="333.5" cy="37.1667" r="37" fill="#FF4F3B"/><circle cx="407.833" cy="37.1667" r="37" fill="#FF4F3B"/><circle cx="259.167" cy="111.5" r="37" fill="#FF4F3B"/><circle cx="333.5" cy="111.5" r="37" fill="#FFC501"/><circle cx="407.833" cy="111.5" r="37" fill="#FF4F3B"/><circle cx="259.167" cy="185.833" r="37" fill="#FF4F3B"/><circle cx="333.5" cy="185.833" r="37" fill="#FF4F3B"/><circle cx="407.833" cy="185.833" r="37" fill="#FF4F3B"/><rect x="0" y="222" width="222" height="223" fill="#FFFFFF"/><polygon points="0,222 0,445 222,445" fill="#FF4F3B"/><polygon points="0,222 222,320 222,445" fill="#003D64"/><rect x="222" y="222" width="223" height="223" fill="#FFFFFF"/><polygon points="222,222 222,445 445,445" fill="#FFC501"/><polygon points="445,222 333.5,333.5 445,445" fill="#003D64"/><rect x="0" y="445" width="111" height="111" fill="#F2F2F2"/><rect x="111" y="445" width="111" height="111" fill="#F2F2F2"/><rect x="0" y="556" width="222" height="111" fill="#FF4F3B"/><path d="M0,556 A111,111 0 0 1 111,445 A111,111 0 0 1 0,556 Z" fill="#003D64"/><path d="M111,556 A111,111 0 0 1 222,445 A111,111 0 0 1 111,556 Z" fill="#FFC501"/><path d="M0,556 A111,111 0 0 1 111,667 A111,111 0 0 1 0,556 Z" fill="#003D64"/><path d="M111,556 A111,111 0 0 1 222,667 A111,111 0 0 1 111,556 Z" fill="#FFC501"/><path d="M222,445 L444,445 A222,222 0 0 1 222,667 Z" fill="#FFFFFF"/><path d="M222,445 L333,445 A111,111 0 0 1 222,556 Z" fill="#FF4F3B"/><polygon points="1153,0 1153,127 1280,127" fill="#003D64"/><rect x="1216" y="0" width="64" height="63" fill="#FFFFFF"/><polygon points="1280,0 1280,63 1216,63" fill="#FF4F3B"/><rect x="1153" y="592" width="63" height="63" fill="#F2F2F2"/><polygon points="1216,592 1216,655 1153,655" fill="#003D64"/><rect x="1216" y="592" width="64" height="63" fill="#FFFFFF"/><polygon points="1280,592 1280,655 1216,655" fill="#FF4F3B"/><rect x="1153" y="655" width="63" height="63" fill="#FFFFFF"/><polygon points="1216,655 1216,718 1153,718" fill="#003D64"/><rect x="1216" y="655" width="64" height="63" fill="#F2F2F2"/><polygon points="1280,655 1280,718 1216,718" fill="#FFC501"/></svg>
+    <h1 class="t h">من نحن</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <p class="t p p1">هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا. هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب هنا. هذا نص توضيحي.</p>
+    <p class="t p p2">هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا. هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب هنا. هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="0" y="360" width="1280" height="360" fill="#FFFFFF"/><path d="M1057,0 L1057,218 A218,218 0 0 1 839,0 Z" fill="#FFFFFF"/><path d="M1057,0 L1057,110 A110,110 0 0 1 947,0 Z" fill="#FF4F3B"/><rect x="1057" y="0" width="111" height="218" fill="#FF4F3B"/><path d="M1057,108 A110,110 0 0 1 1167,-2 A110,110 0 0 1 1057,108 Z" fill="#003D64"/><path d="M1168,-2 A110,110 0 0 1 1279,108 A110,110 0 0 1 1168,-2 Z" fill="#003D64"/><path d="M1057,218 A110,110 0 0 1 1168,108 A110,110 0 0 1 1057,218 Z" fill="#FFC501"/><path d="M1168,108 A110,110 0 0 1 1279,218 A110,110 0 0 1 1168,108 Z" fill="#FFC501"/><rect x="0" y="410" width="250" height="250" fill="#FF4F3B"/><path d="M0,410 H125 A125,125 0 0 1 250,535 H0 Z" fill="#FFC501"/><path d="M0,535 H250 A125,125 0 0 1 125,660 H0 Z" fill="#003D64"/><path d="M0,448 H140 A92,92 0 0 1 140,632 H0 M0,463 H130 A77,77 0 0 1 130,617 H0" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M0,535 A57,57 0 0 1 57,478 A57,57 0 0 1 0,535 Z" fill="#FFFFFF"/><path d="M70,535 A57,57 0 0 1 127,478 A57,57 0 0 1 70,535 Z" fill="#FFFFFF"/><path d="M0,535 A57,57 0 0 1 57,592 A57,57 0 0 1 0,535 Z" fill="#FFFFFF"/><path d="M70,535 A57,57 0 0 1 127,592 A57,57 0 0 1 70,535 Z" fill="#FFFFFF"/><path d="M147,504 A31,31 0 0 0 178,535 A31,31 0 0 0 147,566 A31,31 0 0 0 116,535 A31,31 0 0 0 147,504 Z" fill="#FFFFFF"/><rect x="1154" y="410" width="126" height="252" fill="#FFC501"/><path d="M1153,535 L1046,535 A107,107 0 0 1 1153,428 Z" fill="#003D64"/><path d="M1153,535 L1091,535 A62,62 0 0 1 1153,473 Z" fill="#E6E6E6"/><path d="M1154,535 L1154,409 A126,126 0 0 1 1280,535 Z" fill="#FF4F3B"/><path d="M1154,535 L1154,440 A95,95 0 0 1 1249,535 Z" fill="#FFFFFF"/><path d="M1154,535 L1154,473 A62,62 0 0 1 1216,535 Z" fill="#FF4F3B"/><path d="M1153,535 L1153,597 A62,62 0 0 1 1091,535 Z" fill="#FF4F3B"/><path d="M1154,535 L1216,535 A62,62 0 0 1 1154,597 Z" fill="#003D64"/><path d="M1280,662 L1218,662 A62,62 0 0 1 1280,600 Z" fill="#FF4F3B"/><path d="M1153.5,410 V662" stroke="#fff" stroke-width="2"/></svg>
+    <h1 class="t h">نظرة عامة على الشركة</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <p class="t p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا. هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <div class="stat st1"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 2h12v21h-4.5v-4h-3v4H6zM8 5h2v2h-2zM8 8.4h2v2h-2zM8 11.8h2v2h-2zM8 15.2h2v2h-2zM11.2 5h2v2h-2zM11.2 8.4h2v2h-2zM11.2 11.8h2v2h-2zM11.2 15.2h2v2h-2zM14.4 5h2v2h-2zM14.4 8.4h2v2h-2zM14.4 11.8h2v2h-2zM14.4 15.2h2v2h-2z"/><rect x="5" y="22" width="14" height="1.4"/></svg></span><b><bdi dir="ltr">2018</bdi></b><span>سنة التأسيس</span></div>
+    <i class="dv" style="inset-inline-start:517px"></i>
+    <div class="stat st2"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="4.5" r="2"/><circle cx="12" cy="4" r="2.2"/><circle cx="19" cy="4.5" r="2"/><path d="M2.6 7.6h4.8l.9 6.4-1.4.3-.4 7.7H5.5l-.3-5.5-.3 5.5H3.9l-.4-7.7-1.4-.3z"/><path d="M9.4 7.2h5.2l1 7-1.5.3-.4 8.5h-1.6l-.3-6-.3 6H9.9l-.4-8.5-1.5-.3z"/><path d="M16.6 7.6h4.8l.5 6.4-1.4.3-.4 7.7H19l-.3-5.5-.3 5.5h-1.1l-.4-7.7-1.4-.3z"/></svg></span><b><bdi dir="ltr">125</bdi></b><span>موظفًا</span></div>
+    <i class="dv" style="inset-inline-start:752px"></i>
+    <div class="stat st3"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M2 7h6v14H2zM3.2 9h1.4v1.4h-1.4zM3.2 11.4h1.4v1.4h-1.4zM3.2 13.8h1.4v1.4h-1.4zM3.2 16.2h1.4v1.4h-1.4zM5.4 9h1.4v1.4h-1.4zM5.4 11.4h1.4v1.4h-1.4zM5.4 13.8h1.4v1.4h-1.4zM5.4 16.2h1.4v1.4h-1.4z"/><path fill-rule="evenodd" d="M8.6 12h6v9h-6zM9.8 13.5h1.4v1.4h-1.4zM9.8 15.9h1.4v1.4h-1.4zM12 13.5h1.4v1.4h-1.4zM12 15.9h1.4v1.4h-1.4z"/><path fill-rule="evenodd" d="M15 5h6.5v16H15zM16.2 7h1.4v1.4h-1.4zM16.2 9.4h1.4v1.4h-1.4zM16.2 11.8h1.4v1.4h-1.4zM16.2 14.2h1.4v1.4h-1.4zM16.2 16.6h1.4v1.4h-1.4zM18.4 7h1.4v1.4h-1.4zM18.4 9.4h1.4v1.4h-1.4zM18.4 11.8h1.4v1.4h-1.4zM18.4 14.2h1.4v1.4h-1.4zM18.4 16.6h1.4v1.4h-1.4z"/></svg></span><b><bdi dir="ltr">18</bdi></b><span>فرعًا</span></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="640" y="0" width="640" height="143" fill="#003D64"/><rect x="682" y="62" width="386" height="2" fill="#FFC501"/><rect x="628" y="143" width="652" height="577" fill="#FFFFFF"/><rect x="952" y="143" width="2" height="577" fill="#E6E6E6"/><rect x="628" y="418" width="652" height="2" fill="#E6E6E6"/><rect x="0" y="469" width="126" height="126" fill="#FF4F3B"/><polygon points="126,469 126,595 0,595" fill="#FFC501"/><rect x="126" y="469" width="125" height="126" fill="#FFC501"/><path d="M126,469 A63,63 0 0 1 126,595 Z" fill="#003D64"/><path d="M251,595 A63,63 0 0 1 251,469 Z" fill="#FF4F3B"/><rect x="251" y="469" width="126" height="126" fill="#003D64"/><path d="M251,469 A63,63 0 0 1 314,532 A63,63 0 0 1 251,469 Z" fill="#F2F2F2"/><path d="M314,532 A63,63 0 0 1 377,595 A63,63 0 0 1 314,532 Z" fill="#F2F2F2"/><path d="M314,532 A63,63 0 0 1 377,469 A63,63 0 0 1 314,532 Z" fill="#FF4F3B"/><path d="M251,595 A63,63 0 0 1 314,532 A63,63 0 0 1 251,595 Z" fill="#FF4F3B"/><path d="M377,470 A125,125 0 0 1 502,595 L455,595 A78,78 0 0 0 377,517 Z" fill="#FFC501"/><rect x="0" y="595" width="126" height="125" fill="#003D64"/><path d="M0,595 A126,126 0 0 1 126,721 A126,126 0 0 1 0,595 Z" fill="#F2F2F2"/><rect x="126" y="595" width="125" height="125" fill="#FF4F3B"/><circle cx="146.833" cy="615.833" r="14" fill="#FFFFFF"/><circle cx="188.5" cy="615.833" r="14" fill="#003D64"/><circle cx="230.167" cy="615.833" r="14" fill="#FFFFFF"/><circle cx="146.833" cy="657.5" r="14" fill="#003D64"/><circle cx="188.5" cy="657.5" r="14" fill="#FFC501"/><circle cx="230.167" cy="657.5" r="14" fill="#003D64"/><circle cx="146.833" cy="699.167" r="14" fill="#FFFFFF"/><circle cx="188.5" cy="699.167" r="14" fill="#003D64"/><circle cx="230.167" cy="699.167" r="14" fill="#FFFFFF"/><rect x="251" y="595" width="126" height="125" fill="#FFC501"/><path d="M377,720 L251,720 A126,126 0 0 1 377,594 Z" fill="#003D64"/><rect x="377" y="595" width="125" height="125" fill="#003D64"/><path d="M377,720 L377,635 A85,85 0 0 1 462,720 Z" fill="#F2F2F2"/><polygon points="428,615 481,615 481,668" fill="#FFC501"/><polygon points="502,595 565,657 502,657" fill="#FF4F3B"/><polygon points="565,595 627,657 565,657" fill="#003D64"/><polygon points="502,657 565,720 502,720" fill="#FFC501"/><polygon points="565,657 627,720 565,720" fill="#003D64"/></svg>
+    <h1 class="t h">خدماتنا</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <p class="t p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا. هذا نص توضيحي. أضف النص هنا.</p>
+    <div class="svc v1"><span class="ic navy"><svg viewBox="0 0 26 24" fill="currentColor" aria-hidden="true"><path d="M1 21h11.5v2.6H1zM2.4 20c-.4-2.6.3-4.6 1.6-6.2 1.1-1.3 2.2-2.2 2.4-3.4l-1.8.9-1.6 1.3c-.7.5-1.7.2-1.9-.6l-.8-2.3c-.2-.7 0-1.4.5-1.9L5 4.1l.4-2.6 1.9 1.4c3.4.2 5.4 2.6 5.2 6.4-.2 3.4-1.3 6.8-.5 10.7z"/><circle cx="5.2" cy="6.6" r=".9" fill="#fff"/><path d="M14 21h11.5v2.6H14zM15.4 20l.9-8.4-1.6-1.7V4.4h2.5v1.9h1.6V4.4h2.3v1.9h1.6V4.4h2.5v5.5l-1.6 1.7.9 8.4z"/></svg></span><h3 class="navy">الاستراتيجية</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div><div class="svc v2"><span class="ic tm">TM</span><h3 class="red">العلامة التجارية</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div><div class="svc v3"><span class="ic gold"><svg viewBox="0 0 30 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M1 3h17v13H1zM3 5v9h13V5z"/><path d="M7.5 16h4v3h3v2h-10v-2h3z"/><path fill-rule="evenodd" d="M20 3h8v19h-8zM22 6v1.6h4V6zm0 3v1.6h4V9zm2 8.5a1.2 1.2 0 1 0 0 .1z"/></svg></span><h3 class="gold">الرقمنة</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div><div class="svc v4"><span class="ic sky"><svg viewBox="0 0 26 24" fill="currentColor" aria-hidden="true"><path d="M1 3h14v9.5H6.5L3 15.5v-3H1z"/><path d="M9 8.6h16v10h-2.2v3.2l-3.4-3.2H9z" stroke="#fff" stroke-width="1"/></svg></span><h3 class="sky">الاستشارات</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="33" y="32" width="1215" height="656" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M114,114 L0,114 A114,114 0 0 1 114,0 Z" fill="#FF4F3B"/><rect x="114" y="0" width="114" height="114" fill="#FFC501"/><path d="M114,114 L114,0 A114,114 0 0 1 228,114 Z" fill="#003D64"/><rect x="0" y="114" width="114" height="114" fill="#FFC501"/><path d="M114,114 L114,228 A114,114 0 0 1 0,114 Z" fill="#003D64"/><circle cx="114" cy="114" r="50" fill="#FFFFFF"/><circle cx="114" cy="114" r="31" fill="#FFC501"/><rect x="228" y="0" width="113" height="114" fill="#003D64"/><polygon points="228,0 228,114 341,114" fill="#FF4F3B"/><circle cx="285" cy="57" r="22" fill="#FFFFFF"/><rect x="0" y="228" width="114" height="114" fill="#003D64"/><path d="M0,228 A57,57 0 0 1 57,285 A57,57 0 0 1 0,228 Z" fill="#F2F2F2"/><path d="M57,285 A57,57 0 0 1 114,342 A57,57 0 0 1 57,285 Z" fill="#F2F2F2"/><path d="M57,285 A57,57 0 0 1 114,228 A57,57 0 0 1 57,285 Z" fill="#FF4F3B"/><path d="M0,342 A57,57 0 0 1 57,285 A57,57 0 0 1 0,342 Z" fill="#FF4F3B"/><rect x="1154" y="0" width="126" height="126" fill="#003D64"/><path d="M1154,0 A63,63 0 0 1 1217,63 A63,63 0 0 1 1154,0 Z" fill="#F2F2F2"/><path d="M1217,63 A63,63 0 0 1 1280,126 A63,63 0 0 1 1217,63 Z" fill="#F2F2F2"/><path d="M1217,63 A63,63 0 0 1 1280,0 A63,63 0 0 1 1217,63 Z" fill="#FF4F3B"/><path d="M1154,126 A63,63 0 0 1 1217,63 A63,63 0 0 1 1154,126 Z" fill="#FF4F3B"/></svg>
+    <h1 class="t h">الأولويات الاستراتيجية</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <p class="t quote">فهم المشكلة هو الخطوة الأولى نحو بناء حل أفضل.</p>
+    <p class="t p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا. هذا نص توضيحي. أضف النص هنا.</p>
+    <div class="col k1"><b>01</b><h3>تعزيز<br>الأساس</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div><i class="dv" style="inset-inline-start:329px"></i><div class="col k2"><b>02</b><h3>تسريع<br>النمو</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div><i class="dv" style="inset-inline-start:639px"></i><div class="col k3"><b>03</b><h3>تحسين<br>التجربة</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div><i class="dv" style="inset-inline-start:949px"></i><div class="col k4"><b>04</b><h3>بناء<br>القدرات</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب.</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="908,0 970,63 908,63" fill="#FF4F3B"/><polygon points="970,0 1033,63 970,63" fill="#003D64"/><polygon points="908,63 970,125 908,125" fill="#FFC501"/><polygon points="970,63 1033,125 970,125" fill="#003D64"/><rect x="1033" y="0" width="125" height="125" fill="#FF4F3B"/><polygon points="1158,0 1158,125 1033,125" fill="#FFC501"/><rect x="1158" y="0" width="122" height="125" fill="#FFC501"/><path d="M1158,0 A62.5,62.5 0 0 1 1158,125 Z" fill="#003D64"/><circle cx="1285" cy="62.5" r="62.5" fill="#FF4F3B"/></svg>
+    <h1 class="t h">خريطة الفرص</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <svg class="four" viewBox="80 268 204 268" aria-hidden="true"><path d="M80,437 V422 C121,375 170,312 197,268 H200 V345 C175,375 156,408 133,437 Z" fill="#003D64"/><rect x="80" y="437" width="204" height="43" fill="#003D64"/><polygon points="80,480 130,437 284,437 226,480" fill="#FFC501"/><rect x="198" y="268" width="52" height="170" fill="#003D64"/><path d="M198,448 V436 Q198,425 209,425 H239 Q250,425 250,436 V448 Z" fill="#FFC501"/><path d="M198,535 V449 Q198,437 210,437 H238 Q250,437 250,449 V535 Z" fill="#003D64"/></svg>
+    <p class="t lbl">حيث يمكن<br>إطلاق النمو</p>
+    <div class="card o1"><span class="ic navy"><svg viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><ellipse cx="9.5" cy="4.5" rx="7.5" ry="2.8"/><path d="M2 4.5v4c0 1.6 3.4 2.8 7.5 2.8S17 10.1 17 8.5v-4M2 8.5v4c0 1.6 3.4 2.8 7.5 2.8"/><ellipse cx="18.5" cy="11.5" rx="7.5" ry="2.8"/><path d="M11 11.5v4c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8v-4M11 15.5v4c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8v-4"/></svg></span><h3 class="navy">السوق</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="card o2"><span class="ic red"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="5"/><path d="M5.5 7.5a6.5 6.5 0 0 1 13 0v3h-1.7v-3a4.8 4.8 0 0 0-9.6 0v3H5.5z"/><rect x="4.6" y="7.6" width="2.6" height="4" rx="1"/><rect x="16.8" y="7.6" width="2.6" height="4" rx="1"/><path d="M16.8 11h1.2c0 1.6-1.2 2.6-3 2.7v-1.2c1 0 1.8-.6 1.8-1.5z"/><path d="M2 23v-3.5c0-3.4 3.6-5.5 10-5.5s10 2.1 10 5.5V23z"/></svg></span><h3 class="red">العملاء</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="card o3"><span class="ic yel"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="currentColor" d="M5.2 6.5c1.6-.8 3.6-1.3 5.2-.6.9.4.4 1.6 1.4 2.1 1.2.6 2.6-.3 3.7.4 1 .7.6 2.2-.3 2.8-1.1.7-2.6.2-3.4 1.2-.6.8.3 1.9-.3 2.7-.5.7-1.7.4-2.3-.3-.8-1-.4-2.5-1.3-3.4-.8-.8-2.2-.5-3-1.3-.9-1 .1-2.8.3-3.6zm10.6 7.8c.9-.4 2-.2 2.7.5.6.6.4 1.7-.2 2.3-.8.8-2.2 1.1-2.9.3-.7-.8-.6-2.6.4-3.1zM17 4.8c1 .3 2.1 1.2 2.4 2.2-.9.3-2.1-.2-2.6-1z"/></svg></span><h3 class="yel">العرض</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="card o4"><span class="ic sky"><svg viewBox="0 0 28 24" aria-hidden="true"><path d="M5 9.5L13 4l8.5 2 3.5 7-6 6.5-9 2-6.5-6zM13 4l-1 8 7.5 7.5M5 9.5l7 2.5 9.5-6M3.5 15.5L12 12l13 1" fill="none" stroke="currentColor" stroke-width="1.5"/><g fill="currentColor"><circle cx="5" cy="9.5" r="2.7"/><circle cx="13" cy="4" r="2.7"/><circle cx="21.5" cy="6" r="2.7"/><circle cx="25" cy="13" r="2.4"/><circle cx="19" cy="19.5" r="2.7"/><circle cx="10" cy="21.5" r="2.4"/><circle cx="3.5" cy="15.5" r="2.4"/><circle cx="12" cy="12" r="3"/></g></svg></span><h3 class="sky">القدرات</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص هنا. أضف النص المطلوب هنا.</p></div>
+    <i class="rule"></i>
+    <p class="t foot">تكمن أقوى الفرص عند تقاطع طلب السوق وقيمة العميل وقدرات المؤسسة.</p>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="0" y="518" width="1280" height="202" fill="#003D64"/><path d="M903,125 A125,125 0 0 1 778,0 L829,0 A74,74 0 0 0 903,74 Z" fill="#FFC501"/><rect x="903" y="0" width="126" height="126" fill="#003D64"/><path d="M903,0 A63,63 0 0 1 966,63 A63,63 0 0 1 903,0 Z" fill="#FFC501"/><path d="M966,63 A63,63 0 0 1 1029,126 A63,63 0 0 1 966,63 Z" fill="#FFC501"/><path d="M966,63 A63,63 0 0 1 1029,0 A63,63 0 0 1 966,63 Z" fill="#FF4F3B"/><path d="M903,126 A63,63 0 0 1 966,63 A63,63 0 0 1 903,126 Z" fill="#FF4F3B"/><rect x="1029" y="0" width="125" height="126" fill="#003D64"/><path d="M1029,0 A63,63 0 0 1 1029,126 Z" fill="#FFFFFF"/><path d="M1154,126 A63,63 0 0 1 1154,0 Z" fill="#FFC501"/><rect x="1154" y="0" width="126" height="126" fill="#FFFFFF"/><polygon points="1280,0 1280,126 1154,126" fill="#FF4F3B"/><polygon points="415,380 460,425 415,470" fill="#003D64"/><polygon points="400,380 445,425 400,470" fill="#FFC501"/><polygon points="849,380 894,425 849,470" fill="#003D64"/><polygon points="834,380 879,425 834,470" fill="#FFC501"/></svg>
+    <h1 class="t h">الإطار الاستراتيجي</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <div class="card f1"><h3 class="navy">الرؤية المتبصّرة</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب هنا. هذا نص توضيحي.</p><span class="ic navy"><svg viewBox="0 0 28 24" aria-hidden="true"><path fill="currentColor" d="M6 15.5C2.5 15.5 1 12.5 2.2 10 1 7.5 2.8 4.6 5.6 4.6 6.4 2.2 9.4 1.2 11.6 2.6c1.8-1.8 5-1.7 6.6 0 2.6-.8 5.4.8 5.8 3.4 2.4 1 3.2 4 1.8 6.2.4 2.6-1.8 4.8-4.4 4.4-1.6 1.4-4 1.6-5.6.4V23h-4.4v-5.4c-1.8.2-4-.6-5.4-2.1z"/><path d="M8 6.5c1.5.3 2.5 1.6 2.4 3.2M13.8 3.6v4.2c0 1 .8 1.8 1.8 1.8M19.2 4.6c-1 1-1.2 2.4-.6 3.6M22.6 9.4c-1.2-.2-2.4.4-2.9 1.5M6 11.4c1.2-.6 2.8-.3 3.6.8M11.6 12.8c.8.9 2.1 1.2 3.2.7M17.4 13.2c.4 1 1.4 1.6 2.4 1.6" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/></svg></span></div><div class="card f2"><h3 class="red flip">التوجّه</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب هنا. هذا نص توضيحي.</p><span class="ic red flip"><svg viewBox="0 0 30 20" fill="currentColor" aria-hidden="true"><path d="M1 1h6l8 9-8 9H1l8-9zM9.5 1h6l8 9-8 9h-6l8-9zM18 1h6l6 9-6 9h-6l8-9z"/></svg></span></div><div class="card f3"><h3 class="yel">التنفيذ</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب هنا. هذا نص توضيحي.</p><span class="ic yel"><svg viewBox="0 0 26 24" fill="currentColor" aria-hidden="true"><path d="M1 21h11.5v2.6H1zM2.4 20c-.4-2.6.3-4.6 1.6-6.2 1.1-1.3 2.2-2.2 2.4-3.4l-1.8.9-1.6 1.3c-.7.5-1.7.2-1.9-.6l-.8-2.3c-.2-.7 0-1.4.5-1.9L5 4.1l.4-2.6 1.9 1.4c3.4.2 5.4 2.6 5.2 6.4-.2 3.4-1.3 6.8-.5 10.7z"/><circle cx="5.2" cy="6.6" r=".9" fill="#fff"/><path d="M14 21h11.5v2.6H14zM15.4 20l.9-8.4-1.6-1.7V4.4h2.5v1.9h1.6V4.4h2.3v1.9h1.6V4.4h2.5v5.5l-1.6 1.7.9 8.4z"/></svg></span></div>
+    <i class="rule"></i>
+    <p class="t foot">هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا. هذا نص توضيحي. أضف النص هنا.</p>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="33" y="32" width="1215" height="656" fill="none" stroke="#FFFFFF" stroke-width="2"/><rect x="938" y="0" width="114" height="114" fill="#003D64"/><path d="M938,0 A57,57 0 0 1 995,57 A57,57 0 0 1 938,0 Z" fill="#FF4F3B"/><path d="M995,57 A57,57 0 0 1 1052,114 A57,57 0 0 1 995,57 Z" fill="#FF4F3B"/><path d="M995,57 A57,57 0 0 1 1052,0 A57,57 0 0 1 995,57 Z" fill="#F2F2F2"/><path d="M938,114 A57,57 0 0 1 995,57 A57,57 0 0 1 938,114 Z" fill="#F2F2F2"/><rect x="1052" y="0" width="113" height="114" fill="#FFC501"/><path d="M1165,114 L1052,114 A113,113 0 0 1 1165,1 Z" fill="#003D64"/><path d="M1165,114 L1165,-1 A115,115 0 0 1 1280,114 Z" fill="#FF4F3B"/><rect x="1165" y="114" width="115" height="114" fill="#FFC501"/><path d="M1165,114 L1279,114 A114,114 0 0 1 1165,228 Z" fill="#003D64"/><circle cx="1165" cy="114" r="50" fill="#FFFFFF"/><circle cx="1165" cy="114" r="31" fill="#FFC501"/><rect x="1165" y="228" width="115" height="114" fill="#FF4F3B"/><polygon points="1280,228 1280,342 1165,342" fill="#003D64"/><circle cx="1222" cy="285" r="22" fill="#FFFFFF"/><rect x="902" y="595" width="127" height="125" fill="#FFC501"/><path d="M1029,720 L902,720 A127,127 0 0 1 1029,593 Z" fill="#003D64"/><rect x="1029" y="595" width="125" height="125" fill="#003D64"/><path d="M1029,720 L1029,635 A85,85 0 0 1 1114,720 Z" fill="#F2F2F2"/><polygon points="1077,615 1132,615 1132,668" fill="#FFC501"/><rect x="1153" y="595" width="63" height="63" fill="#F2F2F2"/><polygon points="1216,595 1216,658 1153,658" fill="#003D64"/><rect x="1216" y="595" width="64" height="63" fill="#FFFFFF"/><polygon points="1280,595 1280,658 1216,658" fill="#FF4F3B"/><rect x="1153" y="658" width="63" height="63" fill="#FFFFFF"/><polygon points="1216,658 1216,721 1153,721" fill="#003D64"/><rect x="1216" y="658" width="64" height="63" fill="#F2F2F2"/><polygon points="1280,658 1280,721 1216,721" fill="#FFC501"/></svg>
+    <h1 class="t h">نموذج التنفيذ</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <table>
+      <tr><th class="c1">المرحلة</th><th class="c2">التركيز</th><th>النتيجة</th></tr>
+      <tr><td>المواءمة</td><td>تحديد التوجّه</td><td>أولويات مشتركة</td></tr>
+      <tr><td>التفعيل</td><td>إطلاق المبادرات</td><td>عمل قيد التنفيذ</td></tr>
+      <tr><td>التسريع</td><td>توسيع التنفيذ</td><td>تقدّم أسرع</td></tr>
+      <tr><td>التحسين</td><td>تحسين النتائج</td><td>أثر مستدام</td></tr>
+    </table>
+    <p class="t h3">دورة تنفيذ<br>واحدة مترابطة</p>
+    <p class="t p p1">هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا. هذا نص توضيحي. أضف النص المطلوب هنا.</p>
+    <p class="t p p2">أضف النص هنا. هذا نص توضيحي. أضف النص المطلوب هنا. أضف نصك هنا.</p>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="33" y="32" width="1215" height="656" fill="none" stroke="#FFFFFF" stroke-width="2"/><polygon points="63,657 63,720 0,720" fill="#FF4F3B"/></svg>
+    <h1 class="t h">قياس النجاح</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <div class="m m1"><b class="red" data-k="0"><bdi dir="ltr">35%</bdi></b><h3 class="red">النمو</h3><p>أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="m m2"><b class="yel" data-k="1"><bdi dir="ltr">25%</bdi></b><h3 class="yel">العملاء</h3><p>أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="m m3"><b class="sky" data-k="2"><bdi dir="ltr">20%</bdi></b><h3 class="sky">الكفاءة</h3><p>أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="m m4"><b class="" data-k="3"><bdi dir="ltr">20%</bdi></b><h3 class="navy">القدرات</h3><p>أضف النص هنا. أضف النص المطلوب هنا.</p></div>
+    <svg class="donut" id="donut" viewBox="-252 -252 504 504" role="img" aria-label="رسم حلقي لمؤشرات النجاح"></svg>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><defs><linearGradient id="lg10" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F2F2F2"/><stop offset=".91" stop-color="#F2F2F2"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient></defs><rect x="0" y="0" width="898" height="720" fill="url(#lg10)"/><rect x="898" y="0" width="382" height="720" fill="#FFFFFF"/><rect x="903" y="594" width="126" height="126" fill="#003D64"/><path d="M903,594 A126,126 0 0 1 1029,720 A126,126 0 0 1 903,594 Z" fill="#F2F2F2"/><rect x="1029" y="594" width="125" height="125" fill="#FF4F3B"/><circle cx="1049.83" cy="614.833" r="14" fill="#FFFFFF"/><circle cx="1091.5" cy="614.833" r="14" fill="#003D64"/><circle cx="1133.17" cy="614.833" r="14" fill="#FFFFFF"/><circle cx="1049.83" cy="656.5" r="14" fill="#003D64"/><circle cx="1091.5" cy="656.5" r="14" fill="#FFC501"/><circle cx="1133.17" cy="656.5" r="14" fill="#003D64"/><circle cx="1049.83" cy="698.167" r="14" fill="#FFFFFF"/><circle cx="1091.5" cy="698.167" r="14" fill="#003D64"/><circle cx="1133.17" cy="698.167" r="14" fill="#FFFFFF"/><rect x="1154" y="594" width="126" height="126" fill="#FFC501"/><path d="M1280,720 L1154,720 A126,126 0 0 1 1280,594 Z" fill="#003D64"/><rect x="1154" y="469" width="126" height="125" fill="#003D64"/><path d="M1154,594 L1154,509 A85,85 0 0 1 1239,594 Z" fill="#FFFFFF"/><polygon points="1204,490 1259,490 1259,545" fill="#FFC501"/></svg>
+    <i class="vline"></i><i class="ahead"></i>
+    <i class="dash" style="top:258px"></i><i class="dash" style="top:485px"></i>
+    <p class="date" style="top:61px">يناير<br><bdi dir="ltr">2026</bdi></p><i class="dot" style="top:53px"></i><div class="ms"><h3 style="top:60px">تحديد التوجّه الاستراتيجي</h3><p style="top:102px">هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب. أضف النص هنا. أضف النص المطلوب. أضف النص المطلوب. أضف النص المطلوب. هذا نص توضيحي. هذا نص توضيحي. هذا نص توضيحي.</p></div><p class="date" style="top:288px">يوليو<br><bdi dir="ltr">2026</bdi></p><i class="dot" style="top:280px"></i><div class="ms"><h3 style="top:287px">تسريع زخم الأعمال</h3><p style="top:329px">هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب. أضف النص هنا. أضف النص المطلوب. أضف النص المطلوب. أضف النص المطلوب. هذا نص توضيحي. هذا نص توضيحي. هذا نص توضيحي.</p></div><p class="date" style="top:515px">أكتوبر<br><bdi dir="ltr">2026</bdi></p><i class="dot" style="top:507px"></i><div class="ms"><h3 style="top:514px">تحسين الأداء المستدام</h3><p style="top:556px">هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب. أضف النص هنا. أضف النص المطلوب. أضف النص المطلوب. أضف النص المطلوب. هذا نص توضيحي. هذا نص توضيحي. هذا نص توضيحي.</p></div>
+    <h1 class="t h">خارطة الطريق</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <span class="ic cal"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M1 4h22v19H1zM3 9.5v11.5h18V9.5z"/><rect x="5" y="1" width="2.4" height="5" rx="1"/><rect x="16.6" y="1" width="2.4" height="5" rx="1"/><path d="M3 13.2h18M3 17h18M7.5 9.5V21M12 9.5V21M16.5 9.5V21" stroke="currentColor" stroke-width="1.4"/></svg></span>
+    <p class="t big"><bdi dir="ltr">12</bdi> شهرًا</p>
+    <p class="t p">هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب. أضف النص هنا.</p>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="762" y="0" width="518" height="720" fill="#003D64"/><rect x="1030" y="-3" width="62" height="62" fill="#FF4F3B"/><polygon points="1030,59 1092,59 1092,-3" fill="#003D64"/><rect x="1092" y="-3" width="62" height="62" fill="#FFFFFF"/><polygon points="1092,59 1154,59 1154,-3" fill="#003D64"/><rect x="1030" y="59" width="62" height="63" fill="#F2F2F2"/><polygon points="1030,122 1092,122 1092,59" fill="#003D64"/><rect x="1092" y="59" width="62" height="63" fill="#003D64"/><polygon points="1092,59 1155,59 1092,122" fill="#FFC501"/><rect x="1154" y="-3" width="126" height="125" fill="#003D64"/><circle cx="1284" cy="-2" r="127" fill="#F2F2F2"/><circle cx="1275" cy="2" r="57" fill="#FF4F3B"/><rect x="0" y="582" width="137" height="138" fill="#FFC501"/><path d="M0,582 L137,582 A137,137 0 0 1 0,719 Z" fill="#E6E6E6"/><path d="M0,582 L92,582 A92,92 0 0 1 0,674 Z" fill="#003D64"/><path d="M0,582 L47,582 A47,47 0 0 1 0,629 Z" fill="#FF4F3B"/><rect x="137" y="582" width="137" height="137" fill="#003D64"/><circle cx="159.833" cy="604.833" r="23" fill="#FF4F3B"/><circle cx="205.5" cy="604.833" r="23" fill="#FF4F3B"/><circle cx="251.167" cy="604.833" r="23" fill="#FF4F3B"/><circle cx="159.833" cy="650.5" r="23" fill="#FF4F3B"/><circle cx="205.5" cy="650.5" r="23" fill="#FFC501"/><circle cx="251.167" cy="650.5" r="23" fill="#FF4F3B"/><circle cx="159.833" cy="696.167" r="23" fill="#FF4F3B"/><circle cx="205.5" cy="696.167" r="23" fill="#FF4F3B"/><circle cx="251.167" cy="696.167" r="23" fill="#FF4F3B"/><rect x="274" y="582" width="137" height="137" fill="#003D64"/><path d="M274,582 A68.5,68.5 0 0 1 342.5,650.5 A68.5,68.5 0 0 1 274,582 Z" fill="#F2F2F2"/><path d="M342.5,650.5 A68.5,68.5 0 0 1 411,719 A68.5,68.5 0 0 1 342.5,650.5 Z" fill="#F2F2F2"/><path d="M342.5,650.5 A68.5,68.5 0 0 1 411,582 A68.5,68.5 0 0 1 342.5,650.5 Z" fill="#FF4F3B"/><path d="M274,719 A68.5,68.5 0 0 1 342.5,650.5 A68.5,68.5 0 0 1 274,719 Z" fill="#FF4F3B"/><path d="M411,583 A137,137 0 0 1 548,720 L498,720 A87,87 0 0 0 411,633 Z" fill="#FFC501"/></svg>
+    <h1 class="t h">الفصل التالي</h1>
+    <p class="t sub">أضف عنوانًا فرعيًا هنا.</p>
+    <p class="t big">الخطوة التالية<br>ليست مزيدًا من الاستراتيجية.</p>
+    <p class="t p">هذا نص توضيحي. أضف النص المطلوب هنا. أضف النص هنا. هذا نص توضيحي. أضف النص هنا. أضف النص المطلوب هنا. هذا نص توضيحي.</p>
+    <div class="card n1"><span class="ic navy"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="13" r="9.6"/><circle cx="11" cy="13" r="5.6"/></g><circle cx="11" cy="13" r="2" fill="currentColor"/><path d="M11 13l9-9" stroke="currentColor" stroke-width="2"/><path d="M17.4 3.2L20.6 0l.6 2.8 2.8.6-3.2 3.2-3.1-.4z" fill="currentColor"/></svg></span><h3 class="navy">التركيز على ما يهم</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="card n2"><span class="ic red"><svg viewBox="0 0 30 22" fill="currentColor" aria-hidden="true"><path d="M0 4l5-2 3 8-5 2zM30 4l-5-2-3 8 5 2z"/><path d="M8 3.5l4.5-.5 3 2 4.5-2 3.5 1.5L26 11l-1.8 1.2-6.5-5.5-3.8 2.2c-1 .5-2 .2-2.4-.6l3.6-2.2-2.7-1.4L9 6z"/><path d="M8.5 10.5l1.4-1.2c.6-.5 1.5-.4 2 .2s.4 1.4-.2 1.9l.6-.5c.6-.5 1.5-.4 2 .2s.4 1.4-.2 1.9l.6-.5c.6-.5 1.5-.4 2 .2s.4 1.4-.2 1.9l-.4.3c.6-.4 1.4-.3 1.8.3.4.6.3 1.4-.3 1.8l-2.2 1.7c-.6.4-1.4.3-1.8-.3l-5.6-4.6z"/><path d="M17.6 8.6l5.8 4.8c.5.5.5 1.2.1 1.7-.5.5-1.2.5-1.7.1l-.4-.3c.5.5.5 1.2.1 1.7s-1.2.5-1.7.1l-.6-.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></span><h3 class="red">ربط الفرق حول الأهداف</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص هنا. أضف النص المطلوب هنا.</p></div><div class="card n3"><span class="ic yel"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.6 3.4v10l7.6 7.2A10 10 0 1 1 10.6 3.4z"/><path d="M11.8 14.2h10A10 10 0 0 1 19 20.9z"/><path d="M13 1.6A10 10 0 0 1 22.6 11.6H13z"/></svg></span><h3 class="yel">قياس تقدّم الأعمال</h3><p>هذا نص توضيحي. أضف النص هنا. أضف النص هنا. أضف النص المطلوب هنا.</p></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><rect x="0" y="0" width="784" height="720" fill="#FFFFFF"/><rect x="48" y="48" width="736" height="624" fill="none" stroke="#D6D6D6" stroke-width="1.5"/><rect x="784" y="0" width="496" height="720" fill="#EEEEEE"/><rect x="784" y="0" width="124" height="126" fill="#003D64"/><path d="M784,126 L784,42 A84,84 0 0 1 868,126 Z" fill="#EEEEEE"/><polygon points="834,13 889,13 889,68" fill="#FFC501"/><polygon points="908,0 971,63 908,63" fill="#FFFFFF"/><polygon points="908,63 971,126 908,126" fill="#FFC501"/><polygon points="971,0 1034,63 971,63" fill="#003D64"/><polygon points="971,63 1034,126 971,126" fill="#003D64"/><path d="M1157,125 A125,125 0 0 1 1032,0 L1083,0 A74,74 0 0 0 1157,74 Z" fill="#FFC501"/><rect x="1157" y="0" width="123" height="123" fill="#003D64"/><path d="M1157,0 A61.5,61.5 0 0 1 1218.5,61.5 A61.5,61.5 0 0 1 1157,0 Z" fill="#FFC501"/><path d="M1218.5,61.5 A61.5,61.5 0 0 1 1280,123 A61.5,61.5 0 0 1 1218.5,61.5 Z" fill="#FFC501"/><path d="M1218.5,61.5 A61.5,61.5 0 0 1 1280,0 A61.5,61.5 0 0 1 1218.5,61.5 Z" fill="#FF4F3B"/><path d="M1157,123 A61.5,61.5 0 0 1 1218.5,61.5 A61.5,61.5 0 0 1 1157,123 Z" fill="#FF4F3B"/><path d="M784,720 L784,302 A418,418 0 0 1 1202,720 Z" fill="#003D64"/><path d="M784,720 L784,475 A245,245 0 0 1 1029,720 Z" fill="#FFFFFF"/><path d="M784,720 L784,596 A124,124 0 0 1 908,720 Z" fill="#FF4F3B"/><polygon points="1032,596 1156,472 1156,596" fill="#FFC501"/><polygon points="1156,472 1280,472 1156,596" fill="#003D64"/><polygon points="1032,596 1156,596 1032,720" fill="#003D64"/><polygon points="1156,596 1156,720 1032,720" fill="#FFFFFF"/><polygon points="1156,596 1280,596 1156,720" fill="#003D64"/><polygon points="1280,596 1280,720 1156,720" fill="#FF4F3B"/></svg>
+    <div class="logo"><svg viewBox="0 0 42 46" aria-hidden="true"><path fill="#003D64" fill-rule="evenodd" d="M9 3.5C17 1 27 1 36 3.6c3.6 1 5 3.4 4.6 7.4l-1.8 23.8c-.3 3.8-2.4 6.4-6.4 7.2C24 43.6 15 43.6 7 41.4 3.4 40.4 1.8 38 1.8 34.2V10.6C1.8 6.8 4.6 4.8 9 3.5zM12.5 11c5.6-1.4 11.6-1.4 17.2 0 .9.2 1.3.9 1.2 1.8l-1.1 18.6c0 .9-.6 1.5-1.4 1.7-5 1.2-10 1.2-15 0-.8-.2-1.4-.9-1.4-1.8V12.8c0-.9.6-1.6 1.5-1.8z"/></svg><span>شعار شركتك<br>هنا</span></div>
+    <p class="t kick">تواصل معنا</p>
+    <h1 class="t big">زخمٌ لما<br>هو قادم.</h1>
+    <div class="ci e1"><span class="ic "><svg viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="1" y="1" width="26" height="18"/><path d="M1 1l13 10L27 1M1 19l9.5-10M27 19l-9.5-10"/></svg></span><span>أضف بريدك الإلكتروني هنا</span><i></i></div>
+    <div class="ci e2"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></span><span dir="ltr">+1 (234) 567 8901</span><i></i></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 12</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script type="application/json" id="chart-data">{"labels": ["النمو", "العملاء", "الكفاءة", "القدرات"], "values": [35, 25, 20, 20], "colors": ["#FF4F3B", "#FFC501", "#003D64", "#0AB4F0"]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // الرسم الحلقي لشريحة «قياس النجاح»: يبدأ من الأعلى باتجاه عقارب الساعة (عكسه للعربية)
+  function drawDonut() {
+    var svg = document.getElementById('donut'); if (!svg) return;
+    var d = JSON.parse(document.getElementById('chart-data').textContent);
+    var tot = d.values.reduce(function (a, b) { return a + b; }, 0), R1 = 252, R0 = 121, a0 = 0, out = '';
+    function pt(r, a) { var s = RTL ? -1 : 1; return [(s * r * Math.sin(a)).toFixed(2), (-r * Math.cos(a)).toFixed(2)]; }
+    d.values.forEach(function (v, i) {
+      var a1 = a0 + v / tot * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0, sw = RTL ? 0 : 1;
+      var p1 = pt(R1, a0), p2 = pt(R1, a1), p3 = pt(R0, a1), p4 = pt(R0, a0), m = pt(186, (a0 + a1) / 2);
+      out += '<path fill="' + d.colors[i] + '" d="M' + p1 + ' A' + R1 + ',' + R1 + ' 0 ' + big + ' ' + sw + ' ' + p2 + ' L' + p3 + ' A' + R0 + ',' + R0 + ' 0 ' + big + ' ' + (1 - sw) + ' ' + p4 + ' Z"/>';
+      out += '<text x="' + m[0] + '" y="' + m[1] + '" text-anchor="middle" dominant-baseline="central" direction="ltr">' + v + '%</text>';
+      a0 = a1;
+    });
+    svg.innerHTML = out;
+  }
+  drawDonut();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
