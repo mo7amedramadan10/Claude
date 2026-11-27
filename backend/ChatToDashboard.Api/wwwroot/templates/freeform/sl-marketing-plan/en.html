@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marketing Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «خطة التسويق»: 33 شريحة بهوية زرقاء؛ الفواصل .sec، الشرائط العلوية .hband، الرسوم في svg.ov تُرسم بـ JS من كتل chart-data. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink:#1A1A1A; --navy:#1B2A6B; --navy-2:#02145C; --navy-3:#010D37; --blue:#2B46B7; --blue-2:#335BFB; --blue-3:#6B80DD; --blue-4:#A4B3EA; --lav:#EBEDFA; --soft:#F5F5F5; --dash:#E3E4E8; --mut:#7F7F7F; --accent:#2B46B7; --bg:#FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame p, .frame h1, .frame h2, .frame h3, .frame ul { margin: 0; }
+  .frame > * { position: absolute; }
+  .ttl { top: 47px; inset-inline-start: 68px; font-size: 54px; font-weight: 400; line-height: 1.15; color: var(--navy); letter-spacing: -0.3px; white-space: nowrap; }
+  .ttl.c { inset-inline-start: 0; width: 1280px; text-align: center; }
+  .ttl.w { color: #fff; }
+  html[lang="ar"] .ttl { font-weight: 500; letter-spacing: 0; }
+  .lead { top: 60px; inset-inline-start: 746px; width: 380px; font-size: 19px; line-height: 25px; color: var(--mut); }
+  .pill { width: 64px; height: 28px; border-radius: 14px; background: var(--navy-2); color: #fff; font-size: 17px; line-height: 28px; text-align: center; }
+  .pill.b { background: var(--blue); }
+  .clap { width: 48px; height: 52px; color: var(--blue); }
+  .clap svg { width: 100%; height: 100%; }
+  html[dir="rtl"] .clap svg { transform: scaleX(-1); }
+  .foot { font-size: 19px; line-height: 25px; color: var(--mut); }
+  .gray { color: var(--mut); }
+  .ov { inset: 0; width: 1280px; height: 720px; pointer-events: none; overflow: visible; }
+  .ov { direction: ltr; }
+  .ov text { font-family: var(--font); }
+  .flipx { }
+  html[dir="rtl"] .flipx { transform: scaleX(-1); }
+  /* الشريط العلوي المتدرج */
+  .hband { top: 0; inset-inline-start: 0; width: 1280px; background: linear-gradient(90deg, #2741AF 0%, #1B3395 6%, #12267F 12.5%, #051864 19%, #0A1F70 25%, #162D8A 31%, #233CA3 37.5%, #2944AF 44%, #243996 50%, #1C2E7A 56%, #162568 62.5%, #0F2163 69%, #091A60 75%, #03155D 81%, #091A60 88%, #0F2065 100%); }
+  html[dir="rtl"] .hband, html[dir="rtl"] .secbg { transform: scaleX(-1); }
+  /* فواصل الأقسام */
+  .secbg { inset: 0; background: linear-gradient(100deg, #2A45B6 0%, #1C3399 7%, #0E2378 15%, #041662 24%, #10257D 32%, #2741AA 44%, #213792 55%, #182A70 64%, #0F2066 74%, #07185F 84%, #04165E 92%, #0C1D62 100%); }
+  .secbg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgb(255 255 255 / .03), rgb(0 0 0 / .05)); }
+  .seccard { top: 67px; inset-inline-start: 67px; width: 1147px; height: 588px; border-radius: 30px; border: 2px solid rgb(60 86 200 / .55); background: rgb(2 16 80 / .22); }
+  .secnum { top: 120px; inset-inline-start: 164px; font-size: 80px; font-weight: 400; line-height: 1.2; color: #fff; letter-spacing: -1px; }
+  .seclines { top: 284px; inset-inline-start: 168px; width: 1000px; font-size: 51px; line-height: 81px; color: #fff; font-weight: 400; letter-spacing: -1.2px; }
+  .sech { top: 288px; inset-inline-start: 168px; width: 980px; font-size: 50px; line-height: 1.25; color: #fff; letter-spacing: -0.5px; }
+  .secul { top: 375px; inset-inline-start: 168px; width: 1000px; list-style: none; padding: 0; font-size: 31px; line-height: 56px; color: #D3D9F5; letter-spacing: -0.3px; }
+  .secul li { padding-inline-start: 58px; position: relative; }
+  .secul li::before { content: ""; position: absolute; inset-inline-start: 12px; top: 26px; width: 7px; height: 7px; border-radius: 50%; background: #D3D9F5; }
+  .secsub { top: 380px; inset-inline-start: 176px; width: 620px; font-size: 31px; line-height: 41px; color: #D3D9F5; letter-spacing: -0.3px; }
+  html[lang="ar"] .secnum, html[lang="ar"] .seclines, html[lang="ar"] .sech, html[lang="ar"] .secul, html[lang="ar"] .secsub { translate: 0 8px; }
+  html[lang="ar"] .seclines, html[lang="ar"] .sech, html[lang="ar"] .secul, html[lang="ar"] .secsub { letter-spacing: 0; }
+  .s22 .seclines, .s27 .seclines { line-height: 70px; top: 292px; }
+  /* 1: الغلاف */
+  .s1 .arcs { top: 0; inset-inline-end: 0; width: 740px; height: 720px; object-fit: cover; }
+  html[dir="rtl"] .s1 .arcs { transform: scaleX(-1); }
+  .s1 .logo { top: 72px; inset-inline-start: 92px; display: flex; align-items: center; gap: 26px; }
+  .s1 .logo svg { width: 54px; height: 60px; }
+  .s1 .logo span { font-size: 17px; line-height: 23px; letter-spacing: 3px; color: #222; width: 200px; }
+  html[lang="ar"] .s1 .logo span { letter-spacing: 0; font-size: 18px; }
+  .s1 .cv { top: 258px; inset-inline-start: 86px; font-size: 99px; line-height: 108px; font-weight: 800; color: #0A1543; letter-spacing: -3.5px; }
+  .s1 .cv .l1, .s1 .cv .l2 { display: flex; align-items: center; }
+  .s1 .cv .l2 { gap: 32px; }
+  .s1 .cv em { font-style: normal; font-weight: 400; font-size: 32px; line-height: 40px; letter-spacing: 3px; color: #6880C8; }
+  html[lang="ar"] .s1 .cv { letter-spacing: 0; font-size: 96px; line-height: 112px; top: 240px; }
+  html[lang="ar"] .s1 .cv em { letter-spacing: 0; font-size: 34px; }
+  .s1 .rule { top: 499px; inset-inline-start: 92px; width: 518px; height: 3px; background: linear-gradient(90deg, #2B46B7, #000); }
+  html[dir="rtl"] .s1 .rule { background: linear-gradient(270deg, #2B46B7, #000); }
+  .s1 .cvp { top: 537px; inset-inline-start: 89px; width: 390px; font-size: 19.5px; line-height: 25px; color: var(--mut); }
+  /* 2: المحتويات */
+  .s2 .band { top: 0; inset-inline-start: 0; width: 1280px; height: 155px; background: var(--soft); }
+  .s2 .ttl { color: var(--navy-2); }
+  .s2 .ph { top: 155px; inset-inline-start: 0; width: 1280px; height: 510px; object-fit: cover; }
+  html[dir="rtl"] .s2 .ph { transform: scaleX(-1); }
+  .s2 .bl { top: 665px; inset-inline-start: 0; width: 283px; height: 55px; background: var(--soft); }
+  .s2 .panel { top: 227px; inset-inline-start: 283px; width: 997px; height: 493px; background: #fff; }
+  .s2 .ti { width: 290px; }
+  .s2 .ti b { display: block; font-size: 60px; line-height: 70px; font-weight: 400; color: var(--blue); letter-spacing: -1px; }
+  .s2 .ti h3 { font-size: 24.5px; line-height: 34px; font-weight: 400; color: #222; margin-top: 4px; }
+  .s2 .ti p { font-size: 20px; line-height: 28px; color: var(--mut); margin-top: 4px; }
+  .s2 .rl { top: 470px; inset-inline-start: 324px; width: 898px; height: 1.5px; background: #333; }
+  /* 4: السوق الإجمالية */
+  .s4 .ttl { line-height: 62px; top: 52px; }
+  .s4 .h { top: 264px; inset-inline-start: 67px; font-size: 25px; line-height: 32px; color: var(--navy); font-weight: 400; }
+  .s4 .p { top: 302px; inset-inline-start: 67px; width: 215px; font-size: 19.5px; line-height: 25.5px; color: var(--mut); }
+  .s4 .big { top: 577px; inset-inline-start: 64px; font-size: 70px; line-height: 80px; font-weight: 700; color: #2444A9; letter-spacing: -1px; }
+  .s4 .bigl { top: 653px; inset-inline-start: 67px; font-size: 20px; line-height: 26px; color: var(--mut); }
+  .s4 .circ { top: 215px; inset-inline-start: 362px; width: 428px; height: 430px; }
+  .s4 .cl { inset-inline-start: 373px; width: 400px; text-align: center; color: #fff; }
+  .s4 .cl b { display: block; font-size: 26px; line-height: 32px; font-weight: 700; }
+  .s4 .cl span { display: block; font-size: 18px; line-height: 24px; color: #E8EAF3; }
+  .s4 .cl.c4 span { font-size: 21px; line-height: 25px; color: #fff; }
+  .s4 .ph { top: 0; inset-inline-end: 0; width: 449px; height: 297px; object-fit: cover; }
+  .s4 .side { top: 297px; inset-inline-end: 0; width: 449px; height: 423px; background: var(--soft); }
+  .s4 .row { inset-inline-start: 869px; width: 380px; }
+  .s4 .row .lb { position: absolute; top: 10px; inset-inline-start: 2px; font-size: 20px; line-height: 26px; color: #111; }
+  .s4 .row .v { position: absolute; top: 4px; inset-inline-end: 10px; font-size: 26px; line-height: 32px; color: var(--blue); }
+  .s4 .row .tr { position: absolute; top: 46px; inset-inline-start: 0; width: 379px; height: 8px; border-radius: 4px; background: #CBD2EE; }
+  .s4 .row .fl { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 4px; background: var(--blue); }
+  /* 5: المنتجات والخدمات */
+  .s5 .cell { width: 387px; height: 204px; }
+  .s5 .cell h3 { position: absolute; top: 78px; inset-inline-start: 45px; font-size: 25px; line-height: 32px; font-weight: 400; color: #111; }
+  .s5 .cell p { position: absolute; top: 122px; inset-inline-start: 45px; width: 300px; font-size: 20px; line-height: 25.5px; color: var(--mut); }
+  .s5 .cell .pill { position: absolute; top: 19px; inset-inline-start: 42px; }
+  .s5 .cell.g { background: var(--soft); } .s5 .cell.bl { background: var(--blue); } .s5 .cell.nv { background: var(--navy-2); }
+  .s5 .cell.bl h3, .s5 .cell.nv h3 { color: #fff; }
+  .s5 .cell.bl p, .s5 .cell.nv p { color: #CDD3EF; }
+  /* 6: عرض البيع الفريد */
+  .s6 .ph { top: 42px; inset-inline-start: 36px; width: 401px; height: 634px; border-radius: 30px; object-fit: cover; }
+  html[dir="rtl"] .s6 .ph { transform: scaleX(-1); }
+  .s6 .card0 { top: 413px; inset-inline-start: 0; width: 417px; height: 307px; background: var(--soft); border-start-end-radius: 30px; }
+  .s6 .ttl { top: 458px; line-height: 63px; white-space: normal; width: 340px; }
+  .s6 .u { inset-inline-start: 458px; width: 787px; height: 200px; border-radius: 24px; }
+  .s6 .u.a { background: linear-gradient(100deg, #E4E6EC 0%, #EFF0F4 35%, #FAFAFB 70%, #fff 95%); }
+  .s6 .u.b { background: linear-gradient(260deg, #E4E6EC 0%, #EFF0F4 35%, #FAFAFB 70%, #fff 95%); }
+  html[dir="rtl"] .s6 .u.a { background: linear-gradient(260deg, #E4E6EC 0%, #EFF0F4 35%, #FAFAFB 70%, #fff 95%); }
+  html[dir="rtl"] .s6 .u.b { background: linear-gradient(100deg, #E4E6EC 0%, #EFF0F4 35%, #FAFAFB 70%, #fff 95%); }
+  .s6 .u .n { position: absolute; top: 18px; inset-inline-start: 50px; font-size: 150px; line-height: 170px; color: var(--blue); font-weight: 300; }
+  .s6 .u h3 { position: absolute; top: 50px; inset-inline-start: 175px; width: 160px; font-size: 24px; line-height: 32px; font-weight: 400; color: #111; text-transform: uppercase; }
+  .s6 .u p { position: absolute; top: 58px; inset-inline-start: 441px; width: 320px; font-size: 19.5px; line-height: 25.5px; color: var(--mut); }
+  /* 8، 17، 26: الجداول */
+  .tbl { border-collapse: separate; border-spacing: 2px 2px; table-layout: fixed; font-size: 20px; color: #444; }
+  .tbl th { font-size: 21px; text-align: start; font-weight: 700; color: var(--navy); padding: 0 12px; text-transform: uppercase; }
+  .tbl td { padding: 0 12px; text-align: start; }
+  .tbl tbody tr:nth-child(odd) td { background: var(--soft); }
+  .tbl td.b { font-weight: 700; color: #333; text-transform: uppercase; }
+  /* 9: أنسوف */
+  .s9 .side { top: 0; inset-inline-end: 0; width: 526px; height: 720px; background: var(--soft); }
+  .s9 .ttl { top: 52px; inset-inline-start: 826px; font-size: 60px; line-height: 64px; white-space: normal; width: 420px; }
+  .s9 .lead { top: 271px; inset-inline-start: 826px; width: 380px; }
+  .s9 .cell { width: 310px; height: 246px; }
+  .s9 .cell.g { background: var(--soft); } .s9 .cell.l { background: var(--lav); }
+  .s9 .cell .pill { position: absolute; top: 25px; inset-inline-start: 42px; }
+  .s9 .cell h3 { position: absolute; top: 91px; inset-inline-start: 44px; font-size: 22.5px; line-height: 30px; font-weight: 400; color: #222; }
+  .s9 .cell p { position: absolute; top: 134px; inset-inline-start: 44px; width: 250px; font-size: 19.5px; line-height: 25.5px; color: #666; }
+  .s9 .axp { top: 42px; inset-inline-start: 96px; width: 620px; text-align: center; font-size: 24px; line-height: 32px; color: var(--navy); }
+  .s9 .axm { top: 330px; inset-inline-start: 0; width: 120px; text-align: center; font-size: 24px; line-height: 30px; color: var(--navy); transform: rotate(-90deg); }
+  .s9 .it { inset-inline-start: 824px; width: 400px; }
+  .s9 .it .pill { position: absolute; top: 2px; inset-inline-start: 0; }
+  .s9 .it p { position: absolute; top: -4px; inset-inline-start: 84px; width: 280px; font-size: 19.5px; line-height: 25.5px; color: var(--mut); }
+  /* 10: المزيج السباعي */
+  .s10 .pc { border-radius: 26px; background: linear-gradient(150deg, #E2E4EA 0%, #EEEFF3 30%, #FAFAFB 62%, #fff 85%); }
+  html[dir="rtl"] .s10 .pc { background: linear-gradient(210deg, #E2E4EA 0%, #EEEFF3 30%, #FAFAFB 62%, #fff 85%); }
+  .s10 .pc.r { background: linear-gradient(330deg, #E2E4EA 0%, #EEEFF3 25%, #FAFAFB 55%, #fff 80%); }
+  html[dir="rtl"] .s10 .pc.r { background: linear-gradient(30deg, #E2E4EA 0%, #EEEFF3 25%, #FAFAFB 55%, #fff 80%); }
+  .s10 .pc h3 { position: absolute; top: 26px; inset-inline-start: 26px; font-size: 24px; line-height: 32px; font-weight: 400; color: #111; white-space: nowrap; }
+  .s10 .pc h3 b { font-weight: 400; color: var(--blue); font-size: 29px; margin-inline-end: 14px; }
+  .s10 .pc ul { position: absolute; top: 86px; inset-inline-start: 26px; list-style: none; padding: 0; font-size: 19.5px; line-height: 33.6px; color: var(--mut); }
+  .s10 .pc li { padding-inline-start: 31px; position: relative; white-space: nowrap; }
+  .s10 .pc li::before { content: ""; position: absolute; inset-inline-start: 3px; top: 15px; width: 5px; height: 5px; border-radius: 50%; background: var(--mut); }
+  html[lang="ar"] .s10 .pc h3 { font-size: 23px; }
+  /* 12، 13، 25: الشبكات */
+  .cell { }
+  .cell.g { background: var(--soft); } .cell.l { background: var(--lav); }
+  .cell .pill { position: absolute; }
+  .cell h3 { position: absolute; font-size: 22.5px; line-height: 30px; font-weight: 400; color: #111; }
+  .cell p { position: absolute; font-size: 19.5px; line-height: 25.5px; color: var(--mut); }
+  .s12 .cell .pill { top: 30px; inset-inline-start: 48px; } .s12 .cell h3 { top: 82px; inset-inline-start: 50px; } .s12 .cell p { top: 125px; inset-inline-start: 50px; width: 440px; }
+  .s25 .cell .pill { top: 39px; inset-inline-start: 42px; } .s25 .cell h3 { top: 89px; inset-inline-start: 45px; } .s25 .cell p { top: 133px; inset-inline-start: 45px; width: 260px; }
+  .s13 .wf { top: 148px; inset-inline-start: 79px; width: 1122px; height: 440px; background: #fff; }
+  .s13 .cell .pill { top: 31px; }
+  .s13 .cell.a .pill { inset-inline-start: 48px; } .s13 .cell.b .pill { inset-inline-end: 47px; }
+  .s13 .cell h3 { top: 85px; } .s13 .cell p { top: 126px; width: 330px; }
+  .s13 .cell.a h3, .s13 .cell.a p { inset-inline-start: 50px; } .s13 .cell.b h3, .s13 .cell.b p { inset-inline-start: 166px; }
+  .s13 .ks { top: 232px; inset-inline-start: 495px; width: 290px; height: 290px; border-radius: 50%; background: #182768; color: #fff; display: grid; place-items: center; text-align: center; font-size: 30px; line-height: 39px; }
+  /* 14: التموضع */
+  .s14 .axl { font-size: 21px; line-height: 28px; color: #5B6FCC; text-align: center; width: 400px; }
+  .s14 .box { width: 405px; height: 205px; border-radius: 26px; background: var(--soft); border: 1.5px solid #2B3A8F; display: grid; place-items: center; font-size: 40px; color: #111; letter-spacing: -1px; }
+  html[lang="ar"] .s14 .box { letter-spacing: 0; }
+  /* 16: الدائرة */
+  .s16 .sub { top: 143px; inset-inline-start: 0; width: 1280px; text-align: center; font-size: 19px; line-height: 26px; color: var(--blue); }
+  .s16 .al { font-size: 25.5px; line-height: 30px; color: #111; white-space: nowrap; }
+  .s16 .an { font-size: 30px; line-height: 34px; color: var(--blue); }
+  /* 17 */
+  .s17 .st { top: 130px; inset-inline-start: 68px; font-size: 30px; line-height: 40px; color: #fff; }
+  .s17 .tbl td.b { color: #111; }
+  /* 19: رحلة العميل */
+  .s19 .lb { font-size: 19.5px; line-height: 25px; color: #333; }
+  .s19 .stg { top: 628px; height: 59px; border-radius: 7px; background: var(--soft); border: 1.3px solid; display: grid; place-items: center; font-size: 25px; color: #111; }
+  /* 20: نقاط التواصل */
+  .s20 .ttl { line-height: 62px; top: 52px; }
+  .s20 .dep { top: 261px; inset-inline-start: 82px; font-size: 19px; line-height: 26px; font-weight: 700; color: var(--navy); }
+  .s20 .trow { inset-inline-start: 70px; width: 1146px; height: 43px; display: flex; gap: 2px; }
+  .s20 .trow span { height: 100%; }
+  .s20 .trow.o span { background: var(--soft); }
+  .s20 .trow span:first-child { width: 309px; padding-inline-start: 12px; font-size: 17.5px; line-height: 43px; color: #222; white-space: nowrap; }
+  .s20 .trow span:nth-child(2) { width: 353px; } .s20 .trow span:nth-child(3) { flex: 1; }
+  .s20 .ch { top: 238px; width: 100px; text-align: center; font-size: 19.5px; line-height: 26px; color: #222; }
+  .s20 .tp { top: 276px; width: 1.5px; background: var(--blue); }
+  .s20 .tp::before, .s20 .tp::after { content: ""; position: absolute; inset-inline-start: -3.25px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+  .s20 .tp::before { top: -4px; } .s20 .tp::after { bottom: -4px; }
+  /* 21: دورة حياة المنتج */
+  .s21 .lb { font-size: 19.5px; line-height: 25px; color: #111; text-align: center; width: 200px; }
+  /* 23: خيارات الإعلان */
+  .s23 .ttl { line-height: 62px; top: 52px; }
+  .s23 .cir { top: 370px; width: 152px; height: 152px; border-radius: 50%; color: #fff; display: grid; place-items: center; text-align: center; font-size: 20.5px; line-height: 25px; padding: 0 18px; }
+  .s23 .bx { width: 299px; height: 56px; border-radius: 5px; background: var(--soft); border: 1px solid; display: grid; place-items: center; font-size: 19.5px; color: #111; text-align: center; }
+  /* 26 */
+  .s26 .tbl td.n { font-weight: 700; color: #111; }
+  /* 28: مصفوفة المخاطر */
+  .s28 .ttl { line-height: 62px; top: 52px; }
+  .s28 .rc { display: grid; place-items: center; text-align: center; font-size: 18px; line-height: 22px; color: var(--mut); padding: 0 6px; }
+  .s28 .rc.s { background: var(--soft); }
+  .s28 .rc.k { color: #111; font-size: 21px; line-height: 25px; }
+  .s28 .rc.h { background: var(--navy-2); color: #fff; font-weight: 700; font-size: 23px; }
+  .s28 .rc.lk { background: #182768; color: #fff; font-weight: 700; font-size: 23px; }
+  /* 31، 32: لوحات المتابعة */
+  .pn { background: var(--dash); }
+  .pt { font-size: 19px; line-height: 26px; color: var(--blue); white-space: nowrap; }
+  .lg { font-size: 16.5px; line-height: 22px; color: var(--mut); display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+  .lg i { width: 18px; height: 18px; flex: none; }
+  .s31 .kl { font-size: 18.5px; line-height: 24px; color: #111; }
+  .s31 .kv { font-size: 20.5px; line-height: 26px; color: var(--blue); }
+  .s31 .kd { background: #8A93C8; }
+  .s31 .dv { font-size: 15px; color: #fff; }
+  .s32 .gv { top: 655px; inset-inline-start: 120px; width: 140px; text-align: center; font-size: 16px; line-height: 22px; color: #111; }
+  /* 33: الخطوات التالية */
+  .s33 .ttl { color: var(--navy-2); }
+  .s33 .lp { inset-inline-start: 66px; width: 345px; font-size: 18px; line-height: 22.6px; color: var(--mut); }
+  .s33 .u { inset-inline-start: 527px; width: 648px; height: 137px; border-radius: 22px; }
+  .s33 .u.a { background: linear-gradient(170deg, #fff 0%, #F7F7F9 40%, #E9EAEF 100%); }
+  .s33 .u.a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, rgb(255 255 255 / 0) 30%, rgb(255 255 255 / .9) 100%); }
+  .s33 .u.b { background: linear-gradient(170deg, #fff 0%, #F4F4F6 40%, #E6E7EC 100%); }
+  .s33 .u.b::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(270deg, rgb(255 255 255 / 0) 30%, rgb(255 255 255 / .95) 85%); }
+  html[dir="rtl"] .s33 .u.a::after { background: linear-gradient(270deg, rgb(255 255 255 / 0) 30%, rgb(255 255 255 / .9) 100%); }
+  html[dir="rtl"] .s33 .u.b::after { background: linear-gradient(90deg, rgb(255 255 255 / 0) 30%, rgb(255 255 255 / .95) 85%); }
+  .s33 .u > * { position: absolute; z-index: 1; }
+  .s33 .u .n { top: 6px; inset-inline-start: 52px; font-size: 118px; line-height: 130px; font-weight: 300; color: var(--blue); }
+  .s33 .u h3 { top: 21px; inset-inline-start: 166px; font-size: 25.5px; line-height: 34px; font-weight: 400; color: #111; }
+  .s33 .u p { top: 58px; inset-inline-start: 166px; width: 400px; font-size: 18px; line-height: 22.6px; color: var(--mut); }
+
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><img class="arcs" src="/templates/freeform/sl-marketing-plan/assets/cover-arcs.jpg" alt="Blue gradient arcs"><div class="logo"><svg viewBox="0 0 54 60" aria-hidden="true"><path d="M10 10C20 4 36 3 46 8c6 3 5 15 4 25-1 10-3 19-10 21-10 3-26 3-33-1C2 50 3 36 3 27S4 13 10 10z" fill="none" stroke="#3359EE" stroke-width="8" stroke-linejoin="round"/></svg><span>YOUR COMPANY LOGO HERE</span></div><h1 class="cv"><span class="l1">MARKETING</span><span class="l2"><span>PLAN</span><em>PRESENTATION<br>TEMPLATE</em></span></h1><div class="rule"></div><p class="cvp">This is a sample text. Insert your desired text here. This is a sample text.</p></div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><div class="band"></div><h1 class="ttl">Table of Content</h1><p class="lead">This is a sample text. Insert your desired text here. This is a sample text.</p><img class="ph" src="/templates/freeform/sl-marketing-plan/assets/toc-photo.jpg" alt="Smiling young man in an office"><div class="bl"></div><div class="panel"></div><div class="rl"></div><div class="ti" style="top:282px;inset-inline-start:356px"><b>01</b><h3>Market Overview</h3><p>This is a sample text.</p></div><div class="ti" style="top:282px;inset-inline-start:674px"><b>02</b><h3>Market Overview</h3><p>This is a sample text.</p></div><div class="ti" style="top:282px;inset-inline-start:992px"><b>03</b><h3>Market Overview</h3><p>This is a sample text.</p></div><div class="ti" style="top:515px;inset-inline-start:356px"><b>04</b><h3>Market Overview</h3><p>This is a sample text.</p></div><div class="ti" style="top:515px;inset-inline-start:674px"><b>05</b><h3>Market Overview</h3><p>This is a sample text.</p></div><div class="ti" style="top:515px;inset-inline-start:992px"><b>06</b><h3>Market Overview</h3><p>This is a sample text.</p></div></div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><div class="secbg"></div><div class="seccard"></div><p class="secnum">01</p><p class="seclines">Defining our Total Addressable Market.<br>Product and Services.<br>Our Unique Selling Proposition.</p></div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><h1 class="ttl">Defining out<br>Total Addressable Market</h1><h2 class="h">Add text here</h2><p class="p">This is a sample text. Insert your desired text here. This is a sample text.</p><p class="big"><bdi dir="ltr">$3.2bn</bdi></p><p class="bigl">Total Global Market</p><svg class="circ" viewBox="362 215 428 430" aria-hidden="true"><circle cx="574" cy="429" r="213" fill="#8A93B2"/><circle cx="574" cy="475" r="167" fill="#515D8D"/><circle cx="574" cy="522" r="120" fill="#334279"/><circle cx="574" cy="572" r="71" fill="#182768"/></svg><div class="cl c1" style="top:234px"><b><bdi dir="ltr">$2.5bn</bdi></b><span>Total Addressable Market</span></div><div class="cl c2" style="top:328px"><b><bdi dir="ltr">$500MM</bdi></b><span>Service Available Market</span></div><div class="cl c3" style="top:431px"><b><bdi dir="ltr">$300MM</bdi></b><span>Target Market</span></div><div class="cl c4" style="top:546px;inset-inline-start:523px;width:100px"><span>Marketing Plan</span></div><img class="ph" src="/templates/freeform/sl-marketing-plan/assets/tam-team.jpg" alt="Team in a meeting"><div class="side"></div><div class="row" style="top:342px"><span class="lb">Target Market</span><span class="v"><bdi dir="ltr">$300MM</bdi></span><span class="tr"><span class="fl" style="width:46%"></span></span></div><div class="row" style="top:462px"><span class="lb">Service Available Market</span><span class="v"><bdi dir="ltr">$500MM</bdi></span><span class="tr"><span class="fl" style="width:61%"></span></span></div><div class="row" style="top:582px"><span class="lb">Total Addressable Market</span><span class="v"><bdi dir="ltr">$2.5bn</bdi></span><span class="tr"><span class="fl" style="width:82.5%"></span></span></div></div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><h1 class="ttl">Products &amp; Services</h1><p class="lead">This is a sample text. Insert your desired text here. This is a sample text.</p><div class="cell g" style="top:180px;inset-inline-start:57px"><span class="pill">01</span><h3>Core Products</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="cell bl" style="top:180px;inset-inline-start:444px"><span class="pill">02</span><h3>Service Solutions</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="cell nv" style="top:180px;inset-inline-start:831px"><span class="pill b">03</span><h3>Customer Benefits</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="cell bl" style="top:384px;inset-inline-start:57px"><span class="pill">04</span><h3>Competitive Value</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="cell nv" style="top:384px;inset-inline-start:444px"><span class="pill b">05</span><h3>Custom Solutions</h3><p>This is a sample text. Insert your desired text here.</p></div><div class="cell g" style="top:384px;inset-inline-start:831px"><span class="pill">06</span><h3>After-Sales Support</h3><p>This is a sample text. Insert your desired text here.</p></div><span class="clap" style="top:622px;inset-inline-start:84px;width:48px;height:48px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:630px;inset-inline-start:163px;width:1000px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6"><img class="ph" src="/templates/freeform/sl-marketing-plan/assets/usp-presenter.jpg" alt="Presenter speaking to an audience"><div class="card0"></div><h1 class="ttl">Unique Selling Proposition</h1><div class="u a" style="top:42px"><span class="n">1</span><h3>PREMIUM QUALITY EVERY TIME</h3><p>This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p></div><div class="u b" style="top:261px"><span class="n">2</span><h3>FAST DELIVERY ACROSS MARKETS</h3><p>This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p></div><div class="u a" style="top:480px"><span class="n">3</span><h3>RELIABLE SUPPORT EVERY DAY</h3><p>This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p></div></div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><div class="secbg"></div><div class="seccard"></div><p class="secnum">02</p><p class="seclines">Various Pricing Strategy we Can Use.<br>Our Sales and Distribution Plan.<br>7Ps of Marketing.</p></div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><div class="hband" style="height:164px"></div><h1 class="ttl w">Various Pricing Strategy Slide</h1><table class="tbl" style="top:198px;inset-inline-start:68px;width:1129px"><colgroup><col style="width:65px"><col style="width:220px"><col style="width:390px"><col style="width:225px"><col style="width:225px"></colgroup><thead><tr style="height:60px"><th>#</th><th>PRICE USD</th><th>PRICING STRATEGY USED</th><th>QUARTER</th><th>AGENCY</th></tr></thead><tbody><tr style="height:60px"><td>1</td><td><bdi dir="ltr">$290</bdi></td><td class="b">PREMIUM PRICING</td><td>ADD TEXT HERE</td><td>ADD TEXT HERE</td></tr><tr style="height:60px"><td>2</td><td><bdi dir="ltr">$190</bdi></td><td class="b">PRICE SKIMMING</td><td>ADD TEXT HERE</td><td>ADD TEXT HERE</td></tr><tr style="height:60px"><td>3</td><td><bdi dir="ltr">$100</bdi></td><td class="b">PSYCHOLOGY PRICING</td><td>ADD TEXT HERE</td><td>ADD TEXT HERE</td></tr><tr style="height:60px"><td>4</td><td><bdi dir="ltr">$150</bdi></td><td class="b">ECONOMY PRICING</td><td>ADD TEXT HERE</td><td>ADD TEXT HERE</td></tr><tr style="height:60px"><td>5</td><td><bdi dir="ltr">$134</bdi></td><td class="b">PREMIUM PRICING</td><td>ADD TEXT HERE</td><td>ADD TEXT HERE</td></tr></tbody></table><span class="clap" style="top:598px;inset-inline-start:64px;width:70px;height:70px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:620px;inset-inline-start:158px;width:990px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><p class="axp">Products</p><p class="axm">Markets</p><div class="cell g" style="top:102px;inset-inline-start:96px"><span class="pill">01</span><h3>Market Penetration</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell l" style="top:102px;inset-inline-start:406px"><span class="pill">02</span><h3>Market Development</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell l" style="top:348px;inset-inline-start:96px"><span class="pill">03</span><h3>Product Development</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell g" style="top:348px;inset-inline-start:406px"><span class="pill">04</span><h3>Diversification</h3><p>This is a sample text. Insert your desired text.</p></div><span class="clap" style="top:622px;inset-inline-start:88px;width:48px;height:48px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:630px;inset-inline-start:166px;width:530px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Add text here.</p><div class="side"></div><h1 class="ttl">Our Sales and Distribution Plan</h1><p class="lead">This is a sample text. Insert your desired text here. This is a sample text.</p><div class="it" style="top:370px"><span class="pill">01</span><p>This is a sample text. Insert your desired text here.</p></div><div class="it" style="top:454px"><span class="pill">02</span><p>This is a sample text. Insert your desired text here.</p></div><div class="it" style="top:538px"><span class="pill">03</span><p>This is a sample text. Insert your desired text here.</p></div><div class="it" style="top:622px"><span class="pill">04</span><p>This is a sample text. Insert your desired text here.</p></div></div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><h1 class="ttl">7 Ps of Marketing</h1><div class="pc" style="top:172px;inset-inline-start:38px;width:228px;height:284px"><h3><b>01</b>PLACE</h3><ul><li>Retail</li><li>Wholesale</li><li>Mail order</li><li>Internet</li></ul></div><div class="pc" style="top:172px;inset-inline-start:279px;width:228px;height:284px"><h3><b>02</b>PRODUCT</h3><ul><li>Design</li><li>Technology</li><li>Usefulness</li><li>Convenience</li></ul></div><div class="pc" style="top:172px;inset-inline-start:521px;width:228px;height:284px"><h3><b>03</b>PHYSICAL</h3><ul><li>Smart</li><li>Run-down</li><li>Interface</li><li>Comfort</li></ul></div><div class="pc" style="top:172px;inset-inline-start:762px;width:228px;height:284px"><h3><b>04</b>PRICE</h3><ul><li>Skimming</li><li>Penetration</li><li>Psychological</li><li>Cost-Plus</li></ul></div><div class="pc" style="top:172px;inset-inline-start:1004px;width:228px;height:284px"><h3><b>05</b>PEOPLE</h3><ul><li>Employee</li><li>Management</li><li>Culture</li><li>Customer Service</li></ul></div><div class="pc" style="top:458px;inset-inline-start:38px;width:600px;height:222px"><h3 style="top:30px;inset-inline-start:30px"><b>06</b>PROCESS</h3><ul style="top:92px;inset-inline-start:30px"><li>Especially relevant to service industries</li><li>How are services consumed?</li></ul></div><div class="pc r" style="top:458px;inset-inline-start:655px;width:580px;height:224px"><h3 style="top:30px;inset-inline-start:30px"><b>07</b>PROMOTION</h3><ul style="top:92px;inset-inline-start:30px"><li>Special Offers</li><li>Advertising</li><li>Endorsements</li></ul></div></div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><div class="secbg"></div><div class="seccard"></div><p class="secnum">03</p><p class="seclines">Key Segments of Our Market.<br>Targeting of the Product.<br>How to Position our Product.</p></div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><h1 class="ttl c">Key Segments</h1><div class="cell g" style="top:151px;inset-inline-start:90px;width:551px;height:221px"><span class="pill">01</span><h3>Geographic Segmentation</h3><p>This is a sample text. Insert your desired text. Add text here. This is a sample text.</p></div><div class="cell l" style="top:151px;inset-inline-start:640px;width:551px;height:221px"><span class="pill">02</span><h3>Psychographic</h3><p>This is a sample text. Insert your desired text. Add text here. This is a sample text.</p></div><div class="cell l" style="top:372px;inset-inline-start:90px;width:551px;height:221px"><span class="pill">03</span><h3>Demographic</h3><p>This is a sample text. Insert your desired text. Add text here. This is a sample text.</p></div><div class="cell g" style="top:372px;inset-inline-start:640px;width:551px;height:221px"><span class="pill">04</span><h3>Behavioral</h3><p>This is a sample text. Insert your desired text. Add text here. This is a sample text.</p></div><span class="clap" style="top:622px;inset-inline-start:88px;width:48px;height:48px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:630px;inset-inline-start:169px;width:990px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13"><div class="hband" style="height:214px"></div><h1 class="ttl c w">Targeting of the Product</h1><div class="wf"></div><div class="cell g a" style="top:162px;inset-inline-start:90px;width:550px;height:210px"><span class="pill">01</span><h3>Target Segment 04</h3><p>This is a sample text. Insert your desired text. This is a sample text.</p></div><div class="cell l b" style="top:162px;inset-inline-start:640px;width:550px;height:210px"><span class="pill">02</span><h3>Target Segment 02</h3><p>This is a sample text. Insert your desired text. This is a sample text.</p></div><div class="cell l a" style="top:372px;inset-inline-start:90px;width:550px;height:210px"><span class="pill">03</span><h3>Target Segment 03</h3><p>This is a sample text. Insert your desired text. This is a sample text.</p></div><div class="cell g b" style="top:372px;inset-inline-start:640px;width:550px;height:210px"><span class="pill">04</span><h3>Target Segment 04</h3><p>This is a sample text. Insert your desired text. This is a sample text.</p></div><div class="ks">Key<br>Segments</div><span class="clap" style="top:622px;inset-inline-start:88px;width:48px;height:48px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:630px;inset-inline-start:169px;width:990px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14"><h1 class="ttl c">How to Position our Product</h1><p class="axl" style="top:143px;inset-inline-start:440px">Time &amp; Money Expenditure</p><svg class="ov" viewBox="0 0 1280 720" aria-hidden="true"><g stroke="#000" stroke-width="1.5" fill="#000"><line x1="640" y1="190" x2="640" y2="684"/><line x1="175" y1="436" x2="1107" y2="436"/><path d="M640,184l-4.5,9h9z M640,690l-4.5,-9h9z M170,436l9,-4.5v9z M1112,436l-9,-4.5v9z" stroke="none"/></g></svg><div class="box" style="top:212px;inset-inline-start:213px">Luxuries</div><div class="box" style="top:212px;inset-inline-start:664px">Prestige</div><div class="box" style="top:459px;inset-inline-start:213px">Economy</div><div class="box" style="top:459px;inset-inline-start:664px">Convenience</div><p class="axl" style="top:418px;inset-inline-start:-73px;transform:rotate(-90deg)">Time &amp; Money Expenditure</p></div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15"><div class="secbg"></div><div class="seccard"></div><p class="secnum">04</p><p class="sech">Budget for Marketing Activities</p><ul class="secul"><li>Budgeting for Marketing Activities Pie Chart</li><li>Budgeting for Marketing Activities Tabular Representation</li></ul></div></section>
+  <!-- 16 -->
+  <section class="slide"><div class="frame s16"><h1 class="ttl c">Budget for Marketing Activities Pie Chart</h1><p class="sub">Total Budget for Marketing Activities - <b><bdi dir="ltr">$150,000</bdi></b></p><svg class="ov" id="ch-budget" viewBox="0 0 1280 720" aria-hidden="true"></svg><span class="al" style="top:252px;inset-inline-end:915px">Marketing Activity 1</span><span class="an" style="top:250px;inset-inline-start:388px">01</span><span class="al" style="top:339px;inset-inline-end:954px">Marketing Activity 2</span><span class="an" style="top:337px;inset-inline-start:348px">02</span><span class="al" style="top:429px;inset-inline-end:982px">Marketing Activity 3</span><span class="an" style="top:427px;inset-inline-start:320px">03</span><span class="al" style="top:520px;inset-inline-end:954px">Marketing Activity 4</span><span class="an" style="top:518px;inset-inline-start:348px">04</span><span class="al" style="top:602px;inset-inline-end:915px">Marketing Activity 5</span><span class="an" style="top:600px;inset-inline-start:388px">05</span><span class="an" style="top:250px;inset-inline-start:879px">09</span><span class="al" style="top:252px;inset-inline-start:943px">Marketing Activity 9</span><span class="an" style="top:366px;inset-inline-start:916px">08</span><span class="al" style="top:368px;inset-inline-start:980px">Marketing Activity 8</span><span class="an" style="top:482px;inset-inline-start:916px">07</span><span class="al" style="top:484px;inset-inline-start:980px">Marketing Activity 7</span><span class="an" style="top:600px;inset-inline-start:879px">06</span><span class="al" style="top:602px;inset-inline-start:943px">Marketing Activity 6</span></div></section>
+  <!-- 17 -->
+  <section class="slide"><div class="frame s17"><div class="hband" style="height:214px"></div><h1 class="ttl w">Budget for Marketing Activities</h1><p class="st">Tabular Representation</p><table class="tbl" style="top:238px;inset-inline-start:68px;width:1132px"><colgroup><col style="width:303px"><col style="width:350px"><col style="width:475px"></colgroup><thead><tr style="height:54px"><th>KEY ACTIVITIES</th><th>AMOUNT USD</th><th>PERCENTAGE SHARE OF TOTAL BUDGET (%)</th></tr></thead><tbody><tr style="height:60px"><td class="b">ONLINE MARKETING</td><td><bdi dir="ltr">$40,000</bdi></td><td><bdi dir="ltr">25%</bdi></td></tr><tr style="height:60px"><td class="b">OFFLINE MARKETING</td><td><bdi dir="ltr">$30,000</bdi></td><td><bdi dir="ltr">20%</bdi></td></tr><tr style="height:60px"><td class="b">SEO</td><td><bdi dir="ltr">$1,000</bdi></td><td><bdi dir="ltr">4%</bdi></td></tr><tr style="height:60px"><td class="b">PPC</td><td><bdi dir="ltr">$2,000</bdi></td><td><bdi dir="ltr">8%</bdi></td></tr><tr style="height:60px"><td class="b">BANNERS</td><td><bdi dir="ltr">$3,000</bdi></td><td><bdi dir="ltr">9%</bdi></td></tr></tbody></table><span class="clap" style="top:633px;inset-inline-start:80px;width:44px;height:44px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:642px;inset-inline-start:158px;width:990px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 18 -->
+  <section class="slide"><div class="frame s18"><div class="secbg"></div><div class="seccard"></div><p class="secnum">05</p><p class="sech">Customer Journey</p><ul class="secul"><li>Identifying Our Customer Journey</li><li>Our Key Touch points for Customer Engagement</li><li>Product Lifecycle</li></ul></div></section>
+  <!-- 19 -->
+  <section class="slide"><div class="frame s19"><h1 class="ttl c">Customer Journey Slide</h1><svg class="ov flipx" viewBox="0 0 1280 720" aria-hidden="true"><path d="M0,412 C7.7,419.0 25.0,440.5 46,454 C67.0,467.5 101.5,496.0 126,493 C150.5,490.0 176.3,460.0 193,436 C209.7,412.0 214.0,378.5 226,349 C238.0,319.5 243.7,280.8 265,259 C286.3,237.2 328.7,221.7 354,218 C379.3,214.3 400.5,224.7 417,237 C433.5,249.3 442.5,273.5 453,292 C463.5,310.5 471.3,324.8 480,348 C488.7,371.2 487.0,409.5 505,431 C523.0,452.5 562.0,476.0 588,477 C614.0,478.0 643.5,459.5 661,437 C678.5,414.5 672.2,376.0 693,342 C713.8,308.0 756.2,243.0 786,233 C815.8,223.0 849.2,253.8 872,282 C894.8,310.2 898.3,371.2 923,402 C947.7,432.8 990.8,467.0 1020,467 C1049.2,467.0 1076.3,424.8 1098,402 C1119.7,379.2 1131.5,353.2 1150,330 C1168.5,306.8 1187.3,281.3 1209,263 C1230.7,244.7 1268.2,227.2 1280,220" fill="none" stroke="#6B80DD" stroke-width="2" stroke-dasharray="9 6"/><circle cx="46" cy="454" r="17" fill="#02145C"/><circle cx="126" cy="493" r="17" fill="#02145C"/><circle cx="193" cy="436" r="17" fill="#02145C"/><circle cx="226" cy="349" r="17" fill="#02145C"/><circle cx="265" cy="259" r="17" fill="#02145C"/><circle cx="354" cy="218" r="17" fill="#335BFB"/><circle cx="417" cy="237" r="17" fill="#335BFB"/><circle cx="453" cy="292" r="17" fill="#335BFB"/><circle cx="480" cy="348" r="17" fill="#335BFB"/><circle cx="505" cy="431" r="17" fill="#335BFB"/><circle cx="588" cy="477" r="17" fill="#2B46B7"/><circle cx="661" cy="437" r="17" fill="#2B46B7"/><circle cx="693" cy="342" r="17" fill="#2B46B7"/><circle cx="786" cy="233" r="17" fill="#6B80DD"/><circle cx="872" cy="282" r="17" fill="#6B80DD"/><circle cx="923" cy="402" r="17" fill="#6B80DD"/><circle cx="1020" cy="467" r="17" fill="#A2B1E8"/><circle cx="1098" cy="402" r="17" fill="#A2B1E8"/><circle cx="1150" cy="330" r="17" fill="#A2B1E8"/><circle cx="1209" cy="263" r="17" fill="#A2B1E8"/></svg><p class="lb" style="top:399px;inset-inline-start:36px;width:120px">PR</p><p class="lb" style="top:521px;inset-inline-start:63px;width:170px">Radio / TV /<br>Print / Outdoor</p><p class="lb" style="top:433px;inset-inline-start:221px;width:100px">Word of Mouth</p><p class="lb" style="top:311px;inset-inline-end:1083px;width:80px">Online Ads</p><p class="lb" style="top:222px;inset-inline-end:1044px;width:80px">Viral Emails</p><p class="lb" style="top:163px;inset-inline-start:258px;text-align:center;width:200px">Search</p><p class="lb" style="top:208px;inset-inline-start:450px;width:160px">Landing Page</p><p class="lb" style="top:275px;inset-inline-start:488px;width:110px">Blog</p><p class="lb" style="top:331px;inset-inline-end:830px;width:100px">3rd Party Sites</p><p class="lb" style="top:413px;inset-inline-end:808px;width:70px">Direct Mail</p><p class="lb" style="top:507px;inset-inline-start:496px;text-align:center;width:200px">Store</p><p class="lb" style="top:429px;inset-inline-start:691px;width:160px">Call Centre</p><p class="lb" style="top:330px;inset-inline-start:731px;width:150px">Website</p><p class="lb" style="top:173px;inset-inline-start:710px;text-align:center;width:200px">Mobile</p><p class="lb" style="top:268px;inset-inline-start:900px;width:150px">IM / Chat</p><p class="lb" style="top:384px;inset-inline-start:953px;width:130px">CC IVR</p><p class="lb" style="top:502px;inset-inline-start:1009px;width:120px">Promotion on Invoice</p><p class="lb" style="top:395px;inset-inline-start:1138px;width:110px">Blog</p><p class="lb" style="top:273px;inset-inline-start:1065px;text-align:center;width:140px">Email</p><p class="lb" style="top:206px;inset-inline-start:1121px;text-align:center;width:150px">Newsletter</p><div class="stg" style="inset-inline-start:51px;width:233px;border-color:#1B2A6B">Awareness</div><div class="stg" style="inset-inline-start:305px;width:213px;border-color:#2B3A9F">Consideration</div><div class="stg" style="inset-inline-start:540px;width:189px;border-color:#2B46B7">Purchase</div><div class="stg" style="inset-inline-start:751px;width:190px;border-color:#6B80DD">Service</div><div class="stg" style="inset-inline-start:962px;width:267px;border-color:#A4B3EA">Loyalty</div></div></section>
+  <!-- 20 -->
+  <section class="slide"><div class="frame s20"><div class="hband" style="height:214px"></div><h1 class="ttl c w">Key Touch Points for<br>Customer Engagement</h1><p class="dep">Departments</p><div class="trow o" style="top:297px"><span>Marketing / Online Marketing</span><span></span><span></span></div><div class="trow" style="top:342px"><span>Design / Editorial</span><span></span><span></span></div><div class="trow o" style="top:386px"><span>E-Shop Management</span><span></span><span></span></div><div class="trow" style="top:431px"><span>Customer Management</span><span></span><span></span></div><div class="trow o" style="top:476px"><span>Product Management</span><span></span><span></span></div><div class="trow" style="top:521px"><span>Accounting</span><span></span><span></span></div><div class="trow o" style="top:565px"><span>Legal</span><span></span><span></span></div><div class="trow" style="top:610px"><span>Paid Service Providers</span><span></span><span></span></div><div class="trow o" style="top:655px"><span>Logistics Service Providers</span><span></span><span></span></div><p class="ch" style="inset-inline-start:376px">Add text</p><span class="tp" style="inset-inline-start:425px;height:104px"></span><p class="ch" style="inset-inline-start:483px">Add text</p><span class="tp" style="inset-inline-start:532px;height:148px"></span><p class="ch" style="inset-inline-start:589px">Add text</p><span class="tp" style="inset-inline-start:638px;height:281px"></span><p class="ch" style="inset-inline-start:696px">Add text</p><span class="tp" style="inset-inline-start:745px;height:233px"></span><p class="ch" style="inset-inline-start:803px">Add text</p><span class="tp" style="inset-inline-start:852px;height:148px"></span><p class="ch" style="inset-inline-start:909px">Add text</p><span class="tp" style="inset-inline-start:958px;height:364px"></span><p class="ch" style="inset-inline-start:1016px">Add text</p><span class="tp" style="inset-inline-start:1065px;height:317px"></span><p class="ch" style="inset-inline-start:1123px">Add text</p><span class="tp" style="inset-inline-start:1172px;height:185px"></span></div></section>
+  <!-- 21 -->
+  <section class="slide"><div class="frame s21"><h1 class="ttl c">Product Life Cycle</h1><svg class="ov flipx" viewBox="0 0 1280 720" aria-hidden="true"><path d="M117,619 V600 C250,580 330,560 375,535 V619Z" fill="#02145C"/><path d="M375,619 V535 C430,505 470,445 507,405 C560,345 600,295 639,268 V619Z" fill="#1B2A6B"/><path d="M639,619 V268 C690,230 730,210 780,210 C830,210 870,235 899,262 V619Z" fill="#2B46B7"/><path d="M899,619 V262 C940,300 960,320 1000,340 C1060,375 1110,400 1163,415 V619Z" fill="#6B80DD"/><path d="M928,262 C945,258 975,262 995,258 C1040,247 1080,222 1110,214 C1135,208 1150,205 1163,203 V395 C1120,385 1060,362 1010,330 C980,312 950,285 928,268Z" fill="#E3E4E8"/><g stroke="#000" stroke-width="3.5" fill="none"><path d="M117,196 V620 H1203"/><path d="M507,295 V619"/></g><path d="M117,186 l-6,13 h12z M1212,620 l-13,-6 v12z" fill="#000"/></svg><p class="lb" style="top:645px;inset-inline-start:144px">Introduction</p><p class="lb" style="top:645px;inset-inline-start:404px">Growth</p><p class="lb" style="top:645px;inset-inline-start:667px">Maturity</p><p class="lb" style="top:645px;inset-inline-start:927px">Decline</p><p class="lb" style="top:254px;inset-inline-start:408px">Escape Rooms</p><p class="lb" style="top:275px;inset-inline-start:991px">Product<br>Extension</p></div></section>
+  <!-- 22 -->
+  <section class="slide"><div class="frame s22"><div class="secbg"></div><div class="seccard"></div><p class="secnum">06</p><p class="seclines">Advertisement Options<br>for the Organization</p></div></section>
+  <!-- 23 -->
+  <section class="slide"><div class="frame s23"><div class="hband" style="height:214px"></div><h1 class="ttl c w">Advertisement Options<br>for the Organization</h1><svg class="ov flipx" viewBox="0 0 1280 720" aria-hidden="true" fill="none" stroke-width="1.3"><path stroke="#1B2A6B" d="M552,370 V276 H426 M552,522 V616 H426 M498,361 V531 M498,361 H404 M498,531 H404 M475,446 H382"/><path stroke="#6B80DD" d="M729,370 V276 H854 M729,522 V616 H854 M782,361 V531 M782,361 H876 M782,531 H876 M804,446 H898"/><path fill="#1B2A6B" stroke="none" d="M421,276l8,-4v8z M399,361l8,-4v8z M377,446l8,-4v8z M399,531l8,-4v8z M421,616l8,-4v8z"/><path fill="#6B80DD" stroke="none" d="M859,276l-8,-4v8z M881,361l-8,-4v8z M903,446l-8,-4v8z M881,531l-8,-4v8z M859,616l-8,-4v8z"/></svg><div class="cir" style="inset-inline-start:475px;background:#182768">Online Marketing</div><div class="cir" style="inset-inline-start:652px;background:#6B80DD">Offline Marketing</div><div class="bx" style="top:248px;inset-inline-start:122px;border-color:#1B2A6B">Social Media Marketing</div><div class="bx" style="top:333px;inset-inline-start:100px;border-color:#1B2A6B">E-Mail Marketing</div><div class="bx" style="top:418px;inset-inline-start:78px;border-color:#1B2A6B">Online Advertisement</div><div class="bx" style="top:503px;inset-inline-start:100px;border-color:#1B2A6B">Search Engine Optimization</div><div class="bx" style="top:588px;inset-inline-start:122px;border-color:#1B2A6B">Search Engine Marketing</div><div class="bx" style="top:248px;inset-inline-start:859px;border-color:#6B80DD">Print Media</div><div class="bx" style="top:333px;inset-inline-start:881px;border-color:#6B80DD">Television</div><div class="bx" style="top:418px;inset-inline-start:903px;border-color:#6B80DD">Radio</div><div class="bx" style="top:503px;inset-inline-start:881px;border-color:#6B80DD">Direct Calling</div><div class="bx" style="top:588px;inset-inline-start:859px;border-color:#6B80DD">Trade Shows</div></div></section>
+  <!-- 24 -->
+  <section class="slide"><div class="frame s24"><div class="secbg"></div><div class="seccard"></div><p class="secnum">07</p><p class="sech">Marketing Metrics</p><p class="secsub">Identifying Key Metrics for Measuring Effectiveness of Marketing Plan</p></div></section>
+  <!-- 25 -->
+  <section class="slide"><div class="frame s25"><h1 class="ttl c">Key Segments of our Market</h1><div class="cell g" style="top:151px;inset-inline-start:89px;width:368px;height:221px"><span class="pill">01</span><h3>Brand Awareness</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell l" style="top:151px;inset-inline-start:456px;width:368px;height:221px"><span class="pill">02</span><h3>Customer Acquisition</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell g" style="top:151px;inset-inline-start:824px;width:368px;height:221px"><span class="pill">03</span><h3>Lead Generation</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell l" style="top:372px;inset-inline-start:89px;width:368px;height:221px"><span class="pill">04</span><h3>Website Traffic</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell g" style="top:372px;inset-inline-start:456px;width:368px;height:221px"><span class="pill">05</span><h3>Customer Engagement</h3><p>This is a sample text. Insert your desired text.</p></div><div class="cell l" style="top:372px;inset-inline-start:824px;width:368px;height:221px"><span class="pill">06</span><h3>Cost Per Lead</h3><p>This is a sample text. Insert your desired text.</p></div><span class="clap" style="top:622px;inset-inline-start:88px;width:48px;height:48px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:630px;inset-inline-start:169px;width:990px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 26 -->
+  <section class="slide"><div class="frame s26"><div class="hband" style="height:151px"></div><h1 class="ttl w">Measuring Our Performance</h1><table class="tbl" style="top:216px;inset-inline-start:68px;width:1132px"><colgroup><col style="width:397px"><col style="width:138px"><col style="width:154px"><col style="width:144px"><col style="width:146px"><col style="width:139px"></colgroup><thead><tr style="height:60px"><th>METRICS</th><th>2028</th><th>2029</th><th>2030</th><th>2031</th><th>2032</th></tr></thead><tbody><tr style="height:77px"><td class="n">Customer Acquisition rate</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td></tr><tr style="height:77px"><td class="n">Website Traffic</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td></tr><tr style="height:77px"><td class="n">Customer Engagement Rate</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td></tr><tr style="height:77px"><td class="n">Total Number of Leads Generated</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td><td>xx</td></tr></tbody></table><span class="clap" style="top:633px;inset-inline-start:80px;width:44px;height:44px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:642px;inset-inline-start:158px;width:990px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 27 -->
+  <section class="slide"><div class="frame s27"><div class="secbg"></div><div class="seccard"></div><p class="secnum">08</p><p class="seclines">Key Risks Associated with the<br>Marketing Activities &amp; Projections<br>for the Future</p></div></section>
+  <!-- 28 -->
+  <section class="slide"><div class="frame s28"><div class="hband" style="height:214px"></div><h1 class="ttl c w">Key Risks Associated with<br>Marketing Activities</h1><div class="rc h" style="top:251px;inset-inline-start:556px;width:678px;height:67px"><span>Impact</span></div><div class="rc s k" style="top:321px;inset-inline-start:556px;width:169px;height:68px"><span><bdi dir="ltr">0:</bdi><br>Acceptable</span></div><div class="rc " style="top:391px;inset-inline-start:556px;width:169px;height:75px"><span>Little or No Effect</span></div><div class="rc s k" style="top:321px;inset-inline-start:727px;width:167px;height:68px"><span><bdi dir="ltr">1:</bdi><br>Tolerable</span></div><div class="rc " style="top:391px;inset-inline-start:727px;width:167px;height:75px"><span>Effects are Felt but Not Critical</span></div><div class="rc s k" style="top:321px;inset-inline-start:896px;width:168px;height:68px"><span><bdi dir="ltr">2:</bdi><br>Unacceptable</span></div><div class="rc " style="top:391px;inset-inline-start:896px;width:168px;height:75px"><span>Serious Impact to Course of Action and Outcome</span></div><div class="rc s k" style="top:321px;inset-inline-start:1066px;width:168px;height:68px"><span><bdi dir="ltr">3:</bdi><br>Intolerable</span></div><div class="rc " style="top:391px;inset-inline-start:1066px;width:168px;height:75px"><span>Could Result In Disasters</span></div><div class="rc s k" style="top:469px;inset-inline-start:215px;width:169px;height:66px"><span>Improbable</span></div><div class="rc s" style="top:469px;inset-inline-start:386px;width:168px;height:66px"><span>Risk Unlikely to Occur</span></div><div class="rc s" style="top:469px;inset-inline-start:556px;width:169px;height:66px"><span>Low risk</span></div><div class="rc s" style="top:469px;inset-inline-start:727px;width:167px;height:66px"><span>Low risk</span></div><div class="rc s" style="top:469px;inset-inline-start:896px;width:168px;height:66px"><span>Medium Risk</span></div><div class="rc s" style="top:469px;inset-inline-start:1066px;width:168px;height:66px"><span>High risk</span></div><div class="rc s k" style="top:538px;inset-inline-start:215px;width:169px;height:66px"><span>Possible</span></div><div class="rc s" style="top:538px;inset-inline-start:386px;width:168px;height:66px"><span>Risk Will Likely Occur</span></div><div class="rc s" style="top:538px;inset-inline-start:556px;width:169px;height:66px"><span>Low risk</span></div><div class="rc s" style="top:538px;inset-inline-start:727px;width:167px;height:66px"><span>Medium Risk</span></div><div class="rc s" style="top:538px;inset-inline-start:896px;width:168px;height:66px"><span>Medium Risk</span></div><div class="rc s" style="top:538px;inset-inline-start:1066px;width:168px;height:66px"><span>High risk</span></div><div class="rc s k" style="top:607px;inset-inline-start:215px;width:169px;height:67px"><span>Probable</span></div><div class="rc s" style="top:607px;inset-inline-start:386px;width:168px;height:67px"><span>Risk Will Occur</span></div><div class="rc s" style="top:607px;inset-inline-start:556px;width:169px;height:67px"><span>Low risk</span></div><div class="rc s" style="top:607px;inset-inline-start:727px;width:167px;height:67px"><span>Medium Risk</span></div><div class="rc s" style="top:607px;inset-inline-start:896px;width:168px;height:67px"><span>High risk</span></div><div class="rc s" style="top:607px;inset-inline-start:1066px;width:168px;height:67px"><span>High risk</span></div><div class="rc lk" style="top:469px;inset-inline-start:45px;width:168px;height:205px"><span>Likelihood</span></div></div></section>
+  <!-- 29 -->
+  <section class="slide"><div class="frame s29"><div class="hband" style="height:151px"></div><h1 class="ttl w">Future Projection Slide</h1><svg class="ov" id="ch-proj" viewBox="0 0 1280 720" aria-hidden="true"></svg><span class="clap" style="top:633px;inset-inline-start:80px;width:44px;height:44px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 10.4l5-5a1.3 1.3 0 0 1 1.9 1.8l-3.3 3.3.6.6 4.6-4.6a1.3 1.3 0 0 1 1.9 1.9l-4.6 4.6.6.6 3.9-3.9a1.3 1.3 0 0 1 1.9 1.9l-3.9 3.9.6.6 2.8-2.8a1.3 1.3 0 0 1 1.9 1.9l-5.6 5.6a5.4 5.4 0 0 1-7.6 0L6.6 17a5.4 5.4 0 0 1-1-6.2l1.2-2.6a1.2 1.2 0 0 1 2.2.9z"/><path d="M4.1 12.2l.9-1.7c-.9 2-.6 4.4 1 6l1.5 1.5c.4.4.9.8 1.4 1.1a5.3 5.3 0 0 1-3.6-1.5L3.9 16a3.7 3.7 0 0 1 .2-3.8z" opacity=".9"/><path d="M14.2 1.2l.9.3-.7 2.2-.9-.3zM17.6 2.4l.8.6-1.4 1.8-.8-.6zM19.9 5.3l.4.9-2 .9-.4-.9z"/></svg></span><p class="foot" style="top:642px;inset-inline-start:158px;width:990px">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text. Insert your desired text here. This is a sample text. This is a sample text.</p></div></section>
+  <!-- 30 -->
+  <section class="slide"><div class="frame s30"><div class="secbg"></div><div class="seccard"></div><p class="secnum">09</p><p class="sech">Dashboard</p><ul class="secul"><li>Key Marketing Metrics Dashboard</li><li>Effects of our Marketing Efforts</li></ul></div></section>
+  <!-- 31 -->
+  <section class="slide"><div class="frame s31"><h1 class="ttl c">Key Marketing Metrics Dashboard</h1><div class="pn" style="top:165px;inset-inline-start:36px;width:417px;height:222px"></div><div class="pn" style="top:390px;inset-inline-start:36px;width:417px;height:280px"></div><div class="pn" style="top:165px;inset-inline-start:458px;width:386px;height:250px"></div><div class="pn" style="top:165px;inset-inline-start:849px;width:395px;height:250px"></div><div class="pn" style="top:420px;inset-inline-start:458px;width:386px;height:250px"></div><div class="pn" style="top:420px;inset-inline-start:849px;width:395px;height:250px"></div><span class="kd" style="top:190px;inset-inline-start:255px;width:1px;height:162px"></span><span class="kd" style="top:273px;inset-inline-start:80px;width:349px;height:1px"></span><p class="kl" style="top:190px;inset-inline-start:90px">Visitors Count</p><p class="kv" style="top:225px;inset-inline-start:90px"><bdi dir="ltr">9,999,999</bdi></p><p class="kl" style="top:190px;inset-inline-start:299px">CAC</p><p class="kv" style="top:225px;inset-inline-start:299px"><bdi dir="ltr">$2.23K</bdi></p><p class="kl" style="top:292px;inset-inline-start:90px">ROI</p><p class="kv" style="top:326px;inset-inline-start:90px"><bdi dir="ltr">51.23%</bdi></p><p class="kl" style="top:292px;inset-inline-start:299px">CAC</p><p class="kv" style="top:326px;inset-inline-start:299px"><bdi dir="ltr">51.48%</bdi></p><p class="pt" style="top:404px;inset-inline-start:90px">Weekly Visitors</p><p class="pt" style="top:189px;inset-inline-start:491px">Placeholder</p><p class="pt" style="top:189px;inset-inline-start:870px">Placeholder</p><p class="pt" style="top:443px;inset-inline-start:491px">Placeholder</p><p class="pt" style="top:443px;inset-inline-start:870px">Placeholder</p><p class="lg" style="top:514px;inset-inline-start:491px"><i style="background:#02145C"></i>Sample text</p><p class="lg" style="top:546px;inset-inline-start:491px"><i style="background:#2B46B7"></i>Sample text</p><p class="lg" style="top:578px;inset-inline-start:491px"><i style="background:#6B80DD"></i>Sample text</p><p class="lg" style="top:610px;inset-inline-start:491px"><i style="background:#A4B3EA"></i>Sample text</p><svg class="ov" id="ch-dash" viewBox="0 0 1280 720" aria-hidden="true"></svg></div></section>
+  <!-- 32 -->
+  <section class="slide"><div class="frame s32"><h1 class="ttl c">Marketing Efforts KPI</h1><div class="pn" style="top:165px;inset-inline-start:36px;width:733px;height:270px"></div><div class="pn" style="top:165px;inset-inline-start:775px;width:469px;height:270px"></div><div class="pn" style="top:440px;inset-inline-start:36px;width:333px;height:251px"></div><div class="pn" style="top:440px;inset-inline-start:374px;width:395px;height:251px"></div><div class="pn" style="top:440px;inset-inline-start:775px;width:469px;height:251px"></div><p class="pt" style="top:181px;inset-inline-start:73px">Name of the campaign</p><p class="pt" style="top:188px;inset-inline-start:795px">Why leads are not qualified</p><p class="pt" style="top:450px;inset-inline-start:65px">New Leads</p><p class="pt" style="top:450px;inset-inline-start:390px">Why leads are not qualified</p><p class="pt" style="top:450px;inset-inline-start:795px">Lead Status</p><p class="lg" style="top:266px;inset-inline-start:620px"><i style="background:#02145C"></i>Sample text</p><p class="lg" style="top:298px;inset-inline-start:620px"><i style="background:#2B46B7"></i>Sample text</p><p class="lg" style="top:330px;inset-inline-start:620px"><i style="background:#6B80DD"></i>Sample text</p><p class="lg" style="top:362px;inset-inline-start:620px"><i style="background:#A4B3EA"></i>Sample text</p><p class="lg" style="top:258px;inset-inline-start:1061px"><i style="background:#02145C"></i>Sample text</p><p class="lg" style="top:290px;inset-inline-start:1061px"><i style="background:#2B46B7"></i>Sample text</p><p class="lg" style="top:322px;inset-inline-start:1061px"><i style="background:#6B80DD"></i>Sample text</p><p class="lg" style="top:354px;inset-inline-start:1061px"><i style="background:#A4B3EA"></i>Sample text</p><p class="lg" style="top:384px;inset-inline-start:1061px"><i></i>Sample text</p><p class="lg" style="top:458px;inset-inline-start:646px"><i style="background:#02145C"></i>Event 1</p><p class="lg" style="top:490px;inset-inline-start:646px"><i style="background:#2B46B7"></i>Event 2</p><p class="lg" style="top:522px;inset-inline-start:646px"><i style="background:#6B80DD"></i>Event 3</p><p class="lg" style="top:554px;inset-inline-start:646px"><i style="background:#A4B3EA"></i>Event 4</p><p class="lg" style="top:589px;inset-inline-start:646px"><i style="background:#020F3A"></i>Event 5</p><p class="lg" style="top:621px;inset-inline-start:646px"><i style="background:#2B46B7"></i>Event 6</p><p class="lg" style="top:653px;inset-inline-start:646px"><i style="background:#6B80DD"></i>Event 7</p><p class="gv"><bdi dir="ltr">240 (70%)</bdi></p><svg class="ov" id="ch-kpi" viewBox="0 0 1280 720" aria-hidden="true"></svg></div></section>
+  <!-- 33 -->
+  <section class="slide"><div class="frame s33"><h1 class="ttl">Next Steps Slide</h1><p class="lp" style="top:207px">This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p><div class="u a" style="top:192px"><span class="n">1</span><h3>Recommendation 01</h3><p>This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p></div><p class="lp" style="top:377px">This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p><div class="u b" style="top:350px"><span class="n">2</span><h3>Recommendation 02</h3><p>This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p></div><p class="lp" style="top:548px">This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p><div class="u a" style="top:517px"><span class="n">3</span><h3>Recommendation 03</h3><p>This is a sample text. Insert your desired text here. This is a text. This is a sample text.</p></div></div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 33</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"total": 150000, "values": [10.3, 10.3, 8.9, 9.4, 9.2, 9.2, 16.4, 13.3, 13.0], "colors": ["#F6F6F6", "#E3E4E8", "#6B80DD", "#2B46B7", "#182768", "#02145C", "#192A6F", "#0E173E", "#010D37"]}</script>
+<script type="application/json" id="chart-data-2">{"labels": ["2015", "2016", "2017", "2018", "2019", "2020"], "values": [270, 300, 350, 400, 450, 480], "growth": ["21%", "27%", "33%", "38%", "43%", "47%"], "max": 600, "step": 100}</script>
+<script type="application/json" id="chart-data-3">{"weekly": {"labels": ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"], "values": [10, 13, 14, 24, 33, 31, 26, 28, 24, 15]}, "trend": {"labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], "values": [32, 23, 52, 42, 36, 22, 25, 35, 42, 48, 52, 44]}, "channels": {"labels": ["Social", "Organic", "Referral", "Display", "Campaign", "Paid", "Direct"], "values": [80, 79, 78, 76, 75, 65, 60]}, "share": {"values": [8.2, 3.2, 1.4, 1.2]}, "multi": {"labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], "series": [[148, 145, 128, 144, 149, 154, 157, 141, 157, 135, 132, 137], [52, 54, 58, 50, 54, 58, 53, 41, 47, 46, 50, 59], [40, 47, 59, 24, 50, 56, 65, 40, 47, 48, 49, 53]]}}</script>
+<script type="application/json" id="chart-data-4">{"campaigns": {"labels": ["Campaign 5", "Campaign 4", "Campaign 3", "Campaign 2", "Campaign 1"], "rows": [[4.1, 2.5, 2.0, 8.7], [2.5, 4.5, 1.9, 8.9], [3.5, 1.8, 3.0, 8.3], [4.5, 2.8, 5.0, 12.3], [4.0, 3.0, 5.0, 12.0]]}, "status": {"labels": ["Add Name", "Add Name", "Add Name", "Add Name", "Add Name"], "rows": [[4.5, 2.5, 2.1, 9.3], [2.3, 4.7, 2.1, 9.3], [3.2, 2.0, 3.3, 8.6], [5.0, 2.6, 5.0, 12.5], [4.5, 2.5, 5.0, 12.0]]}, "reasons": [196, 77, 33, 29, 25], "events": [154, 62, 21, 25, 18, 41, 39], "gauge": {"value": 240, "max": 300}}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- الرسوم البيانية (إحداثيات الإطار 1280×720؛ X() تعكس الأفقي في العربية) -----
+  var NS = 'http://www.w3.org/2000/svg';
+  function E(p, t, a, tx) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (tx != null) e.textContent = tx; p.appendChild(e); return e; }
+  function X(x) { return RTL ? 1280 - x : x; }
+  function AN(a) { return !RTL ? a : (a === 'start' ? 'end' : a === 'end' ? 'start' : a); }
+  function J(id) { return JSON.parse(document.getElementById(id).textContent); }
+  // النص العربي يُرسم باتجاه rtl فتبقى المرساة كما هي (start = الحافة اليمنى)، والأرقام باتجاه ltr فتُعكس المرساة
+  function T(g, x, y, s, size, fill, anchor, weight) { var ar = RTL && /[\u0600-\u06FF]/.test(s); return E(g, 'text', { x: X(x), y: y, 'font-size': size, fill: fill, direction: ar ? 'rtl' : 'ltr', 'text-anchor': ar ? (anchor || 'middle') : AN(anchor || 'middle'), 'font-weight': weight || 400 }, s); }
+  function P(cx, cy, r, a) { a = a * Math.PI / 180; return X(cx + r * Math.sin(a)).toFixed(1) + ',' + (cy - r * Math.cos(a)).toFixed(1); }
+  // قطاع حلقي من a0 إلى a1 بالدرجات من القمة مع عقارب الساعة (بالإنجليزية)
+  function seg(cx, cy, ro, ri, a0, a1) { var L = (a1 - a0) > 180 ? 1 : 0, s = RTL ? 0 : 1; return 'M' + P(cx, cy, ro, a0) + 'A' + ro + ',' + ro + ' 0 ' + L + ' ' + s + ' ' + P(cx, cy, ro, a1) + 'L' + P(cx, cy, ri, a1) + 'A' + ri + ',' + ri + ' 0 ' + L + ' ' + (1 - s) + ' ' + P(cx, cy, ri, a0) + 'Z'; }
+  function donut(g, cx, cy, ro, ri, vals, cols, start, ccw) {
+    var t = vals.reduce(function (a, b) { return a + b; }, 0), a = start, mids = [];
+    vals.forEach(function (v, i) { var d = v / t * 360, a0 = ccw ? a - d : a, a1 = ccw ? a : a + d; E(g, 'path', { d: seg(cx, cy, ro, ri, a0, a1), fill: cols[i], stroke: '#fff', 'stroke-width': 2 }); mids.push((a0 + a1) / 2); a = ccw ? a - d : a + d; });
+    return mids;
+  }
+  function line(g, pts, color, w) { E(g, 'polyline', { points: pts.map(function (p) { return X(p[0]).toFixed(1) + ',' + p[1].toFixed(1); }).join(' '), fill: 'none', stroke: color, 'stroke-width': w, 'stroke-linejoin': 'round' }); }
+  var BL = ['#02145C', '#182768', '#2B46B7', '#6B80DD'];
+  // 16: ميزانية الأنشطة
+  (function () { var d = J('chart-data'), g = document.getElementById('ch-budget'); donut(g, 648, 446, 212, 100, d.values, d.colors, 362.7, true); })();
+  // 29: التوقعات (أعمدة + خط اتجاه خطي على المحور نفسه)
+  (function () {
+    var d = J('chart-data-2'), g = document.getElementById('ch-proj'), y0 = 574, u = 367 / d.max, n = d.values.length, x0 = 108, w = 1089 / n;
+    for (var v = 0; v <= d.max; v += d.step) { var y = y0 - v * u; E(g, 'line', { x1: X(x0), x2: X(1197), y1: y, y2: y, stroke: '#D9D9D9', 'stroke-width': 1 }); T(g, 92, y + 5, String(v), 15, '#555', 'end'); }
+    var sx = 0, sy = 0, sxy = 0, sxx = 0;
+    d.values.forEach(function (v, i) { sx += i; sy += v; sxy += i * v; sxx += i * i; });
+    var b = (n * sxy - sx * sy) / (n * sxx - sx * sx), a = (sy - b * sx) / n;
+    d.values.forEach(function (v, i) {
+      var cx = x0 + (i + .5) * w, top = y0 - v * u;
+      E(g, 'rect', { x: X(cx) - 72, y: top, width: 144, height: v * u, fill: '#02145C' });
+      T(g, cx, (top + y0) / 2 + 9, String(v), 20, '#fff');
+      T(g, cx, 603, d.labels[i], 15, '#555');
+      T(g, cx, top - 41, d.growth[i], 20, '#3355E8', 'middle', 700);
+      E(g, 'line', { x1: X(cx + w / 2), x2: X(cx + w / 2), y1: y0, y2: y0 + 6, stroke: '#D9D9D9' });
+    });
+    var c0 = x0 + w / 2, c1 = x0 + (n - .5) * w, t0 = y0 - a * u, t1 = y0 - (a + b * (n - 1)) * u;
+    line(g, [[c0, t0], [c1, t1]], '#3355E8', 1.6);
+    E(g, 'circle', { cx: X(c0), cy: t0, r: 4, fill: '#3355E8' }); E(g, 'circle', { cx: X(c1), cy: t1, r: 4, fill: '#3355E8' });
+  })();
+  // 31: لوحة مقاييس التسويق
+  (function () {
+    var d = J('chart-data-3'), g = document.getElementById('ch-dash'), i;
+    // الزوار الأسبوعيون (مساحة)
+    var wk = d.weekly, pts = [];
+    for (var v = 0; v <= 35; v += 5) T(g, 101, 622 - v * 4.49, String(v), 12, '#333', 'end');
+    wk.values.forEach(function (v, i) { var x = 115 + i * 33; pts.push([x, 618 - v * 4.49]); T(g, x, 641, wk.labels[i], 12, '#333'); });
+    E(g, 'path', { d: 'M' + X(115) + ',618 L' + pts.map(function (p) { return X(p[0]) + ',' + p[1].toFixed(1); }).join(' L') + ' L' + X(412) + ',618Z', fill: '#02145C' });
+    // الاتجاه الشهري (خط)
+    var tr = d.trend; pts = [];
+    for (v = 0; v <= 60; v += 10) T(g, 513, 386 - v * 2.35, v + '%', 11, '#333', 'end');
+    E(g, 'line', { x1: X(525), x2: X(802), y1: 382, y2: 382, stroke: '#BFC3CE' });
+    tr.values.forEach(function (v, i) { var x = 537 + i * 23.05; pts.push([x, 382 - v * 2.35]); T(g, x, 401, tr.labels[i], RTL ? 9 : 10.5, '#333'); });
+    line(g, pts, '#02145C', 2.5); pts.forEach(function (p) { E(g, 'circle', { cx: X(p[0]), cy: p[1], r: 3.5, fill: '#3355E8' }); });
+    // القنوات (أعمدة)
+    var ch = d.channels;
+    for (v = 0; v <= 90; v += 10) T(g, 890, 387 - v * 1.589, v + '%', 8, '#333', 'end');
+    E(g, 'line', { x1: X(905), x2: X(1222), y1: 384, y2: 384, stroke: '#BFC3CE' });
+    ch.values.forEach(function (v, i) { var cx = 924 + i * 46.2; E(g, 'rect', { x: X(cx) - 14, y: 384 - v * 1.589, width: 28, height: v * 1.589, fill: '#02145C' }); T(g, cx, 401, ch.labels[i], 8.5, '#333'); });
+    // الحصص (حلقة)
+    var sh = d.share.values, mids = donut(g, 736, 552, 87, 39, sh, ['#02145C', '#2B46B7', '#6B80DD', '#A4B3EA'], 0, false);
+    sh.forEach(function (v, i) { var p = P(736, 552, 64, mids[i]).split(','); E(g, 'text', { x: p[0], y: +p[1] + 5, 'font-size': 15, fill: '#fff', 'text-anchor': 'middle' }, String(v)); });
+    // سلاسل متعددة
+    var mu = d.multi, lc = ['#182768', '#182768', '#2B46B7'], dc = ['#3355E8', '#182768', '#3355E8'];
+    for (v = 0; v <= 200; v += 50) T(g, 890, 634 - v * 0.695, String(v), 12, '#333', 'end');
+    mu.labels.forEach(function (l, i) { T(g, 912 + i * 23.4, 651, l, RTL ? 9 : 11, '#333'); });
+    mu.series.forEach(function (s, k) { var q = s.map(function (v, i) { return [912 + i * 23.4, 630 - v * 0.695]; }); line(g, q, lc[k], 2.5); q.forEach(function (p) { E(g, 'circle', { cx: X(p[0]), cy: p[1], r: 3.6, fill: dc[k] }); }); });
+  })();
+  // 32: مؤشرات أداء الجهود التسويقية
+  (function () {
+    var d = J('chart-data-4'), g = document.getElementById('ch-kpi');
+    function stacked(s, x0, u, y0, lx, ay) {
+      s.rows.forEach(function (r, i) { var y = y0 + i * 33.75, x = x0; T(g, lx, y + 4, s.labels[i], 11.5, '#333', 'end');
+        r.forEach(function (v, k) { var a = X(x), b = X(x + v * u); E(g, 'rect', { x: Math.min(a, b), y: y - 13.5, width: Math.abs(b - a), height: 27, fill: BL[k] }); x += v * u; }); });
+      for (var v = 0; v <= 25; v += 5) T(g, x0 + v * u, ay, String(v), 11, '#333');
+    }
+    stacked(d.campaigns, 149, 16.68, 239, 136, 412);
+    stacked(d.status, 863, 13.08, 506, 851, 679);
+    donut(g, 901, 321, 86, 42, d.reasons, ['#02145C', '#182768', '#2B46B7', '#6B80DD', '#F5F5F5'], 0, false);
+    donut(g, 489, 580, 86, 44, d.events, ['#02145C', '#182768', '#2B46B7', '#6B80DD', '#FFFFFF', '#F5F5F5', '#010D37'], 0, false);
+    // المقياس: من -100° إلى +100°
+    var cx = 190, cy = 622, r = 113, gv = d.gauge, ang = -100 + gv.value / gv.max * 200;
+    function arc(a0, a1, col, cap) { var s = RTL ? 0 : 1, L = (a1 - a0) > 180 ? 1 : 0; E(g, 'path', { d: 'M' + P(cx, cy, r, a0) + 'A' + r + ',' + r + ' 0 ' + L + ' ' + s + ' ' + P(cx, cy, r, a1), fill: 'none', stroke: col, 'stroke-width': 27, 'stroke-linecap': cap }); }
+    arc(-100, 100, '#F3F3F5', 'round'); arc(-6, 45, '#7F90F4', 'butt'); arc(45, 100, '#1B2A6B', 'round');
+    var tk = [[10, -92], [40, -66], [80, -44], [120, -22], [160, 0], [200, 22], [240, 42], [280, 68], [300, 90]];
+    tk.forEach(function (t, i) { var a = t[1]; E(g, 'line', { x1: P(cx, cy, 93, a).split(',')[0], y1: P(cx, cy, 93, a).split(',')[1], x2: P(cx, cy, 99, a).split(',')[0], y2: P(cx, cy, 99, a).split(',')[1], stroke: '#9AA0AE', 'stroke-width': 2 });
+      var p = P(cx, cy, 80, a).split(','); E(g, 'text', { x: p[0], y: +p[1] + 4, 'font-size': 11.5, fill: '#111', 'text-anchor': 'middle', 'font-weight': i ? 400 : 700 }, String(t[0])); });
+    var na = 42, tip = P(cx, cy, 82, na).split(','), b1 = P(cx, cy, 6, na - 90).split(','), b2 = P(cx, cy, 6, na + 90).split(',');
+    E(g, 'polygon', { points: tip.join(',') + ' ' + b1.join(',') + ' ' + b2.join(','), fill: '#335BFB' });
+    E(g, 'circle', { cx: X(cx), cy: cy, r: 17, fill: '#2B46B7' });
+  })();
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

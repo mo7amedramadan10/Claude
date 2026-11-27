@@ -1,0 +1,178 @@
+{
+  "key": "sl-marketing-plan",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "📣",
+  "name": "خطة التسويق",
+  "nameEn": "Marketing Plan",
+  "description": "33 شريحة لخطة تسويق كاملة: السوق والتسعير والشرائح والميزانية ورحلة العميل والمخاطر ولوحتا متابعة",
+  "descriptionEn": "33-slide marketing plan: market, pricing, segments, budget, customer journey, risks and two dashboards",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover",
+      "needsData": false
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Content",
+      "needsData": false
+    },
+    {
+      "title": "القسم 01",
+      "titleEn": "Section 01",
+      "needsData": false
+    },
+    {
+      "title": "السوق الإجمالية المتاحة",
+      "titleEn": "Total Addressable Market",
+      "needsData": true
+    },
+    {
+      "title": "المنتجات والخدمات",
+      "titleEn": "Products & Services",
+      "needsData": false
+    },
+    {
+      "title": "عرض البيع الفريد",
+      "titleEn": "Unique Selling Proposition",
+      "needsData": false
+    },
+    {
+      "title": "القسم 02",
+      "titleEn": "Section 02",
+      "needsData": false
+    },
+    {
+      "title": "استراتيجيات التسعير",
+      "titleEn": "Pricing Strategy",
+      "needsData": true
+    },
+    {
+      "title": "خطة المبيعات والتوزيع",
+      "titleEn": "Sales & Distribution Plan",
+      "needsData": false
+    },
+    {
+      "title": "المزيج التسويقي السباعي",
+      "titleEn": "7 Ps of Marketing",
+      "needsData": false
+    },
+    {
+      "title": "القسم 03",
+      "titleEn": "Section 03",
+      "needsData": false
+    },
+    {
+      "title": "الشرائح الرئيسية",
+      "titleEn": "Key Segments",
+      "needsData": false
+    },
+    {
+      "title": "استهداف المنتج",
+      "titleEn": "Targeting of the Product",
+      "needsData": false
+    },
+    {
+      "title": "تموضع المنتج",
+      "titleEn": "Product Positioning",
+      "needsData": false
+    },
+    {
+      "title": "القسم 04",
+      "titleEn": "Section 04",
+      "needsData": false
+    },
+    {
+      "title": "ميزانية الأنشطة: مخطط دائري",
+      "titleEn": "Budget Pie Chart",
+      "needsData": true
+    },
+    {
+      "title": "ميزانية الأنشطة: جدول",
+      "titleEn": "Budget Table",
+      "needsData": true
+    },
+    {
+      "title": "القسم 05",
+      "titleEn": "Section 05",
+      "needsData": false
+    },
+    {
+      "title": "رحلة العميل",
+      "titleEn": "Customer Journey",
+      "needsData": false
+    },
+    {
+      "title": "نقاط التواصل الرئيسية",
+      "titleEn": "Key Touch Points",
+      "needsData": false
+    },
+    {
+      "title": "دورة حياة المنتج",
+      "titleEn": "Product Life Cycle",
+      "needsData": false
+    },
+    {
+      "title": "القسم 06",
+      "titleEn": "Section 06",
+      "needsData": false
+    },
+    {
+      "title": "خيارات الإعلان",
+      "titleEn": "Advertisement Options",
+      "needsData": false
+    },
+    {
+      "title": "القسم 07",
+      "titleEn": "Section 07",
+      "needsData": false
+    },
+    {
+      "title": "مقاييس التسويق الرئيسية",
+      "titleEn": "Key Marketing Metrics",
+      "needsData": false
+    },
+    {
+      "title": "قياس الأداء",
+      "titleEn": "Measuring Our Performance",
+      "needsData": true
+    },
+    {
+      "title": "القسم 08",
+      "titleEn": "Section 08",
+      "needsData": false
+    },
+    {
+      "title": "مصفوفة المخاطر",
+      "titleEn": "Key Risks Matrix",
+      "needsData": false
+    },
+    {
+      "title": "التوقعات المستقبلية",
+      "titleEn": "Future Projection",
+      "needsData": true
+    },
+    {
+      "title": "القسم 09",
+      "titleEn": "Section 09",
+      "needsData": false
+    },
+    {
+      "title": "لوحة مقاييس التسويق",
+      "titleEn": "Key Marketing Metrics Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "مؤشرات أداء الجهود التسويقية",
+      "titleEn": "Marketing Efforts KPI",
+      "needsData": true
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps",
+      "needsData": false
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ الرسوم البيانية تُرسم من كتل chart-data وchart-data-2 وchart-data-3 وchart-data-4 فعدّل أرقامها هناك."
+}
